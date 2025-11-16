@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import desc
+from sqlalchemy import desc, text
 import time
 
 from database import get_engine, MonitoringSnapshot, SimulationRun, User
@@ -191,7 +191,7 @@ class DashboardDataService:
         db = self.SessionLocal()
         try:
             start = time.time()
-            db.execute('SELECT 1')
+            db.execute(text('SELECT 1'))
             health['db_ping_ms'] = (time.time() - start) * 1000
             health['database_connected'] = True
             
