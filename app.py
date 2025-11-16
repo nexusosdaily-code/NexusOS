@@ -2169,6 +2169,7 @@ def render_admin():
                             user = create_user(db, new_email, new_password, roles)
                             if user:
                                 st.success(f"✅ User '{new_email}' created successfully with roles: {', '.join(roles)}")
+                                st.rerun()
                             else:
                                 st.error("User with this email already exists")
                         except Exception as e:

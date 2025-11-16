@@ -3,7 +3,7 @@ import secrets
 import hashlib
 from datetime import datetime, timedelta
 from typing import Optional, List, Tuple
-from passlib.hash import bcrypt
+import bcrypt as bcrypt_lib
 import streamlit as st
 from sqlalchemy.orm import Session as DBSession
 from database import User, Role, UserRole, Session, get_engine
@@ -13,11 +13,13 @@ SESSION_EXPIRY_DAYS = 30
 
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt."""
-    return bcrypt.hash(password)
+    salt = bcrypt_lib.gensalt()
+    password_hash = bcrypt_lib.hashpw(password.encode('utf-8'), salt)
+    return password_hash.decode('utf-8')
 
 def verify_password(password: str, password_hash: str) -> bool:
     """Verify a password against its hash."""
-    return bcrypt.verify(password, password_hash)
+    return bcrypt_lib.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
 
 def generate_session_token() -> str:
     """Generate a secure random session token."""
