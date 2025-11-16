@@ -2,7 +2,7 @@ modules = ["python-3.11", "postgresql-16"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["glibcLocales", "libxcrypt", "pkg-config", "xsimd"]
+packages = ["cargo", "glibcLocales", "libiconv", "libxcrypt", "pkg-config", "rustc", "xsimd"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -42,3 +42,7 @@ externalPort = 80
 [[ports]]
 localPort = 40735
 externalPort = 3001
+
+[[ports]]
+localPort = 44029
+externalPort = 3000

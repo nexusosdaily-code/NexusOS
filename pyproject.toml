@@ -4,9 +4,11 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
+    "bcrypt>=5.0.0",
     "networkx>=3.5",
     "numpy>=2.3.4",
     "pandas>=2.3.3",
+    "passlib>=1.7.4",
     "plotly>=6.4.0",
     "psycopg2-binary>=2.9.11",
     "requests>=2.32.5",
