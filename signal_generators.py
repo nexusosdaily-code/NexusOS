@@ -36,7 +36,7 @@ class SignalGenerator:
         initial_value: float,
         volatility: float,
         num_steps: int,
-        seed: int = None
+        seed: int | None = None
     ) -> np.ndarray:
         """Generate random walk signal"""
         if seed is not None:

@@ -623,7 +623,7 @@ def render_scenarios():
         if configs:
             for config in configs:
                 with st.expander(f"📊 {config.name} - {config.created_at.strftime('%Y-%m-%d %H:%M')}"):
-                    if config.description:
+                    if config.description is not None:
                         st.markdown(f"**Description:** {config.description}")
                     
                     col1, col2, col3 = st.columns(3)
@@ -673,7 +673,7 @@ def render_scenarios():
                             'num_steps': config.num_steps
                         }
                         
-                        if config.signal_config:
+                        if config.signal_config is not None:
                             st.session_state.signal_configs = config.signal_config
                         
                         st.success(f"✅ Loaded scenario '{config.name}'")
