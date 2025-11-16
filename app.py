@@ -602,160 +602,249 @@ def main():
             render_admin()
 
 def render_dashboard():
-    st.header("System Overview")
+    """Real-time Production Dashboard with live monitoring and alerting."""
+    from streamlit_autorefresh import st_autorefresh
+    from dashboard_service import get_dashboard_service
+    from alert_service import get_alert_service
+    from datetime import datetime
     
-    if st.session_state.simulation_results is not None:
-        df = st.session_state.simulation_results
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
+    st.header("📊 Real-time Production Dashboard")
+    st.markdown("Live system monitoring with auto-refresh and intelligent alerting")
+    
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col1:
+        refresh_interval = st.select_slider(
+            "Auto-refresh interval",
+            options=[5, 10, 15, 30, 60],
+            value=15,
+            help="Seconds between automatic updates"
+        )
+    with col2:
+        auto_refresh_enabled = st.checkbox("Auto-refresh", value=True)
+    with col3:
+        if st.button("🔄 Refresh Now"):
+            st.rerun()
+    
+    if auto_refresh_enabled:
+        count = st_autorefresh(interval=refresh_interval * 1000, limit=None, key="dashboard_refresh")
+    
+    dashboard_service = get_dashboard_service()
+    alert_service = get_alert_service()
+    
+    summary = dashboard_service.get_dashboard_summary()
+    metrics = summary['metrics']
+    health = summary['health']
+    
+    active_alerts = alert_service.get_active_alerts(limit=10)
+    alert_stats = alert_service.get_alert_statistics()
+    
+    st.divider()
+    
+    st.subheader("🎯 Live Key Performance Indicators")
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        final_n = metrics.get('final_N')
+        if final_n is not None:
             st.metric(
-                "Final Nexus State (N)",
-                f"{df['N'].iloc[-1]:.2f}",
-                f"{df['N'].iloc[-1] - df['N'].iloc[0]:.2f}"
+                "Latest Nexus State",
+                f"{final_n:.2f}",
+                help="Most recent N(t) value from simulations"
             )
-        
-        with col2:
-            avg_I = df['I'].mean()
+        else:
+            st.metric("Latest Nexus State", "No data")
+    
+    with col2:
+        avg_issuance = metrics.get('avg_issuance')
+        if avg_issuance is not None:
             st.metric(
-                "Avg Issuance Rate",
-                f"{avg_I:.2f}"
+                "Avg Issuance",
+                f"{avg_issuance:.2f}",
+                help="Average issuance rate"
             )
-        
-        with col3:
-            avg_B = df['B'].mean()
+        else:
+            st.metric("Avg Issuance", "No data")
+    
+    with col3:
+        avg_burn = metrics.get('avg_burn')
+        if avg_burn is not None:
             st.metric(
-                "Avg Burn Rate",
-                f"{avg_B:.2f}"
+                "Avg Burn",
+                f"{avg_burn:.2f}",
+                help="Average burn rate"
             )
-        
-        with col4:
-            conservation_error = abs(df['cumulative_I'].iloc[-1] - df['cumulative_B'].iloc[-1])
+        else:
+            st.metric("Avg Burn", "No data")
+    
+    with col4:
+        conservation_error = metrics.get('conservation_error')
+        if conservation_error is not None:
+            delta_color = "normal" if abs(conservation_error) < 1.0 else "inverse"
             st.metric(
                 "Conservation Error",
                 f"{conservation_error:.2f}",
-                f"{(conservation_error / df['cumulative_I'].iloc[-1] * 100):.2f}%"
+                help="Issuance vs burn balance"
             )
-        
-        st.subheader("Nexus State Evolution")
-        fig_n = go.Figure()
-        fig_n.add_trace(go.Scatter(
-            x=df['t'], 
-            y=df['N'],
-            mode='lines',
-            name='N(t)',
-            line=dict(color='#1f77b4', width=2)
-        ))
-        fig_n.add_hline(
-            y=st.session_state.params['N_target'], 
-            line_dash="dash", 
-            line_color="red",
-            annotation_text="Target N*"
+        else:
+            st.metric("Conservation Error", "No data")
+    
+    with col5:
+        st.metric(
+            "🚨 Active Alerts",
+            len(active_alerts),
+            delta=f"{alert_stats['alerts_last_24h']} in 24h",
+            help="Currently active unresolved alerts"
         )
-        fig_n.update_layout(
-            xaxis_title="Time",
-            yaxis_title="Nexus State N(t)",
-            height=400,
-            hovermode='x unified'
-        )
-        st.plotly_chart(fig_n, use_container_width=True)
+    
+    st.divider()
+    
+    col1, col2 = st.columns([3, 2])
+    
+    with col1:
+        st.subheader("💚 System Health Status")
         
-        col1, col2 = st.columns(2)
+        db_status = "🟢 Connected" if health['database_connected'] else "🔴 Disconnected"
+        db_ping = f"({health.get('db_ping_ms', 0):.1f}ms)" if health.get('db_ping_ms') else ""
+        st.write(f"**Database:** {db_status} {db_ping}")
         
-        with col1:
-            st.subheader("Issuance vs Burn Dynamics")
-            fig_ib = go.Figure()
-            fig_ib.add_trace(go.Scatter(
-                x=df['t'], 
-                y=df['I'],
-                mode='lines',
-                name='Issuance I(t)',
-                line=dict(color='green')
-            ))
-            fig_ib.add_trace(go.Scatter(
-                x=df['t'], 
-                y=df['B'],
-                mode='lines',
-                name='Burn B(t)',
-                line=dict(color='red')
-            ))
-            fig_ib.update_layout(
-                xaxis_title="Time",
-                yaxis_title="Rate",
-                height=350,
-                hovermode='x unified'
-            )
-            st.plotly_chart(fig_ib, use_container_width=True)
+        st.write(f"**Total Simulations:** {health.get('total_simulations', 0)}")
         
-        with col2:
-            st.subheader("System Health Index")
-            fig_s = go.Figure()
-            fig_s.add_trace(go.Scatter(
-                x=df['t'], 
-                y=df['S'],
-                mode='lines',
-                name='S(t)',
-                fill='tozeroy',
-                line=dict(color='purple')
-            ))
-            fig_s.update_layout(
-                xaxis_title="Time",
-                yaxis_title="System Health S(t)",
-                yaxis_range=[0, 1],
-                height=350,
-                hovermode='x unified'
-            )
-            st.plotly_chart(fig_s, use_container_width=True)
+        last_sim = metrics.get('last_simulation_age_seconds')
+        if last_sim is not None:
+            if last_sim < 60:
+                age_str = f"{last_sim:.0f}s ago"
+            elif last_sim < 3600:
+                age_str = f"{last_sim / 60:.0f}m ago"
+            else:
+                age_str = f"{last_sim / 3600:.1f}h ago"
+            st.write(f"**Last Simulation:** {age_str}")
+        else:
+            st.write("**Last Simulation:** Never")
         
-        col1, col2 = st.columns(2)
+        st.write("**Oracle Sources:**")
+        for name, oracle_info in health.get('oracle_sources', {}).items():
+            status = "🟢" if oracle_info['connected'] else "🔴"
+            st.write(f"  - {status} {name} ({oracle_info['type']})")
+    
+    with col2:
+        st.subheader("🚨 Active Alerts")
         
-        with col1:
-            st.subheader("PID Controller Output")
-            fig_phi = go.Figure()
-            fig_phi.add_trace(go.Scatter(
-                x=df['t'], 
-                y=df['Phi'],
-                mode='lines',
-                name='Φ(t)',
-                line=dict(color='orange')
-            ))
-            fig_phi.add_hline(y=0, line_dash="dot", line_color="gray")
-            fig_phi.update_layout(
-                xaxis_title="Time",
-                yaxis_title="Feedback Φ(t)",
-                height=350,
-                hovermode='x unified'
-            )
-            st.plotly_chart(fig_phi, use_container_width=True)
+        if active_alerts:
+            for alert in active_alerts[:5]:
+                severity_color = {
+                    'info': '🔵',
+                    'warning': '🟡',
+                    'error': '🟠',
+                    'critical': '🔴'
+                }.get(alert.payload.get('severity', 'info'), '⚪')
+                
+                with st.expander(f"{severity_color} {alert.rule.name}"):
+                    st.write(f"**Metric:** {alert.payload.get('metric_key')}")
+                    st.write(f"**Value:** {alert.payload.get('metric_value')}")
+                    st.write(f"**Threshold:** {alert.payload.get('comparator')} {alert.payload.get('threshold')}")
+                    st.write(f"**Triggered:** {alert.triggered_at.strftime('%Y-%m-%d %H:%M:%S')}")
+                    
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        if st.button(f"✓ Acknowledge", key=f"ack_{alert.id}"):
+                            if AuthManager.is_authenticated() and hasattr(st.session_state, 'current_user'):
+                                alert_service.acknowledge_alert(alert.id, st.session_state.current_user.id)
+                                st.success("Alert acknowledged")
+                                st.rerun()
+                    with col_b:
+                        if st.button(f"✓ Resolve", key=f"res_{alert.id}"):
+                            alert_service.resolve_alert(alert.id)
+                            st.success("Alert resolved")
+                            st.rerun()
+        else:
+            st.success("✅ No active alerts")
+    
+    if AuthManager.has_role('admin') or AuthManager.has_role('researcher'):
+        st.divider()
+        st.subheader("⚙️ Alert Configuration")
         
-        with col2:
-            st.subheader("Conservation Monitor")
-            fig_cons = go.Figure()
-            fig_cons.add_trace(go.Scatter(
-                x=df['t'], 
-                y=df['cumulative_I'],
-                mode='lines',
-                name='∫I(t)dt',
-                line=dict(color='green')
-            ))
-            fig_cons.add_trace(go.Scatter(
-                x=df['t'], 
-                y=df['cumulative_B'],
-                mode='lines',
-                name='∫B(t)dt',
-                line=dict(color='red')
-            ))
-            fig_cons.update_layout(
-                xaxis_title="Time",
-                yaxis_title="Cumulative",
-                height=350,
-                hovermode='x unified'
-            )
-            st.plotly_chart(fig_cons, use_container_width=True)
+        with st.expander("📝 Create New Alert Rule"):
+            with st.form("create_alert_rule"):
+                rule_name = st.text_input("Rule Name", placeholder="e.g., Low Nexus State Alert")
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    metric_key = st.selectbox(
+                        "Metric to Monitor",
+                        options=['final_N', 'avg_issuance', 'avg_burn', 'conservation_error'],
+                        help="Which metric to monitor"
+                    )
+                with col2:
+                    comparator = st.selectbox(
+                        "Condition",
+                        options=list(alert_service.COMPARATOR_LABELS.keys()),
+                        format_func=lambda x: alert_service.COMPARATOR_LABELS[x]
+                    )
+                with col3:
+                    threshold = st.number_input("Threshold Value", value=0.0, step=0.1)
+                
+                severity = st.select_slider(
+                    "Severity",
+                    options=alert_service.SEVERITY_LEVELS,
+                    value='warning'
+                )
+                
+                submit_rule = st.form_submit_button("➕ Create Alert Rule")
+                
+                if submit_rule:
+                    if not rule_name:
+                        st.error("Rule name is required")
+                    else:
+                        user_id = st.session_state.current_user.id if hasattr(st.session_state, 'current_user') and st.session_state.current_user else None
+                        rule = alert_service.create_rule(
+                            name=rule_name,
+                            metric_key=metric_key,
+                            comparator=comparator,
+                            threshold=threshold,
+                            severity=severity,
+                            created_by=user_id
+                        )
+                        st.success(f"✅ Alert rule '{rule_name}' created successfully!")
+                        st.rerun()
         
-    else:
-        st.info("👈 Configure parameters and run a simulation to see results")
+        with st.expander("📋 Existing Alert Rules"):
+            all_rules = alert_service.get_all_rules()
+            
+            if all_rules:
+                for rule in all_rules:
+                    status_icon = "✅" if rule.is_active else "⏸️"
+                    with st.expander(f"{status_icon} {rule.name}"):
+                        st.write(f"**Metric:** {rule.metric_key}")
+                        st.write(f"**Condition:** {alert_service.COMPARATOR_LABELS.get(rule.comparator)} {rule.threshold}")
+                        st.write(f"**Severity:** {rule.severity}")
+                        st.write(f"**Status:** {'Active' if rule.is_active else 'Inactive'}")
+                        
+                        col_a, col_b, col_c = st.columns(3)
+                        with col_a:
+                            if rule.is_active:
+                                if st.button(f"⏸️ Disable", key=f"disable_{rule.id}"):
+                                    alert_service.toggle_rule(rule.id, False)
+                                    st.success("Rule disabled")
+                                    st.rerun()
+                            else:
+                                if st.button(f"▶️ Enable", key=f"enable_{rule.id}"):
+                                    alert_service.toggle_rule(rule.id, True)
+                                    st.success("Rule enabled")
+                                    st.rerun()
+                        with col_b:
+                            pass
+                        with col_c:
+                            if st.button(f"🗑️ Delete", key=f"delete_rule_{rule.id}"):
+                                alert_service.delete_rule(rule.id)
+                                st.success("Rule deleted")
+                                st.rerun()
+            else:
+                st.info("No alert rules configured yet")
+    
+    triggered = alert_service.evaluate_all_rules(metrics)
+    if triggered:
+        for alert_info in triggered:
+            st.toast(f"🚨 Alert: {alert_info['rule'].name}", icon="🚨")
 
 def render_parameter_control():
     st.header("Parameter Control")
