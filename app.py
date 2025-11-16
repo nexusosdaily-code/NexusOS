@@ -324,6 +324,162 @@ def render_multi_agent():
             
             st.dataframe(pd.DataFrame(stats_data), use_container_width=True)
 
+def render_smart_contracts():
+    st.header("Smart Contract Code Generation")
+    st.markdown("""
+    Export your validated NexusOS configuration as deployable blockchain smart contracts.
+    Supports Ethereum/EVM (Solidity) and Substrate/Polkadot (Rust/ink!) platforms.
+    """)
+    
+    from contract_generator import (
+        SolidityContractGenerator,
+        RustSubstrateContractGenerator,
+        generate_readme
+    )
+    import zipfile
+    import io
+    
+    st.warning("""
+    ⚠️ **Important**: Generated contracts are templates that require review and testing before deployment.
+    Always test on a local/test network, conduct security audits, and verify all calculations match your requirements.
+    """)
+    
+    st.info("💡 **Tip**: Test your parameters in simulation mode first to ensure stability before deploying to blockchain.")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        contract_name_sol = st.text_input(
+            "Solidity Contract Name",
+            value="NexusEconomicSystem",
+            help="Name for the Solidity contract (PascalCase)"
+        )
+    
+    with col2:
+        contract_name_rust = st.text_input(
+            "Rust Contract Name",
+            value="nexus_economic_system",
+            help="Name for the Rust contract (snake_case)"
+        )
+    
+    platform = st.radio(
+        "Select Platform",
+        ["Both (Recommended)", "Solidity (Ethereum/EVM)", "Rust (Substrate/Polkadot)"],
+        help="Choose which smart contract platforms to generate code for"
+    )
+    
+    include_readme = st.checkbox("Include README with deployment instructions", value=True)
+    
+    if st.button("📜 Generate Smart Contracts", type="primary"):
+        with st.spinner("Generating contract code..."):
+            try:
+                params = st.session_state.params
+                
+                zip_buffer = io.BytesIO()
+                
+                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                    
+                    if platform in ["Both (Recommended)", "Solidity (Ethereum/EVM)"]:
+                        sol_contract = SolidityContractGenerator.generate_contract(
+                            params, contract_name_sol
+                        )
+                        zip_file.writestr(f"{contract_name_sol}.sol", sol_contract)
+                    
+                    if platform in ["Both (Recommended)", "Rust (Substrate/Polkadot)"]:
+                        rust_contract = RustSubstrateContractGenerator.generate_contract(
+                            params, contract_name_rust
+                        )
+                        zip_file.writestr(f"{contract_name_rust}.rs", rust_contract)
+                        
+                        cargo_toml = f"""[package]
+name = "{contract_name_rust}"
+version = "0.1.0"
+authors = ["NexusOS Generator"]
+edition = "2021"
+
+[dependencies]
+ink_primitives = {{ version = "3.4", default-features = false }}
+ink_metadata = {{ version = "3.4", default-features = false, features = ["derive"], optional = true }}
+ink_env = {{ version = "3.4", default-features = false }}
+ink_storage = {{ version = "3.4", default-features = false }}
+ink_lang = {{ version = "3.4", default-features = false }}
+ink_prelude = {{ version = "3.4", default-features = false }}
+
+scale = {{ package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }}
+scale-info = {{ version = "2", default-features = false, features = ["derive"], optional = true }}
+
+[lib]
+name = "{contract_name_rust}"
+path = "{contract_name_rust}.rs"
+crate-type = ["cdylib"]
+
+[features]
+default = ["std"]
+std = [
+    "ink_metadata/std",
+    "ink_env/std",
+    "ink_storage/std",
+    "ink_primitives/std",
+    "scale/std",
+    "scale-info/std",
+]
+ink-as-dependency = []
+"""
+                        zip_file.writestr("Cargo.toml", cargo_toml)
+                    
+                    if include_readme:
+                        readme = generate_readme(params)
+                        zip_file.writestr("README.md", readme)
+                
+                zip_buffer.seek(0)
+                st.session_state['contract_zip'] = zip_buffer.getvalue()
+                
+                st.success("✅ Smart contracts generated successfully!")
+                
+            except Exception as e:
+                st.error(f"Contract generation failed: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
+    
+    if 'contract_zip' in st.session_state:
+        st.divider()
+        st.subheader("Download Contracts")
+        
+        st.download_button(
+            label="⬇️ Download Contract Package (.zip)",
+            data=st.session_state['contract_zip'],
+            file_name=f"nexus_contracts_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
+            mime="application/zip",
+            help="Download complete smart contract package with deployment instructions"
+        )
+        
+        st.info("""
+        **Next Steps:**
+        1. Extract the downloaded ZIP file
+        2. Review the README.md for deployment instructions
+        3. Test contracts on a local/test network first
+        4. Consider a security audit before mainnet deployment
+        5. Deploy to production blockchain
+        """)
+        
+        with st.expander("📋 Parameter Summary"):
+            st.json(st.session_state.params)
+        
+        with st.expander("⚠️ Security Checklist"):
+            st.markdown("""
+            Before deploying to mainnet, ensure:
+            
+            - [ ] All parameters tested in simulation mode
+            - [ ] Contracts compiled without errors
+            - [ ] Deployed and tested on testnet
+            - [ ] Access control properly configured
+            - [ ] Emergency pause mechanism tested
+            - [ ] Gas costs estimated and acceptable
+            - [ ] Security audit completed (for production)
+            - [ ] Backup/recovery procedures in place
+            - [ ] Monitoring and alerting configured
+            """)
+
 def main():
     init_db()
     init_session_state()
@@ -334,12 +490,13 @@ def main():
     with issuance/burn mechanics, feedback control, and conservation constraints.
     """)
     
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📊 Dashboard", 
         "⚙️ Parameter Control", 
         "📈 Simulation", 
         "🔬 Advanced Analysis",
         "🌐 Multi-Agent",
+        "📜 Smart Contracts",
         "💾 Scenarios"
     ])
     
@@ -359,6 +516,9 @@ def main():
         render_multi_agent()
     
     with tab6:
+        render_smart_contracts()
+    
+    with tab7:
         render_scenarios()
 
 def render_dashboard():
