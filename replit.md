@@ -107,15 +107,19 @@ Each generator accepts parameters and returns numpy arrays representing time-ser
 9. ✅ Scenario save/load functionality
 10. ✅ Data export (CSV, JSON)
 
+### Advanced Scenario Analysis (Complete - November 2025)
+1. ✅ Monte Carlo Simulation - Runs multiple simulations with parameter variations, generates full statistical distributions (mean, std, CI, percentiles) for final N, issuance, burn, and conservation error. Includes parameter variation scatter plots.
+2. ✅ Sensitivity Analysis - One-at-a-time parameter sweeps with properly re-instantiated engine for each variation. Visualizes sensitivity curves for all key metrics and ranks parameter importance.
+3. ✅ Stability Region Mapping - 2D parameter space heatmap exploration identifying stable vs unstable regions. Calculates coefficient of variation, convergence rates, and binary stability assessment across parameter grids.
+
 ### Next Phase Features (Planned)
-1. Oracle integration framework for real-world data feeds
-2. Multi-agent simulation with network effects
-3. Smart contract code generation (Solidity/Rust)
-4. ML-based adaptive parameter tuning
-5. Advanced scenario analysis (Monte Carlo, sensitivity)
-6. User authentication and role-based access
-7. Real-time production dashboard
-8. Audit trail and provenance tracking
+1. Multi-agent simulation with network effects (network topology, inter-node value transfers)
+2. Smart contract code generation (Solidity/Rust templates with fixed-point arithmetic)
+3. Oracle integration framework for real-world data feeds (environmental sensors, IoT, blockchain oracles)
+4. ML-based adaptive parameter tuning (historical pattern analysis, RL-based optimization)
+5. User authentication and role-based access (admin/researcher/viewer roles)
+6. Real-time production dashboard with live oracle feeds and alerting
+7. Audit trail and provenance tracking (event logging, cryptographic hashing)
 
 ## External Dependencies
 
