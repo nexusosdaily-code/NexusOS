@@ -1,179 +1,52 @@
 # NexusOS
 
-## Overview
+### Overview
+NexusOS is a comprehensive economic system simulator based on the Nexus equation, a self-regulating system with issuance/burn mechanics, PID feedback control, and conservation constraints. It models a multi-factor ecosystem, offering configurable parameters, real-time visualization, scenario management with PostgreSQL persistence, and data export. The platform also includes advanced features like Monte Carlo and Sensitivity Analysis, Multi-Agent Network Simulation, Smart Contract Code Generation (Solidity, Rust/ink!), Oracle Integration, and ML-Based Adaptive Parameter Tuning. It also provides User Authentication and Role-Based Access Control.
 
-NexusOS is a comprehensive economic system simulator implementing the foundational Nexus equation: a self-regulating system with issuance/burn mechanics, PID feedback control, and conservation constraints. Built with Streamlit and Python scientific computing libraries, it models a multi-factor ecosystem where the Nexus state N(t) evolves according to:
-
-**dN/dt = I(t) - B(t) - κN(t) + Φ(t) + ηF(t)**
-
-Where:
-- I(t) = issuance rate based on validated human/machine contributions and system health
-- B(t) = burn rate tied to consumption, disposal, and ecological load
-- κN(t) = temporal decay
-- Φ(t) = PID feedback controller for stability
-- ηF(t) = floor injection for baseline guaranteed value
-
-The platform features configurable parameters, real-time visualization, scenario management with PostgreSQL persistence, and data export capabilities for research and analysis.
-
-## User Preferences
-
+### User Preferences
 Preferred communication style: Simple, everyday language.
 
-## System Architecture
+### System Architecture
 
-### Frontend Architecture
+#### UI/UX Decisions
+The application uses Streamlit for a single-page, wide-layout dashboard with an expanded sidebar for parameter configuration. Session state manages simulation results, signal configurations, and parameter sets. Plotly is used for interactive visualizations, including subplot-based time-series plots.
 
-**Technology**: Streamlit web framework
+#### Technical Implementations
+**Core Engine**: The `NexusEngine` class implements the mathematical simulation using differential equations and feedback loops. It includes multi-factor system health calculation, a PID controller, dynamic issuance mechanisms, and time-series signal processing.
 
-**Design Pattern**: Single-page application with session state management
+**Data Storage**: SQLAlchemy ORM manages two primary tables: `SimulationConfig` for storing parameter sets and `SimulationRun` for simulation results (including complete time-series data as JSON). Parameters are stored as individual columns for queryability.
 
-The UI is organized into a wide-layout dashboard with an expanded sidebar for parameter configuration. Session state (`st.session_state`) maintains simulation results, signal configurations, and parameter sets across reruns. The architecture separates presentation (app.py) from business logic (nexus_engine.py) and data generation (signal_generators.py).
+**Signal Generation**: A Strategy pattern with static factory methods in the `SignalGenerator` class provides various signal types (constant, sinusoidal, step, random walk, pulse, linear ramp) for external inputs.
 
-**Rationale**: Streamlit was chosen for rapid prototyping of data-centric applications with minimal frontend code. The framework's reactive model automatically handles state updates and re-rendering.
+**Advanced Scenario Analysis**:
+- **Monte Carlo Simulation**: Runs multiple simulations with parameter variations for statistical distributions.
+- **Sensitivity Analysis**: Performs one-at-a-time parameter sweeps to identify and rank parameter importance.
+- **Stability Region Mapping**: Uses 2D parameter space heatmaps to explore stable vs. unstable regions.
 
-### Backend Architecture
+**Multi-Agent Network Simulation**: Supports multi-node simulations where each agent has its own NexusEngine. It includes various network topologies, inter-node value transfer, and network influence mechanisms, with interactive visualizations.
 
-**Core Engine**: NexusEngine class implementing mathematical simulation
+**Smart Contract Code Generation**: Generates deployable smart contracts for Ethereum/EVM (Solidity) and Substrate/Polkadot (Rust/ink!) from simulation parameters, including fixed-point arithmetic, core economic functions, and security features.
 
-The simulation engine uses differential equations and feedback loops to model system behavior. Key components include:
+**Oracle Integration Framework**: Provides an abstraction layer for integrating external data sources via `OracleDataSource`, `RestAPIOracle`, `StaticDataOracle`, and `MockEnvironmentalOracle`. It includes UI integration, configurable refresh intervals, and error handling.
 
-1. **Multi-factor system health calculation** - Weighted combination of energy (E), network (N), health (H), and market (M) metrics
-2. **PID controller** - Proportional-Integral-Derivative control for system stability
-3. **Issuance mechanism** - Dynamic resource allocation based on system state
-4. **Signal processing** - Time-series generation for external inputs
+**ML-Based Adaptive Parameter Tuning**: Utilizes Bayesian Optimization (scikit-optimize) to find optimal parameter configurations for multiple objective functions (stability, conservation, growth). It supports parameter subset selection, warm-starting from historical data, and a comprehensive UI.
 
-The engine accepts a parameter dictionary at initialization and maintains internal state (integral error, previous error) for PID calculations. Simulation proceeds via step-by-step numerical integration.
+**User Authentication & Role-Based Access Control**: Implements user accounts, roles (admin, researcher, viewer), and session-based authentication using bcrypt for password hashing and SHA-256 for session tokens. An admin UI allows user management.
 
-**Design Choice**: Class-based architecture with dependency injection of parameters allows for multiple simulation instances with different configurations.
+### External Dependencies
 
-### Data Storage Solutions
+#### Core Libraries
+- **Streamlit**: Web application framework
+- **NumPy**: Numerical computing
+- **Pandas**: Data manipulation
+- **Plotly**: Interactive visualizations
+- **SQLAlchemy**: SQL toolkit and ORM
+- **NetworkX**: Network analysis for multi-agent topologies
+- **SciPy**: Scientific computing
+- **scikit-optimize**: Bayesian optimization
 
-**Database**: SQLAlchemy ORM with configurable backend
+#### Database
+- **PostgreSQL**: Production-ready persistence for scenarios and simulation runs. Configured via `DATABASE_URL` environment variable.
 
-Two primary tables:
-
-1. **SimulationConfig** - Stores parameter sets with metadata (name, description, timestamp)
-   - Contains ~30 float parameters for engine configuration
-   - Includes simulation settings (delta_t, num_steps)
-   
-2. **SimulationRun** - Stores simulation execution results
-   - Links to SimulationConfig via config_id
-   - Stores complete time-series data as JSON
-   - Tracks final_N, avg_issuance, avg_burn, conservation_error
-
-**Schema Design**: Parameters are stored as individual columns rather than JSON for queryability. This enables filtering and comparison of configurations by specific parameter values.
-
-**Rationale**: SQLAlchemy provides database-agnostic abstraction, allowing deployment with SQLite for development or PostgreSQL for production without code changes.
-
-### Visualization Layer
-
-**Technology**: Plotly for interactive charts
-
-**Approach**: Subplot-based dashboard with time-series plots
-
-The system uses `plotly.graph_objects` and `make_subplots` for composing multi-panel visualizations. This supports comparative analysis of different state variables over time.
-
-**Alternatives Considered**: Matplotlib was likely rejected due to lack of interactivity; Altair for lighter weight visualizations.
-
-**Pros**: Plotly provides zoom, pan, hover tooltips, and export capabilities out-of-box.
-
-### Signal Generation System
-
-**Pattern**: Strategy pattern with static factory methods
-
-The `SignalGenerator` class provides multiple signal types:
-- Constant baseline
-- Sinusoidal oscillations
-- Step changes (shock events)
-- Random walks (stochastic processes)
-- Pulse trains (periodic events)
-- Linear ramps
-
-Each generator accepts parameters and returns numpy arrays representing time-series data. This allows testing system response to various input patterns for H(t), M(t), D(t), E(t), C_cons(t), and C_disp(t).
-
-**Design Rationale**: Static methods avoid unnecessary state while providing a clean namespace. Users can configure signal types and parameters through the UI, enabling scenario testing without code changes.
-
-## Current Implementation Status
-
-### MVP Features (Complete)
-1. ✅ Core Nexus equation engine with all mathematical components
-2. ✅ Discrete-time simulation engine (configurable Δt and num_steps)
-3. ✅ Interactive parameter control with sliders for 20+ parameters
-4. ✅ Real-time visualization suite (N(t), I vs B, S(t), E(t), Φ(t))
-5. ✅ Input signal generators with 6 pattern types
-6. ✅ System health index S(t) with configurable weights
-7. ✅ Conservation constraint monitor (∫I(t)dt vs ∫B(t)dt)
-8. ✅ PostgreSQL persistence for scenarios and runs
-9. ✅ Scenario save/load functionality
-10. ✅ Data export (CSV, JSON)
-
-### Advanced Scenario Analysis (Complete - November 2025)
-1. ✅ Monte Carlo Simulation - Runs multiple simulations with parameter variations, generates full statistical distributions (mean, std, CI, percentiles) for final N, issuance, burn, and conservation error. Includes parameter variation scatter plots.
-2. ✅ Sensitivity Analysis - One-at-a-time parameter sweeps with properly re-instantiated engine for each variation. Visualizes sensitivity curves for all key metrics and ranks parameter importance.
-3. ✅ Stability Region Mapping - 2D parameter space heatmap exploration identifying stable vs unstable regions. Calculates coefficient of variation, convergence rates, and binary stability assessment across parameter grids.
-
-### Multi-Agent Network Simulation (Complete - November 2025)
-1. ✅ Network Architecture - Multi-node simulation where each agent has its own NexusEngine instance and N(t) state. Supports 5 network topologies: fully connected, hub-and-spoke, random (Erdős-Rényi), ring, and small-world (Watts-Strogatz).
-2. ✅ Inter-Node Dynamics - Value transfer mechanics flow resources from high-N to low-N nodes based on network connections. Network influence mechanism allows neighbors' states to affect each agent's system health S(t). Configurable transfer rate and network influence parameters.
-3. ✅ Network Visualization - Interactive Plotly network graph showing agent nodes and connections, color-coded by final N state. Real-time evolution plots for all agents' N(t) trajectories. Comparative issuance/burn analysis across agents. Network topology metrics (density, clustering, degree distribution).
-
-### Smart Contract Code Generation (Complete - November 2025)
-1. ✅ Multi-Platform Support - Generates deployable blockchain smart contracts for Ethereum/EVM (Solidity) and Substrate/Polkadot (Rust/ink!) platforms from validated NexusOS simulation parameters.
-2. ✅ Fixed-Point Arithmetic - Solidity contracts use 18 decimal fixed-point math (1e18 scale); Rust contracts use u128 for precision. Automatic conversion from floating-point simulation parameters to blockchain-compatible integers.
-3. ✅ Complete Contract Suite - Generated ZIP package includes: Solidity contract with OpenZeppelin imports, Rust smart contract with ink! framework, Cargo.toml for Rust dependencies, comprehensive README with deployment instructions and parameter documentation, security checklist.
-4. ✅ Core Economic Functions - Both platforms implement: calculateSystemHealth() for S(t), calculateIssuance() for I(t) with weighted inputs, calculateBurn() for B(t) with consumption/disposal/environmental factors, PID feedback controller, temporal decay (κN), floor injection mechanism (ηF), state update with all Nexus equation components.
-5. ✅ Smart Contract Features - Access control (onlyOwner modifier), pause/unpause emergency controls, event emissions for transparency, parameter management functions, reentrancy guards, comprehensive NatSpec/rustdoc documentation.
-
-**Note**: Generated contracts are templates requiring review, testing, and security audits before mainnet deployment. Always test on local/test networks first.
-
-### Oracle Integration Framework (Complete - November 2025)
-1. ✅ Oracle Abstraction Layer - Base OracleDataSource class with connect/disconnect/fetch interface. OracleManager for managing multiple data sources. OracleDataPoint for timestamped data with metadata.
-2. ✅ Oracle Connectors - RestAPIOracle for web APIs with configurable endpoints and authentication. StaticDataOracle for fixed baseline values. MockEnvironmentalOracle for simulated sensor data with random variation.
-3. ✅ UI Integration - Dedicated "Oracles" tab with connection management, real-time data fetch testing, oracle source configuration, and API load estimation. Two default oracle sources pre-configured.
-4. ✅ Simulation Integration - Step-based oracle sampling with configurable refresh interval. Batch fetching of all variables. Fallback to signal generators when oracle unavailable. Oracle usage tracking in results.
-5. ✅ Performance Optimization - Step-based refresh control (default every 10 steps). Configurable trade-off between data freshness and API load. For 1000-step simulation: ~600 HTTP requests (interval=10) vs original 6000.
-6. ✅ Error Handling - Connection status tracking with health check endpoints. HTTP 401 accepted for authenticated APIs. Error message capture and display. Graceful degradation to signal generators.
-
-**Note**: Oracle integration allows using live external data in simulations while managing API load through configurable refresh intervals.
-
-### ML-Based Adaptive Parameter Tuning (Complete - November 2025)
-1. ✅ Bayesian Optimization Engine - Intelligent parameter search using Gaussian Processes (scikit-optimize). Efficiently finds optimal configurations with fewer simulations than grid/random search. Configurable iteration count (default 50).
-2. ✅ Multiple Objective Functions - Stability (minimize N(t) volatility), Conservation (minimize issuance/burn error), Growth (maximize final N), Balanced (stability + growth), Custom (user-defined weights).
-3. ✅ Parameter Subset Selection - Choose which parameters to optimize (PID gains, weights, burn coefficients, etc.) while fixing others. Supports all 20 tunable parameters organized by category.
-4. ✅ Warm-Start from History - Automatically mines SimulationRun database for best historical configurations matching selected objective. Uses top-N runs as priors to accelerate convergence.
-5. ✅ Comprehensive UI - Dedicated "ML Optimization" tab with: objective selection, parameter checkboxes by category, optimization settings, execution controls, convergence visualization, best parameter display with one-click apply.
-6. ✅ Database Persistence - OptimizationRun table stores optimization metadata (objective, parameters, bounds, best results, convergence history). Enables reproducibility and historical analysis.
-
-**Note**: ML Optimization typically completes 50 iterations in 1-2 minutes depending on simulation complexity. Warm-start from historical data can reduce iterations needed by 20-30%.
-
-### Next Phase Features (Planned)
-1. User authentication and role-based access (admin/researcher/viewer roles)
-2. Real-time production dashboard with live oracle feeds and alerting
-3. Audit trail and provenance tracking (event logging, cryptographic hashing)
-
-## External Dependencies
-
-### Core Libraries
-
-- **Streamlit** - Web application framework for data apps
-- **NumPy** - Numerical computing and array operations
-- **Pandas** - Data manipulation and analysis
-- **Plotly** - Interactive visualization library
-- **SQLAlchemy** - SQL toolkit and ORM
-- **NetworkX** - Network analysis and graph theory library for multi-agent topologies
-- **SciPy** - Scientific computing (used in signal generation)
-- **scikit-optimize** - Bayesian optimization library for ML-based parameter tuning
-
-### Database
-
-- **PostgreSQL** (via DATABASE_URL environment variable)
-- Production-ready persistence for scenarios and simulation runs
-- SQLAlchemy ORM for database-agnostic abstraction
-
-### Deployment
-
-- **Replit** - Current development and hosting environment
-- Streamlit runs on port 5000 with webview output
-- Configured for autoscale deployment
-
-The application is currently self-contained with local computation and storage. Future phases will integrate external APIs for oracles, authentication, and blockchain interactions.
+#### Deployment
+- **Replit**: Current development and hosting environment.
