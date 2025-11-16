@@ -69,14 +69,32 @@ def get_engine():
     if not database_url:
         raise ValueError("DATABASE_URL environment variable not set")
     
-    return create_engine(database_url, echo=False)
+    return create_engine(
+        database_url,
+        echo=False,
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        connect_args={
+            'connect_timeout': 10,
+            'options': '-c statement_timeout=30000'
+        }
+    )
 
 def init_db():
-    engine = get_engine()
-    Base.metadata.create_all(engine)
-    return engine
+    try:
+        engine = get_engine()
+        Base.metadata.create_all(engine)
+        return engine
+    except Exception as e:
+        print(f"Warning: Database initialization failed: {e}")
+        print("App will continue without database persistence")
+        return None
 
 def get_session():
-    engine = get_engine()
-    Session = sessionmaker(bind=engine)
-    return Session()
+    try:
+        engine = get_engine()
+        Session = sessionmaker(bind=engine)
+        return Session()
+    except Exception as e:
+        print(f"Warning: Could not create database session: {e}")
+        return None

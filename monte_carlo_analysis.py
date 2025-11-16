@@ -353,3 +353,206 @@ class SensitivityAnalysis:
         rankings = sorted(rankings, key=lambda x: x['impact_range'], reverse=True)
         
         return rankings
+
+
+class StabilityMapper:
+    def __init__(self, base_params: Dict, signal_configs: Dict):
+        self.base_params = base_params.copy()
+        self.signal_configs = signal_configs
+    
+    def _run_single_simulation(self, params: Dict) -> pd.DataFrame:
+        """Run a single simulation with given parameters"""
+        engine = NexusEngine(params)
+        
+        num_steps = params['num_steps']
+        delta_t = params['delta_t']
+        
+        H_signal = SignalGenerator.generate_from_config(
+            self.signal_configs['H'], num_steps, delta_t
+        )
+        M_signal = SignalGenerator.generate_from_config(
+            self.signal_configs['M'], num_steps, delta_t
+        )
+        D_signal = SignalGenerator.generate_from_config(
+            self.signal_configs['D'], num_steps, delta_t
+        )
+        E_signal = SignalGenerator.generate_from_config(
+            self.signal_configs['E'], num_steps, delta_t
+        )
+        C_cons_signal = SignalGenerator.generate_from_config(
+            self.signal_configs['C_cons'], num_steps, delta_t
+        )
+        C_disp_signal = SignalGenerator.generate_from_config(
+            self.signal_configs['C_disp'], num_steps, delta_t
+        )
+        
+        N = params['N_initial']
+        
+        results = {
+            't': [],
+            'N': [],
+            'I': [],
+            'B': [],
+            'S': [],
+            'Phi': [],
+        }
+        
+        for step in range(num_steps):
+            t = step * delta_t
+            
+            H = H_signal[step]
+            M = M_signal[step]
+            D = D_signal[step]
+            E = np.clip(E_signal[step], 0.0, 1.0)
+            C_cons = C_cons_signal[step]
+            C_disp = C_disp_signal[step]
+            
+            N_next, diagnostics = engine.step(N, H, M, D, E, C_cons, C_disp, delta_t)
+            
+            results['t'].append(t)
+            results['N'].append(N_next)
+            results['I'].append(diagnostics['I'])
+            results['B'].append(diagnostics['B'])
+            results['S'].append(diagnostics['S'])
+            results['Phi'].append(diagnostics['Phi'])
+            
+            N = N_next
+        
+        df = pd.DataFrame(results)
+        df['cumulative_I'] = np.cumsum(df['I']) * delta_t
+        df['cumulative_B'] = np.cumsum(df['B']) * delta_t
+        
+        return df
+    
+    def _calculate_stability_metrics(self, df: pd.DataFrame) -> Dict[str, float]:
+        """Calculate various stability metrics for a simulation run"""
+        N_values = df['N'].values
+        
+        metrics = {
+            'coefficient_of_variation': np.std(N_values) / (np.mean(N_values) + 1e-10),
+            'max_deviation': np.max(np.abs(N_values - np.mean(N_values))),
+            'oscillation_amplitude': (np.max(N_values) - np.min(N_values)) / 2.0,
+            'convergence_rate': self._estimate_convergence_rate(N_values),
+            'conservation_error': abs(df['cumulative_I'].iloc[-1] - df['cumulative_B'].iloc[-1]),
+            'final_N': N_values[-1],
+            'is_stable': self._assess_stability(N_values)
+        }
+        
+        return metrics
+    
+    def _estimate_convergence_rate(self, N_values: np.ndarray) -> float:
+        """Estimate how quickly the system converges to steady state"""
+        if len(N_values) < 100:
+            return 0.0
+        
+        second_half = N_values[len(N_values)//2:]
+        
+        std_second_half = np.std(second_half)
+        mean_second_half = np.mean(second_half)
+        
+        return std_second_half / (mean_second_half + 1e-10)
+    
+    def _assess_stability(self, N_values: np.ndarray) -> float:
+        """Binary stability assessment: 1.0 if stable, 0.0 if unstable"""
+        cv = np.std(N_values) / (np.mean(N_values) + 1e-10)
+        
+        has_nan_or_inf = np.any(np.isnan(N_values)) or np.any(np.isinf(N_values))
+        has_negative = np.any(N_values < 0)
+        high_volatility = cv > 1.0
+        
+        if has_nan_or_inf or has_negative or high_volatility:
+            return 0.0
+        else:
+            return 1.0
+    
+    def map_stability_region(
+        self,
+        param1_name: str,
+        param2_name: str,
+        param1_range: tuple,
+        param2_range: tuple,
+        resolution: int = 20
+    ) -> Dict:
+        """
+        Map stability across 2D parameter space
+        
+        Args:
+            param1_name: Name of first parameter to vary
+            param2_name: Name of second parameter to vary
+            param1_range: (min, max) for first parameter
+            param2_range: (min, max) for second parameter
+            resolution: Grid resolution (NxN grid)
+            
+        Returns:
+            Dict containing parameter grids and stability metrics
+        """
+        param1_values = np.linspace(param1_range[0], param1_range[1], resolution)
+        param2_values = np.linspace(param2_range[0], param2_range[1], resolution)
+        
+        stability_grid = np.zeros((resolution, resolution))
+        cv_grid = np.zeros((resolution, resolution))
+        final_N_grid = np.zeros((resolution, resolution))
+        conservation_grid = np.zeros((resolution, resolution))
+        
+        total_sims = resolution * resolution
+        completed = 0
+        
+        for i, p1_val in enumerate(param1_values):
+            for j, p2_val in enumerate(param2_values):
+                test_params = self.base_params.copy()
+                test_params[param1_name] = float(p1_val)
+                test_params[param2_name] = float(p2_val)
+                
+                try:
+                    df = self._run_single_simulation(test_params)
+                    metrics = self._calculate_stability_metrics(df)
+                    
+                    stability_grid[j, i] = metrics['is_stable']
+                    cv_grid[j, i] = metrics['coefficient_of_variation']
+                    final_N_grid[j, i] = metrics['final_N']
+                    conservation_grid[j, i] = metrics['conservation_error']
+                    
+                except Exception as e:
+                    stability_grid[j, i] = 0.0
+                    cv_grid[j, i] = np.nan
+                    final_N_grid[j, i] = np.nan
+                    conservation_grid[j, i] = np.nan
+                
+                completed += 1
+                
+                if completed % 20 == 0:
+                    print(f"Stability mapping progress: {completed}/{total_sims} ({100*completed/total_sims:.1f}%)")
+        
+        return {
+            'param1_name': param1_name,
+            'param2_name': param2_name,
+            'param1_values': param1_values,
+            'param2_values': param2_values,
+            'stability_grid': stability_grid,
+            'cv_grid': cv_grid,
+            'final_N_grid': final_N_grid,
+            'conservation_grid': conservation_grid,
+            'stable_fraction': np.mean(stability_grid),
+            'stable_param_combinations': self._identify_stable_regions(
+                param1_values, param2_values, stability_grid
+            )
+        }
+    
+    def _identify_stable_regions(
+        self,
+        param1_values: np.ndarray,
+        param2_values: np.ndarray,
+        stability_grid: np.ndarray
+    ) -> list:
+        """Identify parameter combinations that yield stable behavior"""
+        stable_combos = []
+        
+        for i in range(len(param1_values)):
+            for j in range(len(param2_values)):
+                if stability_grid[j, i] == 1.0:
+                    stable_combos.append({
+                        'param1': float(param1_values[i]),
+                        'param2': float(param2_values[j])
+                    })
+        
+        return stable_combos

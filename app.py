@@ -555,13 +555,15 @@ def render_advanced_analysis():
     
     analysis_type = st.selectbox(
         "Select Analysis Type",
-        ["Monte Carlo Simulation", "Sensitivity Analysis"]
+        ["Monte Carlo Simulation", "Sensitivity Analysis", "Stability Region Mapping"]
     )
     
     if analysis_type == "Monte Carlo Simulation":
         render_monte_carlo()
     elif analysis_type == "Sensitivity Analysis":
         render_sensitivity_analysis()
+    elif analysis_type == "Stability Region Mapping":
+        render_stability_mapping()
 
 def render_monte_carlo():
     st.subheader("Monte Carlo Simulation")
@@ -943,8 +945,197 @@ def render_sensitivity_analysis():
             fig.update_layout(height=600, showlegend=False)
             st.plotly_chart(fig, use_container_width=True)
 
+def render_stability_mapping():
+    st.subheader("Stability Region Mapping")
+    st.markdown("""
+    Explore 2D parameter space to identify regions of stable vs unstable system behavior.
+    Generates heatmaps showing which parameter combinations lead to stable operation.
+    """)
+    
+    from monte_carlo_analysis import StabilityMapper
+    
+    all_params = [
+        'alpha_base', 'alpha_H', 'alpha_M', 'alpha_D',
+        'beta_base', 'beta_E', 'beta_C',
+        'gamma_E', 'gamma_N', 'gamma_H', 'gamma_M',
+        'kappa', 'eta_floor', 'F_floor',
+        'Kp', 'Ki', 'Kd', 'N_target'
+    ]
+    
+    param_defaults = {
+        'alpha_base': 1.0,
+        'Kp': 0.1
+    }
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        param1 = st.selectbox("Parameter 1 (X-axis)", all_params, index=0)
+        param1_base = st.session_state.params.get(param1, param_defaults.get(param1, 1.0))
+        param1_min = st.number_input(
+            f"{param1} Min",
+            value=float(param1_base * 0.5),
+            format="%.4f"
+        )
+        param1_max = st.number_input(
+            f"{param1} Max",
+            value=float(param1_base * 1.5),
+            format="%.4f"
+        )
+    
+    with col2:
+        param2 = st.selectbox("Parameter 2 (Y-axis)", all_params, index=14)
+        param2_base = st.session_state.params.get(param2, param_defaults.get(param2, 0.1))
+        param2_min = st.number_input(
+            f"{param2} Min",
+            value=float(param2_base * 0.5),
+            format="%.4f"
+        )
+        param2_max = st.number_input(
+            f"{param2} Max",
+            value=float(param2_base * 1.5),
+            format="%.4f"
+        )
+    
+    resolution = st.slider("Grid Resolution", 10, 30, 15, help="Higher = more accurate but slower")
+    
+    if st.button("🗺️ Generate Stability Map", type="primary"):
+        if param1 == param2:
+            st.error("Please select different parameters for X and Y axes")
+        else:
+            with st.spinner(f"Mapping {resolution}x{resolution} parameter grid... This may take a few minutes."):
+                try:
+                    mapper = StabilityMapper(st.session_state.params, st.session_state.signal_configs)
+                    
+                    results = mapper.map_stability_region(
+                        param1,
+                        param2,
+                        (param1_min, param1_max),
+                        (param2_min, param2_max),
+                        resolution
+                    )
+                    
+                    st.session_state['stability_map_results'] = results
+                    st.success(f"Stability map complete! {results['stable_fraction']*100:.1f}% of parameter space is stable.")
+                    
+                except Exception as e:
+                    st.error(f"Stability mapping failed: {str(e)}")
+    
+    if 'stability_map_results' in st.session_state:
+        results = st.session_state['stability_map_results']
+        
+        st.divider()
+        st.subheader("Stability Map Results")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric(
+                "Stable Fraction",
+                f"{results['stable_fraction']*100:.1f}%"
+            )
+        
+        with col2:
+            st.metric(
+                "Stable Combinations",
+                f"{len(results['stable_param_combinations'])}/{resolution*resolution}"
+            )
+        
+        with col3:
+            avg_cv = np.nanmean(results['cv_grid'])
+            st.metric(
+                "Avg Coef. of Variation",
+                f"{avg_cv:.3f}"
+            )
+        
+        fig = make_subplots(
+            rows=2, cols=2,
+            subplot_titles=(
+                'Stability Map (Green=Stable)',
+                'Coefficient of Variation',
+                'Final Nexus State',
+                'Conservation Error'
+            )
+        )
+        
+        fig.add_trace(
+            go.Heatmap(
+                x=results['param1_values'],
+                y=results['param2_values'],
+                z=results['stability_grid'],
+                colorscale=[[0, 'red'], [1, 'green']],
+                showscale=True,
+                colorbar=dict(x=0.46, len=0.4, y=0.75)
+            ),
+            row=1, col=1
+        )
+        
+        fig.add_trace(
+            go.Heatmap(
+                x=results['param1_values'],
+                y=results['param2_values'],
+                z=results['cv_grid'],
+                colorscale='Viridis',
+                showscale=True,
+                colorbar=dict(x=1.02, len=0.4, y=0.75)
+            ),
+            row=1, col=2
+        )
+        
+        fig.add_trace(
+            go.Heatmap(
+                x=results['param1_values'],
+                y=results['param2_values'],
+                z=results['final_N_grid'],
+                colorscale='RdYlBu',
+                showscale=True,
+                colorbar=dict(x=0.46, len=0.4, y=0.25)
+            ),
+            row=2, col=1
+        )
+        
+        fig.add_trace(
+            go.Heatmap(
+                x=results['param1_values'],
+                y=results['param2_values'],
+                z=results['conservation_grid'],
+                colorscale='Hot',
+                showscale=True,
+                colorbar=dict(x=1.02, len=0.4, y=0.25)
+            ),
+            row=2, col=2
+        )
+        
+        fig.update_xaxes(title_text=results['param1_name'], row=1, col=1)
+        fig.update_xaxes(title_text=results['param1_name'], row=1, col=2)
+        fig.update_xaxes(title_text=results['param1_name'], row=2, col=1)
+        fig.update_xaxes(title_text=results['param1_name'], row=2, col=2)
+        
+        fig.update_yaxes(title_text=results['param2_name'], row=1, col=1)
+        fig.update_yaxes(title_text=results['param2_name'], row=1, col=2)
+        fig.update_yaxes(title_text=results['param2_name'], row=2, col=1)
+        fig.update_yaxes(title_text=results['param2_name'], row=2, col=2)
+        
+        fig.update_layout(height=800)
+        st.plotly_chart(fig, use_container_width=True)
+        
+        with st.expander("📊 Stable Parameter Combinations"):
+            if len(results['stable_param_combinations']) > 0:
+                st.dataframe(
+                    pd.DataFrame(results['stable_param_combinations']),
+                    use_container_width=True
+                )
+            else:
+                st.warning("No stable parameter combinations found in this region.")
+
 def render_scenarios():
     st.header("Scenario Management")
+    
+    session = get_session()
+    if session is None:
+        st.error("⚠️ Database connection unavailable. Scenario management requires database access.")
+        st.info("The database may be temporarily unavailable. Please try refreshing the page or contact support if this persists.")
+        return
     
     col1, col2 = st.columns([2, 1])
     
