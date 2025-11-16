@@ -16,4 +16,5 @@ dependencies = [
     "scipy>=1.16.3",
     "sqlalchemy>=2.0.44",
     "streamlit>=1.51.0",
+    "streamlit-autorefresh>=1.0.1",
 ]

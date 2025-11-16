@@ -140,6 +140,48 @@ class Session(Base):
     user_agent = Column(String(500), nullable=True)
     last_seen = Column(DateTime, default=datetime.utcnow, nullable=False)
 
+class MonitoringSnapshot(Base):
+    __tablename__ = 'monitoring_snapshots'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    captured_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    metrics = Column(JSON, nullable=False)
+    source_latency = Column(JSON, nullable=True)
+    created_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+    
+class AlertRule(Base):
+    __tablename__ = 'alert_rules'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    metric_key = Column(String(100), nullable=False)
+    comparator = Column(String(20), nullable=False)
+    threshold = Column(Float, nullable=False)
+    evaluation_window = Column(Integer, nullable=True)
+    severity = Column(String(20), default='warning', nullable=False)
+    channels = Column(JSON, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    last_evaluated_at = Column(DateTime, nullable=True)
+    created_by = Column(Integer, ForeignKey('users.id'), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    alert_events = relationship("AlertEvent", back_populates="rule", cascade="all, delete-orphan")
+
+class AlertEvent(Base):
+    __tablename__ = 'alert_events'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    rule_id = Column(Integer, ForeignKey('alert_rules.id', ondelete='CASCADE'), nullable=False)
+    triggered_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    resolved_at = Column(DateTime, nullable=True)
+    status = Column(String(20), default='active', nullable=False)
+    payload = Column(JSON, nullable=True)
+    acknowledged_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+    acknowledged_at = Column(DateTime, nullable=True)
+    
+    rule = relationship("AlertRule", back_populates="alert_events")
+
 def get_engine():
     database_url = os.getenv('DATABASE_URL')
     if not database_url:
