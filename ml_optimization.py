@@ -42,9 +42,9 @@ class ObjectiveEvaluator:
         if len(results_df) == 0:
             return float('inf')
         
-        N_values = results_df['N'].values
-        mean_N = np.mean(N_values)
-        std_N = np.std(N_values)
+        N_values = np.array(results_df['N'].values, dtype=float)
+        mean_N = float(np.mean(N_values))
+        std_N = float(np.std(N_values))
         
         if mean_N == 0:
             return float('inf')
@@ -57,8 +57,8 @@ class ObjectiveEvaluator:
         if len(results_df) == 0:
             return float('inf')
         
-        total_issuance = np.sum(results_df['I'].values)
-        total_burn = np.sum(results_df['B'].values)
+        total_issuance = float(np.sum(np.array(results_df['I'].values, dtype=float)))
+        total_burn = float(np.sum(np.array(results_df['B'].values, dtype=float)))
         
         error = abs(total_issuance - total_burn)
         total = max(abs(total_issuance) + abs(total_burn), 1.0)
@@ -205,20 +205,29 @@ class BayesianOptimizer:
             verbose=False
         )
         
+        if result is None or not hasattr(result, 'x'):
+            return {
+                'best_params': self.best_params or {},
+                'best_score': self.best_score,
+                'n_iterations': len(self.iteration_history),
+                'convergence_history': [h['score'] for h in self.iteration_history],
+                'all_params': [h['params'] for h in self.iteration_history]
+            }
+        
         best_params_dict = {
-            param: result.x[i] 
+            param: float(result.x[i]) 
             for i, param in enumerate(self.parameter_names)
         }
         
         return {
             'best_params': best_params_dict,
-            'best_score': result.fun,
-            'n_iterations': len(result.func_vals),
-            'convergence_history': result.func_vals.tolist(),
+            'best_score': float(result.fun),
+            'n_iterations': len(result.func_vals) if hasattr(result, 'func_vals') else 0,
+            'convergence_history': result.func_vals.tolist() if hasattr(result, 'func_vals') else [],
             'all_params': [
-                {param: result.x_iters[i][j] for j, param in enumerate(self.parameter_names)}
+                {param: float(result.x_iters[i][j]) for j, param in enumerate(self.parameter_names)}
                 for i in range(len(result.x_iters))
-            ]
+            ] if hasattr(result, 'x_iters') else []
         }
 
 

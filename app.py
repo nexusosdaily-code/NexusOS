@@ -533,7 +533,7 @@ def main():
     with issuance/burn mechanics, feedback control, and conservation constraints.
     """)
     
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
         "📊 Dashboard", 
         "⚙️ Parameter Control", 
         "📈 Simulation", 
@@ -541,6 +541,7 @@ def main():
         "🌐 Multi-Agent",
         "📜 Smart Contracts",
         "🔗 Oracles",
+        "🤖 ML Optimization",
         "💾 Scenarios"
     ])
     
@@ -566,6 +567,9 @@ def main():
         render_oracles()
     
     with tab8:
+        render_ml_optimization()
+    
+    with tab9:
         render_scenarios()
 
 def render_dashboard():
@@ -1788,6 +1792,297 @@ def render_oracles():
         - Use static or mock oracles for reproducible experiments
         - Monitor oracle errors and connection status
         - Implement fallback strategies for production deployments
+        """)
+
+def render_ml_optimization():
+    st.header("ML-Based Parameter Optimization")
+    
+    st.markdown("""
+    Automatically find optimal parameter configurations using **Bayesian Optimization** - 
+    an intelligent search algorithm that learns from each simulation to explore the parameter space efficiently.
+    """)
+    
+    from ml_optimization import BayesianOptimizer, PARAMETER_SPACE, HistoricalAnalyzer
+    from database import OptimizationRun, OptimizationIteration
+    
+    st.divider()
+    
+    st.subheader("1️⃣ Select Optimization Objective")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        objective_type = st.selectbox(
+            "Objective Function",
+            options=['stability', 'conservation', 'growth', 'stability_and_growth', 'custom'],
+            format_func=lambda x: {
+                'stability': '📊 Stability - Minimize volatility in N(t)',
+                'conservation': '⚖️ Conservation - Minimize issuance/burn error',
+                'growth': '📈 Growth - Maximize long-term N value',
+                'stability_and_growth': '🎯 Balanced - Stability + Growth',
+                'custom': '🎨 Custom - Weighted combination'
+            }[x],
+            help="Choose what aspect of the system to optimize"
+        )
+    
+    objective_weights = {}
+    if objective_type == 'custom':
+        st.markdown("**Custom Objective Weights** (must sum to ~1.0)")
+        col_a, col_b, col_c = st.columns(3)
+        with col_a:
+            objective_weights['stability'] = st.slider("Stability", 0.0, 1.0, 0.4, 0.05)
+        with col_b:
+            objective_weights['conservation'] = st.slider("Conservation", 0.0, 1.0, 0.3, 0.05)
+        with col_c:
+            objective_weights['growth'] = st.slider("Growth", 0.0, 1.0, 0.3, 0.05)
+        
+        total_weight = sum(objective_weights.values())
+        if abs(total_weight - 1.0) > 0.1:
+            st.warning(f"⚠️ Weights sum to {total_weight:.2f}, recommended to be close to 1.0")
+    
+    st.divider()
+    
+    st.subheader("2️⃣ Select Parameters to Optimize")
+    
+    st.markdown("Choose which parameters the algorithm should tune (others will be fixed):")
+    
+    categories = {
+        'Core Rates': ['alpha', 'beta', 'kappa', 'eta'],
+        'System Health Weights': ['w_H', 'w_M', 'w_D', 'w_E'],
+        'Burn Coefficients': ['gamma_C', 'gamma_D', 'gamma_E'],
+        'PID Controller': ['K_p', 'K_i', 'K_d'],
+        'Issuance Multipliers': ['lambda_E', 'lambda_N', 'lambda_H', 'lambda_M'],
+        'Targets': ['N_target', 'F_floor']
+    }
+    
+    selected_params = []
+    
+    for category, params in categories.items():
+        with st.expander(f"**{category}** ({len(params)} parameters)"):
+            cols = st.columns(2)
+            for idx, param in enumerate(params):
+                with cols[idx % 2]:
+                    if st.checkbox(
+                        f"{param} - {PARAMETER_SPACE[param]['description']}", 
+                        value=(category == 'PID Controller'),
+                        key=f"opt_param_{param}"
+                    ):
+                        selected_params.append(param)
+    
+    if not selected_params:
+        st.warning("⚠️ Please select at least one parameter to optimize")
+        return
+    
+    st.success(f"✅ {len(selected_params)} parameters selected for optimization")
+    
+    st.divider()
+    
+    st.subheader("3️⃣ Optimization Settings")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        n_iterations = st.number_input(
+            "Number of Iterations",
+            min_value=10,
+            max_value=200,
+            value=50,
+            step=10,
+            help="More iterations = better results but slower"
+        )
+    
+    with col2:
+        use_warm_start = st.checkbox(
+            "Warm Start from History",
+            value=True,
+            help="Initialize optimization with best historical runs"
+        )
+    
+    with col3:
+        warm_start_count = st.number_input(
+            "Historical Runs to Use",
+            min_value=1,
+            max_value=20,
+            value=5,
+            disabled=not use_warm_start
+        )
+    
+    st.divider()
+    
+    st.subheader("4️⃣ Run Optimization")
+    
+    optimization_name = st.text_input(
+        "Optimization Run Name",
+        value=f"Optimization_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+        help="Name for this optimization run"
+    )
+    
+    if st.button("🚀 Start Optimization", type="primary", use_container_width=True):
+        with st.spinner(f"Running Bayesian Optimization ({n_iterations} iterations)..."):
+            
+            def simulation_wrapper(params_to_test):
+                full_params = st.session_state.params.copy()
+                full_params.update(params_to_test)
+                
+                results_df = run_simulation(
+                    full_params,
+                    st.session_state.signal_configs,
+                    oracle_manager=None,
+                    use_oracle_data=False
+                )
+                return results_df
+            
+            warm_start_data = None
+            if use_warm_start:
+                session = get_session()
+                if session:
+                    warm_start_data = HistoricalAnalyzer.get_best_runs_from_db(
+                        session, 
+                        objective_type, 
+                        top_n=warm_start_count
+                    )
+                    if warm_start_data:
+                        st.info(f"📚 Loaded {len(warm_start_data)} historical runs for warm-starting")
+            
+            optimizer = BayesianOptimizer(
+                simulation_func=simulation_wrapper,
+                parameter_names=selected_params,
+                objective_type=objective_type,
+                objective_weights=objective_weights,
+                n_iterations=n_iterations,
+                warm_start_data=warm_start_data
+            )
+            
+            fixed_params = {k: v for k, v in st.session_state.params.items() 
+                           if k not in selected_params}
+            
+            result = optimizer.optimize(fixed_params)
+            
+            st.success(f"✅ Optimization complete! Best score: {result['best_score']:.6f}")
+            
+            session = get_session()
+            if session:
+                try:
+                    opt_run = OptimizationRun(
+                        name=optimization_name,
+                        objective_type=objective_type,
+                        objective_weights=objective_weights,
+                        parameters_optimized=selected_params,
+                        parameter_bounds={p: PARAMETER_SPACE[p]['bounds'] for p in selected_params},
+                        n_iterations=n_iterations,
+                        best_params=result['best_params'],
+                        best_score=result['best_score'],
+                        convergence_history=result['convergence_history'],
+                        completed_at=datetime.now()
+                    )
+                    session.add(opt_run)
+                    session.commit()
+                    
+                    st.session_state.latest_optimization = result
+                    st.session_state.latest_optimization_name = optimization_name
+                    
+                    st.success("💾 Optimization results saved to database")
+                except Exception as e:
+                    st.warning(f"Could not save to database: {e}")
+            
+            st.session_state.latest_optimization = result
+    
+    if 'latest_optimization' in st.session_state:
+        st.divider()
+        st.subheader("📊 Optimization Results")
+        
+        result = st.session_state.latest_optimization
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### Best Parameters Found")
+            best_params_df = pd.DataFrame([
+                {"Parameter": k, "Optimal Value": f"{v:.6f}", 
+                 "Description": PARAMETER_SPACE[k]['description']}
+                for k, v in result['best_params'].items()
+            ])
+            st.dataframe(best_params_df, use_container_width=True)
+            
+            if st.button("📥 Apply Best Parameters"):
+                st.session_state.params.update(result['best_params'])
+                st.success("✅ Parameters applied! Go to Simulation tab to run with optimized settings.")
+                st.rerun()
+        
+        with col2:
+            st.markdown("### Optimization Metrics")
+            st.metric("Best Score Achieved", f"{result['best_score']:.6f}")
+            st.metric("Iterations Completed", result['n_iterations'])
+            
+            if 'convergence_history' in result and result['convergence_history']:
+                improvement = result['convergence_history'][0] - result['best_score']
+                st.metric("Total Improvement", f"{improvement:.6f}")
+        
+        if 'convergence_history' in result and result['convergence_history']:
+            st.markdown("### Convergence Plot")
+            
+            fig = go.Figure()
+            
+            fig.add_trace(go.Scatter(
+                x=list(range(len(result['convergence_history']))),
+                y=result['convergence_history'],
+                mode='lines+markers',
+                name='Objective Value',
+                line=dict(color='#1f77b4')
+            ))
+            
+            best_so_far = []
+            current_best = float('inf')
+            for val in result['convergence_history']:
+                current_best = min(current_best, val)
+                best_so_far.append(current_best)
+            
+            fig.add_trace(go.Scatter(
+                x=list(range(len(best_so_far))),
+                y=best_so_far,
+                mode='lines',
+                name='Best So Far',
+                line=dict(color='#ff7f0e', dash='dash')
+            ))
+            
+            fig.update_layout(
+                title="Optimization Convergence",
+                xaxis_title="Iteration",
+                yaxis_title="Objective Value (lower is better)",
+                height=400,
+                hovermode='x unified'
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+    
+    st.divider()
+    
+    with st.expander("📖 About ML Optimization"):
+        st.markdown("""
+        ### How It Works
+        
+        **Bayesian Optimization** uses a probabilistic model (Gaussian Process) to intelligently search 
+        the parameter space. Unlike random or grid search, it:
+        
+        1. **Learns from each trial** - Builds a model of which parameters lead to good results
+        2. **Balances exploration vs exploitation** - Tries new areas while refining promising regions
+        3. **Efficient for expensive evaluations** - Finds good solutions with fewer simulations
+        
+        ### Objective Functions
+        
+        - **Stability**: Minimizes coefficient of variation in N(t) - good for steady-state systems
+        - **Conservation**: Minimizes error between total issuance and burn - ensures balance
+        - **Growth**: Maximizes final N value - good for growth-oriented configurations
+        - **Balanced**: Weighted combination of stability and growth
+        - **Custom**: Define your own weights for multi-objective optimization
+        
+        ### Tips for Best Results
+        
+        - Start with 50-100 iterations for good coverage
+        - Enable warm-start to leverage historical knowledge
+        - Optimize fewer parameters (3-5) first, then add more
+        - Review convergence plot - should show improvement over time
+        - Run multiple optimizations with different objectives to explore trade-offs
         """)
 
 def render_scenarios():
