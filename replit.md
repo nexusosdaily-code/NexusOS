@@ -33,10 +33,13 @@ The application uses Streamlit for a single-page, wide-layout dashboard with an 
 
 **User Authentication & Role-Based Access Control**: Implements user accounts, roles (admin, researcher, viewer), and session-based authentication using bcrypt for password hashing and SHA-256 for session tokens. An admin UI allows user management.
 
+**Real-time Production Dashboard**: A comprehensive monitoring dashboard with auto-refresh capability (5-60 second intervals using streamlit-autorefresh). Features live KPI tiles tracking Latest Nexus State, Average Issuance/Burn, Conservation Error, and Active Alerts. System health monitoring displays database connectivity (with ping time), simulation counts, and oracle source status. Intelligent alerting system with configurable rules (metric thresholds, comparators, severity levels) and event management (acknowledge/resolve workflows). Alert configuration is role-gated (admin/researcher only). DashboardDataService aggregates metrics from SimulationRun table and oracle feeds. AlertService evaluates rules in real-time and triggers in-app notifications via st.toast. Database schema includes monitoring_snapshots, alert_rules, and alert_events tables for persistence.
+
 ### External Dependencies
 
 #### Core Libraries
 - **Streamlit**: Web application framework
+- **streamlit-autorefresh**: Auto-refresh component for real-time dashboard updates
 - **NumPy**: Numerical computing
 - **Pandas**: Data manipulation
 - **Plotly**: Interactive visualizations
@@ -44,6 +47,7 @@ The application uses Streamlit for a single-page, wide-layout dashboard with an 
 - **NetworkX**: Network analysis for multi-agent topologies
 - **SciPy**: Scientific computing
 - **scikit-optimize**: Bayesian optimization
+- **bcrypt**: Password hashing for authentication
 
 #### Database
 - **PostgreSQL**: Production-ready persistence for scenarios and simulation runs. Configured via `DATABASE_URL` environment variable.
