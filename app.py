@@ -11,6 +11,7 @@ from nexus_engine import NexusEngine
 from signal_generators import SignalGenerator, get_default_signal_configs
 from monte_carlo_analysis import MonteCarloAnalysis, SensitivityAnalysis
 from oracle_sources import OracleManager, get_default_oracle_configs
+from auth import AuthManager
 
 st.set_page_config(
     page_title="NexusOS",
@@ -525,7 +526,15 @@ ink-as-dependency = []
 
 def main():
     init_db()
+    AuthManager.initialize()
+    
+    if not AuthManager.is_authenticated():
+        AuthManager.render_login()
+        return
+    
     init_session_state()
+    
+    AuthManager.render_logout()
     
     st.title("🔄 NexusOS - Foundational Economic System Simulator")
     st.markdown("""
@@ -533,7 +542,7 @@ def main():
     with issuance/burn mechanics, feedback control, and conservation constraints.
     """)
     
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
+    tab_list = [
         "📊 Dashboard", 
         "⚙️ Parameter Control", 
         "📈 Simulation", 
@@ -543,34 +552,54 @@ def main():
         "🔗 Oracles",
         "🤖 ML Optimization",
         "💾 Scenarios"
-    ])
+    ]
     
-    with tab1:
+    if AuthManager.has_role('admin'):
+        tab_list.append("👥 Admin")
+    
+    tabs = st.tabs(tab_list)
+    
+    tab_index = 0
+    
+    with tabs[tab_index]:
         render_dashboard()
+    tab_index += 1
     
-    with tab2:
+    with tabs[tab_index]:
         render_parameter_control()
+    tab_index += 1
     
-    with tab3:
+    with tabs[tab_index]:
         render_simulation()
+    tab_index += 1
     
-    with tab4:
+    with tabs[tab_index]:
         render_advanced_analysis()
+    tab_index += 1
     
-    with tab5:
+    with tabs[tab_index]:
         render_multi_agent()
+    tab_index += 1
     
-    with tab6:
+    with tabs[tab_index]:
         render_smart_contracts()
+    tab_index += 1
     
-    with tab7:
+    with tabs[tab_index]:
         render_oracles()
+    tab_index += 1
     
-    with tab8:
+    with tabs[tab_index]:
         render_ml_optimization()
+    tab_index += 1
     
-    with tab9:
+    with tabs[tab_index]:
         render_scenarios()
+    tab_index += 1
+    
+    if AuthManager.has_role('admin'):
+        with tabs[tab_index]:
+            render_admin()
 
 def render_dashboard():
     st.header("System Overview")
@@ -2084,6 +2113,156 @@ def render_ml_optimization():
         - Review convergence plot - should show improvement over time
         - Run multiple optimizations with different objectives to explore trade-offs
         """)
+
+def render_admin():
+    """Admin-only user management interface."""
+    from database import User, Role, UserRole, get_engine
+    from auth import create_user, get_user_roles, hash_password
+    from sqlalchemy.orm import sessionmaker
+    
+    if not AuthManager.require_role('admin'):
+        return
+    
+    st.header("👥 User Management")
+    st.markdown("Manage system users and their roles")
+    
+    st.divider()
+    
+    col1, col2 = st.columns([2, 3])
+    
+    with col1:
+        st.subheader("Create New User")
+        
+        with st.form("create_user_form"):
+            new_email = st.text_input("Email", placeholder="user@example.com")
+            new_password = st.text_input("Temporary Password", type="password", help="User should change this on first login")
+            
+            st.markdown("**Assign Roles:**")
+            role_admin = st.checkbox("Admin - Full system access")
+            role_researcher = st.checkbox("Researcher - Can create/run simulations", value=True)
+            role_viewer = st.checkbox("Viewer - Read-only access")
+            
+            submit_create = st.form_submit_button("➕ Create User", use_container_width=True)
+            
+            if submit_create:
+                if not new_email or not new_password:
+                    st.error("Email and password are required")
+                elif len(new_password) < 8:
+                    st.error("Password must be at least 8 characters")
+                else:
+                    roles = []
+                    if role_admin:
+                        roles.append('admin')
+                    if role_researcher:
+                        roles.append('researcher')
+                    if role_viewer:
+                        roles.append('viewer')
+                    
+                    if not roles:
+                        st.error("Please select at least one role")
+                    else:
+                        engine = get_engine()
+                        SessionLocal = sessionmaker(bind=engine)
+                        db = SessionLocal()
+                        
+                        try:
+                            user = create_user(db, new_email, new_password, roles)
+                            if user:
+                                st.success(f"✅ User '{new_email}' created successfully with roles: {', '.join(roles)}")
+                            else:
+                                st.error("User with this email already exists")
+                        except Exception as e:
+                            st.error(f"Error creating user: {e}")
+                        finally:
+                            db.close()
+    
+    with col2:
+        st.subheader("Existing Users")
+        
+        engine = get_engine()
+        SessionLocal = sessionmaker(bind=engine)
+        db = SessionLocal()
+        
+        try:
+            users = db.query(User).order_by(User.created_at.desc()).all()
+            
+            if users:
+                for user in users:
+                    with st.expander(f"👤 {user.email} {'✅' if user.is_active else '❌'}"):
+                        st.write(f"**ID:** {user.id}")
+                        st.write(f"**Created:** {user.created_at.strftime('%Y-%m-%d %H:%M')}")
+                        if user.last_login:
+                            st.write(f"**Last Login:** {user.last_login.strftime('%Y-%m-%d %H:%M')}")
+                        else:
+                            st.write("**Last Login:** Never")
+                        
+                        user_roles = get_user_roles(db, user)
+                        st.write(f"**Roles:** {', '.join(user_roles) if user_roles else 'None'}")
+                        
+                        col_a, col_b, col_c = st.columns(3)
+                        
+                        with col_a:
+                            if user.is_active:
+                                if st.button(f"🚫 Deactivate", key=f"deact_{user.id}"):
+                                    user.is_active = False
+                                    db.commit()
+                                    st.success("User deactivated")
+                                    st.rerun()
+                            else:
+                                if st.button(f"✅ Activate", key=f"act_{user.id}"):
+                                    user.is_active = True
+                                    db.commit()
+                                    st.success("User activated")
+                                    st.rerun()
+                        
+                        with col_b:
+                            if st.button(f"🔑 Reset Password", key=f"reset_{user.id}"):
+                                st.info("Password reset feature - provide new temporary password")
+                        
+                        with col_c:
+                            if st.button(f"🗑️ Delete", key=f"del_{user.id}"):
+                                if user.email == st.session_state.current_user.email:
+                                    st.error("Cannot delete your own account")
+                                else:
+                                    db.delete(user)
+                                    db.commit()
+                                    st.success("User deleted")
+                                    st.rerun()
+            else:
+                st.info("No users yet")
+        
+        except Exception as e:
+            st.error(f"Error loading users: {e}")
+        finally:
+            db.close()
+    
+    st.divider()
+    
+    st.subheader("📊 System Statistics")
+    
+    engine = get_engine()
+    SessionLocal = sessionmaker(bind=engine)
+    db = SessionLocal()
+    
+    try:
+        total_users = db.query(User).count()
+        active_users = db.query(User).filter(User.is_active == True).count()
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Total Users", total_users)
+        
+        with col2:
+            st.metric("Active Users", active_users)
+        
+        with col3:
+            st.metric("Inactive Users", total_users - active_users)
+    
+    except Exception as e:
+        st.error(f"Error loading statistics: {e}")
+    finally:
+        db.close()
 
 def render_scenarios():
     st.header("Scenario Management")
