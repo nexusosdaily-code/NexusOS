@@ -9,6 +9,7 @@ from datetime import datetime
 from database import init_db, get_session, SimulationConfig, SimulationRun
 from nexus_engine import NexusEngine
 from signal_generators import SignalGenerator, get_default_signal_configs
+from monte_carlo_analysis import MonteCarloAnalysis, SensitivityAnalysis
 
 st.set_page_config(
     page_title="NexusOS",
@@ -132,10 +133,11 @@ def main():
     with issuance/burn mechanics, feedback control, and conservation constraints.
     """)
     
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📊 Dashboard", 
         "⚙️ Parameter Control", 
         "📈 Simulation", 
+        "🔬 Advanced Analysis",
         "💾 Scenarios"
     ])
     
@@ -149,6 +151,9 @@ def main():
         render_simulation()
     
     with tab4:
+        render_advanced_analysis()
+    
+    with tab5:
         render_scenarios()
 
 def render_dashboard():
@@ -544,6 +549,399 @@ def render_simulation():
         
         fig.update_layout(height=500, showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
+
+def render_advanced_analysis():
+    st.header("Advanced Analysis Tools")
+    
+    analysis_type = st.selectbox(
+        "Select Analysis Type",
+        ["Monte Carlo Simulation", "Sensitivity Analysis"]
+    )
+    
+    if analysis_type == "Monte Carlo Simulation":
+        render_monte_carlo()
+    elif analysis_type == "Sensitivity Analysis":
+        render_sensitivity_analysis()
+
+def render_monte_carlo():
+    st.subheader("Monte Carlo Simulation")
+    st.markdown("""
+    Run multiple simulations with parameter variations to understand the statistical 
+    distribution of outcomes and assess system robustness under uncertainty.
+    """)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        num_runs = st.slider("Number of Monte Carlo Runs", 10, 500, 100, 10)
+        seed = st.number_input("Random Seed", value=42, min_value=0)
+    
+    with col2:
+        st.markdown("**Select Parameters to Vary**")
+        vary_alpha = st.checkbox("Issuance Gain (α)", value=True)
+        vary_beta = st.checkbox("Burn Gain (β)", value=True)
+        vary_kp = st.checkbox("PID Proportional (K_p)", value=False)
+        vary_ki = st.checkbox("PID Integral (K_i)", value=False)
+    
+    st.subheader("Parameter Variation Settings")
+    
+    param_variations = {}
+    
+    if vary_alpha:
+        col1, col2 = st.columns(2)
+        with col1:
+            alpha_mean = st.number_input("α Mean", value=st.session_state.params['alpha'], min_value=0.0, step=0.1)
+        with col2:
+            alpha_std = st.number_input("α Std Dev", value=0.2, min_value=0.0, step=0.05)
+        param_variations['alpha'] = (alpha_mean, alpha_std)
+    
+    if vary_beta:
+        col1, col2 = st.columns(2)
+        with col1:
+            beta_mean = st.number_input("β Mean", value=st.session_state.params['beta'], min_value=0.0, step=0.1)
+        with col2:
+            beta_std = st.number_input("β Std Dev", value=0.2, min_value=0.0, step=0.05)
+        param_variations['beta'] = (beta_mean, beta_std)
+    
+    if vary_kp:
+        col1, col2 = st.columns(2)
+        with col1:
+            kp_mean = st.number_input("K_p Mean", value=st.session_state.params['K_p'], min_value=0.0, step=0.01)
+        with col2:
+            kp_std = st.number_input("K_p Std Dev", value=0.02, min_value=0.0, step=0.005)
+        param_variations['K_p'] = (kp_mean, kp_std)
+    
+    if vary_ki:
+        col1, col2 = st.columns(2)
+        with col1:
+            ki_mean = st.number_input("K_i Mean", value=st.session_state.params['K_i'], min_value=0.0, step=0.001, format="%.4f")
+        with col2:
+            ki_std = st.number_input("K_i Std Dev", value=0.002, min_value=0.0, step=0.0005, format="%.4f")
+        param_variations['K_i'] = (ki_mean, ki_std)
+    
+    if st.button("▶️ Run Monte Carlo Analysis", type="primary"):
+        if not param_variations:
+            st.warning("Please select at least one parameter to vary")
+        else:
+            with st.spinner(f"Running {num_runs} Monte Carlo simulations..."):
+                mc_analyzer = MonteCarloAnalysis(st.session_state.params, st.session_state.signal_configs)
+                mc_results = mc_analyzer.run_monte_carlo(param_variations, num_runs, int(seed))
+                
+                st.session_state['mc_results'] = mc_results
+                
+                st.success(f"✅ Completed {mc_results['num_successful_runs']} successful runs!")
+    
+    if 'mc_results' in st.session_state:
+        mc_results = st.session_state['mc_results']
+        stats = mc_results['statistics']
+        
+        st.divider()
+        st.subheader("Monte Carlo Results")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric(
+                "Mean Final N",
+                f"{stats['final_N']['mean']:.2f}",
+                f"±{stats['final_N']['std']:.2f}"
+            )
+        
+        with col2:
+            st.metric(
+                "95% CI Range",
+                f"[{stats['final_N']['ci_lower']:.0f}, {stats['final_N']['ci_upper']:.0f}]"
+            )
+        
+        with col3:
+            st.metric(
+                "Mean Issuance",
+                f"{stats['avg_issuance']['mean']:.2f}",
+                f"±{stats['avg_issuance']['std']:.2f}"
+            )
+        
+        with col4:
+            st.metric(
+                "Mean Burn",
+                f"{stats['avg_burn']['mean']:.2f}",
+                f"±{stats['avg_burn']['std']:.2f}"
+            )
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Final N Distribution")
+            fig_hist = go.Figure()
+            fig_hist.add_trace(go.Histogram(
+                x=mc_results['raw_results']['final_N'],
+                nbinsx=30,
+                name='Final N',
+                marker_color='steelblue'
+            ))
+            fig_hist.add_vline(
+                x=stats['final_N']['mean'],
+                line_dash="dash",
+                line_color="red",
+                annotation_text="Mean"
+            )
+            fig_hist.add_vline(
+                x=stats['final_N']['ci_lower'],
+                line_dash="dot",
+                line_color="orange",
+                annotation_text="95% CI"
+            )
+            fig_hist.add_vline(
+                x=stats['final_N']['ci_upper'],
+                line_dash="dot",
+                line_color="orange"
+            )
+            fig_hist.update_layout(
+                xaxis_title="Final Nexus State",
+                yaxis_title="Frequency",
+                height=400
+            )
+            st.plotly_chart(fig_hist, use_container_width=True)
+        
+        with col2:
+            st.subheader("Conservation Error Distribution")
+            fig_cons = go.Figure()
+            fig_cons.add_trace(go.Histogram(
+                x=mc_results['raw_results']['conservation_error'],
+                nbinsx=30,
+                name='Conservation Error',
+                marker_color='purple'
+            ))
+            fig_cons.add_vline(
+                x=stats['conservation_error']['mean'],
+                line_dash="dash",
+                line_color="red",
+                annotation_text="Mean"
+            )
+            fig_cons.update_layout(
+                xaxis_title="Conservation Error",
+                yaxis_title="Frequency",
+                height=400
+            )
+            st.plotly_chart(fig_cons, use_container_width=True)
+        
+        st.subheader("Issuance vs Burn Scatter")
+        fig_scatter = go.Figure()
+        fig_scatter.add_trace(go.Scatter(
+            x=mc_results['raw_results']['avg_issuance'],
+            y=mc_results['raw_results']['avg_burn'],
+            mode='markers',
+            marker=dict(
+                color=mc_results['raw_results']['final_N'],
+                colorscale='Viridis',
+                size=8,
+                colorbar=dict(title="Final N"),
+                showscale=True
+            ),
+            text=[f"Run {i+1}" for i in range(len(mc_results['raw_results']['avg_issuance']))],
+            hovertemplate='<b>%{text}</b><br>Avg I: %{x:.2f}<br>Avg B: %{y:.2f}<br>Final N: %{marker.color:.2f}<extra></extra>'
+        ))
+        fig_scatter.add_trace(go.Scatter(
+            x=[min(mc_results['raw_results']['avg_issuance']), max(mc_results['raw_results']['avg_issuance'])],
+            y=[min(mc_results['raw_results']['avg_issuance']), max(mc_results['raw_results']['avg_issuance'])],
+            mode='lines',
+            line=dict(dash='dash', color='red'),
+            name='I = B (perfect conservation)'
+        ))
+        fig_scatter.update_layout(
+            xaxis_title="Average Issuance",
+            yaxis_title="Average Burn",
+            height=500
+        )
+        st.plotly_chart(fig_scatter, use_container_width=True)
+        
+        if len(mc_results['param_variations']) > 0:
+            st.subheader("Parameter Variation vs Outcomes")
+            
+            for param_name in mc_results['param_variations'].keys():
+                param_values = [p.get(param_name, None) for p in mc_results['raw_results']['params_used']]
+                
+                if not any(param_values):
+                    continue
+                
+                fig_param = make_subplots(
+                    rows=1, cols=3,
+                    subplot_titles=(
+                        f'{param_name} vs Final N',
+                        f'{param_name} vs Avg Issuance',
+                        f'{param_name} vs Conservation Error'
+                    )
+                )
+                
+                fig_param.add_trace(
+                    go.Scatter(
+                        x=param_values,
+                        y=mc_results['raw_results']['final_N'],
+                        mode='markers',
+                        marker=dict(size=8, color='steelblue'),
+                        name='Final N'
+                    ),
+                    row=1, col=1
+                )
+                
+                fig_param.add_trace(
+                    go.Scatter(
+                        x=param_values,
+                        y=mc_results['raw_results']['avg_issuance'],
+                        mode='markers',
+                        marker=dict(size=8, color='green'),
+                        name='Avg I'
+                    ),
+                    row=1, col=2
+                )
+                
+                fig_param.add_trace(
+                    go.Scatter(
+                        x=param_values,
+                        y=mc_results['raw_results']['conservation_error'],
+                        mode='markers',
+                        marker=dict(size=8, color='red'),
+                        name='Cons Error'
+                    ),
+                    row=1, col=3
+                )
+                
+                fig_param.update_xaxes(title_text=param_name, row=1, col=1)
+                fig_param.update_xaxes(title_text=param_name, row=1, col=2)
+                fig_param.update_xaxes(title_text=param_name, row=1, col=3)
+                
+                fig_param.update_layout(height=400, showlegend=False)
+                st.plotly_chart(fig_param, use_container_width=True)
+        
+        with st.expander("📊 Detailed Statistics"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**Final Nexus State (N)**")
+                st.json(stats['final_N'])
+                
+                st.markdown("**Average Issuance**")
+                st.json(stats['avg_issuance'])
+            
+            with col2:
+                st.markdown("**Average Burn**")
+                st.json(stats['avg_burn'])
+                
+                st.markdown("**Conservation Error**")
+                st.json(stats['conservation_error'])
+
+def render_sensitivity_analysis():
+    st.subheader("Sensitivity Analysis")
+    st.markdown("""
+    Analyze how individual parameters affect system behavior by varying each parameter
+    one at a time while holding others constant.
+    """)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        variation_range = st.slider(
+            "Variation Range (±%)",
+            5, 50, 30,
+            help="How much to vary each parameter around its current value"
+        ) / 100.0
+        
+        num_points = st.slider(
+            "Number of Sample Points",
+            10, 50, 20,
+            help="How many values to test for each parameter"
+        )
+    
+    with col2:
+        st.markdown("**Select Parameters to Analyze**")
+        param_options = ['alpha', 'beta', 'kappa', 'eta', 'K_p', 'K_i', 'K_d', 'N_target']
+        selected_params = st.multiselect(
+            "Parameters",
+            param_options,
+            default=['alpha', 'beta', 'K_p']
+        )
+    
+    if st.button("▶️ Run Sensitivity Analysis", type="primary"):
+        if not selected_params:
+            st.warning("Please select at least one parameter to analyze")
+        else:
+            with st.spinner(f"Running sensitivity analysis on {len(selected_params)} parameters..."):
+                sens_analyzer = SensitivityAnalysis(st.session_state.params, st.session_state.signal_configs)
+                sens_results = sens_analyzer.run_sensitivity_analysis(
+                    selected_params,
+                    variation_range,
+                    num_points
+                )
+                
+                st.session_state['sens_results'] = sens_results
+                st.success("✅ Sensitivity analysis completed!")
+    
+    if 'sens_results' in st.session_state:
+        sens_results = st.session_state['sens_results']
+        
+        st.divider()
+        st.subheader("Sensitivity Results")
+        
+        rankings = sens_results['sensitivity_rankings']
+        
+        st.markdown("**Parameter Impact Rankings** (by effect on Final N)")
+        ranking_df = pd.DataFrame(rankings)
+        ranking_df['rank'] = range(1, len(rankings) + 1)
+        ranking_df = ranking_df[['rank', 'parameter', 'impact_range', 'impact_std', 'avg_conservation_error']]
+        ranking_df.columns = ['Rank', 'Parameter', 'Impact Range', 'Impact Std Dev', 'Avg Cons. Error']
+        st.dataframe(ranking_df, use_container_width=True, hide_index=True)
+        
+        st.subheader("Parameter Sensitivity Curves")
+        
+        detailed = sens_results['detailed_results']
+        
+        for param_name in selected_params:
+            if param_name not in detailed:
+                continue
+            
+            param_data = detailed[param_name]
+            
+            if len(param_data['values']) == 0:
+                continue
+            
+            st.markdown(f"**{param_name}**")
+            
+            fig = make_subplots(
+                rows=2, cols=2,
+                subplot_titles=(
+                    'Final N vs Parameter',
+                    'Avg Issuance vs Parameter',
+                    'Conservation Error vs Parameter',
+                    'Stability Metric vs Parameter'
+                )
+            )
+            
+            fig.add_trace(
+                go.Scatter(x=param_data['values'], y=param_data['final_N'], mode='lines+markers', name='Final N'),
+                row=1, col=1
+            )
+            
+            fig.add_trace(
+                go.Scatter(x=param_data['values'], y=param_data['avg_issuance'], mode='lines+markers', name='Avg I', line=dict(color='green')),
+                row=1, col=2
+            )
+            
+            fig.add_trace(
+                go.Scatter(x=param_data['values'], y=param_data['conservation_error'], mode='lines+markers', name='Cons. Error', line=dict(color='red')),
+                row=2, col=1
+            )
+            
+            fig.add_trace(
+                go.Scatter(x=param_data['values'], y=param_data['stability_metric'], mode='lines+markers', name='Stability', line=dict(color='purple')),
+                row=2, col=2
+            )
+            
+            fig.update_xaxes(title_text=param_name, row=1, col=1)
+            fig.update_xaxes(title_text=param_name, row=1, col=2)
+            fig.update_xaxes(title_text=param_name, row=2, col=1)
+            fig.update_xaxes(title_text=param_name, row=2, col=2)
+            
+            fig.update_layout(height=600, showlegend=False)
+            st.plotly_chart(fig, use_container_width=True)
 
 def render_scenarios():
     st.header("Scenario Management")
