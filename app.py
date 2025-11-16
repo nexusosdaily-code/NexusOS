@@ -123,6 +123,207 @@ def run_simulation(params, signal_configs):
     
     return df
 
+def render_multi_agent():
+    st.header("Multi-Agent Network Simulation")
+    st.markdown("""
+    Simulate multiple Nexus agents interacting in a network. Each agent has its own N(t) state,
+    and value flows between connected nodes based on network topology.
+    """)
+    
+    from multi_agent_sim import MultiAgentNexusSimulation
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        num_agents = st.slider("Number of Agents", 3, 20, 5)
+        topology = st.selectbox(
+            "Network Topology",
+            ['fully_connected', 'hub_spoke', 'random', 'ring', 'small_world'],
+            format_func=lambda x: x.replace('_', ' ').title()
+        )
+    
+    with col2:
+        transfer_rate = st.slider("Value Transfer Rate", 0.0, 0.1, 0.01, 0.001, 
+                                  help="Rate at which value flows between connected nodes")
+        network_influence = st.slider("Network Influence on Health", 0.0, 1.0, 0.1, 0.05,
+                                      help="How much neighbors' states influence system health")
+        enable_transfers = st.checkbox("Enable Value Transfers", value=True)
+    
+    if st.button("🌐 Run Multi-Agent Simulation", type="primary"):
+        with st.spinner(f"Simulating {num_agents} agents..."):
+            try:
+                sim = MultiAgentNexusSimulation(
+                    num_agents=num_agents,
+                    base_params=st.session_state.params,
+                    signal_configs=st.session_state.signal_configs,
+                    network_topology=topology,
+                    transfer_rate=transfer_rate,
+                    network_influence=network_influence
+                )
+                
+                df = sim.run_simulation(enable_transfers=enable_transfers)
+                network_metrics = sim.get_network_metrics()
+                network_layout = sim.get_network_layout()
+                
+                st.session_state['multi_agent_results'] = {
+                    'data': df,
+                    'network_metrics': network_metrics,
+                    'network_layout': network_layout,
+                    'sim': sim,
+                    'num_agents': num_agents
+                }
+                
+                st.success(f"Multi-agent simulation complete! {num_agents} agents over {len(df)} timesteps.")
+                
+            except Exception as e:
+                st.error(f"Simulation failed: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
+    
+    if 'multi_agent_results' in st.session_state:
+        results = st.session_state['multi_agent_results']
+        df = results['data']
+        metrics = results['network_metrics']
+        layout = results['network_layout']
+        sim = results['sim']
+        num_agents = results['num_agents']
+        
+        st.divider()
+        st.subheader("Network Topology Metrics")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Nodes", metrics['num_nodes'])
+        with col2:
+            st.metric("Edges", metrics['num_edges'])
+        with col3:
+            st.metric("Density", f"{metrics['density']:.3f}")
+        with col4:
+            st.metric("Avg Clustering", f"{metrics['avg_clustering']:.3f}")
+        
+        st.subheader("Network Visualization")
+        
+        import plotly.graph_objects as go
+        
+        edge_x = []
+        edge_y = []
+        for edge in sim.network.edges():
+            x0, y0 = layout[edge[0]]
+            x1, y1 = layout[edge[1]]
+            edge_x.extend([x0, x1, None])
+            edge_y.extend([y0, y1, None])
+        
+        edge_trace = go.Scatter(
+            x=edge_x, y=edge_y,
+            line=dict(width=1, color='#888'),
+            hoverinfo='none',
+            mode='lines'
+        )
+        
+        node_x = []
+        node_y = []
+        node_text = []
+        node_colors = []
+        
+        for node in sim.network.nodes():
+            x, y = layout[node]
+            node_x.append(x)
+            node_y.append(y)
+            final_N = df[f'N_{node}'].iloc[-1]
+            node_text.append(f'Agent {node}<br>Final N: {final_N:.2f}')
+            node_colors.append(final_N)
+        
+        node_trace = go.Scatter(
+            x=node_x, y=node_y,
+            mode='markers+text',
+            hovertext=node_text,
+            hoverinfo='text',
+            text=[str(i) for i in range(num_agents)],
+            textposition="top center",
+            marker=dict(
+                showscale=True,
+                colorscale='Viridis',
+                size=20,
+                color=node_colors,
+                colorbar=dict(
+                    title="Final N",
+                    xanchor='left'
+                ),
+                line=dict(width=2, color='white')
+            )
+        )
+        
+        fig_network = go.Figure(data=[edge_trace, node_trace],
+                              layout=go.Layout(
+                                  showlegend=False,
+                                  hovermode='closest',
+                                  margin=dict(b=0,l=0,r=0,t=0),
+                                  xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                                  yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                                  height=400
+                              ))
+        
+        st.plotly_chart(fig_network, use_container_width=True)
+        
+        st.subheader("Agent State Evolution")
+        
+        fig_states = go.Figure()
+        
+        for agent_id in range(num_agents):
+            fig_states.add_trace(go.Scatter(
+                x=df['t'],
+                y=df[f'N_{agent_id}'],
+                mode='lines',
+                name=f'Agent {agent_id}',
+                line=dict(width=2)
+            ))
+        
+        fig_states.update_layout(
+            xaxis_title="Time",
+            yaxis_title="Nexus State N(t)",
+            height=400,
+            hovermode='x unified'
+        )
+        
+        st.plotly_chart(fig_states, use_container_width=True)
+        
+        st.subheader("Issuance vs Burn Across Agents")
+        
+        fig_flows = make_subplots(rows=1, cols=2, subplot_titles=("Total Issuance", "Total Burn"))
+        
+        for agent_id in range(num_agents):
+            fig_flows.add_trace(
+                go.Scatter(x=df['t'], y=df[f'I_{agent_id}'], mode='lines', name=f'Agent {agent_id}', showlegend=False),
+                row=1, col=1
+            )
+            fig_flows.add_trace(
+                go.Scatter(x=df['t'], y=df[f'B_{agent_id}'], mode='lines', name=f'Agent {agent_id}', showlegend=False),
+                row=1, col=2
+            )
+        
+        fig_flows.update_xaxes(title_text="Time", row=1, col=1)
+        fig_flows.update_xaxes(title_text="Time", row=1, col=2)
+        fig_flows.update_yaxes(title_text="Issuance Rate", row=1, col=1)
+        fig_flows.update_yaxes(title_text="Burn Rate", row=1, col=2)
+        fig_flows.update_layout(height=400)
+        
+        st.plotly_chart(fig_flows, use_container_width=True)
+        
+        with st.expander("📊 Agent Statistics"):
+            stats_data = []
+            for agent_id in range(num_agents):
+                stats_data.append({
+                    'Agent': agent_id,
+                    'Final N': df[f'N_{agent_id}'].iloc[-1],
+                    'Avg Issuance': df[f'I_{agent_id}'].mean(),
+                    'Avg Burn': df[f'B_{agent_id}'].mean(),
+                    'Avg System Health': df[f'S_{agent_id}'].mean(),
+                    'Degree': sim.network.degree(agent_id)
+                })
+            
+            st.dataframe(pd.DataFrame(stats_data), use_container_width=True)
+
 def main():
     init_db()
     init_session_state()
@@ -133,11 +334,12 @@ def main():
     with issuance/burn mechanics, feedback control, and conservation constraints.
     """)
     
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📊 Dashboard", 
         "⚙️ Parameter Control", 
         "📈 Simulation", 
         "🔬 Advanced Analysis",
+        "🌐 Multi-Agent",
         "💾 Scenarios"
     ])
     
@@ -154,6 +356,9 @@ def main():
         render_advanced_analysis()
     
     with tab5:
+        render_multi_agent()
+    
+    with tab6:
         render_scenarios()
 
 def render_dashboard():
