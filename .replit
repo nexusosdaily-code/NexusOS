@@ -2,7 +2,11 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-25_05"
+packages = ["glibcLocales", "libxcrypt", "pkg-config", "xsimd"]
 
 [deployment]
 deploymentTarget = "autoscale"
 run = ["streamlit", "run", "app.py", "--server.port", "5000"]
+
+[agent]
+integrations = ["streamlit_database:1.0.0"]
