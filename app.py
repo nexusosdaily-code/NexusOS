@@ -10,6 +10,7 @@ from database import init_db, get_session, SimulationConfig, SimulationRun
 from nexus_engine import NexusEngine
 from signal_generators import SignalGenerator, get_default_signal_configs
 from monte_carlo_analysis import MonteCarloAnalysis, SensitivityAnalysis
+from oracle_sources import OracleManager, get_default_oracle_configs
 
 st.set_page_config(
     page_title="NexusOS",
@@ -25,6 +26,15 @@ def init_session_state():
         st.session_state.signal_configs = get_default_signal_configs()
     if 'params' not in st.session_state:
         st.session_state.params = get_default_params()
+    if 'oracle_manager' not in st.session_state:
+        st.session_state.oracle_manager = OracleManager()
+        for config in get_default_oracle_configs():
+            source = st.session_state.oracle_manager.create_source(
+                config['type'], config['name'], config['config']
+            )
+            st.session_state.oracle_manager.add_source(source)
+    if 'use_oracle_data' not in st.session_state:
+        st.session_state.use_oracle_data = False
 
 def get_default_params():
     return {
@@ -56,7 +66,16 @@ def get_default_params():
         'num_steps': 1000
     }
 
-def run_simulation(params, signal_configs):
+def fetch_oracle_value(oracle_manager, variable, default_value):
+    if oracle_manager is None:
+        return default_value
+    
+    data_point = oracle_manager.fetch_variable(variable)
+    if data_point is not None:
+        return data_point.value
+    return default_value
+
+def run_simulation(params, signal_configs, oracle_manager=None, use_oracle_data=False, oracle_refresh_interval=10):
     engine = NexusEngine(params)
     
     num_steps = params['num_steps']
@@ -71,6 +90,8 @@ def run_simulation(params, signal_configs):
     
     N = params['N_initial']
     
+    oracle_cache = {}
+    
     results = {
         't': [],
         'N': [],
@@ -84,18 +105,39 @@ def run_simulation(params, signal_configs):
         'D': [],
         'E': [],
         'C_cons': [],
-        'C_disp': []
+        'C_disp': [],
+        'oracle_used': []
     }
     
     for step in range(num_steps):
         t = step * delta_t
         
-        H = H_signal[step]
-        M = M_signal[step]
-        D = D_signal[step]
-        E = np.clip(E_signal[step], 0.0, 1.0)
-        C_cons = C_cons_signal[step]
-        C_disp = C_disp_signal[step]
+        if use_oracle_data and oracle_manager:
+            should_refresh = (step % oracle_refresh_interval == 0)
+            
+            if should_refresh:
+                for var in ['H', 'M', 'D', 'E', 'C_cons', 'C_disp']:
+                    data_point = oracle_manager.fetch_variable(var)
+                    if data_point:
+                        oracle_cache[var] = data_point.value
+            
+            H = oracle_cache.get('H', H_signal[step])
+            M = oracle_cache.get('M', M_signal[step])
+            D = oracle_cache.get('D', D_signal[step])
+            E = oracle_cache.get('E', E_signal[step])
+            C_cons = oracle_cache.get('C_cons', C_cons_signal[step])
+            C_disp = oracle_cache.get('C_disp', C_disp_signal[step])
+            oracle_used = bool(oracle_cache)
+        else:
+            H = H_signal[step]
+            M = M_signal[step]
+            D = D_signal[step]
+            E = E_signal[step]
+            C_cons = C_cons_signal[step]
+            C_disp = C_disp_signal[step]
+            oracle_used = False
+        
+        E = np.clip(E, 0.0, 1.0)
         
         N_next, diagnostics = engine.step(N, H, M, D, E, C_cons, C_disp, delta_t)
         
@@ -112,6 +154,7 @@ def run_simulation(params, signal_configs):
         results['E'].append(E)
         results['C_cons'].append(C_cons)
         results['C_disp'].append(C_disp)
+        results['oracle_used'].append(oracle_used)
         
         N = N_next
     
@@ -490,13 +533,14 @@ def main():
     with issuance/burn mechanics, feedback control, and conservation constraints.
     """)
     
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
         "📊 Dashboard", 
         "⚙️ Parameter Control", 
         "📈 Simulation", 
         "🔬 Advanced Analysis",
         "🌐 Multi-Agent",
         "📜 Smart Contracts",
+        "🔗 Oracles",
         "💾 Scenarios"
     ])
     
@@ -519,6 +563,9 @@ def main():
         render_smart_contracts()
     
     with tab7:
+        render_oracles()
+    
+    with tab8:
         render_scenarios()
 
 def render_dashboard():
@@ -871,9 +918,22 @@ def render_simulation():
     with col1:
         if st.button("▶️ Run Simulation", type="primary", use_container_width=True):
             with st.spinner("Running simulation..."):
-                df = run_simulation(st.session_state.params, st.session_state.signal_configs)
+                oracle_manager = st.session_state.get('oracle_manager')
+                use_oracle = st.session_state.get('use_oracle_data', False)
+                oracle_refresh = st.session_state.get('oracle_refresh_interval', 10)
+                df = run_simulation(
+                    st.session_state.params,
+                    st.session_state.signal_configs,
+                    oracle_manager,
+                    use_oracle,
+                    oracle_refresh
+                )
                 st.session_state.simulation_results = df
-                st.success(f"Simulation completed! {len(df)} time steps processed.")
+                
+                if use_oracle and any(df['oracle_used']):
+                    st.success(f"✅ Simulation completed with Oracle data! {len(df)} time steps processed.")
+                else:
+                    st.success(f"Simulation completed! {len(df)} time steps processed.")
                 st.rerun()
     
     with col2:
@@ -1492,6 +1552,243 @@ def render_stability_mapping():
                 )
             else:
                 st.warning("No stable parameter combinations found in this region.")
+
+def render_oracles():
+    st.header("Oracle Data Sources")
+    st.markdown("""
+    Connect NexusOS to real-world data sources like environmental sensors, APIs, and IoT devices.
+    Oracle data can be used to drive simulations with live external data.
+    """)
+    
+    manager = st.session_state.oracle_manager
+    
+    st.subheader("Configured Data Sources")
+    
+    sources = manager.get_all_sources()
+    
+    if sources:
+        status_data = []
+        for source in sources:
+            status = source.get_status()
+            status_data.append({
+                'Name': status['name'],
+                'Type': status['type'],
+                'Status': '✅ Connected' if status['connected'] else '❌ Disconnected',
+                'Last Update': status.get('last_update', 'Never'),
+                'Error': status.get('error', '')
+            })
+        
+        st.dataframe(pd.DataFrame(status_data), use_container_width=True)
+        
+        st.divider()
+        
+        st.subheader("Manage Sources")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("🔌 Connect All", use_container_width=True):
+                with st.spinner("Connecting to data sources..."):
+                    results = manager.connect_all()
+                    success_count = sum(1 for v in results.values() if v)
+                    if success_count == len(results):
+                        st.success(f"✅ All {len(results)} sources connected")
+                    else:
+                        st.warning(f"⚠️ {success_count}/{len(results)} sources connected")
+                st.rerun()
+        
+        with col2:
+            if st.button("🔌 Disconnect All", use_container_width=True):
+                manager.disconnect_all()
+                st.success("Disconnected all sources")
+                st.rerun()
+        
+        with col3:
+            st.session_state.use_oracle_data = st.checkbox(
+                "Use Oracle Data in Simulations",
+                value=st.session_state.get('use_oracle_data', False),
+                help="When enabled, simulations will fetch real-time data from connected oracles"
+            )
+        
+        if st.session_state.use_oracle_data:
+            st.divider()
+            st.subheader("Oracle Sampling Settings")
+            
+            st.session_state.oracle_refresh_interval = st.slider(
+                "Oracle Refresh Interval (simulation steps)",
+                min_value=1,
+                max_value=100,
+                value=st.session_state.get('oracle_refresh_interval', 10),
+                help="Fetch fresh oracle data every N simulation steps. Lower = more API calls but fresher data. Higher = fewer API calls but data held longer."
+            )
+            
+            num_steps = st.session_state.params.get('num_steps', 1000)
+            refresh_interval = st.session_state.oracle_refresh_interval
+            total_fetches = (num_steps // refresh_interval) + 1
+            total_requests = total_fetches * 6
+            
+            st.info(f"📊 **Estimated API Load**: ~{total_requests} HTTP requests for {num_steps} simulation steps ({total_fetches} refreshes × 6 variables)")
+        
+        st.divider()
+        
+        st.subheader("Test Data Fetch")
+        
+        col_var, col_source, col_test = st.columns([2, 2, 1])
+        
+        with col_var:
+            test_variable = st.selectbox(
+                "Variable to Test",
+                ['E', 'H', 'M', 'D', 'C_cons', 'C_disp'],
+                key='test_oracle_var'
+            )
+        
+        with col_source:
+            source_names = [s.name for s in sources if s.is_connected]
+            if source_names:
+                test_source = st.selectbox(
+                    "Source",
+                    ['Auto (First Available)'] + source_names,
+                    key='test_oracle_source'
+                )
+            else:
+                st.warning("No connected sources")
+                test_source = None
+        
+        with col_test:
+            st.write("")
+            st.write("")
+            if st.button("🔍 Fetch", use_container_width=True):
+                if test_source:
+                    source_name = None if test_source == 'Auto (First Available)' else test_source
+                    data_point = manager.fetch_variable(test_variable, source_name)
+                    
+                    if data_point:
+                        st.success(f"**{test_variable}** = {data_point.value:.4f}")
+                        with st.expander("Details"):
+                            st.json(data_point.to_dict())
+                    else:
+                        st.error(f"Failed to fetch {test_variable}")
+    
+    else:
+        st.info("No oracle data sources configured")
+    
+    st.divider()
+    
+    st.subheader("Add New Oracle Source")
+    
+    with st.form("add_oracle_form"):
+        oracle_type = st.selectbox(
+            "Oracle Type",
+            ['mock_environmental', 'static', 'rest_api'],
+            format_func=lambda x: {
+                'mock_environmental': 'Mock Environmental Sensor (with noise)',
+                'static': 'Static Data (fixed values)',
+                'rest_api': 'REST API'
+            }[x]
+        )
+        
+        oracle_name = st.text_input("Oracle Name", value=f"New {oracle_type.replace('_', ' ').title()}")
+        
+        config = {}
+        
+        if oracle_type == 'mock_environmental':
+            variation = st.slider("Variation (%)", 0, 50, 15) / 100.0
+            config = {'variation': variation}
+        
+        elif oracle_type == 'static':
+            st.write("Set static values for each variable:")
+            col1, col2 = st.columns(2)
+            with col1:
+                E_val = st.number_input("E (Environmental)", 0.0, 1.0, 0.8)
+                H_val = st.number_input("H (Human)", 0.0, 1000.0, 100.0)
+                M_val = st.number_input("M (Machine)", 0.0, 1000.0, 100.0)
+            with col2:
+                D_val = st.number_input("D (Data)", 0.0, 1000.0, 50.0)
+                C_cons_val = st.number_input("C_cons (Consumption)", 0.0, 1000.0, 15.0)
+                C_disp_val = st.number_input("C_disp (Disposal)", 0.0, 1000.0, 8.0)
+            
+            config = {
+                'data_values': {
+                    'E': E_val,
+                    'H': H_val,
+                    'M': M_val,
+                    'D': D_val,
+                    'C_cons': C_cons_val,
+                    'C_disp': C_disp_val
+                }
+            }
+        
+        elif oracle_type == 'rest_api':
+            base_url = st.text_input("Base URL", placeholder="https://api.example.com")
+            st.write("Configure endpoints for each variable:")
+            
+            endpoints = {}
+            cols = st.columns(2)
+            variables = ['E', 'H', 'M', 'D', 'C_cons', 'C_disp']
+            for i, var in enumerate(variables):
+                with cols[i % 2]:
+                    endpoint = st.text_input(
+                        f"{var} endpoint",
+                        placeholder=f"/api/{var.lower()}",
+                        key=f"endpoint_{var}"
+                    )
+                    if endpoint:
+                        endpoints[var] = endpoint
+            
+            config = {
+                'base_url': base_url,
+                'variable_endpoints': endpoints,
+                'timeout': 10
+            }
+        
+        submitted = st.form_submit_button("➕ Add Oracle Source", use_container_width=True)
+        
+        if submitted:
+            try:
+                new_source = manager.create_source(oracle_type, oracle_name, config)
+                manager.add_source(new_source)
+                st.success(f"✅ Added oracle source: {oracle_name}")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to add oracle: {str(e)}")
+    
+    st.divider()
+    
+    with st.expander("ℹ️ About Oracle Integration"):
+        st.markdown("""
+        ### Oracle Data Sources
+        
+        Oracles provide external data feeds to NexusOS simulations:
+        
+        **Mock Environmental Sensor**
+        - Simulates realistic sensor data with random variation
+        - Useful for testing and development
+        - No external dependencies
+        
+        **Static Data**
+        - Fixed values for all variables
+        - Useful for baseline testing
+        - Deterministic and reproducible
+        
+        **REST API**
+        - Connect to real web APIs
+        - Fetch live environmental, economic, or IoT data
+        - Requires properly configured endpoints
+        
+        ### Using Oracle Data
+        
+        1. Configure and connect your oracle sources
+        2. Enable "Use Oracle Data in Simulations"
+        3. Run simulations - oracle data will override signal generators
+        4. Monitor oracle status and data quality
+        
+        ### Best Practices
+        
+        - Test oracle connections before running long simulations
+        - Use static or mock oracles for reproducible experiments
+        - Monitor oracle errors and connection status
+        - Implement fallback strategies for production deployments
+        """)
 
 def render_scenarios():
     st.header("Scenario Management")

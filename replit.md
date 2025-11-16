@@ -126,9 +126,18 @@ Each generator accepts parameters and returns numpy arrays representing time-ser
 
 **Note**: Generated contracts are templates requiring review, testing, and security audits before mainnet deployment. Always test on local/test networks first.
 
+### Oracle Integration Framework (Complete - November 2025)
+1. ✅ Oracle Abstraction Layer - Base OracleDataSource class with connect/disconnect/fetch interface. OracleManager for managing multiple data sources. OracleDataPoint for timestamped data with metadata.
+2. ✅ Oracle Connectors - RestAPIOracle for web APIs with configurable endpoints and authentication. StaticDataOracle for fixed baseline values. MockEnvironmentalOracle for simulated sensor data with random variation.
+3. ✅ UI Integration - Dedicated "Oracles" tab with connection management, real-time data fetch testing, oracle source configuration, and API load estimation. Two default oracle sources pre-configured.
+4. ✅ Simulation Integration - Step-based oracle sampling with configurable refresh interval. Batch fetching of all variables. Fallback to signal generators when oracle unavailable. Oracle usage tracking in results.
+5. ✅ Performance Optimization - Step-based refresh control (default every 10 steps). Configurable trade-off between data freshness and API load. For 1000-step simulation: ~600 HTTP requests (interval=10) vs original 6000.
+6. ✅ Error Handling - Connection status tracking with health check endpoints. HTTP 401 accepted for authenticated APIs. Error message capture and display. Graceful degradation to signal generators.
+
+**Note**: Oracle integration allows using live external data in simulations while managing API load through configurable refresh intervals.
+
 ### Next Phase Features (Planned)
-1. Oracle integration framework for real-world data feeds (environmental sensors, IoT, blockchain oracles)
-4. ML-based adaptive parameter tuning (historical pattern analysis, RL-based optimization)
+1. ML-based adaptive parameter tuning (historical pattern analysis, RL-based optimization)
 5. User authentication and role-based access (admin/researcher/viewer roles)
 6. Real-time production dashboard with live oracle feeds and alerting
 7. Audit trail and provenance tracking (event logging, cryptographic hashing)
