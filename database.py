@@ -64,6 +64,39 @@ class SimulationRun(Base):
     avg_burn = Column(Float, nullable=True)
     conservation_error = Column(Float, nullable=True)
 
+class OptimizationRun(Base):
+    __tablename__ = 'optimization_runs'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    name = Column(String(255), nullable=False)
+    
+    objective_type = Column(String(50), nullable=False)
+    objective_weights = Column(JSON, nullable=True)
+    
+    parameters_optimized = Column(JSON, nullable=False)
+    parameter_bounds = Column(JSON, nullable=False)
+    
+    n_iterations = Column(Integer, nullable=False)
+    best_params = Column(JSON, nullable=True)
+    best_score = Column(Float, nullable=True)
+    
+    convergence_history = Column(JSON, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+class OptimizationIteration(Base):
+    __tablename__ = 'optimization_iterations'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    optimization_id = Column(Integer, nullable=False)
+    iteration_num = Column(Integer, nullable=False)
+    
+    parameters = Column(JSON, nullable=False)
+    score = Column(Float, nullable=False)
+    simulation_id = Column(Integer, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 def get_engine():
     database_url = os.getenv('DATABASE_URL')
     if not database_url:
