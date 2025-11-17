@@ -8,7 +8,6 @@ various simulation sizes to demonstrate speedup.
 import time
 import numpy as np
 from nexus_engine import NexusEngine
-from nexus_engine_optimized import NexusEngineOptimized
 from nexus_engine_numba import NexusEngineNumba
 
 
@@ -77,33 +76,6 @@ def benchmark_original_engine(num_steps: int, num_runs: int = 3) -> float:
                 delta_t=1.0
             )
             N_current = N_next
-        elapsed = time.time() - start
-        times.append(elapsed)
-    
-    return np.mean(times)
-
-
-def benchmark_optimized_engine(num_steps: int, num_runs: int = 3) -> float:
-    """Benchmark optimized NexusEngineOptimized"""
-    signals = generate_signals(num_steps)
-    params = get_test_params()
-    
-    times = []
-    for _ in range(num_runs):
-        engine = NexusEngineOptimized(params)
-        
-        start = time.time()
-        df = engine.run_simulation_vectorized(
-            signals_H=signals['H'],
-            signals_M=signals['M'],
-            signals_D=signals['D'],
-            signals_E=signals['E'],
-            signals_C_cons=signals['C_cons'],
-            signals_C_disp=signals['C_disp'],
-            N_initial=params['N_0'],
-            delta_t=1.0,
-            reset_controller=True
-        )
         elapsed = time.time() - start
         times.append(elapsed)
     

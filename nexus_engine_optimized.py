@@ -1,9 +1,10 @@
 """
-DEPRECATED: This module has been superseded by nexus_engine_numba.py
+DEPRECATED: This module is deprecated.
 
 The original "optimized" vectorized approach using pure NumPy was found to be 
 slower than the original implementation (0.88x average, 12% slower) due to
-Python loop overhead outweighing benefits from pre-allocation.
+Python loop overhead outweighing benefits from pre-allocation. The approach
+has been removed from the codebase.
 
 Use `NexusEngineNumba` from nexus_engine_numba.py instead, which provides:
 - 56x average speedup (proven via benchmarks)
@@ -11,28 +12,20 @@ Use `NexusEngineNumba` from nexus_engine_numba.py instead, which provides:
 - Exact numerical parity with original engine
 - JIT compilation to machine code via Numba
 
-This file is retained for reference only and should not be used in production.
+This file exists only to maintain import compatibility and should not be used.
 """
 
-# Import the proper implementation
-from nexus_engine_numba import NexusEngineNumba
+import warnings
 
-# Provide deprecated alias with warning
-class NexusEngineOptimized(NexusEngineNumba):
+class NexusEngineOptimized:
     """
-    DEPRECATED: Use NexusEngineNumba directly instead.
+    DEPRECATED: This class has been removed.
     
-    This alias exists for backward compatibility but will be removed in a future version.
+    Use NexusEngineNumba from nexus_engine_numba.py instead.
     """
     def __init__(self, *args, **kwargs):
-        import warnings
-        warnings.warn(
-            "NexusEngineOptimized is deprecated. Use NexusEngineNumba instead for 56x speedup.",
-            DeprecationWarning,
-            stacklevel=2
+        raise DeprecationWarning(
+            "NexusEngineOptimized has been deprecated and removed. "
+            "The NumPy vectorized approach proved slower than the original. "
+            "Use NexusEngineNumba instead for 56x speedup."
         )
-        super().__init__(*args, **kwargs)
-    
-    def run_simulation_vectorized(self, *args, **kwargs):
-        """Deprecated alias for run_simulation"""
-        return self.run_simulation(*args, **kwargs)

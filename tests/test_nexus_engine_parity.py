@@ -1,8 +1,9 @@
 """
-Regression tests to prove NexusEngineOptimized matches NexusEngine exactly.
+Parity tests for NexusEngine implementations
 
-Tests cover:
-1. Single long-run simulations (step-for-step parity)
+Regression tests to prove NexusEngineNumba matches NexusEngine exactly.
+Validates:
+1. Single long simulation run
 2. Back-to-back segmented runs (with/without PID reset)
 3. Parameter edge cases (high volatility, varied PID gains)
 """
@@ -10,56 +11,57 @@ Tests cover:
 import numpy as np
 import pandas as pd
 from nexus_engine import NexusEngine
-from nexus_engine_optimized import NexusEngineOptimized
 from nexus_engine_numba import NexusEngineNumba
 
 
 def assert_dataframe_parity(df1: pd.DataFrame, df2: pd.DataFrame, tolerance_abs: float = 1e-8, tolerance_rel: float = 1e-6):
     """
-    Assert that two DataFrames are equal within tolerance.
+    Assert that two DataFrames match within numerical tolerances.
     
     Args:
-        df1, df2: DataFrames to compare (uses common columns only)
-        tolerance_abs: Absolute tolerance
-        tolerance_rel: Relative tolerance
+        df1: First DataFrame (reference)
+        df2: Second DataFrame (comparison)
+        tolerance_abs: Absolute tolerance for small values
+        tolerance_rel: Relative tolerance for larger values
     """
     assert len(df1) == len(df2), f"Length mismatch: {len(df1)} vs {len(df2)}"
     
-    # Compare only common columns (optimized engine may have extra columns)
-    common_cols = [col for col in df1.columns if col in df2.columns]
-    assert len(common_cols) > 0, "No common columns found"
+    # Find common columns for comparison (df2 may have additional columns)
+    cols1 = set(df1.columns)
+    cols2 = set(df2.columns)
+    common_cols = cols1 & cols2
     
+    # Ensure all df1 columns are in df2
+    assert cols1.issubset(cols2), f"Missing columns in df2: {cols1 - cols2}"
+    
+    # Check each common column
     for col in common_cols:
         v1 = df1[col].values
         v2 = df2[col].values
         
-        # Check absolute and relative difference
-        abs_diff = np.abs(v1 - v2)
-        rel_diff = abs_diff / (np.abs(v1) + 1e-10)  # Avoid division by zero
-        
-        max_abs_diff = np.max(abs_diff)
-        max_rel_diff = np.max(rel_diff)
+        # Use combined absolute and relative tolerance
+        max_abs_diff = np.max(np.abs(v1 - v2))
+        max_rel_diff = np.max(np.abs((v1 - v2) / (np.abs(v1) + 1e-12)))
         
         assert max_abs_diff < tolerance_abs or max_rel_diff < tolerance_rel, \
-            f"Column '{col}' mismatch: max abs diff={max_abs_diff:.2e}, max rel diff={max_rel_diff:.2e}"
+            f"Mismatch in '{col}': max_abs={max_abs_diff:.2e}, max_rel={max_rel_diff:.2e}"
 
 
-def generate_test_signals(num_steps: int, seed: int = 42) -> dict:
-    """Generate deterministic test signals for reproducible testing."""
-    np.random.seed(seed)
-    
+def generate_test_signals(num_steps: int):
+    """Generate deterministic test signals"""
+    np.random.seed(42)
     return {
-        'H': np.random.uniform(50, 150, num_steps),
-        'M': np.random.uniform(50, 150, num_steps),
-        'D': np.random.uniform(50, 150, num_steps),
-        'E': np.random.uniform(0.5, 1.0, num_steps),
-        'C_cons': np.random.uniform(10, 50, num_steps),
-        'C_disp': np.random.uniform(10, 50, num_steps),
+        'H': 100 + 20 * np.sin(2 * np.pi * np.arange(num_steps) / 200),
+        'M': 80 + 10 * np.sin(2 * np.pi * np.arange(num_steps) / 150),
+        'D': 50 + 5 * np.sin(2 * np.pi * np.arange(num_steps) / 100),
+        'E': 0.8 + 0.1 * np.sin(2 * np.pi * np.arange(num_steps) / 250),
+        'C_cons': 60 + np.random.normal(0, 5, num_steps),
+        'C_disp': 40 + np.random.normal(0, 3, num_steps)
     }
 
 
-def generate_test_params() -> dict:
-    """Generate standard test parameters."""
+def generate_test_params():
+    """Generate standard test parameters"""
     return {
         'alpha': 1.0,
         'beta': 1.0,
@@ -83,21 +85,21 @@ def generate_test_params() -> dict:
         'lambda_M': 0.2,
         'N_0': 1000.0,
         'H_0': 100.0,
-        'M_0': 100.0,
+        'M_0': 100.0
     }
 
 
 def test_single_long_run_parity():
-    """Test that both engines produce identical results for a single long simulation."""
+    """
+    Test that a single long run produces identical results between
+    original and Numba engines.
+    """
     num_steps = 1000
     signals = generate_test_signals(num_steps)
     params = generate_test_params()
     
-    # Create both engines
+    # Original engine - step-by-step
     engine_original = NexusEngine(params)
-    engine_optimized = NexusEngineOptimized(params)
-    
-    # Run simulations
     df_original = pd.DataFrame()
     N_current = params['N_0']
     for i in range(num_steps):
@@ -111,12 +113,13 @@ def test_single_long_run_parity():
             N=N_current,
             delta_t=1.0
         )
-        # Combine N and diagnostics into single row
         row = {'N': N_next, **diagnostics}
         df_original = pd.concat([df_original, pd.DataFrame([row])], ignore_index=True)
         N_current = N_next
     
-    df_optimized = engine_optimized.run_simulation_vectorized(
+    # Numba engine
+    engine_numba = NexusEngineNumba(params)
+    df_numba = engine_numba.run_simulation(
         signals_H=signals['H'],
         signals_M=signals['M'],
         signals_D=signals['D'],
@@ -125,90 +128,32 @@ def test_single_long_run_parity():
         signals_C_disp=signals['C_disp'],
         N_initial=params['N_0'],
         delta_t=1.0,
-        reset_controller=True  # Fresh start for fair comparison
+        reset_controller=True
     )
     
     # Assert parity
-    assert_dataframe_parity(df_original, df_optimized)
+    assert_dataframe_parity(df_original, df_numba)
 
 
 def test_segmented_runs_with_reset():
-    """Test that both engines produce identical results for segmented runs with PID reset."""
-    segment_size = 100
-    num_segments = 3
-    
-    signals = generate_test_signals(segment_size * num_segments)
+    """
+    Test that segmented runs with PID resets produce identical results.
+    """
+    num_steps_total = 1000
+    segment_size = 200
+    signals = generate_test_signals(num_steps_total)
     params = generate_test_params()
     
-    # Test each segment independently with reset
-    for seg in range(num_segments):
-        start_idx = seg * segment_size
-        end_idx = (seg + 1) * segment_size
-        
-        seg_signals = {
-            'H': signals['H'][start_idx:end_idx],
-            'M': signals['M'][start_idx:end_idx],
-            'D': signals['D'][start_idx:end_idx],
-            'E': signals['E'][start_idx:end_idx],
-            'C_cons': signals['C_cons'][start_idx:end_idx],
-            'C_disp': signals['C_disp'][start_idx:end_idx],
-        }
-        
-        # Original engine (fresh instance = fresh PID state)
-        engine_original = NexusEngine(params)
-        df_original = pd.DataFrame()
-        N_current = params['N_0']
-        for i in range(segment_size):
-            N_next, diagnostics = engine_original.step(
-                H=seg_signals['H'][i],
-                M=seg_signals['M'][i],
-                D=seg_signals['D'][i],
-                E=seg_signals['E'][i],
-                C_cons=seg_signals['C_cons'][i],
-                C_disp=seg_signals['C_disp'][i],
-                N=N_current,
-                delta_t=1.0
-            )
-            row = {'N': N_next, **diagnostics}
-            df_original = pd.concat([df_original, pd.DataFrame([row])], ignore_index=True)
-            N_current = N_next
-        
-        # Optimized engine (manual reset = fresh PID state)
-        engine_optimized = NexusEngineOptimized(params)
-        df_optimized = engine_optimized.run_simulation_vectorized(
-            signals_H=seg_signals['H'],
-            signals_M=seg_signals['M'],
-            signals_D=seg_signals['D'],
-            signals_E=seg_signals['E'],
-            signals_C_cons=seg_signals['C_cons'],
-            signals_C_disp=seg_signals['C_disp'],
-            N_initial=params['N_0'],
-            delta_t=1.0,
-            reset_controller=True
-        )
-        
-        # Assert parity for this segment
-        assert_dataframe_parity(df_original, df_optimized)
-
-
-def test_segmented_runs_without_reset():
-    """Test that both engines preserve PID state across consecutive runs when not reset."""
-    segment_size = 100
-    num_segments = 3
-    
-    signals = generate_test_signals(segment_size * num_segments)
-    params = generate_test_params()
-    
-    # Original engine (reuse instance for state persistence)
+    # Original engine - segmented with resets
     engine_original = NexusEngine(params)
     df_original_full = pd.DataFrame()
     N_current = params['N_0']
     
-    for seg in range(num_segments):
-        start_idx = seg * segment_size
-        end_idx = (seg + 1) * segment_size
+    for seg_start in range(0, num_steps_total, segment_size):
+        engine_original.reset_controller()
+        seg_end = min(seg_start + segment_size, num_steps_total)
         
-        for i in range(start_idx, end_idx):
+        for i in range(seg_start, seg_end):
             N_next, diagnostics = engine_original.step(
                 H=signals['H'][i],
                 M=signals['M'][i],
@@ -223,58 +168,103 @@ def test_segmented_runs_without_reset():
             df_original_full = pd.concat([df_original_full, pd.DataFrame([row])], ignore_index=True)
             N_current = N_next
     
-    # Optimized engine (reuse instance, no reset for state persistence)
-    engine_optimized = NexusEngineOptimized(params)
-    df_optimized_full = pd.DataFrame()
-    N_current_opt = params['N_0']
+    # Numba engine - segmented with resets
+    engine_numba = NexusEngineNumba(params)
+    df_numba_full = pd.DataFrame()
+    N_current = params['N_0']
     
-    for seg in range(num_segments):
-        start_idx = seg * segment_size
-        end_idx = (seg + 1) * segment_size
+    for seg_start in range(0, num_steps_total, segment_size):
+        seg_end = min(seg_start + segment_size, num_steps_total)
         
-        seg_signals = {
-            'H': signals['H'][start_idx:end_idx],
-            'M': signals['M'][start_idx:end_idx],
-            'D': signals['D'][start_idx:end_idx],
-            'E': signals['E'][start_idx:end_idx],
-            'C_cons': signals['C_cons'][start_idx:end_idx],
-            'C_disp': signals['C_disp'][start_idx:end_idx],
-        }
-        
-        df_seg = engine_optimized.run_simulation_vectorized(
-            signals_H=seg_signals['H'],
-            signals_M=seg_signals['M'],
-            signals_D=seg_signals['D'],
-            signals_E=seg_signals['E'],
-            signals_C_cons=seg_signals['C_cons'],
-            signals_C_disp=seg_signals['C_disp'],
-            N_initial=N_current_opt,
+        df_seg = engine_numba.run_simulation(
+            signals_H=signals['H'][seg_start:seg_end],
+            signals_M=signals['M'][seg_start:seg_end],
+            signals_D=signals['D'][seg_start:seg_end],
+            signals_E=signals['E'][seg_start:seg_end],
+            signals_C_cons=signals['C_cons'][seg_start:seg_end],
+            signals_C_disp=signals['C_disp'][seg_start:seg_end],
+            N_initial=N_current,
             delta_t=1.0,
-            reset_controller=False  # Preserve PID state
+            reset_controller=True
         )
         
-        df_optimized_full = pd.concat([df_optimized_full, df_seg], ignore_index=True)
-        N_current_opt = df_seg['N'].iloc[-1]
+        N_current = df_seg['N'].iloc[-1]
+        df_numba_full = pd.concat([df_numba_full, df_seg], ignore_index=True)
     
-    # Assert parity across all segments
-    assert_dataframe_parity(df_original_full, df_optimized_full)
+    # Assert parity
+    assert_dataframe_parity(df_original_full, df_numba_full)
+
+
+def test_segmented_runs_without_reset():
+    """
+    Test segmented runs without PID resets maintain controller state.
+    """
+    num_steps_total = 500
+    segment_size = 100
+    signals = generate_test_signals(num_steps_total)
+    params = generate_test_params()
+    
+    # Original engine - segmented without resets
+    engine_original = NexusEngine(params)
+    df_original = pd.DataFrame()
+    N_current = params['N_0']
+    
+    for i in range(num_steps_total):
+        N_next, diagnostics = engine_original.step(
+            H=signals['H'][i],
+            M=signals['M'][i],
+            D=signals['D'][i],
+            E=signals['E'][i],
+            C_cons=signals['C_cons'][i],
+            C_disp=signals['C_disp'][i],
+            N=N_current,
+            delta_t=1.0
+        )
+        row = {'N': N_next, **diagnostics}
+        df_original = pd.concat([df_original, pd.DataFrame([row])], ignore_index=True)
+        N_current = N_next
+    
+    # Numba engine - segmented without resets
+    engine_numba = NexusEngineNumba(params)
+    df_numba = pd.DataFrame()
+    N_current = params['N_0']
+    first_segment = True
+    
+    for seg_start in range(0, num_steps_total, segment_size):
+        seg_end = min(seg_start + segment_size, num_steps_total)
+        
+        df_seg = engine_numba.run_simulation(
+            signals_H=signals['H'][seg_start:seg_end],
+            signals_M=signals['M'][seg_start:seg_end],
+            signals_D=signals['D'][seg_start:seg_end],
+            signals_E=signals['E'][seg_start:seg_end],
+            signals_C_cons=signals['C_cons'][seg_start:seg_end],
+            signals_C_disp=signals['C_disp'][seg_start:seg_end],
+            N_initial=N_current,
+            delta_t=1.0,
+            reset_controller=first_segment
+        )
+        
+        N_current = df_seg['N'].iloc[-1]
+        df_numba = pd.concat([df_numba, df_seg], ignore_index=True)
+        first_segment = False
+    
+    # Assert parity
+    assert_dataframe_parity(df_original, df_numba)
 
 
 def test_edge_case_high_volatility():
-    """Test with highly volatile signals to stress-test numerical stability."""
+    """Test parity with high volatility signals"""
     num_steps = 500
     np.random.seed(123)
-    
-    # Extreme volatility signals
     signals = {
-        'H': np.random.uniform(1, 200, num_steps),
-        'M': np.random.uniform(1, 200, num_steps),
-        'D': np.random.uniform(1, 200, num_steps),
-        'E': np.random.uniform(0.1, 1.0, num_steps),
-        'C_cons': np.random.uniform(1, 100, num_steps),
-        'C_disp': np.random.uniform(1, 100, num_steps),
+        'H': 100 + np.random.normal(0, 50, num_steps),
+        'M': 80 + np.random.normal(0, 40, num_steps),
+        'D': 50 + np.random.normal(0, 30, num_steps),
+        'E': np.clip(0.8 + np.random.normal(0, 0.3, num_steps), 0, 1),
+        'C_cons': 60 + np.random.normal(0, 30, num_steps),
+        'C_disp': 40 + np.random.normal(0, 20, num_steps)
     }
-    
     params = generate_test_params()
     
     # Original engine
@@ -296,9 +286,9 @@ def test_edge_case_high_volatility():
         df_original = pd.concat([df_original, pd.DataFrame([row])], ignore_index=True)
         N_current = N_next
     
-    # Optimized engine
-    engine_optimized = NexusEngineOptimized(params)
-    df_optimized = engine_optimized.run_simulation_vectorized(
+    # Numba engine
+    engine_numba = NexusEngineNumba(params)
+    df_numba = engine_numba.run_simulation(
         signals_H=signals['H'],
         signals_M=signals['M'],
         signals_D=signals['D'],
@@ -311,19 +301,21 @@ def test_edge_case_high_volatility():
     )
     
     # Assert parity
-    assert_dataframe_parity(df_original, df_optimized)
+    assert_dataframe_parity(df_original, df_numba)
 
 
 def test_edge_case_varied_pid_gains():
-    """Test with extreme PID parameter values."""
-    num_steps = 300
+    """Test parity with extreme PID gains"""
+    num_steps = 500
     signals = generate_test_signals(num_steps)
     
-    # Extreme PID gains
+    # High PID gains
     params = generate_test_params()
-    params['K_p'] = 1.0  # High proportional
-    params['K_i'] = 0.5  # High integral
-    params['K_d'] = 0.2  # High derivative
+    params.update({
+        'K_p': 5.0,
+        'K_i': 1.0,
+        'K_d': 2.0
+    })
     
     # Original engine
     engine_original = NexusEngine(params)
@@ -344,9 +336,9 @@ def test_edge_case_varied_pid_gains():
         df_original = pd.concat([df_original, pd.DataFrame([row])], ignore_index=True)
         N_current = N_next
     
-    # Optimized engine
-    engine_optimized = NexusEngineOptimized(params)
-    df_optimized = engine_optimized.run_simulation_vectorized(
+    # Numba engine
+    engine_numba = NexusEngineNumba(params)
+    df_numba = engine_numba.run_simulation(
         signals_H=signals['H'],
         signals_M=signals['M'],
         signals_D=signals['D'],
@@ -359,11 +351,11 @@ def test_edge_case_varied_pid_gains():
     )
     
     # Assert parity
-    assert_dataframe_parity(df_original, df_optimized)
+    assert_dataframe_parity(df_original, df_numba)
 
 
 def test_cumulative_conservation():
-    """Test that cumulative sums are preserved (conservation law verification)."""
+    """Test cumulative conservation properties"""
     num_steps = 500
     signals = generate_test_signals(num_steps)
     params = generate_test_params()
@@ -387,9 +379,9 @@ def test_cumulative_conservation():
         df_original = pd.concat([df_original, pd.DataFrame([row])], ignore_index=True)
         N_current = N_next
     
-    # Optimized engine
-    engine_optimized = NexusEngineOptimized(params)
-    df_optimized = engine_optimized.run_simulation_vectorized(
+    # Numba engine
+    engine_numba = NexusEngineNumba(params)
+    df_numba = engine_numba.run_simulation(
         signals_H=signals['H'],
         signals_M=signals['M'],
         signals_D=signals['D'],
@@ -401,14 +393,11 @@ def test_cumulative_conservation():
         reset_controller=True
     )
     
-    # Compute cumulative sums
+    # Check cumulative sums match for issuance and burn
     for col in ['I', 'B', 'dN_dt']:
         cum_original = df_original[col].cumsum().values
-        cum_optimized = df_optimized[col].cumsum().values
-        
-        abs_diff = np.abs(cum_original - cum_optimized)
-        max_abs_diff = np.max(abs_diff)
-        
+        cum_numba = df_numba[col].cumsum().values
+        max_abs_diff = np.max(np.abs(cum_original - cum_numba))
         assert max_abs_diff < 1e-6, \
             f"Cumulative sum mismatch for '{col}': max abs diff={max_abs_diff:.2e}"
 
