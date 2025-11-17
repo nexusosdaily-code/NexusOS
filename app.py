@@ -551,7 +551,8 @@ def main():
         "📜 Smart Contracts",
         "🔗 Oracles",
         "🤖 ML Optimization",
-        "💾 Scenarios"
+        "💾 Scenarios",
+        "📡 WNSP"
     ]
     
     if AuthManager.has_role('admin'):
@@ -595,6 +596,10 @@ def main():
     
     with tabs[tab_index]:
         render_scenarios()
+    tab_index += 1
+    
+    with tabs[tab_index]:
+        render_wnsp()
     tab_index += 1
     
     if AuthManager.has_role('admin'):
@@ -2500,6 +2505,11 @@ def render_scenarios():
         
     except Exception as e:
         st.error(f"Error loading scenarios: {str(e)}")
+
+def render_wnsp():
+    """Render the Wavelength-Native Signaling Protocol (WNSP) interface."""
+    from wnsp_renderer import render_wnsp_interface
+    render_wnsp_interface()
 
 if __name__ == "__main__":
     main()
