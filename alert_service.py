@@ -38,7 +38,7 @@ class AlertService:
     
     def create_rule(self, name: str, metric_key: str, comparator: str, 
                    threshold: float, severity: str = 'warning', 
-                   created_by: int = None, evaluation_window: int = None) -> AlertRule:
+                   created_by: Optional[int] = None, evaluation_window: Optional[int] = None) -> AlertRule:
         """
         Create a new alert rule.
         
@@ -114,7 +114,8 @@ class AlertService:
             return False
         
         try:
-            return comparator_func(float(metric_value), float(rule.threshold))
+            threshold_value = rule.threshold
+            return comparator_func(float(metric_value), float(threshold_value))
         except (ValueError, TypeError):
             return False
     
@@ -136,9 +137,10 @@ class AlertService:
             
             for rule in active_rules:
                 now = datetime.utcnow()
+                last_eval = rule.last_evaluated_at
                 
-                if rule.last_evaluated_at:
-                    time_since_eval = (now - rule.last_evaluated_at).total_seconds()
+                if last_eval is not None:
+                    time_since_eval = (now - last_eval).total_seconds()
                     if time_since_eval < 5:
                         continue
                 
@@ -153,6 +155,7 @@ class AlertService:
                     ).first()
                     
                     if not existing_active:
+                        threshold_value = rule.threshold
                         event = AlertEvent(
                             rule_id=rule.id,
                             triggered_at=now,
@@ -160,7 +163,7 @@ class AlertService:
                             payload={
                                 'metric_key': rule.metric_key,
                                 'metric_value': current_metrics.get(rule.metric_key),
-                                'threshold': rule.threshold,
+                                'threshold': float(threshold_value),
                                 'comparator': rule.comparator,
                                 'severity': rule.severity
                             }
@@ -174,7 +177,7 @@ class AlertService:
                             'metric_value': current_metrics.get(rule.metric_key)
                         })
                 
-                rule.last_evaluated_at = now
+                db.query(AlertRule).filter(AlertRule.id == rule.id).update({'last_evaluated_at': now})
             
             db.commit()
             
@@ -219,8 +222,10 @@ class AlertService:
         try:
             event = db.query(AlertEvent).filter(AlertEvent.id == event_id).first()
             if event:
-                event.acknowledged_by = user_id
-                event.acknowledged_at = datetime.utcnow()
+                db.query(AlertEvent).filter(AlertEvent.id == event_id).update({
+                    'acknowledged_by': user_id,
+                    'acknowledged_at': datetime.utcnow()
+                })
                 db.commit()
                 return True
             return False
@@ -240,9 +245,11 @@ class AlertService:
         db = self.SessionLocal()
         try:
             event = db.query(AlertEvent).filter(AlertEvent.id == event_id).first()
-            if event and event.status == 'active':
-                event.resolved_at = datetime.utcnow()
-                event.status = 'resolved'
+            if event and str(event.status) == 'active':
+                db.query(AlertEvent).filter(AlertEvent.id == event_id).update({
+                    'resolved_at': datetime.utcnow(),
+                    'status': 'resolved'
+                })
                 db.commit()
                 return True
             return False
@@ -264,8 +271,10 @@ class AlertService:
         try:
             rule = db.query(AlertRule).filter(AlertRule.id == rule_id).first()
             if rule:
-                rule.is_active = is_active
-                rule.updated_at = datetime.utcnow()
+                db.query(AlertRule).filter(AlertRule.id == rule_id).update({
+                    'is_active': is_active,
+                    'updated_at': datetime.utcnow()
+                })
                 db.commit()
                 return True
             return False

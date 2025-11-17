@@ -736,6 +736,7 @@ def render_dashboard():
         
         if active_alerts:
             for alert in active_alerts[:5]:
+                alert_id = int(alert.id)
                 severity_color = {
                     'info': '🔵',
                     'warning': '🟡',
@@ -751,14 +752,14 @@ def render_dashboard():
                     
                     col_a, col_b = st.columns(2)
                     with col_a:
-                        if st.button(f"✓ Acknowledge", key=f"ack_{alert.id}"):
+                        if st.button(f"✓ Acknowledge", key=f"ack_{alert_id}"):
                             if AuthManager.is_authenticated() and hasattr(st.session_state, 'current_user'):
-                                alert_service.acknowledge_alert(alert.id, st.session_state.current_user.id)
+                                alert_service.acknowledge_alert(alert_id, int(st.session_state.current_user.id))
                                 st.success("Alert acknowledged")
                                 st.rerun()
                     with col_b:
-                        if st.button(f"✓ Resolve", key=f"res_{alert.id}"):
-                            alert_service.resolve_alert(alert.id)
+                        if st.button(f"✓ Resolve", key=f"res_{alert_id}"):
+                            alert_service.resolve_alert(alert_id)
                             st.success("Alert resolved")
                             st.rerun()
         else:
@@ -800,7 +801,7 @@ def render_dashboard():
                     if not rule_name:
                         st.error("Rule name is required")
                     else:
-                        user_id = st.session_state.current_user.id if hasattr(st.session_state, 'current_user') and st.session_state.current_user else None
+                        user_id = int(st.session_state.current_user.id) if hasattr(st.session_state, 'current_user') and st.session_state.current_user else None
                         rule = alert_service.create_rule(
                             name=rule_name,
                             metric_key=metric_key,
@@ -817,30 +818,32 @@ def render_dashboard():
             
             if all_rules:
                 for rule in all_rules:
-                    status_icon = "✅" if rule.is_active else "⏸️"
+                    rule_id = int(rule.id)
+                    is_active = bool(rule.is_active)
+                    status_icon = "✅" if is_active else "⏸️"
                     with st.expander(f"{status_icon} {rule.name}"):
                         st.write(f"**Metric:** {rule.metric_key}")
                         st.write(f"**Condition:** {alert_service.COMPARATOR_LABELS.get(rule.comparator)} {rule.threshold}")
                         st.write(f"**Severity:** {rule.severity}")
-                        st.write(f"**Status:** {'Active' if rule.is_active else 'Inactive'}")
+                        st.write(f"**Status:** {'Active' if is_active else 'Inactive'}")
                         
                         col_a, col_b, col_c = st.columns(3)
                         with col_a:
-                            if rule.is_active:
-                                if st.button(f"⏸️ Disable", key=f"disable_{rule.id}"):
-                                    alert_service.toggle_rule(rule.id, False)
+                            if is_active:
+                                if st.button(f"⏸️ Disable", key=f"disable_{rule_id}"):
+                                    alert_service.toggle_rule(rule_id, False)
                                     st.success("Rule disabled")
                                     st.rerun()
                             else:
-                                if st.button(f"▶️ Enable", key=f"enable_{rule.id}"):
-                                    alert_service.toggle_rule(rule.id, True)
+                                if st.button(f"▶️ Enable", key=f"enable_{rule_id}"):
+                                    alert_service.toggle_rule(rule_id, True)
                                     st.success("Rule enabled")
                                     st.rerun()
                         with col_b:
                             pass
                         with col_c:
-                            if st.button(f"🗑️ Delete", key=f"delete_rule_{rule.id}"):
-                                alert_service.delete_rule(rule.id)
+                            if st.button(f"🗑️ Delete", key=f"delete_rule_{rule_id}"):
+                                alert_service.delete_rule(rule_id)
                                 st.success("Rule deleted")
                                 st.rerun()
             else:
@@ -2283,11 +2286,13 @@ def render_admin():
             
             if users:
                 for user in users:
-                    with st.expander(f"👤 {user.email} {'✅' if user.is_active else '❌'}"):
+                    is_active = bool(user.is_active)
+                    last_login = user.last_login
+                    with st.expander(f"👤 {user.email} {'✅' if is_active else '❌'}"):
                         st.write(f"**ID:** {user.id}")
                         st.write(f"**Created:** {user.created_at.strftime('%Y-%m-%d %H:%M')}")
-                        if user.last_login:
-                            st.write(f"**Last Login:** {user.last_login.strftime('%Y-%m-%d %H:%M')}")
+                        if last_login is not None:
+                            st.write(f"**Last Login:** {last_login.strftime('%Y-%m-%d %H:%M')}")
                         else:
                             st.write("**Last Login:** Never")
                         
@@ -2297,15 +2302,15 @@ def render_admin():
                         col_a, col_b, col_c = st.columns(3)
                         
                         with col_a:
-                            if user.is_active:
+                            if is_active:
                                 if st.button(f"🚫 Deactivate", key=f"deact_{user.id}"):
-                                    user.is_active = False
+                                    db.query(User).filter(User.id == user.id).update({'is_active': False})
                                     db.commit()
                                     st.success("User deactivated")
                                     st.rerun()
                             else:
                                 if st.button(f"✅ Activate", key=f"act_{user.id}"):
-                                    user.is_active = True
+                                    db.query(User).filter(User.id == user.id).update({'is_active': True})
                                     db.commit()
                                     st.success("User activated")
                                     st.rerun()
@@ -2381,6 +2386,9 @@ def render_scenarios():
             else:
                 try:
                     session = get_session()
+                    if session is None:
+                        st.error("Database connection unavailable")
+                        return
                     
                     config = SimulationConfig(
                         name=scenario_name,
@@ -2438,6 +2446,9 @@ def render_scenarios():
     
     try:
         session = get_session()
+        if session is None:
+            st.error("Database connection unavailable")
+            return
         configs = session.query(SimulationConfig).order_by(SimulationConfig.created_at.desc()).all()
         
         if configs:
