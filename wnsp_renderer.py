@@ -142,7 +142,7 @@ class WnspVisualizer:
             hovermode='closest'
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     def render_spectrum_chart(self, text: str) -> None:
         """
@@ -189,7 +189,7 @@ class WnspVisualizer:
             hovermode='x unified'
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     def render_animated_signal(self, text: str, container) -> None:
         """
