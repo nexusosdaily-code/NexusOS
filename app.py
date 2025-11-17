@@ -594,7 +594,8 @@ def main():
             "🔗 Oracle Integration",
             "🤖 ML Optimization",
             "💾 Scenario Manager",
-            "📡 WNSP Protocol"
+            "📡 WNSP Protocol",
+            "ℹ️ About NexusOS"
         ]
         
         if AuthManager.has_role('admin'):
@@ -617,7 +618,11 @@ def main():
     st.divider()
     
     # Render selected module
-    if selected_module == "📊 Dashboard":
+    if selected_module == "ℹ️ About NexusOS":
+        from app_info_content import render_info_tabs
+        st.title("ℹ️ About NexusOS")
+        render_info_tabs('about_nexusos')
+    elif selected_module == "📊 Dashboard":
         render_dashboard()
     elif selected_module == "🔧 Task Orchestration":
         render_task_orchestration()
@@ -651,9 +656,14 @@ def render_dashboard():
     from dashboard_service import get_dashboard_service
     from alert_service import get_alert_service
     from datetime import datetime
+    from app_info_content import show_help_icon
     
-    st.header("📊 Dashboard")
-    st.markdown("**Real-time system monitoring** with auto-refresh and intelligent alerting")
+    col_header, col_help = st.columns([5, 1])
+    with col_header:
+        st.header("📊 Dashboard")
+        st.markdown("**Real-time system monitoring** with auto-refresh and intelligent alerting")
+    with col_help:
+        show_help_icon('dashboard', 'main')
     
     col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
@@ -1028,7 +1038,17 @@ def render_parameter_control():
         st.rerun()
 
 def render_simulation():
-    st.header("Simulation Engine")
+    from app_info_content import show_help_icon, render_info_tabs
+    
+    col_sim_header, col_sim_help = st.columns([5, 1])
+    with col_sim_header:
+        st.header("Simulation Engine")
+    with col_sim_help:
+        show_help_icon('economic_simulator', 'sim')
+    
+    # Info tabs for economic simulator
+    with st.expander("📖 Need Help? Click here for usage guide and documentation"):
+        render_info_tabs('economic_simulator')
     
     st.subheader("Input Signal Configuration")
     
@@ -2616,12 +2636,17 @@ def render_task_orchestration():
     from task_orchestration import TaskOrchestrationDAG, TaskBuilder, TaskStatus, TaskPriority
     from task_handlers import register_all_handlers
     from dag_domains import DomainRegistry
+    from app_info_content import show_help_icon
     
-    st.header("🔧 Task Orchestration")
-    st.markdown("""
-    **Workflow automation** for administration, communications, data processing, and integrations.
-    Features: dependency management, priority scheduling, auto-retry, and error handling.
-    """)
+    col_header, col_help = st.columns([5, 1])
+    with col_header:
+        st.header("🔧 Task Orchestration")
+        st.markdown("""
+        **Workflow automation** for administration, communications, data processing, and integrations.
+        Features: dependency management, priority scheduling, auto-retry, and error handling.
+        """)
+    with col_help:
+        show_help_icon('task_orchestration', 'main')
     
     if 'task_dag' not in st.session_state:
         st.session_state.task_dag = TaskOrchestrationDAG()
@@ -2640,8 +2665,19 @@ def render_task_orchestration():
     # SECURE MESSAGING - USER FRIENDLY INTERFACE
     # ========================================================================
     st.divider()
-    st.subheader("🔐 Secure Email System (Wavelength Encryption)")
-    st.markdown("**Send and receive encrypted emails with automatic encryption/decryption. One-click secure messaging.**")
+    
+    from app_info_content import render_info_tabs
+    
+    col_msg_header, col_msg_help = st.columns([5, 1])
+    with col_msg_header:
+        st.subheader("🔐 Secure Email System (Wavelength Encryption)")
+        st.markdown("**Send and receive encrypted emails with automatic encryption/decryption. One-click secure messaging.**")
+    with col_msg_help:
+        show_help_icon('secure_messaging', 'email')
+    
+    # Info tabs for secure messaging
+    with st.expander("📖 Need Help? Click here for guides and documentation"):
+        render_info_tabs('secure_messaging')
     
     # Encryption Key Management
     key_col1, key_col2 = st.columns([3, 1])
