@@ -120,7 +120,7 @@ def authenticate_user(db: DBSession, email: str, password: str) -> Optional[Tupl
             raise DatabaseError(error_info['message'], e, error_info['recovery_hint'])
     
     # Invalid credentials - this is the only case where we return None
-    if not user or not verify_password(password, user.password_hash):
+    if not user or not verify_password(password, str(user.password_hash)):
         return None
     
     # Create session with transaction protection
@@ -137,7 +137,7 @@ def authenticate_user(db: DBSession, email: str, password: str) -> Optional[Tupl
         )
         db.add(session)
         
-        user.last_login = datetime.utcnow()
+        user.last_login = datetime.utcnow()  # type: ignore[assignment]
     
     return user, session_token
 
@@ -153,7 +153,7 @@ def validate_session(db: DBSession, session_token: str) -> Optional[User]:
     if not session:
         return None
     
-    session.last_seen = datetime.utcnow()
+    session.last_seen = datetime.utcnow()  # type: ignore[assignment]
     db.commit()
     
     user = db.query(User).filter(User.id == session.user_id, User.is_active == True).first()
@@ -171,7 +171,7 @@ def get_user_roles(db: DBSession, user: User) -> List[str]:
     """Get all role names for a user."""
     role_ids = [ur.role_id for ur in user.user_roles]
     roles = db.query(Role).filter(Role.id.in_(role_ids)).all()
-    return [role.name for role in roles]
+    return [str(role.name) for role in roles]
 
 def user_has_role(db: DBSession, user: User, role_name: str) -> bool:
     """Check if a user has a specific role."""
@@ -200,6 +200,9 @@ def bootstrap_admin(db: DBSession, email: str, password: str) -> bool:
     if not admin_role:
         init_roles(db)
         admin_role = db.query(Role).filter(Role.name == 'admin').first()
+    
+    if not admin_role:
+        return False  # Failed to create admin role
     
     existing_admin = db.query(User).join(UserRole).filter(
         UserRole.role_id == admin_role.id
