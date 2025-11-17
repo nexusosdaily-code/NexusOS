@@ -2319,9 +2319,9 @@ def render_admin():
             
             if submit_create:
                 if not new_email or not new_password:
-                    st.error("Email and password are required")
+                    st.error("❌ Missing required fields\nEmail and password are required\n💡 All fields must be completed to create a user account.")
                 elif len(new_password) < 8:
-                    st.error("Password must be at least 8 characters")
+                    st.error("❌ Password too short\nPassword must be at least 8 characters\n💡 Use a longer password for better security.")
                 else:
                     roles = []
                     if role_admin:

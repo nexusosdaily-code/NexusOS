@@ -266,7 +266,7 @@ class AuthManager:
             
             if submit:
                 if not email or not password:
-                    st.error("Please enter both email and password")
+                    st.error("❌ Missing credentials\nPlease enter both email and password\n💡 All fields are required to log in.")
                     return
                 
                 engine = get_engine()
@@ -283,7 +283,7 @@ class AuthManager:
                         st.success(f"Welcome back, {user.email}!")
                         st.rerun()
                     else:
-                        st.error("Invalid email or password")
+                        st.error("❌ Invalid credentials\nEmail or password is incorrect\n💡 Check your email and password, or contact your administrator for help.")
                 except (DatabaseError, ConstraintViolationError, ConnectionError) as e:
                     st.error(e.get_user_message())
                 except Exception as e:
