@@ -194,7 +194,15 @@ def render_predictive_analytics_dashboard():
         # Simulate historical data for demonstration
         st.session_state.analytics_engine.repository.simulate_historical_data(years=10)
     
+    if 'data_capture_message' not in st.session_state:
+        st.session_state.data_capture_message = None
+    
     engine = st.session_state.analytics_engine
+    
+    # Show success message if present
+    if st.session_state.data_capture_message:
+        st.success(st.session_state.data_capture_message)
+        st.session_state.data_capture_message = None
     
     # Sidebar controls
     st.sidebar.header("⚙️ Analysis Configuration")
@@ -235,15 +243,13 @@ def render_predictive_analytics_dashboard():
     st.sidebar.subheader("📥 Data Capture")
     
     if st.sidebar.button("Simulate Year of Data", use_container_width=True):
-        with st.spinner("Capturing new data points..."):
-            engine.repository.simulate_historical_data(years=1)
-        st.success("✅ Year of data added!")
+        engine.repository.simulate_historical_data(years=1)
+        st.session_state.data_capture_message = "✅ Year of data added!"
         st.rerun()
     
     if st.sidebar.button("Simulate Decade of Data", use_container_width=True):
-        with st.spinner("Capturing decade of data..."):
-            engine.repository.simulate_historical_data(years=10)
-        st.success("✅ Decade of data added!")
+        engine.repository.simulate_historical_data(years=10)
+        st.session_state.data_capture_message = "✅ Decade of data added!"
         st.rerun()
     
     # Main dashboard tabs

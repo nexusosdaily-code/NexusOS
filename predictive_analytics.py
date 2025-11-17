@@ -92,24 +92,32 @@ class TimeSeriesForecaster:
         self.scaler = StandardScaler()
     
     def detect_trend(self, values: np.ndarray) -> str:
-        """Detect overall trend in data"""
+        """Detect overall trend in data with scale-normalized thresholds"""
         if len(values) < 10:
             return 'insufficient_data'
         
-        # Linear regression for trend detection
-        X = np.arange(len(values)).reshape(-1, 1)
-        y = values
+        # Normalize values to remove scale dependency
+        value_range = np.max(values) - np.min(values)
+        if value_range == 0:
+            return 'stable'
+        
+        normalized_values = (values - np.min(values)) / value_range
+        
+        # Linear regression on normalized data
+        X = np.arange(len(normalized_values)).reshape(-1, 1)
+        y = normalized_values
         
         model = LinearRegression()
         model.fit(X, y)
         slope = model.coef_[0]
         
-        # Calculate volatility
-        volatility = np.std(values) / np.mean(np.abs(values)) if np.mean(np.abs(values)) > 0 else 0
+        # Calculate coefficient of variation for volatility (scale-independent)
+        cv = np.std(values) / np.abs(np.mean(values)) if np.mean(values) != 0 else 0
         
-        if volatility > 0.5:
+        # Determine trend with improved thresholds
+        if cv > 0.5:
             return 'volatile'
-        elif abs(slope) < 0.01:
+        elif abs(slope) < 0.005:  # Relative to normalized scale
             return 'stable'
         elif slope > 0:
             return 'increasing'
@@ -117,18 +125,29 @@ class TimeSeriesForecaster:
             return 'decreasing'
     
     def calculate_growth_rate(self, values: np.ndarray, time_years: float) -> float:
-        """Calculate compound annual growth rate"""
+        """Calculate compound annual growth rate with proper handling of edge cases"""
         if len(values) < 2 or time_years <= 0:
             return 0.0
         
         start_value = values[0]
         end_value = values[-1]
         
+        # Handle negative or zero starting values
         if start_value <= 0:
-            return 0.0
+            if end_value > 0:
+                # Went from zero/negative to positive - calculate based on absolute change
+                return (abs(end_value - start_value) / max(abs(start_value), 1.0)) * 100 / time_years
+            else:
+                # Both negative or zero - return simple percentage change
+                return ((end_value - start_value) / max(abs(start_value), 1.0)) * 100 / time_years
         
-        # CAGR formula
-        cagr = (np.power(end_value / start_value, 1 / time_years) - 1) * 100
+        # Standard CAGR formula for positive start value
+        if end_value > 0:
+            cagr = (np.power(end_value / start_value, 1 / time_years) - 1) * 100
+        else:
+            # Went from positive to zero/negative - negative growth
+            cagr = -100.0
+        
         return cagr
     
     def moving_average_forecast(
@@ -155,15 +174,29 @@ class TimeSeriesForecaster:
         forecast_steps: int,
         alpha: float = 0.3
     ) -> np.ndarray:
-        """Forecast using exponential smoothing"""
-        forecasts = []
-        last_smoothed = historical_values[-1]
+        """Forecast using exponential smoothing with proper implementation"""
+        # Apply exponential smoothing to historical data first
+        smoothed = []
+        s = historical_values[0]
         
-        for _ in range(forecast_steps):
-            # Simple exponential smoothing
-            next_value = last_smoothed
+        for value in historical_values:
+            s = alpha * value + (1 - alpha) * s
+            smoothed.append(s)
+        
+        # For forecast, use the trend from smoothed data
+        if len(smoothed) >= 2:
+            trend = smoothed[-1] - smoothed[-2]
+        else:
+            trend = 0
+        
+        # Generate forecasts with trend
+        forecasts = []
+        last_value = smoothed[-1]
+        
+        for i in range(forecast_steps):
+            next_value = last_value + trend
             forecasts.append(next_value)
-            last_smoothed = next_value
+            last_value = next_value
         
         return np.array(forecasts)
     
