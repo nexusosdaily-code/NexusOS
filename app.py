@@ -13,6 +13,7 @@ from monte_carlo_analysis import MonteCarloAnalysis, SensitivityAnalysis
 from oracle_sources import OracleManager, get_default_oracle_configs
 from auth import AuthManager
 from validation import ParameterValidator, validate_and_display
+from blockchain_viz import render_blockchain_dashboard
 
 st.set_page_config(
     page_title="NexusOS Advance Systems",
@@ -586,6 +587,7 @@ def main():
     with col1:
         module_options = [
             "📊 Dashboard",
+            "⛓️ Blockchain Simulator",
             "🔧 Task Orchestration",
             "🌐 Multi-Agent Networks",
             "📈 Economic Simulator",
@@ -624,6 +626,8 @@ def main():
         render_info_tabs('about_nexusos')
     elif selected_module == "📊 Dashboard":
         render_dashboard()
+    elif selected_module == "⛓️ Blockchain Simulator":
+        render_blockchain_dashboard()
     elif selected_module == "🔧 Task Orchestration":
         render_task_orchestration()
     elif selected_module == "🌐 Multi-Agent Networks":

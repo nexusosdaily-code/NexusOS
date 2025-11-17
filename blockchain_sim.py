@@ -258,7 +258,8 @@ class BlockchainSimulator:
                 return random.choice(active_validators)
             
             weights = [v.stake / total_stake for v in active_validators]
-            return np.random.choice(active_validators, p=weights)
+            idx = np.random.choice(len(active_validators), p=weights)
+            return active_validators[idx]
         
         elif self.consensus_type == ConsensusType.DELEGATED_POS:
             # Round-robin among top validators
