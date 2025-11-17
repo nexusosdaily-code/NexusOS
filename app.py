@@ -607,8 +607,12 @@ def main():
         )
     
     with col2:
-        st.caption(f"👤 {AuthManager.get_current_user()['username']}")
-        st.caption(f"🎯 {AuthManager.get_current_user()['role'].title()}")
+        current_user = st.session_state.get('current_user')
+        user_roles = st.session_state.get('user_roles', [])
+        if current_user:
+            st.caption(f"👤 {current_user.email}")
+            if user_roles:
+                st.caption(f"🎯 {user_roles[0].title()}")
     
     st.divider()
     
