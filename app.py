@@ -15,7 +15,7 @@ from auth import AuthManager
 from validation import ParameterValidator, validate_and_display
 
 st.set_page_config(
-    page_title="NexusOS",
+    page_title="NexusOS Advance Systems",
     page_icon="🔄",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -572,7 +572,7 @@ def main():
     
     AuthManager.render_logout()
     
-    st.title("🔄 NexusOS Advance Messaging")
+    st.title("🔄 NexusOS Advance Systems")
     st.markdown("""
     **DAG-Based Platform** for task orchestration, workflow automation, and advanced messaging 
     across multiple domains: administration, communications, data processing, and integrations.
@@ -620,7 +620,7 @@ def main():
     # Render selected module
     if selected_module == "ℹ️ About NexusOS":
         from app_info_content import render_info_tabs
-        st.title("ℹ️ About NexusOS")
+        st.title("ℹ️ About NexusOS Advance Systems")
         render_info_tabs('about_nexusos')
     elif selected_module == "📊 Dashboard":
         render_dashboard()

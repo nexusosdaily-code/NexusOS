@@ -1,7 +1,7 @@
-# NexusOS
+# NexusOS Advance Systems
 
 ### Overview
-NexusOS is a comprehensive economic system simulator based on the Nexus equation, offering a self-regulating system with issuance/burn mechanics, PID feedback control, and conservation constraints. It models a multi-factor ecosystem, providing configurable parameters, real-time visualization, scenario management with PostgreSQL persistence, and data export. Key capabilities include Monte Carlo and Sensitivity Analysis, Multi-Agent Network Simulation, Smart Contract Code Generation (Solidity, Rust/ink!), Oracle Integration, ML-Based Adaptive Parameter Tuning, and User Authentication with Role-Based Access Control. The platform aims to provide robust tools for economic modeling and analysis.
+NexusOS Advance Systems is a comprehensive economic system simulator based on the Nexus equation, offering a self-regulating system with issuance/burn mechanics, PID feedback control, and conservation constraints. It models a multi-factor ecosystem, providing configurable parameters, real-time visualization, scenario management with PostgreSQL persistence, and data export. Key capabilities include Monte Carlo and Sensitivity Analysis, Multi-Agent Network Simulation, Smart Contract Code Generation (Solidity, Rust/ink!), Oracle Integration, ML-Based Adaptive Parameter Tuning, and User Authentication with Role-Based Access Control. The platform aims to provide robust tools for economic modeling and analysis.
 
 ### User Preferences
 Preferred communication style: Simple, everyday language.

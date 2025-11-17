@@ -327,11 +327,11 @@ Where:
         },
         
         'about_nexusos': """
-### 🌐 About NexusOS
+### 🌐 About NexusOS Advance Systems
 
 **Unified Intelligence Platform for Economic Modeling & Advanced Communications**
 
-NexusOS is a comprehensive platform that combines economic simulation, multi-agent systems, smart contract generation, machine learning optimization, and wavelength-based secure communications into a single, integrated ecosystem.
+NexusOS Advance Systems is a comprehensive platform that combines economic simulation, multi-agent systems, smart contract generation, machine learning optimization, and wavelength-based secure communications into a single, integrated ecosystem.
 
 **What We Built:**
 
@@ -401,12 +401,12 @@ Provide robust, production-ready tools for economic modeling, secure communicati
 - **Security**: bcrypt, wavelength cryptography
 - **Networks**: NetworkX
 
-**Why NexusOS?**
-We believe complex systems should be both powerful and accessible. NexusOS hides the complexity of electromagnetic cryptography, economic differential equations, and DAG-based workflows behind simple, one-click interfaces - because advanced technology should empower users, not overwhelm them.
+**Why NexusOS Advance Systems?**
+We believe complex systems should be both powerful and accessible. NexusOS Advance Systems hides the complexity of electromagnetic cryptography, economic differential equations, and DAG-based workflows behind simple, one-click interfaces - because advanced technology should empower users, not overwhelm them.
 
 ---
 
-**Built with care by the NexusOS team**  
+**Built with care by the NexusOS Advance Systems team**  
 Making complexity simple, one wavelength at a time. 🌊
 """,
     }
