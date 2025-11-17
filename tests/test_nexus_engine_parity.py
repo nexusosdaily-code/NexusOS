@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from nexus_engine import NexusEngine
 from nexus_engine_optimized import NexusEngineOptimized
+from nexus_engine_numba import NexusEngineNumba
 
 
 def assert_dataframe_parity(df1: pd.DataFrame, df2: pd.DataFrame, tolerance_abs: float = 1e-8, tolerance_rel: float = 1e-6):
@@ -412,6 +413,49 @@ def test_cumulative_conservation():
             f"Cumulative sum mismatch for '{col}': max abs diff={max_abs_diff:.2e}"
 
 
+def test_numba_engine_parity():
+    """Test that Numba JIT engine produces identical results to original engine."""
+    num_steps = 1000
+    signals = generate_test_signals(num_steps)
+    params = generate_test_params()
+    
+    # Original engine
+    engine_original = NexusEngine(params)
+    df_original = pd.DataFrame()
+    N_current = params['N_0']
+    for i in range(num_steps):
+        N_next, diagnostics = engine_original.step(
+            H=signals['H'][i],
+            M=signals['M'][i],
+            D=signals['D'][i],
+            E=signals['E'][i],
+            C_cons=signals['C_cons'][i],
+            C_disp=signals['C_disp'][i],
+            N=N_current,
+            delta_t=1.0
+        )
+        row = {'N': N_next, **diagnostics}
+        df_original = pd.concat([df_original, pd.DataFrame([row])], ignore_index=True)
+        N_current = N_next
+    
+    # Numba engine
+    engine_numba = NexusEngineNumba(params)
+    df_numba = engine_numba.run_simulation(
+        signals_H=signals['H'],
+        signals_M=signals['M'],
+        signals_D=signals['D'],
+        signals_E=signals['E'],
+        signals_C_cons=signals['C_cons'],
+        signals_C_disp=signals['C_disp'],
+        N_initial=params['N_0'],
+        delta_t=1.0,
+        reset_controller=True
+    )
+    
+    # Assert parity
+    assert_dataframe_parity(df_original, df_numba)
+
+
 if __name__ == '__main__':
     print("Running NexusEngine parity tests...")
     
@@ -432,5 +476,8 @@ if __name__ == '__main__':
     
     test_cumulative_conservation()
     print("✓ Cumulative conservation test passed")
+    
+    test_numba_engine_parity()
+    print("✓ Numba JIT engine parity test passed")
     
     print("\n✅ All parity tests passed!")
