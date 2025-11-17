@@ -572,80 +572,74 @@ def main():
     
     AuthManager.render_logout()
     
-    st.title("🔄 NexusOS - Foundational Economic System Simulator")
+    st.title("🔄 NexusOS Advance Messaging")
     st.markdown("""
-    A comprehensive platform implementing the Nexus equation: a self-regulating economic system 
-    with issuance/burn mechanics, feedback control, and conservation constraints.
+    **DAG-Based Platform** for task orchestration, workflow automation, and advanced messaging 
+    across multiple domains: administration, communications, data processing, and integrations.
     """)
     
-    tab_list = [
-        "📊 Dashboard", 
-        "⚙️ Parameter Control", 
-        "📈 Simulation", 
-        "🔬 Advanced Analysis",
-        "🌐 Multi-Agent",
-        "📜 Smart Contracts",
-        "🔗 Oracles",
-        "🤖 ML Optimization",
-        "💾 Scenarios",
-        "📡 WNSP",
-        "🔧 Task Orchestration"
-    ]
+    # Clean dropdown-based navigation
+    st.divider()
     
-    if AuthManager.has_role('admin'):
-        tab_list.append("👥 Admin")
+    col1, col2 = st.columns([3, 1])
     
-    tabs = st.tabs(tab_list)
+    with col1:
+        module_options = [
+            "📊 Dashboard",
+            "🔧 Task Orchestration",
+            "🌐 Multi-Agent Networks",
+            "📈 Economic Simulator",
+            "🔬 Advanced Analysis",
+            "📜 Smart Contracts",
+            "🔗 Oracle Integration",
+            "🤖 ML Optimization",
+            "💾 Scenario Manager",
+            "📡 WNSP Protocol"
+        ]
+        
+        if AuthManager.has_role('admin'):
+            module_options.append("👥 Administration")
+        
+        selected_module = st.selectbox(
+            "Select Module",
+            module_options,
+            help="Choose a module to access its features"
+        )
     
-    tab_index = 0
+    with col2:
+        st.caption(f"👤 {AuthManager.get_current_user()['username']}")
+        st.caption(f"🎯 {AuthManager.get_current_user()['role'].title()}")
     
-    with tabs[tab_index]:
+    st.divider()
+    
+    # Render selected module
+    if selected_module == "📊 Dashboard":
         render_dashboard()
-    tab_index += 1
-    
-    with tabs[tab_index]:
-        render_parameter_control()
-    tab_index += 1
-    
-    with tabs[tab_index]:
-        render_simulation()
-    tab_index += 1
-    
-    with tabs[tab_index]:
-        render_advanced_analysis()
-    tab_index += 1
-    
-    with tabs[tab_index]:
-        render_multi_agent()
-    tab_index += 1
-    
-    with tabs[tab_index]:
-        render_smart_contracts()
-    tab_index += 1
-    
-    with tabs[tab_index]:
-        render_oracles()
-    tab_index += 1
-    
-    with tabs[tab_index]:
-        render_ml_optimization()
-    tab_index += 1
-    
-    with tabs[tab_index]:
-        render_scenarios()
-    tab_index += 1
-    
-    with tabs[tab_index]:
-        render_wnsp()
-    tab_index += 1
-    
-    with tabs[tab_index]:
+    elif selected_module == "🔧 Task Orchestration":
         render_task_orchestration()
-    tab_index += 1
-    
-    if AuthManager.has_role('admin'):
-        with tabs[tab_index]:
-            render_admin()
+    elif selected_module == "🌐 Multi-Agent Networks":
+        render_multi_agent()
+    elif selected_module == "📈 Economic Simulator":
+        # Simulation module with tabs
+        sim_tabs = st.tabs(["⚙️ Parameters", "📈 Run Simulation"])
+        with sim_tabs[0]:
+            render_parameter_control()
+        with sim_tabs[1]:
+            render_simulation()
+    elif selected_module == "🔬 Advanced Analysis":
+        render_advanced_analysis()
+    elif selected_module == "📜 Smart Contracts":
+        render_smart_contracts()
+    elif selected_module == "🔗 Oracle Integration":
+        render_oracles()
+    elif selected_module == "🤖 ML Optimization":
+        render_ml_optimization()
+    elif selected_module == "💾 Scenario Manager":
+        render_scenarios()
+    elif selected_module == "📡 WNSP Protocol":
+        render_wnsp()
+    elif selected_module == "👥 Administration" and AuthManager.has_role('admin'):
+        render_admin()
 
 def render_dashboard():
     """Real-time Production Dashboard with live monitoring and alerting."""
