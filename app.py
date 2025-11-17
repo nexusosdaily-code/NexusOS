@@ -212,38 +212,100 @@ def render_multi_agent():
     and value flows between connected nodes based on network topology.
     """)
     
+    # Organized tabs for simulation workflow
+    tabs = st.tabs(["⚙️ Configuration", "▶️ Run Simulation", "📊 Results"])
+    
+    with tabs[0]:
+        render_multi_agent_config()
+    with tabs[1]:
+        render_multi_agent_execution()
+    with tabs[2]:
+        render_multi_agent_results()
+
+def render_multi_agent_config():
+    """Configuration tab for multi-agent simulation"""
+    st.subheader("Simulation Parameters")
+    st.markdown("Configure the multi-agent network topology and agent behavior parameters.")
+    
     from multi_agent_sim import MultiAgentNexusSimulation
+    
+    if 'multi_agent_config' not in st.session_state:
+        st.session_state.multi_agent_config = {
+            'num_agents': 5,
+            'topology': 'fully_connected',
+            'transfer_rate': 0.01,
+            'network_influence': 0.1,
+            'enable_transfers': True
+        }
     
     col1, col2 = st.columns(2)
     
     with col1:
-        num_agents = st.slider("Number of Agents", 3, 20, 5)
-        topology = st.selectbox(
+        st.session_state.multi_agent_config['num_agents'] = st.slider(
+            "Number of Agents", 3, 20, 
+            st.session_state.multi_agent_config['num_agents']
+        )
+        st.session_state.multi_agent_config['topology'] = st.selectbox(
             "Network Topology",
             ['fully_connected', 'hub_spoke', 'random', 'ring', 'small_world'],
+            index=['fully_connected', 'hub_spoke', 'random', 'ring', 'small_world'].index(
+                st.session_state.multi_agent_config['topology']
+            ),
             format_func=lambda x: x.replace('_', ' ').title()
         )
     
     with col2:
-        transfer_rate = st.slider("Value Transfer Rate", 0.0, 0.1, 0.01, 0.001, 
-                                  help="Rate at which value flows between connected nodes")
-        network_influence = st.slider("Network Influence on Health", 0.0, 1.0, 0.1, 0.05,
-                                      help="How much neighbors' states influence system health")
-        enable_transfers = st.checkbox("Enable Value Transfers", value=True)
+        st.session_state.multi_agent_config['transfer_rate'] = st.slider(
+            "Value Transfer Rate", 0.0, 0.1, 
+            st.session_state.multi_agent_config['transfer_rate'], 0.001, 
+            help="Rate at which value flows between connected nodes"
+        )
+        st.session_state.multi_agent_config['network_influence'] = st.slider(
+            "Network Influence on Health", 0.0, 1.0, 
+            st.session_state.multi_agent_config['network_influence'], 0.05,
+            help="How much neighbors' states influence system health"
+        )
+        st.session_state.multi_agent_config['enable_transfers'] = st.checkbox(
+            "Enable Value Transfers", 
+            value=st.session_state.multi_agent_config['enable_transfers']
+        )
     
-    if st.button("🌐 Run Multi-Agent Simulation", type="primary"):
-        with st.spinner(f"Simulating {num_agents} agents..."):
+    st.info("💡 **Tip**: Configure these parameters, then go to the 'Run Simulation' tab to execute.")
+
+def render_multi_agent_execution():
+    """Execution tab for running multi-agent simulation"""
+    from multi_agent_sim import MultiAgentNexusSimulation
+    
+    st.subheader("Execute Multi-Agent Simulation")
+    
+    if 'multi_agent_config' not in st.session_state:
+        st.warning("⚠️ Please configure simulation parameters in the Configuration tab first.")
+        return
+    
+    config = st.session_state.multi_agent_config
+    
+    st.markdown(f"""
+    **Current Configuration:**
+    - Agents: {config['num_agents']}
+    - Topology: {config['topology'].replace('_', ' ').title()}
+    - Transfer Rate: {config['transfer_rate']:.3f}
+    - Network Influence: {config['network_influence']:.2f}
+    - Value Transfers: {'Enabled' if config['enable_transfers'] else 'Disabled'}
+    """)
+    
+    if st.button("🌐 Run Multi-Agent Simulation", type="primary", use_container_width=True):
+        with st.spinner(f"Simulating {config['num_agents']} agents..."):
             try:
                 sim = MultiAgentNexusSimulation(
-                    num_agents=num_agents,
+                    num_agents=config['num_agents'],
                     base_params=st.session_state.params,
                     signal_configs=st.session_state.signal_configs,
-                    network_topology=topology,
-                    transfer_rate=transfer_rate,
-                    network_influence=network_influence
+                    network_topology=config['topology'],
+                    transfer_rate=config['transfer_rate'],
+                    network_influence=config['network_influence']
                 )
                 
-                df = sim.run_simulation(enable_transfers=enable_transfers)
+                df = sim.run_simulation(enable_transfers=config['enable_transfers'])
                 network_metrics = sim.get_network_metrics()
                 network_layout = sim.get_network_layout()
                 
@@ -252,15 +314,26 @@ def render_multi_agent():
                     'network_metrics': network_metrics,
                     'network_layout': network_layout,
                     'sim': sim,
-                    'num_agents': num_agents
+                    'num_agents': config['num_agents']
                 }
                 
-                st.success(f"Multi-agent simulation complete! {num_agents} agents over {len(df)} timesteps.")
+                st.success(f"✅ Multi-agent simulation complete! {config['num_agents']} agents over {len(df)} timesteps.")
+                st.info("📊 View results in the 'Results' tab")
                 
             except Exception as e:
-                st.error(f"Simulation failed: {str(e)}")
+                st.error(f"❌ Simulation failed: {str(e)}")
                 import traceback
                 st.code(traceback.format_exc())
+
+def render_multi_agent_results():
+    """Results visualization tab for multi-agent simulation"""
+    import plotly.graph_objects as go
+    
+    st.subheader("Simulation Results")
+    
+    if 'multi_agent_results' not in st.session_state:
+        st.info("⏳ No results available. Run a simulation in the 'Run Simulation' tab to view results here.")
+        return
     
     if 'multi_agent_results' in st.session_state:
         results = st.session_state['multi_agent_results']
@@ -1214,16 +1287,14 @@ def render_simulation():
 def render_advanced_analysis():
     st.header("Advanced Analysis Tools")
     
-    analysis_type = st.selectbox(
-        "Select Analysis Type",
-        ["Monte Carlo Simulation", "Sensitivity Analysis", "Stability Region Mapping"]
-    )
+    # Organized tabs for different analysis types
+    tabs = st.tabs(["🎲 Monte Carlo", "📊 Sensitivity Analysis", "🗺️ Stability Mapping"])
     
-    if analysis_type == "Monte Carlo Simulation":
+    with tabs[0]:
         render_monte_carlo()
-    elif analysis_type == "Sensitivity Analysis":
+    with tabs[1]:
         render_sensitivity_analysis()
-    elif analysis_type == "Stability Region Mapping":
+    with tabs[2]:
         render_stability_mapping()
 
 def render_monte_carlo():
