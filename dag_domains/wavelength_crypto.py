@@ -212,7 +212,7 @@ class WavelengthCryptoEngine:
         Amplitude Modulation Encryption (AME).
         
         Theory: Photon intensity (amplitude) represents the number of photons
-        emitted. We modulate intensity based on key to encode information.
+        emitted. We modulate intensity based on key using XOR for perfect reversibility.
         
         Args:
             frames: Original WNSP frames
@@ -225,11 +225,10 @@ class WavelengthCryptoEngine:
         for i, frame in enumerate(frames):
             # Get intensity modulation from key (0-7 range)
             key_byte = self._get_key_byte(i)
-            intensity_shift = (key_byte % 8) - 4  # -4 to +3
+            intensity_mask = key_byte % 8  # 0-7
             
-            # Apply intensity modulation
-            new_intensity = frame.intensity_level + intensity_shift
-            new_intensity = max(0, min(7, new_intensity))  # Clamp to 0-7
+            # Apply intensity modulation using XOR (perfectly reversible)
+            new_intensity = frame.intensity_level ^ intensity_mask
             
             # Create encrypted frame
             encrypted_frame = WnspFrame(
@@ -248,7 +247,7 @@ class WavelengthCryptoEngine:
         """
         Amplitude Modulation Decryption (AMD).
         
-        Reverses the intensity modulation applied during encryption.
+        Reverses the intensity modulation (XOR is self-inverse).
         
         Args:
             frames: Encrypted frames
@@ -256,29 +255,8 @@ class WavelengthCryptoEngine:
         Returns:
             Decrypted frames with original intensity
         """
-        decrypted_frames = []
-        
-        for i, frame in enumerate(frames):
-            # Get intensity modulation from key (same as encryption)
-            key_byte = self._get_key_byte(i)
-            intensity_shift = (key_byte % 8) - 4
-            
-            # Reverse intensity modulation
-            original_intensity = frame.intensity_level - intensity_shift
-            original_intensity = max(0, min(7, original_intensity))
-            
-            # Create decrypted frame
-            decrypted_frame = WnspFrame(
-                sync=frame.sync,
-                wavelength_nm=frame.wavelength_nm,
-                intensity_level=original_intensity,
-                checksum=frame.checksum,
-                payload_bit=frame.payload_bit,
-                timestamp_ms=frame.timestamp_ms
-            )
-            decrypted_frames.append(decrypted_frame)
-        
-        return decrypted_frames
+        # XOR is self-inverse, so decryption is same as encryption
+        return self.amplitude_modulation_encrypt(frames)
     
     def phase_modulation_encrypt(self, frames: List[WnspFrame]) -> List[WnspFrame]:
         """

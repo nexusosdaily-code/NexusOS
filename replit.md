@@ -34,6 +34,8 @@ The application utilizes Streamlit for a single-page, wide-layout dashboard with
 
 **WNSP (Wavelength-Native Signaling Protocol) Integration**: Integrates an optical communication protocol for mesh networking, mapping letters to wavelengths. It includes modules for wavelength mapping, frame encoding/decoding, and a Streamlit visualization interface for encoding, decoding, and spectrum analysis.
 
+**Wavelength Cryptography Domain**: A DAG-based encryption/decryption system using electromagnetic theory principles. Implements four encryption methods: Frequency Shift (FSE) simulating electron energy transitions, Amplitude Modulation (AME) varying photon intensity, Phase Modulation (PME) using wave interference, and Quantum-Inspired Multi-Layer (QIML) combining all three. Based on E=hc/λ (Planck-Einstein relation) and discrete electron energy levels. Fully integrated into Task Orchestration with workflow automation for encrypt, decrypt, and theory demonstration operations.
+
 ### External Dependencies
 
 #### Core Libraries

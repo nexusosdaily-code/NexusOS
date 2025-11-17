@@ -4,8 +4,7 @@ Wavelength Cryptography Workflows - DAG Integration
 Defines task orchestration workflows for wavelength-based encryption/decryption.
 """
 
-from typing import Dict, Any, List
-from task_orchestration import TaskNode, WorkflowDAG
+from typing import Dict, Any, List, Callable
 from dag_domains.wavelength_crypto import (
     WavelengthCryptoHandler,
     WavelengthCryptoEngine,
@@ -13,6 +12,78 @@ from dag_domains.wavelength_crypto import (
 )
 from wnsp_frames import WnspEncoder, WnspDecoder
 import json
+
+
+class TaskNode:
+    """Simple task node for workflow execution."""
+    def __init__(self, task_id: str, name: str, handler: Callable, description: str = "", dependencies: List[str] = None):
+        self.task_id = task_id
+        self.name = name
+        self.handler = handler
+        self.description = description
+        self.dependencies = dependencies or []
+
+
+class WorkflowDAG:
+    """Simple DAG for workflow execution."""
+    def __init__(self, name: str, description: str = ""):
+        self.name = name
+        self.description = description
+        self.nodes = {}
+    
+    def add_node(self, node: TaskNode):
+        """Add a node to the workflow."""
+        self.nodes[node.task_id] = node
+
+
+class TaskOrchestrator:
+    """Executes workflows by running nodes in dependency order."""
+    
+    def execute_workflow(self, workflow: WorkflowDAG) -> Dict[str, Any]:
+        """
+        Execute workflow by running nodes in topological order.
+        
+        Args:
+            workflow: WorkflowDAG to execute
+            
+        Returns:
+            Dictionary mapping task_id to execution results
+        """
+        results = {}
+        context = {}
+        executed = set()
+        
+        def can_execute(node: TaskNode) -> bool:
+            """Check if all dependencies are satisfied."""
+            return all(dep in executed for dep in node.dependencies)
+        
+        def execute_node(node: TaskNode):
+            """Execute a single node."""
+            # Build context from previous results
+            for dep in node.dependencies:
+                if dep in results:
+                    context[dep] = results[dep]
+            
+            # Execute handler
+            result = node.handler(context)
+            results[node.task_id] = result
+            executed.add(node.task_id)
+        
+        # Execute nodes in topological order
+        while len(executed) < len(workflow.nodes):
+            made_progress = False
+            
+            for task_id, node in workflow.nodes.items():
+                if task_id not in executed and can_execute(node):
+                    execute_node(node)
+                    made_progress = True
+            
+            if not made_progress and len(executed) < len(workflow.nodes):
+                # Circular dependency or missing nodes
+                remaining = set(workflow.nodes.keys()) - executed
+                raise ValueError(f"Cannot execute workflow: circular dependency or missing nodes: {remaining}")
+        
+        return results
 
 
 def create_encrypt_workflow(
