@@ -12,6 +12,7 @@ from signal_generators import SignalGenerator, get_default_signal_configs
 from monte_carlo_analysis import MonteCarloAnalysis, SensitivityAnalysis
 from oracle_sources import OracleManager, get_default_oracle_configs
 from auth import AuthManager
+from validation import ParameterValidator, validate_and_display
 
 st.set_page_config(
     page_title="NexusOS",
@@ -1047,24 +1048,33 @@ def render_simulation():
     
     with col1:
         if st.button("▶️ Run Simulation", type="primary", use_container_width=True):
-            with st.spinner("Running simulation..."):
-                oracle_manager = st.session_state.get('oracle_manager')
-                use_oracle = st.session_state.get('use_oracle_data', False)
-                oracle_refresh = st.session_state.get('oracle_refresh_interval', 10)
-                df = run_simulation(
-                    st.session_state.params,
-                    st.session_state.signal_configs,
-                    oracle_manager,
-                    use_oracle,
-                    oracle_refresh
-                )
-                st.session_state.simulation_results = df
-                
-                if use_oracle and any(df['oracle_used']):
-                    st.success(f"✅ Simulation completed with Oracle data! {len(df)} time steps processed.")
-                else:
-                    st.success(f"Simulation completed! {len(df)} time steps processed.")
-                st.rerun()
+            # Validate parameters and signals before running
+            is_valid = validate_and_display(
+                st.session_state.params, 
+                st.session_state.signal_configs
+            )
+            
+            if is_valid:
+                with st.spinner("Running simulation..."):
+                    oracle_manager = st.session_state.get('oracle_manager')
+                    use_oracle = st.session_state.get('use_oracle_data', False)
+                    oracle_refresh = st.session_state.get('oracle_refresh_interval', 10)
+                    df = run_simulation(
+                        st.session_state.params,
+                        st.session_state.signal_configs,
+                        oracle_manager,
+                        use_oracle,
+                        oracle_refresh
+                    )
+                    st.session_state.simulation_results = df
+                    
+                    if use_oracle and any(df['oracle_used']):
+                        st.success(f"✅ Simulation completed with Oracle data! {len(df)} time steps processed.")
+                    else:
+                        st.success(f"Simulation completed! {len(df)} time steps processed.")
+                    st.rerun()
+            else:
+                st.error("Please fix validation errors before running simulation.")
     
     with col2:
         if st.button("🔄 Reset Signals", type="secondary", use_container_width=True):
