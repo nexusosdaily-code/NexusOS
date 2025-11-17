@@ -14,6 +14,7 @@ from oracle_sources import OracleManager, get_default_oracle_configs
 from auth import AuthManager
 from validation import ParameterValidator, validate_and_display
 from blockchain_viz import render_blockchain_dashboard
+from predictive_viz import render_predictive_analytics_dashboard
 
 st.set_page_config(
     page_title="NexusOS Advance Systems",
@@ -587,6 +588,7 @@ def main():
     with col1:
         module_options = [
             "📊 Dashboard",
+            "🔮 Predictive Analytics",
             "⛓️ Blockchain Simulator",
             "🔧 Task Orchestration",
             "🌐 Multi-Agent Networks",
@@ -626,6 +628,8 @@ def main():
         render_info_tabs('about_nexusos')
     elif selected_module == "📊 Dashboard":
         render_dashboard()
+    elif selected_module == "🔮 Predictive Analytics":
+        render_predictive_analytics_dashboard()
     elif selected_module == "⛓️ Blockchain Simulator":
         render_blockchain_dashboard()
     elif selected_module == "🔧 Task Orchestration":
