@@ -308,7 +308,7 @@ def render_multi_agent():
                                   height=400
                               ))
         
-        st.plotly_chart(fig_network, use_container_width=True)
+        st.plotly_chart(fig_network, width='stretch')
         
         st.subheader("Agent State Evolution")
         
@@ -330,7 +330,7 @@ def render_multi_agent():
             hovermode='x unified'
         )
         
-        st.plotly_chart(fig_states, use_container_width=True)
+        st.plotly_chart(fig_states, width='stretch')
         
         st.subheader("Issuance vs Burn Across Agents")
         
@@ -352,7 +352,7 @@ def render_multi_agent():
         fig_flows.update_yaxes(title_text="Burn Rate", row=1, col=2)
         fig_flows.update_layout(height=400)
         
-        st.plotly_chart(fig_flows, use_container_width=True)
+        st.plotly_chart(fig_flows, width='stretch')
         
         with st.expander("📊 Agent Statistics"):
             stats_data = []
@@ -366,7 +366,7 @@ def render_multi_agent():
                     'Degree': sim.network.degree(agent_id)
                 })
             
-            st.dataframe(pd.DataFrame(stats_data), use_container_width=True)
+            st.dataframe(pd.DataFrame(stats_data), width='stretch')
 
 def render_smart_contracts():
     st.header("Smart Contract Code Generation")
@@ -1100,7 +1100,7 @@ def render_simulation():
             )
         
         fig.update_layout(height=500, showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 def render_advanced_analysis():
     st.header("Advanced Analysis Tools")
@@ -1254,7 +1254,7 @@ def render_monte_carlo():
                 yaxis_title="Frequency",
                 height=400
             )
-            st.plotly_chart(fig_hist, use_container_width=True)
+            st.plotly_chart(fig_hist, width='stretch')
         
         with col2:
             st.subheader("Conservation Error Distribution")
@@ -1276,7 +1276,7 @@ def render_monte_carlo():
                 yaxis_title="Frequency",
                 height=400
             )
-            st.plotly_chart(fig_cons, use_container_width=True)
+            st.plotly_chart(fig_cons, width='stretch')
         
         st.subheader("Issuance vs Burn Scatter")
         fig_scatter = go.Figure()
@@ -1306,7 +1306,7 @@ def render_monte_carlo():
             yaxis_title="Average Burn",
             height=500
         )
-        st.plotly_chart(fig_scatter, use_container_width=True)
+        st.plotly_chart(fig_scatter, width='stretch')
         
         if len(mc_results['param_variations']) > 0:
             st.subheader("Parameter Variation vs Outcomes")
@@ -1364,7 +1364,7 @@ def render_monte_carlo():
                 fig_param.update_xaxes(title_text=param_name, row=1, col=3)
                 
                 fig_param.update_layout(height=400, showlegend=False)
-                st.plotly_chart(fig_param, use_container_width=True)
+                st.plotly_chart(fig_param, width='stretch')
         
         with st.expander("📊 Detailed Statistics"):
             col1, col2 = st.columns(2)
@@ -1442,7 +1442,7 @@ def render_sensitivity_analysis():
         ranking_df['rank'] = range(1, len(rankings) + 1)
         ranking_df = ranking_df[['rank', 'parameter', 'impact_range', 'impact_std', 'avg_conservation_error']]
         ranking_df.columns = ['Rank', 'Parameter', 'Impact Range', 'Impact Std Dev', 'Avg Cons. Error']
-        st.dataframe(ranking_df, use_container_width=True, hide_index=True)
+        st.dataframe(ranking_df, width='stretch', hide_index=True)
         
         st.subheader("Parameter Sensitivity Curves")
         
@@ -1495,7 +1495,7 @@ def render_sensitivity_analysis():
             fig.update_xaxes(title_text=param_name, row=2, col=2)
             
             fig.update_layout(height=600, showlegend=False)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
 def render_stability_mapping():
     st.subheader("Stability Region Mapping")
@@ -1669,13 +1669,13 @@ def render_stability_mapping():
         fig.update_yaxes(title_text=results['param2_name'], row=2, col=2)
         
         fig.update_layout(height=800)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
         with st.expander("📊 Stable Parameter Combinations"):
             if len(results['stable_param_combinations']) > 0:
                 st.dataframe(
                     pd.DataFrame(results['stable_param_combinations']),
-                    use_container_width=True
+                    width='stretch'
                 )
             else:
                 st.warning("No stable parameter combinations found in this region.")
@@ -1705,7 +1705,7 @@ def render_oracles():
                 'Error': status.get('error', '')
             })
         
-        st.dataframe(pd.DataFrame(status_data), use_container_width=True)
+        st.dataframe(pd.DataFrame(status_data), width='stretch')
         
         st.divider()
         
@@ -2125,7 +2125,7 @@ def render_ml_optimization():
                  "Description": PARAMETER_SPACE[k]['description']}
                 for k, v in result['best_params'].items()
             ])
-            st.dataframe(best_params_df, use_container_width=True)
+            st.dataframe(best_params_df, width='stretch')
             
             if st.button("📥 Apply Best Parameters"):
                 st.session_state.params.update(result['best_params'])
@@ -2176,7 +2176,7 @@ def render_ml_optimization():
                 hovermode='x unified'
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
     
     st.divider()
     
