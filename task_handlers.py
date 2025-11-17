@@ -221,6 +221,126 @@ class CommunicationTaskHandlers:
             'success': True,
             'notification_id': f"notif_{datetime.utcnow().timestamp()}"
         }
+    
+    @staticmethod
+    def send_wavelength_encrypted_message(params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Send wavelength-encrypted secure message using electromagnetic theory
+        
+        Params:
+            to: Recipient identifier (email, user_id, phone)
+            message: Plain text message to encrypt
+            encryption_key: Secret key for encryption
+            method: Encryption method (fse, ame, pme, qiml)
+            delivery_method: How to deliver (email, sms, notification, storage)
+        """
+        from dag_domains.wavelength_crypto import WavelengthCryptoHandler
+        from wnsp_frames import WnspEncoder, WnspDecoder
+        
+        message_text = params['message']
+        encryption_key = params['encryption_key']
+        method = params.get('method', 'qiml')
+        delivery_method = params.get('delivery_method', 'storage')
+        
+        # Encode message to wavelengths
+        encoder = WnspEncoder()
+        wnsp_message = encoder.encode_message(message_text)
+        
+        # Encrypt using wavelength cryptography
+        encrypted_message = WavelengthCryptoHandler.encrypt_message(
+            wnsp_message,
+            encryption_key,
+            method
+        )
+        
+        # Create secure payload
+        encrypted_payload = {
+            'encrypted_wavelength_data': encrypted_message.to_dict(),
+            'method': method,
+            'timestamp': datetime.utcnow().isoformat(),
+            'message_id': f"wcrypto_{datetime.utcnow().timestamp()}"
+        }
+        
+        print(f"[WAVELENGTH CRYPTO] Encrypted {len(message_text)} chars using {method.upper()}")
+        print(f"[WAVELENGTH CRYPTO] Frames: {len(encrypted_message.frames)}, Delivery: {delivery_method}")
+        
+        # Deliver via chosen method
+        delivery_result = None
+        if delivery_method == 'email':
+            delivery_result = CommunicationTaskHandlers.send_email({
+                'to': params['to'],
+                'subject': 'Secure Wavelength-Encrypted Message',
+                'body': f"Encrypted message payload: {json.dumps(encrypted_payload)}"
+            })
+        elif delivery_method == 'sms':
+            delivery_result = CommunicationTaskHandlers.send_sms({
+                'to': params['to'],
+                'message': f"Secure wavelength message ID: {encrypted_payload['message_id']}"
+            })
+        elif delivery_method == 'notification':
+            delivery_result = CommunicationTaskHandlers.send_notification({
+                'user_id': params['to'],
+                'title': '🔐 Secure Message Received',
+                'message': f"Wavelength-encrypted message using {method.upper()}",
+                'priority': 'high'
+            })
+        
+        return {
+            'success': True,
+            'method': 'wavelength_crypto',
+            'encryption_method': method,
+            'recipient': params['to'],
+            'message_id': encrypted_payload['message_id'],
+            'encrypted_payload': encrypted_payload,
+            'delivery_method': delivery_method,
+            'delivery_result': delivery_result,
+            'frames_encrypted': len(encrypted_message.frames)
+        }
+    
+    @staticmethod
+    def decrypt_wavelength_message(params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Decrypt wavelength-encrypted message
+        
+        Params:
+            encrypted_payload: The encrypted message payload
+            decryption_key: Secret key for decryption
+        """
+        from dag_domains.wavelength_crypto import WavelengthCryptoHandler, EncryptedWavelengthMessage
+        from wnsp_frames import WnspDecoder
+        
+        encrypted_data = params['encrypted_payload']['encrypted_wavelength_data']
+        decryption_key = params['decryption_key']
+        
+        # Reconstruct encrypted message
+        encrypted_message = EncryptedWavelengthMessage.from_dict(encrypted_data)
+        
+        # Decrypt
+        try:
+            decrypted_message = WavelengthCryptoHandler.decrypt_message(
+                encrypted_message,
+                decryption_key
+            )
+            
+            # Decode wavelengths back to text
+            decoder = WnspDecoder()
+            decrypted_text = decoder.decode_message(decrypted_message)
+            
+            print(f"[WAVELENGTH CRYPTO] Successfully decrypted: {decrypted_text}")
+            
+            return {
+                'success': True,
+                'decrypted_text': decrypted_text,
+                'method': encrypted_message.metadata.get('encryption_method', 'unknown'),
+                'timestamp': datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            print(f"[WAVELENGTH CRYPTO] Decryption failed: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'message': 'Decryption failed - wrong key or corrupted data'
+            }
 
 
 # ============================================================================
@@ -406,6 +526,8 @@ def register_all_handlers(orchestrator):
     orchestrator.register_task_handler('communication', 'send_email', CommunicationTaskHandlers.send_email)
     orchestrator.register_task_handler('communication', 'send_sms', CommunicationTaskHandlers.send_sms)
     orchestrator.register_task_handler('communication', 'send_notification', CommunicationTaskHandlers.send_notification)
+    orchestrator.register_task_handler('communication', 'send_wavelength_encrypted_message', CommunicationTaskHandlers.send_wavelength_encrypted_message)
+    orchestrator.register_task_handler('communication', 'decrypt_wavelength_message', CommunicationTaskHandlers.decrypt_wavelength_message)
     
     orchestrator.register_task_handler('social', 'post_to_twitter', SocialMediaTaskHandlers.post_to_twitter)
     orchestrator.register_task_handler('social', 'post_to_linkedin', SocialMediaTaskHandlers.post_to_linkedin)
