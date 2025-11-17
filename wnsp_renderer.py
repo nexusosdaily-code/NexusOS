@@ -39,49 +39,60 @@ class WnspVisualizer:
             st.warning("No valid characters (A-Z) found in message")
             return
         
+        # Create list of (letter, wavelength) pairs for proper indexing
+        filtered_letters = [char.upper() for char in text if char.isalpha()]
+        letter_wavelength_pairs = list(zip(filtered_letters, wavelengths))
+        
         # Create color swatches
         st.write(f"**Message:** {text.upper()}")
         st.write(f"**Characters:** {len(wavelengths)}")
         
-        # Display as color blocks
-        cols = st.columns(min(len(wavelengths), 13))
-        for i, (col, wl) in enumerate(zip(cols, wavelengths)):
-            rgb = wavelength_to_rgb(wl)
-            hex_color = f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:x}"
+        # Display as color blocks (split into rows of 13 if needed)
+        pairs_per_row = 13
+        num_rows = (len(letter_wavelength_pairs) + pairs_per_row - 1) // pairs_per_row
+        
+        for row_idx in range(num_rows):
+            start_idx = row_idx * pairs_per_row
+            end_idx = min(start_idx + pairs_per_row, len(letter_wavelength_pairs))
+            row_pairs = letter_wavelength_pairs[start_idx:end_idx]
             
-            with col:
-                # Create colored box
-                st.markdown(
-                    f"""
-                    <div style="
-                        background-color: {hex_color};
-                        width: 100%;
-                        height: 60px;
-                        border-radius: 5px;
-                        border: 2px solid #333;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-weight: bold;
-                        color: white;
-                        text-shadow: 1px 1px 2px black;
-                    ">
-                        {text.upper()[i] if i < len(text) else ''}
-                    </div>
-                    <div style="text-align: center; font-size: 10px; margin-top: 5px;">
-                        {wl:.0f}nm
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+            cols = st.columns(len(row_pairs))
+            for col, (letter, wl) in zip(cols, row_pairs):
+                rgb = wavelength_to_rgb(wl)
+                hex_color = f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
+                
+                with col:
+                    # Create colored box
+                    st.markdown(
+                        f"""
+                        <div style="
+                            background-color: {hex_color};
+                            width: 100%;
+                            height: 60px;
+                            border-radius: 5px;
+                            border: 2px solid #333;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-weight: bold;
+                            color: white;
+                            text-shadow: 1px 1px 2px black;
+                        ">
+                            {letter}
+                        </div>
+                        <div style="text-align: center; font-size: 10px; margin-top: 5px;">
+                            {wl:.0f}nm
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
         
         # Show wavelength details
         with st.expander("📊 Wavelength Details"):
-            for char, wl in zip(text.upper(), wavelengths):
-                if char.isalpha():
-                    info = get_letter_info(char)
-                    if info:
-                        st.write(f"**{char}** → {wl:.0f} nm ({info.hex_color})")
+            for letter, wl in letter_wavelength_pairs:
+                info = get_letter_info(letter)
+                if info:
+                    st.write(f"**{letter}** → {wl:.0f} nm ({info.hex_color})")
     
     def render_signal_timeline(self, message: WnspFrameMessage) -> None:
         """
@@ -309,18 +320,20 @@ def render_wnsp_interface():
         # Simulation: decode a test message
         test_message = st.text_input("Simulate received message", value="NEXUS", key="decode_input")
         
-        if st.button("Simulate Decode"):
-            if test_message:
-                encoder = WnspEncoder()
-                decoder = WnspDecoder()
-                
-                # Encode then decode
-                encoded = encoder.encode_message(test_message)
-                decoded = decoder.decode_message(encoded)
-                
-                st.success(f"✅ Decoded message: **{decoded}**")
-                st.write(f"Original: {test_message.upper()}")
-                st.write(f"Match: {'✓ Yes' if decoded == test_message.upper() else '✗ No'}")
+        decode_clicked = st.button("Simulate Decode")
+        
+        # Display results
+        if decode_clicked and test_message:
+            encoder = WnspEncoder()
+            decoder = WnspDecoder()
+            
+            # Encode then decode
+            encoded = encoder.encode_message(test_message)
+            decoded = decoder.decode_message(encoded)
+            
+            st.success(f"✅ Decoded message: **{decoded}**")
+            st.write(f"Original: {test_message.upper()}")
+            st.write(f"Match: {'✓ Yes' if decoded == test_message.upper() else '✗ No'}")
     
     with tab3:
         st.subheader("Spectrum Analysis")
