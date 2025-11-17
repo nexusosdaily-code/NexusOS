@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple
 import networkx as nx
 from nexus_engine import NexusEngine
 from signal_generators import SignalGenerator
+from transaction_dag import DAGTransactionProcessor, VectorizedTransactionProcessor
 
 
 class NetworkTopology:
@@ -55,7 +56,9 @@ class MultiAgentNexusSimulation:
         signal_configs: Dict,
         network_topology: str = 'fully_connected',
         transfer_rate: float = 0.01,
-        network_influence: float = 0.1
+        network_influence: float = 0.1,
+        use_dag_optimization: bool = True,
+        use_vectorized: bool = False
     ):
         """
         Initialize multi-agent simulation
@@ -67,12 +70,16 @@ class MultiAgentNexusSimulation:
             network_topology: Type of network ('fully_connected', 'hub_spoke', 'random', 'ring', 'small_world')
             transfer_rate: Rate at which value transfers occur between connected nodes
             network_influence: How much network neighbors influence each node's system health
+            use_dag_optimization: Whether to use DAG-based transaction processing (default: True)
+            use_vectorized: Whether to use vectorized matrix operations (default: False, overrides DAG if True)
         """
         self.num_agents = num_agents
         self.base_params = base_params
         self.signal_configs = signal_configs
         self.transfer_rate = transfer_rate
         self.network_influence = network_influence
+        self.use_dag_optimization = use_dag_optimization
+        self.use_vectorized = use_vectorized
         
         self.network = self._create_network(network_topology)
         
@@ -81,6 +88,18 @@ class MultiAgentNexusSimulation:
         self.agent_states = {
             i: base_params['N_initial'] for i in range(num_agents)
         }
+        
+        network_edges = list(self.network.edges())
+        if self.use_vectorized:
+            self.transaction_processor = VectorizedTransactionProcessor(
+                num_agents, network_edges, transfer_rate
+            )
+        elif self.use_dag_optimization:
+            self.transaction_processor = DAGTransactionProcessor(
+                network_edges, transfer_rate
+            )
+        else:
+            self.transaction_processor = None
         
     def _create_network(self, topology: str) -> nx.Graph:
         """Create network based on specified topology"""
@@ -130,27 +149,34 @@ class MultiAgentNexusSimulation:
         
         Transfers flow from nodes with higher N to nodes with lower N,
         simulating resource redistribution in the network.
+        
+        Uses DAG-based optimization if enabled for better performance.
         """
-        transfers = {}
-        
-        for edge in self.network.edges():
-            node_a, node_b = edge
+        if self.transaction_processor is not None:
+            self.agent_states = self.transaction_processor.execute_transfers(
+                self.agent_states, delta_t
+            )
+        else:
+            transfers = {}
             
-            N_a = self.agent_states[node_a]
-            N_b = self.agent_states[node_b]
+            for edge in self.network.edges():
+                node_a, node_b = edge
+                
+                N_a = self.agent_states[node_a]
+                N_b = self.agent_states[node_b]
+                
+                transfer_amount = self.transfer_rate * (N_a - N_b) * delta_t
+                
+                if node_a not in transfers:
+                    transfers[node_a] = 0
+                if node_b not in transfers:
+                    transfers[node_b] = 0
+                
+                transfers[node_a] -= transfer_amount
+                transfers[node_b] += transfer_amount
             
-            transfer_amount = self.transfer_rate * (N_a - N_b) * delta_t
-            
-            if node_a not in transfers:
-                transfers[node_a] = 0
-            if node_b not in transfers:
-                transfers[node_b] = 0
-            
-            transfers[node_a] -= transfer_amount
-            transfers[node_b] += transfer_amount
-        
-        for agent_id, transfer in transfers.items():
-            self.agent_states[agent_id] = max(0, self.agent_states[agent_id] + transfer)
+            for agent_id, transfer in transfers.items():
+                self.agent_states[agent_id] = max(0, self.agent_states[agent_id] + transfer)
     
     def run_simulation(
         self,
@@ -251,3 +277,17 @@ class MultiAgentNexusSimulation:
     def get_network_layout(self) -> Dict[int, Tuple[float, float]]:
         """Get network layout positions for visualization"""
         return nx.spring_layout(self.network, seed=42)
+    
+    def get_transaction_metrics(self) -> Dict:
+        """
+        Get transaction processing metrics (only available with DAG optimization)
+        
+        Returns:
+            Dictionary with parallelization statistics, or None if DAG not enabled
+        """
+        if hasattr(self.transaction_processor, 'get_performance_metrics'):
+            return self.transaction_processor.get_performance_metrics()
+        return {
+            'optimization': 'sequential',
+            'message': 'Enable use_dag_optimization=True for detailed metrics'
+        }

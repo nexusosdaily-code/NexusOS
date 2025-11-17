@@ -207,6 +207,10 @@ class DAGTransactionProcessor:
         """
         Execute all transfers using DAG optimization
         
+        IMPORTANT: Computes ALL transfer amounts from frozen initial state snapshot
+        to preserve original simulation semantics. DAG is used for execution ordering
+        but does NOT change physics.
+        
         Args:
             agent_states: Current state of all agents {agent_id: N_value}
             delta_t: Time step
@@ -214,24 +218,19 @@ class DAGTransactionProcessor:
         Returns:
             Updated agent states after transfers
         """
-        plan = self.dag.get_execution_plan()
-        levels = plan['levels']
+        frozen_states = agent_states.copy()
+        
+        total_transfers = defaultdict(float)
+        
+        for node in self.dag.nodes:
+            amount = node.amount_formula(frozen_states, delta_t)
+            
+            total_transfers[node.source] -= amount
+            total_transfers[node.target] += amount
         
         new_states = agent_states.copy()
-        
-        for level in levels:
-            transfers = defaultdict(float)
-            
-            for tid in level:
-                node = self.dag.node_map[tid]
-                
-                amount = node.amount_formula(new_states, delta_t)
-                
-                transfers[node.source] -= amount
-                transfers[node.target] += amount
-            
-            for agent_id, transfer in transfers.items():
-                new_states[agent_id] = max(0, new_states[agent_id] + transfer)
+        for agent_id, transfer in total_transfers.items():
+            new_states[agent_id] = max(0, new_states[agent_id] + transfer)
         
         return new_states
     
