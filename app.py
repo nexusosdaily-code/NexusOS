@@ -907,6 +907,18 @@ def render_parameter_control():
             0.0, 1.0, st.session_state.params['w_E'], 0.01
         )
         
+        # Real-time weight sum validation
+        input_weight_sum = (st.session_state.params['w_H'] + 
+                           st.session_state.params['w_M'] + 
+                           st.session_state.params['w_D'] + 
+                           st.session_state.params['w_E'])
+        if abs(input_weight_sum - 1.0) > 0.05:
+            st.error(f"❌ Weight sum: {input_weight_sum:.3f} (must be 1.0 ± 0.05)")
+        elif abs(input_weight_sum - 1.0) > 0.01:
+            st.warning(f"⚠️ Weight sum: {input_weight_sum:.3f} (close to 1.0)")
+        else:
+            st.success(f"✅ Weight sum: {input_weight_sum:.3f}")
+        
         st.subheader("Burn Weights")
         st.session_state.params['gamma_C'] = st.slider(
             "Consumption (γ_C)",
@@ -920,6 +932,17 @@ def render_parameter_control():
             "Ecological Load (γ_E)",
             0.0, 1.0, st.session_state.params['gamma_E'], 0.01
         )
+        
+        # Real-time burn weight sum validation
+        burn_weight_sum = (st.session_state.params['gamma_C'] + 
+                          st.session_state.params['gamma_D'] + 
+                          st.session_state.params['gamma_E'])
+        if abs(burn_weight_sum - 1.0) > 0.05:
+            st.error(f"❌ Burn weight sum: {burn_weight_sum:.3f} (must be 1.0 ± 0.05)")
+        elif abs(burn_weight_sum - 1.0) > 0.01:
+            st.warning(f"⚠️ Burn weight sum: {burn_weight_sum:.3f} (close to 1.0)")
+        else:
+            st.success(f"✅ Burn weight sum: {burn_weight_sum:.3f}")
     
     with col3:
         st.subheader("PID Controller")
