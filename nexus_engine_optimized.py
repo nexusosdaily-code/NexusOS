@@ -39,7 +39,7 @@ class NexusEngineOptimized:
         self.H_0 = params.get('H_0', 100.0)
         self.M_0 = params.get('M_0', 100.0)
         
-        # Vectorized PID state
+        # PID controller state (persists across runs like original engine)
         self.e_integral = 0.0
         self.e_prev = 0.0
     
@@ -52,7 +52,8 @@ class NexusEngineOptimized:
         signals_C_cons: np.ndarray,
         signals_C_disp: np.ndarray,
         N_initial: float,
-        delta_t: float
+        delta_t: float,
+        reset_controller: bool = False
     ) -> pd.DataFrame:
         """
         Vectorized simulation run - processes entire time series at once where possible.
@@ -61,11 +62,16 @@ class NexusEngineOptimized:
             signals_*: NumPy arrays of signal values for each time step
             N_initial: Initial Nexus state
             delta_t: Time step size
+            reset_controller: If True, reset PID state before simulation (default: False, matches original engine)
             
         Returns:
             DataFrame with full time series results (num_steps rows, matching original engine)
         """
         num_steps = len(signals_H)
+        
+        # Optionally reset PID controller state for fresh simulation
+        if reset_controller:
+            self.reset_controller()
         
         # Pre-allocate arrays to match original engine output (num_steps rows)
         N = np.zeros(num_steps)
@@ -76,28 +82,12 @@ class NexusEngineOptimized:
         e = np.zeros(num_steps)
         dN_dt = np.zeros(num_steps)
         
-        # Tracking state for updates
+        # Tracking state for updates (clamped value from previous step)
         N_current = N_initial
         
-        # PID state tracking
-        e_integral = 0.0
-        e_prev = 0.0
-        
-        # Vectorized calculation where possible
-        # Pre-compute ecological load for all steps
-        ell_E = np.maximum(0.0, 1.0 - signals_E)
-        
-        # Pre-compute burn rate (doesn't depend on N)
-        B_all = self.beta * (
-            self.gamma_C * signals_C_cons +
-            self.gamma_D * signals_C_disp +
-            self.gamma_E * ell_E
-        )
-        B = np.maximum(0.0, B_all)
-        
-        # Main simulation loop (matches original engine's step-by-step behavior)
+        # Main simulation loop (matches original engine's step-by-step behavior exactly)
         for t in range(num_steps):
-            # System health
+            # System health (uses clamped N_current from previous step)
             S[t] = np.clip(
                 self.lambda_E * signals_E[t] +
                 self.lambda_N * (N_current / self.N_0) +
@@ -115,26 +105,34 @@ class NexusEngineOptimized:
             )
             I[t] = max(0.0, self.alpha * S[t] * weighted_inputs)
             
+            # Burn rate (computed per-step to match original engine)
+            ell_E = max(0.0, 1.0 - signals_E[t])
+            B[t] = max(0.0, self.beta * (
+                self.gamma_C * signals_C_cons[t] +
+                self.gamma_D * signals_C_disp[t] +
+                self.gamma_E * ell_E
+            ))
+            
             # PID feedback
             e[t] = N_current - self.N_target
-            e_integral += e[t] * delta_t
-            e_derivative = (e[t] - e_prev) / delta_t if delta_t > 0 else 0.0
+            self.e_integral += e[t] * delta_t
+            e_derivative = (e[t] - self.e_prev) / delta_t if delta_t > 0 else 0.0
             
             Phi[t] = np.clip(
-                -self.K_p * e[t] - self.K_i * e_integral - self.K_d * e_derivative,
+                -self.K_p * e[t] - self.K_i * self.e_integral - self.K_d * e_derivative,
                 -100.0, 100.0
             )
-            e_prev = e[t]
+            self.e_prev = e[t]
             
-            # State update
+            # State update (matches original: dN/dt computed, then N updated and clamped)
             dN_dt[t] = (
                 I[t] - B[t] - self.kappa * N_current + Phi[t] + self.eta * self.F_floor
             )
             
-            # Update state for next iteration
+            # Update and clamp state for next iteration (this clamped value will be used in next step's S calculation)
             N_current = max(0.0, N_current + dN_dt[t] * delta_t)
             
-            # Record post-step state
+            # Record post-step clamped state
             N[t] = N_current
         
         # Build result DataFrame matching original engine format
