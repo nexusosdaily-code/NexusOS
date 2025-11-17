@@ -2635,7 +2635,8 @@ def render_task_orchestration():
     # Domain selection
     try:
         from dag_domains.data_processing import DataProcessingDomain
-        available_domains = ['Core', 'Data Processing']
+        from dag_domains.wavelength_crypto_domain import WavelengthCryptoDomain
+        available_domains = ['Core', 'Data Processing', 'Wavelength Crypto']
     except:
         available_domains = ['Core']
     
@@ -2822,6 +2823,11 @@ def render_task_orchestration():
                     st.rerun()
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
+    
+    # Wavelength Crypto domain workflows
+    if selected_domain == 'Wavelength Crypto':
+        st.divider()
+        WavelengthCryptoDomain.render_workflows()
     
     st.divider()
     
