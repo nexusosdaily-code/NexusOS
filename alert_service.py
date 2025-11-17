@@ -32,9 +32,36 @@ class AlertService:
     
     SEVERITY_LEVELS = ['info', 'warning', 'error', 'critical']
     
-    def __init__(self):
-        self.engine = get_engine()
-        self.SessionLocal = sessionmaker(bind=self.engine)
+    def __init__(self, session_factory=None, test_mode=False):
+        """
+        Initialize AlertService.
+        
+        Args:
+            session_factory: Optional sessionmaker for dependency injection.
+                           If None, creates default production sessionmaker.
+            test_mode: Explicit flag to control session lifecycle.
+                      If True, sessions won't be closed (for testing with shared sessions).
+                      If False (default), sessions are closed after use (production mode).
+        """
+        if session_factory:
+            self.SessionLocal = session_factory
+        else:
+            self.engine = get_engine()
+            self.SessionLocal = sessionmaker(bind=self.engine, expire_on_commit=False)
+        
+        self._test_mode = test_mode
+    
+    def _get_session(self):
+        """
+        Get a database session.
+        
+        Returns:
+            Tuple of (session, should_close) where should_close indicates
+            whether the session should be closed after use.
+        """
+        session = self.SessionLocal()
+        should_close = not self._test_mode
+        return session, should_close
     
     def create_rule(self, name: str, metric_key: str, comparator: str, 
                    threshold: float, severity: str = 'warning', 
@@ -45,7 +72,7 @@ class AlertService:
         Args:
             name: Human-readable rule name
             metric_key: Metric to monitor (e.g., 'final_N', 'conservation_error')
-            comparator: Comparison operator ('gt', 'lt', 'eq', etc.)
+            comparator: Comparison operator ('gt', 'lt', 'eq', etc.')
             threshold: Threshold value for the alert
             severity: Alert severity level
             created_by: User ID who created the rule
@@ -54,7 +81,7 @@ class AlertService:
         Returns:
             Created AlertRule object
         """
-        db = self.SessionLocal()
+        db, should_close = self._get_session()
         try:
             rule = AlertRule(
                 name=name,
@@ -72,23 +99,26 @@ class AlertService:
             db.refresh(rule)
             return rule
         finally:
-            db.close()
+            if should_close:
+                db.close()
     
     def get_active_rules(self) -> List[AlertRule]:
         """Get all active alert rules."""
-        db = self.SessionLocal()
+        db, should_close = self._get_session()
         try:
             return db.query(AlertRule).filter(AlertRule.is_active == True).all()
         finally:
-            db.close()
+            if should_close:
+                db.close()
     
     def get_all_rules(self) -> List[AlertRule]:
         """Get all alert rules (active and inactive)."""
-        db = self.SessionLocal()
+        db, should_close = self._get_session()
         try:
             return db.query(AlertRule).order_by(desc(AlertRule.created_at)).all()
         finally:
-            db.close()
+            if should_close:
+                db.close()
     
     def evaluate_rule(self, rule: AlertRule, current_metrics: Dict[str, Any]) -> bool:
         """
@@ -129,7 +159,7 @@ class AlertService:
         Returns:
             List of triggered alerts with rule and event details
         """
-        db = self.SessionLocal()
+        db, should_close = self._get_session()
         triggered_alerts = []
         
         try:
@@ -182,30 +212,33 @@ class AlertService:
             db.commit()
             
         finally:
-            db.close()
+            if should_close:
+                db.close()
         
         return triggered_alerts
     
     def get_active_alerts(self, limit: int = 50) -> List[AlertEvent]:
         """Get currently active (unresolved) alert events."""
-        db = self.SessionLocal()
+        db, should_close = self._get_session()
         try:
             return db.query(AlertEvent).filter(
                 AlertEvent.status == 'active'
             ).order_by(desc(AlertEvent.triggered_at)).limit(limit).all()
         finally:
-            db.close()
+            if should_close:
+                db.close()
     
     def get_recent_alerts(self, hours: int = 24, limit: int = 100) -> List[AlertEvent]:
         """Get recent alert events within the specified time window."""
-        db = self.SessionLocal()
+        db, should_close = self._get_session()
         try:
             cutoff = datetime.utcnow() - timedelta(hours=hours)
             return db.query(AlertEvent).filter(
                 AlertEvent.triggered_at >= cutoff
             ).order_by(desc(AlertEvent.triggered_at)).limit(limit).all()
         finally:
-            db.close()
+            if should_close:
+                db.close()
     
     def acknowledge_alert(self, event_id: int, user_id: int) -> bool:
         """
@@ -218,7 +251,7 @@ class AlertService:
         Returns:
             True if successful
         """
-        db = self.SessionLocal()
+        db, should_close = self._get_session()
         try:
             event = db.query(AlertEvent).filter(AlertEvent.id == event_id).first()
             if event:
@@ -230,7 +263,8 @@ class AlertService:
                 return True
             return False
         finally:
-            db.close()
+            if should_close:
+                db.close()
     
     def resolve_alert(self, event_id: int) -> bool:
         """
@@ -242,7 +276,7 @@ class AlertService:
         Returns:
             True if successful
         """
-        db = self.SessionLocal()
+        db, should_close = self._get_session()
         try:
             event = db.query(AlertEvent).filter(AlertEvent.id == event_id).first()
             if event and str(event.status) == 'active':
@@ -254,7 +288,8 @@ class AlertService:
                 return True
             return False
         finally:
-            db.close()
+            if should_close:
+                db.close()
     
     def toggle_rule(self, rule_id: int, is_active: bool) -> bool:
         """
@@ -267,7 +302,7 @@ class AlertService:
         Returns:
             True if successful
         """
-        db = self.SessionLocal()
+        db, should_close = self._get_session()
         try:
             rule = db.query(AlertRule).filter(AlertRule.id == rule_id).first()
             if rule:
@@ -279,7 +314,8 @@ class AlertService:
                 return True
             return False
         finally:
-            db.close()
+            if should_close:
+                db.close()
     
     def delete_rule(self, rule_id: int) -> bool:
         """
@@ -291,7 +327,7 @@ class AlertService:
         Returns:
             True if successful
         """
-        db = self.SessionLocal()
+        db, should_close = self._get_session()
         try:
             rule = db.query(AlertRule).filter(AlertRule.id == rule_id).first()
             if rule:
@@ -300,7 +336,8 @@ class AlertService:
                 return True
             return False
         finally:
-            db.close()
+            if should_close:
+                db.close()
     
     def get_alert_statistics(self) -> Dict[str, Any]:
         """
@@ -309,7 +346,7 @@ class AlertService:
         Returns:
             Dictionary with alert metrics
         """
-        db = self.SessionLocal()
+        db, should_close = self._get_session()
         try:
             total_rules = db.query(AlertRule).count()
             active_rules = db.query(AlertRule).filter(AlertRule.is_active == True).count()
@@ -327,7 +364,8 @@ class AlertService:
                 'alerts_last_24h': alerts_24h
             }
         finally:
-            db.close()
+            if should_close:
+                db.close()
 
 @st.cache_resource
 def get_alert_service() -> AlertService:
