@@ -588,7 +588,8 @@ def main():
         "🔗 Oracles",
         "🤖 ML Optimization",
         "💾 Scenarios",
-        "📡 WNSP"
+        "📡 WNSP",
+        "🔧 Task Orchestration"
     ]
     
     if AuthManager.has_role('admin'):
@@ -636,6 +637,10 @@ def main():
     
     with tabs[tab_index]:
         render_wnsp()
+    tab_index += 1
+    
+    with tabs[tab_index]:
+        render_task_orchestration()
     tab_index += 1
     
     if AuthManager.has_role('admin'):
@@ -2607,6 +2612,235 @@ def render_wnsp():
     """Render the Wavelength-Native Signaling Protocol (WNSP) interface."""
     from wnsp_renderer import render_wnsp_interface
     render_wnsp_interface()
+
+def render_task_orchestration():
+    """Render the Task Orchestration DAG interface."""
+    from task_orchestration import TaskOrchestrationDAG, TaskBuilder, TaskStatus, TaskPriority
+    from task_handlers import register_all_handlers
+    
+    st.header("🔧 Task Orchestration System")
+    st.markdown("""
+    DAG-based workflow automation for administration, communications, integrations, and more.
+    Create complex multi-step workflows with dependency management and error handling.
+    """)
+    
+    if 'task_dag' not in st.session_state:
+        st.session_state.task_dag = TaskOrchestrationDAG()
+        register_all_handlers(st.session_state.task_dag)
+    
+    if 'task_execution_results' not in st.session_state:
+        st.session_state.task_execution_results = None
+    
+    st.subheader("📋 Workflow Templates")
+    
+    template_col1, template_col2, template_col3 = st.columns(3)
+    
+    with template_col1:
+        if st.button("📧 User Onboarding", use_container_width=True):
+            dag = TaskOrchestrationDAG()
+            register_all_handlers(dag)
+            
+            create_user_task = (TaskBuilder('create-user')
+                .type('admin')
+                .operation('log_system_event')
+                .params({
+                    'event_type': 'user_created',
+                    'message': 'New user registered in system'
+                })
+                .priority(TaskPriority.HIGH)
+                .build())
+            
+            send_welcome_task = (TaskBuilder('send-welcome-email')
+                .type('communication')
+                .operation('send_email')
+                .params({
+                    'to': 'newuser@example.com',
+                    'subject': 'Welcome to NexusOS!',
+                    'body': 'Thank you for joining NexusOS. Get started with our platform.'
+                })
+                .depends_on('create-user')
+                .build())
+            
+            log_complete_task = (TaskBuilder('log-onboarding')
+                .type('admin')
+                .operation('log_system_event')
+                .params({
+                    'event_type': 'onboarding_complete',
+                    'message': 'User onboarding workflow completed'
+                })
+                .depends_on('send-welcome-email')
+                .build())
+            
+            dag.add_task(create_user_task)
+            dag.add_task(send_welcome_task)
+            dag.add_task(log_complete_task)
+            
+            results = dag.execute_all()
+            st.session_state.task_execution_results = results
+            st.success("✅ User onboarding workflow executed!")
+            st.rerun()
+    
+    with template_col2:
+        if st.button("🔔 Multi-Channel Alert", use_container_width=True):
+            dag = TaskOrchestrationDAG()
+            register_all_handlers(dag)
+            
+            email_task = (TaskBuilder('email-alert')
+                .type('communication')
+                .operation('send_email')
+                .params({
+                    'to': 'admin@example.com',
+                    'subject': 'Simulation Alert',
+                    'body': 'Important simulation event detected'
+                })
+                .priority(TaskPriority.HIGH)
+                .build())
+            
+            sms_task = (TaskBuilder('sms-alert')
+                .type('communication')
+                .operation('send_sms')
+                .params({
+                    'to': '+1234567890',
+                    'message': 'Simulation alert - check email for details'
+                })
+                .priority(TaskPriority.HIGH)
+                .build())
+            
+            log_task = (TaskBuilder('log-alert')
+                .type('admin')
+                .operation('log_system_event')
+                .params({
+                    'event_type': 'alert_sent',
+                    'message': 'Multi-channel alert dispatched'
+                })
+                .depends_on('email-alert', 'sms-alert')
+                .build())
+            
+            dag.add_task(email_task)
+            dag.add_task(sms_task)
+            dag.add_task(log_task)
+            
+            results = dag.execute_all()
+            st.session_state.task_execution_results = results
+            st.success("✅ Multi-channel alert workflow executed!")
+            st.rerun()
+    
+    with template_col3:
+        if st.button("📱 Social Media Post", use_container_width=True):
+            dag = TaskOrchestrationDAG()
+            register_all_handlers(dag)
+            
+            twitter_task = (TaskBuilder('twitter-post')
+                .type('social')
+                .operation('post_to_twitter')
+                .params({
+                    'message': 'Just completed a NexusOS simulation! 🚀 #DataScience #Economics'
+                })
+                .build())
+            
+            linkedin_task = (TaskBuilder('linkedin-post')
+                .type('social')
+                .operation('post_to_linkedin')
+                .params({
+                    'message': 'Excited to share insights from our latest NexusOS economic simulation.',
+                    'visibility': 'public'
+                })
+                .build())
+            
+            log_task = (TaskBuilder('log-social')
+                .type('admin')
+                .operation('log_system_event')
+                .params({
+                    'event_type': 'social_posts_published',
+                    'message': 'Social media posts published successfully'
+                })
+                .depends_on('twitter-post', 'linkedin-post')
+                .build())
+            
+            dag.add_task(twitter_task)
+            dag.add_task(linkedin_task)
+            dag.add_task(log_task)
+            
+            results = dag.execute_all()
+            st.session_state.task_execution_results = results
+            st.success("✅ Social media posting workflow executed!")
+            st.rerun()
+    
+    st.divider()
+    
+    if st.session_state.task_execution_results:
+        st.subheader("📊 Execution Results")
+        
+        results = st.session_state.task_execution_results
+        
+        status_counts = {
+            'completed': sum(1 for r in results.values() if r.status == TaskStatus.COMPLETED),
+            'failed': sum(1 for r in results.values() if r.status == TaskStatus.FAILED),
+            'cancelled': sum(1 for r in results.values() if r.status == TaskStatus.CANCELLED)
+        }
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Tasks", len(results))
+        with col2:
+            st.metric("✅ Completed", status_counts['completed'])
+        with col3:
+            st.metric("❌ Failed", status_counts['failed'])
+        with col4:
+            st.metric("🚫 Cancelled", status_counts['cancelled'])
+        
+        st.divider()
+        
+        for task_id, result in results.items():
+            status_emoji = {
+                TaskStatus.COMPLETED: "✅",
+                TaskStatus.FAILED: "❌",
+                TaskStatus.CANCELLED: "🚫"
+            }.get(result.status, "❓")
+            
+            with st.expander(f"{status_emoji} {task_id} - {result.status.value}"):
+                if result.output:
+                    st.json(result.output)
+                if result.error:
+                    st.error(f"Error: {result.error}")
+                st.caption(f"Execution time: {result.execution_time:.3f}s | Retries: {result.retry_count}")
+    
+    st.divider()
+    
+    st.subheader("🎯 Task Categories")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        **Administration**
+        - 👤 User management (create, update roles)
+        - 📝 System logging and event tracking
+        - 📦 Data export and reporting
+        
+        **Communications**
+        - 📧 Email notifications (SendGrid)
+        - 📱 SMS messaging (Twilio)
+        - 🔔 In-app notifications
+        """)
+    
+    with col2:
+        st.markdown("""
+        **Social Media**
+        - 🐦 Twitter/X posting
+        - 💼 LinkedIn updates
+        - 📅 Scheduled posts
+        
+        **Integrations**
+        - 🔗 Webhook calls
+        - 🌐 API requests
+        - 🔄 Data transformations
+        """)
+    
+    st.info("""
+    💡 **Tip**: Task workflows support dependency chaining, priority ordering, automatic retry logic, 
+    and error propagation. Failed tasks automatically cancel dependent tasks to maintain data consistency.
+    """)
 
 if __name__ == "__main__":
     main()
