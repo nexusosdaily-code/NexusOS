@@ -1,0 +1,5027 @@
+NexusOS Protocol
+Overwiew:
+# 
+Wavelength
+-
+Native Signaling Protocol (WNSP
+) 
+v1.0 
+## 1. Overview 
+The Wavelength
+-
+Native Signaling Protocol (WNSP) is a lightweight optical signaling standard for MesgNexusOS
+. 
+It encodes 
+textual 
+messages into a sequence of 
+**
+wavelength_nm
+** 
+values across the visible spectrum and packages 
+them 
+into 
+discrete **
+frames
+**
+. 
+These 
+frames 
+can be rendered 
+as flashes 
+of 
+light (screen
+, 
+LED
+, 
+etc.
+) 
+and 
+decoded via camera or photodiode
+, 
+then reconstructed back into text
+. 
+WNSP is designed 
+to 
+be
+: 
+- 
+**
+Physics
+-
+based
+**
+: 
+The core symbol is wavelength_nm
+, 
+not perceived color. 
+— 
+**
+Device
+-
+agnostic
+**
+: Independent of 
+screen 
+brand
+, 
+gamma, or white balance
+. 
+- 
+**
+Accessible
+**
+: Works for color
+-
+blind users; humans do not 
+need to see the color
+. 
+- 
+**
+Mesh
+-
+ready
+**
+: 
+Suitable as a signaling layer for offline
+, 
+optical mesh networking
+. 
+- 
+**
+Extensible
+**
+: 
+Can evolve to support smart cities
+, 
+loT
+, 
+and civilizational signaling
+. 
+## 
+2. 
+Alphabet 
+and Wavelength Mapping 
+WNSP v1.0 
+defines 
+a 
+base 
+alphabet 
+of 
+**26 
+letters
+** 
+(A
+-
+Z
+): 
+- 
+Each 
+letter has
+: 
+- 
+A **
+hex color
+** 
+(
+for 
+basic 
+visualization and 
+UI)
+. 
+- 
+A 
+**
+wavelength_nm
+** 
+value
+, 
+evenly spaced 
+across 
+the visible spectrum from 
+~
+380 nm 
+to 
+~
+740 nm
+. 
+The exact mapping is defined in 
+`
+/src
+/
+protocol/ wavelengthMap.ts`
+. 
+Example (conceptual
+)
+: 
+- 
+A
+→ 
+380 nm (violet) 
+-M
+→ 
+~
+567-582 nm (greenish
+-
+yellow) 
+-Z 
+→
+740 
+nm (deep red) 
+The **wavelength_nm** is the canonical representation; the 
+hex 
+color 
+is 
+illustrative
+. 
+## 
+3. 
+Frames 
+The core unit of transmission is the 
+**
+WNSP Frame
+**
+: 
+```
+ts 
+type WnspFrame 
+= 
+{ 
+sync
+: 
+number
+; 
+// 
+sync 
+pattern 
+identifier 
+wavelengthNm: number; 
+// 
+encoded 
+symbol wavelength 
+intensityLevel
+: 
+number
+; 
+// discrete level
+, 
+e.g. 
+0-7 
+checksum: number; 
+detection 
+payloadBit: 0 
+| 
+1; 
+// 
+simple checksum 
+for 
+error 
+// 
+a single bit carried in 
+this 
+frame 
+// local timestamp when frame 
+timestampMs
+: 
+number
+; 
+was created 
+}
+;
+Part1
+Below
+ 
+is
+ 
+the
+ 
+complete
+ 
+Nexus
+ 
+equation
+ 
+beginning
+ 
+from
+ 
+the
+ 
+foun
+ation is a
+ 
+self-contained
+ 
+mathematical
+ 
+model
+ 
+of
+ 
+the
+ 
+system’s
+ 
+state,
+ 
+issua
+ 
+feedback
+ 
+controllers,
+ 
+and
+ 
+constraints.
+ 
+I
+ 
+exclude
+ 
+the
+ 
+recycling/p
+ 
+domain-specific
+ 
+recycling
+ 
+mechanics;
+ 
+this
+ 
+is
+ 
+the
+ 
+core,
+ 
+general-OS
+ 
+model
+ 
+you
+ 
+can
+ 
+reuse
+ 
+across
+ 
+domains.
+I present:
+variables & interpretation,
+continuous-time core differential system,
+issuance / burn functional forms,
+feedback (regulation) term,
+long-run conservation constraint,
+discrete-time implementation (for simulation / smart contrac
+compact operator form + short parameter notes.
+---
+1 — Variables and definitions All functions depend on time .
+Nexus aggregate systemic state (total systemic value / inte
+validated human contribution rate (value units / time).
+machine/automated contribution rate.
+environmental / energy / ecological index (normalized, ).
+quality-weighted data inflow rate (signals / time).
+— Floor (baseline guaranteed value; can be constant
+ 
+or time-varying).
+issuance rate (value created per unit time).
+burn/destruction rate (value destroyed per unit time).
+net credit flow.
+temporal decay coefficient (units 1/time); optionally
+ 
+for half-life .
+feedback/regulation (controller) term (can be PID-like).
+System Health index (normalized, ).
+adaptive issuance and burn gains (controller levers).
+nonnegative weights for input importance.
+target Nexus state (policy anchor).
+coupling coefficient that injects the Floor into dynamics.
+All scalar quantities are normalized/units-consistent.
+---
+2 — Core continuous-time evolution (main differential equation)
+\boxed{\displaystyle
+\frac{dN}{dt} \;=\; I(t) \;-\; B(t) \;-\; \kappa\,N(t) \;+\; \Phi(t) \;+\; \eta\,F(t)
+}
+Interpretation:
+Issuance increases systemic value; burn decreases it. captures natural temporal decay (value/time).
+is the regulator that corrects deviations from the target.
+ensures the floor provides a persistent baseline injection.
+— Issuance and burn functional forms
+Issuance (validated contributions → issuance)
+\boxed{\displaystyle
+I(t) \;=\; \alpha(t)\; S(t)\;\big( w_H H(t) + w_M M(t) + w_D D(t) + w_E
+}
+down-weights issuance when system health is poor.
+is an adaptive gain (controller output) that increases or reduces issu systemic conditions.
+Burn (consumption / disposal / ecological load)
+\boxed{\displaystyle
+B(t) \;=\; \beta(t)\;\big( \gamma_C C_{cons}(t) + \gamma_D C_{disp}(
+\,\ell(E(t)) \big)
+}
+: measured consumption/extraction rate (units aligned to issuance).
+: measured disposal/waste rate.
+: ecological load function (higher when environment stressed).
+: adaptive burn gain.
+Notes: 's are tunable sensitivity constants. Choose forms so
+ 
+and
+ 
+ar
+---
+4 — Feedback / regulation (stabilizer) Define error:
+e(t) \;=\; N(t) - N^*(t)
+A general PID-like regulator:
+\boxed{\displaystyle
+\Phi(t) \;=\; -K_p\,e(t) - K_i\!\int_0^t e(s)\,ds \;-\; K_d\,\frac{d e}{dt}
+}
+tune responsiveness, integral action enforces long-run conservation, derivative damps rapid
+hanges.
+may be bounded to avoid actuator saturation: .
+Alternative:
+ 
+can be implemented as model-predictive control (MPC) for better performance under constraints.
+--
+— System Health index One normalized example:
+boxed{\displaystyle
+S(t) \;=\; \sigma\!\Big( \lambda_E E(t) + \lambda_N\frac{N(t)}{N_0} + lambda_H\frac{H(t)}{H_0} + \lambda_M\frac{M(t)}{M_0} \Big)
+are normalization constants. s are weights.
+--
+— Conservation / long-run 1:1 constraint
+Nexus design enforces that long-run average issuance equals long-run average burn (no uncontrolled inflation):
+boxed{\displaystyle lim_{T\to\infty}\frac{1}{T}\int_0^T\! I(t)\,dt
+;=\;
+lim_{T\to\infty}\frac{1}{T}\int_0^T\! B(t)\,dt
+Equivalently, at steady state (neglecting small decay & floor injections), overline{I}\;\approx\;\overline{B}
+boxed{\displaystyle
+int_0^T (I(t)-B(t))\,dt \;=\; N(T)-N(0) + \int_0^T \big(\kappa N(t)-\Phi(t)-\eta F(t)\big)\,dt
+---
+7 — Compact operator / control form Write the dynamics as an operator :
+\boxed{\displaystyle
+\frac{dN}{dt} \;=\; \mathcal{G}\big(N,H,M,E,D; \alpha,\beta,\kappa,F,N^*,K_p,K_i,K_d\big)
+}
+---
+8 — Discrete-time implementation (for simulation / deployment)
+Let timestep
+ 
+and index . Variables at step : .
+Update rules:
+\begin{aligned}
+I_k &= \alpha_k\; S_k\; ( w_H H_k + w_M M_k + w_D D_k + w_E E_k ) \\
+B_k &= \beta_k\; (\gamma_C C_{cons,k} + \gamma_D C_{disp,k} + \gamma_E \ell(E_k)) \\ e_k &= N_k - N^*_k \\
+\Phi_k &= -K_p e_k - K_i \sum_{j=0}^k e_j \Delta t - K_d \frac{e_k-e_{k-1}}{\Delta t} \\ N_{k+1} &= N_k + (I_k - B_k - \kappa N_k + \Phi_k + \eta F_k)\,\Delta t
+\end{aligned}
+Adapt
+ 
+with simple rules (e.g., gradient descent on error, or controller outputs limited to bounds).
+---
+9 — Parameter notes and implementation guidance Decay / half-life: set
+ 
+for desired half-life
+ 
+of issued value.
+Weights : select to reflect policy priorities (e.g.,
+ 
+large if human validation preferred).
+Saturation & clamps: clamp
+ 
+to avoid runaway issuance/burn. Normalization: scale
+ 
+so magnitudes produce sensible .
+Oracles & inputs:
+ 
+must come from robust oracles/validators with anti-Sybil measures.
+PID tuning: start with conservative ; prefer integral action for long-run conservation.
+Safety: implement emergency clamps that set
+ 
+or freeze issuance if input integrity fails.
+---
+10 — Minimal checklist to preserve the foundational equation in any extension
+Every issuance event
+ 
+must have an observable provenance (who/what validated it).
+Every burn event
+ 
+must be tied to a verifiable destruction/consumption proof.
+The controller
+ 
+must be able to reduce issuance when systemic overshoot is detected.
+Oracles feeding
+ 
+must be auditable and have slashing/penalty mechanisms for fraud.
+Maintain accounting separation between the token accounting layer (issuance/burn) and cash/treasury layer (reserves, receivables).
+---
+Final compact boxed equation (foundational)
+\boxed{\displaystyle
+\frac{dN}{dt} \;=\; \alpha(t)S(t)\big(w_H H+w_M M+w_D D+w_E E\big)
+\;-\;\beta(t)\big(\gamma_C C_{cons}+\gamma_D C_{disp}+\gamma_E\ell(E)\big)
+\;-\;\kappa N(t)\;+\;\Phi(t)\;+\;\eta F(t)
+}
+Part2 
+type TimelineSegment = { 
+tStartMs
+: 
+number; tEndMs
+: 
+number; 
+}
+; 
+wavelengthNm
+: 
+number
+; 
+intensityLevel
+: 
+number
+; 
+{
+tMs
+, 
+wavelength Nm
+, 
+intensityLevel} 
+Part3
+## 
+3. TypeScript core library files 
+### 
+3.1 
+`
+src
+/
+protocol
+/
+wavelengthMap.ts` 
+```
+ts 
+// 
+src
+/
+protocol
+/
+wavelengthMap.ts 
+/
+** 
+* Mapping between alphabet letters
+, 
+their hex color representation
+, 
+* and a canonical wavelength (in nanometers
+) 
+across 
+the 
+visible spectrum. 
+*
+/ 
+export type LetterSymbol 
+= 
+{ 
+}; 
+letter: string
+; 
+hexColor: string
+; 
+wavelengthNm
+: 
+number
+; 
+const 
+LETTER_COLORS: 
+string
+[] 
+= 
+[ 
+"
+#
+8B00FF
+"
+, 
+// 
+A 
+- 
+deep violet 
+"
+#
+7A00FF
+"
+, 
+// 
+B 
+"
+#
+6900FF
+"
+, 
+// 
+C 
+"
+#
+5800FF
+"
+, 
+// 
+D 
+"
+#
+4700FF
+"
+, 
+// 
+E 
+"
+#
+3600FF
+"
+, 
+// 
+F 
+"
+#
+2500FF
+"
+, 
+// 
+G 
+"
+#
+1400FF
+"
+, 
+// 
+H 
+"
+#
+0300FF
+"
+, 
+// 
+\ 
+"
+#
+0040FF
+"
+, 
+// 
+J 
+- 
+blue 
+"
+#0055FF
+"
+, 
+// 
+K 
+"
+#
+006AFF
+"
+, 
+// 
+L 
+"
+#
+0080FF
+", 
+// 
+M
+-
+cyan
+-
+ish 
+"
+#00A0FF
+"
+, 
+// 
+N 
+"
+#
+00C0FF
+", 
+// 
+O 
+"
+#
+00EOFF
+"
+, 
+// 
+P 
+]
+; 
+"
+#00FFBO
+"
+, 
+// 
+Q 
+"
+#40FF40
+", 
+// 
+R
+-
+green 
+"
+#
+80FF00
+"
+, 
+// S 
+"
+#AFFF00
+"
+, 
+// 
+T 
+"
+#DFFF00
+"
+, 
+// 
+U 
+"
+#FFFF00
+"
+, 
+// 
+V 
+- 
+yellow 
+"
+#FFBFOO
+"
+, 
+// W 
+"
+#
+FF8000
+"
+, 
+// 
+X 
+- 
+orange 
+"
+#
+FF4000
+"
+, 
+// Y 
+"
+#
+FF0000
+", 
+// 
+Z 
+- 
+red 
+/
+** 
+* 
+Evenly distribute wavelengths 
+across 
+the visible spectrum (approx 380-740 nm) 
+* 
+for 
+the 
+26 
+letters A
+-
+Z
+. 
+*
+/ 
+const LETTER_WAVELENGTHS: number[] 
+= 
+(() 
+=
+> 
+{ 
+const 
+min 
+= 
+380
+; 
+const max = 
+740
+; 
+const 
+count = 
+26
+; 
+const step = (max 
+- 
+min) 
+/ 
+(count 
+- 
+1
+)
+; 
+// 
+360 
+/ 
+25 
+= 
+14.4 const arr: number[] 
+= 
+[]
+; 
+for (let i = 
+0
+; 
+i 
+< count
+; 
+i++) 
+{ 
+arr.push(Math.round(
+min 
++ 
+step 
+* i)); 
+} 
+return arr; 
+})(
+)
+; 
+/
+** 
+* The full alphabet map A
+-
+Z
+. 
+*
+/ 
+>
+{ 
+export 
+const ALPHABET_MAP: LetterSymbol] 
+= 
+(() 
+=
+> 
+{ 
+const symbols
+: 
+LetterSymbol
+[] 
+= 
+[]; 
+for 
+(
+let i 
+= 
+0; i 
+< 
+26; i
+++
+) { 
+const 
+letter 
+= 
+String.fromCharCode
+(
+"
+A"
+.charCodeAt
+(0
+) 
++ i); symbols.push(
+{ 
+letter
+, 
+hexColor
+: 
+LETTER_COLORS[i]
+, 
+wavelengthNm
+: 
+LETTER_WAVELENGTHS
+[
+i]
+, 
+}); 
+} 
+return 
+symbols
+; 
+}
+)
+(
+); 
+/
+** 
+* 
+Lookup table from letter 
+to 
+symbol
+. 
+*
+/ 
+const LETTER_TO_SYMBOL = new Map
+<
+string
+, 
+LetterSymbol
+>
+( 
+ALPHABET_MAP.map((
+s
+) =
+> 
+[
+s.letter
+, 
+s
+]
+) 
+/
+** 
+* 
+Get 
+the 
+symbol 
+info 
+(
+letter
+, 
+hexColor
+, 
+wavelength 
+Nm) 
+for 
+a given letter
+. 
+*
+/ 
+export function getLetterInfo(
+letter
+: 
+string)
+: 
+LetterSymbol | undefined 
+{ 
+} 
+if (!
+letter
+) 
+return 
+undefined
+; 
+const upper = letter.toUpperCase
+(
+)
+; 
+return 
+LETTER_TO_SYMBOL.get(upper)
+; 
+/
+** 
+* 
+Get 
+the 
+canonical 
+wavelength 
+(
+nm
+) 
+for 
+a 
+given 
+letter
+. 
+*
+/ 
+export 
+function getWavelength 
+ForLetter
+(
+letter
+: 
+string
+)
+: 
+number 
+| 
+undefined 
+{ 
+} 
+const 
+info 
+= 
+getLetterInfo(letter); 
+return info
+?
+.wavelengthNm
+; 
+/
+** 
+* Find the nearest defined letter for a given wavelength
+. 
+* 
+Returns 
+null 
+if alphabet is empty. 
+*
+/ 
+export function getLetterForWavelength( 
+wavelengthNm
+: 
+number 
+)
+: string 
+| 
+null 
+{ 
+if 
+(ALPHABET_MAP.length === 0) return null
+; 
+let best: LetterSymbol 
+= 
+ALPHABET_MAP
+[
+0]; 
+let 
+bestDiff 
+= 
+Math.abs(ALPHABET_MAP
+[
+0].wavelengthNm- wavelengthNm)
+; 
+for (let i = 1
+; 
+i 
+< 
+ALPHABET_MAP.length
+; 
+i++
+) 
+{ 
+const candidate 
+= 
+ALPHABET_MAP
+[
+i]; 
+const 
+diff 
+= 
+Math.abs
+(
+candidate.wavelength Nm 
+- 
+wavelengthNm)
+; 
+if (diff < bestDiff
+) 
+{ 
+} 
+best 
+= candidate; 
+bestDiff 
+= diff; 
+} 
+} 
+return 
+best.letter
+; 
+Part 4
+// 
+src/protocol
+/
+frameTypes.ts 
+/
+** 
+* 
+A 
+single WNSP frame representing an optical symbol in time
+. 
+*
+/ 
+export type WnspFrame = { 
+}; 
+sync
+: 
+number; 
+wavelengthNm
+: 
+number; 
+intensityLevel
+: 
+number; 
+checksum: number
+; 
+payloadBit: 0
+|
+1
+; 
+timestampMs
+: 
+number
+; 
+/** 
+* 
+A 
+message 
+is an ordered sequence 
+of 
+frames
+. 
+*
+/ 
+export type WnspFrameMessage = { 
+}
+; 
+frames
+: 
+WnspFrame[]; 
+P
+art 5
+// 
+src
+/
+codec
+/
+textEncoder.ts 
+import { 
+getWavelengthForLetter, 
+getLetterForWavelength, ALPHABET_MAP, 
+} from 
+"
+../protocol/wavelengthMap
+"
+; 
+/
+** 
+* 
+Normalize text: 
+* 
+- 
+Uppercase 
+* 
+- 
+Filter 
+to 
+A
+-
+Z 
+only 
+(non
+-
+letters are dropped in v1.0
+) 
+*
+/ 
+export function encode TextToLetters (text: string): string[]{ 
+const 
+normalized 
+= 
+text.toUpperCase(); 
+const letters: string[] 
+= 
+[]
+; 
+for 
+(
+let 
+i 
+= 
+0
+; 
+i 
+< normalized.length; i
+++
+) { 
+const 
+ch 
+= 
+normalized
+[i]; 
+if 
+(
+ch 
+>
+= 
+"
+A
+" 
+&& ch 
+<
+= 
+"
+Z
+"
+) 
+{ 
+} 
+letters.push(ch)
+; 
+// 
+Future versions: handle spaces
+, 
+punctuation via special 
+codes
+. 
+} 
+} 
+return 
+letters
+; 
+/
+** 
+* 
+Convert 
+letters to wavelength sequence (nm
+)
+. 
+* 
+Letters 
+that cannot be 
+mapped 
+are skipped
+. 
+*
+/ 
+export function 
+encode 
+LettersToWavelengths (
+letters
+: 
+string
+[]
+)
+: number
+[
+] { 
+const 
+wavelengths: number[] 
+= 
+[]
+; 
+for (const letter of letters
+) 
+{ 
+const 
+wl 
+= 
+getWavelength 
+For 
+Letter
+(
+letter
+); 
+if (typeof wl 
+=== 
+"
+number
+"
+) 
+{ 
+wavelengths.push(wl)
+; 
+} 
+} 
+} 
+return wavelengths
+; 
+/
+** 
+* 
+Convenience
+: 
+directly 
+encode 
+text 
+into wavelength 
+sequence
+. 
+*
+/ 
+export function encodeTextToWavelengthSequence(text
+: 
+string
+)
+: number[] 
+{ 
+} 
+const 
+letters = encodeTextToLetters 
+(
+text
+)
+; 
+return 
+encodeLettersToWavelengths(letters)
+; 
+/** 
+* 
+Decoding 
+utilities 
+*
+/ 
+/
+** 
+* 
+Convert 
+a sequence 
+of 
+wavelengths 
+back 
+into 
+letters 
+via 
+nearest
+-
+neighbour mapping
+. 
+*
+/ 
+export 
+function decodeWavelengths 
+ToLetters 
+(wavelengths
+: 
+number[])
+: 
+string[] { 
+return wavelengths 
+.map
+((wl) 
+=
+> 
+getLetterForWavelength(wl)
+) 
+.filter
+(
+(1): 
+I is 
+string 
+=
+> 
+!!!)
+; 
+/
+** 
+* 
+Convert 
+letters to a reconstructed 
+text 
+string
+. 
+* 
+Currently simply joins letters without spaces
+. 
+*/ 
+export 
+function 
+decodeLettersToText
+(
+letters
+: 
+string
+[
+]): 
+string 
+{ 
+return letters.join(
+""
+)
+; 
+} 
+/
+** 
+* Helper 
+to 
+expose 
+the alphabet mapping for Ul purposes
+. 
+*
+/ 
+export function getAlphabetMap(
+) 
+{ 
+return ALPHABET_MAP: 
+} 
+Part 6
+// 
+src
+/
+codec
+/
+frameEncoder.ts 
+import { WnspFrame } from 
+"
+../protocol/frameTypes
+"
+; 
+import 
+{ 
+encode 
+TextToWavelength 
+Sequence } 
+from 
+"
+./ 
+textEncoder
+"
+; 
+import { getWavelengthForLetter} from 
+"
+../protocol/ 
+wavelengthMap
+"
+; 
+/
+** 
+* 
+Default 
+sync 
+pattern 
+for v1.0
+. 
+*
+/ 
+export const DEFAULT_SYNC_PATTERN = 0xaa
+; 
+/
+** 
+* 
+Default intensity level for v1.0 (0-7)
+. 
+*
+/ 
+export const DEFAULT_INTENSITY_LEVEL 
+= 
+4; 
+/
+** 
+* 
+Compute a simple checksum by XOR
+-
+ing the core numeric fields
+. 
+* This is intentionally simple
+; 
+future versions may use stronger methods
+. 
+*
+/ 
+export 
+function computeChecksum( 
+sync
+: 
+number, 
+wavelengthNm
+: 
+number
+, 
+intensityLevel
+: 
+number
+, 
+payloadBit: 0
+|
+1 
+)
+: 
+number { 
+} 
+let checksum = 0
+; 
+checksum 
+^
+= sync & 0xff
+; 
+checksum ^
+= 
+wavelengthNm & 0xff
+; 
+checksum ^
+= 
+intensityLevel & 0xff
+; 
+checksum 
+^
+= 
+payloadBit & 0xff
+; 
+return 
+checksum; 
+/
+** 
+* 
+Encode a sequence of wavelengths into WNSP frames
+. 
+* 
+In 
+v1.0
+: 
+* 
+- 
+payloadBit is derived as parity 
+of 
+the 
+letter 
+index (
+if 
+provided) 
+* 
+or 
+0 if 
+unknown
+. 
+*
+/ 
+export function encodeWavelengths ToFrames( 
+wavelengths
+: 
+number
+[
+]
+, 
+options
+?: { 
+} 
+intensityLevel
+?: 
+number
+; 
+syncPattern
+?: 
+number; 
+)
+: 
+WnspFrame
+[
+] { 
+const sync 
+= 
+options
+?
+.syncPattern 
+?? 
+DEFAULT_SYNC_PATTERN
+; 
+const intensity = options
+?
+.intensityLevel 
+?? 
+DEFAULT_INTENSITY_LEVEL
+; 
+const 
+frames
+: WnspFrame[] 
+= 
+[]; 
+const nowBase = Date.now()
+; 
+for (let i = 0
+; 
+i < wavelengths.length
+; 
+i
+++
+) { 
+const 
+wl 
+= 
+wavelengths
+[
+i]; 
+const parity = 
+(
+i 
+% 
+2
+) as 0 
+| 
+1
+; 
+const checksum 
+= 
+computeChecksum 
+(sync
+, 
+wl
+, 
+intensity
+, 
+parity)
+; 
+const frame
+: 
+WnspFrame = { 
+}; 
+sync, 
+wavelengthNm
+: 
+wl
+, 
+intensityLevel
+: 
+intensity, 
+payloadBit
+: 
+parity
+, 
+checksum
+, 
+timestampMs
+: 
+nowBase + 
+i
+, 
+frames.push
+(
+frame
+); 
+} 
+} 
+return 
+frames
+; 
+/
+** 
+* 
+Convenience encoder
+: 
+text string 
+-
+> 
+frames
+. 
+*
+/ 
+export 
+function 
+encode 
+TextToFrames
+( 
+text
+: 
+string
+, 
+options?: { 
+intensityLevel?: number; 
+syncPattern
+?: 
+number
+; 
+): WnspFrame
+[
+] { 
+} 
+} 
+const wavelengths = 
+encodeTextToWavelength Sequence(text)
+; 
+return 
+encodeWavelengths To 
+Frames 
+(wavelengths
+, 
+options
+)
+; 
+/
+** 
+* 
+Utility to 
+get 
+a simple 
+"
+index 
+parity
+" 
+for 
+a 
+letter based on its position in alphabet
+. 
+*
+/ 
+export function getLetterParity(letter
+: 
+string
+)
+: 
+0
+|
+1 
+{ 
+const 
+upper 
+= letter.toUpperCase
+(
+)
+; 
+if 
+(
+upper 
+< 
+"
+A
+" 
+|| 
+upper 
+> 
+"
+Z
+"
+) 
+return 
+0; 
+const index 
+= 
+upper.charCodeAt
+(
+0) 
+- "
+A".charCodeAt(0); return (index 
+% 
+2) as 0 
+| 
+1; 
+/** 
+* 
+Encode 
+letters 
+directly 
+to frames (if you already 
+have 
+letters)
+. 
+*
+/ 
+export 
+function 
+encode 
+LettersToFrames( 
+letters
+: 
+string[]
+, 
+options
+?: 
+{ 
+} 
+intensityLevel
+?: 
+number
+; 
+syncPattern?: number; 
+)
+: WnspFrame
+[
+] { 
+const sync = options?.syncPattern ?? 
+DEFAULT_SYNC_PATTERN
+; 
+} 
+const intensity = options
+?
+.intensityLevel 
+?? 
+DEFAULT_INTENSITY_LEVEL
+; 
+const 
+frames
+: 
+WnspFrame[] 
+= 
+[
+]; const nowBase Date.now()
+; 
+= 
+for (let i = 
+0
+; 
+i 
+< 
+letters.length
+; 
+i
+++
+) 
+{ 
+const 
+letter 
+= 
+letters
+[
+i]; 
+const 
+wl 
+= 
+getWavelength 
+ForLetter
+(
+letter
+)
+; 
+if (typeof wl !== 
+"
+number
+"
+) continue
+; 
+const parity 
+= 
+getLetterParity
+(letter)
+; 
+const checksum 
+= 
+computeChecksum (sync
+, 
+wl
+, 
+intensity, parity)
+; 
+frames.push
+({ 
+}); 
+sync, 
+wavelengthNm
+: 
+wl
+, 
+intensityLevel
+: 
+intensity, 
+payloadBit
+: 
+parity
+, 
+checksum
+, 
+timestampMs
+: 
+nowBase 
++ 
+i
+, 
+} 
+return 
+frames
+; 
+Part 7
+// 
+src
+/
+codec
+/
+frameDecoder.ts 
+import { WnspFrame } from 
+"
+../protocol/frameTypes
+"
+; 
+import { 
+decodeWavelengthsToLetters
+, 
+decodeLettersToText
+, 
+} from 
+"
+./textEncoder
+"
+; 
+import { computeChecksum
+, 
+DEFAULT_SYNC_PATTERN} 
+from 
+"
+./frameEncoder
+"
+; 
+/
+** 
+* Validate a 
+frame 
+using checksum and (optionally
+) 
+sync pattern
+. 
+*
+/ 
+export function isValidFrame( 
+frame: WnspFrame, 
+options
+?: 
+{ 
+expectedSync
+?: number} 
+)
+: 
+boolean 
+{ 
+const expectedSync = options
+?
+.expectedSync 
+?? 
+DEFAULT_SYNC_PATTERN
+; 
+if 
+(
+frame.sync 
+!
+== 
+expectedSync
+) 
+return 
+false
+; 
+const checksum 
+= 
+computeChecksum( 
+frame.sync, 
+frame.wavelength 
+Nm
+, 
+frame.intensityLevel
+, 
+frame.payloadBit 
+); 
+return 
+checksum 
+=== 
+frame.checksum
+; 
+} 
+/
+** 
+* 
+Filter 
+out invalid frames 
+from 
+a sequence
+. 
+*
+/ 
+export function filterValidFrames
+( 
+frames: WnspFrame[]
+, 
+options
+?: 
+{ expectedSync?: number} 
+)
+: 
+WnspFrame
+[
+] { 
+} 
+return frames.filter((
+f) =
+> 
+isValidFrame(f
+, 
+options
+)
+)
+; 
+/
+** 
+* Decode 
+frames 
+into a 
+wavelength 
+sequence (nm)
+, 
+ignoring invalid frames
+. 
+*
+/ 
+export 
+function decodeFramesToWavelengths( 
+frames
+: 
+WnspFrame[]
+, 
+options
+?: 
+{ expectedSync
+?: 
+number } 
+)
+: number
+[
+] { 
+} 
+const 
+valid 
+= 
+filterValidFrames (
+frames
+, 
+options)
+; 
+return valid.map
+(
+(
+f
+) 
+=
+> 
+f.wavelength 
+Nm)
+; 
+/
+** 
+* 
+Decode 
+frames directly to letters via wavelength mapping
+. 
+*
+/ 
+export 
+function decodeFramesToLetters( 
+frames
+: 
+WnspFrame[]
+, 
+options
+?: 
+{ expectedSync
+?: 
+number } 
+): 
+string
+[
+]
+{ 
+} 
+const wavelengths = decodeFramesToWavelengths (frames
+, 
+options
+)
+; 
+return 
+decodeWavelengthsToLetters (
+wavelengths
+)
+; 
+/
+** 
+* 
+Decode 
+frames 
+all 
+the 
+way back 
+to 
+text
+. 
+*
+/ 
+public 
+function 
+decodeFramesToText
+( 
+frames
+: 
+WnspFrame[]
+, 
+options
+?: 
+{ expectedSync?: number } 
+)
+: 
+string 
+{ 
+} 
+const letters 
+= 
+decodeFramesToLetters
+(
+frames
+, 
+options
+); return 
+decodeLetters 
+ToText(letters); 
+Part 8
+// 
+src
+/
+codec
+/
+frameDecoder.ts 
+(
+fixed 
+bottom 
+function
+) 
+export function 
+decodeFramesToText
+( 
+frames
+: 
+WnspFrame[]
+, 
+options?: { expectedSync?: number } 
+): string { 
+} 
+const 
+letters 
+= 
+decodeFramesToLetters 
+(
+frames
+, 
+options
+)
+; 
+return 
+decodeLetters To 
+Text 
+(
+letters
+)
+; 
+Part 9
+// 
+src
+/
+modulation
+/
+modulation.ts 
+import { WnspFrame } from 
+"
+../protocol/frameTypes
+"
+; 
+/** 
+* 
+A timeline segment describes how a frame will 
+be 
+rendered 
+as light 
+* 
+between tStartMs and tEndMs
+. 
+*
+/ 
+export type TimelineSegment 
+= 
+{ 
+}; 
+tStartMs
+: 
+number
+; tEndMs: number
+; 
+wavelengthNm
+: 
+number
+; 
+intensityLevel
+: 
+number; 
+/
+** 
+* 
+Convert a sequence of frames into 
+a 
+simple linear timeline
+. 
+* 
+Each frame is assigned a fixed duration
+. 
+*
+/ 
+export 
+function 
+framesToTimeline
+( 
+frames: WnspFrame[]
+, 
+frameDurationMs: number 
+): 
+TimelineSegment
+[] { 
+const segments
+: 
+TimelineSegment
+[] 
+= 
+[]
+; 
+let 
+currentStart 
+= 
+0
+; 
+for (const frame of frames
+) 
+{ 
+const segment
+: 
+TimelineSegment = 
+{ 
+tStartMs: currentStart
+, 
+}; 
+tEndMs
+: 
+currentStart 
++ 
+frameDurationMs
+, 
+wavelengthNm
+: 
+frame.wavelengthNm
+, 
+intensityLevel
+: 
+frame
+. 
+intensityLevel
+, 
+segments.push(segment)
+; 
+currentStart 
++= 
+frame DurationMs
+; 
+} 
+return segments; 
+/** 
+* 
+A simple sample representation of detected optical state
+. 
+*
+/ 
+export type OpticalSample 
+= 
+{ 
+}; 
+tMs: number; 
+wavelengthNm
+: 
+number; 
+intensityLevel
+: 
+number
+; 
+/
+** 
+* 
+Conceptual demodulation
+: 
+group samples into time 
+buckets 
+corresponding 
+* 
+to frames 
+and 
+reconstruct approximate frames
+. 
+* 
+* 
+In v1.0 this is primitive: 
+we 
+assume 
+samples 
+are 
+already aligned and 
+* 
+simply average wavelength & intensity per bucket
+. 
+*
+/ 
+export 
+function 
+demodulate TimelineToFrames
+( 
+samples
+: 
+OpticalSample[]
+, 
+frameDurationMs
+: 
+number 
+)
+: 
+WnspFrame
+[] { 
+if (
+samples.length 
+=== 
+0) 
+return 
+[]; const frames
+: 
+WnspFrame[] = []
+; 
+const 
+startTime 
+= 
+samples
+[0]
+.tMs
+; 
+const 
+endTime 
+= 
+samples
+[
+samples.length
+-
+1].tMs; 
+- 
+const frameCount = Math.ceil((endTime 
+- 
+startTime) 
+/ 
+frameDurationMs)
+; 
+for (let i 
+= 
+0
+; i 
+< 
+frameCount; i++) { 
+const bucketStart = startTime 
++ 
+i * frameDurationMs
+; 
+const bucketEnd
+= 
+bucketStart + frameDurationMs; 
+const bucketSamples 
+= 
+samples.filter( 
+); 
+(
+s
+) =
+> 
+s.tMs 
+>
+= 
+bucketStart 
+&& s.tMs < bucketEnd 
+if (bucketSamples.length 
+const avgWI = 
+=== 
+0) continue
+; 
+bucketSamples.reduce
+((
+sum
+, 
+s
+) 
+=
+> 
+sum 
++ 
+s.wavelengthNm
+, 
+0
+) 
+/ 
+bucketSamples.length
+; 
+const avgintensity 
+= 
+bucketSamples.reduce
+((sum
+, 
+s
+) 
+=
+> 
+sum 
++ 
+s.intensityLevel
+, 
+0
+) 
+/ 
+bucketSamples.length
+; 
+const wavelengthNm = Math.round(avgWI)
+; 
+const intensityLevel = Math.round(avg Intensity
+)
+; 
+// 
+For v1.0
+, 
+we cannot reconstruct payloadBit and checksum reliably from samples
+, 
+// 
+so 
+we 
+set 
+them 
+to 
+neutral values and allow higher
+-
+level logic 
+to 
+decide
+. 
+const 
+frame: WnspFrame = { 
+sync
+: 
+Oxaa
+, 
+wavelengthNm
+, 
+intensityLevel
+, 
+checksum
+: 
+0
+, 
+payloadBit
+: 
+0
+, 
+timestampMs
+: 
+bucketStart
+, 
+} 
+} 
+}; 
+frames.push(frame
+)
+; 
+return 
+frames
+; 
+Part 10
+// 
+src
+/mesh
+/
+meshApi.ts 
+import { WnspFrame } from 
+"
+../protocol/frameTypes
+"
+; 
+import { encodeTextToFrames } from 
+"
+../codec/ 
+frameEncoder
+"
+; 
+import 
+{ 
+decode 
+FramesToText 
+} 
+from 
+"
+../codec/ 
+frameDecoder
+"
+; 
+/
+** 
+* 
+High
+-
+level message shape visible to applications
+. 
+*
+/ 
+export 
+type OpticalMeshMessage = { 
+}; 
+fromld
+: 
+string; 
+told
+?: 
+string
+; 
+text: string
+; 
+frames
+: 
+WnspFrame[]
+; 
+/
+** 
+* 
+Optical mesh node 
+interface
+. 
+*
+/ 
+export interface OpticalMeshNode { 
+id: string
+; 
+sendMessageText(
+text
+: 
+string
+, 
+told
+?: 
+string
+)
+: 
+Promise
+<
+void
+>
+; 
+onMessage( 
+callback
+: 
+(
+msg
+: 
+{ 
+fromld
+: 
+string
+; 
+text
+: 
+string
+; 
+frames
+: 
+WnspFrame[] }) 
+=
+> 
+void 
+)
+: void; 
+} 
+/
+** 
+* 
+Simple in
+-
+memory bus for simulating an optical mesh 
+network
+. 
+* 
+In 
+a 
+real 
+implementation
+, 
+frames would 
+be 
+encoded into light 
+* 
+and 
+received 
+via 
+camera
+/
+photodiode
+. 
+*
+/ 
+class 
+InMemoryMeshBus 
+{ 
+private static instance
+: 
+InMemoryMeshBus
+; 
+private subscribers
+: 
+Map
+< 
+string
+, 
+(msg
+: 
+OpticalMeshMessage
+) 
+=
+> void 
+> 
+= 
+new Map()
+; 
+} 
+static getInstance(
+)
+: 
+InMemoryMeshBus { 
+} 
+if (!InMemoryMeshBus.instance) { 
+InMemoryMeshBus.instance = new InMemoryMeshBus()
+; 
+return InMemoryMeshBus.instance
+; 
+subscribe
+( 
+nodeld
+: 
+string, 
+handler
+: 
+(msg
+: 
+OpticalMeshMessage) 
+=
+> void 
+)
+: void { 
+} 
+this.subscribers.set
+(
+nodeld
+, 
+handler)
+; 
+publish(msg
+: 
+OpticalMeshMessage)
+: 
+void { 
+// 
+If 
+told 
+is 
+specified
+, 
+only deliver 
+to 
+that 
+node
+; 
+otherwise 
+broadcast
+. 
+} 
+} 
+if (msg.told) 
+{ 
+} 
+const handler 
+= 
+this.subscribers.get(msg.told)
+; 
+if 
+(
+handler) handler(msg)
+; 
+return
+; 
+for 
+(
+const 
+[
+nodeld
+, 
+handler] 
+of 
+this.subscribers.entries
+(
+)
+) 
+{ 
+if (nodeld 
+=== 
+msg.fromld
+) 
+continue; 
+} 
+/
+** 
+handler(msg)
+; 
+* 
+Concrete implementation 
+of 
+OpticalMeshNode using the in- memory bus
+. 
+*
+/ 
+export class InMemoryOpticalMeshNode implements OpticalMeshNode { 
+public id
+: 
+string
+; 
+private bus
+: 
+In MemoryMesh Bus
+; 
+private messageHandlers
+: 
+Array
+< 
+(msg: { fromld: string; text: string; frames: WnspFrame
+[
+] }) 
+=
+> 
+void 
+> 
+= 
+[]; 
+constructor
+(id
+: 
+string) 
+{ 
+this.id 
+= 
+id
+; 
+this.bus 
+= 
+InMemoryMeshBus.getInstance()
+; 
+this.bus.subscribe(this.id
+, 
+(msg) this.handleIncoming(msg)); 
+} 
+=
+> 
+async sendMessageText(text
+: 
+string
+, 
+told
+?: 
+string)
+: 
+Promise
+<
+void
+>
+{ 
+const frames 
+= 
+encodeTextToFrames(
+text
+)
+; 
+const meshMessage
+: 
+OpticalMeshMessage = 
+{ 
+fromld: this.id
+, 
+told
+, 
+text
+, 
+// 
+human readable 
+frames
+, 
+this.bus.publish(meshMessage
+)
+; 
+}; 
+} 
+onMessage( 
+callback: (
+msg
+: 
+{ 
+fromld
+: 
+string
+; 
+text
+: 
+string
+; 
+frames
+: WnspFrame[] }) 
+=
+> 
+void 
+)
+: 
+void { 
+} 
+this.messageHandlers.push(callback)
+; 
+private handleIncoming(msg
+: 
+OpticalMeshMessage)
+: 
+void { const decodedText = decodeFramesToText(msg.frames
+)
+; 
+for 
+(
+const handler of this.messageHandlers) { 
+handler
+(
+{ 
+fromld: msg.fromld
+, 
+text
+: 
+decodedText
+, 
+frames: msg.frames, 
+}); 
+Part 11
+// 
+src
+/
+demo
+/
+Encoder Demo.tsx 
+import React
+, 
+{ useState } from 
+"
+react
+"
+; 
+import { 
+encodeTextToLetters
+, 
+encodeLettersToWavelengths
+, 
+getAlphabetMap
+, 
+} 
+from 
+"
+../codec/textEncoder
+"
+; 
+import 
+{ 
+encode 
+Letters 
+To 
+Frames 
+} 
+from 
+"
+../codec/ 
+frameEncoder
+"
+; 
+import type { WnspFrame } from 
+"
+../protocol/frameTypes
+"
+; 
+export const Encoder Demo
+: 
+React.FC = 
+() 
+=
+> 
+{ 
+const 
+[
+input
+, 
+setInput] 
+= 
+useState(
+"
+HELLO NEXUS
+"
+)
+; const [
+letters
+, 
+setLetters
+] = 
+useState
+<string
+[
+]
+>
+(
+[
+])
+; 
+const 
+[
+wavelengths
+, 
+setWavelengths] 
+= 
+useState<number[]>
+([]
+); 
+const 
+[
+frames
+, 
+setFrames
+] 
+= 
+useState
+<WnspFrame
+[
+]>
+([])
+; 
+const alphabet = getAlphabetMap(
+)
+; 
+const handleEncode = 
+() 
+=
+> 
+{ 
+const 
+ltrs 
+= 
+encode 
+TextToLetters
+(input
+)
+; 
+const 
+wls 
+= 
+encodeLetters ToWavelengths (
+Itrs
+); 
+const 
+frs 
+= 
+encode Letters To Frames(
+Itrs
+)
+; 
+encodeLettersToFrames
+(Iltrs
+); 
+setLetters(Itrs
+)
+; 
+setWavelengths(wls
+)
+; 
+setFrames
+(frs
+)
+; 
+}; 
+return ( 
+<
+div style={{ padding
+: 
+"
+1rem
+"
+, 
+border
+: 
+"
+1px solid 
+#
+444
+"
+, 
+borderRadius: 8 
+}}> 
+<
+h2
+>
+Encoder Demo
+<
+/
+h2
+> 
+<
+label
+> 
+Message
+: 
+<
+input 
+style={{ 
+}} 
+width: 
+"
+100
+%
+"
+, 
+padding: 
+"
+0.5rem
+"
+, 
+marginTop: 
+"
+0.25rem
+"
+, 
+marginBottom
+: "
+0.5rem
+", 
+value={input} 
+onChange=
+{
+(
+e
+) =
+> 
+setInput(e.target.value)} 
+/
+> 
+<
+/
+label
+> 
+<button 
+onClick
+=
+{handleEncode} style={{ padding
+: 
+"0.5rem 1rem
+" 
+}}
+> 
+Encode 
+<
+/
+button
+> 
+<
+div style=
+{
+{ marginTop
+: 
+"
+1rem
+" 
+}
+}
+> 
+<
+h3
+>
+Letters
+<
+/
+h3> 
+<
+p
+>
+{letters.join(
+" "
+) 
+|| 
+"
+(none
+)
+"
+}
+<
+/p
+> 
+<
+/
+div
+> 
+<
+div 
+style
+=
+{
+{ marginTop: 
+"
+1rem
+" 
+}
+}> 
+<h3>Wavelengths (nm
+)
+<
+/
+h3> 
+<
+p
+>
+{wavelengths.join(
+"
+, 
+"
+) 
+|| 
+"
+(none)
+"
+}</p
+> 
+<
+/
+div
+> 
+<div 
+style
+=
+{
+{ 
+marginTop
+: 
+"
+1 
+rem
+" 
+}}> 
+<
+h3
+>Frames
+<
+/
+h3
+> 
+<
+pre 
+style={{ 
+}} 
+maxHeight
+: 
+200
+, 
+overflow
+: 
+"
+auto
+"
+, 
+background: 
+"
+#
+111
+"
+, 
+padding: 
+"
+0.5rem
+"
+, 
+{
+frames.length
+? JSON.stringify(
+frames
+, 
+null
+, 
+2
+) : 
+"
+(none
+)
+"
+} 
+<
+/pre
+> 
+<
+/
+div
+> 
+<
+div 
+style
+=
+{
+{ 
+marginTop
+: 
+"
+1rem
+" 
+}}> 
+<
+h3
+>
+Alphabet Map
+<
+/
+h3
+> 
+<
+div style
+=
+{
+{ 
+display: 
+"
+flex
+", 
+flexWrap
+: 
+"
+wrap
+"
+, gap: 
+"
+0.5rem
+" 
+}}> 
+{
+alphabet.map
+((
+symbol
+) 
+=
+> ( 
+<div 
+key={symbol.letter} 
+style
+=
+{
+{ 
+borderRadius
+: 
+4
+, 
+border
+: 
+"
+1px 
+solid 
+#333
+", 
+padding: 
+"
+0.25rem 0.5rem
+"
+, 
+minWidth: 50
+, 
+}} 
+textAlign: 
+"
+center
+"
+, 
+<
+div 
+style={{ 
+width: 24
+, 
+}} 
+/
+> 
+height
+: 
+12
+, 
+margin
+: 
+0 
+auto 
+0.25rem
+"
+, 
+background
+: 
+symbol.hexColor
+, 
+<
+div
+>
+{symbol.letter}<
+/
+div
+> 
+<
+div style={{ fontSize
+: 
+10 }
+}
+>
+{symbol.wavelengthNm} 
+nm
+<
+/
+div
+> 
+<
+/
+div
+> 
+))} 
+<
+/
+div
+> 
+}; 
+)
+; 
+<
+/
+div
+> 
+<
+/
+div> 
+Part 12
+// 
+src/demo/SignalPreview.tsx 
+import React
+, 
+{ 
+useEffect
+, 
+useState } from 
+"
+react
+"
+; 
+import type {WnspFrame } from 
+"
+../protocol/frameTypes
+"
+; 
+interface 
+Signal PreviewProps { 
+} 
+frames
+: 
+WnspFrame[]
+; 
+frameDurationMs?: 
+number
+; 
+/
+** 
+* 
+Simple animated preview that cycles through frame colors
+, 
+* simulating a flashing signal
+. 
+* 
+* 
+NOTE
+: 
+Uses 
+wavelength 
+as 
+a 
+label only
+; 
+you 
+can 
+derive an approximate 
+* 
+color for Ul
+, 
+or later map back to your LETTER_COLORS
+. 
+*/ 
+export 
+const SignalPreview
+: 
+React.FC<Signal PreviewProps
+> 
+= 
+({ 
+frames
+, 
+frameDurationMs 
+= 
+200
+, 
+}) 
+=
+> 
+{ 
+const 
+[
+index
+, 
+setIndex
+] 
+= 
+useState
+(
+0)
+; 
+useEffect(
+(
+) 
+=
+> 
+{ 
+if 
+(
+!
+frames.length) 
+return
+; 
+setIndex(0
+)
+; 
+const interval 
+= 
+setInterval
+(
+() 
+=
+> { 
+setIndex((
+prev
+) => (
+prev 
++ 
+1
+)
+% 
+frames.length)
+; 
+}
+, 
+frameDurationMs
+)
+; 
+return() 
+=
+> clearInterval (interval); }
+, 
+[
+frames
+, 
+frame DurationMs]
+)
+; 
+if 
+(!frames.length) { 
+} 
+return ( 
+); 
+<
+div style=
+{
+{ padding
+: 
+"
+1rem
+" 
+}
+}
+> 
+<h3
+>
+Signal Preview
+<
+/
+h3
+> 
+<
+p>(No 
+frames 
+to 
+preview)
+</
+p
+> 
+</
+div> 
+const current 
+= 
+frames[index]; 
+// 
+Map wavelength to a rough gray
+-
+scale / hue demonstration (simple placeholder
+)
+. 
+const normalized 
+= 
+(current.wavelengthNm 
+- 
+380
+) 
+/ 
+(
+740 
+- 
+380
+)
+; 
+// 
+0–1 
+const brightness 
+= 
+50+ 
+normalized 
+* 
+50
+; 
+// 
+50-100 
+return ( 
+<
+div 
+style
+=
+{{ padding: 
+"
+1rem
+", 
+border
+: 
+"
+1px 
+solid #444
+", 
+borderRadius: 
+8 }}> 
+<h3
+>
+Signal Preview<
+/
+h3
+> 
+<
+div 
+style={
+{ 
+width
+: 
+"
+100
+%
+"
+, 
+height: 
+80
+, 
+borderRadius: 8
+, 
+border: 
+"
+1px solid 
+#
+222
+", 
+marginBottom
+: 
+"
+0.5rem
+"
+, 
+background: 
+`
+hsl(${normalized * 
+300}
+, 
+80
+%
+, 
+$ 
+{
+brightness}
+%
+)
+`, 
+}} 
+/
+> 
+transition: 
+"
+background 
+0.15s linear
+"
+, 
+<
+div style=
+{
+{ fontSize
+: 
+12 
+}}
+> 
+Frame 
+{
+index 
++ 
+1}
+/
+{frames.length} 
+- 
+wavelength
+: 
+{current.wavelengthNm) nm
+, 
+intensity
+: 
+{current.intensity Level}
+, 
+payloadBit
+: 
+{
+current.payload Bit} 
+}; 
+)
+; 
+</div> 
+<
+/div
+> 
+Part 13
+// 
+src
+/
+demo
+/
+Decoder Demo.tsx 
+import React
+, 
+{useState} from 
+"
+react
+"
+; 
+import type { WnspFrame } from 
+"
+../protocol/frameTypes
+"
+; 
+import 
+{ 
+decodeFramesToText
+} 
+from 
+"
+../codec/ 
+frameDecoder
+"
+; 
+= 
+export 
+const DecoderDemo
+: 
+React.FC 
+() 
+=
+> 
+{ 
+const 
+[
+inputJson
+, 
+setInputJson
+] 
+= 
+useState
+("
+"
+)
+; 
+const 
+[
+decodedText
+, 
+setDecodedText] 
+= 
+useState
+<
+string
+>
+(
+""
+)
+; 
+const handleDecode = 
+() 
+=
+> 
+{ 
+try { 
+const parsed 
+= 
+JSON.parse(inputJson
+) 
+as WnspFrame[]; const text 
+= 
+decodeFramesToText(parsed)
+; 
+setDecodedText(text); 
+} catch (err) 
+{ 
+setDecodedText(
+'
+Error decoding: 
+$
+{
+(err as 
+Error
+)
+.message
+}
+`
+)
+; 
+} 
+}; 
+return 
+( 
+<div 
+style
+=
+{{ padding: 
+"
+1rem
+", 
+border
+: 
+"
+1px solid 
+#444
+", 
+borderRadius: 8 
+}}
+> 
+<
+h2
+>
+Decoder Demo<
+/
+h2> 
+<
+label> 
+Frames JSON: 
+<textarea 
+style={
+{ 
+}} 
+width
+: 
+"
+100
+%
+"
+, 
+minHeight
+: 
+120
+, 
+padding
+: 
+"
+0.5rem
+", 
+marginTop: 
+"
+0.25rem
+"
+, 
+value={inputJson} 
+onChange=
+{
+(
+e
+) =
+> 
+setInputJson(e.target.value
+)
+} 
+/
+> 
+<
+/
+label
+> 
+<
+button 
+onClick
+=
+{handleDecode} 
+style
+={
+{ 
+padding
+: 
+"
+0.5rem 
+1rem
+" 
+}}
+> 
+Decode 
+<
+/
+button
+> 
+<div style=
+{
+{ marginTop
+: 
+"
+1 
+rem
+" 
+}
+}
+> 
+<
+h3
+>
+Decoded Text
+<
+/h3
+> 
+<
+pre 
+style
+=
+{{ 
+background: 
+"
+#
+111
+"
+, 
+padding
+: 
+"
+0.5rem
+"
+, 
+minHeight
+: 
+40
+, 
+)
+; 
+}; 
+}} 
+{
+decodedText 
+|| 
+"
+(none)
+"
+} 
+<
+/
+pre
+> 
+<
+/
+div> 
+<
+/
+div> 
+Part 14
+// 
+src
+/
+demo/App.tsx 
+import React
+, 
+{ 
+useState
+} from 
+"
+react
+"
+; 
+import { Encoder Demo } from 
+"
+./EncoderDemo
+"
+; 
+import { DecoderDemo } from 
+"
+./DecoderDemo"
+; 
+import { SignalPreview } from 
+"
+./Signal Preview
+"
+; import type { WnspFrame } from 
+"
+../protocol/frameTypes
+"
+; 
+import { encodeTextToFrames } from 
+"
+../codec/ 
+frameEncoder"; 
+export const App
+: 
+React
+. 
+FC = (
+) 
+=
+> 
+{ 
+const 
+[
+previewFrames
+, 
+setPreviewFrames] 
+= 
+useState<WnspFrame[]>
+([
+]
+)
+; 
+const handlePreviewGenerate 
+= 
+(
+) 
+=
+> 
+{ 
+}; 
+const frames 
+= 
+encodeTextToFrames
+(
+"
+NEXUS OS
+"
+); setPreviewFrames(frames); 
+return ( 
+<div 
+> 
+style={{ 
+}
+} 
+fontFamily
+: 
+"
+system
+-
+ui
+, 
+sans
+-
+serif
+", 
+color: 
+"
+#eee
+"
+, 
+background
+: 
+"
+#
+000
+", 
+minHeight: 
+"
+100vh
+"
+, 
+padding
+: 
+"
+1rem
+", 
+<
+h1
+>
+MesgNexusOS 
+- 
+WNSP 
+Demo
+<
+/
+h1> 
+<
+p style={
+{ 
+maxWidth
+: 
+600
+, 
+fontSize
+: 
+14
+, 
+color
+: 
+"
+#ccc
+" 
+}}
+> 
+This 
+demo encodes 
+text 
+into 
+wavelength
+-
+based 
+frames 
+(WNSP) and shows a 
+simulated flashing signal
+. 
+It's 
+a prototype for a 
+wavelength
+-
+native 
+communication 
+layer 
+that 
+works 
+across devices 
+and 
+for 
+color
+-
+blind 
+users
+. 
+</p
+> 
+<
+div 
+1fr)
+", 
+style={{ 
+}
+} 
+display
+: 
+"
+grid
+"
+, 
+grid TemplateColumns
+: 
+"
+minmax(0
+, 
+1.5fr
+) 
+minmax(0
+, 
+gap
+: 
+"
+1rem
+"
+, 
+marginTop: 
+"
+1rem
+"
+, 
+<
+div style={
+{ 
+display
+: 
+"
+flex
+"
+, 
+flexDirection
+: 
+"
+column
+"
+, 
+gap
+: 
+"
+1rem
+" 
+}}
+> 
+<
+EncoderDemo 
+/
+> 
+<
+DecoderDemo 
+/
+> 
+<
+/
+div> 
+<
+div style={
+{ 
+display
+: 
+"
+flex
+"
+, 
+flexDirection
+: 
+"
+column
+"
+, 
+gap
+: 
+"
+1rem
+" 
+}}
+> 
+<
+button 
+> 
+onClick={handle PreviewGenerate} 
+style={
+{ 
+padding
+: 
+"
+0.5rem 1rem
+"
+, 
+alignSelf
+: 
+"
+flex
+-
+start
+" 
+}} 
+Generate 
+Preview 
+for 
+"
+NEXUS OS
+" 
+}
+; 
+)
+; 
+<
+/
+button> 
+<SignalPreview 
+frames
+={previewFrames} 
+/
+> 
+<
+/
+div> 
+<
+/
+div> 
+<
+/
+div> 
+Part 15
+#
+/
+spec
+/
+diagrams.txt 
+1. 
+End
+-
+to
+-
+End Flow Diagram 
+=== 
+= 
+==== 
++ 
+-
++ 
++
+- 
+| 
+User 
+Text 
+-
++ 
++
+- 
+-
++ 
+|| 
+| 
+MesgNexusOS 
+| 
+|| 
+Optical Signaling 
+| 
+"
+HELLO NEXUS
+" 
+|| 
+Encoder 
+| 
+| 
+(Screen 
+/ 
+LED) 
+| 
+-
++
+------ 
++ 
++
+------ 
+·
++
+--------
++ 
++
+- 
+I 
+| 
+| 
+| 
+Text 
+V 
+V 
+[
+Normalize
+, 
+A
+-
+Z
+] [
+Letters 
+-
+> 
+Wavelengths 
+]
+| 
+| 
+V 
+| 
+V 
+| 
+| 
+| 
+-
++ 
+Letters: HELLO
+... 
+Wavelengths: [wl1
+, 
+wl2
+, 
+...
+] 
+1 
++
+-- 
+-
++
+· 
+| 
+V 
+[WNSP Frame Encoder] 
+| 
+V 
+Frames
+: 
+[ F1
+, 
+F2
+, 
+F3
+, ... 
+] 
+| 
+V 
+[ Optical Modulation ] 
+| 
+V 
+Time segments
+: 
+(tStart
+, 
+tEnd
+, 
+wl
+, 
+intensity) 
+V 
+[ Device 
+Emits 
+Light] 
+| 
+V 
+(Transmission) 
+| 
+V 
+[
+Camera 
+/ 
+Sensor
+] 
+V 
+[ 
+Demodulation 
+-
+> 
+Frames 
+] 
+V 
+WNSP 
+Frames 
+(approximate) 
+| 
+V 
+[Frame Decoder 1 
+| 
+Wavelengths 
+-
+> Letters 
+-
+> 
+Text 
+| 
+V 
+"
+HELLO NEXUS
+" 
+2. Frame 
+Structure 
+===
+: 
+== 
+=== 
+A single WNSP frame (v1.0
+)
+: 
++
+- 
++ 
+| 
+sync (
+8 
+bits) 
+| 
+wavelengthNm 
+(
+~
+16 bits
+) 
+| intensity (3 bits) 
++
+- 
+-
++ 
+I 
+payloadBit (1 
+bit
+) 
+| 
+checksum 
+(8 
+bits
+) 
+| 
+timestampMs 
+(local) 
++
+- 
+--
++ 
+Conceptually
+: 
+- 
+- 
+sync: helps receiver lock onto frame boundaries 
+- 
+wavelengthNm
+: 
+primary symbol (maps 
+back 
+to 
+a 
+letter
+) 
+intensity
+: 
+brightness level for adaptation and metadata 
+- 
+payloadBit
+: 
+0/1
+, 
+can 
+be 
+used as parity or future 
+data 
+- 
+checksum
+: 
+basic 
+XOR 
+over 
+core 
+fields
+, 
+for 
+error 
+detection 
+- 
+timestampMs
+: 
+local 
+metadata
+; 
+not required 
+for 
+correctness 
+3. Mesh Node Interaction 
+= 
+= 
++ 
+| 
+Node B (Receiver) 
+| 
++ 
++ 
+| 
+Node A (
+Sender
+) | 
++
+- 
++ 
+------
++ 
++
+- 
++
+-- 
++ 
+| 
+sendMessageText(
+"
+HELLO
+"
+) 
+-
++ 
+| 
+| 
+V 
+[
+Text 
+-
+> 
+Frames 
+] 
+| 
+| 
+| 
+publish(frames
+) 
++
+- 
+| 
+V 
+-
+>
+| 
+[ 
+Frames -> Text] 
+V 
+"
+HELLO
+" 
+displayed 
+Part 16
+#WNSP Civilization Roadmap 
+This roadmap outlines how the Wavelength
+-
+Native Signaling Protocol (WNSP) can evolve from a simple demo into a civilizational signaling layer integrated into Nexus OS
+. 
+## 
+Phase 
+1 
+(
+1-2 
+Years
+)
+: 
+Foundations 
+and 
+Education 
+### 
+1.1 Developer Tooling and Library Maturity 
+- 
+Stabilize the TypeScript library (protocol
+, 
+codec
+, 
+modulation)
+. 
+- 
+Add unit tests for: 
+- 
+Text 
+→ 
+frames 
+→ 
+text roundtrip
+. 
+- 
+Wavelength mapping correctness
+. 
+- 
+Frame checksum validation
+. 
+- 
+Publish an open
+-
+source SDK (e.g.
+, 
+npm package)
+: 
+-`
+@
+nexusos
+/
+wnsp
+-
+core` 
+- 
+`
+@
+nexusos/wnsp
+-
+react
+-
+demo` 
+### 
+1.2 Educational Applications 
+- 
+Build a 
+**
+Spectrum Learning App
+**
+: 
+- 
+Kids type words
+, 
+see 
+flashing 
+colors 
+and wavelengths
+. 
+- 
+Teaches 
+letters
+, 
+energy
+, 
+spectrum
+, 
+and pattern 
+recognition
+. 
+- 
+Provide 
+a 
+**
+Teacher 
+Dashboard
+**
+: 
+- 
+Simple web UI to 
+create 
+classroom 
+exercises
+. 
+- 
+Export printable cards showing letter
+-
+color
+-
+wavelength triplets
+. 
+### 
+1.3 Basic Messaging App 
+- 
+Create 
+a simple MesgNexusOS mobile app (or PWA
+)
+: 
+- 
+Device
+-
+to
+-
+device messaging over internet using WNSP frames as the internal representation
+. 
+- 
+Optional 
+screen
+-
+flash 
+"
+visual
+" 
+mode 
+for 
+fun and 
+demonstrations
+. 
+- 
+Add accessibility options: 
+- 
+Big text readout
+. 
+- 
+Audio 
+cues 
+tied to wavelength bands
+. 
+## 
+Phase 
+2 
+(
+3-5 
+Years
+)
+: 
+Mesh Networking and Offline Communication 
+### 2.1 Optical Mesh Experiments 
+- 
+Prototype 
+**
+offline optical messaging
+**
+: 
+- 
+Two phones communicate via camera 
++ 
+flashlight in a 
+dark 
+room
+. 
+- 
+Reliable detection at 
+short 
+distances 
+(
+~
+0.5-2m
+)
+. 
+- 
+Implement calibration tools
+: 
+- 
+Tune intensity
+, 
+frame durations
+, 
+and 
+detection 
+thresholds 
+by 
+device 
+model
+. 
+- 
+Establish 
+a 
+device capability registry. 
+### 
+2.2 
+Public 
+Mesh Trials 
+- 
+Organize 
+small
+-
+scale field tests: 
+- 
+Festivals
+, 
+hackathons
+, 
+meetups
+. 
+- 
+Use 
+optical 
+signals 
+to 
+broadcast short 
+messages
+, instructions
+, 
+or alerts
+. 
+- 
+Integrate with local Wi
+-
+Fi / BLE for hybrid communication
+: 
+- 
+Optical link establishes trust or initial handshake
+. 
+- 
+Higher bandwidth data 
+over 
+RF once nodes 
+are 
+linked
+. 
+### 
+2.3 
+Accessibility and Inclusion 
+- 
+Refine protocols 
+for 
+color
+-
+blind 
+and 
+low
+-
+vision users: 
+- 
+Strong emphasis 
+on 
+text
+/
+audio feedback
+. 
+- 
+Device does all 
+color
+/
+wavelength interpretation
+. 
+- 
+Publish guidelines for
+: 
+- 
+Governments
+. 
+- 
+NGOs
+. 
+- 
+Educators
+. 
+- 
+Accessibility 
+orgs. 
+These guidelines highlight WNSP as an 
+**
+inclusive signaling standard
+** 
+## 
+Phase 3 (5-10+ Years): Smart Cities
+, 
+IoT
+, 
+and Nexus Civilization Layer 
+### 
+3.1 
+Smart 
+Infrastructure Integration 
+- 
+Assign 
+**
+Spectrum 
+IDs
+** 
+to
+: 
+- 
+Traffic lights
+. 
+- 
+Public kiosks
+. 
+- 
+Energy meters
+. 
+- 
+Waste/recycling stations
+. - 
+Emergency beacons
+. 
+- 
+Use 
+optical 
+signaling for
+: 
+- 
+Status broadcasts (e.g.
+, 
+"
+available
+"
+, 
+"
+offline
+"
+, 
+"
+low battery
+"
+)
+. 
+- 
+Environmental alerts (e.g.
+, 
+air quality, temperature 
+anomalies
+)
+. 
+### 
+3.2 lot and Industrial Applications 
+- 
+Integrate WNSP into
+: 
+- 
+Factory 
+sensors 
+and 
+robots 
+as 
+a low
+-
+power side
+-
+channel
+. 
+- 
+Drones and autonomous vehicles 
+for short
+-
+range 
+coordination
+. 
+- 
+Define higher
+-
+density modes
+: 
+- 
+Multi
+-
+bit 
+frames
+. 
+- 
+Multiple wavelengths per frame (spatial or temporal multiplexing)
+. 
+- 
+Error
+-
+correcting 
+codes 
+tailored to optical noise
+. 
+### 
+3.3 
+Emergency and Resilience Layer 
+- 
+Standardize 
+WNSP 
+as 
+a 
+**
+fallback channel
+**
+: 
+- 
+When internet
+, 
+cellular
+, 
+or power is disrupted
+, 
+optical nodes can still
+: 
+- 
+Broadcast emergency codes
+. 
+- 
+Share short instructions
+. 
+- 
+Confirm human presence. 
+- 
+Integrate with disaster response protocols
+: 
+- 
+Simple optical patterns for 
+"
+Help
+", "
+Medical 
+needed
+"
+, 
+"
+Safe 
+area
+"
+. 
+### 
+3.4 Nexus OS Integration 
+- 
+WNSP 
+becomes 
+a 
+**
+first
+-
+class 
+module
+** 
+in 
+Nexus 
+OS
+: 
+- 
+Every Citizen Node (device) supports at least
+: 
+- 
+Basic sending
+/
+receiving of WNSP frames
+. 
+- 
+Local decoding to text and alerts
+. - 
+Higher
+-
+tier 
+hardware supports
+: 
+- 
+Continuous optical mesh participation. 
+- 
+Environmental sensing via spectral analysis
+. 
+### 3.5 Governance and Standardization 
+- 
+Work 
+with
+: 
+- 
+Standards 
+bodies 
+(
+e.g.
+, 
+IEEE
+-
+like organizations)
+. 
+- 
+City planners
+. 
+- 
+Hardware manufacturers
+. 
+- 
+Open
+-
+source 
+communities
+. 
+- 
+Establish WNSP as
+: 
+- 
+An open
+, 
+non
+-
+proprietary civilizational signaling layer
+. 
+- 
+A protocol aligned with Nexus OS principles
+: 
+- 
+Accessibility
+. 
+- 
+Non
+-
+extractive design
+. 
+- 
+Contribution
+-
+focused infrastructure
+. 
+## 
+Long
+-
+Term Vision 
+Over decades
+, 
+WNSP can evolve from a simple flashing demo into
+: 
+- 
+A **planetary optical language
+** 
+for devices
+, 
+infrastructure
+, 
+and citizens
+. 
+- 
+A 
+**
+resilience layer
+** 
+that functions when conventional networks fail
+. 
+- 
+A bridge between
+: 
+- 
+Children learning spectrum physics
+. 
+- 
+Engineers building 
+smart 
+infrastructure
+. 
+- 
+Communities maintaining communication under stress
+. 
+- 
+Nexus OS coordinating a regenerative
+, 
+contribution
+-
+based 
+civilization
+. 
+The key principle
+: 
+**
+Physics does not belong to any corporation
+.
+** 
+By anchoring communication in wavelength_nm and open standards
+, 
+WNSP can help guarantee that at least one layer of civilizational messaging remains universal
+, 
+inclusive
+, 
+and sovereign
+. 
