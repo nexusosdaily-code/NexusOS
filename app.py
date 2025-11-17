@@ -2630,6 +2630,277 @@ def render_task_orchestration():
     if 'task_execution_results' not in st.session_state:
         st.session_state.task_execution_results = None
     
+    if 'secure_messages' not in st.session_state:
+        st.session_state.secure_messages = []
+    
+    if 'user_encryption_key' not in st.session_state:
+        st.session_state.user_encryption_key = None
+    
+    # ========================================================================
+    # SECURE MESSAGING - USER FRIENDLY INTERFACE
+    # ========================================================================
+    st.divider()
+    st.subheader("🔐 Secure Email System (Wavelength Encryption)")
+    st.markdown("**Send and receive encrypted emails with automatic encryption/decryption. One-click secure messaging.**")
+    
+    # Encryption Key Management
+    key_col1, key_col2 = st.columns([3, 1])
+    
+    with key_col1:
+        if st.session_state.user_encryption_key:
+            st.success(f"🔑 Active Key: {st.session_state.user_encryption_key[:10]}... (hidden for security)")
+        else:
+            st.info("🔑 No encryption key set. Enter your secure key below to enable encryption.")
+    
+    with key_col2:
+        if st.button("🔑 Manage Keys", use_container_width=True):
+            st.session_state.show_key_manager = not st.session_state.get('show_key_manager', False)
+            st.rerun()
+    
+    if st.session_state.get('show_key_manager', False):
+        with st.expander("🔐 Encryption Key Management", expanded=True):
+            st.warning("⚠️ **Security Notice**: Your encryption key is stored in your session only. Never share your key with others.")
+            
+            key_option = st.radio(
+                "Key Setup:",
+                ["🎲 Generate Random Key", "✏️ Enter Custom Key"],
+                horizontal=True
+            )
+            
+            if key_option == "🎲 Generate Random Key":
+                if st.button("🎲 Generate Secure Key", use_container_width=True):
+                    import secrets
+                    new_key = secrets.token_urlsafe(32)
+                    st.session_state.user_encryption_key = new_key
+                    st.success(f"✅ New key generated! Save this key: `{new_key}`")
+                    st.warning("⚠️ **Important**: Copy and save this key somewhere safe. You'll need it to decrypt your messages.")
+                    st.rerun()
+            else:
+                custom_key = st.text_input("Enter Your Encryption Key:", type="password", placeholder="Enter a secure passphrase or key")
+                if st.button("💾 Save Key", use_container_width=True):
+                    if custom_key and len(custom_key) >= 8:
+                        st.session_state.user_encryption_key = custom_key
+                        st.success("✅ Encryption key saved to session!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Key must be at least 8 characters long")
+            
+            if st.session_state.user_encryption_key and st.button("🗑️ Clear Key", use_container_width=True):
+                st.session_state.user_encryption_key = None
+                st.info("Key cleared from session")
+                st.rerun()
+    
+    st.divider()
+    
+    msg_col1, msg_col2 = st.columns([3, 2])
+    
+    with msg_col1:
+        st.markdown("#### ✉️ Compose Secure Email")
+        
+        with st.form("secure_email_compose", clear_on_submit=True):
+            recipient_email = st.text_input("📧 To:", placeholder="colleague@company.com")
+            email_subject = st.text_input("📋 Subject:", placeholder="Confidential Project Update")
+            email_message = st.text_area("💬 Message:", placeholder="Type your confidential message here...", height=120)
+            
+            encryption_level = st.select_slider(
+                "🔒 Security Level:",
+                options=[
+                    ("fse", "⚡ Fast"),
+                    ("ame", "🌊 Standard"), 
+                    ("pme", "🔮 Advanced"),
+                    ("qiml", "🔐 Maximum")
+                ],
+                value=("qiml", "🔐 Maximum"),
+                format_func=lambda x: x[1]
+            )
+            
+            send_button = st.form_submit_button("🚀 Send Encrypted Email", use_container_width=True, type="primary")
+            
+            if send_button:
+                if not st.session_state.user_encryption_key:
+                    st.error("❌ Please set an encryption key first using the 'Manage Keys' button above.")
+                elif recipient_email and email_message:
+                    with st.spinner("🔐 Encrypting and sending..."):
+                        dag = TaskOrchestrationDAG()
+                        register_all_handlers(dag)
+                        
+                        task_id = f"secure-email-{int(datetime.utcnow().timestamp())}"
+                        
+                        send_secure = (TaskBuilder(task_id)
+                            .type('communication')
+                            .operation('send_wavelength_encrypted_message')
+                            .params({
+                                'to': recipient_email,
+                                'message': email_message,
+                                'encryption_key': st.session_state.user_encryption_key,
+                                'method': encryption_level[0],
+                                'delivery_method': 'email',
+                                'subject': email_subject or 'Secure Message from NexusOS'
+                            })
+                            .priority(TaskPriority.HIGH)
+                            .build())
+                        
+                        dag.add_task(send_secure)
+                        results = dag.execute_all()
+                        
+                        if results[task_id].status == TaskStatus.COMPLETED:
+                            # Store in sent messages
+                            st.session_state.secure_messages.insert(0, {
+                                'id': task_id,
+                                'to': recipient_email,
+                                'subject': email_subject or 'Secure Message from NexusOS',
+                                'message': email_message,
+                                'method': encryption_level[1],
+                                'timestamp': datetime.utcnow().isoformat(),
+                                'status': 'sent',
+                                'encrypted_payload': results[task_id].result.get('encrypted_payload')
+                            })
+                            st.success(f"✅ Encrypted email sent to {recipient_email}!")
+                            st.balloons()
+                            st.rerun()
+                        else:
+                            st.error("❌ Failed to send email. Please try again.")
+                else:
+                    st.warning("⚠️ Please enter both recipient and message.")
+    
+    with msg_col2:
+        st.markdown("#### 📥 Sent Messages")
+        
+        if st.session_state.secure_messages:
+            st.caption(f"Total: {len(st.session_state.secure_messages)} messages")
+            
+            for idx, msg in enumerate(st.session_state.secure_messages[:3]):
+                with st.expander(f"📧 {msg.get('subject', 'No Subject')[:25]}...", expanded=(idx==0)):
+                    st.write(f"**To:** {msg['to']}")
+                    st.write(f"**Security:** {msg['method']}")
+                    st.write(f"**Time:** {msg['timestamp'][:19].replace('T', ' ')}")
+                    st.caption(f"**Original:** {msg['message'][:50]}...")
+                    
+                    decrypt_col1, decrypt_col2 = st.columns(2)
+                    
+                    with decrypt_col1:
+                        if msg.get('encrypted_payload') and st.button("🔓 Decrypt", key=f"decrypt_{msg['id']}", use_container_width=True):
+                            if not st.session_state.user_encryption_key:
+                                st.error("❌ Set encryption key first")
+                            else:
+                                with st.spinner("Decrypting..."):
+                                    dag = TaskOrchestrationDAG()
+                                    register_all_handlers(dag)
+                                    
+                                    decrypt_task = (TaskBuilder(f"decrypt-{msg['id']}")
+                                        .type('communication')
+                                        .operation('decrypt_wavelength_message')
+                                        .params({
+                                            'encrypted_payload': msg['encrypted_payload'],
+                                            'decryption_key': st.session_state.user_encryption_key
+                                        })
+                                        .priority(TaskPriority.HIGH)
+                                        .build())
+                                
+                                    dag.add_task(decrypt_task)
+                                    results = dag.execute_all()
+                                    
+                                    if results[f"decrypt-{msg['id']}"].status == TaskStatus.COMPLETED:
+                                        decrypted_msg = results[f"decrypt-{msg['id']}"].result.get('decrypted_message', 'N/A')
+                                        st.success("**Decrypted:**")
+                                        st.code(decrypted_msg, language=None)
+                                    else:
+                                        st.error("Decryption failed - wrong key?")
+                    
+                    with decrypt_col2:
+                        if st.button("🗑️ Delete", key=f"del_{msg['id']}", use_container_width=True):
+                            st.session_state.secure_messages.pop(idx)
+                            st.rerun()
+            
+            if len(st.session_state.secure_messages) > 3:
+                st.caption(f"... and {len(st.session_state.secure_messages) - 3} more")
+            
+            if st.button("🧹 Clear All", use_container_width=True):
+                st.session_state.secure_messages = []
+                st.rerun()
+        else:
+            st.info("📭 No messages yet.\n\nSend your first encrypted email!")
+    
+    # Quick send examples
+    st.markdown("#### ⚡ Quick Send")
+    quick1, quick2, quick3 = st.columns(3)
+    
+    with quick1:
+        if st.button("📤 Test Email", use_container_width=True):
+            if not st.session_state.user_encryption_key:
+                st.error("❌ Set encryption key first")
+            else:
+                dag = TaskOrchestrationDAG()
+                register_all_handlers(dag)
+                
+                test_id = f"test-{int(datetime.utcnow().timestamp())}"
+                test_task = (TaskBuilder(test_id)
+                    .type('communication')
+                    .operation('send_wavelength_encrypted_message')
+                    .params({
+                        'to': 'test@example.com',
+                        'message': 'This is an automated secure messaging test.',
+                        'encryption_key': st.session_state.user_encryption_key,
+                        'method': 'qiml',
+                        'delivery_method': 'email',
+                        'subject': 'Automated Test'
+                    })
+                    .build())
+                
+                dag.add_task(test_task)
+                results = dag.execute_all()
+                
+                if results[test_id].status == TaskStatus.COMPLETED:
+                    st.session_state.secure_messages.insert(0, {
+                        'id': test_id,
+                        'to': 'test@example.com',
+                        'subject': 'Automated Test',
+                        'message': 'This is an automated secure messaging test.',
+                        'method': '🔐 Maximum',
+                        'timestamp': datetime.utcnow().isoformat(),
+                        'status': 'sent',
+                        'encrypted_payload': results[test_id].result.get('encrypted_payload')
+                    })
+                    st.success("✅ Test sent!")
+                    st.rerun()
+    
+    with quick2:
+        if st.button("🔐 Encrypt & Store", use_container_width=True):
+            dag = TaskOrchestrationDAG()
+            register_all_handlers(dag)
+            
+            store_id = f"store-{int(datetime.utcnow().timestamp())}"
+            store_task = (TaskBuilder(store_id)
+                .type('communication')
+                .operation('send_wavelength_encrypted_message')
+                .params({
+                    'to': 'secure_storage',
+                    'message': 'Confidential data encrypted and stored.',
+                    'encryption_key': 'storage_key',
+                    'method': 'qiml',
+                    'delivery_method': 'storage'
+                })
+                .build())
+            
+            dag.add_task(store_task)
+            results = dag.execute_all()
+            st.success("✅ Encrypted & stored!")
+    
+    with quick3:
+        if st.button("📊 View Stats", use_container_width=True):
+            if st.session_state.secure_messages:
+                total = len(st.session_state.secure_messages)
+                methods = {}
+                for msg in st.session_state.secure_messages:
+                    method = msg['method']
+                    methods[method] = methods.get(method, 0) + 1
+                
+                st.metric("Total Messages", total)
+                st.json(methods)
+            else:
+                st.info("No messages yet")
+    
+    st.divider()
     st.subheader("📋 Workflow Templates")
     
     # Domain selection
