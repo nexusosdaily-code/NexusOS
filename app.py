@@ -2617,6 +2617,7 @@ def render_task_orchestration():
     """Render the Task Orchestration DAG interface."""
     from task_orchestration import TaskOrchestrationDAG, TaskBuilder, TaskStatus, TaskPriority
     from task_handlers import register_all_handlers
+    from dag_domains import DomainRegistry
     
     st.header("🔧 Task Orchestration System")
     st.markdown("""
@@ -2632,6 +2633,21 @@ def render_task_orchestration():
         st.session_state.task_execution_results = None
     
     st.subheader("📋 Workflow Templates")
+    
+    # Domain selection
+    try:
+        from dag_domains.data_processing import DataProcessingDomain
+        available_domains = ['Core', 'Data Processing']
+    except:
+        available_domains = ['Core']
+    
+    selected_domain = st.selectbox(
+        "Select Domain",
+        available_domains,
+        help="Choose a workflow domain to see available templates"
+    )
+    
+    st.divider()
     
     template_col1, template_col2, template_col3 = st.columns(3)
     
@@ -2726,45 +2742,88 @@ def render_task_orchestration():
             st.rerun()
     
     with template_col3:
-        if st.button("📱 Social Media Post", use_container_width=True):
-            dag = TaskOrchestrationDAG()
-            register_all_handlers(dag)
-            
-            twitter_task = (TaskBuilder('twitter-post')
-                .type('social')
-                .operation('post_to_twitter')
-                .params({
-                    'message': 'Just completed a NexusOS simulation! 🚀 #DataScience #Economics'
-                })
-                .build())
-            
-            linkedin_task = (TaskBuilder('linkedin-post')
-                .type('social')
-                .operation('post_to_linkedin')
-                .params({
-                    'message': 'Excited to share insights from our latest NexusOS economic simulation.',
-                    'visibility': 'public'
-                })
-                .build())
-            
-            log_task = (TaskBuilder('log-social')
-                .type('admin')
-                .operation('log_system_event')
-                .params({
-                    'event_type': 'social_posts_published',
-                    'message': 'Social media posts published successfully'
-                })
-                .depends_on('twitter-post', 'linkedin-post')
-                .build())
-            
-            dag.add_task(twitter_task)
-            dag.add_task(linkedin_task)
-            dag.add_task(log_task)
-            
-            results = dag.execute_all()
-            st.session_state.task_execution_results = results
-            st.success("✅ Social media posting workflow executed!")
-            st.rerun()
+        if selected_domain == 'Core':
+            if st.button("📱 Social Media Post", use_container_width=True):
+                dag = TaskOrchestrationDAG()
+                register_all_handlers(dag)
+                
+                twitter_task = (TaskBuilder('twitter-post')
+                    .type('social')
+                    .operation('post_to_twitter')
+                    .params({
+                        'message': 'Just completed a NexusOS simulation! 🚀 #DataScience #Economics'
+                    })
+                    .build())
+                
+                linkedin_task = (TaskBuilder('linkedin-post')
+                    .type('social')
+                    .operation('post_to_linkedin')
+                    .params({
+                        'message': 'Excited to share insights from our latest NexusOS economic simulation.',
+                        'visibility': 'public'
+                    })
+                    .build())
+                
+                log_task = (TaskBuilder('log-social')
+                    .type('admin')
+                    .operation('log_system_event')
+                    .params({
+                        'event_type': 'social_posts_published',
+                        'message': 'Social media posts published successfully'
+                    })
+                    .depends_on('twitter-post', 'linkedin-post')
+                    .build())
+                
+                dag.add_task(twitter_task)
+                dag.add_task(linkedin_task)
+                dag.add_task(log_task)
+                
+                results = dag.execute_all()
+                st.session_state.task_execution_results = results
+                st.success("✅ Social media posting workflow executed!")
+                st.rerun()
+        else:
+            if st.button("🤖 ML Training Pipeline", use_container_width=True):
+                try:
+                    domain = DataProcessingDomain()
+                    dag = domain.create_ml_pipeline()
+                    results = dag.execute_all()
+                    st.session_state.task_execution_results = results
+                    st.success("✅ ML training pipeline executed!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+    
+    # Data Processing domain workflows
+    if selected_domain == 'Data Processing':
+        st.divider()
+        st.subheader("🔬 Data Processing Workflows")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("📦 ETL Pipeline", use_container_width=True):
+                try:
+                    domain = DataProcessingDomain()
+                    dag = domain.create_etl_pipeline()
+                    results = dag.execute_all()
+                    st.session_state.task_execution_results = results
+                    st.success("✅ ETL pipeline executed!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+        
+        with col2:
+            if st.button("✅ Data Quality Check", use_container_width=True):
+                try:
+                    domain = DataProcessingDomain()
+                    dag = domain.create_quality_check()
+                    results = dag.execute_all()
+                    st.session_state.task_execution_results = results
+                    st.success("✅ Quality check completed!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
     
     st.divider()
     
