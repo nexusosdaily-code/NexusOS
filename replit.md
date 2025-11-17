@@ -3,7 +3,9 @@
 ### Overview
 NexusOS is a comprehensive economic system simulator based on the Nexus equation, a self-regulating system with issuance/burn mechanics, PID feedback control, and conservation constraints. It models a multi-factor ecosystem, offering configurable parameters, real-time visualization, scenario management with PostgreSQL persistence, and data export. The platform also includes advanced features like Monte Carlo and Sensitivity Analysis, Multi-Agent Network Simulation, Smart Contract Code Generation (Solidity, Rust/ink!), Oracle Integration, and ML-Based Adaptive Parameter Tuning. It also provides User Authentication and Role-Based Access Control.
 
-**Testing**: Comprehensive test suite with 175 tests covering all core modules (100% pass rate). See Testing section below for details.
+**Testing**: Comprehensive test suite with 226 tests covering all core modules (100% pass rate). Includes 29 validation tests and 22 error handling tests. See Testing section below for details.
+
+**Production Error Handling & Validation**: Comprehensive input validation and database error handling systems with user-friendly messages. The validation system blocks execution for critical constraint violations (weight sums, ranges). Database error handling translates SQLAlchemy exceptions into ❌/💡 formatted messages with recovery hints. All authentication, admin, and scenario management operations include proper error propagation.
 
 ### User Preferences
 Preferred communication style: Simple, everyday language.
@@ -41,7 +43,7 @@ The application uses Streamlit for a single-page, wide-layout dashboard with an 
 
 ### Testing & Quality Assurance
 
-**Comprehensive Test Suite**: 175 tests with 100% pass rate covering all major modules:
+**Comprehensive Test Suite**: 226 tests with 100% pass rate covering all major modules:
 - **test_signal_generator.py** (28 tests): All signal types, configuration generation, edge cases
 - **test_database.py** (24 tests): Full CRUD, foreign key cascades, data integrity for 11 models
 - **test_alert_service.py** (18 tests): Alert rules, event management, production session lifecycle
@@ -49,8 +51,14 @@ The application uses Streamlit for a single-page, wide-layout dashboard with an 
 - **test_auth_service.py** (25 tests): Password hashing, session management, RBAC
 - **test_wnsp.py** (28 tests): Wavelength mapping, frame encoding/decoding, message round-trips
 - **test_smart_contract_generation.py** (20 tests): Solidity and Rust/ink! contract generation
+- **test_validation.py** (23 tests): Parameter validation, weight constraints, signal validation
+- **test_validation_blocks_execution.py** (6 tests): Execution blocking for invalid parameters
+- **test_db_error_handling.py** (22 tests): Error message building, transaction management, exception handling
 
-**Production Fix**: AlertService refactored with dependency injection pattern (`session_factory` parameter and explicit `test_mode` flag) to prevent DetachedInstanceError. All methods use `_get_session()` helper with proper session lifecycle management (`expire_on_commit=False` for production safety).
+**Production Fixes**:
+- **AlertService**: Refactored with dependency injection pattern (`session_factory` parameter and explicit `test_mode` flag) to prevent DetachedInstanceError. All methods use `_get_session()` helper with proper session lifecycle management (`expire_on_commit=False` for production safety).
+- **Input Validation**: Comprehensive validation framework (`validation.py`) validates all simulation parameters, weight constraints, and signal configurations. Critical violations (weight sums, ranges) block execution with ❌ error messages and 💡 recovery hints.
+- **Database Error Handling**: Complete error handling infrastructure (`db_error_handling.py`) translates SQLAlchemy exceptions into user-friendly messages. Custom exception hierarchy (DatabaseError, ConnectionError, ConstraintViolationError) with automatic rollback via `db_transaction` context manager. All database operations in authentication, admin, and scenario management layers properly propagate errors to UI.
 
 ### External Dependencies
 

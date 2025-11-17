@@ -8,6 +8,14 @@ import streamlit as st
 from sqlalchemy.orm import Session as DBSession
 from database import User, Role, UserRole, Session, get_engine
 from sqlalchemy.orm import sessionmaker
+from db_error_handling import (
+    DatabaseError, ConstraintViolationError, ConnectionError,
+    TransactionError, ErrorMessageBuilder, safe_db_operation, db_transaction
+)
+from sqlalchemy.exc import (
+    OperationalError, DisconnectionError, 
+    TimeoutError as SQLTimeoutError, SQLAlchemyError
+)
 
 SESSION_EXPIRY_DAYS = 30
 
@@ -30,52 +38,106 @@ def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 def create_user(db: DBSession, email: str, password: str, role_names: List[str]) -> Optional[User]:
-    """Create a new user with the specified roles."""
-    existing_user = db.query(User).filter(User.email == email).first()
-    if existing_user:
-        return None
+    """
+    Create a new user with the specified roles.
     
-    user = User(
-        email=email,
-        password_hash=hash_password(password),
-        is_active=True
-    )
-    db.add(user)
-    db.flush()
+    Args:
+        db: Database session
+        email: User email address
+        password: Plain text password (will be hashed)
+        role_names: List of role names to assign
+        
+    Returns:
+        User object if successful, None if user already exists
+        
+    Raises:
+        ConstraintViolationError: If duplicate email constraint is violated
+        DatabaseError: If database operation fails
+        ConnectionError: If database connection is lost
+    """
+    # Wrap ALL database operations to catch connection errors properly
+    try:
+        # Check for existing user - this is the only case where we return None
+        existing_user = db.query(User).filter(User.email == email).first()
+        if existing_user:
+            return None  # Explicit duplicate email case
+    except (OperationalError, DisconnectionError, SQLTimeoutError, SQLAlchemyError) as e:
+        # Database error during duplicate check - convert to friendly error
+        error_info = ErrorMessageBuilder.build_message(e, "checking for existing user")
+        if isinstance(e, (OperationalError, DisconnectionError)):
+            raise ConnectionError(error_info['message'], e, error_info['recovery_hint'])
+        elif isinstance(e, SQLTimeoutError):
+            raise TransactionError(error_info['message'], e, error_info['recovery_hint'])
+        else:
+            raise DatabaseError(error_info['message'], e, error_info['recovery_hint'])
     
-    for role_name in role_names:
-        role = db.query(Role).filter(Role.name == role_name).first()
-        if role:
-            user_role = UserRole(user_id=user.id, role_id=role.id)
-            db.add(user_role)
+    # Create user with transaction protection
+    with db_transaction(db, "creating user"):
+        user = User(
+            email=email,
+            password_hash=hash_password(password),
+            is_active=True
+        )
+        db.add(user)
+        db.flush()
+        
+        # Assign roles
+        for role_name in role_names:
+            role = db.query(Role).filter(Role.name == role_name).first()
+            if role:
+                user_role = UserRole(user_id=user.id, role_id=role.id)
+                db.add(user_role)
     
-    db.commit()
     return user
 
 def authenticate_user(db: DBSession, email: str, password: str) -> Optional[Tuple[User, str]]:
     """
     Authenticate a user and create a session.
-    Returns (user, session_token) on success, None on failure.
-    """
-    user = db.query(User).filter(User.email == email, User.is_active == True).first()
     
+    Args:
+        db: Database session
+        email: User email address
+        password: Plain text password to verify
+        
+    Returns:
+        Tuple of (user, session_token) on success, None if invalid credentials
+        
+    Raises:
+        DatabaseError: If database operation fails
+        ConnectionError: If database connection is lost
+    """
+    # Wrap ALL database operations to catch connection errors properly
+    try:
+        user = db.query(User).filter(User.email == email, User.is_active == True).first()
+    except (OperationalError, DisconnectionError, SQLTimeoutError, SQLAlchemyError) as e:
+        # Database error during user lookup - convert to friendly error
+        error_info = ErrorMessageBuilder.build_message(e, "looking up user")
+        if isinstance(e, (OperationalError, DisconnectionError)):
+            raise ConnectionError(error_info['message'], e, error_info['recovery_hint'])
+        elif isinstance(e, SQLTimeoutError):
+            raise TransactionError(error_info['message'], e, error_info['recovery_hint'])
+        else:
+            raise DatabaseError(error_info['message'], e, error_info['recovery_hint'])
+    
+    # Invalid credentials - this is the only case where we return None
     if not user or not verify_password(password, user.password_hash):
         return None
     
-    session_token = generate_session_token()
-    token_hash = hash_token(session_token)
-    
-    session = Session(
-        user_id=user.id,
-        token_hash=token_hash,
-        issued_at=datetime.utcnow(),
-        expires_at=datetime.utcnow() + timedelta(days=SESSION_EXPIRY_DAYS),
-        user_agent=None
-    )
-    db.add(session)
-    
-    user.last_login = datetime.utcnow()
-    db.commit()
+    # Create session with transaction protection
+    with db_transaction(db, "creating session"):
+        session_token = generate_session_token()
+        token_hash = hash_token(session_token)
+        
+        session = Session(
+            user_id=user.id,
+            token_hash=token_hash,
+            issued_at=datetime.utcnow(),
+            expires_at=datetime.utcnow() + timedelta(days=SESSION_EXPIRY_DAYS),
+            user_agent=None
+        )
+        db.add(session)
+        
+        user.last_login = datetime.utcnow()
     
     return user, session_token
 
@@ -222,8 +284,10 @@ class AuthManager:
                         st.rerun()
                     else:
                         st.error("Invalid email or password")
+                except (DatabaseError, ConstraintViolationError, ConnectionError) as e:
+                    st.error(e.get_user_message())
                 except Exception as e:
-                    st.error(f"Login failed: {e}")
+                    st.error(f"❌ Login failed: {str(e)}\n💡 Please try again or contact support if the problem persists.")
                 finally:
                     db.close()
         
