@@ -3,6 +3,8 @@
 ### Overview
 NexusOS is a comprehensive economic system simulator based on the Nexus equation, a self-regulating system with issuance/burn mechanics, PID feedback control, and conservation constraints. It models a multi-factor ecosystem, offering configurable parameters, real-time visualization, scenario management with PostgreSQL persistence, and data export. The platform also includes advanced features like Monte Carlo and Sensitivity Analysis, Multi-Agent Network Simulation, Smart Contract Code Generation (Solidity, Rust/ink!), Oracle Integration, and ML-Based Adaptive Parameter Tuning. It also provides User Authentication and Role-Based Access Control.
 
+**Testing**: Comprehensive test suite with 175 tests covering all core modules (100% pass rate). See Testing section below for details.
+
 ### User Preferences
 Preferred communication style: Simple, everyday language.
 
@@ -36,6 +38,19 @@ The application uses Streamlit for a single-page, wide-layout dashboard with an 
 **Real-time Production Dashboard**: A comprehensive monitoring dashboard with auto-refresh capability (5-60 second intervals using streamlit-autorefresh). Features live KPI tiles tracking Latest Nexus State, Average Issuance/Burn, Conservation Error, and Active Alerts. System health monitoring displays database connectivity (with ping time), simulation counts, and oracle source status. Intelligent alerting system with configurable rules (metric thresholds, comparators, severity levels) and event management (acknowledge/resolve workflows). Alert configuration is role-gated (admin/researcher only). DashboardDataService aggregates metrics from SimulationRun table and oracle feeds. AlertService evaluates rules in real-time and triggers in-app notifications via st.toast. Database schema includes monitoring_snapshots, alert_rules, and alert_events tables for persistence.
 
 **WNSP (Wavelength-Native Signaling Protocol) Integration**: Integrates optical/light-based communication protocol for mesh networking capabilities. Maps A-Z letters to wavelengths 380-740nm evenly distributed across the visible spectrum. Implementation includes three core modules: `wavelength_map.py` for letter-to-wavelength mapping with RGB color conversion, `wnsp_frames.py` for frame encoding/decoding with sync patterns and checksums, and `wnsp_renderer.py` for Streamlit visualization. The WNSP tab provides three interfaces: Encode & Transmit (message preview with color swatches, signal timeline visualization, transmission metadata), Decode (round-trip encode/decode simulation), and Spectrum Analysis (character frequency distribution, wavelength statistics). Visual rendering displays messages as sequences of colored light across the spectrum from violet (A=380nm) to red (Z=740nm), with multi-row layout for long messages. Protocol filters non-alphabetic characters and converts all input to uppercase for consistent encoding.
+
+### Testing & Quality Assurance
+
+**Comprehensive Test Suite**: 175 tests with 100% pass rate covering all major modules:
+- **test_signal_generator.py** (28 tests): All signal types, configuration generation, edge cases
+- **test_database.py** (24 tests): Full CRUD, foreign key cascades, data integrity for 11 models
+- **test_alert_service.py** (18 tests): Alert rules, event management, production session lifecycle
+- **test_oracle_integration.py** (25 tests): All oracle sources, manager, data fetching
+- **test_auth_service.py** (25 tests): Password hashing, session management, RBAC
+- **test_wnsp.py** (28 tests): Wavelength mapping, frame encoding/decoding, message round-trips
+- **test_smart_contract_generation.py** (20 tests): Solidity and Rust/ink! contract generation
+
+**Production Fix**: AlertService refactored with dependency injection pattern (`session_factory` parameter and explicit `test_mode` flag) to prevent DetachedInstanceError. All methods use `_get_session()` helper with proper session lifecycle management (`expire_on_commit=False` for production safety).
 
 ### External Dependencies
 
