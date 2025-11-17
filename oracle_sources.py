@@ -3,6 +3,11 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import requests
 import json
+from oracle_error_handling import (
+    OracleError, OracleConnectionError, OracleTimeoutError,
+    OracleDataError, OracleAuthError, OracleRateLimitError,
+    RetryHandler, CircuitBreaker, handle_oracle_error
+)
 
 
 class OracleDataPoint:
@@ -54,13 +59,29 @@ class RestAPIOracle(OracleDataSource):
         self.timeout = config.get('timeout', 10)
         self.variable_endpoints = config.get('variable_endpoints', {})
         self.health_check_endpoint = config.get('health_check_endpoint', '')
+        
+        # Error handling infrastructure
+        self.retry_handler = RetryHandler(
+            max_retries=config.get('max_retries', 3),
+            base_delay=config.get('retry_delay', 1.0)
+        )
+        self.circuit_breaker = CircuitBreaker(
+            failure_threshold=config.get('failure_threshold', 5),
+            timeout=config.get('circuit_timeout', 60)
+        )
     
     def connect(self) -> bool:
-        try:
-            if not self.base_url:
-                self.error_message = "No base URL provided"
-                return False
-            
+        """Connect to REST API with retry logic and friendly error messages"""
+        if not self.base_url:
+            self.error_message = "No base URL provided"
+            return False
+        
+        # Check circuit breaker
+        if self.circuit_breaker.is_open():
+            self.error_message = "Circuit breaker open - too many recent failures"
+            return False
+        
+        def _do_connect():
             check_url = self.health_check_endpoint or self.base_url
             if not check_url.startswith('http'):
                 check_url = f"{self.base_url.rstrip('/')}/{check_url.lstrip('/')}"
@@ -70,31 +91,54 @@ class RestAPIOracle(OracleDataSource):
                 headers=self.headers,
                 timeout=self.timeout
             )
+            response.raise_for_status()
+            return response
+        
+        try:
+            # Execute with retry logic
+            response = self.retry_handler.execute(_do_connect, "connecting to API")
             
-            if response.status_code == 200 or response.status_code == 401:
-                self.is_connected = True
-                self.error_message = None
-                return True
-            else:
-                self.error_message = f"HTTP {response.status_code}"
-                return False
-        except Exception as e:
-            self.error_message = str(e)
+            self.is_connected = True
+            self.error_message = None
+            self.circuit_breaker.record_success()
+            return True
+            
+        except (OracleConnectionError, OracleTimeoutError, OracleAuthError) as e:
+            self.error_message = e.get_user_message()
             self.is_connected = False
+            self.circuit_breaker.record_failure()
+            return False
+        except OracleError as e:
+            self.error_message = e.get_user_message()
+            self.is_connected = False
+            self.circuit_breaker.record_failure()
+            return False
+        except Exception as e:
+            self.error_message = handle_oracle_error(e, "connecting to API")
+            self.is_connected = False
+            self.circuit_breaker.record_failure()
             return False
     
     def disconnect(self):
         self.is_connected = False
     
     def fetch_data(self, variable: str) -> Optional[OracleDataPoint]:
+        """Fetch data with retry logic, circuit breaker, and graceful degradation"""
         if not self.is_connected:
+            self.error_message = "Not connected to API"
             return None
         
-        try:
-            endpoint = self.variable_endpoints.get(variable, '')
-            if not endpoint:
-                return None
-            
+        # Check circuit breaker
+        if self.circuit_breaker.is_open():
+            self.error_message = "Circuit breaker open - API temporarily unavailable"
+            return None
+        
+        endpoint = self.variable_endpoints.get(variable, '')
+        if not endpoint:
+            self.error_message = f"No endpoint configured for variable '{variable}'"
+            return None
+        
+        def _do_fetch():
             url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
             
             response = requests.get(
@@ -102,32 +146,52 @@ class RestAPIOracle(OracleDataSource):
                 headers=self.headers,
                 timeout=self.timeout
             )
+            response.raise_for_status()
             
-            if response.status_code == 200:
-                data = response.json()
-                
-                value = data.get('value', 0.0)
-                if isinstance(value, (int, float)):
-                    value = float(value)
-                else:
-                    value = 0.0
-                
-                self.last_update = datetime.now()
-                
-                data_point = OracleDataPoint(
-                    timestamp=datetime.now(),
-                    variable=variable,
-                    value=value,
-                    metadata={'source': self.name, 'url': url}
-                )
-                
-                return data_point
-            else:
-                self.error_message = f"HTTP {response.status_code} for {variable}"
-                return None
+            data = response.json()
+            
+            # Validate data format
+            if 'value' not in data:
+                raise ValueError("API response missing 'value' field")
+            
+            value = data.get('value', 0.0)
+            if not isinstance(value, (int, float)):
+                raise ValueError(f"Invalid value type: {type(value).__name__}")
+            
+            return float(value), url
         
+        try:
+            # Execute with retry logic
+            value, url = self.retry_handler.execute(_do_fetch, f"fetching {variable}")
+            
+            self.last_update = datetime.now()
+            self.error_message = None
+            self.circuit_breaker.record_success()
+            
+            data_point = OracleDataPoint(
+                timestamp=datetime.now(),
+                variable=variable,
+                value=value,
+                metadata={
+                    'source': self.name,
+                    'url': url,
+                    'circuit_breaker_state': self.circuit_breaker.state
+                }
+            )
+            
+            return data_point
+            
+        except (OracleConnectionError, OracleTimeoutError, OracleDataError, OracleRateLimitError) as e:
+            self.error_message = e.get_user_message()
+            self.circuit_breaker.record_failure()
+            return None
+        except OracleError as e:
+            self.error_message = e.get_user_message()
+            self.circuit_breaker.record_failure()
+            return None
         except Exception as e:
-            self.error_message = f"Error fetching {variable}: {str(e)}"
+            self.error_message = handle_oracle_error(e, f"fetching {variable}")
+            self.circuit_breaker.record_failure()
             return None
     
     def get_status(self) -> Dict[str, Any]:
@@ -138,7 +202,8 @@ class RestAPIOracle(OracleDataSource):
             'base_url': self.base_url,
             'last_update': self.last_update.isoformat() if self.last_update else None,
             'error': self.error_message,
-            'endpoints': list(self.variable_endpoints.keys())
+            'endpoints': list(self.variable_endpoints.keys()),
+            'circuit_breaker': self.circuit_breaker.get_status()
         }
 
 

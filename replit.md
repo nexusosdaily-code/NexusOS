@@ -31,7 +31,7 @@ The application uses Streamlit for a single-page, wide-layout dashboard with an 
 
 **Smart Contract Code Generation**: Generates deployable smart contracts for Ethereum/EVM (Solidity) and Substrate/Polkadot (Rust/ink!) from simulation parameters, including fixed-point arithmetic, core economic functions, and security features.
 
-**Oracle Integration Framework**: Provides an abstraction layer for integrating external data sources via `OracleDataSource`, `RestAPIOracle`, `StaticDataOracle`, and `MockEnvironmentalOracle`. It includes UI integration, configurable refresh intervals, and error handling.
+**Oracle Integration Framework**: Provides an abstraction layer for integrating external data sources via `OracleDataSource`, `RestAPIOracle`, `StaticDataOracle`, and `MockEnvironmentalOracle`. Features comprehensive error handling infrastructure (`oracle_error_handling.py`) with custom exception hierarchy, retry logic with exponential backoff (3 retries, 1-10s delays), circuit breaker pattern for graceful degradation (opens after 5 failures, 60s timeout), timeout handling, and user-friendly ❌/💡 error messages. API failures are automatically retried, and repeated failures trigger circuit breaker to prevent cascading failures.
 
 **ML-Based Adaptive Parameter Tuning**: Utilizes Bayesian Optimization (scikit-optimize) to find optimal parameter configurations for multiple objective functions (stability, conservation, growth). It supports parameter subset selection, warm-starting from historical data, and a comprehensive UI.
 
