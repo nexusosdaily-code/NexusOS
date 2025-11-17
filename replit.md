@@ -5,7 +5,7 @@ NexusOS is a comprehensive economic system simulator based on the Nexus equation
 
 **Testing**: Comprehensive test suite with 226 tests covering all core modules (100% pass rate). Includes 29 validation tests and 22 error handling tests. See Testing section below for details.
 
-**Production Error Handling & Validation**: Comprehensive input validation and database error handling systems with user-friendly messages. The validation system blocks execution for critical constraint violations (weight sums, ranges). Database error handling translates SQLAlchemy exceptions into ❌/💡 formatted messages with recovery hints. All authentication, admin, and scenario management operations include proper error propagation.
+**Production Error Handling & Validation**: Comprehensive error handling infrastructure with consistent ❌/💡 message pattern across all application layers. Covers six critical areas: (1) Input Validation - blocks execution for constraint violations with recovery hints; (2) Database Error Handling - custom exception hierarchy with auto-rollback via db_transaction context manager; (3) Oracle/API Error Handling - retry logic with exponential backoff, circuit breaker pattern, graceful degradation; (4) Real-time Form Validation - live weight sum indicators (✅/⚠️/❌) during parameter entry; (5) Simulation Error Recovery - detects numerical instability (NaN/Inf) with step-level diagnostics; (6) Authentication Error Messages - clear guidance for login/registration failures. All errors include specific recovery actions in non-technical language. 226 tests passing with 29 validation tests, 22 database error tests.
 
 ### User Preferences
 Preferred communication style: Simple, everyday language.
@@ -55,10 +55,23 @@ The application uses Streamlit for a single-page, wide-layout dashboard with an 
 - **test_validation_blocks_execution.py** (6 tests): Execution blocking for invalid parameters
 - **test_db_error_handling.py** (22 tests): Error message building, transaction management, exception handling
 
-**Production Fixes**:
-- **AlertService**: Refactored with dependency injection pattern (`session_factory` parameter and explicit `test_mode` flag) to prevent DetachedInstanceError. All methods use `_get_session()` helper with proper session lifecycle management (`expire_on_commit=False` for production safety).
-- **Input Validation**: Comprehensive validation framework (`validation.py`) validates all simulation parameters, weight constraints, and signal configurations. Critical violations (weight sums, ranges) block execution with ❌ error messages and 💡 recovery hints.
-- **Database Error Handling**: Complete error handling infrastructure (`db_error_handling.py`) translates SQLAlchemy exceptions into user-friendly messages. Custom exception hierarchy (DatabaseError, ConnectionError, ConstraintViolationError) with automatic rollback via `db_transaction` context manager. All database operations in authentication, admin, and scenario management layers properly propagate errors to UI.
+**Production Fixes & Error Handling Infrastructure**:
+
+**AlertService**: Refactored with dependency injection pattern (`session_factory` parameter and explicit `test_mode` flag) to prevent DetachedInstanceError. All methods use `_get_session()` helper with proper session lifecycle management (`expire_on_commit=False` for production safety).
+
+**Error Handling Infrastructure (Tasks 5a-5f, All Architect-Approved):**
+
+1. **Input Validation (Task 5a)**: Comprehensive validation framework (`validation.py`) validates all simulation parameters, weight constraints, and signal configurations. Critical violations (weight sums ≠ 1.0, parameter ranges) block execution with ❌ error messages and 💡 recovery hints. Includes 29 validation tests and 6 execution-blocking tests.
+
+2. **Database Error Handling (Task 5b)**: Complete error handling infrastructure (`db_error_handling.py`) translates SQLAlchemy exceptions into user-friendly messages. Custom exception hierarchy (DatabaseError, ConnectionError, ConstraintViolationError) with automatic rollback via `db_transaction` context manager. All database operations in authentication, admin, and scenario management layers properly propagate errors to UI. Includes 22 database error handling tests.
+
+3. **Oracle/API Error Handling (Task 5c)**: Retry logic with exponential backoff (3 retries, 1-10s delays), circuit breaker pattern (opens after 5 failures, 60s timeout), graceful degradation with user-friendly ❌/💡 error messages. API failures are automatically retried, repeated failures trigger circuit breaker to prevent cascading failures. Includes 25 oracle integration tests.
+
+4. **Real-time Form Validation (Task 5d)**: Live validation feedback for weight sums during parameter entry. Shows ✅ (valid, sum=1.0), ⚠️ (warning, sum≠1.0), or ❌ (critical error) indicators as users adjust sliders. Maintains existing validation.py execution blocking for critical errors.
+
+5. **Simulation Error Recovery (Task 5e)**: Comprehensive error handling for simulation failures with precise diagnostics. Validates time parameters (num_steps, delta_t > 0), catches signal generation errors, detects numerical instability (NaN/Inf) with step-level precision (shows exact step number and time). Provides specific recovery hints (reduce delta_t, adjust PID gains). All simulation runs wrapped in try/except with user-friendly error display.
+
+6. **Authentication Error Messages (Task 5f)**: Enhanced login/registration error messages with consistent ❌/💡 pattern. Covers empty credentials, invalid login, password length requirements, duplicate emails, and database errors. All messages provide clear descriptions and actionable recovery hints in non-technical language.
 
 ### External Dependencies
 
