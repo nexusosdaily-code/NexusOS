@@ -262,7 +262,7 @@ class CommunicationTaskHandlers:
         }
         
         print(f"[WAVELENGTH CRYPTO] Encrypted {len(message_text)} chars using {method.upper()}")
-        print(f"[WAVELENGTH CRYPTO] Frames: {len(encrypted_message.frames)}, Delivery: {delivery_method}")
+        print(f"[WAVELENGTH CRYPTO] Delivery: {delivery_method}")
         
         # Deliver via chosen method
         delivery_result = None
@@ -294,7 +294,7 @@ class CommunicationTaskHandlers:
             'encrypted_payload': encrypted_payload,
             'delivery_method': delivery_method,
             'delivery_result': delivery_result,
-            'frames_encrypted': len(encrypted_message.frames)
+            'message_length': len(message_text)
         }
     
     @staticmethod
