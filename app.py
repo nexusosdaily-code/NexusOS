@@ -2790,6 +2790,124 @@ def render_task_orchestration():
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
     
+    # Secure Messaging with Wavelength Crypto (Core domain)
+    if selected_domain == 'Core':
+        st.divider()
+        st.subheader("🔐 Secure Messaging (Wavelength Cryptography)")
+        
+        secure_col1, secure_col2, secure_col3 = st.columns(3)
+        
+        with secure_col1:
+            if st.button("🔐 Send Encrypted Message", use_container_width=True):
+                dag = TaskOrchestrationDAG()
+                register_all_handlers(dag)
+                
+                encrypt_send_task = (TaskBuilder('encrypt-and-send')
+                    .type('communication')
+                    .operation('send_wavelength_encrypted_message')
+                    .params({
+                        'to': 'recipient@example.com',
+                        'message': 'CONFIDENTIAL: Project quantum approved. Proceed with phase 2.',
+                        'encryption_key': 'secure_nexus_key',
+                        'method': 'qiml',
+                        'delivery_method': 'notification'
+                    })
+                    .priority(TaskPriority.HIGH)
+                    .build())
+                
+                log_task = (TaskBuilder('log-secure-message')
+                    .type('admin')
+                    .operation('log_system_event')
+                    .params({
+                        'event_type': 'secure_message_sent',
+                        'message': 'Wavelength-encrypted message sent via QIML'
+                    })
+                    .depends_on('encrypt-and-send')
+                    .build())
+                
+                dag.add_task(encrypt_send_task)
+                dag.add_task(log_task)
+                
+                results = dag.execute_all()
+                st.session_state.task_execution_results = results
+                st.success("✅ Secure wavelength message sent!")
+                st.rerun()
+        
+        with secure_col2:
+            if st.button("🔓 Decrypt Received Message", use_container_width=True):
+                from dag_domains.wavelength_crypto import WavelengthCryptoHandler
+                from wnsp_frames import WnspEncoder
+                
+                dag = TaskOrchestrationDAG()
+                register_all_handlers(dag)
+                
+                # Create sample encrypted message for demo
+                encoder = WnspEncoder()
+                sample_msg = encoder.encode_message("APPROVED")
+                encrypted = WavelengthCryptoHandler.encrypt_message(sample_msg, "secure_nexus_key", "fse")
+                
+                encrypted_payload = {
+                    'encrypted_wavelength_data': encrypted.to_dict(),
+                    'method': 'fse',
+                    'timestamp': datetime.utcnow().isoformat(),
+                    'message_id': 'wcrypto_demo'
+                }
+                
+                decrypt_task = (TaskBuilder('decrypt-message')
+                    .type('communication')
+                    .operation('decrypt_wavelength_message')
+                    .params({
+                        'encrypted_payload': encrypted_payload,
+                        'decryption_key': 'secure_nexus_key'
+                    })
+                    .priority(TaskPriority.HIGH)
+                    .build())
+                
+                notify_task = (TaskBuilder('notify-decrypted')
+                    .type('communication')
+                    .operation('send_notification')
+                    .params({
+                        'user_id': 'current_user',
+                        'title': '✅ Message Decrypted',
+                        'message': 'Secure message successfully decrypted',
+                        'priority': 'normal'
+                    })
+                    .depends_on('decrypt-message')
+                    .build())
+                
+                dag.add_task(decrypt_task)
+                dag.add_task(notify_task)
+                
+                results = dag.execute_all()
+                st.session_state.task_execution_results = results
+                st.success("✅ Message decrypted successfully!")
+                st.rerun()
+        
+        with secure_col3:
+            if st.button("🌊 Encrypt + Email Delivery", use_container_width=True):
+                dag = TaskOrchestrationDAG()
+                register_all_handlers(dag)
+                
+                secure_email_task = (TaskBuilder('secure-email')
+                    .type('communication')
+                    .operation('send_wavelength_encrypted_message')
+                    .params({
+                        'to': 'colleague@company.com',
+                        'message': 'Meeting confirmed for tomorrow at 3PM. Bring project files.',
+                        'encryption_key': 'email_secure_2024',
+                        'method': 'ame',  # Amplitude Modulation
+                        'delivery_method': 'email'
+                    })
+                    .priority(TaskPriority.NORMAL)
+                    .build())
+                
+                dag.add_task(secure_email_task)
+                
+                results = dag.execute_all()
+                st.session_state.task_execution_results = results
+                st.success("✅ Encrypted message delivered via email!")
+                st.rerun()
+    
     # Data Processing domain workflows
     if selected_domain == 'Data Processing':
         st.divider()
