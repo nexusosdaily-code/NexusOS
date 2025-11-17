@@ -40,6 +40,15 @@ The application utilizes Streamlit for a single-page, wide-layout dashboard with
 
 **User Guidance System**: Comprehensive informational tabs integrated throughout the application via `app_info_content.py`. Each major module includes "How to Use" guides with step-by-step instructions and "Documentation" sections explaining purpose and problem-solving. Help icons (ℹ️) provide quick access to guidance without cluttering the interface. "About NexusOS" page available for public display, presenting the platform's unified intelligence ecosystem. Guides cover Dashboard, Task Orchestration, Secure Messaging, Economic Simulator, and more.
 
+### Technical Documentation
+
+See `TECHNICAL_SPECIFICATIONS.md` for comprehensive catalog of:
+- Engineering problems solved by each component
+- Technical solutions and algorithms implemented
+- Implementation details (files, classes, methods)
+- Performance specifications and metrics
+- System integration and data flow
+
 ### External Dependencies
 
 #### Core Libraries
