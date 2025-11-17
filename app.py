@@ -2633,12 +2633,9 @@ def render_task_orchestration():
     st.subheader("📋 Workflow Templates")
     
     # Domain selection
-    try:
-        from dag_domains.data_processing import DataProcessingDomain
-        from dag_domains.wavelength_crypto_domain import WavelengthCryptoDomain
-        available_domains = ['Core', 'Data Processing', 'Wavelength Crypto']
-    except:
-        available_domains = ['Core']
+    from dag_domains.data_processing import DataProcessingDomain
+    from dag_domains.wavelength_crypto_domain import WavelengthCryptoDomain
+    available_domains = ['Core', 'Data Processing', 'Wavelength Crypto']
     
     selected_domain = st.selectbox(
         "Select Domain",

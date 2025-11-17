@@ -6,11 +6,11 @@ Provides UI interface for wavelength-based encryption/decryption workflows.
 
 import streamlit as st
 from typing import Dict, Any
-from task_orchestration import TaskOrchestrator
 from dag_domains.wavelength_crypto_workflows import (
     create_encrypt_workflow,
     create_decrypt_workflow,
-    create_theory_demo_workflow
+    create_theory_demo_workflow,
+    TaskOrchestrator
 )
 from dag_domains.wavelength_crypto import (
     WavelengthCryptoHandler,
