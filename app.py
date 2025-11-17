@@ -648,8 +648,8 @@ def render_dashboard():
     from alert_service import get_alert_service
     from datetime import datetime
     
-    st.header("📊 Real-time Production Dashboard")
-    st.markdown("Live system monitoring with auto-refresh and intelligent alerting")
+    st.header("📊 Dashboard")
+    st.markdown("**Real-time system monitoring** with auto-refresh and intelligent alerting")
     
     col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
@@ -2613,10 +2613,10 @@ def render_task_orchestration():
     from task_handlers import register_all_handlers
     from dag_domains import DomainRegistry
     
-    st.header("🔧 Task Orchestration System")
+    st.header("🔧 Task Orchestration")
     st.markdown("""
-    DAG-based workflow automation for administration, communications, integrations, and more.
-    Create complex multi-step workflows with dependency management and error handling.
+    **Workflow automation** for administration, communications, data processing, and integrations.
+    Features: dependency management, priority scheduling, auto-retry, and error handling.
     """)
     
     if 'task_dag' not in st.session_state:
