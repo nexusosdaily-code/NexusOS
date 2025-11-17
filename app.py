@@ -78,17 +78,36 @@ def fetch_oracle_value(oracle_manager, variable, default_value):
     return default_value
 
 def run_simulation(params, signal_configs, oracle_manager=None, use_oracle_data=False, oracle_refresh_interval=10):
-    engine = NexusEngine(params)
+    """
+    Run simulation with comprehensive error handling and diagnostics.
+    
+    Raises:
+        ValueError: If parameters or signals are invalid
+        RuntimeError: If simulation encounters numerical instability
+    """
+    try:
+        engine = NexusEngine(params)
+    except Exception as e:
+        raise ValueError(f"Failed to initialize simulation engine: {str(e)}")
     
     num_steps = params['num_steps']
     delta_t = params['delta_t']
     
-    H_signal = SignalGenerator.generate_from_config(signal_configs['H'], num_steps, delta_t)
-    M_signal = SignalGenerator.generate_from_config(signal_configs['M'], num_steps, delta_t)
-    D_signal = SignalGenerator.generate_from_config(signal_configs['D'], num_steps, delta_t)
-    E_signal = SignalGenerator.generate_from_config(signal_configs['E'], num_steps, delta_t)
-    C_cons_signal = SignalGenerator.generate_from_config(signal_configs['C_cons'], num_steps, delta_t)
-    C_disp_signal = SignalGenerator.generate_from_config(signal_configs['C_disp'], num_steps, delta_t)
+    # Validate time parameters
+    if num_steps <= 0:
+        raise ValueError("Number of steps must be positive")
+    if delta_t <= 0:
+        raise ValueError("Time step (delta_t) must be positive")
+    
+    try:
+        H_signal = SignalGenerator.generate_from_config(signal_configs['H'], num_steps, delta_t)
+        M_signal = SignalGenerator.generate_from_config(signal_configs['M'], num_steps, delta_t)
+        D_signal = SignalGenerator.generate_from_config(signal_configs['D'], num_steps, delta_t)
+        E_signal = SignalGenerator.generate_from_config(signal_configs['E'], num_steps, delta_t)
+        C_cons_signal = SignalGenerator.generate_from_config(signal_configs['C_cons'], num_steps, delta_t)
+        C_disp_signal = SignalGenerator.generate_from_config(signal_configs['C_disp'], num_steps, delta_t)
+    except Exception as e:
+        raise ValueError(f"Failed to generate signals: {str(e)}")
     
     N = params['N_initial']
     
@@ -112,36 +131,52 @@ def run_simulation(params, signal_configs, oracle_manager=None, use_oracle_data=
     }
     
     for step in range(num_steps):
-        t = step * delta_t
-        
-        if use_oracle_data and oracle_manager:
-            should_refresh = (step % oracle_refresh_interval == 0)
+        try:
+            t = step * delta_t
             
-            if should_refresh:
-                for var in ['H', 'M', 'D', 'E', 'C_cons', 'C_disp']:
-                    data_point = oracle_manager.fetch_variable(var)
-                    if data_point:
-                        oracle_cache[var] = data_point.value
+            if use_oracle_data and oracle_manager:
+                should_refresh = (step % oracle_refresh_interval == 0)
+                
+                if should_refresh:
+                    for var in ['H', 'M', 'D', 'E', 'C_cons', 'C_disp']:
+                        data_point = oracle_manager.fetch_variable(var)
+                        if data_point:
+                            oracle_cache[var] = data_point.value
+                
+                H = oracle_cache.get('H', H_signal[step])
+                M = oracle_cache.get('M', M_signal[step])
+                D = oracle_cache.get('D', D_signal[step])
+                E = oracle_cache.get('E', E_signal[step])
+                C_cons = oracle_cache.get('C_cons', C_cons_signal[step])
+                C_disp = oracle_cache.get('C_disp', C_disp_signal[step])
+                oracle_used = bool(oracle_cache)
+            else:
+                H = H_signal[step]
+                M = M_signal[step]
+                D = D_signal[step]
+                E = E_signal[step]
+                C_cons = C_cons_signal[step]
+                C_disp = C_disp_signal[step]
+                oracle_used = False
             
-            H = oracle_cache.get('H', H_signal[step])
-            M = oracle_cache.get('M', M_signal[step])
-            D = oracle_cache.get('D', D_signal[step])
-            E = oracle_cache.get('E', E_signal[step])
-            C_cons = oracle_cache.get('C_cons', C_cons_signal[step])
-            C_disp = oracle_cache.get('C_disp', C_disp_signal[step])
-            oracle_used = bool(oracle_cache)
-        else:
-            H = H_signal[step]
-            M = M_signal[step]
-            D = D_signal[step]
-            E = E_signal[step]
-            C_cons = C_cons_signal[step]
-            C_disp = C_disp_signal[step]
-            oracle_used = False
-        
-        E = np.clip(E, 0.0, 1.0)
-        
-        N_next, diagnostics = engine.step(N, H, M, D, E, C_cons, C_disp, delta_t)
+            E = np.clip(E, 0.0, 1.0)
+            
+            N_next, diagnostics = engine.step(N, H, M, D, E, C_cons, C_disp, delta_t)
+            
+            # Check for numerical instability
+            if np.isnan(N_next) or np.isinf(N_next):
+                raise RuntimeError(
+                    f"Numerical instability detected at step {step}/{num_steps} (t={t:.2f}). "
+                    f"N became {'NaN' if np.isnan(N_next) else 'infinite'}. "
+                    f"Try reducing delta_t or adjusting PID gains."
+                )
+            
+        except RuntimeError:
+            raise  # Re-raise runtime errors with diagnostics
+        except Exception as e:
+            raise RuntimeError(
+                f"Simulation failed at step {step}/{num_steps} (t={t:.2f}): {str(e)}"
+            )
         
         results['t'].append(t)
         results['N'].append(N_next)
@@ -1079,23 +1114,30 @@ def render_simulation():
             
             if is_valid:
                 with st.spinner("Running simulation..."):
-                    oracle_manager = st.session_state.get('oracle_manager')
-                    use_oracle = st.session_state.get('use_oracle_data', False)
-                    oracle_refresh = st.session_state.get('oracle_refresh_interval', 10)
-                    df = run_simulation(
-                        st.session_state.params,
-                        st.session_state.signal_configs,
-                        oracle_manager,
-                        use_oracle,
-                        oracle_refresh
-                    )
-                    st.session_state.simulation_results = df
-                    
-                    if use_oracle and any(df['oracle_used']):
-                        st.success(f"✅ Simulation completed with Oracle data! {len(df)} time steps processed.")
-                    else:
-                        st.success(f"Simulation completed! {len(df)} time steps processed.")
-                    st.rerun()
+                    try:
+                        oracle_manager = st.session_state.get('oracle_manager')
+                        use_oracle = st.session_state.get('use_oracle_data', False)
+                        oracle_refresh = st.session_state.get('oracle_refresh_interval', 10)
+                        df = run_simulation(
+                            st.session_state.params,
+                            st.session_state.signal_configs,
+                            oracle_manager,
+                            use_oracle,
+                            oracle_refresh
+                        )
+                        st.session_state.simulation_results = df
+                        
+                        if use_oracle and any(df['oracle_used']):
+                            st.success(f"✅ Simulation completed with Oracle data! {len(df)} time steps processed.")
+                        else:
+                            st.success(f"Simulation completed! {len(df)} time steps processed.")
+                        st.rerun()
+                    except ValueError as e:
+                        st.error(f"❌ Invalid simulation parameters\n{str(e)}\n💡 Check your parameter values and signal configurations.")
+                    except RuntimeError as e:
+                        st.error(f"❌ Simulation error\n{str(e)}\n💡 Try adjusting parameters or reducing the time step.")
+                    except Exception as e:
+                        st.error(f"❌ Unexpected error: {str(e)}\n💡 Please check the logs or contact support.")
             else:
                 st.error("Please fix validation errors before running simulation.")
     
