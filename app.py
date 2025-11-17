@@ -2226,6 +2226,7 @@ def render_admin():
     from database import User, Role, UserRole, get_engine
     from auth import create_user, get_user_roles, hash_password
     from sqlalchemy.orm import sessionmaker
+    from db_error_handling import DatabaseError, ConstraintViolationError, ConnectionError, handle_db_error
     
     if not AuthManager.require_role('admin'):
         return
@@ -2278,9 +2279,11 @@ def render_admin():
                                 st.success(f"✅ User '{new_email}' created successfully with roles: {', '.join(roles)}")
                                 st.rerun()
                             else:
-                                st.error("User with this email already exists")
+                                st.error("❌ User with this email already exists\n💡 Please use a different email address.")
+                        except (DatabaseError, ConstraintViolationError, ConnectionError) as e:
+                            st.error(e.get_user_message())
                         except Exception as e:
-                            st.error(f"Error creating user: {e}")
+                            st.error(handle_db_error(e, "creating user"))
                         finally:
                             db.close()
     
@@ -2341,8 +2344,10 @@ def render_admin():
             else:
                 st.info("No users yet")
         
+        except (DatabaseError, ConstraintViolationError, ConnectionError) as e:
+            st.error(e.get_user_message())
         except Exception as e:
-            st.error(f"Error loading users: {e}")
+            st.error(handle_db_error(e, "loading users"))
         finally:
             db.close()
     
@@ -2369,12 +2374,16 @@ def render_admin():
         with col3:
             st.metric("Inactive Users", total_users - active_users)
     
+    except (DatabaseError, ConstraintViolationError, ConnectionError) as e:
+        st.error(e.get_user_message())
     except Exception as e:
-        st.error(f"Error loading statistics: {e}")
+        st.error(handle_db_error(e, "loading statistics"))
     finally:
         db.close()
 
 def render_scenarios():
+    from db_error_handling import DatabaseError, ConstraintViolationError, ConnectionError, handle_db_error
+    
     st.header("Scenario Management")
     
     session = get_session()
@@ -2428,8 +2437,10 @@ def render_scenarios():
                     session.close()
                     st.success(f"✅ Scenario '{scenario_name}' saved successfully!")
                     
+                except (DatabaseError, ConstraintViolationError, ConnectionError) as e:
+                    st.error(e.get_user_message())
                 except Exception as e:
-                    st.error(f"Error saving scenario: {str(e)}")
+                    st.error(handle_db_error(e, "saving scenario"))
     
     with col2:
         st.subheader("Export Options")
