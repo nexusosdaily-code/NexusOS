@@ -429,7 +429,7 @@ def run_nexus_consensus_simulation(num_validators: int, num_blocks: int, base_re
         
         consensus.record_contribution(
             validator.validator_id,
-            ContributionType.HUMAN_GOVERNANCE,
+            ContributionType.HUMAN_INTERACTION,
             np.random.uniform(0.1, 1.0)
         )
         consensus.record_contribution(
