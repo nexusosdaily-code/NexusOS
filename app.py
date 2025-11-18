@@ -21,6 +21,7 @@ from dex_page import render_dex_page
 from validator_economics_page import render_validator_economics_page
 from payment_layer_page import render_payment_layer_page
 from nexus_consensus_dashboard import render_nexus_consensus_dashboard
+from wavelength_economics_dashboard import render_wavelength_economics_dashboard
 
 st.set_page_config(
     page_title="NexusOS Advance Systems",
@@ -669,6 +670,7 @@ def main():
             "📊 Dashboard",
             "🔮 Predictive Analytics",
             "🔱 Nexus Consensus",
+            "🌊 Wavelength Economics",
             "⛓️ Blockchain Simulator",
             "🌈 Proof of Spectrum",
             "⚡ GhostDAG System",
@@ -717,6 +719,8 @@ def main():
         render_predictive_analytics_dashboard()
     elif selected_module == "🔱 Nexus Consensus":
         render_nexus_consensus_dashboard()
+    elif selected_module == "🌊 Wavelength Economics":
+        render_wavelength_economics_dashboard()
     elif selected_module == "⛓️ Blockchain Simulator":
         render_blockchain_dashboard()
     elif selected_module == "🌈 Proof of Spectrum":
