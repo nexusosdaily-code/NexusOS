@@ -122,25 +122,30 @@ def render_compose_tab():
     )
     
     # Parent messages for DAG
+    parent_ids = []
     if st.session_state.wnsp_messages:
         with st.expander("🔗 Link to Parent Messages (DAG)"):
-            parent_options = [
-                f"{m.message_id[:12]}... - {m.content[:30]}"
-                for m in st.session_state.wnsp_messages[-10:]
-            ]
+            # Get recent messages (up to 10)
+            recent_messages = st.session_state.wnsp_messages[-10:]
+            
+            # Create mapping from display string to message object
+            parent_options = []
+            message_map = {}
+            for msg in recent_messages:
+                display_str = f"{msg.message_id[:12]}... - {msg.content[:30]}"
+                parent_options.append(display_str)
+                message_map[display_str] = msg
+            
             selected_parents = st.multiselect(
                 "Select parent messages",
                 options=parent_options,
                 help="Create DAG structure by linking to previous messages"
             )
             
-            parent_ids = []
+            # Extract message IDs using the mapping
             if selected_parents:
-                for sel in selected_parents:
-                    idx = parent_options.index(sel)
-                    parent_ids.append(st.session_state.wnsp_messages[-(10-idx)].message_id)
+                parent_ids = [message_map[sel].message_id for sel in selected_parents]
     else:
-        parent_ids = []
         st.info("No previous messages. This will start a new message chain.")
     
     # Cost estimation
