@@ -195,52 +195,50 @@ def render_send_message(messaging_system: WavelengthMessagingSystem, token_syste
         st.divider()
         st.subheader("💰 Cost Estimation")
         
-        # Calculate estimated cost
-        from wavelength_validator import WaveProperties
-        
-        temp_wave = WaveProperties(
-            wavelength=region.center_wavelength,
-            amplitude=0.7,
-            phase=0.0,
-            polarization=0.0,
-            spectral_region=region,
-            modulation_type=modulation
-        )
-        
-        cost_breakdown = messaging_system.wavelength_validator.calculate_message_cost(
-            temp_wave,
-            len(message_text.encode('utf-8')),
-            spectral_diversity_required=5
-        )
-        
-        # Scale costs
-        SCALE_FACTOR = 1e6
-        total_cost_nxt = cost_breakdown['total_nxt'] / SCALE_FACTOR
-        total_cost_nxt = max(0.01, total_cost_nxt)
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Quantum Base", f"{cost_breakdown['quantum_base']/SCALE_FACTOR:.4f} NXT")
-        
-        with col2:
-            frequency_thz = (3e8 / region.center_wavelength) / 1e12
-            st.metric("Frequency", f"{frequency_thz:.0f} THz")
-        
-        with col3:
-            st.metric("**TOTAL COST**", f"{total_cost_nxt:.4f} NXT")
-        
-        # Check balance
-        sender_account = token_system.get_account(sender)
-        sender_balance_nxt = sender_account.get_balance_nxt() if sender_account else 0
-        total_cost_units = int(total_cost_nxt * 100)
-        
-        if sender_balance_nxt < total_cost_nxt:
-            st.error(f"⚠️ Insufficient balance! You have {sender_balance_nxt:.2f} NXT but need {total_cost_nxt:.4f} NXT")
+        try:
+            # Calculate estimated cost using simplified E=hf approach
+            PLANCK = 6.626e-34  # Planck's constant (J·s)
+            SPEED_OF_LIGHT = 3e8  # Speed of light (m/s)
+            
+            # Calculate frequency from wavelength
+            frequency = SPEED_OF_LIGHT / region.center_wavelength  # Hz
+            
+            # Quantum energy cost (E = hf)
+            quantum_energy = PLANCK * frequency  # Joules
+            
+            # Scale to NXT with appropriate factor
+            BASE_SCALE = 1e21  # Scale joules to reasonable NXT amounts
+            message_bytes = len(message_text.encode('utf-8'))
+            
+            quantum_base_nxt = (quantum_energy * BASE_SCALE * message_bytes) / 1e6
+            total_cost_nxt = max(0.01, quantum_base_nxt)  # Minimum 0.01 NXT
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric("Quantum Base", f"{quantum_base_nxt:.4f} NXT")
+            
+            with col2:
+                frequency_thz = frequency / 1e12
+                st.metric("Frequency", f"{frequency_thz:.0f} THz")
+            
+            with col3:
+                st.metric("**TOTAL COST**", f"{total_cost_nxt:.4f} NXT")
+            
+            # Check balance
+            sender_account = token_system.get_account(sender)
+            sender_balance_nxt = sender_account.get_balance_nxt() if sender_account else 0
+            
+            if sender_balance_nxt < total_cost_nxt:
+                st.error(f"⚠️ Insufficient balance! You have {sender_balance_nxt:.2f} NXT but need {total_cost_nxt:.4f} NXT")
+                can_send = False
+            else:
+                st.success(f"✅ Sufficient balance. You'll have {sender_balance_nxt - total_cost_nxt:.2f} NXT remaining")
+                can_send = True
+                
+        except Exception as e:
+            st.error(f"❌ Error calculating cost: {str(e)}")
             can_send = False
-        else:
-            st.success(f"✅ Sufficient balance. You'll have {sender_balance_nxt - total_cost_nxt:.2f} NXT remaining")
-            can_send = True
     else:
         can_send = False
     
