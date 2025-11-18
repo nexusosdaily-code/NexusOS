@@ -46,6 +46,17 @@ The application uses Streamlit for a single-page, wide-layout dashboard with an 
 
 **GhostDAG Ecosystem Optimization**: Implements DAG and GhostDAG for parallel block processing (PHANTOM protocol) in blockchain consensus, and a universal DAG optimizer for dependency resolution and parallel execution across various ecosystem components.
 
+**Nexus Consensus Engine - Revolutionary Unified Consensus**: A groundbreaking blockchain consensus mechanism integrating three independent security/economic systems into one cohesive framework:
+  - **GhostDAG Layer**: Parallel block processing via DAG structure (PHANTOM protocol) for high-throughput consensus without orphaned blocks
+  - **Proof of Spectrum Layer**: Spectral diversity security requiring 83% spectral coverage (5/6 regions: UV, Violet, Blue, Green, Yellow, IR) with stake-weighted validator selection within each region
+  - **Nexus Economic Layer**: AI-optimized system health S(t) = f(H, M, D) drives dynamic block rewards, creating wealth-building aligned with network health
+  - **Contribution Tracking**: Validators earn H (human governance), M (machine computation), D (data provision) scores that update validator stakes, influencing selection probability while maintaining spectral diversity
+  - **Block Reward Distribution**: 60% to block creator, 40% to validators weighted by contribution; uses round() with minimum 1 unit enforcement to prevent zero allocations; mints real NXT tokens via `token_system.mint_reward()`
+  - **Community Governance**: Contribution-weighted voting with 67% approval threshold and 10% max weight per validator (anti-centralization)
+  - **Economic Incentives**: Contribution tracking happens BEFORE minting to preserve AI optimization feedback loop even if mint fails; rewards reconcile rounding deltas ensuring total equals declared block reward
+  - **Integration Flow**: Contributions → Update stakes → Spectral selection (stake-weighted) → Block creation → System health calculation → Reward distribution → NXT minting → Governance weights
+  - **Visualization Dashboard**: Interactive Streamlit UI (`nexus_consensus_dashboard.py`) with 5 tabs: Consensus Overview, Validator Network, Economic Metrics, Governance, and Live Simulation demonstrating full consensus lifecycle
+
 **DEX (Decentralized Exchange) - Layer 2 Integration**: An automated market maker (AMM) with ERC-20-like token standard, constant product formula, liquidity pools, and swap mechanisms. **NXT-Exclusive Base Currency**: All trading pairs must be TOKEN/NXT format (NXT is the exclusive base currency). Uses NativeTokenAdapter to bridge DEX with the native payment layer, ensuring NXT balances and transfers interact with the Layer 1 NativeTokenSystem. Trading fees (0.3%) collected from NXT side of swaps are routed to VALIDATOR_POOL via DEX_FEES account, creating economic flow from DEX activity to validators. UI enforces TOKEN/NXT pairing, queries NXT balances from native system, and handles NXT transfers via adapter rather than ERC-20 Token class. Provides interactive UI for swaps, liquidity management, and analytics.
 
 **Enhanced Validator Economics**: A staking and delegation system with proportional reward distribution, configurable commission rates, unbonding periods, and slashing conditions. Includes a validator reputation system and economic modeling for profitability.

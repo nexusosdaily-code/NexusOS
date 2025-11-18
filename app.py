@@ -20,6 +20,7 @@ from ghostdag_page import render_ghostdag_system
 from dex_page import render_dex_page
 from validator_economics_page import render_validator_economics_page
 from payment_layer_page import render_payment_layer_page
+from nexus_consensus_dashboard import render_nexus_consensus_dashboard
 
 st.set_page_config(
     page_title="NexusOS Advance Systems",
@@ -667,6 +668,7 @@ def main():
         module_options = [
             "📊 Dashboard",
             "🔮 Predictive Analytics",
+            "🔱 Nexus Consensus",
             "⛓️ Blockchain Simulator",
             "🌈 Proof of Spectrum",
             "⚡ GhostDAG System",
@@ -713,6 +715,8 @@ def main():
         render_dashboard()
     elif selected_module == "🔮 Predictive Analytics":
         render_predictive_analytics_dashboard()
+    elif selected_module == "🔱 Nexus Consensus":
+        render_nexus_consensus_dashboard()
     elif selected_module == "⛓️ Blockchain Simulator":
         render_blockchain_dashboard()
     elif selected_module == "🌈 Proof of Spectrum":
