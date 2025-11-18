@@ -122,10 +122,10 @@ def render_validator_network():
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("Total Validators", len(consensus.spectrum_consensus.validators))
+        st.metric("Total Validators", len(consensus.spectrum.validators))
     
     with col2:
-        total_contribution = sum(score.total_contribution for score in consensus.contributions.values())
+        total_contribution = sum(score.calculate_total(consensus.nexus_engine) for score in consensus.contributions.values())
         st.metric("Total Contributions", f"{total_contribution:.2f}")
     
     with col3:
