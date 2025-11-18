@@ -18,6 +18,7 @@ class ConsensusType(Enum):
     PROOF_OF_WORK = "Proof of Work"
     BYZANTINE_FT = "Byzantine Fault Tolerant"
     DELEGATED_POS = "Delegated Proof of Stake"
+    GHOSTDAG = "GhostDAG (Parallel Blocks)"
 
 
 class ValidatorStatus(Enum):
