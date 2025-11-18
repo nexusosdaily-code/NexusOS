@@ -38,7 +38,7 @@ from cryptography.hazmat.backends import default_backend
 
 # Database
 import sqlalchemy as sa
-from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, Text, Boolean
+from sqlalchemy import create_engine, Column, String, Float, Integer, BigInteger, DateTime, Text, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -101,7 +101,7 @@ class TokenAccount(Base):
     
     id = Column(Integer, primary_key=True)
     address = Column(String(64), unique=True, nullable=False)
-    balance = Column(Integer, default=0)  # In smallest units
+    balance = Column(BigInteger, default=0)  # In smallest units (needs BigInteger for 100 trillion total supply)
     nonce = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
