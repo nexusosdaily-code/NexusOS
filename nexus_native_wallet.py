@@ -563,6 +563,30 @@ class NexusNativeWallet:
             for tx in transactions
         ]
     
+    def get_message_history(
+        self,
+        address: str,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """Get message history for wallet"""
+        messages = self.db.query(WalletMessage).filter_by(
+            from_address=address
+        ).order_by(WalletMessage.timestamp.desc()).limit(limit).all()
+        
+        return [
+            {
+                'msg_id': msg.msg_id,
+                'message_type': msg.message_type,
+                'cost_nxt': msg.cost_nxt,
+                'transition_type': msg.transition_type,
+                'wavelength_nm': msg.wavelength_nm,
+                'spectral_region': msg.spectral_region,
+                'timestamp': msg.timestamp.isoformat(),
+                'status': 'sent'
+            }
+            for msg in messages
+        ]
+    
     # ========================================================================
     # Utility Methods
     # ========================================================================
