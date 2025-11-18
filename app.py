@@ -19,6 +19,7 @@ from proof_of_spectrum_page import render_proof_of_spectrum
 from ghostdag_page import render_ghostdag_system
 from dex_page import render_dex_page
 from validator_economics_page import render_validator_economics_page
+from payment_layer_page import render_payment_layer_page
 
 st.set_page_config(
     page_title="NexusOS Advance Systems",
@@ -671,6 +672,7 @@ def main():
             "⚡ GhostDAG System",
             "🏦 DEX - Layer 2",
             "💰 Validator Economics",
+            "💳 Payment Layer",
             "🔧 Task Orchestration",
             "🌐 Multi-Agent Networks",
             "📈 Economic Simulator",
@@ -721,6 +723,8 @@ def main():
         render_dex_page()
     elif selected_module == "💰 Validator Economics":
         render_validator_economics_page()
+    elif selected_module == "💳 Payment Layer":
+        render_payment_layer_page()
     elif selected_module == "🔧 Task Orchestration":
         render_task_orchestration()
     elif selected_module == "🌐 Multi-Agent Networks":
