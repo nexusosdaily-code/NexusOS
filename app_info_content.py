@@ -329,9 +329,9 @@ Where:
         'about_nexusos': """
 ### 🌐 About NexusOS Advance Systems
 
-**Unified Intelligence Platform for Economic Modeling & Advanced Communications**
+**Mobile blockchain using light physics instead of traditional cryptographic hashing.**
 
-NexusOS Advance Systems is a comprehensive platform that combines economic simulation, multi-agent systems, smart contract generation, machine learning optimization, and wavelength-based secure communications into a single, integrated ecosystem.
+NexusOS Advance Systems is a revolutionary mobile-first blockchain operating system where user mobile phones are the sole hardware for the entire network. It combines economic simulation, wavelength-based validation, multi-agent systems, smart contract generation, machine learning optimization, and quantum physics-inspired secure communications into a single, integrated ecosystem.
 
 **What We Built:**
 
