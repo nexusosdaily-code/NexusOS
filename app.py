@@ -658,6 +658,11 @@ def main():
     
     AuthManager.render_logout()
     
+    # Display NEXUS logo
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("assets/nexus_logo.jpg", width='stretch')
+    
     st.title("🔄 NexusOS Advance Systems")
     st.markdown("""
     **DAG-Based Platform** for task orchestration, workflow automation, and advanced messaging 

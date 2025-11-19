@@ -34,7 +34,7 @@ def render_web3_wallet_dashboard():
     # Display NEXUS logo
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.image("assets/nexus_logo.jpg", use_container_width=True)
+        st.image("assets/nexus_logo.jpg", width='stretch')
     
     st.title("💎 NexusOS Native Wallet")
     st.markdown("""
