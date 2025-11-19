@@ -2,12 +2,27 @@
 Reserve Pool Telemetry Module
 Monitors reserve pool burn/issuance flows and projects F_floor coverage
 for AI governance enforcement of basic human living standards
+
+Hierarchical Architecture:
+  Reserve Pools → F_floor → Service Pools
+  
+  Reserve pools (VALIDATOR_POOL, TRANSITION_RESERVE, ECOSYSTEM_FUND)
+  support F_floor which then enables all economic service pools:
+  - DEX Pool, Investment Pool, Staking Pool, Bonus Pool, Lottery Pool
+  - Environmental Pool, Recycling Pool, Product/Service Pool, etc.
 """
 
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 from datetime import datetime
 import numpy as np
+
+# Pool ecosystem integration
+try:
+    from pool_ecosystem import get_pool_ecosystem, PoolLayer
+except ImportError:
+    get_pool_ecosystem = None
+    PoolLayer = None
 
 
 @dataclass
@@ -68,14 +83,19 @@ class ReservePoolTelemetry:
     def project_f_floor_coverage(self, 
                                  current_snapshot: ReservePoolSnapshot,
                                  beneficiary_count: int,
-                                 projection_years: int = 100) -> FFloorProjection:
+                                 projection_years: int = 100,
+                                 include_service_pools: bool = True) -> FFloorProjection:
         """
-        Project how long reserves can sustain F_floor payments
+        Project how long reserves can sustain F_floor payments and service pools
+        
+        Hierarchical Flow:
+          Reserve Pools → F_floor → Service Pools (DEX, Investment, Staking, etc.)
         
         Args:
             current_snapshot: Current reserve state
             beneficiary_count: Number of people receiving F_floor payments
             projection_years: Years to project forward (default 100 for civilization sustainability)
+            include_service_pools: Whether to account for service pool requirements
         
         Returns:
             FFloorProjection with sustainability analysis
@@ -85,23 +105,37 @@ class ReservePoolTelemetry:
         daily_f_floor_obligation = current_snapshot.f_floor_value * beneficiary_count
         annual_f_floor_obligation = daily_f_floor_obligation * 365
         
-        # Minimum reserves = 10 years of F_floor obligations
-        min_reserve_threshold = annual_f_floor_obligation * 10
+        # F_floor also enables service pools - account for their requirements
+        service_pool_load = 0.0
+        if include_service_pools and get_pool_ecosystem is not None:
+            pool_eco = get_pool_ecosystem()
+            service_pools = pool_eco.get_pools_by_layer(PoolLayer.SERVICE)
+            # Service pools require operational reserves (estimate 10% of their transaction volume)
+            service_pool_load = sum(pool.metrics.volume_24h * 0.1 for pool in service_pools)
         
-        # Calculate NET flow after subtracting F_floor obligations
-        # net_flow = (issuance - burns) - F_floor_obligations
+        # Total daily obligation = F_floor payments + service pool requirements
+        total_daily_obligation = daily_f_floor_obligation + service_pool_load
+        annual_total_obligation = total_daily_obligation * 365
+        
+        # Minimum reserves = 10 years of TOTAL obligations (F_floor + service pools)
+        min_reserve_threshold = annual_total_obligation * 10
+        
+        # Calculate NET flow after subtracting TOTAL obligations (F_floor + service pools)
+        # net_flow = (issuance - burns) - (F_floor_obligations + Service_Pool_Requirements)
         total_reserves = current_snapshot.total_reserves
-        net_daily_flow = current_snapshot.net_flow_24h - daily_f_floor_obligation
+        net_daily_flow = current_snapshot.net_flow_24h - total_daily_obligation
         
-        # Project coverage including F_floor obligation load
+        # Project coverage including TOTAL obligation load (F_floor + service pools)
+        service_pool_note = f" + service pools ({service_pool_load:.2f} NXT/day)" if service_pool_load > 0 else ""
+        
         if net_daily_flow >= 0:
-            # Reserves growing even after F_floor payments - sustainable
+            # Reserves growing even after all obligations - sustainable
             coverage_years = float('inf')
             is_sustainable = True
             risk_level = "safe"
-            recommended_action = f"Sustainable - reserves growing {net_daily_flow:.2f} NXT/day after F_floor obligations"
+            recommended_action = f"Sustainable - reserves growing {net_daily_flow:.2f} NXT/day after F_floor{service_pool_note}"
         else:
-            # Reserves depleting after F_floor payments
+            # Reserves depleting after all obligations
             daily_deficit = abs(net_daily_flow)
             days_until_depletion = total_reserves / daily_deficit if daily_deficit > 0 else float('inf')
             coverage_years = days_until_depletion / 365.0
@@ -109,15 +143,15 @@ class ReservePoolTelemetry:
             if coverage_years >= projection_years:
                 is_sustainable = True
                 risk_level = "safe"
-                recommended_action = f"Adequate - {coverage_years:.0f} years coverage after F_floor obligations"
+                recommended_action = f"Adequate - {coverage_years:.0f} years coverage after F_floor{service_pool_note}"
             elif coverage_years >= projection_years * 0.5:
                 is_sustainable = True
                 risk_level = "warning"
-                recommended_action = f"WARNING: Only {coverage_years:.0f} years coverage remaining. Daily deficit: {daily_deficit:.2f} NXT"
+                recommended_action = f"WARNING: {coverage_years:.0f} years coverage remaining. Deficit: {daily_deficit:.2f} NXT/day for F_floor{service_pool_note}"
             else:
                 is_sustainable = False
                 risk_level = "critical"
-                recommended_action = f"CRITICAL: Only {coverage_years:.0f} years until F_floor unsustainable. Deficit: {daily_deficit:.2f} NXT/day"
+                recommended_action = f"CRITICAL: {coverage_years:.0f} years until system unsustainable. Deficit: {daily_deficit:.2f} NXT/day for F_floor{service_pool_note}"
         
         # Check if current reserves meet minimum threshold
         if total_reserves < min_reserve_threshold:

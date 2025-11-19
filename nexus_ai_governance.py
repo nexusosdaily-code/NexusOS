@@ -26,6 +26,14 @@ try:
 except ImportError:
     get_reserve_telemetry = None
 
+# Pool ecosystem integration
+try:
+    from pool_ecosystem import get_pool_ecosystem, PoolLayer, PoolType
+except ImportError:
+    get_pool_ecosystem = None
+    PoolLayer = None
+    PoolType = None
+
 
 @dataclass
 class ResearchObservation:
@@ -507,6 +515,73 @@ class NexusAIGovernance:
             self.save_knowledge()
         
         return (is_valid, message)
+    
+    def manage_pool_ecosystem(self) -> Dict[str, Any]:
+        """
+        AI management of the hierarchical pool ecosystem
+        
+        Hierarchical Flow:
+          Reserve Pools → F_floor → Service Pools (DEX, Investment, Staking, etc.)
+        
+        Returns:
+            Pool ecosystem management report
+        """
+        if get_pool_ecosystem is None:
+            return {"error": "Pool ecosystem not available"}
+        
+        pool_eco = get_pool_ecosystem()
+        
+        # Verify hierarchical support structure
+        verification = pool_eco.verify_f_floor_support()
+        
+        # Get ecosystem health
+        health = pool_eco.get_ecosystem_health()
+        
+        # Check for issues
+        issues = []
+        recommendations = []
+        
+        # Check if hierarchy is valid
+        if not verification.get("hierarchy_valid"):
+            issues.append("⚠️ Hierarchical support structure broken")
+            recommendations.append("Restore Reserve Pools → F_floor → Service Pools architecture")
+        
+        # Check layer health
+        if health["by_layer"]["reserve"]["health_percentage"] < 100:
+            issues.append(f"⚠️ Reserve layer health: {health['by_layer']['reserve']['health_percentage']:.0f}%")
+            recommendations.append("Investigate reserve pool issues - F_floor foundation at risk")
+        
+        if health["by_layer"]["foundation"]["health_percentage"] < 100:
+            issues.append(f"⚠️ F_floor foundation health: {health['by_layer']['foundation']['health_percentage']:.0f}%")
+            recommendations.append("CRITICAL: F_floor compromised - all service pools at risk")
+        
+        if health["by_layer"]["service"]["health_percentage"] < 70:
+            issues.append(f"⚠️ Service pool health: {health['by_layer']['service']['health_percentage']:.0f}%")
+            recommendations.append("Service pools degraded - may need F_floor support increase")
+        
+        # Record observations for learning
+        self.observe_research(
+            component="pool_ecosystem",
+            parameters={
+                "reserve_total": verification["reserve_total"],
+                "f_floor_balance": verification["f_floor_balance"],
+                "service_pool_count": verification["service_pool_count"]
+            },
+            metrics={
+                "reserve_health": health["by_layer"]["reserve"]["health_percentage"],
+                "f_floor_health": health["by_layer"]["foundation"]["health_percentage"],
+                "service_health": health["by_layer"]["service"]["health_percentage"],
+                "overall_health": health["overall"]["health_percentage"]
+            }
+        )
+        
+        return {
+            "verification": verification,
+            "health": health,
+            "issues": issues,
+            "recommendations": recommendations,
+            "timestamp": datetime.now().isoformat()
+        }
 
 
 # Global AI governance instance
