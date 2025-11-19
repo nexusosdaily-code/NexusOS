@@ -64,6 +64,12 @@ try:
 except ImportError:
     get_ai_governance = None
 
+try:
+    from ai_message_security_controller import AIMessageSecurityController, SecurityPriority
+except ImportError:
+    AIMessageSecurityController = None
+    SecurityPriority = None
+
 
 @dataclass
 class MobileMessage:
@@ -122,6 +128,9 @@ class MobileDAGProtocol:
         self.reserve_telemetry = None
         self.ai_governance = None
         
+        # AI Message Security Controller (moderates wavelength + ECDH)
+        self.ai_security_controller = None
+        
         # Message tracking
         self.active_messages: Dict[str, MobileMessage] = {}
         self.message_history: List[MobileMessage] = []
@@ -154,6 +163,12 @@ class MobileDAGProtocol:
         
         if get_ai_governance is not None:
             self.ai_governance = get_ai_governance()
+        
+        # Initialize AI Message Security Controller
+        if AIMessageSecurityController is not None:
+            self.ai_security_controller = AIMessageSecurityController(
+                priority=SecurityPriority.ADAPTIVE
+            )
     
     def send_message(self, sender_address: str, recipient_address: str, 
                     content: str, wavelength: float = 550.0,
@@ -185,12 +200,43 @@ class MobileDAGProtocol:
         """
         # STEP 1: Create mobile message
         message_id = f"msg_{secrets.token_hex(16)}"
+        
+        # STEP 1.5: AI SECURITY DECISION (moderates wavelength + ECDH)
+        ai_decision = None
+        optimal_wavelength = wavelength
+        encryption_level = EncryptionLevel.STANDARD if EncryptionLevel else None
+        
+        if self.ai_security_controller is not None and self.wallet_manager is not None:
+            # Get wallet for sender context
+            wallet = self.wallet_manager.get_active_wallet()
+            if wallet:
+                sender_context = {
+                    "wallet_id": wallet.wallet_id,
+                    "balance_nxt": wallet.balance_nxt,
+                    "security_status": wallet.get_security_status()
+                }
+                recipient_context = {
+                    "address": recipient_address
+                }
+                
+                # AI analyzes message and makes security decision
+                ai_decision = self.ai_security_controller.analyze_message_security(
+                    content=content,
+                    sender_context=sender_context,
+                    recipient_context=recipient_context,
+                    wavelength=wavelength if wavelength != 550.0 else None  # Let AI choose if default
+                )
+                
+                # Use AI-selected wavelength and encryption level
+                optimal_wavelength = ai_decision.wavelength
+                encryption_level = ai_decision.encryption_level
+        
         mobile_msg = MobileMessage(
             message_id=message_id,
             sender_address=sender_address,
             recipient_address=recipient_address,
             content=content,
-            wavelength=wavelength,
+            wavelength=optimal_wavelength,
             priority=priority
         )
         
@@ -199,7 +245,7 @@ class MobileDAGProtocol:
             return (False, "AI router not available", None)
         
         priority_enum = self._convert_priority(priority)
-        burn_cost = self.ai_router.calculate_message_cost(wavelength, priority_enum)
+        burn_cost = self.ai_router.calculate_message_cost(optimal_wavelength, priority_enum)
         
         # STEP 3: Create and sign transaction with wallet
         if self.wallet_manager is None:
@@ -239,11 +285,12 @@ class MobileDAGProtocol:
         if not recipient_public_key_bytes:
             return (False, "No public key available for encryption", None)
         
+        # Use AI-selected encryption level for optimal security/cost balance
         encrypted_msg = self.encryption_system.encrypt_message(
             plaintext=content,
             recipient_public_key_bytes=recipient_public_key_bytes,
             sender_public_key_hash=sender_key_hash,
-            encryption_level=EncryptionLevel.STANDARD if EncryptionLevel else None
+            encryption_level=encryption_level
         )
         
         if encrypted_msg is None:
@@ -256,15 +303,19 @@ class MobileDAGProtocol:
         if Message is None or MessagePriority is None:
             return (False, "Message routing components not available", None)
         
-        # Create routing message
+        # Create routing message with AI-optimized wavelength
         routing_msg = Message(
             message_id=message_id,
             sender=sender_address,
             recipient=recipient_address,
             content_hash=encrypted_msg.content_hash if hasattr(encrypted_msg, 'content_hash') else "",
-            wavelength=wavelength,
+            wavelength=optimal_wavelength,
             priority=priority_enum
         )
+        
+        # Set routing priority from AI decision
+        if ai_decision:
+            routing_msg.routing_priority = ai_decision.routing_priority
         
         # AI routes the message
         success, routing_message = self.ai_router.route_message_ai(routing_msg)
