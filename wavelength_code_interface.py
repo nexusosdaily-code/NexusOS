@@ -15,7 +15,7 @@ import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 from wavelength_code_generator import (
-    WavelengthCodeGenerator, WavelengthInstruction, WaveProperties,
+    WavelengthCodeGenerator, WavelengthInstruction,
     WavelengthOpcodes, ControlFlowMode, DataType
 )
 from wavelength_validator import SpectralRegion, ModulationType

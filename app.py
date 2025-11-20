@@ -44,6 +44,8 @@ from ai_management_dashboard import render_ai_management_dashboard
 from nexus_ai_chat import render_nexus_ai_chat
 from offline_mesh_dashboard import render_offline_mesh_dashboard
 from wavelength_code_interface import render_wavelength_code_interface
+from wavelang_ai_teacher import render_wavelang_ai_teacher
+from wavelang_compiler import render_wavelang_compiler_dashboard
 
 
 def main():
@@ -85,7 +87,9 @@ def main():
                 "🤖 AI Management Control",
                 "💬 Talk to Nexus AI",
                 "🌐 Offline Mesh Network",
-                "🌊 WaveLang Studio"
+                "🌊 WaveLang Studio",
+                "🤖 WaveLang AI Teacher",
+                "💻 WaveLang Binary Compiler"
             ],
             key="module_selector"
         )
@@ -173,6 +177,21 @@ def main():
                 "icon": "💬",
                 "desc": "Conversational interface to the civilization governance AI",
                 "features": ["Ask About Vision", "F_floor Explanations", "Learned Patterns", "Governance Decisions", "Economics Discussion", "100-Year Planning"]
+            },
+            "🌊 WaveLang Studio": {
+                "icon": "🌊",
+                "desc": "Revolutionary code using wavelengths instead of syntax - ZERO syntax errors ever",
+                "features": ["Visual Builder", "Energy Calculator", "Error Prevention", "Comparison", "Save Programs"]
+            },
+            "🤖 WaveLang AI Teacher": {
+                "icon": "🤖",
+                "desc": "NexusOS AI assistant for learning WaveLang - text-to-wavelength encoder/decoder",
+                "features": ["Text→Wavelength", "Wavelength→English", "Optimizer", "Validator", "Advisor"]
+            },
+            "💻 WaveLang Binary Compiler": {
+                "icon": "💻",
+                "desc": "See how binary CPUs execute wavelength code - shows full compilation pipeline",
+                "features": ["Wavelength→Bytecode", "Bytecode→Assembly", "Bytecode→Python", "Full Pipeline"]
             }
         }
         
@@ -256,6 +275,18 @@ def main():
     elif module == "🌐 Offline Mesh Network":
         # Offline peer-to-peer internet infrastructure
         render_offline_mesh_dashboard()
+    
+    elif module == "🌊 WaveLang Studio":
+        # WaveLang visual interface
+        render_wavelength_code_interface()
+    
+    elif module == "🤖 WaveLang AI Teacher":
+        # WaveLang AI assistant
+        render_wavelang_ai_teacher()
+    
+    elif module == "💻 WaveLang Binary Compiler":
+        # WaveLang compilation pipeline
+        render_wavelang_compiler_dashboard()
 
 
 if __name__ == "__main__":
