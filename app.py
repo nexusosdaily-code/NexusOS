@@ -9,10 +9,11 @@ Central hub providing access to all NexusOS modules:
 3. WNSP Protocol v2.0
 4. Mobile DAG Messaging (Blockchain Messaging)
 5. Blockchain Explorer (Live Block/Transaction Visualization)
-6. Wavelength Economics
-7. Nexus Consensus
-8. Mobile Connectivity
-9. Long-term Supply Forecasting
+6. DEX - Decentralized Exchange (AMM with NXT pairs)
+7. Wavelength Economics
+8. Nexus Consensus
+9. Mobile Connectivity
+10. Long-term Supply Forecasting
 """
 
 import streamlit as st
@@ -27,6 +28,7 @@ from mobile_connectivity_dashboard import show_mobile_connectivity_dashboard
 from longterm_supply_dashboard import render_longterm_supply_dashboard
 from mobile_dag_messaging import render_mobile_dag_messaging
 from blockchain_viz import render_blockchain_dashboard
+from dex_page import render_dex_page
 
 
 def main():
@@ -56,6 +58,7 @@ def main():
                 "📡 WNSP Protocol v2.0",
                 "💬 Mobile DAG Messaging",
                 "🔗 Blockchain Explorer",
+                "💱 DEX (Token Exchange)",
                 "💰 Wavelength Economics",
                 "⚙️ Nexus Consensus",
                 "📱 Mobile Connectivity",
@@ -92,6 +95,11 @@ def main():
                 "icon": "🔗",
                 "desc": "Real-time blockchain visualization and transaction explorer",
                 "features": ["Live Blocks", "Transaction History", "Network Stats", "Validator Activity"]
+            },
+            "💱 DEX (Token Exchange)": {
+                "icon": "💱",
+                "desc": "Decentralized Exchange with AMM (NXT-paired liquidity pools)",
+                "features": ["Token Swaps", "Liquidity Pools", "Add/Remove Liquidity", "Pool Analytics", "0.3% Fees to Validators"]
             },
             "💰 Wavelength Economics": {
                 "icon": "💰",
@@ -147,6 +155,10 @@ def main():
     elif module == "🔗 Blockchain Explorer":
         # Blockchain visualization
         render_blockchain_dashboard()
+    
+    elif module == "💱 DEX (Token Exchange)":
+        # Decentralized Exchange
+        render_dex_page()
     
     elif module == "💰 Wavelength Economics":
         # Economics dashboard
