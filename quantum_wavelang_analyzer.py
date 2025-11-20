@@ -141,8 +141,8 @@ class QuantumWaveLangAnalyzer:
         amplitudes = [inst.amplitude for inst in instructions]
         
         # Calculate coherence score: how aligned are the wavelengths?
-        wavelength_std = np.std(wavelengths) if len(wavelengths) > 1 else 0
-        wavelength_coherence = 1 / (1 + wavelength_std / np.mean(wavelengths)) if wavelengths else 1.0
+        wavelength_std = float(np.std(wavelengths)) if len(wavelengths) > 1 else 0.0
+        wavelength_coherence = 1.0 / (1.0 + wavelength_std / np.mean(wavelengths)) if wavelengths else 1.0
         
         # Phase coherence: how synchronized are instructions?
         phase_coherence = 1 - (np.std(phases) / math.pi) if phases else 1.0
