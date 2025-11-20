@@ -18,11 +18,11 @@ import streamlit as st
 # Import all dashboard modules
 from civilization_dashboard import main as civilization_main
 from web3_wallet_dashboard import render_web3_wallet_dashboard
-from wnsp_dashboard_v2 import show_wnsp_dashboard_v2
-from wavelength_economics_dashboard import show_wavelength_economics_dashboard
-from nexus_consensus_dashboard import show_nexus_consensus_dashboard
+from wnsp_dashboard_v2 import render_wnsp_v2_dashboard
+from wavelength_economics_dashboard import render_wavelength_economics_dashboard
+from nexus_consensus_dashboard import render_nexus_consensus_dashboard
 from mobile_connectivity_dashboard import show_mobile_connectivity_dashboard
-from longterm_supply_dashboard import show_longterm_supply_dashboard
+from longterm_supply_dashboard import render_longterm_supply_dashboard
 
 
 def main():
@@ -153,15 +153,15 @@ def main():
     
     elif module == "📡 WNSP Protocol v2.0":
         # WNSP protocol dashboard
-        show_wnsp_dashboard_v2()
+        render_wnsp_v2_dashboard()
     
     elif module == "💰 Wavelength Economics":
         # Economics dashboard
-        show_wavelength_economics_dashboard()
+        render_wavelength_economics_dashboard()
     
     elif module == "⚙️ Nexus Consensus":
         # Consensus dashboard
-        show_nexus_consensus_dashboard()
+        render_nexus_consensus_dashboard()
     
     elif module == "📱 Mobile Connectivity":
         # Mobile connectivity monitor
@@ -169,7 +169,7 @@ def main():
     
     elif module == "📊 Long-term Supply":
         # Long-term supply forecasting
-        show_longterm_supply_dashboard()
+        render_longterm_supply_dashboard()
 
 
 if __name__ == "__main__":
