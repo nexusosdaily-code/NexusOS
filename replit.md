@@ -1,7 +1,7 @@
-# NexusOS Advance Systems
+# NexusOS Civilization Operating System
 
 ## Overview
-NexusOS is a revolutionary mobile-first blockchain operating system where user mobile phones are the sole hardware for the entire network. It functions as a complete blockchain system through connected mobile devices without traditional server infrastructure, aiming for a community-owned, pure peer-to-peer network with zero infrastructure costs. Mobile blockchain using light physics instead of traditional cryptographic hashing. It features a native NXT token, an integrated Decentralized Exchange (DEX), secure messaging, and an optical mesh networking infrastructure, all governed by quantum physics principles.
+NexusOS is a revolutionary civilization architecture built on physics instead of speculation. It replaces binary computation with electromagnetic wave states, anchors economics to quantum energy (E=hf), and guarantees every citizen's basic living standards through the BHLS floor system. The complete system spans 7 integrated modules: Wave Computation, BHLS Floor, Regenerative Circular Economy, Civilization Simulator (Nexus equation), Civic Governance (Proof of Spectrum), Supply Chain & Energy, and Interactive Dashboard.
 
 ## User Preferences
 - **Communication Style**: Simple, everyday language
