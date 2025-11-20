@@ -231,9 +231,9 @@ def render_civilization_simulator_tab():
     
     col1, col2 = st.columns(2)
     with col1:
-        sim_years = st.slider("Simulation Years", 1, 50, 10)
+        sim_years = st.slider("Simulation Years", 1, 50, 10, key="sim_years")
     with col2:
-        if st.button("Run Simulation"):
+        if st.button("Run Simulation", key="run_sim"):
             with st.spinner("Simulating civilization dynamics..."):
                 simulator.simulate_years(sim_years, verbose=False)
     
@@ -249,6 +249,47 @@ def render_civilization_simulator_tab():
         col3.metric("Stability", f"{stats['final_stability_index']:.2%}")
         col4.metric("Entropy", f"{stats['final_entropy']:.1%}")
         
+        # Debt backing metrics
+        final_state = simulator.current_state
+        debt_backing_ratio = final_state.nxt_debt_backing_ratio()
+        
+        st.markdown("### 💰 Global Debt Backing - Value Increase Mechanism")
+        st.markdown("""
+        As global debt ($300T+) exceeds NXT supply, each NXT token gains intrinsic value.
+        A portion of this value flows to the BHLS floor as additional credits.
+        """)
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Global Debt", f"${final_state.global_debt_usd/1e12:.1f}T USD")
+        
+        # Format debt-per-NXT with appropriate precision
+        if debt_backing_ratio >= 1:
+            debt_per_nxt_display = f"${debt_backing_ratio:,.2f} USD"
+        elif debt_backing_ratio >= 0.001:
+            debt_per_nxt_display = f"${debt_backing_ratio:.4f} USD"
+        else:
+            debt_per_nxt_display = f"${debt_backing_ratio:.2e} USD"
+        
+        col2.metric("Debt per NXT", debt_per_nxt_display)
+        
+        # Format floor credits with proper decimal precision
+        if final_state.debt_backed_floor_credits >= 1:
+            credits_display = f"{final_state.debt_backed_floor_credits:,.2f} NXT"
+        else:
+            credits_display = f"{final_state.debt_backed_floor_credits:.4f} NXT"
+        
+        col3.metric("Daily Floor Credits", credits_display)
+        
+        # Format the info message with proper precision
+        if debt_backing_ratio >= 1:
+            ratio_text = f"${debt_backing_ratio:,.2f}"
+        elif debt_backing_ratio >= 0.001:
+            ratio_text = f"${debt_backing_ratio:.4f}"
+        else:
+            ratio_text = f"${debt_backing_ratio:.2e}"
+        
+        st.info(f"💡 **Economic Formula**: With ${final_state.global_debt_usd/1e12:.1f}T debt backing {final_state.nxt_supply:,.0f} NXT, each token represents {ratio_text} in debt value. This backing flows {final_state.debt_backed_floor_credits:,.2f} NXT daily to the BHLS floor, ensuring guaranteed living standards.")
+        
         # Time series plots
         if len(simulator.history) > 1:
             df = pd.DataFrame([{
@@ -256,9 +297,12 @@ def render_civilization_simulator_tab():
                 'Population': s.population,
                 'Stability': s.stability_index,
                 'Entropy': s.entropy,
-                'Floor Reserve': s.bhls_floor_reserve / 1000  # in thousands
+                'Floor Reserve': s.bhls_floor_reserve / 1000,  # in thousands
+                'Global Debt (T)': s.global_debt_usd / 1e12,  # in trillions
+                'Debt Backing ($)': s.nxt_debt_backing_ratio() / 1000  # in thousands
             } for s in simulator.history])
             
+            # Stability chart
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=df['Day'], y=df['Stability'], 
                                     name='Stability', line=dict(color='#2ECC71')))
@@ -272,6 +316,21 @@ def render_civilization_simulator_tab():
                 template="plotly_dark"
             )
             st.plotly_chart(fig, use_container_width=True)
+            
+            # Debt backing chart
+            fig2 = go.Figure()
+            fig2.add_trace(go.Scatter(x=df['Day'], y=df['Debt Backing ($)'], 
+                                     name='Debt Backing per NXT', 
+                                     line=dict(color='#F39C12', width=2),
+                                     fill='tozeroy'))
+            fig2.update_layout(
+                title="Debt Backing Growth - NXT Value Increase Over Time",
+                xaxis_title="Days",
+                yaxis_title="Debt per NXT ($1000s)",
+                height=300,
+                template="plotly_dark"
+            )
+            st.plotly_chart(fig2, use_container_width=True)
 
 def render_governance_tab():
     """Render civic governance"""

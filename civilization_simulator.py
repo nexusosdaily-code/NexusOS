@@ -24,6 +24,14 @@ class CivilizationState:
     economic_growth_rate: float  # Percentage
     entropy: float  # Waste, friction, resource depletion
     stability_index: float  # Overall civilization health (0-1)
+    global_debt_usd: float = 300_000_000_000_000.0  # Global debt in USD (~$300T)
+    debt_backed_floor_credits: float = 0.0  # Additional floor credits from debt backing
+    
+    def nxt_debt_backing_ratio(self) -> float:
+        """Calculate how much USD debt backs each NXT token"""
+        if self.nxt_supply == 0:
+            return 0.0
+        return self.global_debt_usd / self.nxt_supply
     
     def __repr__(self) -> str:
         return (f"CivState(t={self.time_days}d, pop={self.population:,}, "
@@ -104,6 +112,10 @@ class CivilizationSimulator:
         # Simulation history
         self.history: List[CivilizationState] = []
         
+        # Global debt (starts at ~$300 trillion, grows ~5% annually)
+        self.global_debt_usd = 300_000_000_000_000.0  # $300T
+        self.debt_growth_rate = 0.05  # 5% annual
+        
         # Current state
         self.current_state = CivilizationState(
             time_days=0,
@@ -115,7 +127,9 @@ class CivilizationSimulator:
             distribution_efficiency=0.85,  # 85% efficient distribution
             economic_growth_rate=2.5,  # 2.5% annual growth
             entropy=0.15,  # 15% entropy/waste
-            stability_index=0.90  # 90% stable
+            stability_index=0.90,  # 90% stable
+            global_debt_usd=self.global_debt_usd,
+            debt_backed_floor_credits=0.0
         )
         
         self.history.append(self.current_state)
@@ -147,7 +161,32 @@ class CivilizationSimulator:
         daily_pop_growth = self.population_growth_rate / 365
         new_population = int(prev_state.population * (1 + daily_pop_growth))
         
-        # BHLS floor reserve (funded by messaging + recycling)
+        # Global debt grows daily (5% annually = ~0.0137% daily)
+        daily_debt_growth = self.debt_growth_rate / 365
+        new_global_debt = prev_state.global_debt_usd * (1 + daily_debt_growth)
+        
+        # Debt backing: As global debt exceeds NXT supply, each NXT gains value
+        # This is the per-token intrinsic value from debt backing
+        debt_backing_per_nxt_usd = new_global_debt / new_nxt_supply if new_nxt_supply > 0 else 0
+        
+        # Debt-backed floor credits: Based on per-citizen debt backing allocation
+        # Each citizen receives credits proportional to their share of debt-backed value
+        # Formula: citizens × (debt_per_NXT in USD) × USD→NXT conversion × distribution
+        #
+        # Example: If debt_per_NXT = $300M and we have 10K citizens:
+        # - Total backing for citizens = 10,000 × $300M = $3T
+        # - Convert to NXT: $3T × 0.01 = 30B NXT value
+        # - Daily distribution: 30B × 0.01 = 300M NXT/day
+        
+        usd_to_nxt_conversion = 0.01  # $1 → 0.01 NXT (tighter peg)
+        daily_distribution_rate = 0.01  # 1% of citizen backing flows daily
+        
+        # Calculate floor credits from debt backing PER CITIZEN
+        citizen_debt_value_usd = debt_backing_per_nxt_usd  # Each citizen gets full backing
+        citizen_debt_value_nxt = citizen_debt_value_usd * usd_to_nxt_conversion
+        debt_backed_floor_credits = new_population * citizen_debt_value_nxt * daily_distribution_rate
+        
+        # BHLS floor reserve (funded by messaging + recycling + debt backing)
         daily_messaging_revenue = new_population * 0.5  # Avg 0.5 NXT per person/day
         daily_recycling_revenue = new_population * 0.2  # Avg 0.2 NXT per person/day
         daily_floor_cost = new_population * 3.75  # 1150 NXT/month ≈ 3.75/day
@@ -155,7 +194,8 @@ class CivilizationSimulator:
         new_floor_reserve = (
             prev_state.bhls_floor_reserve +
             daily_messaging_revenue +
-            daily_recycling_revenue -
+            daily_recycling_revenue +
+            debt_backed_floor_credits -
             daily_floor_cost
         )
         
@@ -201,7 +241,9 @@ class CivilizationSimulator:
             distribution_efficiency=new_distribution,
             economic_growth_rate=new_growth_rate,
             entropy=new_entropy,
-            stability_index=new_stability
+            stability_index=new_stability,
+            global_debt_usd=new_global_debt,
+            debt_backed_floor_credits=debt_backed_floor_credits
         )
         
         self.current_state = new_state
