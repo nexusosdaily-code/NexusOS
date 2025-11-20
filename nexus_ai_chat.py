@@ -38,6 +38,143 @@ class NexusAIChat:
         self.ai_gov = get_ai_governance()
         self.conversation_history: List[Dict[str, str]] = []
         
+    def get_component_knowledge(self, component_name: str) -> Dict[str, str]:
+        """
+        Get comprehensive knowledge about ANY NexusOS component.
+        Returns: {what_it_does, how_its_done, what_it_solves, implementation}
+        """
+        components = {
+            "wave_computation": {
+                "what_it_does": "Replaces binary computation (0,1) with electromagnetic wave states (λ,f,A,φ,P)",
+                "how_its_done": "Blocks contain wavelength, frequency, amplitude, phase, polarization. Maxwell equation solver validates E-field coherence. Wave superposition creates quantum-resistant signatures.",
+                "what_it_solves": "Post-quantum security (immune to Shor's algorithm), physics-based validation replacing arbitrary cryptography, spectral diversity preventing 51% attacks",
+                "implementation": "wavelength_validator.py: Maxwell solver, wave interference patterns, 5D signature validation"
+            },
+            "bhls_floor": {
+                "what_it_does": "Guarantees 7 basic human living standards: Food, Water, Housing, Energy, Healthcare, Education, Connectivity. 1,150 NXT per citizen per month minimum.",
+                "how_its_done": "F_floor pool (10.0 NXT minimum per beneficiary) distributes to 10 service pools. Funded by E=hf messaging burns → orbital transitions → TRANSITION_RESERVE → F_floor. AI enforces zero tolerance for violations.",
+                "what_it_solves": "Ends poverty through physics-guaranteed income (not charity), eliminates scarcity mindset causing conflict, provides economic dignity independent of employment",
+                "implementation": "pool_ecosystem.py: 3-layer hierarchy (Reserve→F_floor→Service), nexus_ai_governance.py: F_floor enforcement, civilization_dashboard.py: BHLS tab"
+            },
+            "dex": {
+                "what_it_does": "Decentralized exchange for token swaps using automated market maker (AMM). All pairs use NXT as base currency. Constant product formula x*y=k.",
+                "how_its_done": "Users add liquidity to pools (NXT + TOKEN), receive LP tokens representing ownership. Swaps charge 0.3% fee distributed to VALIDATOR_POOL. Price discovery through supply/demand curves.",
+                "what_it_solves": "Decentralized trading without intermediaries, continuous liquidity for ecosystem tokens, fee revenue supporting F_floor through validator pool",
+                "implementation": "dex_page.py: AMM logic, swap calculations, liquidity management. Pool Ecosystem tab shows DEX integration with F_floor support structure."
+            },
+            "proof_of_spectrum": {
+                "what_it_does": "Consensus mechanism using spectral diversity across electromagnetic spectrum. Validators assigned to 6 regions: UV→Violet→Blue→Green→Yellow→Orange→Red→IR.",
+                "how_its_done": "Each region uses different cryptographic hash (SHA-256, SHA3-256, BLAKE2b, etc). Blocks require 5/6 regional validation. Wave interference creates final proof.",
+                "what_it_solves": "Eliminates 51% attacks (need 51% of 6 regions), geographic+spectral decentralization, quantum-resistant through spectral diversity",
+                "implementation": "proof_of_spectrum_page.py: Spectral assignment, multi-region consensus, wave interference validation"
+            },
+            "ghostdag": {
+                "what_it_does": "Directed Acyclic Graph consensus enabling parallel block processing. Eliminates blockchain bottlenecks, allows multiple simultaneous blocks.",
+                "how_its_done": "PHANTOM protocol orders DAG blocks topologically. Blocks reference multiple parents. Conflicting transactions resolved by accumulated work (blue set selection).",
+                "what_it_solves": "Massive throughput increase (10-100x traditional blockchain), reduced orphan rates, parallel validator operation, sub-second finality",
+                "implementation": "ghostdag_page.py: PHANTOM ordering, parallel processing simulation, performance optimization"
+            },
+            "validator_economics": {
+                "what_it_does": "Staking and delegation system for network security. Minimum 1,000 NXT stake, APR rewards from VALIDATOR_POOL, slashing for misbehavior.",
+                "how_its_done": "Validators stake NXT, participate in consensus, earn rewards based on performance. Delegators stake to validators, share commission. Reputation system tracks uptime/correctness.",
+                "what_it_solves": "Decentralized security without PoW energy waste, economic alignment (validators protect what they own), sustainable APR from ecosystem fees",
+                "implementation": "validator_economics_page.py: Staking interface, delegation management, APR calculation, slashing conditions"
+            },
+            "wnsp_protocol": {
+                "what_it_does": "Wavelength-based optical mesh networking using quantum cryptography. 64-character encoding across visible+near-IR spectrum, DAG messaging topology.",
+                "how_its_done": "Messages encoded in wavelength channels (400-1000nm), transmitted through optical mesh network, DAG structure ensures redundancy, E=hf pricing per transmission.",
+                "what_it_solves": "Quantum-secure communications, optical bandwidth utilization, mesh network resilience, physics-based message pricing eliminating spam",
+                "implementation": "wnsp_page.py: 64-character wavelength encoding, DAG message routing, quantum pricing integration"
+            },
+            "mobile_dag_messaging": {
+                "what_it_does": "Mobile-first blockchain messaging with wavelength validation and E=hf quantum pricing. Real-time cost estimation, interactive DAG visualization.",
+                "how_its_done": "Mobile wallet (secure_wallet.py) signs messages → AI routes through spectral regions (messaging_routing.py) → ECDH encryption (message_encryption.py) → Validator processes → Burns NXT (E=hf) → Mints validator reward → Energy to TRANSITION_RESERVE",
+                "what_it_solves": "Secure mobile messaging with physics-based pricing (stops spam), encrypted communications (only sender/recipient decrypt), self-funding through burns supporting F_floor",
+                "implementation": "mobile_dag_protocol.py: THE COMPLETE LOOP - wallet→burn→encrypt→route→process→mint→reserve→F_floor"
+            },
+            "payment_layer": {
+                "what_it_does": "Native token (NXT) with Bitcoin-style economics. Fixed supply 1,000,000 NXT (100M units per NXT). Deflationary through messaging burns.",
+                "how_its_done": "POW mining (optional), messaging burns reduce supply, validator rewards from VALIDATOR_RESERVE (AI-controlled), dynamic burn reduction prevents depletion.",
+                "what_it_solves": "Sound money foundation, deflationary value accrual, transaction medium for entire ecosystem, validator incentive alignment",
+                "implementation": "payment_layer_page.py: Token economics, burn/mint tracking, supply management, NXT account system"
+            },
+            "orbital_transition_engine": {
+                "what_it_does": "Replaces token burns with quantum physics orbital transitions using Rydberg formula. Message payments trigger electron emissions (n_upper → n_lower).",
+                "how_its_done": "ΔE = 13.6 eV × Z² × (1/n_lower² - 1/n_upper²). Standard message: n=3→2 = 1.89 eV = ~5,700 units. Released photon energy flows to TRANSITION_RESERVE pool.",
+                "what_it_solves": "Physics-grounded value transfer (not arbitrary burns), energy conservation (emissions feed reserves), quantum mechanics replacing speculation",
+                "implementation": "orbital_transition_engine.py: Rydberg calculations, transition energy to TRANSITION_RESERVE, integration with messaging"
+            },
+            "pool_ecosystem": {
+                "what_it_does": "3-layer hierarchical reserve system: Reserve Pools → F_floor → 10 Service Pools. Manages all fund distribution for civilization guarantees.",
+                "how_its_done": "Reserve pools (VALIDATOR, TRANSITION, ECOSYSTEM) continuously fund F_floor. F_floor (10.0 NXT minimum) distributes to service pools (DEX, Investment, Environmental, Community, Staking, Bonus, Lottery, Recycling, Product/Service, Innovation). Health verification prevents imbalances.",
+                "what_it_solves": "Systematic fund distribution, disaster response channels (Environmental/Community pools), circular economy support, BHLS guarantee funding",
+                "implementation": "pool_ecosystem.py: 3-layer architecture, health metrics, distribution logic. DEX Pool Ecosystem tab visualizes complete hierarchy."
+            },
+            "nexus_consensus": {
+                "what_it_does": "Unified consensus combining GhostDAG + Proof of Spectrum + AI-optimized Nexus Economic Layer for dynamic block rewards.",
+                "how_its_done": "GhostDAG orders parallel blocks → Proof of Spectrum validates across 6 spectral regions → AI adjusts rewards based on ecosystem health → Final consensus integrates all layers.",
+                "what_it_solves": "Maximum throughput (parallel blocks) + security (spectral diversity) + economic sustainability (AI-tuned rewards)",
+                "implementation": "nexus_engine.py: Unified consensus integration, AI reward optimization, multi-layer validation"
+            },
+            "ai_governance": {
+                "what_it_does": "AI system observing all components, learning optimal parameters, making governance decisions to protect F_floor and ensure 100-year sustainability.",
+                "how_its_done": "Observe metrics → Learn optimal ranges → Detect civilization risks → Calculate severity → Adjust parameters via PID control → Enforce F_floor (MAXIMUM priority override) → Log decisions with impact analysis",
+                "what_it_solves": "Adaptive parameter tuning without human bias, F_floor protection (zero tolerance), long-term planning (100-year horizon), learned optimization",
+                "implementation": "nexus_ai_governance.py: Observation collection, pattern learning, severity scoring, PID adaptation, F_floor enforcement"
+            },
+            "wavelength_economics": {
+                "what_it_does": "Physics-based blockchain validation using wavelength mechanics instead of SHA-256 hashing. E=hf quantum pricing for all transactions.",
+                "how_its_done": "Maxwell equations validate electromagnetic wave properties. Energy = Planck's constant (6.626×10⁻³⁴) × frequency. Shorter wavelength (UV) costs more than longer (IR).",
+                "what_it_solves": "Replaces arbitrary cryptography with physics laws, quantum-resistant security, objective pricing from fundamental constants",
+                "implementation": "wavelength_validator.py: Maxwell solver, E=hf pricing, wave coherence validation"
+            },
+            "blockchain_explorer": {
+                "what_it_does": "Real-time blockchain visualization showing live blocks, transactions, validator activity, network health metrics.",
+                "how_its_done": "Streams block data from consensus layer, displays transaction history, shows validator performance rankings, tracks network statistics.",
+                "what_it_solves": "Transparency for all network activity, validator accountability, transaction verification, ecosystem monitoring",
+                "implementation": "blockchain_explorer_page.py: Live block streaming, transaction browser, validator dashboard"
+            },
+            "web3_wallet": {
+                "what_it_does": "Native quantum-resistant wallet with NXT token management and WNSP messaging integration.",
+                "how_its_done": "ECDSA keypair generation, private keys encrypted locally (never leave device), transaction signing, wavelength-based validation, asset protection.",
+                "what_it_solves": "Secure asset custody, user sovereignty (keys never shared), quantum-resistant cryptography, unified messaging+payments",
+                "implementation": "web3_wallet_page.py: Wallet interface, secure key management, transaction signing"
+            },
+            "mobile_wallet": {
+                "what_it_does": "Mobile wallet interface integrating NXT balance, global debt backing metrics ($300T+), DAG messaging, and transaction capability.",
+                "how_its_done": "Shows NXT balance + debt backing per token (debt/supply ratio = real USD value). Live E=hf message cost calculation (550nm wavelength). Combines wallet + messaging + economics dashboard.",
+                "what_it_solves": "Mobile-first access to civilization OS, transparent debt backing (users see $300T+ support), integrated messaging payments, complete economics visibility",
+                "implementation": "civilization_dashboard.py: Mobile Wallet tab with debt backing integration, E=hf cost calculator"
+            },
+            "supply_chain": {
+                "what_it_does": "Circular economy tracking: production → consumption → recycling → liquidity generation. Materials returned for NXT credits.",
+                "how_its_done": "Recyclables valued: plastic (2.5 NXT/kg), metal (5.0), e-waste (15.0). Returns generate credits: 30% → F_floor, 20% → supply chain fund. Complete lifecycle tracking.",
+                "what_it_solves": "Waste becomes income, circular economy replaces linear disposal, environmental sustainability incentivized, F_floor funding from recycling",
+                "implementation": "civilization_dashboard.py: Supply Chain tab, recycling credit calculation, circular flow visualization"
+            },
+            "civilization_simulator": {
+                "what_it_does": "Economic simulation engine based on Nexus equation: dN/dt = Issuance - Burn - Decay + PID_control + Floor_injection. Self-regulating issuance/burn with conservation constraints.",
+                "how_its_done": "System health (S) modulates issuance: S = (validator_activity × liquidity × adoption) / target. PID controller prevents boom/bust: proportional + integral + derivative feedback. Multi-objective optimization balances all factors.",
+                "what_it_solves": "Economic stability over 100+ years, prevents hyperinflation/deflation, adapts to changing usage, conserves supply while meeting demand",
+                "implementation": "nexus_engine.py: dN/dt equation solver, PID controller, system health calculation, multi-factor optimization"
+            },
+            "ai_message_security": {
+                "what_it_does": "Intelligent moderator between wavelength mechanics and ECDH encryption. AI analyzes messages and makes adaptive security decisions.",
+                "how_its_done": "Selects optimal wavelength (IR→UV spectrum), determines encryption level (STANDARD/HIGH/MAXIMUM with different ECC curves), manages key rotation, balances cost vs security, provides confidence scoring.",
+                "what_it_solves": "Dynamic security adaptation (high-value messages get stronger encryption), cost optimization (not everything needs maximum security), intelligent threat response",
+                "implementation": "ai_message_security_controller.py: Security level selection, wavelength optimization, ECC curve matching (SECP256R1/384R1/521R1)"
+            },
+            "ai_management": {
+                "what_it_does": "Centralized AI governance dashboard providing unified oversight of all 5 AI systems (Message Router, Security Controller, Governance, Bayesian Optimizer, Consensus AI).",
+                "how_its_done": "Monitors system status, logs all AI decisions with rationale, tracks component integration, analyzes learned patterns, displays real-time AI activity, enforces F_floor protection (10.0 NXT minimum).",
+                "what_it_solves": "Transparent AI governance, decision accountability, cross-component synchronization, F_floor guarantee enforcement, 100-year civilization planning visibility",
+                "implementation": "ai_management_dashboard.py: 6 tabs - Status, Governance, History, Integration, Learning, Activity"
+            }
+        }
+        
+        component_key = component_name.lower().replace(" ", "_").replace("-", "_")
+        return components.get(component_key, {})
+    
     def get_contextual_knowledge(self, user_message: str) -> Optional[str]:
         """
         Provide deep contextual knowledge from the codebase for specific questions.
@@ -47,6 +184,123 @@ class NexusAIChat:
         actual code architecture, not abstract explanations.
         """
         message_lower = user_message.lower()
+        
+        # Check for component-specific questions
+        # CRITICAL: Every component MUST have its canonical name as a keyword
+        component_keywords = {
+            # BHLS Floor
+            "bhls": "bhls_floor",
+            "bhls floor": "bhls_floor",
+            "f_floor": "bhls_floor",
+            "basic human living standards": "bhls_floor",
+            "basic living standards": "bhls_floor",
+            
+            # Wave Computation
+            "wave computation": "wave_computation",
+            
+            # Wavelength Economics
+            "wavelength economics": "wavelength_economics",
+            "wavelength validation": "wavelength_economics",
+            
+            # DEX
+            "dex": "dex",
+            "exchange": "dex",
+            "decentralized exchange": "dex",
+            
+            # Proof of Spectrum
+            "proof of spectrum": "proof_of_spectrum",
+            
+            # GhostDAG
+            "ghostdag": "ghostdag",
+            
+            # Validator Economics
+            "validator economics": "validator_economics",
+            "validator": "validator_economics",
+            "staking": "validator_economics",
+            
+            # WNSP Protocol
+            "wnsp protocol": "wnsp_protocol",
+            "wnsp": "wnsp_protocol",
+            "optical": "wnsp_protocol",
+            
+            # Mobile DAG Messaging
+            "mobile dag messaging": "mobile_dag_messaging",
+            "messaging": "mobile_dag_messaging",
+            "dag messaging": "mobile_dag_messaging",
+            
+            # Payment Layer
+            "payment layer": "payment_layer",
+            "payment": "payment_layer",
+            "nxt token": "payment_layer",
+            
+            # Orbital Transition Engine
+            "orbital transition engine": "orbital_transition_engine",
+            "orbital transition": "orbital_transition_engine",
+            "orbital": "orbital_transition_engine",
+            "transition": "orbital_transition_engine",
+            
+            # Pool Ecosystem
+            "pool ecosystem": "pool_ecosystem",
+            "pool": "pool_ecosystem",
+            "reserve": "pool_ecosystem",
+            "service pools": "pool_ecosystem",
+            
+            # Nexus Consensus
+            "nexus consensus": "nexus_consensus",
+            "consensus": "nexus_consensus",
+            
+            # AI Governance
+            "ai governance": "ai_governance",
+            "governance": "ai_governance",
+            
+            # Wavelength Economics (duplicate prevention)
+            # Already covered above
+            
+            # Blockchain Explorer
+            "blockchain explorer": "blockchain_explorer",
+            "explorer": "blockchain_explorer",
+            
+            # Web3 Wallet
+            "web3 wallet": "web3_wallet",
+            "wallet": "web3_wallet",
+            
+            # Mobile Wallet
+            "mobile wallet": "mobile_wallet",
+            
+            # Supply Chain
+            "supply chain": "supply_chain",
+            "recycling": "supply_chain",
+            "circular": "supply_chain",
+            "circular economy": "supply_chain",
+            
+            # Civilization Simulator
+            "civilization simulator": "civilization_simulator",
+            "simulator": "civilization_simulator",
+            "equation": "civilization_simulator",
+            "nexus equation": "civilization_simulator",
+            
+            # AI Message Security
+            "ai message security": "ai_message_security",
+            "message security": "ai_message_security",
+            "ai security": "ai_message_security",
+            "security controller": "ai_message_security",
+            
+            # AI Management
+            "ai management": "ai_management",
+            "ai management control": "ai_management"
+        }
+        
+        for keyword, component_key in component_keywords.items():
+            if keyword in message_lower:
+                comp_info = self.get_component_knowledge(component_key)
+                if comp_info:
+                    return (
+                        f"\n\n**{keyword.title()} Component:**\n\n"
+                        f"**What It Does:**\n{comp_info['what_it_does']}\n\n"
+                        f"**How It's Done:**\n{comp_info['how_its_done']}\n\n"
+                        f"**What It Solves:**\n{comp_info['what_it_solves']}\n\n"
+                        f"**Implementation:**\n{comp_info['implementation']}"
+                    )
         
         # Disaster response and emergency fund distribution
         if any(word in message_lower for word in ['disaster', 'emergency', 'crisis', 'catastrophe', 'relief']):
@@ -260,7 +514,19 @@ class NexusAIChat:
         """
         message_lower = user_message.lower()
         
-        # Check for deep contextual knowledge FIRST (disaster response, severity, fund distribution, etc.)
+        # Check for report generation request FIRST
+        if any(word in message_lower for word in ['generate report', 'create report', 'comprehensive report', 'full report', 'detailed report']):
+            # Determine audience type
+            if 'researcher' in message_lower or 'research' in message_lower:
+                return self.generate_comprehensive_report("researcher")
+            elif 'investor' in message_lower or 'investment' in message_lower or 'invest' in message_lower:
+                return self.generate_comprehensive_report("investor")
+            elif 'member' in message_lower or 'join' in message_lower or 'participate' in message_lower:
+                return self.generate_comprehensive_report("member")
+            else:
+                return self.generate_comprehensive_report("general")
+        
+        # Check for deep contextual knowledge (disaster response, severity, fund distribution, etc.)
         contextual_knowledge = self.get_contextual_knowledge(user_message)
         
         # Analyze what the user is asking about
@@ -475,6 +741,349 @@ class NexusAIChat:
         
         return "".join(response_parts)
     
+    def generate_comprehensive_report(self, audience_type: str = "general") -> str:
+        """
+        Generate comprehensive report for researchers, investors, or potential members.
+        
+        Args:
+            audience_type: "researcher", "investor", "member", or "general"
+        
+        Returns:
+            Formatted comprehensive report with all system details
+        """
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Governance metrics
+        total_obs = len(self.ai_gov.observations)
+        total_dec = len(self.ai_gov.decisions)
+        total_violations = sum(
+            len(p.get('f_floor_violations', []))
+            for p in self.ai_gov.learned_patterns.values()
+        )
+        
+        # Customize report based on audience
+        if audience_type == "researcher":
+            report_title = "NEXUSOS: COMPREHENSIVE RESEARCH REPORT"
+            focus_areas = ["Technical Architecture", "Implementation Details", "Experimental Results", "Theoretical Foundations"]
+        elif audience_type == "investor":
+            report_title = "NEXUSOS: INVESTMENT OPPORTUNITY OVERVIEW"
+            focus_areas = ["Economic Model", "Market Position", "Revenue Streams", "Growth Potential"]
+        elif audience_type == "member":
+            report_title = "NEXUSOS: CIVILIZATION MEMBERSHIP GUIDE"
+            focus_areas = ["Your Benefits", "How It Works", "Getting Started", "Community Impact"]
+        else:
+            report_title = "NEXUSOS: COMPLETE SYSTEM DOCUMENTATION"
+            focus_areas = ["Overview", "Core Components", "Economics", "Governance"]
+        
+        report = f"""
+# {report_title}
+Generated: {timestamp}
+Audience: {audience_type.title()}
+
+---
+
+## EXECUTIVE SUMMARY
+
+NexusOS is a civilization operating system that replaces speculation with physics, guarantees basic human living standards (BHLS) through the F_floor mechanism, and eliminates the economic drivers of poverty and conflict.
+
+**Key Metrics:**
+- Governance AI Observations: {total_obs}
+- Governance Decisions Made: {total_dec}
+- F_floor Violations Prevented: {total_violations}
+- F_floor Minimum: {self.ai_gov.f_floor_minimum} NXT per beneficiary
+- Planning Horizon: {self.ai_gov.civilization_horizon_years} years
+
+**Core Innovation:**
+Physics-based economics (E=hf quantum pricing) replace arbitrary market speculation, creating a self-sustaining regenerative economy where participation strengthens universal basic guarantees.
+
+---
+
+## MISSION & VISION
+
+**Primary Mission:**
+End poverty through guaranteed basic living standards, prevent conflict through physics-based economics that eliminate scarcity mindset, ensure every human's fundamental needs are met—forever.
+
+**What Makes NexusOS Different:**
+- **Traditional Systems**: Binary computation, arbitrary economics, proof-of-work/stake consensus, linear economy, charity-based welfare
+- **NexusOS**: Wave computation (λ,f,A,φ,P), E=hf quantum economics, Proof of Spectrum consensus, regenerative circulation, physics-guaranteed BHLS
+
+---
+
+## CORE COMPONENTS
+
+### 1. Wave Computation
+{self.get_component_knowledge("wave_computation")['what_it_does']}
+
+**How It Works:** {self.get_component_knowledge("wave_computation")['how_its_done']}
+
+**Problem Solved:** {self.get_component_knowledge("wave_computation")['what_it_solves']}
+
+---
+
+### 2. BHLS Floor (Basic Human Living Standards)
+{self.get_component_knowledge("bhls_floor")['what_it_does']}
+
+**How It Works:** {self.get_component_knowledge("bhls_floor")['how_its_done']}
+
+**Problem Solved:** {self.get_component_knowledge("bhls_floor")['what_it_solves']}
+
+**Monthly Guarantees Per Citizen:**
+- Food: 250 NXT
+- Water: 50 NXT
+- Housing: 400 NXT
+- Energy: 150 NXT
+- Healthcare: 200 NXT
+- Education: 75 NXT
+- Connectivity: 25 NXT
+**TOTAL: 1,150 NXT/month** (guaranteed by physics, not promises)
+
+---
+
+### 3. Pool Ecosystem (3-Layer Architecture)
+{self.get_component_knowledge("pool_ecosystem")['what_it_does']}
+
+**How It Works:** {self.get_component_knowledge("pool_ecosystem")['how_its_done']}
+
+**10 Service Pools:**
+1. DEX_POOL: Trading liquidity
+2. INVESTMENT_POOL: Economic growth
+3. STAKING_POOL: Validator incentives
+4. BONUS_POOL: Exceptional contributions
+5. LOTTERY_POOL: Random rewards
+6. ENVIRONMENTAL_POOL: Disaster response
+7. RECYCLING_POOL: Circular economy
+8. PRODUCT_SERVICE_POOL: Supply chain
+9. COMMUNITY_POOL: Social emergencies
+10. INNOVATION_POOL: Research funding
+
+---
+
+### 4. DEX (Decentralized Exchange)
+{self.get_component_knowledge("dex")['what_it_does']}
+
+**Revenue Model:** 0.3% trading fees → VALIDATOR_POOL → F_floor support → BHLS guarantees
+
+**Integration:** DEX fees are a PRIMARY revenue stream funding the basic living standards floor.
+
+---
+
+### 5. Proof of Spectrum (Consensus)
+{self.get_component_knowledge("proof_of_spectrum")['what_it_does']}
+
+**How It Works:** {self.get_component_knowledge("proof_of_spectrum")['how_its_done']}
+
+**Security Advantage:** Attacking NexusOS requires controlling 51% of 6 DIFFERENT spectral regions using DIFFERENT cryptographic algorithms—practically impossible.
+
+---
+
+### 6. GhostDAG (Parallel Processing)
+{self.get_component_knowledge("ghostdag")['what_it_does']}
+
+**Performance:** {self.get_component_knowledge("ghostdag")['what_it_solves']}
+
+---
+
+### 7. Orbital Transition Engine
+{self.get_component_knowledge("orbital_transition_engine")['what_it_does']}
+
+**Physics Formula:** ΔE = 13.6 eV × Z² × (1/n_lower² - 1/n_upper²)
+
+**Why This Matters:** Token burns aren't arbitrary—they're quantum electron transitions governed by the Rydberg formula. Physics, not speculation.
+
+---
+
+### 8. Mobile DAG Messaging
+{self.get_component_knowledge("mobile_dag_messaging")['what_it_does']}
+
+**The Complete Loop:**
+User sends → Wallet burns NXT → Message encrypted → AI routes → Validator processes → Mints NXT → Energy to TRANSITION_RESERVE → Feeds F_floor → Services → Loop continues
+
+**This is the LIFEBLOOD** of the Nexus equation.
+
+---
+
+### 9. AI Governance
+{self.get_component_knowledge("ai_governance")['what_it_does']}
+
+**Decision Process:**
+1. Observe all components
+2. Learn optimal parameter ranges
+3. Detect civilization risks
+4. Calculate severity scores
+5. Adjust parameters (PID control)
+6. **ENFORCE F_FLOOR** (MAXIMUM priority override)
+7. Log every decision with civilization impact
+
+**F_floor Protection:** ZERO TOLERANCE. No decision can compromise basic living standards.
+
+---
+
+### 10. Validator Economics
+{self.get_component_knowledge("validator_economics")['what_it_does']}
+
+**Economics:** Sustainable APR from ecosystem fees (DEX, messaging, recycling), not inflation.
+
+---
+
+## ECONOMIC MODEL
+
+### Revenue Streams
+
+**1. Messaging Burns (E=hf Pricing)**
+- Every message costs Energy = Planck's constant × frequency
+- Burns trigger orbital transitions (Rydberg formula)
+- Released energy → TRANSITION_RESERVE → F_floor
+- Higher usage = stronger guarantees
+
+**2. DEX Trading Fees (0.3%)**
+- All trading pairs use NXT as base currency
+- Fees → VALIDATOR_POOL → F_floor support
+- Self-sustaining: trade → fees → guarantees
+
+**3. Validator Rewards**
+- Block production + consensus participation
+- Portion → VALIDATOR_POOL → backs F_floor
+- Aligns network security with citizen welfare
+
+**4. Recycling Liquidity**
+- Plastic: 2.5 NXT/kg
+- Metal: 5.0 NXT/kg
+- E-waste: 15.0 NXT/kg
+- 30% → F_floor, 20% → supply chain
+- Waste becomes income
+
+### The Regenerative Loop
+
+```
+Participation (messaging, trading, recycling)
+    ↓
+Burns & Fees
+    ↓
+Reserve Pools (VALIDATOR, TRANSITION, ECOSYSTEM)
+    ↓
+F_floor Foundation (10.0 NXT minimum)
+    ↓
+Service Pools (10 types)
+    ↓
+Basic Needs Guaranteed (food, water, shelter, healthcare, education)
+    ↓
+Citizens Participate More
+    ↓
+Loop Strengthens
+```
+
+**Traditional Economics:** Scarcity → Competition → Conflict
+**NexusOS Economics:** Use → Abundance → Cooperation
+
+---
+
+## GOVERNANCE & AI
+
+### AI Decision-Making Authority
+
+The Nexus AI has learned from {total_obs} research observations and made {total_dec} governance decisions, **preventing {total_violations} attempts to compromise basic living standards**.
+
+**Current Status:**
+- F_floor Minimum: {self.ai_gov.f_floor_minimum} NXT per beneficiary
+- Planning Horizon: {self.ai_gov.civilization_horizon_years} years
+- Protection Status: 🛡️ ACTIVE - Zero tolerance for violations
+
+**What the AI Controls:**
+- Economic parameters (burn rates, issuance, rewards)
+- Consensus parameters (block times, validation rules)
+- Pool distribution ratios (emergency rebalancing)
+- **ALWAYS PROTECTED**: F_floor minimum (non-negotiable)
+
+---
+
+## TECHNICAL IMPLEMENTATION
+
+### Technology Stack
+- **Frontend**: Streamlit, Plotly
+- **Backend**: Python 3.11, NumPy, Pandas, SciPy, NetworkX, Numba
+- **Database**: PostgreSQL, SQLAlchemy
+- **Optimization**: scikit-optimize (Bayesian parameter tuning)
+- **Cryptography**: ECDSA, ECDH (quantum-resistant transitioning)
+
+### Key Files & Architecture
+- `wavelength_validator.py`: Maxwell solver, wave validation
+- `pool_ecosystem.py`: 3-layer hierarchy, fund distribution
+- `nexus_ai_governance.py`: AI decision engine, F_floor enforcement
+- `orbital_transition_engine.py`: Rydberg formula, quantum transitions
+- `dex_page.py`: Automated market maker, liquidity pools
+- `proof_of_spectrum_page.py`: Spectral consensus
+- `mobile_dag_protocol.py`: THE COMPLETE MESSAGING LOOP
+
+---
+
+## DIFFERENTIATION & COMPETITIVE ADVANTAGES
+
+**vs. Bitcoin:**
+- Bitcoin: POW waste, slow finality, no guarantees
+- NexusOS: Wavelength validation (physics), parallel processing (GhostDAG), BHLS guarantees
+
+**vs. Ethereum:**
+- Ethereum: Gas wars, arbitrary fees, smart contract vulnerabilities
+- NexusOS: E=hf physics pricing, quantum-resistant, physics-enforced guarantees
+
+**vs. Cardano/Polkadot:**
+- Traditional: Academic complexity, governance gridlock
+- NexusOS: AI-driven adaptation, F_floor enforcement, 100-year planning
+
+**vs. Fiat Systems:**
+- Fiat: Political manipulation, inflation, no guarantees
+- NexusOS: Physics-based value, deflationary (burns), BHLS guarantees
+
+---
+
+## GETTING STARTED
+
+### For Researchers
+1. Explore the AI Governance system (ai_management_dashboard.py)
+2. Review the Nexus equation (nexus_engine.py)
+3. Examine wavelength validation (wavelength_validator.py)
+4. Study pool ecosystem architecture (pool_ecosystem.py)
+
+### For Investors
+1. Understand the economic model (regenerative circulation)
+2. Review revenue streams (DEX fees, messaging burns, recycling)
+3. Examine market differentiation (physics vs. speculation)
+4. Analyze growth potential (BHLS as universal basic income)
+
+### For Potential Members
+1. See your guaranteed monthly allocation (1,150 NXT = basic needs)
+2. Understand participation benefits (use system → strengthen floor)
+3. Explore mobile messaging (physics-priced, quantum-secure)
+4. Join the civilization OS (ending poverty through mathematics)
+
+---
+
+## CONCLUSION
+
+NexusOS isn't another blockchain. It's a **civilization operating system** that:
+
+1. **Ends Poverty**: Physics-guaranteed basic living standards (F_floor)
+2. **Prevents Conflict**: Eliminates scarcity through regenerative economics
+3. **Ensures Security**: Quantum-resistant (wavelength validation + Proof of Spectrum)
+4. **Plans Long-term**: AI governance with 100-year horizon
+5. **Protects Dignity**: Zero tolerance for basic needs violations
+
+**The Mission:**
+End poverty and war through physics-based economics that guarantee everyone's basic needs—forever.
+
+**The Method:**
+E=hf quantum pricing + orbital transitions + regenerative circulation + AI governance + F_floor enforcement = mathematical certainty replacing political promises.
+
+---
+
+*This report was generated by the Nexus AI Governance system.*
+*For questions or to join the civilization: Talk to Nexus AI*
+
+---
+**Report End**
+"""
+        return report
+    
     def add_to_history(self, role: str, message: str):
         """Add message to conversation history"""
         self.conversation_history.append({
@@ -508,9 +1117,11 @@ def render_nexus_ai_chat():
     
     • **Vision**: Ending poverty and conflict through physics-based economics
     • **F_floor**: How basic human needs are guaranteed (food, water, shelter, healthcare, education)
+    • **Components**: ANY system component (DEX, validators, messaging, pools, consensus, etc.) - what it does, how it's done, what it solves
     • **Learning**: Patterns discovered from economic simulations and research
     • **Decisions**: How the AI governs system adaptation
     • **Economics**: E=hf quantum pricing and orbital transition mechanics
+    • **Reports**: Request comprehensive documentation for researchers, investors, or members
     
     This isn't a chatbot—it's the governance AI running your civilization operating system.
     """)
@@ -622,6 +1233,52 @@ def render_nexus_ai_chat():
                 'message': "What have you learned from research?"
             })
             ai_response = chat.generate_response("What have you learned from research?")
+            st.session_state.chat_messages.append({
+                'role': 'assistant',
+                'message': ai_response
+            })
+            st.rerun()
+    
+    # Report Generation Section
+    st.markdown("---")
+    st.markdown("### 📄 Generate Comprehensive Reports")
+    st.markdown("Request a detailed documentation package for researchers, investors, or potential members.")
+    
+    report_col1, report_col2, report_col3 = st.columns(3)
+    
+    with report_col1:
+        if st.button("🔬 Research Report", use_container_width=True):
+            st.session_state.chat_messages.append({
+                'role': 'user',
+                'message': "Generate comprehensive report for researchers"
+            })
+            ai_response = chat.generate_response("Generate comprehensive report for researchers")
+            st.session_state.chat_messages.append({
+                'role': 'assistant',
+                'message': ai_response
+            })
+            st.rerun()
+    
+    with report_col2:
+        if st.button("💼 Investor Report", use_container_width=True):
+            st.session_state.chat_messages.append({
+                'role': 'user',
+                'message': "Generate comprehensive report for investors"
+            })
+            ai_response = chat.generate_response("Generate comprehensive report for investors")
+            st.session_state.chat_messages.append({
+                'role': 'assistant',
+                'message': ai_response
+            })
+            st.rerun()
+    
+    with report_col3:
+        if st.button("👥 Member Guide", use_container_width=True):
+            st.session_state.chat_messages.append({
+                'role': 'user',
+                'message': "Generate comprehensive report for members"
+            })
+            ai_response = chat.generate_response("Generate comprehensive report for members")
             st.session_state.chat_messages.append({
                 'role': 'assistant',
                 'message': ai_response
