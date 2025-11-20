@@ -759,15 +759,22 @@ def main():
             box-shadow: 0 4px 12px rgba(138, 43, 226, 0.3);
         }
         </style>
-        
-        <div class="nexus-header">
-            <img src="app/assets/nexus_logo.jpg" class="nexus-logo" alt="Nexus Logo" />
-            <div>
-                <h1 class="nexus-title">NexusOS Mobile-First Blockchain</h1>
-                <p class="nexus-subtitle">Wavelength mechanics Operating System guided by AI create new opportunities.</p>
-            </div>
-        </div>
     """, unsafe_allow_html=True)
+    
+    # Header with logo using Streamlit columns
+    st.markdown('<div class="nexus-header">', unsafe_allow_html=True)
+    col_logo, col_text = st.columns([1, 9])
+    with col_logo:
+        try:
+            st.image("assets/nexus_logo.jpg", width=60)
+        except:
+            st.markdown("🌐")
+    with col_text:
+        st.markdown("""
+            <h1 class="nexus-title">NexusOS Mobile-First Blockchain</h1>
+            <p class="nexus-subtitle">Wavelength mechanics Operating System guided by AI create new opportunities.</p>
+        """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
     
     st.divider()
     
