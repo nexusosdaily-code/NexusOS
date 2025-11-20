@@ -415,6 +415,12 @@ def render_mobile_wallet_tab():
     if 'wallet_balance' not in st.session_state:
         st.session_state.wallet_balance = 1000.0
     
+    # Calculate total backed value
+    total_value = st.session_state.wallet_balance * debt_backing_ratio
+    
+    # PROMINENT VALUE COMPARISON - Show exact backed value
+    st.success(f"💎 **Your {st.session_state.wallet_balance:,.2f} NXT = ${total_value:,.2f} USD in backed value**")
+    
     # Wallet Overview
     st.markdown("### 💰 Wallet Overview")
     
@@ -434,8 +440,7 @@ def render_mobile_wallet_tab():
         st.metric("Debt Backing per NXT", backing_display)
     
     with col3:
-        # Total value from debt backing
-        total_value = st.session_state.wallet_balance * debt_backing_ratio
+        # Total value from debt backing (already calculated above)
         st.metric("Your Backed Value", f"${total_value:,.2f} USD")
     
     with col4:
