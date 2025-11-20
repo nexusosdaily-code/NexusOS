@@ -760,30 +760,47 @@ def main():
             backdrop-filter: blur(5px);
         }
         
-        /* Make selectbox larger and more readable with wavelength animation */
-        [data-testid="stSelectbox"] select {
-            font-size: 18px !important;
-            font-weight: 600 !important;
-            padding: 12px !important;
-            min-height: 48px !important;
-            background: rgba(0, 0, 0, 0.6) !important;
-            border: 2px solid rgba(255, 255, 255, 0.3) !important;
-            border-radius: 8px !important;
+        /* Animated wavelength border for selectboxes */
+        @keyframes wavelength-border {
+            0% {
+                border-color: #ff0000;
+                box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+            }
+            14% {
+                border-color: #ff7f00;
+                box-shadow: 0 0 15px rgba(255, 127, 0, 0.6);
+            }
+            28% {
+                border-color: #ffff00;
+                box-shadow: 0 0 15px rgba(255, 255, 0, 0.6);
+            }
+            42% {
+                border-color: #00ff00;
+                box-shadow: 0 0 15px rgba(0, 255, 0, 0.6);
+            }
+            57% {
+                border-color: #00ffff;
+                box-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+            }
+            71% {
+                border-color: #0000ff;
+                box-shadow: 0 0 15px rgba(0, 0, 255, 0.6);
+            }
+            85% {
+                border-color: #8b00ff;
+                box-shadow: 0 0 15px rgba(139, 0, 255, 0.6);
+            }
+            100% {
+                border-color: #ff0000;
+                box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+            }
         }
         
-        /* Animated wavelength text for select options */
-        [data-testid="stSelectbox"] label,
-        [data-testid="stSelectbox"] select,
-        [data-testid="stSelectbox"] option {
+        /* Wavelength animated label */
+        [data-testid="stSelectbox"] label {
             background: linear-gradient(90deg, 
-                #ff0000,  /* Red */
-                #ff7f00,  /* Orange */
-                #ffff00,  /* Yellow */
-                #00ff00,  /* Green */
-                #00ffff,  /* Cyan */
-                #0000ff,  /* Blue */
-                #8b00ff,  /* Violet */
-                #ff0000   /* Back to Red */
+                #ff0000, #ff7f00, #ffff00, #00ff00, 
+                #00ffff, #0000ff, #8b00ff, #ff0000
             ) !important;
             background-size: 200% 200% !important;
             -webkit-background-clip: text !important;
@@ -791,21 +808,37 @@ def main():
             background-clip: text !important;
             animation: wavelength-flow 8s ease infinite !important;
             font-weight: 700 !important;
+            font-size: 18px !important;
         }
         
-        /* Dropdown options styling */
-        select option {
+        /* Selectbox with animated wavelength border */
+        [data-testid="stSelectbox"] select {
+            font-size: 20px !important;
+            font-weight: 700 !important;
+            padding: 15px !important;
+            min-height: 52px !important;
             background: #1a1a1a !important;
             color: #ffffff !important;
-            padding: 10px !important;
-            font-size: 16px !important;
+            border: 3px solid #ff0000 !important;
+            border-radius: 10px !important;
+            animation: wavelength-border 8s ease infinite !important;
+        }
+        
+        /* Dropdown options - solid white text, dark background */
+        [data-testid="stSelectbox"] select option {
+            background: #1a1a1a !important;
+            color: #ffffff !important;
+            padding: 12px !important;
+            font-size: 18px !important;
+            font-weight: 600 !important;
         }
         
         /* Highlighted dropdown option */
-        select option:hover,
-        select option:focus,
-        select option:checked {
-            background: #2d2d2d !important;
+        [data-testid="stSelectbox"] select option:hover,
+        [data-testid="stSelectbox"] select option:focus,
+        [data-testid="stSelectbox"] select option:checked {
+            background: #3a3a3a !important;
+            color: #ffffff !important;
             font-weight: 700 !important;
         }
         
