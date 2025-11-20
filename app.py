@@ -713,17 +713,14 @@ def main():
             margin: 0;
         }
         
-        /* Clean header design */
+        /* Clean header design - transparent for better appearance */
         .nexus-header {
             display: flex;
             align-items: center;
             gap: 20px;
             padding: 20px;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
+            background: transparent;
             margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         .nexus-logo {
