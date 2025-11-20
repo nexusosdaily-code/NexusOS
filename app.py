@@ -4,13 +4,15 @@ Unified Dashboard Launcher
 =========================================
 
 Central hub providing access to all NexusOS modules:
-- Civilization Dashboard (7 tabs with Mobile Wallet)
-- Web3 Wallet Dashboard
-- WNSP Protocol v2.0
-- Wavelength Economics
-- Nexus Consensus
-- Mobile Connectivity
-- Long-term Supply Forecasting
+1. Civilization Dashboard (7 tabs with Mobile Wallet)
+2. Web3 Wallet Dashboard
+3. WNSP Protocol v2.0
+4. Mobile DAG Messaging (Blockchain Messaging)
+5. Blockchain Explorer (Live Block/Transaction Visualization)
+6. Wavelength Economics
+7. Nexus Consensus
+8. Mobile Connectivity
+9. Long-term Supply Forecasting
 """
 
 import streamlit as st
@@ -23,6 +25,8 @@ from wavelength_economics_dashboard import render_wavelength_economics_dashboard
 from nexus_consensus_dashboard import render_nexus_consensus_dashboard
 from mobile_connectivity_dashboard import show_mobile_connectivity_dashboard
 from longterm_supply_dashboard import render_longterm_supply_dashboard
+from mobile_dag_messaging import render_mobile_dag_messaging
+from blockchain_viz import render_blockchain_dashboard
 
 
 def main():
@@ -50,6 +54,8 @@ def main():
                 "🌍 Civilization Dashboard",
                 "💎 Web3 Wallet",
                 "📡 WNSP Protocol v2.0",
+                "💬 Mobile DAG Messaging",
+                "🔗 Blockchain Explorer",
                 "💰 Wavelength Economics",
                 "⚙️ Nexus Consensus",
                 "📱 Mobile Connectivity",
@@ -76,6 +82,16 @@ def main():
                 "icon": "📡",
                 "desc": "Wavelength-Native Signaling Protocol with quantum cryptography",
                 "features": ["64 Characters", "DAG Messaging", "E=hf Pricing", "Network Visualization"]
+            },
+            "💬 Mobile DAG Messaging": {
+                "icon": "💬",
+                "desc": "Mobile blockchain messaging with E=hf quantum pricing",
+                "features": ["Send Messages", "DAG Network View", "Message Inbox", "Cost Analytics"]
+            },
+            "🔗 Blockchain Explorer": {
+                "icon": "🔗",
+                "desc": "Real-time blockchain visualization and transaction explorer",
+                "features": ["Live Blocks", "Transaction History", "Network Stats", "Validator Activity"]
             },
             "💰 Wavelength Economics": {
                 "icon": "💰",
@@ -123,6 +139,14 @@ def main():
     elif module == "📡 WNSP Protocol v2.0":
         # WNSP protocol dashboard
         render_wnsp_v2_dashboard()
+    
+    elif module == "💬 Mobile DAG Messaging":
+        # Mobile blockchain messaging
+        render_mobile_dag_messaging()
+    
+    elif module == "🔗 Blockchain Explorer":
+        # Blockchain visualization
+        render_blockchain_dashboard()
     
     elif module == "💰 Wavelength Economics":
         # Economics dashboard

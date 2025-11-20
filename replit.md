@@ -11,16 +11,18 @@ NexusOS is a revolutionary civilization architecture built on physics instead of
 ## System Architecture
 
 ### UI/UX Decisions
-**Unified Dashboard Launcher** (`app.py`): Central hub providing access to all NexusOS modules via sidebar navigation. Users select from 7 different dashboard modules:
+**Unified Dashboard Launcher** (`app.py`): Central hub providing access to all NexusOS modules via sidebar navigation. Users select from 9 comprehensive dashboard modules:
 1. **Civilization Dashboard** (7 tabs): Wave Computation, BHLS Floor, Circular Economy, Civilization Simulator, Governance, Supply Chain, **Mobile Wallet**
 2. **Web3 Wallet**: Native quantum-resistant wallet with NXT tokens and WNSP messaging
 3. **WNSP Protocol v2.0**: 64-character encoding with DAG messaging visualization
-4. **Wavelength Economics**: Physics-based validation and E=hf economics
-5. **Nexus Consensus**: GhostDAG + Proof of Spectrum unified engine
-6. **Mobile Connectivity**: Real-time mobile device network monitoring
-7. **Long-term Supply**: 50-100 year forecasting and predictive analytics
+4. **Mobile DAG Messaging**: Mobile blockchain messaging with E=hf quantum pricing, inbox, and cost analytics
+5. **Blockchain Explorer**: Real-time blockchain visualization, live blocks, transactions, and validator activity
+6. **Wavelength Economics**: Physics-based validation and E=hf economics
+7. **Nexus Consensus**: GhostDAG + Proof of Spectrum unified engine
+8. **Mobile Connectivity**: Real-time mobile device network monitoring
+9. **Long-term Supply**: 50-100 year forecasting and predictive analytics
 
-The unified launcher ensures all wallets and specialized dashboards are accessible from one central interface. The Mobile Wallet tab (in Civilization Dashboard) integrates global debt backing metrics with messaging/transaction functionality, showing users how $300T+ global debt backs their NXT tokens and supports the BHLS floor.
+The unified launcher ensures all wallets, blockchain tools, and specialized dashboards are accessible from one central interface. The Mobile Wallet tab (in Civilization Dashboard) integrates global debt backing metrics with messaging/transaction functionality, showing users how $300T+ global debt backs their NXT tokens and supports the BHLS floor.
 
 ### Technical Implementations & Feature Specifications
 1.  **Economic Simulation Engine**: A comprehensive simulator based on the Nexus equation with self-regulating issuance/burn, PID control, multi-factor ecosystem health, and conservation constraints.
