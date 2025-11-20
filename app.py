@@ -811,22 +811,55 @@ def main():
             font-size: 18px !important;
         }
         
-        /* Selectbox with animated wavelength border */
-        [data-testid="stSelectbox"] select {
+        /* Remove ALL white backgrounds from selectbox container */
+        [data-testid="stSelectbox"],
+        [data-testid="stSelectbox"] > div,
+        [data-testid="stSelectbox"] > div > div,
+        [data-testid="stSelectbox"] div[data-baseweb="select"],
+        [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+        
+        /* Selectbox with animated wavelength border - force dark background and white text */
+        [data-testid="stSelectbox"] select,
+        [data-testid="stSelectbox"] div[role="button"],
+        [data-testid="stSelectbox"] div[data-baseweb="select"] > div > div {
             font-size: 20px !important;
             font-weight: 700 !important;
             padding: 15px !important;
             min-height: 52px !important;
             background: #1a1a1a !important;
+            background-color: #1a1a1a !important;
             color: #ffffff !important;
             border: 3px solid #ff0000 !important;
             border-radius: 10px !important;
             animation: wavelength-border 8s ease infinite !important;
         }
         
-        /* Dropdown options - solid white text, dark background */
-        [data-testid="stSelectbox"] select option {
+        /* Force white text on ALL selectbox text elements */
+        [data-testid="stSelectbox"] select,
+        [data-testid="stSelectbox"] div[role="button"],
+        [data-testid="stSelectbox"] span,
+        [data-testid="stSelectbox"] div[data-baseweb="select"] span {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+            text-shadow: none !important;
+        }
+        
+        /* Dropdown menu styling */
+        ul[role="listbox"],
+        [data-baseweb="popover"] {
             background: #1a1a1a !important;
+            border: 2px solid #ffffff !important;
+        }
+        
+        /* Dropdown options - solid white text, dark background */
+        [data-testid="stSelectbox"] select option,
+        li[role="option"],
+        [data-baseweb="menu"] li {
+            background: #1a1a1a !important;
+            background-color: #1a1a1a !important;
             color: #ffffff !important;
             padding: 12px !important;
             font-size: 18px !important;
@@ -836,8 +869,11 @@ def main():
         /* Highlighted dropdown option */
         [data-testid="stSelectbox"] select option:hover,
         [data-testid="stSelectbox"] select option:focus,
-        [data-testid="stSelectbox"] select option:checked {
+        [data-testid="stSelectbox"] select option:checked,
+        li[role="option"]:hover,
+        li[role="option"][aria-selected="true"] {
             background: #3a3a3a !important;
+            background-color: #3a3a3a !important;
             color: #ffffff !important;
             font-weight: 700 !important;
         }
