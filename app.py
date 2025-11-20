@@ -650,21 +650,12 @@ def main():
     init_db()
     AuthManager.initialize()
     
-    # Spectral gradient theme background and elegant styling (always visible)
+    # Mobile-optimized grey background with elegant styling
     st.markdown("""
         <style>
-        /* Spectral gradient background - Economic Loop Equation theme */
+        /* Grey background for mobile app */
         .main {
-            background: linear-gradient(135deg, 
-                #1a0033 0%,    /* Deep violet */
-                #0f0040 15%,   /* Ultraviolet */
-                #00004d 30%,   /* Deep blue */
-                #001a4d 45%,   /* Blue */
-                #003d33 60%,   /* Cyan-green */
-                #1a2600 75%,   /* Green */
-                #331a00 90%,   /* Orange */
-                #1a0000 100%   /* Deep red */
-            );
+            background: #2d2d2d;
             background-attachment: fixed;
         }
         
