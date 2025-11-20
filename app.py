@@ -43,6 +43,7 @@ from validator_economics_page import render_validator_economics_page
 from ai_management_dashboard import render_ai_management_dashboard
 from nexus_ai_chat import render_nexus_ai_chat
 from offline_mesh_dashboard import render_offline_mesh_dashboard
+from wavelength_code_interface import render_wavelength_code_interface
 
 
 def main():
@@ -83,7 +84,8 @@ def main():
                 "📊 Long-term Supply",
                 "🤖 AI Management Control",
                 "💬 Talk to Nexus AI",
-                "🌐 Offline Mesh Network"
+                "🌐 Offline Mesh Network",
+                "🌊 WaveLang Studio"
             ],
             key="module_selector"
         )
