@@ -581,7 +581,7 @@ def render_transport_settings_tab(transport: OfflineMeshTransport):
     
     with col2:
         st.markdown(f"**Spectral Region**: {transport.spectral_region.name}")
-        st.markdown(f"**Wavelength**: {transport.spectral_region.value:.0f} nm")
+        st.markdown(f"**Wavelength**: {transport.spectral_region.wavelength_min}-{transport.spectral_region.wavelength_max} nm")
     
     st.divider()
     
