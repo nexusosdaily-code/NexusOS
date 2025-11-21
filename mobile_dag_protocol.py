@@ -32,6 +32,10 @@ from enum import Enum
 import time
 import secrets
 
+# Economic loop integration
+from economic_loop_controller import get_flow_controller
+from native_token import NativeTokenSystem
+
 # Import all messaging components
 try:
     from messaging_routing import get_ai_message_router, Message, MessagePriority, MessageStatus
@@ -352,8 +356,44 @@ class MobileDAGProtocol:
         # This happens asynchronously in the actual system
         # Here we simulate completion
         
-        # Process burn - feeds TRANSITION_RESERVE
-        wallet.balance_nxt -= burn_cost
+        # 🔥 ECONOMIC LOOP INTEGRATION: Process burn through token system first
+        # STEP 1: Ensure sender has on-chain account in token system
+        try:
+            if hasattr(self, '_token_system') and self._token_system is not None:
+                token_system = self._token_system
+                
+                # Create on-chain account if doesn't exist (sync wallet to blockchain)
+                onchain_account = token_system.get_account(wallet.wallet_id)
+                if onchain_account is None:
+                    token_system.create_account(wallet.wallet_id, initial_balance=wallet.balance_nxt)
+                    onchain_account = token_system.get_account(wallet.wallet_id)
+                
+                # STEP 2: Process burn through Economic Loop (atomic transfer)
+                flow_controller = get_flow_controller(token_system)
+                success, loop_msg, event = flow_controller.process_message_burn(
+                    sender_address=wallet.wallet_id,
+                    message_id=message_id,
+                    burn_amount_nxt=burn_cost,
+                    wavelength_nm=optimal_wavelength,
+                    message_type=message_type
+                )
+                
+                if success and event:
+                    # Burn successfully processed - NXT moved to TRANSITION_RESERVE
+                    # Sync wallet balance with on-chain account
+                    wallet.balance_nxt = onchain_account.balance
+                else:
+                    # Economic loop failed - fallback to simple wallet debit
+                    wallet.balance_nxt -= burn_cost
+            else:
+                # No token system available - simple wallet debit
+                wallet.balance_nxt -= burn_cost
+        except Exception as e:
+            # Economic loop integration failed, fallback to wallet debit
+            print(f"⚠️ Economic loop warning: {e}")
+            wallet.balance_nxt -= burn_cost
+        
+        # Record transaction
         wallet.transactions.extend([transaction])
         
         # Update statistics

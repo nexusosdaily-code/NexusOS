@@ -139,7 +139,7 @@ class TransitionReserveLedger:
         
         return entry
     
-    def get_reserve_balance(self) -> Dict[str, float]:
+    def get_reserve_balance(self) -> Dict[str, Any]:
         """Get current reserve pool balance"""
         return {
             'total_energy_joules': self.total_energy_joules,
@@ -226,18 +226,34 @@ class MessagingFlowController:
         # Map message type to transition type
         transition_type = self._map_message_to_transition(message_type)
         
-        # Execute orbital transition
-        transition, nxt_units = orbital_engine.execute_transition(
-            transition_type=transition_type,
-            custom_amount_nxt=burn_amount_nxt
-        )
-        
-        # Transfer NXT from sender to TRANSITION_RESERVE
-        # (In production, this transfer happens in messaging system)
-        # Here we just verify the reserve account exists
+        # Get reserve account and balance
         reserve_account = self.token_system.get_account("TRANSITION_RESERVE")
         if reserve_account is None:
             self.token_system.create_account("TRANSITION_RESERVE", initial_balance=0)
+            reserve_account = self.token_system.get_account("TRANSITION_RESERVE")
+        
+        reserve_balance_before = int(reserve_account.balance) if reserve_account else 0
+        
+        # Execute orbital transition
+        transition, nxt_units = orbital_engine.execute_transition(
+            transition_type=transition_type,
+            user_address=sender_address,
+            reserve_balance_before=reserve_balance_before
+        )
+        
+        # 💰 ATOMIC TRANSFER: Move NXT from sender to TRANSITION_RESERVE
+        sender_account = self.token_system.get_account(sender_address)
+        if sender_account is None:
+            return (False, f"Sender account {sender_address} not found", None)
+        
+        if sender_account.balance < burn_amount_nxt:
+            return (False, f"Insufficient balance: {sender_account.balance:.6f} < {burn_amount_nxt:.6f}", None)
+        
+        # Debit sender
+        sender_account.balance -= burn_amount_nxt
+        
+        # Credit TRANSITION_RESERVE
+        reserve_account.balance += burn_amount_nxt
         
         # Record in ledger
         entry = self.ledger.add_entry(
@@ -335,6 +351,8 @@ class ReserveLiquidityAllocator:
     
     Allocation weights are derived from supply chain demand to ensure
     liquidity mirrors real economic throughput.
+    
+    🔗 PRODUCTION INTEGRATION: Injects reserve NXT into real DEX pools
     """
     
     def __init__(
@@ -346,7 +364,7 @@ class ReserveLiquidityAllocator:
         """Initialize reserve liquidity allocator"""
         self.token_system = token_system
         self.ledger = ledger
-        self.dex_adapter = dex_adapter
+        self.dex_adapter = dex_adapter or NativeTokenAdapter(token_system)
         self.supply_chain_weights = SupplyChainDemand()
         self.allocation_history: List[Dict] = []
         
@@ -391,11 +409,24 @@ class ReserveLiquidityAllocator:
             allocation_nxt = reserve_amount_nxt * weight
             allocations[pool_name] = allocation_nxt
         
-        # Transfer from TRANSITION_RESERVE to pool accounts
-        # (In production, would interact with actual DEX)
+        # 🔗 PRODUCTION: Transfer from TRANSITION_RESERVE to pool accounts
         reserve_account = self.token_system.get_account("TRANSITION_RESERVE")
         if reserve_account is None:
             return (False, "TRANSITION_RESERVE account not found", {})
+        
+        # Verify sufficient reserve balance
+        if reserve_account.balance < reserve_amount_nxt:
+            return (False, f"Insufficient reserve balance: {reserve_account.balance:.2f} NXT", {})
+        
+        # Execute transfers to each pool via DEX adapter
+        for pool_name, allocation_nxt in allocations.items():
+            # Ensure pool account exists
+            pool_account = self.token_system.get_account(pool_name)
+            if pool_account is None:
+                self.token_system.create_account(pool_name, initial_balance=0)
+            
+            # Transfer NXT from reserve to pool
+            self.dex_adapter.transfer("TRANSITION_RESERVE", pool_name, allocation_nxt)
         
         # Record allocation
         allocation_record = {
@@ -709,18 +740,22 @@ class CrisisDrainController:
     Monitors system health and drains reserves back to BHLS F_floor during crises.
     
     Ensures civilization survival by redirecting economic energy to basic needs.
+    
+    🔗 PRODUCTION INTEGRATION: Monitors bhls_floor_system and executes real transfers
     """
     
     def __init__(
         self,
         token_system: NativeTokenSystem,
-        ledger: TransitionReserveLedger
+        ledger: TransitionReserveLedger,
+        bhls_system=None
     ):
         """Initialize crisis drain controller"""
         self.token_system = token_system
         self.ledger = ledger
+        self.bhls_system = bhls_system  # Will integrate with bhls_floor_system
         self.crisis_threshold_debt_coverage = 0.5  # 50% coverage minimum
-        self.f_floor_minimum = 15000.0  # BHLS minimum per person
+        self.f_floor_minimum = 500000.0  # BHLS minimum reserve NXT
         self.drain_events: List[Dict] = []
         
     def check_crisis_conditions(self) -> Tuple[bool, List[str]]:
@@ -738,11 +773,17 @@ class CrisisDrainController:
         if reserve_balance['total_energy_nxt'] < 100000:  # Arbitrary threshold
             reasons.append("Reserve pool critically low")
         
-        # Check F_floor stress (simplified)
-        # In production, would integrate with bhls_floor_system
-        f_floor_account = self.token_system.get_account("F_FLOOR_RESERVE")
-        if f_floor_account and f_floor_account.balance < 500000:  # Units
-            reasons.append("F_floor reserve below minimum")
+        # 🔗 PRODUCTION: Check F_floor stress via bhls_floor_system
+        if self.bhls_system is not None:
+            # Integrated with real BHLS system
+            if hasattr(self.bhls_system, 'floor_reserve_pool'):
+                if self.bhls_system.floor_reserve_pool < self.f_floor_minimum:
+                    reasons.append(f"F_floor reserve critically low: {self.bhls_system.floor_reserve_pool:.2f} NXT")
+        else:
+            # Fallback to account check
+            f_floor_account = self.token_system.get_account("F_FLOOR_RESERVE")
+            if f_floor_account and f_floor_account.balance < self.f_floor_minimum:
+                reasons.append("F_floor reserve below minimum")
         
         return (len(reasons) > 0, reasons)
     
@@ -759,16 +800,35 @@ class CrisisDrainController:
         Returns:
             (success, message)
         """
-        # Verify accounts exist
+        # 🔗 PRODUCTION: Execute real transfer from TRANSITION_RESERVE to F_floor
         reserve_account = self.token_system.get_account("TRANSITION_RESERVE")
-        f_floor_account = self.token_system.get_account("F_FLOOR_RESERVE")
         
         if reserve_account is None:
             return (False, "TRANSITION_RESERVE account not found")
         
-        if f_floor_account is None:
-            # Create F_floor reserve if doesn't exist
-            self.token_system.create_account("F_FLOOR_RESERVE", initial_balance=0)
+        if reserve_account.balance < drain_amount_nxt:
+            return (False, f"Insufficient reserve balance for drain: {reserve_account.balance:.2f} NXT")
+        
+        # Transfer to F_floor via BHLS system if available
+        if self.bhls_system is not None and hasattr(self.bhls_system, 'add_revenue_to_floor'):
+            # Integrated transfer through BHLS system
+            f_floor_before = self.bhls_system.floor_reserve_pool
+            self.bhls_system.add_revenue_to_floor("crisis_drain", drain_amount_nxt)
+            # Deduct from token system reserve
+            reserve_account.balance -= drain_amount_nxt
+            f_floor_after = self.bhls_system.floor_reserve_pool
+        else:
+            # Fallback to direct account transfer
+            f_floor_account = self.token_system.get_account("F_FLOOR_RESERVE")
+            if f_floor_account is None:
+                self.token_system.create_account("F_FLOOR_RESERVE", initial_balance=0)
+                f_floor_account = self.token_system.get_account("F_FLOOR_RESERVE")
+            
+            f_floor_before = f_floor_account.balance
+            # Execute transfer
+            reserve_account.balance -= drain_amount_nxt
+            f_floor_account.balance += drain_amount_nxt
+            f_floor_after = f_floor_account.balance
         
         # Record drain event
         drain_event = {
