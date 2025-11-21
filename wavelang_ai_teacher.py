@@ -332,7 +332,7 @@ class WaveLangPipeline:
                     })
         
         # ADD instruction
-        if "add" in description_lower or "sum" in description_lower:
+        if "add" in description_lower or "sum" in description_lower or "+" in user_description:
             numbers = re.findall(r'\d+', user_description)
             
             # Check if we need to add LOAD instructions first
@@ -374,8 +374,88 @@ class WaveLangPipeline:
                 "explanation": "Add values together"
             })
         
-        # MULTIPLY instruction
-        if "multiply" in description_lower or "scale" in description_lower or "factor" in description_lower or "*" in description_lower or "times" in description_lower:
+        # SUBTRACT instruction
+        if "subtract" in description_lower or "minus" in description_lower or "-" in user_description:
+            numbers = re.findall(r'\d+', user_description)
+            needs_loads = not any(i["opcode"] == "LOAD" for i in instructions)
+            
+            if len(numbers) >= 2 and needs_loads:
+                instructions.append({
+                    "opcode": "LOAD",
+                    "wavelength": 495.0,
+                    "operand": numbers[0],
+                    "explanation": f"Load first number: {numbers[0]}"
+                })
+                instructions.append({
+                    "opcode": "LOAD",
+                    "wavelength": 508.0,
+                    "operand": numbers[1],
+                    "explanation": f"Load second number: {numbers[1]}"
+                })
+            elif needs_loads and ("two" in description_lower or "number" in description_lower):
+                instructions.append({
+                    "opcode": "LOAD",
+                    "wavelength": 495.0,
+                    "operand": "A",
+                    "explanation": "Load first number (A)"
+                })
+                instructions.append({
+                    "opcode": "LOAD",
+                    "wavelength": 508.0,
+                    "operand": "B",
+                    "explanation": "Load second number (B)"
+                })
+            
+            if not any(i["opcode"] == "SUBTRACT" for i in instructions):
+                instructions.append({
+                    "opcode": "SUBTRACT",
+                    "wavelength": 386.0,
+                    "operand": None,
+                    "explanation": "Subtract values"
+                })
+        
+        # DIVIDE instruction
+        if "divide" in description_lower or "÷" in user_description or "/" in user_description:
+            numbers = re.findall(r'\d+', user_description)
+            needs_loads = not any(i["opcode"] == "LOAD" for i in instructions)
+            
+            if len(numbers) >= 2 and needs_loads:
+                instructions.append({
+                    "opcode": "LOAD",
+                    "wavelength": 495.0,
+                    "operand": numbers[0],
+                    "explanation": f"Load first number: {numbers[0]}"
+                })
+                instructions.append({
+                    "opcode": "LOAD",
+                    "wavelength": 508.0,
+                    "operand": numbers[1],
+                    "explanation": f"Load second number: {numbers[1]}"
+                })
+            elif needs_loads and ("two" in description_lower or "number" in description_lower):
+                instructions.append({
+                    "opcode": "LOAD",
+                    "wavelength": 495.0,
+                    "operand": "dividend",
+                    "explanation": "Load dividend"
+                })
+                instructions.append({
+                    "opcode": "LOAD",
+                    "wavelength": 508.0,
+                    "operand": "divisor",
+                    "explanation": "Load divisor"
+                })
+            
+            if not any(i["opcode"] == "DIVIDE" for i in instructions):
+                instructions.append({
+                    "opcode": "DIVIDE",
+                    "wavelength": 398.0,
+                    "operand": None,
+                    "explanation": "Divide values"
+                })
+        
+        # MULTIPLY instruction  
+        if "multiply" in description_lower or "scale" in description_lower or "factor" in description_lower or "*" in user_description or "×" in user_description or "times" in description_lower:
             numbers = re.findall(r'\d+', user_description)
             
             # Check if we need to add LOAD instructions first
