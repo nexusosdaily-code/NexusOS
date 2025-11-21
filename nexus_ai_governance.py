@@ -250,12 +250,21 @@ class NexusAIGovernance:
                 optimal_mean = ranges['successful_mean']
                 
                 # Nudge toward optimal if significantly diverged
-                if abs(current_value - optimal_mean) / optimal_mean > 0.5:  # >50% deviation
+                # Defensive check: avoid division by zero
+                if optimal_mean != 0 and abs(current_value - optimal_mean) / abs(optimal_mean) > 0.5:  # >50% deviation
                     # Gradual adaptation: move 20% toward optimal
                     new_value = current_value + 0.2 * (optimal_mean - current_value)
                     adjustments[param] = new_value
                     rationale_parts.append(
                         f"Adapted {param} from {current_value:.3f} toward optimal {optimal_mean:.3f} "
+                        f"(learned from {ranges['sample_count']} observations)"
+                    )
+                elif optimal_mean == 0 and abs(current_value) > 0.01:  # Handle zero optimal case
+                    # If optimal is zero and current is far from zero, gradually approach zero
+                    new_value = current_value * 0.8  # Move 20% closer to zero
+                    adjustments[param] = new_value
+                    rationale_parts.append(
+                        f"Adapted {param} from {current_value:.3f} toward optimal 0.0 "
                         f"(learned from {ranges['sample_count']} observations)"
                     )
         

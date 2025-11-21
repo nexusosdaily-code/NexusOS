@@ -59,6 +59,66 @@
         "uptime": 98.5
       },
       "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T09:19:04.138291",
+      "component": "validator_economics",
+      "parameters": {
+        "stake": 135000.0,
+        "rewards": 0.0,
+        "apr": 23360.0,
+        "uptime": 98.5
+      },
+      "metrics": {
+        "apr": 23360.0,
+        "uptime": 98.5
+      },
+      "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T09:19:23.871680",
+      "component": "validator_economics",
+      "parameters": {
+        "stake": 135000.0,
+        "rewards": 0.0,
+        "apr": 23360.0,
+        "uptime": 98.5
+      },
+      "metrics": {
+        "apr": 23360.0,
+        "uptime": 98.5
+      },
+      "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T09:19:41.244201",
+      "component": "validator_economics",
+      "parameters": {
+        "stake": 135000.0,
+        "rewards": 0.0,
+        "apr": 23360.0,
+        "uptime": 98.5
+      },
+      "metrics": {
+        "apr": 23360.0,
+        "uptime": 98.5
+      },
+      "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T09:22:44.766562",
+      "component": "validator_economics",
+      "parameters": {
+        "stake": 135000.0,
+        "rewards": 0.0,
+        "apr": 23360.0,
+        "uptime": 98.5
+      },
+      "metrics": {
+        "apr": 23360.0,
+        "uptime": 98.5
+      },
+      "researcher_email": null
     }
   ],
   "patterns": {
@@ -68,32 +128,32 @@
       "optimal_ranges": {
         "stake": {
           "min": 125000.0,
-          "max": 125000.0,
-          "successful_mean": 125000.0,
-          "sample_count": 4
+          "max": 135000.0,
+          "successful_mean": 130000.0,
+          "sample_count": 8
         },
         "rewards": {
           "min": 0.0,
           "max": 0.0,
           "successful_mean": 0.0,
-          "sample_count": 4
+          "sample_count": 8
         },
         "apr": {
-          "min": 25228.800000000003,
+          "min": 23360.0,
           "max": 25228.800000000003,
-          "successful_mean": 25228.800000000003,
-          "sample_count": 4
+          "successful_mean": 24294.4,
+          "sample_count": 8
         },
         "uptime": {
           "min": 98.5,
           "max": 98.5,
           "successful_mean": 98.5,
-          "sample_count": 4
+          "sample_count": 8
         }
       },
       "civilization_risks": [],
       "f_floor_violations": []
     }
   },
-  "last_updated": "2025-11-21T08:59:00.836989"
+  "last_updated": "2025-11-21T09:22:44.766838"
 }
