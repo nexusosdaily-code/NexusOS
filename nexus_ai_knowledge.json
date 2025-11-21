@@ -119,6 +119,36 @@
         "uptime": 98.5
       },
       "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T09:28:19.527896",
+      "component": "validator_economics",
+      "parameters": {
+        "stake": 135000.0,
+        "rewards": 0.0,
+        "apr": 23360.0,
+        "uptime": 98.5
+      },
+      "metrics": {
+        "apr": 23360.0,
+        "uptime": 98.5
+      },
+      "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T09:30:33.053346",
+      "component": "validator_economics",
+      "parameters": {
+        "stake": 225000.0,
+        "rewards": 0.0,
+        "apr": 14016.0,
+        "uptime": 98.5
+      },
+      "metrics": {
+        "apr": 14016.0,
+        "uptime": 98.5
+      },
+      "researcher_email": null
     }
   ],
   "patterns": {
@@ -128,32 +158,32 @@
       "optimal_ranges": {
         "stake": {
           "min": 125000.0,
-          "max": 135000.0,
-          "successful_mean": 130000.0,
-          "sample_count": 8
+          "max": 225000.0,
+          "successful_mean": 140000.0,
+          "sample_count": 10
         },
         "rewards": {
           "min": 0.0,
           "max": 0.0,
           "successful_mean": 0.0,
-          "sample_count": 8
+          "sample_count": 10
         },
         "apr": {
-          "min": 23360.0,
+          "min": 14016.0,
           "max": 25228.800000000003,
-          "successful_mean": 24294.4,
-          "sample_count": 8
+          "successful_mean": 23173.120000000003,
+          "sample_count": 10
         },
         "uptime": {
           "min": 98.5,
           "max": 98.5,
           "successful_mean": 98.5,
-          "sample_count": 8
+          "sample_count": 10
         }
       },
       "civilization_risks": [],
       "f_floor_violations": []
     }
   },
-  "last_updated": "2025-11-21T09:22:44.766838"
+  "last_updated": "2025-11-21T09:30:33.056887"
 }

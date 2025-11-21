@@ -48,6 +48,7 @@ from wavelang_ai_teacher import render_wavelang_ai_teacher
 from wavelang_compiler import render_wavelang_compiler_dashboard
 from quantum_wavelang_analyzer import render_quantum_wavelang_analyzer
 from civic_governance_dashboard import main as civic_governance_main
+from mobile_blockchain_hub import render_mobile_blockchain_hub
 
 
 def main():
@@ -72,6 +73,7 @@ def main():
         module = st.selectbox(
             "**Select Dashboard**",
             [
+                "📱 Mobile Blockchain Hub",
                 "🌍 Civilization Dashboard",
                 "💎 Web3 Wallet",
                 "📡 WNSP Protocol v2.0",
@@ -102,6 +104,11 @@ def main():
         
         # Simple module info
         module_info = {
+            "📱 Mobile Blockchain Hub": {
+                "icon": "📱",
+                "desc": "Unified mobile blockchain interface - Your phone IS the blockchain node",
+                "features": ["💎 Web3 Wallet", "📨 DAG Messaging", "🔗 Explorer", "💱 DEX", "🏛️ Validators", "⚛️ Wavelength", "🌐 Network (GhostDAG/PoS/Consensus/Mesh)", "🗳️ Governance", "🔌 Connectivity"]
+            },
             "🌍 Civilization Dashboard": {
                 "icon": "🌍",
                 "desc": "Complete civilization architecture with 7 integrated systems",
@@ -222,7 +229,11 @@ def main():
         st.caption("Production Ready ✅")
     
     # Main content area - Route to selected module
-    if module == "🌍 Civilization Dashboard":
+    if module == "📱 Mobile Blockchain Hub":
+        # Mobile blockchain hub - unified interface
+        render_mobile_blockchain_hub()
+    
+    elif module == "🌍 Civilization Dashboard":
         # Full civilization dashboard with 7 tabs
         civilization_main()
     
