@@ -332,10 +332,14 @@ class WaveLangPipeline:
                     })
         
         # ADD instruction
-        if "add" in description_lower and ("and" in description_lower or "+" in description_lower):
+        if "add" in description_lower or "sum" in description_lower:
             numbers = re.findall(r'\d+', user_description)
             
-            if len(numbers) >= 2 and not any(i["opcode"]=="LOAD" for i in instructions):
+            # Check if we need to add LOAD instructions first
+            needs_loads = not any(i["opcode"] == "LOAD" for i in instructions)
+            
+            if len(numbers) >= 2 and needs_loads:
+                # Explicit numbers provided (e.g., "add 5 and 3")
                 instructions.append({
                     "opcode": "LOAD",
                     "wavelength": 495.0,
@@ -347,6 +351,20 @@ class WaveLangPipeline:
                     "wavelength": 508.0,
                     "operand": numbers[1],
                     "explanation": f"Load second number: {numbers[1]}"
+                })
+            elif needs_loads and ("two" in description_lower or "number" in description_lower):
+                # Generic "add two numbers" without explicit values
+                instructions.append({
+                    "opcode": "LOAD",
+                    "wavelength": 495.0,
+                    "operand": "A",
+                    "explanation": "Load first number (A)"
+                })
+                instructions.append({
+                    "opcode": "LOAD",
+                    "wavelength": 508.0,
+                    "operand": "B",
+                    "explanation": "Load second number (B)"
                 })
             
             instructions.append({
