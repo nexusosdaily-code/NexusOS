@@ -454,6 +454,16 @@ def render_text_to_wavelength_mode(teacher: WaveLangAITeacher):
                     st.error("⚠️ **Errors:**\n" + "\n".join(validation["errors"]))
                 if validation["warnings"]:
                     st.warning("⚠️ **Warnings:**\n" + "\n".join(validation["warnings"]))
+                
+                # Store instructions in session for optimizer
+                st.session_state.last_instructions = result["instructions"]
+            elif result["status"] == "goal_recognized":
+                st.info("✨ I recognize you want to build something!")
+                st.markdown(result.get("explanation", ""))
+                if "suggestions" in result:
+                    st.markdown("**Try these examples:**")
+                    for sugg in result["suggestions"]:
+                        st.markdown(f"- {sugg}")
             else:
                 st.error("❌ Could not parse your description. Try being more specific.")
                 st.info(result.get("explanation", ""))
@@ -463,10 +473,6 @@ def render_text_to_wavelength_mode(teacher: WaveLangAITeacher):
                         st.markdown(f"- {sugg}")
         else:
             st.warning("Please enter a description")
-        
-        # Store instructions in session for optimizer
-        if "instructions" in result:
-            st.session_state.last_instructions = result["instructions"]
 
 
 def render_wavelength_to_text_mode(teacher: WaveLangAITeacher):
@@ -511,49 +517,111 @@ def render_optimize_mode(teacher: WaveLangAITeacher):
     st.subheader("✨ Program Optimizer & Validator")
     
     st.markdown("""
-    Get suggestions to improve your wavelength program.
+    Analyze your wavelength program for optimization opportunities and logical errors.
     """)
     
-    # Simulated program for demo
-    num_instructions = st.slider("Number of instructions in your program:", 1, 20, 5)
-    has_qam64 = st.checkbox("Using QAM64 modulation?")
-    has_print = st.checkbox("Has PRINT instruction?")
-    
-    # Create demo program
-    demo_instructions = [{"opcode": "LOAD"} for _ in range(num_instructions)]
-    if has_qam64:
-        demo_instructions.append({"opcode": "MULTIPLY", "modulation": "QAM64"})
-    if has_print:
-        demo_instructions.append({"opcode": "PRINT"})
-    
-    if st.button("🔍 Analyze Program", type="primary"):
-        optimization = teacher.optimize_program(demo_instructions)
-        validation = teacher.validate_program(demo_instructions)
+    # Check if we have instructions from the converter
+    if "last_instructions" in st.session_state and st.session_state.last_instructions:
+        st.success(f"📋 Loaded {len(st.session_state.last_instructions)} instructions from your last conversion")
         
-        col1, col2 = st.columns(2)
+        # Display the program being analyzed
+        with st.expander("📝 View Program Instructions"):
+            for i, inst in enumerate(st.session_state.last_instructions, 1):
+                st.text(f"{i}. {inst['opcode']} ({inst['wavelength']}nm) - {inst.get('explanation', '')}")
         
-        with col1:
-            st.markdown("### ✅ Validation Results:")
-            if validation["valid"]:
-                st.success("Program is logically valid!")
-            else:
-                for error in validation["errors"]:
-                    st.error(f"❌ {error}")
+        instructions_to_analyze = st.session_state.last_instructions
+        
+        if st.button("🔍 Analyze Program", type="primary"):
+            optimization = teacher.optimize_program(instructions_to_analyze)
+            validation = teacher.validate_program(instructions_to_analyze)
             
-            for warning in validation["warnings"]:
-                st.warning(f"⚠️ {warning}")
-        
-        with col2:
-            st.markdown("### 💡 Optimization Suggestions:")
-            for suggestion in optimization["suggestions"]:
-                if suggestion["type"] == "optimization":
-                    st.info(f"💡 **{suggestion['message']}**\n{suggestion['impact']}")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("### ✅ Validation Results:")
+                if validation["valid"]:
+                    st.success("Program is logically valid!")
                 else:
-                    st.warning(f"⚠️ **{suggestion['message']}**")
+                    for error in validation["errors"]:
+                        st.error(f"❌ {error}")
+                
+                for warning in validation["warnings"]:
+                    st.warning(f"⚠️ {warning}")
+            
+            with col2:
+                st.markdown("### 💡 Optimization Suggestions:")
+                if optimization["suggestions"]:
+                    for suggestion in optimization["suggestions"]:
+                        if suggestion["type"] == "optimization":
+                            st.info(f"💡 {suggestion['message']}\n\n**Impact:** {suggestion['impact']}")
+                        else:
+                            st.warning(f"⚠️ {suggestion['message']}\n\n**Impact:** {suggestion['impact']}")
+                else:
+                    st.success("✨ Your program is already optimized!")
+            
+            st.divider()
+            st.markdown("### 📊 Program Stats:")
+            col_a, col_b, col_c = st.columns(3)
+            with col_a:
+                st.metric("Total Instructions", len(instructions_to_analyze))
+            with col_b:
+                avg_wavelength = sum(i.get("wavelength", 0) for i in instructions_to_analyze) / len(instructions_to_analyze)
+                st.metric("Avg Wavelength", f"{avg_wavelength:.1f}nm")
+            with col_c:
+                energy_cost = sum(i.get("wavelength", 0) for i in instructions_to_analyze)
+                st.metric("Total Energy Cost", f"{energy_cost:.0f}")
+    
+    else:
+        st.info("💡 **No program loaded yet!**")
+        st.markdown("""
+        First, use the **📝 Text → WaveLang** mode to convert an English description into wavelength instructions.
+        
+        Then come back here to analyze and optimize your program!
+        
+        **Quick Start:**
+        1. Click "📝 Text → WaveLang" above
+        2. Enter a description like: "Load input, multiply by frequency factor, output encoded signal"
+        3. Click "Convert to WaveLang"
+        4. Come back to this optimizer tab
+        """)
         
         st.divider()
-        st.markdown("### 📊 Program Stats:")
-        st.metric("Total Instructions", len(demo_instructions))
+        st.markdown("### 📝 Or Enter Instructions Manually:")
+        
+        manual_input = st.text_area(
+            "Enter instructions (one per line):",
+            placeholder="LOAD\nMULTIPLY\nPRINT",
+            height=100
+        )
+        
+        if st.button("📥 Load Manual Instructions"):
+            if manual_input.strip():
+                lines = [line.strip() for line in manual_input.split('\n') if line.strip()]
+                # Convert to instruction format
+                manual_instructions = []
+                for line in lines:
+                    opcode = line.upper()
+                    # Map to wavelength
+                    wavelength_map = {
+                        "LOAD": 495.0, "STORE": 508.0, "ADD": 380.0, "SUBTRACT": 386.0,
+                        "MULTIPLY": 392.0, "DIVIDE": 398.0, "AND": 450.0, "OR": 462.0,
+                        "IF": 570.0, "LOOP": 578.0, "PRINT": 650.0
+                    }
+                    if opcode in wavelength_map:
+                        manual_instructions.append({
+                            "opcode": opcode,
+                            "wavelength": wavelength_map[opcode],
+                            "explanation": f"{opcode} instruction"
+                        })
+                
+                if manual_instructions:
+                    st.session_state.last_instructions = manual_instructions
+                    st.success(f"✅ Loaded {len(manual_instructions)} instructions!")
+                    st.rerun()
+                else:
+                    st.error("No valid instructions found. Use opcodes like LOAD, ADD, MULTIPLY, PRINT")
+            else:
+                st.warning("Please enter some instructions")
 
 
 if __name__ == "__main__":
