@@ -221,6 +221,57 @@ def render_regenerative_economy_tab():
     col1.metric("Recycling Pool", f"{stats['recycling_liquidity_pool']:,.0f} NXT")
     col2.metric("→ BHLS Floor", f"{stats['bhls_floor_transfer']:,.0f} NXT")
     col3.metric("→ Supply Chain", f"{stats['supply_chain_fund']:,.0f} NXT")
+    
+    # Interactive Recycling Analysis
+    st.divider()
+    st.markdown("### 🔬 Custom Recycling Analysis")
+    st.markdown("**Research Tool**: Input arbitrary material weights to analyze economic impact, entropy reduction, and system efficiency")
+    
+    # Material weight inputs in 2 columns
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        plastic_kg = st.number_input("Plastic (kg)", min_value=0.0, max_value=10000.0, value=100.0, step=10.0, key="plastic_kg")
+        metal_kg = st.number_input("Metal (kg)", min_value=0.0, max_value=10000.0, value=50.0, step=10.0, key="metal_kg")
+        glass_kg = st.number_input("Glass (kg)", min_value=0.0, max_value=10000.0, value=75.0, step=10.0, key="glass_kg")
+        paper_kg = st.number_input("Paper & Cardboard (kg)", min_value=0.0, max_value=10000.0, value=200.0, step=10.0, key="paper_kg")
+    
+    with col2:
+        electronics_kg = st.number_input("E-Waste (kg)", min_value=0.0, max_value=10000.0, value=25.0, step=5.0, key="electronics_kg")
+        organic_kg = st.number_input("Organic Waste (kg)", min_value=0.0, max_value=10000.0, value=500.0, step=50.0, key="organic_kg")
+        textiles_kg = st.number_input("Textiles & Fabrics (kg)", min_value=0.0, max_value=10000.0, value=80.0, step=10.0, key="textiles_kg")
+        batteries_kg = st.number_input("Batteries (kg)", min_value=0.0, max_value=10000.0, value=10.0, step=1.0, key="batteries_kg")
+    
+    # Quality grade slider
+    quality_grade = st.slider("Material Quality Grade", 0.0, 1.0, 0.8, 0.05, 
+                              help="Higher quality = better recycling value (0=damaged, 1=pristine)", key="quality_grade")
+    
+    # Generate AI report button
+    if st.button("🤖 Generate Comprehensive Recycling Analysis", key="recycling_ai_report"):
+        from nexus_ai import NexusAI
+        
+        with st.expander("📊 Nexus AI Recycling Analysis Report", expanded=True):
+            # Prepare material weights dictionary
+            material_weights = {
+                MaterialType.PLASTIC: plastic_kg,
+                MaterialType.METAL: metal_kg,
+                MaterialType.GLASS: glass_kg,
+                MaterialType.PAPER: paper_kg,
+                MaterialType.ELECTRONICS: electronics_kg,
+                MaterialType.ORGANIC: organic_kg,
+                MaterialType.TEXTILES: textiles_kg,
+                MaterialType.BATTERIES: batteries_kg
+            }
+            
+            # Prepare data for report
+            recycling_data = {
+                'material_weights': material_weights,
+                'quality_grade': quality_grade,
+                'recycling_rates': economy.recycling_rates,
+                'current_stats': stats
+            }
+            
+            NexusAI.generate_recycling_analysis_report(recycling_data)
 
 def render_civilization_simulator_tab():
     """Render civilization simulator"""

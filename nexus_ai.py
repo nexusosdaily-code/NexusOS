@@ -673,6 +673,263 @@ class NexusAI:
             findings_text if findings else "Run simulation to generate findings",
             "success" if len([f for f in findings if '✅' in f]) >= 3 else "info"
         )
+    
+    @staticmethod
+    def generate_recycling_analysis_report(recycling_data: Dict) -> None:
+        """Generate comprehensive recycling analysis report with real-world calculations and interpretations"""
+        st.markdown("### 🤖 Nexus AI Recycling Economics Report")
+        st.markdown("---")
+        
+        # Extract data
+        material_weights = recycling_data.get('material_weights', {})
+        quality_grade = recycling_data.get('quality_grade', 0.8)
+        recycling_rates = recycling_data.get('recycling_rates', {})
+        current_stats = recycling_data.get('current_stats', {})
+        
+        # Calculate real values for each material
+        material_calculations = {}
+        total_nxt_value = 0.0
+        total_weight_kg = 0.0
+        
+        for material_type, weight_kg in material_weights.items():
+            if weight_kg > 0:
+                base_rate = recycling_rates.get(material_type, 0.0)
+                nxt_value = base_rate * weight_kg * quality_grade
+                total_nxt_value += nxt_value
+                total_weight_kg += weight_kg
+                
+                material_calculations[material_type] = {
+                    'weight_kg': weight_kg,
+                    'base_rate': base_rate,
+                    'quality_adjusted_rate': base_rate * quality_grade,
+                    'nxt_value': nxt_value,
+                    'percentage_of_total': 0.0  # Will calculate after
+                }
+        
+        # Calculate percentages
+        for material_type in material_calculations:
+            if total_nxt_value > 0:
+                material_calculations[material_type]['percentage_of_total'] = (
+                    material_calculations[material_type]['nxt_value'] / total_nxt_value * 100
+                )
+        
+        # === SECTION 1: Input Summary ===
+        NexusAI.render_report_section(
+            "Research Input Configuration",
+            f"""You submitted {total_weight_kg:,.2f} kg of recyclable materials across {len([w for w in material_weights.values() if w > 0])} 
+            material types with a quality grade of {quality_grade:.1%}. Quality grade represents material condition:
+            
+            - **1.0 (100%)**: Pristine, clean, ready for reprocessing
+            - **0.8 (80%)**: Good condition, minimal contamination (your setting)
+            - **0.5 (50%)**: Average, some damage or mixing
+            - **0.3 (30%)**: Poor quality, heavily contaminated
+            
+            The quality grade directly multiplies the base recycling rate to reflect real-world processing costs.""",
+            "info"
+        )
+        
+        # === SECTION 2: Material-by-Material Analysis ===
+        st.markdown("#### 📊 Detailed Material Analysis")
+        
+        for material_type, calc in material_calculations.items():
+            weight = calc['weight_kg']
+            base_rate = calc['base_rate']
+            adjusted_rate = calc['quality_adjusted_rate']
+            nxt_value = calc['nxt_value']
+            percentage = calc['percentage_of_total']
+            
+            # Determine material-specific insights
+            if material_type.name == 'ELECTRONICS':
+                insight = f"""E-waste contains valuable metals (gold, copper, rare earths). At {base_rate} NXT/kg base rate, 
+                your {weight:,.2f} kg generates {nxt_value:,.2f} NXT - the highest value per kilogram. Critical for circular economy."""
+                insight_type = "success"
+            elif material_type.name == 'METAL':
+                insight = f"""Metals are infinitely recyclable. At {base_rate} NXT/kg, your {weight:,.2f} kg yields {nxt_value:,.2f} NXT. 
+                Metal recycling saves 95% energy vs. virgin production."""
+                insight_type = "success"
+            elif material_type.name == 'PLASTIC':
+                insight = f"""Plastic recycling is critical for entropy reduction. Your {weight:,.2f} kg at {base_rate} NXT/kg earns 
+                {nxt_value:,.2f} NXT. Each kg prevents ocean/landfill pollution."""
+                insight_type = "info"
+            elif material_type.name == 'ORGANIC':
+                insight = f"""Organic waste has low economic value ({base_rate} NXT/kg) but high entropy reduction. Your {weight:,.2f} kg 
+                yields {nxt_value:,.2f} NXT while preventing methane emissions from landfills."""
+                insight_type = "info"
+            elif material_type.name == 'BATTERIES':
+                insight = f"""Batteries require specialized recycling due to toxic materials. At {base_rate} NXT/kg, your {weight:,.2f} kg 
+                generates {nxt_value:,.2f} NXT while preventing environmental contamination."""
+                insight_type = "warning"
+            else:
+                insight = f"""Your {weight:,.2f} kg of {material_type.value} at {base_rate} NXT/kg generates {nxt_value:,.2f} NXT 
+                ({percentage:.1f}% of total recycling value)."""
+                insight_type = "info"
+            
+            NexusAI.render_report_section(
+                f"{material_type.value}: {nxt_value:,.2f} NXT ({percentage:.1f}% of total)",
+                f"""**Weight**: {weight:,.2f} kg
+                **Base Rate**: {base_rate} NXT/kg
+                **Quality-Adjusted Rate**: {adjusted_rate:.2f} NXT/kg (×{quality_grade:.2f} quality factor)
+                **Total Value**: {nxt_value:,.2f} NXT
+                
+                {insight}""",
+                insight_type
+            )
+        
+        # === SECTION 3: Economic Impact Summary ===
+        # Calculate downstream effects
+        bhls_floor_transfer = total_nxt_value * 0.5  # 50% to BHLS floor
+        supply_chain_fund = total_nxt_value * 0.3  # 30% to supply chain
+        recycler_credits = total_nxt_value * 0.2  # 20% to recycler
+        
+        # Entropy reduction calculation (rough estimate: 1 kg recycled = 2 kg CO2 equivalent prevented)
+        co2_prevented_kg = total_weight_kg * 2.0
+        entropy_reduction_normalized = total_weight_kg / 1000  # Normalized entropy score
+        
+        NexusAI.render_report_section(
+            "Economic Impact - Total Value Generated",
+            f"""Your {total_weight_kg:,.2f} kg submission generates **{total_nxt_value:,.2f} NXT** in total economic value.
+            
+            **Value Distribution** (NexusOS Circular Economy):
+            - **BHLS Floor**: {bhls_floor_transfer:,.2f} NXT (50%) → Funds guaranteed basic living standards
+            - **Supply Chain**: {supply_chain_fund:,.2f} NXT (30%) → Supports renewable energy/resource infrastructure
+            - **Recycler Credits**: {recycler_credits:,.2f} NXT (20%) → Direct payment to citizen/business
+            
+            **Equivalent Purchasing Power**:
+            - {total_nxt_value:,.2f} NXT ≈ ${total_nxt_value * 100:,.2f} USD (at $100/NXT market rate)
+            - Can support {total_nxt_value / 1150:.2f} citizens with 1 month of BHLS floor (1,150 NXT/month)
+            - Equivalent to {total_nxt_value / 3.75:.0f} citizen-days of guaranteed basic living standards
+            
+            This demonstrates how physical recycling directly backs economic value through physics-anchored tokenomics.""",
+            "success" if total_nxt_value > 500 else "info"
+        )
+        
+        # === SECTION 4: Entropy Reduction Analysis ===
+        if entropy_reduction_normalized > 0.5:
+            entropy_type = "success"
+            entropy_msg = f"""Excellent entropy reduction: {total_weight_kg:,.2f} kg recycled prevents ~{co2_prevented_kg:,.0f} kg CO₂ equivalent 
+            emissions. Large-scale recycling like this directly improves civilization stability by reducing waste entropy."""
+        elif entropy_reduction_normalized > 0.1:
+            entropy_type = "info"
+            entropy_msg = f"""Good entropy reduction: {total_weight_kg:,.2f} kg recycled prevents ~{co2_prevented_kg:,.0f} kg CO₂ equivalent 
+            emissions. Scaling this impact requires broader citizen participation."""
+        else:
+            entropy_type = "warning"
+            entropy_msg = f"""Modest entropy reduction: {total_weight_kg:,.2f} kg recycled prevents ~{co2_prevented_kg:,.0f} kg CO₂ equivalent 
+            emissions. Consider scaling up material collection for greater environmental impact."""
+        
+        NexusAI.render_report_section(
+            "Entropy Reduction & Environmental Impact",
+            entropy_msg +
+            f"""
+            
+            **Entropy Formula**: Recycling prevents resource depletion and reduces system disorder (2nd Law of Thermodynamics).
+            - **Landfill Prevention**: {total_weight_kg:,.2f} kg diverted from waste stream
+            - **Energy Savings**: Recycling uses 30-95% less energy than virgin material production
+            - **Resource Conservation**: Extends finite material reserves for future generations
+            
+            In NexusOS's Nexus equation (dN/dt = αC + βD + γE - δEntropy + PID), recycling directly reduces the δEntropy term, 
+            allowing the civilization to maintain higher stability indices.""",
+            entropy_type
+        )
+        
+        # === SECTION 5: Comparative Analysis ===
+        avg_weight_per_material = total_weight_kg / max(len([w for w in material_weights.values() if w > 0]), 1)
+        weighted_avg_rate = total_nxt_value / total_weight_kg if total_weight_kg > 0 else 0
+        
+        NexusAI.render_report_section(
+            "Portfolio Optimization Analysis",
+            f"""Your material mix achieves a weighted average rate of {weighted_avg_rate:.2f} NXT/kg (quality-adjusted).
+            
+            **Optimization Recommendations**:
+            
+            1. **High-Value Materials** (>10 NXT/kg): E-waste ({recycling_rates.get('ELECTRONICS', 0)} NXT/kg base)
+               - Your e-waste: {material_weights.get('ELECTRONICS', 0):,.2f} kg
+               - Potential: Increase e-waste collection for maximum economic return
+            
+            2. **Medium-Value Materials** (2-10 NXT/kg): Metal, Plastic, Textiles, Batteries
+               - Your submission: {sum([material_weights.get(m, 0) for m in ['METAL', 'PLASTIC', 'TEXTILES', 'BATTERIES']]):,.2f} kg combined
+               - Strategy: These materials balance value and volume
+            
+            3. **High-Volume Materials** (<2 NXT/kg): Paper, Glass, Organic
+               - Your submission: {sum([material_weights.get(m, 0) for m in ['PAPER', 'GLASS', 'ORGANIC']]):,.2f} kg combined
+               - Impact: Low per-kg value but high entropy reduction and availability
+            
+            **Quality Grade Impact**:
+            - Current grade: {quality_grade:.1%} ({quality_grade * 100:.0f}/100)
+            - If perfect quality (1.0): {total_nxt_value / quality_grade:,.2f} NXT (+{(1/quality_grade - 1) * 100:.1f}% increase)
+            - If poor quality (0.5): {total_nxt_value * 0.5 / quality_grade:,.2f} NXT ({(0.5/quality_grade - 1) * 100:.1f}% decrease)
+            
+            **Recommendation**: Invest in sorting/cleaning infrastructure to maximize quality grade → higher NXT returns.""",
+            "insight"
+        )
+        
+        # === SECTION 6: Research Applications ===
+        NexusAI.render_report_section(
+            "Research Applications & Experimental Framework",
+            f"""Use this recycling analysis tool to test circular economy theories:
+            
+            **Economic Experiments**:
+            - **Price Sensitivity**: Test how changing recycling rates (NXT/kg) affects citizen participation
+            - **Quality Thresholds**: Model minimum quality grades needed for economic viability
+            - **Material Substitution**: Compare value of different material compositions
+            - **Scale Effects**: Test whether bulk recycling (1000+ kg) improves efficiency
+            
+            **Entropy Modeling**:
+            - **Waste Reduction Scenarios**: Model civilization stability under different recycling rates (50%, 80%, 95%)
+            - **Material Lifecycle**: Calculate full cradle-to-grave environmental impact
+            - **Landfill Avoidance**: Quantify entropy reduction from diverting materials
+            
+            **System Integration Testing**:
+            - **BHLS Floor Impact**: How much recycling needed to sustain 10,000 citizens?
+            - **Circular Flow**: Track NXT from recycling → BHLS → consumption → disposal → recycling
+            - **Supply Chain Funding**: Test how recycling revenue supports renewable energy infrastructure
+            
+            **Comparative Studies**:
+            - NexusOS (incentivized recycling) vs. Traditional (landfill fees) vs. Zero-Waste (mandates)
+            - Physics-backed value (E=hf, material conservation) vs. Speculative carbon credits
+            - Decentralized citizen recycling vs. Centralized waste management
+            
+            **Parameter Sweeps**:
+            - Vary quality grade from 0.1 to 1.0 in 0.1 increments
+            - Test material mixes: e-waste-heavy, plastic-heavy, balanced portfolios
+            - Model population scaling: 100 citizens → 1M citizens recycling behavior
+            
+            Document findings to validate circular economy models and inform policy design.""",
+            "insight"
+        )
+        
+        # === SECTION 7: Actionable Recommendations ===
+        recommendations = []
+        
+        # High-value material suggestions
+        if material_weights.get('ELECTRONICS', 0) < 50:
+            recommendations.append("⚡ **Increase E-Waste Collection**: At 15 NXT/kg, e-waste offers 3-6x returns vs. other materials")
+        
+        # Quality improvement
+        if quality_grade < 0.7:
+            recommendations.append(f"🔧 **Improve Material Quality**: Current {quality_grade:.0%} grade reduces value by {(1-quality_grade)*100:.0f}%. Invest in sorting/cleaning")
+        
+        # Volume optimization
+        if total_weight_kg < 100:
+            recommendations.append("📦 **Scale Up Collection**: Your {total_weight_kg:,.0f} kg submission is small-scale. Industrial volumes (1000+ kg) improve logistics efficiency")
+        
+        # Material balance
+        plastic_pct = material_calculations.get('PLASTIC', {}).get('percentage_of_total', 0)
+        if plastic_pct > 50:
+            recommendations.append(f"♻️ **Diversify Materials**: Plastic dominates ({plastic_pct:.0f}%). Add metals/e-waste for higher average returns")
+        
+        # BHLS floor contribution
+        citizens_supported = bhls_floor_transfer / 1150
+        if citizens_supported < 1:
+            recommendations.append(f"👥 **BHLS Impact**: Currently supports {citizens_supported:.2f} citizens/month. Target 1,150+ NXT for 1 citizen guarantee")
+        
+        recommendations_text = "\n".join([f"- {r}" for r in recommendations])
+        
+        NexusAI.render_report_section(
+            "Actionable Recommendations",
+            recommendations_text if recommendations else "✅ Optimal configuration - no immediate changes needed",
+            "warning" if len(recommendations) >= 3 else "success"
+        )
 
 
 def render_nexus_ai_button(component_name: str, data: Dict) -> None:
