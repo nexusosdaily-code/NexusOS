@@ -51,6 +51,59 @@ Core technical implementations include:
 3. **WaveLang Binary Compiler** (`wavelang_compiler.py`) - Full compilation pipeline: Wavelength → Bytecode → Assembly → Python → Machine Code execution
 4. **Quantum Analyzer** (`quantum_wavelang_analyzer.py`) - Quantum-level program optimization using WaveProperties physics
 
+#### WaveLang AI Teacher - Complete User Guide
+
+**What It Does:**
+Transform natural language descriptions into physics-based wavelength code with zero syntax errors. The unified pipeline automatically optimizes, compiles to binary, and executes your program showing real output.
+
+**7-Stage Pipeline:**
+1. **Text Input** - Describe program in everyday English
+2. **WaveLang Instructions** - Auto-converts to wavelength code (380nm-650nm)
+3. **Validation** - Checks program correctness (pre/post optimization)
+4. **Optimization** - Auto-adds missing PRINT, downgrades complex modulation
+5. **Binary Compilation** - Generates bytecode (hex) + x86-64 assembly
+6. **English Explanation** - Plain language summary of what program does
+7. **Visual Execution** - Live output display + memory state visualization
+
+**Supported Operations:**
+- **Addition**: `5 + 3`, `X + Y`, `add two numbers`
+- **Subtraction**: `10 - 4`, `A - B`, `subtract values`
+- **Multiplication**: `7 * 9`, `7 × 9`, `P * Q`, `7 times 9`
+- **Division**: `20 / 4`, `20 ÷ 4`, `M / N`, `divide values`
+
+**Input Modes:**
+1. **Numeric**: `10 + 5 result C` → Calculates actual result (15.0)
+2. **Symbolic**: `X + Y result C` → Shows algebraic expression (C = X + Y)
+3. **Generic**: `add two numbers` → Creates template (A + B)
+
+**Example Usage:**
+
+```
+Input: "10 + 5 result C"
+
+Stage 1: LOAD 10, LOAD 5, ADD, STORE C, PRINT
+Stage 2: ✓ Valid
+Stage 3: Already optimized
+Stage 4-5: Bytecode + Assembly generated
+Stage 6: "This program loads two numbers, adds them, and stores the result"
+Stage 7: Output: >> 15
+         Memory: C = 15.0
+```
+
+**Key Features:**
+- ✅ Variables (A-Z) and numbers (0-9) both supported
+- ✅ Unicode symbols (×, ÷) work alongside ASCII (*, /)
+- ✅ Auto-storage with `result C`, `outcome X`, or `store in Y`
+- ✅ Dual-mode: symbolic algebra OR numeric calculations
+- ✅ Zero syntax errors (wavelengths are physics constants!)
+- ✅ Complete 64-char encoding (WNSP v2.0 compatible)
+
+**Best For:**
+- Teaching programming concepts (variables, operations, memory)
+- Building calculator applications
+- Learning physics-based computing
+- Prototyping WaveLang programs quickly
+
 #### Quantum Analyzer - Advanced Features (Now Live)
 Applies WaveProperties for 6 quantum analysis modes analyzing any WaveLang program:
 
