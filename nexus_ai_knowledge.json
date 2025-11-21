@@ -149,6 +149,18 @@
         "uptime": 98.5
       },
       "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T16:31:41.930973",
+      "component": "wavelength_economics",
+      "parameters": {
+        "wavelength": 550,
+        "region": "Green",
+        "cost": 7500,
+        "modulation": "OOK"
+      },
+      "metrics": {},
+      "researcher_email": null
     }
   ],
   "patterns": {
@@ -183,7 +195,39 @@
       },
       "civilization_risks": [],
       "f_floor_violations": []
+    },
+    "wavelength_economics": {
+      "successful_configs": [],
+      "failed_configs": [],
+      "optimal_ranges": {
+        "wavelength": {
+          "min": 550,
+          "max": 550,
+          "successful_mean": 550,
+          "sample_count": 1
+        },
+        "region": {
+          "min": "Green",
+          "max": "Green",
+          "successful_mean": "Green",
+          "sample_count": 1
+        },
+        "cost": {
+          "min": 7500,
+          "max": 7500,
+          "successful_mean": 7500,
+          "sample_count": 1
+        },
+        "modulation": {
+          "min": "OOK",
+          "max": "OOK",
+          "successful_mean": "OOK",
+          "sample_count": 1
+        }
+      },
+      "civilization_risks": [],
+      "f_floor_violations": []
     }
   },
-  "last_updated": "2025-11-21T09:30:33.056887"
+  "last_updated": "2025-11-21T16:31:41.931222"
 }

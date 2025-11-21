@@ -230,7 +230,10 @@ class NexusAIGovernance:
         # 1. CRITICAL: Enforce F_floor minimum (basic human living standards)
         if 'F_floor' in current_params or 'f_floor' in current_params:
             floor_key = 'F_floor' if 'F_floor' in current_params else 'f_floor'
-            current_floor = current_params[floor_key]
+            try:
+                current_floor = float(current_params[floor_key])
+            except (ValueError, TypeError):
+                current_floor = self.f_floor_minimum  # Default to safe value if conversion fails
             
             if current_floor < self.f_floor_minimum:
                 adjustments[floor_key] = self.f_floor_minimum
@@ -246,8 +249,13 @@ class NexusAIGovernance:
         # 2. Apply learned optimal ranges
         for param, ranges in patterns['optimal_ranges'].items():
             if param in current_params:
-                current_value = current_params[param]
-                optimal_mean = ranges['successful_mean']
+                # Safe type conversion: handle both numeric and string inputs
+                try:
+                    current_value = float(current_params[param])
+                    optimal_mean = float(ranges['successful_mean'])
+                except (ValueError, TypeError):
+                    # Skip non-numeric parameters
+                    continue
                 
                 # Nudge toward optimal if significantly diverged
                 # Defensive check: avoid division by zero
@@ -278,8 +286,11 @@ class NexusAIGovernance:
                 avg_years = np.mean([r['years_remaining'] for r in supply_risks])
                 if 'base_burn_rate' in current_params:
                     # Reduce burn to extend supply
-                    current_burn = current_params['base_burn_rate']
-                    reduction_factor = max(0.5, avg_years / self.civilization_horizon_years)
+                    try:
+                        current_burn = float(current_params['base_burn_rate'])
+                    except (ValueError, TypeError):
+                        current_burn = 0.0
+                    reduction_factor = max(0.5, float(avg_years) / self.civilization_horizon_years)
                     new_burn = current_burn * reduction_factor
                     adjustments['base_burn_rate'] = new_burn
                     rationale_parts.append(
@@ -293,7 +304,10 @@ class NexusAIGovernance:
             if validator_risks:
                 if 'validator_reward_rate' in current_params:
                     # Increase rewards to retain validators
-                    current_rate = current_params['validator_reward_rate']
+                    try:
+                        current_rate = float(current_params['validator_reward_rate'])
+                    except (ValueError, TypeError):
+                        current_rate = 0.0
                     adjustments['validator_reward_rate'] = current_rate * 1.2
                     rationale_parts.append(
                         "Increased validator rewards to prevent network security degradation"
