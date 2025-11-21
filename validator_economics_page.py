@@ -7,7 +7,9 @@ import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
+from datetime import datetime
 from validator_economics import StakingEconomy, ValidatorEconomics, SlashingType
+from nexus_ai import NexusAI
 
 
 def initialize_staking_economy():
@@ -154,6 +156,27 @@ def render_my_delegations(economy: StakingEconomy):
     
     user = st.session_state.user_address
     stats = economy.get_delegator_stats(user)
+    
+    # Check if AI performance report exists
+    if 'delegation_performance_report' in st.session_state:
+        st.success("✅ AI Performance Report Available")
+        
+        # Display AI report
+        with st.expander("🤖 View AI Delegation Performance Analysis", expanded=True):
+            report_data = st.session_state.delegation_performance_report
+            
+            st.caption(f"Generated: {report_data.get('timestamp', 'N/A')}")
+            st.markdown("---")
+            
+            # Generate the comprehensive AI report using calculator values
+            NexusAI.generate_delegation_performance_report(report_data)
+            
+            # Option to clear report
+            if st.button("🗑️ Clear Report"):
+                del st.session_state.delegation_performance_report
+                st.rerun()
+        
+        st.divider()
     
     # Summary metrics
     col1, col2, col3, col4 = st.columns(4)
@@ -376,6 +399,33 @@ def render_profitability_calculator(economy: StakingEconomy):
         color_continuous_scale='Greens'
     )
     st.plotly_chart(fig, use_container_width=True)
+    
+    # AI Delegation Performance Report Generation
+    st.divider()
+    st.markdown("**🤖 AI Delegation Performance Analysis**")
+    st.markdown("Generate a comprehensive personalized report using these calculator values. The report will appear in your **My Delegations** tab.")
+    
+    if st.button("🤖 Generate AI Performance Report", type="primary", use_container_width=True):
+        # Prepare data with all calculator values
+        calc_report_data = {
+            'self_stake': self_stake,
+            'commission_rate': commission_rate,
+            'delegated_stake': delegated_stake,
+            'blocks_per_day': blocks_per_day,
+            'daily_earnings': results['daily_earnings'],
+            'monthly_earnings': results['monthly_earnings'],
+            'annual_earnings': results['annual_earnings'],
+            'annual_roi': results['annual_roi'],
+            'effective_apy': results['effective_apy'],
+            'commission_earnings_daily': results['commission_earnings_daily'],
+            'stake_earnings_daily': results['stake_earnings_daily'],
+            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        # Store in session state
+        st.session_state.delegation_performance_report = calc_report_data
+        st.success("✅ AI Report Generated! Switch to the **📊 My Delegations** tab to view your personalized analysis.")
+        st.rerun()
 
 
 def render_network_stats(economy: StakingEconomy):

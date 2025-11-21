@@ -289,6 +289,198 @@ class NexusAI:
         )
     
     @staticmethod
+    def generate_delegation_performance_report(calc_data: Dict) -> None:
+        """
+        Generate personalized delegation performance report using exact calculator values.
+        Appears in My Delegations tab linked to delegate staking.
+        """
+        st.markdown("### 🤖 Nexus AI Delegation Performance Analysis")
+        st.markdown("---")
+        
+        # Extract calculator inputs with defensive defaults
+        self_stake = float(calc_data.get('self_stake', 0))
+        commission_rate = float(calc_data.get('commission_rate', 0))
+        delegated_stake = float(calc_data.get('delegated_stake', 0))
+        blocks_per_day = int(calc_data.get('blocks_per_day', 0))
+        
+        # Extract calculated results with defensive defaults
+        daily_earnings = float(calc_data.get('daily_earnings', 0))
+        monthly_earnings = float(calc_data.get('monthly_earnings', daily_earnings * 30))
+        annual_earnings = float(calc_data.get('annual_earnings', daily_earnings * 365))
+        annual_roi = float(calc_data.get('annual_roi', 0))
+        effective_apy = float(calc_data.get('effective_apy', 0))
+        commission_earnings_daily = float(calc_data.get('commission_earnings_daily', 0))
+        stake_earnings_daily = float(calc_data.get('stake_earnings_daily', 0))
+        
+        # Calculate derived metrics (not passed in)
+        total_stake = self_stake + delegated_stake
+        delegation_ratio = (delegated_stake / self_stake) if self_stake > 0 else 0
+        rewards_per_block = (daily_earnings / blocks_per_day) if blocks_per_day > 0 else 0
+        
+        # Validate we have meaningful data
+        if total_stake == 0:
+            st.warning("⚠️ No delegation data available. Please input values in the Calculator tab first.")
+            return
+        
+        # Section 1: Delegation Configuration Analysis
+        NexusAI.render_report_section(
+            "1️⃣ Your Delegation Configuration",
+            f"""Based on your inputs, you're analyzing a validator setup with:
+            
+            • **Self-Bonded Stake**: {self_stake:,.0f} NXT (your capital at risk)
+            • **Delegated Stake**: {delegated_stake:,.0f} NXT (community trust)
+            • **Total Stake**: {total_stake:,.0f} NXT
+            • **Commission Rate**: {commission_rate*100:.1f}%
+            • **Expected Block Production**: {blocks_per_day} blocks/day
+            
+            This represents a {'whale' if total_stake > 200000 else 'professional' if total_stake > 100000 else 'medium' if total_stake > 50000 else 'small'} validator profile with {('high' if commission_rate > 0.12 else 'moderate' if commission_rate > 0.05 else 'low')} commission strategy.""",
+            "info"
+        )
+        
+        # Section 2: Revenue Breakdown
+        commission_pct = (commission_earnings_daily / daily_earnings * 100) if daily_earnings > 0 else 0
+        stake_pct = (stake_earnings_daily / daily_earnings * 100) if daily_earnings > 0 else 0
+        
+        NexusAI.render_report_section(
+            "2️⃣ Revenue Stream Analysis",
+            f"""Your validator earnings come from two sources:
+            
+            **Commission Earnings** ({commission_pct:.1f}% of total):
+            • Daily: {commission_earnings_daily:,.2f} NXT
+            • Monthly: {commission_earnings_daily * 30:,.2f} NXT
+            • Annual: {commission_earnings_daily * 365:,.2f} NXT
+            
+            **Stake Earnings** ({stake_pct:.1f}% of total):
+            • Daily: {stake_earnings_daily:,.2f} NXT
+            • Monthly: {stake_earnings_daily * 30:,.2f} NXT
+            • Annual: {stake_earnings_daily * 365:,.2f} NXT
+            
+            Your {commission_rate*100:.1f}% commission rate generates {commission_earnings_daily:,.2f} NXT/day from delegator rewards, while your self-stake earns {stake_earnings_daily:,.2f} NXT/day. The {'commission' if commission_pct > stake_pct else 'stake'} component dominates your revenue.""",
+            "success" if daily_earnings > 100 else "info"
+        )
+        
+        # Section 3: ROI & Performance Metrics
+        roi_quality = "excellent" if annual_roi > 20 else "strong" if annual_roi > 15 else "moderate" if annual_roi > 10 else "conservative"
+        
+        NexusAI.render_report_section(
+            "3️⃣ Return on Investment Assessment",
+            f"""**Performance Metrics**:
+            • Annual ROI: {annual_roi:.2f}% ({roi_quality})
+            • Effective APY: {effective_apy:.2f}%
+            • Daily Yield: {(daily_earnings/self_stake*100) if self_stake > 0 else 0:.4f}%
+            
+            With {self_stake:,.0f} NXT self-staked, you're earning {annual_roi:.2f}% annually. This means:
+            • **Breakeven Time**: ~{(self_stake/annual_earnings*12) if annual_earnings > 0 else 0:.1f} months to recoup infrastructure costs
+            • **5-Year Projection**: {annual_earnings * 5:,.0f} NXT total earnings
+            • **10-Year Projection**: {annual_earnings * 10:,.0f} NXT total earnings
+            
+            Your ROI is {'highly competitive' if annual_roi > 20 else 'above average' if annual_roi > 15 else 'market standard' if annual_roi > 10 else 'below market'} compared to typical validator returns (12-18% range).""",
+            "success" if annual_roi > 15 else "info" if annual_roi > 10 else "warning"
+        )
+        
+        # Section 4: Delegation Economics
+        NexusAI.render_report_section(
+            "4️⃣ Delegation Leverage Analysis",
+            f"""**Delegation Multiplier**: {delegation_ratio:.2f}x
+            
+            For every 1 NXT you self-stake, you attract {delegation_ratio:.2f} NXT in delegations. This {'exceptional' if delegation_ratio > 5 else 'strong' if delegation_ratio > 3 else 'moderate' if delegation_ratio > 1 else 'low'} leverage indicates:
+            
+            • **Community Trust Score**: {min(100, delegation_ratio * 15):.0f}/100
+            • **Effective Capital**: {total_stake:,.0f} NXT (only {(self_stake/total_stake*100) if total_stake > 0 else 0:.1f}% is yours)
+            • **Commission Revenue**: {commission_earnings_daily * 365:,.0f} NXT/year from {delegated_stake:,.0f} NXT delegations
+            
+            Your {commission_rate*100:.1f}% commission rate is {'competitive' if commission_rate < 0.08 else 'above average' if commission_rate < 0.12 else 'premium'} - {'lower' if commission_rate < 0.08 else 'higher'} commission {'attracts more delegators' if commission_rate < 0.08 else 'maximizes revenue per delegation'}.""",
+            "success" if delegation_ratio > 3 else "info" if delegation_ratio > 1 else "warning"
+        )
+        
+        # Section 5: Block Production Efficiency
+        NexusAI.render_report_section(
+            "5️⃣ Block Production Economics",
+            f"""**Block Performance**:
+            • Blocks Proposed: {blocks_per_day} per day ({blocks_per_day * 365:,} annually)
+            • Revenue per Block: {rewards_per_block:.2f} NXT
+            • Monthly Blocks: {blocks_per_day * 30:,}
+            
+            At {blocks_per_day} blocks/day, you're {'highly active' if blocks_per_day > 100 else 'moderately active' if blocks_per_day > 50 else 'light producer' if blocks_per_day > 20 else 'minimal producer'}. Each block generates {rewards_per_block:.2f} NXT in rewards.
+            
+            **Network Impact**: With {total_stake:,.0f} NXT staked, you should propose ~{int(total_stake / 1000)} blocks/day (network average). Your {blocks_per_day} blocks/day means you're {'overperforming' if blocks_per_day > total_stake/1000 else 'underperforming' if blocks_per_day < total_stake/2000 else 'meeting expectations'}.""",
+            "success" if blocks_per_day > 50 else "info"
+        )
+        
+        # Section 6: Strategic Recommendations
+        recommendations = []
+        
+        if commission_rate > 0.10 and delegated_stake < self_stake * 2:
+            recommendations.append("🔻 **Lower Commission**: Your {:.1f}% fee may be deterring delegators. Try 8% to increase delegations.".format(commission_rate*100))
+        
+        if delegation_ratio < 2:
+            recommendations.append("📢 **Marketing**: Low delegation ratio suggests visibility issues. Improve uptime/reputation to attract delegators.")
+        
+        if annual_roi < 12:
+            recommendations.append("⚡ **Increase Blocks**: Target 20% more block proposals to boost ROI above market average (15%).")
+        
+        if delegated_stake > self_stake * 5:
+            recommendations.append("✅ **Optimal Leverage**: Excellent delegation ratio! Maintain uptime and reputation to preserve community trust.")
+        
+        if annual_roi > 20:
+            recommendations.append("🎯 **Market Leader**: Your ROI outperforms the market. Consider raising commission slightly (test +2%) to maximize revenue.")
+        
+        if not recommendations:
+            recommendations.append("✅ **Balanced Setup**: Your configuration is well-optimized. Monitor network conditions and adjust as needed.")
+        
+        rec_text = "\n\n".join(recommendations)
+        
+        NexusAI.render_report_section(
+            "6️⃣ AI Strategic Recommendations",
+            f"""Based on your delegation profile, here are personalized optimization suggestions:
+            
+            {rec_text}
+            
+            **Next Steps**:
+            1. Monitor actual vs. projected earnings for 30 days
+            2. A/B test commission rates (±2%) to find optimal balance
+            3. Track delegator retention and acquisition rates
+            4. Benchmark against top 10 validators in network""",
+            "insight"
+        )
+        
+        # Section 7: Risk Analysis
+        concentration_risk = (delegated_stake / (delegated_stake + self_stake) * 100) if (delegated_stake + self_stake) > 0 else 0
+        
+        NexusAI.render_report_section(
+            "7️⃣ Risk Assessment",
+            f"""**Capital at Risk**: {self_stake:,.0f} NXT
+            
+            • **Slashing Exposure**: If slashed at 5%, you lose {self_stake * 0.05:,.0f} NXT
+            • **Delegation Concentration**: {concentration_risk:.1f}% of stake is delegated (not owned)
+            • **Commission Dependency**: {(commission_earnings_daily * 365 / annual_earnings * 100) if annual_earnings > 0 else 0:.1f}% of revenue depends on maintaining delegations
+            
+            Your validator business has {'high' if concentration_risk > 80 else 'moderate' if concentration_risk > 60 else 'low'} dependency on delegators. If delegations withdraw, your revenue {'drops significantly' if concentration_risk > 80 else 'decreases moderately' if concentration_risk > 60 else 'remains stable'}. Maintain 95%+ uptime to minimize slashing risk.""",
+            "warning" if concentration_risk > 80 else "info"
+        )
+        
+        # Section 8: Comparative Market Analysis
+        NexusAI.render_report_section(
+            "8️⃣ Market Position Analysis",
+            f"""**Validator Competitive Landscape**:
+            
+            Your validator profile:
+            • Total Stake: {total_stake:,.0f} NXT (Top {'10%' if total_stake > 200000 else '25%' if total_stake > 100000 else '50%'})
+            • Commission: {commission_rate*100:.1f}% ({'Low' if commission_rate < 0.06 else 'Medium' if commission_rate < 0.10 else 'High'} tier)
+            • ROI: {annual_roi:.2f}% ({'Leader' if annual_roi > 18 else 'Competitive' if annual_roi > 12 else 'Follower'})
+            
+            **Market Averages** (reference):
+            • Median Stake: ~75,000 NXT
+            • Average Commission: 8-10%
+            • Target ROI: 12-18%
+            
+            You're {'significantly above' if total_stake > 150000 else 'above' if total_stake > 75000 else 'below'} median stake. Your {commission_rate*100:.1f}% commission is {'below market average' if commission_rate < 0.08 else 'at market average' if commission_rate < 0.10 else 'above market average'}, which {'attracts more delegators but reduces per-delegation revenue' if commission_rate < 0.08 else 'balances delegator attraction with revenue maximization' if commission_rate < 0.10 else 'maximizes revenue but may limit delegation growth'}.
+            
+            **Estimated Market Rank**: #{int(max(1, min(100, 100 - (annual_roi - 5) * 5)))} of ~100 active validators""",
+            "success" if annual_roi > 15 else "info"
+        )
+    
+    @staticmethod
     def generate_dex_report(dex_data: Dict) -> None:
         """Generate report for DEX trading analysis"""
         st.markdown("### 🤖 Nexus AI DEX Analysis")

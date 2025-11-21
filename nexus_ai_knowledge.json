@@ -1,0 +1,84 @@
+{
+  "observations": [
+    {
+      "timestamp": "2025-11-21T04:16:11.086684",
+      "component": "validator_economics",
+      "parameters": {
+        "stake": 125000.0,
+        "rewards": 0.0,
+        "apr": 25228.800000000003,
+        "uptime": 98.5
+      },
+      "metrics": {
+        "apr": 25228.800000000003,
+        "uptime": 98.5
+      },
+      "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T04:20:00.202655",
+      "component": "validator_economics",
+      "parameters": {
+        "stake": 125000.0,
+        "rewards": 0.0,
+        "apr": 25228.800000000003,
+        "uptime": 98.5
+      },
+      "metrics": {
+        "apr": 25228.800000000003,
+        "uptime": 98.5
+      },
+      "researcher_email": null
+    },
+    {
+      "timestamp": "2025-11-21T04:22:29.776430",
+      "component": "validator_economics",
+      "parameters": {
+        "stake": 125000.0,
+        "rewards": 0.0,
+        "apr": 25228.800000000003,
+        "uptime": 98.5
+      },
+      "metrics": {
+        "apr": 25228.800000000003,
+        "uptime": 98.5
+      },
+      "researcher_email": null
+    }
+  ],
+  "patterns": {
+    "validator_economics": {
+      "successful_configs": [],
+      "failed_configs": [],
+      "optimal_ranges": {
+        "stake": {
+          "min": 125000.0,
+          "max": 125000.0,
+          "successful_mean": 125000.0,
+          "sample_count": 3
+        },
+        "rewards": {
+          "min": 0.0,
+          "max": 0.0,
+          "successful_mean": 0.0,
+          "sample_count": 3
+        },
+        "apr": {
+          "min": 25228.800000000003,
+          "max": 25228.800000000003,
+          "successful_mean": 25228.800000000003,
+          "sample_count": 3
+        },
+        "uptime": {
+          "min": 98.5,
+          "max": 98.5,
+          "successful_mean": 98.5,
+          "sample_count": 3
+        }
+      },
+      "civilization_risks": [],
+      "f_floor_violations": []
+    }
+  },
+  "last_updated": "2025-11-21T04:22:29.776562"
+}
