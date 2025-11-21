@@ -34,7 +34,7 @@ def render_economic_loop_dashboard():
     
     # Initialize token system and economic loop
     if 'token_system' not in st.session_state:
-        st.session_state.token_system = NativeTokenSystem(initial_supply=1_000_000)
+        st.session_state.token_system = NativeTokenSystem()
     
     token_system = st.session_state.token_system
     economic_loop = get_economic_loop(token_system)
