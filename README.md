@@ -78,6 +78,43 @@
 
 ---
 
+## 📚 Scientific Documentation (NEW)
+
+**Complete In-Depth Wavelength Mechanics & WNSP Integration**
+
+For technical and scientific learners seeking deep understanding:
+
+### 🔬 Core Documentation
+
+1. **[Wavelength Validation Science](docs/WAVELENGTH_VALIDATION_SCIENCE.md)** (35 KB)
+   - Maxwell's Equations & wave mechanics foundation
+   - 5-Dimensional wave signature system (λ, A, φ, P, t)
+   - Interference resistance mechanics with mathematical proofs
+   - WNSP protocol integration details
+   - Quantum-resistant security analysis
+   - Comparison with SHA-256 and ECDSA
+
+2. **[Quick Reference Guide](docs/QUICK_REFERENCE_WAVELENGTH_MECHANICS.md)** (7 KB)
+   - Core equations & formulas
+   - Character encoding maps
+   - Implementation examples
+   - Performance benchmarks
+
+3. **[Atomic Transfer Specifications](ATOMIC_TRANSFER_SPECIFICATIONS.md)** (17 KB)
+   - Production-grade transaction safety
+   - All-or-nothing transfer semantics
+   - Economic loop integration
+
+### 📖 Additional Resources
+
+- **[Wavelength Crypto Theory](WAVELENGTH_CRYPTO_THEORY.md)** - Encryption methods (FSE, AME, PME, QIML)
+- **[Technical Specifications](TECHNICAL_SPECIFICATIONS.md)** - Complete engineering catalog
+- **[Atomic Transfer Quick Start](docs/ATOMIC_TRANSFER_QUICKSTART.md)** - Developer guide
+
+**Perfect for**: Researchers, physicists, cryptographers, blockchain developers wanting to understand the physics-based validation system.
+
+---
+
 ## 📋 Platform Features
 
 ### 🌊 Wavelength Infrastructure
