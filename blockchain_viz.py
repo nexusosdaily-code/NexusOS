@@ -304,43 +304,47 @@ def render_blockchain_dashboard():
                 filtered_txs = sorted_txs[:limit]
             
             # Display transaction table
-            tx_df = pd.DataFrame(filtered_txs)
-            st.dataframe(
-                tx_df[[
-                    'tx_id', 'from_address', 'to_address', 
-                    'amount_nxt', 'fee_nxt', 'status', 'timestamp'
-                ]],
-                use_container_width=True,
-                height=600
-            )
+            if filtered_txs:
+                tx_df = pd.DataFrame(filtered_txs)
+                st.dataframe(
+                    tx_df[[
+                        'tx_id', 'from_address', 'to_address', 
+                        'amount_nxt', 'fee_nxt', 'status', 'timestamp'
+                    ]],
+                    use_container_width=True,
+                    height=600
+                )
+            else:
+                st.warning("No transactions match your search criteria")
             
             st.info(f"Showing {len(filtered_txs)} of {len(all_transactions)} total transactions")
             
             # Transaction details expander
-            st.subheader("Transaction Details")
-            selected_tx_id = st.selectbox("Select transaction to view quantum proof", 
-                                         [tx['tx_id'] for tx in filtered_txs[:20]])
-            
-            if selected_tx_id:
-                try:
-                    proof = wallet_system.export_quantum_proof(selected_tx_id)
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.json({
-                            'transaction_id': proof['tx_id'],
-                            'interference_hash': proof['interference_hash'],
-                            'energy_cost': proof['energy_cost']
-                        })
-                    
-                    with col2:
-                        st.json({
-                            'wave_signature': proof['wave_signature'],
-                            'spectral_proof': proof['spectral_proof']
-                        })
-                except Exception as e:
-                    st.error(f"Failed to load quantum proof: {str(e)}")
+            if filtered_txs:
+                st.subheader("Transaction Details")
+                selected_tx_id = st.selectbox("Select transaction to view quantum proof", 
+                                             [tx['tx_id'] for tx in filtered_txs[:20]])
+                
+                if selected_tx_id:
+                    try:
+                        proof = wallet_system.export_quantum_proof(selected_tx_id)
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.json({
+                                'transaction_id': proof['tx_id'],
+                                'interference_hash': proof['interference_hash'],
+                                'energy_cost': proof['energy_cost']
+                            })
+                        
+                        with col2:
+                            st.json({
+                                'wave_signature': proof['wave_signature'],
+                                'spectral_proof': proof['spectral_proof']
+                            })
+                    except Exception as e:
+                        st.error(f"Failed to load quantum proof: {str(e)}")
         else:
             st.info("No transactions found. Send your first NXT transaction to see it here!")
     
@@ -367,16 +371,19 @@ def render_blockchain_dashboard():
                 filtered_msgs = sorted_msgs[:limit]
             
             # Display message table
-            msg_df = pd.DataFrame(filtered_msgs)
-            st.dataframe(
-                msg_df[[
-                    'message_id', 'from_address', 'to_address', 
-                    'content', 'spectral_region', 'wavelength', 
-                    'cost_nxt', 'timestamp'
-                ]],
-                use_container_width=True,
-                height=600
-            )
+            if filtered_msgs:
+                msg_df = pd.DataFrame(filtered_msgs)
+                st.dataframe(
+                    msg_df[[
+                        'message_id', 'from_address', 'to_address', 
+                        'content', 'spectral_region', 'wavelength', 
+                        'cost_nxt', 'timestamp'
+                    ]],
+                    use_container_width=True,
+                    height=600
+                )
+            else:
+                st.warning("No messages match your search criteria")
             
             st.info(f"Showing {len(filtered_msgs)} of {len(all_messages)} total messages")
         else:
