@@ -124,12 +124,36 @@ class NexusNativeWallet:
     
     def __init__(self, database_url: Optional[str] = None):
         """Initialize wallet with NexusOS core systems"""
-        # Database setup
+        # Database setup with fallback to SQLite
         db_url = database_url or os.getenv('DATABASE_URL', 'sqlite:///nexus_native_wallet.db')
-        self.engine = create_engine(db_url)
-        Base.metadata.create_all(self.engine)
-        Session = sessionmaker(bind=self.engine)
-        self.db = Session()
+        
+        try:
+            # Try to connect to the specified database
+            self.engine = create_engine(db_url, pool_pre_ping=True)
+            Base.metadata.create_all(self.engine)
+            Session = sessionmaker(bind=self.engine)
+            self.db = Session()
+            
+            # Test connection with a simple query
+            self.db.execute(sa.text("SELECT 1"))
+            self.db.commit()
+            
+            print(f"✅ Database connected: {db_url.split('@')[0].split('//')[1] if '@' in db_url else 'SQLite'}")
+            
+        except Exception as e:
+            # If PostgreSQL fails, fall back to SQLite
+            if db_url != 'sqlite:///nexus_native_wallet.db':
+                print(f"⚠️  PostgreSQL connection failed ({str(e)[:50]}...)")
+                print("📂 Falling back to SQLite for data persistence")
+                
+                db_url = 'sqlite:///nexus_native_wallet.db'
+                self.engine = create_engine(db_url)
+                Base.metadata.create_all(self.engine)
+                Session = sessionmaker(bind=self.engine)
+                self.db = Session()
+            else:
+                # SQLite also failed - this is a critical error
+                raise RuntimeError(f"Failed to initialize database: {e}")
         
         # NexusOS core components  
         self.wavelength_validator = WavelengthValidator()
