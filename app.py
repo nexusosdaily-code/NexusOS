@@ -51,6 +51,7 @@ from civic_governance_dashboard import main as civic_governance_main
 from mobile_blockchain_hub import render_mobile_blockchain_hub
 from economic_loop_dashboard import render_economic_loop_dashboard
 from avogadro_economics_dashboard import main as avogadro_economics_main
+from napp_deployment_center import render_napp_deployment_center
 
 
 def main():
@@ -89,6 +90,7 @@ def main():
                 "📡 WNSP Protocol v2.0",
                 "💬 Mobile DAG Messaging",
                 "🔗 Blockchain Explorer",
+                "🚀 Napp Deployment Center",
                 "💱 DEX (Token Exchange)",
                 "⚡ GhostDAG System",
                 "💰 Payment Layer",
@@ -153,6 +155,11 @@ def main():
                 "icon": "🔗",
                 "desc": "Real-time blockchain visualization and transaction explorer",
                 "features": ["Live Blocks", "Transaction History", "Network Stats", "Validator Activity"]
+            },
+            "🚀 Napp Deployment Center": {
+                "icon": "🚀",
+                "desc": "Deploy NexusOS Apps (Napps) with physics-based smart contracts - not Dapps!",
+                "features": ["🛠️ Smart Contract Generator", "🔗 Napp Explorer", "🚀 Deployment Manager", "📚 Pre-built Templates", "⚛️ E=hf Validation", "🌊 Maxwell Compliance"]
             },
             "💱 DEX (Token Exchange)": {
                 "icon": "💱",
@@ -280,6 +287,10 @@ def main():
     elif module == "🔗 Blockchain Explorer":
         # Blockchain visualization
         render_blockchain_dashboard()
+    
+    elif module == "🚀 Napp Deployment Center":
+        # Napp deployment center - smart contract generator + explorer
+        render_napp_deployment_center()
     
     elif module == "💱 DEX (Token Exchange)":
         # Decentralized Exchange
