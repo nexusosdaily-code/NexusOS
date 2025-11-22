@@ -381,6 +381,7 @@ def main():
         module = st.selectbox(
             "**Select Dashboard**",
             [
+                "🏠 Home",
                 "📱 Mobile Blockchain Hub",
                 "💫 Economic Loop Dashboard",
                 "⚛️ Avogadro Economics",
@@ -561,7 +562,70 @@ def main():
         st.caption("Production Ready ✅")
     
     # Main content area - Route to selected module
-    if module == "📱 Mobile Blockchain Hub":
+    # Show visual dashboard grid if no module selected or on home
+    if not module or module == "🏠 Home":
+        st.title("🌍 NexusOS Civilization Operating System")
+        st.markdown("### Select a Dashboard")
+        
+        # Create visual dashboard cards
+        dashboards = [
+            {"name": "📱 Mobile Blockchain Hub", "desc": "All-in-one mobile blockchain interface", "color": "#88aaff"},
+            {"name": "💱 DEX (Token Exchange)", "desc": "Decentralized token exchange & liquidity", "color": "#aa88ff"},
+            {"name": "🏛️ Validator Economics", "desc": "Staking, delegation & validator rewards", "color": "#88ddff"},
+            {"name": "💵 Wavelength Economics", "desc": "Physics-based validation economics", "color": "#ff88dd"},
+            {"name": "💬 Mobile DAG Messaging", "desc": "Blockchain messaging with E=hf pricing", "color": "#ddff88"},
+            {"name": "🔗 Blockchain Explorer", "desc": "Real-time block & transaction explorer", "color": "#88ffaa"},
+            {"name": "💎 Web3 Wallet", "desc": "Quantum-resistant NXT wallet", "color": "#ffaa88"},
+            {"name": "⚡ GhostDAG System", "desc": "Parallel block processing DAG", "color": "#aa88dd"},
+            {"name": "🌈 Proof of Spectrum", "desc": "Wavelength-based consensus", "color": "#88aadd"},
+            {"name": "⚙️ Nexus Consensus", "desc": "Unified consensus engine", "color": "#ddaa88"},
+            {"name": "🌍 Civilization Dashboard", "desc": "Complete civilization architecture", "color": "#88ddaa"},
+            {"name": "💫 Economic Loop Dashboard", "desc": "Full economic cycle visualization", "color": "#dd88ff"}
+        ]
+        
+        # Display in 3-column grid
+        cols = st.columns(3)
+        for idx, dashboard in enumerate(dashboards):
+            with cols[idx % 3]:
+                if st.button(
+                    f"{dashboard['name']}\n\n{dashboard['desc']}", 
+                    key=f"btn_{idx}",
+                    use_container_width=True
+                ):
+                    st.session_state.module_selector = dashboard['name']
+                    st.rerun()
+        
+        st.divider()
+        st.markdown("### 📚 More Dashboards")
+        
+        # Additional dashboards in expandable section
+        with st.expander("🔧 System & Advanced Dashboards"):
+            more_cols = st.columns(3)
+            more_dashboards = [
+                "📡 WNSP Protocol v2.0",
+                "🔍 Transaction Search Explorer",
+                "🚀 Napp Deployment Center",
+                "💰 Payment Layer",
+                "📱 Mobile Connectivity",
+                "📊 Long-term Supply",
+                "🤖 AI Management Control",
+                "💬 Talk to Nexus AI",
+                "🌐 Offline Mesh Network",
+                "🏛️ Civic Governance",
+                "⚛️ Avogadro Economics",
+                "🌊 WaveLang Studio",
+                "🤖 WaveLang AI Teacher",
+                "💻 WaveLang Binary Compiler",
+                "⚛️ Quantum Analyzer"
+            ]
+            
+            for idx, dash_name in enumerate(more_dashboards):
+                with more_cols[idx % 3]:
+                    if st.button(dash_name, key=f"more_btn_{idx}", use_container_width=True):
+                        st.session_state.module_selector = dash_name
+                        st.rerun()
+    
+    elif module == "📱 Mobile Blockchain Hub":
         # Mobile blockchain hub - unified interface
         render_mobile_blockchain_hub()
     
