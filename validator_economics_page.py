@@ -236,11 +236,12 @@ def render_my_delegations(economy: StakingEconomy):
             with col3:
                 st.markdown("<br>", unsafe_allow_html=True)
                 if st.button("🔓 Undelegate", width="stretch"):
-                    if undelegate_amount > 0:
+                    if undelegate_amount > 0 and undelegate_validator:
                         # Get full validator address
                         full_addr = None
+                        validator_prefix = undelegate_validator.replace("...", "") if "..." in undelegate_validator else undelegate_validator
                         for v_addr, v in economy.validators.items():
-                            if v_addr.startswith(undelegate_validator.replace("...", "")):
+                            if v_addr.startswith(validator_prefix):
                                 full_addr = v_addr
                                 break
                         

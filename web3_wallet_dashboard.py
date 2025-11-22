@@ -186,9 +186,29 @@ def render_home_tab(wallet):
                     st.caption(f"**Created:** {w['created_at'][:10]}")
                 with col2:
                     st.metric("Balance", f"{w['balance_nxt']:.2f} NXT")
-                    if st.button(f"🔓 Unlock", key=f"unlock_{w['address']}"):
-                        st.session_state.unlock_target = w['address']
-                        st.rerun()
+                    
+                    # Quick unlock from home
+                    unlock_password = st.text_input(
+                        "Password to unlock",
+                        type="password",
+                        key=f"pwd_{w['address'][:10]}",
+                        placeholder="Enter password"
+                    )
+                    
+                    if st.button(f"🔓 Unlock This Wallet", key=f"unlock_{w['address']}", type="primary"):
+                        if not unlock_password:
+                            st.error("Please enter password")
+                        else:
+                            try:
+                                if wallet.unlock_wallet(w['address'], unlock_password):
+                                    st.session_state.active_address = w['address']
+                                    st.session_state.wallet_unlocked = w['address']
+                                    st.success("✅ Wallet unlocked!")
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Invalid password")
+                            except Exception as e:
+                                st.error(f"❌ Error: {str(e)}")
 
 
 def render_create_wallet_tab(wallet):
