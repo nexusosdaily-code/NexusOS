@@ -151,11 +151,26 @@ def main():
             font-weight: 600 !important;
         }
         
-        /* Sidebar selectbox options in dropdown */
+        /* Sidebar selectbox - the actual input field */
+        [data-testid="stSidebar"] select {
+            color: #000000 !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            font-weight: 600 !important;
+            font-size: 15px !important;
+        }
+        
+        /* Sidebar selectbox options in dropdown - DARK text on light background */
         [data-testid="stSidebar"] option {
             color: #000000 !important;
-            background: #ffffff !important;
-            font-weight: 500 !important;
+            background: #f0f4f8 !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+        }
+        
+        /* When hovering over dropdown options */
+        [data-testid="stSidebar"] option:hover {
+            color: #000000 !important;
+            background: #d0e0f0 !important;
         }
         
         /* Code blocks */
