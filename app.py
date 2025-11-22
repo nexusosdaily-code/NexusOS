@@ -50,6 +50,7 @@ from quantum_wavelang_analyzer import render_quantum_wavelang_analyzer
 from civic_governance_dashboard import main as civic_governance_main
 from mobile_blockchain_hub import render_mobile_blockchain_hub
 from economic_loop_dashboard import render_economic_loop_dashboard
+from avogadro_economics_dashboard import main as avogadro_economics_main
 
 
 def main():
@@ -76,6 +77,7 @@ def main():
             [
                 "📱 Mobile Blockchain Hub",
                 "💫 Economic Loop Dashboard",
+                "⚛️ Avogadro Economics",
                 "🌍 Civilization Dashboard",
                 "💎 Web3 Wallet",
                 "📡 WNSP Protocol v2.0",
@@ -115,6 +117,11 @@ def main():
                 "icon": "💫",
                 "desc": "Complete economic cycle: Messaging→Reserve→DEX→Supply Chain→Community→F_floor",
                 "features": ["📨 Messaging Burns", "⚛️ Orbital Transitions", "💧 DEX Liquidity", "🏭 Supply Chain Value", "🤝 Community Ownership", "🛡️ Crisis Protection"]
+            },
+            "⚛️ Avogadro Economics": {
+                "icon": "⚛️",
+                "desc": "Statistical mechanics applied to civilization economics - bridge quantum to macroscopic scale",
+                "features": ["📐 Molar Metrics (N_A)", "🌡️ Economic Temperature & Entropy", "📊 Boltzmann Wealth Distribution", "⚖️ Chemical Equilibrium", "💨 Ideal Gas Law (PV=nRT)", "🔄 Phase Transitions"]
             },
             "🌍 Civilization Dashboard": {
                 "icon": "🌍",
@@ -243,6 +250,10 @@ def main():
     elif module == "💫 Economic Loop Dashboard":
         # Economic loop system
         render_economic_loop_dashboard()
+    
+    elif module == "⚛️ Avogadro Economics":
+        # Avogadro statistical mechanics economics
+        avogadro_economics_main()
     
     elif module == "🌍 Civilization Dashboard":
         # Full civilization dashboard with 7 tabs
