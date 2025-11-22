@@ -125,28 +125,36 @@ def main():
             background: rgba(30, 90, 142, 0.3) !important;
         }
         
-        /* Sidebar text - EXTRA BRIGHT with shadow for visibility */
+        /* Sidebar text - BLACK text for visibility on light background */
         [data-testid="stSidebar"] p, 
         [data-testid="stSidebar"] span,
         [data-testid="stSidebar"] label,
         [data-testid="stSidebar"] div {
-            color: #ffffff !important;
-            text-shadow: 0 0 3px rgba(0, 0, 0, 0.8), 0 0 5px rgba(136, 170, 255, 0.3) !important;
-            font-weight: 500 !important;
+            color: #000000 !important;
+            background: transparent !important;
+            font-weight: 600 !important;
         }
         
-        /* Sidebar dropdown/selectbox - make text VERY visible */
+        /* Sidebar dropdown/selectbox - BLACK text */
         [data-testid="stSidebar"] .stSelectbox label,
         [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] {
-            color: #ffffff !important;
-            font-weight: 600 !important;
+            color: #000000 !important;
+            background: transparent !important;
+            font-weight: 700 !important;
             font-size: 16px !important;
         }
         
-        /* Sidebar selectbox options */
+        /* Sidebar selectbox selected value - make it dark and visible */
+        [data-testid="stSidebar"] [data-baseweb="select"] > div {
+            color: #000000 !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            font-weight: 600 !important;
+        }
+        
+        /* Sidebar selectbox options in dropdown */
         [data-testid="stSidebar"] option {
-            color: #ffffff !important;
-            background: #1e3a5f !important;
+            color: #000000 !important;
+            background: #ffffff !important;
             font-weight: 500 !important;
         }
         
@@ -167,26 +175,32 @@ def main():
             color: #aaccff !important;
         }
         
-        /* Sidebar quantum styling - MUCH LIGHTER background */
+        /* Sidebar quantum styling - LIGHT background for dark text */
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, rgba(70, 90, 120, 0.95), rgba(50, 110, 160, 0.95)) !important;
+            background: linear-gradient(180deg, rgba(200, 220, 240, 0.98), rgba(180, 210, 235, 0.98)) !important;
             border-right: 3px solid rgba(136, 170, 255, 0.8);
             box-shadow: 5px 0 40px rgba(136, 170, 255, 0.7);
         }
         
         [data-testid="stSidebar"] h1 {
-            color: #ffffff !important;
-            text-shadow: 0 0 10px rgba(136, 170, 255, 0.8), 0 0 20px rgba(170, 136, 255, 0.5) !important;
+            color: #1e3a5f !important;
+            text-shadow: 0 0 5px rgba(136, 170, 255, 0.5) !important;
             font-size: 32px !important;
             font-weight: 700 !important;
         }
         
-        /* Make "Civilization Operating System" text bright */
+        /* Make "Civilization Operating System" text dark and visible */
         [data-testid="stSidebar"] .stMarkdown p {
-            color: #ffffff !important;
-            font-weight: 600 !important;
+            color: #1e3a5f !important;
+            font-weight: 700 !important;
             font-size: 15px !important;
-            text-shadow: 0 0 5px rgba(0, 0, 0, 0.8) !important;
+            background: transparent !important;
+        }
+        
+        /* Sidebar captions at bottom */
+        [data-testid="stSidebar"] .stCaption {
+            color: #2a5f8e !important;
+            font-weight: 600 !important;
         }
         
         /* Enhanced buttons with BRIGHT glow effect */
