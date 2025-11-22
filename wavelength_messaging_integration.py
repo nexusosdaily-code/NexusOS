@@ -9,7 +9,7 @@ This is where electromagnetic theory meets economics:
 - Spectral diversity ensures decentralization
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from dataclasses import dataclass
 from collections import defaultdict
 from datetime import datetime
@@ -24,6 +24,9 @@ from wavelength_validator import (
 )
 from native_token import NativeTokenSystem, Account, token_system
 from proof_of_spectrum import SpectralValidator, ProofOfSpectrumConsensus, SpectralRegion as PoSRegion
+
+if TYPE_CHECKING:
+    from messaging_payment_adapter import PaymentAdapter
 
 
 @dataclass
@@ -142,18 +145,21 @@ class WavelengthMessagingSystem:
         content: str,
         spectral_region: SpectralRegion,
         modulation_type: ModulationType,
-        parent_message_ids: Optional[List[str]] = None
+        parent_message_ids: Optional[List[str]] = None,
+        payment_adapter: Optional['PaymentAdapter'] = None
     ) -> Tuple[bool, Optional[WavelengthMessage], str]:
         """
         Send a message using wavelength-based validation.
         
-        Process:
+        Process (UPDATED - Validation-First for Atomic Safety):
         1. Create wave signature from message content
         2. Calculate cost from quantum energy (E = hf)
-        3. Deduct NXT from sender
-        4. Validate via spectral diversity (5/6 regions)
-        5. Distribute rewards to validators
-        6. Add to message DAG
+        3. VALIDATE spectral diversity (5/6 regions) BEFORE payment
+        4. VALIDATE DAG integrity BEFORE payment
+        5. If PaymentAdapter provided: authorize() → commit() payment
+        6. Otherwise: legacy token_system.transfer() for demo accounts
+        7. Distribute rewards to validators
+        8. Add to message DAG
         
         Args:
             sender_account: Sender's account ID
@@ -162,6 +168,7 @@ class WavelengthMessagingSystem:
             spectral_region: Which electromagnetic region to use
             modulation_type: Encoding complexity
             parent_message_ids: Previous messages (for DAG structure)
+            payment_adapter: Optional PaymentAdapter for atomic real-wallet transactions
         
         Returns:
             (success, message_object, status_message)
