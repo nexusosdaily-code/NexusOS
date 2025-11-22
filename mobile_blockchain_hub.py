@@ -45,15 +45,29 @@ def render_mobile_blockchain_hub():
     init_wallet_session()
     wallet = st.session_state.nexus_wallet
     
-    # Mobile-optimized CSS
+    # Mobile-optimized CSS with WHITE TEXT
     st.markdown("""
         <style>
+        /* WHITE TEXT for entire Mobile Blockchain Hub dashboard */
+        .stApp main p,
+        .stApp main span,
+        .stApp main div,
+        .stApp main label,
+        .stApp main h1,
+        .stApp main h2,
+        .stApp main h3,
+        .stApp main li,
+        .stApp main td,
+        .stApp main th {
+            color: #ffffff !important;
+        }
+        
         /* Mobile-first responsive design */
         .main-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 25px;
             border-radius: 15px;
-            color: white;
+            color: white !important;
             text-align: center;
             margin-bottom: 25px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.2);
@@ -66,6 +80,12 @@ def render_mobile_blockchain_hub():
             padding: 20px;
             margin: 10px 0;
             transition: all 0.3s ease;
+        }
+        
+        .module-card p,
+        .module-card span,
+        .module-card div {
+            color: #ffffff !important;
         }
         
         .module-card:hover {
