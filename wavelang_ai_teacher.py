@@ -836,6 +836,40 @@ def render_wavelang_ai_teacher():
     get automatic optimization, compile to binary, and see everything explained!
     """)
     
+    with st.expander("ℹ️ How Does the AI Teacher Work?"):
+        st.markdown("""
+        ### 🧠 Your Personal WaveLang Tutor
+        
+        The AI Teacher transforms natural language into physics-based wavelength code:
+        
+        **📝 Text to WaveLang:**
+        - Write in plain English: "Add 5 and 3, then print the result"
+        - AI converts to wavelength instructions automatically
+        - Each operation mapped to specific electromagnetic wavelengths
+        
+        **✨ Auto-Optimizer:**
+        - Analyzes your program for efficiency
+        - Suggests energy-saving improvements
+        - Reduces wavelength computation costs by 15-50%
+        
+        **💻 Binary Compiler:**
+        - Compiles wavelength code to executable bytecode
+        - Generates assembly and machine code
+        - Production-ready deployment packages
+        
+        **🔍 English Decoder:**
+        - Explains what your wavelength program does
+        - Translates technical operations to plain language
+        - Perfect for learning and documentation
+        
+        **🎨 Visual Execution:**
+        - See your program run in real-time
+        - Memory state visualization
+        - Step-by-step wavelength execution
+        
+        **Try it:** Type "multiply 7 by 8 and show result" in Unified Pipeline mode!
+        """)
+    
     pipeline = WaveLangPipeline()
     
     # Tabs for different modes
