@@ -41,6 +41,41 @@ import sqlalchemy as sa
 from sqlalchemy import create_engine, Column, String, Float, Integer, BigInteger, DateTime, Text, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import OperationalError, DBAPIError
+from functools import wraps
+
+# ============================================================================
+# Database Retry Decorator
+# ============================================================================
+
+def retry_on_connection_error(max_retries=2):
+    """
+    Decorator to retry database operations on connection errors.
+    Automatically refreshes the database session and retries.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            last_error = None
+            for attempt in range(max_retries + 1):
+                try:
+                    return func(self, *args, **kwargs)
+                except (OperationalError, DBAPIError) as e:
+                    last_error = e
+                    error_msg = str(e).lower()
+                    
+                    # Check if it's a connection-related error
+                    if any(err in error_msg for err in ['ssl', 'connection', 'closed', 'timeout']):
+                        if attempt < max_retries:
+                            # Refresh session and retry
+                            self._refresh_session()
+                            continue
+                    # Not a connection error or max retries reached, re-raise
+                    raise
+            # All retries exhausted
+            raise last_error
+        return wrapper
+    return decorator
 
 # ============================================================================
 # Database Models
@@ -126,17 +161,29 @@ class NexusNativeWallet:
         """Initialize wallet with NexusOS core systems"""
         # Database setup with fallback to SQLite
         db_url = database_url or os.getenv('DATABASE_URL', 'sqlite:///nexus_native_wallet.db')
+        self._fallback_attempted = False
         
         try:
-            # Try to connect to the specified database
-            self.engine = create_engine(db_url, pool_pre_ping=True)
+            # Try to connect to the specified database with robust pooling
+            self.engine = create_engine(
+                db_url, 
+                pool_pre_ping=True,  # Test connections before using
+                pool_recycle=3600,   # Recycle connections after 1 hour
+                pool_size=5,          # Connection pool size
+                max_overflow=10       # Max overflow connections
+            )
             Base.metadata.create_all(self.engine)
-            Session = sessionmaker(bind=self.engine)
-            self.db = Session()
+            
+            # Store SessionMaker instead of single session
+            self.SessionMaker = sessionmaker(bind=self.engine)
             
             # Test connection with a simple query
-            self.db.execute(sa.text("SELECT 1"))
-            self.db.commit()
+            test_session = self.SessionMaker()
+            try:
+                test_session.execute(sa.text("SELECT 1"))
+                test_session.commit()
+            finally:
+                test_session.close()
             
             # Log connection success WITHOUT exposing credentials
             db_type = "PostgreSQL" if db_url.startswith('postgresql') else "SQLite"
@@ -148,11 +195,11 @@ class NexusNativeWallet:
                 print(f"⚠️  PostgreSQL connection failed ({str(e)[:50]}...)")
                 print("📂 Falling back to SQLite for data persistence")
                 
+                self._fallback_attempted = True
                 db_url = 'sqlite:///nexus_native_wallet.db'
                 self.engine = create_engine(db_url)
                 Base.metadata.create_all(self.engine)
-                Session = sessionmaker(bind=self.engine)
-                self.db = Session()
+                self.SessionMaker = sessionmaker(bind=self.engine)
             else:
                 # SQLite also failed - this is a critical error
                 raise RuntimeError(f"Failed to initialize database: {e}")
@@ -161,8 +208,19 @@ class NexusNativeWallet:
         self.wavelength_validator = WavelengthValidator()
         self.wnsp_encoder = WnspEncoderV2()
         
+        # Create initial session
+        self.db = self.SessionMaker()
+        
         # Initialize persistent accounts (instead of in-memory NativeTokenSystem)
         self._init_genesis_accounts()
+    
+    def _refresh_session(self):
+        """Recreate the database session (call this when connection errors occur)"""
+        try:
+            self.db.close()
+        except:
+            pass
+        self.db = self.SessionMaker()
     
     # ========================================================================
     # Database Token System (Replaces in-memory NativeTokenSystem)
@@ -201,6 +259,7 @@ class NexusNativeWallet:
     # Wallet Management
     # ========================================================================
     
+    @retry_on_connection_error(max_retries=2)
     def create_wallet(self, password: str, initial_balance: float = 0) -> Dict[str, Any]:
         """
         Create new quantum-resistant NexusOS wallet.
@@ -248,6 +307,7 @@ class NexusNativeWallet:
             'created_at': wallet.created_at.isoformat()
         }
     
+    @retry_on_connection_error(max_retries=2)
     def import_wallet(self, address: str, private_key: str, password: str) -> Dict[str, Any]:
         """Import existing wallet with quantum encryption layer"""
         # Check if already exists
@@ -283,6 +343,7 @@ class NexusNativeWallet:
             'imported': True
         }
     
+    @retry_on_connection_error(max_retries=2)
     def unlock_wallet(self, address: str, password: str) -> bool:
         """Verify password can unlock wallet"""
         wallet = self.db.query(NexusWallet).filter_by(address=address).first()
@@ -301,6 +362,7 @@ class NexusNativeWallet:
         except:
             return False
     
+    @retry_on_connection_error(max_retries=2)
     def get_balance(self, address: str) -> Dict[str, Any]:
         """Get NXT balance for address"""
         account = self._get_token_account(address)
@@ -323,6 +385,7 @@ class NexusNativeWallet:
     # NXT Token Transfers
     # ========================================================================
     
+    @retry_on_connection_error(max_retries=2)
     def send_nxt(
         self,
         from_address: str,
@@ -438,6 +501,7 @@ class NexusNativeWallet:
     # WNSP Messaging
     # ========================================================================
     
+    @retry_on_connection_error(max_retries=2)
     def send_message(
         self,
         from_address: str,
@@ -529,6 +593,7 @@ class NexusNativeWallet:
             'dag_parents': parent_messages or []
         }
     
+    @retry_on_connection_error(max_retries=2)
     def get_messages(
         self,
         address: str,
@@ -569,6 +634,7 @@ class NexusNativeWallet:
     # Transaction History
     # ========================================================================
     
+    @retry_on_connection_error(max_retries=2)
     def get_transaction_history(
         self,
         address: str,
@@ -594,6 +660,7 @@ class NexusNativeWallet:
             for tx in transactions
         ]
     
+    @retry_on_connection_error(max_retries=2)
     def get_message_history(
         self,
         address: str,
@@ -622,6 +689,7 @@ class NexusNativeWallet:
     # Utility Methods
     # ========================================================================
     
+    @retry_on_connection_error(max_retries=2)
     def list_wallets(self) -> List[Dict[str, Any]]:
         """List all wallets"""
         wallets = self.db.query(NexusWallet).filter_by(is_active=True).all()
@@ -637,6 +705,7 @@ class NexusNativeWallet:
             })
         return result
     
+    @retry_on_connection_error(max_retries=2)
     def export_quantum_proof(self, tx_id: str) -> Dict[str, Any]:
         """Export quantum security proof for transaction"""
         tx = self.db.query(WalletTransaction).filter_by(tx_id=tx_id).first()
