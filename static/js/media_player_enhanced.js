@@ -557,6 +557,121 @@ function updateLocalStats() {
     document.getElementById('cacheHitRate').textContent = `${cacheHitRate}%`;
 }
 
+// Upload Modal Functions
+const uploadModal = document.getElementById('uploadModal');
+const uploadBtn = document.getElementById('uploadBtn');
+const closeUploadModal = document.getElementById('closeUploadModal');
+const uploadDropZone = document.getElementById('uploadDropZone');
+const fileInput = document.getElementById('fileInput');
+const uploadCategory = document.getElementById('uploadCategory');
+const uploadProgress = document.getElementById('uploadProgress');
+const uploadProgressFill = document.getElementById('uploadProgressFill');
+const uploadProgressText = document.getElementById('uploadProgressText');
+const uploadStatus = document.getElementById('uploadStatus');
+
+function openUploadModal() {
+    uploadModal.style.display = 'flex';
+    uploadStatus.textContent = '';
+    uploadStatus.className = 'upload-status';
+    uploadProgress.style.display = 'none';
+}
+
+function closeUploadModalFunc() {
+    uploadModal.style.display = 'none';
+}
+
+function handleFileSelect(files) {
+    if (!files || files.length === 0) return;
+    
+    const formData = new FormData();
+    const category = uploadCategory.value;
+    
+    Array.from(files).forEach(file => {
+        // Validate file type
+        const validTypes = ['audio/mpeg', 'video/mp4', 'application/pdf'];
+        const validExts = ['.mp3', '.mp4', '.pdf'];
+        const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+        
+        if (!validExts.includes(fileExt)) {
+            showUploadStatus(`Invalid file type: ${file.name}. Only MP3, MP4, PDF allowed.`, 'error');
+            return;
+        }
+        
+        // Validate file size (max 100MB)
+        if (file.size > 100 * 1024 * 1024) {
+            showUploadStatus(`File too large: ${file.name}. Max 100MB allowed.`, 'error');
+            return;
+        }
+        
+        formData.append('files', file);
+    });
+    
+    formData.append('category', category);
+    
+    // Show progress
+    uploadProgress.style.display = 'block';
+    uploadProgressFill.style.width = '0%';
+    uploadProgressText.textContent = 'Uploading to WNSP network...';
+    
+    // Upload to server
+    const xhr = new XMLHttpRequest();
+    
+    xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            uploadProgressFill.style.width = percentComplete + '%';
+            uploadProgressText.textContent = `Uploading... ${Math.round(percentComplete)}%`;
+        }
+    });
+    
+    xhr.addEventListener('load', () => {
+        uploadProgress.style.display = 'none';
+        
+        if (xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText);
+            
+            // Check for partial failures
+            if (response.errors && response.errors.length > 0) {
+                const errorMsg = `⚠️ Uploaded ${response.uploaded} file(s), but ${response.errors.length} failed:\n\n${response.errors.join('\n')}`;
+                showUploadStatus(errorMsg, 'error');
+                
+                // Refresh library but keep modal open for user to see errors
+                if (response.uploaded > 0) {
+                    loadMediaLibrary();
+                }
+            } else {
+                showUploadStatus(`✅ Successfully uploaded ${response.uploaded} file(s) to ${category} community!`, 'success');
+                
+                // Refresh media library and close modal after success
+                setTimeout(() => {
+                    loadMediaLibrary();
+                    closeUploadModalFunc();
+                }, 2000);
+            }
+        } else {
+            try {
+                const response = JSON.parse(xhr.responseText);
+                showUploadStatus(`❌ Upload failed: ${response.error || xhr.statusText}`, 'error');
+            } catch {
+                showUploadStatus(`❌ Upload failed: ${xhr.statusText}`, 'error');
+            }
+        }
+    });
+    
+    xhr.addEventListener('error', () => {
+        showUploadStatus('❌ Network error during upload', 'error');
+        uploadProgress.style.display = 'none';
+    });
+    
+    xhr.open('POST', '/api/upload');
+    xhr.send(formData);
+}
+
+function showUploadStatus(message, type) {
+    uploadStatus.textContent = message;
+    uploadStatus.className = `upload-status ${type}`;
+}
+
 // Attach Event Listeners
 function attachEventListeners() {
     // Category buttons
@@ -569,6 +684,48 @@ function attachEventListeners() {
     // Search
     if (searchInput) {
         searchInput.addEventListener('input', handleSearch);
+    }
+    
+    // Upload modal
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', openUploadModal);
+    }
+    
+    if (closeUploadModal) {
+        closeUploadModal.addEventListener('click', closeUploadModalFunc);
+    }
+    
+    if (uploadModal) {
+        uploadModal.addEventListener('click', (e) => {
+            if (e.target === uploadModal) {
+                closeUploadModalFunc();
+            }
+        });
+    }
+    
+    if (uploadDropZone) {
+        uploadDropZone.addEventListener('click', () => fileInput.click());
+        
+        uploadDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadDropZone.classList.add('drag-over');
+        });
+        
+        uploadDropZone.addEventListener('dragleave', () => {
+            uploadDropZone.classList.remove('drag-over');
+        });
+        
+        uploadDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadDropZone.classList.remove('drag-over');
+            handleFileSelect(e.dataTransfer.files);
+        });
+    }
+    
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            handleFileSelect(e.target.files);
+        });
     }
     
     // Audio controls

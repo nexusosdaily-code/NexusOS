@@ -60,6 +60,49 @@
                 <span class="search-icon">🔍</span>
             </div>
 
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <button class="upload-btn" id="uploadBtn">
+                    <span class="upload-icon">📤</span>
+                    Upload Media to WNSP Network
+                </button>
+            </div>
+
+            <!-- Upload Modal -->
+            <div class="upload-modal" id="uploadModal" style="display: none;">
+                <div class="upload-modal-content">
+                    <div class="upload-modal-header">
+                        <h2>Upload to WNSP Mesh Network</h2>
+                        <button class="close-btn" id="closeUploadModal">✕</button>
+                    </div>
+                    <div class="upload-modal-body">
+                        <div class="upload-drop-zone" id="uploadDropZone">
+                            <div class="upload-icon-large">📁</div>
+                            <p class="upload-text">Drag & drop media files here</p>
+                            <p class="upload-subtext">or click to browse</p>
+                            <p class="upload-formats">MP3, MP4, PDF (max 100MB)</p>
+                            <input type="file" id="fileInput" accept=".mp3,.mp4,.pdf" multiple style="display: none;">
+                        </div>
+                        <div class="upload-category-select">
+                            <label for="uploadCategory">Target Community:</label>
+                            <select id="uploadCategory" class="category-dropdown">
+                                <option value="university">🎓 University</option>
+                                <option value="refugee">🏕️ Refugee Resources</option>
+                                <option value="rural">🌾 Rural Communities</option>
+                                <option value="crisis">🚨 Crisis Response</option>
+                            </select>
+                        </div>
+                        <div class="upload-progress" id="uploadProgress" style="display: none;">
+                            <div class="progress-bar-upload">
+                                <div class="progress-fill-upload" id="uploadProgressFill"></div>
+                            </div>
+                            <p class="progress-text" id="uploadProgressText">Uploading...</p>
+                        </div>
+                        <div class="upload-status" id="uploadStatus"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Media Grid -->
             <div class="media-section">
                 <h2 class="section-title">Available Content</h2>

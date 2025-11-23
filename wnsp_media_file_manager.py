@@ -76,28 +76,31 @@ class WNSPMediaFileManager:
         for subdir in ['video', 'audio', 'docs']:
             (self.MEDIA_BASE_PATH / subdir).mkdir(parents=True, exist_ok=True)
     
-    def ingest_file(self, filepath: str, category: str, title: str, 
-                    artist: str = "Unknown", description: str = "",
-                    duration: str = "Unknown") -> Optional[MediaFile]:
+    def ingest_file(self, filepath: str, category: str = "university", 
+                    title: Optional[str] = None, artist: str = "Unknown", 
+                    description: str = "", duration: str = "Unknown") -> str:
         """
         Ingest a real media file from disk
         
         Args:
             filepath: Path to the media file
             category: Content category (university, refugee, rural, crisis)
-            title: Display title
+            title: Display title (defaults to filename if not provided)
             artist: Creator/author
             description: File description
             duration: Playback duration (for audio/video)
         
         Returns:
-            MediaFile object or None if ingestion fails
+            File ID string if successful, raises exception if ingestion fails
         """
         path = Path(filepath)
         
         if not path.exists():
-            print(f"❌ File not found: {filepath}")
-            return None
+            raise FileNotFoundError(f"File not found: {filepath}")
+        
+        # Auto-generate title from filename if not provided
+        if title is None:
+            title = path.stem.replace('_', ' ').title()
         
         try:
             # Determine file type
@@ -113,6 +116,10 @@ class WNSPMediaFileManager:
             
             # Split into chunks
             chunks = self._create_chunks(path, file_id, content_hash)
+            
+            # Auto-generate description if not provided
+            if not description:
+                description = f"{file_type.title()} file"
             
             # Create MediaFile object
             media_file = MediaFile(
@@ -137,11 +144,11 @@ class WNSPMediaFileManager:
             
             print(f"✅ Ingested: {title} ({file_size / 1048576:.2f} MB, {len(chunks)} chunks)")
             
-            return media_file
+            return file_id
             
         except Exception as e:
             print(f"❌ Ingestion failed for {filepath}: {e}")
-            return None
+            raise
     
     def _determine_file_type(self, mime_type: Optional[str], extension: str) -> str:
         """Determine media type from MIME type and extension"""

@@ -7,6 +7,7 @@ Serves the user-facing media player interface and integrates with WNSP backend
 
 from flask import Flask, send_from_directory, jsonify, request, Response, send_file
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
 import os
 import sys
 
@@ -32,6 +33,19 @@ except ImportError:
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
+
+# Security: Enforce maximum upload size (100MB)
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
+
+# Error handler for file too large
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    """Handle file size exceeded error"""
+    return jsonify({
+        'error': 'File too large. Maximum upload size is 100MB.',
+        'uploaded': 0,
+        'files': []
+    }), 413
 
 # Lazy initialization globals
 mesh_stack = None
@@ -211,6 +225,95 @@ def propagate_media():
             'success': False,
             'error': str(e)
         }), 500
+
+@app.route('/api/upload', methods=['POST'])
+def upload_media():
+    """
+    Handle file uploads to WNSP network
+    Accepts: MP3, MP4, PDF files
+    """
+    if not FILE_MANAGER_AVAILABLE:
+        return jsonify({'error': 'File manager not available'}), 503
+    
+    # Check if files were uploaded
+    if 'files' not in request.files:
+        return jsonify({'error': 'No files provided'}), 400
+    
+    files = request.files.getlist('files')
+    category = request.form.get('category', 'university')
+    
+    # Validate category
+    valid_categories = ['university', 'refugee', 'rural', 'crisis']
+    if category not in valid_categories:
+        return jsonify({'error': f'Invalid category. Must be one of: {valid_categories}'}), 400
+    
+    uploaded_files = []
+    errors = []
+    
+    # Process each file
+    for file in files:
+        if file.filename == '':
+            continue
+        
+        # Secure the filename
+        filename = secure_filename(file.filename)
+        
+        # Validate file extension
+        allowed_extensions = ['.mp3', '.mp4', '.pdf']
+        file_ext = os.path.splitext(filename)[1].lower()
+        
+        if file_ext not in allowed_extensions:
+            errors.append(f'{filename}: Invalid file type. Only MP3, MP4, PDF allowed.')
+            continue
+        
+        # Check file size (max 100MB)
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+        
+        if file_size > 100 * 1024 * 1024:
+            errors.append(f'{filename}: File too large (max 100MB).')
+            continue
+        
+        # Save file to media directory
+        media_dir = os.path.join('static', 'media')
+        os.makedirs(media_dir, exist_ok=True)
+        
+        filepath = os.path.join(media_dir, filename)
+        
+        # If file exists, add timestamp to avoid overwrite
+        if os.path.exists(filepath):
+            import time
+            base, ext = os.path.splitext(filename)
+            filename = f'{base}_{int(time.time())}{ext}'
+            filepath = os.path.join(media_dir, filename)
+        
+        try:
+            # Save file to disk
+            file.save(filepath)
+            
+            # Ingest file into WNSP network with category metadata
+            media_id = media_manager.ingest_file(filepath, category=category)
+            
+            uploaded_files.append({
+                'filename': filename,
+                'id': media_id,
+                'category': category
+            })
+        except Exception as e:
+            errors.append(f'{filename}: Upload failed - {str(e)}')
+    
+    # Return results
+    response = {
+        'uploaded': len(uploaded_files),
+        'files': uploaded_files,
+        'category': category
+    }
+    
+    if errors:
+        response['errors'] = errors
+    
+    return jsonify(response), 200 if uploaded_files else 400
 
 @app.route('/api/health')
 def health_check():
