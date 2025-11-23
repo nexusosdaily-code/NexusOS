@@ -11,7 +11,7 @@ NexusOS is a civilization architecture founded on physics, replacing traditional
 ## System Architecture
 
 ### UI/UX Decisions
-The system provides a Unified Dashboard Launcher (`app.py`) offering access to multiple modules. The **Mobile Blockchain Hub** (`mobile_blockchain_hub.py`) serves as the central blockchain interface, integrating all core blockchain operations into a unified mobile-first application including a Web3 Wallet, Mobile DAG Messaging, Blockchain Explorer, DEX, Validator Economics, Wavelength Economics, Network modules, Civic Governance, and Mobile Connectivity. Additional modules include a Civilization Dashboard, WNSP Protocol v2.0, Payment Layer, AI Management Control, Talk to Nexus AI, and the WaveLang ecosystem.
+The system provides a Unified Dashboard Launcher (`app.py`) offering access to multiple modules. The **Mobile Blockchain Hub** (`mobile_blockchain_hub.py`) serves as the central blockchain interface, integrating all core blockchain operations into a unified mobile-first application including a Web3 Wallet, Mobile DAG Messaging, Blockchain Explorer, DEX, Validator Economics, Wavelength Economics, Network modules, Civic Governance, and Mobile Connectivity. Additional modules include a Civilization Dashboard, WNSP Protocol v2.0, WNSP Protocol v3.0 (Architecture), Payment Layer, AI Management Control, Talk to Nexus AI, and the WaveLang ecosystem.
 
 ### Technical Implementations & Feature Specifications
 Key technical components and features include:
@@ -22,6 +22,7 @@ Key technical components and features include:
 -   **Civic Governance Campaign System**: Enables validators to promote innovation campaigns, facilitates community voting, and uses AI for analysis reports.
 -   **Economic Simulation Engine**: Features a self-regulating issuance/burn mechanism, PID control, and conservation constraints.
 -   **WNSP v2.0 Protocol (Optical Mesh Networking)**: Enables quantum cryptography-enabled optical communication with DAG messaging and 170+ scientific character encoding using unique wavelengths.
+-   **WNSP v3.0 Protocol (Architecture Phase)**: Next-generation WNSP roadmap focused on hardware abstraction to enable deployment on current devices (BLE/WiFi/LoRa) without optical transceivers. Key architectural components include: (1) Hardware Abstraction Layer mapping wavelength physics to radio frequencies, (2) Adaptive Encoding System with dual-mode (Scientific/Binary) for 10x throughput, (3) Progressive Validation Tiers (Full/Intermittent/Light/Relay) for diverse device capabilities, (4) Quantum Economics Preservation across radio transmission. **Status**: Conceptual/architectural layer requiring radio stack integration, energy model revision, and measurable benchmarks for production readiness (per architect review, November 2025).
 -   **Wavelength-Economic Validation System**: A physics-based blockchain validation system utilizing Maxwell equation solvers, wave superposition, and 5D wave signature validation for quantum resistance.
 -   **Mobile DAG Messaging System**: Optimized with wavelength validation, E=hf cost estimation, interactive DAG visualization, and an AI Message Security Controller.
 -   **Proof of Spectrum (PoS) Consensus**: A wavelength-inspired consensus mechanism using spectral regions and wave interference for validation.

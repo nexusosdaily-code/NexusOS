@@ -29,6 +29,7 @@ import streamlit as st
 from civilization_dashboard import main as civilization_main
 from web3_wallet_dashboard import render_web3_wallet_dashboard
 from wnsp_dashboard_v2 import render_wnsp_v2_dashboard
+from wnsp_v3_dashboard import render_wnsp_v3_dashboard
 from wavelength_economics_dashboard import render_wavelength_economics_dashboard
 from nexus_consensus_dashboard import render_nexus_consensus_dashboard
 from mobile_connectivity_dashboard import show_mobile_connectivity_dashboard
@@ -511,6 +512,7 @@ def main():
                 "🌍 Civilization Dashboard",
                 "💎 Web3 Wallet",
                 "📡 WNSP Protocol v2.0",
+                "🚀 WNSP Protocol v3.0",
                 "💬 Mobile DAG Messaging",
                 "🔗 Blockchain Explorer",
                 "🔍 Transaction Search Explorer",
@@ -572,6 +574,11 @@ def main():
                 "icon": "📡",
                 "desc": "Wavelength-Native Signaling Protocol with quantum cryptography",
                 "features": ["64 Characters", "DAG Messaging", "E=hf Pricing", "Network Visualization"]
+            },
+            "🚀 WNSP Protocol v3.0": {
+                "icon": "🚀",
+                "desc": "WNSP v3.0 Architecture - Hardware abstraction roadmap for deployment on current devices",
+                "features": ["🔧 Hardware Abstraction Design", "⚡ Binary Encoding Architecture", "📱 Validation Tier Concept", "🌍 LoRa Range Planning", "⚛️ Economics Model", "📋 Deployment Roadmap"]
             },
             "💬 Mobile DAG Messaging": {
                 "icon": "💬",
@@ -744,6 +751,7 @@ def main():
             more_cols = st.columns(3)
             more_dashboards = [
                 "📡 WNSP Protocol v2.0",
+                "🚀 WNSP Protocol v3.0",
                 "🔍 Transaction Search Explorer",
                 "🚀 Napp Deployment Center",
                 "💰 Payment Layer",
@@ -791,6 +799,10 @@ def main():
     elif module == "📡 WNSP Protocol v2.0":
         # WNSP protocol dashboard
         render_wnsp_v2_dashboard()
+    
+    elif module == "🚀 WNSP Protocol v3.0":
+        # WNSP v3.0 - Hardware Abstraction + Adaptive Encoding
+        render_wnsp_v3_dashboard()
     
     elif module == "💬 Mobile DAG Messaging":
         # Mobile blockchain messaging
