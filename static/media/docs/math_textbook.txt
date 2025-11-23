@@ -1,5 +1,0 @@
-[SAMPLE PDF DOCUMENT - WNSP Demo]
-Advanced Mathematics Textbook
-This file represents a PDF document.
-In production, this would be actual PDF data distributed via WNSP mesh network.
-File size: ~15MB equivalent

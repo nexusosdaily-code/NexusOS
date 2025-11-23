@@ -1,2 +1,0 @@
-This is a placeholder for an actual MP4 video file.
-In production, this would be a real lecture video file propagated through the WNSP mesh network.

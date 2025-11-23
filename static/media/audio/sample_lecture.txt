@@ -1,4 +1,0 @@
-[SAMPLE AUDIO FILE - WNSP Demo]
-This file represents an MP3 audio lecture.
-In production, this would be actual audio data streamed via WNSP mesh network.
-File size: ~5MB equivalent

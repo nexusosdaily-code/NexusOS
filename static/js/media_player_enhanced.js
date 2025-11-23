@@ -358,11 +358,14 @@ function playVideo(media) {
     document.getElementById('videoTitle').textContent = media.title;
     document.getElementById('videoMeta').textContent = `${media.artist} • ${media.duration} • ${media.size} MB`;
     
-    // Demo: Show placeholder with message
-    videoPlayer.poster = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450"><rect fill="%23252540" width="800" height="450"/><text x="50%" y="45%" fill="%2394a3b8" text-anchor="middle" font-family="Arial" font-size="20">${encodeURIComponent(media.thumbnail + ' ' + media.title)}</text><text x="50%" y="55%" fill="%236366f1" text-anchor="middle" font-family="Arial" font-size="14">Connect to WNSP network to stream</text><text x="50%" y="65%" fill="%2394a3b8" text-anchor="middle" font-family="Arial" font-size="12">Energy cost: ${media.energyCost} NXT</text></svg>`;
-    
-    // In production, would load actual video:
-    // videoPlayer.src = `/api/media/${media.id}/stream`;
+    // Set video source from backend URL or fallback
+    if (media.url && media.url !== 'demo' && media.url !== '#') {
+        videoPlayer.src = media.url;
+        videoPlayer.load();
+    } else {
+        // Fallback: Show placeholder poster
+        videoPlayer.poster = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450"><rect fill="%23252540" width="800" height="450"/><text x="50%" y="45%" fill="%2394a3b8" text-anchor="middle" font-family="Arial" font-size="20">${encodeURIComponent(media.thumbnail + ' ' + media.title)}</text><text x="50%" y="55%" fill="%236366f1" text-anchor="middle" font-family="Arial" font-size="14">No video source available</text><text x="50%" y="65%" fill="%2394a3b8" text-anchor="middle" font-family="Arial" font-size="12">Energy cost: ${media.energyCost} NXT</text></svg>`;
+    }
 }
 
 // Play Audio
@@ -376,13 +379,15 @@ function playAudio(media) {
     audioPlaylist = mediaLibrary.filter(item => item.type === 'audio' && item.category === media.category);
     currentAudioIndex = audioPlaylist.findIndex(item => item.id === media.id);
     
-    // Demo mode - show message
-    // In production, would load actual audio:
-    // audioPlayer.src = `/api/media/${media.id}/stream`;
-    // audioPlayer.play();
-    
-    // Reset button state
-    playPauseBtn.textContent = '▶️';
+    // Load actual audio from backend URL
+    if (media.url && media.url !== 'demo' && media.url !== '#') {
+        audioPlayer.src = media.url;
+        audioPlayer.load();
+        playPauseBtn.textContent = '▶️';
+    } else {
+        playPauseBtn.textContent = '▶️';
+        console.warn('No audio source available for:', media.title);
+    }
 }
 
 // View Document
@@ -392,26 +397,33 @@ function viewDocument(media) {
     document.getElementById('documentMeta').textContent = `${media.artist} • ${media.size} MB`;
     
     const viewer = document.getElementById('documentViewer');
-    viewer.srcdoc = `
-        <html>
-        <body style="margin: 0; padding: 40px; font-family: Arial; background: #f5f5f5; color: #333;">
-            <div style="max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <h1 style="color: #6366f1; margin-bottom: 20px;">${media.thumbnail} ${media.title}</h1>
-                <p style="color: #666; margin-bottom: 30px;"><strong>Author:</strong> ${media.artist}</p>
-                <hr style="border: none; border-top: 2px solid #eee; margin: 30px 0;">
-                <p style="line-height: 1.8; color: #444;">${media.description}</p>
-                <div style="margin-top: 40px; padding: 20px; background: #f8f9ff; border-left: 4px solid #6366f1; border-radius: 4px;">
-                    <p style="margin: 0; color: #6366f1; font-weight: bold;">📡 WNSP Network Status</p>
-                    <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">This document is ${media.cached ? 'cached locally' : 'available on the mesh network'}. Energy cost: ${media.energyCost} NXT</p>
+    
+    // Load actual document from backend URL
+    if (media.url && media.url !== 'demo' && media.url !== '#') {
+        // For PDF files, use the streaming URL directly
+        viewer.src = media.url;
+    } else {
+        // Fallback: Show placeholder message
+        viewer.srcdoc = `
+            <html>
+            <body style="margin: 0; padding: 40px; font-family: Arial; background: #f5f5f5; color: #333;">
+                <div style="max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h1 style="color: #6366f1; margin-bottom: 20px;">${media.thumbnail} ${media.title}</h1>
+                    <p style="color: #666; margin-bottom: 30px;"><strong>Author:</strong> ${media.artist}</p>
+                    <hr style="border: none; border-top: 2px solid #eee; margin: 30px 0;">
+                    <p style="line-height: 1.8; color: #444;">${media.description}</p>
+                    <div style="margin-top: 40px; padding: 20px; background: #f8f9ff; border-left: 4px solid #6366f1; border-radius: 4px;">
+                        <p style="margin: 0; color: #6366f1; font-weight: bold;">📡 WNSP Network Status</p>
+                        <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">Document source not available. Energy cost: ${media.energyCost} NXT</p>
+                    </div>
+                    <div style="margin-top: 30px; text-align: center; color: #999; font-size: 14px;">
+                        <p>GPL v3.0 License • Community Knowledge Network</p>
+                    </div>
                 </div>
-                <div style="margin-top: 30px; text-align: center; color: #999; font-size: 14px;">
-                    <p>Connect to WNSP network to view full document</p>
-                    <p style="margin-top: 10px;">GPL v3.0 License • Community Knowledge Network</p>
-                </div>
-            </div>
-        </body>
-        </html>
-    `;
+            </body>
+            </html>
+        `;
+    }
 }
 
 // Audio Player Controls
