@@ -42,6 +42,15 @@ Key technical components and features include:
     -   **Governance Protection**: Quadratic voting, collusion detection, Sybil resistance
     -   **AI Anomaly Detection**: Real-time monitoring of economic patterns and validator behavior
     -   **Security Command Center**: Real-time monitoring dashboard with live metrics and alerts
+    -   **Active Intervention Engine**: AI-powered immune system that automatically detects and neutralizes attacks in real-time:
+        - **Oracle Manipulation**: Auto-blacklist sources with >50% price deviation from consensus
+        - **Governance Attacks**: Auto-pause voting on >40% vote concentration in 60 seconds
+        - **Network DDoS**: Auto-ban IPs flooding >100 req/s (permanent), >50 req/s (1hr temporary)
+        - **Wash Trading**: Auto-ban addresses executing >50% of pair volume
+        - **Flash Loans**: Auto-ban same-block borrow/repay patterns
+        - **Validator Attacks**: Auto-isolate validators exhibiting double-signing or censorship
+        - **Emergency Controls**: Kill-switch for governance pause/resume and system shutdown
+        - **Real-time Monitoring**: Active Interventions Dashboard with blacklists, bans, and intervention statistics
 
 ### WaveLang Ecosystem
 A complete quantum-level programming stack:
