@@ -5,13 +5,21 @@ GPL v3.0 License
 Serves the user-facing media player interface and integrates with WNSP backend
 """
 
-from flask import Flask, send_from_directory, jsonify, request
+from flask import Flask, send_from_directory, jsonify, request, Response, send_file
 from flask_cors import CORS
 import os
 import sys
 
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Import production file manager
+try:
+    from wnsp_media_file_manager import media_manager
+    FILE_MANAGER_AVAILABLE = True
+except ImportError:
+    FILE_MANAGER_AVAILABLE = False
+    print("⚠️  File manager not available")
 
 # Import WNSP backend
 try:
@@ -69,6 +77,19 @@ def serve_static(path):
 @app.route('/api/media/library')
 def get_media_library():
     """Get complete media library"""
+    # Try file manager first (production)
+    if FILE_MANAGER_AVAILABLE and len(media_manager.media_library) > 0:
+        try:
+            library = media_manager.get_library_summary()
+            return jsonify({
+                'success': True,
+                'data': library,
+                'source': 'file_manager'
+            })
+        except Exception as e:
+            print(f"File manager error: {e}")
+    
+    # Fallback to WNSP engine (simulation)
     engine = get_media_engine()
     if engine:
         try:
@@ -87,8 +108,8 @@ def get_media_library():
     else:
         return jsonify({
             'success': False,
-            'error': 'WNSP backend not available',
-            'source': 'standalone'
+            'error': 'No media source available',
+            'source': 'none'
         }), 503
 
 @app.route('/api/media/<media_id>')
@@ -197,8 +218,75 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'wnsp_available': WNSP_AVAILABLE,
+        'file_manager_available': FILE_MANAGER_AVAILABLE,
         'version': '1.0.0'
     })
+
+@app.route('/media/<file_id>/stream')
+def stream_media(file_id):
+    """
+    Stream media file with HTTP range request support
+    Enables video/audio seeking and progressive download
+    """
+    if not FILE_MANAGER_AVAILABLE:
+        return jsonify({'error': 'File manager not available'}), 503
+    
+    # Get media file from manager
+    if file_id not in media_manager.media_library:
+        return jsonify({'error': 'Media file not found'}), 404
+    
+    media_file = media_manager.media_library[file_id]
+    
+    # Get file path
+    filepath = media_file.filepath
+    
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'File not found on disk'}), 404
+    
+    # Get file size
+    file_size = os.path.getsize(filepath)
+    
+    # Handle range requests (for video/audio seeking)
+    range_header = request.headers.get('Range', None)
+    
+    if range_header:
+        # Parse range header (e.g., "bytes=0-1023")
+        byte_range = range_header.strip().split('=')[1]
+        start, end = byte_range.split('-')
+        start = int(start) if start else 0
+        end = int(end) if end else file_size - 1
+        
+        # Get file bytes in range
+        data = media_manager.get_file_bytes(file_id, start, end)
+        
+        if data is None:
+            return jsonify({'error': 'Failed to read file'}), 500
+        
+        # Build response with partial content
+        response = Response(
+            data,
+            206,  # Partial Content
+            mimetype=media_file.mime_type,
+            direct_passthrough=True
+        )
+        
+        response.headers.add('Content-Range', f'bytes {start}-{end}/{file_size}')
+        response.headers.add('Accept-Ranges', 'bytes')
+        response.headers.add('Content-Length', str(len(data)))
+        response.headers.add('Content-Type', media_file.mime_type)
+        
+        return response
+    else:
+        # No range request - send entire file
+        try:
+            return send_file(
+                filepath,
+                mimetype=media_file.mime_type,
+                as_attachment=False,
+                conditional=True
+            )
+        except Exception as e:
+            return jsonify({'error': f'Streaming failed: {str(e)}'}), 500
 
 if __name__ == '__main__':
     print("=" * 60)
@@ -206,7 +294,12 @@ if __name__ == '__main__':
     print("=" * 60)
     print(f"📺 Media Player: http://0.0.0.0:5000")
     print(f"🔧 WNSP Backend: {'✅ Available' if WNSP_AVAILABLE else '⚠️  Standalone Mode'}")
+    print(f"📂 File Manager: {'✅ Available' if FILE_MANAGER_AVAILABLE else '⚠️  Not Available'}")
     print(f"📡 API Endpoints: http://0.0.0.0:5000/api/")
     print("=" * 60)
+    
+    # Initialize file manager and scan for media
+    if FILE_MANAGER_AVAILABLE:
+        media_manager.scan_media_directory()
     
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -1,0 +1,4 @@
+[SAMPLE VIDEO FILE - WNSP Demo]
+This file represents an MP4 video lecture.
+In production, this would be actual video data streamed via WNSP mesh network.
+File size: ~100MB equivalent
