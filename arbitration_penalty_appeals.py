@@ -246,11 +246,13 @@ class ArbitrationPenaltyBridge:
     
     def get_validator_appeals(self, validator_address: str) -> List[Dict[str, Any]]:
         """Get all appeals filed by a validator"""
-        return [
-            self.get_appeal_status(appeal_id)
-            for appeal_id, appeal in self.appeals.items()
-            if appeal.validator_address == validator_address
-        ]
+        appeals = []
+        for appeal_id, appeal in self.appeals.items():
+            if appeal.validator_address == validator_address:
+                status = self.get_appeal_status(appeal_id)
+                if status:
+                    appeals.append(status)
+        return appeals
     
     def get_appeal_statistics(self) -> Dict[str, Any]:
         """Get penalty appeal statistics"""

@@ -106,12 +106,16 @@ class GovernanceArbitrationController:
         votes_abstain = 0.0
         
         for vote in votes:
-            power = vote.voting_power
+            # Use weight attribute from Vote object
+            power = getattr(vote, 'weight', 1.0)
             total_power += power
             
-            if vote.vote_choice == "for":
+            # Vote.choice is a VoteChoice enum - convert to string for comparison
+            choice_str = str(getattr(vote, 'choice', 'ABSTAIN')).lower()
+            
+            if 'approve' in choice_str or 'for' in choice_str:
                 votes_for += power
-            elif vote.vote_choice == "against":
+            elif 'reject' in choice_str or 'against' in choice_str:
                 votes_against += power
             else:
                 votes_abstain += power

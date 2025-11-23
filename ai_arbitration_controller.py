@@ -401,38 +401,59 @@ class AIArbitrationController:
         - Detailed reasoning
         - Recommended actions
         """
-        analysis = self.analyze_case(case_id)
+        if case_id not in self.cases:
+            raise ValueError(f"Case {case_id} not found")
+        
         case = self.cases[case_id]
         
+        # Run AI analysis
+        analysis = self.analyze_case(case_id)
+        
+        # Extract decision from analysis
+        decision = analysis["decision"]
+        confidence = analysis["confidence"]
+        reasoning = analysis["reasoning"]
+        
         # Check if confidence is sufficient for autonomous decision
-        if analysis["confidence"] < self.confidence_threshold:
+        if confidence < self.confidence_threshold:
+            # Low confidence - escalate to human governance
             case.status = DisputeStatus.RESOLVED
             case.ai_decision = ArbitrationDecision.ESCALATE
-            case.confidence_score = analysis["confidence"]
-            case.reasoning = f"Confidence {analysis['confidence']:.0%} below threshold {self.confidence_threshold:.0%}. Escalating to human governance."
+            case.confidence_score = confidence
+            case.reasoning = f"Confidence {confidence:.0%} below threshold {self.confidence_threshold:.0%}. Escalating to human governance."
+            case.ai_analysis = json.dumps(analysis.get("evidence_analysis", {}), indent=2)
             case.escalated_to_governance = True
             case.resolution_timestamp = time.time()
             
             self.escalated_cases += 1
             
+            # Log decision
+            self.decision_history.append({
+                "case_id": case_id,
+                "dispute_type": case.dispute_type.value,
+                "decision": ArbitrationDecision.ESCALATE.value,
+                "confidence": confidence,
+                "timestamp": case.resolution_timestamp
+            })
+            
             return {
                 "case_id": case_id,
                 "decision": ArbitrationDecision.ESCALATE,
-                "confidence": analysis["confidence"],
+                "confidence": confidence,
                 "reasoning": case.reasoning,
                 "escalated": True
             }
         
-        # Issue autonomous decision
+        # Issue autonomous decision (confidence >= threshold)
         case.status = DisputeStatus.RESOLVED
-        case.ai_decision = analysis["decision"]
-        case.confidence_score = analysis["confidence"]
-        case.reasoning = analysis["reasoning"]
-        case.ai_analysis = json.dumps(analysis["evidence_analysis"], indent=2)
+        case.ai_decision = decision
+        case.confidence_score = confidence
+        case.reasoning = reasoning
+        case.ai_analysis = json.dumps(analysis.get("evidence_analysis", {}), indent=2)
         case.resolution_timestamp = time.time()
         
         # Handle MODIFY decisions
-        if analysis["decision"] == ArbitrationDecision.MODIFY:
+        if decision == ArbitrationDecision.MODIFY:
             case.modifications = {
                 "penalty_reduction": 0.5,  # Reduce penalty by 50%
                 "reason": "Partial evidence supports appeal"
@@ -449,16 +470,16 @@ class AIArbitrationController:
         self.decision_history.append({
             "case_id": case_id,
             "dispute_type": case.dispute_type.value,
-            "decision": analysis["decision"].value,
-            "confidence": analysis["confidence"],
+            "decision": decision.value,
+            "confidence": confidence,
             "timestamp": case.resolution_timestamp
         })
         
         return {
             "case_id": case_id,
-            "decision": analysis["decision"],
-            "confidence": analysis["confidence"],
-            "reasoning": analysis["reasoning"],
+            "decision": decision,
+            "confidence": confidence,
+            "reasoning": reasoning,
             "modifications": case.modifications,
             "escalated": False
         }
@@ -491,7 +512,10 @@ class AIArbitrationController:
             case_id=case_id,
             submitter=appellant,
             evidence_type="appeal_statement",
-            content={"appeal_reason": appeal_reason, "previous_decision": case.ai_decision.value}
+            content={
+                "appeal_reason": appeal_reason,
+                "previous_decision": case.ai_decision.value if case.ai_decision else "unknown"
+            }
         )
         
         return f"Appeal accepted. Case re-opened for review (appeal {case.appeal_count}/{self.max_auto_appeals})"
