@@ -103,40 +103,24 @@ def render_stack_overview(stack: WNSPUnifiedMeshStack):
     # Architecture diagram
     st.subheader("🏗️ 4-Layer Architecture")
     
-    fig = go.Figure()
-    
     layers = [
-        {"name": "Layer 4: Offline Knowledge", "y": 4, "color": "#ff6b6b", "features": ["Wikipedia cache", "Education content", "Physics verification"]},
-        {"name": "Layer 3: Privacy Messaging", "y": 3, "color": "#4ecdc4", "features": ["Quantum encryption", "Peer-to-peer", "E=hf pricing"]},
-        {"name": "Layer 2: Censorship-Resistant", "y": 2, "color": "#45b7d1", "features": ["Wavelength routing", "Self-healing mesh", "No DNS"]},
-        {"name": "Layer 1: Community Mesh ISP", "y": 1, "color": "#96ceb4", "features": ["BLE/WiFi/LoRa", "Phone-to-phone", "No ISP needed"]},
+        {"name": "Layer 4: Offline Knowledge", "color": "#ff6b6b", "features": ["Wikipedia cache", "Education content", "Physics verification"]},
+        {"name": "Layer 3: Privacy Messaging", "color": "#4ecdc4", "features": ["Quantum encryption", "Peer-to-peer", "E=hf pricing"]},
+        {"name": "Layer 2: Censorship-Resistant", "color": "#45b7d1", "features": ["Wavelength routing", "Self-healing mesh", "No DNS"]},
+        {"name": "Layer 1: Community Mesh ISP", "color": "#96ceb4", "features": ["BLE/WiFi/LoRa", "Phone-to-phone", "No ISP needed"]},
     ]
     
     for layer in layers:
-        fig.add_trace(go.Bar(
-            name=layer["name"],
-            x=[len(layer["features"])],
-            y=[layer["y"]],
-            orientation='h',
-            marker=dict(color=layer["color"]),
-            text=f"<b>{layer['name']}</b><br>" + "<br>".join([f"• {f}" for f in layer["features"]]),
-            textposition='inside',
-            textfont=dict(size=11, color='white'),
-            hoverinfo='text',
-            hovertext=f"<b>{layer['name']}</b><br>" + "<br>".join(layer["features"])
-        ))
-    
-    fig.update_layout(
-        title="WNSP Unified Stack - All Layers Work Together",
-        xaxis_title="Feature Count",
-        yaxis_title="Layer",
-        barmode='overlay',
-        showlegend=False,
-        height=400,
-        yaxis=dict(tickmode='array', tickvals=[1,2,3,4], ticktext=["L1: Mesh", "L2: Routing", "L3: Privacy", "L4: Knowledge"])
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, {layer['color']}88 0%, {layer['color']}44 100%); 
+                    padding: 20px; border-radius: 10px; margin: 10px 0; 
+                    border-left: 5px solid {layer['color']};">
+            <h4 style="color: white; margin: 0 0 10px 0;">{layer['name']}</h4>
+            <ul style="color: white; margin: 0; padding-left: 20px;">
+                {"".join([f"<li>{feature}</li>" for feature in layer['features']])}
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
     
     st.info("""
     **How They Work Together:**

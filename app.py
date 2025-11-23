@@ -30,7 +30,6 @@ from civilization_dashboard import main as civilization_main
 from web3_wallet_dashboard import render_web3_wallet_dashboard
 from wnsp_dashboard_v2 import render_wnsp_v2_dashboard
 from wnsp_v3_dashboard import render_wnsp_v3_dashboard
-from wnsp_unified_mesh_dashboard import render_wnsp_unified_mesh_dashboard
 from wavelength_economics_dashboard import render_wavelength_economics_dashboard
 from nexus_consensus_dashboard import render_nexus_consensus_dashboard
 from mobile_connectivity_dashboard import show_mobile_connectivity_dashboard
@@ -514,7 +513,6 @@ def main():
                 "💎 Web3 Wallet",
                 "📡 WNSP Protocol v2.0",
                 "🚀 WNSP Protocol v3.0",
-                "🌐 WNSP Unified Mesh Stack",
                 "💬 Mobile DAG Messaging",
                 "🔗 Blockchain Explorer",
                 "🔍 Transaction Search Explorer",
@@ -581,11 +579,6 @@ def main():
                 "icon": "🚀",
                 "desc": "WNSP v3.0 Architecture - Hardware abstraction roadmap for deployment on current devices",
                 "features": ["🔧 Hardware Abstraction Design", "⚡ Binary Encoding Architecture", "📱 Validation Tier Concept", "🌍 LoRa Range Planning", "⚛️ Economics Model", "📋 Deployment Roadmap"]
-            },
-            "🌐 WNSP Unified Mesh Stack": {
-                "icon": "🌐",
-                "desc": "Complete 4-layer decentralized knowledge infrastructure working together",
-                "features": ["📡 Community Mesh ISP", "🛡️ Censorship-Resistant Routing", "🔐 Privacy Messaging", "📚 Offline Knowledge", "🎮 Live Demo", "🏥 Health Monitoring"]
             },
             "💬 Mobile DAG Messaging": {
                 "icon": "💬",
@@ -810,10 +803,6 @@ def main():
     elif module == "🚀 WNSP Protocol v3.0":
         # WNSP v3.0 - Hardware Abstraction + Adaptive Encoding
         render_wnsp_v3_dashboard()
-    
-    elif module == "🌐 WNSP Unified Mesh Stack":
-        # WNSP Unified Mesh - 4 layers integrated
-        render_wnsp_unified_mesh_dashboard()
     
     elif module == "💬 Mobile DAG Messaging":
         # Mobile blockchain messaging
