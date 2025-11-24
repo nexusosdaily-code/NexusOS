@@ -948,6 +948,12 @@ function handleFileSelect(files) {
         return;
     }
     
+    // Check wallet authentication
+    if (!currentWallet || !currentWallet.auth_token) {
+        showUploadStatus('❌ Please login to your wallet before uploading content', 'error');
+        return;
+    }
+    
     const formData = new FormData();
     const category = uploadCategory.value;
     const enableEncryption = document.getElementById('enableEncryption').checked;
@@ -1039,18 +1045,47 @@ function handleFileSelect(files) {
                     loadMediaLibrary();
                 }
             } else {
-                showUploadStatus(`✅ Successfully uploaded ${response.uploaded} file(s) to ${category} community!`, 'success');
+                // Extract energy cost and new balance from response
+                const totalEnergyCost = response.files.reduce((sum, f) => sum + (f.energy_cost_units || 0), 0);
+                const energyCostNXT = (totalEnergyCost / 100000000).toFixed(8);
+                // Get the most recent balance (from last file processed)
+                const newBalance = response.files[response.files.length - 1]?.new_wallet_balance || currentWallet.balance_units;
+                
+                // Update wallet balance in UI
+                if (currentWallet && newBalance !== undefined) {
+                    currentWallet.balance_units = newBalance;
+                    localStorage.setItem('wallet', JSON.stringify(currentWallet));
+                    updateWalletUI();
+                }
+                
+                const energyMsg = totalEnergyCost > 0 
+                    ? `\n💰 Energy cost: ${totalEnergyCost.toLocaleString()} units (${energyCostNXT} NXT)\n💎 New balance: ${newBalance.toLocaleString()} units`
+                    : '';
+                
+                showUploadStatus(`✅ Successfully uploaded ${response.uploaded} file(s) to ${category} community!${energyMsg}`, 'success');
                 
                 // Refresh media library and close modal after success
                 setTimeout(() => {
                     loadMediaLibrary();
                     closeUploadModalFunc();
-                }, 2000);
+                }, 3000);
             }
         } else {
             try {
                 const response = JSON.parse(xhr.responseText);
-                showUploadStatus(`❌ Upload failed: ${response.error || xhr.statusText}`, 'error');
+                let errorMessage = response.error || xhr.statusText;
+                
+                // Show specific errors for insufficient balance or wallet issues
+                if (response.errors && response.errors.length > 0) {
+                    errorMessage = `Upload failed:\n${response.errors.join('\n')}`;
+                }
+                
+                showUploadStatus(`❌ ${errorMessage}`, 'error');
+                
+                // Don't update wallet balance on failed uploads
+                if (xhr.status === 401 || errorMessage.includes('wallet') || errorMessage.includes('balance')) {
+                    console.log('⚠️ Wallet error - balance not updated');
+                }
             } catch {
                 showUploadStatus(`❌ Upload failed: ${xhr.statusText}`, 'error');
             }
@@ -1063,6 +1098,7 @@ function handleFileSelect(files) {
     });
     
     xhr.open('POST', '/api/upload');
+    xhr.setRequestHeader('X-Auth-Token', currentWallet.auth_token);
     xhr.send(formData);
 }
 

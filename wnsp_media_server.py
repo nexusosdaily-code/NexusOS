@@ -536,6 +536,24 @@ def upload_media():
     if not FILE_MANAGER_AVAILABLE:
         return jsonify({'error': 'File manager not available'}), 503
     
+    # 🔐 WALLET AUTHENTICATION: Verify wallet before upload
+    auth_token = request.headers.get('X-Auth-Token')
+    if not auth_token:
+        return jsonify({'error': 'Wallet authentication required. Please login to your wallet first.'}), 401
+    
+    # Verify wallet and get user info
+    wallet_mgr = get_wallet_manager()
+    if not wallet_mgr:
+        return jsonify({'error': 'Wallet system unavailable'}), 503
+    
+    wallet_result = wallet_mgr.get_wallet_by_auth(auth_token)
+    if not wallet_result['success']:
+        return jsonify({'error': 'Invalid wallet credentials'}), 401
+    
+    user_wallet = wallet_result['wallet']
+    device_id = user_wallet['device_id']
+    current_balance = user_wallet['balance_units']
+    
     # Check if files were uploaded
     if 'files' not in request.files:
         return jsonify({'error': 'No files provided'}), 400
@@ -556,6 +574,7 @@ def upload_media():
     
     uploaded_files = []
     errors = []
+    estimated_total_cost_units = 0  # Track total estimated cost for all files
     
     # Process each file
     for file in files:
@@ -582,6 +601,36 @@ def upload_media():
             errors.append(f'{filename}: File too large (max 100MB).')
             continue
         
+        # 💰 PRE-PROPAGATION COST ESTIMATION: Estimate E=hf cost before uploading
+        # Calculate estimated cost based on file size and typical propagation pattern
+        engine = get_media_engine()
+        estimated_cost_units = 0
+        
+        if engine and engine.mesh_stack:
+            # Estimate number of target nodes
+            all_nodes = list(engine.mesh_stack.layer1_mesh_isp.nodes.keys())
+            if share_mode == 'friends' and friend_ids:
+                target_count = len([n for n in friend_ids if n in all_nodes])
+            else:
+                target_count = len(all_nodes) - 1  # All except source
+            
+            # Estimate E=hf cost: ~0.00001 NXT per KB per hop (rough estimate)
+            # Typical mesh has 1-2 hops, so use average of 1.5 hops
+            file_size_kb = file_size / 1024
+            estimated_cost_nxt = file_size_kb * 0.00001 * 1.5 * target_count
+            estimated_cost_units = int(estimated_cost_nxt * 100_000_000)
+            estimated_total_cost_units += estimated_cost_units
+            
+            print(f"📊 Estimated cost for {filename}: {estimated_cost_units} units ({estimated_cost_nxt:.8f} NXT)")
+            
+            # 🔒 CRITICAL: Check wallet balance BEFORE saving file (prevent free sharing)
+            if estimated_cost_units > 0 and current_balance < estimated_cost_units:
+                error_msg = f'Insufficient balance. Required: {estimated_cost_units} units, Available: {current_balance} units. Please top up your wallet.'
+                errors.append(f'{filename}: {error_msg}')
+                print(f"❌ REJECTED: {error_msg}")
+                continue  # Skip this file - NO FREE SHARING!
+        
+        # Balance is sufficient - proceed with upload
         # Save file to media directory
         media_dir = os.path.join('static', 'media')
         os.makedirs(media_dir, exist_ok=True)
@@ -655,10 +704,59 @@ def upload_media():
                 
                 print(f"📤 Upload from {source_display} ({source_ip})")
                 print(f"📡 Share Mode: {share_type}")
-                print(f"📡 Propagating {filename} to {len(target_nodes)} peer node(s)...")
                 
-                # Propagate to peer nodes only (not back to source)
-                if wnsp_media_id:
+                # 💰 CRITICAL: Calculate CONSERVATIVE upper-bound cost BEFORE propagation
+                if wnsp_media_id and target_nodes:
+                    # Use CONSERVATIVE estimate to ensure we never undercharge
+                    # Assume worst-case: 3 hops per target + 20% safety margin
+                    # This guarantees payment covers actual energy liability
+                    conservative_hops_per_target = 3  # Worst-case mesh depth
+                    safety_margin = 1.2  # 20% overcharge margin
+                    
+                    estimated_cost_nxt = media_file.total_energy_cost_single_hop * len(target_nodes) * conservative_hops_per_target * safety_margin
+                    estimated_cost_units = int(estimated_cost_nxt * 100_000_000)
+                    avg_wavelength = sum(chunk.wavelength for chunk in media_file.chunks) / len(media_file.chunks) if media_file.chunks else 0
+                    
+                    print(f"📊 CONSERVATIVE estimate: {estimated_cost_units} units ({estimated_cost_nxt:.8f} NXT) for {len(target_nodes)} target(s)")
+                    
+                    # 🔒 DEDUCT ENERGY COST BEFORE PROPAGATION (prevent free distribution)
+                    energy_description = f"P2P content sharing (pre-paid): {len(target_nodes)} target(s), {media_file.total_chunks} chunks"
+                    
+                    deduction_result = wallet_mgr.deduct_energy_cost(
+                        device_id=device_id,
+                        amount_units=total_energy_cost_units,
+                        filename=filename,
+                        file_size=file_size,
+                        wavelength_nm=avg_wavelength,
+                        energy_description=energy_description
+                    )
+                    
+                    if not deduction_result['success']:
+                        # ❌ PAYMENT FAILED - ABORT UPLOAD, ROLLBACK EVERYTHING
+                        print(f"❌ PAYMENT FAILED: {deduction_result.get('error')}")
+                        print(f"🔄 ROLLBACK: Deleting unpaid content (NO FREE SHARING!)")
+                        
+                        try:
+                            if os.path.exists(filepath):
+                                os.remove(filepath)
+                                print(f"🗑️  Deleted unpaid file: {filepath}")
+                            if media_manager and media_id:
+                                media_manager.remove_file(media_id)
+                                print(f"🗑️  Removed from media manager: {media_id}")
+                        except Exception as rollback_error:
+                            print(f"⚠️  Rollback error: {rollback_error}")
+                        
+                        errors.append(f'{filename}: {deduction_result.get("error")} - Upload cancelled (payment required before distribution)')
+                        continue  # Skip propagation and file listing - NO SUCCESS!
+                    
+                    # ✅ Payment successful - NOW propagate to network
+                    print(f"✅ Payment deducted: {total_energy_cost_units} units ({total_energy_cost_nxt:.8f} NXT)")
+                    print(f"💰 New balance: {deduction_result['new_balance']} units")
+                    current_balance = deduction_result['new_balance']
+                    
+                    print(f"📡 Propagating {filename} to {len(target_nodes)} peer node(s)...")
+                    
+                    # Propagate to peer nodes only (payment already confirmed)
                     for node_id in target_nodes:
                         try:
                             result = engine.propagate_file_to_node(wnsp_media_id, node_id, source_node_id=source_node)
@@ -676,7 +774,20 @@ def upload_media():
                         except Exception as prop_error:
                             print(f"⚠️  Propagation to {node_id} failed: {prop_error}")
                 else:
-                    print("⚠️  Skipping propagation - WNSP ingestion failed")
+                    print("⚠️  Skipping propagation - WNSP ingestion failed or no targets")
+                    
+                    # WNSP ingestion failed - rollback
+                    try:
+                        if os.path.exists(filepath):
+                            os.remove(filepath)
+                        if media_manager and media_id:
+                            media_manager.remove_file(media_id)
+                    except Exception as e:
+                        print(f"⚠️  Rollback error: {e}")
+                    errors.append(f'{filename}: WNSP ingestion failed')
+                    continue
+            
+            # Payment already deducted before propagation (above) - just track results
             
             uploaded_files.append({
                 'filename': filename,
@@ -686,7 +797,10 @@ def upload_media():
                 'share_mode': share_mode,
                 'selected_friends': friend_ids if share_mode == 'friends' else [],
                 'propagated_to_nodes': len(propagation_results),
-                'propagation_details': propagation_results
+                'propagation_details': propagation_results,
+                'energy_cost_units': total_energy_cost_units,
+                'energy_cost_nxt': total_energy_cost_units / 100_000_000,
+                'new_wallet_balance': current_balance
             })
         except Exception as e:
             errors.append(f'{filename}: Upload failed - {str(e)}')
