@@ -54,7 +54,7 @@ def request_entity_too_large(error):
 # Lazy initialization globals
 mesh_stack = None
 media_engine = None
-_wnsp_init_attempted = False
+_wnsp_initializing = False  # Lock to prevent concurrent initialization
 registered_devices = {}  # Track connected devices as mesh nodes
 
 def create_user_mesh_network():
@@ -115,23 +115,26 @@ def get_media_engine():
     return media_engine
 
 def init_media_engine():
-    """Initialize WNSP media engine at app startup"""
-    global mesh_stack, media_engine, WNSP_AVAILABLE
+    """Initialize WNSP media engine (thread-safe, idempotent)"""
+    global mesh_stack, media_engine, _wnsp_initializing, WNSP_AVAILABLE
     
-    if not WNSP_AVAILABLE:
-        return
+    if not WNSP_AVAILABLE or media_engine is not None or _wnsp_initializing:
+        return  # Already initialized or in progress
     
-    # Always reinitialize if engine is None (no early return guard!)
+    _wnsp_initializing = True
     try:
         print("🔄 Initializing WNSP Media Engine with YOUR devices...", flush=True)
         mesh_stack = create_user_mesh_network()
         media_engine = WNSPMediaPropagationProduction(mesh_stack=mesh_stack)
-        print("✅ WNSP Media Engine initialized and ready for uploads!", flush=True)
+        print(f"✅ WNSP Media Engine initialized! engine={media_engine is not None}, mesh={mesh_stack is not None}", flush=True)
     except Exception as e:
         print(f"⚠️  WNSP Engine initialization failed: {e}", flush=True)
         import traceback
         traceback.print_exc()
         WNSP_AVAILABLE = False
+        media_engine = None
+    finally:
+        _wnsp_initializing = False
 
 @app.before_request
 def ensure_wnsp_engine():
