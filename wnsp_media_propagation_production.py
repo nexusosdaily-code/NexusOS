@@ -168,7 +168,8 @@ class WNSPMediaPropagationProduction:
                 )
         
         # Initialize sample content library
-        self._initialize_content_library()
+        # DISABLED: Causes hang during server startup - files added via upload API instead
+        # self._initialize_content_library()
     
     def _initialize_content_library(self):
         """Create sample media files for different community types"""

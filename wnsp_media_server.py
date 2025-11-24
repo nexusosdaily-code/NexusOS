@@ -131,6 +131,7 @@ def init_media_engine():
         mesh_stack = create_user_mesh_network()
         print(f"📝 Mesh created: {mesh_stack is not None}", flush=True)
         
+        print("📝 Creating WNSPMediaPropagationProduction engine...", flush=True)
         media_engine = WNSPMediaPropagationProduction(mesh_stack=mesh_stack)
         print(f"📝 Engine created: {media_engine is not None}, type={type(media_engine)}", flush=True)
         
