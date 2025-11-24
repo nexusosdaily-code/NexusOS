@@ -163,9 +163,32 @@
             Peer-to-peer mesh broadcasting with physics-based routing
         </p>
 
-        <!-- Broadcast Controls -->
-        <div class="broadcast-controls" id="broadcastControls">
+        <!-- Phone Number Login (Required for Broadcasting) -->
+        <div class="broadcast-controls" id="phoneLogin" style="display: block;">
+            <h2>📱 Enter Your Phone Number</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                Phone number is required to broadcast or watch streams
+            </p>
+            
+            <div class="input-group">
+                <label for="phoneNumber">Phone Number (with country code)</label>
+                <input type="tel" id="phoneNumber" placeholder="+1234567890" style="font-size: 18px;">
+                <p style="color: var(--text-secondary); font-size: 12px; margin-top: 8px;">
+                    Example: +1234567890 (US), +441234567890 (UK), +861234567890 (China)
+                </p>
+            </div>
+
+            <button class="btn-start-broadcast" onclick="registerPhone()">
+                Continue
+            </button>
+        </div>
+
+        <!-- Broadcast Controls (hidden until phone registered) -->
+        <div class="broadcast-controls" id="broadcastControls" style="display: none;">
             <h2>Start Broadcasting</h2>
+            <p style="color: var(--accent); margin-bottom: 16px;">
+                📱 Logged in as: <strong id="userPhone">+1234567890</strong>
+            </p>
             
             <div class="consent-notice">
                 🔒 Your camera will only activate after you grant permission. Streams are peer-to-peer encrypted via WNSP mesh network.

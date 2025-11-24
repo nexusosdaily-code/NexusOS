@@ -22,6 +22,7 @@ let peerConnections = {}; // viewer_id -> RTCPeerConnection
 let viewingBroadcast = null;
 let currentViewPeerConnection = null;
 let userFriends = []; // List of user's friends (loaded on page load)
+let userPhone = null; // User's registered phone number (server-verified)
 
 // ============================================================================
 // SOCKET.IO EVENT HANDLERS
@@ -29,7 +30,33 @@ let userFriends = []; // List of user's friends (loaded on page load)
 
 socket.on('connected', (data) => {
     console.log('✅ Connected to WNSP mesh network:', data.message);
-    loadActiveBroadcasts();
+    
+    // Check if phone already registered (from localStorage)
+    const savedPhone = localStorage.getItem('user_phone');
+    if (savedPhone) {
+        // Auto-login with saved phone
+        socket.emit('register_phone', { phone_number: savedPhone });
+    }
+});
+
+socket.on('phone_registered', (data) => {
+    if (data.success) {
+        userPhone = data.phone_number;
+        localStorage.setItem('user_phone', userPhone);
+        
+        console.log('✅ Phone registered:', userPhone);
+        
+        // Show broadcast controls, hide phone login
+        document.getElementById('phoneLogin').style.display = 'none';
+        document.getElementById('broadcastControls').style.display = 'block';
+        document.getElementById('userPhone').textContent = userPhone;
+        
+        // Load available broadcasts and friends
+        loadActiveBroadcasts();
+        loadFriends();
+    } else {
+        alert('Registration failed: ' + data.error);
+    }
 });
 
 socket.on('broadcast_available', (data) => {
