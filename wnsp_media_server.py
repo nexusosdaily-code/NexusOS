@@ -312,6 +312,7 @@ def upload_media():
     
     files = request.files.getlist('files')
     category = request.form.get('category', 'university')
+    enable_encryption = request.form.get('enable_encryption', 'false').lower() == 'true'
     
     # Validate category
     valid_categories = ['university', 'refugee', 'rural', 'crisis']
@@ -385,7 +386,8 @@ def upload_media():
                     with open(filepath, 'rb') as f:
                         file_content = f.read()
                     
-                    print(f"📝 Adding to WNSP engine: {filename} ({file_size} bytes)...", flush=True)
+                    encryption_status = "🔐 ENCRYPTED" if enable_encryption else "🔓 unencrypted"
+                    print(f"📝 Adding to WNSP engine: {filename} ({file_size} bytes) {encryption_status}...", flush=True)
                     media_file = engine.add_media_file(
                         filename=filename,
                         file_type=file_ext.replace('.', ''),
@@ -393,7 +395,8 @@ def upload_media():
                         description=f"{category} content",
                         category=category,
                         simulated_content=file_content,  # Real file content for dedup
-                        source_node_id=source_node  # Add chunks to source node cache
+                        source_node_id=source_node,  # Add chunks to source node cache
+                        enable_encryption=enable_encryption  # Enable quantum encryption
                     )
                     wnsp_media_id = media_file.file_id
                     print(f"✅ Ingested into WNSP engine: {wnsp_media_id} ({media_file.total_chunks} chunks)", flush=True)
@@ -422,7 +425,8 @@ def upload_media():
                                     'node_display': target_display,
                                     'chunks': result.get('successful_chunks', 0),
                                     'energy': result.get('total_energy_cost', 0),
-                                    'hops': result.get('total_hops', 0)
+                                    'hops': result.get('total_hops', 0),
+                                    'encrypted': media_file.is_encrypted
                                 })
                                 print(f"✅ {source_display} → {target_display}: {result.get('successful_chunks')} chunks, {result.get('total_hops')} hops, {result.get('total_energy_cost', 0):.6f} NXT")
                         except Exception as prop_error:
@@ -433,6 +437,7 @@ def upload_media():
             uploaded_files.append({
                 'filename': filename,
                 'id': media_id,
+                'encrypted': enable_encryption,
                 'category': category,
                 'propagated_to_nodes': len(propagation_results),
                 'propagation_details': propagation_results

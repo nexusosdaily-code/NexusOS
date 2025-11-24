@@ -628,6 +628,7 @@ function handleFileSelect(files) {
     
     const formData = new FormData();
     const category = uploadCategory.value;
+    const enableEncryption = document.getElementById('enableEncryption').checked;
     let validFileCount = 0;
     let hasErrors = false;
     
@@ -667,7 +668,9 @@ function handleFileSelect(files) {
     }
     
     formData.append('category', category);
-    console.log(`🚀 Starting upload of ${validFileCount} file(s) to /api/upload`);
+    formData.append('enable_encryption', enableEncryption);
+    const encryptionStatus = enableEncryption ? '🔐 ENCRYPTED' : '🔓 unencrypted';
+    console.log(`🚀 Starting upload of ${validFileCount} file(s) to /api/upload (${encryptionStatus})`);
     
     // Show progress
     uploadProgress.style.display = 'block';

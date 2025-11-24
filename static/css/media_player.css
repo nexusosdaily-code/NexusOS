@@ -990,6 +990,34 @@ body {
     border-color: var(--primary-color);
 }
 
+.upload-encryption-option {
+    margin-top: 20px;
+    padding: 16px;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 8px;
+}
+
+.upload-encryption-option label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.upload-encryption-option input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+.upload-encryption-option span {
+    user-select: none;
+}
+
 .upload-progress {
     margin-top: 24px;
 }
