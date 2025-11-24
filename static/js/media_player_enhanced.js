@@ -581,12 +581,18 @@ function closeUploadModalFunc() {
 }
 
 function handleFileSelect(files) {
-    if (!files || files.length === 0) return;
+    console.log('📤 handleFileSelect called with files:', files);
+    if (!files || files.length === 0) {
+        console.warn('⚠️ No files provided');
+        return;
+    }
     
     const formData = new FormData();
     const category = uploadCategory.value;
     let validFileCount = 0;
     let hasErrors = false;
+    
+    console.log(`📂 Processing ${files.length} file(s) for category: ${category}`);
     
     Array.from(files).forEach(file => {
         // Validate file type
@@ -609,10 +615,12 @@ function handleFileSelect(files) {
         
         formData.append('files', file);
         validFileCount++;
+        console.log(`✅ Valid file added: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
     });
     
     // Don't upload if no valid files
     if (validFileCount === 0) {
+        console.error('❌ No valid files to upload');
         if (!hasErrors) {
             showUploadStatus('No valid files to upload', 'error');
         }
@@ -620,6 +628,7 @@ function handleFileSelect(files) {
     }
     
     formData.append('category', category);
+    console.log(`🚀 Starting upload of ${validFileCount} file(s) to /api/upload`);
     
     // Show progress
     uploadProgress.style.display = 'block';
