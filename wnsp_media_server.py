@@ -356,14 +356,20 @@ def upload_media():
             if engine and engine.mesh_stack:
                 # CRITICAL: Also ingest into WNSP engine for mesh propagation
                 try:
-                    wnsp_media_id = engine.ingest_media_file(
-                        filepath=filepath,
+                    # Read actual file content for content-based hashing
+                    with open(filepath, 'rb') as f:
+                        file_content = f.read()
+                    
+                    media_file = engine.add_media_file(
                         filename=filename,
                         file_type=file_ext.replace('.', ''),
+                        file_size=file_size,
                         description=f"{category} content",
-                        category=category
+                        category=category,
+                        simulated_content=file_content  # Real file content for dedup
                     )
-                    print(f"✅ Ingested into WNSP engine: {wnsp_media_id}")
+                    wnsp_media_id = media_file.file_id
+                    print(f"✅ Ingested into WNSP engine: {wnsp_media_id} ({media_file.total_chunks} chunks)")
                 except Exception as ingest_error:
                     print(f"⚠️  WNSP ingestion failed: {ingest_error}")
                     wnsp_media_id = None
