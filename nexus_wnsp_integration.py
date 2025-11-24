@@ -152,15 +152,21 @@ class NexusWNSPWallet(NexusNativeWallet):
             
             address = mapping.nexus_address
             
-            # Check balance (use exact ledger value, no float reconstruction)
-            balance_result = super().get_balance(address)
-            balance_units = balance_result.get('balance_units', 0)
+            # Get token account and check balance
+            account = self._get_token_account(address)
+            if not account:
+                return {'success': False, 'error': 'Account not found'}
+            
+            balance_units = account.balance
             
             if balance_units < amount_units:
                 return {
                     'success': False,
                     'error': f'Insufficient balance. Need {amount_units} units, have {balance_units} units'
                 }
+            
+            # 🔒 CRITICAL: Actually deduct reserved amount from blockchain balance (LOCK FUNDS)
+            account.balance -= amount_units
             
             # Create reservation
             reservation = EnergyReservation(
@@ -175,15 +181,15 @@ class NexusWNSPWallet(NexusNativeWallet):
             session.add(reservation)
             session.commit()
             
-            # Calculate temporary balance (for display only)
-            temp_balance = balance_units - amount_units
+            # Get new balance after reservation
+            new_balance = account.balance
             
             return {
                 'success': True,
                 'reservation_id': reservation.id,
                 'reserved_amount': amount_units,
-                'new_balance': temp_balance,
-                'balance_nxt': temp_balance / UNITS_PER_NXT
+                'new_balance': new_balance,
+                'balance_nxt': new_balance / UNITS_PER_NXT
             }
         except Exception as e:
             session.rollback()
@@ -222,19 +228,24 @@ class NexusWNSPWallet(NexusNativeWallet):
             elif adjustment < 0:
                 adjustment_type = 'TOP_UP'
             
-            # Deduct actual energy cost from token account
+            # Get token account for adjustment
             account = self._get_token_account(address)
             if not account:
                 return {'success': False, 'error': 'Account not found'}
             
-            # Deduct actual cost (already in correct units - no conversion needed)
-            if account.balance < actual_amount_units:
-                return {
-                    'success': False,
-                    'error': f'Insufficient balance for finalization'
-                }
-            
-            account.balance -= actual_amount_units
+            # 💰 RECONCILE: Refund excess or charge deficit (funds already locked in reserve)
+            if adjustment > 0:
+                # Refund excess (actual < reserved)
+                account.balance += adjustment
+            elif adjustment < 0:
+                # Charge deficit (actual > reserved) - need more funds
+                deficit = abs(adjustment)
+                if account.balance < deficit:
+                    return {
+                        'success': False,
+                        'error': f'Insufficient balance for top-up. Need {deficit} more units.'
+                    }
+                account.balance -= deficit
             
             # Update reservation
             reservation.actual_amount_units = actual_amount_units
@@ -274,16 +285,23 @@ class NexusWNSPWallet(NexusNativeWallet):
             if not reservation:
                 return {'success': False, 'error': 'Reservation not found'}
             
+            # Get token account and refund reserved funds
+            address = reservation.address
+            account = self._get_token_account(address)
+            if not account:
+                return {'success': False, 'error': 'Account not found'}
+            
+            # 💸 REFUND: Return locked funds to blockchain balance
+            account.balance += reserved_amount_units
+            
             # Mark as cancelled
             reservation.status = 'cancelled'
             reservation.finalized_at = datetime.utcnow()
             
             session.commit()
             
-            # Get current balance (already in correct units)
-            address = reservation.address
-            account = self._get_token_account(address)
-            final_balance = account.balance if account else 0
+            # Get final balance after refund
+            final_balance = account.balance
             
             return {
                 'success': True,
