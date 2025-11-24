@@ -726,7 +726,11 @@ function attachEventListeners() {
     }
     
     if (uploadDropZone) {
-        uploadDropZone.addEventListener('click', () => fileInput.click());
+        console.log('✅ Attaching event listeners to uploadDropZone');
+        uploadDropZone.addEventListener('click', () => {
+            console.log('🖱️ Drop zone clicked, triggering file input');
+            fileInput.click();
+        });
         
         uploadDropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -740,16 +744,23 @@ function attachEventListeners() {
         uploadDropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadDropZone.classList.remove('drag-over');
+            console.log('📦 Files dropped!', e.dataTransfer.files);
             handleFileSelect(e.dataTransfer.files);
         });
+    } else {
+        console.error('❌ uploadDropZone element not found!');
     }
     
     if (fileInput) {
+        console.log('✅ Attaching change event listener to fileInput');
         fileInput.addEventListener('change', (e) => {
+            console.log('📁 File input change event triggered!', e.target.files);
             handleFileSelect(e.target.files);
             // Reset file input so the same file can be selected again
             e.target.value = '';
         });
+    } else {
+        console.error('❌ fileInput element not found!');
     }
     
     // Audio controls
