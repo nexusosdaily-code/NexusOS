@@ -110,8 +110,11 @@ def create_user_mesh_network():
 def get_media_engine():
     """Get WNSP media engine (lazy initialization on first call)"""
     global media_engine
+    print(f"🔍 get_media_engine() called: media_engine={media_engine is not None}", flush=True)
     if media_engine is None:
+        print("⚠️  Engine is None, calling init_media_engine()...", flush=True)
         init_media_engine()
+        print(f"🔍 After init: media_engine={media_engine is not None}", flush=True)
     return media_engine
 
 def init_media_engine():
@@ -361,7 +364,7 @@ def upload_media():
             # 🌐 PEER-TO-PEER MESH PROPAGATION: Detect source device and propagate to peer
             propagation_results = []
             engine = get_media_engine()
-            print(f"🔍 DEBUG: engine={engine is not None}, mesh={engine.mesh_stack is not None if engine else False}", flush=True)
+            print(f"🔍 DEBUG upload: engine={engine is not None}, mesh={engine.mesh_stack is not None if engine else False}, engine_id={id(engine) if engine else 'None'}", flush=True)
             
             if engine and engine.mesh_stack:
                 # CRITICAL: Also ingest into WNSP engine for mesh propagation
