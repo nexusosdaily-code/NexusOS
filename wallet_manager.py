@@ -2,6 +2,8 @@
 """
 Wallet Manager for WNSP P2P Hub
 Now uses unified NexusOS blockchain wallet system
+
+This module provides backward compatibility wrapper around NexusWNSPWallet
 """
 
 import os
@@ -13,631 +15,113 @@ UNITS_PER_NXT = 100_000_000  # 100 million units per NXT
 _wallet_instance = None
 
 def get_wallet_manager():
-    """Get unified wallet instance"""
-    global _wallet_instance
-    if _wallet_instance is None:
-        from nexus_wnsp_integration import NexusWNSPWallet
-        _wallet_instance = NexusWNSPWallet(database_url=os.getenv('DATABASE_URL'))
-    return _wallet_instance
+    """Get unified wallet instance (returns WalletManager for compatibility)"""
+    return WalletManager()
 
 class WalletManager:
     """
-    LEGACY WRAPPER - Now uses unified NexusOS blockchain wallet
+    Unified Wallet Manager
     
-    Provides backward compatibility for existing WNSP P2P Hub code
-    while using NexusWNSPWallet backend
+    Wraps NexusWNSPWallet to provide backward compatibility with existing
+    WNSP P2P Hub code while using blockchain backend
     """
     
     def __init__(self):
-        """Initialize unified wallet"""
+        """Initialize unified NexusOS blockchain wallet"""
         from nexus_wnsp_integration import NexusWNSPWallet
         self.wallet = NexusWNSPWallet(database_url=os.environ.get('DATABASE_URL'))
     
-    def _init_database(self):
-        """No-op - database initialized by NexusWNSPWallet"""
-        pass
-    
-    def _get_connection(self):
-        """Get database connection"""
-        return psycopg2.connect(self.db_url)
-    
-    def _init_database(self):
-        """Create wallets and transactions tables if they don't exist"""
-        conn = self._get_connection()
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS wallets (
-                        id SERIAL PRIMARY KEY,
-                        device_id VARCHAR(255) UNIQUE NOT NULL,
-                        device_name VARCHAR(255) NOT NULL,
-                        contact VARCHAR(255) NOT NULL,
-                        balance_units BIGINT DEFAULT 0,
-                        auth_token VARCHAR(255) UNIQUE NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS transactions (
-                        id SERIAL PRIMARY KEY,
-                        device_id VARCHAR(255) NOT NULL,
-                        amount_units BIGINT NOT NULL,
-                        tx_type VARCHAR(50) NOT NULL,
-                        filename VARCHAR(255),
-                        file_size BIGINT,
-                        wavelength_nm FLOAT,
-                        energy_description TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (device_id) REFERENCES wallets(device_id)
-                    )
-                """)
-                conn.commit()
-                print("✅ Wallets and transactions tables initialized")
-        except Exception as e:
-            print(f"❌ Database initialization error: {e}")
-            conn.rollback()
-        finally:
-            conn.close()
-    
     def create_wallet(self, device_name: str, contact: str) -> Dict:
-        """Create new wallet - now uses unified blockchain wallet"""
+        """Create new wallet with blockchain backend"""
         password = contact  # Simple password (user can change later)
         return self.wallet.create_device_wallet(device_name, contact, password, initial_balance_nxt=1.0)
-        try:
-            # Generate unique device ID from contact
-            device_id = hashlib.sha256(f"{contact}{secrets.token_hex(8)}".encode()).hexdigest()[:16]
-            auth_token = secrets.token_urlsafe(32)
-            
-            # Initial balance: 1,000,000 units = 0.01 NXT
-            initial_balance = 1_000_000
-            
-            with conn.cursor() as cur:
-                cur.execute("""
-                    INSERT INTO wallets (device_id, device_name, contact, balance_units, auth_token)
-                    VALUES (%s, %s, %s, %s, %s)
-                    RETURNING id, device_id, balance_units
-                """, (device_id, device_name, contact, initial_balance, auth_token))
-                
-                result = cur.fetchone()
-                conn.commit()
-                
-                if not result:
-                    return {
-                        'success': False,
-                        'error': 'Failed to create wallet'
-                    }
-                
-                return {
-                    'success': True,
-                    'wallet': {
-                        'device_id': device_id,
-                        'device_name': device_name,
-                        'balance_units': initial_balance,
-                        'balance_nxt': initial_balance / UNITS_PER_NXT,
-                        'auth_token': auth_token
-                    }
-                }
-        except psycopg2.IntegrityError:
-            conn.rollback()
-            return {
-                'success': False,
-                'error': 'Wallet already exists for this contact'
-            }
-        except Exception as e:
-            conn.rollback()
-            return {
-                'success': False,
-                'error': str(e)
-            }
-        finally:
-            conn.close()
     
     def login_wallet(self, contact: str) -> Dict:
-        """Login to wallet using contact"""
-        conn = self._get_connection()
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT device_id, device_name, balance_units, auth_token
-                    FROM wallets
-                    WHERE contact = %s
-                """, (contact,))
-                
-                row = cur.fetchone()
-                
-                if not row:
-                    return {
-                        'success': False,
-                        'error': 'Wallet not found. Please create a new wallet.'
-                    }
-                
-                # Update last seen
-                cur.execute("""
-                    UPDATE wallets SET last_seen = CURRENT_TIMESTAMP
-                    WHERE contact = %s
-                """, (contact,))
-                conn.commit()
-                
-                return {
-                    'success': True,
-                    'wallet': {
-                        'device_id': row[0],
-                        'device_name': row[1],
-                        'balance_units': row[2],
-                        'balance_nxt': row[2] / UNITS_PER_NXT,
-                        'auth_token': row[3]
-                    }
-                }
-        except Exception as e:
-            return {
-                'success': False,
-                'error': str(e)
-            }
-        finally:
-            conn.close()
-    
-    def get_balance(self, device_id: str) -> Dict:
-        """Get wallet balance"""
-        conn = self._get_connection()
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT balance_units FROM wallets
-                    WHERE device_id = %s
-                """, (device_id,))
-                
-                row = cur.fetchone()
-                
-                if not row:
-                    return {
-                        'success': False,
-                        'error': 'Wallet not found'
-                    }
-                
-                return {
-                    'success': True,
-                    'balance_units': row[0],
-                    'balance_nxt': row[0] / UNITS_PER_NXT
-                }
-        except Exception as e:
-            return {
-                'success': False,
-                'error': str(e)
-            }
-        finally:
-            conn.close()
-    
-    def deduct_balance(self, device_id: str, amount_units: int) -> bool:
-        """Deduct balance from wallet"""
-        conn = self._get_connection()
-        try:
-            with conn.cursor() as cur:
-                # Check current balance
-                cur.execute("""
-                    SELECT balance_units FROM wallets
-                    WHERE device_id = %s
-                """, (device_id,))
-                
-                row = cur.fetchone()
-                if not row or row[0] < amount_units:
-                    return False
-                
-                # Deduct balance
-                cur.execute("""
-                    UPDATE wallets
-                    SET balance_units = balance_units - %s
-                    WHERE device_id = %s
-                """, (amount_units, device_id))
-                
-                conn.commit()
-                return True
-        except Exception as e:
-            print(f"❌ Deduct balance error: {e}")
-            conn.rollback()
-            return False
-        finally:
-            conn.close()
-    
-    def deduct_energy_cost(self, device_id: str, amount_units: int, filename: str, file_size: int, wavelength_nm: float = None, energy_description: str = None) -> Dict:
         """
-        Deduct E=hf energy cost from wallet and record orbital transition
+        Login to wallet using contact
         
-        Args:
-            device_id: User's device ID
-            amount_units: Energy cost in NXT units
-            filename: Name of shared file
-            file_size: Size of file in bytes
-            wavelength_nm: Wavelength used for energy calculation
-            energy_description: Description of energy transition
-        
-        Returns:
-            Dict with success status, new balance, and transaction info
+        Note: For unified system, this searches device mappings by contact
+        Returns first matching device
         """
-        conn = self._get_connection()
+        # This is a compatibility method - unified system uses device_id + auth_token
+        # For now, we'll search by contact in the mapping table
         try:
-            with conn.cursor() as cur:
-                # Check current balance
-                cur.execute("""
-                    SELECT balance_units FROM wallets
-                    WHERE device_id = %s
-                """, (device_id,))
-                
-                row = cur.fetchone()
-                if not row:
-                    return {
-                        'success': False,
-                        'error': 'Wallet not found'
-                    }
-                
-                current_balance = row[0]
-                if current_balance < amount_units:
-                    return {
-                        'success': False,
-                        'error': f'Insufficient balance. Required: {amount_units} units, Available: {current_balance} units'
-                    }
-                
-                # Deduct balance
-                cur.execute("""
-                    UPDATE wallets
-                    SET balance_units = balance_units - %s
-                    WHERE device_id = %s
-                    RETURNING balance_units
-                """, (amount_units, device_id))
-                
-                new_balance = cur.fetchone()[0]
-                
-                # Record transaction (orbital transition to TRANSITION_RESERVE)
-                cur.execute("""
-                    INSERT INTO transactions (device_id, amount_units, tx_type, filename, file_size, wavelength_nm, energy_description)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id, created_at
-                """, (device_id, amount_units, 'ENERGY_COST', filename, file_size, wavelength_nm, energy_description))
-                
-                tx_id, created_at = cur.fetchone()
-                
-                conn.commit()
-                
-                return {
-                    'success': True,
-                    'transaction_id': tx_id,
-                    'amount_deducted': amount_units,
-                    'new_balance': new_balance,
-                    'balance_nxt': new_balance / UNITS_PER_NXT,
-                    'created_at': created_at.isoformat()
-                }
-        except Exception as e:
-            print(f"❌ Energy cost deduction error: {e}")
-            conn.rollback()
-            return {
-                'success': False,
-                'error': str(e)
-            }
-        finally:
-            conn.close()
-    
-    def get_wallet_by_auth(self, auth_token: str) -> Dict:
-        """Get wallet info by auth token"""
-        conn = self._get_connection()
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT device_id, device_name, balance_units, contact
-                    FROM wallets
-                    WHERE auth_token = %s
-                """, (auth_token,))
-                
-                row = cur.fetchone()
-                
-                if not row:
-                    return {
-                        'success': False,
-                        'error': 'Invalid auth token'
-                    }
-                
-                return {
-                    'success': True,
-                    'wallet': {
-                        'device_id': row[0],
-                        'device_name': row[1],
-                        'balance_units': row[2],
-                        'balance_nxt': row[2] / UNITS_PER_NXT,
-                        'contact': row[3]
-                    }
-                }
-        except Exception as e:
-            return {
-                'success': False,
-                'error': str(e)
-            }
-        finally:
-            conn.close()
-    
-    def get_recent_transactions(self, device_id: str, limit: int = 10) -> Dict:
-        """Get recent transactions for a wallet"""
-        conn = self._get_connection()
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT id, amount_units, tx_type, filename, file_size, wavelength_nm, energy_description, created_at
-                    FROM transactions
-                    WHERE device_id = %s
-                    ORDER BY created_at DESC
-                    LIMIT %s
-                """, (device_id, limit))
-                
-                rows = cur.fetchall()
-                
-                transactions = []
-                for row in rows:
-                    transactions.append({
-                        'id': row[0],
-                        'amount_units': row[1],
-                        'amount_nxt': row[1] / UNITS_PER_NXT,
-                        'type': row[2],
-                        'filename': row[3],
-                        'file_size': row[4],
-                        'wavelength_nm': row[5],
-                        'description': row[6],
-                        'created_at': row[7].isoformat() if row[7] else None
-                    })
-                
-                return {
-                    'success': True,
-                    'transactions': transactions
-                }
-        except Exception as e:
-            return {
-                'success': False,
-                'error': str(e)
-            }
-        finally:
-            conn.close()
-    
-    def reserve_energy_cost(self, device_id: str, amount_units: int, filename: str, file_size: int, wavelength_nm: float = None, energy_description: str = None) -> Dict:
-        """
-        Phase 1: Reserve (hold) energy cost without final deduction
-        Used for two-phase transaction: reserve → propagate → finalize
-        
-        Args:
-            device_id: User's device ID
-            amount_units: Estimated energy cost in NXT units to reserve
-            filename: Name of file being shared
-            file_size: Size of file in bytes
-            wavelength_nm: Wavelength used for calculation
-            energy_description: Description of the transaction
-        
-        Returns:
-            Dict with success, reservation_id, and balance info
-        """
-        conn = self._get_connection()
-        try:
-            with conn.cursor() as cur:
-                # Check current balance
-                cur.execute("""
-                    SELECT balance_units FROM wallets
-                    WHERE device_id = %s
-                """, (device_id,))
-                
-                row = cur.fetchone()
-                if not row:
-                    return {
-                        'success': False,
-                        'error': 'Wallet not found'
-                    }
-                
-                current_balance = row[0]
-                if current_balance < amount_units:
-                    return {
-                        'success': False,
-                        'error': f'Insufficient balance. Required: {amount_units} units, Available: {current_balance} units'
-                    }
-                
-                # Temporarily deduct (reserve) the amount
-                cur.execute("""
-                    UPDATE wallets
-                    SET balance_units = balance_units - %s
-                    WHERE device_id = %s
-                    RETURNING balance_units
-                """, (amount_units, device_id))
-                
-                new_balance = cur.fetchone()[0]
-                
-                # Create pending transaction record
-                cur.execute("""
-                    INSERT INTO transactions (device_id, amount_units, tx_type, filename, file_size, wavelength_nm, energy_description)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id
-                """, (device_id, amount_units, 'ENERGY_RESERVE', filename, file_size, wavelength_nm, f"PENDING: {energy_description}"))
-                
-                reservation_id = cur.fetchone()[0]
-                
-                conn.commit()
-                
-                return {
-                    'success': True,
-                    'reservation_id': reservation_id,
-                    'reserved_amount': amount_units,
-                    'new_balance': new_balance,
-                    'balance_nxt': new_balance / UNITS_PER_NXT
-                }
-        except Exception as e:
-            print(f"❌ Reserve energy cost error: {e}")
-            conn.rollback()
-            return {
-                'success': False,
-                'error': str(e)
-            }
-        finally:
-            conn.close()
-    
-    def finalize_energy_cost(self, device_id: str, reservation_id: int, actual_amount_units: int, reserved_amount_units: int) -> Dict:
-        """
-        Phase 2: Finalize reserved energy cost with actual amount
-        - If actual > reserved: deduct additional amount (top-up)
-        - If actual < reserved: refund excess (partial refund)
-        - If actual == reserved: mark as finalized
-        
-        Args:
-            device_id: User's device ID
-            reservation_id: Transaction ID from reserve_energy_cost
-            actual_amount_units: Actual energy cost from propagation
-            reserved_amount_units: Originally reserved amount
-        
-        Returns:
-            Dict with success, adjustment info, and final balance
-        """
-        conn = self._get_connection()
-        try:
-            with conn.cursor() as cur:
-                delta = actual_amount_units - reserved_amount_units
-                
-                if delta > 0:
-                    # Top-up: Deduct additional amount
+            import psycopg2
+            db_url = os.environ.get('DATABASE_URL')
+            conn = psycopg2.connect(db_url)
+            
+            try:
+                with conn.cursor() as cur:
                     cur.execute("""
-                        SELECT balance_units FROM wallets
-                        WHERE device_id = %s
-                    """, (device_id,))
+                        SELECT device_id, device_name, auth_token, nexus_address
+                        FROM nexus_device_wallet_mapping
+                        WHERE contact = %s
+                        ORDER BY created_at DESC
+                        LIMIT 1
+                    """, (contact,))
                     
                     row = cur.fetchone()
-                    if not row:
-                        return {'success': False, 'error': 'Wallet not found'}
                     
-                    current_balance = row[0]
-                    if current_balance < delta:
+                    if not row:
                         return {
                             'success': False,
-                            'error': f'Insufficient balance for top-up. Required: {delta} units, Available: {current_balance} units'
+                            'error': 'Wallet not found. Please create a new wallet.'
                         }
                     
-                    cur.execute("""
-                        UPDATE wallets
-                        SET balance_units = balance_units - %s
-                        WHERE device_id = %s
-                        RETURNING balance_units
-                    """, (delta, device_id))
+                    device_id, device_name, auth_token, nexus_address = row
                     
-                    adjustment_type = 'TOP_UP'
+                    # Get balance from blockchain
+                    balance_result = self.wallet.get_balance(device_id)
                     
-                elif delta < 0:
-                    # Refund: Add back excess amount
-                    cur.execute("""
-                        UPDATE wallets
-                        SET balance_units = balance_units + %s
-                        WHERE device_id = %s
-                        RETURNING balance_units
-                    """, (abs(delta), device_id))
-                    
-                    adjustment_type = 'REFUND'
-                else:
-                    # Exact match: no adjustment needed
-                    cur.execute("""
-                        SELECT balance_units FROM wallets
-                        WHERE device_id = %s
-                    """, (device_id,))
-                    adjustment_type = 'EXACT'
-                
-                final_balance = cur.fetchone()[0]
-                
-                # Update original transaction to FINALIZED
-                cur.execute("""
-                    UPDATE transactions
-                    SET tx_type = 'ENERGY_COST',
-                        amount_units = %s,
-                        energy_description = REPLACE(energy_description, 'PENDING: ', '')
-                    WHERE id = %s
-                """, (actual_amount_units, reservation_id))
-                
-                # Create adjustment record if needed
-                if delta != 0:
-                    cur.execute("""
-                        INSERT INTO transactions (device_id, amount_units, tx_type, energy_description)
-                        VALUES (%s, %s, %s, %s)
-                    """, (device_id, abs(delta), adjustment_type, f"Reconciliation for reservation #{reservation_id}"))
-                
-                conn.commit()
-                
-                return {
-                    'success': True,
-                    'adjustment_type': adjustment_type,
-                    'adjustment_amount': abs(delta),
-                    'actual_cost': actual_amount_units,
-                    'reserved_cost': reserved_amount_units,
-                    'final_balance': final_balance,
-                    'balance_nxt': final_balance / UNITS_PER_NXT
-                }
+                    if balance_result['success']:
+                        return {
+                            'success': True,
+                            'wallet': {
+                                'device_id': device_id,
+                                'device_name': device_name,
+                                'balance_units': balance_result['balance_units'],
+                                'balance_nxt': balance_result['balance_nxt'],
+                                'auth_token': auth_token
+                            }
+                        }
+                    else:
+                        return balance_result
+            finally:
+                conn.close()
         except Exception as e:
-            print(f"❌ Finalize energy cost error: {e}")
-            conn.rollback()
             return {
                 'success': False,
-                'error': str(e)
+                'error': f'Login failed: {str(e)}'
             }
-        finally:
-            conn.close()
     
-    def cancel_reservation(self, device_id: str, reservation_id: int, reserved_amount_units: int) -> Dict:
-        """
-        Cancel a reservation and refund the full reserved amount
-        Used when propagation fails completely
-        
-        Args:
-            device_id: User's device ID
-            reservation_id: Transaction ID to cancel
-            reserved_amount_units: Amount to refund
-        
-        Returns:
-            Dict with success and refunded balance
-        """
-        conn = self._get_connection()
-        try:
-            with conn.cursor() as cur:
-                # Refund the full reserved amount
-                cur.execute("""
-                    UPDATE wallets
-                    SET balance_units = balance_units + %s
-                    WHERE device_id = %s
-                    RETURNING balance_units
-                """, (reserved_amount_units, device_id))
-                
-                final_balance = cur.fetchone()[0]
-                
-                # Delete the pending reservation transaction
-                cur.execute("""
-                    DELETE FROM transactions
-                    WHERE id = %s
-                """, (reservation_id,))
-                
-                conn.commit()
-                
-                return {
-                    'success': True,
-                    'refunded_amount': reserved_amount_units,
-                    'final_balance': final_balance,
-                    'balance_nxt': final_balance / UNITS_PER_NXT
-                }
-        except Exception as e:
-            print(f"❌ Cancel reservation error: {e}")
-            conn.rollback()
-            return {
-                'success': False,
-                'error': str(e)
-            }
-        finally:
-            conn.close()
-
-
-# Global instance
-wallet_manager = None
-
-def get_wallet_manager():
-    """Get or create wallet manager instance"""
-    global wallet_manager
-    if wallet_manager is None:
-        try:
-            wallet_manager = WalletManager()
-        except Exception as e:
-            print(f"❌ Failed to initialize wallet manager: {e}")
-            return None
-    return wallet_manager
+    def authenticate(self, device_id: str, auth_token: str) -> Dict:
+        """Authenticate device with auth token"""
+        return self.wallet.authenticate(device_id, auth_token)
+    
+    def get_balance(self, device_id: str) -> Dict:
+        """Get wallet balance from blockchain"""
+        return self.wallet.get_balance(device_id)
+    
+    def reserve_energy_cost(self, device_id: str, amount_units: int, filename: str,
+                           file_size: int, wavelength_nm: float = None,
+                           energy_description: str = None) -> Dict:
+        """Phase 1: Reserve energy cost (ACID-compliant)"""
+        return self.wallet.reserve_energy_cost(
+            device_id, amount_units, filename, file_size, wavelength_nm, energy_description
+        )
+    
+    def finalize_energy_cost(self, device_id: str, reservation_id: int,
+                            actual_amount_units: int, reserved_amount_units: int) -> Dict:
+        """Phase 2: Finalize with actual energy cost"""
+        return self.wallet.finalize_energy_cost(
+            device_id, reservation_id, actual_amount_units, reserved_amount_units
+        )
+    
+    def cancel_reservation(self, device_id: str, reservation_id: int,
+                          reserved_amount_units: int) -> Dict:
+        """Cancel reservation and refund"""
+        return self.wallet.cancel_reservation(device_id, reservation_id, reserved_amount_units)
+    
+    def add_balance(self, device_id: str, amount_units: int, description: str = "Manual top-up") -> Dict:
+        """Add balance to wallet (admin/testing)"""
+        return self.wallet.add_balance(device_id, amount_units, description)

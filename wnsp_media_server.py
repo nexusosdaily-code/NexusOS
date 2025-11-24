@@ -333,9 +333,8 @@ def remove_friend(friend_id):
 
 @app.route('/api/wallet/create', methods=['POST'])
 def create_wallet():
-    """Create new wallet"""
-    from nexus_wnsp_integration import NexusWNSPWallet
-    import os
+    """Create new wallet (unified blockchain wallet)"""
+    from wallet_manager import get_wallet_manager
     
     data = request.get_json()
     device_name = data.get('device_name', '').strip()
@@ -347,11 +346,9 @@ def create_wallet():
             'error': 'Device name and contact are required'
         }), 400
     
-    # Use unified NexusOS wallet (password auto-generated for security)
     try:
-        wallet = NexusWNSPWallet(database_url=os.getenv('DATABASE_URL'))
-        password = contact  # Simple password for now (user can change later)
-        result = wallet.create_device_wallet(device_name, contact, password, initial_balance_nxt=1.0)
+        wallet_mgr = get_wallet_manager()
+        result = wallet_mgr.create_wallet(device_name, contact)
         
         if result['success']:
             return jsonify(result), 201
@@ -362,23 +359,21 @@ def create_wallet():
 
 @app.route('/api/wallet/login', methods=['POST'])
 def login_wallet():
-    """Login to wallet - authenticate device"""
-    from nexus_wnsp_integration import NexusWNSPWallet
-    import os
+    """Login to wallet using contact"""
+    from wallet_manager import get_wallet_manager
     
     data = request.get_json()
-    device_id = data.get('device_id', '').strip()
-    auth_token = data.get('auth_token', '').strip()
+    contact = data.get('contact', '').strip()
     
-    if not device_id or not auth_token:
+    if not contact:
         return jsonify({
             'success': False,
-            'error': 'Device ID and auth token required'
+            'error': 'Contact is required'
         }), 400
     
     try:
-        wallet = NexusWNSPWallet(database_url=os.getenv('DATABASE_URL'))
-        result = wallet.authenticate(device_id, auth_token)
+        wallet_mgr = get_wallet_manager()
+        result = wallet_mgr.login_wallet(contact)
         
         if result['success']:
             return jsonify(result)
