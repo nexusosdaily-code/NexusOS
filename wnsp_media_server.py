@@ -595,6 +595,6 @@ if __name__ == '__main__':
         media_manager.scan_media_directory()
     
     # Note: WNSP Media Engine will auto-initialize on first API call
-    # (Eager initialization causes timeout due to media scanning)
+    # Running without auto-reload to preserve engine state across requests
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
