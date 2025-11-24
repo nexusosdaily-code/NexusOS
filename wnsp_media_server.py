@@ -116,17 +116,12 @@ def get_media_engine():
 
 def init_media_engine():
     """Initialize WNSP media engine at app startup"""
-    global mesh_stack, media_engine, _wnsp_init_attempted, WNSP_AVAILABLE
+    global mesh_stack, media_engine, WNSP_AVAILABLE
     
     if not WNSP_AVAILABLE:
-        print("⚠️  WNSP not available - skipping engine initialization")
         return
     
-    if _wnsp_init_attempted:
-        return
-    
-    _wnsp_init_attempted = True
-    
+    # Always reinitialize if engine is None (no early return guard!)
     try:
         print("🔄 Initializing WNSP Media Engine with YOUR devices...", flush=True)
         mesh_stack = create_user_mesh_network()
@@ -134,6 +129,8 @@ def init_media_engine():
         print("✅ WNSP Media Engine initialized and ready for uploads!", flush=True)
     except Exception as e:
         print(f"⚠️  WNSP Engine initialization failed: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
         WNSP_AVAILABLE = False
 
 @app.before_request
