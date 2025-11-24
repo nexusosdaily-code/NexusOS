@@ -1527,13 +1527,42 @@ def handle_start_broadcast(data):
         from wallet_manager import get_wallet_manager
         wallet_mgr = get_wallet_manager()
         
+        # CRITICAL: Look up the actual device_id from phone number
+        # Phone number is stored as 'contact' in nexus_device_wallet_mapping
+        import psycopg2
+        try:
+            conn = psycopg2.connect(os.getenv('DATABASE_URL'))
+            cursor = conn.cursor()
+            cursor.execute('SELECT device_id FROM nexus_device_wallet_mapping WHERE contact = %s', (phone_number,))
+            result = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            
+            if not result:
+                emit('broadcast_started', {
+                    'success': False,
+                    'error': f"No wallet found for {phone_number}. Please create a wallet first."
+                }, room=broadcaster_id)
+                print(f"❌ No wallet found for {phone_number}")
+                return
+            
+            device_id = result[0]
+            print(f"✅ Found wallet device_id: {device_id} for phone: {phone_number}")
+        except Exception as e:
+            emit('broadcast_started', {
+                'success': False,
+                'error': f"Database error: {str(e)}"
+            }, room=broadcaster_id)
+            print(f"❌ Database error looking up device_id: {str(e)}")
+            return
+        
         # Estimate 10 minutes of streaming (600 seconds)
         estimated_duration = 600  # seconds
         estimated_cost_units = calculate_stream_energy_cost(estimated_duration, quality)
         
-        # Reserve funds from wallet (using phone_number as device_id for now)
+        # Reserve funds from wallet (using the actual device_id)
         reserve_result = wallet_mgr.reserve_energy_cost(
-            device_id=phone_number,  # Use phone_number as identifier
+            device_id=device_id,  # Use actual device_id from database
             amount_units=estimated_cost_units,
             filename=f"stream_{title}",
             file_size=0,  # N/A for streaming
@@ -1558,6 +1587,7 @@ def handle_start_broadcast(data):
         # Store reservation info
         broadcaster_streams[broadcaster_id] = {
             'phone_number': phone_number,
+            'device_id': device_id,  # Store device_id for finalization
             'reservation_id': reservation_id,
             'reserved_amount': reserved_amount,
             'quality': quality
