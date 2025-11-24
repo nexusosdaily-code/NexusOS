@@ -68,6 +68,12 @@ body {
     50% { transform: scale(1.1); }
 }
 
+.logo-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
 .logo h1 {
     font-size: 24px;
     font-weight: 700;
@@ -75,6 +81,16 @@ body {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.logo-subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin: 0;
+    letter-spacing: 0.5px;
 }
 
 .network-status {
@@ -639,6 +655,10 @@ body {
 
     .logo h1 {
         font-size: 18px;
+    }
+
+    .logo-subtitle {
+        font-size: 10px;
     }
 
     .logo-icon {
