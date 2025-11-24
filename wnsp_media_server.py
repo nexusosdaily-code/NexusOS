@@ -127,9 +127,14 @@ def init_media_engine():
     _wnsp_initializing = True
     try:
         print("🔄 Initializing WNSP Media Engine with YOUR devices...", flush=True)
-        mesh_stack = create_user_mesh_network()
-        media_engine = WNSPMediaPropagationProduction(mesh_stack=mesh_stack)
-        print(f"✅ WNSP Media Engine initialized! engine={media_engine is not None}, mesh={mesh_stack is not None}", flush=True)
+        local_mesh = create_user_mesh_network()
+        local_engine = WNSPMediaPropagationProduction(mesh_stack=local_mesh)
+        
+        # CRITICAL: Must use global keyword to modify module-level variable
+        mesh_stack = local_mesh
+        media_engine = local_engine
+        
+        print(f"✅ WNSP Media Engine initialized! engine={media_engine is not None}, mesh={mesh_stack is not None}, id={id(media_engine)}", flush=True)
     except Exception as e:
         print(f"⚠️  WNSP Engine initialization failed: {e}", flush=True)
         import traceback
@@ -139,10 +144,8 @@ def init_media_engine():
     finally:
         _wnsp_initializing = False
 
-@app.before_request
-def ensure_wnsp_engine():
-    """Ensure WNSP engine is initialized before handling any request"""
-    get_media_engine()
+# Removed @app.before_request hook - it causes infinite init loops and page hangs
+# Engine will initialize on first upload/stats request instead
 
 @app.route('/')
 def index():
