@@ -1460,7 +1460,7 @@ def handle_register_phone(data):
     })
 
 @socketio.on('disconnect')
-def handle_disconnect():
+def handle_disconnect(reason=None):
     """
     Client disconnected - Clean up broadcast or viewer state
     
@@ -1854,10 +1854,11 @@ def finalize_stream_energy_cost(broadcaster_id, duration_seconds):
     stream_info = broadcaster_streams[broadcaster_id]
     device_id = stream_info.get('device_id')
     reservation_id = stream_info.get('reservation_id')
+    reserved_amount = stream_info.get('reserved_amount')
     quality = stream_info.get('quality', 'medium')
     
-    if not device_id or not reservation_id:
-        print(f"⚠️  Missing device_id or reservation_id - cannot charge")
+    if not device_id or not reservation_id or reserved_amount is None:
+        print(f"⚠️  Missing device_id, reservation_id, or reserved_amount - cannot charge")
         return
     
     # 💰 CALCULATE ACTUAL E=hf COST based on real streaming duration
@@ -1872,7 +1873,8 @@ def finalize_stream_energy_cost(broadcaster_id, duration_seconds):
     result = wallet_mgr.finalize_energy_cost(
         device_id=device_id,
         reservation_id=reservation_id,
-        actual_amount_units=actual_cost_units
+        actual_amount_units=actual_cost_units,
+        reserved_amount_units=reserved_amount
     )
     
     if result['success']:
