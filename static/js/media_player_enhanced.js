@@ -607,12 +607,53 @@ const uploadProgress = document.getElementById('uploadProgress');
 const uploadProgressFill = document.getElementById('uploadProgressFill');
 const uploadProgressText = document.getElementById('uploadProgressText');
 const uploadStatus = document.getElementById('uploadStatus');
+const friendSelection = document.getElementById('friendSelection');
+const friendListContainer = document.getElementById('friendListContainer');
+
+let discoveredPeers = [];
+
+async function loadNearbyPeers() {
+    try {
+        const response = await fetch('/api/peers');
+        const data = await response.json();
+        
+        if (data.success && data.peers) {
+            discoveredPeers = data.peers;
+            renderPeerList(data.peers);
+        } else {
+            friendListContainer.innerHTML = '<div class="loading-peers">⚠️ No peers found</div>';
+        }
+    } catch (error) {
+        console.error('Error loading peers:', error);
+        friendListContainer.innerHTML = '<div class="loading-peers">⚠️ Failed to discover peers</div>';
+    }
+}
+
+function renderPeerList(peers) {
+    if (!peers || peers.length === 0) {
+        friendListContainer.innerHTML = '<div class="loading-peers">No peers available</div>';
+        return;
+    }
+    
+    friendListContainer.innerHTML = peers.map(peer => `
+        <div class="friend-item" data-peer-id="${peer.device_id}">
+            <input type="checkbox" class="friend-checkbox" value="${peer.device_id}" id="peer_${peer.device_id}">
+            <div class="friend-info">
+                <div class="friend-name">${peer.device_name}</div>
+                <div class="friend-status online">${peer.status} • ${peer.transport_protocols.join(', ')}</div>
+            </div>
+        </div>
+    `).join('');
+}
 
 function openUploadModal() {
     uploadModal.style.display = 'flex';
     uploadStatus.textContent = '';
     uploadStatus.className = 'upload-status';
     uploadProgress.style.display = 'none';
+    
+    // Load nearby peers for friend selection
+    loadNearbyPeers();
 }
 
 function closeUploadModalFunc() {
@@ -629,6 +670,13 @@ function handleFileSelect(files) {
     const formData = new FormData();
     const category = uploadCategory.value;
     const enableEncryption = document.getElementById('enableEncryption').checked;
+    
+    // Get share mode and selected friends
+    const shareMode = document.querySelector('input[name="shareMode"]:checked').value;
+    const selectedFriends = shareMode === 'friends' 
+        ? Array.from(document.querySelectorAll('.friend-checkbox:checked')).map(cb => cb.value)
+        : [];
+    
     let validFileCount = 0;
     let hasErrors = false;
     
@@ -669,8 +717,14 @@ function handleFileSelect(files) {
     
     formData.append('category', category);
     formData.append('enable_encryption', enableEncryption);
+    formData.append('share_mode', shareMode);
+    if (shareMode === 'friends' && selectedFriends.length > 0) {
+        formData.append('friend_ids', selectedFriends.join(','));
+    }
+    
     const encryptionStatus = enableEncryption ? '🔐 ENCRYPTED' : '🔓 unencrypted';
-    console.log(`🚀 Starting upload of ${validFileCount} file(s) to /api/upload (${encryptionStatus})`);
+    const shareStatus = shareMode === 'friends' ? `👥 Friends (${selectedFriends.length})` : '📡 Network Broadcast';
+    console.log(`🚀 Starting upload of ${validFileCount} file(s) to /api/upload (${encryptionStatus}, ${shareStatus})`);
     
     // Show progress
     uploadProgress.style.display = 'block';
@@ -792,6 +846,18 @@ function attachEventListeners() {
     } else {
         console.error('❌ uploadDropZone element not found!');
     }
+    
+    // Share mode toggle
+    const shareModeRadios = document.querySelectorAll('input[name="shareMode"]');
+    shareModeRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (e.target.value === 'friends') {
+                friendSelection.style.display = 'block';
+            } else {
+                friendSelection.style.display = 'none';
+            }
+        });
+    });
     
     if (fileInput) {
         console.log('✅ Attaching change event listener to fileInput');

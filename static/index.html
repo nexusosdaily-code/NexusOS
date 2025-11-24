@@ -105,6 +105,27 @@
                                 <span>🔐 Enable Quantum Encryption (E=hf secured)</span>
                             </label>
                         </div>
+                        <!-- Share Mode Selection -->
+                        <div class="upload-share-mode">
+                            <label class="share-mode-label">📡 Share With:</label>
+                            <div class="share-mode-options">
+                                <label class="radio-option">
+                                    <input type="radio" name="shareMode" value="broadcast" checked>
+                                    <span>Entire Network (All Nodes)</span>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="shareMode" value="friends">
+                                    <span>Selected Friends Only</span>
+                                </label>
+                            </div>
+                        </div>
+                        <!-- Friend Selection (Hidden by default, shown when Friends mode selected) -->
+                        <div class="upload-friend-selection" id="friendSelection" style="display: none;">
+                            <label class="friend-list-label">👥 Select Friends:</label>
+                            <div class="friend-list-container" id="friendListContainer">
+                                <div class="loading-peers">🔍 Discovering nearby peers...</div>
+                            </div>
+                        </div>
                         <div class="upload-progress" id="uploadProgress" style="display: none;">
                             <div class="progress-bar-upload">
                                 <div class="progress-fill-upload" id="uploadProgressFill"></div>

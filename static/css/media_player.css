@@ -1038,6 +1038,134 @@ body {
     user-select: none;
 }
 
+/* Share Mode Selection */
+.upload-share-mode {
+    margin-top: 20px;
+    padding: 16px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+}
+
+.share-mode-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.share-mode-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+}
+
+.radio-option:hover {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.radio-option input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+.radio-option span {
+    user-select: none;
+    color: var(--text-primary);
+}
+
+/* Friend Selection */
+.upload-friend-selection {
+    margin-top: 20px;
+    padding: 16px;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 8px;
+}
+
+.friend-list-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.friend-list-container {
+    max-height: 200px;
+    overflow-y: auto;
+    border-radius: 6px;
+}
+
+.loading-peers {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.friend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.friend-item:hover {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.5);
+}
+
+.friend-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: rgba(150, 150, 150, 0.1);
+}
+
+.friend-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+.friend-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.friend-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.friend-status {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.friend-status.online {
+    color: #10b981;
+}
+
 .upload-progress {
     margin-top: 24px;
 }
