@@ -41,6 +41,13 @@ The system provides a Unified Dashboard Launcher (`app.py`) offering access to m
 -   **Offline Mesh Network with Hybrid AI Routing**: A peer-to-peer internet infrastructure for direct phone-to-phone communication, integrating with WNSP v2.0 DAG messaging and using a Hybrid AI Routing Controller.
 -   **Comprehensive Security Framework (Production-Integrated)**: Multi-layered defense with rate limiting, authentication hardening, DEX security (wash trading detection, liquidity withdrawal protection), multi-oracle consensus, governance protection, AI anomaly detection, and an Active Intervention Engine for real-time threat neutralization (e.g., oracle manipulation, DDoS, wash trading, validator attacks).
 
+### Quantum Energy Systems (Tesla/Feynman-Inspired) - CONCEPTUAL MODELS
+Physics simulation frameworks demonstrating proven quantum concepts (NO HARDWARE CONNECTED):
+-   **Environmental Energy Harvester (SIMULATED)**: Tesla-inspired conceptual model simulating ambient energy capture from Schumann resonance (7.83 Hz), cosmic rays, and geomagnetic fields. **Status**: Physics calculations only, no real sensors. Future: Could interface with ELF antennas, Geiger counters, and magnetometers.
+-   **Resonant Frequency Optimizer (CALCULATED)**: Tesla coil physics calculator using coupled mode theory formulas for wireless power transmission efficiency. **Status**: Mathematical model only, no real coils. Future: Could control real resonant power transfer hardware.
+-   **Quantum Vacuum Randomness Generator (CRYPTOGRAPHICALLY SECURE)**: Uses Python's secrets module (NIST-approved CSPRNG) with physics-inspired interface. **Status**: SAFE for production cryptography (wallet keys, nonces). NOT quantum hardware, but mathematically equivalent for security purposes.
+-   **Quantum Energy Dashboard**: Streamlit interface demonstrating all three systems with prominent simulation disclaimers and comprehensive physics disclosure documentation clearly distinguishing proven science from experimental features and current simulations from future hardware.
+
 ### WaveLang Ecosystem
 A complete quantum-level programming stack including:
 -   **WaveLang Studio**: A visual code builder with real-time energy calculation.
