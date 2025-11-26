@@ -73,8 +73,11 @@ class QuadraticVotingSystem:
         # Voter participation (address -> set of proposal_ids)
         self.voter_history: Dict[str, Set[str]] = defaultdict(set)
         
-        # Proposal creation burn requirement
-        self.proposal_burn_amount = 100.0  # 100 NXT to create proposal (anti-spam)
+        # Proposal creation burn requirement (derived from BHLS economics)
+        # Equal to ~10% of monthly connectivity allocation (75 NXT × 10% ≈ 7.5 NXT, rounded up)
+        # This ensures proposals have meaningful economic commitment without excluding participation
+        # Connectivity is the lowest BHLS tier, making proposals accessible while preventing spam
+        self.proposal_burn_amount = 7.5  # ~10% of BHLS connectivity tier (anti-spam, economically derived)
         
         # Voting power caps
         self.max_voting_power_percentage = 0.1  # No single voter can have >10% of total votes

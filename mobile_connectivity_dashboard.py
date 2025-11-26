@@ -4,6 +4,8 @@ Mobile Connectivity Dashboard
 
 Streamlit dashboard showing mobile devices connected to the NexusOS web platform.
 Displays real-time connection status, network topology, and mobile validator activity.
+
+PRODUCTION: Connects to mobile_api_gateway.py for real device tracking.
 """
 
 import streamlit as st
@@ -13,57 +15,84 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import time
-import random
 
-def get_simulated_network_status():
-    """Generate simulated network status data"""
-    return {
-        'connected_mobiles': random.randint(15, 25),
-        'active_validators': random.randint(8, 15),
-        'total_nxt_staked': random.uniform(50000, 100000),
-        'network_health': random.choice(['healthy', 'healthy', 'healthy', 'degraded'])
-    }
-
-def get_simulated_mobile_devices():
-    """Generate simulated mobile device data"""
-    spectral_regions = ['Infrared', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Violet', 'Ultraviolet']
-    device_names = [
-        'iPhone 15 Pro', 'Samsung Galaxy S24', 'Google Pixel 8', 'OnePlus 12',
-        'Xiaomi 14', 'iPhone 14', 'Samsung Galaxy A54', 'Google Pixel 7a',
-        'Motorola Edge 40', 'Nothing Phone 2', 'ASUS ROG Phone 7', 'Sony Xperia 1 V',
-        'Realme GT 5', 'Oppo Find X6', 'Vivo X100', 'Honor Magic 6'
-    ]
+def get_real_network_status():
+    """
+    Get REAL network status from mobile_api_gateway.
     
-    current_time = time.time()
-    mobiles = []
-    
-    for i in range(random.randint(12, 20)):
-        connected_at = current_time - random.uniform(60, 86400)
-        last_seen = current_time - random.uniform(0, 300)
-        is_validator = random.random() > 0.5
+    In production, mobile_api_gateway maintains:
+    - mobile_clients: Dict[device_id, MobileClient] - all registered devices
+    - active_connections: Dict[socket_id, device_id] - currently connected devices
+    """
+    try:
+        from mobile_api_gateway import mobile_clients, active_connections
         
-        mobiles.append({
-            'device_id': f'mobile_{i:03d}',
-            'device_name': random.choice(device_names),
-            'account_id': f'0x{random.randint(100000, 999999):06x}',
-            'spectral_region': random.choice(spectral_regions),
-            'is_validator': is_validator,
-            'stake_nxt': random.uniform(1000, 10000) if is_validator else 0,
-            'connected_at': connected_at,
-            'last_seen': last_seen
-        })
+        connected_count = len(mobile_clients)
+        active_count = len(active_connections)
+        validators = [c for c in mobile_clients.values() if c.is_validator]
+        total_stake = sum(c.stake_nxt for c in validators)
+        
+        health = 'healthy'
+        if connected_count == 0:
+            health = 'no_connections'
+        elif active_count < connected_count * 0.3:
+            health = 'degraded'
+        
+        return {
+            'connected_mobiles': connected_count,
+            'active_connections': active_count,
+            'active_validators': len(validators),
+            'total_nxt_staked': total_stake,
+            'network_health': health
+        }
+    except ImportError:
+        return {
+            'connected_mobiles': 0,
+            'active_connections': 0,
+            'active_validators': 0,
+            'total_nxt_staked': 0.0,
+            'network_health': 'gateway_offline'
+        }
+
+def get_real_mobile_devices():
+    """
+    Get REAL mobile device data from mobile_api_gateway.
     
-    return mobiles
+    Returns list of connected MobileClient objects converted to dicts.
+    """
+    try:
+        from mobile_api_gateway import mobile_clients
+        
+        mobiles = []
+        for device_id, client in mobile_clients.items():
+            mobiles.append({
+                'device_id': client.device_id,
+                'device_name': client.device_name,
+                'account_id': client.account_id,
+                'spectral_region': client.spectral_region,
+                'is_validator': client.is_validator,
+                'stake_nxt': client.stake_nxt,
+                'connected_at': client.connected_at,
+                'last_seen': client.last_seen
+            })
+        
+        return mobiles
+    except ImportError:
+        return []
 
 def show_mobile_connectivity_dashboard():
     """Main dashboard showing mobile connectivity"""
     
     st.title("📱 Mobile Connectivity Dashboard")
     st.markdown("### Real-time view of mobile devices connected to NexusOS")
-    st.info("💡 **Demo Mode**: Showing simulated mobile connectivity data")
     
-    # Network status with simulated data
-    status = get_simulated_network_status()
+    # PRODUCTION: Get real network status from mobile_api_gateway
+    status = get_real_network_status()
+    
+    if status['network_health'] == 'gateway_offline':
+        st.warning("⚠️ Mobile API Gateway not running. Start the gateway to see connected devices.")
+    elif status['connected_mobiles'] == 0:
+        st.info("📱 No mobile devices connected yet. Use the Mobile Client SDK to register devices.")
     
     col1, col2, col3, col4 = st.columns(4)
     
@@ -102,8 +131,8 @@ def show_mobile_connectivity_dashboard():
     # Mobile devices list
     st.subheader("📱 Connected Mobile Devices")
     
-    # Get simulated mobile devices
-    mobiles = get_simulated_mobile_devices()
+    # PRODUCTION: Get real mobile devices from mobile_api_gateway
+    mobiles = get_real_mobile_devices()
     
     if mobiles:
         # Create DataFrame

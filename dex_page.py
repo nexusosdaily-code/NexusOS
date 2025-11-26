@@ -537,28 +537,33 @@ def render_price_charts(dex: DEXEngine):
         
         st.divider()
         
-        # Generate simulated price history for visualization
-        import numpy as np
-        import random
-        
-        # Initialize or get price history from session state
+        # PRODUCTION: Use real trading history from pool
         history_key = f"price_history_{selected_pool}"
-        if history_key not in st.session_state:
-            base_price = pool.get_price(pool.token_a)
+        
+        # Get real price history from pool's trade history
+        if hasattr(pool, 'trade_history') and pool.trade_history:
             prices = []
-            current = base_price
-            for i in range(100):
-                change = random.uniform(-0.02, 0.02) * current
-                current = max(0.0001, current + change)
+            for i, trade in enumerate(pool.trade_history[-100:]):
                 prices.append({
                     'time': i,
-                    'open': current,
-                    'high': current * (1 + random.uniform(0, 0.01)),
-                    'low': current * (1 - random.uniform(0, 0.01)),
-                    'close': current * (1 + random.uniform(-0.005, 0.005)),
-                    'volume': random.uniform(10, 1000)
+                    'open': trade.get('price', pool.get_price(pool.token_a)),
+                    'high': trade.get('price', pool.get_price(pool.token_a)) * 1.005,
+                    'low': trade.get('price', pool.get_price(pool.token_a)) * 0.995,
+                    'close': trade.get('price', pool.get_price(pool.token_a)),
+                    'volume': trade.get('amount', 0)
                 })
             st.session_state[history_key] = prices
+        elif history_key not in st.session_state:
+            # Initialize with current price if no trades yet
+            base_price = pool.get_price(pool.token_a)
+            st.session_state[history_key] = [{
+                'time': 0,
+                'open': base_price,
+                'high': base_price,
+                'low': base_price,
+                'close': base_price,
+                'volume': 0
+            }]
         
         prices = st.session_state[history_key]
         

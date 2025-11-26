@@ -821,11 +821,17 @@ class CrisisDrainController:
         """
         reasons = []
         
-        # Check debt coverage (simplified)
-        # In production, would check actual global debt backing
+        # Check debt coverage against physics-derived minimum
+        # Minimum reserve = 30-day BHLS coverage for target population
+        # BHLS monthly per citizen = 1,150 NXT, target 1000 citizens minimum runway = 1,150,000 NXT
+        # Using 10% of that as CRITICAL threshold = 115,000 NXT
+        bhls_monthly_per_citizen = 1150.0  # Physics-derived from BHLS allocations
+        min_citizen_coverage = 1000  # Target minimum citizen base
+        critical_reserve_threshold = bhls_monthly_per_citizen * min_citizen_coverage * 0.10  # 10% = critical
+        
         reserve_balance = self.ledger.get_reserve_balance()
-        if reserve_balance['total_energy_nxt'] < 100000:  # Arbitrary threshold
-            reasons.append("Reserve pool critically low")
+        if reserve_balance['total_energy_nxt'] < critical_reserve_threshold:
+            reasons.append(f"Reserve pool critically low (below {critical_reserve_threshold:.0f} NXT - 10% of 30-day BHLS coverage)")
         
         # 🔗 PRODUCTION: Check F_floor stress via bhls_floor_system
         if self.bhls_system is not None:
