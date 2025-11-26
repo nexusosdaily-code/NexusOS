@@ -669,23 +669,22 @@ def render_mobile_hub():
     bhls_data = get_bhls_data()
     
     st.markdown("""
-        <div style="text-align: center; padding: 16px 0 8px 0;">
-            <h1 class="nexus-title">NexusOS</h1>
-            <p class="nexus-subtitle">Physics-Based Civilization OS</p>
+        <style>
+        .nexus-main-container {
+            margin: 0 3px;
+            padding: 0 1px;
+            border-left: 2px solid rgba(102, 126, 234, 0.4);
+            border-right: 2px solid rgba(102, 126, 234, 0.4);
+            border-radius: 4px;
+        }
+        </style>
+        <div class="nexus-main-container">
+            <div style="text-align: center; padding: 12px 0 6px 0;">
+                <h1 class="nexus-title" style="margin-bottom: 4px;">NexusOS</h1>
+                <p class="nexus-subtitle" style="margin: 0; font-size: 0.85rem;">Physics-Based Civilization OS</p>
+            </div>
         </div>
     """, unsafe_allow_html=True)
-    
-    notif_center = get_notification_center()
-    unread = notif_center.get_unread_count()
-    if unread > 0:
-        st.markdown(f"""
-            <div style="text-align: center; margin-bottom: 16px;">
-                <span style="background: #ef4444; color: white; padding: 4px 12px; 
-                            border-radius: 12px; font-size: 0.75rem;">
-                    {unread} new notification{'s' if unread > 1 else ''}
-                </span>
-            </div>
-        """, unsafe_allow_html=True)
     
     current_view = st.session_state.get('current_view', 'home')
     
