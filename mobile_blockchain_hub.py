@@ -652,60 +652,269 @@ def render_trading_tab():
 
 
 def render_staking_tab():
-    """Staking & validator navigation"""
+    """Enhanced Staking & Validator Control Center"""
     
-    st.subheader("🏛️ Validator Economics")
-    st.caption("Stake NXT, delegate tokens, earn rewards")
+    st.subheader("🏛️ Staking Control Center")
+    st.caption("Stake NXT, delegate to validators, earn rewards")
     
-    col1, col2 = st.columns(2)
+    # Initialize staking economy
+    from validator_economics_page import initialize_staking_economy
+    economy = initialize_staking_economy()
+    user = st.session_state.get('user_address', 'user_0x1234')
+    stats = economy.get_delegator_stats(user)
+    apy = economy.calculate_apy()
+    user_balance = st.session_state.get('user_tokens', 100000.0)
     
-    with col1:
-        st.markdown("""
-        <div class="module-card">
-            <h3>🏛️ Validator Economics</h3>
-            <p><strong>Full staking and delegation system</strong></p>
-            <ul>
-                <li>💰 Stake NXT as a validator</li>
-                <li>🤝 Delegate to validators</li>
-                <li>📊 Performance calculator</li>
-                <li>🤖 AI performance reports</li>
-                <li>📈 Earnings analytics</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("🚀 Open Validator Economics", width="stretch", key="btn_validator"):
+    # Staking sub-tabs
+    staking_tabs = st.tabs([
+        "📊 Dashboard",
+        "💰 Quick Stake",
+        "💎 Rewards",
+        "🔍 Validators",
+        "🚀 Full Platform"
+    ])
+    
+    # TAB 1: Dashboard Overview
+    with staking_tabs[0]:
+        st.markdown("### 📊 Your Staking Portfolio")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Available", f"{user_balance:,.0f} NXT")
+        with col2:
+            st.metric("Staked", f"{stats['total_delegated']:,.0f} NXT")
+        with col3:
+            st.metric("Pending Rewards", f"{stats['pending_rewards']:.2f} NXT")
+        with col4:
+            st.metric("APY", f"{apy:.1f}%")
+        
+        st.divider()
+        
+        # Quick actions
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("💰 Stake Now", use_container_width=True, type="primary", key="dash_stake"):
+                st.session_state.staking_action = "delegate"
+        with col2:
+            if stats['pending_rewards'] > 0:
+                if st.button(f"💎 Claim {stats['pending_rewards']:.2f}", use_container_width=True, key="dash_claim"):
+                    total_claimed, _ = economy.claim_rewards(user)
+                    st.session_state.user_tokens += total_claimed
+                    st.success(f"✅ Claimed {total_claimed:.4f} NXT!")
+                    st.rerun()
+            else:
+                st.button("💎 No Rewards", use_container_width=True, disabled=True, key="dash_no_claim")
+        with col3:
+            if st.button("🔓 Unstake", use_container_width=True, key="dash_unstake"):
+                st.session_state.staking_action = "undelegate"
+        
+        # Staking allocation
+        if stats['delegations']:
+            st.markdown("### 📈 Your Delegations")
+            import pandas as pd
+            del_data = []
+            for d in stats['delegations']:
+                del_data.append({
+                    'Validator': d['validator'][:15] + "...",
+                    'Amount': f"{d['amount']:,.0f}",
+                    'Status': d['status'].title()
+                })
+            df = pd.DataFrame(del_data)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+        else:
+            st.info("🚀 Start staking to earn rewards!")
+    
+    # TAB 2: Quick Stake
+    with staking_tabs[1]:
+        st.markdown("### 💰 Quick Stake")
+        st.info(f"💡 Current APY: **{apy:.1f}%** | Your Balance: **{user_balance:,.0f} NXT**")
+        
+        # Select validator
+        validators = economy.get_validator_rankings()
+        active_validators = [v for v in validators if not v.is_jailed]
+        
+        if active_validators:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**Select Validator**")
+                validator_options = [
+                    f"{v.address[:12]}... | {v.commission_rate*100:.0f}% fee | Rep: {v.reputation_score:.0f}"
+                    for v in active_validators
+                ]
+                selected_idx = st.selectbox("Validator", range(len(validator_options)),
+                                           format_func=lambda i: validator_options[i],
+                                           key="quick_stake_validator")
+                selected_validator = active_validators[selected_idx]
+                
+                st.caption(f"Total Stake: {selected_validator.get_total_stake():,.0f} | Uptime: {selected_validator.uptime_percentage:.1f}%")
+            
+            with col2:
+                st.markdown("**Stake Amount**")
+                stake_amount = st.number_input(
+                    "Amount (NXT)",
+                    min_value=0.0,
+                    max_value=float(user_balance),
+                    value=0.0,
+                    step=1000.0,
+                    key="quick_stake_amount"
+                )
+                
+                if stake_amount > 0:
+                    yearly = stake_amount * (apy / 100)
+                    monthly = yearly / 12
+                    st.success(f"📈 Est. Monthly: {monthly:.2f} NXT | Yearly: {yearly:.2f} NXT")
+            
+            if st.button("✅ Delegate Now", type="primary", use_container_width=True, key="quick_delegate_btn"):
+                if stake_amount <= 0:
+                    st.error("Enter an amount")
+                elif stake_amount > user_balance:
+                    st.error("Insufficient balance")
+                else:
+                    success, msg = economy.delegate(user, selected_validator.address, stake_amount)
+                    if success:
+                        st.session_state.user_tokens -= stake_amount
+                        st.success(f"✅ {msg}")
+                        st.balloons()
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {msg}")
+        else:
+            st.warning("No active validators available")
+    
+    # TAB 3: Rewards
+    with staking_tabs[2]:
+        st.markdown("### 💎 Rewards Center")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Pending", f"{stats['pending_rewards']:.4f}")
+        with col2:
+            st.metric("Total Claimed", f"{stats['total_claimed']:.4f}")
+        with col3:
+            daily = stats['total_delegated'] * (apy / 100) / 365
+            st.metric("Daily Est.", f"{daily:.4f}")
+        with col4:
+            monthly = daily * 30
+            st.metric("Monthly Est.", f"{monthly:.2f}")
+        
+        if stats['pending_rewards'] > 0:
+            st.divider()
+            if st.button("💎 Claim All Rewards", type="primary", use_container_width=True, key="rewards_claim"):
+                total_claimed, _ = economy.claim_rewards(user)
+                st.session_state.user_tokens += total_claimed
+                st.success(f"✅ Claimed {total_claimed:.4f} NXT!")
+                st.balloons()
+                st.rerun()
+        
+        # Rewards projection
+        st.divider()
+        st.markdown("### 📈 12-Month Projection")
+        
+        if stats['total_delegated'] > 0:
+            import plotly.graph_objects as go
+            
+            months = list(range(0, 13))
+            principal = stats['total_delegated']
+            monthly_rate = (apy / 100) / 12
+            
+            projections = [principal + (principal * monthly_rate * m) for m in months]
+            
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=months, y=projections,
+                mode='lines+markers',
+                name='Projected Value',
+                line=dict(color='cyan', width=2),
+                fill='tozeroy'
+            ))
+            fig.update_layout(
+                height=250,
+                xaxis_title='Month',
+                yaxis_title='Value (NXT)',
+                template='plotly_dark'
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Stake tokens to see projections")
+    
+    # TAB 4: Validators Overview
+    with staking_tabs[3]:
+        st.markdown("### 🔍 Top Validators")
+        
+        validators = economy.get_validator_rankings()[:5]
+        
+        for v in validators:
+            col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+            with col1:
+                status = "🟢" if not v.is_jailed else "🔴"
+                st.markdown(f"**{status} {v.address[:18]}...**")
+            with col2:
+                st.metric("Stake", f"{v.get_total_stake():,.0f}")
+            with col3:
+                st.metric("Fee", f"{v.commission_rate*100:.0f}%")
+            with col4:
+                st.metric("Rep", f"{v.reputation_score:.0f}")
+            st.divider()
+        
+        if st.button("🔍 View All Validators", use_container_width=True, key="view_all_validators"):
             st.session_state.nav_request = "🏛️ Validator Economics"
             st.rerun()
     
-    with col2:
-        st.markdown("""
-        <div class="module-card">
-            <h3>⚛️ Wavelength Economics</h3>
-            <p><strong>Physics-based validation system</strong></p>
-            <ul>
-                <li>🌊 Maxwell equation solvers</li>
-                <li>⚡ E=hf energy economics</li>
-                <li>🔐 Quantum-resistant validation</li>
-                <li>📐 5D wave signatures</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("🚀 Open Wavelength Economics", width="stretch", key="btn_wavelength"):
-            st.session_state.nav_request = "💵 Wavelength Economics"
-            st.rerun()
-    
-    st.divider()
-    
-    # Quick validator stats
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Active Validators", "847", "+5")
-    with col2:
-        st.metric("Total Staked", "428K NXT", "+2.1%")
-    with col3:
-        st.metric("Avg APY", "12.4%", "+0.3%")
-    with col4:
-        st.metric("Network Uptime", "99.8%", "🟢")
+    # TAB 5: Full Platform Access
+    with staking_tabs[4]:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+            <div class="module-card">
+                <h3>🏛️ Validator Economics</h3>
+                <p><strong>Full staking platform</strong></p>
+                <ul>
+                    <li>📊 Staking Dashboard</li>
+                    <li>🔍 Validator Explorer</li>
+                    <li>💎 Rewards Center</li>
+                    <li>📈 Analytics & E=hf Physics</li>
+                    <li>📜 Staking History</li>
+                    <li>🚀 Become a Validator</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("🚀 Open Validator Economics", use_container_width=True, key="btn_validator"):
+                st.session_state.nav_request = "🏛️ Validator Economics"
+                st.rerun()
+        
+        with col2:
+            st.markdown("""
+            <div class="module-card">
+                <h3>⚛️ Wavelength Economics</h3>
+                <p><strong>Physics-based validation</strong></p>
+                <ul>
+                    <li>🌊 Maxwell equation solvers</li>
+                    <li>⚡ E=hf energy economics</li>
+                    <li>🔐 Quantum-resistant validation</li>
+                    <li>📐 5D wave signatures</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("🚀 Open Wavelength Economics", use_container_width=True, key="btn_wavelength"):
+                st.session_state.nav_request = "💵 Wavelength Economics"
+                st.rerun()
+        
+        st.divider()
+        
+        # Live network stats
+        st.markdown("### 🌐 Network Status")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            active = len([v for v in economy.validators.values() if not v.is_jailed])
+            st.metric("Active Validators", active)
+        with col2:
+            st.metric("Total Staked", f"{economy.total_staked:,.0f}")
+        with col3:
+            st.metric("APY", f"{apy:.1f}%")
+        with col4:
+            st.metric("Rewards Dist.", f"{economy.total_rewards_distributed:,.0f}")
 
 
 def render_p2p_hub_tab():
