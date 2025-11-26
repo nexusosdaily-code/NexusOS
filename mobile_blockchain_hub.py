@@ -81,20 +81,63 @@ def render_mobile_blockchain_hub():
             color: #e2e8f0 !important;
         }
         
-        /* Ensure input fields are readable - dark text on light background */
+        /* Ensure input fields are readable AND CLICKABLE */
         .stApp input,
         .stApp textarea,
         .stApp select,
         .stApp [data-testid="stTextInput"] input,
-        .stApp [data-testid="textInput"] input {
+        .stApp [data-testid="textInput"] input,
+        .stApp [data-testid="stNumberInput"] input {
             background-color: #ffffff !important;
             color: #1a1a2e !important;
             border: 2px solid #667eea !important;
             border-radius: 8px !important;
+            position: relative !important;
+            z-index: 10 !important;
+            pointer-events: auto !important;
+            cursor: text !important;
+            padding: 12px 16px !important;
+            font-size: 16px !important;
+            min-height: 44px !important;
+        }
+        
+        /* Make sure the input containers don't block interaction */
+        .stApp [data-testid="stTextInput"],
+        .stApp [data-testid="stNumberInput"],
+        .stApp [data-baseweb="input"] {
+            position: relative !important;
+            z-index: 10 !important;
+            pointer-events: auto !important;
+        }
+        
+        /* Fix form containers */
+        .stApp form,
+        .stApp [data-testid="stForm"] {
+            position: relative !important;
+            z-index: 5 !important;
+        }
+        
+        /* Ensure labels don't block input */
+        .stApp label {
+            pointer-events: none !important;
+        }
+        
+        /* Focus state for better feedback */
+        .stApp input:focus,
+        .stApp textarea:focus {
+            outline: 3px solid #00d4ff !important;
+            outline-offset: 2px !important;
+            border-color: #00d4ff !important;
         }
         
         .stApp input::placeholder {
             color: #6b7280 !important;
+        }
+        
+        /* Ensure password input is accessible */
+        .stApp input[type="password"] {
+            -webkit-text-security: disc !important;
+            font-family: inherit !important;
         }
         
         /* Metric values - bright and readable */
