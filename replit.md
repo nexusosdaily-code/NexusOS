@@ -1,7 +1,7 @@
 # NexusOS Civilization Operating System
 
 ## Overview
-NexusOS is a civilization architecture replacing traditional binary computation with electromagnetic wave states and basing economics on quantum energy (E=hf). Its core purpose is to build a self-sustaining, physics-based civilization that guarantees basic living standards through a Basic Human Living Standards (BHLS) floor system, ensuring prosperity and stability for all citizens. A key feature is the Economic Loop System, a 5-milestone economic architecture where messaging burns create economic value through orbital transitions, DEX liquidity allocation, supply chain monetization, community ownership, and crisis protection.
+NexusOS is a civilization architecture that replaces traditional binary computation with electromagnetic wave states and bases its economics on quantum energy (E=hf). Its core purpose is to build a self-sustaining, physics-based civilization that guarantees basic living standards through a Basic Human Living Standards (BHLS) floor system, ensuring prosperity and stability. A key feature is the Economic Loop System, a 5-milestone economic architecture where messaging burns create economic value through orbital transitions, DEX liquidity allocation, supply chain monetization, community ownership, and crisis protection.
 
 ## User Preferences
 -   **Communication Style**: Simple, everyday language
@@ -22,19 +22,18 @@ The system provides a Unified Dashboard Launcher (`app.py`) offering access to m
 -   **Civic Governance Campaign System**: Enables validators to promote innovation campaigns, facilitates community voting, and uses AI for analysis reports.
 -   **Economic Simulation Engine**: Features a self-regulating issuance/burn mechanism, PID control, and conservation constraints.
 -   **WNSP v2.0 Protocol (Optical Mesh Networking)**: Enables quantum cryptography-enabled optical communication with DAG messaging and 170+ scientific character encoding.
--   **WNSP v3.0 Protocol (Architecture Phase)**: Next-generation WNSP focused on hardware abstraction to enable deployment on current devices (BLE/WiFi/LoRa) without optical transceivers, including a Hardware Abstraction Layer, Adaptive Encoding System, Progressive Validation Tiers, and Quantum Economics Preservation.
--   **WNSP v4.0 Protocol (Quantum Entanglement Consensus)**: Advanced consensus layer using Bell's theorem and EPR pairs for Byzantine-fault-tolerant validation. Features Proof of Entanglement consensus (50% fault tolerance vs 33% in v3), instant 10ms confirmation times (vs 5s in v3), entanglement-swapping relay nodes, temporal entanglement for historical validation, and full integration with Environmental Energy Harvester and Quantum Randomness systems. Backward compatible with v3.0; available as standalone module (`wnsp_quantum_entanglement_poc.py`) for optional deployment.
--   **WNSP Unified Mesh Stack**: A 4-layer decentralized knowledge infrastructure integrating Community Mesh ISP, Censorship-Resistant Routing, Privacy-First Messaging, and Offline Knowledge Networks. It enables internet-independent communication with wavelength-based addressing, quantum-encrypted P2P messaging, and distributed Wikipedia caching.
--   **WNSP Media Propagation Engine (Complete Architecture)**: Full content distribution architecture for media types (MP3/MP4/PDF/images/software) across mesh using 64KB chunking, mesh-aware routing, progressive streaming, content hashing, and multi-hop E=hf energy accounting.
--   **WNSP Live Streaming (WebRTC + E=hf Integration)**: Real-time peer-to-peer video/audio broadcasting system with quantum energy cost enforcement via a two-phase E=hf transaction system, WebRTC signaling, and friend-only privacy.
--   **WNSP P2P Hub - Phone Number Authentication (PROTOTYPE/DEMO ONLY)**: Phone number-based authentication system for P2P broadcasting and content sharing. **CRITICAL SECURITY LIMITATION**: Current implementation accepts client-sent phone numbers WITHOUT SMS verification.
+-   **WNSP v3.0 Protocol (Architecture Phase)**: Next-generation WNSP focused on hardware abstraction to enable deployment on current devices (BLE/WiFi/LoRa) without optical transceivers.
+-   **WNSP v4.0 Protocol (Quantum Entanglement Consensus)**: Advanced consensus layer using Bell's theorem and EPR pairs for Byzantine-fault-tolerant validation, featuring Proof of Entanglement consensus, instant 10ms confirmation times, entanglement-swapping relay nodes, and temporal entanglement.
+-   **WNSP Unified Mesh Stack**: A 4-layer decentralized knowledge infrastructure integrating Community Mesh ISP, Censorship-Resistant Routing, Privacy-First Messaging, and Offline Knowledge Networks.
+-   **WNSP Media Propagation Engine**: Full content distribution architecture for various media types across mesh using 64KB chunking, mesh-aware routing, progressive streaming, content hashing, and multi-hop E=hf energy accounting.
+-   **WNSP Live Streaming (WebRTC + E=hf Integration)**: Real-time peer-to-peer video/audio broadcasting system with quantum energy cost enforcement via a two-phase E=hf transaction system.
 -   **Wavelength-Economic Validation System**: A physics-based blockchain validation system utilizing Maxwell equation solvers, wave superposition, and 5D wave signature validation.
 -   **Mobile DAG Messaging System**: Optimized with wavelength validation, E=hf cost estimation, interactive DAG visualization, and an AI Message Security Controller.
 -   **Proof of Spectrum (PoS) Consensus**: A wavelength-inspired consensus mechanism using spectral regions and wave interference for validation.
 -   **Nexus Consensus Engine**: Integrates GhostDAG, Proof of Spectrum, and an AI-optimized economic layer.
--   **DEX (Decentralized Exchange)**: A Layer 2 Automated Market Maker with physics-based E=hf swap fees. Pools are assigned spectral regions based on TVL (higher TVL = higher frequency = higher fees), with fairness safeguards including fee floor (0.1%) and cap (0.5%). Each swap calculates quantum energy and tracks total energy processed.
--   **DEX LP Farming System**: Physics-based yield farming using E=hf economics. Features 5 energy tiers (Gamma, X-Ray, UV, Visible, Infrared) based on electromagnetic spectrum. Higher TVL pools = higher frequency = more energy rewards. LP tokens are locked in escrow when staked to prevent reward extraction without liquidity backing.
--   **Validator Spectral Rewards**: Physics-based validator reward multipliers using E=hf principle. Validators are assigned spectral regions based on total stake (MICROWAVE 1.0x to GAMMA 1.5x). Spectral region updates automatically on all stake changes (delegation, slashing, registration). Real-time system health S(t) from NexusEngine displayed in staking UI.
+-   **DEX (Decentralized Exchange)**: A Layer 2 Automated Market Maker with physics-based E=hf swap fees, where pools are assigned spectral regions based on TVL.
+-   **DEX LP Farming System**: Physics-based yield farming using E=hf economics, with 5 energy tiers (Gamma, X-Ray, UV, Visible, Infrared).
+-   **Validator Spectral Rewards**: Physics-based validator reward multipliers using E=hf principle, where validators are assigned spectral regions based on total stake.
 -   **Native Payment Layer - NexusToken (NXT)**: Features Bitcoin-style tokenomics, fixed supply, deflationary mechanics, and AI-controlled validator rewards.
 -   **Orbital Transition Engine**: Replaces token burns with quantum physics-inspired orbital transitions.
 -   **Hierarchical Pool Ecosystem**: An architecture of Reserve Pools, F_floor, and 10 Service Pools.
@@ -42,14 +41,14 @@ The system provides a Unified Dashboard Launcher (`app.py`) offering access to m
 -   **AI Management Control Dashboard**: A centralized governance interface for all AI systems.
 -   **Talk to Nexus AI**: A conversational AI interface for governance and report generation.
 -   **Offline Mesh Network with Hybrid AI Routing**: A peer-to-peer internet infrastructure for direct phone-to-phone communication, integrating with WNSP v2.0 DAG messaging and using a Hybrid AI Routing Controller.
--   **Comprehensive Security Framework (Production-Integrated)**: Multi-layered defense with rate limiting, authentication hardening, DEX security (wash trading detection, liquidity withdrawal protection), multi-oracle consensus, governance protection, AI anomaly detection, and an Active Intervention Engine for real-time threat neutralization (e.g., oracle manipulation, DDoS, wash trading, validator attacks).
+-   **Comprehensive Security Framework**: Multi-layered defense with rate limiting, authentication hardening, DEX security, multi-oracle consensus, governance protection, AI anomaly detection, and an Active Intervention Engine.
 
 ### Quantum Energy Systems (Tesla/Feynman-Inspired) - CONCEPTUAL MODELS
 Physics simulation frameworks demonstrating proven quantum concepts (NO HARDWARE CONNECTED):
--   **Environmental Energy Harvester (SIMULATED)**: Tesla-inspired conceptual model simulating ambient energy capture from Schumann resonance (7.83 Hz), cosmic rays, and geomagnetic fields. **Status**: Physics calculations only, no real sensors. Future: Could interface with ELF antennas, Geiger counters, and magnetometers.
--   **Resonant Frequency Optimizer (CALCULATED)**: Tesla coil physics calculator using coupled mode theory formulas for wireless power transmission efficiency. **Status**: Mathematical model only, no real coils. Future: Could control real resonant power transfer hardware.
--   **Quantum Vacuum Randomness Generator (CRYPTOGRAPHICALLY SECURE)**: Uses Python's secrets module (NIST-approved CSPRNG) with physics-inspired interface. **Status**: SAFE for production cryptography (wallet keys, nonces). NOT quantum hardware, but mathematically equivalent for security purposes.
--   **Quantum Energy Dashboard**: Streamlit interface demonstrating all three systems with prominent simulation disclaimers and comprehensive physics disclosure documentation clearly distinguishing proven science from experimental features and current simulations from future hardware.
+-   **Environmental Energy Harvester (SIMULATED)**: Tesla-inspired conceptual model simulating ambient energy capture.
+-   **Resonant Frequency Optimizer (CALCULATED)**: Tesla coil physics calculator using coupled mode theory formulas for wireless power transmission efficiency.
+-   **Quantum Vacuum Randomness Generator (CRYPTOGRAPHICALLY SECURE)**: Uses Python's secrets module (NIST-approved CSPRNG) with a physics-inspired interface.
+-   **Quantum Energy Dashboard**: Streamlit interface demonstrating all three systems with prominent simulation disclaimers.
 
 ### WaveLang Ecosystem
 A complete quantum-level programming stack including:
