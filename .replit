@@ -43,13 +43,12 @@ outputType = "webview"
 name = "WNSP Media Server"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python wnsp_media_server.py"
-waitForPort = 8080
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [[ports]]
 localPort = 5000
