@@ -1854,19 +1854,17 @@ def render_p2p_hub_tab():
             # FORCE reload friends from database for this tab
             streaming_friends = []
             active_addr = st.session_state.get('active_address')
-            
-            # Debug: Show wallet address being used
-            with st.expander("🔧 Debug Info", expanded=False):
-                st.code(f"Wallet: {active_addr}")
+            debug_info = []
+            debug_info.append(f"Wallet Address: {active_addr}")
             
             if active_addr:
                 try:
                     from friend_manager import get_friend_manager
                     fm = get_friend_manager()
+                    debug_info.append(f"Friend Manager: {'OK' if fm else 'FAILED'}")
                     if fm:
                         db_friends = fm.get_friends(active_addr)
-                        with st.expander("🔧 Debug Info", expanded=False):
-                            st.write(f"Friends from DB: {db_friends}")
+                        debug_info.append(f"DB Query Result: {len(db_friends) if db_friends else 0} friends")
                         if db_friends:
                             streaming_friends = [
                                 {
@@ -1876,10 +1874,17 @@ def render_p2p_hub_tab():
                                 }
                                 for f in db_friends
                             ]
-                            # Also update session state
                             st.session_state.p2p_friends = streaming_friends
+                            debug_info.append(f"Loaded friends: {[f['name'] for f in streaming_friends]}")
                 except Exception as e:
-                    st.error(f"Error loading friends: {e}")
+                    debug_info.append(f"Error: {e}")
+            else:
+                debug_info.append("No active wallet address - unlock wallet first!")
+            
+            # Show debug info
+            with st.expander("🔧 Debug: Friend Loading", expanded=True):
+                for info in debug_info:
+                    st.text(info)
             
             st.markdown("""
             <div class="module-card">
