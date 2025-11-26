@@ -524,37 +524,41 @@ def render_mobile_blockchain_hub():
     notif_center = get_notification_center()
     unread_count = notif_center.get_unread_count()
     
-    # Main header with notification bell
-    header_col1, header_col2 = st.columns([4, 1])
-    with header_col1:
-        st.markdown("""
+    # Main header with notification bell in top right
+    st.markdown(f"""
+        <div style="position: relative;">
             <div class="main-header">
                 <h1>📱 NexusOS Blockchain Hub</h1>
                 <p style="font-size: 18px; margin-top: 10px;">Your Phone IS the Blockchain Node</p>
                 <p style="font-size: 14px; margin-top: 5px; opacity: 0.9;">Mobile-First • Quantum-Resistant • Physics-Based</p>
             </div>
-        """, unsafe_allow_html=True)
-    with header_col2:
-        # Notification bell
-        badge_text = f" ({unread_count})" if unread_count > 0 else ""
-        badge_style = "background: #ef4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;" if unread_count > 0 else ""
-        st.markdown(f"""
-            <div style="text-align: center; padding: 20px 0;">
-                <span style="font-size: 32px;">🔔</span>
-                {f'<span style="{badge_style}">{unread_count}</span>' if unread_count > 0 else ''}
-            </div>
-        """, unsafe_allow_html=True)
-        if st.button("View Alerts", key="open_notifications", use_container_width=True):
-            st.session_state.show_notifications = True
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Notification bell button - positioned in top right of the tab area
+    bell_col1, bell_col2, bell_col3 = st.columns([6, 1, 1])
+    with bell_col3:
+        # Bell with badge showing unread count
+        bell_label = f"🔔 {unread_count}" if unread_count > 0 else "🔔"
+        bell_type = "primary" if unread_count > 0 else "secondary"
+        if st.button(bell_label, key="bell_toggle", type=bell_type, help="Tap to view notifications"):
+            st.session_state.show_notifications = not st.session_state.get('show_notifications', False)
+            if st.session_state.show_notifications:
+                notif_center.mark_all_read()
             st.rerun()
     
-    # Show notification panel if requested
+    # Show notification panel when bell is tapped
     if st.session_state.get('show_notifications', False):
-        with st.expander("🔔 Notifications", expanded=True):
-            render_notification_panel()
-            if st.button("Close", key="close_notif_panel"):
-                st.session_state.show_notifications = False
-                st.rerun()
+        st.markdown("""
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+                        padding: 15px; border-radius: 12px; border: 1px solid #667eea; margin: 10px 0;">
+                <h4 style="color: #00d4ff; margin-bottom: 10px;">🔔 Notifications</h4>
+            </div>
+        """, unsafe_allow_html=True)
+        render_notification_panel()
+        if st.button("✕ Close Notifications", key="close_notif_panel", use_container_width=True):
+            st.session_state.show_notifications = False
+            st.rerun()
         st.divider()
     
     # Wallet status bar (always visible)
