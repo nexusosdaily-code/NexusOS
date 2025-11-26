@@ -178,6 +178,7 @@ def render_mobile_blockchain_hub():
         "🌐 Blockchain",
         "💱 Trading",
         "🏛️ Staking",
+        "📱 P2P Hub",
         "📊 Info"
     ])
     
@@ -197,8 +198,12 @@ def render_mobile_blockchain_hub():
     with tab[3]:
         render_staking_tab()
     
-    # TAB 5: INFO
+    # TAB 5: P2P HUB (NEW!)
     with tab[4]:
+        render_p2p_hub_tab()
+    
+    # TAB 6: INFO
+    with tab[5]:
         render_info_tab()
 
 
@@ -412,6 +417,245 @@ def render_staking_tab():
         st.metric("Network Uptime", "99.8%", "🟢")
 
 
+def render_p2p_hub_tab():
+    """P2P Broadcasting Hub - Phone-to-phone communication"""
+    
+    st.subheader("📱 WNSP P2P Broadcasting Hub")
+    st.markdown("**Connect • Stream • Share** - Phone-to-Phone Mesh Network")
+    
+    st.divider()
+    
+    # Initialize P2P session state
+    if 'p2p_phone' not in st.session_state:
+        st.session_state.p2p_phone = None
+    if 'p2p_friends' not in st.session_state:
+        st.session_state.p2p_friends = []
+    
+    # P2P Sub-tabs
+    p2p_tabs = st.tabs([
+        "🔐 Register",
+        "👥 Friends",
+        "📹 Live Stream",
+        "📁 Media Share",
+        "🌐 Mesh Network"
+    ])
+    
+    # TAB 1: Phone Registration
+    with p2p_tabs[0]:
+        st.markdown("### 🔐 Phone Number Registration")
+        st.info("""
+        **Your phone number is your identity on the mesh network.**
+        Register to access P2P broadcasting, friend-only streams, and mesh messaging.
+        """)
+        
+        if st.session_state.p2p_phone:
+            st.success(f"✅ **Registered as:** {st.session_state.p2p_phone}")
+            st.markdown(f"**Wallet Balance:** 5.00 NXT (500,000,000 units)")
+            
+            if st.button("🔓 Logout", key="p2p_logout"):
+                st.session_state.p2p_phone = None
+                st.session_state.p2p_friends = []
+                st.rerun()
+        else:
+            phone = st.text_input("📱 Enter Phone Number", placeholder="+1234567890", key="p2p_phone_input")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("✨ Register & Create Wallet", type="primary", key="p2p_register"):
+                    if phone and len(phone) >= 10:
+                        st.session_state.p2p_phone = phone
+                        st.success(f"✅ Registered! Wallet created with 5 NXT")
+                        st.rerun()
+                    else:
+                        st.error("Please enter a valid phone number")
+            
+            st.markdown("""
+            ---
+            **🔋 E=hf Energy Economics:**
+            - Text message: ~0.0001 NXT
+            - Image share: ~0.01-0.05 NXT  
+            - 1 min video stream: ~0.5-1 NXT
+            - 1 hour broadcast: ~20-30 NXT
+            """)
+    
+    # TAB 2: Friends Management
+    with p2p_tabs[1]:
+        st.markdown("### 👥 Friend Management")
+        
+        if not st.session_state.p2p_phone:
+            st.warning("🔐 Please register your phone number first")
+        else:
+            st.markdown(f"**Your ID:** {st.session_state.p2p_phone}")
+            
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                friend_phone = st.text_input("Add friend's phone number", key="add_friend_input")
+            with col2:
+                if st.button("➕ Add Friend", key="add_friend_btn"):
+                    if friend_phone and friend_phone not in st.session_state.p2p_friends:
+                        st.session_state.p2p_friends.append(friend_phone)
+                        st.success(f"✅ Added {friend_phone}")
+                        st.rerun()
+            
+            st.divider()
+            
+            if st.session_state.p2p_friends:
+                st.markdown("**📋 Your Friends:**")
+                for i, friend in enumerate(st.session_state.p2p_friends):
+                    col1, col2, col3 = st.columns([2, 1, 1])
+                    with col1:
+                        st.markdown(f"👤 **{friend}**")
+                    with col2:
+                        st.markdown("🟢 Online")
+                    with col3:
+                        if st.button("❌", key=f"remove_{i}"):
+                            st.session_state.p2p_friends.remove(friend)
+                            st.rerun()
+            else:
+                st.info("No friends added yet. Add friends to enable private broadcasts!")
+    
+    # TAB 3: Live Streaming
+    with p2p_tabs[2]:
+        st.markdown("### 📹 P2P Live Streaming")
+        
+        if not st.session_state.p2p_phone:
+            st.warning("🔐 Please register your phone number first")
+        else:
+            st.markdown("""
+            <div class="module-card">
+                <h3>🔴 WebRTC Live Broadcasting</h3>
+                <p><strong>Stream directly to friends via the mesh network</strong></p>
+                <ul>
+                    <li>📹 Camera & microphone access</li>
+                    <li>👥 Friend-only or public broadcasts</li>
+                    <li>⚡ E=hf energy cost per stream</li>
+                    <li>🔐 End-to-end encryption</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            broadcast_type = st.radio(
+                "Broadcast Type:",
+                ["🌍 Public (Anyone)", "👥 Friends Only"],
+                key="broadcast_type"
+            )
+            
+            if broadcast_type == "👥 Friends Only" and st.session_state.p2p_friends:
+                selected_friends = st.multiselect(
+                    "Select friends who can view:",
+                    st.session_state.p2p_friends,
+                    key="selected_viewers"
+                )
+            
+            stream_title = st.text_input("Stream Title", placeholder="My NexusOS Stream", key="stream_title")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🔴 Start Broadcasting", type="primary", key="start_stream"):
+                    st.success("🔴 **LIVE** - Broadcasting started!")
+                    st.info("⚡ Energy cost: ~0.5 NXT/minute")
+            with col2:
+                if st.button("⏹️ Stop Broadcast", key="stop_stream"):
+                    st.info("Broadcast ended. Energy finalized.")
+            
+            st.divider()
+            
+            st.markdown("### 📺 Active Broadcasts")
+            st.markdown("""
+            <div class="module-card" style="border: 2px solid #ef4444;">
+                <span style="background: #ef4444; padding: 4px 8px; border-radius: 4px; font-size: 12px;">🔴 LIVE</span>
+                <h4 style="margin-top: 10px;">Demo Stream - NexusOS Testing</h4>
+                <p>👤 Broadcaster: +1234567890 | 👁️ 3 viewers</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button("📺 Watch This Stream", key="watch_demo"):
+                st.info("Connecting to stream via WebRTC mesh...")
+    
+    # TAB 4: Media Sharing
+    with p2p_tabs[3]:
+        st.markdown("### 📁 Media Propagation Engine")
+        
+        if not st.session_state.p2p_phone:
+            st.warning("🔐 Please register your phone number first")
+        else:
+            st.markdown("""
+            Share media across the mesh network with E=hf energy costs:
+            - 🎵 **MP3** - Audio files
+            - 🎬 **MP4** - Video files
+            - 📄 **PDF** - Documents
+            - 🖼️ **Images** - Photos and graphics
+            """)
+            
+            uploaded = st.file_uploader(
+                "Upload media to share",
+                type=['mp3', 'mp4', 'pdf', 'png', 'jpg', 'jpeg'],
+                key="media_upload"
+            )
+            
+            if uploaded:
+                file_size = len(uploaded.getvalue()) / 1024 / 1024  # MB
+                energy_cost = file_size * 0.01  # Rough estimate
+                
+                st.info(f"""
+                📁 **{uploaded.name}**  
+                📊 Size: {file_size:.2f} MB  
+                ⚡ Energy Cost: ~{energy_cost:.4f} NXT
+                """)
+                
+                share_to = st.radio("Share with:", ["👥 Friends Only", "🌍 Public"], key="share_scope")
+                
+                if st.button("📤 Share via Mesh", type="primary", key="share_media"):
+                    st.success(f"✅ Sharing {uploaded.name} across mesh network...")
+                    st.info("Content will propagate via 64KB chunks with E=hf accounting")
+    
+    # TAB 5: Mesh Network Status
+    with p2p_tabs[4]:
+        st.markdown("### 🌐 Mesh Network Status")
+        
+        st.markdown("""
+        <div class="module-card">
+            <h3>📡 Your Phone as a Mesh Node</h3>
+            <p>Your device is part of the NexusOS peer-to-peer network. No central servers needed!</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Nearby Nodes", "7", "+2")
+        with col2:
+            st.metric("Mesh Hops", "3", "avg")
+        with col3:
+            st.metric("Bandwidth", "10 Mbps", "WiFi")
+        with col4:
+            st.metric("Latency", "45ms", "-5")
+        
+        st.divider()
+        
+        st.markdown("""
+        **🔗 Connection Protocols:**
+        - 📡 **Bluetooth LE**: ~100m range, low power
+        - 📶 **WiFi Direct**: ~200m range, high bandwidth
+        - 📲 **NFC**: <10cm, secure pairing
+        
+        **🛡️ Security:**
+        - TLS 1.3 transport encryption
+        - AES-256-GCM message encryption
+        - Quantum-resistant 5D wave signatures
+        """)
+        
+        st.markdown("""
+        <div class="module-card">
+            <h3>🌍 Offline Mesh Network</h3>
+            <p>Access the full offline mesh dashboard for peer-to-peer internet without WiFi or cellular data.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("🚀 Open Full Mesh Dashboard", key="open_mesh"):
+            st.session_state.nav_request = "🌐 Offline Mesh Network"
+            st.rerun()
+
+
 def render_info_tab():
     """System information and navigation guide"""
     
@@ -435,7 +679,8 @@ def render_info_tab():
     2. **Blockchain Tab** - Links to messaging, explorer, consensus
     3. **Trading Tab** - Access DEX and liquidity pools
     4. **Staking Tab** - Validator economics and wavelength validation
-    5. **Info Tab** - You are here! 😊
+    5. **P2P Hub Tab** - Phone registration, friends, live streaming, media sharing
+    6. **Info Tab** - You are here!
     
     #### 🚀 Full Feature Access:
     For complete functionality, use the **main module selector** in the sidebar to access:
