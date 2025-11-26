@@ -20,8 +20,10 @@ It provides navigation to access full dashboards in the main app selector.
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 from typing import Dict, Optional
 import time
+import json
 
 # Import wallet for central hub functionality
 from nexus_native_wallet import NexusNativeWallet
@@ -1859,17 +1861,15 @@ def render_p2p_hub_tab():
             else:
                 st.info("No friends added yet. Add friends to enable private broadcasts and media sharing!")
     
-    # TAB 3: Live Streaming
+    # TAB 3: Live Streaming - FULL WNSP P2P Hub
     with p2p_tabs[2]:
-        st.markdown("### 📹 P2P Live Streaming")
+        st.markdown("### 📹 WNSP Live Streaming")
         
         if not has_wallet:
-            st.warning("🔐 Please create or unlock your wallet in the **Wallet** tab first")
+            st.warning("🔐 Please create or unlock your wallet in the **Wallet** tab first to access live streaming")
         else:
-            # Load friends from session state (populated on wallet unlock)
+            # Load friends from database for the streaming system
             streaming_friends = st.session_state.get('p2p_friends', [])
-            
-            # If no friends in session, try loading from database
             if not streaming_friends:
                 active_addr = st.session_state.get('active_address')
                 if active_addr:
@@ -1884,85 +1884,44 @@ def render_p2p_hub_tab():
                     except Exception:
                         pass
             
-            st.markdown("""
-            <div class="module-card">
-                <h3>🔴 WebRTC Live Broadcasting</h3>
-                <p><strong>Stream directly to friends via the mesh network</strong></p>
-                <ul>
-                    <li>📹 Camera & microphone access</li>
-                    <li>👥 Friend-only or public broadcasts</li>
-                    <li>⚡ E=hf energy cost per stream</li>
-                    <li>🔐 End-to-end encryption</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
-            
             # Show friend count
             if streaming_friends:
-                st.success(f"👥 {len(streaming_friends)} friends available for private streaming")
+                st.success(f"👥 {len(streaming_friends)} friends loaded for private streaming")
             
-            broadcast_type = st.radio(
-                "Broadcast Type:",
-                ["🌍 Public (Anyone)", "👥 Friends Only"],
-                key="broadcast_type"
-            )
-            
-            selected_friends = []
-            if broadcast_type == "👥 Friends Only":
-                if streaming_friends:
-                    # Create display-friendly options from database friends
-                    friend_options = {}
-                    for f in streaming_friends:
-                        name = f.get('name', f.get('friend_name', 'Unknown'))
-                        contact = f.get('contact', f.get('friend_contact', 'No contact'))
-                        display_key = f"{name} ({contact})"
-                        friend_options[display_key] = f
+            # Read and embed the full WNSP LiveStream HTML
+            try:
+                import os
+                livestream_path = os.path.join(os.path.dirname(__file__), 'static', 'livestream.html')
+                if os.path.exists(livestream_path):
+                    with open(livestream_path, 'r') as f:
+                        livestream_html = f.read()
                     
-                    selected_display = st.multiselect(
-                        "Select friends who can view:",
-                        options=list(friend_options.keys()),
-                        key="selected_viewers"
-                    )
-                    selected_friends = [friend_options[name] for name in selected_display]
+                    # Inject friends data into the HTML
+                    friends_json = json.dumps(streaming_friends) if streaming_friends else '[]'
+                    wallet_addr = st.session_state.get('active_address', '')
                     
-                    if not selected_display:
-                        st.info("👆 Select at least one friend to start private streaming")
+                    # Add script to pass friends data to the livestream page
+                    inject_script = f"""
+                    <script>
+                        window.nexusFriends = {friends_json};
+                        window.nexusWallet = "{wallet_addr}";
+                    </script>
+                    """
+                    livestream_html = livestream_html.replace('</head>', inject_script + '</head>')
+                    
+                    # Embed the full WNSP LiveStream interface
+                    components.html(livestream_html, height=800, scrolling=True)
                 else:
-                    st.warning("📭 No friends added yet. Go to the **Friends** tab to add friends first!")
-            
-            stream_title = st.text_input("Stream Title", placeholder="My NexusOS Stream", key="stream_title")
-            
-            # Streaming controls
-            col1, col2 = st.columns(2)
-            with col1:
-                can_start = broadcast_type == "🌍 Public (Anyone)" or len(selected_friends) > 0
-                if st.button("🔴 Start Broadcasting", type="primary", key="start_stream", disabled=not can_start):
-                    if broadcast_type == "👥 Friends Only":
-                        friend_names = [f.get('name', f.get('friend_name', 'Unknown')) for f in selected_friends]
-                        st.success(f"🔴 **LIVE** - Private broadcast to: {', '.join(friend_names)}")
-                    else:
-                        st.success("🔴 **LIVE** - Public broadcast started!")
-                    st.info("⚡ Energy cost: ~0.5 NXT/minute")
-                    st.session_state.stream_active = True
-            with col2:
-                if st.button("⏹️ Stop Broadcast", key="stop_stream"):
-                    st.info("Broadcast ended. Energy finalized.")
-                    st.session_state.stream_active = False
-            
-            st.divider()
-            
-            # Show active streams (real data would come from mesh network)
-            st.markdown("### 📺 Available Streams")
-            if st.session_state.get('stream_active'):
-                st.markdown(f"""
-                <div class="module-card" style="border: 2px solid #ef4444;">
-                    <span style="background: #ef4444; padding: 4px 8px; border-radius: 4px; font-size: 12px;">🔴 LIVE</span>
-                    <h4 style="margin-top: 10px;">{stream_title or 'My Stream'}</h4>
-                    <p>👤 You are broadcasting | 👁️ Awaiting viewers</p>
+                    st.error("LiveStream interface not found. Please check installation.")
+            except Exception as e:
+                st.error(f"Error loading LiveStream: {e}")
+                # Fallback to basic interface
+                st.markdown("""
+                <div class="module-card">
+                    <h3>🔴 WebRTC Live Broadcasting</h3>
+                    <p>Full streaming interface temporarily unavailable.</p>
                 </div>
                 """, unsafe_allow_html=True)
-            else:
-                st.info("No active broadcasts. Start streaming or check back later!")
     
     # TAB 4: Media Sharing
     with p2p_tabs[3]:
