@@ -1854,12 +1854,19 @@ def render_p2p_hub_tab():
             # FORCE reload friends from database for this tab
             streaming_friends = []
             active_addr = st.session_state.get('active_address')
+            
+            # Debug: Show wallet address being used
+            with st.expander("🔧 Debug Info", expanded=False):
+                st.code(f"Wallet: {active_addr}")
+            
             if active_addr:
                 try:
                     from friend_manager import get_friend_manager
                     fm = get_friend_manager()
                     if fm:
                         db_friends = fm.get_friends(active_addr)
+                        with st.expander("🔧 Debug Info", expanded=False):
+                            st.write(f"Friends from DB: {db_friends}")
                         if db_friends:
                             streaming_friends = [
                                 {
