@@ -245,14 +245,14 @@ def render_mobile_blockchain_hub():
     # Wallet status bar (always visible)
     if st.session_state.active_address:
         balance = wallet.get_balance(st.session_state.active_address)
-        # Convert to true atomic scale: DB stores at 100 units/NXT, atomic scale is 100M units/NXT
-        atomic_units = balance['balance_units'] * 1_000_000
+        # Balance is already in smallest units (100M units = 1 NXT, like Bitcoin satoshis)
+        units = balance['balance_units']
         nxt = balance['balance_nxt']
         st.markdown(f"""
             <div class="wallet-status-active">
                 <strong>🔓 Wallet Active</strong><br/>
                 Address: <code>{st.session_state.active_address[:24]}...</code><br/>
-                Balance: <strong>{atomic_units:,.0f} units</strong> <span style="opacity: 0.7; font-size: 14px;">({nxt:.8f} NXT)</span>
+                Balance: <strong>{nxt:,.8f} NXT</strong> <span style="opacity: 0.7; font-size: 14px;">({units:,.0f} units)</span>
             </div>
         """, unsafe_allow_html=True)
         
