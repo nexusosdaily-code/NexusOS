@@ -737,7 +737,22 @@ def render_mobile_blockchain_hub():
                                 if wallet.unlock_wallet(selected_address, quick_password):
                                     st.session_state.active_address = selected_address
                                     st.session_state.wallet_unlocked = selected_address
-                                    st.success("✅ Wallet unlocked!")
+                                    
+                                    # IMMEDIATELY load friends from database on unlock
+                                    try:
+                                        from friend_manager import get_friend_manager
+                                        fm = get_friend_manager()
+                                        if fm:
+                                            db_friends = fm.get_friends(selected_address)
+                                            if db_friends:
+                                                st.session_state.p2p_friends = db_friends
+                                                st.success(f"✅ Wallet unlocked! {len(db_friends)} friends loaded.")
+                                            else:
+                                                st.session_state.p2p_friends = []
+                                                st.success("✅ Wallet unlocked!")
+                                    except Exception:
+                                        st.success("✅ Wallet unlocked!")
+                                    
                                     st.rerun()
                                 else:
                                     st.error("❌ Invalid password")
