@@ -431,38 +431,224 @@ def render_blockchain_tab():
 
 
 def render_trading_tab():
-    """Trading & DEX navigation"""
+    """Trading & DEX navigation with embedded quick swap"""
     
     st.subheader("💱 Decentralized Trading")
     st.caption("Swap tokens, provide liquidity, earn fees")
     
-    st.markdown("""
-    <div class="module-card">
-        <h2>💱 DEX (Decentralized Exchange)</h2>
-        <p><strong>Automated Market Maker with NXT-based liquidity pools</strong></p>
-        <ul>
-            <li>🔄 Token swaps with instant execution</li>
-            <li>💧 Provide liquidity and earn 0.3% fees</li>
-            <li>📊 Pool analytics and performance tracking</li>
-            <li>🏆 Fees contribute to validator rewards</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    # Trading sub-tabs
+    trading_tabs = st.tabs([
+        "⚡ Quick Swap",
+        "📈 Markets",
+        "🌾 Farming",
+        "🏭 Create Token",
+        "🚀 Full DEX"
+    ])
     
-    if st.button("🚀 Open DEX Trading Platform", width="stretch", key="btn_dex", type="primary"):
-        st.session_state.nav_request = "💱 DEX (Token Exchange)"
-        st.rerun()
+    # TAB 1: Quick Swap
+    with trading_tabs[0]:
+        st.markdown("### ⚡ Quick Token Swap")
+        st.info("💡 All swaps use NXT as the base currency")
+        
+        # Initialize DEX for quick swap
+        from dex_page import initialize_dex
+        dex = initialize_dex()
+        
+        user = st.session_state.get('user_address', 'dex_user_1')
+        
+        col1, col2 = st.columns(2)
+        
+        all_tokens = list(dex.tokens.keys()) + ["NXT"]
+        
+        with col1:
+            st.markdown("**From**")
+            input_token = st.selectbox("Token", all_tokens, key="quick_swap_input")
+            
+            if input_token == "NXT":
+                balance = dex.nxt_adapter.get_balance(user) if dex.nxt_adapter else 0.0
+            else:
+                balance = dex.tokens[input_token].balance_of(user)
+            st.caption(f"Balance: {balance:.4f} {input_token}")
+            
+            input_amount = st.number_input(
+                "Amount",
+                min_value=0.0,
+                max_value=float(balance),
+                value=0.0,
+                step=0.1,
+                key="quick_swap_amount"
+            )
+        
+        with col2:
+            st.markdown("**To**")
+            output_tokens = [t for t in all_tokens if t != input_token]
+            output_token = st.selectbox("Token", output_tokens, key="quick_swap_output")
+            
+            if input_amount > 0:
+                output_amount, price_impact, _ = dex.get_quote(input_token, output_token, input_amount)
+                st.metric("You receive", f"{output_amount:.4f} {output_token}")
+                if price_impact > 5:
+                    st.warning(f"⚠️ High impact: {price_impact:.1f}%")
+                else:
+                    st.caption(f"Price impact: {price_impact:.1f}%")
+            else:
+                st.metric("You receive", "0.0000")
+        
+        slippage = st.slider("Slippage Tolerance", 0.1, 5.0, 1.0, 0.1, key="quick_slippage") / 100
+        
+        if st.button("🔄 Swap Now", type="primary", use_container_width=True, key="quick_swap_btn"):
+            if input_amount <= 0:
+                st.error("Enter an amount")
+            else:
+                success, output, message = dex.swap_tokens(user, input_token, output_token, input_amount, slippage)
+                if success:
+                    st.success(f"✅ {message}")
+                    # Record trade
+                    if 'trade_history' not in st.session_state:
+                        st.session_state.trade_history = []
+                    st.session_state.trade_history.append({
+                        'pair': f"{input_token}/{output_token}",
+                        'type': 'Swap',
+                        'amount': input_amount,
+                        'received': output,
+                        'time': 'Now'
+                    })
+                    st.rerun()
+                else:
+                    st.error(f"❌ {message}")
     
-    st.divider()
+    # TAB 2: Markets Overview
+    with trading_tabs[1]:
+        st.markdown("### 📈 Market Overview")
+        
+        from dex_page import initialize_dex
+        dex = initialize_dex()
+        
+        if dex.pools:
+            import pandas as pd
+            markets_data = []
+            for pool_id, pool in dex.pools.items():
+                price = pool.get_price(pool.token_a)
+                tvl = pool.reserve_a + pool.reserve_b
+                volume = pool.total_volume_a + pool.total_volume_b
+                markets_data.append({
+                    'Pair': pool_id,
+                    'Price': f"{price:.6f}",
+                    'TVL': f"{tvl:.2f}",
+                    'Volume': f"{volume:.2f}",
+                    'Fees': f"{pool.total_fees_collected:.4f}"
+                })
+            
+            df = pd.DataFrame(markets_data)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+        else:
+            st.info("No markets yet. Create a pool to start trading!")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Pools", len(dex.pools) if dex.pools else 0)
+        with col2:
+            total_tvl = sum(p.reserve_a + p.reserve_b for p in dex.pools.values()) if dex.pools else 0
+            st.metric("Total TVL", f"{total_tvl:.2f}")
+        with col3:
+            st.metric("Tokens", len(dex.tokens))
     
-    # Quick stats (mock data for display)
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Total Liquidity", "$2.4M", "+8.2%")
-    with col2:
-        st.metric("24h Volume", "$156K", "+12.1%")
-    with col3:
-        st.metric("Active Pools", "24", "+3")
+    # TAB 3: Farming Quick Access
+    with trading_tabs[2]:
+        st.markdown("### 🌾 LP Farming")
+        st.info("Stake LP tokens to earn NXT rewards")
+        
+        from dex_page import initialize_dex
+        dex = initialize_dex()
+        
+        if dex.pools:
+            for pool_id, pool in list(dex.pools.items())[:3]:  # Show top 3
+                tvl = pool.reserve_a + pool.reserve_b
+                volume = pool.total_volume_a + pool.total_volume_b
+                apy = min(500, (volume / max(tvl, 1)) * 100 * 365 / 100 + 12)
+                
+                col1, col2, col3 = st.columns([2, 1, 1])
+                with col1:
+                    st.markdown(f"**{pool_id}**")
+                with col2:
+                    st.metric("APY", f"{apy:.1f}%")
+                with col3:
+                    st.metric("TVL", f"{tvl:.0f}")
+                st.divider()
+        
+        if st.button("🚀 Open Full Farming Dashboard", use_container_width=True):
+            st.session_state.nav_request = "💱 DEX (Token Exchange)"
+            st.rerun()
+    
+    # TAB 4: Quick Token Creation
+    with trading_tabs[3]:
+        st.markdown("### 🏭 Create Your Token")
+        
+        from dex_page import initialize_dex
+        dex = initialize_dex()
+        
+        with st.form("quick_token_form"):
+            col1, col2 = st.columns(2)
+            with col1:
+                symbol = st.text_input("Symbol", placeholder="MYTOKEN", max_chars=10)
+                name = st.text_input("Name", placeholder="My Token")
+            with col2:
+                supply = st.number_input("Supply", min_value=1.0, value=1000000.0, step=1000.0)
+                decimals = st.selectbox("Decimals", [6, 8, 18], index=2)
+            
+            creator = st.session_state.get('user_address', 'dex_user_1')
+            
+            if st.form_submit_button("🚀 Create Token", type="primary", use_container_width=True):
+                if symbol and name:
+                    success, msg = dex.create_token(symbol.upper(), name, supply, creator, decimals)
+                    if success:
+                        st.success(f"✅ {msg}")
+                        st.balloons()
+                    else:
+                        st.error(f"❌ {msg}")
+                else:
+                    st.error("Fill in all fields")
+        
+        st.caption(f"📊 {len(dex.tokens)} tokens available")
+    
+    # TAB 5: Full DEX Access
+    with trading_tabs[4]:
+        st.markdown("""
+        <div class="module-card">
+            <h2>💱 Full DEX Platform</h2>
+            <p><strong>Complete trading experience with all features:</strong></p>
+            <ul>
+                <li>📈 Price charts with candlesticks</li>
+                <li>💧 Advanced liquidity management</li>
+                <li>🌾 LP Farming with APY tracking</li>
+                <li>📜 Complete trade history</li>
+                <li>🏭 Token factory</li>
+                <li>📊 Analytics dashboard</li>
+                <li>🏛️ Pool ecosystem</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("🚀 Open Full DEX Trading Platform", use_container_width=True, type="primary", key="btn_full_dex"):
+            st.session_state.nav_request = "💱 DEX (Token Exchange)"
+            st.rerun()
+        
+        st.divider()
+        
+        # Quick stats
+        from dex_page import initialize_dex
+        dex = initialize_dex()
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Pools", len(dex.pools))
+        with col2:
+            total_tvl = sum(p.reserve_a + p.reserve_b for p in dex.pools.values()) if dex.pools else 0
+            st.metric("Total TVL", f"{total_tvl:.0f}")
+        with col3:
+            st.metric("Tokens", len(dex.tokens))
+        with col4:
+            st.metric("Total Swaps", dex.total_swaps)
 
 
 def render_staking_tab():

@@ -508,6 +508,433 @@ def render_pool_ecosystem_tab(dex: DEXEngine):
         st.caption(f"{overall['healthy_pools']}/{overall['total_pools']} pools healthy")
 
 
+def render_price_charts(dex: DEXEngine):
+    """Render price charts with candlestick visualization"""
+    st.subheader("📈 Price Charts")
+    
+    if not dex.pools:
+        st.info("No pools available. Create a pool to see price charts.")
+        return
+    
+    # Pool selector
+    pool_options = list(dex.pools.keys())
+    selected_pool = st.selectbox("Select Trading Pair", pool_options, key="chart_pool")
+    
+    if selected_pool:
+        pool = dex.pools[selected_pool]
+        
+        # Current price display
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            price = pool.get_price(pool.token_a)
+            st.metric(f"1 {pool.token_a}", f"{price:.6f} {pool.token_b}")
+        with col2:
+            st.metric("TVL", f"{pool.reserve_a + pool.reserve_b:.2f}")
+        with col3:
+            st.metric("24h Volume", f"{pool.total_volume_a + pool.total_volume_b:.2f}")
+        with col4:
+            st.metric("Fees (0.3%)", f"{pool.total_fees_collected:.4f}")
+        
+        st.divider()
+        
+        # Generate simulated price history for visualization
+        import numpy as np
+        import random
+        
+        # Initialize or get price history from session state
+        history_key = f"price_history_{selected_pool}"
+        if history_key not in st.session_state:
+            base_price = pool.get_price(pool.token_a)
+            prices = []
+            current = base_price
+            for i in range(100):
+                change = random.uniform(-0.02, 0.02) * current
+                current = max(0.0001, current + change)
+                prices.append({
+                    'time': i,
+                    'open': current,
+                    'high': current * (1 + random.uniform(0, 0.01)),
+                    'low': current * (1 - random.uniform(0, 0.01)),
+                    'close': current * (1 + random.uniform(-0.005, 0.005)),
+                    'volume': random.uniform(10, 1000)
+                })
+            st.session_state[history_key] = prices
+        
+        prices = st.session_state[history_key]
+        
+        # Candlestick chart
+        fig = go.Figure(data=[go.Candlestick(
+            x=[p['time'] for p in prices],
+            open=[p['open'] for p in prices],
+            high=[p['high'] for p in prices],
+            low=[p['low'] for p in prices],
+            close=[p['close'] for p in prices],
+            increasing_line_color='#10b981',
+            decreasing_line_color='#ef4444'
+        )])
+        
+        fig.update_layout(
+            title=f"{pool.token_a}/{pool.token_b} Price Chart",
+            yaxis_title="Price",
+            xaxis_title="Time",
+            template="plotly_dark",
+            height=400,
+            xaxis_rangeslider_visible=False
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Volume chart
+        fig_vol = go.Figure(data=[go.Bar(
+            x=[p['time'] for p in prices],
+            y=[p['volume'] for p in prices],
+            marker_color='#667eea'
+        )])
+        fig_vol.update_layout(
+            title="Trading Volume",
+            yaxis_title="Volume",
+            xaxis_title="Time",
+            template="plotly_dark",
+            height=200
+        )
+        st.plotly_chart(fig_vol, use_container_width=True)
+        
+        # Price depth visualization
+        st.markdown("### 📊 Liquidity Depth")
+        
+        col1, col2 = st.columns(2)
+        
+        # Guard against zero reserves
+        max_reserve = max(pool.reserve_a, pool.reserve_b)
+        depth_a = pool.reserve_a / max_reserve if max_reserve > 0 else 0.0
+        depth_b = pool.reserve_b / max_reserve if max_reserve > 0 else 0.0
+        
+        with col1:
+            st.markdown(f"**{pool.token_a} Reserve**")
+            st.progress(min(1.0, depth_a))
+            st.caption(f"{pool.reserve_a:.4f} {pool.token_a}")
+        
+        with col2:
+            st.markdown(f"**{pool.token_b} Reserve**")
+            st.progress(min(1.0, depth_b))
+            st.caption(f"{pool.reserve_b:.4f} {pool.token_b}")
+
+
+def render_trade_history(dex: DEXEngine):
+    """Render trade history and recent transactions"""
+    st.subheader("📜 Trade History")
+    
+    # Initialize trade history in session state
+    if 'trade_history' not in st.session_state:
+        st.session_state.trade_history = []
+    
+    # Display recent trades
+    if st.session_state.trade_history:
+        trades_df = pd.DataFrame(st.session_state.trade_history[-50:][::-1])  # Last 50, newest first
+        
+        st.markdown("### Recent Trades")
+        st.dataframe(trades_df, use_container_width=True, hide_index=True)
+        
+        # Trade volume by pair
+        if len(st.session_state.trade_history) > 0:
+            st.markdown("### Volume by Pair")
+            pair_volumes = {}
+            for trade in st.session_state.trade_history:
+                pair = trade.get('pair', 'Unknown')
+                pair_volumes[pair] = pair_volumes.get(pair, 0) + trade.get('amount', 0)
+            
+            fig = px.pie(
+                values=list(pair_volumes.values()),
+                names=list(pair_volumes.keys()),
+                title="Trading Volume Distribution",
+                color_discrete_sequence=px.colors.qualitative.Set3
+            )
+            fig.update_layout(template="plotly_dark", height=300)
+            st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No trades yet. Start swapping to see your trade history!")
+    
+    st.divider()
+    
+    # Pool activity summary
+    st.markdown("### Pool Activity Summary")
+    
+    if dex.pools:
+        activity_data = []
+        for pool_id, pool in dex.pools.items():
+            activity_data.append({
+                'Pool': pool_id,
+                'Total Volume A': f"{pool.total_volume_a:.2f}",
+                'Total Volume B': f"{pool.total_volume_b:.2f}",
+                'Total Fees': f"{pool.total_fees_collected:.4f}",
+                'LP Providers': len(pool.lp_balances)
+            })
+        
+        df = pd.DataFrame(activity_data)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No pools created yet.")
+    
+    # DEX statistics
+    st.markdown("### DEX Statistics")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Swaps", dex.total_swaps)
+    with col2:
+        st.metric("Total Volume", f"{dex.total_volume:.2f}")
+    with col3:
+        st.metric("Fees to Validators", f"{dex.total_fees_to_validators:.4f}")
+
+
+def render_token_factory(dex: DEXEngine):
+    """Render token creation interface"""
+    st.subheader("🏭 Token Factory")
+    st.markdown("**Create your own tokens on NexusOS**")
+    
+    st.info("""
+    💡 **Token Creation Guide:**
+    - Tokens are ERC-20 compatible fungible tokens
+    - All tokens can be paired with NXT for trading
+    - Creator receives the initial supply
+    - Token symbol must be unique
+    """)
+    
+    st.divider()
+    
+    # Token creation form
+    st.markdown("### Create New Token")
+    
+    with st.form("create_token_form"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            symbol = st.text_input(
+                "Token Symbol",
+                placeholder="e.g., MYTOKEN",
+                max_chars=10,
+                help="3-10 character symbol (uppercase recommended)"
+            )
+            
+            name = st.text_input(
+                "Token Name",
+                placeholder="e.g., My Awesome Token",
+                help="Full name of your token"
+            )
+        
+        with col2:
+            initial_supply = st.number_input(
+                "Initial Supply",
+                min_value=1.0,
+                max_value=1_000_000_000_000.0,
+                value=1_000_000.0,
+                step=1000.0,
+                help="Total tokens to create"
+            )
+            
+            decimals = st.selectbox(
+                "Decimals",
+                options=[6, 8, 18],
+                index=2,
+                help="Precision (18 is standard)"
+            )
+        
+        creator = st.session_state.get('user_address', 'dex_user_1')
+        st.caption(f"Creator: {creator}")
+        
+        submit = st.form_submit_button("🚀 Create Token", type="primary", use_container_width=True)
+        
+        if submit:
+            if not symbol or not name:
+                st.error("Please fill in all fields")
+            elif symbol.upper() == "NXT":
+                st.error("Cannot create NXT - it's the native token")
+            elif symbol.upper() in dex.tokens:
+                st.error(f"Token {symbol.upper()} already exists")
+            else:
+                success, message = dex.create_token(
+                    symbol.upper(),
+                    name,
+                    initial_supply,
+                    creator,
+                    decimals
+                )
+                if success:
+                    st.success(f"✅ {message}")
+                    st.balloons()
+                else:
+                    st.error(f"❌ {message}")
+    
+    st.divider()
+    
+    # Existing tokens list
+    st.markdown("### 📋 All Tokens")
+    
+    tokens_data = []
+    for symbol, token in dex.tokens.items():
+        tokens_data.append({
+            'Symbol': symbol,
+            'Name': token.name,
+            'Supply': f"{token.total_supply:,.0f}",
+            'Decimals': token.decimals,
+            'Holders': len(token.balances),
+            'Creator': token.creator[:15] + "..." if len(token.creator) > 15 else token.creator
+        })
+    
+    # Add NXT as native token
+    tokens_data.insert(0, {
+        'Symbol': '🌟 NXT',
+        'Name': 'NexusOS Native Token',
+        'Supply': '1,000,000 (Fixed)',
+        'Decimals': 8,
+        'Holders': 'Native',
+        'Creator': 'Genesis'
+    })
+    
+    df = pd.DataFrame(tokens_data)
+    st.dataframe(df, use_container_width=True, hide_index=True)
+    
+    st.caption(f"📊 **{len(dex.tokens) + 1} tokens** available for trading")
+
+
+def render_lp_farming(dex: DEXEngine):
+    """Render LP Farming and staking rewards interface"""
+    st.subheader("🌾 LP Farming")
+    st.markdown("**Stake LP tokens to earn rewards**")
+    
+    user = st.session_state.get('user_address', 'dex_user_1')
+    
+    # Initialize farming state
+    if 'farming_positions' not in st.session_state:
+        st.session_state.farming_positions = {}
+    if 'farming_rewards' not in st.session_state:
+        st.session_state.farming_rewards = {}
+    
+    st.info("""
+    🌾 **How LP Farming Works:**
+    1. Provide liquidity to any pool to receive LP tokens
+    2. Stake your LP tokens in the farm
+    3. Earn NXT rewards based on your share
+    4. Claim rewards anytime or compound them
+    """)
+    
+    st.divider()
+    
+    # Available farms
+    st.markdown("### 🏆 Active Farms")
+    
+    if dex.pools:
+        farms_data = []
+        for pool_id, pool in dex.pools.items():
+            # Calculate APY based on pool activity
+            tvl = pool.reserve_a + pool.reserve_b
+            volume = pool.total_volume_a + pool.total_volume_b
+            estimated_apy = min(500, (volume / max(tvl, 1)) * 100 * 365 / 100 + 12)  # Base 12% + volume bonus
+            
+            user_staked = st.session_state.farming_positions.get(f"{user}_{pool_id}", 0)
+            user_rewards = st.session_state.farming_rewards.get(f"{user}_{pool_id}", 0)
+            
+            farms_data.append({
+                'pool_id': pool_id,
+                'tvl': tvl,
+                'apy': estimated_apy,
+                'user_staked': user_staked,
+                'user_rewards': user_rewards,
+                'lp_balance': pool.lp_balances.get(user, 0)
+            })
+        
+        for farm in farms_data:
+            with st.container():
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+                            border: 1px solid rgba(102, 126, 234, 0.3); 
+                            border-radius: 12px; padding: 20px; margin-bottom: 15px;">
+                    <h4 style="color: #00d4ff; margin: 0;">{farm['pool_id']} Farm</h4>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("TVL", f"{farm['tvl']:.2f}")
+                with col2:
+                    st.metric("APY", f"{farm['apy']:.1f}%", delta="+2.3%")
+                with col3:
+                    st.metric("Your Staked", f"{farm['user_staked']:.4f} LP")
+                with col4:
+                    st.metric("Rewards", f"{farm['user_rewards']:.4f} NXT")
+                
+                # Actions
+                col_a, col_b, col_c = st.columns(3)
+                
+                with col_a:
+                    # Stake
+                    stake_amount = st.number_input(
+                        "Stake LP",
+                        min_value=0.0,
+                        max_value=float(farm['lp_balance']),
+                        value=0.0,
+                        step=0.1,
+                        key=f"stake_{farm['pool_id']}"
+                    )
+                    if st.button("🌾 Stake", key=f"btn_stake_{farm['pool_id']}"):
+                        if stake_amount > 0:
+                            key = f"{user}_{farm['pool_id']}"
+                            st.session_state.farming_positions[key] = st.session_state.farming_positions.get(key, 0) + stake_amount
+                            # Simulate reward accrual
+                            st.session_state.farming_rewards[key] = st.session_state.farming_rewards.get(key, 0) + (stake_amount * farm['apy'] / 100 / 365)
+                            st.success(f"✅ Staked {stake_amount:.4f} LP tokens")
+                            st.rerun()
+                
+                with col_b:
+                    # Unstake
+                    if farm['user_staked'] > 0:
+                        unstake_amount = st.number_input(
+                            "Unstake LP",
+                            min_value=0.0,
+                            max_value=float(farm['user_staked']),
+                            value=0.0,
+                            step=0.1,
+                            key=f"unstake_{farm['pool_id']}"
+                        )
+                        if st.button("📤 Unstake", key=f"btn_unstake_{farm['pool_id']}"):
+                            if unstake_amount > 0:
+                                key = f"{user}_{farm['pool_id']}"
+                                st.session_state.farming_positions[key] = max(0, st.session_state.farming_positions.get(key, 0) - unstake_amount)
+                                st.success(f"✅ Unstaked {unstake_amount:.4f} LP tokens")
+                                st.rerun()
+                
+                with col_c:
+                    # Claim rewards
+                    if farm['user_rewards'] > 0:
+                        if st.button("💰 Claim Rewards", key=f"btn_claim_{farm['pool_id']}"):
+                            key = f"{user}_{farm['pool_id']}"
+                            rewards = st.session_state.farming_rewards.get(key, 0)
+                            st.session_state.farming_rewards[key] = 0
+                            st.success(f"✅ Claimed {rewards:.4f} NXT rewards!")
+                            st.rerun()
+                
+                st.divider()
+    else:
+        st.info("No pools available for farming. Create a pool first!")
+    
+    # Farming summary
+    st.markdown("### 📊 Your Farming Summary")
+    
+    total_staked = sum(st.session_state.farming_positions.values())
+    total_rewards = sum(st.session_state.farming_rewards.values())
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total LP Staked", f"{total_staked:.4f}")
+    with col2:
+        st.metric("Pending Rewards", f"{total_rewards:.4f} NXT")
+    with col3:
+        if st.button("💰 Claim All Rewards", type="primary"):
+            if total_rewards > 0:
+                for key in st.session_state.farming_rewards:
+                    st.session_state.farming_rewards[key] = 0
+                st.success(f"✅ Claimed all {total_rewards:.4f} NXT rewards!")
+                st.rerun()
+
+
 def render_analytics(dex: DEXEngine):
     """Render DEX analytics and charts"""
     st.subheader("📊 Analytics")
@@ -573,12 +1000,16 @@ def render_dex_page():
     # Initialize DEX
     dex = initialize_dex()
     
-    # Navigation tabs
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    # Navigation tabs - Enhanced with new features
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
         "💱 Swap",
+        "📈 Charts",
         "💧 Liquidity",
+        "🌾 Farming",
         "🏊 Pools",
         "👛 Portfolio",
+        "📜 History",
+        "🏭 Token Factory",
         "📊 Analytics",
         "🏛️ Pool Ecosystem"
     ])
@@ -587,18 +1018,30 @@ def render_dex_page():
         render_swap_interface(dex)
     
     with tab2:
-        render_liquidity_interface(dex)
+        render_price_charts(dex)
     
     with tab3:
-        render_pools_overview(dex)
+        render_liquidity_interface(dex)
     
     with tab4:
-        render_user_portfolio(dex)
+        render_lp_farming(dex)
     
     with tab5:
-        render_analytics(dex)
+        render_pools_overview(dex)
     
     with tab6:
+        render_user_portfolio(dex)
+    
+    with tab7:
+        render_trade_history(dex)
+    
+    with tab8:
+        render_token_factory(dex)
+    
+    with tab9:
+        render_analytics(dex)
+    
+    with tab10:
         render_pool_ecosystem_tab(dex)
     
     # Nexus AI Research Report for Researchers
