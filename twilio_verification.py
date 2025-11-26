@@ -35,19 +35,24 @@ class TwilioVerificationService:
     
     def __init__(self):
         """Initialize Twilio client and database connection"""
-        self.account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
-        self.auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
-        self.api_key = os.environ.get('TWILIO_API_KEY')
+        self.account_sid = (os.environ.get('TWILIO_ACCOUNT_SID') or '').strip()
+        self.auth_token = (os.environ.get('TWILIO_AUTH_TOKEN') or '').strip()
+        self.api_key = (os.environ.get('TWILIO_API_KEY') or '').strip()
+        self.api_secret = (os.environ.get('TWILIO_API_SECRET') or '').strip()
         self.db_url = os.environ.get('DATABASE_URL')
         
         self.client = None
         self.from_number = None
         
-        if TWILIO_AVAILABLE and self.account_sid and self.auth_token:
+        if TWILIO_AVAILABLE and self.account_sid:
             try:
-                self.client = Client(self.account_sid, self.auth_token)
+                if self.auth_token:
+                    self.client = Client(self.account_sid, self.auth_token)
+                    print("✅ Twilio SMS service initialized (Auth Token)")
+                elif self.api_key and self.api_secret:
+                    self.client = Client(self.api_key, self.api_secret, self.account_sid)
+                    print("✅ Twilio SMS service initialized (API Key auth)")
                 self._get_twilio_phone_number()
-                print("✅ Twilio SMS service initialized")
             except Exception as e:
                 print(f"⚠️ Twilio initialization error: {e}")
         else:
