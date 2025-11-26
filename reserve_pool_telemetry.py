@@ -66,7 +66,10 @@ class ReservePoolTelemetry:
     
     def __init__(self):
         self.history: List[ReservePoolSnapshot] = []
-        self.f_floor_minimum = 10.0  # Absolute minimum from Nexus equation
+        # BHLS monthly allocation per citizen (physics-derived from living costs)
+        # Food 250 + Water 50 + Housing 400 + Energy 150 + Healthcare 200 + Connectivity 75 + Recycling 25 = 1,150 NXT/month
+        self.f_floor_minimum_monthly = 1150.0
+        self.f_floor_minimum_daily = 1150.0 / 30.0  # ~38.33 NXT/day for projections
         
     def record_snapshot(self, snapshot: ReservePoolSnapshot):
         """Record current reserve pool state"""
@@ -183,11 +186,11 @@ class ReservePoolTelemetry:
         Returns:
             (is_valid, message)
         """
-        # FIRST: Enforce absolute minimum
-        if requested_f_floor < self.f_floor_minimum:
+        # FIRST: Enforce absolute minimum (monthly BHLS allocation)
+        if requested_f_floor < self.f_floor_minimum_monthly:
             return (False, 
                     f"⚠️ REJECTED: F_floor ({requested_f_floor}) below minimum basic living standards "
-                    f"({self.f_floor_minimum}). This violates civilization sustainability constraints.")
+                    f"({self.f_floor_minimum_monthly} NXT/month). This violates civilization sustainability constraints.")
         
         # SECOND: Check sustainability if we have reserve data
         if current_snapshot is not None:
@@ -226,12 +229,12 @@ class ReservePoolTelemetry:
         Returns:
             (is_valid, message)
         """
-        if requested_f_floor < self.f_floor_minimum:
+        if requested_f_floor < self.f_floor_minimum_monthly:
             return (False, 
                     f"⚠️ REJECTED: F_floor ({requested_f_floor}) below minimum basic living standards "
-                    f"({self.f_floor_minimum}). This violates civilization sustainability constraints.")
+                    f"({self.f_floor_minimum_monthly} NXT/month). This violates civilization sustainability constraints.")
         
-        return (True, f"✅ F_floor ({requested_f_floor}) meets minimum basic living standards")
+        return (True, f"✅ F_floor ({requested_f_floor}) meets minimum basic living standards ({self.f_floor_minimum_monthly} NXT/month)")
     
     def get_burn_runway_days(self) -> float:
         """Calculate days until reserves depleted at current burn rate"""
@@ -277,8 +280,8 @@ class ReservePoolTelemetry:
             if late_avg > early_avg * 1.5:
                 anomalies.append("Burn rate accelerating rapidly")
         
-        # Check F_floor violations
-        if any(s.f_floor_value < self.f_floor_minimum for s in recent):
+        # Check F_floor violations (compare against daily minimum for snapshot-level checks)
+        if any(s.f_floor_value < self.f_floor_minimum_daily for s in recent):
             anomalies.append("F_floor violation detected in recent history")
         
         return anomalies

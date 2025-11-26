@@ -52,7 +52,7 @@ class NexusAIChat:
             },
             "bhls_floor": {
                 "what_it_does": "Guarantees 7 basic human living standards: Food, Water, Housing, Energy, Healthcare, Education, Connectivity. 1,150 NXT per citizen per month minimum.",
-                "how_its_done": "F_floor pool (10.0 NXT minimum per beneficiary) distributes to 10 service pools. Funded by E=hf messaging burns → orbital transitions → TRANSITION_RESERVE → F_floor. AI enforces zero tolerance for violations.",
+                "how_its_done": "F_floor pool (1,150 NXT/month minimum per citizen) distributes to 10 service pools. Funded by E=hf messaging burns → orbital transitions → TRANSITION_RESERVE → F_floor. AI enforces zero tolerance for violations.",
                 "what_it_solves": "Ends poverty through physics-guaranteed income (not charity), eliminates scarcity mindset causing conflict, provides economic dignity independent of employment",
                 "implementation": "pool_ecosystem.py: 3-layer hierarchy (Reserve→F_floor→Service), nexus_ai_governance.py: F_floor enforcement, civilization_dashboard.py: BHLS tab"
             },
@@ -106,7 +106,7 @@ class NexusAIChat:
             },
             "pool_ecosystem": {
                 "what_it_does": "3-layer hierarchical reserve system: Reserve Pools → F_floor → 10 Service Pools. Manages all fund distribution for civilization guarantees.",
-                "how_its_done": "Reserve pools (VALIDATOR, TRANSITION, ECOSYSTEM) continuously fund F_floor. F_floor (10.0 NXT minimum) distributes to service pools (DEX, Investment, Environmental, Community, Staking, Bonus, Lottery, Recycling, Product/Service, Innovation). Health verification prevents imbalances.",
+                "how_its_done": "Reserve pools (VALIDATOR, TRANSITION, ECOSYSTEM) continuously fund F_floor. F_floor (1,150 NXT/month minimum per citizen) distributes to service pools (DEX, Investment, Environmental, Community, Staking, Bonus, Lottery, Recycling, Product/Service, Innovation). Health verification prevents imbalances.",
                 "what_it_solves": "Systematic fund distribution, disaster response channels (Environmental/Community pools), circular economy support, BHLS guarantee funding",
                 "implementation": "pool_ecosystem.py: 3-layer architecture, health metrics, distribution logic. DEX Pool Ecosystem tab visualizes complete hierarchy."
             },
@@ -166,7 +166,7 @@ class NexusAIChat:
             },
             "ai_management": {
                 "what_it_does": "Centralized AI governance dashboard providing unified oversight of all 5 AI systems (Message Router, Security Controller, Governance, Bayesian Optimizer, Consensus AI).",
-                "how_its_done": "Monitors system status, logs all AI decisions with rationale, tracks component integration, analyzes learned patterns, displays real-time AI activity, enforces F_floor protection (10.0 NXT minimum).",
+                "how_its_done": "Monitors system status, logs all AI decisions with rationale, tracks component integration, analyzes learned patterns, displays real-time AI activity, enforces F_floor protection (1,150 NXT/month minimum per citizen).",
                 "what_it_solves": "Transparent AI governance, decision accountability, cross-component synchronization, F_floor guarantee enforcement, 100-year civilization planning visibility",
                 "implementation": "ai_management_dashboard.py: 6 tabs - Status, Governance, History, Integration, Learning, Activity"
             }
@@ -313,7 +313,7 @@ class NexusAIChat:
                 "• ECOSYSTEM_FUND: Long-term development reserve\n\n"
                 "**Layer 2: F_floor Foundation** (Distribution hub)\n"
                 "• Receives continuous support from all reserves\n"
-                "• Minimum 10.0 NXT per beneficiary (AI enforced, zero tolerance)\n"
+                "• Minimum 1,150 NXT/month per citizen (AI enforced, zero tolerance)\n"
                 "• Acts as distribution controller to service pools\n\n"
                 "**Layer 3: Service Pools** (Emergency response channels)\n"
                 "• ENVIRONMENTAL_POOL: Climate disasters, natural emergencies\n"
@@ -343,7 +343,7 @@ class NexusAIChat:
                 "• Supply depletion: years_remaining < 100 (civilization horizon)\n"
                 "• Validator exodus: APR < 3.0% (network security threat)\n"
                 "• Market instability: liquidity < 100,000 NXT (economic fragility)\n"
-                "• F_floor violations: any attempt to drop below 10.0 NXT minimum\n\n"
+                "• F_floor violations: any attempt to drop below 1,150 NXT/month minimum\n\n"
                 "**Step 3: Calculate Severity Scores** (AI learns optimal weights)\n"
                 "• Critical: F_floor violations → MAXIMUM priority (override everything)\n"
                 "• High: Validator exodus, supply depletion → Adjust burn/rewards\n"
@@ -392,7 +392,7 @@ class NexusAIChat:
                 "    ↓ (burns, fees, liquidity)\n"
                 "Reserve Pools (VALIDATOR, TRANSITION, ECOSYSTEM)\n"
                 "    ↓ (continuous support)\n"
-                "F_floor Foundation (10.0 NXT minimum per beneficiary)\n"
+                "F_floor Foundation (1,150 NXT/month minimum per citizen)\n"
                 "    ↓ (distributes to 10 service pools)\n"
                 "Service Pools (DEX, Investment, Environmental, Community, etc.)\n"
                 "    ↓ (guarantees basic services)\n"
@@ -404,7 +404,7 @@ class NexusAIChat:
                 "If F_floor balance drops or emergency detected:\n"
                 "1. AI Governance increases allocation from reserves (severity-weighted)\n"
                 "2. ENVIRONMENTAL_POOL + COMMUNITY_POOL receive priority funding\n"
-                "3. F_floor minimum (10.0 NXT) NEVER violated - AI enforced\n"
+                "3. F_floor minimum (1,150 NXT/month) NEVER violated - AI enforced\n"
                 "4. Once stabilized, normal distribution resumes\n\n"
                 "This isn't charity distribution. It's physics-guaranteed circulation."
             )
@@ -425,7 +425,7 @@ class NexusAIChat:
                 "• Automatic monthly allocation: Food (250 NXT), Water (50), Housing (400), Energy (150), Healthcare (200), Connectivity (75)\n"
                 "• Total: 1,150 NXT per citizen per month - GUARANTEED by physics, not promises\n"
                 "• Funded by: E=hf messaging burns → orbital transitions → TRANSITION_RESERVE → F_floor → services\n"
-                "• AI enforces 10.0 NXT minimum per beneficiary - zero tolerance for violations\n\n"
+                "• AI enforces 1,150 NXT/month minimum per citizen - zero tolerance for violations\n\n"
                 "**2. Prevent Conflict Through Regenerative Economics**\n"
                 "• Traditional: Scarcity → competition → conflict → war\n"
                 "• Nexus: Use → burns → energy release → reserves → F_floor → abundance\n"
@@ -961,7 +961,7 @@ Burns & Fees
     ↓
 Reserve Pools (VALIDATOR, TRANSITION, ECOSYSTEM)
     ↓
-F_floor Foundation (10.0 NXT minimum)
+F_floor Foundation (1,150 NXT/month minimum)
     ↓
 Service Pools (10 types)
     ↓

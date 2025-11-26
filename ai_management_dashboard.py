@@ -210,7 +210,7 @@ def render_ai_governance_control():
         
         The running AI Governance instance has authority to:
         - Learn from research observations
-        - Enforce F_floor minimum (10.0 NXT minimum)
+        - Enforce F_floor minimum (1,150 NXT/month per citizen)
         - Identify risks and recommend adaptations
         - Log all decisions with civilization impact
         
@@ -625,7 +625,7 @@ def render_ai_management_dashboard():
         ### F_floor Protection (Critical)
         
         The AI's PRIMARY directive is preserving basic human living standards:
-        - Minimum floor: 10.0 NXT per beneficiary
+        - Minimum floor: 1,150 NXT/month per citizen
         - Never compromised for optimization
         - All decisions logged with F_floor status
         - Violations prevented automatically

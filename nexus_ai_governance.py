@@ -71,7 +71,9 @@ class NexusAIGovernance:
         self.learned_patterns: Dict[str, Any] = {}
         
         # Critical threshold: F_floor minimum (basic human living standards)
-        self.f_floor_minimum = 10.0  # From nexus_engine.py
+        # Physics-derived from bhls_floor_system.py: Food 250 + Water 50 + Housing 400 + 
+        # Energy 150 + Healthcare 200 + Connectivity 75 + Recycling 25 = 1,150 NXT/month
+        self.f_floor_minimum = 1150.0  # Monthly BHLS allocation per citizen
         self.civilization_horizon_years = 100  # Plan for 100+ years
         
         self.load_knowledge()
