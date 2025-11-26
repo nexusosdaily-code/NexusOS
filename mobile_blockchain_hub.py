@@ -704,9 +704,53 @@ def render_mobile_blockchain_hub():
         st.markdown("""
             <div class="wallet-status-locked">
                 <strong>🔐 Wallet Locked</strong><br/>
-                Create or unlock a wallet below to access blockchain features
+                Unlock your wallet below to access all features
             </div>
         """, unsafe_allow_html=True)
+        
+        # Quick unlock section - right at the top!
+        wallets = wallet.list_wallets()
+        if wallets:
+            with st.expander("🔓 Quick Unlock - Tap to unlock your wallet", expanded=True):
+                # Select wallet
+                wallet_options = {f"{w['address'][:20]}... ({w['balance_nxt']:.2f} NXT)": w['address'] for w in wallets}
+                selected_display = st.selectbox(
+                    "Select Wallet",
+                    options=list(wallet_options.keys()),
+                    key="quick_unlock_select"
+                )
+                selected_address = wallet_options.get(selected_display)
+                
+                # Password input
+                quick_password = st.text_input(
+                    "Enter Password",
+                    type="password",
+                    placeholder="Your wallet password",
+                    key="quick_unlock_password"
+                )
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("🔓 Unlock Now", type="primary", use_container_width=True, key="quick_unlock_btn"):
+                        if quick_password and selected_address:
+                            try:
+                                if wallet.unlock_wallet(selected_address, quick_password):
+                                    st.session_state.active_address = selected_address
+                                    st.session_state.wallet_unlocked = selected_address
+                                    st.success("✅ Wallet unlocked!")
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Invalid password")
+                            except Exception as e:
+                                st.error(f"❌ Error: {str(e)}")
+                        else:
+                            st.error("Please enter your password")
+                with col2:
+                    if st.button("➕ Create New Wallet", use_container_width=True, key="quick_create_btn"):
+                        st.info("👆 Go to the Wallet tab → Create section")
+        else:
+            with st.expander("➕ Get Started - Create Your First Wallet", expanded=True):
+                st.info("👆 Tap on the **Wallet** tab below, then select **Create** to set up your first wallet!")
     
     st.divider()
     
