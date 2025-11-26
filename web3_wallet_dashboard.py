@@ -292,7 +292,7 @@ def render_create_wallet_tab(wallet):
 
 
 def render_unlock_wallet_tab(wallet):
-    """Unlock existing wallet"""
+    """Unlock existing wallet with scrollable wallet list"""
     
     st.header("🔓 Unlock Wallet")
     
@@ -302,27 +302,115 @@ def render_unlock_wallet_tab(wallet):
         st.warning("No wallets found. Create one first!")
         return
     
+    # Initialize selected wallet in session state
+    if 'selected_unlock_wallet' not in st.session_state:
+        st.session_state.selected_unlock_wallet = wallets[0]['address'] if wallets else None
+    
     # Check if we need to unlock a specific wallet
     unlock_target = st.session_state.get('unlock_target')
     if unlock_target:
-        selected_address = unlock_target
+        st.session_state.selected_unlock_wallet = unlock_target
         st.session_state.unlock_target = None
-    else:
-        selected_address = st.selectbox(
-            "Select Wallet",
-            options=[w['address'] for w in wallets],
-            format_func=lambda addr: f"{addr[:30]}... ({next(w['balance_nxt'] for w in wallets if w['address'] == addr):.2f} NXT)"
-        )
+    
+    st.caption(f"📋 **{len(wallets)} wallet(s) found** - Select one to unlock")
+    
+    # Scrollable wallet container with CSS
+    st.markdown("""
+        <style>
+        .wallet-scroll-container {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 12px;
+            background: rgba(26, 26, 46, 0.5);
+            margin-bottom: 20px;
+        }
+        .wallet-card {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .wallet-card:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        .wallet-card.selected {
+            border-color: #10b981 !important;
+            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+        }
+        .wallet-address {
+            font-family: monospace;
+            font-size: 12px;
+            color: #94a3b8;
+            word-break: break-all;
+        }
+        .wallet-balance {
+            font-size: 18px;
+            font-weight: bold;
+            color: #10b981;
+        }
+        .wallet-label {
+            font-size: 14px;
+            color: #e2e8f0;
+            margin-bottom: 5px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # Display wallets in scrollable container
+    st.markdown('<div class="wallet-scroll-container">', unsafe_allow_html=True)
+    
+    for i, w in enumerate(wallets):
+        is_selected = w['address'] == st.session_state.selected_unlock_wallet
+        
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            # Display wallet info
+            selected_marker = "✅ " if is_selected else "💼 "
+            st.markdown(f"""
+                <div class="wallet-card {'selected' if is_selected else ''}">
+                    <div class="wallet-label">{selected_marker}Wallet {i+1}</div>
+                    <div class="wallet-balance">{w['balance_nxt']:.4f} NXT</div>
+                    <div class="wallet-address">{w['address']}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            # Selection button
+            if st.button("Select" if not is_selected else "Selected", key=f"select_wallet_{i}", disabled=is_selected):
+                st.session_state.selected_unlock_wallet = w['address']
+                st.rerun()
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Show currently selected wallet
+    selected_address = st.session_state.selected_unlock_wallet
+    if selected_address:
+        selected_wallet = next((w for w in wallets if w['address'] == selected_address), None)
+        if selected_wallet:
+            st.success(f"🎯 **Selected:** {selected_address[:20]}...{selected_address[-10:]} ({selected_wallet['balance_nxt']:.4f} NXT)")
+    
+    st.divider()
     
     password = st.text_input(
         "Password",
         type="password",
-        help="Enter your wallet password"
+        help="Enter your wallet password",
+        key="unlock_password_input"
     )
     
-    if st.button("🔓 Unlock Wallet", type="primary", width="stretch"):
+    if st.button("🔓 Unlock Wallet", type="primary", use_container_width=True):
         if not password:
             st.error("Please enter your password")
+        elif not selected_address:
+            st.error("Please select a wallet first")
         else:
             try:
                 with st.spinner("🔐 Unlocking wallet..."):
