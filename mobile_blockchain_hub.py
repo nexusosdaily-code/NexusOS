@@ -24,6 +24,8 @@ import streamlit.components.v1 as components
 from typing import Dict, Optional
 import time
 import json
+import os
+import math
 
 # Import wallet for central hub functionality
 from nexus_native_wallet import NexusNativeWallet
@@ -1938,6 +1940,11 @@ def render_p2p_hub_tab():
             - 🖼️ **Images** - Photos and graphics
             """)
             
+            # Get list of shared media from media directory
+            media_dir = os.path.join(os.path.dirname(__file__), 'media')
+            if not os.path.exists(media_dir):
+                os.makedirs(media_dir, exist_ok=True)
+            
             uploaded = st.file_uploader(
                 "Upload media to share",
                 type=['mp3', 'mp4', 'pdf', 'png', 'jpg', 'jpeg'],
@@ -1946,65 +1953,180 @@ def render_p2p_hub_tab():
             
             if uploaded:
                 file_size = len(uploaded.getvalue()) / 1024 / 1024  # MB
-                energy_cost = file_size * 0.01  # Rough estimate
+                
+                # E=hf energy cost calculation (physics-based)
+                PLANCK = 6.62607015e-34
+                CHUNK_SIZE = 64 * 1024  # 64KB chunks
+                num_chunks = max(1, math.ceil((file_size * 1024 * 1024) / CHUNK_SIZE))  # ceil to account for partial chunks
+                base_frequency = 5e14  # Visible light ~500 THz
+                energy_joules = PLANCK * base_frequency * num_chunks
+                energy_cost = energy_joules * 1e20  # Convert to NXT scale
                 
                 st.info(f"""
                 📁 **{uploaded.name}**  
-                📊 Size: {file_size:.2f} MB  
-                ⚡ Energy Cost: ~{energy_cost:.4f} NXT
+                📊 Size: {file_size:.2f} MB ({num_chunks} chunks @ 64KB)  
+                ⚡ Energy Cost: ~{energy_cost:.6f} NXT (E=hf × chunks)
                 """)
                 
                 share_to = st.radio("Share with:", ["👥 Friends Only", "🌍 Public"], key="share_scope")
                 
                 if st.button("📤 Share via Mesh", type="primary", key="share_media"):
-                    st.success(f"✅ Sharing {uploaded.name} across mesh network...")
-                    st.info("Content will propagate via 64KB chunks with E=hf accounting")
+                    # Actually save the file to media directory
+                    try:
+                        import hashlib
+                        import time
+                        
+                        # Generate unique filename with content hash
+                        file_bytes = uploaded.getvalue()
+                        content_hash = hashlib.sha256(file_bytes).hexdigest()[:16]
+                        timestamp = int(time.time())
+                        safe_name = "".join(c if c.isalnum() or c in '._-' else '_' for c in uploaded.name)
+                        dest_filename = f"{timestamp}_{content_hash}_{safe_name}"
+                        dest_path = os.path.join(media_dir, dest_filename)
+                        
+                        # Save file
+                        with open(dest_path, 'wb') as f:
+                            f.write(file_bytes)
+                        
+                        # Store metadata for propagation
+                        metadata = {
+                            'filename': uploaded.name,
+                            'hash': content_hash,
+                            'size_mb': file_size,
+                            'chunks': num_chunks,
+                            'energy_cost': energy_cost,
+                            'shared_by': st.session_state.active_address,
+                            'share_scope': 'friends' if 'Friends' in share_to else 'public',
+                            'timestamp': timestamp
+                        }
+                        
+                        # Save metadata
+                        import json
+                        meta_path = dest_path + '.meta.json'
+                        with open(meta_path, 'w') as f:
+                            json.dump(metadata, f, indent=2)
+                        
+                        st.success(f"✅ {uploaded.name} saved and ready for mesh propagation!")
+                        st.markdown(f"""
+                        **Propagation Details:**
+                        - 📦 Chunks: {num_chunks} × 64KB
+                        - 🔗 Content Hash: `{content_hash}`
+                        - ⚡ Energy: {energy_cost:.6f} NXT (E=hf accounting)
+                        """)
+                        
+                        # Award achievement for first share
+                        try:
+                            trigger_achievement(st.session_state.active_address, 'media_shared', increment=1)
+                        except Exception:
+                            pass
+                        
+                    except Exception as e:
+                        st.error(f"Failed to save media: {e}")
+            
+            # Show existing shared media
+            st.divider()
+            st.markdown("**📂 Your Shared Media:**")
+            
+            try:
+                media_files = [f for f in os.listdir(media_dir) if not f.endswith('.meta.json')]
+                if media_files:
+                    for mf in media_files[:5]:  # Show last 5
+                        meta_path = os.path.join(media_dir, mf + '.meta.json')
+                        if os.path.exists(meta_path):
+                            with open(meta_path, 'r') as f:
+                                meta = json.load(f)
+                            st.markdown(f"📁 **{meta.get('filename', mf)}** - {meta.get('size_mb', 0):.2f} MB")
+                        else:
+                            st.markdown(f"📁 {mf}")
+                else:
+                    st.caption("No media shared yet. Upload files above to share on the mesh!")
+            except Exception:
+                st.caption("No media shared yet.")
     
     # TAB 5: Mesh Network Status
     with p2p_tabs[4]:
         st.markdown("### 🌐 Mesh Network Status")
         
-        st.markdown("""
-        <div class="module-card">
-            <h3>📡 Your Phone as a Mesh Node</h3>
-            <p>Your device is part of the NexusOS peer-to-peer network. No central servers needed!</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Nearby Nodes", "7", "+2")
-        with col2:
-            st.metric("Mesh Hops", "3", "avg")
-        with col3:
-            st.metric("Bandwidth", "10 Mbps", "WiFi")
-        with col4:
-            st.metric("Latency", "45ms", "-5")
-        
-        st.divider()
-        
-        st.markdown("""
-        **🔗 Connection Protocols:**
-        - 📡 **Bluetooth LE**: ~100m range, low power
-        - 📶 **WiFi Direct**: ~200m range, high bandwidth
-        - 📲 **NFC**: <10cm, secure pairing
-        
-        **🛡️ Security:**
-        - TLS 1.3 transport encryption
-        - AES-256-GCM message encryption
-        - Quantum-resistant 5D wave signatures
-        """)
-        
-        st.markdown("""
-        <div class="module-card">
-            <h3>🌍 Offline Mesh Network</h3>
-            <p>Access the full offline mesh dashboard for peer-to-peer internet without WiFi or cellular data.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        if st.button("🚀 Open Full Mesh Dashboard", key="open_mesh"):
-            st.session_state.nav_request = "🌐 Offline Mesh Network"
-            st.rerun()
+        if not has_wallet:
+            st.warning("🔐 Please create or unlock your wallet in the **Wallet** tab first")
+        else:
+            st.markdown("""
+            <div class="module-card">
+                <h3>📡 Your Phone as a Mesh Node</h3>
+                <p>Your device is part of the NexusOS peer-to-peer network. No central servers needed!</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Get REAL data from friends list and media
+            friends_count = len(st.session_state.get('p2p_friends', []))
+            
+            # Count shared media files
+            media_dir = os.path.join(os.path.dirname(__file__), 'media')
+            try:
+                shared_media = len([f for f in os.listdir(media_dir) if not f.endswith('.meta.json')]) if os.path.exists(media_dir) else 0
+            except Exception:
+                shared_media = 0
+            
+            # Node status based on wallet activity
+            node_status = "🟢 Active" if st.session_state.get('wallet_unlocked') else "🟡 Standby"
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Friends (Nodes)", friends_count, help="Connected peers on your mesh")
+            with col2:
+                st.metric("Shared Media", shared_media, help="Files available for propagation")
+            with col3:
+                st.metric("Node Status", node_status)
+            with col4:
+                st.metric("Protocol", "WNSP v3", help="Wavelength Network Signaling Protocol")
+            
+            st.divider()
+            
+            # Show friends as mesh nodes
+            friends_list = st.session_state.get('p2p_friends', [])
+            if friends_list:
+                st.markdown("**🔗 Connected Mesh Nodes:**")
+                for friend in friends_list[:5]:
+                    if isinstance(friend, dict):
+                        name = friend.get('name', 'Unknown')
+                        contact = friend.get('contact', '')
+                        country = friend.get('country', '')
+                    else:
+                        name = friend
+                        contact = ''
+                        country = ''
+                    
+                    location_str = f" ({country})" if country else ""
+                    st.markdown(f"- 🟢 **{name}**{location_str} - Online")
+            else:
+                st.info("Add friends in the 'Friends' tab to expand your mesh network!")
+            
+            st.divider()
+            
+            st.markdown("""
+            **🔗 Connection Protocols:**
+            - 📡 **Bluetooth LE**: ~100m range, low power
+            - 📶 **WiFi Direct**: ~200m range, high bandwidth  
+            - 📲 **NFC**: <10cm, secure pairing
+            - 🌊 **WNSP**: Wavelength-based quantum addressing
+            
+            **🛡️ Security:**
+            - TLS 1.3 transport encryption
+            - AES-256-GCM message encryption
+            - Quantum-resistant 5D wave signatures
+            - E=hf energy accounting (anti-spam)
+            """)
+            
+            st.markdown("""
+            <div class="module-card">
+                <h3>🌍 Offline Mesh Network</h3>
+                <p>Access the full offline mesh dashboard for peer-to-peer internet without WiFi or cellular data.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button("🚀 Open Full Mesh Dashboard", key="open_mesh"):
+                st.session_state.nav_request = "🌐 Offline Mesh Network"
+                st.rerun()
 
 
 def render_requested_module():

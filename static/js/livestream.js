@@ -31,7 +31,27 @@ let userPhone = null; // User's registered phone number (server-verified)
 socket.on('connected', (data) => {
     console.log('✅ Connected to WNSP mesh network:', data.message);
     
-    // Check if phone already registered (from localStorage)
+    // PRIORITY 1: Check for wallet/friends injected from Streamlit (embedded mode)
+    if (window.nexusWallet) {
+        console.log('🔗 Wallet injected from Streamlit:', window.nexusWallet.substring(0, 20) + '...');
+        userPhone = window.nexusWallet; // Use wallet as identity
+        
+        // Show broadcast controls, hide phone login (already authenticated via Streamlit)
+        const phoneLogin = document.getElementById('phoneLogin');
+        const broadcastControls = document.getElementById('broadcastControls');
+        const userPhoneDisplay = document.getElementById('userPhone');
+        
+        if (phoneLogin) phoneLogin.style.display = 'none';
+        if (broadcastControls) broadcastControls.style.display = 'block';
+        if (userPhoneDisplay) userPhoneDisplay.textContent = window.nexusWallet.substring(0, 16) + '...';
+        
+        // Load friends from injected data
+        loadFriends();
+        loadActiveBroadcasts();
+        return;
+    }
+    
+    // PRIORITY 2: Check if phone already registered (from localStorage)
     const savedPhone = localStorage.getItem('user_phone');
     if (savedPhone) {
         // Auto-login with saved phone
@@ -221,10 +241,22 @@ function logoutPhone() {
 
 async function loadFriends() {
     /**
-     * Load user's friends from API for targeted streaming
+     * Load user's friends - first from Streamlit injection, then from API
      */
+    
+    // PRIORITY 1: Check for friends injected from Streamlit
+    if (window.nexusFriends && window.nexusFriends.length > 0) {
+        userFriends = window.nexusFriends;
+        console.log(`✅ Loaded ${userFriends.length} friends from Streamlit session`);
+        renderFriendsList();
+        return;
+    }
+    
+    // PRIORITY 2: Try loading from API (requires phone number)
     if (!userPhone) {
-        console.log('⚠️ No phone number - cannot load friends');
+        console.log('⚠️ No phone number and no Streamlit friends - cannot load friends');
+        userFriends = [];
+        renderFriendsList();
         return;
     }
     
@@ -234,14 +266,14 @@ async function loadFriends() {
         
         if (data.success && data.friends) {
             userFriends = data.friends;
-            console.log(`✅ Loaded ${userFriends.length} friends`);
+            console.log(`✅ Loaded ${userFriends.length} friends from API`);
             renderFriendsList();
         } else {
             userFriends = [];
             renderFriendsList();
         }
     } catch (error) {
-        console.error('❌ Failed to load friends:', error);
+        console.error('❌ Failed to load friends from API:', error);
         userFriends = [];
         renderFriendsList();
     }
