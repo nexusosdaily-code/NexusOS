@@ -230,7 +230,287 @@ def render_mobile_blockchain_hub():
         .stApp [data-testid="stFileUploader"] span {
             color: #e2e8f0 !important;
         }
+        
+        /* ================================================
+           MOBILE TOUCH & SWIPE OPTIMIZATION
+           ================================================ */
+        
+        /* Enable smooth scrolling throughout the app */
+        html, body, .stApp, [data-testid="stAppViewContainer"] {
+            scroll-behavior: smooth !important;
+            -webkit-overflow-scrolling: touch !important;
+            overscroll-behavior: contain !important;
+        }
+        
+        /* Main content area - vertical scroll with momentum */
+        .stApp main,
+        [data-testid="stVerticalBlock"],
+        .element-container {
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            scroll-behavior: smooth !important;
+        }
+        
+        /* Tab container - horizontal swipe for tab navigation */
+        .stApp [data-testid="stTabs"],
+        .stApp [role="tablist"] {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            scroll-behavior: smooth !important;
+            scroll-snap-type: x mandatory !important;
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+            padding-bottom: 5px !important;
+        }
+        
+        .stApp [data-testid="stTabs"]::-webkit-scrollbar,
+        .stApp [role="tablist"]::-webkit-scrollbar {
+            display: none !important;
+        }
+        
+        /* Individual tabs - snap points for swipe */
+        .stApp button[data-baseweb="tab"] {
+            scroll-snap-align: start !important;
+            flex-shrink: 0 !important;
+            min-width: fit-content !important;
+            padding: 12px 20px !important;
+            font-size: 15px !important;
+            touch-action: manipulation !important;
+            -webkit-tap-highlight-color: rgba(0, 212, 255, 0.3) !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        /* Active tab visual feedback */
+        .stApp button[data-baseweb="tab"]:active {
+            transform: scale(0.95) !important;
+            background-color: rgba(0, 212, 255, 0.1) !important;
+        }
+        
+        /* Tab content panels - swipeable */
+        .stApp [data-testid="stTabContent"],
+        .stApp [role="tabpanel"] {
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            -webkit-overflow-scrolling: touch !important;
+            scroll-behavior: smooth !important;
+            max-height: calc(100vh - 250px) !important;
+            padding-bottom: 80px !important;
+        }
+        
+        /* Touch-friendly interactive elements */
+        .stApp button,
+        .stApp [data-testid="stButton"] button,
+        .stApp a,
+        .stApp [role="button"] {
+            touch-action: manipulation !important;
+            -webkit-tap-highlight-color: rgba(102, 126, 234, 0.4) !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+        }
+        
+        /* Touch feedback animation */
+        .stApp button:active,
+        .stApp [data-testid="stButton"] button:active {
+            transform: scale(0.97) !important;
+            transition: transform 0.1s ease !important;
+        }
+        
+        /* Cards and clickable elements - touch optimized */
+        .module-card {
+            touch-action: manipulation !important;
+            -webkit-tap-highlight-color: transparent !important;
+            cursor: pointer !important;
+        }
+        
+        .module-card:active {
+            transform: scale(0.98) !important;
+            transition: transform 0.1s ease !important;
+        }
+        
+        /* Scrollable containers within tabs */
+        .stApp [data-testid="stExpander"],
+        .stApp [data-testid="stDataFrame"],
+        .stApp .stDataFrame {
+            overflow: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            max-height: 400px !important;
+        }
+        
+        /* Mobile viewport optimizations */
+        @media (max-width: 768px) {
+            /* Larger touch targets on mobile */
+            .stApp button[data-baseweb="tab"] {
+                padding: 14px 18px !important;
+                font-size: 14px !important;
+                min-height: 48px !important;
+            }
+            
+            /* Full-width buttons on mobile */
+            .stApp [data-testid="stButton"] button {
+                width: 100% !important;
+                min-height: 52px !important;
+                font-size: 17px !important;
+            }
+            
+            /* Better spacing for touch */
+            .module-card {
+                padding: 18px !important;
+                margin: 12px 0 !important;
+            }
+            
+            /* Ensure tab content fills screen */
+            .stApp [data-testid="stTabContent"] {
+                min-height: calc(100vh - 300px) !important;
+            }
+            
+            /* Input fields - larger for mobile */
+            .stApp input,
+            .stApp textarea {
+                font-size: 16px !important;
+                padding: 14px !important;
+                min-height: 48px !important;
+            }
+            
+            /* Select dropdowns - touch friendly */
+            .stApp select,
+            .stApp [data-baseweb="select"] {
+                min-height: 48px !important;
+                font-size: 16px !important;
+            }
+        }
+        
+        /* Swipe indicator hint for tabs */
+        .stApp [role="tablist"]::after {
+            content: "";
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 30px;
+            background: linear-gradient(to right, transparent, rgba(15, 15, 35, 0.8));
+            pointer-events: none;
+        }
+        
+        /* Pull-to-refresh visual hint area */
+        .main-header {
+            position: relative;
+            z-index: 10;
+        }
+        
+        /* Prevent accidental text selection during swipe */
+        .stApp [data-testid="stTabs"],
+        .stApp [role="tablist"],
+        .stApp button[data-baseweb="tab"] {
+            user-select: none !important;
+            -webkit-user-select: none !important;
+        }
+        
+        /* Smooth transitions for all interactive states */
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        
         </style>
+        
+        <!-- Mobile Touch & Swipe JavaScript -->
+        <script>
+        (function() {
+            // Wait for Streamlit to fully load
+            const initMobileTouch = () => {
+                // Find tab container
+                const tabList = document.querySelector('[role="tablist"]');
+                if (!tabList) {
+                    setTimeout(initMobileTouch, 500);
+                    return;
+                }
+                
+                let touchStartX = 0;
+                let touchEndX = 0;
+                let touchStartY = 0;
+                let touchEndY = 0;
+                
+                // Get all tab buttons
+                const getTabs = () => document.querySelectorAll('button[data-baseweb="tab"]');
+                
+                // Find current active tab index
+                const getActiveTabIndex = () => {
+                    const tabs = getTabs();
+                    for (let i = 0; i < tabs.length; i++) {
+                        if (tabs[i].getAttribute('aria-selected') === 'true') {
+                            return i;
+                        }
+                    }
+                    return 0;
+                };
+                
+                // Switch to tab by index
+                const switchToTab = (index) => {
+                    const tabs = getTabs();
+                    if (index >= 0 && index < tabs.length) {
+                        tabs[index].click();
+                        tabs[index].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }
+                };
+                
+                // Handle swipe on tab content area
+                const tabContent = document.querySelector('[data-testid="stTabContent"]') || 
+                                   document.querySelector('[role="tabpanel"]') ||
+                                   document.querySelector('.stApp main');
+                
+                if (tabContent) {
+                    tabContent.addEventListener('touchstart', (e) => {
+                        touchStartX = e.changedTouches[0].screenX;
+                        touchStartY = e.changedTouches[0].screenY;
+                    }, { passive: true });
+                    
+                    tabContent.addEventListener('touchend', (e) => {
+                        touchEndX = e.changedTouches[0].screenX;
+                        touchEndY = e.changedTouches[0].screenY;
+                        
+                        const deltaX = touchEndX - touchStartX;
+                        const deltaY = touchEndY - touchStartY;
+                        
+                        // Only trigger horizontal swipe if it's more horizontal than vertical
+                        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 80) {
+                            const currentIndex = getActiveTabIndex();
+                            
+                            if (deltaX < 0) {
+                                // Swipe left - go to next tab
+                                switchToTab(currentIndex + 1);
+                            } else {
+                                // Swipe right - go to previous tab
+                                switchToTab(currentIndex - 1);
+                            }
+                        }
+                    }, { passive: true });
+                }
+                
+                // Add smooth scroll to tab clicks
+                const tabs = getTabs();
+                tabs.forEach((tab, index) => {
+                    tab.addEventListener('click', () => {
+                        tab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    });
+                });
+                
+                console.log('NexusOS Mobile Touch initialized');
+            };
+            
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initMobileTouch);
+            } else {
+                setTimeout(initMobileTouch, 1000);
+            }
+            
+            // Re-initialize on Streamlit reruns
+            const observer = new MutationObserver(() => {
+                setTimeout(initMobileTouch, 500);
+            });
+            
+            observer.observe(document.body, { childList: true, subtree: true });
+        })();
+        </script>
     """, unsafe_allow_html=True)
     
     # Main header
