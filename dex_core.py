@@ -342,9 +342,41 @@ class LiquidityPool:
         Remove liquidity from pool with 24-hour time-lock protection
         
         🔒 SECURITY: Requires withdrawal request 24 hours in advance to prevent instant liquidity drains
+        🔒 FARMING LOCK: LP tokens staked in farms cannot be withdrawn until unstaked
+        🔒 ESCROW PROTECTION: Farm escrow accounts cannot be drained directly
         
         Returns: (success, amount_a, amount_b, message)
         """
+        # SECURITY: Input sanitization and system account protection
+        # 1. Sanitize provider ID - strip whitespace, reject invalid characters
+        import re
+        provider_clean = provider.strip()
+        if not provider_clean or not re.match(r'^[a-zA-Z0-9_\-]+$', provider_clean):
+            return False, 0.0, 0.0, "🔒 Security: Invalid provider ID format"
+        
+        # 2. Block direct access to system/escrow accounts (case-insensitive)
+        provider_upper = provider_clean.upper()
+        protected_prefixes = ["FARM_ESCROW_", "FARM_ESCROW", "TREASURY", "VALIDATOR_", "DEX_", "SYSTEM_", "RESERVE_", "GENESIS", "MINING"]
+        for prefix in protected_prefixes:
+            if provider_upper.startswith(prefix) or provider_upper == prefix.rstrip("_"):
+                return False, 0.0, 0.0, f"🔒 Security: Cannot withdraw from protected account. Use proper interface."
+        
+        # Use sanitized provider for all subsequent operations
+        provider = provider_clean
+        
+        # Check for farming escrow lock
+        # If LP tokens are locked in farm escrow, they cannot be withdrawn
+        pool_id = f"{self.token_a}-{self.token_b}"
+        farm_escrow = f"FARM_ESCROW_{pool_id}"
+        escrow_balance = self.lp_balances.get(farm_escrow, 0)
+        
+        # User's available LP for withdrawal = their balance (escrow is separate account)
+        # The escrow check ensures staked LP cannot be accessed
+        provider_balance = self.lp_balances.get(provider, 0)
+        
+        # NOTE: If provider tries to withdraw more than their non-escrowed balance, reject
+        # Their staked LP is now in the escrow account, not their account
+        
         # Note: For full production, this would check pending withdrawal requests
         # For now, we add the security check but allow immediate withdrawal with warning
         liquidity_protection = get_liquidity_protection()
@@ -365,8 +397,10 @@ class LiquidityPool:
         if lp_tokens <= 0:
             return False, 0.0, 0.0, "Invalid LP token amount"
         
-        provider_balance = self.lp_balances.get(provider, 0)
         if provider_balance < lp_tokens:
+            # Check if the reason is farming escrow
+            if escrow_balance > 0:
+                return False, 0.0, 0.0, f"🔒 Insufficient LP: {provider_balance:.4f} available ({escrow_balance:.4f} locked in farming). Unstake from farm first."
             return False, 0.0, 0.0, f"Insufficient LP tokens: have {provider_balance:.4f}, need {lp_tokens:.4f}"
         
         # Calculate share

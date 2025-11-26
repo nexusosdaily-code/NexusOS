@@ -796,143 +796,380 @@ def render_token_factory(dex: DEXEngine):
 
 
 def render_lp_farming(dex: DEXEngine):
-    """Render LP Farming and staking rewards interface"""
+    """
+    Render LP Farming interface with physics-based rewards
+    Uses E=hf energy economics for yield calculation
+    """
+    from farming_core import initialize_farming, get_farming_engine, TIER_CONFIG, FarmTier
+    
     st.subheader("🌾 LP Farming")
-    st.markdown("**Stake LP tokens to earn rewards**")
+    st.markdown("**Stake LP tokens to earn NXT rewards using E=hf physics**")
     
     user = st.session_state.get('user_address', 'dex_user_1')
     
-    # Initialize farming state
-    if 'farming_positions' not in st.session_state:
-        st.session_state.farming_positions = {}
-    if 'farming_rewards' not in st.session_state:
-        st.session_state.farming_rewards = {}
+    nxt_adapter = dex.nxt_adapter if hasattr(dex, 'nxt_adapter') else None
+    farming = initialize_farming(dex, nxt_adapter)
+    
+    farm_tabs = st.tabs(["🏆 Farms", "📊 My Positions", "🔬 Physics", "📈 Analytics"])
+    
+    with farm_tabs[0]:
+        render_farm_list(dex, farming, user)
+    
+    with farm_tabs[1]:
+        render_my_farming_positions(farming, user)
+    
+    with farm_tabs[2]:
+        render_farming_physics()
+    
+    with farm_tabs[3]:
+        render_farming_analytics(farming)
+
+
+def render_farm_list(dex, farming, user: str):
+    """Render list of available farms"""
+    from farming_core import TIER_CONFIG
+    
+    st.markdown("### 🏆 Active Farms")
     
     st.info("""
     🌾 **How LP Farming Works:**
-    1. Provide liquidity to any pool to receive LP tokens
-    2. Stake your LP tokens in the farm
-    3. Earn NXT rewards based on your share
-    4. Claim rewards anytime or compound them
+    1. Provide liquidity to any pool → receive LP tokens
+    2. Stake your LP tokens in the farm → earn NXT rewards  
+    3. Higher TVL pools = higher frequency = more energy (E=hf)
+    4. Claim rewards anytime or let them compound
+    """)
+    
+    if not dex.pools:
+        st.warning("No pools available for farming. Create a pool first!")
+        return
+    
+    for pool_id, pool in dex.pools.items():
+        farm = farming.get_or_create_farm(pool_id)
+        if farm is None:
+            continue
+        
+        tier = farm.get_tier()
+        tier_config = TIER_CONFIG[tier]
+        apy = farm.calculate_apy()
+        
+        user_lp_balance = pool.lp_balances.get(user, 0)
+        user_info = farm.get_user_info(user)
+        user_staked = user_info['staked_lp'] if user_info else 0
+        user_pending = user_info['pending_rewards'] if user_info else 0
+        available_to_stake = user_lp_balance
+        
+        with st.container():
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+                        border: 2px solid {tier_config['color']}; 
+                        border-radius: 12px; padding: 20px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h4 style="color: #00d4ff; margin: 0;">🌾 {pool_id} Farm</h4>
+                    <span style="background: {tier_config['color']}; color: white; padding: 4px 12px; 
+                                 border-radius: 20px; font-size: 12px; font-weight: bold;">
+                        {tier.value}
+                    </span>
+                </div>
+                <p style="color: #a0a0a0; margin-top: 5px; font-size: 13px;">{tier_config['description']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            col1, col2, col3, col4, col5 = st.columns(5)
+            with col1:
+                st.metric("TVL", f"{farm.total_value_locked:,.2f} NXT")
+            with col2:
+                st.metric("APY", f"{apy:.1f}%", delta=f"{tier_config['multiplier']}x")
+            with col3:
+                st.metric("Stakers", f"{len(farm.stakers)}")
+            with col4:
+                st.metric("Your Staked", f"{user_staked:.4f} LP")
+            with col5:
+                st.metric("Pending", f"{user_pending:.4f} NXT")
+            
+            col_stake, col_unstake, col_claim = st.columns(3)
+            
+            with col_stake:
+                st.markdown("**Stake LP Tokens**")
+                stake_amount = st.number_input(
+                    "Amount to stake",
+                    min_value=0.0,
+                    max_value=float(max(0, available_to_stake)),
+                    value=0.0,
+                    step=0.1,
+                    key=f"farm_stake_{pool_id}",
+                    label_visibility="collapsed"
+                )
+                st.caption(f"Available: {available_to_stake:.4f} LP")
+                if st.button("🌾 Stake LP", key=f"btn_farm_stake_{pool_id}", use_container_width=True):
+                    if stake_amount > 0:
+                        success, msg = farming.stake_lp(user, pool_id, stake_amount)
+                        if success:
+                            st.success(f"✅ {msg}")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {msg}")
+                    else:
+                        st.warning("Enter an amount to stake")
+            
+            with col_unstake:
+                st.markdown("**Unstake LP Tokens**")
+                unstake_amount = st.number_input(
+                    "Amount to unstake",
+                    min_value=0.0,
+                    max_value=float(user_staked),
+                    value=0.0,
+                    step=0.1,
+                    key=f"farm_unstake_{pool_id}",
+                    label_visibility="collapsed"
+                )
+                st.caption(f"Staked: {user_staked:.4f} LP")
+                if st.button("📤 Unstake + Claim", key=f"btn_farm_unstake_{pool_id}", use_container_width=True):
+                    if unstake_amount > 0:
+                        success, rewards, msg = farming.unstake_lp(user, pool_id, unstake_amount)
+                        if success:
+                            st.success(f"✅ {msg}")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {msg}")
+                    else:
+                        st.warning("Enter an amount to unstake")
+            
+            with col_claim:
+                st.markdown("**Claim Rewards**")
+                st.markdown(f"**{user_pending:.4f} NXT** pending")
+                st.caption("Rewards auto-compound if not claimed")
+                if st.button("💰 Claim NXT", key=f"btn_farm_claim_{pool_id}", 
+                            use_container_width=True, disabled=(user_pending <= 0)):
+                    success, rewards, msg = farming.claim_rewards(user, pool_id)
+                    if success:
+                        st.success(f"✅ {msg}")
+                        st.rerun()
+                    else:
+                        st.info(msg)
+            
+            st.divider()
+
+
+def render_my_farming_positions(farming, user: str):
+    """Render user's farming positions summary"""
+    st.markdown("### 📊 My Farming Positions")
+    
+    positions = farming.get_user_farms(user)
+    
+    if not positions:
+        st.info("You have no active farming positions. Stake LP tokens to start earning!")
+        return
+    
+    total_staked_value = 0
+    total_pending = 0
+    total_claimed = 0
+    
+    for pos in positions:
+        total_pending += pos.get('pending_rewards', 0)
+        total_claimed += pos.get('total_claimed', 0)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Active Farms", len(positions))
+    with col2:
+        st.metric("Total Pending", f"{total_pending:.4f} NXT")
+    with col3:
+        st.metric("Total Claimed", f"{total_claimed:.4f} NXT")
+    with col4:
+        if st.button("💰 Claim All Rewards", type="primary", use_container_width=True):
+            success, rewards, msg = farming.claim_all_rewards(user)
+            if success:
+                st.success(f"✅ {msg}")
+                st.rerun()
+            else:
+                st.info(msg)
+    
+    st.divider()
+    
+    st.markdown("### Position Details")
+    
+    for pos in positions:
+        with st.expander(f"🌾 {pos['pool_id']} - {pos['staked_lp']:.4f} LP staked", expanded=True):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Staked LP", f"{pos['staked_lp']:.4f}")
+                st.caption(f"Pool share: {pos['share_percent']:.2f}%")
+            with col2:
+                st.metric("Pending Rewards", f"{pos['pending_rewards']:.4f} NXT")
+                st.caption(f"APY: {pos.get('apy', 0):.1f}%")
+            with col3:
+                st.metric("Total Claimed", f"{pos['total_claimed']:.4f} NXT")
+                st.caption(f"Staked for: {pos['stake_duration_days']:.1f} days")
+
+
+def render_farming_physics():
+    """Render physics explanation of farming rewards"""
+    import plotly.graph_objects as go
+    from farming_core import TIER_CONFIG, FarmTier, PLANCK_CONSTANT, SPEED_OF_LIGHT
+    import math
+    
+    st.markdown("### 🔬 E=hf Farming Physics")
+    
+    st.markdown("""
+    NexusOS farming rewards follow Planck's quantum energy equation: **E = hf**
+    
+    - **E** = Energy (rewards)
+    - **h** = Planck's constant
+    - **f** = Frequency (determined by pool activity)
+    
+    Higher TVL pools operate at "higher frequencies", producing more energy rewards.
+    This creates natural incentives for liquidity concentration.
     """)
     
     st.divider()
     
-    # Available farms
-    st.markdown("### 🏆 Active Farms")
+    st.markdown("### 🌈 Energy Tiers (Electromagnetic Spectrum)")
     
-    if dex.pools:
-        farms_data = []
-        for pool_id, pool in dex.pools.items():
-            # Calculate APY based on pool activity
-            tvl = pool.reserve_a + pool.reserve_b
-            volume = pool.total_volume_a + pool.total_volume_b
-            estimated_apy = min(500, (volume / max(tvl, 1)) * 100 * 365 / 100 + 12)  # Base 12% + volume bonus
-            
-            user_staked = st.session_state.farming_positions.get(f"{user}_{pool_id}", 0)
-            user_rewards = st.session_state.farming_rewards.get(f"{user}_{pool_id}", 0)
-            
-            farms_data.append({
-                'pool_id': pool_id,
-                'tvl': tvl,
-                'apy': estimated_apy,
-                'user_staked': user_staked,
-                'user_rewards': user_rewards,
-                'lp_balance': pool.lp_balances.get(user, 0)
-            })
+    tiers_data = []
+    for tier in [FarmTier.GAMMA, FarmTier.XRAY, FarmTier.UV, FarmTier.VISIBLE, FarmTier.INFRARED]:
+        config = TIER_CONFIG[tier]
+        wavelength_m = config["wavelength_nm"] * 1e-9
+        frequency = SPEED_OF_LIGHT / wavelength_m
+        energy = PLANCK_CONSTANT * frequency
         
-        for farm in farms_data:
-            with st.container():
-                st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
-                            border: 1px solid rgba(102, 126, 234, 0.3); 
-                            border-radius: 12px; padding: 20px; margin-bottom: 15px;">
-                    <h4 style="color: #00d4ff; margin: 0;">{farm['pool_id']} Farm</h4>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("TVL", f"{farm['tvl']:.2f}")
-                with col2:
-                    st.metric("APY", f"{farm['apy']:.1f}%", delta="+2.3%")
-                with col3:
-                    st.metric("Your Staked", f"{farm['user_staked']:.4f} LP")
-                with col4:
-                    st.metric("Rewards", f"{farm['user_rewards']:.4f} NXT")
-                
-                # Actions
-                col_a, col_b, col_c = st.columns(3)
-                
-                with col_a:
-                    # Stake
-                    stake_amount = st.number_input(
-                        "Stake LP",
-                        min_value=0.0,
-                        max_value=float(farm['lp_balance']),
-                        value=0.0,
-                        step=0.1,
-                        key=f"stake_{farm['pool_id']}"
-                    )
-                    if st.button("🌾 Stake", key=f"btn_stake_{farm['pool_id']}"):
-                        if stake_amount > 0:
-                            key = f"{user}_{farm['pool_id']}"
-                            st.session_state.farming_positions[key] = st.session_state.farming_positions.get(key, 0) + stake_amount
-                            # Simulate reward accrual
-                            st.session_state.farming_rewards[key] = st.session_state.farming_rewards.get(key, 0) + (stake_amount * farm['apy'] / 100 / 365)
-                            st.success(f"✅ Staked {stake_amount:.4f} LP tokens")
-                            st.rerun()
-                
-                with col_b:
-                    # Unstake
-                    if farm['user_staked'] > 0:
-                        unstake_amount = st.number_input(
-                            "Unstake LP",
-                            min_value=0.0,
-                            max_value=float(farm['user_staked']),
-                            value=0.0,
-                            step=0.1,
-                            key=f"unstake_{farm['pool_id']}"
-                        )
-                        if st.button("📤 Unstake", key=f"btn_unstake_{farm['pool_id']}"):
-                            if unstake_amount > 0:
-                                key = f"{user}_{farm['pool_id']}"
-                                st.session_state.farming_positions[key] = max(0, st.session_state.farming_positions.get(key, 0) - unstake_amount)
-                                st.success(f"✅ Unstaked {unstake_amount:.4f} LP tokens")
-                                st.rerun()
-                
-                with col_c:
-                    # Claim rewards
-                    if farm['user_rewards'] > 0:
-                        if st.button("💰 Claim Rewards", key=f"btn_claim_{farm['pool_id']}"):
-                            key = f"{user}_{farm['pool_id']}"
-                            rewards = st.session_state.farming_rewards.get(key, 0)
-                            st.session_state.farming_rewards[key] = 0
-                            st.success(f"✅ Claimed {rewards:.4f} NXT rewards!")
-                            st.rerun()
-                
-                st.divider()
-    else:
-        st.info("No pools available for farming. Create a pool first!")
+        log_freq = math.log10(frequency)
+        base_apy = 10 + (log_freq - 14) * 100
+        final_apy = max(10, min(500, base_apy * config["multiplier"]))
+        
+        tiers_data.append({
+            "tier": tier.value,
+            "wavelength": config["wavelength_nm"],
+            "frequency": frequency,
+            "energy": energy,
+            "multiplier": config["multiplier"],
+            "min_tvl": config["min_tvl"],
+            "apy": final_apy,
+            "color": config["color"]
+        })
     
-    # Farming summary
-    st.markdown("### 📊 Your Farming Summary")
+    for t in tiers_data:
+        st.markdown(f"""
+        <div style="background: linear-gradient(90deg, {t['color']}22 0%, transparent 100%);
+                    border-left: 4px solid {t['color']};
+                    padding: 15px; margin-bottom: 10px; border-radius: 0 8px 8px 0;">
+            <h4 style="color: {t['color']}; margin: 0;">{t['tier']}</h4>
+            <p style="color: #e0e0e0; margin: 5px 0;">
+                λ = {t['wavelength']:.2f} nm | f = {t['frequency']:.2e} Hz | E = {t['energy']:.2e} J
+            </p>
+            <p style="color: #a0a0a0; font-size: 13px;">
+                Min TVL: {t['min_tvl']:,} NXT | Multiplier: {t['multiplier']}x | Est. APY: {t['apy']:.0f}%
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
     
-    total_staked = sum(st.session_state.farming_positions.values())
-    total_rewards = sum(st.session_state.farming_rewards.values())
+    wavelengths = [t["wavelength"] for t in tiers_data]
+    apys = [t["apy"] for t in tiers_data]
+    colors = [t["color"] for t in tiers_data]
     
-    col1, col2, col3 = st.columns(3)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=wavelengths,
+        y=apys,
+        mode='markers+lines',
+        marker=dict(size=20, color=colors),
+        line=dict(color='#667eea', width=2),
+        text=[t["tier"] for t in tiers_data],
+        hovertemplate="<b>%{text}</b><br>Wavelength: %{x} nm<br>APY: %{y:.1f}%<extra></extra>"
+    ))
+    
+    fig.update_layout(
+        title="Energy Tier APY by Wavelength (E=hf)",
+        xaxis_title="Wavelength (nm) - Log Scale",
+        yaxis_title="APY (%)",
+        xaxis_type="log",
+        template="plotly_dark",
+        height=400
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def render_farming_analytics(farming):
+    """Render farming analytics dashboard"""
+    import plotly.express as px
+    
+    st.markdown("### 📈 Farming Analytics")
+    
+    stats = farming.get_stats()
+    
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Total LP Staked", f"{total_staked:.4f}")
+        st.metric("Total Farms", stats["total_farms"])
     with col2:
-        st.metric("Pending Rewards", f"{total_rewards:.4f} NXT")
+        st.metric("Total TVL", f"{stats['total_tvl']:,.2f} NXT")
     with col3:
-        if st.button("💰 Claim All Rewards", type="primary"):
-            if total_rewards > 0:
-                for key in st.session_state.farming_rewards:
-                    st.session_state.farming_rewards[key] = 0
-                st.success(f"✅ Claimed all {total_rewards:.4f} NXT rewards!")
-                st.rerun()
+        st.metric("Total Stakers", stats["total_stakers"])
+    with col4:
+        st.metric("Rewards Distributed", f"{stats['total_rewards_distributed']:,.4f} NXT")
+    
+    st.divider()
+    
+    farms = farming.get_all_farms()
+    
+    if farms:
+        st.markdown("### Farm Performance")
+        
+        df_farms = pd.DataFrame(farms)
+        
+        if not df_farms.empty and 'tvl' in df_farms.columns:
+            fig_tvl = px.bar(
+                df_farms,
+                x='pool_id',
+                y='tvl',
+                color='tier',
+                title='Total Value Locked by Farm',
+                labels={'tvl': 'TVL (NXT)', 'pool_id': 'Farm'},
+                color_discrete_map={
+                    'Gamma Ray': '#FF00FF',
+                    'X-Ray': '#9400D3',
+                    'Ultraviolet': '#8A2BE2',
+                    'Visible': '#00FF00',
+                    'Infrared': '#FF4500'
+                }
+            )
+            fig_tvl.update_layout(template="plotly_dark")
+            st.plotly_chart(fig_tvl, use_container_width=True)
+            
+            fig_apy = px.bar(
+                df_farms,
+                x='pool_id',
+                y='apy',
+                color='tier',
+                title='APY by Farm (E=hf Based)',
+                labels={'apy': 'APY (%)', 'pool_id': 'Farm'},
+                color_discrete_map={
+                    'Gamma Ray': '#FF00FF',
+                    'X-Ray': '#9400D3',
+                    'Ultraviolet': '#8A2BE2',
+                    'Visible': '#00FF00',
+                    'Infrared': '#FF4500'
+                }
+            )
+            fig_apy.update_layout(template="plotly_dark")
+            st.plotly_chart(fig_apy, use_container_width=True)
+        
+        st.markdown("### Farm Details")
+        st.dataframe(
+            df_farms[['pool_id', 'tvl', 'apy', 'tier', 'multiplier', 'staker_count', 'total_rewards_distributed']],
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                'pool_id': 'Farm',
+                'tvl': st.column_config.NumberColumn('TVL (NXT)', format="%.2f"),
+                'apy': st.column_config.NumberColumn('APY', format="%.1f%%"),
+                'tier': 'Energy Tier',
+                'multiplier': st.column_config.NumberColumn('Multiplier', format="%.1fx"),
+                'staker_count': 'Stakers',
+                'total_rewards_distributed': st.column_config.NumberColumn('Rewards Paid', format="%.4f")
+            }
+        )
+    else:
+        st.info("No farming data available yet. Stake LP tokens to start earning!")
 
 
 def render_analytics(dex: DEXEngine):

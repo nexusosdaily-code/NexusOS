@@ -33,6 +33,7 @@ The system provides a Unified Dashboard Launcher (`app.py`) offering access to m
 -   **Proof of Spectrum (PoS) Consensus**: A wavelength-inspired consensus mechanism using spectral regions and wave interference for validation.
 -   **Nexus Consensus Engine**: Integrates GhostDAG, Proof of Spectrum, and an AI-optimized economic layer.
 -   **DEX (Decentralized Exchange)**: A Layer 2 Automated Market Maker with liquidity pools.
+-   **DEX LP Farming System**: Physics-based yield farming using E=hf economics. Features 5 energy tiers (Gamma, X-Ray, UV, Visible, Infrared) based on electromagnetic spectrum. Higher TVL pools = higher frequency = more energy rewards. LP tokens are locked in escrow when staked to prevent reward extraction without liquidity backing.
 -   **Native Payment Layer - NexusToken (NXT)**: Features Bitcoin-style tokenomics, fixed supply, deflationary mechanics, and AI-controlled validator rewards.
 -   **Orbital Transition Engine**: Replaces token burns with quantum physics-inspired orbital transitions.
 -   **Hierarchical Pool Ecosystem**: An architecture of Reserve Pools, F_floor, and 10 Service Pools.
