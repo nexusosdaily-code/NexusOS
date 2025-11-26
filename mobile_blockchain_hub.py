@@ -1955,12 +1955,14 @@ def render_p2p_hub_tab():
                 file_size = len(uploaded.getvalue()) / 1024 / 1024  # MB
                 
                 # E=hf energy cost calculation (physics-based)
+                # Pricing aligned with app guidelines: images ~0.01-0.05 NXT
                 PLANCK = 6.62607015e-34
                 CHUNK_SIZE = 64 * 1024  # 64KB chunks
-                num_chunks = max(1, math.ceil((file_size * 1024 * 1024) / CHUNK_SIZE))  # ceil to account for partial chunks
+                num_chunks = max(1, math.ceil((file_size * 1024 * 1024) / CHUNK_SIZE))  # ceil for partial chunks
                 base_frequency = 5e14  # Visible light ~500 THz
                 energy_joules = PLANCK * base_frequency * num_chunks
-                energy_cost = energy_joules * 1e20  # Convert to NXT scale
+                # Scale to match pricing: ~0.01-0.05 NXT per MB
+                energy_cost = (file_size * 0.02) + (energy_joules * 1e15)  # Base rate + physics component
                 
                 st.info(f"""
                 📁 **{uploaded.name}**  
