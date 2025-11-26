@@ -1507,9 +1507,21 @@ def render_p2p_hub_tab():
                                 st.session_state.active_address = result['address']
                                 st.session_state.wallet_unlocked = result['address']
                                 
+                                # Award Genesis Block badge for first wallet!
+                                new_badges = trigger_achievement(result['address'], 'wallet_created', increment=1)
+                                
+                                # Also check for Early Adopter badge
+                                trigger_achievement(result['address'], 'joined_before', value=True)
+                                
                                 # Link phone if provided
                                 if phone_optional and len(phone_optional) >= 10:
                                     st.session_state.p2p_phone = phone_optional
+                                    trigger_achievement(result['address'], 'phone_verified', increment=1)
+                                
+                                # Show badge notification
+                                if new_badges:
+                                    for badge in new_badges:
+                                        st.toast(f"🏆 Badge Earned: {badge['icon']} {badge['name']}!")
                                 
                                 st.success(f"✅ Wallet created! You're ready to use P2P features!")
                                 st.balloons()

@@ -506,10 +506,11 @@ class AchievementsManager:
                             if stats.get(req['type']) == req['value']:
                                 earned_badge = True
                     
-                    # Special case for date-based requirements
+                    # Special case for Early Adopter (joined_before) - check if current date is before cutoff
                     if req['type'] == 'joined_before':
-                        join_date = datetime.strptime(req['date'], "%Y-%m-%d")
-                        if datetime.now() <= join_date:
+                        cutoff_date = datetime.strptime(req['date'], "%Y-%m-%d")
+                        # Award if user has a wallet and we're still in early adopter period
+                        if datetime.now() <= cutoff_date and stats.get('wallet_created', 0) > 0:
                             earned_badge = True
                     
                     if earned_badge:
