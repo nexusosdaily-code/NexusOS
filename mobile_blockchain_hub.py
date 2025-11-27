@@ -659,26 +659,93 @@ def render_mobile_blockchain_hub():
     badge_html = f'<span style="background: #ef4444; color: white; padding: 2px 6px; border-radius: 10px; font-size: 12px; position: relative; top: -8px;">{unread_count}</span>' if unread_count > 0 else ''
     bell_style = "cursor: pointer; font-size: 24px; margin-left: 10px;" + (" animation: bell-ring 0.5s ease-in-out;" if unread_count > 0 else "")
     
-    # Fetch LIVE network data for the energy core
+    # Fetch LIVE network data for the dynamic energy core
+    # Initialize all variables with defaults first
+    pulse_speed = 2.5
+    glow_color = "rgba(0, 180, 255, 0.8)"
+    core_gradient_start = "rgba(120, 220, 255, 0.95)"
+    core_gradient_mid = "rgba(0, 150, 255, 0.85)"
+    core_display = "⚡ NXT"
+    core_label = "E=h·f"
+    stake_display = "0"
+    activity_pct = "0%"
+    stake_intensity = 0
+    activity_level = 0
+    
     try:
         from native_token import NativeTokenSystem
+        from sqlalchemy import func
+        from datetime import datetime, timedelta
+        
         token_system = NativeTokenSystem()
         total_supply_nxt = token_system.TOTAL_SUPPLY / token_system.UNITS_PER_NXT
         circulating = token_system.get_circulating_supply() / token_system.UNITS_PER_NXT
         
-        from database import get_session, DAGMessage
+        from database import get_session, DAGMessage, ValidatorStake
         session = get_session()
-        message_count = session.query(DAGMessage).count() if session else 0
-        if session:
-            session.close()
         
-        core_display = f"{message_count:,}"
-        core_label = "DAG Msgs"
+        if session:
+            try:
+                # Get total message count
+                message_count = session.query(DAGMessage).count() or 0
+                
+                # Calculate recent activity (messages in last 5 minutes) for pulse speed
+                five_min_ago = datetime.utcnow() - timedelta(minutes=5)
+                try:
+                    recent_messages = session.query(DAGMessage).filter(
+                        DAGMessage.timestamp >= five_min_ago
+                    ).count() or 0
+                except:
+                    recent_messages = min(message_count, 50)
+                
+                # Calculate total staked amount using SQL aggregation
+                try:
+                    stake_sum_result = session.query(func.sum(ValidatorStake.stake_amount)).scalar()
+                    total_stake_amount = float(stake_sum_result) if stake_sum_result else 0.0
+                except Exception:
+                    total_stake_amount = 0.0
+                
+                # Network activity level (0-100) - based on recent messages
+                # 50 messages in 5 min = 100% activity
+                activity_level = min(100, (recent_messages / 50) * 100)
+                # Pulse speed: 3s (idle) to 0.8s (very active)
+                pulse_speed = max(0.8, 3.0 - (activity_level * 0.022))
+                
+                # Staking intensity (0-100) - affects color
+                # Scale: 0 stake = 0%, 1M NXT staked = 100%
+                stake_intensity = min(100, (total_stake_amount / 1_000_000) * 100)
+                
+                # Color interpolation: Blue (low stake) -> Cyan -> Green -> Yellow -> Orange (high stake)
+                if stake_intensity < 25:
+                    # Blue to Cyan
+                    r, g, b = 0, int(100 + stake_intensity * 6), 255
+                elif stake_intensity < 50:
+                    # Cyan to Green
+                    progress = (stake_intensity - 25) / 25
+                    r, g, b = 0, 255, int(255 - progress * 100)
+                elif stake_intensity < 75:
+                    # Green to Yellow
+                    progress = (stake_intensity - 50) / 25
+                    r, g, b = int(progress * 255), 255, 0
+                else:
+                    # Yellow to Orange/Red
+                    progress = (stake_intensity - 75) / 25
+                    r, g, b = 255, int(255 - progress * 100), 0
+                
+                glow_color = f"rgba({r}, {g}, {b}, 0.8)"
+                core_gradient_start = f"rgba({min(255, r+80)}, {min(255, g+30)}, {min(255, b)}, 0.95)"
+                core_gradient_mid = f"rgba({max(0, r-20)}, {max(0, g-30)}, {max(0, b-50)}, 0.85)"
+                
+                core_display = f"{message_count:,}"
+                core_label = "DAG Msgs"
+                stake_display = f"{total_stake_amount:,.0f}"
+                activity_pct = f"{activity_level:.0f}%"
+            finally:
+                session.close()
+        
     except Exception as e:
         import logging
         logging.warning(f"Energy core data fetch failed: {e}")
-        core_display = "⚡ NXT"
-        core_label = "E=h·f"
     
     # PULSING ENERGY CORE - The Living Ecosystem Heart with Wavelength Header
     import streamlit.components.v1 as components
@@ -694,32 +761,36 @@ def render_mobile_blockchain_hub():
 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
 body {{ background: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }}
 
+/* Dynamic animations based on network activity */
 @keyframes pulse-ring {{ 0% {{ transform: scale(0.95); opacity: 0.8; }} 50% {{ transform: scale(1.05); opacity: 1; }} 100% {{ transform: scale(0.95); opacity: 0.8; }} }}
 @keyframes pulse-ring-slow {{ 0% {{ transform: scale(0.98); opacity: 0.6; }} 50% {{ transform: scale(1.02); opacity: 0.9; }} 100% {{ transform: scale(0.98); opacity: 0.6; }} }}
-@keyframes glow-pulse {{ 0%, 100% {{ box-shadow: 0 0 30px rgba(0, 180, 255, 0.5), 0 0 60px rgba(0, 150, 255, 0.3), 0 0 90px rgba(0, 120, 255, 0.2); }} 50% {{ box-shadow: 0 0 50px rgba(0, 200, 255, 0.7), 0 0 100px rgba(0, 170, 255, 0.5), 0 0 150px rgba(0, 140, 255, 0.3); }} }}
+@keyframes glow-pulse {{ 0%, 100% {{ box-shadow: 0 0 30px {glow_color}, 0 0 60px {glow_color.replace('0.8', '0.5')}, 0 0 90px {glow_color.replace('0.8', '0.3')}; }} 50% {{ box-shadow: 0 0 50px {glow_color}, 0 0 100px {glow_color.replace('0.8', '0.6')}, 0 0 150px {glow_color.replace('0.8', '0.4')}; }} }}
 @keyframes core-breathe {{ 0%, 100% {{ transform: scale(1); }} 50% {{ transform: scale(1.08); }} }}
 @keyframes data-flow {{ 0% {{ opacity: 0.4; transform: translateY(5px); }} 50% {{ opacity: 1; transform: translateY(0); }} 100% {{ opacity: 0.4; transform: translateY(-5px); }} }}
-@keyframes particle-float {{ 0% {{ transform: translateY(0) rotate(0deg); opacity: 0; }} 25% {{ opacity: 0.6; }} 75% {{ opacity: 0.6; }} 100% {{ transform: translateY(-150px) rotate(360deg); opacity: 0; }} }}
+@keyframes particle-float {{ 0% {{ transform: translateY(0) rotate(0deg); opacity: 0; }} 25% {{ opacity: 0.8; }} 75% {{ opacity: 0.8; }} 100% {{ transform: translateY(-150px) rotate(360deg); opacity: 0; }} }}
 @keyframes wave-flow {{ 0% {{ transform: translateX(-100%); }} 100% {{ transform: translateX(100%); }} }}
 @keyframes wave-pulse {{ 0%, 100% {{ opacity: 0.3; }} 50% {{ opacity: 0.7; }} }}
 @keyframes bell-ring {{ 0%, 100% {{ transform: rotate(0deg); }} 10% {{ transform: rotate(15deg); }} 20% {{ transform: rotate(-15deg); }} 30% {{ transform: rotate(10deg); }} 40% {{ transform: rotate(-10deg); }} 50% {{ transform: rotate(0deg); }} }}
 @keyframes nano-shimmer {{ 0% {{ background-position: -200% center; }} 100% {{ background-position: 200% center; }} }}
+@keyframes ring-rotate {{ 0% {{ transform: rotate(0deg); }} 100% {{ transform: rotate(360deg); }} }}
+@keyframes energy-spark {{ 0%, 100% {{ opacity: 0; transform: scale(0.5); }} 50% {{ opacity: 1; transform: scale(1.2); }} }}
+@keyframes orbit {{ 0% {{ transform: rotate(0deg) translateX(90px) rotate(0deg); }} 100% {{ transform: rotate(360deg) translateX(90px) rotate(-360deg); }} }}
 
 .header-container {{ position: relative; width: 100%; background: linear-gradient(180deg, rgba(0, 30, 60, 0.95) 0%, rgba(10, 10, 30, 1) 100%); overflow: hidden; }}
 
-.wavelength-bar {{ position: absolute; top: 0; left: 0; right: 0; height: 50px; background: linear-gradient(90deg, transparent, rgba(0, 150, 255, 0.1), transparent); overflow: hidden; }}
-.wave-line {{ position: absolute; height: 2px; width: 100%; background: linear-gradient(90deg, transparent 0%, rgba(0, 200, 255, 0.8) 50%, transparent 100%); animation: wave-flow 3s linear infinite; }}
+.wavelength-bar {{ position: absolute; top: 0; left: 0; right: 0; height: 50px; background: linear-gradient(90deg, transparent, {glow_color.replace('0.8', '0.15')}, transparent); overflow: hidden; }}
+.wave-line {{ position: absolute; height: 2px; width: 100%; background: linear-gradient(90deg, transparent 0%, {glow_color} 50%, transparent 100%); animation: wave-flow {pulse_speed}s linear infinite; }}
 .wave-line:nth-child(1) {{ top: 10px; animation-delay: 0s; opacity: 0.6; }}
-.wave-line:nth-child(2) {{ top: 20px; animation-delay: 0.5s; opacity: 0.4; }}
-.wave-line:nth-child(3) {{ top: 30px; animation-delay: 1s; opacity: 0.5; }}
-.wave-line:nth-child(4) {{ top: 40px; animation-delay: 1.5s; opacity: 0.3; }}
+.wave-line:nth-child(2) {{ top: 20px; animation-delay: {pulse_speed/4}s; opacity: 0.4; }}
+.wave-line:nth-child(3) {{ top: 30px; animation-delay: {pulse_speed/2}s; opacity: 0.5; }}
+.wave-line:nth-child(4) {{ top: 40px; animation-delay: {pulse_speed*0.75}s; opacity: 0.3; }}
 
-.nano-grid {{ position: absolute; top: 0; left: 0; right: 0; height: 50px; background: repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(0, 180, 255, 0.05) 20px, rgba(0, 180, 255, 0.05) 21px), repeating-linear-gradient(0deg, transparent, transparent 10px, rgba(0, 180, 255, 0.03) 10px, rgba(0, 180, 255, 0.03) 11px); animation: wave-pulse 4s ease-in-out infinite; }}
+.nano-grid {{ position: absolute; top: 0; left: 0; right: 0; height: 50px; background: repeating-linear-gradient(90deg, transparent, transparent 20px, {glow_color.replace('0.8', '0.08')} 20px, {glow_color.replace('0.8', '0.08')} 21px), repeating-linear-gradient(0deg, transparent, transparent 10px, {glow_color.replace('0.8', '0.05')} 10px, {glow_color.replace('0.8', '0.05')} 11px); animation: wave-pulse {pulse_speed*1.5}s ease-in-out infinite; }}
 
-.top-bar {{ position: relative; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: linear-gradient(90deg, rgba(0, 60, 120, 0.3), rgba(0, 100, 180, 0.2), rgba(0, 60, 120, 0.3)); background-size: 200% 100%; animation: nano-shimmer 8s linear infinite; border-bottom: 1px solid rgba(0, 180, 255, 0.2); }}
+.top-bar {{ position: relative; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: linear-gradient(90deg, rgba(0, 60, 120, 0.3), rgba(0, 100, 180, 0.2), rgba(0, 60, 120, 0.3)); background-size: 200% 100%; animation: nano-shimmer 8s linear infinite; border-bottom: 1px solid {glow_color.replace('0.8', '0.3')}; }}
 
 .brand {{ display: flex; align-items: center; gap: 10px; }}
-.brand-icon {{ font-size: 24px; filter: drop-shadow(0 0 8px rgba(0, 200, 255, 0.8)); }}
+.brand-icon {{ font-size: 24px; filter: drop-shadow(0 0 8px {glow_color}); }}
 .brand-text {{ color: #00d4ff; font-size: 16px; font-weight: 700; text-shadow: 0 0 15px rgba(0, 212, 255, 0.5); letter-spacing: 1px; }}
 
 .notif-btn {{ position: relative; background: rgba(0, 100, 180, 0.3); border: 1px solid rgba(0, 180, 255, 0.4); border-radius: 12px; padding: 8px 16px; color: #00d4ff; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease; }}
@@ -727,24 +798,46 @@ body {{ background: transparent; font-family: -apple-system, BlinkMacSystemFont,
 .notif-btn.active {{ animation: bell-ring 1s ease-in-out; background: rgba(0, 150, 255, 0.3); }}
 .notif-badge {{ position: absolute; top: -5px; right: -5px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 10px; min-width: 18px; text-align: center; box-shadow: 0 0 8px rgba(239, 68, 68, 0.6); }}
 
-.energy-core-container {{ position: relative; width: 100%; height: 240px; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(0, 60, 120, 0.4) 0%, transparent 70%); overflow: hidden; }}
+.energy-core-container {{ position: relative; width: 100%; height: 280px; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, {glow_color.replace('0.8', '0.25')} 0%, transparent 70%); overflow: hidden; }}
 
-.core-outer-ring {{ position: absolute; width: 200px; height: 200px; border-radius: 50%; border: 2px solid rgba(0, 180, 255, 0.3); animation: pulse-ring-slow 4s ease-in-out infinite; }}
-.core-middle-ring {{ position: absolute; width: 155px; height: 155px; border-radius: 50%; border: 3px solid rgba(0, 200, 255, 0.5); animation: pulse-ring 2.5s ease-in-out infinite; }}
-.core-inner-ring {{ position: absolute; width: 115px; height: 115px; border-radius: 50%; border: 2px solid rgba(0, 220, 255, 0.7); animation: pulse-ring 2s ease-in-out infinite 0.5s; }}
-.core-center {{ position: absolute; width: 80px; height: 80px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, rgba(120, 220, 255, 0.95) 0%, rgba(0, 150, 255, 0.85) 40%, rgba(0, 80, 180, 0.7) 70%, rgba(0, 40, 100, 0.5) 100%); animation: core-breathe 3s ease-in-out infinite, glow-pulse 2s ease-in-out infinite; display: flex; flex-direction: column; align-items: center; justify-content: center; }}
+/* Dynamic rings with activity-based pulse speed */
+.core-outer-ring {{ position: absolute; width: 200px; height: 200px; border-radius: 50%; border: 2px solid {glow_color.replace('0.8', '0.4')}; animation: pulse-ring-slow {pulse_speed*1.5}s ease-in-out infinite, ring-rotate 20s linear infinite; }}
+.core-middle-ring {{ position: absolute; width: 155px; height: 155px; border-radius: 50%; border: 3px solid {glow_color.replace('0.8', '0.6')}; animation: pulse-ring {pulse_speed}s ease-in-out infinite, ring-rotate 15s linear infinite reverse; }}
+.core-inner-ring {{ position: absolute; width: 115px; height: 115px; border-radius: 50%; border: 2px solid {glow_color}; animation: pulse-ring {pulse_speed*0.8}s ease-in-out infinite 0.3s, ring-rotate 10s linear infinite; }}
 
-.core-data {{ color: #ffffff; font-weight: bold; text-shadow: 0 0 10px rgba(255, 255, 255, 0.9); animation: data-flow 2s ease-in-out infinite; text-align: center; }}
-.core-data-primary {{ font-size: 18px; line-height: 1.1; }}
-.core-data-secondary {{ font-size: 9px; opacity: 0.9; margin-top: 2px; }}
+/* Central core with dynamic colors based on staking */
+.core-center {{ position: absolute; width: 85px; height: 85px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, {core_gradient_start} 0%, {core_gradient_mid} 40%, rgba(0, 80, 180, 0.7) 70%, rgba(0, 40, 100, 0.5) 100%); animation: core-breathe {pulse_speed}s ease-in-out infinite, glow-pulse {pulse_speed*0.7}s ease-in-out infinite; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 40px {glow_color}, 0 0 80px {glow_color.replace('0.8', '0.5')}; }}
 
-.core-title {{ position: absolute; bottom: 12px; text-align: center; width: 100%; }}
-.core-title h2 {{ color: #00d4ff; font-size: 16px; margin: 0; text-shadow: 0 0 20px rgba(0, 212, 255, 0.6); font-weight: 600; }}
-.core-title p {{ color: rgba(200, 230, 255, 0.85); font-size: 10px; margin: 3px 0 0 0; }}
+.core-data {{ color: #ffffff; font-weight: bold; text-shadow: 0 0 10px rgba(255, 255, 255, 0.9); animation: data-flow {pulse_speed}s ease-in-out infinite; text-align: center; }}
+.core-data-primary {{ font-size: 16px; line-height: 1.1; }}
+.core-data-secondary {{ font-size: 8px; opacity: 0.9; margin-top: 2px; }}
 
-.particle {{ position: absolute; width: 3px; height: 3px; background: rgba(0, 200, 255, 0.6); border-radius: 50%; animation: particle-float 4s linear infinite; }}
+/* Orbiting energy nodes */
+.orbit-node {{ position: absolute; width: 8px; height: 8px; border-radius: 50%; background: {glow_color}; box-shadow: 0 0 10px {glow_color}, 0 0 20px {glow_color.replace('0.8', '0.5')}; animation: orbit {pulse_speed*3}s linear infinite; }}
+.orbit-node:nth-child(2) {{ animation-delay: -{pulse_speed}s; }}
+.orbit-node:nth-child(3) {{ animation-delay: -{pulse_speed*2}s; }}
 
-.wavelength-spectrum {{ position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #7c3aed 0%, #3b82f6 20%, #06b6d4 40%, #10b981 60%, #eab308 80%, #ef4444 100%); opacity: 0.6; }}
+/* Metrics display */
+.metrics-row {{ position: absolute; bottom: 50px; display: flex; gap: 30px; justify-content: center; width: 100%; }}
+.metric {{ text-align: center; }}
+.metric-value {{ color: #ffffff; font-size: 14px; font-weight: bold; text-shadow: 0 0 8px {glow_color}; }}
+.metric-label {{ color: rgba(200, 230, 255, 0.7); font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }}
+
+.core-title {{ position: absolute; bottom: 8px; text-align: center; width: 100%; }}
+.core-title h2 {{ color: #00d4ff; font-size: 14px; margin: 0; text-shadow: 0 0 20px rgba(0, 212, 255, 0.6); font-weight: 600; }}
+.core-title p {{ color: rgba(200, 230, 255, 0.85); font-size: 9px; margin: 2px 0 0 0; }}
+
+/* Energy particles with dynamic color */
+.particle {{ position: absolute; width: 4px; height: 4px; background: {glow_color}; border-radius: 50%; animation: particle-float {pulse_speed*1.5}s linear infinite; box-shadow: 0 0 6px {glow_color}; }}
+
+/* Energy sparks around core */
+.spark {{ position: absolute; width: 3px; height: 3px; background: white; border-radius: 50%; animation: energy-spark {pulse_speed*0.5}s ease-in-out infinite; }}
+
+.wavelength-spectrum {{ position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #7c3aed 0%, #3b82f6 20%, #06b6d4 40%, #10b981 60%, #eab308 80%, #ef4444 100%); opacity: 0.7; }}
+
+/* Activity indicator bar */
+.activity-bar {{ position: absolute; top: 52px; left: 20px; right: 20px; height: 4px; background: rgba(0, 50, 100, 0.5); border-radius: 2px; overflow: hidden; }}
+.activity-fill {{ height: 100%; width: {activity_level}%; background: linear-gradient(90deg, {glow_color}, {glow_color.replace('0.8', '1')}); border-radius: 2px; box-shadow: 0 0 10px {glow_color}; transition: width 0.5s ease; }}
 </style>
 </head>
 <body>
@@ -767,12 +860,21 @@ body {{ background: transparent; font-family: -apple-system, BlinkMacSystemFont,
 {notif_badge}
 </div>
 </div>
+<div class="activity-bar"><div class="activity-fill"></div></div>
 <div class="energy-core-container">
-<div class="particle" style="left: 15%; animation-delay: 0s;"></div>
-<div class="particle" style="left: 35%; animation-delay: 0.8s;"></div>
-<div class="particle" style="left: 55%; animation-delay: 1.6s;"></div>
-<div class="particle" style="left: 75%; animation-delay: 2.4s;"></div>
-<div class="particle" style="left: 90%; animation-delay: 3.2s;"></div>
+<div class="particle" style="left: 10%; animation-delay: 0s;"></div>
+<div class="particle" style="left: 25%; animation-delay: 0.5s;"></div>
+<div class="particle" style="left: 40%; animation-delay: 1s;"></div>
+<div class="particle" style="left: 55%; animation-delay: 1.5s;"></div>
+<div class="particle" style="left: 70%; animation-delay: 2s;"></div>
+<div class="particle" style="left: 85%; animation-delay: 2.5s;"></div>
+<div class="spark" style="top: 30%; left: 35%; animation-delay: 0s;"></div>
+<div class="spark" style="top: 40%; right: 35%; animation-delay: 0.3s;"></div>
+<div class="spark" style="bottom: 40%; left: 40%; animation-delay: 0.6s;"></div>
+<div class="spark" style="bottom: 35%; right: 40%; animation-delay: 0.9s;"></div>
+<div class="orbit-node"></div>
+<div class="orbit-node"></div>
+<div class="orbit-node"></div>
 <div class="core-outer-ring"></div>
 <div class="core-middle-ring"></div>
 <div class="core-inner-ring"></div>
@@ -782,16 +884,26 @@ body {{ background: transparent; font-family: -apple-system, BlinkMacSystemFont,
 <div class="core-data-secondary">{core_label}</div>
 </div>
 </div>
+<div class="metrics-row">
+<div class="metric">
+<div class="metric-value">{stake_display}</div>
+<div class="metric-label">Staked NXT</div>
+</div>
+<div class="metric">
+<div class="metric-value">{activity_pct}</div>
+<div class="metric-label">Activity</div>
+</div>
+</div>
 <div class="core-title">
 <h2>The Living Ecosystem</h2>
-<p>Your Phone IS the Node • E=h·f</p>
+<p>Your Phone IS the Node • E=h·f·n·authority²</p>
 </div>
 </div>
 <div class="wavelength-spectrum"></div>
 </div>
 </body>
 </html>'''
-    components.html(energy_core_html, height=340, scrolling=False)
+    components.html(energy_core_html, height=380, scrolling=False)
     
     # Streamlit notification toggle (fallback for touch)
     if st.button(f"🔔 {'(' + str(unread_count) + ') ' if unread_count > 0 else ''}Tap for Notifications", key="bell_toggle", type="primary" if unread_count > 0 else "secondary", width="stretch"):
