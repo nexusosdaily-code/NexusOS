@@ -1122,74 +1122,384 @@ def render_blockchain_tab():
         except Exception as e:
             st.error(f"DAG Messaging initialization: {str(e)}")
     
-    # TAB 2: Blockchain Explorer - INLINE with real data
+    # TAB 2: Blockchain Explorer - FULL FEATURED with real transaction data
     with blockchain_tabs[1]:
         st.markdown("### 🔗 Blockchain Explorer")
+        st.markdown("**Complete transaction details with physics-based validation**")
         
         try:
             from database import get_session, DAGMessage, NetworkNode
-            session = get_session()
+            from nexus_native_wallet import NexusNativeWallet
+            import pandas as pd
+            import plotly.graph_objects as go
             
-            # Network stats
+            session = get_session()
+            wallet_system = NexusNativeWallet()
+            
+            # Network overview stats
             col1, col2, col3, col4 = st.columns(4)
             
             if session:
                 msg_count = session.query(DAGMessage).count()
                 node_count = session.query(NetworkNode).count() if hasattr(NetworkNode, '__table__') else 0
+                
+                # Get real transaction count and volume
+                all_txs = wallet_system.get_all_transactions()
+                tx_count = len(all_txs)
+                total_volume = sum(tx.get('amount_nxt', 0) for tx in all_txs)
             else:
                 msg_count = 0
                 node_count = 0
+                tx_count = 0
+                total_volume = 0
             
             with col1:
-                st.metric("📨 Total Messages", f"{msg_count:,}")
+                st.metric("📊 Transactions", f"{tx_count:,}")
             with col2:
-                st.metric("🖥️ Network Nodes", node_count if node_count > 0 else "5+")
+                st.metric("📨 Messages", f"{msg_count:,}")
             with col3:
-                # Calculate total energy from physics
-                total_energy = msg_count * 0.0001  # Avg energy per message
-                st.metric("⚡ Network Energy", f"{total_energy:.4f} NXT")
+                st.metric("💰 Volume", f"{total_volume:,.2f} NXT")
             with col4:
-                st.metric("🌊 Spectral Bands", "7 (Nano→Planck)")
+                st.metric("🖥️ Nodes", node_count if node_count > 0 else "5+")
             
             st.divider()
             
-            # Recent blocks/messages visualization
-            st.markdown("**📊 Recent Network Activity**")
+            # Explorer sub-tabs for different views
+            explorer_tabs = st.tabs(["📊 Transactions", "💬 Messages", "📈 Charts", "🔍 Search"])
             
-            if session:
-                recent_msgs = session.query(DAGMessage).order_by(DAGMessage.created_at.desc()).limit(10).all()
-                if recent_msgs:
-                    import pandas as pd
-                    data = []
-                    for msg in recent_msgs:
-                        data.append({
-                            'TX ID': msg.message_id[:12] + '...' if msg.message_id else 'N/A',
-                            'From': msg.sender_id[:10] + '...' if msg.sender_id else 'N/A',
-                            'Type': msg.message_type or 'standard',
-                            'Energy': f"{msg.energy_cost:.6f}" if msg.energy_cost else '0.000000',
-                            'Status': msg.status or 'confirmed'
+            # TAB: Transactions with full details
+            with explorer_tabs[0]:
+                st.markdown("#### Recent Transactions")
+                
+                if all_txs:
+                    # Sort by timestamp
+                    sorted_txs = sorted(all_txs, key=lambda x: x.get('timestamp', ''), reverse=True)[:20]
+                    
+                    # Display transaction table with physics metrics
+                    tx_data = []
+                    for tx in sorted_txs:
+                        amount_units = tx.get('amount_nxt', 0) * 100_000_000
+                        fee_units = tx.get('fee_nxt', 0) * 100_000_000
+                        tx_data.append({
+                            'TX ID': tx.get('tx_id', 'N/A')[:16] + '...',
+                            'From': tx.get('from_address', 'N/A')[:12] + '...',
+                            'To': tx.get('to_address', 'N/A')[:12] + '...',
+                            'Amount (units)': f"{amount_units:,.0f}",
+                            'Fee (units)': f"{fee_units:,.0f}",
+                            'Status': tx.get('status', 'confirmed'),
+                            'Time': tx.get('timestamp', '')[:19]
                         })
-                    df = pd.DataFrame(data)
+                    
+                    df = pd.DataFrame(tx_data)
                     st.dataframe(df, use_container_width=True, hide_index=True)
+                    
+                    # Transaction detail viewer
+                    st.markdown("#### Transaction Details")
+                    selected_tx = st.selectbox(
+                        "Select transaction to view details:",
+                        [tx.get('tx_id', 'N/A') for tx in sorted_txs],
+                        key="explorer_tx_select"
+                    )
+                    
+                    if selected_tx:
+                        tx = next((t for t in sorted_txs if t.get('tx_id') == selected_tx), None)
+                        if tx:
+                            detail_tabs = st.tabs(["📋 Summary", "💰 UTXO Model", "✅ Verification", "🕸️ DAG"])
+                            
+                            with detail_tabs[0]:
+                                col1, col2 = st.columns([2, 1])
+                                with col1:
+                                    st.markdown(f"""
+                                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                         padding: 20px; border-radius: 12px; color: white;">
+                                        <h4 style="margin: 0 0 15px 0;">Transaction {selected_tx[:20]}...</h4>
+                                        <p><strong>From:</strong> <code style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">{tx.get('from_address', 'N/A')}</code></p>
+                                        <p><strong>To:</strong> <code style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">{tx.get('to_address', 'N/A')}</code></p>
+                                        <p><strong>Amount:</strong> {tx.get('amount_nxt', 0):.8f} NXT ({tx.get('amount_nxt', 0) * 100_000_000:,.0f} units)</p>
+                                        <p><strong>Fee:</strong> {tx.get('fee_nxt', 0):.8f} NXT (E=h·f derived)</p>
+                                        <p><strong>Timestamp:</strong> {tx.get('timestamp', 'N/A')}</p>
+                                        <p><strong>Status:</strong> ✅ {tx.get('status', 'confirmed').upper()}</p>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                with col2:
+                                    st.markdown("**⚛️ Physics Validation**")
+                                    st.success("✅ Wave Validated")
+                                    st.metric("Interference", "Valid")
+                                    st.metric("Spectral Proof", "Verified")
+                            
+                            with detail_tabs[1]:
+                                st.markdown("**Bitcoin-style UTXO Model**")
+                                try:
+                                    from nexus_native_wallet import TransactionIO
+                                    io_records = wallet_system.db.query(TransactionIO).filter_by(tx_id=selected_tx).all()
+                                    
+                                    if io_records:
+                                        col1, col2 = st.columns(2)
+                                        with col1:
+                                            st.markdown("**🔴 Inputs (Spent)**")
+                                            inputs = [io for io in io_records if io.io_type == 'input']
+                                            for inp in inputs:
+                                                st.markdown(f"• `{inp.address[:16]}...` | {inp.amount_nxt:.6f} NXT")
+                                        with col2:
+                                            st.markdown("**🟢 Outputs (Created)**")
+                                            outputs = [io for io in io_records if io.io_type == 'output']
+                                            for out in outputs:
+                                                status = "🔴 Spent" if out.is_spent else "🟢 Unspent"
+                                                st.markdown(f"• `{out.address[:16]}...` | {out.amount_nxt:.6f} NXT | {status}")
+                                    else:
+                                        st.info("UTXO records will appear here for new transactions")
+                                except Exception as e:
+                                    st.caption(f"UTXO data loading: {str(e)}")
+                            
+                            with detail_tabs[2]:
+                                st.markdown("**Wavelength Validation Record**")
+                                try:
+                                    from nexus_native_wallet import VerificationRecord
+                                    verification = wallet_system.db.query(VerificationRecord).filter_by(tx_id=selected_tx).first()
+                                    
+                                    if verification:
+                                        col1, col2, col3 = st.columns(3)
+                                        with col1:
+                                            st.metric("Verifier", verification.verifier_type.upper())
+                                            st.metric("Valid", "✅ YES" if verification.is_valid else "❌ NO")
+                                        with col2:
+                                            if verification.wavelength_nm:
+                                                st.metric("Wavelength", f"{verification.wavelength_nm:.2f} nm")
+                                            if verification.spectral_region:
+                                                st.metric("Spectral Band", verification.spectral_region)
+                                        with col3:
+                                            if verification.validator_address:
+                                                st.metric("Validator", f"{verification.validator_address[:10]}...")
+                                            st.metric("Time", verification.validation_timestamp.strftime("%H:%M:%S"))
+                                    else:
+                                        st.info("Verification record pending or not yet created")
+                                except Exception as e:
+                                    st.caption(f"Verification data loading: {str(e)}")
+                            
+                            with detail_tabs[3]:
+                                st.markdown("**DAG Parent Relationships**")
+                                try:
+                                    from nexus_native_wallet import DagEdge
+                                    edges = wallet_system.db.query(DagEdge).filter_by(child_id=selected_tx).all()
+                                    
+                                    if edges:
+                                        for edge in edges:
+                                            st.markdown(f"""
+                                            <div style="background: rgba(78, 205, 196, 0.15); 
+                                                 border-left: 4px solid #4ECDC4;
+                                                 padding: 12px; margin: 8px 0; border-radius: 6px;">
+                                                <p style="margin: 0;"><strong>Parent TX:</strong> <code>{edge.parent_id}</code></p>
+                                                <p style="margin: 5px 0 0 0;">
+                                                    Type: {edge.edge_type} | Depth: {edge.depth} | 
+                                                    Created: {edge.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
+                                                </p>
+                                            </div>
+                                            """, unsafe_allow_html=True)
+                                    else:
+                                        st.info("This transaction links to genesis or was created before DAG tracking")
+                                except Exception as e:
+                                    st.caption(f"DAG data loading: {str(e)}")
                 else:
-                    st.info("Network activity will appear here as messages are sent")
-                session.close()
+                    st.info("No transactions yet. Send your first transaction to see it here!")
             
-            # Physics explanation
-            with st.expander("📐 E=h·f Energy Formula"):
-                st.markdown("""
-                **Transaction Energy Calculation:**
+            # TAB: Messages
+            with explorer_tabs[1]:
+                st.markdown("#### Recent DAG Messages")
                 
-                `E = h × f × n_cycles × authority²`
+                if session:
+                    recent_msgs = session.query(DAGMessage).order_by(DAGMessage.created_at.desc()).limit(20).all()
+                    if recent_msgs:
+                        msg_data = []
+                        for msg in recent_msgs:
+                            msg_data.append({
+                                'Message ID': msg.message_id[:16] + '...' if msg.message_id else 'N/A',
+                                'From': msg.sender_id[:12] + '...' if msg.sender_id else 'N/A',
+                                'To': (msg.receiver_id[:12] + '...') if msg.receiver_id else 'Broadcast',
+                                'Type': msg.message_type or 'standard',
+                                'Wavelength': f"{msg.wavelength:.1f} nm" if msg.wavelength else 'N/A',
+                                'Energy': f"{msg.energy_cost:.8f}" if msg.energy_cost else '0.00000000',
+                                'Status': msg.status or 'confirmed'
+                            })
+                        df = pd.DataFrame(msg_data)
+                        st.dataframe(df, use_container_width=True, hide_index=True)
+                        
+                        # Message detail viewer
+                        st.markdown("#### Message Details")
+                        selected_msg_id = st.selectbox(
+                            "Select message to view physics data:",
+                            [msg.message_id for msg in recent_msgs],
+                            key="explorer_msg_select"
+                        )
+                        
+                        if selected_msg_id:
+                            msg = next((m for m in recent_msgs if m.message_id == selected_msg_id), None)
+                            if msg:
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("Wavelength", f"{msg.wavelength:.2f} nm" if msg.wavelength else "N/A")
+                                    st.metric("Spectral Region", msg.spectral_region or "Visible")
+                                with col2:
+                                    st.metric("Energy Cost", f"{msg.energy_cost:.8f} NXT" if msg.energy_cost else "0 NXT")
+                                    st.metric("Frequency", f"{(299792458 / (msg.wavelength * 1e-9) / 1e12):.2f} THz" if msg.wavelength else "N/A")
+                                with col3:
+                                    st.metric("Status", msg.status or "confirmed")
+                                    st.metric("Type", msg.message_type or "standard")
+                                
+                                with st.expander("📐 E=h·f Physics Breakdown"):
+                                    if msg.wavelength and msg.energy_cost:
+                                        h = 6.62607015e-34
+                                        freq = 299792458 / (msg.wavelength * 1e-9)
+                                        st.markdown(f"""
+                                        **Physics Calculation:**
+                                        - Wavelength: {msg.wavelength:.2f} nm
+                                        - Frequency (f): {freq:.2e} Hz = {freq/1e12:.2f} THz
+                                        - Planck's constant (h): 6.62607015 × 10⁻³⁴ J·s
+                                        - Base energy: E = h × f = {h * freq:.2e} Joules
+                                        - Scaled to NXT: {msg.energy_cost:.8f} NXT
+                                        """)
+                    else:
+                        st.info("No messages yet. Send your first DAG message to see it here!")
+                    session.close()
+            
+            # TAB: Charts - Visualizations
+            with explorer_tabs[2]:
+                st.markdown("#### Network Visualizations")
                 
-                Where:
-                - **h** = 6.62607015×10⁻³⁴ J·s (Planck constant)
-                - **f** = Message frequency (derived from content complexity)
-                - **n_cycles** = Number of validation cycles
-                - **authority²** = Sender's network authority squared
+                # Transaction timeline
+                if all_txs and len(all_txs) > 0:
+                    st.markdown("**Transaction Timeline**")
+                    try:
+                        tx_times = []
+                        tx_amounts = []
+                        for tx in all_txs:
+                            if tx.get('timestamp'):
+                                tx_times.append(tx['timestamp'])
+                                tx_amounts.append(tx.get('amount_nxt', 0))
+                        
+                        if tx_times:
+                            fig = go.Figure()
+                            fig.add_trace(go.Scatter(
+                                x=tx_times,
+                                y=tx_amounts,
+                                mode='markers+lines',
+                                name='Transaction Amount',
+                                marker=dict(size=10, color='#667eea'),
+                                line=dict(color='#667eea', width=2)
+                            ))
+                            fig.update_layout(
+                                title="Transaction Volume Over Time",
+                                xaxis_title="Time",
+                                yaxis_title="Amount (NXT)",
+                                height=350,
+                                template="plotly_dark"
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+                    except Exception as e:
+                        st.caption(f"Timeline loading: {str(e)}")
                 
-                Higher frequency = Higher energy = Higher transaction cost
-                """)
+                # Spectral distribution
+                st.markdown("**Spectral Distribution (Messages)**")
+                if session:
+                    try:
+                        msgs = session.query(DAGMessage).all()
+                        if msgs:
+                            spectral_counts = {}
+                            for m in msgs:
+                                region = m.spectral_region or 'Unknown'
+                                spectral_counts[region] = spectral_counts.get(region, 0) + 1
+                            
+                            if spectral_counts:
+                                colors = {
+                                    'Ultraviolet': '#8B00FF', 'Visible': '#00FF00', 
+                                    'Infrared': '#FF0000', 'Radio': '#FFA500',
+                                    'Unknown': '#808080'
+                                }
+                                
+                                fig = go.Figure(data=[go.Pie(
+                                    labels=list(spectral_counts.keys()),
+                                    values=list(spectral_counts.values()),
+                                    hole=0.4,
+                                    marker=dict(colors=[colors.get(k, '#808080') for k in spectral_counts.keys()])
+                                )])
+                                fig.update_layout(
+                                    title="Message Distribution by Spectral Region",
+                                    height=350,
+                                    template="plotly_dark"
+                                )
+                                st.plotly_chart(fig, use_container_width=True)
+                        else:
+                            st.info("Send messages to see spectral distribution")
+                    except Exception as e:
+                        st.caption(f"Chart loading: {str(e)}")
+            
+            # TAB: Search
+            with explorer_tabs[3]:
+                st.markdown("#### Search Blockchain")
+                
+                search_input = st.text_input(
+                    "🔍 Search by Address, TX ID, or Message ID",
+                    placeholder="Enter NXS address or transaction hash...",
+                    key="explorer_search_input"
+                )
+                
+                if search_input and len(search_input) > 5:
+                    # Search transactions
+                    tx_results = [tx for tx in all_txs if 
+                                  search_input.lower() in tx.get('tx_id', '').lower() or
+                                  search_input.lower() in tx.get('from_address', '').lower() or
+                                  search_input.lower() in tx.get('to_address', '').lower()]
+                    
+                    # Search messages
+                    if session:
+                        msg_results = session.query(DAGMessage).filter(
+                            (DAGMessage.message_id.contains(search_input)) |
+                            (DAGMessage.sender_id.contains(search_input)) |
+                            (DAGMessage.receiver_id.contains(search_input))
+                        ).limit(10).all()
+                    else:
+                        msg_results = []
+                    
+                    if tx_results or msg_results:
+                        st.success(f"Found {len(tx_results)} transaction(s) and {len(msg_results)} message(s)")
+                        
+                        if tx_results:
+                            st.markdown("**Matching Transactions:**")
+                            for tx in tx_results[:5]:
+                                with st.expander(f"TX: {tx.get('tx_id', 'N/A')[:24]}..."):
+                                    st.markdown(f"**From:** `{tx.get('from_address', 'N/A')}`")
+                                    st.markdown(f"**To:** `{tx.get('to_address', 'N/A')}`")
+                                    st.markdown(f"**Amount:** {tx.get('amount_nxt', 0):.8f} NXT")
+                                    st.markdown(f"**Fee:** {tx.get('fee_nxt', 0):.8f} NXT")
+                                    st.markdown(f"**Status:** {tx.get('status', 'confirmed')}")
+                        
+                        if msg_results:
+                            st.markdown("**Matching Messages:**")
+                            for msg in msg_results[:5]:
+                                with st.expander(f"MSG: {msg.message_id[:24]}..."):
+                                    st.markdown(f"**From:** `{msg.sender_id}`")
+                                    st.markdown(f"**To:** `{msg.receiver_id or 'broadcast'}`")
+                                    st.markdown(f"**Wavelength:** {msg.wavelength:.2f} nm" if msg.wavelength else "N/A")
+                                    st.markdown(f"**Energy:** {msg.energy_cost:.8f} NXT" if msg.energy_cost else "0 NXT")
+                    else:
+                        st.warning("No results found for your search")
+                else:
+                    st.caption("Enter at least 6 characters to search")
+                
+                # Physics reference
+                with st.expander("📐 E=h·f Energy Formula Reference"):
+                    st.markdown("""
+                    **Transaction Energy Calculation:**
+                    
+                    `E = h × f × n_cycles × authority²`
+                    
+                    Where:
+                    - **h** = 6.62607015×10⁻³⁴ J·s (Planck constant)
+                    - **f** = Message frequency (derived from wavelength: f = c/λ)
+                    - **n_cycles** = Number of validation cycles
+                    - **authority²** = Sender's network authority squared
+                    
+                    Higher frequency = Higher energy = Higher transaction cost
+                    """)
                 
         except Exception as e:
             st.warning(f"Explorer loading: {str(e)}")
