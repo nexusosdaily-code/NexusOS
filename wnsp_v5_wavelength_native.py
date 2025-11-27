@@ -1046,23 +1046,130 @@ class V4CompatibilityLayer:
     """
     Backwards compatibility with WNSP v4
     
-    Encapsulates v4 frames inside v5 wrapper with:
-    - Magic bytes for identification
+    Encapsulates v4 frames inside v5 wrapper with physics-accurate calculations:
+    - Magic bytes for identification (WNv4)
     - Version header for protocol detection
-    - Checksum for integrity verification
-    - Round-trip encoding/decoding support
+    - SHA-256 checksum for integrity verification
+    - Round-trip encoding/decoding with energy pricing E = h·f·n_cycles·authority²
+    
+    Physics Constants (CODATA 2018):
+    - Planck constant h = 6.62607015×10⁻³⁴ J·s
+    - Speed of light c = 299,792,458 m/s
+    - Visible light center frequency ~500 THz
+    
+    Payload format:
+    [MAGIC:4][VERSION:1][CHECKSUM:32][V4_DATA:N]
     """
     
     V4_MAGIC = b'WNv4'
     V4_VERSION = 4
     V5_VERSION = 5
     
+    PLANCK_H = 6.62607015e-34
+    SPEED_C = 299792458
+    VISIBLE_CENTER_FREQ = 5e14
+    BOLTZMANN_K = 1.380649e-23
+    
+    @classmethod
+    def _analyze_waveform_physics(cls, waveform_data: bytes) -> Dict[str, float]:
+        """
+        Analyze waveform using real physics:
+        - Derive dominant frequency from byte pattern using DFT-like analysis
+        - Calculate photon energy E = h·f
+        - Determine spectral band from wavelength λ = c/f
+        - Compute authority-weighted energy cost
+        
+        Returns physics metrics dictionary
+        """
+        if len(waveform_data) == 0:
+            waveform_data = b'\x00' * 8
+        
+        samples = [float(b) / 255.0 for b in waveform_data[:64]]
+        n_samples = len(samples)
+        
+        zero_crossings = 0
+        for i in range(1, n_samples):
+            if (samples[i-1] - 0.5) * (samples[i] - 0.5) < 0:
+                zero_crossings += 1
+        
+        sample_rate = 1e9
+        
+        if zero_crossings > 0:
+            period_samples = (2.0 * n_samples) / zero_crossings
+            dominant_frequency = sample_rate / max(period_samples, 1)
+        else:
+            spectral_sum = sum(samples[i] * math.sin(2 * math.pi * i / n_samples) for i in range(n_samples))
+            dominant_frequency = abs(spectral_sum) * 1e12 + cls.VISIBLE_CENTER_FREQ
+        
+        dominant_frequency = max(dominant_frequency, 1e12)
+        
+        wavelength = cls.SPEED_C / dominant_frequency
+        
+        photon_energy = cls.PLANCK_H * dominant_frequency
+        
+        amplitude = max(samples) - min(samples) if samples else 0.5
+        
+        n_cycles = max(1, zero_crossings // 2) if zero_crossings > 0 else len(waveform_data)
+        
+        phase_samples = waveform_data[4:6] if len(waveform_data) >= 6 else b'\x00\x00'
+        phase = (int.from_bytes(phase_samples, 'big') / 65535.0) * 2 * math.pi
+        
+        return {
+            'frequency_hz': dominant_frequency,
+            'wavelength_m': wavelength,
+            'photon_energy_j': photon_energy,
+            'amplitude': amplitude,
+            'n_cycles': n_cycles,
+            'phase_rad': phase,
+            'sample_rate_hz': sample_rate
+        }
+    
+    @classmethod
+    def _determine_spectral_band(cls, wavelength: float) -> SpectralBand:
+        """Determine spectral band from wavelength using physics thresholds"""
+        if wavelength >= 1e-9:
+            return SpectralBand.NANO
+        elif wavelength >= 1e-12:
+            return SpectralBand.PICO
+        elif wavelength >= 1e-15:
+            return SpectralBand.FEMTO
+        elif wavelength >= 1e-18:
+            return SpectralBand.ATTO
+        elif wavelength >= 1e-21:
+            return SpectralBand.ZEPTO
+        elif wavelength >= 1e-24:
+            return SpectralBand.YOCTO
+        else:
+            return SpectralBand.PLANCK
+    
+    @classmethod
+    def _calculate_energy_cost(cls, frequency: float, n_cycles: int, authority: int) -> float:
+        """
+        Calculate energy cost using E = h·f·n_cycles·authority²
+        
+        Args:
+            frequency: Signal frequency in Hz
+            n_cycles: Number of wave cycles
+            authority: Band authority level (1-7)
+        
+        Returns:
+            Energy cost in Joules
+        """
+        base_energy = cls.PLANCK_H * frequency * n_cycles
+        authority_factor = authority ** 2
+        return base_energy * authority_factor
+    
     @classmethod
     def encapsulate_v4(cls, v4_frame_data: bytes, 
                         source_address: str,
                         dest_address: str) -> WNSPv5Frame:
         """
-        Wrap v4 frame in v5 container with proper header
+        Wrap v4 frame in v5 container with physics-accurate header
+        
+        Uses real physics calculations:
+        - Waveform analysis for frequency extraction
+        - E = h·f for photon energy
+        - Authority-weighted energy cost E_total = h·f·n_cycles·authority²
         
         Payload format:
         [MAGIC:4][VERSION:1][CHECKSUM:32][V4_DATA:N]
@@ -1075,27 +1182,58 @@ class V4CompatibilityLayer:
             v4_frame_data
         )
         
-        phy_event = PhysicalEventDescriptor.from_waveform(
-            v4_frame_data[:64] if len(v4_frame_data) >= 64 else v4_frame_data.ljust(64, b'\x00'),
-            "V4_LEGACY_SENSOR"
+        waveform_sample = v4_frame_data[:64] if len(v4_frame_data) >= 64 else v4_frame_data.ljust(64, b'\x00')
+        physics = cls._analyze_waveform_physics(waveform_sample)
+        
+        spectral_band = cls._determine_spectral_band(physics['wavelength_m'])
+        
+        energy_cost_joules = cls._calculate_energy_cost(
+            physics['frequency_hz'],
+            int(physics['n_cycles']),
+            spectral_band.authority_level
+        )
+        
+        energy_units = int(energy_cost_joules * 1e18)
+        energy_units = min(max(energy_units, 1), 65535)
+        
+        event_id = hashlib.sha3_256(waveform_sample + secrets.token_bytes(8)).digest()[:20]
+        waveform_hash = hashlib.sha3_256(v4_frame_data).digest()
+        
+        phy_event = PhysicalEventDescriptor(
+            event_id=event_id,
+            timestamp_planck=int(time.time() * 1e9),
+            waveform_hash=waveform_hash,
+            amplitude=physics['amplitude'],
+            frequency=physics['frequency_hz'],
+            phase=physics['phase_rad'],
+            polarization="horizontal",
+            pulse_count=int(physics['n_cycles']),
+            sensor_id="V4_LEGACY_SENSOR"
         )
         
         band_header = BandHeader(
-            source_band_mask=0x01,
+            source_band_mask=1 << (spectral_band.authority_level - 1),
             dest_band_mask=0x01,
-            primary_band=SpectralBand.NANO,
+            primary_band=spectral_band,
             priority=Priority.NORMAL,
-            energy_cost_units=100,
+            energy_cost_units=energy_units,
             ttl=8,
             hop_count=0,
             flags=FrameFlags.V4_ENCAPSULATED
         )
         
+        phys_signature_data = (
+            waveform_hash + 
+            struct.pack('!d', physics['frequency_hz']) +
+            struct.pack('!d', physics['photon_energy_j']) +
+            struct.pack('!I', physics['n_cycles'])
+        )
+        
         attestation = PhysicalAttestation(
             sensor_id="V4_COMPAT",
             sensor_public_key=hashlib.sha256(b"V4_COMPAT_KEY").digest() + b'\x00' * 32,
-            waveform_hash=hashlib.sha3_256(v4_frame_data).digest(),
-            physical_signature=hashlib.sha256(v4_frame_data + b"PHYS").digest() + b'\x00' * 32,
+            waveform_hash=waveform_hash,
+            physical_signature=hashlib.sha256(phys_signature_data).digest() + b'\x00' * 32,
             crypto_signature=hashlib.sha256(v4_frame_data + b"CRYPTO").digest() + b'\x00' * 32
         )
         
@@ -1160,16 +1298,126 @@ class V4CompatibilityLayer:
         return frame.payload[:4] == cls.V4_MAGIC
     
     @classmethod
+    def get_frame_physics(cls, frame: WNSPv5Frame) -> Dict[str, Any]:
+        """
+        Get physics metrics from a v5 frame containing v4 data
+        
+        Returns dictionary with:
+        - frequency_hz: Extracted signal frequency
+        - wavelength_m: Corresponding wavelength (λ = c/f)
+        - photon_energy_j: Single photon energy (E = h·f)
+        - total_energy_j: Total energy (E = h·f·n_cycles·authority²)
+        - spectral_band: Detected spectral band
+        - authority_level: Band authority (1-7)
+        - n_cycles: Number of wave cycles
+        - nxt_cost: Cost in NXT tokens
+        """
+        return {
+            'frequency_hz': frame.phy_header.frequency,
+            'wavelength_m': cls.SPEED_C / frame.phy_header.frequency,
+            'photon_energy_j': cls.PLANCK_H * frame.phy_header.frequency,
+            'total_energy_j': frame.calculate_energy_cost(),
+            'spectral_band': frame.band_header.primary_band.band_name,
+            'authority_level': frame.band_header.primary_band.authority_level,
+            'n_cycles': frame.phy_header.pulse_count,
+            'energy_units': frame.band_header.energy_cost_units,
+            'nxt_cost': frame.calculate_nxt_cost()
+        }
+    
+    @classmethod
+    def verify_physics_attestation(cls, frame: WNSPv5Frame) -> Tuple[bool, str]:
+        """
+        Verify physical attestation using real physics checks
+        
+        Validates:
+        1. Frequency is within physically possible range
+        2. Energy calculations are consistent with E = h·f·n_cycles·authority²
+        3. Waveform hash matches attestation
+        
+        Returns (success, message) tuple
+        """
+        frequency = frame.phy_header.frequency
+        if frequency < 1e9 or frequency > 1e21:
+            return False, f"Frequency {frequency:.2e} Hz outside valid range (1 GHz - 1 ZHz)"
+        
+        expected_energy = cls._calculate_energy_cost(
+            frequency,
+            frame.phy_header.pulse_count,
+            frame.band_header.primary_band.authority_level
+        )
+        
+        frame_energy = frame.calculate_energy_cost()
+        tolerance = 0.01
+        if abs(expected_energy - frame_energy) / max(expected_energy, 1e-30) > tolerance:
+            return False, f"Energy mismatch: expected {expected_energy:.2e} J, got {frame_energy:.2e} J"
+        
+        if not frame.attestation.verify(frame.phy_header.waveform_hash):
+            return False, "Waveform hash mismatch in attestation"
+        
+        return True, "Physics attestation verified"
+    
+    @classmethod
     def round_trip_test(cls, v4_data: bytes, source: str, dest: str) -> bool:
         """
         Test round-trip encapsulation/extraction
         
-        Returns True if data survives round-trip intact
+        Verifies:
+        1. Data survives round-trip intact
+        2. Physics calculations are consistent
+        3. All checksums validate
+        
+        Returns True if all checks pass
         """
         v5_frame = cls.encapsulate_v4(v4_data, source, dest)
         extracted = cls.extract_v4(v5_frame)
         
-        return extracted == v4_data
+        if extracted != v4_data:
+            return False
+        
+        physics_valid, _ = cls.verify_physics_attestation(v5_frame)
+        if not physics_valid:
+            return False
+        
+        if not v5_frame.verify_fec():
+            return False
+        
+        return True
+    
+    @classmethod
+    def get_energy_formula_breakdown(cls, frame: WNSPv5Frame) -> str:
+        """
+        Return human-readable breakdown of E = h·f·n_cycles·authority²
+        """
+        h = cls.PLANCK_H
+        f = frame.phy_header.frequency
+        n = frame.phy_header.pulse_count
+        a = frame.band_header.primary_band.authority_level
+        
+        base_e = h * f
+        cycles_e = base_e * n
+        total_e = cycles_e * (a ** 2)
+        
+        return f"""
+Energy Formula: E = h × f × n_cycles × authority²
+
+Constants:
+  h (Planck) = {h:.6e} J·s
+  c (Light)  = {cls.SPEED_C:,} m/s
+
+Measured Values:
+  f (frequency)   = {f:.6e} Hz
+  λ (wavelength)  = {cls.SPEED_C/f:.6e} m
+  n (cycles)      = {n:,}
+  authority       = {a} ({frame.band_header.primary_band.band_name.upper()})
+
+Calculation Steps:
+  Step 1: E_photon = h × f = {h:.2e} × {f:.2e} = {base_e:.6e} J
+  Step 2: E_cycles = E_photon × n = {base_e:.2e} × {n} = {cycles_e:.6e} J
+  Step 3: E_total  = E_cycles × authority² = {cycles_e:.2e} × {a}² = {total_e:.6e} J
+
+Final Energy Cost: {total_e:.6e} Joules
+NXT Cost: {frame.calculate_nxt_cost():.10f} NXT
+"""
 
 
 class WNSPv5Node:
