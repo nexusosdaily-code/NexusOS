@@ -3102,10 +3102,43 @@ def render_p2p_hub_tab():
                 st.info("The v4 quantum consensus module is being initialized...")
 
 
+def render_supply_chain_module(title: str, description: str, funded: float, goal: float, apy: str, details: list):
+    """Helper function to render supply chain pool modules consistently"""
+    st.markdown(f"**{title}**")
+    st.info(description)
+    
+    progress_pct = (funded / goal) * 100
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Funded", f"{funded:,.0f} NXT")
+    with col2:
+        st.metric("Goal", f"{goal:,.0f} NXT")
+    with col3:
+        st.metric("Progress", f"{progress_pct:.1f}%")
+    with col4:
+        st.metric("APY", apy)
+    
+    st.progress(min(progress_pct / 100, 1.0))
+    
+    st.divider()
+    st.markdown("**Infrastructure Components:**")
+    for detail in details:
+        st.markdown(f"- ✅ {detail}")
+    
+    st.divider()
+    st.markdown("**Contribute to Pool:**")
+    amount = st.number_input("Amount (NXT)", min_value=10.0, value=100.0, key=f"pool_{title.replace(' ', '_')}")
+    
+    if st.button("💰 Fund Pool", type="primary", key=f"fund_{title.replace(' ', '_')}"):
+        st.success(f"✅ Contributed {amount} NXT to {title}")
+        st.balloons()
+
+
 def render_requested_module():
     """
     Render ACTUAL module content inline with real physics data.
-    Full transparency and accessibility - no navigation hints, just real modules.
+    Comprehensive dispatch to all NexusOS ecosystem modules using exact matching.
     """
     module_name = st.session_state.get('nav_request', '')
     
@@ -3123,11 +3156,554 @@ def render_requested_module():
     # PHYSICS CONSTANTS for all modules
     PLANCK_CONSTANT = 6.62607015e-34
     
-    # RENDER ACTUAL MODULE CONTENT based on request
-    module_lower = module_name.lower()
+    # Normalize module name for matching: remove emoji and extra spaces, lowercase
+    import re
+    module_clean = re.sub(r'[^\w\s]', '', module_name).strip().lower()
+    module_clean = ' '.join(module_clean.split())  # normalize whitespace
+    
+    # EXACT DISPATCH DICTIONARY - maps normalized module names to handler functions
+    def get_module_handler():
+        """Return the handler for exact module matches"""
+        
+        # Exact match dictionary (normalized names without emoji)
+        exact_handlers = {
+            # Developer Tools
+            "wavelang ai teacher": "wavelang_ai_teacher",
+            "quantum wavelang analyzer": "quantum_wavelang_analyzer",
+            "wavelength code generator": "wavelength_code_generator",
+            "napp deployment center": "napp_deployment_center",
+            "quantum energy dashboard": "quantum_energy_dashboard",
+            # Core Blockchain
+            "mobile dag messaging": "dag_messaging",
+            "blockchain explorer": "blockchain_explorer",
+            "transaction search explorer": "transaction_search_explorer",
+            "nexus consensus dashboard": "nexus_consensus_dashboard",
+            "ghostdag visualization": "ghostdag",
+            "proof of spectrum": "proof_of_spectrum",
+            # Economics & Trading
+            "dex decentralized exchange": "dex",
+            "validator economics": "validator",
+            "wavelength economics": "wavelength_economics",
+            "economic loop dashboard": "economic_loop",
+            "pool ecosystem": "pool_ecosystem",
+            "longterm supply dashboard": "longterm_supply",
+            "service pools": "service_pools",
+            "lottery system": "lottery",
+            "bonus rewards": "bonus_rewards",
+            # Governance & AI
+            "civic governance": "governance",
+            "ai management dashboard": "ai_management",
+            "talk to nexus ai": "nexus_ai_chat",
+            "ai arbitration dashboard": "arbitration",
+            "security dashboard": "security",
+            # Network & Mesh
+            "offline mesh network": "offline_mesh",
+            "mobile connectivity": "mobile_connectivity",
+            "wnsp v20 dashboard": "wnsp_v2",
+            "wnsp v30 architecture": "wnsp_v3",
+            "wnsp v40 quantum": "wnsp_v4",
+            "unified mesh stack": "unified_mesh",
+            # Economics Theory
+            "avogadro economics": "avogadro",
+            "orbital transition engine": "orbital_transition",
+            "monte carlo analysis": "monte_carlo",
+            "regenerative economy": "regenerative",
+            # Supply Chains
+            "electricity pool": "electricity",
+            "water desalination": "water",
+            "food supply chain": "food",
+            "agriculture pool": "agriculture",
+            "horticulture": "horticulture",
+            "aquaculture": "aquaculture",
+            "manufacturing": "manufacturing",
+            "carbon credits": "carbon",
+            # Legacy modules
+            "mobile dag messaging": "dag_messaging",
+            "blockchain explorer": "blockchain_explorer",
+            "wavelength economics": "wavelength_economics",
+            "wavelang programming": "wavelang_basic",
+            "web3 wallet": "web3_wallet",
+            "mesh network": "mesh_basic",
+        }
+        
+        # Try exact match first
+        if module_clean in exact_handlers:
+            return exact_handlers[module_clean]
+        
+        # Fallback: find best partial match
+        for key, handler in exact_handlers.items():
+            if key in module_clean or module_clean in key:
+                return handler
+        
+        return None
+    
+    handler_key = get_module_handler()
+    
+    # ============ DEVELOPER TOOLS ============
+    
+    # WAVELANG AI TEACHER MODULE
+    if handler_key == "wavelang_ai_teacher":
+        try:
+            from wavelang_ai_teacher import render_wavelang_ai_teacher
+            render_wavelang_ai_teacher()
+            return
+        except Exception as e:
+            st.error(f"WaveLang AI Teacher loading: {str(e)}")
+            st.info("The WaveLang AI teaching system is being initialized...")
+    
+    # QUANTUM WAVELANG ANALYZER
+    elif handler_key == "quantum_wavelang_analyzer":
+        try:
+            from quantum_wavelang_analyzer import render_quantum_wavelang_analyzer
+            render_quantum_wavelang_analyzer()
+            return
+        except Exception as e:
+            st.error(f"Wavelang Analyzer loading: {str(e)}")
+    
+    # WAVELENGTH CODE GENERATOR
+    elif handler_key == "wavelength_code_generator":
+        st.markdown("**💻 Wavelength Code Generator**")
+        st.info("Generate physics-based smart contracts using wavelength properties")
+        
+        st.markdown("**Select Contract Type:**")
+        contract_type = st.selectbox("Type", ["Token Transfer", "Staking Contract", "Governance Vote", "DEX Swap"], key="codegen_type")
+        
+        st.markdown("**Configure Parameters:**")
+        col1, col2 = st.columns(2)
+        with col1:
+            spectral_region = st.selectbox("Spectral Region", ["VISIBLE", "ULTRAVIOLET", "INFRARED", "X_RAY", "GAMMA"], key="codegen_spectrum")
+            wavelength = st.number_input("Wavelength (nm)", min_value=100, max_value=1000, value=550, key="codegen_wavelength")
+        with col2:
+            energy_tier = st.selectbox("Energy Tier", ["Standard", "High", "Maximum"], key="codegen_energy")
+            cycles = st.number_input("Validation Cycles", min_value=1, max_value=10, value=3, key="codegen_cycles")
+        
+        if st.button("🔧 Generate Code", type="primary", key="codegen_btn"):
+            freq = 299792458 / (wavelength * 1e-9)
+            energy = PLANCK_CONSTANT * freq * cycles
+            st.code(f'''# Generated WaveLang Contract
+@spectrum(region="{spectral_region}", wavelength={wavelength})
+@energy_tier("{energy_tier}")
+contract {contract_type.replace(" ", "")}:
+    
+    wavelength = {wavelength}  # nm
+    frequency = {freq:.2e}  # Hz
+    base_energy = {energy:.2e}  # Joules
+    validation_cycles = {cycles}
+    
+    def execute(self, sender, params):
+        energy_cost = self.base_energy * authority_squared(sender)
+        if sender.balance >= energy_cost:
+            # Execute {contract_type.lower()}
+            return SUCCESS, energy_cost
+        return INSUFFICIENT_ENERGY, 0
+''', language="python")
+            st.success(f"✅ Contract generated with E = {energy:.2e} J base cost")
+    
+    # NAPP DEPLOYMENT CENTER
+    elif handler_key == "napp_deployment_center":
+        try:
+            from napp_deployment_center import render_napp_deployment_center
+            render_napp_deployment_center()
+            return
+        except Exception as e:
+            st.error(f"Napp Deployment loading: {str(e)}")
+    
+    # QUANTUM ENERGY DASHBOARD
+    elif handler_key == "quantum_energy_dashboard":
+        try:
+            from quantum_energy_dashboard import create_quantum_energy_page
+            create_quantum_energy_page()
+            return
+        except Exception as e:
+            st.error(f"Quantum Energy loading: {str(e)}")
+    
+    # ============ CORE BLOCKCHAIN ============
+    
+    # TRANSACTION SEARCH EXPLORER
+    elif handler_key == "transaction_search_explorer":
+        try:
+            from transaction_search_explorer import render_transaction_search_explorer
+            render_transaction_search_explorer()
+            return
+        except Exception as e:
+            st.error(f"Transaction Search loading: {str(e)}")
+    
+    # NEXUS CONSENSUS DASHBOARD
+    elif handler_key == "nexus_consensus_dashboard":
+        try:
+            from nexus_consensus_dashboard import render_nexus_consensus_dashboard
+            render_nexus_consensus_dashboard()
+            return
+        except Exception as e:
+            st.error(f"Consensus Dashboard loading: {str(e)}")
+    
+    # GHOSTDAG VISUALIZATION
+    elif handler_key == "ghostdag":
+        try:
+            from ghostdag_page import render_ghostdag_system
+            render_ghostdag_system()
+            return
+        except Exception as e:
+            st.error(f"GhostDAG loading: {str(e)}")
+    
+    # PROOF OF SPECTRUM
+    elif handler_key == "proof_of_spectrum":
+        try:
+            from proof_of_spectrum_page import render_proof_of_spectrum
+            render_proof_of_spectrum()
+            return
+        except Exception as e:
+            st.error(f"Proof of Spectrum loading: {str(e)}")
+    
+    # ============ ECONOMICS & TRADING ============
+    
+    # ECONOMIC LOOP DASHBOARD
+    elif handler_key == "economic_loop":
+        try:
+            from economic_loop_dashboard import render_economic_loop_dashboard
+            render_economic_loop_dashboard()
+            return
+        except Exception as e:
+            st.error(f"Economic Loop loading: {str(e)}")
+    
+    # POOL ECOSYSTEM
+    elif handler_key == "pool_ecosystem":
+        try:
+            from pool_ecosystem import get_pool_ecosystem
+            pool = get_pool_ecosystem()
+            st.markdown("**💎 Pool Ecosystem Overview**")
+            st.info("Unified reserve pool management for BHLS sustainability")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Reserve Pool", f"{pool.reserve_pool.get_balance():,.0f} NXT")
+            with col2:
+                st.metric("F_floor (Daily)", f"{pool.bhls_floor_daily:,.0f} NXT")
+            with col3:
+                st.metric("Active Citizens", f"{pool.active_citizens:,}")
+            
+            st.divider()
+            st.markdown("**Service Pools:**")
+            for name, service_pool in pool.service_pools.items():
+                progress = service_pool.funded / service_pool.goal if service_pool.goal > 0 else 0
+                st.markdown(f"**{name}**: {service_pool.funded:,.0f} / {service_pool.goal:,.0f} NXT ({progress*100:.1f}%)")
+                st.progress(min(progress, 1.0))
+            return
+        except Exception as e:
+            st.error(f"Pool Ecosystem loading: {str(e)}")
+    
+    # LONGTERM SUPPLY DASHBOARD
+    elif handler_key == "longterm_supply":
+        try:
+            from longterm_supply_dashboard import render_longterm_supply_dashboard
+            render_longterm_supply_dashboard()
+            return
+        except Exception as e:
+            st.error(f"Supply Dashboard loading: {str(e)}")
+    
+    # LOTTERY SYSTEM
+    elif handler_key == "lottery":
+        st.markdown("**🎰 Quantum Randomness Lottery**")
+        st.info("Fair lottery powered by quantum vacuum randomness")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Current Jackpot", "125,000 NXT")
+        with col2:
+            st.metric("Ticket Price", "10 NXT")
+        with col3:
+            st.metric("Next Draw", "2h 15m")
+        
+        st.divider()
+        st.markdown("**Buy Tickets:**")
+        tickets = st.number_input("Number of Tickets", min_value=1, max_value=100, value=1, key="lottery_tickets")
+        st.caption(f"Total: {tickets * 10} NXT")
+        
+        if st.button("🎫 Purchase Tickets", type="primary", key="lottery_buy"):
+            st.success(f"✅ Purchased {tickets} lottery tickets!")
+            st.balloons()
+    
+    # BONUS REWARDS
+    elif handler_key == "bonus_rewards":
+        st.markdown("**🏆 Bonus Rewards Distribution**")
+        st.info("Performance-based rewards from the bonus pool")
+        
+        rewards = [
+            {"type": "Validator Performance", "amount": 250, "status": "Available"},
+            {"type": "Governance Participation", "amount": 100, "status": "Claimed"},
+            {"type": "Referral Bonus", "amount": 50, "status": "Available"},
+            {"type": "Early Adopter", "amount": 500, "status": "Locked"},
+        ]
+        
+        import pandas as pd
+        df = pd.DataFrame(rewards)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+        
+        available = sum(r['amount'] for r in rewards if r['status'] == 'Available')
+        st.metric("Available to Claim", f"{available} NXT")
+        
+        if st.button("💰 Claim All Available", type="primary", key="claim_rewards"):
+            st.success(f"✅ Claimed {available} NXT in rewards!")
+    
+    # ============ GOVERNANCE & AI ============
+    
+    # AI MANAGEMENT DASHBOARD
+    elif handler_key == "ai_management":
+        try:
+            from ai_management_dashboard import render_ai_management_dashboard
+            render_ai_management_dashboard()
+            return
+        except Exception as e:
+            st.error(f"AI Management loading: {str(e)}")
+    
+    # NEXUS AI CHAT
+    elif handler_key == "nexus_ai_chat":
+        try:
+            from nexus_ai_chat import render_nexus_ai_chat
+            render_nexus_ai_chat()
+            return
+        except Exception as e:
+            st.error(f"Nexus AI Chat loading: {str(e)}")
+    
+    # AI ARBITRATION DASHBOARD
+    elif handler_key == "arbitration":
+        try:
+            from ai_arbitration_dashboard import render_arbitration_dashboard
+            render_arbitration_dashboard()
+            return
+        except Exception as e:
+            st.error(f"AI Arbitration loading: {str(e)}")
+    
+    # SECURITY DASHBOARD
+    elif handler_key == "security":
+        try:
+            from security_dashboard import security_dashboard
+            security_dashboard()
+            return
+        except Exception as e:
+            st.error(f"Security Dashboard loading: {str(e)}")
+    
+    # ============ NETWORK & MESH ============
+    
+    # OFFLINE MESH NETWORK
+    elif handler_key == "offline_mesh":
+        try:
+            from offline_mesh_dashboard import render_offline_mesh_dashboard
+            render_offline_mesh_dashboard()
+            return
+        except Exception as e:
+            st.error(f"Mesh Network loading: {str(e)}")
+    
+    # MOBILE CONNECTIVITY
+    elif handler_key == "mobile_connectivity":
+        try:
+            from mobile_connectivity_dashboard import show_mobile_connectivity_dashboard
+            show_mobile_connectivity_dashboard()
+            return
+        except Exception as e:
+            st.error(f"Mobile Connectivity loading: {str(e)}")
+    
+    # WNSP V2.0 DASHBOARD
+    elif handler_key == "wnsp_v2":
+        st.markdown("**🛜 WNSP v2.0 - Optical Mesh Protocol**")
+        st.info("Second-generation Wavelength Network Signaling Protocol")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Active Nodes", "1,247")
+        with col2:
+            st.metric("Mesh Hops", "3.2 avg")
+        with col3:
+            st.metric("Throughput", "45 Mbps")
+        
+        st.markdown("**v2.0 Features:**")
+        st.markdown("""
+        - 🌐 Optical mesh networking with DAG messaging
+        - 🔬 Scientific encoding for data transmission
+        - ⚡ Enhanced E=hf energy calculations
+        - 📡 Multi-band spectral routing
+        """)
+    
+    # WNSP V3.0 ARCHITECTURE
+    elif handler_key == "wnsp_v3":
+        st.markdown("**🔬 WNSP v3.0 - Hardware Abstraction Layer**")
+        st.info("Third-generation protocol with adaptive encoding")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("HAL Version", "3.2.1")
+        with col2:
+            st.metric("Encoding Modes", "7")
+        with col3:
+            st.metric("Fault Tolerance", "33%")
+        
+        st.markdown("**v3.0 Improvements:**")
+        st.markdown("""
+        - 🔧 Hardware abstraction for multiple device types
+        - 📊 Adaptive encoding based on network conditions
+        - 🛡️ Proof of Spectrum consensus
+        - ⚛️ Spectral diversity requirements
+        """)
+    
+    # WNSP V4.0 QUANTUM
+    elif handler_key == "wnsp_v4":
+        render_wnsp_v4_quantum()
+        return
+    
+    # UNIFIED MESH STACK
+    elif handler_key == "unified_mesh":
+        st.markdown("**🌍 Unified Mesh Stack - 4-Layer Architecture**")
+        st.info("Decentralized knowledge infrastructure")
+        
+        layers = [
+            {"layer": "L1 - Physical", "desc": "Device mesh, BLE/WiFi-Direct", "status": "🟢 Active"},
+            {"layer": "L2 - Network", "desc": "WNSP protocol routing", "status": "🟢 Active"},
+            {"layer": "L3 - Consensus", "desc": "PoSPECTRUM + Quantum", "status": "🟢 Active"},
+            {"layer": "L4 - Application", "desc": "DAG messaging, DEX, governance", "status": "🟢 Active"},
+        ]
+        
+        import pandas as pd
+        df = pd.DataFrame(layers)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    
+    # ============ ECONOMICS THEORY ============
+    
+    # AVOGADRO ECONOMICS
+    elif handler_key == "avogadro":
+        try:
+            from avogadro_economics_dashboard import render_avogadro_economics_dashboard
+            render_avogadro_economics_dashboard()
+            return
+        except Exception as e:
+            st.error(f"Avogadro Economics loading: {str(e)}")
+    
+    # ORBITAL TRANSITION ENGINE
+    elif handler_key == "orbital_transition":
+        st.markdown("**🔄 Orbital Transition Engine**")
+        st.info("Quantum orbital burns replacing traditional token burns")
+        
+        st.markdown("**Physics Basis:**")
+        st.latex(r"E_{burn} = h \times f \times n_{cycles} \times authority^2")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Tokens in Orbit", "2.5M NXT")
+            st.metric("Current Orbital Level", "n=3")
+        with col2:
+            st.metric("Total Burned", "125,000 NXT")
+            st.metric("Energy Released", "8.2e-19 J")
+        
+        st.divider()
+        st.markdown("**Simulate Orbital Transition:**")
+        from_level = st.selectbox("From Orbital", [1, 2, 3, 4, 5], index=2, key="orbital_from")
+        to_level = st.selectbox("To Orbital", [1, 2, 3, 4, 5], index=1, key="orbital_to")
+        amount = st.number_input("Amount (NXT)", min_value=100.0, value=1000.0, key="orbital_amt")
+        
+        if st.button("⚡ Execute Transition", type="primary", key="orbital_exec"):
+            energy = PLANCK_CONSTANT * 5e14 * abs(from_level - to_level)
+            st.success(f"✅ Transitioned {amount} NXT from n={from_level} to n={to_level}")
+            st.info(f"Energy released: {energy:.2e} J")
+    
+    # MONTE CARLO ANALYSIS
+    elif handler_key == "monte_carlo":
+        st.markdown("**📈 Monte Carlo Economic Simulation**")
+        st.info("Statistical analysis and risk modeling")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            simulations = st.number_input("Simulations", min_value=100, max_value=10000, value=1000, key="mc_sims")
+            time_horizon = st.selectbox("Time Horizon", ["1 month", "3 months", "1 year", "5 years"], key="mc_horizon")
+        with col2:
+            volatility = st.slider("Volatility (%)", min_value=5, max_value=50, value=20, key="mc_vol")
+            initial_supply = st.number_input("Initial Supply (M)", min_value=1.0, max_value=100.0, value=21.0, key="mc_supply")
+        
+        if st.button("🎲 Run Simulation", type="primary", key="mc_run"):
+            import numpy as np
+            np.random.seed(42)
+            results = np.random.normal(initial_supply, volatility/100 * initial_supply, simulations)
+            
+            st.metric("Mean Outcome", f"{np.mean(results):.2f}M NXT")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("5th Percentile", f"{np.percentile(results, 5):.2f}M")
+            with col2:
+                st.metric("95th Percentile", f"{np.percentile(results, 95):.2f}M")
+    
+    # REGENERATIVE ECONOMY
+    elif handler_key == "regenerative":
+        st.markdown("**🌱 Regenerative Economy Model**")
+        st.info("Self-sustaining economic cycles")
+        
+        st.markdown("""
+        **Core Principles:**
+        1. **Circular Flow**: All transaction fees return to ecosystem services
+        2. **BHLS Guarantee**: 1,150 NXT/month floor for all citizens
+        3. **Supply Chain Funding**: Real-world infrastructure investment
+        4. **Carbon Neutrality**: Automatic offset through carbon credits
+        """)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Ecosystem Health", "94%")
+            st.metric("Regeneration Rate", "2.3%/month")
+        with col2:
+            st.metric("Active Citizens", "12,450")
+            st.metric("BHLS Distributed", "14.3M NXT")
+    
+    # ============ SUPPLY CHAINS ============
+    
+    # ELECTRICITY POOL
+    elif handler_key == "electricity":
+        render_supply_chain_module("⚡ Electricity Pool", "Sustainable power generation", 
+                                    funded=45000, goal=100000, apy="12.5%",
+                                    details=["Solar farms", "Wind turbines", "Grid distribution", "Smart meters"])
+    
+    # WATER DESALINATION
+    elif handler_key == "water":
+        render_supply_chain_module("💧 Water Desalination", "Clean water infrastructure",
+                                    funded=32000, goal=80000, apy="10.2%",
+                                    details=["Desalination plants", "Purification systems", "Distribution pipes", "Quality testing"])
+    
+    # FOOD SUPPLY CHAIN
+    elif handler_key == "food":
+        render_supply_chain_module("🍽️ Food Supply Chain", "Food production and distribution",
+                                    funded=28000, goal=60000, apy="8.8%",
+                                    details=["Processing facilities", "Cold storage", "Distribution centers", "Quality control"])
+    
+    # AGRICULTURE POOL
+    elif handler_key == "agriculture":
+        render_supply_chain_module("🌾 Agriculture Pool", "Sustainable farming",
+                                    funded=55000, goal=150000, apy="11.3%",
+                                    details=["Crop production", "Soil management", "Irrigation", "Harvest equipment"])
+    
+    # HORTICULTURE
+    elif handler_key == "horticulture":
+        render_supply_chain_module("🌿 Horticulture", "Fruits and vegetables",
+                                    funded=22000, goal=40000, apy="9.5%",
+                                    details=["Greenhouses", "Orchards", "Vertical farms", "Organic certification"])
+    
+    # AQUACULTURE
+    elif handler_key == "aquaculture":
+        render_supply_chain_module("🐟 Aquaculture", "Fish farming and marine resources",
+                                    funded=18000, goal=50000, apy="10.8%",
+                                    details=["Fish farms", "Hatcheries", "Feed production", "Water quality"])
+    
+    # MANUFACTURING
+    elif handler_key == "manufacturing":
+        render_supply_chain_module("🏭 Manufacturing", "Industrial production",
+                                    funded=88000, goal=200000, apy="14.2%",
+                                    details=["Production lines", "Quality assurance", "Logistics", "Raw materials"])
+    
+    # CARBON CREDITS
+    elif handler_key == "carbon":
+        render_supply_chain_module("🌍 Carbon Credits", "Environmental offsets",
+                                    funded=15000, goal=50000, apy="7.5%",
+                                    details=["Reforestation", "Carbon capture", "Offset verification", "Sustainability tracking"])
+    
+    # ============ LEGACY HANDLERS ============
     
     # DAG MESSAGING MODULE
-    if 'dag' in module_lower or 'messaging' in module_lower:
+    elif handler_key == "dag_messaging":
         st.info("💡 E=h·f physics pricing: Higher frequency = more energy = higher cost")
         
         try:
@@ -3176,7 +3752,7 @@ def render_requested_module():
             st.error(f"Module loading: {str(e)}")
     
     # DEX MODULE
-    elif 'dex' in module_lower or 'exchange' in module_lower or 'trading' in module_lower:
+    elif handler_key == "dex":
         try:
             from dex_page import initialize_dex
             dex = initialize_dex()
@@ -3219,7 +3795,7 @@ def render_requested_module():
             st.error(f"DEX loading: {str(e)}")
     
     # GOVERNANCE MODULE
-    elif 'governance' in module_lower or 'voting' in module_lower:
+    elif handler_key == "governance":
         st.markdown("**🗳️ Active Proposals:**")
         
         try:
@@ -3260,8 +3836,8 @@ def render_requested_module():
                 else:
                     st.warning("Fill all fields")
     
-    # WAVELANG MODULE  
-    elif 'wavelang' in module_lower or 'programming' in module_lower:
+    # WAVELANG MODULE (basic fallback)
+    elif handler_key == "wavelang_basic":
         st.markdown("**📝 WaveLang - Physics-Based Smart Contracts:**")
         
         st.code("""
@@ -3293,8 +3869,8 @@ contract EnergyTransfer:
             else:
                 st.warning("Enter code to compile")
     
-    # SERVICE POOLS MODULE
-    elif 'service' in module_lower or 'pool' in module_lower or 'supply' in module_lower:
+    # SERVICE POOLS MODULE (fallback)
+    elif handler_key == "service_pools":
         st.markdown("**🏗️ Real-World Infrastructure Funding:**")
         
         pools = [
@@ -3321,8 +3897,8 @@ contract EnergyTransfer:
             st.success(f"✅ Contributed {amount} NXT to {selected_pool}")
             st.balloons()
     
-    # VALIDATOR / STAKING MODULE
-    elif 'validator' in module_lower or 'staking' in module_lower:
+    # VALIDATOR / STAKING MODULE (fallback)
+    elif handler_key == "validator":
         try:
             from validator_economics_page import initialize_staking_economy
             economy = initialize_staking_economy()
@@ -3354,8 +3930,8 @@ contract EnergyTransfer:
         except Exception as e:
             st.error(f"Validator module: {str(e)}")
     
-    # MESH NETWORK MODULE
-    elif 'mesh' in module_lower or 'network' in module_lower:
+    # MESH NETWORK MODULE (basic fallback)
+    elif handler_key == "mesh_basic":
         st.markdown("**🌐 Mesh Network Status:**")
         
         col1, col2, col3, col4 = st.columns(4)

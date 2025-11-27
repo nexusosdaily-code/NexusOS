@@ -1,0 +1,48 @@
+
+🔓 Wallet Active Level 2 • 185 pts
+Address: NXS5372697543A0FEF822E45...
+Balance: 9,850.46777959 NXT (985,046,777,959 units)
+Badges: ✨⚡💎
+
+
+
+
+
+
+
+
+
+
+
+
+streamlit.errors.StreamlitDuplicateElementKey: There are multiple elements with the same key='wavelang_input'. To fix this, please make sure that the key argument is unique for each element you create.
+
+Traceback:
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 129, in exec_func_with_error_handling
+    result = func()
+             ^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 669, in code_to_exec
+    exec(code, module.__dict__)  # noqa: S102
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/mobile_blockchain_hub.py", line 4521, in <module>
+    render_mobile_blockchain_hub()
+File "/home/runner/workspace/mobile_blockchain_hub.py", line 964, in render_mobile_blockchain_hub
+    render_explore_ecosystem_tab()
+File "/home/runner/workspace/mobile_blockchain_hub.py", line 3538, in render_explore_ecosystem_tab
+    render_requested_module()
+File "/home/runner/workspace/mobile_blockchain_hub.py", line 3287, in render_requested_module
+    user_code = st.text_area("Your Code", placeholder="Write WaveLang code...", height=150, key="wavelang_input")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/metrics_util.py", line 447, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/elements/widgets/text_widgets.py", line 598, in text_area
+    return self._text_area(
+           ^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/elements/widgets/text_widgets.py", line 645, in _text_area
+    element_id = compute_and_register_element_id(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/elements/lib/utils.py", line 265, in compute_and_register_element_id
+    _register_element_id(ctx, element_type, element_id)
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/elements/lib/utils.py", line 145, in _register_element_id
+    raise StreamlitDuplicateElementKey(user_key)
