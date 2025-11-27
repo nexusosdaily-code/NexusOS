@@ -864,61 +864,62 @@ body {{ background: transparent; font-family: -apple-system, BlinkMacSystemFont,
         # Quick unlock section - right at the top!
         wallets = wallet.list_wallets()
         if wallets:
-            with st.expander("🔓 Quick Unlock - Tap to unlock your wallet", expanded=True):
-                # Select wallet
-                wallet_options = {f"{w['address'][:20]}... ({w['balance_nxt']:.2f} NXT)": w['address'] for w in wallets}
-                selected_display = st.selectbox(
-                    "Select Wallet",
-                    options=list(wallet_options.keys()),
-                    key="quick_unlock_select"
-                )
-                selected_address = wallet_options.get(selected_display)
-                
-                # Password input
-                quick_password = st.text_input(
-                    "Enter Password",
-                    type="password",
-                    placeholder="Your wallet password",
-                    key="quick_unlock_password"
-                )
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("🔓 Unlock Now", type="primary", width="stretch", key="quick_unlock_btn"):
-                        if quick_password and selected_address:
-                            try:
-                                if wallet.unlock_wallet(selected_address, quick_password):
-                                    st.session_state.active_address = selected_address
-                                    st.session_state.wallet_unlocked = selected_address
-                                    
-                                    # IMMEDIATELY load friends from database on unlock
-                                    try:
-                                        from friend_manager import get_friend_manager
-                                        fm = get_friend_manager()
-                                        if fm:
-                                            db_friends = fm.get_friends(selected_address)
-                                            if db_friends:
-                                                st.session_state.p2p_friends = db_friends
-                                                st.success(f"✅ Wallet unlocked! {len(db_friends)} friends loaded.")
-                                            else:
-                                                st.session_state.p2p_friends = []
-                                                st.success("✅ Wallet unlocked!")
-                                    except Exception:
-                                        st.success("✅ Wallet unlocked!")
-                                    
-                                    st.rerun()
-                                else:
-                                    st.error("❌ Invalid password")
-                            except Exception as e:
-                                st.error(f"❌ Error: {str(e)}")
-                        else:
-                            st.error("Please enter your password")
-                with col2:
-                    if st.button("➕ Create New Wallet", width="stretch", key="quick_create_btn"):
-                        st.info("👆 Go to the Wallet tab → Create section")
+            st.markdown("#### 🔓 Quick Unlock")
+            
+            # Wallet selection (dropdown with only select options)
+            wallet_options = {f"{w['address'][:20]}... ({w['balance_nxt']:.2f} NXT)": w['address'] for w in wallets}
+            selected_display = st.selectbox(
+                "Select Wallet",
+                options=list(wallet_options.keys()),
+                key="quick_unlock_select"
+            )
+            selected_address = wallet_options.get(selected_display)
+            
+            # Password input (outside any dropdown)
+            quick_password = st.text_input(
+                "Enter Password",
+                type="password",
+                placeholder="Your wallet password",
+                key="quick_unlock_password"
+            )
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🔓 Unlock Now", type="primary", use_container_width=True, key="quick_unlock_btn"):
+                    if quick_password and selected_address:
+                        try:
+                            if wallet.unlock_wallet(selected_address, quick_password):
+                                st.session_state.active_address = selected_address
+                                st.session_state.wallet_unlocked = selected_address
+                                
+                                # IMMEDIATELY load friends from database on unlock
+                                try:
+                                    from friend_manager import get_friend_manager
+                                    fm = get_friend_manager()
+                                    if fm:
+                                        db_friends = fm.get_friends(selected_address)
+                                        if db_friends:
+                                            st.session_state.p2p_friends = db_friends
+                                            st.success(f"✅ Wallet unlocked! {len(db_friends)} friends loaded.")
+                                        else:
+                                            st.session_state.p2p_friends = []
+                                            st.success("✅ Wallet unlocked!")
+                                except Exception:
+                                    st.success("✅ Wallet unlocked!")
+                                
+                                st.rerun()
+                            else:
+                                st.error("❌ Invalid password")
+                        except Exception as e:
+                            st.error(f"❌ Error: {str(e)}")
+                    else:
+                        st.error("Please enter your password")
+            with col2:
+                if st.button("➕ Create New Wallet", use_container_width=True, key="quick_create_btn"):
+                    st.info("👆 Go to the Wallet tab → Create section")
         else:
-            with st.expander("➕ Get Started - Create Your First Wallet", expanded=True):
-                st.info("👆 Tap on the **Wallet** tab below, then select **Create** to set up your first wallet!")
+            st.markdown("#### ➕ Get Started")
+            st.info("👆 Tap on the **Wallet** tab below, then select **Create** to set up your first wallet!")
     
     st.divider()
     
@@ -3965,7 +3966,8 @@ def render_community_tab():
         # BEGINNER LESSONS
         with lesson_tabs[0]:
             # Lesson 1: E=hf Economics
-            with st.expander("⚛️ Lesson 1: Understanding E=hf Economics", expanded=False):
+            st.markdown("#### ⚛️ Lesson 1: Understanding E=hf Economics")
+            with st.expander("📖 View Theory", expanded=False):
                 st.markdown("""
                 ### The Physics Foundation of NexusOS Economics
                 
@@ -3982,27 +3984,28 @@ def render_community_tab():
                 
                 This means **every transaction has a physics-derived cost** - not arbitrary fees set by miners.
                 """)
-                
-                st.markdown("#### Try the E=hf Calculator")
-                calc_col1, calc_col2 = st.columns(2)
-                with calc_col1:
-                    freq_input = st.number_input("Frequency (THz)", min_value=100.0, max_value=3000.0, value=789.0, key="ehf_freq")
-                    cycles_input = st.number_input("Computation Cycles", min_value=1, max_value=1000, value=100, key="ehf_cycles")
-                with calc_col2:
-                    authority_input = st.slider("Authority Weight", min_value=1.0, max_value=10.0, value=1.0, key="ehf_auth")
-                
-                # Real physics calculation
-                freq_hz = freq_input * 1e12  # Convert THz to Hz
-                energy_joules = PLANCK_CONSTANT * freq_hz * cycles_input * (authority_input ** 2)
-                energy_nxt = energy_joules * 1e20  # Scale to NXT units
-                
-                st.metric("Calculated Energy Cost", f"{energy_nxt:.6f} NXT")
-                st.caption(f"Raw energy: {energy_joules:.2e} Joules")
-                
-                if st.button("✅ Mark Lesson 1 Complete", key="complete_l1"):
-                    st.session_state.completed_lessons.add("lesson_1")
-                    st.success("Lesson 1 completed! You understand E=hf economics.")
-                    st.rerun()
+            
+            st.markdown("**E=hf Calculator:**")
+            calc_col1, calc_col2 = st.columns(2)
+            with calc_col1:
+                freq_input = st.number_input("Frequency (THz)", min_value=100.0, max_value=3000.0, value=789.0, key="ehf_freq")
+                cycles_input = st.number_input("Computation Cycles", min_value=1, max_value=1000, value=100, key="ehf_cycles")
+            with calc_col2:
+                authority_input = st.slider("Authority Weight", min_value=1.0, max_value=10.0, value=1.0, key="ehf_auth")
+            
+            freq_hz = freq_input * 1e12
+            energy_joules = PLANCK_CONSTANT * freq_hz * cycles_input * (authority_input ** 2)
+            energy_nxt = energy_joules * 1e20
+            
+            st.metric("Calculated Energy Cost", f"{energy_nxt:.6f} NXT")
+            st.caption(f"Raw energy: {energy_joules:.2e} Joules")
+            
+            if st.button("✅ Mark Lesson 1 Complete", key="complete_l1"):
+                st.session_state.completed_lessons.add("lesson_1")
+                st.success("Lesson 1 completed! You understand E=hf economics.")
+                st.rerun()
+            
+            st.divider()
             
             # Lesson 2: WNSP Protocol
             with st.expander("📡 Lesson 2: WNSP Protocol Overview", expanded=False):
@@ -4045,7 +4048,8 @@ def render_community_tab():
                     st.rerun()
             
             # Lesson 3: BHLS
-            with st.expander("💰 Lesson 3: How BHLS Works", expanded=False):
+            st.markdown("#### 💰 Lesson 3: How BHLS Works")
+            with st.expander("📖 View Theory", expanded=False):
                 st.markdown(f"""
                 ### Basic Human Living Standards (BHLS)
                 
@@ -4062,25 +4066,25 @@ def render_community_tab():
                 - Citizen Weight = Based on participation and staking
                 - Active Citizens = All verified network participants
                 """)
-                
-                st.markdown("#### BHLS Calculator")
-                bhls_col1, bhls_col2 = st.columns(2)
-                with bhls_col1:
-                    network_energy = st.number_input("Network Energy (NXT)", min_value=100000, max_value=10000000, value=1000000, key="bhls_energy")
-                    citizens = st.number_input("Active Citizens", min_value=100, max_value=100000, value=1000, key="bhls_citizens")
-                with bhls_col2:
-                    your_weight = st.slider("Your Citizen Weight", min_value=0.5, max_value=2.0, value=1.0, key="bhls_weight")
-                
-                base_bhls = network_energy / citizens
-                your_bhls = max(BHLS_FLOOR, base_bhls * your_weight)
-                
-                st.metric("Your Monthly BHLS", f"{your_bhls:,.2f} NXT")
-                st.caption(f"Floor guarantee: {BHLS_FLOOR:,} NXT/month (you always receive at least this)")
-                
-                if st.button("✅ Mark Lesson 3 Complete", key="complete_l3"):
-                    st.session_state.completed_lessons.add("lesson_3")
-                    st.success("Lesson 3 completed! You understand BHLS economics.")
-                    st.rerun()
+            
+            st.markdown("**BHLS Calculator:**")
+            bhls_col1, bhls_col2 = st.columns(2)
+            with bhls_col1:
+                network_energy = st.number_input("Network Energy (NXT)", min_value=100000, max_value=10000000, value=1000000, key="bhls_energy")
+                citizens = st.number_input("Active Citizens", min_value=100, max_value=100000, value=1000, key="bhls_citizens")
+            with bhls_col2:
+                your_weight = st.slider("Your Citizen Weight", min_value=0.5, max_value=2.0, value=1.0, key="bhls_weight")
+            
+            base_bhls = network_energy / citizens
+            your_bhls = max(BHLS_FLOOR, base_bhls * your_weight)
+            
+            st.metric("Your Monthly BHLS", f"{your_bhls:,.2f} NXT")
+            st.caption(f"Floor guarantee: {BHLS_FLOOR:,} NXT/month (you always receive at least this)")
+            
+            if st.button("✅ Mark Lesson 3 Complete", key="complete_l3"):
+                st.session_state.completed_lessons.add("lesson_3")
+                st.success("Lesson 3 completed! You understand BHLS economics.")
+                st.rerun()
         
         # INTERMEDIATE LESSONS
         with lesson_tabs[1]:
@@ -4132,7 +4136,8 @@ def render_community_tab():
                     st.rerun()
             
             # Lesson 5: PoSPECTRUM Consensus
-            with st.expander("🔐 Lesson 5: PoSPECTRUM Consensus", expanded=False):
+            st.markdown("#### 🔐 Lesson 5: PoSPECTRUM Consensus")
+            with st.expander("📖 View Theory", expanded=False):
                 st.markdown("""
                 ### Proof of Spectrum: Physics-Based Consensus
                 
@@ -4154,36 +4159,37 @@ def render_community_tab():
                 3. **Maxwell Validation**: Verified against Maxwell's equations
                 4. **Consensus**: Validators in same spectral region agree on state
                 """)
-                
-                st.markdown("#### Spectral Validator Simulator")
-                validator_band = st.selectbox("Select Your Spectral Band", 
-                    ["UV (380-420nm)", "Blue (420-490nm)", "Green (490-570nm)", 
-                     "Yellow (570-590nm)", "Orange (590-620nm)", "Red (620-700nm)"],
-                    key="validator_band")
-                
-                band_rewards = {
-                    "UV (380-420nm)": 2.0,
-                    "Blue (420-490nm)": 1.7,
-                    "Green (490-570nm)": 1.4,
-                    "Yellow (570-590nm)": 1.2,
-                    "Orange (590-620nm)": 1.0,
-                    "Red (620-700nm)": 0.8
-                }
-                
-                base_reward = 100  # NXT per block
-                your_reward = base_reward * band_rewards[validator_band]
-                st.metric("Your Block Reward", f"{your_reward:.1f} NXT", 
-                         delta=f"{band_rewards[validator_band]:.1f}x multiplier")
-                
-                if st.button("✅ Mark Lesson 5 Complete", key="complete_l5"):
-                    st.session_state.completed_lessons.add("lesson_5")
-                    st.success("Lesson 5 completed! You understand PoSPECTRUM consensus.")
-                    st.rerun()
+            
+            st.markdown("**Spectral Validator Simulator:**")
+            validator_band = st.selectbox("Select Your Spectral Band", 
+                ["UV (380-420nm)", "Blue (420-490nm)", "Green (490-570nm)", 
+                 "Yellow (570-590nm)", "Orange (590-620nm)", "Red (620-700nm)"],
+                key="validator_band")
+            
+            band_rewards = {
+                "UV (380-420nm)": 2.0,
+                "Blue (420-490nm)": 1.7,
+                "Green (490-570nm)": 1.4,
+                "Yellow (570-590nm)": 1.2,
+                "Orange (590-620nm)": 1.0,
+                "Red (620-700nm)": 0.8
+            }
+            
+            base_reward = 100
+            your_reward = base_reward * band_rewards[validator_band]
+            st.metric("Your Block Reward", f"{your_reward:.1f} NXT", 
+                     delta=f"{band_rewards[validator_band]:.1f}x multiplier")
+            
+            if st.button("✅ Mark Lesson 5 Complete", key="complete_l5"):
+                st.session_state.completed_lessons.add("lesson_5")
+                st.success("Lesson 5 completed! You understand PoSPECTRUM consensus.")
+                st.rerun()
         
         # ADVANCED LESSONS
         with lesson_tabs[2]:
             # Lesson 6: Running a Validator
-            with st.expander("🖥️ Lesson 6: Running a Validator Node", expanded=False):
+            st.markdown("#### 🖥️ Lesson 6: Running a Validator Node")
+            with st.expander("📖 View Theory", expanded=False):
                 st.markdown("""
                 ### Becoming a NexusOS Validator
                 
@@ -4195,33 +4201,39 @@ def render_community_tab():
                 - 24/7 uptime capability
                 
                 #### Reward Structure:
+                - Base APY: 12%
+                - Uptime bonus: Up to +5% for 100% uptime
+                - Spectral multiplier: Based on your band
                 """)
-                
-                stake_input = st.number_input("Your Stake (NXT)", min_value=10000, max_value=1000000, value=50000, key="val_stake")
-                uptime_input = st.slider("Expected Uptime %", min_value=90.0, max_value=100.0, value=99.0, key="val_uptime")
-                
-                # Calculate rewards based on stake and uptime
-                base_apy = 0.12  # 12% base APY
-                uptime_bonus = (uptime_input - 90) / 10 * 0.05  # Up to 5% bonus for 100% uptime
-                effective_apy = base_apy + uptime_bonus
-                annual_reward = stake_input * effective_apy
-                monthly_reward = annual_reward / 12
-                
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Effective APY", f"{effective_apy*100:.2f}%")
-                with col2:
-                    st.metric("Monthly Reward", f"{monthly_reward:,.2f} NXT")
-                with col3:
-                    st.metric("Annual Reward", f"{annual_reward:,.2f} NXT")
-                
-                if st.button("✅ Mark Lesson 6 Complete", key="complete_l6"):
-                    st.session_state.completed_lessons.add("lesson_6")
-                    st.success("Lesson 6 completed! You're ready to become a validator.")
-                    st.rerun()
+            
+            st.markdown("**Validator Reward Calculator:**")
+            stake_input = st.number_input("Your Stake (NXT)", min_value=10000, max_value=1000000, value=50000, key="val_stake")
+            uptime_input = st.slider("Expected Uptime %", min_value=90.0, max_value=100.0, value=99.0, key="val_uptime")
+            
+            base_apy = 0.12
+            uptime_bonus = (uptime_input - 90) / 10 * 0.05
+            effective_apy = base_apy + uptime_bonus
+            annual_reward = stake_input * effective_apy
+            monthly_reward = annual_reward / 12
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Effective APY", f"{effective_apy*100:.2f}%")
+            with col2:
+                st.metric("Monthly Reward", f"{monthly_reward:,.2f} NXT")
+            with col3:
+                st.metric("Annual Reward", f"{annual_reward:,.2f} NXT")
+            
+            if st.button("✅ Mark Lesson 6 Complete", key="complete_l6"):
+                st.session_state.completed_lessons.add("lesson_6")
+                st.success("Lesson 6 completed! You're ready to become a validator.")
+                st.rerun()
+            
+            st.divider()
             
             # Lesson 7: WaveLang Programming
-            with st.expander("📝 Lesson 7: WaveLang Programming", expanded=False):
+            st.markdown("#### 📝 Lesson 7: WaveLang Programming")
+            with st.expander("📖 View Theory", expanded=False):
                 st.markdown("""
                 ### Introduction to WaveLang
                 
@@ -4252,29 +4264,28 @@ def render_community_tab():
                 - **SPECTRUM**: Access spectral band properties
                 - **INTERFERE**: Combine multiple wave states
                 """)
-                
-                st.markdown("#### Try WaveLang (Simple Example)")
-                wavelang_code = st.text_area("Enter WaveLang code:", 
-                    value="EMIT wavelength=500nm energy=10NXT {\n    message: 'My first WaveLang!';\n}",
-                    height=100, key="wavelang_input")
-                
-                if st.button("Simulate Execution", key="run_wavelang"):
-                    # Simple parser simulation
-                    if "EMIT" in wavelang_code and "wavelength" in wavelang_code:
-                        st.success("Code validated! Simulated execution successful.")
-                        st.json({
-                            "status": "executed",
-                            "wavelength": "500nm",
-                            "energy_cost": "10 NXT",
-                            "execution_time": "2.3ms"
-                        })
-                    else:
-                        st.error("Syntax error: Missing EMIT or wavelength declaration")
-                
-                if st.button("✅ Mark Lesson 7 Complete", key="complete_l7"):
-                    st.session_state.completed_lessons.add("lesson_7")
-                    st.success("Lesson 7 completed! You're a WaveLang programmer.")
-                    st.rerun()
+            
+            st.markdown("**Try WaveLang (Simple Example):**")
+            wavelang_code = st.text_area("Enter WaveLang code:", 
+                value="EMIT wavelength=500nm energy=10NXT {\n    message: 'My first WaveLang!';\n}",
+                height=100, key="wavelang_input")
+            
+            if st.button("Simulate Execution", key="run_wavelang"):
+                if "EMIT" in wavelang_code and "wavelength" in wavelang_code:
+                    st.success("Code validated! Simulated execution successful.")
+                    st.json({
+                        "status": "executed",
+                        "wavelength": "500nm",
+                        "energy_cost": "10 NXT",
+                        "execution_time": "2.3ms"
+                    })
+                else:
+                    st.error("Syntax error: Missing EMIT or wavelength declaration")
+            
+            if st.button("✅ Mark Lesson 7 Complete", key="complete_l7"):
+                st.session_state.completed_lessons.add("lesson_7")
+                st.success("Lesson 7 completed! You're a WaveLang programmer.")
+                st.rerun()
         
         st.divider()
         
