@@ -680,40 +680,99 @@ def render_mobile_blockchain_hub():
         core_display = "⚡ NXT"
         core_label = "E=h·f"
     
-    # PULSING ENERGY CORE - The Living Ecosystem Heart
+    # PULSING ENERGY CORE - The Living Ecosystem Heart with Wavelength Header
     import streamlit.components.v1 as components
+    
+    # Notification badge for header
+    notif_badge = f'<span class="notif-badge">{unread_count}</span>' if unread_count > 0 else ''
+    notif_active = 'active' if unread_count > 0 else ''
+    
     energy_core_html = f'''<!DOCTYPE html>
 <html>
 <head>
 <style>
 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
 body {{ background: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }}
+
 @keyframes pulse-ring {{ 0% {{ transform: scale(0.95); opacity: 0.8; }} 50% {{ transform: scale(1.05); opacity: 1; }} 100% {{ transform: scale(0.95); opacity: 0.8; }} }}
 @keyframes pulse-ring-slow {{ 0% {{ transform: scale(0.98); opacity: 0.6; }} 50% {{ transform: scale(1.02); opacity: 0.9; }} 100% {{ transform: scale(0.98); opacity: 0.6; }} }}
 @keyframes glow-pulse {{ 0%, 100% {{ box-shadow: 0 0 30px rgba(0, 180, 255, 0.5), 0 0 60px rgba(0, 150, 255, 0.3), 0 0 90px rgba(0, 120, 255, 0.2); }} 50% {{ box-shadow: 0 0 50px rgba(0, 200, 255, 0.7), 0 0 100px rgba(0, 170, 255, 0.5), 0 0 150px rgba(0, 140, 255, 0.3); }} }}
 @keyframes core-breathe {{ 0%, 100% {{ transform: scale(1); }} 50% {{ transform: scale(1.08); }} }}
 @keyframes data-flow {{ 0% {{ opacity: 0.4; transform: translateY(5px); }} 50% {{ opacity: 1; transform: translateY(0); }} 100% {{ opacity: 0.4; transform: translateY(-5px); }} }}
 @keyframes particle-float {{ 0% {{ transform: translateY(0) rotate(0deg); opacity: 0; }} 25% {{ opacity: 0.6; }} 75% {{ opacity: 0.6; }} 100% {{ transform: translateY(-150px) rotate(360deg); opacity: 0; }} }}
-.energy-core-container {{ position: relative; width: 100%; height: 280px; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(0, 60, 120, 0.4) 0%, rgba(10, 10, 30, 1) 70%); overflow: hidden; }}
-.core-outer-ring {{ position: absolute; width: 220px; height: 220px; border-radius: 50%; border: 2px solid rgba(0, 180, 255, 0.3); animation: pulse-ring-slow 4s ease-in-out infinite; }}
-.core-middle-ring {{ position: absolute; width: 170px; height: 170px; border-radius: 50%; border: 3px solid rgba(0, 200, 255, 0.5); animation: pulse-ring 2.5s ease-in-out infinite; }}
-.core-inner-ring {{ position: absolute; width: 130px; height: 130px; border-radius: 50%; border: 2px solid rgba(0, 220, 255, 0.7); animation: pulse-ring 2s ease-in-out infinite 0.5s; }}
-.core-center {{ position: absolute; width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, rgba(120, 220, 255, 0.95) 0%, rgba(0, 150, 255, 0.85) 40%, rgba(0, 80, 180, 0.7) 70%, rgba(0, 40, 100, 0.5) 100%); animation: core-breathe 3s ease-in-out infinite, glow-pulse 2s ease-in-out infinite; display: flex; flex-direction: column; align-items: center; justify-content: center; }}
+@keyframes wave-flow {{ 0% {{ transform: translateX(-100%); }} 100% {{ transform: translateX(100%); }} }}
+@keyframes wave-pulse {{ 0%, 100% {{ opacity: 0.3; }} 50% {{ opacity: 0.7; }} }}
+@keyframes bell-ring {{ 0%, 100% {{ transform: rotate(0deg); }} 10% {{ transform: rotate(15deg); }} 20% {{ transform: rotate(-15deg); }} 30% {{ transform: rotate(10deg); }} 40% {{ transform: rotate(-10deg); }} 50% {{ transform: rotate(0deg); }} }}
+@keyframes nano-shimmer {{ 0% {{ background-position: -200% center; }} 100% {{ background-position: 200% center; }} }}
+
+.header-container {{ position: relative; width: 100%; background: linear-gradient(180deg, rgba(0, 30, 60, 0.95) 0%, rgba(10, 10, 30, 1) 100%); overflow: hidden; }}
+
+.wavelength-bar {{ position: absolute; top: 0; left: 0; right: 0; height: 50px; background: linear-gradient(90deg, transparent, rgba(0, 150, 255, 0.1), transparent); overflow: hidden; }}
+.wave-line {{ position: absolute; height: 2px; width: 100%; background: linear-gradient(90deg, transparent 0%, rgba(0, 200, 255, 0.8) 50%, transparent 100%); animation: wave-flow 3s linear infinite; }}
+.wave-line:nth-child(1) {{ top: 10px; animation-delay: 0s; opacity: 0.6; }}
+.wave-line:nth-child(2) {{ top: 20px; animation-delay: 0.5s; opacity: 0.4; }}
+.wave-line:nth-child(3) {{ top: 30px; animation-delay: 1s; opacity: 0.5; }}
+.wave-line:nth-child(4) {{ top: 40px; animation-delay: 1.5s; opacity: 0.3; }}
+
+.nano-grid {{ position: absolute; top: 0; left: 0; right: 0; height: 50px; background: repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(0, 180, 255, 0.05) 20px, rgba(0, 180, 255, 0.05) 21px), repeating-linear-gradient(0deg, transparent, transparent 10px, rgba(0, 180, 255, 0.03) 10px, rgba(0, 180, 255, 0.03) 11px); animation: wave-pulse 4s ease-in-out infinite; }}
+
+.top-bar {{ position: relative; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: linear-gradient(90deg, rgba(0, 60, 120, 0.3), rgba(0, 100, 180, 0.2), rgba(0, 60, 120, 0.3)); background-size: 200% 100%; animation: nano-shimmer 8s linear infinite; border-bottom: 1px solid rgba(0, 180, 255, 0.2); }}
+
+.brand {{ display: flex; align-items: center; gap: 10px; }}
+.brand-icon {{ font-size: 24px; filter: drop-shadow(0 0 8px rgba(0, 200, 255, 0.8)); }}
+.brand-text {{ color: #00d4ff; font-size: 16px; font-weight: 700; text-shadow: 0 0 15px rgba(0, 212, 255, 0.5); letter-spacing: 1px; }}
+
+.notif-btn {{ position: relative; background: rgba(0, 100, 180, 0.3); border: 1px solid rgba(0, 180, 255, 0.4); border-radius: 12px; padding: 8px 16px; color: #00d4ff; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease; }}
+.notif-btn:hover {{ background: rgba(0, 120, 200, 0.4); box-shadow: 0 0 15px rgba(0, 180, 255, 0.4); }}
+.notif-btn.active {{ animation: bell-ring 1s ease-in-out; background: rgba(0, 150, 255, 0.3); }}
+.notif-badge {{ position: absolute; top: -5px; right: -5px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 10px; min-width: 18px; text-align: center; box-shadow: 0 0 8px rgba(239, 68, 68, 0.6); }}
+
+.energy-core-container {{ position: relative; width: 100%; height: 240px; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(0, 60, 120, 0.4) 0%, transparent 70%); overflow: hidden; }}
+
+.core-outer-ring {{ position: absolute; width: 200px; height: 200px; border-radius: 50%; border: 2px solid rgba(0, 180, 255, 0.3); animation: pulse-ring-slow 4s ease-in-out infinite; }}
+.core-middle-ring {{ position: absolute; width: 155px; height: 155px; border-radius: 50%; border: 3px solid rgba(0, 200, 255, 0.5); animation: pulse-ring 2.5s ease-in-out infinite; }}
+.core-inner-ring {{ position: absolute; width: 115px; height: 115px; border-radius: 50%; border: 2px solid rgba(0, 220, 255, 0.7); animation: pulse-ring 2s ease-in-out infinite 0.5s; }}
+.core-center {{ position: absolute; width: 80px; height: 80px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, rgba(120, 220, 255, 0.95) 0%, rgba(0, 150, 255, 0.85) 40%, rgba(0, 80, 180, 0.7) 70%, rgba(0, 40, 100, 0.5) 100%); animation: core-breathe 3s ease-in-out infinite, glow-pulse 2s ease-in-out infinite; display: flex; flex-direction: column; align-items: center; justify-content: center; }}
+
 .core-data {{ color: #ffffff; font-weight: bold; text-shadow: 0 0 10px rgba(255, 255, 255, 0.9); animation: data-flow 2s ease-in-out infinite; text-align: center; }}
-.core-data-primary {{ font-size: 20px; line-height: 1.1; }}
-.core-data-secondary {{ font-size: 10px; opacity: 0.9; margin-top: 3px; }}
-.core-title {{ position: absolute; bottom: 15px; text-align: center; width: 100%; }}
-.core-title h2 {{ color: #00d4ff; font-size: 18px; margin: 0; text-shadow: 0 0 20px rgba(0, 212, 255, 0.6); font-weight: 600; }}
-.core-title p {{ color: rgba(200, 230, 255, 0.85); font-size: 11px; margin: 4px 0 0 0; }}
-.particle {{ position: absolute; width: 4px; height: 4px; background: rgba(0, 200, 255, 0.6); border-radius: 50%; animation: particle-float 4s linear infinite; }}
+.core-data-primary {{ font-size: 18px; line-height: 1.1; }}
+.core-data-secondary {{ font-size: 9px; opacity: 0.9; margin-top: 2px; }}
+
+.core-title {{ position: absolute; bottom: 12px; text-align: center; width: 100%; }}
+.core-title h2 {{ color: #00d4ff; font-size: 16px; margin: 0; text-shadow: 0 0 20px rgba(0, 212, 255, 0.6); font-weight: 600; }}
+.core-title p {{ color: rgba(200, 230, 255, 0.85); font-size: 10px; margin: 3px 0 0 0; }}
+
+.particle {{ position: absolute; width: 3px; height: 3px; background: rgba(0, 200, 255, 0.6); border-radius: 50%; animation: particle-float 4s linear infinite; }}
+
+.wavelength-spectrum {{ position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #7c3aed 0%, #3b82f6 20%, #06b6d4 40%, #10b981 60%, #eab308 80%, #ef4444 100%); opacity: 0.6; }}
 </style>
 </head>
 <body>
+<div class="header-container">
+<div class="wavelength-bar">
+<div class="nano-grid"></div>
+<div class="wave-line"></div>
+<div class="wave-line"></div>
+<div class="wave-line"></div>
+<div class="wave-line"></div>
+</div>
+<div class="top-bar">
+<div class="brand">
+<span class="brand-icon">⚛️</span>
+<span class="brand-text">NEXUS OS</span>
+</div>
+<div class="notif-btn {notif_active}" onclick="window.parent.postMessage('toggle_notifications', '*')">
+<span>🔔</span>
+<span>Alerts</span>
+{notif_badge}
+</div>
+</div>
 <div class="energy-core-container">
-<div class="particle" style="left: 20%; animation-delay: 0s;"></div>
-<div class="particle" style="left: 40%; animation-delay: 1s;"></div>
-<div class="particle" style="left: 60%; animation-delay: 2s;"></div>
-<div class="particle" style="left: 80%; animation-delay: 3s;"></div>
+<div class="particle" style="left: 15%; animation-delay: 0s;"></div>
+<div class="particle" style="left: 35%; animation-delay: 0.8s;"></div>
+<div class="particle" style="left: 55%; animation-delay: 1.6s;"></div>
+<div class="particle" style="left: 75%; animation-delay: 2.4s;"></div>
+<div class="particle" style="left: 90%; animation-delay: 3.2s;"></div>
 <div class="core-outer-ring"></div>
 <div class="core-middle-ring"></div>
 <div class="core-inner-ring"></div>
@@ -724,34 +783,27 @@ body {{ background: transparent; font-family: -apple-system, BlinkMacSystemFont,
 </div>
 </div>
 <div class="core-title">
-<h2>NexusOS Blockchain Hub</h2>
-<p>The Living Ecosystem • Your Phone IS the Node</p>
+<h2>The Living Ecosystem</h2>
+<p>Your Phone IS the Node • E=h·f</p>
 </div>
+</div>
+<div class="wavelength-spectrum"></div>
 </div>
 </body>
 </html>'''
-    components.html(energy_core_html, height=280, scrolling=False)
+    components.html(energy_core_html, height=340, scrolling=False)
     
-    # Bell tap button (small, centered)
-    col1, col2, col3 = st.columns([3, 2, 3])
-    with col2:
-        bell_label = f"🔔 Tap for Alerts ({unread_count})" if unread_count > 0 else "🔔 Tap for Alerts"
-        if st.button(bell_label, key="bell_toggle", type="primary" if unread_count > 0 else "secondary", use_container_width=True):
-            st.session_state.show_notifications = not st.session_state.get('show_notifications', False)
-            if st.session_state.show_notifications:
-                notif_center.mark_all_read()
-            st.rerun()
+    # Streamlit notification toggle (fallback for touch)
+    if st.button(f"🔔 {'(' + str(unread_count) + ') ' if unread_count > 0 else ''}Tap for Notifications", key="bell_toggle", type="primary" if unread_count > 0 else "secondary", use_container_width=True):
+        st.session_state.show_notifications = not st.session_state.get('show_notifications', False)
+        if st.session_state.show_notifications:
+            notif_center.mark_all_read()
+        st.rerun()
     
     # Show notification panel when bell is tapped
     if st.session_state.get('show_notifications', False):
-        st.markdown("""
-            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
-                        padding: 15px; border-radius: 12px; border: 1px solid #667eea; margin: 10px 0;">
-                <h4 style="color: #00d4ff; margin-bottom: 10px;">🔔 Notifications</h4>
-            </div>
-        """, unsafe_allow_html=True)
         render_notification_panel()
-        if st.button("✕ Close Notifications", key="close_notif_panel", use_container_width=True):
+        if st.button("✕ Close", key="close_notif_panel", use_container_width=True):
             st.session_state.show_notifications = False
             st.rerun()
         st.divider()
