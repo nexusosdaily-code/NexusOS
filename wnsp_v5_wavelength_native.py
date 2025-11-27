@@ -426,13 +426,99 @@ class ControlMetadata:
         )
     
     @staticmethod
-    def create_wavelength_address(user_id: str, device_sig: bytes, bands: List[SpectralBand]) -> str:
+    def create_wavelength_address(node_id: str, device_sig: bytes, bands: List[SpectralBand]) -> str:
         """
-        Create W-Addr: <UserID>@<DeviceSignature>::<BandFingerprint>
+        Create W-Address per WNSP v5 Specification
+        
+        Format: W-Address ::= <node_id>#<spectral_fingerprint>::BAND(<band_mask>)
+        
+        Example: alice#08f7d040b5f5::BAND(NANO|PICO|FEMTO)
+        
+        Args:
+            node_id: User/node identifier (e.g., "alice")
+            device_sig: Device signature bytes for fingerprint generation
+            bands: List of spectral bands this address can operate on
+        
+        Returns:
+            W-Address string in canonical format
         """
-        device_hash = hashlib.sha256(device_sig).hexdigest()[:12]
+        spectral_fingerprint = hashlib.sha256(device_sig).hexdigest()[:12]
+        
         band_mask = '|'.join([b.band_name.upper() for b in bands])
-        return f"{user_id}#{device_hash}::BAND({band_mask})"
+        
+        return f"{node_id}#{spectral_fingerprint}::BAND({band_mask})"
+    
+    @staticmethod
+    def parse_wavelength_address(w_address: str) -> Optional[Dict[str, Any]]:
+        """
+        Parse W-Address into components
+        
+        Format: <node_id>#<spectral_fingerprint>::BAND(<band_mask>)
+        
+        Returns:
+            Dictionary with node_id, spectral_fingerprint, and bands list
+            None if parsing fails
+        """
+        import re
+        
+        pattern = r'^([^#]+)#([a-f0-9]{12})::BAND\(([A-Z|]+)\)$'
+        match = re.match(pattern, w_address)
+        
+        if not match:
+            return None
+        
+        node_id = match.group(1)
+        spectral_fingerprint = match.group(2)
+        band_mask_str = match.group(3)
+        
+        band_names = band_mask_str.split('|')
+        
+        bands = []
+        band_map = {
+            'NANO': SpectralBand.NANO,
+            'PICO': SpectralBand.PICO,
+            'FEMTO': SpectralBand.FEMTO,
+            'ATTO': SpectralBand.ATTO,
+            'ZEPTO': SpectralBand.ZEPTO,
+            'YOCTO': SpectralBand.YOCTO,
+            'PLANCK': SpectralBand.PLANCK
+        }
+        
+        for name in band_names:
+            if name in band_map:
+                bands.append(band_map[name])
+        
+        return {
+            'node_id': node_id,
+            'spectral_fingerprint': spectral_fingerprint,
+            'bands': bands,
+            'band_mask': band_mask_str,
+            'authority_level': max([b.authority_level for b in bands]) if bands else 0
+        }
+    
+    @staticmethod
+    def validate_wavelength_address(w_address: str) -> Tuple[bool, str]:
+        """
+        Validate W-Address format and components
+        
+        Returns:
+            (is_valid, message) tuple
+        """
+        parsed = ControlMetadata.parse_wavelength_address(w_address)
+        
+        if parsed is None:
+            return False, "Invalid W-Address format. Expected: <node_id>#<fingerprint>::BAND(<bands>)"
+        
+        if len(parsed['node_id']) == 0:
+            return False, "Node ID cannot be empty"
+        
+        if len(parsed['spectral_fingerprint']) != 12:
+            return False, "Spectral fingerprint must be 12 hex characters"
+        
+        if len(parsed['bands']) == 0:
+            return False, "At least one spectral band must be specified"
+        
+        return True, f"Valid W-Address for node '{parsed['node_id']}' with {len(parsed['bands'])} bands"
 
 
 @dataclass
