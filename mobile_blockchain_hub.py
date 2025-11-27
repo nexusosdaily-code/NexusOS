@@ -681,169 +681,56 @@ def render_mobile_blockchain_hub():
         core_label = "E=h·f"
     
     # PULSING ENERGY CORE - The Living Ecosystem Heart
-    st.markdown(f"""
-        <style>
-            @keyframes bell-ring {{
-                0%, 100% {{ transform: rotate(0deg); }}
-                25% {{ transform: rotate(15deg); }}
-                50% {{ transform: rotate(-15deg); }}
-                75% {{ transform: rotate(10deg); }}
-            }}
-            .bell-icon:hover {{ transform: scale(1.2); transition: transform 0.2s; }}
-            
-            /* PULSING ENERGY CORE ANIMATIONS */
-            @keyframes pulse-ring {{
-                0% {{ transform: scale(0.95); opacity: 0.8; }}
-                50% {{ transform: scale(1.05); opacity: 1; }}
-                100% {{ transform: scale(0.95); opacity: 0.8; }}
-            }}
-            
-            @keyframes pulse-ring-slow {{
-                0% {{ transform: scale(0.98); opacity: 0.6; }}
-                50% {{ transform: scale(1.02); opacity: 0.9; }}
-                100% {{ transform: scale(0.98); opacity: 0.6; }}
-            }}
-            
-            @keyframes glow-pulse {{
-                0%, 100% {{ box-shadow: 0 0 30px rgba(0, 180, 255, 0.5), 0 0 60px rgba(0, 150, 255, 0.3), 0 0 90px rgba(0, 120, 255, 0.2); }}
-                50% {{ box-shadow: 0 0 50px rgba(0, 200, 255, 0.7), 0 0 100px rgba(0, 170, 255, 0.5), 0 0 150px rgba(0, 140, 255, 0.3); }}
-            }}
-            
-            @keyframes core-breathe {{
-                0%, 100% {{ transform: scale(1); }}
-                50% {{ transform: scale(1.08); }}
-            }}
-            
-            @keyframes data-flow {{
-                0% {{ opacity: 0.4; transform: translateY(5px); }}
-                50% {{ opacity: 1; transform: translateY(0); }}
-                100% {{ opacity: 0.4; transform: translateY(-5px); }}
-            }}
-            
-            .energy-core-container {{
-                position: relative;
-                width: 100%;
-                height: 280px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: radial-gradient(ellipse at center, rgba(0, 60, 120, 0.3) 0%, rgba(15, 15, 35, 1) 70%);
-                margin: -20px 0 20px 0;
-                overflow: hidden;
-            }}
-            
-            .core-outer-ring {{
-                position: absolute;
-                width: 240px;
-                height: 240px;
-                border-radius: 50%;
-                border: 2px solid rgba(0, 180, 255, 0.3);
-                animation: pulse-ring-slow 4s ease-in-out infinite;
-            }}
-            
-            .core-middle-ring {{
-                position: absolute;
-                width: 190px;
-                height: 190px;
-                border-radius: 50%;
-                border: 3px solid rgba(0, 200, 255, 0.5);
-                animation: pulse-ring 2.5s ease-in-out infinite;
-            }}
-            
-            .core-inner-ring {{
-                position: absolute;
-                width: 140px;
-                height: 140px;
-                border-radius: 50%;
-                border: 2px solid rgba(0, 220, 255, 0.7);
-                animation: pulse-ring 2s ease-in-out infinite 0.5s;
-            }}
-            
-            .core-center {{
-                position: absolute;
-                width: 100px;
-                height: 100px;
-                border-radius: 50%;
-                background: radial-gradient(circle at 40% 40%, rgba(120, 220, 255, 0.9) 0%, rgba(0, 150, 255, 0.8) 40%, rgba(0, 80, 180, 0.6) 70%, rgba(0, 40, 100, 0.4) 100%);
-                animation: core-breathe 3s ease-in-out infinite, glow-pulse 2s ease-in-out infinite;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-            }}
-            
-            .core-data {{
-                color: #ffffff;
-                font-weight: bold;
-                text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
-                animation: data-flow 2s ease-in-out infinite;
-            }}
-            
-            .core-data-primary {{
-                font-size: 22px;
-                line-height: 1;
-            }}
-            
-            .core-data-secondary {{
-                font-size: 11px;
-                opacity: 0.9;
-                margin-top: 4px;
-            }}
-            
-            .core-title {{
-                position: absolute;
-                bottom: 20px;
-                text-align: center;
-                width: 100%;
-            }}
-            
-            .core-title h2 {{
-                color: #00d4ff;
-                font-size: 20px;
-                margin: 0;
-                text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
-            }}
-            
-            .core-title p {{
-                color: rgba(200, 230, 255, 0.8);
-                font-size: 12px;
-                margin: 5px 0 0 0;
-            }}
-            
-            /* Notification bell positioning */
-            .bell-container {{
-                position: absolute;
-                top: 15px;
-                right: 20px;
-            }}
-        </style>
-        
-        <div class="energy-core-container">
-            <!-- Pulsing Concentric Rings -->
-            <div class="core-outer-ring"></div>
-            <div class="core-middle-ring"></div>
-            <div class="core-inner-ring"></div>
-            
-            <!-- Central Energy Core -->
-            <div class="core-center">
-                <div class="core-data">
-                    <div class="core-data-primary">{core_display}</div>
-                    <div class="core-data-secondary">{core_label}</div>
-                </div>
-            </div>
-            
-            <!-- Title Overlay -->
-            <div class="core-title">
-                <h2>NexusOS Blockchain Hub</h2>
-                <p>The Living Ecosystem • Your Phone IS the Node</p>
-            </div>
-            
-            <!-- Notification Bell -->
-            <div class="bell-container">
-                <span class="bell-icon" style="{bell_style}">🔔</span>{badge_html}
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+    import streamlit.components.v1 as components
+    energy_core_html = f'''<!DOCTYPE html>
+<html>
+<head>
+<style>
+* {{ margin: 0; padding: 0; box-sizing: border-box; }}
+body {{ background: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }}
+@keyframes pulse-ring {{ 0% {{ transform: scale(0.95); opacity: 0.8; }} 50% {{ transform: scale(1.05); opacity: 1; }} 100% {{ transform: scale(0.95); opacity: 0.8; }} }}
+@keyframes pulse-ring-slow {{ 0% {{ transform: scale(0.98); opacity: 0.6; }} 50% {{ transform: scale(1.02); opacity: 0.9; }} 100% {{ transform: scale(0.98); opacity: 0.6; }} }}
+@keyframes glow-pulse {{ 0%, 100% {{ box-shadow: 0 0 30px rgba(0, 180, 255, 0.5), 0 0 60px rgba(0, 150, 255, 0.3), 0 0 90px rgba(0, 120, 255, 0.2); }} 50% {{ box-shadow: 0 0 50px rgba(0, 200, 255, 0.7), 0 0 100px rgba(0, 170, 255, 0.5), 0 0 150px rgba(0, 140, 255, 0.3); }} }}
+@keyframes core-breathe {{ 0%, 100% {{ transform: scale(1); }} 50% {{ transform: scale(1.08); }} }}
+@keyframes data-flow {{ 0% {{ opacity: 0.4; transform: translateY(5px); }} 50% {{ opacity: 1; transform: translateY(0); }} 100% {{ opacity: 0.4; transform: translateY(-5px); }} }}
+@keyframes particle-float {{ 0% {{ transform: translateY(0) rotate(0deg); opacity: 0; }} 25% {{ opacity: 0.6; }} 75% {{ opacity: 0.6; }} 100% {{ transform: translateY(-150px) rotate(360deg); opacity: 0; }} }}
+.energy-core-container {{ position: relative; width: 100%; height: 280px; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(0, 60, 120, 0.4) 0%, rgba(10, 10, 30, 1) 70%); overflow: hidden; }}
+.core-outer-ring {{ position: absolute; width: 220px; height: 220px; border-radius: 50%; border: 2px solid rgba(0, 180, 255, 0.3); animation: pulse-ring-slow 4s ease-in-out infinite; }}
+.core-middle-ring {{ position: absolute; width: 170px; height: 170px; border-radius: 50%; border: 3px solid rgba(0, 200, 255, 0.5); animation: pulse-ring 2.5s ease-in-out infinite; }}
+.core-inner-ring {{ position: absolute; width: 130px; height: 130px; border-radius: 50%; border: 2px solid rgba(0, 220, 255, 0.7); animation: pulse-ring 2s ease-in-out infinite 0.5s; }}
+.core-center {{ position: absolute; width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, rgba(120, 220, 255, 0.95) 0%, rgba(0, 150, 255, 0.85) 40%, rgba(0, 80, 180, 0.7) 70%, rgba(0, 40, 100, 0.5) 100%); animation: core-breathe 3s ease-in-out infinite, glow-pulse 2s ease-in-out infinite; display: flex; flex-direction: column; align-items: center; justify-content: center; }}
+.core-data {{ color: #ffffff; font-weight: bold; text-shadow: 0 0 10px rgba(255, 255, 255, 0.9); animation: data-flow 2s ease-in-out infinite; text-align: center; }}
+.core-data-primary {{ font-size: 20px; line-height: 1.1; }}
+.core-data-secondary {{ font-size: 10px; opacity: 0.9; margin-top: 3px; }}
+.core-title {{ position: absolute; bottom: 15px; text-align: center; width: 100%; }}
+.core-title h2 {{ color: #00d4ff; font-size: 18px; margin: 0; text-shadow: 0 0 20px rgba(0, 212, 255, 0.6); font-weight: 600; }}
+.core-title p {{ color: rgba(200, 230, 255, 0.85); font-size: 11px; margin: 4px 0 0 0; }}
+.particle {{ position: absolute; width: 4px; height: 4px; background: rgba(0, 200, 255, 0.6); border-radius: 50%; animation: particle-float 4s linear infinite; }}
+</style>
+</head>
+<body>
+<div class="energy-core-container">
+<div class="particle" style="left: 20%; animation-delay: 0s;"></div>
+<div class="particle" style="left: 40%; animation-delay: 1s;"></div>
+<div class="particle" style="left: 60%; animation-delay: 2s;"></div>
+<div class="particle" style="left: 80%; animation-delay: 3s;"></div>
+<div class="core-outer-ring"></div>
+<div class="core-middle-ring"></div>
+<div class="core-inner-ring"></div>
+<div class="core-center">
+<div class="core-data">
+<div class="core-data-primary">{core_display}</div>
+<div class="core-data-secondary">{core_label}</div>
+</div>
+</div>
+<div class="core-title">
+<h2>NexusOS Blockchain Hub</h2>
+<p>The Living Ecosystem • Your Phone IS the Node</p>
+</div>
+</div>
+</body>
+</html>'''
+    components.html(energy_core_html, height=280, scrolling=False)
     
     # Bell tap button (small, centered)
     col1, col2, col3 = st.columns([3, 2, 3])
