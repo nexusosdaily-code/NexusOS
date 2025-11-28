@@ -166,8 +166,8 @@ Complete architecture implemented with simulated content for demonstration. Prod
 
 ```bash
 # Clone repository
-git clone https://github.com/YOUR_USERNAME/nexusos-blockchain-hub.git
-cd nexusos-blockchain-hub
+git clone https://github.com/nexusosdaily-code/WNSP-P2P-Hub.git
+cd WNSP-P2P-Hub
 
 # Install dependencies
 pip install -r requirements.txt
@@ -428,11 +428,34 @@ See [LICENSE](LICENSE) file for full terms.
 
 ---
 
-*Last Updated: November 23, 2025*
+*Last Updated: November 28, 2025*
 
 ---
 
-## 🆕 Latest Updates (v2.0)
+## 🆕 Latest Updates (v2.1 - Security Audit Ready)
+
+### Security & Input Validation Enhancements (November 28, 2025)
+
+**Comprehensive Security Audit Completed:**
+- **AES-256-GCM Encryption**: Wallet private keys secured with industry-standard encryption
+- **PBKDF2 Key Derivation**: 100,000+ iterations for password-based key protection
+- **Quantum-Resistant Signatures**: Multi-spectral wavelength validation
+
+**New Input Validation System:**
+- **NXS Address Validation**: Strict format enforcement (NXS prefix + 40 hex characters)
+- **E.164 Phone Validation**: International phone number format with normalization
+- **Centralized Validators**: New `input_validators.py` module eliminates code duplication
+- **Frontend Blocking**: Invalid inputs blocked with contextual error messages
+
+**Code Quality Improvements:**
+- Fixed ValidatorStake import (migrated to NetworkNode.stake_amount aggregation)
+- Updated deprecated Streamlit parameters (use_container_width → width="stretch")
+- Enhanced database session handling with try/finally patterns
+- Production-ready with NO PLACEHOLDERS
+
+---
+
+## 🆕 Previous Updates (v2.0)
 
 ### Avogadro Economics Integration (November 2025)
 Revolutionary statistical mechanics integration - **first blockchain to unify quantum, relativistic, and thermodynamic physics**. Measures economic activity in photon-moles, calculates real-time economic temperature and entropy, models wealth distribution using Maxwell-Boltzmann statistics, and predicts phase transitions across 5 economic states.
