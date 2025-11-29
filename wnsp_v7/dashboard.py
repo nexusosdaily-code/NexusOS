@@ -1,12 +1,15 @@
 """
-WNSP v7.0 — Harmonic Octave Dashboard
+WNSP v7.0 — Harmonic Octave Dashboard with Lambda Boson Substrate
 
-Visualization of the Harmonic Octave Protocol:
+Visualization of the Harmonic Octave Protocol and Lambda Boson Substrate:
 - Node tone signatures (musical notes)
 - Octave band distribution
 - Resonance network graph
 - Excitation chain propagation
 - Carrier-payload visualization
+- Lambda Boson substrate (mass-energy conservation)
+- Standing wave storage (stored value)
+- Gravitational routing (mass-weighted paths)
 """
 
 import streamlit as st
@@ -24,6 +27,13 @@ from wnsp_v7.protocol import (
     Octave, HarmonicRatio, ExcitationState,
     PLANCK_CONSTANT, SPEED_OF_LIGHT, A4_FREQUENCY
 )
+
+from wnsp_v7.substrate import (
+    OscillatorState, OscillationRegister, SubstrateEncoder,
+    OscillationField, lambda_mass_from_frequency
+)
+
+from wnsp_v7.mass_routing import SubstrateNetwork
 
 st.set_page_config(
     page_title="WNSP v7.0 — Harmonic Octave Protocol",
@@ -43,6 +53,20 @@ def get_network() -> HarmonicNetwork:
         ("frank", 0.7),
         ("grace", 0.5),
         ("henry", 0.85)
+    ]
+    for node_id, stake in default_nodes:
+        network.add_node(node_id, stake)
+    return network
+
+@st.cache_resource
+def get_substrate_network() -> SubstrateNetwork:
+    network = SubstrateNetwork()
+    default_nodes = [
+        ("alice", 10.0),
+        ("bob", 8.0),
+        ("charlie", 6.0),
+        ("diana", 4.0),
+        ("eve", 5.0)
     ]
     for node_id, stake in default_nodes:
         network.add_node(node_id, stake)
@@ -520,6 +544,194 @@ def render_network_status(network: HarmonicNetwork):
     with col2:
         st.metric("Average Hops", f"{stats['average_hops']:.2f}")
 
+def render_lambda_substrate(substrate: SubstrateNetwork):
+    st.markdown("## Λ Lambda Boson Substrate")
+    st.markdown("""
+    > **Λ = hf/c²** — Oscillation IS mass  
+    > Every message carries inherent mass-equivalent through its wavelength.
+    """)
+    
+    status = substrate.status()
+    
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1:
+        st.metric("Substrate Nodes", status["nodes"])
+    with col2:
+        st.metric("Network Lambda", f"{status['network_lambda']:.2e} kg")
+    with col3:
+        st.metric("Stored Lambda", f"{status['total_stored_lambda']:.2e} kg")
+    with col4:
+        ledger = substrate.field.ledger.status()
+        st.metric("Active Lambda", f"{ledger.get('active_lambda', 0):.2e} kg")
+    with col5:
+        conservation = status["conservation"]
+        st.metric(
+            "Conservation",
+            "PASSED" if conservation["is_conserved"] else "FAILED"
+        )
+    
+    st.markdown("### Node Balances (Standing Wave Storage)")
+    
+    balances = status.get("node_balances", {})
+    if balances:
+        nodes = list(balances.keys())
+        values = [balances[n] for n in nodes]
+        
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=nodes,
+            y=values,
+            marker_color=[f"hsl({i * 60}, 70%, 50%)" for i in range(len(nodes))],
+            text=[f"{v:.2e}" for v in values],
+            textposition="outside"
+        ))
+        fig.update_layout(
+            title="Lambda Mass Stored at Each Node (Standing Waves)",
+            xaxis_title="Node",
+            yaxis_title="Lambda Mass (kg)",
+            height=350,
+            template="plotly_dark"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    st.markdown("### Lambda Boson Equations")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        **Mass from Frequency:**
+        ```
+        Λ = hf / c²
+        ```
+        
+        **Mass from Wavelength:**
+        ```
+        Λ = h / (λc)
+        ```
+        """)
+    
+    with col2:
+        st.markdown("""
+        **Conservation Law:**
+        ```
+        ΣΛ_in = ΣΛ_out + ΣΛ_stored + ΣΛ_dissipated
+        ```
+        
+        **Derivation:**
+        ```
+        E = hf (Planck) + E = mc² (Einstein)
+        → m = hf/c² = Λ (Lambda Boson)
+        ```
+        """)
+    
+    st.markdown("### Store Value (Create Standing Wave)")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        store_node = st.selectbox(
+            "Select Node",
+            options=list(substrate.substrate_nodes.keys()),
+            key="store_node"
+        )
+        
+        store_data = st.text_input(
+            "Data to Store",
+            value="Stored value as standing wave",
+            key="store_data"
+        )
+        
+        store_authority = st.slider(
+            "Authority Level",
+            min_value=0,
+            max_value=7,
+            value=3,
+            key="store_authority"
+        )
+    
+    with col2:
+        data_bytes = store_data.encode() * 10
+        preview_lambda = lambda_mass_from_frequency(4.3e14) * len(data_bytes)
+        
+        st.markdown("**Estimated Lambda Mass:**")
+        st.code(f"Λ ≈ {preview_lambda:.3e} kg")
+        st.markdown(f"Data size: {len(data_bytes)} bytes")
+        st.markdown(f"Oscillators: {len(data_bytes)}")
+    
+    if st.button("Store Value as Standing Wave", use_container_width=True, key="store_btn"):
+        result = substrate.store_value(store_node, store_data.encode() * 10, store_authority)
+        if "error" not in result:
+            st.success(f"Stored Λ = {result['lambda_stored']:.3e} kg at {store_node}")
+            st.session_state["last_store"] = result
+            st.rerun()
+        else:
+            st.error(result["error"])
+    
+    st.markdown("### Transfer Value Between Nodes")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        from_node = st.selectbox(
+            "From Node",
+            options=list(substrate.substrate_nodes.keys()),
+            key="from_node"
+        )
+        from_balance = balances.get(from_node, 0)
+        st.caption(f"Balance: {from_balance:.3e} kg")
+    
+    with col2:
+        to_node = st.selectbox(
+            "To Node",
+            options=[n for n in substrate.substrate_nodes.keys() if n != from_node],
+            key="to_node"
+        )
+        to_balance = balances.get(to_node, 0)
+        st.caption(f"Balance: {to_balance:.3e} kg")
+    
+    with col3:
+        transfer_pct = st.slider(
+            "Transfer %",
+            min_value=10,
+            max_value=100,
+            value=50,
+            key="transfer_pct"
+        )
+        transfer_amount = from_balance * (transfer_pct / 100)
+        st.caption(f"Amount: {transfer_amount:.3e} kg")
+    
+    if st.button("Transfer Lambda", use_container_width=True, key="transfer_btn"):
+        if from_balance > 0:
+            result = substrate.transfer_value(from_node, to_node, transfer_amount)
+            if "error" not in result:
+                st.success(f"Transferred {result['transferred']:.3e} kg from {from_node} to {to_node}")
+                st.session_state["last_transfer"] = result
+                st.rerun()
+            else:
+                st.error(result["error"])
+        else:
+            st.warning(f"{from_node} has no stored Lambda to transfer")
+    
+    with st.expander("Ledger Entries"):
+        ledger = substrate.field.ledger
+        if ledger.entries:
+            data = []
+            for entry in ledger.entries[-20:]:
+                data.append({
+                    "Type": entry.event_type,
+                    "Node": entry.node_id,
+                    "Λ In": f"{entry.lambda_in:.2e}",
+                    "Λ Out": f"{entry.lambda_out:.2e}",
+                    "Λ Stored": f"{entry.lambda_stored:.2e}",
+                    "Λ Dissipated": f"{entry.lambda_dissipated:.2e}",
+                    "Balance": f"{entry.lambda_balance:.2e}"
+                })
+            st.dataframe(data, use_container_width=True)
+        else:
+            st.info("No ledger entries yet")
+
+
 def render_physics_foundation():
     st.markdown("## 📚 Physics Foundation")
     
@@ -596,10 +808,12 @@ def render_physics_foundation():
 
 def main():
     network = get_network()
+    substrate = get_substrate_network()
     
     render_header()
     
     tabs = st.tabs([
+        "Λ Lambda Substrate",
         "🌈 Octave Spectrum",
         "🎼 Node Tones",
         "🔗 Resonance Network",
@@ -610,24 +824,27 @@ def main():
     ])
     
     with tabs[0]:
-        render_octave_spectrum()
+        render_lambda_substrate(substrate)
     
     with tabs[1]:
-        render_node_tones(network)
+        render_octave_spectrum()
     
     with tabs[2]:
-        render_resonance_network(network)
+        render_node_tones(network)
     
     with tabs[3]:
-        render_packet_creator(network)
+        render_resonance_network(network)
     
     with tabs[4]:
-        render_excitation_chain()
+        render_packet_creator(network)
     
     with tabs[5]:
-        render_network_status(network)
+        render_excitation_chain()
     
     with tabs[6]:
+        render_network_status(network)
+    
+    with tabs[7]:
         render_physics_foundation()
     
     st.markdown("---")

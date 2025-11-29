@@ -1,11 +1,16 @@
 """
-WNSP v7.0 — Harmonic Octave Protocol
+WNSP v7.0 — Harmonic Octave Protocol with Lambda Boson Substrate
 Standalone package for harmonic resonance-based networking.
 
 "Energy is alternating wavelength frequency vibration octave tone"
 
-This package is intentionally separate from the core WNSP protocol stack
-to allow independent development of Lambda Boson computational substrate.
+Theoretical Foundation:
+- E = hf (Planck 1900): Energy from frequency
+- E = mc² (Einstein 1905): Mass-energy equivalence  
+- Λ = hf/c² (Lambda Boson 2024): Oscillation IS mass
+
+This package implements the Lambda Boson computational substrate,
+where messages ARE oscillation, not bytes tagged with wavelength.
 """
 
 from .protocol import (
@@ -26,8 +31,33 @@ from .protocol import (
     convert_v7_to_v6,
 )
 
+from .substrate import (
+    OscillatorState,
+    OscillationRegister,
+    SubstrateEncoder,
+    MassLedger,
+    MassLedgerEntry,
+    StandingWave,
+    StandingWaveRegistry,
+    GravitationalNode,
+    GravitationalField,
+    OscillationField,
+    lambda_mass_from_frequency,
+    lambda_mass_from_wavelength,
+    energy_from_lambda,
+    frequency_from_lambda,
+)
+
+from .mass_routing import (
+    MassRoute,
+    MassWeightedRouter,
+    SubstrateNode,
+    SubstrateNetwork,
+)
+
 __version__ = "7.0.0"
 __all__ = [
+    # Protocol layer
     "Octave",
     "HarmonicRatio", 
     "ToneSignature",
@@ -38,9 +68,32 @@ __all__ = [
     "ExcitationEvent",
     "HarmonicNode",
     "HarmonicNetwork",
+    # Constants
     "PLANCK_CONSTANT",
     "SPEED_OF_LIGHT",
     "A4_FREQUENCY",
+    # Converters
     "convert_v6_to_v7",
     "convert_v7_to_v6",
+    # Substrate layer
+    "OscillatorState",
+    "OscillationRegister",
+    "SubstrateEncoder",
+    "MassLedger",
+    "MassLedgerEntry",
+    "StandingWave",
+    "StandingWaveRegistry",
+    "GravitationalNode",
+    "GravitationalField",
+    "OscillationField",
+    # Mass routing
+    "MassRoute",
+    "MassWeightedRouter",
+    "SubstrateNode",
+    "SubstrateNetwork",
+    # Utility functions
+    "lambda_mass_from_frequency",
+    "lambda_mass_from_wavelength",
+    "energy_from_lambda",
+    "frequency_from_lambda",
 ]
