@@ -18,7 +18,7 @@ import math
 import time
 from typing import Dict, List, Any
 
-from wnsp_v7_harmonic_octave import (
+from wnsp_v7.protocol import (
     HarmonicNetwork, HarmonicNode, HarmonicPacket,
     ToneSignature, CarrierWave, HarmonicPayload,
     Octave, HarmonicRatio, ExcitationState,

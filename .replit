@@ -42,13 +42,13 @@ args = "python wnsp_media_server.py"
 name = "WNSP v7 Harmonic"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "streamlit run wnsp_v7_dashboard.py --server.port 5000 --server.headless true"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run wnsp_v7/dashboard.py --server.port 5000 --server.headless true"
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000
