@@ -254,7 +254,7 @@ def render_resonance_network(network: HarmonicNetwork):
         marker=dict(
             size=30,
             color=node_colors,
-            colorscale="HSL",
+            colorscale="rainbow",
             showscale=True,
             colorbar=dict(title="Freq (Hz)")
         ),
