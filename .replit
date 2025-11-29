@@ -23,10 +23,6 @@ author = "agent"
 task = "workflow.run"
 args = "WNSP Media Server"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "WNSP v7 Harmonic"
-
 [[workflows.workflow]]
 name = "WNSP Media Server"
 author = "agent"
@@ -37,18 +33,6 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python wnsp_media_server.py"
-
-[[workflows.workflow]]
-name = "WNSP v7 Harmonic"
-author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "webview"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd /home/runner/workspace && PYTHONPATH=/home/runner/workspace:$PYTHONPATH streamlit run wnsp_v7/dashboard.py --server.port 5000 --server.headless true"
-waitForPort = 5000
 
 [[ports]]
 localPort = 5000
