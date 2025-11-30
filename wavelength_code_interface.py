@@ -21,7 +21,9 @@ from wavelength_code_generator import (
 from wavelength_validator import SpectralRegion, ModulationType, WaveProperties
 from text_to_wavelength_translator import (
     render_text_to_wavelength_translator,
-    render_quick_translator
+    render_quick_translator,
+    translate_text_full,
+    wavelength_to_color
 )
 import math
 import json
@@ -609,6 +611,135 @@ def render_visual_builder_tab(gen):
         
         **380nm is ALWAYS 380nm** - wavelengths don't have typos!
         """)
+    
+    # ============================================================
+    # MOBILE TEXT-TO-WAVELENGTH INPUT WINDOW
+    # ============================================================
+    st.markdown("### 📱 Text Input Monitor - Mobile Wavelength Constructor")
+    st.markdown("Type any text using your mobile keyboard and watch it convert to wavelengths in real-time!")
+    
+    # Text input with mobile keyboard support
+    text_input = st.text_area(
+        "Type your program text here:",
+        placeholder="Type any text... each character becomes a wavelength!",
+        height=100,
+        key="mobile_text_input",
+        label_visibility="collapsed"
+    )
+    
+    if text_input:
+        # Translate text to wavelengths
+        translation = translate_text_full(text_input, use_scientific=True)
+        
+        if translation.mappings:
+            # Show conversion stats
+            stats_col1, stats_col2, stats_col3 = st.columns(3)
+            with stats_col1:
+                st.metric("Characters Encoded", len(translation.mappings))
+            with stats_col2:
+                st.metric("Encoding Success", f"{translation.encoding_ratio*100:.1f}%")
+            with stats_col3:
+                st.metric("Total Energy", f"{sum(m.energy_j for m in translation.mappings):.2e} J")
+            
+            # Visual spectrum display of wavelengths
+            fig = go.Figure()
+            
+            # Add spectral regions
+            regions = [
+                ("UV", 365, 400, "#9500ff"),
+                ("Violet", 400, 450, "#7500ff"),
+                ("Blue", 450, 495, "#0015ff"),
+                ("Green", 495, 570, "#00ff00"),
+                ("Yellow", 570, 590, "#ffff00"),
+                ("Orange", 590, 620, "#ff7f00"),
+                ("Red", 620, 750, "#ff0000"),
+            ]
+            
+            for region_name, wl_min, wl_max, color in regions:
+                fig.add_vrect(
+                    x0=wl_min, x1=wl_max,
+                    fillcolor=color, opacity=0.2,
+                    layer="below", line_width=0,
+                    annotation_text=region_name, annotation_position="top left"
+                )
+            
+            # Plot each character's wavelength
+            wavelengths = [m.wavelength_nm for m in translation.mappings]
+            characters = [m.character for m in translation.mappings]
+            colors = [m.color_hex for m in translation.mappings]
+            
+            fig.add_trace(go.Scatter(
+                x=wavelengths, 
+                y=[1]*len(wavelengths),
+                mode='markers+text',
+                marker=dict(
+                    size=20,
+                    color=colors,
+                    line=dict(color='white', width=2)
+                ),
+                text=characters,
+                textposition="top center",
+                textfont=dict(size=12, color="white", family="monospace"),
+                name="Text Wavelengths",
+                hovertemplate="<b>%{text}</b><br>Wavelength: %{x:.1f}nm<extra></extra>"
+            ))
+            
+            fig.update_layout(
+                title="📊 Mobile Text-to-Wavelength Visualization",
+                xaxis_title="Wavelength (nm)",
+                yaxis_title="",
+                height=300,
+                showlegend=False,
+                yaxis=dict(visible=False),
+                hovermode="closest",
+                margin=dict(t=50, b=50, l=50, r=50)
+            )
+            
+            st.plotly_chart(fig, use_container_width=True, key="text_spectrum_visual")
+            
+            # Show character mapping details
+            with st.expander("📋 Character-to-Wavelength Mapping"):
+                mapping_data = []
+                for m in translation.mappings:
+                    mapping_data.append({
+                        "Char": m.character,
+                        "Wavelength (nm)": f"{m.wavelength_nm:.1f}",
+                        "Region": m.spectral_region,
+                        "Frequency (Hz)": f"{m.frequency_hz:.2e}",
+                        "Energy (J)": f"{m.energy_j:.2e}"
+                    })
+                st.dataframe(mapping_data, use_container_width=True)
+            
+            # Option to load as program
+            if st.button("🚀 Load Text as Wavelength Program", type="primary", key="load_text_program"):
+                # Create instructions from wavelengths
+                new_instructions = []
+                for mapping in translation.mappings:
+                    # Find closest opcode
+                    closest_opcode = min(WavelengthOpcodes, 
+                                        key=lambda x: abs(x.value - mapping.wavelength_nm))
+                    spectral_region = mapping.spectral_region
+                    
+                    instruction = WavelengthInstruction(
+                        opcode=closest_opcode,
+                        wavelength_nm=mapping.wavelength_nm,
+                        spectral_region=spectral_region,
+                        modulation=ModulationType.OOK,
+                        amplitude=0.8,
+                        phase=0.0
+                    )
+                    new_instructions.append(instruction)
+                
+                st.session_state.instructions = new_instructions
+                st.success(f"✅ Loaded {len(new_instructions)} wavelength instructions from text!")
+                st.rerun()
+        else:
+            st.warning("⚠️ No characters could be encoded. Try different text!")
+        
+        if translation.unsupported_chars:
+            st.info(f"💡 Unsupported characters: {', '.join(translation.unsupported_chars)}")
+    
+    st.divider()
     
     col1, col2 = st.columns([1, 2])
     
