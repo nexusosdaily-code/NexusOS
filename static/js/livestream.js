@@ -31,6 +31,50 @@ let userPhone = null; // User's registered phone number (server-verified)
 socket.on('connected', (data) => {
     console.log('✅ Connected to WNSP mesh network:', data.message);
     
+    // PRIORITY 0: Check URL parameters (for Streamlit iframe embedding)
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlWallet = urlParams.get('wallet');
+    const urlPhone = urlParams.get('phone');
+    const urlFriends = urlParams.get('friends');
+    
+    if (urlWallet || urlPhone) {
+        console.log('🔗 Credentials received via URL params');
+        
+        // Parse friends from URL
+        if (urlFriends) {
+            try {
+                userFriends = JSON.parse(decodeURIComponent(urlFriends));
+                console.log(`✅ Loaded ${userFriends.length} friends from URL params`);
+            } catch (e) {
+                console.log('⚠️ Could not parse friends from URL');
+                userFriends = [];
+            }
+        }
+        
+        // Use phone if provided, otherwise wallet as identity
+        const identity = urlPhone || urlWallet;
+        if (identity) {
+            userPhone = identity;
+            
+            // CRITICAL: Register with Socket.IO backend so server recognizes this session
+            console.log('📱 Registering identity with backend:', identity.substring(0, 20) + '...');
+            socket.emit('register_phone', { phone_number: identity });
+            
+            // Show broadcast controls, hide phone login
+            const phoneLogin = document.getElementById('phoneLogin');
+            const broadcastControls = document.getElementById('broadcastControls');
+            const userPhoneDisplay = document.getElementById('userPhone');
+            
+            if (phoneLogin) phoneLogin.style.display = 'none';
+            if (broadcastControls) broadcastControls.style.display = 'block';
+            if (userPhoneDisplay) userPhoneDisplay.textContent = identity.substring(0, 20) + '...';
+            
+            renderFriendsList();
+            loadActiveBroadcasts();
+            return;
+        }
+    }
+    
     // PRIORITY 1: Check for wallet/friends injected from Streamlit (embedded mode)
     if (window.nexusWallet) {
         console.log('🔗 Wallet injected from Streamlit:', window.nexusWallet.substring(0, 20) + '...');

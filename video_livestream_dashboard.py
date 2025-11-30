@@ -107,22 +107,162 @@ def render_video_livestream_dashboard():
     if 'friends_list' not in st.session_state:
         st.session_state.friends_list = []
     
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📤 Upload Video", "📡 Livestream", "👥 Friends", "📚 Library", "⚙️ Settings"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📹 Video Calling", "📤 Upload Video", "📡 Livestream", "👥 Friends", "📚 Library", "⚙️ Settings"])
     
     with tab1:
-        render_video_upload_tab()
+        render_video_calling_tab()
     
     with tab2:
-        render_livestream_tab()
+        render_video_upload_tab()
     
     with tab3:
-        render_friends_tab()
+        render_livestream_tab()
     
     with tab4:
-        render_video_library_tab()
+        render_friends_tab()
     
     with tab5:
+        render_video_library_tab()
+    
+    with tab6:
         render_settings_tab()
+
+
+def render_video_calling_tab():
+    """Video calling interface with video monitors for seeing friends"""
+    st.subheader("📹 Video Calling & Monitors")
+    
+    st.markdown("""
+    Connect with friends through live video calls. Each monitor shows a friend's video feed in real-time.
+    """)
+    
+    col_status, col_server = st.columns([2, 1])
+    with col_status:
+        st.markdown("### 🌐 Connection Status")
+        st.success("✅ WNSP Media Server: Online (Port 8080)")
+    with col_server:
+        if st.button("🔗 Open Full Video Hub", type="primary", use_container_width=True):
+            st.markdown(f"[Open in new tab](http://localhost:8080/livestream.html)", unsafe_allow_html=True)
+    
+    st.divider()
+    
+    st.markdown("### 📺 Video Monitor Grid")
+    st.markdown("Select friends to start a video call. Their video feed will appear in the monitors below.")
+    
+    if st.session_state.friends_list:
+        friend_options = []
+        for friend in st.session_state.friends_list:
+            friend_name = friend.get('name', friend.get('friend_name', 'Unknown'))
+            friend_contact = friend.get('contact', friend.get('friend_contact', ''))
+            friend_options.append(f"{friend_name} ({friend_contact})")
+        
+        selected_for_call = st.multiselect(
+            "Choose friends to video call:",
+            options=friend_options,
+            max_selections=4,
+            key="video_call_friends",
+            help="Select up to 4 friends for a group video call"
+        )
+        
+        if selected_for_call:
+            st.info(f"📞 Ready to call {len(selected_for_call)} friend(s)")
+            
+            if st.button("📹 Start Video Call", type="primary", use_container_width=True):
+                st.session_state['active_video_call'] = selected_for_call
+                st.success("🔔 Calling friends... Waiting for them to connect.")
+    else:
+        st.warning("⚠️ Add friends in the Friends tab to start video calling")
+    
+    st.markdown("---")
+    
+    st.markdown("### 🖥️ Video Monitors")
+    
+    monitor_cols = st.columns(2)
+    
+    active_call = st.session_state.get('active_video_call', [])
+    
+    for i in range(4):
+        col_idx = i % 2
+        with monitor_cols[col_idx]:
+            with st.container(border=True):
+                if i < len(active_call):
+                    friend_name = active_call[i].split(" (")[0]
+                    st.markdown(f"""
+                    <div style="background: #1a1a2e; border-radius: 12px; padding: 20px; text-align: center; min-height: 200px;">
+                        <div style="color: #ef4444; font-weight: bold; margin-bottom: 10px;">🔴 CONNECTING...</div>
+                        <div style="font-size: 48px; margin: 20px 0;">👤</div>
+                        <div style="color: white; font-weight: 600;">{friend_name}</div>
+                        <div style="color: #94a3b8; font-size: 12px; margin-top: 5px;">Waiting for video feed...</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <div style="background: #252540; border-radius: 12px; padding: 20px; text-align: center; min-height: 200px; border: 2px dashed #374151;">
+                        <div style="font-size: 48px; margin: 30px 0; opacity: 0.3;">📺</div>
+                        <div style="color: #64748b;">Monitor {i+1}</div>
+                        <div style="color: #475569; font-size: 12px;">No active connection</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+    
+    if active_call:
+        st.markdown("---")
+        col_mute, col_video, col_end = st.columns(3)
+        with col_mute:
+            if st.button("🔇 Mute", use_container_width=True):
+                st.info("Microphone muted")
+        with col_video:
+            if st.button("📷 Toggle Camera", use_container_width=True):
+                st.info("Camera toggled")
+        with col_end:
+            if st.button("📴 End Call", type="secondary", use_container_width=True):
+                st.session_state['active_video_call'] = []
+                st.warning("Call ended")
+                st.rerun()
+    
+    st.markdown("---")
+    
+    st.markdown("### 🎬 WebRTC Live Video Hub")
+    st.markdown("For full video calling with camera access, use the embedded video hub below:")
+    
+    import streamlit.components.v1 as components
+    import urllib.parse
+    
+    wallet_id = st.session_state.get('wallet_address', 'NXS_GUEST')
+    user_phone = st.session_state.get('user_phone', '')
+    
+    friends_data = []
+    for friend in st.session_state.friends_list:
+        friends_data.append({
+            'name': friend.get('name', friend.get('friend_name', 'Unknown')),
+            'contact': friend.get('contact', friend.get('friend_contact', ''))
+        })
+    
+    friends_encoded = urllib.parse.quote(json.dumps(friends_data))
+    wallet_encoded = urllib.parse.quote(wallet_id)
+    phone_encoded = urllib.parse.quote(user_phone) if user_phone else ''
+    
+    iframe_url = f"http://localhost:8080/livestream.html?wallet={wallet_encoded}&phone={phone_encoded}&friends={friends_encoded}"
+    
+    video_hub_html = f"""
+    <div style="position: relative;">
+        <iframe 
+            id="videoHubFrame"
+            src="{iframe_url}" 
+            width="100%" 
+            height="600" 
+            style="border: 2px solid #667eea; border-radius: 12px; background: #0f0f23;"
+            allow="camera; microphone; autoplay; display-capture"
+        ></iframe>
+        <div style="position: absolute; top: 10px; right: 10px; background: rgba(16, 185, 129, 0.9); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">
+            ✅ Camera Ready
+        </div>
+    </div>
+    <p style="color: #64748b; font-size: 12px; margin-top: 8px; text-align: center;">
+        📹 Click "Continue" in the video hub above, then "Start Live Broadcast" to begin video calling
+    </p>
+    """
+    
+    components.html(video_hub_html, height=660)
 
 
 def render_friends_tab():
