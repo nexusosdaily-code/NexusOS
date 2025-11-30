@@ -26,6 +26,249 @@ from text_to_wavelength_translator import (
 import math
 import json
 
+# Physics constants
+PLANCK_CONSTANT = 6.62607015e-34  # J·s
+SPEED_OF_LIGHT = 299792458  # m/s
+
+# Learning Monitor - operation explanations
+OPERATION_EXPLANATIONS = {
+    "ADD": {
+        "wavelength": 380.0,
+        "region": "UV",
+        "what_it_does": "Combines two values together, like adding numbers",
+        "physics": "Uses 380nm UV wavelength - high energy for fast computation",
+        "real_world": "Like combining ingredients in a recipe",
+        "troubleshoot": "If result seems wrong, check that both operands are numbers",
+        "example": "ADD 5, 3 → Result: 8"
+    },
+    "SUBTRACT": {
+        "wavelength": 390.0,
+        "region": "UV",
+        "what_it_does": "Takes one value away from another",
+        "physics": "390nm UV - slightly lower energy than ADD",
+        "real_world": "Like removing items from a shopping cart",
+        "troubleshoot": "Order matters! First operand minus second operand",
+        "example": "SUBTRACT 10, 4 → Result: 6"
+    },
+    "MULTIPLY": {
+        "wavelength": 400.0,
+        "region": "Violet",
+        "what_it_does": "Multiplies two values together",
+        "physics": "400nm Violet - visible spectrum begins",
+        "real_world": "Like calculating total cost: quantity × price",
+        "troubleshoot": "Large numbers may overflow - use smaller values",
+        "example": "MULTIPLY 7, 8 → Result: 56"
+    },
+    "DIVIDE": {
+        "wavelength": 410.0,
+        "region": "Violet",
+        "what_it_does": "Splits one value by another",
+        "physics": "410nm Violet - balanced energy for precision",
+        "real_world": "Like splitting a pizza among friends",
+        "troubleshoot": "Cannot divide by zero! Always check denominator",
+        "example": "DIVIDE 20, 4 → Result: 5"
+    },
+    "AND": {
+        "wavelength": 420.0,
+        "region": "Violet",
+        "what_it_does": "Returns true only if BOTH conditions are true",
+        "physics": "420nm - logical operations use blue-violet spectrum",
+        "real_world": "Like needing BOTH a key AND a password to enter",
+        "troubleshoot": "Both inputs must be boolean (true/false)",
+        "example": "AND (true, true) → true; AND (true, false) → false"
+    },
+    "OR": {
+        "wavelength": 430.0,
+        "region": "Blue",
+        "what_it_does": "Returns true if EITHER condition is true",
+        "physics": "430nm Blue - slightly higher energy logic",
+        "real_world": "Like opening door with EITHER key OR card",
+        "troubleshoot": "Returns false only if BOTH inputs are false",
+        "example": "OR (true, false) → true; OR (false, false) → false"
+    },
+    "NOT": {
+        "wavelength": 440.0,
+        "region": "Blue",
+        "what_it_does": "Flips true to false, and false to true",
+        "physics": "440nm Blue - simple inversion operation",
+        "real_world": "Like a light switch - on becomes off, off becomes on",
+        "troubleshoot": "Only takes one input, not two",
+        "example": "NOT (true) → false; NOT (false) → true"
+    },
+    "XOR": {
+        "wavelength": 450.0,
+        "region": "Blue",
+        "what_it_does": "Returns true if inputs are DIFFERENT",
+        "physics": "450nm Blue - exclusive logic operation",
+        "real_world": "Like choosing between two exclusive options",
+        "troubleshoot": "True only when exactly one input is true",
+        "example": "XOR (true, false) → true; XOR (true, true) → false"
+    },
+    "LOAD": {
+        "wavelength": 500.0,
+        "region": "Green",
+        "what_it_does": "Retrieves a value from memory into working area",
+        "physics": "500nm Green - balanced energy for data operations",
+        "real_world": "Like getting a book from a library shelf",
+        "troubleshoot": "Make sure the memory address exists first",
+        "example": "LOAD address_5 → Puts value at address 5 into register"
+    },
+    "STORE": {
+        "wavelength": 510.0,
+        "region": "Green",
+        "what_it_does": "Saves a value from working area to memory",
+        "physics": "510nm Green - stable storage wavelength",
+        "real_world": "Like putting a book back on the shelf",
+        "troubleshoot": "Value in register will be copied, not moved",
+        "example": "STORE 42, address_5 → Saves 42 at memory address 5"
+    },
+    "PUSH": {
+        "wavelength": 520.0,
+        "region": "Green",
+        "what_it_does": "Adds a value to the top of the stack",
+        "physics": "520nm Green - stack operations use green spectrum",
+        "real_world": "Like stacking plates - new one goes on top",
+        "troubleshoot": "Stack has limited size - don't overflow!",
+        "example": "PUSH 10 → Stack: [10] (10 is now on top)"
+    },
+    "POP": {
+        "wavelength": 530.0,
+        "region": "Green",
+        "what_it_does": "Removes and returns the top value from stack",
+        "physics": "530nm Green - retrieval from stack",
+        "real_world": "Like taking the top plate off a stack",
+        "troubleshoot": "Can't pop from empty stack! Check size first",
+        "example": "POP → Returns top value and removes it from stack"
+    },
+    "IF": {
+        "wavelength": 550.0,
+        "region": "Yellow-Green",
+        "what_it_does": "Executes next instruction only if condition is true",
+        "physics": "550nm - control flow uses yellow-green band",
+        "real_world": "Like a traffic light - proceed only on green",
+        "troubleshoot": "Condition must evaluate to true/false",
+        "example": "IF (x > 5) → Only runs next instruction if x is greater than 5"
+    },
+    "LOOP": {
+        "wavelength": 570.0,
+        "region": "Yellow",
+        "what_it_does": "Repeats a block of instructions multiple times",
+        "physics": "570nm Yellow - repetition wavelength",
+        "real_world": "Like a washing machine cycle - repeats until done",
+        "troubleshoot": "Make sure loop has exit condition to avoid infinite loops",
+        "example": "LOOP 10 → Repeats next block 10 times"
+    },
+    "BREAK": {
+        "wavelength": 590.0,
+        "region": "Orange",
+        "what_it_does": "Exits from a loop immediately",
+        "physics": "590nm Orange - interrupt signal",
+        "real_world": "Like an emergency stop button",
+        "troubleshoot": "Only works inside a loop",
+        "example": "BREAK → Immediately exits current loop"
+    },
+    "CALL": {
+        "wavelength": 600.0,
+        "region": "Orange",
+        "what_it_does": "Jumps to and executes a named function",
+        "physics": "600nm Orange - function call wavelength",
+        "real_world": "Like asking a specialist to do a specific task",
+        "troubleshoot": "Function must be defined before calling",
+        "example": "CALL calculate_tax → Runs the calculate_tax function"
+    },
+    "RETURN": {
+        "wavelength": 610.0,
+        "region": "Orange",
+        "what_it_does": "Exits function and returns a value to caller",
+        "physics": "610nm Orange - return signal",
+        "real_world": "Like a delivery person bringing back a package",
+        "troubleshoot": "Return value type should match function definition",
+        "example": "RETURN 42 → Sends 42 back to whoever called this function"
+    },
+    "DEFINE": {
+        "wavelength": 620.0,
+        "region": "Red",
+        "what_it_does": "Creates a new named function",
+        "physics": "620nm Red - definition wavelength",
+        "real_world": "Like writing a recipe that can be used later",
+        "troubleshoot": "Function name must be unique",
+        "example": "DEFINE add_tax → Creates a function called add_tax"
+    },
+    "INPUT": {
+        "wavelength": 650.0,
+        "region": "Red",
+        "what_it_does": "Receives data from external source",
+        "physics": "650nm Red - input wavelength",
+        "real_world": "Like listening for a message",
+        "troubleshoot": "Input may be empty - always validate",
+        "example": "INPUT → Waits for and receives external data"
+    },
+    "OUTPUT": {
+        "wavelength": 680.0,
+        "region": "Red",
+        "what_it_does": "Sends data to external destination",
+        "physics": "680nm Deep Red - output wavelength",
+        "real_world": "Like sending a message out",
+        "troubleshoot": "Destination must be available",
+        "example": "OUTPUT result → Sends result to output channel"
+    },
+    "PRINT": {
+        "wavelength": 700.0,
+        "region": "Deep Red",
+        "what_it_does": "Displays a value on screen",
+        "physics": "700nm Deep Red - display wavelength",
+        "real_world": "Like showing a message on a billboard",
+        "troubleshoot": "Value will be converted to text for display",
+        "example": "PRINT 'Hello' → Shows 'Hello' on screen"
+    }
+}
+
+# SDK Capabilities - what can be built
+SDK_CAPABILITIES = {
+    "Programs": {
+        "icon": "📱",
+        "description": "Build standalone applications that run on NexusOS",
+        "examples": ["Calculator", "Data processor", "File manager", "Crypto wallet"],
+        "difficulty": "Beginner",
+        "starter_ops": ["LOAD", "STORE", "ADD", "PRINT"]
+    },
+    "Operating Systems": {
+        "icon": "🖥️",
+        "description": "Create custom OS components and system utilities",
+        "examples": ["Task scheduler", "Memory manager", "File system", "Process controller"],
+        "difficulty": "Advanced",
+        "starter_ops": ["LOAD", "STORE", "IF", "LOOP", "CALL"]
+    },
+    "AI & Machine Learning": {
+        "icon": "🤖",
+        "description": "Build intelligent systems with wavelength-encoded neural operations",
+        "examples": ["Pattern recognizer", "Decision engine", "Learning system", "Classifier"],
+        "difficulty": "Intermediate",
+        "starter_ops": ["MULTIPLY", "ADD", "IF", "LOOP"]
+    },
+    "Games": {
+        "icon": "🎮",
+        "description": "Create interactive games with physics-based logic",
+        "examples": ["Number guessing", "Logic puzzles", "Text adventure", "Trading game"],
+        "difficulty": "Beginner",
+        "starter_ops": ["INPUT", "IF", "LOOP", "PRINT", "RETURN"]
+    },
+    "DeFi & Blockchain": {
+        "icon": "💰",
+        "description": "Build decentralized finance applications on NexusOS",
+        "examples": ["Token swaps", "Staking contracts", "Governance", "DEX interfaces"],
+        "difficulty": "Advanced",
+        "starter_ops": ["LOAD", "STORE", "MULTIPLY", "IF", "CALL"]
+    },
+    "IoT & Sensors": {
+        "icon": "📡",
+        "description": "Interface with physical devices via wavelength protocols",
+        "examples": ["Sensor reader", "Device controller", "Data logger", "Alert system"],
+        "difficulty": "Intermediate",
+        "starter_ops": ["INPUT", "OUTPUT", "IF", "LOOP"]
+    }
+}
+
 # Future use cases for WaveProperties:
 # 1. Wave interference analysis - detect instruction collisions
 # 2. Quantum superposition - model parallel execution paths
@@ -34,6 +277,228 @@ import json
 # 5. Phase locking - synchronize multi-instruction sequences
 # 6. Harmonic analysis - optimize bytecode efficiency
 # 7. Wave packet collapse - debug program execution states
+
+
+def render_learning_monitor(selected_opcode, instructions):
+    """
+    Render the Learning Monitor panel showing real-time explanations
+    of the selected operation and program state.
+    """
+    opcode_name = selected_opcode.name
+    explanation = OPERATION_EXPLANATIONS.get(opcode_name, {})
+    
+    st.markdown("### 🖥️ Learning Monitor")
+    
+    # Calculate physics values
+    wavelength_nm = selected_opcode.value
+    wavelength_m = wavelength_nm * 1e-9
+    frequency_hz = SPEED_OF_LIGHT / wavelength_m
+    energy_j = PLANCK_CONSTANT * frequency_hz
+    
+    # Main monitor display
+    st.markdown(f"""
+    <div style='background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+                padding: 20px; border-radius: 12px; border: 1px solid #4a4a6a;
+                font-family: monospace;'>
+        <div style='color: #00ff88; font-size: 1.4em; margin-bottom: 15px;'>
+            📡 OPERATION: {opcode_name}
+        </div>
+        <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 15px;'>
+            <div style='background: rgba(0,255,136,0.1); padding: 12px; border-radius: 8px;'>
+                <div style='color: #888; font-size: 0.8em;'>WAVELENGTH</div>
+                <div style='color: #00ff88; font-size: 1.3em;'>{wavelength_nm:.1f} nm</div>
+            </div>
+            <div style='background: rgba(136,136,255,0.1); padding: 12px; border-radius: 8px;'>
+                <div style='color: #888; font-size: 0.8em;'>FREQUENCY</div>
+                <div style='color: #8888ff; font-size: 1.1em;'>{frequency_hz:.2e} Hz</div>
+            </div>
+            <div style='background: rgba(255,136,0,0.1); padding: 12px; border-radius: 8px;'>
+                <div style='color: #888; font-size: 0.8em;'>ENERGY (E=hf)</div>
+                <div style='color: #ff8800; font-size: 1.1em;'>{energy_j:.2e} J</div>
+            </div>
+            <div style='background: rgba(255,0,136,0.1); padding: 12px; border-radius: 8px;'>
+                <div style='color: #888; font-size: 0.8em;'>SPECTRAL REGION</div>
+                <div style='color: #ff0088; font-size: 1.1em;'>{explanation.get('region', 'Unknown')}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Explanation tabs
+    monitor_tab1, monitor_tab2, monitor_tab3 = st.tabs(["💡 What It Does", "🔧 Troubleshoot", "📖 Physics"])
+    
+    with monitor_tab1:
+        st.markdown(f"**{explanation.get('what_it_does', 'No description available')}**")
+        st.markdown(f"🌍 *Real-world analogy:* {explanation.get('real_world', 'N/A')}")
+        st.code(explanation.get('example', 'No example available'), language="text")
+    
+    with monitor_tab2:
+        st.warning(f"⚠️ {explanation.get('troubleshoot', 'No troubleshooting tips available')}")
+        
+        # Common issues based on operation type
+        if opcode_name in ["DIVIDE"]:
+            st.error("🚫 **Division by Zero**: Always check that your divisor is not zero!")
+        elif opcode_name in ["POP"]:
+            st.error("🚫 **Empty Stack**: Make sure you PUSH values before trying to POP!")
+        elif opcode_name in ["LOOP"]:
+            st.error("🚫 **Infinite Loop**: Always include a BREAK condition or limit iterations!")
+        elif opcode_name in ["CALL"]:
+            st.info("💡 **Tip**: Define functions before calling them using DEFINE operation")
+    
+    with monitor_tab3:
+        st.markdown(f"**Physics Basis:** {explanation.get('physics', 'N/A')}")
+        st.markdown(f"""
+        **Lambda Boson Formula:**
+        - Energy: E = hf = {energy_j:.4e} J
+        - Mass-equivalent: Λ = hf/c² = {energy_j / (SPEED_OF_LIGHT**2):.4e} kg
+        
+        This wavelength carries real mass-equivalent through oscillation!
+        """)
+    
+    # Program state monitor
+    if instructions:
+        st.markdown("---")
+        st.markdown("### 📊 Program State")
+        
+        total_energy = sum(PLANCK_CONSTANT * SPEED_OF_LIGHT / (inst.wavelength_nm * 1e-9) 
+                         for inst in instructions)
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Instructions", len(instructions))
+        col2.metric("Total Energy", f"{total_energy:.2e} J")
+        col3.metric("Status", "✅ Valid" if len(instructions) > 0 else "⏳ Empty")
+
+
+def render_sdk_capabilities():
+    """Render the SDK capabilities section showing what can be built"""
+    
+    st.markdown("### 🚀 What Can You Build?")
+    st.markdown("The NexusOS SDK lets you create anything from simple programs to complete operating systems!")
+    
+    cols = st.columns(3)
+    
+    for idx, (name, info) in enumerate(SDK_CAPABILITIES.items()):
+        with cols[idx % 3]:
+            difficulty_color = {
+                "Beginner": "#00ff88",
+                "Intermediate": "#ffaa00",
+                "Advanced": "#ff4444"
+            }.get(info['difficulty'], "#888888")
+            
+            st.markdown(f"""
+            <div style='background: linear-gradient(135deg, #1e1e2e 0%, #2d2d3e 100%);
+                        padding: 15px; border-radius: 10px; margin-bottom: 10px;
+                        border-left: 4px solid {difficulty_color};'>
+                <div style='font-size: 1.5em; margin-bottom: 5px;'>{info['icon']} {name}</div>
+                <div style='color: #aaa; font-size: 0.9em; margin-bottom: 8px;'>{info['description']}</div>
+                <div style='color: {difficulty_color}; font-size: 0.8em;'>Difficulty: {info['difficulty']}</div>
+                <div style='color: #666; font-size: 0.8em; margin-top: 5px;'>
+                    Examples: {', '.join(info['examples'][:3])}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Starter template selector
+    st.markdown("---")
+    st.markdown("### 🎯 Quick Start Templates")
+    
+    template = st.selectbox(
+        "Choose a template to start building:",
+        ["Select a template...", "Simple Calculator", "Number Guessing Game", 
+         "Data Logger", "Token Counter", "Pattern Matcher"],
+        key="sdk_template_selector"
+    )
+    
+    # Template definitions with actual opcodes
+    templates = {
+        "Simple Calculator": {
+            "description": "📱 **Simple Calculator**: LOAD → ADD/SUBTRACT/MULTIPLY/DIVIDE → PRINT",
+            "opcodes": [WavelengthOpcodes.LOAD, WavelengthOpcodes.ADD, WavelengthOpcodes.PRINT]
+        },
+        "Number Guessing Game": {
+            "description": "🎮 **Number Guessing Game**: INPUT → IF → LOOP → PRINT",
+            "opcodes": [WavelengthOpcodes.INPUT, WavelengthOpcodes.IF, WavelengthOpcodes.LOOP, WavelengthOpcodes.PRINT]
+        },
+        "Data Logger": {
+            "description": "📡 **Data Logger**: INPUT → STORE → LOOP → OUTPUT",
+            "opcodes": [WavelengthOpcodes.INPUT, WavelengthOpcodes.STORE, WavelengthOpcodes.LOOP, WavelengthOpcodes.OUTPUT]
+        },
+        "Token Counter": {
+            "description": "💰 **Token Counter**: LOAD → ADD → LOOP → STORE → PRINT",
+            "opcodes": [WavelengthOpcodes.LOAD, WavelengthOpcodes.ADD, WavelengthOpcodes.LOOP, WavelengthOpcodes.STORE, WavelengthOpcodes.PRINT]
+        },
+        "Pattern Matcher": {
+            "description": "🔍 **Pattern Matcher**: INPUT → IF → AND → RETURN",
+            "opcodes": [WavelengthOpcodes.INPUT, WavelengthOpcodes.IF, WavelengthOpcodes.AND, WavelengthOpcodes.RETURN]
+        }
+    }
+    
+    if template in templates:
+        template_info = templates[template]
+        st.info(template_info["description"])
+        
+        if st.button(f"📥 Load {template} Template", key=f"load_{template.lower().replace(' ', '_')}", type="primary"):
+            # Create instructions from template opcodes
+            new_instructions = []
+            for opcode in template_info["opcodes"]:
+                spectral_region = get_spectral_region(opcode.value)
+                instruction = WavelengthInstruction(
+                    opcode=opcode,
+                    wavelength_nm=opcode.value,
+                    spectral_region=spectral_region,
+                    modulation=ModulationType.OOK,
+                    amplitude=0.8,
+                    phase=0.0
+                )
+                new_instructions.append(instruction)
+            
+            # Add to session state
+            st.session_state.instructions = new_instructions
+            st.success(f"✅ Loaded {template} template with {len(new_instructions)} instructions!")
+            st.rerun()
+
+
+def render_nexus_system_controls():
+    """Render NexusOS system interaction controls"""
+    
+    st.markdown("### ⚙️ NexusOS System Controls")
+    
+    st.markdown("""
+    <div style='background: #1a1a2e; padding: 15px; border-radius: 10px; 
+                border: 1px solid #4a4a6a; margin-bottom: 15px;'>
+        <div style='color: #00ff88;'>🔌 Direct System Access</div>
+        <div style='color: #888; font-size: 0.9em;'>
+            Interact directly with NexusOS blockchain, wallet, and governance systems
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    system_action = st.selectbox(
+        "System Action:",
+        ["Select action...", "Check Wallet Balance", "View Network Status", 
+         "Query Validator Nodes", "Get Block Height", "Estimate Transaction Cost"]
+    )
+    
+    if system_action == "Check Wallet Balance":
+        st.code("LOAD wallet_address\nCALL get_balance\nPRINT result", language="wavelang")
+        st.success("💰 This program queries your NexusOS wallet balance")
+        
+    elif system_action == "View Network Status":
+        st.code("CALL network_status\nLOAD node_count\nPRINT 'Active nodes:'\nPRINT node_count", language="wavelang")
+        st.success("🌐 This program displays current network status")
+        
+    elif system_action == "Query Validator Nodes":
+        st.code("CALL get_validators\nLOOP validator_list\n  PRINT validator_id\n  PRINT stake_amount", language="wavelang")
+        st.success("🔐 This program lists all active validator nodes")
+        
+    elif system_action == "Get Block Height":
+        st.code("CALL get_latest_block\nLOAD block_height\nPRINT block_height", language="wavelang")
+        st.success("📦 This program retrieves the current block height")
+        
+    elif system_action == "Estimate Transaction Cost":
+        st.code("INPUT message\nCALL estimate_cost message\nPRINT 'Cost in NXT:'\nPRINT cost", language="wavelang")
+        st.success("💵 This program estimates transaction cost based on message length")
+
 
 def render_wavelength_code_interface():
     """Main interactive interface for WaveLang programming"""
@@ -111,9 +576,13 @@ def render_text_translator_tab():
 
 
 def render_visual_builder_tab(gen):
-    """Visual wavelength instruction builder"""
+    """Visual wavelength instruction builder with Learning Monitor"""
     
     st.subheader("🎨 Build Your Wavelength Program Visually")
+    
+    # Initialize selected_opcode at function level for Learning Monitor access
+    if 'selected_opcode' not in st.session_state:
+        st.session_state.selected_opcode = WavelengthOpcodes.ADD
     
     with st.expander("ℹ️ What is Visual Wavelength Programming?"):
         st.markdown("""
@@ -173,8 +642,11 @@ def render_visual_builder_tab(gen):
             "Operation:",
             opcodes,
             format_func=lambda x: f"{x.name} ({x.value}nm)",
-            label_visibility="collapsed"
+            label_visibility="collapsed",
+            key="visual_builder_opcode"
         )
+        # Store in session state for Learning Monitor access
+        st.session_state.selected_opcode = selected_opcode
         
         st.divider()
         
@@ -328,6 +800,25 @@ def render_visual_builder_tab(gen):
                 st.rerun()
             else:
                 st.error("❌ Add instructions first")
+    
+    # Learning Monitor Section - Below main builder
+    st.divider()
+    
+    # Use tabs for Learning Monitor, SDK Capabilities, and System Controls
+    learn_tab1, learn_tab2, learn_tab3 = st.tabs([
+        "🖥️ Learning Monitor", 
+        "🚀 SDK Capabilities", 
+        "⚙️ System Controls"
+    ])
+    
+    with learn_tab1:
+        render_learning_monitor(st.session_state.selected_opcode, st.session_state.instructions)
+    
+    with learn_tab2:
+        render_sdk_capabilities()
+    
+    with learn_tab3:
+        render_nexus_system_controls()
 
 
 def render_energy_calculator_tab(gen):
