@@ -68,30 +68,28 @@ def render_mobile_blockchain_hub():
     init_wallet_session()
     wallet = st.session_state.nexus_wallet
     
-    # Mobile-optimized CSS with IMPROVED CONTRAST
+    # Mobile-optimized CSS - LIGHT THEME COMPATIBLE
     st.markdown("""
         <style>
-        /* Dark background for main content area */
-        .stApp > header + div > div > div > div > section > div {
-            background-color: #0f0f23 !important;
+        /* ================================================
+           LIGHT THEME COMPATIBLE - Works with app.py spectrum theme
+           ================================================ */
+        
+        /* Text colors - DARK on light background */
+        .mobile-hub-content h1,
+        .mobile-hub-content h2,
+        .mobile-hub-content h3 {
+            color: #1e3a5f !important;
         }
         
-        /* Clear readable text - default to light text on dark backgrounds */
-        .stApp main h1,
-        .stApp main h2,
-        .stApp main h3 {
-            color: #00d4ff !important;
-            text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        .mobile-hub-content p,
+        .mobile-hub-content span,
+        .mobile-hub-content label,
+        .mobile-hub-content li {
+            color: #1B1B2F !important;
         }
         
-        .stApp main p,
-        .stApp main span,
-        .stApp main label,
-        .stApp main li {
-            color: #e2e8f0 !important;
-        }
-        
-        /* Ensure input fields are readable AND CLICKABLE */
+        /* Input fields - WHITE background with DARK text */
         .stApp input,
         .stApp textarea,
         .stApp select,
@@ -99,7 +97,7 @@ def render_mobile_blockchain_hub():
         .stApp [data-testid="textInput"] input,
         .stApp [data-testid="stNumberInput"] input {
             background-color: #ffffff !important;
-            color: #1a1a2e !important;
+            color: #1B1B2F !important;
             border: 2px solid #667eea !important;
             border-radius: 8px !important;
             position: relative !important;
@@ -130,14 +128,15 @@ def render_mobile_blockchain_hub():
         /* Ensure labels don't block input */
         .stApp label {
             pointer-events: none !important;
+            color: #1B1B2F !important;
         }
         
         /* Focus state for better feedback */
         .stApp input:focus,
         .stApp textarea:focus {
-            outline: 3px solid #00d4ff !important;
+            outline: 3px solid #667eea !important;
             outline-offset: 2px !important;
-            border-color: #00d4ff !important;
+            border-color: #667eea !important;
         }
         
         .stApp input::placeholder {
@@ -150,56 +149,60 @@ def render_mobile_blockchain_hub():
             font-family: inherit !important;
         }
         
-        /* Metric values - bright and readable */
+        /* Metric values - DARK and readable on light background */
         .stApp [data-testid="stMetricValue"] {
-            color: #10b981 !important;
+            color: #1e7a5f !important;
             font-weight: bold !important;
         }
         
         .stApp [data-testid="stMetricLabel"] {
-            color: #94a3b8 !important;
+            color: #3a5f7a !important;
         }
         
-        /* Tab labels - HIGH CONTRAST for visibility */
+        /* ================================================
+           TAB STYLING - HIGH CONTRAST LIGHT THEME
+           ================================================ */
         .stApp [data-baseweb="tab-list"] {
             gap: 8px !important;
             overflow-x: auto !important;
             scrollbar-width: thin !important;
-            padding: 10px 5px !important;
-            background: rgba(255, 255, 255, 0.95) !important;
-            border-radius: 12px !important;
+            padding: 12px 8px !important;
+            background: rgba(255, 255, 255, 0.98) !important;
+            border-radius: 16px !important;
             margin-bottom: 15px !important;
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.15) !important;
+            border: 1px solid rgba(102, 126, 234, 0.2) !important;
         }
         
         .stApp button[data-baseweb="tab"] {
-            color: #1a1a2e !important;
-            background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 100%) !important;
+            color: #1B1B2F !important;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%) !important;
             border: 2px solid #667eea !important;
-            border-radius: 10px !important;
-            padding: 12px 20px !important;
-            margin: 0 4px !important;
+            border-radius: 12px !important;
+            padding: 14px 22px !important;
+            margin: 0 5px !important;
             font-size: 15px !important;
-            font-weight: 600 !important;
+            font-weight: 700 !important;
             min-width: fit-content !important;
             white-space: nowrap !important;
-            transition: all 0.2s ease !important;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
+            transition: all 0.25s ease !important;
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.2) !important;
         }
         
         .stApp button[data-baseweb="tab"]:hover {
-            background: linear-gradient(135deg, #e0e8ff 0%, #d0dcff 100%) !important;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 100%) !important;
             border-color: #5a6fd6 !important;
-            transform: translateY(-2px) !important;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35) !important;
+            transform: translateY(-3px) !important;
+            box-shadow: 0 6px 18px rgba(102, 126, 234, 0.35) !important;
             color: #0a0a1a !important;
         }
         
         .stApp button[data-baseweb="tab"][aria-selected="true"] {
             color: #ffffff !important;
-            background: linear-gradient(135deg, #667eea 0%, #5a6fd6 100%) !important;
-            border-color: #4a5fc6 !important;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.5), 0 2px 8px rgba(90, 111, 214, 0.3) !important;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border-color: #5a6fd6 !important;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.5), 0 3px 10px rgba(118, 75, 162, 0.3) !important;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
         }
         
         /* Hide the default underline indicator */
@@ -226,14 +229,17 @@ def render_mobile_blockchain_hub():
             color: #ffffff !important;
         }
         
+        /* ================================================
+           MODULE CARDS - LIGHT THEME
+           ================================================ */
         .module-card {
-            background: linear-gradient(135deg, #0d0d1a 0%, #0a1628 100%);
-            border: 1px solid rgba(0, 180, 255, 0.25);
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+            border: 2px solid rgba(102, 126, 234, 0.3);
             border-radius: 16px;
             padding: 20px;
             margin: 10px 0;
             transition: all 0.4s ease;
-            box-shadow: 0 0 15px rgba(0, 150, 255, 0.1), inset 0 0 20px rgba(0, 100, 200, 0.05);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
             position: relative;
             overflow: hidden;
         }
@@ -244,117 +250,77 @@ def render_mobile_blockchain_hub():
             top: 0;
             left: 0;
             right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(0, 200, 255, 0.5), transparent);
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #667eea);
+            background-size: 200% 100%;
             animation: energy-line 3s ease-in-out infinite;
         }
         
         @keyframes energy-line {
-            0%, 100% { opacity: 0.3; transform: translateX(-100%); }
-            50% { opacity: 1; transform: translateX(100%); }
+            0%, 100% { background-position: 0% 0%; }
+            50% { background-position: 100% 0%; }
         }
         
         .module-card h3,
         .module-card h4 {
-            color: #00d4ff !important;
-            text-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+            color: #1e3a5f !important;
         }
         
         .module-card p,
         .module-card span,
         .module-card li {
-            color: #b8d4e8 !important;
+            color: #1B1B2F !important;
         }
         
         .module-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 0 30px rgba(0, 180, 255, 0.3), 0 8px 20px rgba(0, 100, 200, 0.2);
-            border-color: rgba(0, 200, 255, 0.5);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            border-color: rgba(102, 126, 234, 0.5);
         }
         
+        /* Wallet status - LIGHT THEME */
         .wallet-status-active {
-            background: linear-gradient(135deg, rgba(0, 200, 150, 0.15) 0%, rgba(0, 100, 100, 0.2) 100%);
-            border: 1px solid rgba(0, 255, 180, 0.4);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.2) 100%);
+            border: 2px solid rgba(16, 185, 129, 0.5);
             padding: 18px;
             border-radius: 14px;
             margin: 15px 0;
-            box-shadow: 0 0 25px rgba(0, 255, 180, 0.15), inset 0 0 15px rgba(0, 200, 150, 0.1);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
         }
         
         .wallet-status-active strong,
         .wallet-status-active code,
         .wallet-status-active span {
-            color: #00ffb4 !important;
-            text-shadow: 0 0 8px rgba(0, 255, 180, 0.4);
+            color: #047857 !important;
         }
         
         .wallet-status-active code {
-            background: rgba(0, 100, 100, 0.3) !important;
+            background: rgba(16, 185, 129, 0.15) !important;
             padding: 2px 6px !important;
             border-radius: 4px !important;
         }
         
         .wallet-status-locked {
-            background: linear-gradient(135deg, rgba(255, 180, 0, 0.1) 0%, rgba(200, 100, 0, 0.15) 100%);
-            border: 1px solid rgba(255, 200, 50, 0.4);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.2) 100%);
+            border: 2px solid rgba(245, 158, 11, 0.5);
             padding: 18px;
             border-radius: 14px;
             margin: 15px 0;
-            box-shadow: 0 0 20px rgba(255, 180, 0, 0.1);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);
         }
         
         .wallet-status-locked strong {
-            color: #ffd54f !important;
-            text-shadow: 0 0 8px rgba(255, 200, 50, 0.4);
+            color: #b45309 !important;
         }
         
-        /* Streamlit info/warning/success boxes */
+        /* Streamlit info/warning/success boxes - DARK TEXT */
         .stApp [data-testid="stAlert"] {
             background-color: rgba(16, 185, 129, 0.1) !important;
             border: 1px solid rgba(16, 185, 129, 0.3) !important;
         }
         
         .stApp [data-testid="stAlert"] p {
-            color: #10b981 !important;
-        }
-        
-        /* Mobile-friendly touch targets with energy glow */
-        .stApp button,
-        .stApp [data-testid="stButton"] button {
-            font-size: 16px !important;
-            padding: 12px 24px !important;
-            min-height: 48px !important;
-            cursor: pointer !important;
-            background: linear-gradient(135deg, rgba(0, 120, 200, 0.8) 0%, rgba(0, 80, 180, 0.9) 100%) !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(0, 200, 255, 0.3) !important;
-            border-radius: 10px !important;
-            box-shadow: 0 0 15px rgba(0, 150, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-            transition: all 0.3s ease !important;
-        }
-        
-        .stApp button:hover,
-        .stApp [data-testid="stButton"] button:hover {
-            transform: translateY(-3px) !important;
-            box-shadow: 0 0 25px rgba(0, 180, 255, 0.4), 0 8px 20px rgba(0, 100, 200, 0.3) !important;
-            border-color: rgba(0, 220, 255, 0.5) !important;
-            background: linear-gradient(135deg, rgba(0, 150, 220, 0.9) 0%, rgba(0, 100, 200, 1) 100%) !important;
-        }
-        
-        .stApp button:active,
-        .stApp [data-testid="stButton"] button:active {
-            transform: translateY(0) !important;
-            box-shadow: 0 0 15px rgba(0, 150, 255, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
-        }
-        
-        @media (max-width: 768px) {
-            .stApp button,
-            .stApp [data-testid="stButton"] button {
-                font-size: 18px !important;
-                padding: 14px 28px !important;
-                min-height: 52px !important;
-            }
+            color: #047857 !important;
         }
         
         /* Dividers */
@@ -362,22 +328,22 @@ def render_mobile_blockchain_hub():
             border-color: rgba(102, 126, 234, 0.3) !important;
         }
         
-        /* Radio buttons and checkboxes */
+        /* Radio buttons and checkboxes - DARK TEXT */
         .stApp [data-testid="stRadio"] label,
         .stApp [data-testid="stCheckbox"] label {
-            color: #e2e8f0 !important;
+            color: #1B1B2F !important;
         }
         
-        /* File uploader */
+        /* File uploader - LIGHT THEME */
         .stApp [data-testid="stFileUploader"] {
-            background-color: #1a1a2e !important;
+            background-color: #ffffff !important;
             border: 2px dashed #667eea !important;
             border-radius: 12px !important;
         }
         
         .stApp [data-testid="stFileUploader"] p,
         .stApp [data-testid="stFileUploader"] span {
-            color: #e2e8f0 !important;
+            color: #1B1B2F !important;
         }
         
         /* ================================================
