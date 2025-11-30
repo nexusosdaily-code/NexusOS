@@ -600,7 +600,12 @@ def render_dex_view():
         """, unsafe_allow_html=True)
     
     wallet = st.session_state.get('nexus_wallet')
-    wallet_address = wallet.get_address() if wallet and wallet.is_unlocked() else None
+    wallet_address = None
+    try:
+        if wallet and hasattr(wallet, 'get_address'):
+            wallet_address = wallet.get_address()
+    except Exception:
+        pass
     
     if st.button("Swap Tokens", key="btn_swap", width="stretch"):
         if from_amount > 0:
@@ -682,7 +687,12 @@ def render_governance_view():
             """, unsafe_allow_html=True)
             
             wallet = st.session_state.get('nexus_wallet')
-            wallet_address = wallet.get_address() if wallet and wallet.is_unlocked() else None
+            wallet_address = None
+            try:
+                if wallet and hasattr(wallet, 'get_address'):
+                    wallet_address = wallet.get_address()
+            except Exception:
+                pass
             
             col1, col2 = st.columns(2)
             with col1:
@@ -722,8 +732,13 @@ def render_governance_view():
         if st.button("Submit Proposal", key="btn_submit_prop", width="stretch"):
             st.success("Proposal submitted for community review!")
             wallet = st.session_state.get('nexus_wallet')
-            if wallet and wallet.is_unlocked():
-                wallet_address = wallet.get_address()
+            wallet_address = None
+            try:
+                if wallet and hasattr(wallet, 'get_address'):
+                    wallet_address = wallet.get_address()
+            except Exception:
+                pass
+            if wallet_address:
                 achievement_sys = get_achievement_system()
                 newly_unlocked = achievement_sys.record_action(wallet_address, 'proposal')
                 for ach in newly_unlocked:
@@ -741,8 +756,13 @@ def render_more_view():
     
     with st.expander("🏆 Achievements & Badges", expanded=(more_section == 'achievements')):
         wallet = st.session_state.get('nexus_wallet')
-        if wallet and wallet.is_unlocked():
-            wallet_address = wallet.get_address()
+        wallet_address = None
+        try:
+            if wallet and hasattr(wallet, 'get_address'):
+                wallet_address = wallet.get_address()
+        except Exception:
+            pass
+        if wallet_address:
             achievement_sys = get_achievement_system()
             
             level_info = achievement_sys.get_user_level_info(wallet_address)
