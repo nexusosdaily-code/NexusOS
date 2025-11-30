@@ -761,6 +761,7 @@ def main():
                 "🚀 WNSP Protocol v3.0",
                 "🔍 Transaction Search Explorer",
                 "🚀 Napp Deployment Center",
+                "🚀 Resonance Propulsion",
                 "💰 Payment Layer",
                 "📱 Mobile Connectivity",
                 "📊 Long-term Supply",
