@@ -182,39 +182,99 @@ def main():
             font-size: 15px !important;
         }
         
-        /* Streamlit dropdown popover - renders OUTSIDE sidebar in root DOM */
+        /* ============================================
+           DROPDOWN/SELECTBOX FIX - GLOBAL
+           BaseWeb renders popovers in portal outside component tree
+           ============================================ */
+        
+        /* Dropdown popover container */
+        [data-baseweb="popover"],
         div[data-baseweb="popover"] {
             background: #ffffff !important;
             border: 2px solid rgba(102, 126, 234, 0.5) !important;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+            overflow: hidden !important;
         }
         
-        /* Dropdown menu items - CRITICAL for visibility */
-        div[data-baseweb="popover"] ul[role="listbox"] div[data-baseweb="option"] {
+        /* Dropdown menu container */
+        [data-baseweb="menu"],
+        div[data-baseweb="menu"] {
+            background: #ffffff !important;
+            padding: 8px !important;
+        }
+        
+        /* Dropdown menu list */
+        [data-baseweb="menu"] ul,
+        ul[role="listbox"] {
+            background: #ffffff !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        
+        /* Dropdown list items - CRITICAL: uses li not div */
+        [data-baseweb="menu"] li,
+        ul[role="listbox"] li,
+        li[role="option"],
+        [role="option"] {
             color: #1B1B2F !important;
             background: #ffffff !important;
             font-weight: 600 !important;
             font-size: 15px !important;
-            padding: 10px 15px !important;
+            padding: 12px 16px !important;
+            margin: 2px 4px !important;
+            border-radius: 8px !important;
+            cursor: pointer !important;
         }
         
-        /* Dropdown menu item text - ALL text elements */
-        div[data-baseweb="popover"] ul[role="listbox"] div[data-baseweb="option"] span,
-        div[data-baseweb="popover"] ul[role="listbox"] div[data-baseweb="option"] div,
-        div[data-baseweb="popover"] ul[role="listbox"] div[data-baseweb="option"] p {
+        /* Dropdown item hover state */
+        [data-baseweb="menu"] li:hover,
+        ul[role="listbox"] li:hover,
+        li[role="option"]:hover,
+        [role="option"]:hover {
+            color: #1B1B2F !important;
+            background: rgba(102, 126, 234, 0.15) !important;
+        }
+        
+        /* Dropdown item selected/highlighted state */
+        [data-baseweb="menu"] li[aria-selected="true"],
+        li[role="option"][aria-selected="true"],
+        [role="option"][aria-selected="true"],
+        [data-highlighted="true"] {
+            color: #ffffff !important;
+            background: linear-gradient(135deg, #667eea, #764ba2) !important;
+        }
+        
+        /* Force ALL text inside dropdowns to be visible */
+        [data-baseweb="popover"] span,
+        [data-baseweb="popover"] div,
+        [data-baseweb="popover"] p,
+        [data-baseweb="menu"] span,
+        [data-baseweb="menu"] div,
+        [data-baseweb="menu"] p,
+        li[role="option"] span,
+        li[role="option"] div {
+            color: inherit !important;
+            font-weight: 600 !important;
+        }
+        
+        /* Selectbox control (closed state) */
+        [data-baseweb="select"] > div {
+            background: rgba(255, 255, 255, 0.95) !important;
+            border: 2px solid rgba(102, 126, 234, 0.3) !important;
+            border-radius: 10px !important;
+        }
+        
+        /* Selectbox selected value text */
+        [data-baseweb="select"] span,
+        [data-baseweb="select"] [data-testid="stMarkdownContainer"] {
             color: #1B1B2F !important;
             font-weight: 600 !important;
         }
         
-        /* Dropdown menu item hover */
-        div[data-baseweb="popover"] ul[role="listbox"] div[data-baseweb="option"]:hover {
-            color: #1B1B2F !important;
-            background: rgba(200, 230, 255, 0.8) !important;
-        }
-        
-        /* Force ALL dropdown list text to be visible */
-        div[data-baseweb="popover"] * {
-            color: #1B1B2F !important;
+        /* Selectbox dropdown arrow */
+        [data-baseweb="select"] svg {
+            fill: #1B1B2F !important;
         }
         
         /* Sidebar selectbox options in dropdown - DARK text on light background */

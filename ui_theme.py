@@ -725,70 +725,93 @@ def get_responsive_css() -> str:
         border: none !important;
     }
     
-    /* Selectbox */
-    .stApp [data-baseweb="select"] {
-        background: var(--bg-elevated) !important;
+    /* ============================================
+       SELECTBOX/DROPDOWN - LIGHT THEME
+       Matches app.py global light theme
+       ============================================ */
+    
+    /* Selectbox control (closed state) */
+    .stApp [data-baseweb="select"],
+    [data-baseweb="select"] {
+        background: rgba(255, 255, 255, 0.95) !important;
         border-radius: 12px !important;
     }
     
-    .stApp [data-baseweb="select"] > div {
-        background: var(--bg-elevated) !important;
+    .stApp [data-baseweb="select"] > div,
+    [data-baseweb="select"] > div {
+        background: rgba(255, 255, 255, 0.95) !important;
         border: 2px solid rgba(102, 126, 234, 0.3) !important;
         border-radius: 12px !important;
     }
     
-    /* Selectbox - Selected value text */
-    .stApp [data-baseweb="select"] [data-testid="stMarkdownContainer"],
-    .stApp [data-baseweb="select"] span {
-        color: var(--text-primary) !important;
+    /* Selectbox selected value text - DARK on light */
+    .stApp [data-baseweb="select"] span,
+    [data-baseweb="select"] span {
+        color: #1B1B2F !important;
+        font-weight: 600 !important;
     }
     
-    /* Selectbox dropdown menu/popover */
+    /* Dropdown popover container */
     .stApp [data-baseweb="popover"],
-    .stApp [data-baseweb="menu"],
-    [data-baseweb="popover"],
-    [data-baseweb="menu"] {
-        background: var(--bg-card) !important;
-        border: 1px solid rgba(102, 126, 234, 0.3) !important;
+    [data-baseweb="popover"] {
+        background: #ffffff !important;
+        border: 2px solid rgba(102, 126, 234, 0.5) !important;
         border-radius: 12px !important;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
     }
     
-    /* Selectbox dropdown list container */
-    .stApp [data-baseweb="menu"] ul,
-    [data-baseweb="menu"] ul {
-        background: var(--bg-card) !important;
+    /* Dropdown menu container */
+    .stApp [data-baseweb="menu"],
+    [data-baseweb="menu"] {
+        background: #ffffff !important;
         padding: 8px !important;
     }
     
-    /* Selectbox dropdown list items */
+    /* Dropdown menu list */
+    .stApp [data-baseweb="menu"] ul,
+    [data-baseweb="menu"] ul {
+        background: #ffffff !important;
+        padding: 0 !important;
+    }
+    
+    /* Dropdown list items - DARK text on white */
     .stApp [data-baseweb="menu"] li,
     [data-baseweb="menu"] li,
     .stApp [role="option"],
-    [role="option"] {
-        background: var(--bg-card) !important;
-        color: var(--text-primary) !important;
-        padding: 10px 16px !important;
+    [role="option"],
+    li[role="option"] {
+        background: #ffffff !important;
+        color: #1B1B2F !important;
+        font-weight: 600 !important;
+        padding: 12px 16px !important;
         border-radius: 8px !important;
-        margin: 2px 0 !important;
+        margin: 2px 4px !important;
     }
     
-    /* Selectbox dropdown hover state */
+    /* Dropdown hover state */
     .stApp [data-baseweb="menu"] li:hover,
     [data-baseweb="menu"] li:hover,
     .stApp [role="option"]:hover,
     [role="option"]:hover {
-        background: var(--bg-elevated) !important;
-        color: var(--accent-cyan) !important;
+        background: rgba(102, 126, 234, 0.15) !important;
+        color: #1B1B2F !important;
     }
     
-    /* Selectbox dropdown selected/highlighted item */
+    /* Dropdown selected/highlighted item */
     .stApp [data-baseweb="menu"] li[aria-selected="true"],
     [data-baseweb="menu"] li[aria-selected="true"],
     .stApp [role="option"][aria-selected="true"],
     [role="option"][aria-selected="true"] {
-        background: linear-gradient(135deg, var(--primary-start), var(--primary-end)) !important;
-        color: white !important;
+        background: linear-gradient(135deg, #667eea, #764ba2) !important;
+        color: #ffffff !important;
+    }
+    
+    /* Force dropdown text visibility */
+    [data-baseweb="popover"] span,
+    [data-baseweb="popover"] div,
+    [data-baseweb="menu"] span,
+    li[role="option"] span {
+        color: inherit !important;
     }
     
     /* Progress bar */
