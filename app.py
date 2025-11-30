@@ -62,6 +62,7 @@ from transaction_search_explorer import render_transaction_search_explorer
 from sybil_dashboard import render_sybil_detection_dashboard
 from ai_arbitration_dashboard import render_arbitration_dashboard
 from security_dashboard import security_dashboard
+from video_livestream_dashboard import render_video_livestream_dashboard
 
 
 def main():
