@@ -19,6 +19,25 @@ from wavelength_code_generator import (
     WavelengthOpcodes, ControlFlowMode, DataType
 )
 from wavelength_validator import SpectralRegion, ModulationType, WaveProperties
+
+def get_spectral_region_enum(wavelength_nm: float) -> SpectralRegion:
+    """Convert wavelength to SpectralRegion enum"""
+    if wavelength_nm < 380:
+        return SpectralRegion.UV
+    elif wavelength_nm < 450:
+        return SpectralRegion.VIOLET
+    elif wavelength_nm < 495:
+        return SpectralRegion.BLUE
+    elif wavelength_nm < 570:
+        return SpectralRegion.GREEN
+    elif wavelength_nm < 590:
+        return SpectralRegion.YELLOW
+    elif wavelength_nm < 620:
+        return SpectralRegion.ORANGE
+    elif wavelength_nm < 750:
+        return SpectralRegion.RED
+    else:
+        return SpectralRegion.RED
 from text_to_wavelength_translator import (
     render_text_to_wavelength_translator,
     render_quick_translator,
@@ -718,7 +737,8 @@ def render_visual_builder_tab(gen):
                     # Find closest opcode
                     closest_opcode = min(WavelengthOpcodes, 
                                         key=lambda x: abs(x.value - mapping.wavelength_nm))
-                    spectral_region = mapping.spectral_region
+                    # Convert wavelength to proper SpectralRegion enum
+                    spectral_region = get_spectral_region_enum(mapping.wavelength_nm)
                     
                     instruction = WavelengthInstruction(
                         opcode=closest_opcode,
