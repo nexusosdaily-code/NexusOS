@@ -130,7 +130,51 @@ def render_video_livestream_dashboard():
 
 def render_video_calling_tab():
     """Video calling interface with video monitors for seeing friends"""
+    from video_energy_meter import video_energy_meter, VideoQuality, StreamType
+    
     st.subheader("📹 Video Calling & Monitors")
+    
+    wallet_address = st.session_state.get('wallet_address', '')
+    wallet_valid = wallet_address and wallet_address.startswith('NXS') and not wallet_address.startswith('NXS_GUEST')
+    
+    if not wallet_valid:
+        st.error("""
+        ⚠️ **Wallet Not Linked** - Video calls require a linked wallet for physics-based energy billing.
+        
+        When you unlock your wallet, it must be bound to this session for E=hf energy costs to be charged correctly.
+        Without a linked wallet, video charges go to **escrow** and are collected when you link your wallet.
+        """)
+        
+        with st.expander("📊 Physics Economics for Video"):
+            st.markdown("""
+            **How Video Calling is Priced:**
+            
+            Video streams are photon oscillations at specific frequencies:
+            - **E = hf × t** (Energy = Planck constant × frequency × time)
+            - **Λ = hf/c²** (Lambda Boson mass-equivalent)
+            
+            | Quality | Frequency (Hz) | Cost/Minute (NXT) |
+            |---------|---------------|-------------------|
+            | 240p    | ~1.2M         | ~0.001 NXT        |
+            | 480p    | ~7.4M         | ~0.005 NXT        |
+            | 720p    | ~27.6M        | ~0.018 NXT        |
+            | 1080p   | ~62.2M        | ~0.041 NXT        |
+            
+            Your **BHLS** (Basic Human Living Standards) includes **115 NXT/month** for video (10% of 1,150 NXT).
+            """)
+    else:
+        bhls_status = video_energy_meter.get_bhls_video_status(wallet_address)
+        col_wallet, col_budget = st.columns(2)
+        with col_wallet:
+            st.success(f"✅ Wallet Linked: `{wallet_address[:20]}...`")
+        with col_budget:
+            remaining = bhls_status['remaining_nxt']
+            if remaining > 50:
+                st.info(f"📊 BHLS Video Budget: {remaining:.2f} NXT remaining")
+            elif remaining > 0:
+                st.warning(f"⚠️ Low Budget: {remaining:.2f} NXT remaining")
+            else:
+                st.error("❌ BHLS Video Budget Exhausted")
     
     st.markdown("""
     Connect with friends through live video calls. Each monitor shows a friend's video feed in real-time.
@@ -169,7 +213,25 @@ def render_video_calling_tab():
             
             if st.button("📹 Start Video Call", type="primary", use_container_width=True):
                 st.session_state['active_video_call'] = selected_for_call
-                st.success("🔔 Calling friends... Waiting for them to connect.")
+                
+                import uuid
+                session_id = f"video_{uuid.uuid4().hex[:8]}"
+                user_identity = st.session_state.get('user_phone', 'unknown')
+                
+                result = video_energy_meter.start_session(
+                    session_id=session_id,
+                    wallet_address=wallet_address if wallet_valid else None,
+                    user_identity=user_identity,
+                    quality=VideoQuality.HD_720P,
+                    stream_type=StreamType.VIDEO_CALL
+                )
+                
+                st.session_state['video_session_id'] = session_id
+                
+                if result['is_escrowed']:
+                    st.warning(f"⚠️ Charges escrowed (wallet not linked). Rate: {result['energy_rate_nxt_per_minute']:.4f} NXT/min")
+                else:
+                    st.success(f"🔔 Calling friends... Energy rate: {result['energy_rate_nxt_per_minute']:.4f} NXT/min")
     else:
         st.warning("⚠️ Add friends in the Friends tab to start video calling")
     
@@ -206,6 +268,19 @@ def render_video_calling_tab():
     
     if active_call:
         st.markdown("---")
+        
+        session_id = st.session_state.get('video_session_id')
+        if session_id:
+            meter_result = video_energy_meter.meter_session(session_id)
+            if meter_result:
+                col_time, col_cost = st.columns(2)
+                with col_time:
+                    minutes = int(meter_result['elapsed_seconds'] // 60)
+                    seconds = int(meter_result['elapsed_seconds'] % 60)
+                    st.metric("⏱️ Call Duration", f"{minutes}:{seconds:02d}")
+                with col_cost:
+                    st.metric("⚡ Energy Used", f"{meter_result['total_energy_nxt']:.6f} NXT")
+        
         col_mute, col_video, col_end = st.columns(3)
         with col_mute:
             if st.button("🔇 Mute", use_container_width=True):
@@ -215,7 +290,15 @@ def render_video_calling_tab():
                 st.info("Camera toggled")
         with col_end:
             if st.button("📴 End Call", type="secondary", use_container_width=True):
+                if session_id:
+                    cost = video_energy_meter.end_session(session_id)
+                    if cost:
+                        st.info(f"📊 Call Cost: {cost.energy_nxt:.6f} NXT | Duration: {cost.duration_seconds:.1f}s | SDK Fee: {cost.sdk_fee_nxt:.8f} NXT")
+                        if cost.is_escrowed:
+                            st.warning("⚠️ Charges escrowed - link wallet to complete payment")
+                
                 st.session_state['active_video_call'] = []
+                st.session_state['video_session_id'] = None
                 st.warning("Call ended")
                 st.rerun()
     
