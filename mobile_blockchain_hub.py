@@ -160,41 +160,46 @@ def render_mobile_blockchain_hub():
             color: #94a3b8 !important;
         }
         
-        /* Tab labels - IMPROVED for PC navigation */
+        /* Tab labels - HIGH CONTRAST for visibility */
         .stApp [data-baseweb="tab-list"] {
-            gap: 5px !important;
+            gap: 8px !important;
             overflow-x: auto !important;
             scrollbar-width: thin !important;
-            padding-bottom: 5px !important;
+            padding: 10px 5px !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            border-radius: 12px !important;
+            margin-bottom: 15px !important;
         }
         
         .stApp button[data-baseweb="tab"] {
-            color: #e2e8f0 !important;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
-            border: 1px solid #374151 !important;
-            border-radius: 8px !important;
+            color: #1a1a2e !important;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 100%) !important;
+            border: 2px solid #667eea !important;
+            border-radius: 10px !important;
             padding: 12px 20px !important;
-            margin: 0 3px !important;
+            margin: 0 4px !important;
             font-size: 15px !important;
-            font-weight: 500 !important;
+            font-weight: 600 !important;
             min-width: fit-content !important;
             white-space: nowrap !important;
             transition: all 0.2s ease !important;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
         }
         
         .stApp button[data-baseweb="tab"]:hover {
-            background: linear-gradient(135deg, rgba(0, 80, 150, 0.4) 0%, rgba(0, 60, 120, 0.5) 100%) !important;
-            border-color: rgba(0, 200, 255, 0.5) !important;
+            background: linear-gradient(135deg, #e0e8ff 0%, #d0dcff 100%) !important;
+            border-color: #5a6fd6 !important;
             transform: translateY(-2px) !important;
-            box-shadow: 0 0 15px rgba(0, 150, 255, 0.2) !important;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35) !important;
+            color: #0a0a1a !important;
         }
         
         .stApp button[data-baseweb="tab"][aria-selected="true"] {
             color: #ffffff !important;
-            background: linear-gradient(135deg, rgba(0, 120, 200, 0.8) 0%, rgba(0, 80, 180, 0.9) 100%) !important;
-            border-color: rgba(0, 200, 255, 0.6) !important;
-            box-shadow: 0 0 20px rgba(0, 180, 255, 0.4), 0 4px 15px rgba(0, 100, 200, 0.3) !important;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            background: linear-gradient(135deg, #667eea 0%, #5a6fd6 100%) !important;
+            border-color: #4a5fc6 !important;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.5), 0 2px 8px rgba(90, 111, 214, 0.3) !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
         }
         
         /* Hide the default underline indicator */
