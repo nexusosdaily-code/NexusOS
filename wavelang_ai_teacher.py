@@ -16,6 +16,11 @@ from wavelength_code_generator import (
 )
 from wavelength_validator import SpectralRegion, ModulationType
 from wavelang_compiler import WaveLangCompiler
+from text_to_wavelength_translator import (
+    render_text_to_wavelength_translator,
+    translate_text_to_wavelengths,
+    get_wavelength_sequence
+)
 import math
 import json
 from typing import List, Dict, Any, Optional
@@ -872,14 +877,56 @@ def render_wavelang_ai_teacher():
     
     pipeline = WaveLangPipeline()
     
-    # Tabs for different modes
-    tab1, tab2 = st.tabs(["🚀 Unified Pipeline", "🔍 Decode Existing Code"])
+    # Tabs for different modes - Easy Text Translator first for adoption
+    tab1, tab2, tab3 = st.tabs([
+        "✨ Easy Text Translator", 
+        "🚀 Unified Pipeline", 
+        "🔍 Decode Existing Code"
+    ])
     
     with tab1:
-        render_unified_pipeline_mode(pipeline)
+        render_easy_text_translator_mode()
     
     with tab2:
+        render_unified_pipeline_mode(pipeline)
+    
+    with tab3:
         render_wavelength_to_text_mode(pipeline)
+
+
+def render_easy_text_translator_mode():
+    """
+    Easy text-to-wavelength translator for beginners.
+    Simple one-click translation from plain text to wavelength encoding.
+    """
+    st.subheader("✨ Easy Text to Wavelength Translator")
+    
+    st.markdown("""
+    **New to wavelength encoding?** Start here! Type any message and instantly 
+    see how each character translates to a specific wavelength in the electromagnetic spectrum.
+    
+    This is the easiest way to understand how NexusOS encodes information using physics.
+    """)
+    
+    st.info("💡 **Tip:** Every character maps to a unique wavelength. Letters use the visible spectrum (violet to red), while numbers and symbols extend into UV and infrared regions.")
+    
+    render_text_to_wavelength_translator(
+        key_prefix="wavelang_easy",
+        show_educational=True,
+        compact=False
+    )
+    
+    st.divider()
+    
+    st.markdown("### 🎓 Ready for More?")
+    st.markdown("""
+    Once you understand character-to-wavelength mapping, try the **Unified Pipeline** tab 
+    to write actual programs using wavelength instructions!
+    
+    **Next Steps:**
+    - **Unified Pipeline**: Convert English descriptions to executable wavelength code
+    - **Decode Existing Code**: Understand what existing wavelength programs do
+    """)
 
 
 def render_unified_pipeline_mode(pipeline: WaveLangPipeline):

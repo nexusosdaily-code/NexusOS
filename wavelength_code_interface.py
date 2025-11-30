@@ -19,6 +19,10 @@ from wavelength_code_generator import (
     WavelengthOpcodes, ControlFlowMode, DataType
 )
 from wavelength_validator import SpectralRegion, ModulationType, WaveProperties
+from text_to_wavelength_translator import (
+    render_text_to_wavelength_translator,
+    render_quick_translator
+)
 import math
 import json
 
@@ -55,14 +59,18 @@ def render_wavelength_code_interface():
     
     gen = st.session_state.code_generator
     
-    # Main tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    # Main tabs - Text Translator first for easy adoption
+    tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "✨ Text Translator",
         "🎨 Visual Builder",
         "⚡ Energy Calculator",
         "🔍 Validator",
         "📊 Comparison",
         "📚 My Programs"
     ])
+    
+    with tab0:
+        render_text_translator_tab()
     
     with tab1:
         render_visual_builder_tab(gen)
@@ -78,6 +86,28 @@ def render_wavelength_code_interface():
     
     with tab5:
         render_my_programs_tab(gen)
+
+
+def render_text_translator_tab():
+    """Easy text-to-wavelength translator for beginners"""
+    
+    st.subheader("✨ Text to Wavelength Translator")
+    
+    st.markdown("""
+    **Start here!** Type any text and instantly see how each character 
+    translates to a wavelength in the electromagnetic spectrum.
+    
+    This is the easiest way to understand wavelength encoding - no programming required.
+    """)
+    
+    render_text_to_wavelength_translator(
+        key_prefix="studio_translator",
+        show_educational=True,
+        compact=False
+    )
+    
+    st.divider()
+    st.info("💡 **Ready to build programs?** Switch to the **Visual Builder** tab to create wavelength programs with drag-and-drop operations!")
 
 
 def render_visual_builder_tab(gen):

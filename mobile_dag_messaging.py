@@ -32,6 +32,11 @@ from wavelength_validator import SpectralRegion, ModulationType
 from native_token import NativeTokenSystem
 from nexus_native_wallet import NexusNativeWallet
 from messaging_payment_adapter import WalletPaymentAdapter, DemoPaymentAdapter
+from text_to_wavelength_translator import (
+    translate_text_full,
+    get_wavelength_sequence,
+    render_compact_spectrum_bar
+)
 
 
 def render_mobile_dag_messaging():
@@ -225,6 +230,26 @@ def render_send_message(messaging_system: WavelengthMessagingSystem, token_syste
         height=150,
         max_chars=1000
     )
+    
+    # Wavelength preview toggle - makes adoption easy!
+    show_wavelength_preview = st.checkbox(
+        "🌈 Show Wavelength Encoding Preview",
+        value=False,
+        help="See how your message translates to wavelengths in real-time"
+    )
+    
+    if show_wavelength_preview and message_text:
+        result = translate_text_full(message_text, use_scientific=True)
+        
+        if result.has_unsupported:
+            unsupported_display = ", ".join([f"'{c}'" for c in result.unsupported_chars[:5]])
+            if len(result.unsupported_chars) > 5:
+                unsupported_display += f" (+{len(result.unsupported_chars) - 5} more)"
+            st.warning(f"⚠️ Some characters won't be encoded: {unsupported_display}")
+        
+        if result.mappings:
+            spectrum_html = render_compact_spectrum_bar(result.mappings, max_chars=80)
+            st.markdown(spectrum_html, unsafe_allow_html=True)
     
     # Password input for real wallet users
     wallet_password = None
