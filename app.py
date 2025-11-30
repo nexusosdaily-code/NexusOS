@@ -33,6 +33,7 @@ from wnsp_v3_dashboard import render_wnsp_v3_dashboard
 from wnsp_v4_quantum_dashboard import render_wnsp_v4_dashboard
 from wnsp_v5_dashboard import main as render_wnsp_v5_dashboard
 from wnsp_v6_consciousness_dashboard import render_v6_page as render_wnsp_v6_dashboard
+from wnsp_v7.dashboard import main as render_wnsp_v7_dashboard
 from wavelength_economics_dashboard import render_wavelength_economics_dashboard
 from nexus_consensus_dashboard import render_nexus_consensus_dashboard
 from mobile_connectivity_dashboard import show_mobile_connectivity_dashboard
@@ -765,6 +766,7 @@ def main():
                 "⚛️ WNSP Protocol v4.0",
                 "🌊 WNSP Protocol v5.0",
                 "🔮 WNSP Protocol v6.0",
+                "🎵 WNSP Protocol v7.0",
                 "🔍 Transaction Search Explorer",
                 "🚀 Napp Deployment Center",
                 "🚀 Resonance Propulsion",
@@ -829,6 +831,10 @@ def main():
     elif module == "🔮 WNSP Protocol v6.0":
         # WNSP v6.0 - Spectrum Consciousness
         render_wnsp_v6_dashboard()
+    
+    elif module == "🎵 WNSP Protocol v7.0":
+        # WNSP v7.0 - Harmonic Octave Protocol
+        render_wnsp_v7_dashboard()
     
     elif module == "💬 Mobile DAG Messaging":
         # Mobile blockchain messaging

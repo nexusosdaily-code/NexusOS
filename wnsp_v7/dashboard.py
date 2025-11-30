@@ -35,11 +35,6 @@ from wnsp_v7.substrate import (
 
 from wnsp_v7.mass_routing import SubstrateNetwork
 
-st.set_page_config(
-    page_title="WNSP v7.0 — Harmonic Octave Protocol",
-    page_icon="🎵",
-    layout="wide"
-)
 
 @st.cache_resource
 def get_network() -> HarmonicNetwork:
