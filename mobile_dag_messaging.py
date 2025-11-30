@@ -37,6 +37,7 @@ from text_to_wavelength_translator import (
     get_wavelength_sequence,
     render_compact_spectrum_bar
 )
+from physics_economics_adapter import get_physics_adapter, EconomicModule
 
 
 def render_mobile_dag_messaging():

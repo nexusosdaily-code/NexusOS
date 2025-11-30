@@ -1,22 +1,36 @@
 """
-Validator Economics Module
-Staking, delegation, reward distribution, slashing, and reputation system for blockchain validators
+Validator Economics Module with Full Substrate Compliance
+===========================================================
+
+Staking, delegation, reward distribution, slashing, and reputation system for validators.
 
 Physics-Based Spectral Weighting:
 - Validators are assigned spectral regions based on their total stake
 - Higher stake = higher frequency = higher energy = larger reward multiplier
-- This aligns with E=hf (Planck's equation): more "massive" validators operate at higher energy levels
+- E=hf (Planck's equation): more "massive" validators operate at higher energy levels
+- Λ=hf/c² (Lambda Boson): reward mass-equivalence tracking
+
+Substrate Integration:
+- Orbital burns → TransitionReserveLedger
+- BHLS GOVERNANCE allocation integration
+- SDK fee routing (0.5%) to founder wallet
 """
 
 import time
 import hashlib
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from enum import Enum
 import random
 
-# Planck constant (CODATA 2018 exact value)
-PLANCK_CONSTANT = 6.62607015e-34  # J⋅s (exact by SI definition)
+from physics_economics_adapter import (
+    get_physics_adapter,
+    EconomicModule,
+    SubstrateTransaction
+)
+
+PLANCK_CONSTANT = 6.62607015e-34
+SPEED_OF_LIGHT = 2.99792458e8
 
 # Spectral regions for validator reward multipliers
 # Higher frequency = higher energy = higher reward multiplier
@@ -361,19 +375,25 @@ class ValidatorEconomics:
 
 
 class StakingEconomy:
-    """Blockchain staking economy manager"""
+    """
+    Blockchain staking economy manager with full substrate compliance.
     
-    # Whale Protection: Staking Limits
-    # With 1M total supply, these limits ensure decentralization
-    TOTAL_SUPPLY = 1_000_000  # 1 million NXT total supply
-    MIN_VALIDATOR_STAKE = 1_000  # Minimum 1,000 NXT to become validator
-    MAX_VALIDATOR_STAKE = 10_000  # Maximum 10,000 NXT per validator (1% of supply)
-    MIN_DELEGATION = 10  # Minimum 10 NXT to delegate
-    MAX_DELEGATION_PER_VALIDATOR = 50_000  # Max total delegations per validator (5% of supply)
+    Physics Economics Integration:
+    - Orbital burns for staking/delegation actions
+    - BHLS GOVERNANCE allocation integration
+    - SDK fee routing (0.5%) to founder wallet
+    - Lambda Boson mass tracking
+    """
+    
+    TOTAL_SUPPLY = 1_000_000
+    MIN_VALIDATOR_STAKE = 1_000
+    MAX_VALIDATOR_STAKE = 10_000
+    MIN_DELEGATION = 10
+    MAX_DELEGATION_PER_VALIDATOR = 50_000
     
     def __init__(self, block_reward: float = 2.0, inflation_rate: float = 0.05):
         """
-        Initialize staking economy
+        Initialize staking economy with physics economics integration.
         
         Args:
             block_reward: Reward per block
@@ -382,23 +402,26 @@ class StakingEconomy:
         self.block_reward = block_reward
         self.inflation_rate = inflation_rate
         
-        # Validators and delegations
         self.validators: Dict[str, ValidatorEconomics] = {}
-        self.delegations: Dict[str, List[Delegation]] = {}  # delegator -> [delegations]
+        self.delegations: Dict[str, List[Delegation]] = {}
         
-        # Economic metrics
         self.total_staked = 0.0
         self.total_rewards_distributed = 0.0
         self.total_slashed = 0.0
         self.current_apy = 0.0
         
-        # Slashing parameters
+        self._physics_adapter = get_physics_adapter()
+        self.substrate_transactions: List[SubstrateTransaction] = []
+        self.total_energy_joules = 0.0
+        self.total_lambda_mass_kg = 0.0
+        self.total_sdk_fees_nxt = 0.0
+        
         self.slashing_params = {
-            SlashingType.DOWNTIME: 1.0,  # 1% slash
-            SlashingType.DOUBLE_SIGN: 5.0,  # 5% slash
-            SlashingType.MALICIOUS_BLOCK: 10.0,  # 10% slash
-            SlashingType.BYZANTINE_BEHAVIOR: 20.0,  # 20% slash
-            SlashingType.NETWORK_ATTACK: 100.0,  # Complete slash
+            SlashingType.DOWNTIME: 1.0,
+            SlashingType.DOUBLE_SIGN: 5.0,
+            SlashingType.MALICIOUS_BLOCK: 10.0,
+            SlashingType.BYZANTINE_BEHAVIOR: 20.0,
+            SlashingType.NETWORK_ATTACK: 100.0,
         }
     
     def register_validator(self, address: str, self_stake: float, commission_rate: float = 0.10) -> Tuple[bool, str]:
@@ -533,17 +556,45 @@ class StakingEconomy:
         
         return False, 0.0, "No unbonded delegations ready for withdrawal"
     
-    def distribute_block_reward(self, validator_address: str):
-        """Distribute block reward to validator and delegators"""
+    def distribute_block_reward(self, validator_address: str) -> Optional[SubstrateTransaction]:
+        """
+        Distribute block reward to validator with substrate integration.
+        
+        Physics Flow:
+        1. Calculate spectral reward with E=hf multiplier
+        2. Process orbital burn for reward distribution
+        3. Route SDK fee (0.5%) to founder wallet
+        4. Track Lambda Boson mass
+        """
         if validator_address not in self.validators:
-            return
+            return None
         
         validator = self.validators[validator_address]
         validator.distribute_rewards(self.block_reward)
         validator.blocks_proposed += 1
         validator.last_active = time.time()
         
+        tier = VALIDATOR_SPECTRAL_TIERS.get(validator.spectral_region, VALIDATOR_SPECTRAL_TIERS['MICROWAVE'])
+        wavelength_nm = (SPEED_OF_LIGHT / tier['frequency_hz']) * 1e9
+        
+        reward_id = f"REWARD_{validator_address[:8]}_{int(time.time())}"
+        substrate_tx = self._physics_adapter.process_orbital_burn(
+            sender_address="VALIDATOR_POOL",
+            amount_nxt=self.block_reward * tier['multiplier'],
+            wavelength_nm=min(wavelength_nm, 700),
+            module=EconomicModule.VALIDATOR,
+            message_id=reward_id,
+            bhls_category=None
+        )
+        
+        self.substrate_transactions.append(substrate_tx)
+        self.total_energy_joules += substrate_tx.energy_joules
+        self.total_lambda_mass_kg += substrate_tx.lambda_boson_kg
+        self.total_sdk_fees_nxt += substrate_tx.sdk_fee_routed
+        
         self.total_rewards_distributed += self.block_reward
+        
+        return substrate_tx
     
     def apply_slashing(self, validator_address: str, slash_type: SlashingType, reason: str = ""):
         """Apply slashing penalty to validator"""
@@ -696,4 +747,23 @@ class StakingEconomy:
                 f"This ensures minimum {self.TOTAL_SUPPLY // self.MAX_VALIDATOR_STAKE} validators "
                 f"are needed to secure the network, preventing centralization."
             )
+        }
+    
+    def get_physics_economics_stats(self) -> Dict[str, Any]:
+        """Get physics economics statistics for validator operations"""
+        return {
+            "total_validators": len(self.validators),
+            "total_staked_nxt": self.total_staked,
+            "total_rewards_distributed_nxt": self.total_rewards_distributed,
+            "total_slashed_nxt": self.total_slashed,
+            "current_apy": self.current_apy,
+            "physics_economics": {
+                "total_energy_joules": self.total_energy_joules,
+                "total_lambda_mass_kg": self.total_lambda_mass_kg,
+                "total_sdk_fees_nxt": self.total_sdk_fees_nxt,
+                "substrate_transactions": len(self.substrate_transactions),
+                "energy_formula": "E = h × f (Planck)",
+                "lambda_formula": "Λ = hf/c² (Lambda Boson)",
+                "sdk_wallet": "NXS5372697543A0FEF822E453DBC26FA044D14599E9"
+            }
         }

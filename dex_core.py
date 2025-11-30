@@ -17,6 +17,7 @@ from typing import Dict, List, Optional, Tuple
 from enum import Enum
 import math
 from native_token import NativeTokenSystem, TransactionType
+from physics_economics_adapter import get_physics_adapter, EconomicModule, SubstrateTransaction
 
 # ═══════════════════════════════════════════════════════════════════════════
 # PHYSICS CONSTANTS (CODATA 2018 EXACT VALUES)
@@ -588,13 +589,21 @@ class LiquidityPool:
 
 
 class DEXEngine:
-    """Decentralized Exchange Engine with AMM integrated with NXT"""
+    """
+    Decentralized Exchange Engine with AMM integrated with NXT.
     
-    NXT_SYMBOL = "NXT"  # Native token symbol
+    Physics Economics Integration:
+    - E=hf swap fee calculation (spectral region based)
+    - Orbital burns → TransitionReserveLedger
+    - SDK fee routing (0.5%) to founder wallet
+    - Lambda Boson mass tracking (Λ=hf/c²)
+    """
+    
+    NXT_SYMBOL = "NXT"
     
     def __init__(self, nxt_adapter: Optional[NativeTokenAdapter] = None):
         """
-        Initialize DEX engine
+        Initialize DEX engine with physics economics integration.
         
         Args:
             nxt_adapter: NativeTokenAdapter for NXT integration (required for production)
@@ -603,13 +612,17 @@ class DEXEngine:
         self.tokens: Dict[str, Token] = {}
         self.pools: Dict[str, LiquidityPool] = {}
         
-        # DEX statistics
         self.total_swaps = 0
         self.total_volume = 0.0
         self.total_liquidity_added = 0.0
-        self.total_fees_to_validators = 0.0  # Track fees routed to validators
+        self.total_fees_to_validators = 0.0
         
-        # Initialize with default tokens
+        self._physics_adapter = get_physics_adapter()
+        self.substrate_transactions: List[SubstrateTransaction] = []
+        self.total_energy_joules = 0.0
+        self.total_lambda_mass_kg = 0.0
+        self.total_sdk_fees_nxt = 0.0
+        
         self._initialize_default_tokens()
     
     def _initialize_default_tokens(self):
@@ -838,16 +851,30 @@ class DEXEngine:
                 if not output_token_obj.transfer(pool_id, user, output_amount):
                     return False, 0.0, f"Failed to transfer {output_token} to user"
             
-            # Route collected NXT fees to validator pool
             if fee_units > 0:
                 self.nxt_adapter.route_fee_to_validator_pool(fee_units)
                 self.total_fees_to_validators += fee_amount_nxt
             
-            # Update statistics
+            swap_id = f"SWAP_{self.total_swaps}_{int(time.time())}"
+            spectral_wavelength = SPECTRAL_FEE_TIERS.get(pool.spectral_region, {}).get('wavelength_nm', 550.0)
+            
+            substrate_tx = self._physics_adapter.process_orbital_burn(
+                sender_address=user,
+                amount_nxt=fee_amount_nxt,
+                wavelength_nm=spectral_wavelength,
+                module=EconomicModule.DEX,
+                message_id=swap_id,
+                bhls_category=None
+            )
+            
+            self.substrate_transactions.append(substrate_tx)
+            self.total_energy_joules += substrate_tx.energy_joules
+            self.total_lambda_mass_kg += substrate_tx.lambda_boson_kg
+            self.total_sdk_fees_nxt += substrate_tx.sdk_fee_routed
+            
             self.total_swaps += 1
             self.total_volume += input_amount
             
-            # 🔒 SECURITY: Wash trading detection
             mev_protection = get_mev_protection()
             token_pair = f"{input_token}-{output_token}"
             is_wash, wash_evidence = mev_protection.detect_wash_trading(user, token_pair, input_amount)
@@ -883,16 +910,31 @@ class DEXEngine:
         """Get all token balances for a user (includes NXT from native system)"""
         balances = {}
         
-        # Add NXT balance from native system
         if self.nxt_adapter:
             nxt_balance = self.nxt_adapter.get_balance(user)
             if nxt_balance > 0:
                 balances[self.NXT_SYMBOL] = nxt_balance
         
-        # Add ERC-20 token balances
         for symbol, token in self.tokens.items():
             balance = token.balance_of(user)
             if balance > 0:
                 balances[symbol] = balance
         
         return balances
+    
+    def get_physics_economics_stats(self) -> dict:
+        """Get physics economics statistics for DEX operations"""
+        return {
+            "total_swaps": self.total_swaps,
+            "total_volume_nxt": self.total_volume,
+            "total_fees_to_validators_nxt": self.total_fees_to_validators,
+            "physics_economics": {
+                "total_energy_joules": self.total_energy_joules,
+                "total_lambda_mass_kg": self.total_lambda_mass_kg,
+                "total_sdk_fees_nxt": self.total_sdk_fees_nxt,
+                "substrate_transactions": len(self.substrate_transactions),
+                "energy_formula": "E = h × f (Planck)",
+                "lambda_formula": "Λ = hf/c² (Lambda Boson)",
+                "sdk_wallet": "NXS5372697543A0FEF822E453DBC26FA044D14599E9"
+            }
+        }
