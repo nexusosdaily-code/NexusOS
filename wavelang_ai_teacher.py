@@ -919,13 +919,16 @@ def render_easy_text_translator_mode():
     st.divider()
     
     st.markdown("### 🎓 Ready for More?")
+    
+    st.success("🛠️ **Ready to build programs?** Switch to the **Visual Builder** tab to create wavelength programs with drag-and-drop operations!")
+    
     st.markdown("""
-    Once you understand character-to-wavelength mapping, try the **Unified Pipeline** tab 
-    to write actual programs using wavelength instructions!
+    Once you understand character-to-wavelength mapping, explore these next steps:
     
     **Next Steps:**
-    - **Unified Pipeline**: Convert English descriptions to executable wavelength code
-    - **Decode Existing Code**: Understand what existing wavelength programs do
+    - **Visual Builder** (sidebar): Drag-and-drop wavelength program creation
+    - **Unified Pipeline** (above): Convert English descriptions to executable wavelength code
+    - **Decode Existing Code** (above): Understand what existing wavelength programs do
     """)
 
 
