@@ -537,7 +537,8 @@ def main():
                 "🌊 WaveLang Studio",
                 "🤖 WaveLang AI Teacher",
                 "💻 WaveLang Binary Compiler",
-                "⚛️ Quantum Analyzer"
+                "⚛️ Quantum Analyzer",
+                "🚀 Resonance Propulsion"
             ],
             key="module_selector"
         )
@@ -695,6 +696,11 @@ def main():
                 "icon": "🔒",
                 "desc": "Comprehensive security framework protecting against 8 major attack vectors",
                 "features": ["🚦 Rate Limiting", "💱 DEX MEV Protection", "📊 Multi-Oracle", "🗳️ Quadratic Voting", "🤖 AI Anomaly Detection", "💧 Liquidity Time-Locks", "🛡️ Collusion Detection", "📈 Security Analytics"]
+            },
+            "🚀 Resonance Propulsion": {
+                "icon": "🚀",
+                "desc": "Electromagnetic resonance propulsion research based on Lambda Boson substrate (Λ = hf/c²)",
+                "features": ["⚛️ Lambda Boson Calculations", "📐 Cavity Geometry Design", "🔬 Thrust Simulation", "📊 WNSP Spectral Analysis", "📈 Propulsion Comparison", "🧪 Research Platform"]
             }
         }
         
@@ -900,6 +906,44 @@ def main():
     elif module == "🔒 Security Command Center":
         # Comprehensive security monitoring and protection
         security_dashboard()
+    
+    elif module == "🚀 Resonance Propulsion":
+        # Electromagnetic resonance propulsion research
+        from resonance_propulsion import ResonancePropulsionSimulator, ResonantCavity, LambdaBosonField
+        import numpy as np
+        
+        st.title("🚀 Resonance Propulsion Research")
+        st.markdown("### Lambda Boson Substrate: Λ = hf/c²")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Cavity Design")
+            large_dia = st.slider("Large End (cm)", 10.0, 50.0, 28.0) / 100
+            small_dia = st.slider("Small End (cm)", 5.0, 30.0, 15.0) / 100
+            length = st.slider("Length (cm)", 10.0, 50.0, 22.0) / 100
+            
+        with col2:
+            st.subheader("RF Parameters")
+            freq_ghz = st.slider("Frequency (GHz)", 1.0, 10.0, 2.45)
+            power = st.slider("Power (Watts)", 10, 5000, 1000)
+        
+        cavity = ResonantCavity(large_dia, small_dia, length)
+        field = LambdaBosonField(freq_ghz * 1e9, power)
+        sim = ResonancePropulsionSimulator(cavity, field)
+        
+        thrust = sim.calculate_theoretical_thrust()
+        spectral = sim.calculate_wnsp_spectral_bands()
+        
+        st.divider()
+        
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Lambda Boson Mass", f"{spectral['lambda_boson_mass_kg']:.2e} kg")
+        m2.metric("WNSP Band", spectral['wnsp_band'])
+        m3.metric("Q-Enhanced Thrust", f"{thrust['q_enhanced_thrust_n']*1e6:.4f} µN")
+        m4.metric("Thrust/Power", f"{thrust['thrust_per_watt']*1e6:.6f} µN/W")
+        
+        st.info("**Λ = hf/c²** - Oscillation IS mass. This module simulates electromagnetic propulsion based on Lambda Boson physics.")
 
 
 if __name__ == "__main__":
