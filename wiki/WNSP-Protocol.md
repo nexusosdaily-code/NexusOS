@@ -921,6 +921,23 @@ print(f'Consensus: {success}')
 
 ---
 
+## Developer SDK
+
+Build applications using WNSP protocol with industry-specific SDKs:
+
+| SDK | Package | WNSP Features Used |
+|-----|---------|-------------------|
+| **Blockchain** | `pip install wnsp-blockchain` | PoSPECTRUM, GhostDAG, Validation |
+| **Security** | `pip install wnsp-crypto` | 5D signatures, Spectral encryption |
+| **Messaging** | `pip install wnsp-messaging` | DAG messaging, P2P channels |
+| **Media** | `pip install wnsp-media` | Spectral streaming, λ-mass encoding |
+| **IoT** | `pip install wnsp-iot` | Sensor attestation, Mesh networking |
+
+➡️ **[Full Developer SDK](Developer-SDK.md)** - 15 industry-specific packages  
+➡️ **[SDK Reference](../WNSP_DEVELOPER_SDK_BY_FIELD.md)** - Complete code examples
+
+---
+
 *Technical documentation maintained by the NexusOS development team*
 *Last Updated: November 2025*
 *WNSP v5.0 Specification: Production Ready*

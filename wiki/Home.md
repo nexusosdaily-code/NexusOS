@@ -10,6 +10,7 @@
 
 | Section | Description |
 |---------|-------------|
+| [Developer SDK](Developer-SDK.md) | **15 industry-specific SDKs for developers** |
 | [Achievements & Breakthroughs](Achievements.md) | Complete history of technical milestones |
 | [Roadmap](Roadmap.md) | Future development plans |
 | [WNSP Protocol](WNSP-Protocol.md) | Protocol versions v1.0 → v5.0 |
@@ -158,6 +159,23 @@ This ensures:
 5. Send messages using E=hf energy costs
 6. Trade on the DEX
 7. Participate in governance
+
+---
+
+## For Developers
+
+Build on NexusOS with industry-specific SDKs:
+
+| SDK | Install | Use Case |
+|-----|---------|----------|
+| Blockchain | `pip install wnsp-blockchain` | Layer 1/2, DEX, Smart Contracts |
+| Security | `pip install wnsp-crypto` | Quantum-resistant encryption |
+| Messaging | `pip install wnsp-messaging` | P2P, Mesh, DAG messaging |
+| Media | `pip install wnsp-media` | Video, Livestream, Spectral encoding |
+| AI/ML | `pip install wnsp-ai` | TensorFlow/PyTorch integration |
+| IoT | `pip install wnsp-iot` | Sensor networks, Arduino |
+
+➡️ **[Full Developer SDK Documentation](Developer-SDK.md)** - 15 industry-specific packages
 
 ---
 
