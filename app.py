@@ -585,8 +585,7 @@ def main():
                 "⚛️ Avogadro Economics",
                 "🌍 Civilization Dashboard",
                 "💎 Web3 Wallet",
-                "📡 WNSP Protocol v2.0",
-                "🚀 WNSP Protocol v3.0",
+                "🎵 WNSP v7.1 Substrate",
                 "💬 Mobile DAG Messaging",
                 "🔗 Blockchain Explorer",
                 "🔍 Transaction Search Explorer",
@@ -646,15 +645,10 @@ def main():
                 "desc": "Native quantum-resistant wallet for NXT tokens",
                 "features": ["Create Wallets", "Send NXT", "WNSP Messaging", "Transaction History"]
             },
-            "📡 WNSP Protocol v2.0": {
-                "icon": "📡",
-                "desc": "Wavelength-Native Signaling Protocol with quantum cryptography",
-                "features": ["64 Characters", "DAG Messaging", "E=hf Pricing", "Network Visualization"]
-            },
-            "🚀 WNSP Protocol v3.0": {
-                "icon": "🚀",
-                "desc": "WNSP v3.0 Architecture - Hardware abstraction roadmap for deployment on current devices",
-                "features": ["🔧 Hardware Abstraction Design", "⚡ Binary Encoding Architecture", "📱 Validation Tier Concept", "🌍 LoRa Range Planning", "⚛️ Economics Model", "📋 Deployment Roadmap"]
+            "🎵 WNSP v7.1 Substrate": {
+                "icon": "🎵",
+                "desc": "Unified Lambda Boson substrate (Λ = hf/c²) governing all modules - 2+ chars per particle",
+                "features": ["⚛️ Lambda Mass Conservation", "🎵 2+ Chars/Particle Encoding", "📜 Constitutional Enforcement", "🏠 BHLS 1,150 NXT/mo", "💱 DEX Validation", "🗳️ Governance Validation", "💼 Wallet Validation"]
             },
             "💬 Mobile DAG Messaging": {
                 "icon": "💬",
@@ -837,12 +831,7 @@ def main():
         with st.expander("🔧 System & Advanced Dashboards"):
             more_cols = st.columns(3)
             more_dashboards = [
-                "📡 WNSP Protocol v2.0",
-                "🚀 WNSP Protocol v3.0",
-                "⚛️ WNSP Protocol v4.0",
-                "🌊 WNSP Protocol v5.0",
-                "🔮 WNSP Protocol v6.0",
-                "🎵 WNSP Protocol v7.0",
+                "🎵 WNSP v7.1 Substrate",
                 "🔍 Transaction Search Explorer",
                 "🚀 Napp Deployment Center",
                 "🚀 Resonance Propulsion",
@@ -888,9 +877,7 @@ def main():
         # Native wallet interface
         render_web3_wallet_dashboard()
     
-    elif module in ["📡 WNSP Protocol v2.0", "🚀 WNSP Protocol v3.0", "⚛️ WNSP Protocol v4.0", 
-                     "🌊 WNSP Protocol v5.0", "🔮 WNSP Protocol v6.0", "🎵 WNSP Protocol v7.0",
-                     "🎵 WNSP v7.1 Substrate"]:
+    elif module == "🎵 WNSP v7.1 Substrate":
         render_wnsp_v7_dashboard()
     
     elif module == "💬 Mobile DAG Messaging":
