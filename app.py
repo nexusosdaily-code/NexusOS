@@ -792,8 +792,8 @@ def main():
                     st.markdown(f"• {feature}")
         
         st.divider()
-        st.caption("🌊 NexusOS v3.0")
-        st.caption("Production Ready ✅")
+        st.caption("🎵 NexusOS v7.1 - Unified Substrate")
+        st.caption("Lambda Boson (Λ = hf/c²) ✅")
     
     # Main content area - Route to selected module
     # Show visual dashboard grid if no module selected or on home
