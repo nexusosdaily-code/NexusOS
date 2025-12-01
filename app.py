@@ -611,7 +611,8 @@ def main():
                 "💻 WaveLang Binary Compiler",
                 "⚛️ Quantum Analyzer",
                 "🚀 Resonance Propulsion",
-                "🎥 Video & Livestream"
+                "🎥 Video & Livestream",
+                "📄 Documentation"
             ],
             key="module_selector"
         )
@@ -774,6 +775,11 @@ def main():
                 "icon": "🎥",
                 "desc": "Upload videos and broadcast live across the NexusOS network with wavelength energy tracking",
                 "features": ["📤 Video Upload", "📡 Live Streaming", "📚 Video Library", "👥 Friend Sharing", "⚡ Energy Cost Tracking", "🌐 WNSP Network Distribution"]
+            },
+            "📄 Documentation": {
+                "icon": "📄",
+                "desc": "Complete technical documentation for WNSP v7.1 Unified Substrate Architecture",
+                "features": ["⚛️ Lambda Boson Theory", "🏗️ Architecture Overview", "📜 Constitutional Enforcement", "🏠 BHLS Floor System", "💱 Module Integration", "🔧 API Reference"]
             }
         }
         
@@ -979,6 +985,32 @@ def main():
     elif module == "🎥 Video & Livestream":
         # Video upload and livestreaming dashboard
         render_video_livestream_dashboard()
+    
+    elif module == "📄 Documentation":
+        # Technical documentation page
+        st.title("📄 WNSP v7.1 Unified Substrate Architecture")
+        st.markdown("**Complete Technical Documentation**")
+        st.divider()
+        
+        try:
+            with open("docs/Unified-Substrate-Architecture.md", "r") as f:
+                doc_content = f.read()
+            
+            # Download button
+            st.download_button(
+                label="⬇️ Download Documentation (Markdown)",
+                data=doc_content,
+                file_name="Unified-Substrate-Architecture.md",
+                mime="text/markdown"
+            )
+            
+            st.divider()
+            
+            # Render the markdown
+            st.markdown(doc_content)
+            
+        except FileNotFoundError:
+            st.error("Documentation file not found. Please check docs/Unified-Substrate-Architecture.md")
     
     elif module == "🚀 Resonance Propulsion":
         # Electromagnetic resonance propulsion research
