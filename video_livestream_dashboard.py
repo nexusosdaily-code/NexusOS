@@ -207,10 +207,9 @@ def render_video_calling_tab():
     col_status, col_server = st.columns([2, 1])
     with col_status:
         st.markdown("### 🌐 Connection Status")
-        st.success("✅ WNSP Media Server: Online (Port 8080)")
+        st.success("✅ WNSP Media Server: Online")
     with col_server:
-        if st.button("🔗 Open Full Video Hub", type="primary", use_container_width=True):
-            st.markdown(f"[Open in new tab](http://localhost:8080/livestream.html)", unsafe_allow_html=True)
+        st.info("📱 Video Hub embedded below")
     
     st.divider()
     
@@ -333,6 +332,8 @@ def render_video_calling_tab():
     
     import streamlit.components.v1 as components
     import urllib.parse
+    import os
+    import re
     
     wallet_id = st.session_state.get('wallet_address', 'NXS_GUEST')
     user_phone = st.session_state.get('user_phone', '')
@@ -348,7 +349,22 @@ def render_video_calling_tab():
     wallet_encoded = urllib.parse.quote(wallet_id)
     phone_encoded = urllib.parse.quote(user_phone) if user_phone else ''
     
-    iframe_url = f"http://localhost:8080/livestream.html?wallet={wallet_encoded}&phone={phone_encoded}&friends={friends_encoded}"
+    # Compute public media server URL for external access
+    # Replit exposes port 8080 on sibling subdomain (change -00- to -01-)
+    def get_media_server_url():
+        replit_dev_domain = os.environ.get('REPLIT_DEV_DOMAIN', '')
+        if replit_dev_domain:
+            # Convert main domain to port 8080 domain
+            # e.g., xxx-00-yyy.spock.replit.dev -> xxx-01-yyy.spock.replit.dev
+            media_domain = re.sub(r'-00-', '-01-', replit_dev_domain)
+            return f"https://{media_domain}"
+        # Fallback for local development
+        return "http://localhost:8080"
+    
+    media_server_url = get_media_server_url()
+    media_origin_encoded = urllib.parse.quote(media_server_url)
+    
+    iframe_url = f"{media_server_url}/livestream.html?wallet={wallet_encoded}&phone={phone_encoded}&friends={friends_encoded}&mediaOrigin={media_origin_encoded}"
     
     video_hub_html = f"""
     <div style="position: relative;">

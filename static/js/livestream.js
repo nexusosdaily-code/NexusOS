@@ -3,8 +3,29 @@
  * GPL v3.0 License
  */
 
-// Socket.IO connection
-const socket = io();
+// Determine media server origin from URL params or window global
+function getMediaServerOrigin() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mediaOrigin = urlParams.get('mediaOrigin');
+    
+    if (mediaOrigin) {
+        console.log('📡 Using media origin from URL:', mediaOrigin);
+        return decodeURIComponent(mediaOrigin);
+    }
+    
+    if (window.MEDIA_SERVER_ORIGIN) {
+        console.log('📡 Using media origin from window:', window.MEDIA_SERVER_ORIGIN);
+        return window.MEDIA_SERVER_ORIGIN;
+    }
+    
+    // Default: same origin (works when accessed directly on port 8080)
+    console.log('📡 Using same-origin for media server');
+    return undefined;
+}
+
+// Socket.IO connection - use dynamic origin for external access
+const mediaServerOrigin = getMediaServerOrigin();
+const socket = mediaServerOrigin ? io(mediaServerOrigin) : io();
 
 // WebRTC configuration
 const rtcConfig = {
