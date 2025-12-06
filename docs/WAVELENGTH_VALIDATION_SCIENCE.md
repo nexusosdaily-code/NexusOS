@@ -46,6 +46,17 @@ NexusOS replaces traditional cryptographic hashing (SHA-256, Blake2, etc.) with 
 - Quantum-resistant (no quantum algorithm can reverse wave interference)
 - Energy-bound (E=hf provides economic foundation)
 
+### Important Clarification: λ-Mode ≠ Zero-Point Energy
+
+The λ-mode used in WNSP is **not** Zero-Point Energy (ZPE). While ZPE is an unavoidable vacuum fluctuation that cannot be controlled or harvested, the λ-mode is:
+
+- An **engineered informational structure** imposed onto classical EM waves
+- Built on real photons from a transmitter, not vacuum fluctuations
+- Fully tunable via frequency, phase, and polarization encoding
+- A **new encoding standard**, not a new particle or exotic physics
+
+This framework does NOT claim free energy, ZPE extraction, or violations of thermodynamics. It remains entirely consistent with Maxwell's equations and quantum electrodynamics. See [Lambda vs ZPE (PDF)](https://github.com/nexusosdaily-code/WNSP-P2P-Hub/blob/main/docs/LAMBDA_VS_ZPE.pdf) for the formal comparative analysis.
+
 ---
 
 ## Theoretical Foundation

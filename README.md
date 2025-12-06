@@ -2,6 +2,106 @@
 
 **Your Phone IS the Blockchain Node**
 
+---
+
+# 🚨 ATTENTION: ALL CLONERS, FORKERS & DEVELOPERS
+
+**Welcome to NexusOS!** We're excited you're here. Before you build, please read this.
+
+---
+
+## 📋 BEFORE YOU START
+
+If you cloned or forked this repository, you are joining a **governed open-source project**. NexusOS is not just code — it's a physics-based civilization operating system with binding rules to protect all participants.
+
+### Step 1: Read the Fork Covenant
+**[governance/FORK_COVENANT.md](governance/FORK_COVENANT.md)** — Your binding agreement
+
+### Step 2: Understand the Rules
+Your fork/clone must comply with **7 mandatory requirements** to use the "NexusOS" name:
+
+| # | Requirement | Why It Matters |
+|---|-------------|----------------|
+| 1 | Preserve Lambda Boson physics (Λ = hf/c²) | Core scientific foundation |
+| 2 | Implement 3 constitutional clauses | Protects all users from exploitation |
+| 3 | Maintain BHLS floor ≥ 1,150 NXT/month | Guarantees basic living standards |
+| 4 | Use 7-band spectral authority (NANO → PLANCK) | Governance hierarchy |
+| 5 | Include GPL v3.0 license | Keeps code community-owned |
+| 6 | Credit original NexusOS project | Respects contributors |
+| 7 | Pass constitutional enforcer tests | Proves compliance |
+
+### Step 3: Stay Updated
+```bash
+git remote add upstream https://github.com/nexusosdaily-code/WNSP-P2P-Hub.git
+git pull upstream main
+```
+Derivatives must stay within **2 minor versions** of mainline (WNSP v7.x).
+
+---
+
+## 🔴 WHAT YOU CANNOT DO
+
+- Remove or weaken the 3 constitutional clauses
+- Lower the BHLS floor below 1,150 NXT/month
+- Strip out Lambda Boson physics
+- Use "NexusOS" name without compliance
+- Change to a non-GPL license
+
+**Violations forfeit the right to use "NexusOS" branding.**
+
+---
+
+## ✅ WHAT YOU CAN DO
+
+- Build new features on top of the core
+- Create industry-specific adapters
+- Improve performance and UX
+- Add new spectral bands
+- Extend the SDK
+- Translate documentation
+- Fork for experimentation (just don't call it "NexusOS" if non-compliant)
+
+---
+
+## 📜 Governance Documents
+
+| Document | Purpose |
+|----------|---------|
+| [GOVERNANCE.md](governance/GOVERNANCE.md) | Master governance framework |
+| [FORK_COVENANT.md](governance/FORK_COVENANT.md) | Fork requirements & naming rules |
+| [VERSIONING.md](governance/VERSIONING.md) | WNSP v7.x = MAINLINE |
+| [UPGRADE_PROTOCOL.md](governance/UPGRADE_PROTOCOL.md) | Protocol upgrade categories |
+| [DEVELOPER_COUNCIL.md](governance/DEVELOPER_COUNCIL.md) | Council structure & authority |
+
+---
+
+## ⚡ MAINLINE DEFINITION
+
+**WNSP v7.x** at `github.com/nexusosdaily-code/WNSP-P2P-Hub` (main branch) is the canonical mainline.
+
+All compatible forks must:
+- Track within 2 minor versions
+- Pull security patches within 30 days
+- Pass constitutional enforcer tests
+
+---
+
+## 🤝 EXISTING CLONERS
+
+If you cloned before December 3, 2025:
+```bash
+git pull origin main
+```
+Then review `governance/FORK_COVENANT.md` for your obligations.
+
+---
+
+## 📞 Questions?
+
+Open a GitHub Issue or Discussion. We want you to succeed — within the rules that protect everyone.
+
+---
+
 A unified mobile-first blockchain interface that transforms smartphones into complete blockchain nodes. Built on physics-based economics (E=hf) with quantum-resistant cryptography.
 
 ---
@@ -349,6 +449,58 @@ The Blockchain Hub is part of the larger **NexusOS Civilization Operating System
 
 ---
 
+## 🏭 Industry Framework (NEW - December 2025)
+
+**Universal Substrate → Industry-Specific Adapters**
+
+The Lambda Boson substrate extends to multiple industries while maintaining constitutional physics constraints. Every sector operation flows through the universal substrate with Lambda mass signatures.
+
+### Sector Policy Packs (`sector_policies/`)
+JSON configurations defining operations, band mappings, escrow requirements, and attestations for each industry:
+- `energy.json` - Power grid operations
+- `security.json` - Access control & secure communications
+- `military.json` - Command & control with confined dominance
+- `supply_chain.json` - Provenance & logistics
+
+### Domain Adapters (`wnsp_v7/industry/`)
+Industry-specific Python adapters built on the universal substrate:
+
+| Sector | Key Operations | Authority Bands |
+|--------|----------------|-----------------|
+| **Energy** | Power generation, grid balancing, conservation verification | YOCTO (grid ops), ZEPTO (generation) |
+| **Security** | Authentication, authorization, threat escalation | FEMTO (auth), ATTO (alerts), YOCTO (escalation) |
+| **Military** | Command issuance, coalition coordination, confined dominance | ATTO (tactical), YOCTO (mission), PLANCK (strategic) |
+| **Supply Chain** | Asset creation, custody transfer, provenance verification | FEMTO (transfers), YOCTO (certification) |
+
+### 7-Band Spectral Authority Hierarchy
+```
+PLANCK  → Strategic/constitutional (95% quorum, 1M NXT escrow)
+YOCTO   → Mission-critical operations (80% quorum, 100K NXT)
+ZEPTO   → High-authority operations (60% quorum, 10K NXT)
+ATTO    → Tactical/alert operations (40% quorum, 1K NXT)
+FEMTO   → Standard operations (20% quorum, 100 NXT)
+PICO    → Routine operations (10% quorum, 10 NXT)
+NANO    → Basic operations (5% quorum, 1 NXT)
+```
+
+### SDK Examples (`sdk/examples/`)
+Complete demos for each sector showing physics-based operations:
+- `energy_demo.py` - Conservation law enforcement
+- `security_demo.py` - Wavelength-encoded identity
+- `military_demo.py` - Confined dominance windows
+- `supply_chain_demo.py` - Lambda custody chains
+
+### Key Principle
+> "The primordial substrate becomes governance of civilization"
+
+As developers build adapters for more sectors, the Lambda substrate gains visibility across the entire economy while enforcing the same fundamental rules everywhere:
+- **Non-Dominance**: No entity >5% authority (except confined windows)
+- **Conservation**: Energy/value cannot be created from nothing
+- **Energy Escrow**: All actions require physics-backed stake
+- **Lambda Signatures**: Every operation carries auditable Λ = hf/c² mass
+
+---
+
 ## 🤝 Contributing
 
 We welcome contributions! Here's how:
@@ -428,7 +580,7 @@ See [LICENSE](LICENSE) file for full terms.
 
 ---
 
-*Last Updated: November 28, 2025*
+*Last Updated: December 3, 2025*
 
 ---
 

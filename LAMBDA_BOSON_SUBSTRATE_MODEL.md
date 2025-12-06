@@ -331,7 +331,7 @@ NexusOS builds civilization governance on this foundation — constructing the r
 3. Compton, A.H. (1923). "A Quantum Theory of the Scattering of X-rays by Light Elements." *Physical Review*
 4. Feynman, R.P. (1965). *Quantum Electrodynamics*. Princeton University Press
 5. Tesla, N. (1904). "The Transmission of Electrical Energy Without Wires." *Electrical World and Engineer*
-6. Pou, T.R. (2024). "Oscillatory Cosmogenesis: Lambda Boson Unification Theory"
+6. Pou, T.R. (2025). "Oscillatory Cosmogenesis: Lambda Boson Unification Theory"
 
 ---
 

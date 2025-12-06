@@ -259,7 +259,7 @@ Experimental attempts to isolate or concentrate λ-boson states at extreme energ
 
 ## References
 
-1. Pou, T.R. (2024). "Oscillatory Cosmogenesis: Lambda Boson Unification Theory"
+1. Pou, T.R. (2025). "Oscillatory Cosmogenesis: Lambda Boson Unification Theory"
 2. Tegmark, M. (2014). "Our Mathematical Universe" — Discussion of existential physics risks
 3. Rees, M. (2003). "Our Final Hour" — Scientific risk assessment
 4. CERN Safety Assessment Group. "Review of the Safety of LHC Collisions"

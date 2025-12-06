@@ -1,0 +1,176 @@
+{
+  "sector_id": "banking",
+  "sector_name": "Banking & Finance",
+  "version": "1.0.0",
+  "description": "Policy pack for financial services including savings, loans, credit, and remittances. Physics-based validation ensures BHLS floor protection and Lambda-backed transactions.",
+
+  "band_mappings": {
+    "PLANCK": {
+      "authority_label": "Systemic Risk Protection",
+      "operations": ["bank_resolution", "systemic_freeze", "constitutional_override"],
+      "min_energy_escrow_nxt": 10000,
+      "multi_party_required": true,
+      "quorum_percent": 90
+    },
+    "YOCTO": {
+      "authority_label": "Monetary Policy",
+      "operations": ["interest_rate_change", "reserve_requirement", "capital_ratio_adjust"],
+      "min_energy_escrow_nxt": 1000,
+      "multi_party_required": true,
+      "quorum_percent": 75
+    },
+    "ZEPTO": {
+      "authority_label": "Large Value Settlements",
+      "operations": ["interbank_settlement", "major_loan_approval", "cross_border_settlement"],
+      "min_energy_escrow_nxt": 100,
+      "multi_party_required": true,
+      "quorum_percent": 51
+    },
+    "ATTO": {
+      "authority_label": "Loan Operations",
+      "operations": ["loan_disbursement", "credit_line_approval", "mortgage_origination"],
+      "min_energy_escrow_nxt": 10,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "FEMTO": {
+      "authority_label": "Account Operations",
+      "operations": ["account_opening", "large_transfer", "remittance_processing"],
+      "min_energy_escrow_nxt": 1,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "PICO": {
+      "authority_label": "Standard Transactions",
+      "operations": ["deposit", "withdrawal", "transfer", "payment"],
+      "min_energy_escrow_nxt": 0.1,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "NANO": {
+      "authority_label": "Queries & Interest",
+      "operations": ["balance_query", "statement_generation", "interest_calculation"],
+      "min_energy_escrow_nxt": 0.01,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    }
+  },
+
+  "operations": [
+    {
+      "operation_id": "banking.open_account",
+      "name": "Open Account",
+      "description": "Create new bank account with BHLS protection option",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 1.0,
+      "attestations_required": ["identity_verification"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "banking.deposit",
+      "name": "Deposit Funds",
+      "description": "Add Lambda mass to account balance",
+      "required_band": "NANO",
+      "energy_cost_multiplier": 0.5,
+      "attestations_required": [],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "banking.withdraw",
+      "name": "Withdraw Funds",
+      "description": "Remove Lambda mass from account (respects BHLS floor)",
+      "required_band": "PICO",
+      "energy_cost_multiplier": 1.0,
+      "attestations_required": ["account_ownership"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "banking.transfer",
+      "name": "Transfer Funds",
+      "description": "Move Lambda mass between accounts",
+      "required_band": "PICO",
+      "energy_cost_multiplier": 1.0,
+      "attestations_required": ["account_ownership"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "banking.apply_loan",
+      "name": "Apply for Loan",
+      "description": "Request Lambda-backed loan obligation",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 2.0,
+      "attestations_required": ["identity_verification", "income_verification"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "banking.disburse_loan",
+      "name": "Disburse Loan",
+      "description": "Release approved loan funds",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 3.0,
+      "attestations_required": ["loan_approval", "collateral_verification"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "banking.send_remittance",
+      "name": "Send Remittance",
+      "description": "Cross-border Lambda transfer",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 1.5,
+      "attestations_required": ["identity_verification", "aml_check"],
+      "reversible": false,
+      "audit_trail": true
+    }
+  ],
+
+  "constraints": {
+    "max_dominance_percent": 5,
+    "bhls_applicable": true,
+    "bhls_floor_nxt": 1150,
+    "confined_dominance_allowed": false,
+    "audit_level": "PICO",
+    "max_single_transfer_nxt": 1000000,
+    "max_loan_to_value": 0.8,
+    "remittance_fee_rate": 0.001
+  },
+
+  "attestations": [
+    {
+      "type": "identity_verification",
+      "required_for": ["banking.open_account", "banking.apply_loan", "banking.send_remittance"],
+      "minimum_band": "FEMTO",
+      "description": "Verified identity through KYC process"
+    },
+    {
+      "type": "account_ownership",
+      "required_for": ["banking.withdraw", "banking.transfer"],
+      "minimum_band": "PICO",
+      "description": "Proof of account ownership"
+    },
+    {
+      "type": "income_verification",
+      "required_for": ["banking.apply_loan"],
+      "minimum_band": "FEMTO",
+      "description": "Verified income for loan eligibility"
+    },
+    {
+      "type": "aml_check",
+      "required_for": ["banking.send_remittance"],
+      "minimum_band": "FEMTO",
+      "description": "Anti-money laundering compliance check"
+    }
+  ],
+
+  "physics_rules": {
+    "conservation": "Λ_deposited = Λ_withdrawn + Λ_fees + Λ_interest",
+    "bhls_protection": "balance >= 1150 NXT for BHLS-protected accounts",
+    "loan_obligation": "Λ_obligation = (h × f × principal) / c²",
+    "interest_resonance": "Interest accrues as standing wave amplification"
+  }
+}

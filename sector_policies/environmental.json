@@ -1,0 +1,185 @@
+{
+  "sector_id": "environmental",
+  "version": "1.0.0",
+  "name": "Environmental & Extraction Sector",
+  "description": "Physics-based environmental governance ensuring extraction operations fund mandatory restoration. Conservation law: Λ_extracted ≤ Λ_restored + Λ_escrowed",
+  
+  "operations": {
+    "extraction_permit": {
+      "name": "Extraction Permit Application",
+      "description": "Apply for mineral/resource extraction permit with mandatory restoration escrow",
+      "required_band": "YOCTO",
+      "required_attestations": ["environmental_impact_assessment", "restoration_plan", "escrow_commitment", "community_consent"],
+      "energy_multiplier": 10.0
+    },
+    "mineral_extraction": {
+      "name": "Mineral Extraction",
+      "description": "Record extraction activity with real-time depletion tracking",
+      "required_band": "ZEPTO",
+      "required_attestations": ["extraction_license", "quantity_measurement", "site_coordinates"],
+      "energy_multiplier": 5.0
+    },
+    "resource_depletion": {
+      "name": "Resource Depletion Report",
+      "description": "Track cumulative resource depletion against permitted limits",
+      "required_band": "ATTO",
+      "required_attestations": ["measurement_certificate", "geological_survey"],
+      "energy_multiplier": 2.0
+    },
+    "restoration_milestone": {
+      "name": "Restoration Milestone",
+      "description": "Verified land/ecosystem restoration progress checkpoint",
+      "required_band": "ATTO",
+      "required_attestations": ["restoration_verification", "ecological_survey", "third_party_audit"],
+      "energy_multiplier": 1.0
+    },
+    "restoration_complete": {
+      "name": "Restoration Completion",
+      "description": "Final verification that extraction site has been fully restored",
+      "required_band": "YOCTO",
+      "required_attestations": ["final_ecological_audit", "community_acceptance", "regulatory_signoff"],
+      "energy_multiplier": 5.0
+    },
+    "carbon_emission": {
+      "name": "Carbon Emission Recording",
+      "description": "Record carbon emissions from operations",
+      "required_band": "FEMTO",
+      "required_attestations": ["emission_measurement", "source_identification"],
+      "energy_multiplier": 1.0
+    },
+    "carbon_offset": {
+      "name": "Carbon Offset Registration",
+      "description": "Register verified carbon offset with Lambda chain provenance",
+      "required_band": "ZEPTO",
+      "required_attestations": ["offset_certificate", "verification_body", "permanence_guarantee"],
+      "energy_multiplier": 3.0
+    },
+    "carbon_credit_transfer": {
+      "name": "Carbon Credit Transfer",
+      "description": "Transfer carbon credits between entities",
+      "required_band": "FEMTO",
+      "required_attestations": ["sender_signature", "recipient_signature", "credit_verification"],
+      "energy_multiplier": 1.0
+    },
+    "environmental_violation": {
+      "name": "Environmental Violation",
+      "description": "Record environmental violation with automatic escrow seizure",
+      "required_band": "YOCTO",
+      "required_attestations": ["violation_evidence", "regulatory_authority", "damage_assessment"],
+      "energy_multiplier": 20.0
+    },
+    "ecosystem_monitoring": {
+      "name": "Ecosystem Monitoring Report",
+      "description": "Ongoing ecosystem health monitoring for extraction sites",
+      "required_band": "FEMTO",
+      "required_attestations": ["monitoring_data", "sensor_certification"],
+      "energy_multiplier": 1.0
+    },
+    "water_quality": {
+      "name": "Water Quality Assessment",
+      "description": "Monitor water quality in extraction zones",
+      "required_band": "ATTO",
+      "required_attestations": ["water_sample_analysis", "lab_certification"],
+      "energy_multiplier": 2.0
+    },
+    "biodiversity_survey": {
+      "name": "Biodiversity Survey",
+      "description": "Assess species diversity before, during, and after extraction",
+      "required_band": "ZEPTO",
+      "required_attestations": ["species_inventory", "ecological_assessment", "baseline_comparison"],
+      "energy_multiplier": 3.0
+    },
+    "community_benefit": {
+      "name": "Community Benefit Distribution",
+      "description": "Distribute extraction benefits to affected communities",
+      "required_band": "ATTO",
+      "required_attestations": ["benefit_calculation", "community_registry", "distribution_verification"],
+      "energy_multiplier": 1.0
+    },
+    "emergency_shutdown": {
+      "name": "Emergency Environmental Shutdown",
+      "description": "Halt extraction operations due to environmental emergency",
+      "required_band": "PLANCK",
+      "required_attestations": ["emergency_declaration", "multi_authority_consensus", "immediate_threat_evidence"],
+      "energy_multiplier": 50.0
+    }
+  },
+  
+  "band_requirements": {
+    "PLANCK": {
+      "min_escrow_nxt": 1000000,
+      "multi_party_required": true,
+      "quorum_percent": 95,
+      "description": "Constitutional environmental protection"
+    },
+    "YOCTO": {
+      "min_escrow_nxt": 100000,
+      "multi_party_required": true,
+      "quorum_percent": 80,
+      "description": "Extraction permits and violation enforcement"
+    },
+    "ZEPTO": {
+      "min_escrow_nxt": 10000,
+      "multi_party_required": true,
+      "quorum_percent": 60,
+      "description": "Extraction operations and carbon offsets"
+    },
+    "ATTO": {
+      "min_escrow_nxt": 1000,
+      "multi_party_required": false,
+      "quorum_percent": 40,
+      "description": "Restoration milestones and monitoring"
+    },
+    "FEMTO": {
+      "min_escrow_nxt": 100,
+      "multi_party_required": false,
+      "quorum_percent": 20,
+      "description": "Routine environmental tracking"
+    },
+    "PICO": {
+      "min_escrow_nxt": 10,
+      "multi_party_required": false,
+      "quorum_percent": 10,
+      "description": "Sensor data logging"
+    },
+    "NANO": {
+      "min_escrow_nxt": 1,
+      "multi_party_required": false,
+      "quorum_percent": 5,
+      "description": "Basic telemetry"
+    }
+  },
+  
+  "constraints": {
+    "max_dominance_percent": 5,
+    "bhls_applicable": true,
+    "restoration_escrow_minimum_percent": 150,
+    "extraction_restoration_ratio": 1.0,
+    "carbon_neutrality_required": true,
+    "community_consent_required": true,
+    "third_party_audit_required": true,
+    "conservation_law": "Λ_extracted ≤ Λ_restored + Λ_escrowed"
+  },
+  
+  "escrow_rules": {
+    "restoration_escrow": {
+      "minimum_percent_of_extraction_value": 150,
+      "release_conditions": ["restoration_milestone", "restoration_complete"],
+      "seizure_conditions": ["environmental_violation", "permit_revocation"],
+      "decay_rate_annual_percent": 0
+    },
+    "carbon_escrow": {
+      "minimum_per_ton_co2": 100,
+      "release_conditions": ["carbon_offset", "verified_sequestration"],
+      "seizure_conditions": ["emission_fraud", "offset_invalidation"],
+      "decay_rate_annual_percent": 0
+    }
+  },
+  
+  "physics_rules": {
+    "conservation_law": "Λ_extracted ≤ Λ_restored + Λ_escrowed",
+    "carbon_balance": "Σ_emissions ≤ Σ_offsets + Σ_sequestration",
+    "ecosystem_integrity": "biodiversity_post ≥ biodiversity_pre * 0.9",
+    "water_quality_threshold": "contamination ≤ baseline * 1.1"
+  }
+}

@@ -1,4 +1,16 @@
 [server]
 headless = true
 address = "0.0.0.0"
+<<<<<<< HEAD
 port = 5000
+
+[theme]
+base = "light"
+primaryColor = "#667eea"
+backgroundColor = "#f8faff"
+secondaryBackgroundColor = "#e8f0ff"
+textColor = "#1B1B2F"
+font = "sans serif"
+=======
+port = 5000
+>>>>>>> f141339b87d1249df922e7e081e7b68a91e7f12a

@@ -1,0 +1,400 @@
+{
+  "sector_id": "community_health",
+  "version": "1.0.0",
+  "name": "Community Health Sector",
+  "description": "Universal physics-based governance for community health programs worldwide. Nutrition, fitness, health education in local languages, and remote infrastructure. BHLS floor of 1,150 NXT/month guaranteed for ALL peoples regardless of location or background.",
+  
+  "operations": {
+    "community_registration": {
+      "name": "Community Registration",
+      "description": "Register community for health program access",
+      "required_band": "YOCTO",
+      "required_attestations": ["community_leadership_approval", "location_verification", "population_census"],
+      "energy_multiplier": 1.0
+    },
+    "member_enrollment": {
+      "name": "Member Enrollment",
+      "description": "Enroll community member in health programs with BHLS guarantee",
+      "required_band": "ATTO",
+      "required_attestations": ["identity_verification", "community_membership", "bhls_eligibility"],
+      "energy_multiplier": 1.0
+    },
+    "fund_allocation": {
+      "name": "Program Fund Allocation",
+      "description": "Allocate funds to specific health programs",
+      "required_band": "ZEPTO",
+      "required_attestations": ["budget_approval", "program_verification", "oversight_committee"],
+      "energy_multiplier": 2.0
+    },
+    "fund_disbursement": {
+      "name": "Fund Disbursement",
+      "description": "Disburse allocated funds to program operators",
+      "required_band": "ATTO",
+      "required_attestations": ["allocation_reference", "recipient_verification", "disbursement_approval"],
+      "energy_multiplier": 1.0
+    },
+    "nutrition_delivery": {
+      "name": "Nutrition Program Delivery",
+      "description": "Track nutrition package delivery to communities",
+      "required_band": "FEMTO",
+      "required_attestations": ["delivery_confirmation", "recipient_verification", "quality_check"],
+      "energy_multiplier": 1.0
+    },
+    "child_nutrition": {
+      "name": "Child Nutrition Program",
+      "description": "Specialized nutrition tracking for children",
+      "required_band": "ATTO",
+      "required_attestations": ["child_registry", "growth_tracking", "nutrition_assessment"],
+      "energy_multiplier": 2.0
+    },
+    "fitness_program": {
+      "name": "Fitness Program Session",
+      "description": "Record community fitness and wellness session",
+      "required_band": "FEMTO",
+      "required_attestations": ["instructor_certification", "attendance_record", "activity_log"],
+      "energy_multiplier": 1.0
+    },
+    "health_education": {
+      "name": "Health Education Delivery",
+      "description": "Educational health content delivered in local language",
+      "required_band": "ATTO",
+      "required_attestations": ["language_certification", "content_approval", "community_acceptance"],
+      "energy_multiplier": 1.0
+    },
+    "language_content": {
+      "name": "Local Language Content Creation",
+      "description": "Create health education materials in local languages worldwide",
+      "required_band": "ZEPTO",
+      "required_attestations": ["language_expert_review", "cultural_review", "community_approval"],
+      "energy_multiplier": 3.0
+    },
+    "medical_visit": {
+      "name": "Medical Visit Record",
+      "description": "Record medical professional visit to community",
+      "required_band": "ATTO",
+      "required_attestations": ["medical_license", "visit_verification", "treatment_record"],
+      "energy_multiplier": 2.0
+    },
+    "telemedicine_session": {
+      "name": "Telemedicine Session",
+      "description": "Remote medical consultation via telecommunications",
+      "required_band": "FEMTO",
+      "required_attestations": ["connectivity_verification", "patient_consent", "doctor_attestation"],
+      "energy_multiplier": 1.0
+    },
+    "infrastructure_project": {
+      "name": "Remote Infrastructure Project",
+      "description": "Track infrastructure development in remote areas",
+      "required_band": "YOCTO",
+      "required_attestations": ["community_need_assessment", "environmental_clearance", "funding_allocation"],
+      "energy_multiplier": 5.0
+    },
+    "infrastructure_milestone": {
+      "name": "Infrastructure Milestone",
+      "description": "Verified progress checkpoint for infrastructure projects",
+      "required_band": "ATTO",
+      "required_attestations": ["construction_verification", "quality_inspection", "community_oversight"],
+      "energy_multiplier": 2.0
+    },
+    "water_system": {
+      "name": "Clean Water System",
+      "description": "Track clean water infrastructure installation and maintenance",
+      "required_band": "ZEPTO",
+      "required_attestations": ["water_quality_test", "installation_certification", "maintenance_plan"],
+      "energy_multiplier": 3.0
+    },
+    "solar_power": {
+      "name": "Solar Power Installation",
+      "description": "Track solar power installation for remote community",
+      "required_band": "ZEPTO",
+      "required_attestations": ["installation_certification", "capacity_verification", "grid_connection"],
+      "energy_multiplier": 3.0
+    },
+    "connectivity": {
+      "name": "Communications Infrastructure",
+      "description": "Install internet/telecommunications for remote access",
+      "required_band": "ZEPTO",
+      "required_attestations": ["installation_verification", "bandwidth_test", "connectivity_proof"],
+      "energy_multiplier": 3.0
+    },
+    "bhls_distribution": {
+      "name": "BHLS Floor Distribution",
+      "description": "Monthly BHLS distribution to community members (1,150 NXT/month)",
+      "required_band": "ATTO",
+      "required_attestations": ["eligibility_verification", "identity_confirmation", "receipt_confirmation"],
+      "energy_multiplier": 1.0
+    },
+    "emergency_response": {
+      "name": "Emergency Health Response",
+      "description": "Emergency medical response to community",
+      "required_band": "YOCTO",
+      "required_attestations": ["emergency_declaration", "response_team", "medical_authority"],
+      "energy_multiplier": 10.0
+    },
+    "health_worker_certification": {
+      "name": "Community Health Worker Certification",
+      "description": "Train and certify local community health workers",
+      "required_band": "ZEPTO",
+      "required_attestations": ["training_completion", "skill_assessment", "community_endorsement"],
+      "energy_multiplier": 2.0
+    },
+    "maternal_health": {
+      "name": "Maternal Health Program",
+      "description": "Track maternal health services",
+      "required_band": "ATTO",
+      "required_attestations": ["prenatal_registration", "health_monitoring", "care_plan"],
+      "energy_multiplier": 2.0
+    },
+    "elder_care": {
+      "name": "Elder Care Program",
+      "description": "Track elder care and support services",
+      "required_band": "ATTO",
+      "required_attestations": ["elder_registration", "care_assessment", "family_consent"],
+      "energy_multiplier": 2.0
+    },
+    "program_audit": {
+      "name": "Program Audit",
+      "description": "Third-party audit of program fund usage and outcomes",
+      "required_band": "YOCTO",
+      "required_attestations": ["auditor_certification", "fund_tracing", "outcome_measurement"],
+      "energy_multiplier": 5.0
+    },
+    "device_manufacturing": {
+      "name": "Medical Device Manufacturing",
+      "description": "Track manufacturing of medical devices (glasses, hearing aids, prosthetics)",
+      "required_band": "ZEPTO",
+      "required_attestations": ["manufacturing_license", "quality_control", "materials_sourcing"],
+      "energy_multiplier": 3.0
+    },
+    "colorblind_glasses": {
+      "name": "Colorblind Glasses Production",
+      "description": "Manufacture wavelength-filtering glasses for color vision correction",
+      "required_band": "ZEPTO",
+      "required_attestations": ["optical_calibration", "wavelength_verification", "quality_inspection"],
+      "energy_multiplier": 3.0
+    },
+    "device_quality_test": {
+      "name": "Device Quality Testing",
+      "description": "Quality assurance testing for medical devices",
+      "required_band": "ATTO",
+      "required_attestations": ["test_protocol", "test_results", "certification_body"],
+      "energy_multiplier": 2.0
+    },
+    "device_distribution": {
+      "name": "Medical Device Distribution",
+      "description": "Track distribution of medical devices to communities",
+      "required_band": "ATTO",
+      "required_attestations": ["device_registry", "recipient_verification", "fitting_confirmation"],
+      "energy_multiplier": 1.0
+    },
+    "device_fitting": {
+      "name": "Device Fitting Session",
+      "description": "Professional fitting of medical devices (glasses, hearing aids)",
+      "required_band": "FEMTO",
+      "required_attestations": ["fitter_certification", "patient_assessment", "fitting_record"],
+      "energy_multiplier": 1.0
+    },
+    "vision_screening": {
+      "name": "Vision Screening",
+      "description": "Community vision screening to identify needs",
+      "required_band": "FEMTO",
+      "required_attestations": ["screening_protocol", "optometrist_certification", "results_record"],
+      "energy_multiplier": 1.0
+    },
+    "hearing_screening": {
+      "name": "Hearing Screening",
+      "description": "Community hearing screening to identify needs",
+      "required_band": "FEMTO",
+      "required_attestations": ["screening_protocol", "audiologist_certification", "results_record"],
+      "energy_multiplier": 1.0
+    },
+    "device_maintenance": {
+      "name": "Device Maintenance",
+      "description": "Track maintenance and repair of distributed medical devices",
+      "required_band": "PICO",
+      "required_attestations": ["maintenance_record", "technician_certification"],
+      "energy_multiplier": 0.5
+    },
+    "outcome_tracking": {
+      "name": "Health Outcome Tracking",
+      "description": "Track health improvements from device usage",
+      "required_band": "FEMTO",
+      "required_attestations": ["baseline_assessment", "follow_up_assessment", "patient_feedback"],
+      "energy_multiplier": 1.0
+    }
+  },
+  
+  "band_requirements": {
+    "PLANCK": {
+      "min_escrow_nxt": 100000,
+      "multi_party_required": true,
+      "quorum_percent": 95,
+      "description": "Constitutional health rights protection"
+    },
+    "YOCTO": {
+      "min_escrow_nxt": 10000,
+      "multi_party_required": true,
+      "quorum_percent": 80,
+      "description": "Community registration and emergency response"
+    },
+    "ZEPTO": {
+      "min_escrow_nxt": 1000,
+      "multi_party_required": true,
+      "quorum_percent": 60,
+      "description": "Infrastructure and fund allocation"
+    },
+    "ATTO": {
+      "min_escrow_nxt": 100,
+      "multi_party_required": false,
+      "quorum_percent": 40,
+      "description": "Health programs and BHLS distribution"
+    },
+    "FEMTO": {
+      "min_escrow_nxt": 10,
+      "multi_party_required": false,
+      "quorum_percent": 20,
+      "description": "Session tracking and delivery"
+    },
+    "PICO": {
+      "min_escrow_nxt": 1,
+      "multi_party_required": false,
+      "quorum_percent": 10,
+      "description": "Telemetry and monitoring"
+    },
+    "NANO": {
+      "min_escrow_nxt": 0.1,
+      "multi_party_required": false,
+      "quorum_percent": 5,
+      "description": "Basic data logging"
+    }
+  },
+  
+  "constraints": {
+    "max_dominance_percent": 5,
+    "bhls_applicable": true,
+    "bhls_monthly_floor_nxt": 1150,
+    "universal_coverage": true,
+    "no_discrimination": true,
+    "local_language_required": true,
+    "community_consent_required": true,
+    "child_protection_priority": true,
+    "fund_transparency_required": true
+  },
+  
+  "bhls_rules": {
+    "monthly_floor_nxt": 1150,
+    "distribution_frequency": "monthly",
+    "eligibility": "all_registered_members",
+    "child_supplement_percent": 25,
+    "elder_supplement_percent": 15,
+    "maternal_supplement_percent": 20,
+    "disability_supplement_percent": 20,
+    "no_exclusions": true,
+    "universal_guarantee": "Every human being receives BHLS floor regardless of background"
+  },
+  
+  "fund_management": {
+    "allocation_transparency": true,
+    "multi_signature_required": true,
+    "audit_frequency": "quarterly",
+    "community_oversight": true,
+    "outcome_tracking": true,
+    "misuse_penalty_percent": 200,
+    "program_categories": [
+      "nutrition",
+      "child_nutrition", 
+      "fitness",
+      "health_education",
+      "medical_services",
+      "maternal_health",
+      "elder_care",
+      "infrastructure",
+      "emergency_response",
+      "medical_devices",
+      "vision_care",
+      "hearing_care"
+    ]
+  },
+  
+  "medical_devices": {
+    "supported_devices": [
+      "colorblind_glasses",
+      "corrective_glasses",
+      "hearing_aids",
+      "prosthetics",
+      "mobility_aids",
+      "diabetes_monitors",
+      "blood_pressure_monitors"
+    ],
+    "manufacturing_standards": {
+      "quality_control_required": true,
+      "materials_traceability": true,
+      "wavelength_calibration_for_optical": true,
+      "third_party_testing": true
+    },
+    "distribution_rules": {
+      "needs_based_priority": true,
+      "bhls_subsidy_eligible": true,
+      "fitting_required": true,
+      "follow_up_required": true,
+      "maintenance_included": true
+    },
+    "colorblind_glasses_specs": {
+      "wavelength_filtering": "notch_filter_technology",
+      "target_wavelengths_nm": [530, 560],
+      "filter_bandwidth_nm": 15,
+      "types_supported": ["protan", "deutan", "tritan"],
+      "calibration_required": true
+    }
+  },
+  
+  "mesh_network": {
+    "description": "P2P mesh networks for remote communities without traditional internet",
+    "node_types": ["mobile", "relay", "gateway", "community_hub"],
+    "connection_types": ["wifi_direct", "bluetooth", "lora", "satellite", "mesh_radio"],
+    "relay_station_specs": {
+      "power_source": "solar",
+      "min_solar_watts": 100,
+      "min_battery_wh": 500,
+      "typical_range_km": 5
+    },
+    "message_priorities": {
+      "emergency": 0,
+      "bhls": 1,
+      "health": 2,
+      "governance": 3,
+      "standard": 4,
+      "bulk": 5
+    },
+    "offline_support": {
+      "store_and_forward": true,
+      "max_message_age_days": 7,
+      "bhls_message_age_days": 30,
+      "sync_on_reconnect": true
+    },
+    "coverage_requirements": {
+      "min_connectivity_score": 50,
+      "satellite_gateway_recommended": true,
+      "relay_spacing_km": 5
+    }
+  },
+  
+  "infrastructure_requirements": {
+    "clean_water_priority": 1,
+    "solar_power_priority": 2,
+    "mesh_network_priority": 3,
+    "connectivity_priority": 3,
+    "health_clinic_priority": 4,
+    "community_center_priority": 5,
+    "maintenance_fund_percent": 15
+  },
+  
+  "physics_rules": {
+    "bhls_conservation": "BHLS_distributed ≥ population × 1150 NXT",
+    "fund_conservation": "funds_disbursed ≤ funds_allocated",
+    "child_nutrition": "calories_delivered ≥ daily_requirement × children × 30",
+    "health_access": "medical_visits ≥ 1 per quarter per community",
+    "education_reach": "coverage_percent ≥ 90%",
+    "infrastructure_progress": "milestones_completed / milestones_planned ≥ 0.9"
+  }
+}

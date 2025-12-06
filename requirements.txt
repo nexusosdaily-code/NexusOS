@@ -56,3 +56,6 @@ socketio
 python-docx
 python-docx
 twilio
+fastapi
+pydantic
+uvicorn

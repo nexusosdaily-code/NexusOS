@@ -1,0 +1,175 @@
+{
+  "sector_id": "real_estate",
+  "sector_name": "Real Estate & Housing",
+  "version": "1.0.0",
+  "description": "Policy pack for property rights, transfers, and housing. Physics-based validation ensures clear title ownership and BHLS housing subsidies for all citizens.",
+
+  "band_mappings": {
+    "PLANCK": {
+      "authority_label": "Land Registry Authority",
+      "operations": ["land_reform", "eminent_domain", "title_system_change"],
+      "min_energy_escrow_nxt": 10000,
+      "multi_party_required": true,
+      "quorum_percent": 90
+    },
+    "YOCTO": {
+      "authority_label": "Zoning & Planning",
+      "operations": ["zoning_change", "land_use_policy", "development_rights"],
+      "min_energy_escrow_nxt": 1000,
+      "multi_party_required": true,
+      "quorum_percent": 75
+    },
+    "ZEPTO": {
+      "authority_label": "Major Developments",
+      "operations": ["subdivision_approval", "major_development", "environmental_impact"],
+      "min_energy_escrow_nxt": 100,
+      "multi_party_required": true,
+      "quorum_percent": 51
+    },
+    "ATTO": {
+      "authority_label": "Property Transactions",
+      "operations": ["title_transfer", "mortgage_creation", "property_registration"],
+      "min_energy_escrow_nxt": 10,
+      "multi_party_required": true,
+      "quorum_percent": 51
+    },
+    "FEMTO": {
+      "authority_label": "Lease Operations",
+      "operations": ["lease_creation", "lease_termination", "rent_adjustment"],
+      "min_energy_escrow_nxt": 1,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "PICO": {
+      "authority_label": "Standard Operations",
+      "operations": ["rent_payment", "maintenance_request", "inspection"],
+      "min_energy_escrow_nxt": 0.1,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "NANO": {
+      "authority_label": "Queries",
+      "operations": ["title_verification", "property_search", "valuation_query"],
+      "min_energy_escrow_nxt": 0.01,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    }
+  },
+
+  "operations": [
+    {
+      "operation_id": "real_estate.register_property",
+      "name": "Register Property",
+      "description": "Register new property with Lambda-backed title",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 5.0,
+      "attestations_required": ["survey_certification", "ownership_proof"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "real_estate.transfer_ownership",
+      "name": "Transfer Ownership",
+      "description": "Transfer title as wave propagation to new owner",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 5.0,
+      "attestations_required": ["seller_consent", "buyer_verification", "title_search"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "real_estate.create_lease",
+      "name": "Create Lease",
+      "description": "Create temporary resonance coupling between parties",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 2.0,
+      "attestations_required": ["owner_consent", "tenant_verification"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "real_estate.pay_rent",
+      "name": "Pay Rent",
+      "description": "Monthly Lambda transfer for occupancy",
+      "required_band": "NANO",
+      "energy_cost_multiplier": 0.5,
+      "attestations_required": [],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "real_estate.create_mortgage",
+      "name": "Create Mortgage",
+      "description": "Create phase-locked lien on property Lambda",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 5.0,
+      "attestations_required": ["property_appraisal", "credit_verification"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "real_estate.verify_title",
+      "name": "Verify Title",
+      "description": "Verify Lambda signature of ownership",
+      "required_band": "NANO",
+      "energy_cost_multiplier": 0.1,
+      "attestations_required": [],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "real_estate.bhls_housing",
+      "name": "BHLS Housing",
+      "description": "Apply for housing subsidy",
+      "required_band": "PICO",
+      "energy_cost_multiplier": 0.0,
+      "attestations_required": ["bhls_eligibility", "income_verification"],
+      "reversible": false,
+      "audit_trail": true
+    }
+  ],
+
+  "constraints": {
+    "max_dominance_percent": 5,
+    "bhls_applicable": true,
+    "bhls_housing_subsidy_percent": 50,
+    "confined_dominance_allowed": false,
+    "audit_level": "PICO",
+    "max_ltv_ratio": 0.8,
+    "transfer_fee_rate": 0.02
+  },
+
+  "attestations": [
+    {
+      "type": "survey_certification",
+      "required_for": ["real_estate.register_property"],
+      "minimum_band": "ATTO",
+      "description": "Certified property survey"
+    },
+    {
+      "type": "ownership_proof",
+      "required_for": ["real_estate.register_property"],
+      "minimum_band": "ATTO",
+      "description": "Proof of legal ownership"
+    },
+    {
+      "type": "seller_consent",
+      "required_for": ["real_estate.transfer_ownership"],
+      "minimum_band": "ATTO",
+      "description": "Seller consent to transfer"
+    },
+    {
+      "type": "property_appraisal",
+      "required_for": ["real_estate.create_mortgage"],
+      "minimum_band": "ATTO",
+      "description": "Professional property valuation"
+    }
+  ],
+
+  "physics_rules": {
+    "title_nature": "Title is standing wave claim at property coordinates",
+    "transfer_physics": "Transfer is wave propagation from seller to buyer",
+    "lease_coupling": "Lease is temporary resonance coupling",
+    "bhls_guarantee": "50% housing subsidy for eligible citizens"
+  }
+}

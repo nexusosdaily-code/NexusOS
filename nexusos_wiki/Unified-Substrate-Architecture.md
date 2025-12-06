@@ -1,7 +1,7 @@
 # WNSP v7.1 Unified Substrate Architecture
 
 **Version**: 7.1  
-**Date**: December 2024  
+**Date**: December 2025  
 **Status**: Production Ready
 
 ---
@@ -25,7 +25,7 @@ The NexusOS system is built on **Lambda Boson (Λ)**, the mass-equivalent of osc
 |----------|--------|-------------|
 | E = hf | Planck 1900 | Energy from frequency |
 | E = mc² | Einstein 1905 | Mass-energy equivalence |
-| **Λ = hf/c²** | Lambda Boson 2024 | Oscillation IS mass |
+| **Λ = hf/c²** | Lambda Boson 2025 | Oscillation IS mass |
 
 ```
 Lambda Mass = (Planck Constant × Frequency) / (Speed of Light)²

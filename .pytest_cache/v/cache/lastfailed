@@ -1,0 +1,6 @@
+{
+  "tests/test_oracle_integration.py::TestOracleManager::test_fetch_from_source": true,
+  "tests/test_oracle_integration.py::TestOracleManager::test_fetch_all_variables": true,
+  "tests/test_oracle_integration.py::TestOracleManager::test_get_all_statuses": true,
+  "tests/test_validation.py::TestSimulationParamsValidation::test_invalid_weight_sum_produces_warning": true
+}

@@ -7,7 +7,7 @@ NexusOS is a civilization architecture that replaces traditional binary computat
 The NexusOS system is built on **Lambda Boson (Λ)**, the mass-equivalent of oscillation, derived from first principles:
 - **E = hf** (Planck 1900): Energy from frequency
 - **E = mc²** (Einstein 1905): Mass-energy equivalence
-- **Λ = hf/c²** (Lambda Boson 2024): Oscillation IS mass
+- **Λ = hf/c²** (Lambda Boson 2025): Oscillation IS mass
 
 Every transaction in NexusOS carries inherent mass-equivalent through its wavelength. This is not metaphor — it is direct application of Nobel Prize-winning physics. NexusOS operates on the Lambda Boson substrate, where messages ARE oscillation.
 
@@ -35,12 +35,51 @@ The system provides a Unified Dashboard Launcher (`app.py`) offering access to m
 - **Mobile & Connectivity**: Optimized DAG messaging for mobile, offline mesh transport for P2P communication, and AI-optimized hybrid routing.
 - **Quantum Energy Systems (Simulated)**: Environmental energy harvesting simulation, resonant frequency optimization, and quantum vacuum randomness for CSPRNG.
 - **WaveLang Programming**: Features an AI teacher for natural language to WaveLang conversion, a compiler, and a code generator.
+- **Scientific Research Platform**: Complete research infrastructure for Wavelength Information Physics (WIP) experiments:
+  - `wip_analysis_module.py`: Statistical analysis with correlations, confidence intervals, hypothesis testing, regression
+  - `wip_data_collection.py`: 6 sensor types (Frequency, Wavelength, Energy, Lambda Mass, Temperature, Intensity) with session management
+  - `wip_3d_visualizations.py`: 8 interactive 3D Plotly visualizations (Lambda Boson model, EM spectrum helix, E=hf surface, interference patterns, standing waves, blackbody spectra)
+  - `wip_research_api.py`: 20+ REST endpoints for physics calculations, experiments, simulations, analysis, reports
+  - `scientific_research_platform.py`: Core experiment design, Monte Carlo simulation engine, report generator (5 formats: Executive, Technical, Academic, Patent, Investor)
+  - `scientific_research_dashboard.py`: User-friendly Streamlit interface for research operations
+
+### Lambda Substrate Performance Enhancements
+When Lambda Boson was integrated as substrate, the following improvements were achieved:
+- **File Size Capacity**: 5x increase (100MB → 500MB) via oscillating encoding (λ₁ → λ₂)
+- **Encoding Efficiency**: 2x improvement (2+ chars per particle vs 1 char before)
+- **Binary Mode Speed**: 10x faster blockchain sync through adaptive encoding
+- **Authority Band Multiplier**: 5x energy multiplier at higher bands (ATTO, ZEPTO, YOCTO)
 
 ### Design Patterns
 - **Physics-based Architecture**: Core design principles are derived from quantum physics and electromagnetic wave states.
 - **Decentralized Network**: Utilizes a Directed Acyclic Graph (DAG) for transaction processing and messaging.
 - **Modular Design**: System functionality is organized into distinct layers and modules for scalability and maintainability.
 - **Mobile-First Approach**: Key interfaces are designed for optimal mobile experience.
+
+## Community & Development Process
+
+### GitHub Community Hub
+- **Repository**: github.com/nexusosdaily-code/WNSP-P2P-Hub
+- **Discussions**: All community conversations and updates
+- **Roadmap**: Discussion #8 - Project updates and milestones
+
+### Community Update Process (Established Dec 4, 2025)
+1. **Announce** when projects are completed
+2. **Disclose** upcoming development priorities
+3. **Keep community informed** of all upgrades and updates
+4. **Post to Roadmap discussion** for major milestones
+
+### Active Discussions
+- #1: Wavelength Information Physics (WIP) - Announcements
+- #2: Scientific Research Platform - Show and Tell
+- #3: WNSP High School Curriculum - Ideas
+- #4: Getting Started Q&A - Questions
+- #5: Dev Wallet Architecture - For Engineers
+- #6: System Architecture - Technical Overview
+- #7: Contributing Guide - How to Contribute
+- #8: Project Roadmap & Updates - Milestones
+- #9: Welcome to NexusOS Community - Start Here
+- #10: Nexus Encoding Equation (NEE) - Build Systems with Lambda Physics
 
 ## External Dependencies
 

@@ -1,0 +1,24 @@
+WNSP v7 — Wavelength-Native Signalling Protocol
+Copyright (C) 2025
+
+This work is collectively owned by the WNSP Project Contributors and is
+maintained under an open technical governance model. No individual or
+organization holds exclusive ownership; stewardship is community-driven.
+
+Primary Maintainer: Te Rata Pou (Founding Contributor)
+
+All contributions to this repository are licensed under the GNU General
+Public License v3.0 or any later version (GPL-3-or-later), unless
+explicitly stated otherwise within a specific file or sub-module.
+
+WNSP v7 includes:
+  - W-ASCII Encoding Standard
+  - Lambda-Substrate Protocol Specification
+  - Spectral Governance Model
+  - NexusOS Integration Standards
+  - Open Source Reference Implementations (Python, JS, Rust, C)
+
+Contributors retain copyright to their individual contributions but
+agree to license them under GPLv3-or-later at the time of submission.
+
+For full license text, see: LICENSE

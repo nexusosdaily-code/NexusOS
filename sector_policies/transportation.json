@@ -1,0 +1,185 @@
+{
+  "sector_id": "transportation",
+  "sector_name": "Transportation",
+  "version": "1.0.0",
+  "description": "Policy pack for transit, freight, and logistics. Physics-based validation ensures efficient routing and BHLS free transit for all citizens.",
+
+  "band_mappings": {
+    "PLANCK": {
+      "authority_label": "Infrastructure Authority",
+      "operations": ["network_shutdown", "infrastructure_change", "safety_emergency"],
+      "min_energy_escrow_nxt": 10000,
+      "multi_party_required": true,
+      "quorum_percent": 90
+    },
+    "YOCTO": {
+      "authority_label": "Regulatory Standards",
+      "operations": ["safety_standard_change", "emission_requirement", "operator_licensing"],
+      "min_energy_escrow_nxt": 1000,
+      "multi_party_required": true,
+      "quorum_percent": 75
+    },
+    "ZEPTO": {
+      "authority_label": "Network Operations",
+      "operations": ["route_network_change", "major_schedule_change", "fare_structure"],
+      "min_energy_escrow_nxt": 100,
+      "multi_party_required": true,
+      "quorum_percent": 51
+    },
+    "ATTO": {
+      "authority_label": "Fleet Operations",
+      "operations": ["vehicle_registration", "operator_certification", "major_freight_contract"],
+      "min_energy_escrow_nxt": 10,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "FEMTO": {
+      "authority_label": "Route Operations",
+      "operations": ["route_creation", "schedule_update", "freight_booking"],
+      "min_energy_escrow_nxt": 1,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "PICO": {
+      "authority_label": "Passenger Operations",
+      "operations": ["ticket_purchase", "shipment_tracking", "journey_start"],
+      "min_energy_escrow_nxt": 0.1,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "NANO": {
+      "authority_label": "Queries & Tracking",
+      "operations": ["ticket_validation", "route_query", "tracking_update"],
+      "min_energy_escrow_nxt": 0.01,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    }
+  },
+
+  "operations": [
+    {
+      "operation_id": "transportation.create_route",
+      "name": "Create Route",
+      "description": "Define new transit route with Lambda energy",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 2.0,
+      "attestations_required": ["operator_license"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "transportation.purchase_ticket",
+      "name": "Purchase Ticket",
+      "description": "Buy frequency token for transit access",
+      "required_band": "NANO",
+      "energy_cost_multiplier": 0.5,
+      "attestations_required": [],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "transportation.validate_ticket",
+      "name": "Validate Ticket",
+      "description": "Check frequency token at entry",
+      "required_band": "NANO",
+      "energy_cost_multiplier": 0.1,
+      "attestations_required": [],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "transportation.start_journey",
+      "name": "Start Journey",
+      "description": "Begin oscillation from origin",
+      "required_band": "NANO",
+      "energy_cost_multiplier": 0.5,
+      "attestations_required": ["valid_ticket"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "transportation.complete_journey",
+      "name": "Complete Journey",
+      "description": "End oscillation at destination",
+      "required_band": "NANO",
+      "energy_cost_multiplier": 0.5,
+      "attestations_required": [],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "transportation.book_shipment",
+      "name": "Book Shipment",
+      "description": "Book Lambda mass transfer through physical space",
+      "required_band": "PICO",
+      "energy_cost_multiplier": 1.0,
+      "attestations_required": ["shipper_verification"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "transportation.deliver_shipment",
+      "name": "Deliver Shipment",
+      "description": "Complete freight Lambda transfer",
+      "required_band": "PICO",
+      "energy_cost_multiplier": 1.0,
+      "attestations_required": ["delivery_confirmation"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "transportation.bhls_transit_pass",
+      "name": "BHLS Transit Pass",
+      "description": "Issue free monthly transit pass",
+      "required_band": "NANO",
+      "energy_cost_multiplier": 0.0,
+      "attestations_required": ["bhls_eligibility"],
+      "reversible": false,
+      "audit_trail": true
+    }
+  ],
+
+  "constraints": {
+    "max_dominance_percent": 5,
+    "bhls_applicable": true,
+    "bhls_free_journeys_per_month": 60,
+    "confined_dominance_allowed": false,
+    "audit_level": "NANO",
+    "base_fare_per_km_nxt": 0.05,
+    "freight_rate_per_kg_km_nxt": 0.01
+  },
+
+  "attestations": [
+    {
+      "type": "operator_license",
+      "required_for": ["transportation.create_route"],
+      "minimum_band": "FEMTO",
+      "description": "Licensed transport operator"
+    },
+    {
+      "type": "valid_ticket",
+      "required_for": ["transportation.start_journey"],
+      "minimum_band": "NANO",
+      "description": "Valid transit ticket or pass"
+    },
+    {
+      "type": "shipper_verification",
+      "required_for": ["transportation.book_shipment"],
+      "minimum_band": "PICO",
+      "description": "Verified shipper identity"
+    },
+    {
+      "type": "delivery_confirmation",
+      "required_for": ["transportation.deliver_shipment"],
+      "minimum_band": "PICO",
+      "description": "Receiver confirmation of delivery"
+    }
+  ],
+
+  "physics_rules": {
+    "journey_energy": "E_journey = Λ × distance (Lambda mass × distance)",
+    "fare_calculation": "Fare based on E = hf × distance",
+    "shipment_cost": "Cost proportional to Lambda mass × distance",
+    "bhls_guarantee": "60 free journeys per month for all citizens"
+  }
+}

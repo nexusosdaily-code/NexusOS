@@ -58,6 +58,7 @@ from sybil_dashboard import render_sybil_detection_dashboard
 from ai_arbitration_dashboard import render_arbitration_dashboard
 from security_dashboard import security_dashboard
 from video_livestream_dashboard import render_video_livestream_dashboard
+from scientific_research_dashboard import main as render_scientific_research_dashboard
 
 
 def main():
@@ -575,6 +576,51 @@ def main():
         st.markdown("**Civilization Operating System**")
         st.divider()
         
+        # Quick Access buttons for students
+        st.markdown("### 🚀 Quick Access")
+        quick_col1, quick_col2 = st.columns(2)
+        
+        with quick_col1:
+            if st.button("🎓 Education", key="quick_education", use_container_width=True):
+                st.session_state.module_selector = "🔬 Scientific Research Platform"
+                st.session_state.research_default_tab = "education"
+                st.rerun()
+        
+        with quick_col2:
+            if st.button("📚 Curriculum", key="quick_curriculum", use_container_width=True):
+                st.session_state.module_selector = "🔬 Scientific Research Platform"
+                st.session_state.research_default_tab = "education"
+                st.rerun()
+        
+        quick_col3, quick_col4 = st.columns(2)
+        
+        with quick_col3:
+            if st.button("🔬 Research", key="quick_research", use_container_width=True):
+                st.session_state.module_selector = "🔬 Scientific Research Platform"
+                st.session_state.research_default_tab = "design"
+                st.rerun()
+        
+        with quick_col4:
+            if st.button("🌊 WIP Field", key="quick_wip", use_container_width=True):
+                st.session_state.module_selector = "🔬 Scientific Research Platform"
+                st.session_state.research_default_tab = "wip"
+                st.rerun()
+        
+        # Additional quick access row
+        quick_col5, quick_col6 = st.columns(2)
+        
+        with quick_col5:
+            if st.button("🏠 Home", key="quick_home", use_container_width=True):
+                st.session_state.module_selector = "🏠 Home"
+                st.rerun()
+        
+        with quick_col6:
+            if st.button("💱 DEX", key="quick_dex", use_container_width=True):
+                st.session_state.module_selector = "💱 DEX (Token Exchange)"
+                st.rerun()
+        
+        st.divider()
+        
         # Module selector - clean and simple
         module = st.selectbox(
             "**Select Dashboard**",
@@ -612,6 +658,7 @@ def main():
                 "⚛️ Quantum Analyzer",
                 "🚀 Resonance Propulsion",
                 "🎥 Video & Livestream",
+                "🔬 Scientific Research Platform",
                 "📄 Documentation"
             ],
             key="module_selector"
@@ -775,6 +822,11 @@ def main():
                 "icon": "🎥",
                 "desc": "Upload videos and broadcast live across the NexusOS network with wavelength energy tracking",
                 "features": ["📤 Video Upload", "📡 Live Streaming", "📚 Video Library", "👥 Friend Sharing", "⚡ Energy Cost Tracking", "🌐 WNSP Network Distribution"]
+            },
+            "🔬 Scientific Research Platform": {
+                "icon": "🔬",
+                "desc": "Design experiments, run simulations, and generate reports grounded in Lambda Boson physics",
+                "features": ["🧪 Experiment Designer", "⚡ Monte Carlo Simulation", "📊 Statistical Analysis", "📝 Report Generator (5 formats)", "🔢 Lambda Calculator", "📈 Trend & Anomaly Detection"]
             },
             "📄 Documentation": {
                 "icon": "📄",
@@ -986,31 +1038,51 @@ def main():
         # Video upload and livestreaming dashboard
         render_video_livestream_dashboard()
     
+    elif module == "🔬 Scientific Research Platform":
+        # Scientific Research Platform with experiment design, simulation, and reporting
+        render_scientific_research_dashboard()
+    
     elif module == "📄 Documentation":
         # Technical documentation page
-        st.title("📄 WNSP v7.1 Unified Substrate Architecture")
-        st.markdown("**Complete Technical Documentation**")
+        st.title("📄 WNSP v7.1 Technical Documentation")
+        st.markdown("**Complete Physics-Based Architecture Documentation**")
         st.divider()
         
-        try:
-            with open("docs/Unified-Substrate-Architecture.md", "r") as f:
-                doc_content = f.read()
-            
-            # Download button
-            st.download_button(
-                label="⬇️ Download Documentation (Markdown)",
-                data=doc_content,
-                file_name="Unified-Substrate-Architecture.md",
-                mime="text/markdown"
-            )
-            
-            st.divider()
-            
-            # Render the markdown
-            st.markdown(doc_content)
-            
-        except FileNotFoundError:
-            st.error("Documentation file not found. Please check docs/Unified-Substrate-Architecture.md")
+        doc_tab, ascii_tab = st.tabs(["🏗️ Unified Substrate Architecture", "📊 ASCII-Wavelength Table"])
+        
+        with doc_tab:
+            try:
+                with open("docs/Unified-Substrate-Architecture.md", "r") as f:
+                    doc_content = f.read()
+                
+                st.download_button(
+                    label="⬇️ Download Architecture Docs",
+                    data=doc_content,
+                    file_name="Unified-Substrate-Architecture.md",
+                    mime="text/markdown"
+                )
+                st.divider()
+                st.markdown(doc_content)
+                
+            except FileNotFoundError:
+                st.error("Documentation file not found.")
+        
+        with ascii_tab:
+            try:
+                with open("docs/ASCII-Wavelength-Table.md", "r") as f:
+                    ascii_content = f.read()
+                
+                st.download_button(
+                    label="⬇️ Download ASCII-Wavelength Table",
+                    data=ascii_content,
+                    file_name="ASCII-Wavelength-Table.md",
+                    mime="text/markdown"
+                )
+                st.divider()
+                st.markdown(ascii_content)
+                
+            except FileNotFoundError:
+                st.error("ASCII-Wavelength table not found.")
     
     elif module == "🚀 Resonance Propulsion":
         # Electromagnetic resonance propulsion research

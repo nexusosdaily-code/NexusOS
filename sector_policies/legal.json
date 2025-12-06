@@ -1,0 +1,185 @@
+{
+  "sector_id": "legal",
+  "sector_name": "Legal & Justice",
+  "version": "1.0.0",
+  "description": "Policy pack for contracts, disputes, and arbitration. Physics-based validation ensures fair dispute resolution and BHLS legal aid for all citizens.",
+
+  "band_mappings": {
+    "PLANCK": {
+      "authority_label": "Constitutional Court",
+      "operations": ["constitutional_ruling", "fundamental_rights_enforcement", "system_wide_injunction"],
+      "min_energy_escrow_nxt": 10000,
+      "multi_party_required": true,
+      "quorum_percent": 90
+    },
+    "YOCTO": {
+      "authority_label": "Appellate Review",
+      "operations": ["appeal_ruling", "precedent_setting", "judicial_review"],
+      "min_energy_escrow_nxt": 1000,
+      "multi_party_required": true,
+      "quorum_percent": 75
+    },
+    "ZEPTO": {
+      "authority_label": "Major Disputes",
+      "operations": ["arbitration_award", "class_action", "major_settlement"],
+      "min_energy_escrow_nxt": 100,
+      "multi_party_required": true,
+      "quorum_percent": 51
+    },
+    "ATTO": {
+      "authority_label": "Contract Execution",
+      "operations": ["contract_execution", "dispute_resolution", "enforcement_order"],
+      "min_energy_escrow_nxt": 10,
+      "multi_party_required": true,
+      "quorum_percent": 51
+    },
+    "FEMTO": {
+      "authority_label": "Contract Operations",
+      "operations": ["contract_signing", "breach_filing", "mediation"],
+      "min_energy_escrow_nxt": 1,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "PICO": {
+      "authority_label": "Standard Operations",
+      "operations": ["contract_creation", "dispute_filing", "document_notarization"],
+      "min_energy_escrow_nxt": 0.1,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "NANO": {
+      "authority_label": "Queries",
+      "operations": ["contract_status", "case_status", "document_verification"],
+      "min_energy_escrow_nxt": 0.01,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    }
+  },
+
+  "operations": [
+    {
+      "operation_id": "legal.create_contract",
+      "name": "Create Contract",
+      "description": "Draft new Lambda-backed contract",
+      "required_band": "PICO",
+      "energy_cost_multiplier": 1.0,
+      "attestations_required": [],
+      "reversible": true,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "legal.sign_contract",
+      "name": "Sign Contract",
+      "description": "Party Lambda lock to contract",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 2.0,
+      "attestations_required": ["identity_verification", "consent"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "legal.execute_contract",
+      "name": "Execute Contract",
+      "description": "Activate fully signed contract",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 3.0,
+      "attestations_required": ["all_signatures"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "legal.file_dispute",
+      "name": "File Dispute",
+      "description": "Submit dispute between parties",
+      "required_band": "PICO",
+      "energy_cost_multiplier": 1.0,
+      "attestations_required": ["identity_verification"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "legal.mediate",
+      "name": "Mediate",
+      "description": "Attempt frequency harmonization",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 2.0,
+      "attestations_required": ["mediator_certification"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "legal.arbitrate",
+      "name": "Arbitrate",
+      "description": "Submit to binding arbitration",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 5.0,
+      "attestations_required": ["arbitrator_certification", "party_consent"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "legal.resolve_dispute",
+      "name": "Resolve Dispute",
+      "description": "Record final resolution with award",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 3.0,
+      "attestations_required": ["resolution_authority"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "legal.bhls_legal_aid",
+      "name": "BHLS Legal Aid",
+      "description": "Free legal assistance hours",
+      "required_band": "NANO",
+      "energy_cost_multiplier": 0.0,
+      "attestations_required": ["bhls_eligibility"],
+      "reversible": false,
+      "audit_trail": true
+    }
+  ],
+
+  "constraints": {
+    "max_dominance_percent": 5,
+    "bhls_applicable": true,
+    "bhls_legal_aid_hours": 5,
+    "confined_dominance_allowed": false,
+    "audit_level": "PICO",
+    "max_appeal_rounds": 2,
+    "mediation_required_threshold_nxt": 1000
+  },
+
+  "attestations": [
+    {
+      "type": "identity_verification",
+      "required_for": ["legal.sign_contract", "legal.file_dispute"],
+      "minimum_band": "FEMTO",
+      "description": "Verified party identity"
+    },
+    {
+      "type": "consent",
+      "required_for": ["legal.sign_contract"],
+      "minimum_band": "FEMTO",
+      "description": "Explicit consent to contract terms"
+    },
+    {
+      "type": "all_signatures",
+      "required_for": ["legal.execute_contract"],
+      "minimum_band": "ATTO",
+      "description": "All parties have signed"
+    },
+    {
+      "type": "arbitrator_certification",
+      "required_for": ["legal.arbitrate"],
+      "minimum_band": "ATTO",
+      "description": "Certified arbitrator"
+    }
+  ],
+
+  "physics_rules": {
+    "contract_binding": "Contracts are phase-locked oscillation between parties",
+    "dispute_nature": "Disputes are destructive interference (imbalanced oscillation)",
+    "resolution_process": "Resolution is frequency harmonization to consensus",
+    "bhls_guarantee": "5 hours free legal aid for all citizens"
+  }
+}

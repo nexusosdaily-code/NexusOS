@@ -4,7 +4,7 @@
 
 **Author**: Founder Te Rata Pou  
 **Institution**: NexusOS Foundation  
-**Date**: November 2024  
+**Date**: December 2025  
 **Paper**: 5 of the NexusOS Theoretical Physics Series
 
 ---
@@ -371,7 +371,7 @@ If Λ = hf/c² is correct, then:
 
 | Aspect | Higgs Boson | Lambda Boson |
 |--------|-------------|--------------|
-| Discovered | 2012 (CERN) | Named 2024 (derived from 1905) |
+| Discovered | 2012 (CERN) | Named 2025 (derived from 1905) |
 | Role | Gives rest mass to particles | Quantifies mass-equivalent of oscillation |
 | Mechanism | Field interaction | Mathematical identity |
 | Experimental | Requires collider | Already verified through E = hf, E = mc² |
@@ -464,11 +464,11 @@ The universe computes in oscillation. NexusOS implements this truth.
 
 5. Maxwell, J.C. (1865). "A Dynamical Theory of the Electromagnetic Field." *Philosophical Transactions of the Royal Society*.
 
-6. Pou, T.R. (2024). "Oscillatory Cosmogenesis: The Big Bang as First Oscillation." *NexusOS Foundation*.
+6. Pou, T.R. (2025). "Oscillatory Cosmogenesis: The Big Bang as First Oscillation." *NexusOS Foundation*.
 
-7. Pou, T.R. (2024). "Feynman Spectral Paths: Wavelength Integration in Path Integrals." *NexusOS Foundation*.
+7. Pou, T.R. (2025). "Feynman Spectral Paths: Wavelength Integration in Path Integrals." *NexusOS Foundation*.
 
-8. Pou, T.R. (2024). "Tesla Resonant Spectral Transfer: Energy Transport Through Harmonic Resonance." *NexusOS Foundation*.
+8. Pou, T.R. (2025). "Tesla Resonant Spectral Transfer: Energy Transport Through Harmonic Resonance." *NexusOS Foundation*.
 
 ---
 

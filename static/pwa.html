@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  
+  <!-- iOS PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NexusOS">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#00d4ff">
+  <meta name="msapplication-TileColor" content="#0a0a0a">
+  
+  <!-- iOS Icons -->
+  <link rel="apple-touch-icon" href="/static/icons/icon-152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/icon-192.png">
+  <link rel="apple-touch-startup-image" href="/static/icons/splash.png">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/static/manifest.json">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="/static/css/mobile.css">
+  
+  <title>NexusOS</title>
+  
+  <style>
+    .splash-screen {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+    
+    .splash-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .splash-logo {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #00d4ff, #7c3aed);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      margin-bottom: 24px;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    .splash-title {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(90deg, #00d4ff, #7c3aed);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .splash-subtitle {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Splash Screen -->
+  <div class="splash-screen" id="splash">
+    <div class="splash-logo">Λ</div>
+    <div class="splash-title">NexusOS</div>
+    <div class="splash-subtitle">Physics-Based Civilization</div>
+  </div>
+
+  <!-- Offline Banner -->
+  <div class="offline-banner" style="display: none;">
+    You're offline. Changes will sync when connected.
+  </div>
+
+  <!-- Main App -->
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-logo">
+        <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #00d4ff, #7c3aed); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold;">Λ</div>
+        <h1>NexusOS</h1>
+      </div>
+      <div class="connection-status">
+        <span class="dot"></span>
+        <span class="status-text">Connected</span>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content" id="main-content">
+      <!-- Wallet Card -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">Your Wallet</h3>
+            <p class="card-subtitle" id="wallet-id">Loading...</p>
+          </div>
+        </div>
+        <div class="balance-display">
+          <p class="balance-amount" id="balance">0.00</p>
+          <p class="balance-label">NXT Balance</p>
+          <div class="bhls-badge">
+            <span>✓</span>
+            <span>BHLS Eligible: <span id="bhls-amount">1,150</span> NXT/mo</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <h3 class="card-title" style="margin-bottom: 16px;">Quick Actions</h3>
+        <div class="action-grid">
+          <a href="#send" class="action-btn" onclick="showSection('send')">
+            <span class="icon">↗️</span>
+            <span class="label">Send</span>
+          </a>
+          <a href="#receive" class="action-btn" onclick="showSection('receive')">
+            <span class="icon">↙️</span>
+            <span class="label">Receive</span>
+          </a>
+          <a href="#health" class="action-btn" onclick="showSection('health')">
+            <span class="icon">❤️</span>
+            <span class="label">Health</span>
+          </a>
+          <a href="#mesh" class="action-btn" onclick="showSection('mesh')">
+            <span class="icon">📡</span>
+            <span class="label">Mesh</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- BHLS Status -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">BHLS Status</h3>
+          <span style="color: #10b981; font-size: 13px;">Active</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Monthly Amount</span>
+          <span class="stat-value" id="bhls-monthly">1,150 NXT</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Next Distribution</span>
+          <span class="stat-value" id="next-dist">1st of Month</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Distributions Received</span>
+          <span class="stat-value" id="dist-count">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Total Received</span>
+          <span class="stat-value" id="total-received">0.00 NXT</span>
+        </div>
+      </div>
+
+      <!-- Mesh Network Status -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Mesh Network</h3>
+        </div>
+        <div class="mesh-status">
+          <div class="mesh-icon">📡</div>
+          <div class="mesh-info">
+            <h4 id="mesh-status-text">Connecting...</h4>
+            <p id="mesh-neighbors">Searching for neighbors</p>
+          </div>
+        </div>
+        <button class="btn btn-secondary" style="margin-top: 16px;" onclick="syncMesh()">
+          Sync Messages
+        </button>
+      </div>
+
+      <!-- Health Programs -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Health Programs</h3>
+        </div>
+        <div id="health-programs">
+          <div class="list-item">
+            <div class="list-item-icon">🥗</div>
+            <div class="list-item-content">
+              <h4 class="list-item-title">Nutrition Program</h4>
+              <p class="list-item-subtitle">Food security support</p>
+            </div>
+          </div>
+          <div class="list-item">
+            <div class="list-item-icon">👓</div>
+            <div class="list-item-content">
+              <h4 class="list-item-title">Vision Care</h4>
+              <p class="list-item-subtitle">Eye exams & glasses</p>
+            </div>
+          </div>
+          <div class="list-item">
+            <div class="list-item-icon">🏃</div>
+            <div class="list-item-content">
+              <h4 class="list-item-title">Fitness & Wellness</h4>
+              <p class="list-item-subtitle">Community fitness</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="nav-bar">
+      <a href="#home" class="nav-item active" onclick="showSection('home')">
+        <span class="icon">🏠</span>
+        <span>Home</span>
+      </a>
+      <a href="#wallet" class="nav-item" onclick="showSection('wallet')">
+        <span class="icon">💳</span>
+        <span>Wallet</span>
+      </a>
+      <a href="#bhls" class="nav-item" onclick="showSection('bhls')">
+        <span class="icon">✨</span>
+        <span>BHLS</span>
+      </a>
+      <a href="#community" class="nav-item" onclick="showSection('community')">
+        <span class="icon">👥</span>
+        <span>Community</span>
+      </a>
+      <a href="#settings" class="nav-item" onclick="showSection('settings')">
+        <span class="icon">⚙️</span>
+        <span>Settings</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/js/app.js"></script>
+  <script>
+    // Hide splash screen after load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        document.getElementById('splash').classList.add('hidden');
+      }, 1500);
+    });
+
+    // Navigation
+    function showSection(section) {
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      event.target.closest('.nav-item')?.classList.add('active');
+      
+      // Would load different content based on section
+      console.log('Navigate to:', section);
+    }
+
+    // Initialize wallet
+    async function initWallet() {
+      const deviceId = NexusOS.utils.generateDeviceId();
+      let walletId = NexusOS.wallet.getStored();
+      
+      if (!walletId) {
+        try {
+          const result = await NexusOS.wallet.create(deviceId, 'default');
+          walletId = result.wallet_id;
+          NexusOS.wallet.store(walletId);
+        } catch (e) {
+          console.log('Wallet creation queued for sync');
+        }
+      }
+      
+      if (walletId) {
+        document.getElementById('wallet-id').textContent = walletId.substring(0, 16) + '...';
+      }
+    }
+
+    // Sync mesh
+    async function syncMesh() {
+      const deviceId = NexusOS.utils.generateDeviceId();
+      try {
+        const result = await NexusOS.mesh.sync(deviceId);
+        NexusOS.utils.showToast(`Synced ${result.messages_received} messages`);
+      } catch (e) {
+        NexusOS.utils.showToast('Sync queued for when online');
+      }
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+      initWallet();
+    });
+  </script>
+</body>
+</html>

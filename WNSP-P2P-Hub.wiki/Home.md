@@ -1,5 +1,88 @@
 # WNSP P2P Hub - GitHub Wiki
 
+---
+
+# 🚨 ATTENTION: ALL CLONERS, FORKERS & DEVELOPERS
+
+**Welcome to NexusOS!** 500+ clones in 48 hours — thank you! Before you build, please read this.
+
+---
+
+## 📋 BEFORE YOU START
+
+If you cloned or forked this repository, you are joining a **governed open-source project**. NexusOS is not just code — it's a physics-based civilization operating system with binding rules to protect all participants.
+
+### Step 1: Read the Fork Covenant
+**[governance/FORK_COVENANT.md](https://github.com/nexusosdaily-code/WNSP-P2P-Hub/blob/main/governance/FORK_COVENANT.md)** — Your binding agreement
+
+### Step 2: Understand the Rules
+Your fork/clone must comply with **7 mandatory requirements** to use the "NexusOS" name:
+
+| # | Requirement | Why It Matters |
+|---|-------------|----------------|
+| 1 | Preserve Lambda Boson physics (Λ = hf/c²) | Core scientific foundation |
+| 2 | Implement 3 constitutional clauses | Protects all users from exploitation |
+| 3 | Maintain BHLS floor ≥ 1,150 NXT/month | Guarantees basic living standards |
+| 4 | Use 7-band spectral authority (NANO → PLANCK) | Governance hierarchy |
+| 5 | Include GPL v3.0 license | Keeps code community-owned |
+| 6 | Credit original NexusOS project | Respects contributors |
+| 7 | Pass constitutional enforcer tests | Proves compliance |
+
+### Step 3: Stay Updated
+```bash
+git remote add upstream https://github.com/nexusosdaily-code/WNSP-P2P-Hub.git
+git pull upstream main
+```
+Derivatives must stay within **2 minor versions** of mainline (WNSP v7.x).
+
+---
+
+## 🔴 WHAT YOU CANNOT DO
+
+- Remove or weaken the 3 constitutional clauses
+- Lower the BHLS floor below 1,150 NXT/month
+- Strip out Lambda Boson physics
+- Use "NexusOS" name without compliance
+- Change to a non-GPL license
+
+**Violations forfeit the right to use "NexusOS" branding.**
+
+---
+
+## ✅ WHAT YOU CAN DO
+
+- Build new features on top of the core
+- Create industry-specific adapters
+- Improve performance and UX
+- Add new spectral bands
+- Extend the SDK
+- Translate documentation
+- Fork for experimentation (just don't call it "NexusOS" if non-compliant)
+
+---
+
+## 📜 Governance Documents
+
+| Document | Description |
+|----------|-------------|
+| [GOVERNANCE.md](https://github.com/nexusosdaily-code/WNSP-P2P-Hub/blob/main/governance/GOVERNANCE.md) | Master governance framework |
+| [FORK_COVENANT.md](https://github.com/nexusosdaily-code/WNSP-P2P-Hub/blob/main/governance/FORK_COVENANT.md) | Fork requirements & naming rules |
+| [VERSIONING.md](https://github.com/nexusosdaily-code/WNSP-P2P-Hub/blob/main/governance/VERSIONING.md) | WNSP v7.x = MAINLINE |
+| [UPGRADE_PROTOCOL.md](https://github.com/nexusosdaily-code/WNSP-P2P-Hub/blob/main/governance/UPGRADE_PROTOCOL.md) | Protocol upgrade categories |
+| [DEVELOPER_COUNCIL.md](https://github.com/nexusosdaily-code/WNSP-P2P-Hub/blob/main/governance/DEVELOPER_COUNCIL.md) | Council structure & authority |
+
+---
+
+## 🤝 EXISTING CLONERS
+
+If you cloned before December 3, 2025:
+```bash
+git pull origin main
+```
+Then review the Fork Covenant for your obligations.
+
+---
+
 ## Welcome to the WNSP P2P Hub Project
 
 **WNSP (Wavelength Network Signaling Protocol)** is a revolutionary decentralized mesh networking technology that replaces traditional binary computation with electromagnetic wave states and bases all economic transactions on quantum physics (E=hf).

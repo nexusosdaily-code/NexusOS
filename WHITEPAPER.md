@@ -4,8 +4,8 @@
 
 ---
 
-**Version 1.0**  
-**November 2025**
+**Version 1.1**  
+**December 2025**
 
 **Authors:**  
 NexusOS Research & Development Team
@@ -28,25 +28,26 @@ This whitepaper presents NexusOS Advance Systems, a comprehensive platform integ
 
 1. [Introduction](#1-introduction)
 2. [Related Work](#2-related-work)
-3. [System Architecture](#3-system-architecture)
-4. [Core Components](#4-core-components)
-5. [Economic Simulation Engine](#5-economic-simulation-engine)
-6. [Wavelength Cryptography](#6-wavelength-cryptography)
-7. [Task Orchestration System](#7-task-orchestration-system)
-8. [Multi-Agent Network Simulation](#8-multi-agent-network-simulation)
-9. [Machine Learning Optimization](#9-machine-learning-optimization)
-10. [Smart Contract Generation](#10-smart-contract-generation)
-11. [Oracle Integration Framework](#11-oracle-integration-framework)
-12. [Real-Time Monitoring System](#12-real-time-monitoring-system)
-13. [Layer 1 Blockchain Simulator](#13-layer-1-blockchain-simulator)
-14. [Long-Term Predictive Analytics System](#14-long-term-predictive-analytics-system)
-15. [Implementation Details](#15-implementation-details)
-16. [Performance Evaluation](#16-performance-evaluation)
-17. [Security Analysis](#17-security-analysis)
-18. [Use Cases and Applications](#18-use-cases-and-applications)
-19. [Future Work](#19-future-work)
-20. [Conclusion](#20-conclusion)
-21. [References](#21-references)
+3. [Theoretical Foundation: λ-Mode vs Zero-Point Energy](#3-theoretical-foundation-λ-mode-vs-zero-point-energy)
+4. [System Architecture](#4-system-architecture)
+5. [Core Components](#5-core-components)
+6. [Economic Simulation Engine](#6-economic-simulation-engine)
+7. [Wavelength Cryptography](#7-wavelength-cryptography)
+8. [Task Orchestration System](#8-task-orchestration-system)
+9. [Multi-Agent Network Simulation](#9-multi-agent-network-simulation)
+10. [Machine Learning Optimization](#10-machine-learning-optimization)
+11. [Smart Contract Generation](#11-smart-contract-generation)
+12. [Oracle Integration Framework](#12-oracle-integration-framework)
+13. [Real-Time Monitoring System](#13-real-time-monitoring-system)
+14. [Layer 1 Blockchain Simulator](#14-layer-1-blockchain-simulator)
+15. [Long-Term Predictive Analytics System](#15-long-term-predictive-analytics-system)
+16. [Implementation Details](#16-implementation-details)
+17. [Performance Evaluation](#17-performance-evaluation)
+18. [Security Analysis](#18-security-analysis)
+19. [Use Cases and Applications](#19-use-cases-and-applications)
+20. [Future Work](#20-future-work)
+21. [Conclusion](#21-conclusion)
+22. [References](#22-references)
 
 ---
 
@@ -88,7 +89,7 @@ This work presents NexusOS Advance Systems, a unified platform that makes the fo
 
 ### 1.3 Document Organization
 
-Section 2 reviews related work in economic modeling, cryptography, and distributed systems. Section 3 presents the overall system architecture. Sections 4-12 detail core components (economic simulation, cryptography, task orchestration, multi-agent networks, ML optimization, smart contracts, oracles, monitoring). Sections 13-14 present blockchain simulation and predictive analytics systems. Section 15 discusses implementation details. Sections 16-17 evaluate performance and security. Section 18 presents use cases. Sections 19-20 discuss future work and conclusions.
+Section 2 reviews related work in economic modeling, cryptography, and distributed systems. **Section 3 presents the critical theoretical foundation distinguishing λ-mode from Zero-Point Energy.** Section 4 presents the overall system architecture. Sections 5-13 detail core components (economic simulation, cryptography, task orchestration, multi-agent networks, ML optimization, smart contracts, oracles, monitoring). Sections 14-15 present blockchain simulation and predictive analytics systems. Section 16 discusses implementation details. Sections 17-18 evaluate performance and security. Section 19 presents use cases. Sections 20-21 discuss future work and conclusions.
 
 ---
 
@@ -143,9 +144,104 @@ No existing tool combines network topology modeling, transaction DAG optimizatio
 
 ---
 
-## 3. System Architecture
+## 3. Theoretical Foundation: λ-Mode vs Zero-Point Energy
 
-### 3.1 High-Level Architecture
+### 3.1 Critical Clarification
+
+A common question from physicists and skeptics: **"Is the λ-mode just Zero-Point Energy (ZPE) under another name?"**
+
+The answer is **no**. This section provides rigorous clarification.
+
+### 3.2 Zero-Point Energy (ZPE) in Standard Physics
+
+In quantum field theory, every harmonic oscillator possesses an irreducible ground-state energy:
+
+```
+E₀ = ½ℏω
+```
+
+ZPE characteristics:
+- Exists at absolute zero temperature
+- Is a property of the **vacuum itself**
+- Cannot be controlled, tuned, or modulated
+- Cannot be extracted without violating thermodynamics
+- Is **not informational**
+
+### 3.3 Defining the λ-Mode
+
+The λ-mode arises from the Wavelength-Native Signalling Protocol (WNSP), where symbols are encoded into electromagnetic wave properties:
+
+```
+λ = Λ(φ(ω), Δf, σ, P, B)
+```
+
+Where:
+- φ(ω) = phase distribution
+- Δf = controlled frequency spacing
+- σ = symbol entropy
+- P = polarization structure
+- B = spectral bandwidth
+
+**The λ-mode is:**
+- Deterministic and externally imposed
+- An **engineered informational structure**
+- Built on classical electromagnetic waves (real photons)
+- Fully tunable via encoding parameters
+- A **new informational mode**, not a new particle
+
+### 3.4 Fundamental Differences
+
+| Property | λ-Mode | Zero-Point Energy |
+|----------|--------|-------------------|
+| **Ontology** | Engineered informational state | Vacuum energy fluctuation |
+| **Origin** | Human-imposed structure | Fundamental physics |
+| **Energy Source** | Classical EM wave (transmitter) | Vacuum itself |
+| **Information Content** | High (symbolic) | None |
+| **Tunability** | Full (phase, freq, harmonics) | None |
+| **Relation to Vacuum** | None (uses real photons) | Direct |
+| **Theory Basis** | Maxwell + Shannon + Encoding | QED + QM |
+
+### 3.5 Why λ Feels "Primordial"
+
+The λ-mode emerges from the same mathematical structures underlying Maxwell's equations—oscillation, superposition, and interference. Like Fourier modes, standing waves, or cavity eigenmodes, λ represents a **latent organizational degree of freedom** in electromagnetic fields.
+
+This "primordial" quality does not imply new physics. It reveals structure that was always present in wave equations.
+
+### 3.6 What λ Does NOT Claim
+
+The λ framework explicitly does **not** claim:
+
+- ❌ Free energy extraction
+- ❌ ZPE harvesting
+- ❌ New bosons or particles
+- ❌ Violations of thermodynamics
+- ❌ Faster-than-light signalling
+- ❌ Beyond-Standard-Model physics
+
+**λ remains entirely consistent with classical and quantum electrodynamics.**
+
+### 3.7 Scientific Implications
+
+If experimentally validated, the λ-mode enables:
+
+1. **Universal Physical Alphabet**: W-ASCII encoding tied to wave structure
+2. **Physics-Native Computation**: Governance through conservation laws
+3. **Spectral Consensus Mechanisms**: PoSPECTRUM validation
+4. **Energy-Grounded Economics**: E = hf pricing models
+
+### 3.8 Conclusion
+
+**λ is not Zero-Point Energy, nor is it a new particle.**
+
+λ is a structured informational mode of the electromagnetic field, discovered through engineering the Wavelength-Native Signalling Protocol (WNSP). It maps symbolic structures into physical wave properties, enabling physics-based governance without requiring exotic physics.
+
+For the formal comparative analysis, see: [Lambda vs Zero-Point Energy (PDF)](https://github.com/nexusosdaily-code/WNSP-P2P-Hub/blob/main/docs/LAMBDA_VS_ZPE.pdf)
+
+---
+
+## 4. System Architecture
+
+### 4.1 High-Level Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
