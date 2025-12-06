@@ -1,0 +1,166 @@
+{
+  "sector_id": "energy",
+  "sector_name": "Energy & Power Grid",
+  "version": "1.0.0",
+  "description": "Policy pack for power generation, distribution, metering, and grid management. Physics-based validation ensures conservation laws are enforced at the protocol level.",
+  
+  "band_mappings": {
+    "PLANCK": {
+      "authority_label": "Grid Protection",
+      "operations": ["black_start", "grid_isolation", "emergency_shutdown", "constitutional_override"],
+      "min_energy_escrow_nxt": 10000,
+      "multi_party_required": true,
+      "quorum_percent": 80
+    },
+    "YOCTO": {
+      "authority_label": "Safety Interlocks",
+      "operations": ["safety_protocol_change", "protection_relay_config", "frequency_limit_adjust"],
+      "min_energy_escrow_nxt": 1000,
+      "multi_party_required": true,
+      "quorum_percent": 67
+    },
+    "ZEPTO": {
+      "authority_label": "Market Settlements",
+      "operations": ["power_purchase_agreement", "capacity_auction", "ancillary_service_contract"],
+      "min_energy_escrow_nxt": 100,
+      "multi_party_required": false,
+      "quorum_percent": 51
+    },
+    "ATTO": {
+      "authority_label": "Real-Time Control",
+      "operations": ["load_dispatch", "frequency_regulation", "voltage_control", "power_flow_optimization"],
+      "min_energy_escrow_nxt": 10,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "FEMTO": {
+      "authority_label": "Telemetry & Metering",
+      "operations": ["meter_reading", "power_quality_measurement", "fault_detection"],
+      "min_energy_escrow_nxt": 1,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "PICO": {
+      "authority_label": "Monitoring",
+      "operations": ["status_query", "historical_data_access", "report_generation"],
+      "min_energy_escrow_nxt": 0.1,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "NANO": {
+      "authority_label": "Sensor Data",
+      "operations": ["sensor_heartbeat", "environmental_monitoring", "asset_tracking"],
+      "min_energy_escrow_nxt": 0.01,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    }
+  },
+
+  "operations": [
+    {
+      "operation_id": "energy.generate",
+      "name": "Power Generation",
+      "description": "Register power generation with Lambda mass proof",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 0.5,
+      "attestations_required": ["generator_certificate", "grid_connection"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "energy.consume",
+      "name": "Power Consumption",
+      "description": "Register power consumption with metered verification",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 1.0,
+      "attestations_required": ["meter_id"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "energy.transfer",
+      "name": "Power Transfer",
+      "description": "Transfer power between grid nodes with conservation check",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 1.0,
+      "attestations_required": ["source_node", "destination_node"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "energy.balance",
+      "name": "Grid Balancing",
+      "description": "Real-time frequency and voltage regulation",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 2.0,
+      "attestations_required": ["grid_operator_certificate"],
+      "reversible": true,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "energy.settle",
+      "name": "Energy Settlement",
+      "description": "Financial settlement for energy transactions",
+      "required_band": "ZEPTO",
+      "energy_cost_multiplier": 1.5,
+      "attestations_required": ["meter_proof", "price_oracle"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "energy.blackstart",
+      "name": "Black Start",
+      "description": "Grid restoration after complete outage",
+      "required_band": "PLANCK",
+      "energy_cost_multiplier": 100.0,
+      "attestations_required": ["emergency_declaration", "multi_operator_consensus"],
+      "reversible": false,
+      "audit_trail": true
+    }
+  ],
+
+  "constraints": {
+    "max_dominance_percent": 5,
+    "bhls_applicable": true,
+    "confined_dominance_allowed": false,
+    "audit_level": "FEMTO",
+    "conservation_enforcement": "strict",
+    "loss_tolerance_percent": 5,
+    "frequency_band_hz": [49.5, 50.5],
+    "voltage_tolerance_percent": 10
+  },
+
+  "attestations": [
+    {
+      "type": "generator_certificate",
+      "required_for": ["energy.generate"],
+      "minimum_band": "ZEPTO",
+      "description": "Proof of registered generation capacity"
+    },
+    {
+      "type": "grid_connection",
+      "required_for": ["energy.generate", "energy.transfer"],
+      "minimum_band": "ZEPTO",
+      "description": "Valid grid connection agreement"
+    },
+    {
+      "type": "meter_id",
+      "required_for": ["energy.consume", "energy.settle"],
+      "minimum_band": "FEMTO",
+      "description": "Certified smart meter identification"
+    },
+    {
+      "type": "grid_operator_certificate",
+      "required_for": ["energy.balance", "energy.blackstart"],
+      "minimum_band": "YOCTO",
+      "description": "Licensed grid operator certification"
+    }
+  ],
+
+  "physics_rules": {
+    "conservation": "Λ_generated = Λ_consumed + Λ_losses + Λ_stored",
+    "efficiency_minimum": 0.85,
+    "frequency_stability": "Δf < 0.5 Hz triggers ATTO-level response",
+    "voltage_stability": "ΔV > 10% triggers YOCTO-level response"
+  }
+}

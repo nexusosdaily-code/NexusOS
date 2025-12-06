@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "name": "NexusOS Constitution v1",
+    "version": "1.0",
+    "created_by": "nexusos-collective",
+    "created_ts": "2025-11-28T00:00:00Z"
+  },
+  "clauses": [
+    {
+      "id": "C-0001",
+      "title": "Non-Dominance",
+      "level": "YOCTO",
+      "text": "No single agent, human, or coordinated node set with less than PLANCK consensus shall hold >5% effective authority across femto/atto validator weight.",
+      "enforcement": {
+        "type": "automatic",
+        "required_attestations": ["FEMTO_MULTI_ENDORSEMENT", "ATTO_STAKE_CHECK"],
+        "remedy": "auto-rebalance; temporary stake-freeze; public audit trigger"
+      }
+    },
+    {
+      "id": "C-0002",
+      "title": "Immutable Rights",
+      "level": "YOCTO",
+      "text": "Basic rights (privacy, freedom-to-access-emergency) cannot be suspended except via PLANCK-level consensus.",
+      "enforcement": {
+        "type": "guarded",
+        "required_attestations": ["YOCTO_FLAG"],
+        "remedy": "audit-only; emergency logs recorded at FEMTO & ZEPTO"
+      }
+    },
+    {
+      "id": "C-0003",
+      "title": "Energy-Backed Validity",
+      "level": "FEMTO",
+      "text": "Any system-level governance action including validator rotation, constitutional amendment proposals, and planetary transfers must include an energy-escrow attestation equivalent to defined EnergyUnits.",
+      "enforcement": {
+        "type": "automatic",
+        "required_attestations": ["FEMTO_MULTI_ENDORSEMENT"],
+        "remedy": "action rejected; energy refunded"
+      },
+      "parameters": {
+        "min_energy_units": 1000000
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+Clarify file upload instructions for users
+
+Update UI text and styling in `ide-layout.tsx` to reflect that the user uploaded a single file from within a zip archive, rather than the entire zip file itself.
+
+Replit-Commit-Author: Agent
+Replit-Commit-Session-Id: b29241d6-798c-402b-a853-e10e290978de
+Replit-Commit-Checkpoint-Type: full_checkpoint
+Replit-Commit-Event-Id: d3b45355-f4d5-4675-be97-faf509b02523
+Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/0a70fadf-e9ae-4e02-8d6d-f55fdb7924c1/b29241d6-798c-402b-a853-e10e290978de/mwNwpNp
+Replit-Helium-Checkpoint-Created: true

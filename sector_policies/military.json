@@ -1,0 +1,217 @@
+{
+  "sector_id": "military",
+  "sector_name": "Defense & Command Control",
+  "version": "1.0.0",
+  "description": "Policy pack for military operations, command & control, logistics, and coalition coordination. Supports confined dominance windows for mission-critical operations while maintaining constitutional audit at YOCTO/PLANCK level.",
+
+  "band_mappings": {
+    "PLANCK": {
+      "authority_label": "Strategic Command",
+      "operations": ["nuclear_authorization", "war_declaration", "strategic_asset_deployment", "alliance_activation"],
+      "min_energy_escrow_nxt": 1000000,
+      "multi_party_required": true,
+      "quorum_percent": 95
+    },
+    "YOCTO": {
+      "authority_label": "Mission Authority",
+      "operations": ["mission_authorization", "roe_activation", "confined_dominance_grant", "cross_border_operation"],
+      "min_energy_escrow_nxt": 100000,
+      "multi_party_required": true,
+      "quorum_percent": 80
+    },
+    "ZEPTO": {
+      "authority_label": "Logistics & Contracts",
+      "operations": ["supply_chain_approval", "asset_transfer", "personnel_deployment", "contract_execution"],
+      "min_energy_escrow_nxt": 10000,
+      "multi_party_required": true,
+      "quorum_percent": 67
+    },
+    "ATTO": {
+      "authority_label": "Tactical Operations",
+      "operations": ["tactical_command", "real_time_coordination", "asset_positioning", "fire_mission"],
+      "min_energy_escrow_nxt": 1000,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "FEMTO": {
+      "authority_label": "Field Operations",
+      "operations": ["patrol_report", "checkpoint_status", "intel_submission", "casualty_report"],
+      "min_energy_escrow_nxt": 100,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "PICO": {
+      "authority_label": "Routine Communications",
+      "operations": ["secure_message", "status_update", "logistics_query"],
+      "min_energy_escrow_nxt": 10,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "NANO": {
+      "authority_label": "Sensor & ISR",
+      "operations": ["sensor_data", "surveillance_feed", "equipment_telemetry", "position_beacon"],
+      "min_energy_escrow_nxt": 1,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    }
+  },
+
+  "operations": [
+    {
+      "operation_id": "military.command",
+      "name": "Issue Command",
+      "description": "Issue tactical or operational command",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 5.0,
+      "attestations_required": ["commander_authority", "mission_context"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "military.execute",
+      "name": "Execute Order",
+      "description": "Acknowledge and execute received command",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 3.0,
+      "attestations_required": ["command_hash", "executor_identity"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "military.intel",
+      "name": "Intelligence Report",
+      "description": "Submit or query intelligence data",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 2.0,
+      "attestations_required": ["source_classification", "reliability_rating"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "military.logistics",
+      "name": "Logistics Transaction",
+      "description": "Supply chain and asset movement",
+      "required_band": "ZEPTO",
+      "energy_cost_multiplier": 1.5,
+      "attestations_required": ["supply_authority", "destination_verification"],
+      "reversible": true,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "military.coalition",
+      "name": "Coalition Coordination",
+      "description": "Multi-nation operation coordination",
+      "required_band": "YOCTO",
+      "energy_cost_multiplier": 10.0,
+      "attestations_required": ["nation_signatures", "shared_roe"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "military.mission_auth",
+      "name": "Mission Authorization",
+      "description": "Authorize specific mission with defined scope",
+      "required_band": "YOCTO",
+      "energy_cost_multiplier": 20.0,
+      "attestations_required": ["mission_brief", "legal_review", "commander_signature"],
+      "reversible": true,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "military.dominance_window",
+      "name": "Confined Dominance Window",
+      "description": "Grant temporary elevated authority for mission-critical operation",
+      "required_band": "YOCTO",
+      "energy_cost_multiplier": 50.0,
+      "attestations_required": ["mission_justification", "time_bound", "scope_limitation", "audit_commitment"],
+      "reversible": true,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "military.strategic",
+      "name": "Strategic Action",
+      "description": "Strategic-level military action requiring highest authority",
+      "required_band": "PLANCK",
+      "energy_cost_multiplier": 1000.0,
+      "attestations_required": ["national_authority", "alliance_consultation", "constitutional_compliance"],
+      "reversible": false,
+      "audit_trail": true
+    }
+  ],
+
+  "constraints": {
+    "max_dominance_percent": 5,
+    "bhls_applicable": false,
+    "confined_dominance_allowed": true,
+    "confined_dominance_max_duration_hours": 72,
+    "confined_dominance_max_scope_percent": 25,
+    "audit_level": "YOCTO",
+    "chain_of_command": "strict",
+    "roe_enforcement": "substrate_level"
+  },
+
+  "attestations": [
+    {
+      "type": "commander_authority",
+      "required_for": ["military.command", "military.mission_auth"],
+      "minimum_band": "ATTO",
+      "description": "Verified command authority for operation level"
+    },
+    {
+      "type": "mission_context",
+      "required_for": ["military.command", "military.execute"],
+      "minimum_band": "ATTO",
+      "description": "Link to authorized mission"
+    },
+    {
+      "type": "source_classification",
+      "required_for": ["military.intel"],
+      "minimum_band": "FEMTO",
+      "description": "Intelligence source classification"
+    },
+    {
+      "type": "nation_signatures",
+      "required_for": ["military.coalition", "military.strategic"],
+      "minimum_band": "YOCTO",
+      "description": "Multi-nation authorization signatures"
+    },
+    {
+      "type": "time_bound",
+      "required_for": ["military.dominance_window"],
+      "minimum_band": "YOCTO",
+      "description": "Explicit time limitation for elevated authority"
+    },
+    {
+      "type": "scope_limitation",
+      "required_for": ["military.dominance_window"],
+      "minimum_band": "YOCTO",
+      "description": "Defined scope boundaries for elevated authority"
+    }
+  ],
+
+  "confined_dominance_rules": {
+    "description": "Military operations may require temporary elevated authority (>5%) for mission-critical situations. These 'confined dominance windows' must comply with strict rules.",
+    "requirements": [
+      "Time-bound: Maximum 72 hours per window",
+      "Scope-limited: Maximum 25% authority within defined scope",
+      "YOCTO-level authorization required",
+      "Full audit trail at YOCTO/PLANCK level",
+      "Automatic termination at expiry",
+      "Cannot override C-0002 (Immutable Rights)"
+    ],
+    "prohibited_actions": [
+      "Civilian targeting",
+      "Constitutional amendment",
+      "BHLS floor violation (in civilian zones)",
+      "Evidence destruction",
+      "Audit trail modification"
+    ]
+  },
+
+  "physics_rules": {
+    "command_verification": "All commands carry Lambda mass signature",
+    "chain_integrity": "Command chain verified via spectral hash",
+    "roe_encoding": "ROE encoded at YOCTO level, checked at ATTO execution",
+    "coalition_consensus": "Multi-nation ops require spectral multi-sig"
+  }
+}

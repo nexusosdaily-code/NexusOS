@@ -1,0 +1,197 @@
+{
+  "sector_id": "supply_chain",
+  "sector_name": "Supply Chain & Logistics",
+  "version": "1.0.0",
+  "description": "Policy pack for supply chain management, provenance tracking, logistics coordination, and trade settlement. Lambda mass signatures provide physics-based proof of origin and chain of custody.",
+
+  "band_mappings": {
+    "PLANCK": {
+      "authority_label": "Trade Agreements",
+      "operations": ["trade_treaty", "embargo_declaration", "sanctions_enforcement", "critical_supply_protection"],
+      "min_energy_escrow_nxt": 50000,
+      "multi_party_required": true,
+      "quorum_percent": 85
+    },
+    "YOCTO": {
+      "authority_label": "Regulatory Compliance",
+      "operations": ["certification_grant", "import_export_license", "safety_standard_update", "recall_order"],
+      "min_energy_escrow_nxt": 5000,
+      "multi_party_required": true,
+      "quorum_percent": 67
+    },
+    "ZEPTO": {
+      "authority_label": "Trade Settlement",
+      "operations": ["purchase_order", "invoice_settlement", "letter_of_credit", "insurance_claim"],
+      "min_energy_escrow_nxt": 500,
+      "multi_party_required": true,
+      "quorum_percent": 51
+    },
+    "ATTO": {
+      "authority_label": "Logistics Coordination",
+      "operations": ["shipment_routing", "warehouse_allocation", "carrier_dispatch", "customs_clearance"],
+      "min_energy_escrow_nxt": 50,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "FEMTO": {
+      "authority_label": "Tracking & Handoff",
+      "operations": ["custody_transfer", "location_update", "condition_report", "delivery_confirmation"],
+      "min_energy_escrow_nxt": 5,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "PICO": {
+      "authority_label": "Inventory Management",
+      "operations": ["stock_query", "reorder_trigger", "inventory_adjustment", "forecast_update"],
+      "min_energy_escrow_nxt": 0.5,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "NANO": {
+      "authority_label": "IoT & Sensors",
+      "operations": ["sensor_reading", "temperature_log", "gps_beacon", "rfid_scan"],
+      "min_energy_escrow_nxt": 0.05,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    }
+  },
+
+  "operations": [
+    {
+      "operation_id": "supply.create",
+      "name": "Create Asset",
+      "description": "Register new asset with origin provenance",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 2.0,
+      "attestations_required": ["manufacturer_certificate", "origin_location"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "supply.transfer",
+      "name": "Custody Transfer",
+      "description": "Transfer asset custody with Lambda signature chain",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 1.0,
+      "attestations_required": ["sender_signature", "receiver_signature", "condition_attestation"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "supply.ship",
+      "name": "Shipment",
+      "description": "Initiate shipment with carrier and route",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 1.5,
+      "attestations_required": ["carrier_id", "route_plan", "insurance_proof"],
+      "reversible": true,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "supply.verify",
+      "name": "Provenance Verification",
+      "description": "Verify complete chain of custody",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 0.5,
+      "attestations_required": [],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "supply.settle",
+      "name": "Trade Settlement",
+      "description": "Financial settlement for goods delivered",
+      "required_band": "ZEPTO",
+      "energy_cost_multiplier": 1.5,
+      "attestations_required": ["delivery_proof", "quality_inspection", "invoice_match"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "supply.certify",
+      "name": "Certification",
+      "description": "Grant or verify product certification",
+      "required_band": "YOCTO",
+      "energy_cost_multiplier": 5.0,
+      "attestations_required": ["testing_results", "regulatory_compliance", "certifier_authority"],
+      "reversible": true,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "supply.recall",
+      "name": "Product Recall",
+      "description": "Initiate product recall across supply chain",
+      "required_band": "YOCTO",
+      "energy_cost_multiplier": 10.0,
+      "attestations_required": ["safety_justification", "regulatory_approval", "affected_batch_ids"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "supply.customs",
+      "name": "Customs Clearance",
+      "description": "Process customs declaration and clearance",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 2.0,
+      "attestations_required": ["customs_declaration", "origin_certificate", "duty_payment"],
+      "reversible": false,
+      "audit_trail": true
+    }
+  ],
+
+  "constraints": {
+    "max_dominance_percent": 5,
+    "bhls_applicable": true,
+    "confined_dominance_allowed": false,
+    "audit_level": "FEMTO",
+    "provenance_required": true,
+    "chain_of_custody": "unbroken",
+    "temperature_monitoring": "cold_chain_assets"
+  },
+
+  "attestations": [
+    {
+      "type": "manufacturer_certificate",
+      "required_for": ["supply.create"],
+      "minimum_band": "ZEPTO",
+      "description": "Verified manufacturer identity and license"
+    },
+    {
+      "type": "origin_location",
+      "required_for": ["supply.create"],
+      "minimum_band": "FEMTO",
+      "description": "GPS-verified origin coordinates"
+    },
+    {
+      "type": "condition_attestation",
+      "required_for": ["supply.transfer"],
+      "minimum_band": "FEMTO",
+      "description": "Condition report at time of transfer"
+    },
+    {
+      "type": "carrier_id",
+      "required_for": ["supply.ship"],
+      "minimum_band": "ATTO",
+      "description": "Licensed carrier identification"
+    },
+    {
+      "type": "origin_certificate",
+      "required_for": ["supply.customs"],
+      "minimum_band": "ZEPTO",
+      "description": "Certificate of origin for customs"
+    },
+    {
+      "type": "quality_inspection",
+      "required_for": ["supply.settle", "supply.certify"],
+      "minimum_band": "ZEPTO",
+      "description": "Quality inspection report"
+    }
+  ],
+
+  "physics_rules": {
+    "provenance_signature": "Each asset carries Λ_origin = wavelength_hash(manufacturer, timestamp, location)",
+    "custody_chain": "Λ_chain = sequential_hash(Λ_origin, Λ_transfer_1, Λ_transfer_2, ...)",
+    "verification": "verify(asset) = validate_lambda_chain(asset.custody_chain)",
+    "counterfeit_detection": "Λ_signature mismatch triggers YOCTO alert"
+  }
+}

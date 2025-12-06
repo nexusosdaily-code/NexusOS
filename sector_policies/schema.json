@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NexusOS Sector Policy Pack",
+  "description": "Defines how the Lambda Boson substrate adapts to a specific industry sector",
+  "type": "object",
+  "required": ["sector_id", "sector_name", "version", "band_mappings", "operations", "constraints"],
+  "properties": {
+    "sector_id": {
+      "type": "string",
+      "description": "Unique identifier for the sector",
+      "pattern": "^[a-z_]+$"
+    },
+    "sector_name": {
+      "type": "string",
+      "description": "Human-readable sector name"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string"
+    },
+    "band_mappings": {
+      "type": "object",
+      "description": "Maps spectral bands to sector-specific authority levels",
+      "properties": {
+        "PLANCK": { "$ref": "#/definitions/band_config" },
+        "YOCTO": { "$ref": "#/definitions/band_config" },
+        "ZEPTO": { "$ref": "#/definitions/band_config" },
+        "ATTO": { "$ref": "#/definitions/band_config" },
+        "FEMTO": { "$ref": "#/definitions/band_config" },
+        "PICO": { "$ref": "#/definitions/band_config" },
+        "NANO": { "$ref": "#/definitions/band_config" }
+      }
+    },
+    "operations": {
+      "type": "array",
+      "description": "Sector-specific operations",
+      "items": { "$ref": "#/definitions/operation" }
+    },
+    "constraints": {
+      "type": "object",
+      "description": "Sector-specific constraints and limits",
+      "properties": {
+        "max_dominance_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5
+        },
+        "bhls_applicable": {
+          "type": "boolean",
+          "default": true
+        },
+        "confined_dominance_allowed": {
+          "type": "boolean",
+          "default": false
+        },
+        "audit_level": {
+          "type": "string",
+          "enum": ["PLANCK", "YOCTO", "ZEPTO", "ATTO", "FEMTO", "PICO", "NANO"]
+        }
+      }
+    },
+    "attestations": {
+      "type": "array",
+      "description": "Required attestations for sector operations",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "required_for": { "type": "array", "items": { "type": "string" } },
+          "minimum_band": { "type": "string" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "band_config": {
+      "type": "object",
+      "properties": {
+        "authority_label": { "type": "string" },
+        "operations": { "type": "array", "items": { "type": "string" } },
+        "min_energy_escrow_nxt": { "type": "number" },
+        "multi_party_required": { "type": "boolean" },
+        "quorum_percent": { "type": "number" }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "required": ["operation_id", "name", "required_band"],
+      "properties": {
+        "operation_id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "required_band": { "type": "string" },
+        "energy_cost_multiplier": { "type": "number", "default": 1.0 },
+        "attestations_required": { "type": "array", "items": { "type": "string" } },
+        "reversible": { "type": "boolean", "default": true },
+        "audit_trail": { "type": "boolean", "default": true }
+      }
+    }
+  }
+}

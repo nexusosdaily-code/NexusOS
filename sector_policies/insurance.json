@@ -1,0 +1,176 @@
+{
+  "sector_id": "insurance",
+  "sector_name": "Insurance",
+  "version": "1.0.0",
+  "description": "Policy pack for risk pooling, claims processing, and actuarial operations. Physics-based validation ensures fair risk distribution and BHLS basic coverage for all citizens.",
+
+  "band_mappings": {
+    "PLANCK": {
+      "authority_label": "Systemic Risk Pool",
+      "operations": ["pool_dissolution", "reinsurance_cascade", "constitutional_override"],
+      "min_energy_escrow_nxt": 10000,
+      "multi_party_required": true,
+      "quorum_percent": 90
+    },
+    "YOCTO": {
+      "authority_label": "Actuarial Standards",
+      "operations": ["premium_methodology_change", "reserve_calculation_update", "risk_model_approval"],
+      "min_energy_escrow_nxt": 1000,
+      "multi_party_required": true,
+      "quorum_percent": 75
+    },
+    "ZEPTO": {
+      "authority_label": "Reinsurance",
+      "operations": ["reinsurance_contract", "catastrophe_bond", "risk_transfer"],
+      "min_energy_escrow_nxt": 100,
+      "multi_party_required": true,
+      "quorum_percent": 51
+    },
+    "ATTO": {
+      "authority_label": "Large Claims",
+      "operations": ["major_claim_approval", "fraud_investigation", "subrogation"],
+      "min_energy_escrow_nxt": 10,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "FEMTO": {
+      "authority_label": "Policy Operations",
+      "operations": ["policy_creation", "claim_review", "policy_modification"],
+      "min_energy_escrow_nxt": 1,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "PICO": {
+      "authority_label": "Standard Claims",
+      "operations": ["claim_submission", "premium_payment", "policy_renewal"],
+      "min_energy_escrow_nxt": 0.1,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    },
+    "NANO": {
+      "authority_label": "Queries",
+      "operations": ["policy_status", "claim_status", "coverage_query"],
+      "min_energy_escrow_nxt": 0.01,
+      "multi_party_required": false,
+      "quorum_percent": 0
+    }
+  },
+
+  "operations": [
+    {
+      "operation_id": "insurance.create_policy",
+      "name": "Create Policy",
+      "description": "Issue new insurance policy with Lambda pool contribution",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 2.0,
+      "attestations_required": ["identity_verification", "risk_assessment"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "insurance.pay_premium",
+      "name": "Pay Premium",
+      "description": "Monthly premium contribution to risk pool",
+      "required_band": "NANO",
+      "energy_cost_multiplier": 0.5,
+      "attestations_required": [],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "insurance.submit_claim",
+      "name": "Submit Claim",
+      "description": "File insurance claim with evidence",
+      "required_band": "PICO",
+      "energy_cost_multiplier": 1.0,
+      "attestations_required": ["evidence"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "insurance.review_claim",
+      "name": "Review Claim",
+      "description": "AI-assisted claim adjudication",
+      "required_band": "FEMTO",
+      "energy_cost_multiplier": 2.0,
+      "attestations_required": ["adjuster_review"],
+      "reversible": true,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "insurance.approve_claim",
+      "name": "Approve Claim",
+      "description": "Approve and pay Lambda from pool",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 3.0,
+      "attestations_required": ["adjuster_approval"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "insurance.actuarial_analysis",
+      "name": "Actuarial Analysis",
+      "description": "Risk frequency and loss analysis",
+      "required_band": "ATTO",
+      "energy_cost_multiplier": 5.0,
+      "attestations_required": ["actuary_certification"],
+      "reversible": false,
+      "audit_trail": true
+    },
+    {
+      "operation_id": "insurance.bhls_enroll",
+      "name": "BHLS Enrollment",
+      "description": "Free basic coverage for all citizens",
+      "required_band": "NANO",
+      "energy_cost_multiplier": 0.0,
+      "attestations_required": ["bhls_eligibility"],
+      "reversible": false,
+      "audit_trail": true
+    }
+  ],
+
+  "constraints": {
+    "max_dominance_percent": 5,
+    "bhls_applicable": true,
+    "bhls_basic_coverage_nxt": 50000,
+    "bhls_premium": 0,
+    "confined_dominance_allowed": false,
+    "audit_level": "PICO",
+    "min_solvency_ratio": 0.15,
+    "max_claim_to_coverage": 1.0
+  },
+
+  "attestations": [
+    {
+      "type": "identity_verification",
+      "required_for": ["insurance.create_policy", "insurance.bhls_enroll"],
+      "minimum_band": "FEMTO",
+      "description": "Verified identity for policy issuance"
+    },
+    {
+      "type": "risk_assessment",
+      "required_for": ["insurance.create_policy"],
+      "minimum_band": "FEMTO",
+      "description": "Underwriting risk evaluation"
+    },
+    {
+      "type": "evidence",
+      "required_for": ["insurance.submit_claim"],
+      "minimum_band": "PICO",
+      "description": "Supporting documentation for claim"
+    },
+    {
+      "type": "adjuster_approval",
+      "required_for": ["insurance.approve_claim"],
+      "minimum_band": "ATTO",
+      "description": "Authorized claim adjuster approval"
+    }
+  ],
+
+  "physics_rules": {
+    "pool_balance": "Λ_premiums >= Λ_claims + Λ_reserves",
+    "risk_distribution": "Risk shared as oscillation across pool members",
+    "claim_validation": "Evidence hash must match Lambda signature",
+    "bhls_guarantee": "All citizens entitled to 50,000 NXT basic coverage"
+  }
+}

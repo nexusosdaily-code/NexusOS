@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexus-web3-wallet"
+version = "1.0.0"
+description = "Quantum-resistant Web3 wallet with wavelength encryption"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+keywords = ["web3", "cryptocurrency", "wallet", "quantum-resistant", "blockchain"]
+authors = [
+  {name = "NexusOS Team", email = "support@nexusos.io"}
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Topic :: Security :: Cryptography",
+]
+
+dependencies = [
+  "web3>=7.0.0",
+  "eth-account>=0.13.0",
+  "eth-keys>=0.7.0",
+  "hexbytes>=1.0.0",
+  "sqlalchemy>=2.0.0",
+  "streamlit>=1.20.0",
+  "plotly>=5.0.0",
+  "numpy>=1.20.0",
+  "pandas>=1.3.0",
+  "click>=8.0.0",
+  "rich>=13.0.0",
+  "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0.0",
+  "pytest-cov>=4.0.0",
+  "black>=23.0.0",
+  "flake8>=6.0.0",
+  "mypy>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://nexusos.io"
+Documentation = "https://docs.nexusos.io/wallet"
+Repository = "https://github.com/nexusos/web3-wallet"
+"Bug Tracker" = "https://github.com/nexusos/web3-wallet/issues"
+
+[project.scripts]
+nexus-wallet-cli = "nexus_wallet.cli:main"
+nexus-wallet-ui = "nexus_wallet.ui:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nexus_wallet*"]
+
+[tool.setuptools.package-data]
+nexus_wallet = ["py.typed", "data/*"]
