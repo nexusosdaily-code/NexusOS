@@ -17,7 +17,9 @@ import {
   Upload,
   CloudDownload,
   Terminal,
-  X
+  X,
+  Trash2,
+  CheckCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
