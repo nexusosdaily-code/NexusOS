@@ -1,0 +1,59 @@
+# governance/enforcer.py
+import time
+import json
+from typing import Dict, Any
+
+# load constitution
+with open("governance/constitution.json","r") as f:
+    CON = json.load(f)
+
+# simple in-memory spectrum ledger (in production: distributed ledger)
+SPECTRUM_LEDGER = {}  # waddr -> energy_units (int)
+VALIDATOR_WEIGHTS = {}  # validator_id -> effective_weight
+
+# helper: compute energy cost from band and cycles
+def compute_energy_units(band:int, cycles:int=1) -> int:
+    # simple mapping, tune to real physics in production
+    band_base = {0:1,1:10,2:100,3:1000,4:10000,5:100000,6:10**9}  # nano..planck
+    return band_base.get(band,1) * cycles
+
+def check_attestations(frame: Dict[str,Any], required:list) -> bool:
+    # frame['attest'] must contain necessary attestations
+    att = frame.get("attest", {})
+    for req in required:
+        if req not in att:
+            return False
+    return True
+
+def enforce_frame(frame_obj):
+    """
+    frame_obj: instance of WNSPFrame or dict with keys:
+      - band_hdr.primary_band
+      - attest (dict)
+      - physical_event_id
+    """
+    # normalize
+    try:
+        band = frame_obj.band_hdr.primary_band
+    except AttributeError:
+        band = frame_obj.get("band_hdr",{}).get("primary_band",0)
+
+    # Example: enforce "Energy-Backed Validity" when action flagged
+    att = frame_obj.attest
+    action = att.get("action","")  # attestation may include action metadata
+    if action == "validator_rotation":
+        # find clause C-0003
+        clause = next((c for c in CON["clauses"] if c["id"]=="C-0003"), None)
+        if clause:
+            required_energy = clause["parameters"]["min_energy_units"]
+            # energy reported in attestation
+            supplied = int(att.get("energy_units",0))
+            if supplied < required_energy:
+                raise Exception("EnforcementFailed: insufficient energy escrow")
+            # check attestation types
+            if not check_attestations(frame_obj.__dict__ if hasattr(frame_obj,'__dict__') else frame_obj, ["FEMTO_MULTI_ENDORSEMENT"]):
+                raise Exception("EnforcementFailed: missing femto multi-endorsement")
+            # pass: proceed to schedule validator rotation
+            return {"status":"ok","action":"rotate_validators"}
+    # default: no special enforcement, just allow
+    return {"status":"ok","action":"nop"}

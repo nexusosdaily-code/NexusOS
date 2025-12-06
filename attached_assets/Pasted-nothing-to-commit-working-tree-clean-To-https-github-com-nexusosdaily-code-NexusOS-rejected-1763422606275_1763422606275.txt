@@ -1,0 +1,42 @@
+nothing to commit, working tree clean
+To https://github.com/nexusosdaily-code/NexusOS
+ ! [rejected]        main -> main (non-fast-forward)
+error: failed to push some refs to 'https://github.com/nexusosdaily-code/NexusOS'
+hint: Updates were rejected because the tip of your current branch is behind
+hint: its remote counterpart. If you want to integrate the remote changes,
+hint: use 'git pull' before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+~/workspace$ git pull origin main --rebase
+From https://github.com/nexusosdaily-code/NexusOS
+ * branch            main       -> FETCH_HEAD
+Auto-merging LICENSE
+CONFLICT (add/add): Merge conflict in LICENSE
+error: could not apply 740503f... Add comprehensive documentation structure and license file
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply 740503f... # Add comprehensive documentation structure and license file
+~/workspace$ git push origin main
+To https://github.com/nexusosdaily-code/NexusOS
+ ! [rejected]        main -> main (non-fast-forward)
+error: failed to push some refs to 'https://github.com/nexusosdaily-code/NexusOS'
+hint: Updates were rejected because a pushed branch tip is behind its remote
+hint: counterpart. If you want to integrate the remote changes, use 'git pull'
+hint: before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+~/workspace$ git pull origin main --allow-unrelated-histories
+git push origin main
+error: Pulling is not possible because you have unmerged files.
+hint: Fix them up in the work tree, and then use 'git add/rm <file>'
+hint: as appropriate to mark resolution and make a commit.
+fatal: Exiting because of an unresolved conflict.
+To https://github.com/nexusosdaily-code/NexusOS
+ ! [rejected]        main -> main (non-fast-forward)
+error: failed to push some refs to 'https://github.com/nexusosdaily-code/NexusOS'
+hint: Updates were rejected because a pushed branch tip is behind its remote
+hint: counterpart. If you want to integrate the remote changes, use 'git pull'
+hint: before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+~/workspace$ 

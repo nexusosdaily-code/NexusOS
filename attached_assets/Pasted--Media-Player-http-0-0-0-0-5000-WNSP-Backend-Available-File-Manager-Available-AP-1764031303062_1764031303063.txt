@@ -1,0 +1,54 @@
+📺 Media Player: http://0.0.0.0:5000
+🔧 WNSP Backend: ✅ Available
+📂 File Manager: ✅ Available
+📡 API Endpoints: http://0.0.0.0:5000/api/
+📤 Upload: ✅ MP3/MP4/PDF (100MB max)
+🎥 Streaming: ✅ HTTP Range Requests
+============================================================
+🔍 Scanning media directory...
+✅ Ingested: nasa_apollo11 (0.00 MB, 0 chunks)
+✅ Ingested: quantum_textbook (0.00 MB, 1 chunks)
+✅ Scan complete: 2 files in library
+📡 Live Streaming: ✅ WebRTC + Socket.IO
+============================================================
+ * Serving Flask app 'wnsp_media_server'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.31.75.98:5000
+Press CTRL+C to quit
+172.31.75.98 - - [25/Nov/2025 00:39:25] "GET /socket.io/?EIO=4&transport=polling&t=PguStP9 HTTP/1.1" 200 -
+📡 Client connected: ysVp1nlynRgQzGA6AAAB
+172.31.75.98 - - [25/Nov/2025 00:39:26] "POST /socket.io/?EIO=4&transport=polling&t=PguStTq&sid=nZwTnZgIQlD08ztVAAAA HTTP/1.1" 200 -
+172.31.75.98 - - [25/Nov/2025 00:39:26] "GET /socket.io/?EIO=4&transport=polling&t=PguStTw&sid=nZwTnZgIQlD08ztVAAAA HTTP/1.1" 200 -
+172.31.75.98 - - [25/Nov/2025 00:39:26] "GET / HTTP/1.1" 304 -
+📱 Phone registered: +610476158211 → ysVp1nlynRgQzGA6AAAB
+172.31.75.98 - - [25/Nov/2025 00:39:26] "GET /socket.io/?EIO=4&transport=polling&t=PguStZ8&sid=nZwTnZgIQlD08ztVAAAA HTTP/1.1" 200 -
+172.31.75.98 - - [25/Nov/2025 00:39:26] "POST /socket.io/?EIO=4&transport=polling&t=PguStZD&sid=nZwTnZgIQlD08ztVAAAA HTTP/1.1" 200 -
+172.31.75.98 - - [25/Nov/2025 00:39:26] "GET /js/media_player_enhanced.js?v=device-detection-fix-132100 HTTP/1.1" 304 -
+172.31.75.98 - - [25/Nov/2025 00:39:26] "GET /css/media_player.css HTTP/1.1" 304 -
+172.31.75.98 - - [25/Nov/2025 00:39:26] "GET /api/live/broadcasts HTTP/1.1" 200 -
+172.31.75.98 - - [25/Nov/2025 00:39:26] "GET /api/media/library HTTP/1.1" 200 -
+🔍 get_media_engine() called: media_engine=False
+⚠️  Engine is None, calling init_media_engine()...
+🔄 Initializing WNSP Media Engine with YOUR devices...
+🌐 Creating real WNSP mesh network with your devices:
+  ✅ 📱 Your Phone (your_phone): 2000MB cache, 2 protocols
+  ✅ 💻 Your Computer (your_computer): 5000MB cache, 1 protocols
+  🔗 Mesh link: Your Phone ↔ Your Computer (WiFi, -45dBm)
+✅ Real user mesh network ready!
+📝 Mesh created: True
+📝 Creating WNSPMediaPropagationProduction engine...
+📝 Engine created: True, type=<class 'wnsp_media_propagation_production.WNSPMediaPropagationProduction'>
+✅ WNSP Media Engine initialized! engine=True, mesh=True, id=140104714295504
+🔍 Finally block: media_engine=NOT_DEFINED
+🔍 After init: media_engine=True
+172.31.75.98 - - [25/Nov/2025 00:39:26] "GET /api/stats HTTP/1.1" 200 -
+172.31.75.98 - - [25/Nov/2025 00:39:27] "GET /socket.io/?EIO=4&transport=polling&t=PguStMh HTTP/1.1" 200 -
+📡 Client connected: uqgBLieySBxPnQ1RAAAD
+172.31.75.98 - - [25/Nov/2025 00:39:27] "POST /socket.io/?EIO=4&transport=polling&t=PguStf5&sid=xZS8OyFG0sRKD9TRAAAC HTTP/1.1" 200 -
+172.31.75.98 - - [25/Nov/2025 00:39:27] "GET /socket.io/?EIO=4&transport=polling&t=PguStfA&sid=xZS8OyFG0sRKD9TRAAAC HTTP/1.1" 200 -
+✅ Friends table initialized
+172.31.75.98 - - [25/Nov/2025 00:39:27] "GET /socket.io/?EIO=4&transport=polling&t=PguStdw&sid=nZwTnZgIQlD08ztVAAAA HTTP/1.1" 200 -
+172.31.75.98 - - [25/Nov/2025 00:39:27] "GET /api/wallet/list HTTP/1.1" 200 -

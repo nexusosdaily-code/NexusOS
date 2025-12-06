@@ -1,0 +1,36 @@
+TypeError: string indices must be integers, not 'str'
+Traceback:
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 129, in exec_func_with_error_handling
+    result = func()
+             ^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 667, in code_to_exec
+    _mpa_v1(self._main_script_path)
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 165, in _mpa_v1
+    page.run()
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/navigation/page.py", line 303, in run
+    exec(code, module.__dict__)  # noqa: S102
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/pages/industry_dashboard.py", line 701, in <module>
+    render_industry_dashboard()
+File "/home/runner/workspace/pages/industry_dashboard.py", line 681, in render_industry_dashboard
+    render_health_panel()
+File "/home/runner/workspace/pages/industry_dashboard.py", line 371, in render_health_panel
+    health = get_adapter_instance(CommunityHealthAdapter, 'health_adapter')
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/pages/industry_dashboard.py", line 53, in get_adapter_instance
+    st.session_state[key] = adapter_class()
+                            ^^^^^^^^^^^^^^^
+File "/home/runner/workspace/wnsp_v7/industry/community_health.py", line 73, in __init__
+    super().__init__(sector_id="community_health")
+File "/home/runner/workspace/wnsp_v7/industry/base.py", line 194, in __init__
+    self.policy = load_sector_policy(sector_id)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/wnsp_v7/industry/base.py", line 165, in load_sector_policy
+    return SectorPolicy(policy_data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/wnsp_v7/industry/base.py", line 103, in __init__
+    self.operations = {op['operation_id']: op for op in policy_data.get('operations', [])}
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/wnsp_v7/industry/base.py", line 103, in <dictcomp>
+    self.operations = {op['operation_id']: op for op in policy_data.get('operations', [])}
+                       ~~^^^^^^^^^^^^^^^^

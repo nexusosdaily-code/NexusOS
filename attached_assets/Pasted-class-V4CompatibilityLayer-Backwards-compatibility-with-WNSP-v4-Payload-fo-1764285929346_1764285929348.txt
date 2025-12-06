@@ -1,0 +1,61 @@
+class V4CompatibilityLayer:
+    """
+    Backwards compatibility with WNSP v4
+    
+    Payload format:
+    [MAGIC:4][VERSION:1][CHECKSUM:32][V4_DATA:N]
+    """
+    
+    V4_MAGIC = b'WNv4'
+    V4_VERSION = 4
+    
+    @classmethod
+    def encapsulate_v4(cls, v4_frame_data: bytes, 
+                       source_address: str,
+                       dest_address: str) -> WNSPv5Frame:
+        """Wrap v4 frame in v5 container with verification"""
+        checksum = hashlib.sha256(v4_frame_data).digest()
+        encapsulated_payload = (
+            cls.V4_MAGIC +
+            struct.pack('!B', cls.V4_VERSION) +
+            checksum +
+            v4_frame_data
+        )
+        
+        return WNSPv5Frame(
+            phy_header=PhysicalEventDescriptor.from_waveform(v4_frame_data[:64]),
+            band_header=BandHeader(
+                primary_band=SpectralBand.NANO,
+                flags=FrameFlags.V4_ENCAPSULATED
+            ),
+            attestation=PhysicalAttestation(sensor_id="V4_COMPAT"),
+            control=ControlMetadata(source_address=source_address, 
+                                   dest_address=dest_address),
+            payload=encapsulated_payload
+        )
+    
+    @classmethod
+    def extract_v4(cls, frame: WNSPv5Frame) -> Optional[bytes]:
+        """Extract v4 frame with checksum verification"""
+        if not frame.band_header.has_flag(FrameFlags.V4_ENCAPSULATED):
+            return None
+        
+        payload = frame.payload
+        if payload[:4] != cls.V4_MAGIC:
+            return None
+        
+        stored_checksum = payload[5:37]
+        v4_data = payload[37:]
+        
+        calculated_checksum = hashlib.sha256(v4_data).digest()
+        if stored_checksum != calculated_checksum:
+            return None
+        
+        return v4_data
+    
+    @classmethod
+    def round_trip_test(cls, v4_data: bytes, source: str, dest: str) -> bool:
+        """Verify round-trip encapsulation/extraction"""
+        v5_frame = cls.encapsulate_v4(v4_data, source, dest)
+        extracted = cls.extract_v4(v5_frame)
+        return extracted == v4_data

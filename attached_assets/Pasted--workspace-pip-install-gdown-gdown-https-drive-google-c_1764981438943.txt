@@ -1,0 +1,47 @@
+~/workspace$ pip install gdown && gdown https://drive.google.com/file/d/14eFHsRqFm1P6pFWLeMWsvR6_bd_bQMdn/view?usp=sharing
+Install Replit's Python tools [y/n]  y
+Collecting gdown
+  Downloading gdown-5.2.0-py3-none-any.whl.metadata (5.8 kB)
+Collecting beautifulsoup4 (from gdown)
+  Downloading beautifulsoup4-4.14.3-py3-none-any.whl.metadata (3.8 kB)
+Collecting filelock (from gdown)
+  Downloading filelock-3.20.0-py3-none-any.whl.metadata (2.1 kB)
+Collecting requests[socks] (from gdown)
+  Downloading requests-2.32.5-py3-none-any.whl.metadata (4.9 kB)
+Collecting tqdm (from gdown)
+  Downloading tqdm-4.67.1-py3-none-any.whl.metadata (57 kB)
+Collecting soupsieve>=1.6.1 (from beautifulsoup4->gdown)
+  Downloading soupsieve-2.8-py3-none-any.whl.metadata (4.6 kB)
+Collecting typing-extensions>=4.0.0 (from beautifulsoup4->gdown)
+  Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting charset_normalizer<4,>=2 (from requests[socks]->gdown)
+  Downloading charset_normalizer-3.4.4-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (37 kB)
+Collecting idna<4,>=2.5 (from requests[socks]->gdown)
+  Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+Collecting urllib3<3,>=1.21.1 (from requests[socks]->gdown)
+  Downloading urllib3-2.6.0-py3-none-any.whl.metadata (6.6 kB)
+Collecting certifi>=2017.4.17 (from requests[socks]->gdown)
+  Downloading certifi-2025.11.12-py3-none-any.whl.metadata (2.5 kB)
+Collecting PySocks!=1.5.7,>=1.5.6 (from requests[socks]->gdown)
+  Downloading PySocks-1.7.1-py3-none-any.whl.metadata (13 kB)
+Downloading gdown-5.2.0-py3-none-any.whl (18 kB)
+Downloading beautifulsoup4-4.14.3-py3-none-any.whl (107 kB)
+Downloading filelock-3.20.0-py3-none-any.whl (16 kB)
+Downloading tqdm-4.67.1-py3-none-any.whl (78 kB)
+Downloading certifi-2025.11.12-py3-none-any.whl (159 kB)
+Downloading charset_normalizer-3.4.4-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (151 kB)
+Downloading idna-3.11-py3-none-any.whl (71 kB)
+Downloading PySocks-1.7.1-py3-none-any.whl (16 kB)
+Downloading soupsieve-2.8-py3-none-any.whl (36 kB)
+Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Downloading urllib3-2.6.0-py3-none-any.whl (131 kB)
+Downloading requests-2.32.5-py3-none-any.whl (64 kB)
+Installing collected packages: urllib3, typing-extensions, tqdm, soupsieve, PySocks, idna, filelock, charset_normalizer, certifi, requests, beautifulsoup4, gdown
+Successfully installed PySocks-1.7.1 beautifulsoup4-4.14.3 certifi-2025.11.12 charset_normalizer-3.4.4 filelock-3.20.0 gdown-5.2.0 idna-3.11 requests-2.32.5 soupsieve-2.8 tqdm-4.67.1 typing-extensions-4.15.0 urllib3-2.6.0
+/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gdown/parse_url.py:48: UserWarning: You specified a Google Drive link that is not the correct link to download a file. You might want to try `--fuzzy` option or the following url: https://drive.google.com/uc?id=14eFHsRqFm1P6pFWLeMWsvR6_bd_bQMdn
+  warnings.warn(
+Downloading...
+From: https://drive.google.com/file/d/14eFHsRqFm1P6pFWLeMWsvR6_bd_bQMdn/view?usp=sharing
+To: /home/runner/workspace/view?usp=sharing
+53.1kB [00:00, 38.2MB/s]
+~/workspace$ 

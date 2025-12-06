@@ -1,0 +1,81 @@
+"""
+WaveLang Binary Compiler & Translator
+======================================
+Translates wavelength code to binary-executable formats
+
+KEY INSIGHT: WaveLang is a Domain-Specific Language (DSL)
+- Humans read/write: Wavelengths (380nm = ADD)
+- Compilers convert to: Machine code (binary)
+- Binary CPU executes: Traditional bytecode
+
+This layer bridges the physics-based representation to silicon reality.
+"""
+
+import streamlit as st
+from wavelength_code_generator import WavelengthOpcodes, WavelengthInstruction
+from typing import List, Dict, Any, Tuple
+import math
+
+class WaveLangCompiler:
+    """Compiler for translating WaveLang to executable binary formats"""
+    
+    def __init__(self):
+        self._wavelength_to_bytecode_map = self._build_bytecode_map()
+        self._bytecode_to_assembly_map = self._build_assembly_map()
+    
+    def _build_bytecode_map(self) -> Dict[float, int]:
+        """Map wavelengths to bytecode values (0-255)"""
+        return {
+            380.0: 0x01,    # ADD
+            386.0: 0x02,    # SUBTRACT
+            392.0: 0x03,    # MULTIPLY
+            398.0: 0x04,    # DIVIDE
+            404.0: 0x05,    # MODULO
+            410.0: 0x06,    # POWER
+            450.0: 0x10,    # AND
+            462.0: 0x11,    # OR
+            474.0: 0x12,    # NOT
+            486.0: 0x13,    # XOR
+            495.0: 0x20,    # LOAD
+            508.0: 0x21,    # STORE
+            521.0: 0x22,    # PUSH
+            534.0: 0x23,    # POP
+            570.0: 0x30,    # IF
+            578.0: 0x31,    # LOOP
+            586.0: 0x32,    # BREAK
+            590.0: 0x40,    # CALL
+            600.0: 0x41,    # RETURN
+            610.0: 0x42,    # DEFINE
+            620.0: 0x50,    # INPUT
+            635.0: 0x51,    # OUTPUT
+            650.0: 0x52,    # PRINT
+        }
+    
+    def _build_assembly_map(self) -> Dict[int, str]:
+        """Map bytecode to x86-64 assembly mnemonics"""
+        return {
+            0x01: "ADD",      # add rax, rbx
+            0x02: "SUB",      # sub rax, rbx
+            0x03: "IMUL",     # imul rax, rbx
+            0x04: "DIV",      # div rbx
+            0x05: "MOD",      # mod rax, rbx
+            0x06: "POW",      # Not standard, emulate with loop
+            0x10: "AND",      # and rax, rbx
+            0x11: "OR",       # or rax, rbx
+            0x12: "NOT",      # not rax
+            0x13: "XOR",      # xor rax, rbx
+            0x20: "MOV",      # mov from memory
+            0x21: "MOV",      # mov to memory
+            0x22: "PUSH",     # push rax
+            0x23: "POP",      # pop rax
+            0x30: "CMP+JE",   # cmp, je (conditional jump)
+            0x31: "LOOP",     # loop (decrement, jump if not zero)
+            0x32: "JMP",      # jmp (break/goto)
+            0x40: "CALL",     # call (function call)
+            0x41: "RET",      # ret (return)
+            0x42: "NOP",      # nop (placeholder)
+            0x50: "STDIN",    # syscall read input
+            0x51: "STDOUT",   # syscall write output
+            0x52: "STDOUT",   # syscall write output
+        }
+    # ... (rest of the class methods) ...
