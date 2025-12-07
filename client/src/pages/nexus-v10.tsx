@@ -433,11 +433,12 @@ export default function NexusV10Page() {
 
               {/* Version Evolution */}
               <h3 className="text-lg font-semibold text-gray-300 mb-4">NexusOS Versions</h3>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
-                  { v: "v1-v5", name: "Foundation", desc: "WNSP protocol development", status: "archived" },
+                  { v: "v1-v4", name: "Genesis", desc: "Initial protocol concepts", status: "archived" },
+                  { v: "v5", name: "Foundation", desc: "WNSP specification", status: "archived" },
                   { v: "v6", name: "Scientific", desc: "Theoretical foundation", status: "archived" },
-                  { v: "v7", name: "Technical", desc: "Protocol specification", status: "archived" },
+                  { v: "v7", name: "Technical", desc: "Protocol stack", status: "archived" },
                   { v: "v8", name: "Professional", desc: "Economics & governance", status: "archived" },
                   { v: "v9", name: "Academic", desc: "Educational curriculum", status: "archived" },
                 ].map((version, i) => (
