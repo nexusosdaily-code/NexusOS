@@ -29,3 +29,9 @@ author = 49759428
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
+
+[userenv]
+
+[userenv.shared]
+UV_NO_SYNC = "1"
+PYTHON_DISABLED = "1"
