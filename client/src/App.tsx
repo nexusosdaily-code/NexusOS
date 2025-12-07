@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import WNSPv7Page from "@/pages/wnsp-v7";
+import EncodingLab from "@/pages/encoding-lab";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -12,6 +13,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/v7" component={WNSPv7Page} />
+      <Route path="/encoding-lab" component={EncodingLab} />
       <Route component={NotFound} />
     </Switch>
   );
