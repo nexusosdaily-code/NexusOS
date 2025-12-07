@@ -7,6 +7,7 @@ import WNSPv7Page from "@/pages/wnsp-v7";
 import NexusV10Page from "@/pages/nexus-v10";
 import EncodingLab from "@/pages/encoding-lab";
 import AnnouncementsPage from "@/pages/announcements";
+import AnnouncementSubstrateV2Page from "@/pages/announcement-substrate-v2";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/v7" component={WNSPv7Page} />
       <Route path="/encoding-lab" component={EncodingLab} />
       <Route path="/announcements" component={AnnouncementsPage} />
+      <Route path="/announcements/substrate-v2" component={AnnouncementSubstrateV2Page} />
       <Route component={NotFound} />
     </Switch>
   );
