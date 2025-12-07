@@ -1,0 +1,6 @@
+Add this section at the END of your .replit file:
+
+[deployment]
+run = ["sh", "-c", "npm run start"]
+build = ["sh", "-c", "npm run build"]
+deploymentTarget = "cloudrun"
