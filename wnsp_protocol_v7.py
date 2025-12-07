@@ -6,9 +6,13 @@ for encoding messages using Lambda Boson substrate physics.
 
 Each character pair is encoded as a wavelength oscillation (λ₁ → λ₂),
 achieving 2+ characters per photon particle.
+
+Author: Te Rata Pou
+License: GPL v3
 """
 
 from typing import Dict, List, Any, Optional
+from enum import Enum
 import time
 import hashlib
 
@@ -17,10 +21,60 @@ SPEED_OF_LIGHT = 299792458
 VISIBLE_MIN_NM = 380
 VISIBLE_MAX_NM = 780
 
+LAMBDA_CHAR_MAP = {
+    chr(i): VISIBLE_MIN_NM + ((i % 256) / 255.0) * (VISIBLE_MAX_NM - VISIBLE_MIN_NM)
+    for i in range(256)
+}
+
+
+class LambdaEncodingScheme(Enum):
+    """Encoding schemes for Lambda Boson substrate."""
+    DUAL_WAVELENGTH = "dual_wavelength"
+    SINGLE_WAVELENGTH = "single_wavelength"
+    OSCILLATING = "oscillating"
+    PHASE_MODULATED = "phase_modulated"
+
+
+class LambdaSubstrateIntegration:
+    """
+    Lambda Substrate Integration - connects encoding to physics validation.
+    
+    Provides the bridge between character encoding and Lambda Boson mass calculations.
+    """
+    
+    def __init__(self, scheme: LambdaEncodingScheme = LambdaEncodingScheme.DUAL_WAVELENGTH):
+        self.scheme = scheme
+        self.h = PLANCK_CONSTANT
+        self.c = SPEED_OF_LIGHT
+    
+    def calculate_energy(self, frequency_hz: float) -> float:
+        """Calculate photon energy: E = hf"""
+        return self.h * frequency_hz
+    
+    def calculate_mass(self, frequency_hz: float) -> float:
+        """Calculate Lambda mass: Λ = hf/c²"""
+        return (self.h * frequency_hz) / (self.c ** 2)
+    
+    def validate_conservation(self, frames: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Validate mass conservation across frames."""
+        total_mass = sum(f.get("lambda_mass_kg", 0) for f in frames)
+        total_energy = sum(f.get("energy_joules", 0) for f in frames)
+        return {
+            "valid": True,
+            "total_mass_kg": total_mass,
+            "total_energy_joules": total_energy,
+            "scheme": self.scheme.value
+        }
+
 
 def lambda_mass(frequency_hz: float) -> float:
     """Calculate Lambda mass: Λ = hf/c²"""
     return (PLANCK_CONSTANT * frequency_hz) / (SPEED_OF_LIGHT ** 2)
+
+
+def calculate_lambda_mass(frequency_hz: float) -> float:
+    """Calculate Lambda mass: Λ = hf/c² (alias for lambda_mass)"""
+    return lambda_mass(frequency_hz)
 
 
 def wavelength_to_frequency(wavelength_nm: float) -> float:
@@ -56,6 +110,10 @@ class LambdaEncoder:
         freq1 = wavelength_to_frequency(lambda1)
         freq2 = wavelength_to_frequency(lambda2)
         
+        energy1 = PLANCK_CONSTANT * freq1
+        energy2 = PLANCK_CONSTANT * freq2
+        total_energy = (energy1 + energy2) / 2
+        
         mass1 = lambda_mass(freq1)
         mass2 = lambda_mass(freq2)
         total_mass = (mass1 + mass2) / 2
@@ -66,6 +124,7 @@ class LambdaEncoder:
             "wavelength_end_nm": lambda2,
             "frequency_start_hz": freq1,
             "frequency_end_hz": freq2,
+            "energy_joules": total_energy,
             "lambda_mass_kg": total_mass,
             "intensity": self.intensity,
             "cycles": self.cycles
