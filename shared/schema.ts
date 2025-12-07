@@ -242,6 +242,35 @@ export type InsertRateLimit = z.infer<typeof insertRateLimitSchema>;
 export type RateLimit = typeof rateLimits.$inferSelect;
 
 // ============================================
+// FRIENDSHIPS TABLE - User connections
+// ============================================
+export const friendships = pgTable("friendships", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  requesterId: varchar("requester_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  addresseeId: varchar("addressee_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("pending"),
+  spectralBond: decimal("spectral_bond", { precision: 20, scale: 12 }),
+  wavelength: decimal("wavelength", { precision: 10, scale: 4 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  acceptedAt: timestamp("accepted_at"),
+}, (table) => ({
+  requesterIdx: index("friendships_requester_idx").on(table.requesterId),
+  addresseeIdx: index("friendships_addressee_idx").on(table.addresseeId),
+  statusIdx: index("friendships_status_idx").on(table.status),
+}));
+
+export const insertFriendshipSchema = createInsertSchema(friendships).pick({
+  requesterId: true,
+  addresseeId: true,
+  status: true,
+  spectralBond: true,
+  wavelength: true,
+});
+
+export type InsertFriendship = z.infer<typeof insertFriendshipSchema>;
+export type Friendship = typeof friendships.$inferSelect;
+
+// ============================================
 // VALIDATION SCHEMAS
 // ============================================
 
@@ -271,7 +300,17 @@ export const transferSchema = z.object({
   memo: z.string().max(500).optional(),
 });
 
+export const friendRequestSchema = z.object({
+  phoneNumber: z.string().min(10).max(20),
+});
+
+export const friendActionSchema = z.object({
+  friendshipId: z.string().min(1),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type SpectralEncodeInput = z.infer<typeof spectralEncodeSchema>;
 export type TransferInput = z.infer<typeof transferSchema>;
+export type FriendRequestInput = z.infer<typeof friendRequestSchema>;
+export type FriendActionInput = z.infer<typeof friendActionSchema>;

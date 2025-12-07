@@ -13,6 +13,7 @@ import AnnouncementsPage from "@/pages/announcements";
 import AnnouncementSubstrateV2Page from "@/pages/announcement-substrate-v2";
 import ResonancePropulsionPage from "@/pages/resonance-propulsion";
 import AuthPage from "@/pages/auth";
+import FriendsPage from "@/pages/friends";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/announcements/substrate-v2" component={AnnouncementSubstrateV2Page} />
       <Route path="/resonance-propulsion" component={ResonancePropulsionPage} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/friends" component={FriendsPage} />
       <Route component={NotFound} />
     </Switch>
   );

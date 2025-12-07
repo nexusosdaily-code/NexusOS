@@ -4,12 +4,12 @@ import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import {
   users, sessions, auditLogs, wallets, transactions,
-  versionRegistry, apiKeys, rateLimits,
+  versionRegistry, apiKeys, rateLimits, friendships,
   type User, type InsertUser, type Session, type InsertSession,
   type AuditLog, type InsertAuditLog, type Wallet, type InsertWallet,
   type Transaction, type InsertTransaction, type VersionRegistry,
   type InsertVersionRegistry, type ApiKey, type InsertApiKey,
-  type RateLimit, type InsertRateLimit,
+  type RateLimit, type InsertRateLimit, type Friendship, type InsertFriendship,
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
@@ -61,6 +61,17 @@ export interface IStorage {
   // Rate limiting
   checkRateLimit(identifier: string, endpoint: string, limit: number, windowMs: number): Promise<boolean>;
   incrementRateLimit(identifier: string, endpoint: string, windowMs: number): Promise<void>;
+
+  // Friendship operations
+  getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
+  sendFriendRequest(requesterId: string, addresseeId: string): Promise<Friendship>;
+  acceptFriendRequest(friendshipId: string): Promise<Friendship>;
+  rejectFriendRequest(friendshipId: string): Promise<void>;
+  removeFriend(friendshipId: string): Promise<void>;
+  getFriendship(id: string): Promise<Friendship | undefined>;
+  getFriends(userId: string): Promise<Array<{ friendship: Friendship; friend: User }>>;
+  getPendingRequests(userId: string): Promise<Array<{ friendship: Friendship; requester: User }>>;
+  getSentRequests(userId: string): Promise<Array<{ friendship: Friendship; addressee: User }>>;
 }
 
 function generateWalletAddress(): string {
@@ -347,6 +358,106 @@ export class DatabaseStorage implements IStorage {
         .set({ requestCount: existing[0].requestCount + 1 })
         .where(eq(rateLimits.id, existing[0].id));
     }
+  }
+
+  // ============================================
+  // FRIENDSHIP OPERATIONS
+  // ============================================
+
+  async getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
+    const result = await db.select().from(users)
+      .where(eq(users.phoneNumber, phoneNumber))
+      .limit(1);
+    return result[0];
+  }
+
+  async sendFriendRequest(requesterId: string, addresseeId: string): Promise<Friendship> {
+    const wavelength = 380 + Math.random() * 400;
+    const frequency = (3e8) / (wavelength * 1e-9);
+    const spectralBond = (6.626e-34 * frequency).toString();
+
+    const result = await db.insert(friendships).values({
+      requesterId,
+      addresseeId,
+      status: "pending",
+      wavelength: wavelength.toString(),
+      spectralBond,
+    }).returning();
+    return result[0];
+  }
+
+  async acceptFriendRequest(friendshipId: string): Promise<Friendship> {
+    const result = await db.update(friendships)
+      .set({ status: "accepted", acceptedAt: new Date() })
+      .where(eq(friendships.id, friendshipId))
+      .returning();
+    return result[0];
+  }
+
+  async rejectFriendRequest(friendshipId: string): Promise<void> {
+    await db.update(friendships)
+      .set({ status: "rejected" })
+      .where(eq(friendships.id, friendshipId));
+  }
+
+  async removeFriend(friendshipId: string): Promise<void> {
+    await db.delete(friendships).where(eq(friendships.id, friendshipId));
+  }
+
+  async getFriendship(id: string): Promise<Friendship | undefined> {
+    const result = await db.select().from(friendships)
+      .where(eq(friendships.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async getFriends(userId: string): Promise<Array<{ friendship: Friendship; friend: User }>> {
+    const asRequester = await db.select()
+      .from(friendships)
+      .innerJoin(users, eq(friendships.addresseeId, users.id))
+      .where(and(
+        eq(friendships.requesterId, userId),
+        eq(friendships.status, "accepted")
+      ));
+
+    const asAddressee = await db.select()
+      .from(friendships)
+      .innerJoin(users, eq(friendships.requesterId, users.id))
+      .where(and(
+        eq(friendships.addresseeId, userId),
+        eq(friendships.status, "accepted")
+      ));
+
+    const friends = [
+      ...asRequester.map(r => ({ friendship: r.friendships, friend: r.users })),
+      ...asAddressee.map(r => ({ friendship: r.friendships, friend: r.users })),
+    ];
+
+    return friends;
+  }
+
+  async getPendingRequests(userId: string): Promise<Array<{ friendship: Friendship; requester: User }>> {
+    const result = await db.select()
+      .from(friendships)
+      .innerJoin(users, eq(friendships.requesterId, users.id))
+      .where(and(
+        eq(friendships.addresseeId, userId),
+        eq(friendships.status, "pending")
+      ));
+
+    return result.map(r => ({ friendship: r.friendships, requester: r.users }));
+  }
+
+  async getSentRequests(userId: string): Promise<Array<{ friendship: Friendship; addressee: User }>> {
+    const result = await db.select()
+      .from(friendships)
+      .innerJoin(users, eq(friendships.addresseeId, users.id))
+      .where(and(
+        eq(friendships.requesterId, userId),
+        eq(friendships.status, "pending")
+      ));
+
+    return result.map(r => ({ friendship: r.friendships, addressee: r.users }));
   }
 }
 
