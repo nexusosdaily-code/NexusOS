@@ -2,9 +2,64 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { spawn, ChildProcess } from "child_process";
 
 const app = express();
 const httpServer = createServer(app);
+
+let flaskProcess: ChildProcess | null = null;
+
+function startFlaskAPI() {
+  if (process.env.NODE_ENV === "production") return;
+  
+  console.log("Starting Spectral API server on port 5001...");
+  
+  flaskProcess = spawn("python", ["spectral_api.py"], {
+    stdio: ["ignore", "pipe", "pipe"],
+    detached: false,
+  });
+
+  flaskProcess.stdout?.on("data", (data) => {
+    process.stdout.write(data);
+  });
+
+  flaskProcess.stderr?.on("data", (data) => {
+    process.stderr.write(data);
+  });
+
+  flaskProcess.on("error", (err) => {
+    console.error("Failed to start Flask API:", err.message);
+  });
+
+  flaskProcess.on("exit", (code) => {
+    if (code !== 0 && code !== null) {
+      console.error(`Flask API exited with code ${code}`);
+    }
+  });
+}
+
+function cleanupFlask() {
+  if (flaskProcess && !flaskProcess.killed) {
+    flaskProcess.kill("SIGTERM");
+    flaskProcess = null;
+  }
+}
+
+process.on("SIGINT", () => {
+  cleanupFlask();
+  process.exit(0);
+});
+
+process.on("SIGTERM", () => {
+  cleanupFlask();
+  process.exit(0);
+});
+
+process.on("exit", () => {
+  cleanupFlask();
+});
+
+startFlaskAPI();
 
 declare module "http" {
   interface IncomingMessage {
