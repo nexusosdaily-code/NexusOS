@@ -8,6 +8,7 @@ import NexusV10Page from "@/pages/nexus-v10";
 import EncodingLab from "@/pages/encoding-lab";
 import AnnouncementsPage from "@/pages/announcements";
 import AnnouncementSubstrateV2Page from "@/pages/announcement-substrate-v2";
+import ResonancePropulsionPage from "@/pages/resonance-propulsion";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/encoding-lab" component={EncodingLab} />
       <Route path="/announcements" component={AnnouncementsPage} />
       <Route path="/announcements/substrate-v2" component={AnnouncementSubstrateV2Page} />
+      <Route path="/resonance-propulsion" component={ResonancePropulsionPage} />
       <Route component={NotFound} />
     </Switch>
   );

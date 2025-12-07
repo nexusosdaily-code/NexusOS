@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link } from "wouter";
 import { 
   Waves, 
   Atom, 
@@ -17,7 +18,10 @@ import {
   FileText,
   Orbit,
   Clock,
-  Infinity
+  Infinity,
+  Rocket,
+  FlaskConical,
+  ExternalLink
 } from "lucide-react";
 
 export default function NexusV10Page() {
@@ -712,6 +716,79 @@ export default function NexusV10Page() {
                     <span className="text-gray-300" data-testid={`resource-name-${resource.id}`}>{resource.name}</span>
                   </div>
                 ))}
+              </div>
+            </Card>
+
+            {/* Research Modules */}
+            <Card className="bg-gradient-to-br from-orange-900/20 to-red-900/20 border-orange-500/30 p-6" data-testid="card-research-modules">
+              <h3 className="text-xl font-bold text-orange-400 mb-4 flex items-center gap-2">
+                <FlaskConical className="w-5 h-5" />
+                Research Modules
+              </h3>
+              <p className="text-gray-300 text-sm mb-4">
+                Explore advanced applications of Lambda Boson theory across different domains.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Link href="/resonance-propulsion">
+                  <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-lg border border-orange-500/20 hover:border-orange-500/50 hover:bg-slate-800/80 transition-all cursor-pointer group" data-testid="link-resonance-propulsion">
+                    <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
+                      <Rocket className="w-6 h-6 text-orange-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-white group-hover:text-orange-300 transition-colors">Resonance Propulsion</h4>
+                        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">RESEARCH</Badge>
+                      </div>
+                      <p className="text-gray-400 text-sm">Lambda Boson propulsion theory with frustum cavity analysis</p>
+                    </div>
+                    <ExternalLink className="w-5 h-5 text-gray-500 group-hover:text-orange-400 transition-colors" />
+                  </div>
+                </Link>
+                <Link href="/v7">
+                  <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-lg border border-cyan-500/20 hover:border-cyan-500/50 hover:bg-slate-800/80 transition-all cursor-pointer group" data-testid="link-wnsp-v7">
+                    <div className="w-12 h-12 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                      <Waves className="w-6 h-6 text-cyan-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-white group-hover:text-cyan-300 transition-colors">WNSP v7.0</h4>
+                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">ACTIVE</Badge>
+                      </div>
+                      <p className="text-gray-400 text-sm">Wavelength Network Signaling Protocol implementation</p>
+                    </div>
+                    <ExternalLink className="w-5 h-5 text-gray-500 group-hover:text-cyan-400 transition-colors" />
+                  </div>
+                </Link>
+                <Link href="/encoding-lab">
+                  <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-lg border border-purple-500/20 hover:border-purple-500/50 hover:bg-slate-800/80 transition-all cursor-pointer group" data-testid="link-encoding-lab">
+                    <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                      <Atom className="w-6 h-6 text-purple-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-white group-hover:text-purple-300 transition-colors">Encoding Lab</h4>
+                        <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs">TOOL</Badge>
+                      </div>
+                      <p className="text-gray-400 text-sm">W-ASCII wavelength encoding experimentation</p>
+                    </div>
+                    <ExternalLink className="w-5 h-5 text-gray-500 group-hover:text-purple-400 transition-colors" />
+                  </div>
+                </Link>
+                <Link href="/announcements">
+                  <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-lg border border-green-500/20 hover:border-green-500/50 hover:bg-slate-800/80 transition-all cursor-pointer group" data-testid="link-announcements">
+                    <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <BookOpen className="w-6 h-6 text-green-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-white group-hover:text-green-300 transition-colors">Announcements</h4>
+                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">NEWS</Badge>
+                      </div>
+                      <p className="text-gray-400 text-sm">Latest updates and substrate releases</p>
+                    </div>
+                    <ExternalLink className="w-5 h-5 text-gray-500 group-hover:text-green-400 transition-colors" />
+                  </div>
+                </Link>
               </div>
             </Card>
           </TabsContent>
