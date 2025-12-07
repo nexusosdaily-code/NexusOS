@@ -1,38 +1,353 @@
-import { type User, type InsertUser } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, gte, lte, desc } from "drizzle-orm";
+import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
+import {
+  users, sessions, auditLogs, wallets, transactions,
+  versionRegistry, apiKeys, rateLimits,
+  type User, type InsertUser, type Session, type InsertSession,
+  type AuditLog, type InsertAuditLog, type Wallet, type InsertWallet,
+  type Transaction, type InsertTransaction, type VersionRegistry,
+  type InsertVersionRegistry, type ApiKey, type InsertApiKey,
+  type RateLimit, type InsertRateLimit,
+} from "@shared/schema";
 
-// modify the interface with any CRUD methods
-// you might need
+const SALT_ROUNDS = 12;
+const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const INITIAL_NXT_BALANCE = "500000000"; // 5 NXT (8 decimals)
 
 export interface IStorage {
+  // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(username: string, password: string, email?: string, phoneNumber?: string): Promise<User>;
+  verifyPassword(user: User, password: string): Promise<boolean>;
+  updateUserLastLogin(userId: string): Promise<void>;
+
+  // Session operations
+  createSession(userId: string, ipAddress?: string, userAgent?: string): Promise<Session>;
+  getSessionByToken(token: string): Promise<Session | undefined>;
+  deleteSession(sessionId: string): Promise<void>;
+  deleteUserSessions(userId: string): Promise<void>;
+  cleanExpiredSessions(): Promise<number>;
+
+  // Audit log operations
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(userId?: string, limit?: number): Promise<AuditLog[]>;
+
+  // Wallet operations
+  getWallet(userId: string): Promise<Wallet | undefined>;
+  getWalletByAddress(address: string): Promise<Wallet | undefined>;
+  createWallet(userId: string): Promise<Wallet>;
+  updateWalletBalance(walletId: string, newBalance: string): Promise<Wallet>;
+
+  // Transaction operations
+  createTransaction(tx: InsertTransaction): Promise<Transaction>;
+  getTransactions(walletId: string, limit?: number): Promise<Transaction[]>;
+  updateTransactionStatus(txId: string, status: string): Promise<Transaction>;
+
+  // Version registry operations
+  getVersions(): Promise<VersionRegistry[]>;
+  getVersion(version: string): Promise<VersionRegistry | undefined>;
+  createVersion(version: InsertVersionRegistry): Promise<VersionRegistry>;
+
+  // API key operations
+  createApiKey(userId: string, name: string, permissions: string[]): Promise<{ key: string; apiKey: ApiKey }>;
+  getApiKeyByPrefix(prefix: string): Promise<ApiKey | undefined>;
+  verifyApiKey(key: string, keyHash: string): Promise<boolean>;
+  revokeApiKey(keyId: string): Promise<void>;
+
+  // Rate limiting
+  checkRateLimit(identifier: string, endpoint: string, limit: number, windowMs: number): Promise<boolean>;
+  incrementRateLimit(identifier: string, endpoint: string, windowMs: number): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+function generateWalletAddress(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let address = "NXT_";
+  for (let i = 0; i < 32; i++) {
+    address += chars.charAt(Math.floor(Math.random() * chars.length));
   }
+  return address;
+}
+
+function generateApiKey(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let key = "nxt_";
+  for (let i = 0; i < 48; i++) {
+    key += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return key;
+}
+
+export class DatabaseStorage implements IStorage {
+  // ============================================
+  // USER OPERATIONS
+  // ============================================
 
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0];
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    return result[0];
+  }
+
+  async createUser(username: string, password: string, email?: string, phoneNumber?: string): Promise<User> {
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const result = await db.insert(users).values({
+      username,
+      passwordHash,
+      email,
+      phoneNumber,
+    }).returning();
+    
+    const user = result[0];
+    await this.createWallet(user.id);
+    
     return user;
+  }
+
+  async verifyPassword(user: User, password: string): Promise<boolean> {
+    return bcrypt.compare(password, user.passwordHash);
+  }
+
+  async updateUserLastLogin(userId: string): Promise<void> {
+    await db.update(users)
+      .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  // ============================================
+  // SESSION OPERATIONS
+  // ============================================
+
+  async createSession(userId: string, ipAddress?: string, userAgent?: string): Promise<Session> {
+    const token = randomUUID() + randomUUID();
+    const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
+    
+    const result = await db.insert(sessions).values({
+      userId,
+      token,
+      ipAddress,
+      userAgent,
+      expiresAt,
+    }).returning();
+    
+    return result[0];
+  }
+
+  async getSessionByToken(token: string): Promise<Session | undefined> {
+    const now = new Date();
+    const result = await db.select().from(sessions)
+      .where(and(eq(sessions.token, token), gte(sessions.expiresAt, now)))
+      .limit(1);
+    return result[0];
+  }
+
+  async deleteSession(sessionId: string): Promise<void> {
+    await db.delete(sessions).where(eq(sessions.id, sessionId));
+  }
+
+  async deleteUserSessions(userId: string): Promise<void> {
+    await db.delete(sessions).where(eq(sessions.userId, userId));
+  }
+
+  async cleanExpiredSessions(): Promise<number> {
+    const now = new Date();
+    const result = await db.delete(sessions).where(lte(sessions.expiresAt, now)).returning();
+    return result.length;
+  }
+
+  // ============================================
+  // AUDIT LOG OPERATIONS
+  // ============================================
+
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const result = await db.insert(auditLogs).values(log).returning();
+    return result[0];
+  }
+
+  async getAuditLogs(userId?: string, limit: number = 100): Promise<AuditLog[]> {
+    if (userId) {
+      return db.select().from(auditLogs)
+        .where(eq(auditLogs.userId, userId))
+        .orderBy(desc(auditLogs.createdAt))
+        .limit(limit);
+    }
+    return db.select().from(auditLogs)
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(limit);
+  }
+
+  // ============================================
+  // WALLET OPERATIONS
+  // ============================================
+
+  async getWallet(userId: string): Promise<Wallet | undefined> {
+    const result = await db.select().from(wallets).where(eq(wallets.userId, userId)).limit(1);
+    return result[0];
+  }
+
+  async getWalletByAddress(address: string): Promise<Wallet | undefined> {
+    const result = await db.select().from(wallets).where(eq(wallets.address, address)).limit(1);
+    return result[0];
+  }
+
+  async createWallet(userId: string): Promise<Wallet> {
+    const address = generateWalletAddress();
+    const result = await db.insert(wallets).values({
+      userId,
+      address,
+      balance: INITIAL_NXT_BALANCE,
+    }).returning();
+    return result[0];
+  }
+
+  async updateWalletBalance(walletId: string, newBalance: string): Promise<Wallet> {
+    const result = await db.update(wallets)
+      .set({ balance: newBalance, updatedAt: new Date() })
+      .where(eq(wallets.id, walletId))
+      .returning();
+    return result[0];
+  }
+
+  // ============================================
+  // TRANSACTION OPERATIONS
+  // ============================================
+
+  async createTransaction(tx: InsertTransaction): Promise<Transaction> {
+    const result = await db.insert(transactions).values(tx).returning();
+    return result[0];
+  }
+
+  async getTransactions(walletId: string, limit: number = 50): Promise<Transaction[]> {
+    return db.select().from(transactions)
+      .where(eq(transactions.fromWalletId, walletId))
+      .orderBy(desc(transactions.createdAt))
+      .limit(limit);
+  }
+
+  async updateTransactionStatus(txId: string, status: string): Promise<Transaction> {
+    const result = await db.update(transactions)
+      .set({ 
+        status, 
+        confirmedAt: status === "confirmed" ? new Date() : undefined 
+      })
+      .where(eq(transactions.id, txId))
+      .returning();
+    return result[0];
+  }
+
+  // ============================================
+  // VERSION REGISTRY OPERATIONS
+  // ============================================
+
+  async getVersions(): Promise<VersionRegistry[]> {
+    return db.select().from(versionRegistry).orderBy(desc(versionRegistry.createdAt));
+  }
+
+  async getVersion(version: string): Promise<VersionRegistry | undefined> {
+    const result = await db.select().from(versionRegistry)
+      .where(eq(versionRegistry.version, version))
+      .limit(1);
+    return result[0];
+  }
+
+  async createVersion(versionData: InsertVersionRegistry): Promise<VersionRegistry> {
+    const result = await db.insert(versionRegistry).values(versionData).returning();
+    return result[0];
+  }
+
+  // ============================================
+  // API KEY OPERATIONS
+  // ============================================
+
+  async createApiKey(userId: string, name: string, permissions: string[]): Promise<{ key: string; apiKey: ApiKey }> {
+    const key = generateApiKey();
+    const keyHash = await bcrypt.hash(key, SALT_ROUNDS);
+    const keyPrefix = key.substring(0, 12);
+    
+    const result = await db.insert(apiKeys).values({
+      userId,
+      name,
+      keyHash,
+      keyPrefix,
+      permissions,
+    }).returning();
+    
+    return { key, apiKey: result[0] };
+  }
+
+  async getApiKeyByPrefix(prefix: string): Promise<ApiKey | undefined> {
+    const result = await db.select().from(apiKeys)
+      .where(and(eq(apiKeys.keyPrefix, prefix), eq(apiKeys.isActive, true)))
+      .limit(1);
+    return result[0];
+  }
+
+  async verifyApiKey(key: string, keyHash: string): Promise<boolean> {
+    return bcrypt.compare(key, keyHash);
+  }
+
+  async revokeApiKey(keyId: string): Promise<void> {
+    await db.update(apiKeys).set({ isActive: false }).where(eq(apiKeys.id, keyId));
+  }
+
+  // ============================================
+  // RATE LIMITING
+  // ============================================
+
+  async checkRateLimit(identifier: string, endpoint: string, limit: number, windowMs: number): Promise<boolean> {
+    const now = new Date();
+    const result = await db.select().from(rateLimits)
+      .where(and(
+        eq(rateLimits.identifier, identifier),
+        eq(rateLimits.endpoint, endpoint),
+        gte(rateLimits.windowEnd, now)
+      ))
+      .limit(1);
+    
+    if (result.length === 0) {
+      return true;
+    }
+    
+    return result[0].requestCount < limit;
+  }
+
+  async incrementRateLimit(identifier: string, endpoint: string, windowMs: number): Promise<void> {
+    const now = new Date();
+    const windowEnd = new Date(now.getTime() + windowMs);
+    
+    const existing = await db.select().from(rateLimits)
+      .where(and(
+        eq(rateLimits.identifier, identifier),
+        eq(rateLimits.endpoint, endpoint),
+        gte(rateLimits.windowEnd, now)
+      ))
+      .limit(1);
+    
+    if (existing.length === 0) {
+      await db.insert(rateLimits).values({
+        identifier,
+        endpoint,
+        requestCount: 1,
+        windowEnd,
+      });
+    } else {
+      await db.update(rateLimits)
+        .set({ requestCount: existing[0].requestCount + 1 })
+        .where(eq(rateLimits.id, existing[0].id));
+    }
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
