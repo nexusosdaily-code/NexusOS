@@ -83,10 +83,10 @@ export function UploadZone() {
             <Upload className="w-8 h-8 text-primary/60" />
           </div>
           <h3 className="text-xl font-medium text-foreground mb-2">
-            {isDragActive ? "Drop files here" : "Upload your Replit files"}
+            {isDragActive ? "Drop files here" : "Upload your project files"}
           </h3>
           <p className="text-sm text-muted-foreground max-w-xs">
-            Drag and drop your .replit, .zip, or code files here, or click to browse.
+            Drag and drop your .zip or code files here, or click to browse.
           </p>
         </div>
       </div>

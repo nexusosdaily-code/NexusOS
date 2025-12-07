@@ -18,7 +18,6 @@ import {
   CloudDownload,
   Terminal,
   X,
-  Trash2,
   CheckCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -59,9 +58,9 @@ export function IDELayout() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded bg-primary text-primary-foreground flex items-center justify-center font-bold font-mono text-lg">
-              R
+              N
             </div>
-            <span className="font-medium text-sm hidden sm:inline-block">Replit Workspace</span>
+            <span className="font-medium text-sm hidden sm:inline-block">NexusOS Workspace</span>
           </div>
           <div className="h-4 w-[1px] bg-border mx-2" />
           <Button variant="ghost" size="sm" className="text-xs h-7 gap-2 text-muted-foreground hover:text-foreground">
@@ -105,7 +104,7 @@ export function IDELayout() {
                      <Button variant="ghost" size="icon" className="h-4 w-4 hover:text-foreground" title="Upload Zip">
                        <Upload className="w-3 h-3" />
                      </Button>
-                     <Button variant="ghost" size="icon" className="h-4 w-4 hover:text-foreground" title="Import from Replit">
+                     <Button variant="ghost" size="icon" className="h-4 w-4 hover:text-foreground" title="Import Project">
                        <CloudDownload className="w-3 h-3" />
                      </Button>
                      <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => setIsSidebarOpen(false)}>
@@ -207,7 +206,7 @@ export function IDELayout() {
                   {/* Mock Preview Content */}
                   <div className="text-center space-y-4">
                     <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-primary to-primary/50 mx-auto shadow-xl flex items-center justify-center text-white font-bold text-3xl">
-                      R
+                      N
                     </div>
                     <h2 className="text-2xl font-bold">App Running</h2>
                     <p className="text-muted-foreground">Edit code to see changes instantly.</p>
@@ -239,131 +238,45 @@ export function IDELayout() {
                 </div>
               </div>
               <div className="flex-1 p-4 font-mono text-xs overflow-auto">
-                <div className="text-muted-foreground mb-2">Replit Container - Shell</div>
+                <div className="text-muted-foreground mb-2">NexusOS Container - Shell</div>
                 <div className="space-y-1">
                    <div className="flex gap-2">
                      <span className="text-green-500">➜</span>
-                     <span className="text-blue-400">~/rest-express</span>
-                     <span className="text-foreground"># This is a simulation of what happens when you run commands</span>
+                     <span className="text-blue-400">~/nexusos</span>
+                     <span className="text-foreground"># Welcome to NexusOS Terminal</span>
                    </div>
                    <div className="flex gap-2">
                      <span className="text-green-500">➜</span>
-                     <span className="text-blue-400">~/rest-express</span>
-                     <span className="text-foreground">wget &lt;https://replit.com/@nexusosdaily/NexusOS&gt;</span>
+                     <span className="text-blue-400">~/nexusos</span>
+                     <span className="text-foreground">npm run dev</span>
                    </div>
-                   <div className="text-red-400 pl-4">
-                     bash: syntax error near unexpected token `newline'
+                   <div className="text-muted-foreground pl-4">
+                     Starting NexusOS development server...<br/>
+                     Compiling TypeScript...<br/>
+                     <span className="text-green-400">Server ready at http://localhost:5000</span>
+                   </div>
+                   <div className="flex gap-2 pt-4">
+                     <span className="text-green-500">➜</span>
+                     <span className="text-blue-400">~/nexusos</span>
+                     <span className="text-foreground"># NexusOS P2P Hub initialized successfully!</span>
                    </div>
                    <div className="flex gap-2 pt-2">
                      <span className="text-green-500">➜</span>
-                     <span className="text-blue-400">~/rest-express</span>
-                     <span className="text-foreground"># Remove the &lt; &gt; brackets! Try this:</span>
+                     <span className="text-blue-400">~/nexusos</span>
+                     <span className="text-foreground"># Wavelength cryptography module loaded</span>
                    </div>
-                   <div className="flex gap-2">
-                     <span className="text-green-500">➜</span>
-                     <span className="text-blue-400">~/rest-express</span>
-                     <span className="text-foreground">wget https://replit.com/@nexusosdaily/NexusOS.zip</span>
-                   </div>
-                   <div className="text-foreground pl-4">
-                     wget: command not installed, but was located via Nix.<br/>
-                     package: wget  1.21.4  Tool for retrieving files using HTTP, HTTPS, and FTP<br/>
-                     <span className="text-yellow-400">Would you like to run wget from Nix and add it to your project? [Yn]:</span> <span className="text-foreground">Y</span>
-                   </div>
-                   <div className="text-muted-foreground pl-4 pt-2">
-                     wget  1.21.4  Tool for retrieving files using HTTP, HTTPS, and FTP<br/>
-                     Adding wget to .replit<br/>
-                     --2025-12-05 22:41:35--  https://replit.com/@nexusosdaily/NexusOS.zip<br/>
-                     Resolving replit.com (replit.com)... 104.18.35.46...<br/>
-                     Connecting to replit.com (replit.com)|104.18.35.46|:443... connected.<br/>
-                     HTTP request sent, awaiting response... 403 Forbidden<br/>
-                     <span className="text-red-400">2025-12-05 22:41:36 ERROR 403: Forbidden.</span>
-                   </div>
-                   <div className="flex gap-2 pt-4">
-                     <span className="text-green-500">➜</span>
-                     <span className="text-blue-400">~/rest-express</span>
-                     <span className="text-foreground"># Download complete! Now unzipping...</span>
-                   </div>
-                   <div className="flex gap-2">
-                     <span className="text-green-500">➜</span>
-                     <span className="text-blue-400">~/rest-express</span>
-                     <span className="text-foreground">unzip NexusOS.zip -x "*/node_modules/*"</span>
-                   </div>
-                   <div className="text-muted-foreground pl-4">
-                     Archive:  NexusOS.zip<br/>
-                     <span className="text-red-400">Error: End-of-central-directory signature not found.</span><br/>
-                     <span className="text-red-400">The file is corrupted (Google Drive blocked it).</span>
-                   </div>
-                   <div className="flex gap-2 pt-4">
-                     <span className="text-green-500">➜</span>
-                     <span className="text-blue-400">~/rest-express</span>
-                     <span className="text-foreground"># 🛑 AUTOMATIC IMPORT FAILED.</span>
-                   </div>
-                   <div className="text-muted-foreground pl-4 space-y-1">
-                     The file is too large (1.5GB) and Google Drive is blocking a clean download.<br/>
-                     We cannot fix this from inside Replit.<br/>
-                     <br/>
-                     <span className="text-yellow-400 font-bold">YOU MUST DO THIS MANUALLY:</span>
-                   </div>
-                   <div className="flex gap-2 pt-4">
-                     <span className="text-green-500">➜</span>
-                     <span className="text-blue-400">~/rest-express</span>
-                     <span className="text-foreground"># 1. On your computer, unzip the file.</span>
-                   </div>
-                   <div className="flex gap-2">
-                     <span className="text-green-500">➜</span>
-                     <span className="text-blue-400">~/rest-express</span>
-                     <span className="text-foreground"># 2. DELETE the 'node_modules' folder.</span>
-                   </div>
-                   <div className="flex gap-2">
-                     <span className="text-green-500">➜</span>
-                     <span className="text-blue-400">~/rest-express</span>
-                     <span className="text-foreground"># 3. Zip it again (It will be tiny ~50MB).</span>
-                   </div>
-                   <div className="flex gap-2">
-                     <span className="text-green-500">➜</span>
-                     <span className="text-blue-400">~/rest-express</span>
-                     <span className="text-foreground"># 4. Drag & Drop into the Replit File Sidebar (Left) 👈</span>
-                   </div>
-                   <div className="text-muted-foreground pl-4 pt-4 border-l-2 border-blue-500/30 ml-2 space-y-4">
-                     <div>
-                       <span className="text-yellow-400 font-bold">Great question! NO, you do NOT need it.</span><br/>
-                       The <span className="text-red-400">.git</span> folder is just "history". It can be huge and block uploads.
+                   <div className="text-muted-foreground pl-4 pt-2 border-l-2 border-green-500/30 ml-2 space-y-2">
+                     <div className="flex items-center gap-2">
+                       <CheckCircle className="w-4 h-4 text-green-500" />
+                       <span className="text-green-400">WNSP Protocol initialized</span>
                      </div>
-                     
-                     <div className="grid grid-cols-1 gap-4 text-xs">
-                       <div className="border border-red-500/30 bg-red-500/5 p-4 rounded">
-                         <div className="text-red-400 font-bold mb-2 flex items-center gap-2">
-                           <Trash2 className="w-4 h-4" />
-                           DELETE THESE FOLDERS BEFORE ZIPPING
-                         </div>
-                         <div className="grid grid-cols-2 gap-4">
-                           <div>
-                             <div className="font-bold text-foreground">1. node_modules</div>
-                             <div className="text-muted-foreground">The "Groceries" (We auto-install these)</div>
-                           </div>
-                           <div>
-                             <div className="font-bold text-foreground">2. .git</div>
-                             <div className="text-muted-foreground">The "History" (Too heavy, not needed)</div>
-                           </div>
-                         </div>
-                       </div>
-                       
-                       <div className="border border-green-500/30 bg-green-500/5 p-4 rounded">
-                         <div className="text-green-400 font-bold mb-2 flex items-center gap-2">
-                           <CheckCircle className="w-4 h-4" />
-                           KEEP ONLY THESE
-                         </div>
-                         <ul className="list-disc list-inside space-y-1 text-foreground/80">
-                           <li>src/</li>
-                           <li>server/</li>
-                           <li>public/</li>
-                           <li>package.json</li>
-                         </ul>
-                       </div>
+                     <div className="flex items-center gap-2">
+                       <CheckCircle className="w-4 h-4 text-green-500" />
+                       <span className="text-green-400">Lambda Boson engine ready</span>
                      </div>
-
-                     <div className="text-sm text-foreground/90">
-                       <b>Try this:</b> Delete the <code>.git</code> folder from your recovery files, zip it again, and it will be TINY (probably less than 10MB). Then upload that!
+                     <div className="flex items-center gap-2">
+                       <CheckCircle className="w-4 h-4 text-green-500" />
+                       <span className="text-green-400">P2P mesh network active</span>
                      </div>
                    </div>
                 </div>
