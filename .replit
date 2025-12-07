@@ -18,3 +18,14 @@ packages = ["glibcLocales"]
 
 [agent]
 integrations = ["github:1.0.0"]
+
+[workflows]
+
+[[workflows.workflow]]
+name = "Start application"
+mode = "sequential"
+author = 49759428
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
