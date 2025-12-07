@@ -1,0 +1,45 @@
+
+# Force push again
+git push origin main --force
+WARNING: git-filter-branch has a glut of gotchas generating mangled history
+     rewrites.  Hit Ctrl-C before proceeding to abort, then use an
+     alternative filtering tool such as 'git filter-repo'
+     (https://github.com/newren/git-filter-repo/) instead.  See the
+     filter-branch manual page for more details; to squelch this warning,
+     set FILTER_BRANCH_SQUELCH_WARNING=1.
+Proceeding with filter-branch...
+
+Rewrite a533f8dea1d947825f5d213df39196da13870824 (764/782) (30 seconds passed, remaining 0 predicted)    rm 'attached_assets/attached_assets.zip'
+Rewrite b1cf80c15b3ed1409e8033911f4d0954719e58b3 (764/782) (30 seconds passed, remaining 0 predicted)    rm 'attached_assets/attached_assets.zip'
+Rewrite e42e4b1989e30e4538dfde7c761be9477ef8f8af (764/782) (30 seconds passed, remaining 0 predicted)    
+Ref 'refs/heads/main' was rewritten
+Ref 'refs/heads/replit-agent' was rewritten
+Ref 'refs/remotes/gitsafe-backup/main' was rewritten
+Ref 'refs/remotes/origin/main' was rewritten
+Ref 'refs/replit/agent-ledger' was rewritten
+Enumerating objects: 511, done.
+Counting objects: 100% (511/511), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (450/450), done.
+Writing objects: 100% (511/511), 123.99 MiB | 5.80 MiB/s, done.
+Total 511 (delta 49), reused 324 (delta 18), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (49/49), done.
+To https://github.com/nexusosdaily-code/NexusOS.git
+ + 0fc1d1a...3c553e9 main -> main (forced update)
+~/workspace$ git push origin main --force
+Everything up-to-date
+~/workspace$ # Add the WNSP-P2P-Hub as a new remote
+git remote add wnsp https://github.com/nexusosdaily-code/WNSP-P2P-Hub.git
+
+# Push to that repository
+git push wnsp main --force
+Enumerating objects: 511, done.
+Counting objects: 100% (511/511), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (450/450), done.
+Writing objects: 100% (511/511), 123.99 MiB | 5.79 MiB/s, done.
+Total 511 (delta 49), reused 324 (delta 18), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (49/49), done.
+To https://github.com/nexusosdaily-code/WNSP-P2P-Hub.git
+ + 5428100...3c553e9 main -> main (forced update)
+~/workspace$ 
