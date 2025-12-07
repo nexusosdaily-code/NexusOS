@@ -1,0 +1,168 @@
+# Overview
+
+This is a full-stack web application implementing the WNSP (Wavelength Network Signaling Protocol) P2P Hub - a physics-based blockchain and communication system. The project combines a React/TypeScript frontend with an Express/Node.js backend, utilizing PostgreSQL for data persistence. The application implements novel cryptographic and economic systems based on electromagnetic wave physics and Lambda Boson theory, featuring phone-based authentication, NXT token wallets, and peer-to-peer media sharing.
+
+# User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+# System Architecture
+
+## Frontend Architecture
+
+**Framework**: React 18 with TypeScript
+- **Build Tool**: Vite with custom plugins for runtime error handling and meta image management
+- **UI Framework**: Radix UI components with shadcn/ui design system
+- **Styling**: Tailwind CSS v4 with CSS variables for theming
+- **State Management**: TanStack React Query for server state
+- **Forms**: React Hook Form with Zod validation via @hookform/resolvers
+
+**Key Design Decisions**:
+- Component library follows the "New York" style from shadcn/ui
+- Custom Vite plugin (`vite-plugin-meta-images`) dynamically updates OpenGraph meta tags for Replit deployments
+- Monorepo structure with client code isolated in `/client` directory
+- Path aliases configured for clean imports (`@/`, `@shared/`, `@assets/`)
+
+## Backend Architecture
+
+**Runtime**: Node.js with TypeScript (ESM modules)
+- **Framework**: Express.js (inferred from package.json dependencies)
+- **Development Server**: tsx for TypeScript execution
+- **Build Process**: Custom build script (`script/build.ts`) compiling to CommonJS for production
+- **Session Management**: PostgreSQL-backed sessions via `connect-pg-simple`
+
+**Key Design Decisions**:
+- Dual-mode execution: development uses `tsx` for hot-reload, production uses compiled CommonJS bundle
+- Separation of development and build commands with explicit NODE_ENV settings
+- Express server located in `/server` directory
+
+## Data Layer
+
+**Database**: PostgreSQL (configured via Drizzle ORM)
+- **ORM**: Drizzle ORM v0.39.3
+- **Schema Location**: `/shared/schema.ts` (shared between client and server)
+- **Migrations**: Stored in `/migrations` directory
+- **Schema-to-Type Safety**: drizzle-zod for runtime validation
+
+**Key Design Decisions**:
+- Database URL required via environment variable (`DATABASE_URL`)
+- Shared schema definition enables type safety across frontend and backend
+- Session storage uses PostgreSQL directly (`connect-pg-simple`)
+
+## Authentication & Wallet System
+
+**Authentication**: Phone number-based registration
+- New users receive 500,000,000 units (5 NXT tokens) upon registration
+- Phone numbers stored with bcrypt hashing
+- **Note**: Current implementation is prototype-level - SMS verification NOT implemented (requires Twilio integration for production)
+
+**Wallet System**:
+- NXT token economics: 8 decimals (100,000,000 units = 1 NXT)
+- Total supply: 21 billion NXT
+- Integration with physics-based transaction costs using E=hf (Planck's equation)
+
+## Physics-Based Protocol Layer
+
+**WNSP Protocol**: Novel communication protocol replacing cryptographic hashing with electromagnetic wave physics
+- Maxwell equation validation instead of SHA-256
+- Wavelength-based addressing (170+ scientific character encoding)
+- Quantum economics: transaction costs derived from wavelength→frequency→energy calculations
+- Message validation through wave interference patterns
+
+**Lambda Boson Theory**: 
+- Core equation: Λ = hf/c² (mass-equivalent of oscillation)
+- Extends Einstein's E=mc² to oscillating quanta
+- Implements spectral authority bands (NANO through PLANCK governance tiers)
+
+## Multi-Agent & Task Orchestration
+
+**DAG-Based Workflows**: Task orchestration system with domain-specific modules
+- Domain modules: data processing, DevOps, content management, wavelength cryptography
+- Directed Acyclic Graph (DAG) execution engine
+- Handler registration system for extensible task types
+
+**Wavelength Cryptography**: Encryption/decryption based on electromagnetic theory
+- Frequency Shift Encryption (FSE): Simulates electron energy transitions
+- Amplitude Modulation Encryption (AME): Photon intensity variation
+- Phase Modulation Encryption (PME): Wave interference patterns
+- Quantum-Inspired Multi-Layer (QIML): Combined approach
+
+## Content & Media System
+
+**Media Engine**: P2P media sharing with physics-based cost calculations
+- Mesh networking capabilities for device-to-device transfer
+- Chunk-based file distribution (207 chunks for ~13MB files)
+- Energy cost estimation per upload using wavelength calculations
+- WebRTC + Socket.IO for live streaming
+- HTTP Range Request support for progressive loading
+
+**Supported Formats**: MP3, MP4, PDF (100MB max)
+- Encryption support for shared files
+- Automatic energy cost reservation with refund mechanism
+
+## Development Tools
+
+**Replit Integration**:
+- Custom Vite plugins for Replit-specific features (cartographer, dev banner)
+- Automatic deployment URL detection for meta tag updates
+- Runtime error modal overlay in development
+
+**Type Safety**:
+- Strict TypeScript configuration across all modules
+- Incremental compilation with build info caching
+- Path-based imports with baseUrl configuration
+
+# External Dependencies
+
+## Third-Party Services
+
+**Octokit (GitHub API)**: Integration with GitHub REST API v22.0.0
+- Used for repository management and contribution tracking
+
+**PostgreSQL Database**: 
+- Connection required via `DATABASE_URL` environment variable
+- Used for user accounts, wallet balances, session storage, and transaction history
+- Session management via `connect-pg-simple` package
+
+**Planned Integrations** (not yet implemented):
+- **Twilio/SMS Provider**: Required for production phone verification (currently prototype accepts numbers without verification)
+
+## Core Libraries
+
+**UI & Styling**:
+- Radix UI component primitives (accordion, dialog, dropdown, tooltip, etc.)
+- Tailwind CSS with @tailwindcss/vite plugin
+- Lucide React for iconography
+- class-variance-authority + clsx for conditional styling
+
+**Forms & Validation**:
+- React Hook Form for form state
+- Zod for schema validation
+- @hookform/resolvers for integration
+
+**Data Fetching**:
+- TanStack React Query v5.60.5 for server state management
+
+**Date Handling**:
+- date-fns v3.6.0 for date manipulation
+
+**Media & Interaction**:
+- embla-carousel-react for carousel components
+- cmdk for command menu interface
+
+**Build Tools**:
+- Vite as primary build tool
+- tsx for TypeScript execution in development
+- PostCSS with Autoprefixer
+- Custom Vite plugins for Replit integration
+
+**Database**:
+- Drizzle ORM with drizzle-kit for migrations
+- drizzle-zod for schema validation
+
+## Development Dependencies
+
+**Replit Plugins**:
+- @replit/vite-plugin-runtime-error-modal
+- @replit/vite-plugin-cartographer (development only)
+- @replit/vite-plugin-dev-banner (development only)
