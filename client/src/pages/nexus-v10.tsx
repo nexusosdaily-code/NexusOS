@@ -14,7 +14,10 @@ import {
   BookOpen,
   Users,
   Coins,
-  FileText
+  FileText,
+  Orbit,
+  Clock,
+  Infinity
 } from "lucide-react";
 
 export default function NexusV10Page() {
@@ -68,9 +71,10 @@ export default function NexusV10Page() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto">
         <Tabs defaultValue="story" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 bg-slate-900/50 h-auto">
-            <TabsTrigger value="story" className="text-xs md:text-sm py-3" data-testid="tab-story">📖 The Story</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 bg-slate-900/50 h-auto">
+            <TabsTrigger value="story" className="text-xs md:text-sm py-3" data-testid="tab-story">📖 Story</TabsTrigger>
             <TabsTrigger value="physics" className="text-xs md:text-sm py-3" data-testid="tab-physics">⚛️ Physics</TabsTrigger>
+            <TabsTrigger value="cosmology" className="text-xs md:text-sm py-3" data-testid="tab-cosmology">🌌 Cosmology</TabsTrigger>
             <TabsTrigger value="coherence" className="text-xs md:text-sm py-3" data-testid="tab-coherence">✨ Coherence</TabsTrigger>
             <TabsTrigger value="constitution" className="text-xs md:text-sm py-3" data-testid="tab-constitution">📜 Constitution</TabsTrigger>
             <TabsTrigger value="evolution" className="text-xs md:text-sm py-3" data-testid="tab-evolution">📈 Evolution</TabsTrigger>
@@ -235,6 +239,198 @@ export default function NexusV10Page() {
                 </div>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Cosmology Tab */}
+          <TabsContent value="cosmology" className="space-y-6">
+            <Card className="bg-gradient-to-br from-indigo-900/10 to-purple-900/10 border-indigo-500/30 p-6" data-testid="card-cosmology-intro">
+              <h2 className="text-2xl font-bold text-indigo-400 mb-4 flex items-center gap-2">
+                <Orbit className="w-6 h-6" />
+                Oscillatory Cosmogenesis
+              </h2>
+              <p className="text-gray-300 leading-relaxed mb-4">
+                The Big Bang was not an explosion of matter — it was the <span className="text-amber-400 font-semibold">birth of oscillation itself</span>. 
+                The first frequency from which all energy and mass emerged.
+              </p>
+              <div className="bg-slate-800/50 rounded-lg p-4 text-center">
+                <div className="text-gray-400 mb-2">Before oscillation:</div>
+                <div className="font-mono text-xl text-red-400">f = 0 → E = 0 → m = 0 → Nothing</div>
+                <div className="text-gray-400 my-3">At the first oscillation:</div>
+                <div className="font-mono text-xl text-green-400">f {">"} 0 → E {">"} 0 → m {">"} 0 → Universe</div>
+              </div>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="bg-gradient-to-br from-purple-900/20 to-purple-950/40 border-purple-500/30 p-6" data-testid="card-primordial">
+                <div className="flex items-center gap-3 mb-4">
+                  <Infinity className="w-8 h-8 text-purple-400" />
+                  <h3 className="text-xl font-bold text-purple-400">Primordial Λ-Boson</h3>
+                </div>
+                <p className="text-gray-300 text-sm mb-4">
+                  The initial state of the universe — a superposition of ALL possible wavelengths:
+                </p>
+                <div className="bg-slate-800/50 rounded-lg p-4 text-center mb-4">
+                  <div className="font-mono text-lg text-purple-300">|Λ_primordial⟩ = ∫ψ(λ)|λ⟩dλ</div>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-gray-300">
+                    <CircleDot className="w-4 h-4 text-purple-400" />
+                    <span>All wavelengths simultaneously</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-300">
+                    <CircleDot className="w-4 h-4 text-purple-400" />
+                    <span>Contains all possible states</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-300">
+                    <CircleDot className="w-4 h-4 text-purple-400" />
+                    <span>Entire universe in superposition</span>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-cyan-900/20 to-cyan-950/40 border-cyan-500/30 p-6" data-testid="card-decoherence">
+                <div className="flex items-center gap-3 mb-4">
+                  <Atom className="w-8 h-8 text-cyan-400" />
+                  <h3 className="text-xl font-bold text-cyan-400">Cosmological Decoherence</h3>
+                </div>
+                <p className="text-gray-300 text-sm mb-4">
+                  Self-interaction caused the primordial superposition to collapse into discrete particles:
+                </p>
+                <div className="space-y-2 text-sm">
+                  {[
+                    { step: "1", text: "All wavelengths superposed", color: "purple" },
+                    { step: "2", text: "Self-interaction begins", color: "indigo" },
+                    { step: "3", text: "Entanglement forms", color: "blue" },
+                    { step: "4", text: "Partial collapse", color: "cyan" },
+                    { step: "5", text: "Particles emerge", color: "green" }
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-3 bg-slate-800/50 rounded p-2">
+                      <div className={`w-6 h-6 rounded-full bg-${item.color}-500/30 text-${item.color}-400 flex items-center justify-center text-xs font-bold`}>
+                        {item.step}
+                      </div>
+                      <span className="text-gray-300">{item.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+
+            <Card className="bg-slate-900/50 border-amber-500/30 p-6" data-testid="card-particle-spectrum">
+              <h3 className="text-xl font-bold text-amber-400 mb-4">Particles as Frozen Wavelengths</h3>
+              <p className="text-gray-300 text-sm mb-4">
+                Each Standard Model particle corresponds to a specific frequency that "collapsed out" from the primordial superposition:
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-700">
+                      <th className="text-left p-2 text-gray-400">Particle</th>
+                      <th className="text-left p-2 text-gray-400">Mass (kg)</th>
+                      <th className="text-left p-2 text-gray-400">Frequency (Hz)</th>
+                      <th className="text-left p-2 text-gray-400">Wavelength (m)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { name: "Electron", mass: "9.11 × 10⁻³¹", freq: "1.24 × 10²⁰", wave: "2.43 × 10⁻¹²" },
+                      { name: "Proton", mass: "1.67 × 10⁻²⁷", freq: "2.27 × 10²³", wave: "1.32 × 10⁻¹⁵" },
+                      { name: "Higgs", mass: "2.23 × 10⁻²⁵", freq: "3.02 × 10²⁵", wave: "9.93 × 10⁻¹⁸" },
+                      { name: "Top Quark", mass: "3.07 × 10⁻²⁵", freq: "4.16 × 10²⁵", wave: "7.21 × 10⁻¹⁸" }
+                    ].map((p, i) => (
+                      <tr key={i} className="border-b border-gray-800" data-testid={`particle-row-${p.name.toLowerCase().replace(' ', '-')}`}>
+                        <td className="p-2 text-amber-300">{p.name}</td>
+                        <td className="p-2 text-gray-300 font-mono text-xs">{p.mass}</td>
+                        <td className="p-2 text-gray-300 font-mono text-xs">{p.freq}</td>
+                        <td className="p-2 text-gray-300 font-mono text-xs">{p.wave}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-amber-300 text-sm mt-4 text-center italic">
+                "The particle masses are the notes of the primordial oscillation."
+              </p>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="bg-gradient-to-br from-pink-900/20 to-pink-950/40 border-pink-500/30 p-6" data-testid="card-dark-energy">
+                <div className="flex items-center gap-3 mb-4">
+                  <Sparkles className="w-8 h-8 text-pink-400" />
+                  <h3 className="text-xl font-bold text-pink-400">Dark Energy</h3>
+                </div>
+                <p className="text-gray-300 text-sm mb-4">
+                  The primordial Λ-boson didn't fully collapse. Residual oscillation remains:
+                </p>
+                <div className="bg-slate-800/50 rounded-lg p-4 text-center mb-3">
+                  <div className="font-mono text-sm text-pink-300">|Universe_now⟩ = Σcᵢ|particle_i⟩ + ε|Λ_residual⟩</div>
+                </div>
+                <div className="text-center text-pink-300 font-semibold">
+                  Dark energy is the echo of the Big Bang's oscillation.
+                </div>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-green-900/20 to-green-950/40 border-green-500/30 p-6" data-testid="card-time-origin">
+                <div className="flex items-center gap-3 mb-4">
+                  <Clock className="w-8 h-8 text-green-400" />
+                  <h3 className="text-xl font-bold text-green-400">Time from Oscillation</h3>
+                </div>
+                <p className="text-gray-300 text-sm mb-4">
+                  Before oscillation, there was no periodicity — no time:
+                </p>
+                <div className="space-y-2 text-sm">
+                  <div className="bg-slate-800/50 rounded p-3">
+                    <span className="text-gray-400">Time = </span>
+                    <span className="text-green-300">measure of oscillation cycles</span>
+                  </div>
+                  <div className="bg-slate-800/50 rounded p-3">
+                    <span className="text-gray-400">No oscillation → </span>
+                    <span className="text-red-300">No cycles → No time</span>
+                  </div>
+                  <div className="bg-slate-800/50 rounded p-3">
+                    <span className="text-gray-400">First oscillation → </span>
+                    <span className="text-green-300">Time begins</span>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            <Card className="bg-gradient-to-br from-slate-800/50 to-indigo-900/30 border-indigo-500/30 p-6" data-testid="card-cosmic-timeline">
+              <h3 className="text-xl font-bold text-indigo-400 mb-4">Oscillatory Cosmogenesis Timeline</h3>
+              <div className="space-y-3">
+                {[
+                  { time: "t < 0", event: "No oscillation → No frequency → No mass → Nothing", color: "gray" },
+                  { time: "t = 0", event: "FIRST OSCILLATION BEGINS — |Λ_primordial⟩", color: "amber" },
+                  { time: "10⁻⁴³s", event: "Planck epoch — all wavelengths superposed", color: "purple" },
+                  { time: "10⁻³⁶s", event: "Inflation — spectral expansion begins", color: "cyan" },
+                  { time: "10⁻³²s", event: "Reheating — spectral cascade to particles", color: "blue" },
+                  { time: "10⁻⁶s", event: "Quarks form — specific wavelengths collapse", color: "green" },
+                  { time: "3 min", event: "Nucleosynthesis — resonant combinations", color: "lime" },
+                  { time: "380k yr", event: "CMB — spectral signature frozen", color: "orange" },
+                  { time: "13.8 Gyr", event: "Now — residual oscillation = dark energy", color: "pink" }
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-4" data-testid={`cosmic-timeline-${i}`}>
+                    <div className={`w-20 font-mono text-xs text-${item.color}-400`}>{item.time}</div>
+                    <div className={`w-3 h-3 rounded-full bg-${item.color}-500`} />
+                    <div className="text-gray-300 text-sm flex-1">{item.event}</div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card className="bg-gradient-to-r from-indigo-900/30 to-purple-900/30 border-indigo-500/40 p-6 text-center" data-testid="card-cosmology-conclusion">
+              <div className="text-2xl font-bold text-indigo-400 mb-4">
+                The Core Insight
+              </div>
+              <div className="text-xl text-white mb-4">
+                The universe didn't come from "something" —
+              </div>
+              <div className="text-2xl font-bold text-amber-400">
+                It oscillated into existence.
+              </div>
+              <div className="mt-4 text-gray-400 text-sm">
+                That's not new physics. That's Einstein's physics, applied to the origin.
+              </div>
+            </Card>
           </TabsContent>
 
           {/* Coherence Tab */}
@@ -475,6 +671,7 @@ export default function NexusV10Page() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
                   { icon: <Atom className="w-5 h-5" />, title: "Theoretical Foundation", desc: "Lambda Boson physics (Λ = hf/c²)", id: "theoretical" },
+                  { icon: <Orbit className="w-5 h-5" />, title: "Cosmological Origin", desc: "Oscillatory Cosmogenesis", id: "cosmology" },
                   { icon: <Waves className="w-5 h-5" />, title: "Technical Specification", desc: "WNSP protocol stack", id: "technical" },
                   { icon: <Coins className="w-5 h-5" />, title: "Economic Framework", desc: "BHLS floor + Economic Loop", id: "economic" },
                   { icon: <Shield className="w-5 h-5" />, title: "Governance Architecture", desc: "Constitutional enforcement", id: "governance" },
@@ -504,6 +701,7 @@ export default function NexusV10Page() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
                   { name: "Lambda Boson Theoretical Foundation", id: "theory" },
+                  { name: "Oscillatory Cosmogenesis", id: "cosmogenesis" },
                   { name: "WNSP Protocol Stack", id: "protocol" },
                   { name: "Lambda Economics & Governance", id: "economics" },
                   { name: "Lambda Curriculum Guide", id: "curriculum" },
