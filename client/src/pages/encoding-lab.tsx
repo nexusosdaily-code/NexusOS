@@ -6,28 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Zap, Waves, ArrowRight, Atom } from "lucide-react";
+import { Zap, Waves, ArrowRight, Atom, AlertCircle } from "lucide-react";
 
-const PLANCK_CONSTANT = 6.62607015e-34;
-const SPEED_OF_LIGHT = 299792458;
 const VISIBLE_MIN_NM = 380;
 const VISIBLE_MAX_NM = 780;
-
-function lambdaMass(frequencyHz: number): number {
-  return (PLANCK_CONSTANT * frequencyHz) / (SPEED_OF_LIGHT ** 2);
-}
-
-function wavelengthToFrequency(wavelengthNm: number): number {
-  const wavelengthM = wavelengthNm * 1e-9;
-  return SPEED_OF_LIGHT / wavelengthM;
-}
-
-function charToWavelength(char: string): number {
-  const code = char.length === 1 ? char.charCodeAt(0) : char.split('').reduce((sum, c) => sum + c.charCodeAt(0), 0);
-  const normalized = (code % 256) / 255.0;
-  return VISIBLE_MIN_NM + (normalized * (VISIBLE_MAX_NM - VISIBLE_MIN_NM));
-}
 
 function wavelengthToColor(wavelengthNm: number): string {
   let r = 0, g = 0, b = 0;
@@ -69,51 +51,11 @@ interface EncodingResult {
   recipient: string;
   frames: LambdaFrame[];
   totalLambdaMass: number;
+  hash: string;
   efficiency: {
     characters: number;
     particles: number;
     charsPerParticle: number;
-  };
-}
-
-function encodeLambdaMessage(content: string, sender: string, recipient: string, intensity: number, cycles: number): EncodingResult {
-  const frames: LambdaFrame[] = [];
-  const padded = content.length % 2 === 0 ? content : content + " ";
-  
-  for (let i = 0; i < padded.length; i += 2) {
-    const char1 = padded[i];
-    const char2 = padded[i + 1];
-    
-    const lambda1 = charToWavelength(char1);
-    const lambda2 = charToWavelength(char2);
-    const freq1 = wavelengthToFrequency(lambda1);
-    const freq2 = wavelengthToFrequency(lambda2);
-    const mass1 = lambdaMass(freq1);
-    const mass2 = lambdaMass(freq2);
-    
-    frames.push({
-      charPair: [char1, char2],
-      wavelengthStart: lambda1,
-      wavelengthEnd: lambda2,
-      frequencyStart: freq1,
-      frequencyEnd: freq2,
-      lambdaMass: (mass1 + mass2) / 2
-    });
-  }
-  
-  const totalMass = frames.reduce((sum, f) => sum + f.lambdaMass, 0);
-  
-  return {
-    message: content,
-    sender,
-    recipient,
-    frames,
-    totalLambdaMass: totalMass,
-    efficiency: {
-      characters: content.length,
-      particles: frames.length,
-      charsPerParticle: content.length / frames.length
-    }
   };
 }
 
@@ -125,14 +67,61 @@ export default function EncodingLab() {
   const [cycles, setCycles] = useState([1]);
   const [result, setResult] = useState<EncodingResult | null>(null);
   const [isEncoding, setIsEncoding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleEncode = () => {
+  const handleEncode = async () => {
     setIsEncoding(true);
-    setTimeout(() => {
-      const encoded = encodeLambdaMessage(message, sender, recipient, intensity[0], cycles[0]);
-      setResult(encoded);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/spectral/encode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: message,
+          sender: sender,
+          recipient: recipient,
+          intensity: intensity[0],
+          cycles: cycles[0],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Encoding failed');
+      }
+
+      const data = await response.json();
+      
+      const frames: LambdaFrame[] = data.message.frames.map((f: any) => ({
+        charPair: f.char_pair,
+        wavelengthStart: f.wavelength_start_nm,
+        wavelengthEnd: f.wavelength_end_nm,
+        frequencyStart: f.frequency_start_hz,
+        frequencyEnd: f.frequency_end_hz,
+        lambdaMass: f.lambda_mass_kg,
+      }));
+
+      setResult({
+        message: data.message.content,
+        sender: data.message.sender,
+        recipient: data.message.recipient,
+        frames,
+        totalLambdaMass: data.message.total_lambda_mass_kg,
+        hash: data.message.hash,
+        efficiency: {
+          characters: data.efficiency.characters,
+          particles: data.efficiency.particles,
+          charsPerParticle: data.efficiency.chars_per_particle,
+        },
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to encode message');
+    } finally {
       setIsEncoding(false);
-    }, 500);
+    }
   };
 
   return (
