@@ -82,6 +82,23 @@ Preferred communication style: Simple, everyday language.
 - Normalization checking and expected energy calculations
 - Located at `/workspace/wavefield`
 
+**Lambda Gate Substrate v4** (New in v1.2.0):
+- 8 primitive photonic gate operators for Lambda mode transformations
+- CE-1 Coherence Engineering protocol with energy pool management
+- Gates: Phase-Shift, Gain, Mode-Mixer, OAM-Rotor, Phase-Gradient, Density-Swap, Coherence-Amplify, Stabilizer
+- Master Equation: E(ν, ℓ, t) ≥ h·ν·I(λ) + α·||K̂||² + β·O(L̂)
+- Located at `/wnsp_v7/substrate_v4.py`
+
+**K1 Energy Infrastructure** (New in v1.3.0):
+- Kardashev Type I civilization energy roadmap
+- Four integrated energy modules:
+  1. **ResonanceHarvesterV2**: Tesla-inspired planetary field coupling (Schumann, geomagnetic)
+  2. **OrbitalSolarArray**: Space-based solar with laser power transmission via OAM multiplexing
+  3. **FusionPhotonics**: Lambda Gate optimized fusion reactors (2.2× efficiency boost)
+  4. **K1EnergyMarket**: NXT token integrated decentralized energy trading
+- Lambda Gate contributions: 5× Q-factor from Coherence-Amplify, 64.6% end-to-end solar efficiency
+- Located at `/wnsp_v7/k1_energy.py` and `/wnsp_v7/k1_roadmap.py`
+
 ## Multi-Agent & Task Orchestration
 
 **DAG-Based Workflows**: Task orchestration system with domain-specific modules
