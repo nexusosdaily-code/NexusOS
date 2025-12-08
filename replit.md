@@ -99,6 +99,65 @@ Preferred communication style: Simple, everyday language.
 - Lambda Gate contributions: 5× Q-factor from Coherence-Amplify, 64.6% end-to-end solar efficiency
 - Located at `/wnsp_v7/k1_energy.py` and `/wnsp_v7/k1_roadmap.py`
 
+**Photonic Computing Substrate** (New in v1.5.0):
+- Photonic Logic Gates: AND, OR, NOT, XOR using wave interference
+- Wavelength-Division Computing: Parallel computation across spectral channels
+- OAM Qubit Registers: Information storage in orbital angular momentum
+- Lambda Processor Architecture: Composing gates into programs
+- K-Level: 0.75 (Photonic Computing mastery)
+- Located at `/wnsp_v7/photonic_computing.py`
+
+**Planetary Communications** (New in v1.6.0):
+- K-Level: 0.80 (Planetary Communications mastery)
+- Core Components:
+  1. **SpectralRelayMesh**: Global wavelength routing graph with Dijkstra pathfinding
+  2. **OAMChannelAllocator**: OAM mode management for 65+ channels per wavelength
+  3. **CoherenceRepeater**: Lambda Gate amplified relay stations (5× coherence boost)
+  4. **SpectrumQoSManager**: Traffic classification and flow admission control
+  5. **InterplanetaryLinkPlanner**: Deep space links (Earth-Moon: 1.28s, Earth-Mars: 12.5min)
+- Physics: Friis transmission, Shannon capacity, atmospheric attenuation models
+- Located at `/wnsp_v7/planetary_communications.py`
+
+**Resource Orchestration** (New in v1.7.0):
+- K-Level: 0.85 (Resource Orchestration mastery)
+- Core Components:
+  1. **WavelengthLedger**: Inventory tracking with spectral signatures for authenticity
+  2. **ResourceUnit**: Lambda mass valuation in NXT tokens (Λ = hf/c²)
+  3. **PhotonicManufacturingPipeline**: Bose-Einstein yield enhancement (14% boost)
+  4. **LogisticsWaveOptimizer**: Monge-Kantorovich optimal transport
+  5. **EnergyMassExchangeEngine**: Λ-based conversion economics
+  6. **AutonomousFleetCoordinator**: Distributed transport coordination
+- Physics: Continuity equation, spectral fingerprinting, element emission lines
+- Located at `/wnsp_v7/resource_orchestration.py`
+
+**Planetary Governance** (New in v1.8.0):
+- K-Level: 0.90 (Planetary Governance mastery)
+- Core Components:
+  1. **AuthorityBandRegistry**: 7-tier hierarchy from Individual to Planetary (wavelength-mapped)
+  2. **SigmaConstitutionEngine**: Charter articles with spectral encoding and immutability verification
+  3. **MultiSpectrumVoting**: Coherence-weighted voting with interference tallying
+  4. **DisputeResonanceMediator**: Arbitration via phase alignment and resonance
+  5. **CivicIntelligenceDashboard**: Governance health metrics and coherence visualization
+- Physics: Wave interference trust model T = Σ|c_i|²·cos²(Δφ_i), governance entropy
+- Located at `/wnsp_v7/planetary_governance.py`
+
+**K1 Integration Demo** (New in v1.9.0):
+- Complete integration of all five K1 civilization pillars
+- Demonstrates cross-pillar resource flows and coordination
+- Pillars: Energy (0.80) → Computing (0.75) → Communications (0.80) → Resources (0.85) → Governance (0.90)
+- Energy harvesting, photonic computation, message routing, manufacturing, and policy voting
+- Located at `/wnsp_v7/k1_integration_demo.py`
+
+**K1 Roadmap Progress**:
+| Milestone | K-Level | Status |
+|-----------|---------|--------|
+| Power Grids (K1 Energy) | 0.75-0.80 | ✅ Complete |
+| Photonic Computing | 0.75 | ✅ Complete |
+| Planetary Communications | 0.80 | ✅ Complete |
+| Resource Orchestration | 0.85 | ✅ Complete |
+| Planetary Governance | 0.90 | ✅ Complete |
+| K1 Integration | 0.90 | ✅ Complete |
+
 ## Multi-Agent & Task Orchestration
 
 **DAG-Based Workflows**: Task orchestration system with domain-specific modules
