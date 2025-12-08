@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   FileText, Shield, Wallet, Radio, Zap, 
-  Users, FlaskConical, Activity, Waves, Rocket 
+  Users, FlaskConical, Activity, Waves, Rocket, LogOut 
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 const features = [
   {
@@ -74,9 +75,31 @@ const features = [
 ];
 
 export default function LambdaPlaceholder() {
+  const { user, logout } = useAuth();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900">
       <div className="container mx-auto px-4 py-12">
+        <div className="flex justify-end mb-4">
+          <div className="flex items-center gap-4">
+            {user && (
+              <span className="text-gray-400 text-sm" data-testid="text-user-phone">
+                {user.phone}
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={logout}
+              className="border-red-500/30 text-red-300 hover:bg-red-600/20"
+              data-testid="btn-logout"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </div>
+        </div>
+
         <div className="text-center mb-12">
           <div className="text-6xl md:text-8xl font-light text-white tracking-widest mb-4" data-testid="text-lambda">
             Λ
@@ -112,19 +135,7 @@ export default function LambdaPlaceholder() {
           ))}
         </div>
 
-        <div className="mt-12 text-center">
-          <Link href="/auth">
-            <Button 
-              size="lg" 
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-              data-testid="btn-login"
-            >
-              Login / Register
-            </Button>
-          </Link>
-        </div>
-
-        <div className="mt-8 text-center text-gray-500 text-sm">
+        <div className="mt-12 text-center text-gray-500 text-sm">
           <p>Physics-based blockchain • Lambda Boson cryptography • E=hf economics</p>
         </div>
       </div>
