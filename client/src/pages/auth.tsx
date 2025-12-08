@@ -117,11 +117,9 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 p-4 md:p-8 flex items-center justify-center" data-testid="page-auth">
       <div className="w-full max-w-md">
-        <Link href="/">
-          <a className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6" data-testid="link-back">
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to NexusOS</span>
-          </a>
+        <Link href="/" className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6" data-testid="link-back">
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to NexusOS</span>
         </Link>
 
         <div className="text-center mb-8">
