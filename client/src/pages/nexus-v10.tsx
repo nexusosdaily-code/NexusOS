@@ -21,7 +21,8 @@ import {
   Infinity,
   Rocket,
   FlaskConical,
-  ExternalLink
+  ExternalLink,
+  Activity
 } from "lucide-react";
 
 export default function NexusV10Page() {
@@ -787,6 +788,21 @@ export default function NexusV10Page() {
                       <p className="text-gray-400 text-sm">Latest updates and substrate releases</p>
                     </div>
                     <ExternalLink className="w-5 h-5 text-gray-500 group-hover:text-green-400 transition-colors" />
+                  </div>
+                </Link>
+                <Link href="/workspace/wavefield">
+                  <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-lg border border-pink-500/20 hover:border-pink-500/50 hover:bg-slate-800/80 transition-all cursor-pointer group" data-testid="link-wavefield">
+                    <div className="w-12 h-12 rounded-full bg-pink-500/20 flex items-center justify-center">
+                      <Activity className="w-6 h-6 text-pink-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-white group-hover:text-pink-300 transition-colors">Wavefield Simulation</h4>
+                        <Badge className="bg-pink-500/20 text-pink-400 border-pink-500/30 text-xs">NEW</Badge>
+                      </div>
+                      <p className="text-gray-400 text-sm">Φ_λ(r,t) eigenstate superposition simulator</p>
+                    </div>
+                    <ExternalLink className="w-5 h-5 text-gray-500 group-hover:text-pink-400 transition-colors" />
                   </div>
                 </Link>
               </div>

@@ -12,6 +12,7 @@ import EncodingLab from "@/pages/encoding-lab";
 import AnalyticsPage from "@/pages/analytics";
 import TransmissionPage from "@/pages/transmission";
 import ResearchPage from "@/pages/research";
+import WavefieldPage from "@/pages/wavefield";
 import WalletPage from "@/pages/wallet";
 import AnnouncementsPage from "@/pages/announcements";
 import AnnouncementSubstrateV2Page from "@/pages/announcement-substrate-v2";
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/workspace/analytics" component={AnalyticsPage} />
       <Route path="/workspace/transmission" component={TransmissionPage} />
       <Route path="/workspace/research" component={ResearchPage} />
+      <Route path="/workspace/wavefield" component={WavefieldPage} />
       <Route path="/wallet" component={WalletPage} />
       <Route path="/announcements" component={AnnouncementsPage} />
       <Route path="/announcements/substrate-v2" component={AnnouncementSubstrateV2Page} />
