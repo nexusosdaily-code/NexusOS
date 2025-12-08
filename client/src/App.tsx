@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import LambdaPlaceholder from "@/pages/lambda-placeholder";
 import WNSPv7Page from "@/pages/wnsp-v7";
 import NexusV10Page from "@/pages/nexus-v10";
 import NexusV6Page from "@/pages/nexus-v6";
@@ -24,7 +25,7 @@ import NotFound from "@/pages/not-found";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={NexusV10Page} />
+      <Route path="/" component={LambdaPlaceholder} />
       <Route path="/v10" component={NexusV10Page} />
       <Route path="/v9" component={NexusV9Page} />
       <Route path="/v8" component={NexusV8Page} />
