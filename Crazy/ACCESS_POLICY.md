@@ -50,13 +50,31 @@ To access these specifications, you must:
 | **F** | K1 Roadmap Specification | Pathway simulation to Type I civilization |
 | **Simulator** | Pseudocode | Implementation reference for spectral_state simulator |
 
-## Implementation Files (v1.3.0)
+## Implementation Files (v1.4.0)
 
 | File | Lines | Description |
 |------|-------|-------------|
+| `sigma_field.py` | ~750 | **Σ-Field collective intelligence (Step 3)** |
 | `k1_energy.py` | ~1200 | Complete K1 energy infrastructure |
 | `k1_roadmap.py` | ~545 | K1 progression simulator |
 | `Lambda_Gate_Simulator.py` | - | Lambda Gate substrate simulator |
+
+---
+
+## Step 3 Announcement: Σ-Field Theory
+
+**How Multiple λ-Programs Form Collective Intelligence**
+
+The Σ-Field enables individual agents to transcend their limitations through coherent interaction:
+
+| Property | Individual | Collective (N=5) | Amplification |
+|----------|------------|------------------|---------------|
+| Coherence | 0.50 | 1.00 | 2.0× |
+| Power | 1.28 avg | 14.31 eff | 2.2× |
+| Knowledge | 2 domains | 5 domains | 2.5× |
+| Intelligence | 1.0 | 10.4 | **10.4×** |
+
+Key insight: **The whole is greater than the sum of its parts.**
 
 ---
 
