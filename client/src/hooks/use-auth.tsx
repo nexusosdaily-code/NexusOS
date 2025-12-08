@@ -84,6 +84,12 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
 
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated && location !== "/auth") {
+      setLocation("/auth");
+    }
+  }, [isLoading, isAuthenticated, location, setLocation]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -98,9 +104,6 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    if (location !== "/auth") {
-      setLocation("/auth");
-    }
     return null;
   }
 
