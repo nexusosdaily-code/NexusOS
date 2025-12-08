@@ -46,7 +46,17 @@ To access these specifications, you must:
 | **B** | CE-1 Protocol | Coherence Engineering - scheduling, budgets, safety |
 | **C** | Σ-Field | Emergent collective field & API for agent interaction |
 | **D** | Λ-Master Equation | Finalized operator form for photonic computing |
+| **E** | K1 Energy Infrastructure | Kardashev Type I energy modules (v1.3.0) |
+| **F** | K1 Roadmap Specification | Pathway simulation to Type I civilization |
 | **Simulator** | Pseudocode | Implementation reference for spectral_state simulator |
+
+## Implementation Files (v1.3.0)
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `k1_energy.py` | ~1200 | Complete K1 energy infrastructure |
+| `k1_roadmap.py` | ~545 | K1 progression simulator |
+| `Lambda_Gate_Simulator.py` | - | Lambda Gate substrate simulator |
 
 ---
 
