@@ -4,12 +4,13 @@ import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import {
   users, sessions, auditLogs, wallets, transactions,
-  versionRegistry, apiKeys, rateLimits, friendships,
+  versionRegistry, apiKeys, rateLimits, friendships, uploadedFiles,
   type User, type InsertUser, type Session, type InsertSession,
   type AuditLog, type InsertAuditLog, type Wallet, type InsertWallet,
   type Transaction, type InsertTransaction, type VersionRegistry,
   type InsertVersionRegistry, type ApiKey, type InsertApiKey,
   type RateLimit, type InsertRateLimit, type Friendship, type InsertFriendship,
+  type UploadedFile, type InsertUploadedFile,
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
@@ -72,6 +73,13 @@ export interface IStorage {
   getFriends(userId: string): Promise<Array<{ friendship: Friendship; friend: User }>>;
   getPendingRequests(userId: string): Promise<Array<{ friendship: Friendship; requester: User }>>;
   getSentRequests(userId: string): Promise<Array<{ friendship: Friendship; addressee: User }>>;
+
+  // File operations
+  createUploadedFile(file: InsertUploadedFile): Promise<UploadedFile>;
+  getUploadedFiles(userId?: string, limit?: number): Promise<UploadedFile[]>;
+  getUploadedFile(id: string): Promise<UploadedFile | undefined>;
+  updateUploadedFileStatus(id: string, status: string, spectralData?: Partial<InsertUploadedFile>): Promise<UploadedFile>;
+  deleteUploadedFile(id: string): Promise<void>;
 }
 
 function generateWalletAddress(): string {
@@ -458,6 +466,50 @@ export class DatabaseStorage implements IStorage {
       ));
 
     return result.map(r => ({ friendship: r.friendships, addressee: r.users }));
+  }
+
+  // ============================================
+  // FILE OPERATIONS
+  // ============================================
+
+  async createUploadedFile(file: InsertUploadedFile): Promise<UploadedFile> {
+    const result = await db.insert(uploadedFiles).values(file).returning();
+    return result[0];
+  }
+
+  async getUploadedFiles(userId?: string, limit: number = 50): Promise<UploadedFile[]> {
+    if (userId) {
+      return db.select().from(uploadedFiles)
+        .where(eq(uploadedFiles.userId, userId))
+        .orderBy(desc(uploadedFiles.createdAt))
+        .limit(limit);
+    }
+    return db.select().from(uploadedFiles)
+      .orderBy(desc(uploadedFiles.createdAt))
+      .limit(limit);
+  }
+
+  async getUploadedFile(id: string): Promise<UploadedFile | undefined> {
+    const result = await db.select().from(uploadedFiles)
+      .where(eq(uploadedFiles.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateUploadedFileStatus(id: string, status: string, spectralData?: Partial<InsertUploadedFile>): Promise<UploadedFile> {
+    const updateData: any = { status };
+    if (spectralData) {
+      Object.assign(updateData, spectralData);
+    }
+    const result = await db.update(uploadedFiles)
+      .set(updateData)
+      .where(eq(uploadedFiles.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteUploadedFile(id: string): Promise<void> {
+    await db.delete(uploadedFiles).where(eq(uploadedFiles.id, id));
   }
 }
 

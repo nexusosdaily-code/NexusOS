@@ -9,6 +9,10 @@ import NexusV6Page from "@/pages/nexus-v6";
 import NexusV8Page from "@/pages/nexus-v8";
 import NexusV9Page from "@/pages/nexus-v9";
 import EncodingLab from "@/pages/encoding-lab";
+import AnalyticsPage from "@/pages/analytics";
+import TransmissionPage from "@/pages/transmission";
+import ResearchPage from "@/pages/research";
+import WalletPage from "@/pages/wallet";
 import AnnouncementsPage from "@/pages/announcements";
 import AnnouncementSubstrateV2Page from "@/pages/announcement-substrate-v2";
 import ResonancePropulsionPage from "@/pages/resonance-propulsion";
@@ -26,6 +30,11 @@ function Router() {
       <Route path="/v7" component={WNSPv7Page} />
       <Route path="/v6" component={NexusV6Page} />
       <Route path="/encoding-lab" component={EncodingLab} />
+      <Route path="/workspace/encoding" component={EncodingLab} />
+      <Route path="/workspace/analytics" component={AnalyticsPage} />
+      <Route path="/workspace/transmission" component={TransmissionPage} />
+      <Route path="/workspace/research" component={ResearchPage} />
+      <Route path="/wallet" component={WalletPage} />
       <Route path="/announcements" component={AnnouncementsPage} />
       <Route path="/announcements/substrate-v2" component={AnnouncementSubstrateV2Page} />
       <Route path="/resonance-propulsion" component={ResonancePropulsionPage} />

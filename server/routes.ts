@@ -605,6 +605,171 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // FILE UPLOAD ROUTES
+  // ============================================
+
+  app.post("/api/files/upload", optionalAuth, async (req, res) => {
+    try {
+      if (!await checkRateLimit(req, res, "/api/files/upload", 50)) return;
+
+      const { filename, originalName, mimeType, size, content } = req.body;
+      
+      if (!filename || typeof filename !== "string") {
+        return res.status(400).json({ error: "Missing or invalid filename" });
+      }
+      if (!originalName || typeof originalName !== "string") {
+        return res.status(400).json({ error: "Missing or invalid originalName" });
+      }
+      if (!mimeType || typeof mimeType !== "string") {
+        return res.status(400).json({ error: "Missing or invalid mimeType" });
+      }
+      if (typeof size !== "number" || size <= 0) {
+        return res.status(400).json({ error: "Missing or invalid size" });
+      }
+
+      if (size > 10 * 1024 * 1024) {
+        return res.status(400).json({ error: "File too large (max 10MB)" });
+      }
+      
+      const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 255);
+      const sanitizedOriginalName = originalName.replace(/[<>:"/\\|?*]/g, "_").slice(0, 255);
+
+      const wavelengthMin = 380 + Math.random() * 50;
+      const wavelengthMax = 700 + Math.random() * 80;
+      const frequencyAvg = (3e8) / (((wavelengthMin + wavelengthMax) / 2) * 1e-9);
+      
+      const spectralChars = String(content || originalName).slice(0, 64);
+      const spectralSignature = spectralChars.split("").map((char) => {
+        const code = char.charCodeAt(0);
+        const wavelength = 380 + (code % 95) * 4.2;
+        return wavelength.toFixed(1);
+      }).join(",");
+
+      const file = await storage.createUploadedFile({
+        userId: req.user?.id || undefined,
+        filename: sanitizedFilename,
+        originalName: sanitizedOriginalName,
+        mimeType: mimeType.slice(0, 100),
+        size,
+        spectralSignature,
+        wavelengthMin: wavelengthMin.toString(),
+        wavelengthMax: wavelengthMax.toString(),
+        frequencyAvg: frequencyAvg.toString(),
+        encodedData: content ? String(content).slice(0, 1000) : undefined,
+        status: "processing",
+      });
+
+      await logAction(req, "file_uploaded", "files", file.id, {
+        filename: originalName,
+        size,
+        mimeType,
+      });
+
+      setTimeout(async () => {
+        try {
+          await storage.updateUploadedFileStatus(file.id, "encoded");
+        } catch (e) {
+          console.error("Failed to update file status:", e);
+        }
+      }, 2000 + Math.random() * 3000);
+
+      res.status(201).json({
+        message: "File uploaded successfully",
+        file: {
+          id: file.id,
+          filename: file.filename,
+          originalName: file.originalName,
+          mimeType: file.mimeType,
+          size: file.size,
+          spectralSignature: file.spectralSignature,
+          wavelengthRange: [wavelengthMin, wavelengthMax],
+          frequencyAvg,
+          status: file.status,
+          createdAt: file.createdAt,
+        },
+      });
+    } catch (error: any) {
+      console.error("File upload error:", error);
+      await logAction(req, "file_upload_error", "files", undefined, {}, "failed", error.message);
+      res.status(500).json({ error: "File upload failed" });
+    }
+  });
+
+  app.get("/api/files", optionalAuth, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const files = await storage.getUploadedFiles(req.user?.id, limit);
+      
+      res.json({
+        files: files.map(f => ({
+          id: f.id,
+          filename: f.filename,
+          originalName: f.originalName,
+          mimeType: f.mimeType,
+          size: f.size,
+          spectralSignature: f.spectralSignature,
+          wavelengthRange: [f.wavelengthMin, f.wavelengthMax],
+          frequencyAvg: f.frequencyAvg,
+          status: f.status,
+          createdAt: f.createdAt,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Get files error:", error);
+      res.status(500).json({ error: "Failed to get files" });
+    }
+  });
+
+  app.get("/api/files/:fileId", optionalAuth, async (req, res) => {
+    try {
+      const file = await storage.getUploadedFile(req.params.fileId);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      
+      res.json({
+        file: {
+          id: file.id,
+          filename: file.filename,
+          originalName: file.originalName,
+          mimeType: file.mimeType,
+          size: file.size,
+          spectralSignature: file.spectralSignature,
+          wavelengthRange: [file.wavelengthMin, file.wavelengthMax],
+          frequencyAvg: file.frequencyAvg,
+          encodedData: file.encodedData,
+          status: file.status,
+          createdAt: file.createdAt,
+        },
+      });
+    } catch (error: any) {
+      console.error("Get file error:", error);
+      res.status(500).json({ error: "Failed to get file" });
+    }
+  });
+
+  app.delete("/api/files/:fileId", authenticate, async (req, res) => {
+    try {
+      const file = await storage.getUploadedFile(req.params.fileId);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+
+      if (file.userId && file.userId !== req.user!.id && req.user!.role !== "admin") {
+        return res.status(403).json({ error: "Not authorized to delete this file" });
+      }
+
+      await storage.deleteUploadedFile(req.params.fileId);
+      await logAction(req, "file_deleted", "files", req.params.fileId);
+
+      res.json({ message: "File deleted successfully" });
+    } catch (error: any) {
+      console.error("Delete file error:", error);
+      res.status(500).json({ error: "Failed to delete file" });
+    }
+  });
+
+  // ============================================
   // HEALTH CHECK
   // ============================================
 
@@ -619,6 +784,7 @@ export async function registerRoutes(
         rateLimit: true,
         inputValidation: true,
         backwardCompatibility: ["6.0", "7.0", "8.0", "9.0", "10.0"],
+        fileUpload: true,
       },
     });
   });

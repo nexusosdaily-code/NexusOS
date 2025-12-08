@@ -308,6 +308,45 @@ export const friendActionSchema = z.object({
   friendshipId: z.string().min(1),
 });
 
+// ============================================
+// UPLOADED FILES TABLE - File storage with spectral encoding
+// ============================================
+export const uploadedFiles = pgTable("uploaded_files", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 36 }).references(() => users.id, { onDelete: "cascade" }),
+  filename: text("filename").notNull(),
+  originalName: text("original_name").notNull(),
+  mimeType: text("mime_type").notNull(),
+  size: integer("size").notNull(),
+  spectralSignature: text("spectral_signature"),
+  wavelengthMin: decimal("wavelength_min", { precision: 10, scale: 4 }),
+  wavelengthMax: decimal("wavelength_max", { precision: 10, scale: 4 }),
+  frequencyAvg: decimal("frequency_avg", { precision: 30, scale: 2 }),
+  encodedData: text("encoded_data"),
+  status: text("status").notNull().default("processing"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index("uploaded_files_user_id_idx").on(table.userId),
+  statusIdx: index("uploaded_files_status_idx").on(table.status),
+}));
+
+export const insertUploadedFileSchema = createInsertSchema(uploadedFiles).pick({
+  userId: true,
+  filename: true,
+  originalName: true,
+  mimeType: true,
+  size: true,
+  spectralSignature: true,
+  wavelengthMin: true,
+  wavelengthMax: true,
+  frequencyAvg: true,
+  encodedData: true,
+  status: true,
+});
+
+export type InsertUploadedFile = z.infer<typeof insertUploadedFileSchema>;
+export type UploadedFile = typeof uploadedFiles.$inferSelect;
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type SpectralEncodeInput = z.infer<typeof spectralEncodeSchema>;
