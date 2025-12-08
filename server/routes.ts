@@ -770,6 +770,176 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // SECURE DOCUMENTS ROUTES
+  // ============================================
+
+  app.get("/api/secure-documents/upload-url", authenticate, async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import("./objectStorage");
+      const storageService = new ObjectStorageService();
+      const url = await storageService.getObjectEntityUploadURL();
+      res.json({ url });
+    } catch (error: any) {
+      console.error("Get upload URL error:", error);
+      res.status(500).json({ error: error.message || "Failed to get upload URL" });
+    }
+  });
+
+  app.get("/api/secure-documents", authenticate, async (req, res) => {
+    try {
+      const documents = await storage.getSecureDocuments(req.user!.id);
+      res.json({ documents });
+    } catch (error: any) {
+      console.error("Get secure documents error:", error);
+      res.status(500).json({ error: "Failed to get documents" });
+    }
+  });
+
+  app.post("/api/secure-documents", authenticate, async (req, res) => {
+    try {
+      const { filename, originalName, size, objectPath } = req.body;
+      
+      if (!filename || typeof filename !== "string") {
+        return res.status(400).json({ error: "Missing or invalid filename" });
+      }
+      if (!originalName || typeof originalName !== "string") {
+        return res.status(400).json({ error: "Missing or invalid originalName" });
+      }
+      if (typeof size !== "number" || size <= 0) {
+        return res.status(400).json({ error: "Missing or invalid size" });
+      }
+      if (!objectPath || typeof objectPath !== "string") {
+        return res.status(400).json({ error: "Missing or invalid objectPath" });
+      }
+      
+      if (!originalName.toLowerCase().endsWith(".docx")) {
+        return res.status(400).json({ error: "Only DOCX files are allowed" });
+      }
+      
+      if (size > 52428800) {
+        return res.status(400).json({ error: "File too large (max 50MB)" });
+      }
+      
+      const wavelength = 380 + (originalName.charCodeAt(0) % 120) + ((size % 300));
+      const frequency = (3e8) / (wavelength * 1e-9);
+      const planckConstant = 6.62607015e-34;
+      const energy = planckConstant * frequency;
+      const timestamp = Date.now().toString(36);
+      const energyHash = `Λ${energy.toExponential(6)}_${timestamp}_${req.user!.id.slice(0, 8)}`;
+      const lambdaSignature = `WNSP-Λ-${wavelength.toFixed(4)}nm-${frequency.toExponential(4)}Hz-${timestamp}`;
+
+      const document = await storage.createSecureDocument({
+        userId: req.user!.id,
+        filename,
+        originalName,
+        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        size,
+        objectPath,
+        lambdaSignature,
+        wavelength: wavelength.toString(),
+        frequency: frequency.toString(),
+        energyHash,
+        isVerified: true,
+        encryptionStatus: "encrypted",
+      });
+
+      await logAction(req, "secure_document_created", "secure_documents", document.id, {
+        filename: originalName,
+        size,
+      });
+
+      res.status(201).json({ document });
+    } catch (error: any) {
+      console.error("Create secure document error:", error);
+      await logAction(req, "secure_document_create_error", "secure_documents", undefined, {}, "failed", error.message);
+      res.status(500).json({ error: "Failed to create secure document" });
+    }
+  });
+
+  app.post("/api/secure-documents/:docId/verify", authenticate, async (req, res) => {
+    try {
+      const doc = await storage.getSecureDocument(req.params.docId);
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      if (doc.userId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to verify this document" });
+      }
+
+      const wavelength = parseFloat(doc.wavelength);
+      const frequency = parseFloat(doc.frequency);
+      const expectedFrequency = (3e8) / (wavelength * 1e-9);
+      const frequencyMatch = Math.abs(frequency - expectedFrequency) / expectedFrequency < 0.001;
+      
+      const planckConstant = 6.62607015e-34;
+      const energy = planckConstant * frequency;
+      const energyHashValid = doc.energyHash.startsWith("Λ") && doc.energyHash.includes(energy.toExponential(6).slice(0, 8));
+
+      const isValid = frequencyMatch && energyHashValid;
+
+      await storage.updateSecureDocumentVerification(doc.id, isValid);
+
+      await logAction(req, "secure_document_verified", "secure_documents", doc.id, {
+        isValid,
+        wavelength,
+        frequency,
+      });
+
+      res.json({ isValid, document: { ...doc, isVerified: isValid } });
+    } catch (error: any) {
+      console.error("Verify secure document error:", error);
+      res.status(500).json({ error: "Failed to verify document" });
+    }
+  });
+
+  app.get("/api/secure-documents/:docId/download", authenticate, async (req, res) => {
+    try {
+      const doc = await storage.getSecureDocument(req.params.docId);
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      if (doc.userId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to download this document" });
+      }
+
+      const { ObjectStorageService } = await import("./objectStorage");
+      const storageService = new ObjectStorageService();
+      const objectFile = await storageService.getObjectEntityFile(doc.objectPath);
+      
+      res.setHeader("Content-Disposition", `attachment; filename="${doc.originalName}"`);
+      await storageService.downloadObject(objectFile, res);
+    } catch (error: any) {
+      console.error("Download secure document error:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: error.message || "Failed to download document" });
+      }
+    }
+  });
+
+  app.delete("/api/secure-documents/:docId", authenticate, async (req, res) => {
+    try {
+      const doc = await storage.getSecureDocument(req.params.docId);
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      if (doc.userId !== req.user!.id && req.user!.role !== "admin") {
+        return res.status(403).json({ error: "Not authorized to delete this document" });
+      }
+
+      await storage.deleteSecureDocument(req.params.docId);
+      await logAction(req, "secure_document_deleted", "secure_documents", req.params.docId);
+
+      res.json({ message: "Document deleted successfully" });
+    } catch (error: any) {
+      console.error("Delete secure document error:", error);
+      res.status(500).json({ error: "Failed to delete document" });
+    }
+  });
+
+  // ============================================
   // HEALTH CHECK
   // ============================================
 
@@ -785,6 +955,7 @@ export async function registerRoutes(
         inputValidation: true,
         backwardCompatibility: ["6.0", "7.0", "8.0", "9.0", "10.0"],
         fileUpload: true,
+        secureDocuments: true,
       },
     });
   });

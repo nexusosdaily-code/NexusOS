@@ -21,6 +21,7 @@ import ResonancePropulsionPage from "@/pages/resonance-propulsion";
 import AuthPage from "@/pages/auth";
 import FriendsPage from "@/pages/friends";
 import K1InfrastructurePage from "@/pages/k1-infrastructure";
+import SecureDocxPage from "@/pages/secure-docx";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/friends" component={FriendsPage} />
       <Route path="/k1" component={K1InfrastructurePage} />
       <Route path="/workspace/k1" component={K1InfrastructurePage} />
+      <Route path="/secure-docs" component={SecureDocxPage} />
       <Route component={NotFound} />
     </Switch>
   );

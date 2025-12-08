@@ -353,3 +353,34 @@ export type SpectralEncodeInput = z.infer<typeof spectralEncodeSchema>;
 export type TransferInput = z.infer<typeof transferSchema>;
 export type FriendRequestInput = z.infer<typeof friendRequestSchema>;
 export type FriendActionInput = z.infer<typeof friendActionSchema>;
+
+// ============================================
+// SECURE DOCUMENTS TABLE - Lambda-signed DOCX storage
+// ============================================
+export const secureDocuments = pgTable("secure_documents", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  filename: text("filename").notNull(),
+  originalName: text("original_name").notNull(),
+  mimeType: text("mime_type").notNull(),
+  size: integer("size").notNull(),
+  objectPath: text("object_path").notNull(),
+  lambdaSignature: text("lambda_signature").notNull(),
+  wavelength: decimal("wavelength", { precision: 20, scale: 12 }).notNull(),
+  frequency: decimal("frequency", { precision: 30, scale: 2 }).notNull(),
+  energyHash: text("energy_hash").notNull(),
+  isVerified: boolean("is_verified").notNull().default(false),
+  encryptionStatus: text("encryption_status").notNull().default("encrypted"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index("secure_documents_user_id_idx").on(table.userId),
+  lambdaSignatureIdx: index("secure_documents_lambda_signature_idx").on(table.lambdaSignature),
+}));
+
+export const insertSecureDocumentSchema = createInsertSchema(secureDocuments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSecureDocument = z.infer<typeof insertSecureDocumentSchema>;
+export type SecureDocument = typeof secureDocuments.$inferSelect;

@@ -4,13 +4,14 @@ import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import {
   users, sessions, auditLogs, wallets, transactions,
-  versionRegistry, apiKeys, rateLimits, friendships, uploadedFiles,
+  versionRegistry, apiKeys, rateLimits, friendships, uploadedFiles, secureDocuments,
   type User, type InsertUser, type Session, type InsertSession,
   type AuditLog, type InsertAuditLog, type Wallet, type InsertWallet,
   type Transaction, type InsertTransaction, type VersionRegistry,
   type InsertVersionRegistry, type ApiKey, type InsertApiKey,
   type RateLimit, type InsertRateLimit, type Friendship, type InsertFriendship,
   type UploadedFile, type InsertUploadedFile,
+  type SecureDocument, type InsertSecureDocument,
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
@@ -80,6 +81,13 @@ export interface IStorage {
   getUploadedFile(id: string): Promise<UploadedFile | undefined>;
   updateUploadedFileStatus(id: string, status: string, spectralData?: Partial<InsertUploadedFile>): Promise<UploadedFile>;
   deleteUploadedFile(id: string): Promise<void>;
+
+  // Secure document operations
+  createSecureDocument(doc: InsertSecureDocument): Promise<SecureDocument>;
+  getSecureDocuments(userId: string, limit?: number): Promise<SecureDocument[]>;
+  getSecureDocument(id: string): Promise<SecureDocument | undefined>;
+  updateSecureDocumentVerification(id: string, isVerified: boolean): Promise<SecureDocument>;
+  deleteSecureDocument(id: string): Promise<void>;
 }
 
 function generateWalletAddress(): string {
@@ -510,6 +518,41 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUploadedFile(id: string): Promise<void> {
     await db.delete(uploadedFiles).where(eq(uploadedFiles.id, id));
+  }
+
+  // ============================================
+  // SECURE DOCUMENT OPERATIONS
+  // ============================================
+
+  async createSecureDocument(doc: InsertSecureDocument): Promise<SecureDocument> {
+    const result = await db.insert(secureDocuments).values(doc).returning();
+    return result[0];
+  }
+
+  async getSecureDocuments(userId: string, limit: number = 50): Promise<SecureDocument[]> {
+    return db.select().from(secureDocuments)
+      .where(eq(secureDocuments.userId, userId))
+      .orderBy(desc(secureDocuments.createdAt))
+      .limit(limit);
+  }
+
+  async getSecureDocument(id: string): Promise<SecureDocument | undefined> {
+    const result = await db.select().from(secureDocuments)
+      .where(eq(secureDocuments.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateSecureDocumentVerification(id: string, isVerified: boolean): Promise<SecureDocument> {
+    const result = await db.update(secureDocuments)
+      .set({ isVerified })
+      .where(eq(secureDocuments.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteSecureDocument(id: string): Promise<void> {
+    await db.delete(secureDocuments).where(eq(secureDocuments.id, id));
   }
 }
 
