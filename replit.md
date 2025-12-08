@@ -74,6 +74,14 @@ Preferred communication style: Simple, everyday language.
 - Extends Einstein's E=mc² to oscillating quanta
 - Implements spectral authority bands (NANO through PLANCK governance tiers)
 
+**Wavefield Quantum Simulation** (New in v1.1.0):
+- Implements wavefield equation: Φ_λ(r,t) = Σ_n a_n · ψ_n(r) · e^(-iω_n t)
+- Interactive quantum eigenstate superposition simulator
+- Particle-in-a-box eigenfunctions with time evolution
+- Real-time visualization of real, imaginary, and magnitude components
+- Normalization checking and expected energy calculations
+- Located at `/workspace/wavefield`
+
 ## Multi-Agent & Task Orchestration
 
 **DAG-Based Workflows**: Task orchestration system with domain-specific modules
