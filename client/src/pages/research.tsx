@@ -134,10 +134,10 @@ export default function ResearchPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <Link href="/workspace">
+          <Link href="/">
             <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" data-testid="button-back">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Workspace
+              Back to Home
             </Button>
           </Link>
         </div>

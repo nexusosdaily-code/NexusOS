@@ -100,10 +100,10 @@ export default function AnalyticsPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Link href="/workspace">
+            <Link href="/">
               <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" data-testid="button-back">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Workspace
+                Back to Home
               </Button>
             </Link>
           </div>
