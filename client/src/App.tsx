@@ -23,6 +23,7 @@ import AuthPage from "@/pages/auth";
 import FriendsPage from "@/pages/friends";
 import K1InfrastructurePage from "@/pages/k1-infrastructure";
 import SecureDocxPage from "@/pages/secure-docx";
+import ResearchPresentationPage from "@/pages/research-presentation";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -49,6 +50,7 @@ function ProtectedRoutes() {
         <Route path="/k1" component={K1InfrastructurePage} />
         <Route path="/workspace/k1" component={K1InfrastructurePage} />
         <Route path="/secure-docs" component={SecureDocxPage} />
+        <Route path="/research-presentation" component={ResearchPresentationPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
