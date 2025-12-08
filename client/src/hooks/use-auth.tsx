@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { useLocation } from "wouter";
 
 interface User {
@@ -21,15 +21,26 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [, setLocation] = useLocation();
 
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/me");
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+      
+      const res = await fetch("/api/auth/me", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
       } else {
+        localStorage.removeItem("auth_token");
         setUser(null);
       }
     } catch {
@@ -37,25 +48,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchUser();
+  }, [fetchUser]);
+
+  const logout = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("auth_token");
+      await fetch("/api/auth/logout", { 
+        method: "POST",
+        headers: token ? { "Authorization": `Bearer ${token}` } : {}
+      });
+    } finally {
+      localStorage.removeItem("auth_token");
+      setUser(null);
+    }
   }, []);
 
-  const logout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } finally {
-      setUser(null);
-      setLocation("/auth");
-    }
-  };
-
-  const refetch = async () => {
+  const refetch = useCallback(async () => {
     setIsLoading(true);
     await fetchUser();
-  };
+  }, [fetchUser]);
 
   return (
     <AuthContext.Provider
@@ -83,12 +98,20 @@ export function useAuth() {
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
+  const [shouldRedirect, setShouldRedirect] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated && location !== "/auth") {
-      setLocation("/auth");
+      setShouldRedirect(true);
     }
-  }, [isLoading, isAuthenticated, location, setLocation]);
+  }, [isLoading, isAuthenticated, location]);
+
+  useEffect(() => {
+    if (shouldRedirect) {
+      setLocation("/auth");
+      setShouldRedirect(false);
+    }
+  }, [shouldRedirect, setLocation]);
 
   if (isLoading) {
     return (
