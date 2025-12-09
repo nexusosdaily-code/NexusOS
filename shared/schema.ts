@@ -461,3 +461,111 @@ export const initiateCallSchema = z.object({
 });
 
 export type InitiateCallInput = z.infer<typeof initiateCallSchema>;
+
+// ============================================
+// STREAMS TABLE - Live video streaming
+// ============================================
+export const streams = pgTable("streams", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  broadcasterId: varchar("broadcaster_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("pending"), // pending, live, ended, paused
+  streamType: text("stream_type").notNull().default("camera"), // camera, screen, both
+  isPublic: boolean("is_public").notNull().default(true),
+  viewerCount: integer("viewer_count").notNull().default(0),
+  peakViewers: integer("peak_viewers").notNull().default(0),
+  quality: text("quality").notNull().default("720p"), // 480p, 720p, 1080p, 4k
+  bitrate: integer("bitrate").notNull().default(2500), // kbps
+  frameRate: integer("frame_rate").notNull().default(30),
+  recordingEnabled: boolean("recording_enabled").notNull().default(false),
+  recordingPath: text("recording_path"),
+  thumbnailUrl: text("thumbnail_url"),
+  startedAt: timestamp("started_at"),
+  endedAt: timestamp("ended_at"),
+  duration: integer("duration"), // seconds
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  broadcasterIdx: index("streams_broadcaster_idx").on(table.broadcasterId),
+  statusIdx: index("streams_status_idx").on(table.status),
+  isPublicIdx: index("streams_is_public_idx").on(table.isPublic),
+}));
+
+export const insertStreamSchema = createInsertSchema(streams).omit({
+  id: true,
+  createdAt: true,
+  viewerCount: true,
+  peakViewers: true,
+});
+
+export type InsertStream = z.infer<typeof insertStreamSchema>;
+export type Stream = typeof streams.$inferSelect;
+
+// ============================================
+// STREAM VIEWERS TABLE - Track stream viewers
+// ============================================
+export const streamViewers = pgTable("stream_viewers", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  streamId: varchar("stream_id", { length: 36 }).notNull().references(() => streams.id, { onDelete: "cascade" }),
+  viewerId: varchar("viewer_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  joinedAt: timestamp("joined_at").notNull().defaultNow(),
+  leftAt: timestamp("left_at"),
+  watchDuration: integer("watch_duration"), // seconds
+}, (table) => ({
+  streamIdx: index("stream_viewers_stream_idx").on(table.streamId),
+  viewerIdx: index("stream_viewers_viewer_idx").on(table.viewerId),
+}));
+
+export const insertStreamViewerSchema = createInsertSchema(streamViewers).omit({
+  id: true,
+});
+
+export type InsertStreamViewer = z.infer<typeof insertStreamViewerSchema>;
+export type StreamViewer = typeof streamViewers.$inferSelect;
+
+// ============================================
+// STREAM RECORDINGS TABLE - Recorded streams
+// ============================================
+export const streamRecordings = pgTable("stream_recordings", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  streamId: varchar("stream_id", { length: 36 }).notNull().references(() => streams.id, { onDelete: "cascade" }),
+  userId: varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  filename: text("filename").notNull(),
+  size: integer("size").notNull(),
+  duration: integer("duration").notNull(), // seconds
+  format: text("format").notNull().default("webm"),
+  status: text("status").notNull().default("processing"), // processing, ready, failed
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  streamIdx: index("stream_recordings_stream_idx").on(table.streamId),
+  userIdx: index("stream_recordings_user_idx").on(table.userId),
+}));
+
+export const insertStreamRecordingSchema = createInsertSchema(streamRecordings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertStreamRecording = z.infer<typeof insertStreamRecordingSchema>;
+export type StreamRecording = typeof streamRecordings.$inferSelect;
+
+// Streaming validation schemas
+export const createStreamSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(1000).optional(),
+  streamType: z.enum(["camera", "screen", "both"]).optional(),
+  isPublic: z.boolean().optional(),
+  quality: z.enum(["480p", "720p", "1080p", "4k"]).optional(),
+  bitrate: z.number().min(500).max(20000).optional(),
+  frameRate: z.number().min(15).max(60).optional(),
+  recordingEnabled: z.boolean().optional(),
+});
+
+export const updateStreamSettingsSchema = z.object({
+  quality: z.enum(["480p", "720p", "1080p", "4k"]).optional(),
+  bitrate: z.number().min(500).max(20000).optional(),
+  frameRate: z.number().min(15).max(60).optional(),
+});
+
+export type CreateStreamInput = z.infer<typeof createStreamSchema>;
+export type UpdateStreamSettingsInput = z.infer<typeof updateStreamSettingsSchema>;
