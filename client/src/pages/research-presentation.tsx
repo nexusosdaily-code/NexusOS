@@ -7,6 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
 import { InfoTooltip, RESEARCH_SOURCES } from "@/components/InfoTooltip";
+import { LiveResonanceSimulator } from "@/components/LiveResonanceSimulator";
 import {
   ArrowLeft,
   Zap,
@@ -833,7 +834,10 @@ export default function ResearchPresentationPage() {
         </div>
 
         <Tabs defaultValue="connection" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-slate-900/50">
+          <TabsList className="grid w-full grid-cols-5 bg-slate-900/50">
+            <TabsTrigger value="live" data-testid="tab-live">
+              <Play className="w-4 h-4 mr-2" /> Live Demo
+            </TabsTrigger>
             <TabsTrigger value="connection" data-testid="tab-connection">
               <Network className="w-4 h-4 mr-2" /> Connection
             </TabsTrigger>
@@ -847,6 +851,10 @@ export default function ResearchPresentationPage() {
               <Users className="w-4 h-4 mr-2" /> Collaborate
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="live" className="space-y-6">
+            <LiveResonanceSimulator />
+          </TabsContent>
 
           <TabsContent value="connection" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
