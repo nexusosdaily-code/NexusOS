@@ -251,9 +251,9 @@ export async function registerRoutes(
   
   const handleViewerLeave = async (streamId: string, userId: string, streamViewers: Map<string, { ws: WebSocket; isBroadcaster: boolean }>) => {
     streamViewers.delete(userId);
-    await storage.leaveStream(streamId, userId);
+    await storage.removeStreamViewer(streamId, userId);
     
-    for (const [viewerId, client] of streamViewers) {
+    Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
       if (client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
         client.ws.send(JSON.stringify({
           type: "viewer-left",
@@ -261,14 +261,14 @@ export async function registerRoutes(
           viewerCount: Array.from(streamViewers.values()).filter(c => !c.isBroadcaster).length,
         }));
       }
-    }
+    });
     console.log(`Viewer ${userId} left stream ${streamId}`);
   };
   
   const handleBroadcasterDisconnect = (streamId: string, userId: string, streamViewers: Map<string, { ws: WebSocket; isBroadcaster: boolean }>) => {
     streamViewers.delete(userId);
     
-    for (const [viewerId, client] of streamViewers) {
+    Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
       if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
         client.ws.send(JSON.stringify({
           type: "stream-ended",
@@ -276,7 +276,7 @@ export async function registerRoutes(
           reason: "broadcaster-disconnected",
         }));
       }
-    }
+    });
     streamClients.delete(streamId);
     console.log(`Broadcaster ${userId} disconnected from stream ${streamId}`);
   };
@@ -328,10 +328,10 @@ export async function registerRoutes(
     
     // Track viewer in database if not broadcaster
     if (!isBroadcaster) {
-      await storage.joinStream(streamId, userId);
+      await storage.addStreamViewer(streamId, userId);
       
       // Notify broadcaster of new viewer
-      for (const [viewerId, client] of streamViewers) {
+      Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
         if (client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
           client.ws.send(JSON.stringify({
             type: "viewer-joined",
@@ -339,7 +339,7 @@ export async function registerRoutes(
             viewerCount: streamViewers.size - 1, // Exclude broadcaster
           }));
         }
-      }
+      });
     }
     
     // Send current viewer count to new connection
@@ -357,7 +357,7 @@ export async function registerRoutes(
         switch (message.type) {
           case "broadcaster-ready":
             // Notify all viewers that broadcaster is ready
-            for (const [viewerId, client] of streamViewers) {
+            Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
               if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
                 client.ws.send(JSON.stringify({
                   type: "broadcaster-ready",
@@ -365,7 +365,7 @@ export async function registerRoutes(
                   broadcasterId: userId,
                 }));
               }
-            }
+            });
             break;
             
           case "offer":
@@ -386,7 +386,7 @@ export async function registerRoutes(
           case "answer":
             // Viewer sends answer back to broadcaster
             if (!isBroadcaster) {
-              for (const [viewerId, client] of streamViewers) {
+              Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
                 if (client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
                   client.ws.send(JSON.stringify({
                     type: "answer",
@@ -395,7 +395,7 @@ export async function registerRoutes(
                     payload: message.payload,
                   }));
                 }
-              }
+              });
             }
             break;
             
@@ -413,7 +413,7 @@ export async function registerRoutes(
               }
             } else if (!isBroadcaster) {
               // Viewer sends ICE to broadcaster
-              for (const [viewerId, client] of streamViewers) {
+              Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
                 if (client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
                   client.ws.send(JSON.stringify({
                     type: "ice-candidate",
@@ -422,14 +422,14 @@ export async function registerRoutes(
                     payload: message.payload,
                   }));
                 }
-              }
+              });
             }
             break;
             
           case "stream-settings-update":
             // Broadcaster updates stream settings
             if (isBroadcaster) {
-              for (const [viewerId, client] of streamViewers) {
+              Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
                 if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
                   client.ws.send(JSON.stringify({
                     type: "stream-settings-update",
@@ -437,14 +437,14 @@ export async function registerRoutes(
                     payload: message.payload,
                   }));
                 }
-              }
+              });
             }
             break;
             
           case "stream-ended":
             // Broadcaster ends stream
             if (isBroadcaster) {
-              for (const [viewerId, client] of streamViewers) {
+              Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
                 if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
                   client.ws.send(JSON.stringify({
                     type: "stream-ended",
@@ -452,7 +452,7 @@ export async function registerRoutes(
                   }));
                   client.ws.close(1000, "Stream ended");
                 }
-              }
+              });
               streamClients.delete(streamId);
             }
             break;
