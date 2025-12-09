@@ -564,13 +564,27 @@ function PowerExtractionSimulator() {
 }
 
 function InitiativeDetail({ initiative }: { initiative: ResearchInitiative }) {
+  const getInitiativeTooltip = () => {
+    switch (initiative.id) {
+      case 'tesla': return RESEARCH_SOURCES.tesla;
+      case 'cses': return RESEARCH_SOURCES.cses;
+      case 'haarp': return RESEARCH_SOURCES.haarp;
+      case 'witricity': return RESEARCH_SOURCES.witricity;
+      default: return null;
+    }
+  };
+  const tooltipData = getInitiativeTooltip();
+  
   return (
     <Card className={`bg-gradient-to-br ${initiative.bgColor} ${initiative.borderColor} p-6`} data-testid={`detail-${initiative.id}`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className={initiative.color}>{initiative.icon}</div>
           <div>
-            <h3 className="text-xl font-bold text-white">{initiative.name}</h3>
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              {initiative.name}
+              {tooltipData && <InfoTooltip {...tooltipData} />}
+            </h3>
             <div className="text-sm text-gray-400">{initiative.location}</div>
           </div>
         </div>
@@ -661,7 +675,10 @@ function UnifiedFrameworkSection() {
             <div><span className="text-cyan-400">A</span> = collector area (Tesla scale)</div>
             <div><span className="text-cyan-400">Q_eff</span> = amplified Q-factor (MIT + Lambda Gates)</div>
             <div><span className="text-cyan-400">η</span> = coupling efficiency (HAARP ionospheric mod)</div>
-            <div><span className="text-cyan-400">N_oam</span> = OAM channels (photonic computing)</div>
+            <div className="flex items-center gap-1">
+              <span className="text-cyan-400">N_oam</span> = OAM channels (photonic computing)
+              <InfoTooltip {...RESEARCH_SOURCES.oam} />
+            </div>
           </div>
         </div>
         

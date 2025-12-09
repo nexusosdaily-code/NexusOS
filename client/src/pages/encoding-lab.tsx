@@ -8,6 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { Zap, Waves, ArrowRight, ArrowLeft, Atom, AlertCircle } from "lucide-react";
+import { InfoTooltip, RESEARCH_SOURCES } from "@/components/InfoTooltip";
 
 const VISIBLE_MIN_NM = 380;
 const VISIBLE_MAX_NM = 780;
@@ -151,17 +152,23 @@ export default function EncodingLab() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card className="bg-gradient-to-br from-cyan-900/20 to-cyan-950/20 border-cyan-500/30 p-4">
-            <div className="text-cyan-400 text-sm mb-1">PLANCK</div>
+            <div className="text-cyan-400 text-sm mb-1 flex items-center gap-1">
+              PLANCK <InfoTooltip {...RESEARCH_SOURCES.planck} />
+            </div>
             <div className="text-xl font-bold text-white font-mono">E = hf</div>
             <div className="text-cyan-300 text-xs">Energy IS frequency</div>
           </Card>
           <Card className="bg-gradient-to-br from-orange-900/20 to-orange-950/20 border-orange-500/30 p-4">
-            <div className="text-orange-400 text-sm mb-1">EINSTEIN</div>
+            <div className="text-orange-400 text-sm mb-1 flex items-center gap-1">
+              EINSTEIN <InfoTooltip {...RESEARCH_SOURCES.einstein} />
+            </div>
             <div className="text-xl font-bold text-white font-mono">E = mc²</div>
             <div className="text-orange-300 text-xs">Energy IS mass</div>
           </Card>
           <Card className="bg-gradient-to-br from-green-900/20 to-green-950/20 border-green-500/30 p-4">
-            <div className="text-green-400 text-sm mb-1">NEXUSOS</div>
+            <div className="text-green-400 text-sm mb-1 flex items-center gap-1">
+              NEXUSOS <InfoTooltip {...RESEARCH_SOURCES.lambda} />
+            </div>
             <div className="text-xl font-bold text-white font-mono">Λ = hf/c²</div>
             <div className="text-green-300 text-xs">Oscillation IS mass</div>
           </Card>
@@ -377,7 +384,9 @@ export default function EncodingLab() {
           <h3 className="text-lg font-bold text-amber-400 mb-4">Physics Foundation</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div className="bg-slate-800/50 rounded-lg p-4">
-              <div className="text-cyan-400 font-semibold mb-2">Wavelength Mapping</div>
+              <div className="text-cyan-400 font-semibold mb-2 flex items-center gap-1">
+                Wavelength Mapping <InfoTooltip {...RESEARCH_SOURCES.maxwell} />
+              </div>
               <div className="text-gray-300 font-mono text-xs">
                 λ = 380 + (char_code / 255) × 400 nm
               </div>
@@ -386,7 +395,9 @@ export default function EncodingLab() {
               </div>
             </div>
             <div className="bg-slate-800/50 rounded-lg p-4">
-              <div className="text-purple-400 font-semibold mb-2">Frequency Conversion</div>
+              <div className="text-purple-400 font-semibold mb-2 flex items-center gap-1">
+                Frequency Conversion <InfoTooltip {...RESEARCH_SOURCES.planck} />
+              </div>
               <div className="text-gray-300 font-mono text-xs">
                 f = c / λ
               </div>
@@ -395,7 +406,9 @@ export default function EncodingLab() {
               </div>
             </div>
             <div className="bg-slate-800/50 rounded-lg p-4">
-              <div className="text-green-400 font-semibold mb-2">Lambda Mass</div>
+              <div className="text-green-400 font-semibold mb-2 flex items-center gap-1">
+                Lambda Mass <InfoTooltip {...RESEARCH_SOURCES.lambda} />
+              </div>
               <div className="text-gray-300 font-mono text-xs">
                 Λ = hf / c²
               </div>
