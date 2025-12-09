@@ -84,38 +84,51 @@ export default function InboxPage() {
     },
   });
 
-  const { data: inboxData, isLoading: inboxLoading } = useQuery<{ messages: InboxMessage[] }>({
+  const { data: inboxData, isLoading: inboxLoading, error: inboxError } = useQuery<{ messages: InboxMessage[] }>({
     queryKey: ["/api/messages/inbox"],
     queryFn: async () => {
       const token = localStorage.getItem("auth_token");
+      if (!token) throw new Error("Please log in to view messages");
       const res = await fetch("/api/messages/inbox", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Failed to load inbox");
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("Please log in to view messages");
+        throw new Error("Failed to load inbox");
+      }
       return res.json();
     },
   });
 
-  const { data: sentData, isLoading: sentLoading } = useQuery<{ messages: SentMessage[] }>({
+  const { data: sentData, isLoading: sentLoading, error: sentError } = useQuery<{ messages: SentMessage[] }>({
     queryKey: ["/api/messages/sent"],
     queryFn: async () => {
       const token = localStorage.getItem("auth_token");
+      if (!token) throw new Error("Please log in to view messages");
       const res = await fetch("/api/messages/sent", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Failed to load sent");
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("Please log in to view messages");
+        throw new Error("Failed to load sent messages");
+      }
       return res.json();
     },
   });
 
-  const { data: messageDetail, isLoading: detailLoading } = useQuery<{ message: MessageDetail; isRecipient: boolean; isSender: boolean }>({
+  const { data: messageDetail, isLoading: detailLoading, error: detailError } = useQuery<{ message: MessageDetail; isRecipient: boolean; isSender: boolean }>({
     queryKey: ["/api/messages", selectedMessage],
     queryFn: async () => {
       const token = localStorage.getItem("auth_token");
+      if (!token) throw new Error("Please log in to view this message");
       const res = await fetch(`/api/messages/${selectedMessage}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Failed to load message");
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("Please log in to view this message");
+        if (res.status === 404) throw new Error("Message not found");
+        throw new Error("Failed to load message");
+      }
       return res.json();
     },
     enabled: !!selectedMessage,
@@ -207,7 +220,63 @@ export default function InboxPage() {
     );
   };
 
-  if (selectedMessage && messageDetail) {
+  if (selectedMessage) {
+    if (detailLoading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+          <div className="max-w-4xl mx-auto space-y-6">
+            <Button
+              variant="ghost"
+              onClick={() => setSelectedMessage(null)}
+              className="text-purple-300 hover:text-white"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Messages
+            </Button>
+            <Card className="bg-black/40 border-purple-500/30">
+              <CardContent className="py-12 text-center">
+                <Waves className="w-12 h-12 text-purple-400 mx-auto mb-4 animate-pulse" />
+                <p className="text-purple-300">Loading message...</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    if (detailError) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+          <div className="max-w-4xl mx-auto space-y-6">
+            <Button
+              variant="ghost"
+              onClick={() => setSelectedMessage(null)}
+              className="text-purple-300 hover:text-white"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Messages
+            </Button>
+            <Card className="bg-black/40 border-purple-500/30">
+              <CardContent className="py-12 text-center">
+                <MessageSquare className="w-12 h-12 text-red-400 mx-auto mb-4" />
+                <p className="text-red-400 mb-4">{(detailError as Error).message}</p>
+                <Button
+                  onClick={() => setSelectedMessage(null)}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  Return to Inbox
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    if (!messageDetail) return null;
+
     const msg = messageDetail.message;
     const senderName = inboxData?.messages.find(m => m.id === selectedMessage)?.sender.username ||
                        sentData?.messages.find(m => m.id === selectedMessage)?.recipient.username ||
@@ -296,6 +365,24 @@ export default function InboxPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+    );
+  }
+
+  if (inboxError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-black/40 border-purple-500/30">
+          <CardContent className="pt-6 text-center">
+            <Mail className="w-12 h-12 text-red-400 mx-auto mb-4" />
+            <p className="text-purple-300 mb-4">{(inboxError as Error).message}</p>
+            <Link href="/auth">
+              <Button data-testid="button-login" className="bg-purple-600 hover:bg-purple-700">
+                Log In
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -470,6 +557,13 @@ export default function InboxPage() {
               <div className="space-y-3">
                 {sentLoading ? (
                   <div className="text-center py-8 text-purple-300">Loading messages...</div>
+                ) : sentError ? (
+                  <Card className="bg-black/40 border-purple-500/30">
+                    <CardContent className="py-8 text-center">
+                      <Send className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                      <p className="text-red-400">{(sentError as Error).message}</p>
+                    </CardContent>
+                  </Card>
                 ) : !sentData?.messages.length ? (
                   <Card className="bg-black/40 border-purple-500/30">
                     <CardContent className="py-8 text-center">
