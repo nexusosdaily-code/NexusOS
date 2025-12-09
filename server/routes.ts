@@ -265,6 +265,22 @@ export async function registerRoutes(
     console.log(`Viewer ${userId} left stream ${streamId}`);
   };
   
+  const handleBroadcasterDisconnect = (streamId: string, userId: string, streamViewers: Map<string, { ws: WebSocket; isBroadcaster: boolean }>) => {
+    streamViewers.delete(userId);
+    
+    for (const [viewerId, client] of streamViewers) {
+      if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(JSON.stringify({
+          type: "stream-ended",
+          streamId,
+          reason: "broadcaster-disconnected",
+        }));
+      }
+    }
+    streamClients.delete(streamId);
+    console.log(`Broadcaster ${userId} disconnected from stream ${streamId}`);
+  };
+  
   const streamingWss = new WebSocketServer({ server: httpServer, path: "/ws/streaming" });
   
   streamingWss.on("connection", async (ws, req) => {
@@ -467,20 +483,8 @@ export async function registerRoutes(
         // Use centralized viewer leave handler
         await handleViewerLeave(streamId, userId, streamViewers);
       } else {
-        // Broadcaster disconnected - notify all viewers
-        streamViewers.delete(userId);
-        console.log(`Broadcaster ${userId} disconnected from stream ${streamId}`);
-        
-        for (const [viewerId, client] of streamViewers) {
-          if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
-            client.ws.send(JSON.stringify({
-              type: "stream-ended",
-              streamId,
-              reason: "broadcaster-disconnected",
-            }));
-          }
-        }
-        streamClients.delete(streamId);
+        // Use centralized broadcaster disconnect handler
+        handleBroadcasterDisconnect(streamId, userId, streamViewers);
       }
       
       // Clean up empty stream
