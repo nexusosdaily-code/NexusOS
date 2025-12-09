@@ -96,6 +96,14 @@ const features = [
     color: "text-teal-400",
     bgColor: "bg-teal-600/20",
   },
+  {
+    title: "Live Streaming",
+    description: "Broadcast & watch live",
+    href: "/streaming",
+    icon: Activity,
+    color: "text-red-400",
+    bgColor: "bg-red-600/20",
+  },
 ];
 
 export default function LambdaPlaceholder() {
