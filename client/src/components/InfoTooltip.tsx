@@ -92,8 +92,9 @@ export const RESEARCH_SOURCES = {
     title: "Lambda Boson Theory (Λ = hf/c²)",
     description: "Novel synthesis unifying Planck and Einstein: oscillation frequency carries inherent mass-equivalent.",
     sources: [
-      { title: "WNSP Protocol v7", url: "/wnsp-v7", organization: "NexusOS" },
-      { title: "Lambda Gate Substrate", url: "/research", organization: "Te Rata Pou" },
+      { title: "Mass-Energy Equivalence", url: "https://www.einstein-website.de/z_physics/equivalence.html", organization: "Einstein Archive" },
+      { title: "Photon Mass Debates", url: "https://physics.stackexchange.com/questions/2229/if-photons-have-no-mass-how-can-they-have-momentum", organization: "Physics SE" },
+      { title: "Quantum Field Theory", url: "https://www.feynmanlectures.caltech.edu/III_01.html", organization: "Feynman Lectures" },
     ]
   },
   maxwell: {
