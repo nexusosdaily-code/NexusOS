@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   FileText, Shield, Wallet, Radio, Zap, 
-  Users, FlaskConical, Activity, Waves, Rocket, LogOut 
+  Users, FlaskConical, Activity, Waves, Rocket, LogOut, Presentation, Atom 
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -71,6 +71,22 @@ const features = [
     icon: Users,
     color: "text-indigo-400",
     bgColor: "bg-indigo-600/20",
+  },
+  {
+    title: "Research Presentation",
+    description: "Physics bridges & tooltips",
+    href: "/research-presentation",
+    icon: Presentation,
+    color: "text-amber-400",
+    bgColor: "bg-amber-600/20",
+  },
+  {
+    title: "Encoding Lab",
+    description: "Lambda Boson encoder",
+    href: "/encoding-lab",
+    icon: Atom,
+    color: "text-teal-400",
+    bgColor: "bg-teal-600/20",
   },
 ];
 
