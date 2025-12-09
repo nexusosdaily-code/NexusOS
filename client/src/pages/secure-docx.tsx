@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { 
   FileText, Shield, Lock, CheckCircle2, AlertCircle, 
   Download, Trash2, RefreshCw, ArrowLeft, Zap
@@ -54,26 +55,34 @@ function formatDate(dateStr: string): string {
 
 export default function SecureDocxPage() {
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
+  const token = localStorage.getItem("auth_token");
   const queryClient = useQueryClient();
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
   const { data: documents, isLoading, error } = useQuery<SecureDocument[]>({
     queryKey: ["/api/secure-documents"],
     queryFn: async () => {
-      const res = await fetch("/api/secure-documents");
+      const res = await fetch("/api/secure-documents", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || "Failed to fetch documents");
       }
       return data.documents || [];
     },
+    enabled: isAuthenticated,
   });
 
   const uploadMutation = useMutation({
     mutationFn: async (fileData: { filename: string; originalName: string; size: number; objectPath: string }) => {
       const res = await fetch("/api/secure-documents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           filename: fileData.filename,
           originalName: fileData.originalName,
@@ -109,6 +118,7 @@ export default function SecureDocxPage() {
       setVerifyingId(docId);
       const res = await fetch(`/api/secure-documents/${docId}/verify`, {
         method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) {
         const err = await res.json();
@@ -141,6 +151,7 @@ export default function SecureDocxPage() {
     mutationFn: async (docId: string) => {
       const res = await fetch(`/api/secure-documents/${docId}`, {
         method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) {
         const err = await res.json();
@@ -165,13 +176,15 @@ export default function SecureDocxPage() {
   });
 
   const getUploadParameters = useCallback(async () => {
-    const res = await fetch("/api/secure-documents/upload-url");
+    const res = await fetch("/api/secure-documents/upload-url", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     if (!res.ok) {
       throw new Error("Failed to get upload URL");
     }
     const { url } = await res.json();
     return { method: "PUT" as const, url };
-  }, []);
+  }, [token]);
 
   const handleUploadComplete = useCallback((result: any) => {
     if (result.successful && result.successful.length > 0) {
