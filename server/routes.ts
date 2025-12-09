@@ -1,12 +1,24 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { authenticate, optionalAuth, logAction } from "./auth";
 import { 
   loginSchema, registerSchema, spectralEncodeSchema, transferSchema,
-  friendRequestSchema, friendActionSchema, sendMessageSchema
+  friendRequestSchema, friendActionSchema, sendMessageSchema, initiateCallSchema
 } from "@shared/schema";
 import { z } from "zod";
+
+// WebSocket clients mapped by userId
+const connectedClients = new Map<string, WebSocket>();
+
+// Call signaling message types
+interface SignalingMessage {
+  type: "offer" | "answer" | "ice-candidate" | "call-initiate" | "call-accept" | "call-reject" | "call-end" | "call-busy";
+  callId?: string;
+  targetUserId?: string;
+  payload?: any;
+}
 
 const SPECTRAL_API_URL = "http://127.0.0.1:5001";
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
@@ -107,6 +119,121 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
+  // ============================================
+  // WEBSOCKET SIGNALING FOR VIDEO/VOICE CALLS
+  // ============================================
+  
+  const wss = new WebSocketServer({ server: httpServer, path: "/ws/signaling" });
+  
+  wss.on("connection", async (ws, req) => {
+    const url = new URL(req.url || "", `http://${req.headers.host}`);
+    const token = url.searchParams.get("token");
+    
+    if (!token) {
+      ws.close(1008, "Authentication required");
+      return;
+    }
+    
+    const session = await storage.getSessionByToken(token);
+    if (!session) {
+      ws.close(1008, "Invalid token");
+      return;
+    }
+    
+    const userId = session.userId;
+    connectedClients.set(userId, ws);
+    console.log(`User ${userId} connected to signaling`);
+    
+    ws.on("message", async (data) => {
+      try {
+        const message: SignalingMessage = JSON.parse(data.toString());
+        const targetWs = message.targetUserId ? connectedClients.get(message.targetUserId) : null;
+        
+        switch (message.type) {
+          case "offer":
+          case "answer":
+          case "ice-candidate":
+            if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+              targetWs.send(JSON.stringify({
+                type: message.type,
+                callId: message.callId,
+                fromUserId: userId,
+                payload: message.payload,
+              }));
+            }
+            break;
+            
+          case "call-accept":
+            if (message.callId) {
+              await storage.updateCallStatus(message.callId, "active", new Date());
+            }
+            if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+              targetWs.send(JSON.stringify({
+                type: "call-accept",
+                callId: message.callId,
+                fromUserId: userId,
+              }));
+            }
+            break;
+            
+          case "call-reject":
+            if (message.callId) {
+              await storage.updateCallStatus(message.callId, "declined");
+            }
+            if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+              targetWs.send(JSON.stringify({
+                type: "call-reject",
+                callId: message.callId,
+                fromUserId: userId,
+              }));
+            }
+            break;
+            
+          case "call-end":
+            if (message.callId) {
+              const call = await storage.getCall(message.callId);
+              if (call && call.startedAt) {
+                const duration = Math.floor((Date.now() - new Date(call.startedAt).getTime()) / 1000);
+                await storage.updateCallStatus(message.callId, "ended", undefined, new Date(), duration);
+              } else if (call) {
+                await storage.updateCallStatus(message.callId, "missed");
+              }
+            }
+            if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+              targetWs.send(JSON.stringify({
+                type: "call-end",
+                callId: message.callId,
+                fromUserId: userId,
+              }));
+            }
+            break;
+            
+          case "call-busy":
+            if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+              targetWs.send(JSON.stringify({
+                type: "call-busy",
+                callId: message.callId,
+                fromUserId: userId,
+              }));
+            }
+            break;
+        }
+      } catch (error) {
+        console.error("WebSocket message error:", error);
+      }
+    });
+    
+    ws.on("close", () => {
+      connectedClients.delete(userId);
+      console.log(`User ${userId} disconnected from signaling`);
+    });
+    
+    ws.on("error", (error) => {
+      console.error(`WebSocket error for user ${userId}:`, error);
+      connectedClients.delete(userId);
+    });
+  });
+
   // ============================================
   // AUTHENTICATION ROUTES
   // ============================================
@@ -1222,6 +1349,125 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // CALL ROUTES
+  // ============================================
+  
+  app.post("/api/calls/initiate", authenticate, validateRequest(initiateCallSchema), async (req, res) => {
+    try {
+      const { receiverId, type } = req.body;
+      const callerId = req.user!.id;
+      
+      // Check if receiver exists and is a friend
+      const receiver = await storage.getUser(receiverId);
+      if (!receiver) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Create call record
+      const call = await storage.createCall({
+        callerId,
+        receiverId,
+        type,
+        status: "ringing",
+      });
+      
+      // Notify receiver via WebSocket if online
+      const receiverWs = connectedClients.get(receiverId);
+      if (receiverWs && receiverWs.readyState === WebSocket.OPEN) {
+        const caller = await storage.getUser(callerId);
+        receiverWs.send(JSON.stringify({
+          type: "incoming-call",
+          callId: call.id,
+          callType: type,
+          caller: {
+            id: caller!.id,
+            username: caller!.username,
+          },
+        }));
+      }
+      
+      await logAction(req, "call_initiated", "calls", call.id, { receiverId, type });
+      
+      res.json({ 
+        call,
+        receiverOnline: !!receiverWs && receiverWs.readyState === WebSocket.OPEN,
+      });
+    } catch (error: any) {
+      console.error("Call initiation error:", error);
+      res.status(500).json({ error: "Failed to initiate call" });
+    }
+  });
+  
+  app.get("/api/calls/history", authenticate, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const callHistory = await storage.getCallHistory(req.user!.id, limit);
+      
+      res.json({
+        calls: callHistory.map(({ call, otherUser }) => ({
+          id: call.id,
+          type: call.type,
+          status: call.status,
+          direction: call.callerId === req.user!.id ? "outgoing" : "incoming",
+          otherUser: {
+            id: otherUser.id,
+            username: otherUser.username,
+          },
+          startedAt: call.startedAt,
+          endedAt: call.endedAt,
+          duration: call.duration,
+          createdAt: call.createdAt,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Call history error:", error);
+      res.status(500).json({ error: "Failed to get call history" });
+    }
+  });
+  
+  app.get("/api/calls/:callId", authenticate, async (req, res) => {
+    try {
+      const call = await storage.getCall(req.params.callId);
+      if (!call) {
+        return res.status(404).json({ error: "Call not found" });
+      }
+      
+      if (call.callerId !== req.user!.id && call.receiverId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to view this call" });
+      }
+      
+      const otherUserId = call.callerId === req.user!.id ? call.receiverId : call.callerId;
+      const otherUser = await storage.getUser(otherUserId);
+      
+      res.json({
+        call: {
+          ...call,
+          direction: call.callerId === req.user!.id ? "outgoing" : "incoming",
+        },
+        otherUser: otherUser ? {
+          id: otherUser.id,
+          username: otherUser.username,
+        } : null,
+      });
+    } catch (error: any) {
+      console.error("Get call error:", error);
+      res.status(500).json({ error: "Failed to get call" });
+    }
+  });
+  
+  // Check if user is online (for call availability)
+  app.get("/api/users/:userId/online", authenticate, async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      const ws = connectedClients.get(userId);
+      const isOnline = !!ws && ws.readyState === WebSocket.OPEN;
+      res.json({ userId, isOnline });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to check user status" });
+    }
+  });
+
+  // ============================================
   // HEALTH CHECK
   // ============================================
 
@@ -1238,6 +1484,8 @@ export async function registerRoutes(
         backwardCompatibility: ["6.0", "7.0", "8.0", "9.0", "10.0"],
         fileUpload: true,
         secureDocuments: true,
+        videoCalls: true,
+        voiceCalls: true,
       },
     });
   });

@@ -427,3 +427,37 @@ export const insertSecureDocumentSchema = createInsertSchema(secureDocuments).om
 
 export type InsertSecureDocument = z.infer<typeof insertSecureDocumentSchema>;
 export type SecureDocument = typeof secureDocuments.$inferSelect;
+
+// ============================================
+// CALLS TABLE - Video/Voice call history
+// ============================================
+export const calls = pgTable("calls", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  callerId: varchar("caller_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  receiverId: varchar("receiver_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // "video" | "voice"
+  status: text("status").notNull().default("pending"), // pending, ringing, active, ended, missed, declined
+  startedAt: timestamp("started_at"),
+  endedAt: timestamp("ended_at"),
+  duration: integer("duration"), // seconds
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  callerIdx: index("calls_caller_idx").on(table.callerId),
+  receiverIdx: index("calls_receiver_idx").on(table.receiverId),
+  statusIdx: index("calls_status_idx").on(table.status),
+}));
+
+export const insertCallSchema = createInsertSchema(calls).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCall = z.infer<typeof insertCallSchema>;
+export type Call = typeof calls.$inferSelect;
+
+export const initiateCallSchema = z.object({
+  receiverId: z.string().min(1),
+  type: z.enum(["video", "voice"]),
+});
+
+export type InitiateCallInput = z.infer<typeof initiateCallSchema>;

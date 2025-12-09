@@ -7,8 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Clock, Check, X, Trash2, Radio, Waves } from "lucide-react";
+import { Users, UserPlus, Clock, Check, X, Trash2, Radio, Waves, Video, Phone } from "lucide-react";
 import { Link } from "wouter";
+import { VideoCall, IncomingCallNotification } from "@/components/VideoCall";
+import { useCallSignaling } from "@/hooks/useCallSignaling";
 
 interface Friend {
   id: string;
@@ -41,6 +43,27 @@ export default function FriendsPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { 
+    socket, 
+    incomingCall, 
+    activeCall, 
+    initiateCall, 
+    acceptCall, 
+    rejectCall, 
+    endCall 
+  } = useCallSignaling();
+
+  const handleCall = async (friendId: string, friendUsername: string, type: "video" | "voice") => {
+    try {
+      await initiateCall(friendId, friendUsername, type);
+    } catch (error: any) {
+      toast({
+        title: "Call Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const { data: friendsData, isLoading, error } = useQuery<FriendsData>({
     queryKey: ["/api/friends"],
@@ -167,6 +190,28 @@ export default function FriendsPage() {
   }
 
   return (
+    <>
+      {incomingCall && (
+        <IncomingCallNotification
+          callId={incomingCall.callId}
+          callType={incomingCall.callType}
+          caller={incomingCall.caller}
+          onAccept={acceptCall}
+          onReject={rejectCall}
+        />
+      )}
+      
+      {activeCall && (
+        <VideoCall
+          callId={activeCall.callId}
+          callType={activeCall.callType}
+          otherUser={activeCall.otherUser}
+          isIncoming={activeCall.isIncoming}
+          onEnd={endCall}
+          signalingSocket={socket}
+        />
+      )}
+      
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
@@ -286,15 +331,35 @@ export default function FriendsPage() {
                           </div>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        data-testid={`button-remove-${friend.id}`}
-                        onClick={() => removeMutation.mutate(friend.id)}
-                        className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          data-testid={`button-voice-call-${friend.id}`}
+                          onClick={() => handleCall(friend.id, friend.username, "voice")}
+                          className="text-green-400 hover:text-green-300 hover:bg-green-900/20"
+                        >
+                          <Phone className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          data-testid={`button-video-call-${friend.id}`}
+                          onClick={() => handleCall(friend.id, friend.username, "video")}
+                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
+                        >
+                          <Video className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          data-testid={`button-remove-${friend.id}`}
+                          onClick={() => removeMutation.mutate(friend.id)}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -392,5 +457,6 @@ export default function FriendsPage() {
         </Tabs>
       </div>
     </div>
+    </>
   );
 }

@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 import {
   users, sessions, auditLogs, wallets, transactions,
   versionRegistry, apiKeys, rateLimits, friendships, uploadedFiles, secureDocuments,
-  lambdaMessages,
+  lambdaMessages, calls,
   type User, type InsertUser, type Session, type InsertSession,
   type AuditLog, type InsertAuditLog, type Wallet, type InsertWallet,
   type Transaction, type InsertTransaction, type VersionRegistry,
@@ -14,6 +14,7 @@ import {
   type UploadedFile, type InsertUploadedFile,
   type SecureDocument, type InsertSecureDocument,
   type LambdaMessage, type InsertLambdaMessage,
+  type Call, type InsertCall,
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
@@ -99,6 +100,12 @@ export interface IStorage {
   markMessageAsRead(messageId: string): Promise<LambdaMessage>;
   markMessageAsDecoded(messageId: string): Promise<LambdaMessage>;
   getUnreadCount(userId: string): Promise<number>;
+
+  // Call operations
+  createCall(call: InsertCall): Promise<Call>;
+  getCall(id: string): Promise<Call | undefined>;
+  updateCallStatus(callId: string, status: string, startedAt?: Date, endedAt?: Date, duration?: number): Promise<Call>;
+  getCallHistory(userId: string, limit?: number): Promise<Array<{ call: Call; otherUser: User }>>;
 }
 
 function generateWalletAddress(): string {
@@ -628,6 +635,65 @@ export class DatabaseStorage implements IStorage {
         eq(lambdaMessages.isRead, false)
       ));
     return result.length;
+  }
+
+  // ============================================
+  // CALL OPERATIONS
+  // ============================================
+  
+  async createCall(call: InsertCall): Promise<Call> {
+    const result = await db.insert(calls).values(call).returning();
+    return result[0];
+  }
+
+  async getCall(id: string): Promise<Call | undefined> {
+    const result = await db.select().from(calls)
+      .where(eq(calls.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateCallStatus(callId: string, status: string, startedAt?: Date, endedAt?: Date, duration?: number): Promise<Call> {
+    const updateData: Partial<Call> = { status };
+    if (startedAt) updateData.startedAt = startedAt;
+    if (endedAt) updateData.endedAt = endedAt;
+    if (duration !== undefined) updateData.duration = duration;
+    
+    const result = await db.update(calls)
+      .set(updateData)
+      .where(eq(calls.id, callId))
+      .returning();
+    return result[0];
+  }
+
+  async getCallHistory(userId: string, limit: number = 50): Promise<Array<{ call: Call; otherUser: User }>> {
+    const result = await db.select()
+      .from(calls)
+      .where(
+        eq(calls.callerId, userId)
+      )
+      .orderBy(desc(calls.createdAt))
+      .limit(limit);
+
+    const receivedCalls = await db.select()
+      .from(calls)
+      .where(eq(calls.receiverId, userId))
+      .orderBy(desc(calls.createdAt))
+      .limit(limit);
+
+    const allCalls = [...result, ...receivedCalls]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+
+    const callsWithUsers: Array<{ call: Call; otherUser: User }> = [];
+    for (const call of allCalls) {
+      const otherUserId = call.callerId === userId ? call.receiverId : call.callerId;
+      const otherUser = await this.getUser(otherUserId);
+      if (otherUser) {
+        callsWithUsers.push({ call, otherUser });
+      }
+    }
+    return callsWithUsers;
   }
 }
 
