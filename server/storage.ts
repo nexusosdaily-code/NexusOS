@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import {
   users, sessions, auditLogs, wallets, transactions,
   versionRegistry, apiKeys, rateLimits, friendships, uploadedFiles, secureDocuments,
+  lambdaMessages,
   type User, type InsertUser, type Session, type InsertSession,
   type AuditLog, type InsertAuditLog, type Wallet, type InsertWallet,
   type Transaction, type InsertTransaction, type VersionRegistry,
@@ -12,6 +13,7 @@ import {
   type RateLimit, type InsertRateLimit, type Friendship, type InsertFriendship,
   type UploadedFile, type InsertUploadedFile,
   type SecureDocument, type InsertSecureDocument,
+  type LambdaMessage, type InsertLambdaMessage,
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
@@ -88,6 +90,15 @@ export interface IStorage {
   getSecureDocument(id: string): Promise<SecureDocument | undefined>;
   updateSecureDocumentVerification(id: string, isVerified: boolean): Promise<SecureDocument>;
   deleteSecureDocument(id: string): Promise<void>;
+
+  // Lambda message operations
+  createLambdaMessage(message: InsertLambdaMessage): Promise<LambdaMessage>;
+  getLambdaMessage(id: string): Promise<LambdaMessage | undefined>;
+  getInbox(userId: string, limit?: number): Promise<Array<{ message: LambdaMessage; sender: User }>>;
+  getSentMessages(userId: string, limit?: number): Promise<Array<{ message: LambdaMessage; recipient: User }>>;
+  markMessageAsRead(messageId: string): Promise<LambdaMessage>;
+  markMessageAsDecoded(messageId: string): Promise<LambdaMessage>;
+  getUnreadCount(userId: string): Promise<number>;
 }
 
 function generateWalletAddress(): string {
@@ -553,6 +564,70 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSecureDocument(id: string): Promise<void> {
     await db.delete(secureDocuments).where(eq(secureDocuments.id, id));
+  }
+
+  // ============================================
+  // LAMBDA MESSAGE OPERATIONS
+  // ============================================
+
+  async createLambdaMessage(message: InsertLambdaMessage): Promise<LambdaMessage> {
+    const result = await db.insert(lambdaMessages).values(message).returning();
+    return result[0];
+  }
+
+  async getLambdaMessage(id: string): Promise<LambdaMessage | undefined> {
+    const result = await db.select().from(lambdaMessages)
+      .where(eq(lambdaMessages.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async getInbox(userId: string, limit: number = 50): Promise<Array<{ message: LambdaMessage; sender: User }>> {
+    const result = await db.select()
+      .from(lambdaMessages)
+      .innerJoin(users, eq(lambdaMessages.senderId, users.id))
+      .where(eq(lambdaMessages.recipientId, userId))
+      .orderBy(desc(lambdaMessages.createdAt))
+      .limit(limit);
+
+    return result.map(r => ({ message: r.lambda_messages, sender: r.users }));
+  }
+
+  async getSentMessages(userId: string, limit: number = 50): Promise<Array<{ message: LambdaMessage; recipient: User }>> {
+    const result = await db.select()
+      .from(lambdaMessages)
+      .innerJoin(users, eq(lambdaMessages.recipientId, users.id))
+      .where(eq(lambdaMessages.senderId, userId))
+      .orderBy(desc(lambdaMessages.createdAt))
+      .limit(limit);
+
+    return result.map(r => ({ message: r.lambda_messages, recipient: r.users }));
+  }
+
+  async markMessageAsRead(messageId: string): Promise<LambdaMessage> {
+    const result = await db.update(lambdaMessages)
+      .set({ isRead: true, readAt: new Date() })
+      .where(eq(lambdaMessages.id, messageId))
+      .returning();
+    return result[0];
+  }
+
+  async markMessageAsDecoded(messageId: string): Promise<LambdaMessage> {
+    const result = await db.update(lambdaMessages)
+      .set({ isDecoded: true })
+      .where(eq(lambdaMessages.id, messageId))
+      .returning();
+    return result[0];
+  }
+
+  async getUnreadCount(userId: string): Promise<number> {
+    const result = await db.select()
+      .from(lambdaMessages)
+      .where(and(
+        eq(lambdaMessages.recipientId, userId),
+        eq(lambdaMessages.isRead, false)
+      ));
+    return result.length;
   }
 }
 

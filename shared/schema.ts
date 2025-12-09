@@ -355,6 +355,49 @@ export type FriendRequestInput = z.infer<typeof friendRequestSchema>;
 export type FriendActionInput = z.infer<typeof friendActionSchema>;
 
 // ============================================
+// LAMBDA MESSAGES TABLE - Spectral-encoded messaging
+// ============================================
+export const lambdaMessages = pgTable("lambda_messages", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  senderId: varchar("sender_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  recipientId: varchar("recipient_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  encodedFrames: jsonb("encoded_frames"),
+  totalLambdaMass: decimal("total_lambda_mass", { precision: 50, scale: 30 }),
+  spectralHash: text("spectral_hash"),
+  wavelengthMin: decimal("wavelength_min", { precision: 10, scale: 4 }),
+  wavelengthMax: decimal("wavelength_max", { precision: 10, scale: 4 }),
+  intensity: integer("intensity").default(32),
+  cycles: integer("cycles").default(1),
+  isRead: boolean("is_read").notNull().default(false),
+  isDecoded: boolean("is_decoded").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  readAt: timestamp("read_at"),
+}, (table) => ({
+  senderIdx: index("lambda_messages_sender_idx").on(table.senderId),
+  recipientIdx: index("lambda_messages_recipient_idx").on(table.recipientId),
+  createdAtIdx: index("lambda_messages_created_at_idx").on(table.createdAt),
+}));
+
+export const insertLambdaMessageSchema = createInsertSchema(lambdaMessages).omit({
+  id: true,
+  createdAt: true,
+  readAt: true,
+});
+
+export type InsertLambdaMessage = z.infer<typeof insertLambdaMessageSchema>;
+export type LambdaMessage = typeof lambdaMessages.$inferSelect;
+
+export const sendMessageSchema = z.object({
+  recipientId: z.string().min(1),
+  content: z.string().min(1).max(10000),
+  intensity: z.number().min(1).max(100).optional(),
+  cycles: z.number().min(1).max(10).optional(),
+});
+
+export type SendMessageInput = z.infer<typeof sendMessageSchema>;
+
+// ============================================
 // SECURE DOCUMENTS TABLE - Lambda-signed DOCX storage
 // ============================================
 export const secureDocuments = pgTable("secure_documents", {
