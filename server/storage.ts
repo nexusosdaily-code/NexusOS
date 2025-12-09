@@ -1,11 +1,11 @@
 import { db } from "./db";
-import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { eq, and, gte, lte, desc, isNull } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import {
   users, sessions, auditLogs, wallets, transactions,
   versionRegistry, apiKeys, rateLimits, friendships, uploadedFiles, secureDocuments,
-  lambdaMessages, calls,
+  lambdaMessages, calls, streams, streamViewers, streamRecordings,
   type User, type InsertUser, type Session, type InsertSession,
   type AuditLog, type InsertAuditLog, type Wallet, type InsertWallet,
   type Transaction, type InsertTransaction, type VersionRegistry,
@@ -15,6 +15,10 @@ import {
   type SecureDocument, type InsertSecureDocument,
   type LambdaMessage, type InsertLambdaMessage,
   type Call, type InsertCall,
+  type Stream, type InsertStream,
+  type StreamViewer, type InsertStreamViewer,
+  type StreamRecording, type InsertStreamRecording,
+  type UpdateStreamSettingsInput,
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
@@ -106,6 +110,26 @@ export interface IStorage {
   getCall(id: string): Promise<Call | undefined>;
   updateCallStatus(callId: string, status: string, startedAt?: Date, endedAt?: Date, duration?: number): Promise<Call>;
   getCallHistory(userId: string, limit?: number): Promise<Array<{ call: Call; otherUser: User }>>;
+
+  // Stream operations
+  createStream(stream: InsertStream): Promise<Stream>;
+  getStream(id: string): Promise<Stream | undefined>;
+  updateStreamStatus(streamId: string, status: string, startedAt?: Date, endedAt?: Date): Promise<Stream>;
+  updateStreamSettings(streamId: string, settings: UpdateStreamSettingsInput): Promise<Stream>;
+  updateStreamViewerCount(streamId: string, count: number): Promise<Stream>;
+  getLiveStreams(limit?: number): Promise<Array<{ stream: Stream; broadcaster: User }>>;
+  getUserStreams(userId: string, limit?: number): Promise<Stream[]>;
+  endStream(streamId: string): Promise<Stream>;
+
+  // Stream viewer operations
+  addStreamViewer(streamId: string, viewerId: string): Promise<StreamViewer>;
+  removeStreamViewer(streamId: string, viewerId: string): Promise<void>;
+  getStreamViewers(streamId: string): Promise<Array<{ viewer: StreamViewer; user: User }>>;
+
+  // Stream recording operations
+  createStreamRecording(recording: InsertStreamRecording): Promise<StreamRecording>;
+  getStreamRecordings(streamId: string): Promise<StreamRecording[]>;
+  getUserRecordings(userId: string): Promise<StreamRecording[]>;
 }
 
 function generateWalletAddress(): string {
@@ -694,6 +718,177 @@ export class DatabaseStorage implements IStorage {
       }
     }
     return callsWithUsers;
+  }
+
+  // ============================================
+  // STREAM OPERATIONS
+  // ============================================
+
+  async createStream(stream: InsertStream): Promise<Stream> {
+    const result = await db.insert(streams).values(stream).returning();
+    return result[0];
+  }
+
+  async getStream(id: string): Promise<Stream | undefined> {
+    const result = await db.select().from(streams)
+      .where(eq(streams.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateStreamStatus(streamId: string, status: string, startedAt?: Date, endedAt?: Date): Promise<Stream> {
+    const updateData: Partial<Stream> = { status };
+    if (startedAt) updateData.startedAt = startedAt;
+    if (endedAt) {
+      updateData.endedAt = endedAt;
+      const stream = await this.getStream(streamId);
+      if (stream?.startedAt) {
+        updateData.duration = Math.floor((endedAt.getTime() - new Date(stream.startedAt).getTime()) / 1000);
+      }
+    }
+    
+    const result = await db.update(streams)
+      .set(updateData)
+      .where(eq(streams.id, streamId))
+      .returning();
+    return result[0];
+  }
+
+  async updateStreamSettings(streamId: string, settings: UpdateStreamSettingsInput): Promise<Stream> {
+    const result = await db.update(streams)
+      .set(settings)
+      .where(eq(streams.id, streamId))
+      .returning();
+    return result[0];
+  }
+
+  async updateStreamViewerCount(streamId: string, count: number): Promise<Stream> {
+    const stream = await this.getStream(streamId);
+    const peakViewers = stream && count > (stream.peakViewers || 0) ? count : stream?.peakViewers || 0;
+    
+    const result = await db.update(streams)
+      .set({ viewerCount: count, peakViewers })
+      .where(eq(streams.id, streamId))
+      .returning();
+    return result[0];
+  }
+
+  async getLiveStreams(limit: number = 50): Promise<Array<{ stream: Stream; broadcaster: User }>> {
+    const result = await db.select()
+      .from(streams)
+      .innerJoin(users, eq(streams.broadcasterId, users.id))
+      .where(and(
+        eq(streams.status, "live"),
+        eq(streams.isPublic, true)
+      ))
+      .orderBy(desc(streams.viewerCount))
+      .limit(limit);
+
+    return result.map(r => ({ stream: r.streams, broadcaster: r.users }));
+  }
+
+  async getUserStreams(userId: string, limit: number = 50): Promise<Stream[]> {
+    return db.select().from(streams)
+      .where(eq(streams.broadcasterId, userId))
+      .orderBy(desc(streams.createdAt))
+      .limit(limit);
+  }
+
+  async endStream(streamId: string): Promise<Stream> {
+    const stream = await this.getStream(streamId);
+    const endedAt = new Date();
+    let duration = 0;
+    
+    if (stream?.startedAt) {
+      duration = Math.floor((endedAt.getTime() - new Date(stream.startedAt).getTime()) / 1000);
+    }
+    
+    const result = await db.update(streams)
+      .set({ status: "ended", endedAt, duration, viewerCount: 0 })
+      .where(eq(streams.id, streamId))
+      .returning();
+    return result[0];
+  }
+
+  // ============================================
+  // STREAM VIEWER OPERATIONS
+  // ============================================
+
+  async addStreamViewer(streamId: string, viewerId: string): Promise<StreamViewer> {
+    const result = await db.insert(streamViewers).values({
+      streamId,
+      viewerId,
+      joinedAt: new Date(),
+    }).returning();
+    
+    const viewerCount = await this.getStreamViewerCount(streamId);
+    await this.updateStreamViewerCount(streamId, viewerCount);
+    
+    return result[0];
+  }
+
+  async removeStreamViewer(streamId: string, viewerId: string): Promise<void> {
+    const viewer = await db.select().from(streamViewers)
+      .where(and(
+        eq(streamViewers.streamId, streamId),
+        eq(streamViewers.viewerId, viewerId)
+      ))
+      .limit(1);
+    
+    if (viewer[0]) {
+      const joinedAt = new Date(viewer[0].joinedAt);
+      const leftAt = new Date();
+      const watchDuration = Math.floor((leftAt.getTime() - joinedAt.getTime()) / 1000);
+      
+      await db.update(streamViewers)
+        .set({ leftAt, watchDuration })
+        .where(eq(streamViewers.id, viewer[0].id));
+    }
+    
+    const viewerCount = await this.getStreamViewerCount(streamId);
+    await this.updateStreamViewerCount(streamId, viewerCount);
+  }
+
+  private async getStreamViewerCount(streamId: string): Promise<number> {
+    const result = await db.select().from(streamViewers)
+      .where(and(
+        eq(streamViewers.streamId, streamId),
+        isNull(streamViewers.leftAt)
+      ));
+    return result.length;
+  }
+
+  async getStreamViewers(streamId: string): Promise<Array<{ viewer: StreamViewer; user: User }>> {
+    const result = await db.select()
+      .from(streamViewers)
+      .innerJoin(users, eq(streamViewers.viewerId, users.id))
+      .where(and(
+        eq(streamViewers.streamId, streamId),
+        isNull(streamViewers.leftAt)
+      ));
+
+    return result.map(r => ({ viewer: r.stream_viewers, user: r.users }));
+  }
+
+  // ============================================
+  // STREAM RECORDING OPERATIONS
+  // ============================================
+
+  async createStreamRecording(recording: InsertStreamRecording): Promise<StreamRecording> {
+    const result = await db.insert(streamRecordings).values(recording).returning();
+    return result[0];
+  }
+
+  async getStreamRecordings(streamId: string): Promise<StreamRecording[]> {
+    return db.select().from(streamRecordings)
+      .where(eq(streamRecordings.streamId, streamId))
+      .orderBy(desc(streamRecordings.createdAt));
+  }
+
+  async getUserRecordings(userId: string): Promise<StreamRecording[]> {
+    return db.select().from(streamRecordings)
+      .where(eq(streamRecordings.userId, userId))
+      .orderBy(desc(streamRecordings.createdAt));
   }
 }
 

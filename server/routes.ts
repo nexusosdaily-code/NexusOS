@@ -5,7 +5,8 @@ import { storage } from "./storage";
 import { authenticate, optionalAuth, logAction } from "./auth";
 import { 
   loginSchema, registerSchema, spectralEncodeSchema, transferSchema,
-  friendRequestSchema, friendActionSchema, sendMessageSchema, initiateCallSchema
+  friendRequestSchema, friendActionSchema, sendMessageSchema, initiateCallSchema,
+  createStreamSchema, updateStreamSettingsSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -1468,6 +1469,295 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // STREAMING ROUTES
+  // ============================================
+
+  app.post("/api/streams", authenticate, validateRequest(createStreamSchema), async (req, res) => {
+    try {
+      if (!await checkRateLimit(req, res, "/api/streams", 20)) return;
+      
+      const { title, description, streamType, isPublic, quality, bitrate, frameRate, recordingEnabled } = req.body;
+      
+      const stream = await storage.createStream({
+        broadcasterId: req.user!.id,
+        title,
+        description,
+        streamType: streamType || "camera",
+        isPublic: isPublic !== false,
+        quality: quality || "720p",
+        bitrate: bitrate || 2500,
+        frameRate: frameRate || 30,
+        recordingEnabled: recordingEnabled || false,
+      });
+      
+      await logAction(req, "stream_created", "streams", stream.id, { title, streamType });
+      
+      res.status(201).json({ stream });
+    } catch (error: any) {
+      console.error("Create stream error:", error);
+      await logAction(req, "stream_create_error", "streams", undefined, {}, "failed", error.message);
+      res.status(500).json({ error: "Failed to create stream" });
+    }
+  });
+
+  app.get("/api/streams/live", optionalAuth, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const liveStreams = await storage.getLiveStreams(limit);
+      
+      res.json({
+        streams: liveStreams.map(({ stream, broadcaster }) => ({
+          id: stream.id,
+          title: stream.title,
+          description: stream.description,
+          viewerCount: stream.viewerCount,
+          quality: stream.quality,
+          streamType: stream.streamType,
+          startedAt: stream.startedAt,
+          broadcaster: {
+            id: broadcaster.id,
+            username: broadcaster.username,
+          },
+        })),
+      });
+    } catch (error: any) {
+      console.error("Get live streams error:", error);
+      res.status(500).json({ error: "Failed to get live streams" });
+    }
+  });
+
+  app.get("/api/streams/my", authenticate, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const streams = await storage.getUserStreams(req.user!.id, limit);
+      res.json({ streams });
+    } catch (error: any) {
+      console.error("Get user streams error:", error);
+      res.status(500).json({ error: "Failed to get your streams" });
+    }
+  });
+
+  app.get("/api/streams/:streamId", optionalAuth, async (req, res) => {
+    try {
+      const stream = await storage.getStream(req.params.streamId);
+      if (!stream) {
+        return res.status(404).json({ error: "Stream not found" });
+      }
+      
+      if (!stream.isPublic && (!req.user || stream.broadcasterId !== req.user.id)) {
+        return res.status(403).json({ error: "This stream is private" });
+      }
+      
+      const broadcaster = await storage.getUser(stream.broadcasterId);
+      
+      res.json({
+        stream,
+        broadcaster: broadcaster ? {
+          id: broadcaster.id,
+          username: broadcaster.username,
+        } : null,
+        isOwner: req.user?.id === stream.broadcasterId,
+      });
+    } catch (error: any) {
+      console.error("Get stream error:", error);
+      res.status(500).json({ error: "Failed to get stream" });
+    }
+  });
+
+  app.post("/api/streams/:streamId/start", authenticate, async (req, res) => {
+    try {
+      const stream = await storage.getStream(req.params.streamId);
+      if (!stream) {
+        return res.status(404).json({ error: "Stream not found" });
+      }
+      
+      if (stream.broadcasterId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to start this stream" });
+      }
+      
+      const updatedStream = await storage.updateStreamStatus(stream.id, "live", new Date());
+      
+      await logAction(req, "stream_started", "streams", stream.id);
+      
+      res.json({ stream: updatedStream });
+    } catch (error: any) {
+      console.error("Start stream error:", error);
+      res.status(500).json({ error: "Failed to start stream" });
+    }
+  });
+
+  app.post("/api/streams/:streamId/end", authenticate, async (req, res) => {
+    try {
+      const stream = await storage.getStream(req.params.streamId);
+      if (!stream) {
+        return res.status(404).json({ error: "Stream not found" });
+      }
+      
+      if (stream.broadcasterId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to end this stream" });
+      }
+      
+      const endedStream = await storage.endStream(stream.id);
+      
+      await logAction(req, "stream_ended", "streams", stream.id, { 
+        duration: endedStream.duration,
+        peakViewers: endedStream.peakViewers,
+      });
+      
+      res.json({ stream: endedStream });
+    } catch (error: any) {
+      console.error("End stream error:", error);
+      res.status(500).json({ error: "Failed to end stream" });
+    }
+  });
+
+  app.patch("/api/streams/:streamId/settings", authenticate, validateRequest(updateStreamSettingsSchema), async (req, res) => {
+    try {
+      const stream = await storage.getStream(req.params.streamId);
+      if (!stream) {
+        return res.status(404).json({ error: "Stream not found" });
+      }
+      
+      if (stream.broadcasterId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to update this stream" });
+      }
+      
+      const updatedStream = await storage.updateStreamSettings(stream.id, req.body);
+      
+      await logAction(req, "stream_settings_updated", "streams", stream.id, req.body);
+      
+      res.json({ stream: updatedStream });
+    } catch (error: any) {
+      console.error("Update stream settings error:", error);
+      res.status(500).json({ error: "Failed to update stream settings" });
+    }
+  });
+
+  app.post("/api/streams/:streamId/join", authenticate, async (req, res) => {
+    try {
+      const stream = await storage.getStream(req.params.streamId);
+      if (!stream) {
+        return res.status(404).json({ error: "Stream not found" });
+      }
+      
+      if (stream.status !== "live") {
+        return res.status(400).json({ error: "Stream is not live" });
+      }
+      
+      if (!stream.isPublic && stream.broadcasterId !== req.user!.id) {
+        return res.status(403).json({ error: "This stream is private" });
+      }
+      
+      const viewer = await storage.addStreamViewer(stream.id, req.user!.id);
+      const broadcaster = await storage.getUser(stream.broadcasterId);
+      
+      await logAction(req, "stream_joined", "streams", stream.id);
+      
+      res.json({ 
+        viewer,
+        stream,
+        broadcaster: broadcaster ? {
+          id: broadcaster.id,
+          username: broadcaster.username,
+        } : null,
+      });
+    } catch (error: any) {
+      console.error("Join stream error:", error);
+      res.status(500).json({ error: "Failed to join stream" });
+    }
+  });
+
+  app.post("/api/streams/:streamId/leave", authenticate, async (req, res) => {
+    try {
+      const stream = await storage.getStream(req.params.streamId);
+      if (!stream) {
+        return res.status(404).json({ error: "Stream not found" });
+      }
+      
+      await storage.removeStreamViewer(stream.id, req.user!.id);
+      
+      await logAction(req, "stream_left", "streams", stream.id);
+      
+      res.json({ message: "Left stream successfully" });
+    } catch (error: any) {
+      console.error("Leave stream error:", error);
+      res.status(500).json({ error: "Failed to leave stream" });
+    }
+  });
+
+  app.get("/api/streams/:streamId/viewers", authenticate, async (req, res) => {
+    try {
+      const stream = await storage.getStream(req.params.streamId);
+      if (!stream) {
+        return res.status(404).json({ error: "Stream not found" });
+      }
+      
+      if (stream.broadcasterId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to view viewers list" });
+      }
+      
+      const viewers = await storage.getStreamViewers(stream.id);
+      
+      res.json({
+        viewerCount: stream.viewerCount,
+        viewers: viewers.map(({ viewer, user }) => ({
+          id: viewer.id,
+          username: user.username,
+          joinedAt: viewer.joinedAt,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Get viewers error:", error);
+      res.status(500).json({ error: "Failed to get viewers" });
+    }
+  });
+
+  app.post("/api/streams/:streamId/recordings", authenticate, async (req, res) => {
+    try {
+      const stream = await storage.getStream(req.params.streamId);
+      if (!stream) {
+        return res.status(404).json({ error: "Stream not found" });
+      }
+      
+      if (stream.broadcasterId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to create recordings for this stream" });
+      }
+      
+      const { filename, size, duration, format } = req.body;
+      
+      const recording = await storage.createStreamRecording({
+        streamId: stream.id,
+        userId: req.user!.id,
+        filename,
+        size,
+        duration,
+        format: format || "webm",
+        status: "ready",
+      });
+      
+      await logAction(req, "recording_created", "streams", stream.id, { 
+        recordingId: recording.id,
+        duration,
+      });
+      
+      res.status(201).json({ recording });
+    } catch (error: any) {
+      console.error("Create recording error:", error);
+      res.status(500).json({ error: "Failed to create recording" });
+    }
+  });
+
+  app.get("/api/recordings", authenticate, async (req, res) => {
+    try {
+      const recordings = await storage.getUserRecordings(req.user!.id);
+      res.json({ recordings });
+    } catch (error: any) {
+      console.error("Get recordings error:", error);
+      res.status(500).json({ error: "Failed to get recordings" });
+    }
+  });
+
+  // ============================================
   // HEALTH CHECK
   // ============================================
 
@@ -1486,6 +1776,9 @@ export async function registerRoutes(
         secureDocuments: true,
         videoCalls: true,
         voiceCalls: true,
+        liveStreaming: true,
+        screenSharing: true,
+        streamRecording: true,
       },
     });
   });
