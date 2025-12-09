@@ -12,31 +12,119 @@ import {
   Radio, 
   Activity,
   TrendingUp,
-  Gauge
+  Gauge,
+  Link2,
+  Unlink2,
+  RefreshCw
 } from "lucide-react";
 
 const SCHUMANN_HARMONICS = [7.83, 14.3, 20.8, 27.3, 33.8, 39.0, 45.0];
 const PLANCK_CONSTANT = 6.62607015e-34;
 const SPEED_OF_LIGHT = 299792458;
 
-interface DataPoint {
-  time: number;
-  amplitude: number;
-  frequency: number;
+interface SyncData {
+  backend_coherence: number;
+  energy_pool: number;
+  lambda_mass: number;
+  k1_tick: number;
+  k1_state: string;
+  sync_quality: number;
+  resonance_strength: number;
+  simulator_stats: {
+    total_harvested_energy: number;
+    contributions: number;
+  };
 }
 
 export function LiveResonanceSimulator() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const spectrumRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
+  const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [isSynced, setIsSynced] = useState(false);
   const [time, setTime] = useState(0);
   const [harvestedEnergy, setHarvestedEnergy] = useState(0);
   const [instantPower, setInstantPower] = useState(0);
   const [coherence, setCoherence] = useState(0.85);
   const [qFactor, setQFactor] = useState(1000);
   const [harvesterCount, setHarvesterCount] = useState(100);
-  const [dataHistory, setDataHistory] = useState<DataPoint[]>([]);
+  const [syncData, setSyncData] = useState<SyncData | null>(null);
+  const [lastInjection, setLastInjection] = useState<{ energy_added: number; contributions: number } | null>(null);
+  const lastSyncEnergy = useRef(0);
+  
+  const stateRef = useRef({
+    harvestedEnergy: 0,
+    instantPower: 0,
+    coherence: 0.85,
+    harvesterCount: 100,
+    isSynced: false
+  });
+  
+  useEffect(() => {
+    stateRef.current = { harvestedEnergy, instantPower, coherence, harvesterCount, isSynced };
+  }, [harvestedEnergy, instantPower, coherence, harvesterCount, isSynced]);
+
+  const fetchSyncData = useCallback(async () => {
+    try {
+      const response = await fetch('/api/k1/simulator/sync');
+      if (response.ok) {
+        const data = await response.json();
+        setSyncData(data);
+        if (stateRef.current.isSynced && data.backend_coherence) {
+          setCoherence(prev => prev * 0.9 + data.backend_coherence * 0.1);
+        }
+      }
+    } catch (error) {
+      console.error('Sync fetch error:', error);
+    }
+  }, []);
+
+  const injectEnergy = useCallback(async () => {
+    const { harvestedEnergy, instantPower, coherence, harvesterCount, isSynced } = stateRef.current;
+    
+    if (!isSynced || harvestedEnergy <= lastSyncEnergy.current) return;
+    
+    const deltaEnergy = harvestedEnergy - lastSyncEnergy.current;
+    lastSyncEnergy.current = harvestedEnergy;
+    
+    try {
+      const response = await fetch('/api/k1/simulator/inject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          harvested_energy: deltaEnergy,
+          instant_power: instantPower,
+          coherence,
+          harvester_count: harvesterCount
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setLastInjection({ energy_added: data.energy_added, contributions: data.contributions });
+      }
+    } catch (error) {
+      console.error('Energy injection error:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isSynced) {
+      fetchSyncData();
+      injectEnergy();
+      
+      syncIntervalRef.current = setInterval(() => {
+        fetchSyncData();
+        injectEnergy();
+      }, 2000);
+    }
+    return () => {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+      }
+    };
+  }, [isSynced, fetchSyncData, injectEnergy]);
 
   const calculatePower = useCallback((t: number) => {
     let totalAmplitude = 0;
@@ -48,8 +136,9 @@ export function LiveResonanceSimulator() {
     
     const basePower = Math.abs(totalAmplitude) * 1e-6 * qFactor;
     const networkBonus = 1 + (harvesterCount - 1) * coherence ** 2;
-    return basePower * networkBonus * harvesterCount;
-  }, [coherence, qFactor, harvesterCount]);
+    const syncBonus = isSynced && syncData ? (1 + syncData.resonance_strength * 0.1) : 1;
+    return basePower * networkBonus * harvesterCount * syncBonus;
+  }, [coherence, qFactor, harvesterCount, isSynced, syncData]);
 
   const drawWaveform = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, t: number) => {
     ctx.fillStyle = '#0f172a';
@@ -102,7 +191,7 @@ export function LiveResonanceSimulator() {
     ctx.globalAlpha = 1;
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 3;
-    ctx.shadowColor = '#22d3ee';
+    ctx.shadowColor = isSynced ? '#22c55e' : '#22d3ee';
     ctx.shadowBlur = 10;
     ctx.beginPath();
     
@@ -123,11 +212,14 @@ export function LiveResonanceSimulator() {
     ctx.stroke();
     ctx.shadowBlur = 0;
     
-    ctx.fillStyle = '#22d3ee';
+    ctx.fillStyle = isSynced ? '#22c55e' : '#22d3ee';
     ctx.font = 'bold 12px monospace';
     ctx.fillText(`t = ${(t / 1000).toFixed(2)}s`, 10, 20);
     ctx.fillText(`Schumann Resonance: 7.83 Hz`, 10, 36);
-  }, [coherence]);
+    if (isSynced && syncData) {
+      ctx.fillText(`K1 Tick: ${syncData.k1_tick}`, 10, 52);
+    }
+  }, [coherence, isSynced, syncData]);
 
   const drawSpectrum = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, t: number) => {
     ctx.fillStyle = '#0f172a';
@@ -211,8 +303,16 @@ export function LiveResonanceSimulator() {
     if (!isRunning) {
       setTime(0);
       setHarvestedEnergy(0);
+      lastSyncEnergy.current = 0;
     }
     setIsRunning(!isRunning);
+  };
+
+  const toggleSync = () => {
+    setIsSynced(!isSynced);
+    if (!isSynced) {
+      fetchSyncData();
+    }
   };
 
   const formatEnergy = (joules: number) => {
@@ -244,6 +344,17 @@ export function LiveResonanceSimulator() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            onClick={toggleSync}
+            variant="outline"
+            className={isSynced 
+              ? "border-green-500/50 bg-green-500/10 text-green-400 hover:bg-green-500/20" 
+              : "border-gray-500/50 bg-gray-500/10 text-gray-400 hover:bg-gray-500/20"}
+            data-testid="btn-toggle-sync"
+          >
+            {isSynced ? <Link2 className="w-4 h-4 mr-2" /> : <Unlink2 className="w-4 h-4 mr-2" />}
+            {isSynced ? "K1 Synced" : "Sync K1"}
+          </Button>
           <Badge className={isRunning ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-gray-500/20 text-gray-400 border-gray-500/30"}>
             {isRunning ? "● LIVE" : "○ PAUSED"}
           </Badge>
@@ -257,6 +368,38 @@ export function LiveResonanceSimulator() {
           </Button>
         </div>
       </div>
+
+      {isSynced && syncData && (
+        <div className="mb-6 bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <RefreshCw className="w-4 h-4 text-green-400 animate-spin" style={{ animationDuration: '3s' }} />
+            <span className="text-sm font-semibold text-green-400">K1 Runtime Sync Active</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <span className="text-gray-400">Backend Coherence</span>
+              <p className="text-white font-mono">{(syncData.backend_coherence * 100).toFixed(1)}%</p>
+            </div>
+            <div>
+              <span className="text-gray-400">Energy Pool</span>
+              <p className="text-white font-mono">{syncData.energy_pool.toFixed(4)}</p>
+            </div>
+            <div>
+              <span className="text-gray-400">Sync Quality</span>
+              <p className="text-white font-mono">{(syncData.sync_quality * 100).toFixed(1)}%</p>
+            </div>
+            <div>
+              <span className="text-gray-400">Contributions</span>
+              <p className="text-white font-mono">{syncData.simulator_stats.contributions}</p>
+            </div>
+          </div>
+          {lastInjection && (
+            <div className="mt-2 text-xs text-green-400">
+              Last injection: +{lastInjection.energy_added.toExponential(2)} energy units
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2 space-y-4">
@@ -324,6 +467,7 @@ export function LiveResonanceSimulator() {
             </div>
             <div className="text-xs text-gray-400 mt-1">
               Coherence bonus: {(1 + (harvesterCount - 1) * coherence ** 2).toFixed(1)}×
+              {isSynced && syncData && <span className="text-green-400 ml-1">+ K1 sync</span>}
             </div>
           </div>
         </div>
@@ -381,6 +525,7 @@ export function LiveResonanceSimulator() {
 
       <div className="mt-4 text-xs text-gray-500 text-center">
         Simulation based on Schumann resonance physics (7.83 Hz fundamental + harmonics) • Q-factor amplification • Phase-locked network coherence
+        {isSynced && <span className="text-green-400 ml-1">• Synchronized with K1 Orchestration Runtime</span>}
       </div>
     </Card>
   );

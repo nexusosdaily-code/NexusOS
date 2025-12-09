@@ -625,6 +625,22 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // POWER EXTRACTION SIMULATOR SYNC ROUTES
+  // ============================================
+
+  app.get("/api/k1/simulator/sync", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/k1/simulator/sync");
+  });
+
+  app.post("/api/k1/simulator/inject", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/k1/simulator/inject");
+  });
+
+  app.post("/api/k1/simulator/reset", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/k1/simulator/reset");
+  });
+
+  // ============================================
   // FILE UPLOAD ROUTES
   // ============================================
 

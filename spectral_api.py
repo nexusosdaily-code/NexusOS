@@ -201,6 +201,94 @@ def k1_reset():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Power Extraction Simulator synchronization
+_simulator_state = {
+    "total_harvested_energy": 0.0,
+    "last_power": 0.0,
+    "contributions": 0,
+    "coherence_boost": 0.0
+}
+
+@app.route('/api/k1/simulator/inject', methods=['POST'])
+def simulator_inject_energy():
+    """Inject harvested energy from the Power Extraction Simulator into K1 runtime."""
+    global _simulator_state
+    try:
+        data = request.get_json() or {}
+        harvested_energy = data.get('harvested_energy', 0.0)
+        instant_power = data.get('instant_power', 0.0)
+        coherence = data.get('coherence', 0.0)
+        harvester_count = data.get('harvester_count', 1)
+        
+        _simulator_state['total_harvested_energy'] += harvested_energy
+        _simulator_state['last_power'] = instant_power
+        _simulator_state['contributions'] += 1
+        
+        runtime = get_k1_runtime()
+        
+        energy_factor = min(harvested_energy * 1e6, 0.1)
+        if hasattr(runtime, 'wired_substrate') and runtime.wired_substrate:
+            if hasattr(runtime.wired_substrate, 'operational'):
+                runtime.wired_substrate.operational.energy_pool += energy_factor
+                current_coherence = runtime.wired_substrate.operational.coherence
+                boosted_coherence = min(1.0, current_coherence + coherence * 0.01)
+                runtime.wired_substrate.operational.coherence = boosted_coherence
+                _simulator_state['coherence_boost'] = boosted_coherence - current_coherence
+        
+        return jsonify({
+            "status": "injected",
+            "energy_added": energy_factor,
+            "total_harvested": _simulator_state['total_harvested_energy'],
+            "contributions": _simulator_state['contributions'],
+            "coherence_boost": _simulator_state['coherence_boost'],
+            "k1_tick": runtime.tick,
+            "k1_state": runtime.state.state_id
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/k1/simulator/sync', methods=['GET'])
+def simulator_sync():
+    """Get sync data for the Power Extraction Simulator from K1 runtime."""
+    global _simulator_state
+    try:
+        runtime = get_k1_runtime()
+        
+        backend_coherence = 0.85
+        energy_pool = 0.0
+        lambda_mass = 0.0
+        
+        if hasattr(runtime, 'wired_substrate') and runtime.wired_substrate:
+            if hasattr(runtime.wired_substrate, 'operational'):
+                backend_coherence = runtime.wired_substrate.operational.coherence
+                energy_pool = runtime.wired_substrate.operational.energy_pool
+                lambda_mass = runtime.wired_substrate.operational.total_lambda_mass
+        
+        return jsonify({
+            "backend_coherence": backend_coherence,
+            "energy_pool": energy_pool,
+            "lambda_mass": lambda_mass,
+            "k1_tick": runtime.tick,
+            "k1_state": runtime.state.state_id,
+            "sync_quality": runtime.sync_quality,
+            "resonance_strength": runtime.resonance_strength,
+            "simulator_stats": _simulator_state
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/k1/simulator/reset', methods=['POST'])
+def simulator_reset():
+    """Reset the simulator state."""
+    global _simulator_state
+    _simulator_state = {
+        "total_harvested_energy": 0.0,
+        "last_power": 0.0,
+        "contributions": 0,
+        "coherence_boost": 0.0
+    }
+    return jsonify({"status": "reset", "simulator_state": _simulator_state})
+
 if __name__ == '__main__':
     print("Starting Spectral API server on port 5001...")
     app.run(host='0.0.0.0', port=5001, debug=True)
