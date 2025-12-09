@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   FileText, Shield, Wallet, Radio, Zap, 
-  Users, FlaskConical, Activity, Waves, Rocket, LogOut, Presentation, Atom 
+  Users, FlaskConical, Activity, Waves, Rocket, LogOut, Presentation, Atom, Mail 
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -63,6 +63,14 @@ const features = [
     icon: Rocket,
     color: "text-orange-400",
     bgColor: "bg-orange-600/20",
+  },
+  {
+    title: "Inbox",
+    description: "Lambda-encoded messages",
+    href: "/inbox",
+    icon: Mail,
+    color: "text-rose-400",
+    bgColor: "bg-rose-600/20",
   },
   {
     title: "Friends",
