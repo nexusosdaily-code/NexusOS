@@ -22,37 +22,41 @@ interface InfoTooltipProps {
 export function InfoTooltip({ title, description, sources, className = "" }: InfoTooltipProps) {
   return (
     <TooltipProvider>
-      <Tooltip delayDuration={200}>
+      <Tooltip delayDuration={100}>
         <TooltipTrigger asChild>
           <button
-            className={`inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-700/50 hover:bg-slate-600/50 transition-colors ${className}`}
+            type="button"
+            className={`inline-flex items-center justify-center w-5 h-5 rounded-full bg-cyan-500/20 hover:bg-cyan-500/40 border border-cyan-500/30 transition-colors cursor-help ${className}`}
             data-testid={`info-tooltip-${title.toLowerCase().replace(/\s+/g, '-')}`}
+            aria-label={`Info about ${title}`}
           >
             <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
           </button>
         </TooltipTrigger>
         <TooltipContent 
           side="top" 
-          className="max-w-xs bg-slate-800 border border-cyan-500/30 p-3 text-left"
+          className="max-w-sm bg-slate-900 border-2 border-cyan-500/50 p-4 text-left z-50 shadow-xl"
+          sideOffset={5}
         >
-          <div className="space-y-2">
-            <div className="font-semibold text-cyan-300 text-sm">{title}</div>
-            <p className="text-gray-300 text-xs leading-relaxed">{description}</p>
+          <div className="space-y-3">
+            <div className="font-bold text-cyan-300 text-sm">{title}</div>
+            <p className="text-gray-200 text-xs leading-relaxed">{description}</p>
             {sources.length > 0 && (
-              <div className="pt-2 border-t border-slate-700">
-                <div className="text-xs text-gray-400 mb-1">Research Sources:</div>
-                <div className="space-y-1">
+              <div className="pt-3 border-t border-cyan-500/30">
+                <div className="text-xs text-cyan-400 font-semibold mb-2">📚 Research Sources:</div>
+                <div className="space-y-2">
                   {sources.map((source, idx) => (
                     <a
                       key={idx}
                       href={source.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-2 text-xs text-white bg-slate-800 hover:bg-cyan-900/50 p-2 rounded border border-slate-600 hover:border-cyan-500/50 transition-all cursor-pointer"
                       data-testid={`info-link-${idx}`}
                     >
-                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                      <span className="truncate">
+                      <ExternalLink className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                      <span className="underline underline-offset-2">
                         {source.organization ? `${source.organization}: ` : ""}{source.title}
                       </span>
                     </a>
