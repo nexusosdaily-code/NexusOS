@@ -236,6 +236,266 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // WEBSOCKET SIGNALING FOR LIVE STREAMING
+  // ============================================
+  
+  // Stream clients: Map<streamId, Map<viewerId, { ws: WebSocket, isBroadcaster: boolean }>>
+  const streamClients = new Map<string, Map<string, { ws: WebSocket; isBroadcaster: boolean }>>();
+  
+  interface StreamSignalingMessage {
+    type: "join-stream" | "leave-stream" | "broadcaster-ready" | "offer" | "answer" | "ice-candidate" | "stream-settings-update" | "stream-ended" | "viewer-count";
+    streamId: string;
+    targetViewerId?: string;
+    payload?: any;
+  }
+  
+  const handleViewerLeave = async (streamId: string, userId: string, streamViewers: Map<string, { ws: WebSocket; isBroadcaster: boolean }>) => {
+    streamViewers.delete(userId);
+    await storage.leaveStream(streamId, userId);
+    
+    for (const [viewerId, client] of streamViewers) {
+      if (client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(JSON.stringify({
+          type: "viewer-left",
+          viewerId: userId,
+          viewerCount: Array.from(streamViewers.values()).filter(c => !c.isBroadcaster).length,
+        }));
+      }
+    }
+    console.log(`Viewer ${userId} left stream ${streamId}`);
+  };
+  
+  const streamingWss = new WebSocketServer({ server: httpServer, path: "/ws/streaming" });
+  
+  streamingWss.on("connection", async (ws, req) => {
+    const url = new URL(req.url || "", `http://${req.headers.host}`);
+    const token = url.searchParams.get("token");
+    const streamId = url.searchParams.get("streamId");
+    const role = url.searchParams.get("role"); // "broadcaster" or "viewer"
+    
+    if (!token || !streamId) {
+      ws.close(1008, "Authentication and stream ID required");
+      return;
+    }
+    
+    const session = await storage.getSessionByToken(token);
+    if (!session) {
+      ws.close(1008, "Invalid token");
+      return;
+    }
+    
+    const userId = session.userId;
+    const isBroadcaster = role === "broadcaster";
+    
+    // Verify stream exists
+    const stream = await storage.getStream(streamId);
+    if (!stream) {
+      ws.close(1008, "Stream not found");
+      return;
+    }
+    
+    // Broadcaster must own the stream
+    if (isBroadcaster && stream.broadcasterId !== userId) {
+      ws.close(1008, "Not authorized to broadcast this stream");
+      return;
+    }
+    
+    // Initialize stream clients map if needed
+    if (!streamClients.has(streamId)) {
+      streamClients.set(streamId, new Map());
+    }
+    
+    const streamViewers = streamClients.get(streamId)!;
+    streamViewers.set(userId, { ws, isBroadcaster });
+    
+    console.log(`User ${userId} joined stream ${streamId} as ${isBroadcaster ? "broadcaster" : "viewer"}`);
+    
+    // Track viewer in database if not broadcaster
+    if (!isBroadcaster) {
+      await storage.joinStream(streamId, userId);
+      
+      // Notify broadcaster of new viewer
+      for (const [viewerId, client] of streamViewers) {
+        if (client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
+          client.ws.send(JSON.stringify({
+            type: "viewer-joined",
+            viewerId: userId,
+            viewerCount: streamViewers.size - 1, // Exclude broadcaster
+          }));
+        }
+      }
+    }
+    
+    // Send current viewer count to new connection
+    const viewerCount = Array.from(streamViewers.values()).filter(c => !c.isBroadcaster).length;
+    ws.send(JSON.stringify({
+      type: "viewer-count",
+      streamId,
+      count: viewerCount,
+    }));
+    
+    ws.on("message", async (data) => {
+      try {
+        const message: StreamSignalingMessage = JSON.parse(data.toString());
+        
+        switch (message.type) {
+          case "broadcaster-ready":
+            // Notify all viewers that broadcaster is ready
+            for (const [viewerId, client] of streamViewers) {
+              if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
+                client.ws.send(JSON.stringify({
+                  type: "broadcaster-ready",
+                  streamId,
+                  broadcasterId: userId,
+                }));
+              }
+            }
+            break;
+            
+          case "offer":
+            // Broadcaster sends offer to specific viewer
+            if (isBroadcaster && message.targetViewerId) {
+              const viewer = streamViewers.get(message.targetViewerId);
+              if (viewer && viewer.ws.readyState === WebSocket.OPEN) {
+                viewer.ws.send(JSON.stringify({
+                  type: "offer",
+                  streamId,
+                  fromUserId: userId,
+                  payload: message.payload,
+                }));
+              }
+            }
+            break;
+            
+          case "answer":
+            // Viewer sends answer back to broadcaster
+            if (!isBroadcaster) {
+              for (const [viewerId, client] of streamViewers) {
+                if (client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
+                  client.ws.send(JSON.stringify({
+                    type: "answer",
+                    streamId,
+                    fromUserId: userId,
+                    payload: message.payload,
+                  }));
+                }
+              }
+            }
+            break;
+            
+          case "ice-candidate":
+            if (isBroadcaster && message.targetViewerId) {
+              // Broadcaster sends ICE to specific viewer
+              const viewer = streamViewers.get(message.targetViewerId);
+              if (viewer && viewer.ws.readyState === WebSocket.OPEN) {
+                viewer.ws.send(JSON.stringify({
+                  type: "ice-candidate",
+                  streamId,
+                  fromUserId: userId,
+                  payload: message.payload,
+                }));
+              }
+            } else if (!isBroadcaster) {
+              // Viewer sends ICE to broadcaster
+              for (const [viewerId, client] of streamViewers) {
+                if (client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
+                  client.ws.send(JSON.stringify({
+                    type: "ice-candidate",
+                    streamId,
+                    fromUserId: userId,
+                    payload: message.payload,
+                  }));
+                }
+              }
+            }
+            break;
+            
+          case "stream-settings-update":
+            // Broadcaster updates stream settings
+            if (isBroadcaster) {
+              for (const [viewerId, client] of streamViewers) {
+                if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
+                  client.ws.send(JSON.stringify({
+                    type: "stream-settings-update",
+                    streamId,
+                    payload: message.payload,
+                  }));
+                }
+              }
+            }
+            break;
+            
+          case "stream-ended":
+            // Broadcaster ends stream
+            if (isBroadcaster) {
+              for (const [viewerId, client] of streamViewers) {
+                if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
+                  client.ws.send(JSON.stringify({
+                    type: "stream-ended",
+                    streamId,
+                  }));
+                  client.ws.close(1000, "Stream ended");
+                }
+              }
+              streamClients.delete(streamId);
+            }
+            break;
+            
+          case "leave-stream":
+            // Viewer explicitly leaves stream
+            if (!isBroadcaster) {
+              await handleViewerLeave(streamId, userId, streamViewers);
+            }
+            break;
+        }
+      } catch (error) {
+        console.error("Stream WebSocket message error:", error);
+      }
+    });
+    
+    ws.on("close", async () => {
+      // Check if user was already removed (e.g., by leave-stream message)
+      if (!streamViewers.has(userId)) {
+        console.log(`User ${userId} already left stream ${streamId}`);
+        if (streamViewers.size === 0) {
+          streamClients.delete(streamId);
+        }
+        return;
+      }
+      
+      if (!isBroadcaster) {
+        // Use centralized viewer leave handler
+        await handleViewerLeave(streamId, userId, streamViewers);
+      } else {
+        // Broadcaster disconnected - notify all viewers
+        streamViewers.delete(userId);
+        console.log(`Broadcaster ${userId} disconnected from stream ${streamId}`);
+        
+        for (const [viewerId, client] of streamViewers) {
+          if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
+            client.ws.send(JSON.stringify({
+              type: "stream-ended",
+              streamId,
+              reason: "broadcaster-disconnected",
+            }));
+          }
+        }
+        streamClients.delete(streamId);
+      }
+      
+      // Clean up empty stream
+      if (streamViewers.size === 0) {
+        streamClients.delete(streamId);
+      }
+    });
+    
+    ws.on("error", (error) => {
+      console.error(`Stream WebSocket error for user ${userId}:`, error);
+      streamViewers.delete(userId);
+    });
+  });
+
+  // ============================================
   // AUTHENTICATION ROUTES
   // ============================================
   
