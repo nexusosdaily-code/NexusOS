@@ -21,6 +21,7 @@ import AnnouncementSubstrateV2Page from "@/pages/announcement-substrate-v2";
 import ResonancePropulsionPage from "@/pages/resonance-propulsion";
 import AuthPage from "@/pages/auth";
 import FriendsPage from "@/pages/friends";
+import InboxPage from "@/pages/inbox";
 import K1InfrastructurePage from "@/pages/k1-infrastructure";
 import K1OrchestrationPage from "@/pages/k1-orchestration";
 import SecureDocxPage from "@/pages/secure-docx";
@@ -48,6 +49,8 @@ function ProtectedRoutes() {
         <Route path="/announcements/substrate-v2" component={AnnouncementSubstrateV2Page} />
         <Route path="/resonance-propulsion" component={ResonancePropulsionPage} />
         <Route path="/friends" component={FriendsPage} />
+        <Route path="/inbox" component={InboxPage} />
+        <Route path="/messages" component={InboxPage} />
         <Route path="/k1" component={K1InfrastructurePage} />
         <Route path="/workspace/k1" component={K1InfrastructurePage} />
         <Route path="/k1/orchestration" component={K1OrchestrationPage} />
