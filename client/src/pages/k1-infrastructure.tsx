@@ -513,6 +513,14 @@ export default function K1InfrastructurePage() {
           <p className="text-xl text-cyan-300 font-light mb-2">
             Kardashev Type I Civilization Dashboard
           </p>
+          <div className="flex justify-center mb-4">
+            <Link href="/k1/orchestration">
+              <Button className="bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500" data-testid="link-k1-orchestration">
+                <Activity className="w-4 h-4 mr-2" />
+                Open K1 Orchestration Runtime
+              </Button>
+            </Link>
+          </div>
           <div className="flex items-center justify-center gap-6 text-sm">
             <div className="flex items-center gap-2">
               <span className="text-gray-400">Overall K-Level:</span>

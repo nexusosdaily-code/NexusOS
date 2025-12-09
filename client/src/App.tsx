@@ -22,6 +22,7 @@ import ResonancePropulsionPage from "@/pages/resonance-propulsion";
 import AuthPage from "@/pages/auth";
 import FriendsPage from "@/pages/friends";
 import K1InfrastructurePage from "@/pages/k1-infrastructure";
+import K1OrchestrationPage from "@/pages/k1-orchestration";
 import SecureDocxPage from "@/pages/secure-docx";
 import ResearchPresentationPage from "@/pages/research-presentation";
 import NotFound from "@/pages/not-found";
@@ -49,6 +50,8 @@ function ProtectedRoutes() {
         <Route path="/friends" component={FriendsPage} />
         <Route path="/k1" component={K1InfrastructurePage} />
         <Route path="/workspace/k1" component={K1InfrastructurePage} />
+        <Route path="/k1/orchestration" component={K1OrchestrationPage} />
+        <Route path="/workspace/orchestration" component={K1OrchestrationPage} />
         <Route path="/secure-docs" component={SecureDocxPage} />
         <Route path="/research-presentation" component={ResearchPresentationPage} />
         <Route component={NotFound} />

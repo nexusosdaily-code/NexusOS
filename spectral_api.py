@@ -131,6 +131,76 @@ def health_check():
         "physics": "Λ = hf/c²"
     })
 
+# K1 Orchestration Runtime singleton
+_k1_runtime = None
+
+def get_k1_runtime():
+    """Get or create the K1 orchestration runtime."""
+    global _k1_runtime
+    if _k1_runtime is None:
+        from wnsp_v7.k1_orchestration import K1OrchestrationRuntime
+        _k1_runtime = K1OrchestrationRuntime("k1_api_runtime")
+        _k1_runtime.initialize()
+    return _k1_runtime
+
+@app.route('/api/k1/status', methods=['GET'])
+def k1_status():
+    """Get K1 orchestration runtime status."""
+    try:
+        runtime = get_k1_runtime()
+        status = runtime.get_status()
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/k1/evolve', methods=['POST'])
+def k1_evolve():
+    """Evolve the K1 orchestration runtime."""
+    try:
+        data = request.get_json() or {}
+        n_steps = data.get('n_steps', 10)
+        dt = data.get('dt', 0.001)
+        
+        runtime = get_k1_runtime()
+        snapshots = runtime.run_evolution(n_steps=n_steps, dt=dt)
+        
+        return jsonify({
+            "status": "evolved",
+            "steps": len(snapshots),
+            "final_tick": runtime.tick,
+            "sync_quality": runtime.sync_quality,
+            "resonance_strength": runtime.resonance_strength,
+            "state": runtime.state.state_id,
+            "snapshots": [s.to_dict() for s in snapshots[-5:]]
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/k1/telemetry', methods=['GET'])
+def k1_telemetry():
+    """Get K1 orchestration telemetry summary."""
+    try:
+        runtime = get_k1_runtime()
+        summary = runtime.get_telemetry_summary(last_n=100)
+        return jsonify(summary)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/k1/reset', methods=['POST'])
+def k1_reset():
+    """Reset the K1 orchestration runtime."""
+    global _k1_runtime
+    try:
+        _k1_runtime = None
+        runtime = get_k1_runtime()
+        return jsonify({
+            "status": "reset",
+            "state": runtime.state.state_id,
+            "tick": runtime.tick
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     print("Starting Spectral API server on port 5001...")
     app.run(host='0.0.0.0', port=5001, debug=True)

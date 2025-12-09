@@ -605,6 +605,26 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // K1 ORCHESTRATION API PROXY ROUTES
+  // ============================================
+
+  app.get("/api/k1/status", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/k1/status");
+  });
+
+  app.post("/api/k1/evolve", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/k1/evolve");
+  });
+
+  app.get("/api/k1/telemetry", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/k1/telemetry");
+  });
+
+  app.post("/api/k1/reset", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/k1/reset");
+  });
+
+  // ============================================
   // FILE UPLOAD ROUTES
   // ============================================
 
