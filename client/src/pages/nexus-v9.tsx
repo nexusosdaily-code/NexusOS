@@ -7,6 +7,12 @@ export default function NexusV9Page() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-cyan-950 to-slate-950 p-4 md:p-8" data-testid="page-nexus-v9">
       <div className="max-w-5xl mx-auto">
+        <Link href="/">
+          <div className="inline-flex items-center gap-2 text-gray-400 hover:text-cyan-400 transition-colors cursor-pointer mb-6" data-testid="link-back-home">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Home</span>
+          </div>
+        </Link>
         <div className="flex items-center justify-between mb-8">
           <Link href="/v8">
             <a className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300" data-testid="link-prev-version">

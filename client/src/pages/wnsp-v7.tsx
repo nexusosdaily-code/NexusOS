@@ -1,13 +1,20 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Zap, Waves, Atom, Shield, Lock, Unlock, RotateCcw, Orbit, Check } from "lucide-react";
+import { Link } from "wouter";
+import { Zap, Waves, Atom, Shield, Lock, Unlock, RotateCcw, Orbit, Check, ArrowLeft } from "lucide-react";
 
 export default function WNSPv7Page() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 p-8">
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-8">
+        <Link href="/">
+          <div className="inline-flex items-center gap-2 text-gray-400 hover:text-cyan-400 transition-colors cursor-pointer mb-6" data-testid="link-back-home">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Home</span>
+          </div>
+        </Link>
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Unlock className="w-12 h-12 text-green-400 animate-pulse" />

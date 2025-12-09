@@ -30,6 +30,12 @@ export default function NexusV10Page() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 p-4 md:p-8">
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-8">
+        <Link href="/">
+          <div className="inline-flex items-center gap-2 text-gray-400 hover:text-amber-400 transition-colors cursor-pointer mb-6" data-testid="link-back-home">
+            <ArrowRight className="w-4 h-4 rotate-180" />
+            <span>Back to Home</span>
+          </div>
+        </Link>
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Sparkles className="w-12 h-12 text-amber-400 animate-pulse" />

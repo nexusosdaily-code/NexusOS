@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Waves, ArrowRight, Atom, AlertCircle } from "lucide-react";
+import { Link } from "wouter";
+import { Zap, Waves, ArrowRight, ArrowLeft, Atom, AlertCircle } from "lucide-react";
 
 const VISIBLE_MIN_NM = 380;
 const VISIBLE_MAX_NM = 780;
@@ -127,6 +128,12 @@ export default function EncodingLab() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 p-6">
       <div className="max-w-7xl mx-auto">
+        <Link href="/">
+          <div className="inline-flex items-center gap-2 text-gray-400 hover:text-cyan-400 transition-colors cursor-pointer mb-6" data-testid="link-back-home">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Home</span>
+          </div>
+        </Link>
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Atom className="w-10 h-10 text-cyan-400 animate-pulse" />
