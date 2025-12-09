@@ -8,6 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
 import { InfoTooltip, RESEARCH_SOURCES } from "@/components/InfoTooltip";
 import { LiveResonanceSimulator } from "@/components/LiveResonanceSimulator";
+import { CosmologicalDataDashboard } from "@/components/CosmologicalDataDashboard";
+import { NasaApod } from "@/components/NasaApod";
 import {
   ArrowLeft,
   Zap,
@@ -32,7 +34,8 @@ import {
   Users,
   CheckCircle2,
   AlertCircle,
-  TrendingUp
+  TrendingUp,
+  Sun
 } from "lucide-react";
 
 const PLANCK_CONSTANT = 6.62607015e-34;
@@ -834,9 +837,12 @@ export default function ResearchPresentationPage() {
         </div>
 
         <Tabs defaultValue="connection" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-slate-900/50">
+          <TabsList className="grid w-full grid-cols-6 bg-slate-900/50">
             <TabsTrigger value="live" data-testid="tab-live">
               <Play className="w-4 h-4 mr-2" /> Live Demo
+            </TabsTrigger>
+            <TabsTrigger value="space-weather" data-testid="tab-space-weather">
+              <Sun className="w-4 h-4 mr-2" /> Space Weather
             </TabsTrigger>
             <TabsTrigger value="connection" data-testid="tab-connection">
               <Network className="w-4 h-4 mr-2" /> Connection
@@ -854,6 +860,11 @@ export default function ResearchPresentationPage() {
 
           <TabsContent value="live" className="space-y-6">
             <LiveResonanceSimulator />
+          </TabsContent>
+
+          <TabsContent value="space-weather" className="space-y-6">
+            <CosmologicalDataDashboard />
+            <NasaApod />
           </TabsContent>
 
           <TabsContent value="connection" className="space-y-6">
