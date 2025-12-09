@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
+import { InfoTooltip, RESEARCH_SOURCES } from "@/components/InfoTooltip";
 import {
   ArrowLeft,
   Zap,
@@ -306,9 +307,11 @@ function QFactorCalculator() {
       <h3 className="text-xl font-bold text-purple-400 mb-4 flex items-center gap-2">
         <TrendingUp className="w-5 h-5" />
         Q-Factor Scaling Calculator
+        <InfoTooltip {...RESEARCH_SOURCES.witricity} />
       </h3>
       <p className="text-sm text-gray-400 mb-6">
         See how Lambda Gate Coherence-Amplify bridges MIT's proven short-range tech to planetary scale
+        <InfoTooltip {...RESEARCH_SOURCES.lambda} className="ml-1" />
       </p>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -453,9 +456,11 @@ function PowerExtractionSimulator() {
       <h3 className="text-xl font-bold text-yellow-400 mb-4 flex items-center gap-2">
         <Zap className="w-5 h-5" />
         Power Extraction Simulator
+        <InfoTooltip {...RESEARCH_SOURCES.schumann} />
       </h3>
       <p className="text-sm text-gray-400 mb-6">
         Model the PlanetaryResonanceNetwork power output with your parameters
+        <InfoTooltip {...RESEARCH_SOURCES.tesla} className="ml-1" />
       </p>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
