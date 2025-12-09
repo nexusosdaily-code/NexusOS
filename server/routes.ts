@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { authenticate, optionalAuth, logAction } from "./auth";
 import { 
   loginSchema, registerSchema, spectralEncodeSchema, transferSchema,
-  friendRequestSchema, friendActionSchema
+  friendRequestSchema, friendActionSchema, sendMessageSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -512,6 +512,252 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Remove friend error:", error);
       res.status(500).json({ error: "Failed to remove friend" });
+    }
+  });
+
+  // ============================================
+  // LAMBDA MESSAGE ROUTES
+  // ============================================
+
+  app.post("/api/messages/send", authenticate, validateRequest(sendMessageSchema), async (req, res) => {
+    try {
+      if (!await checkRateLimit(req, res, "/api/messages/send", 30)) return;
+
+      const { recipientId, content, intensity = 32, cycles = 1 } = req.body;
+
+      const friends = await storage.getFriends(req.user!.id);
+      const isFriend = friends.some(f => f.friend.id === recipientId);
+      if (!isFriend) {
+        return res.status(403).json({ error: "Can only send messages to friends" });
+      }
+
+      let encodedFrames = null;
+      let totalLambdaMass = null;
+      let spectralHash = null;
+      let wavelengthMin = null;
+      let wavelengthMax = null;
+
+      try {
+        const encodeResponse = await fetch(`${SPECTRAL_API_URL}/api/spectral/encode`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: content, options: {} }),
+        });
+
+        if (encodeResponse.ok) {
+          const encodeData = await encodeResponse.json();
+          encodedFrames = encodeData.frames || encodeData.encoded_frames;
+          totalLambdaMass = encodeData.total_lambda_mass?.toString();
+          spectralHash = encodeData.spectral_hash;
+          if (encodeData.wavelength_range) {
+            wavelengthMin = encodeData.wavelength_range[0]?.toString();
+            wavelengthMax = encodeData.wavelength_range[1]?.toString();
+          }
+        }
+      } catch (encodeError) {
+        console.error("Spectral encoding failed, storing raw message:", encodeError);
+      }
+
+      const message = await storage.createLambdaMessage({
+        senderId: req.user!.id,
+        recipientId,
+        content,
+        encodedFrames,
+        totalLambdaMass,
+        spectralHash,
+        wavelengthMin,
+        wavelengthMax,
+        intensity,
+        cycles,
+        isRead: false,
+        isDecoded: false,
+      });
+
+      await logAction(req, "message_sent", "messages", message.id, {
+        recipientId,
+        hasEncoding: !!encodedFrames,
+      });
+
+      res.status(201).json({
+        message: "Message sent successfully",
+        data: {
+          id: message.id,
+          recipientId: message.recipientId,
+          hasEncoding: !!encodedFrames,
+          totalLambdaMass,
+          createdAt: message.createdAt,
+        },
+      });
+    } catch (error: any) {
+      console.error("Send message error:", error);
+      await logAction(req, "message_send_error", "messages", undefined, {}, "failed", error.message);
+      res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+
+  app.get("/api/messages/inbox", authenticate, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const inbox = await storage.getInbox(req.user!.id, limit);
+
+      res.json({
+        messages: inbox.map(({ message, sender }) => ({
+          id: message.id,
+          sender: {
+            id: sender.id,
+            username: sender.username,
+          },
+          content: message.isDecoded ? message.content : null,
+          hasEncoding: !!message.encodedFrames,
+          totalLambdaMass: message.totalLambdaMass,
+          isRead: message.isRead,
+          isDecoded: message.isDecoded,
+          createdAt: message.createdAt,
+          readAt: message.readAt,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Get inbox error:", error);
+      res.status(500).json({ error: "Failed to get inbox" });
+    }
+  });
+
+  app.get("/api/messages/sent", authenticate, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const sent = await storage.getSentMessages(req.user!.id, limit);
+
+      res.json({
+        messages: sent.map(({ message, recipient }) => ({
+          id: message.id,
+          recipient: {
+            id: recipient.id,
+            username: recipient.username,
+          },
+          content: message.content,
+          hasEncoding: !!message.encodedFrames,
+          totalLambdaMass: message.totalLambdaMass,
+          isRead: message.isRead,
+          createdAt: message.createdAt,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Get sent messages error:", error);
+      res.status(500).json({ error: "Failed to get sent messages" });
+    }
+  });
+
+  app.get("/api/messages/unread-count", authenticate, async (req, res) => {
+    try {
+      const count = await storage.getUnreadCount(req.user!.id);
+      res.json({ count });
+    } catch (error: any) {
+      console.error("Get unread count error:", error);
+      res.status(500).json({ error: "Failed to get unread count" });
+    }
+  });
+
+  app.get("/api/messages/:id", authenticate, async (req, res) => {
+    try {
+      const message = await storage.getLambdaMessage(req.params.id);
+      if (!message) {
+        return res.status(404).json({ error: "Message not found" });
+      }
+
+      if (message.senderId !== req.user!.id && message.recipientId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to view this message" });
+      }
+
+      const isRecipient = message.recipientId === req.user!.id;
+
+      res.json({
+        message: {
+          id: message.id,
+          senderId: message.senderId,
+          recipientId: message.recipientId,
+          content: message.isDecoded || message.senderId === req.user!.id ? message.content : null,
+          encodedFrames: message.encodedFrames,
+          totalLambdaMass: message.totalLambdaMass,
+          spectralHash: message.spectralHash,
+          wavelengthMin: message.wavelengthMin,
+          wavelengthMax: message.wavelengthMax,
+          intensity: message.intensity,
+          cycles: message.cycles,
+          isRead: message.isRead,
+          isDecoded: message.isDecoded,
+          createdAt: message.createdAt,
+          readAt: message.readAt,
+        },
+        isRecipient,
+        isSender: message.senderId === req.user!.id,
+      });
+    } catch (error: any) {
+      console.error("Get message error:", error);
+      res.status(500).json({ error: "Failed to get message" });
+    }
+  });
+
+  app.post("/api/messages/:id/read", authenticate, async (req, res) => {
+    try {
+      const message = await storage.getLambdaMessage(req.params.id);
+      if (!message) {
+        return res.status(404).json({ error: "Message not found" });
+      }
+
+      if (message.recipientId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to mark this message as read" });
+      }
+
+      const updated = await storage.markMessageAsRead(req.params.id);
+      
+      await logAction(req, "message_read", "messages", message.id);
+
+      res.json({
+        message: "Message marked as read",
+        readAt: updated.readAt,
+      });
+    } catch (error: any) {
+      console.error("Mark message read error:", error);
+      res.status(500).json({ error: "Failed to mark message as read" });
+    }
+  });
+
+  app.post("/api/messages/:id/decode", authenticate, async (req, res) => {
+    try {
+      const message = await storage.getLambdaMessage(req.params.id);
+      if (!message) {
+        return res.status(404).json({ error: "Message not found" });
+      }
+
+      if (message.recipientId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to decode this message" });
+      }
+
+      if (message.isDecoded) {
+        return res.json({
+          message: "Message already decoded",
+          content: message.content,
+        });
+      }
+
+      const updated = await storage.markMessageAsDecoded(req.params.id);
+      
+      if (!message.isRead) {
+        await storage.markMessageAsRead(req.params.id);
+      }
+
+      await logAction(req, "message_decoded", "messages", message.id);
+
+      res.json({
+        message: "Message decoded successfully",
+        content: updated.content,
+        encodedFrames: updated.encodedFrames,
+        totalLambdaMass: updated.totalLambdaMass,
+        spectralHash: updated.spectralHash,
+      });
+    } catch (error: any) {
+      console.error("Decode message error:", error);
+      res.status(500).json({ error: "Failed to decode message" });
     }
   });
 
