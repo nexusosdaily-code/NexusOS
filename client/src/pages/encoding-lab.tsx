@@ -129,12 +129,22 @@ export default function EncodingLab() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 p-6">
       <div className="max-w-7xl mx-auto">
-        <Link href="/">
-          <div className="inline-flex items-center gap-2 text-gray-400 hover:text-cyan-400 transition-colors cursor-pointer mb-6" data-testid="link-back-home">
+        <div className="flex items-center justify-between mb-6">
+          <Link href="/">
+            <div className="inline-flex items-center gap-2 text-gray-400 hover:text-cyan-400 transition-colors cursor-pointer" data-testid="link-home">
+              <ArrowLeft className="w-4 h-4" />
+              <span>Home</span>
+            </div>
+          </Link>
+          <button 
+            onClick={() => window.history.back()}
+            className="inline-flex items-center gap-2 text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 px-3 py-1.5 rounded-md text-sm transition-colors"
+            data-testid="button-back-previous"
+          >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Home</span>
-          </div>
-        </Link>
+            Back to Previous Page
+          </button>
+        </div>
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Atom className="w-10 h-10 text-cyan-400 animate-pulse" />

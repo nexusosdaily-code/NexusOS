@@ -429,16 +429,28 @@ export default function DocsPage() {
   return (
     <div className="min-h-screen bg-black text-white" data-testid="page-docs">
       <div className="max-w-7xl mx-auto p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Link href="/developer-matrix">
-            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white" data-testid="button-back">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight" data-testid="text-title">NexusOS Builder Documentation</h1>
-            <p className="text-gray-400 text-sm">Technical mechanics for developers building infrastructure</p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Link href="/developer-matrix">
+              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white" data-testid="button-home">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight" data-testid="text-title">NexusOS Builder Documentation</h1>
+              <p className="text-gray-400 text-sm">Technical mechanics for developers building infrastructure</p>
+            </div>
           </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => window.history.back()}
+            className="text-gray-400 hover:text-white border-gray-700 hover:border-gray-500"
+            data-testid="button-back-previous"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Previous Page
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

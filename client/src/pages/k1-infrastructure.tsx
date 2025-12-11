@@ -495,12 +495,22 @@ export default function K1InfrastructurePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center justify-between mb-6">
           <Link href="/">
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" data-testid="btn-back">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Back
+            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" data-testid="btn-home">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Home
             </Button>
           </Link>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => window.history.back()}
+            className="text-gray-400 hover:text-white border-gray-700 hover:border-gray-500"
+            data-testid="btn-back-previous"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Previous Page
+          </Button>
         </div>
 
         <div className="text-center mb-8">

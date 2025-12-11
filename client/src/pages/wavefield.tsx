@@ -316,11 +316,21 @@ export default function WavefieldPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <Link href="/">
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" data-testid="button-back">
+            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" data-testid="button-home">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+              Home
             </Button>
           </Link>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => window.history.back()}
+            className="text-gray-400 hover:text-white border-gray-700 hover:border-gray-500"
+            data-testid="button-back-previous"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Previous Page
+          </Button>
         </div>
 
         <div className="text-center mb-8">
