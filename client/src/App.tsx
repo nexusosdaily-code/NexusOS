@@ -27,6 +27,7 @@ import K1OrchestrationPage from "@/pages/k1-orchestration";
 import SecureDocxPage from "@/pages/secure-docx";
 import ResearchPresentationPage from "@/pages/research-presentation";
 import StreamingPage from "@/pages/streaming";
+import DeveloperMatrixPage from "@/pages/developer-matrix";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -60,6 +61,8 @@ function ProtectedRoutes() {
         <Route path="/research-presentation" component={ResearchPresentationPage} />
         <Route path="/streaming" component={StreamingPage} />
         <Route path="/streaming/:streamId" component={StreamingPage} />
+        <Route path="/developer-matrix" component={DeveloperMatrixPage} />
+        <Route path="/workspace/matrix" component={DeveloperMatrixPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
