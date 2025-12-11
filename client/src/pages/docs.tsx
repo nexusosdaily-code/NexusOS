@@ -596,6 +596,67 @@ export default function DocsPage() {
                 </div>
               </div>
             </Card>
+
+            {/* AGPL-3.0 License Footer */}
+            <Card className="bg-gray-900/50 border-gray-700 p-6 mt-6" data-testid="license-footer">
+              <div className="flex items-start gap-4">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30">
+                  <Shield className="w-6 h-6 text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-lg font-bold text-white">AGPL-3.0 License</h3>
+                    <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">Copyleft</Badge>
+                  </div>
+                  <p className="text-gray-400 text-sm mb-3">
+                    WNSP Protocol, Lambda Gate Substrate, NXT Token Economics, and all associated implementations are licensed under the 
+                    <a 
+                      href="https://www.gnu.org/licenses/agpl-3.0.en.html" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 mx-1 underline"
+                    >
+                      GNU Affero General Public License v3.0
+                    </a>
+                    (AGPL-3.0).
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                    <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <div className="text-green-400 font-semibold mb-1">You CAN:</div>
+                      <ul className="text-gray-400 space-y-1">
+                        <li>Use commercially</li>
+                        <li>Modify and distribute</li>
+                        <li>Patent use</li>
+                      </ul>
+                    </div>
+                    <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <div className="text-amber-400 font-semibold mb-1">You MUST:</div>
+                      <ul className="text-gray-400 space-y-1">
+                        <li>Disclose source code</li>
+                        <li>Include license & copyright</li>
+                        <li>Share network modifications</li>
+                      </ul>
+                    </div>
+                    <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                      <div className="text-red-400 font-semibold mb-1">You CANNOT:</div>
+                      <ul className="text-gray-400 space-y-1">
+                        <li>Sublicense</li>
+                        <li>Hold liable</li>
+                        <li>Close-source derivatives</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-gray-700 text-center">
+                    <p className="text-gray-500 text-xs">
+                      © 2024-2025 NexusOS. All rights reserved under AGPL-3.0.
+                    </p>
+                    <p className="text-gray-600 text-xs mt-1">
+                      Physics principles (E=hf, Maxwell's equations) are public domain. Implementation is protected.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
         </div>
       </div>
