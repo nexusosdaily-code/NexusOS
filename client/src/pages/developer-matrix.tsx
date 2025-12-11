@@ -35,8 +35,106 @@ import {
   Wallet,
   Activity,
   BarChart3,
-  Settings
+  Settings,
+  ExternalLink,
+  FileText,
+  Library,
+  Atom,
+  Lightbulb
 } from "lucide-react";
+
+const INTERNAL_RESOURCES = [
+  {
+    category: "Live Tools",
+    icon: Zap,
+    color: "from-purple-500 to-pink-500",
+    links: [
+      { name: "Document Transmission Center", path: "/transmission", description: "Transmit documents via wavelength encoding" },
+      { name: "Quantum Wavefield Simulator", path: "/workspace/wavefield", description: "Interactive eigenstate superposition" },
+      { name: "NXT Wallet Dashboard", path: "/wallet", description: "Manage NXT tokens and transactions" },
+      { name: "Governance Hub", path: "/governance", description: "Voting and constitutional proposals" }
+    ]
+  },
+  {
+    category: "Protocol Documentation",
+    icon: FileText,
+    color: "from-blue-500 to-cyan-500",
+    links: [
+      { name: "WNSP Protocol Specification", path: "/wiki/WNSP-Protocol", description: "Complete protocol v1.0-v5.0 spec" },
+      { name: "Proof of Spectrum Consensus", path: "/wiki/Proof-of-Spectrum", description: "Physics-based Byzantine fault tolerance" },
+      { name: "Physics Foundation", path: "/wiki/Physics-Foundation", description: "Core physics: E=hf, Maxwell equations" },
+      { name: "Lambda Boson Theory", path: "/wiki/Primordial-Field-Theory", description: "Λ=hf/c² unifying oscillation with mass" }
+    ]
+  },
+  {
+    category: "Economics & Governance",
+    icon: Scale,
+    color: "from-green-500 to-emerald-500",
+    links: [
+      { name: "NXT Token Economics", path: "/wiki/NXT-Economics", description: "21B supply, 8 decimals, E=hf fees" },
+      { name: "BHLS Floor System", path: "/wiki/BHLS-Floor-System", description: "1,150 NXT/month basic living standard" },
+      { name: "Constitutional Articles", path: "/wiki/Constitutional-Law", description: "C-0001 through C-0010 clauses" },
+      { name: "Authority Band Registry", path: "/wiki/Authority-Bands", description: "7-tier spectral governance hierarchy" }
+    ]
+  },
+  {
+    category: "Developer SDK",
+    icon: Code,
+    color: "from-orange-500 to-amber-500",
+    links: [
+      { name: "SDK Overview", path: "/wiki/Developer-SDK", description: "15 SDK packages by developer field" },
+      { name: "API Reference", path: "/docs/API", description: "Module APIs and endpoints" },
+      { name: "Contributing Guide", path: "/docs/CONTRIBUTING", description: "How to contribute code and docs" },
+      { name: "Test Suite & Certification", path: "/docs/WNSP-v7.1-Test-Suite", description: "Certification test categories" }
+    ]
+  }
+];
+
+const EXTERNAL_RESOURCES = [
+  {
+    category: "Physics Foundations",
+    icon: Atom,
+    color: "from-violet-500 to-purple-500",
+    links: [
+      { name: "Planck's Law (E=hf)", url: "https://en.wikipedia.org/wiki/Planck%27s_law", description: "Energy-frequency relationship" },
+      { name: "Maxwell's Equations", url: "https://en.wikipedia.org/wiki/Maxwell%27s_equations", description: "Electromagnetic wave validation" },
+      { name: "Electromagnetic Spectrum", url: "https://en.wikipedia.org/wiki/Electromagnetic_spectrum", description: "Wavelength ranges and properties" },
+      { name: "Wave Interference", url: "https://en.wikipedia.org/wiki/Wave_interference", description: "Constructive/destructive patterns" },
+      { name: "Schumann Resonances", url: "https://en.wikipedia.org/wiki/Schumann_resonances", description: "Earth-ionosphere cavity (7.83Hz)" }
+    ]
+  },
+  {
+    category: "Quantum & Photonics",
+    icon: Lightbulb,
+    color: "from-cyan-500 to-blue-500",
+    links: [
+      { name: "Orbital Angular Momentum", url: "https://en.wikipedia.org/wiki/Orbital_angular_momentum_of_light", description: "OAM modes for data encoding" },
+      { name: "Photonic Computing", url: "https://en.wikipedia.org/wiki/Optical_computing", description: "Light-based computation" },
+      { name: "Coherent State", url: "https://en.wikipedia.org/wiki/Coherent_state", description: "Quantum coherence principles" },
+      { name: "Bose-Einstein Condensate", url: "https://en.wikipedia.org/wiki/Bose%E2%80%93Einstein_condensate", description: "Quantum yield enhancement" }
+    ]
+  },
+  {
+    category: "Civilization Scale",
+    icon: Globe,
+    color: "from-amber-500 to-orange-500",
+    links: [
+      { name: "Kardashev Scale", url: "https://en.wikipedia.org/wiki/Kardashev_scale", description: "Type I-III civilization energy" },
+      { name: "Dyson Sphere", url: "https://en.wikipedia.org/wiki/Dyson_sphere", description: "Stellar energy harvesting concepts" },
+      { name: "Tesla's Wireless Power", url: "https://en.wikipedia.org/wiki/Wardenclyffe_Tower", description: "Planetary resonance inspiration" }
+    ]
+  },
+  {
+    category: "Cryptography & Consensus",
+    icon: Shield,
+    color: "from-red-500 to-pink-500",
+    links: [
+      { name: "Byzantine Fault Tolerance", url: "https://en.wikipedia.org/wiki/Byzantine_fault", description: "Distributed consensus problems" },
+      { name: "Post-Quantum Cryptography", url: "https://en.wikipedia.org/wiki/Post-quantum_cryptography", description: "Quantum-resistant algorithms" },
+      { name: "Hash Functions", url: "https://en.wikipedia.org/wiki/Cryptographic_hash_function", description: "SHA-256, BLAKE2, etc." }
+    ]
+  }
+];
 
 const BUILD_CATEGORIES = [
   {
@@ -316,6 +414,10 @@ export default function DeveloperMatrixPage() {
               <Layers className="w-4 h-4 mr-2" />
               Authority Tiers
             </TabsTrigger>
+            <TabsTrigger value="resources" className="data-[state=active]:bg-purple-600" data-testid="tab-resources">
+              <Library className="w-4 h-4 mr-2" />
+              Resources
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="matrix" className="space-y-6">
@@ -571,6 +673,108 @@ export default function DeveloperMatrixPage() {
                   </Card>
                 );
               })}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="resources" className="space-y-6">
+            <Card className="bg-gradient-to-r from-indigo-900/30 to-violet-900/30 border-indigo-500/30 p-6">
+              <h2 className="text-xl font-bold mb-2">Builder Resources</h2>
+              <p className="text-gray-400">Essential documentation, tools, and physics references for understanding and building NexusOS infrastructure.</p>
+            </Card>
+
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-purple-300 border-b border-purple-500/30 pb-2">Internal Documentation & Tools</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {INTERNAL_RESOURCES.map(category => {
+                  const IconComponent = category.icon;
+                  return (
+                    <Card key={category.category} className="p-5 bg-gray-900/50 border-gray-700" data-testid={`resource-internal-${category.category.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${category.color} flex items-center justify-center`}>
+                          <IconComponent className="w-5 h-5 text-white" />
+                        </div>
+                        <h4 className="font-bold">{category.category}</h4>
+                      </div>
+                      <div className="space-y-2">
+                        {category.links.map(link => (
+                          <Link key={link.path} href={link.path}>
+                            <div className="flex items-center gap-2 p-2 rounded hover:bg-gray-800/50 cursor-pointer group" data-testid={`link-${link.path.replace(/\//g, '-').slice(1)}`}>
+                              <FileText className="w-4 h-4 text-gray-500 group-hover:text-purple-400" />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-gray-200 group-hover:text-purple-300">{link.name}</div>
+                                <div className="text-xs text-gray-500 truncate">{link.description}</div>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              <h3 className="text-lg font-semibold text-cyan-300 border-b border-cyan-500/30 pb-2 mt-8">External Physics & Theory References</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {EXTERNAL_RESOURCES.map(category => {
+                  const IconComponent = category.icon;
+                  return (
+                    <Card key={category.category} className="p-5 bg-gray-900/50 border-gray-700" data-testid={`resource-external-${category.category.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${category.color} flex items-center justify-center`}>
+                          <IconComponent className="w-5 h-5 text-white" />
+                        </div>
+                        <h4 className="font-bold">{category.category}</h4>
+                      </div>
+                      <div className="space-y-2">
+                        {category.links.map(link => (
+                          <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" data-testid={`link-external-${link.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>
+                            <div className="flex items-center gap-2 p-2 rounded hover:bg-gray-800/50 cursor-pointer group">
+                              <ExternalLink className="w-4 h-4 text-gray-500 group-hover:text-cyan-400" />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-gray-200 group-hover:text-cyan-300">{link.name}</div>
+                                <div className="text-xs text-gray-500 truncate">{link.description}</div>
+                              </div>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              <Card className="bg-gray-900/30 border-gray-700 p-5 mt-6">
+                <h4 className="font-bold mb-3 flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-purple-400" />
+                  Key Equations to Know
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="p-3 bg-gray-800/50 rounded-lg">
+                    <div className="text-purple-300 font-mono text-lg mb-1">E = hf</div>
+                    <div className="text-gray-500">Planck's equation: Energy from frequency</div>
+                  </div>
+                  <div className="p-3 bg-gray-800/50 rounded-lg">
+                    <div className="text-cyan-300 font-mono text-lg mb-1">Λ = hf/c²</div>
+                    <div className="text-gray-500">Lambda Boson: Mass-equivalent of oscillation</div>
+                  </div>
+                  <div className="p-3 bg-gray-800/50 rounded-lg">
+                    <div className="text-green-300 font-mono text-lg mb-1">c = fλ</div>
+                    <div className="text-gray-500">Wave equation: Speed of light</div>
+                  </div>
+                  <div className="p-3 bg-gray-800/50 rounded-lg">
+                    <div className="text-amber-300 font-mono text-lg mb-1">Ĥ_eff = hν + αK̂² + βL̂</div>
+                    <div className="text-gray-500">Effective Hamiltonian for Lambda modes</div>
+                  </div>
+                  <div className="p-3 bg-gray-800/50 rounded-lg">
+                    <div className="text-pink-300 font-mono text-lg mb-1">T = Σ|c_i|²·cos²(Δφ_i)</div>
+                    <div className="text-gray-500">Interference trust model for governance</div>
+                  </div>
+                  <div className="p-3 bg-gray-800/50 rounded-lg">
+                    <div className="text-red-300 font-mono text-lg mb-1">∇×E = -∂B/∂t</div>
+                    <div className="text-gray-500">Maxwell: Electromagnetic wave validation</div>
+                  </div>
+                </div>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>
