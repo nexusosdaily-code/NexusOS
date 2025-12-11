@@ -28,6 +28,7 @@ import SecureDocxPage from "@/pages/secure-docx";
 import ResearchPresentationPage from "@/pages/research-presentation";
 import StreamingPage from "@/pages/streaming";
 import DeveloperMatrixPage from "@/pages/developer-matrix";
+import DocsPage from "@/pages/docs";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -63,6 +64,8 @@ function ProtectedRoutes() {
         <Route path="/streaming/:streamId" component={StreamingPage} />
         <Route path="/developer-matrix" component={DeveloperMatrixPage} />
         <Route path="/workspace/matrix" component={DeveloperMatrixPage} />
+        <Route path="/docs" component={DocsPage} />
+        <Route path="/docs/:section" component={DocsPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>

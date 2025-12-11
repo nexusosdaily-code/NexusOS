@@ -52,65 +52,36 @@ const INTERNAL_RESOURCES = [
       { name: "Document Transmission Center", path: "/transmission", description: "Transmit documents via wavelength encoding" },
       { name: "Quantum Wavefield Simulator", path: "/workspace/wavefield", description: "Interactive eigenstate superposition" },
       { name: "NXT Wallet Dashboard", path: "/wallet", description: "Manage NXT tokens and transactions" },
-      { name: "Governance Hub", path: "/governance", description: "Voting and constitutional proposals" }
+      { name: "K1 Infrastructure", path: "/k1", description: "Kardashev Type I civilization systems" }
     ]
   },
   {
-    category: "Core Mechanics",
+    category: "Core Mechanics Documentation",
     icon: Cpu,
     color: "from-violet-500 to-purple-500",
     links: [
-      { name: "Lambda Gate Substrate v4", path: "/wiki/Lambda-Gate-Substrate", description: "8 photonic gate primitives: Phase-Shift, Gain, Mode-Mixer, OAM-Rotor" },
-      { name: "CE-1 Coherence Protocol", path: "/wiki/CE1-Protocol", description: "Energy pool management, coherence margin enforcement" },
-      { name: "W-ASCII Encoding", path: "/wiki/WASCII-Encoding", description: "170+ character wavelength mapping (380-780nm)" },
-      { name: "Spectral Routing", path: "/wiki/Spectral-Routing", description: "Wavelength-based message routing and validation" },
-      { name: "Lambda Mode States", path: "/wiki/Lambda-Modes", description: "|λ⟩ = (ν, A(t), φ(t), ℓ, s) - carrier frequency, amplitude, phase, OAM, spin" }
+      { name: "Lambda Gate Substrate v4", path: "/docs", description: "8 photonic gate primitives: Phase-Shift, Gain, Mode-Mixer, OAM-Rotor" },
+      { name: "W-ASCII Encoding", path: "/docs", description: "170+ character wavelength mapping (380-780nm)" },
+      { name: "Proof of Spectrum Consensus", path: "/docs", description: "Physics-based Byzantine fault tolerance" }
     ]
   },
   {
-    category: "Infrastructure Building",
-    icon: Building2,
-    color: "from-cyan-500 to-blue-500",
-    links: [
-      { name: "Photonic Computing", path: "/wiki/Photonic-Computing", description: "AND, OR, NOT, XOR gates using wave interference" },
-      { name: "Planetary Communications", path: "/wiki/Planetary-Communications", description: "Spectral relay mesh, OAM channel allocation, coherence repeaters" },
-      { name: "Resource Orchestration", path: "/wiki/Resource-Orchestration", description: "Wavelength ledger, manufacturing pipelines, logistics optimization" },
-      { name: "K1 Energy Systems", path: "/wiki/K1-Energy", description: "Resonance harvesting, fusion photonics, energy markets" },
-      { name: "Planetary Resonance", path: "/wiki/Planetary-Resonance", description: "Schumann modes, geomagnetic pulsations, Tesla stations" }
-    ]
-  },
-  {
-    category: "Protocol Documentation",
-    icon: FileText,
-    color: "from-blue-500 to-cyan-500",
-    links: [
-      { name: "WNSP Protocol Specification", path: "/wiki/WNSP-Protocol", description: "Complete protocol v1.0-v5.0 spec" },
-      { name: "Proof of Spectrum Consensus", path: "/wiki/Proof-of-Spectrum", description: "Physics-based Byzantine fault tolerance" },
-      { name: "Physics Foundation", path: "/wiki/Physics-Foundation", description: "Core physics: E=hf, Maxwell equations" },
-      { name: "Lambda Boson Theory", path: "/wiki/Primordial-Field-Theory", description: "Λ=hf/c² unifying oscillation with mass" }
-    ]
-  },
-  {
-    category: "Economics & Governance",
+    category: "Economics & Governance Docs",
     icon: Scale,
     color: "from-green-500 to-emerald-500",
     links: [
-      { name: "NXT Token Economics", path: "/wiki/NXT-Economics", description: "21B supply, 8 decimals, E=hf transaction fees" },
-      { name: "BHLS Floor System", path: "/wiki/BHLS-Floor-System", description: "1,150 NXT/month basic living standard guarantee" },
-      { name: "Constitutional Articles", path: "/wiki/Constitutional-Law", description: "C-0001 Non-Dominance, C-0002 Immutable Rights, C-0003 Energy Escrow" },
-      { name: "Authority Band Registry", path: "/wiki/Authority-Bands", description: "7-tier spectral hierarchy: Individual → Planetary" },
-      { name: "Sigma Voting", path: "/wiki/Sigma-Voting", description: "Coherence-weighted voting via wave interference" }
+      { name: "NXT Token Economics", path: "/docs", description: "21B supply, 8 decimals, E=hf transaction fees" },
+      { name: "BHLS Floor System", path: "/docs", description: "1,150 NXT/month basic living standard guarantee" },
+      { name: "Planetary Governance", path: "/docs", description: "Authority bands, constitutional articles, Sigma voting" }
     ]
   },
   {
-    category: "Developer SDK",
-    icon: Code,
-    color: "from-orange-500 to-amber-500",
+    category: "Infrastructure Building Docs",
+    icon: Building2,
+    color: "from-cyan-500 to-blue-500",
     links: [
-      { name: "SDK Overview", path: "/wiki/Developer-SDK", description: "15 SDK packages by developer field" },
-      { name: "API Reference", path: "/docs/API", description: "Module APIs and endpoints" },
-      { name: "Contributing Guide", path: "/docs/CONTRIBUTING", description: "How to contribute code and docs" },
-      { name: "Test Suite & Certification", path: "/docs/WNSP-v7.1-Test-Suite", description: "Certification test categories and requirements" }
+      { name: "K1 Infrastructure Guide", path: "/docs", description: "Photonic computing, planetary comms, resonance harvesting" },
+      { name: "K1 Orchestration Dashboard", path: "/k1/orchestration", description: "Live infrastructure management" }
     ]
   }
 ];
