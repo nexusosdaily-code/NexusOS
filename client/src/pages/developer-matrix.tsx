@@ -447,39 +447,42 @@ const INTERNAL_RESOURCES = [
     icon: Zap,
     color: "from-purple-500 to-pink-500",
     links: [
-      { name: "Document Transmission Center", path: "/transmission", description: "Transmit documents via wavelength encoding" },
-      { name: "Quantum Wavefield Simulator", path: "/workspace/wavefield", description: "Interactive eigenstate superposition" },
-      { name: "NXT Wallet Dashboard", path: "/wallet", description: "Manage NXT tokens and transactions" },
-      { name: "K1 Infrastructure", path: "/k1", description: "Kardashev Type I civilization systems" }
+      { name: "Document Transmission Center", path: "/workspace/transmission", description: "Transmit documents via wavelength encoding", isRoute: true },
+      { name: "Quantum Wavefield Simulator", path: "/workspace/wavefield", description: "Interactive eigenstate superposition", isRoute: true },
+      { name: "NXT Wallet Dashboard", path: "/wallet", description: "Manage NXT tokens and transactions", isRoute: true },
+      { name: "K1 Infrastructure", path: "/k1", description: "Kardashev Type I civilization systems", isRoute: true },
+      { name: "K1 Orchestration Dashboard", path: "/k1/orchestration", description: "Live infrastructure management", isRoute: true },
+      { name: "Encoding Lab", path: "/encoding-lab", description: "Test wavelength encoding algorithms", isRoute: true },
+      { name: "Research Center", path: "/workspace/research", description: "Physics research and simulations", isRoute: true },
+      { name: "Analytics Dashboard", path: "/workspace/analytics", description: "Network metrics and statistics", isRoute: true }
     ]
   },
   {
-    category: "Core Mechanics Documentation",
+    category: "Core Mechanics (Documentation Tab)",
     icon: Cpu,
     color: "from-violet-500 to-purple-500",
     links: [
-      { name: "Lambda Gate Substrate v4", path: "/docs", description: "8 photonic gate primitives: Phase-Shift, Gain, Mode-Mixer, OAM-Rotor" },
-      { name: "W-ASCII Encoding", path: "/docs", description: "170+ character wavelength mapping (380-780nm)" },
-      { name: "Proof of Spectrum Consensus", path: "/docs", description: "Physics-based Byzantine fault tolerance" }
+      { name: "Lambda Gate Substrate v4", docSection: "substrate", description: "8 photonic gate primitives: Phase-Shift, Gain, Mode-Mixer, OAM-Rotor" },
+      { name: "W-ASCII Encoding", docSection: "wascii", description: "170+ character wavelength mapping (380-780nm)" },
+      { name: "Proof of Spectrum Consensus", docSection: "consensus", description: "Physics-based Byzantine fault tolerance" }
     ]
   },
   {
-    category: "Economics & Governance Docs",
+    category: "Economics & Governance (Documentation Tab)",
     icon: Scale,
     color: "from-green-500 to-emerald-500",
     links: [
-      { name: "NXT Token Economics", path: "/docs", description: "21B supply, 8 decimals, E=hf transaction fees" },
-      { name: "BHLS Floor System", path: "/docs", description: "1,150 NXT/month basic living standard guarantee" },
-      { name: "Planetary Governance", path: "/docs", description: "Authority bands, constitutional articles, Sigma voting" }
+      { name: "NXT Token Economics", docSection: "economics", description: "21B supply, 8 decimals, E=hf transaction fees" },
+      { name: "BHLS Floor System", docSection: "bhls", description: "1,150 NXT/month basic living standard guarantee" },
+      { name: "Planetary Governance", docSection: "governance", description: "Authority bands, constitutional articles, Sigma voting" }
     ]
   },
   {
-    category: "Infrastructure Building Docs",
+    category: "K1 Infrastructure (Documentation Tab)",
     icon: Building2,
     color: "from-cyan-500 to-blue-500",
     links: [
-      { name: "K1 Infrastructure Guide", path: "/docs", description: "Photonic computing, planetary comms, resonance harvesting" },
-      { name: "K1 Orchestration Dashboard", path: "/k1/orchestration", description: "Live infrastructure management" }
+      { name: "K1 Infrastructure Guide", docSection: "infrastructure", description: "Photonic computing, planetary comms, resonance harvesting" }
     ]
   }
 ];
@@ -1095,17 +1098,40 @@ export default function DeveloperMatrixPage() {
                         <h4 className="font-bold">{category.category}</h4>
                       </div>
                       <div className="space-y-2">
-                        {category.links.map(link => (
-                          <Link key={link.path} href={link.path}>
-                            <div className="flex items-center gap-2 p-2 rounded hover:bg-gray-800/50 cursor-pointer group" data-testid={`link-${link.path.replace(/\//g, '-').slice(1)}`}>
-                              <FileText className="w-4 h-4 text-gray-500 group-hover:text-purple-400" />
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium text-gray-200 group-hover:text-purple-300">{link.name}</div>
-                                <div className="text-xs text-gray-500 truncate">{link.description}</div>
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
+                        {category.links.map((link: any, idx: number) => {
+                          if (link.isRoute && link.path) {
+                            return (
+                              <Link key={link.path} href={link.path}>
+                                <div className="flex items-center gap-2 p-2 rounded hover:bg-gray-800/50 cursor-pointer group" data-testid={`link-${link.path.replace(/\//g, '-').slice(1)}`}>
+                                  <Zap className="w-4 h-4 text-green-500 group-hover:text-green-400" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-medium text-gray-200 group-hover:text-green-300">{link.name}</div>
+                                    <div className="text-xs text-gray-500 truncate">{link.description}</div>
+                                  </div>
+                                </div>
+                              </Link>
+                            );
+                          } else if (link.docSection) {
+                            return (
+                              <button 
+                                key={link.docSection}
+                                onClick={() => {
+                                  setActiveTab("documentation");
+                                  setActiveDocSection(link.docSection);
+                                }}
+                                className="w-full flex items-center gap-2 p-2 rounded hover:bg-gray-800/50 cursor-pointer group text-left"
+                                data-testid={`link-doc-${link.docSection}`}
+                              >
+                                <FileText className="w-4 h-4 text-purple-500 group-hover:text-purple-400" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium text-gray-200 group-hover:text-purple-300">{link.name}</div>
+                                  <div className="text-xs text-gray-500 truncate">{link.description}</div>
+                                </div>
+                              </button>
+                            );
+                          }
+                          return null;
+                        })}
                       </div>
                     </Card>
                   );
