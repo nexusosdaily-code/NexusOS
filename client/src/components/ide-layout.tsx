@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import { 
   FileCode, 
   Folder, 
@@ -18,7 +19,9 @@ import {
   CloudDownload,
   Terminal,
   X,
-  CheckCircle
+  CheckCircle,
+  FileText,
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +81,19 @@ export function IDELayout() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link href="/docs">
+            <Button variant="outline" size="sm" className="h-8 gap-2 bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 text-blue-400" data-testid="button-docs">
+              <FileText className="w-3.5 h-3.5" />
+              <span className="text-xs font-medium">Docs</span>
+            </Button>
+          </Link>
+          <Link href="/developer-matrix">
+            <Button variant="outline" size="sm" className="h-8 gap-2 bg-purple-500/10 border-purple-500/30 hover:bg-purple-500/20 text-purple-400" data-testid="button-developer-matrix">
+              <BookOpen className="w-3.5 h-3.5" />
+              <span className="text-xs font-medium hidden sm:inline">Developer Matrix</span>
+              <span className="text-xs font-medium sm:hidden">Matrix</span>
+            </Button>
+          </Link>
           <Button variant="outline" size="sm" className="h-8 gap-2 bg-primary/5 border-primary/20 hover:bg-primary/10">
             <Play className="w-3.5 h-3.5 fill-current" />
             <span className="text-xs font-medium">Run</span>
