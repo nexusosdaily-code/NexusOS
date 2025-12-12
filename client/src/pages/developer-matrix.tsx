@@ -539,6 +539,123 @@ Agents optimize via: ∂L/∂θ = ∂(R - λ·penalty)/∂θ
 This ensures agents learn to obey substrate constraints while maximizing their objectives.`
       }
     ]
+  },
+  frameBuilder: {
+    title: "Frame Builder v7.1 (AGPL-3.0)",
+    icon: Shield,
+    color: "from-amber-500 to-yellow-500",
+    content: [
+      {
+        heading: "AGPL-3.0 Compliance Architecture",
+        text: `Every Lambda Gate operation includes a **Source Code Reference (SCR)** for copyleft compliance.
+
+**Frame Structure:**
+\`\`\`
+{
+  LCU_HDR: Lambda Compute Unit header
+  GATE_ID: Which gate was executed
+  SCR: Commit hash of source code ← AGPL-3.0
+  SCR_URL: Full URL to source code
+  PRE_ATTEST: Pre-execution state
+  POST_ATTEST: Post-execution state
+  PAYLOAD: Transformed data
+  COHERENCE_SIG: Consensus signature
+}
+\`\`\``
+      },
+      {
+        heading: "Code Repository Attestation Service",
+        text: `**CRAS** provides immutable source references:
+
+\`\`\`python
+class CodeRepoAttestation:
+    @classmethod
+    def get_gate_commit(cls, gate_id) -> str:
+        """Returns commit hash for AGPL compliance."""
+        return cls._gate_commits[gate_id]
+    
+    @classmethod
+    def get_repo_url(cls, gate_id) -> str:
+        """Full URL to source code."""
+        return f"https://github.com/nexusos/wnsp-protocol/tree/{commit}"
+\`\`\`
+
+Every gate has a registered commit hash pointing to its exact implementation.`
+      },
+      {
+        heading: "FrameBuilder Usage",
+        text: `\`\`\`python
+from frame_builder_v7_1 import FrameBuilder, LambdaGateID
+
+builder = FrameBuilder(lcu_id="my-lcu-001")
+
+# Build AGPL-compliant frame
+frame = builder.build_v7_frame(
+    raw_payload=b"Hello, Lambda!",
+    gate_id=LambdaGateID.PHASE_SHIFT
+)
+
+# Verify received frame
+result = builder.verify_frame(frame)
+print(result['agpl_compliant'])  # True
+\`\`\``
+      },
+      {
+        heading: "Temporal Attestations",
+        text: `**PRE_ATTEST** and **POST_ATTEST** prove state integrity:
+
+\`\`\`
+PRE_ATTEST:
+  timestamp: 1765545970.357
+  coherence_level: 0.95
+  energy_consumed: 0.0
+  state_hash: "28e455..."
+
+POST_ATTEST:
+  timestamp: 1765545970.358
+  coherence_level: 0.92
+  energy_consumed: 1.025
+  state_hash: "051b24..."
+\`\`\`
+
+The **COHERENCE_SIG** signs both attestations, proving temporal ordering and coherence maintenance.`
+      },
+      {
+        heading: "8 Gate SCR Registry",
+        text: `| Gate | Symbol | Commit Hash |
+|------|--------|-------------|
+| Phase-Shift | Φ(θ) | a1b2c3d4... |
+| Gain | G(α) | b2c3d4e5... |
+| Mode-Mixer | M(κ) | c3d4e5f6... |
+| OAM-Rotor | L(Δℓ) | d4e5f678... |
+| Phase-Gradient | ∇Φ | e5f67890... |
+| Density-Swap | S | f6789012... |
+| Coherence-Amplify | A_c | 67890123... |
+| Stabilizer | D(τ) | 78901234... |
+
+All commits are publicly verifiable at the GitHub repository.`
+      },
+      {
+        heading: "Copyleft Protection",
+        text: `**AGPL-3.0 Requirements Met:**
+
+1. **Source Availability** - SCR_URL provides direct link
+2. **Modification Tracking** - Commit hashes are immutable
+3. **Network Use** - All network operations include SCR
+4. **Derivative Works** - Must publish modifications
+
+**What's Protected:**
+- Lambda Gate implementations
+- FrameBuilder protocol logic
+- Attestation mechanisms
+- Consensus algorithms
+
+**What's Public Domain:**
+- Physics principles (E=hf, Maxwell equations)
+- Mathematical formulas
+- Physical constants`
+      }
+    ]
   }
 };
 
@@ -564,6 +681,8 @@ const INTERNAL_RESOURCES = [
     color: "from-violet-500 to-purple-500",
     links: [
       { name: "Lambda Gate Substrate v4", docSection: "substrate", description: "8 photonic gate primitives: Phase-Shift, Gain, Mode-Mixer, OAM-Rotor" },
+      { name: "Frame Builder v7.1", docSection: "frameBuilder", description: "AGPL-3.0 compliant frame protocol with SCR attestation" },
+      { name: "Λ-Master Field Equation", docSection: "masterField", description: "Continuous field dynamics with constitutional enforcement" },
       { name: "W-ASCII Encoding", docSection: "wascii", description: "170+ character wavelength mapping (380-780nm)" },
       { name: "Proof of Spectrum Consensus", docSection: "consensus", description: "Physics-based Byzantine fault tolerance" }
     ]
