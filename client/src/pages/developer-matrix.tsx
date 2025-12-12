@@ -699,6 +699,41 @@ def request_source_disclosure(self, gate_id, scr_hash):
 2. Source disclosure request generated
 3. Sender has 72 hours to provide source
 4. Non-compliance → network blacklist`
+      },
+      {
+        heading: "Lambda State Machine Usage",
+        text: `**Developer Integration Example:**
+
+\`\`\`python
+from lambda_sdk.state_machine import LambdaStateMachine
+from lambda_sdk.gates import LambdaGateID
+
+# Initialize the State Machine
+lsm = LambdaStateMachine(node_id="MyApp-Node-01")
+
+# 1. Request high-assurance operation (Yocto Rule Check)
+proof_data = lsm.request_constitutional_proof(
+    rule_check="No_Temporal_Drift_Exceeding_1E-18",
+)
+# Returns PRE-ATTESTED frame from Lambda
+
+# 2. Request standard forward synchronization
+transaction_payload = b'transfer_100_units'
+try:
+    lsm.request_sync_write(transaction_payload)
+    print("Transaction encoded and sent.")
+    
+except StateError as e:
+    # 3. Handle DEGRADED state (AGPLv3 audit)
+    if lsm.current_state == LSMState.DEGRADED:
+        print("Coherence Degraded. Triggering audit.")
+        lsm.trigger_source_audit()
+\`\`\`
+
+**State Transitions:**
+- COHERENT → request_sync_write() allowed
+- DEGRADED → writes blocked, audit required
+- trigger_source_audit() → automatic gate selection`
       }
     ]
   }
