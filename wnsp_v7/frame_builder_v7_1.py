@@ -13,6 +13,7 @@ Licensed under AGPL-3.0: https://www.gnu.org/licenses/agpl-3.0.html
 
 import hashlib
 import json
+import struct
 import time
 from dataclasses import dataclass, field
 from typing import Dict, Any, Optional
@@ -279,8 +280,75 @@ class FrameBuilder:
         return self._serialize(final_frame)
     
     def _serialize(self, frame: Dict[str, Any]) -> bytes:
-        """Serialize frame to bytes for transmission."""
+        """Serialize frame to bytes for transmission (JSON format)."""
         return json.dumps(frame, indent=2).encode('utf-8')
+    
+    def _serialize_binary(self, frame_dict: Dict[str, Any]) -> bytes:
+        """
+        Binary serialization using Protobuf-like fixed-width encoding.
+        Optimized for speed and compact transmission.
+        
+        Frame Structure (140 bytes header + variable payload):
+        - FRAME_MAGIC: 4 bytes (0x71FA0000)
+        - GATE_ID: 1 byte
+        - LCU_HDR: 3 bytes
+        - PAYLOAD_LEN: 4 bytes
+        - SCR: 32 bytes (AGPLv3 hash)
+        - PRE_ATTEST: 32 bytes (Lambda temporal signature)
+        - POST_ATTEST: 32 bytes (Lambda temporal signature)
+        - COHERENCE_SIG: 32 bytes (final integrity check)
+        - PAYLOAD: variable length
+        """
+        binary_frame = bytearray(140)
+        offset = 0
+        
+        GATE_ID_MAP = {
+            "Φ(θ)": 0x01, "G(α)": 0x02, "M(κ)": 0x03, "L(Δℓ)": 0x04,
+            "∇Φ": 0x05, "S": 0x06, "A_c": 0x07, "D(τ)": 0x08
+        }
+        
+        struct.pack_into('<I', binary_frame, offset, 0x71FA0000)
+        offset += 4
+        
+        gate_id_str = frame_dict.get('GATE_ID', 'Φ(θ)')
+        binary_frame[offset] = GATE_ID_MAP.get(gate_id_str, 0x01)
+        offset += 1
+        
+        lcu_hdr = frame_dict.get('LCU_HDR', {})
+        lcu_version = int(lcu_hdr.get('version', '7.1').replace('.', '')) if isinstance(lcu_hdr, dict) else 71
+        binary_frame[offset:offset+3] = lcu_version.to_bytes(3, 'little')
+        offset += 3
+        
+        payload = frame_dict.get('TRANSFORMED_PAYLOAD', b'')
+        if isinstance(payload, str):
+            payload = payload.encode('utf-8')
+        struct.pack_into('<I', binary_frame, offset, len(payload))
+        offset += 4
+        
+        scr = frame_dict.get('SCR', '')
+        scr_bytes = bytes.fromhex(scr[:64].ljust(64, '0')) if scr else bytes(32)
+        binary_frame[offset:offset+32] = scr_bytes
+        offset += 32
+        
+        pre_attest = frame_dict.get('PRE_ATTEST', {})
+        pre_hash = pre_attest.get('state_hash', '') if isinstance(pre_attest, dict) else ''
+        pre_bytes = bytes.fromhex(pre_hash[:64].ljust(64, '0')) if pre_hash else bytes(32)
+        binary_frame[offset:offset+32] = pre_bytes
+        offset += 32
+        
+        post_attest = frame_dict.get('POST_ATTEST', {})
+        post_hash = post_attest.get('state_hash', '') if isinstance(post_attest, dict) else ''
+        post_bytes = bytes.fromhex(post_hash[:64].ljust(64, '0')) if post_hash else bytes(32)
+        binary_frame[offset:offset+32] = post_bytes
+        offset += 32
+        
+        coh_sig = frame_dict.get('COHERENCE_SIG', '')
+        if coh_sig.startswith('COH-SIG:'):
+            coh_sig = coh_sig[8:]
+        coh_bytes = bytes.fromhex(coh_sig[:64].ljust(64, '0')) if coh_sig else bytes(32)
+        binary_frame[offset:offset+32] = coh_bytes
+        
+        return bytes(binary_frame) + payload
     
     def verify_frame(self, frame_bytes: bytes) -> Dict[str, Any]:
         """
