@@ -58,6 +58,7 @@ The frontend uses React 18 with TypeScript, Vite, Radix UI components, and the s
     - **Λ-Master Field Equation**: Continuous field dynamics for Lambda substrate, including spectral pressure and effective mass.
     - **Frame Builder v7.1**: AGPL-3.0 compliant frame protocol with Source Code References (SCR) for all 8 Lambda Gates.
     - **Coherence Verifier v7.1**: Two-phase frame validation (temporal coherence + AGPL compliance) with source disclosure enforcement.
+    - **Lambda State Machine v7.1**: Network state management (COHERENT/DEGRADED) with automatic gate selection and AGPL audit triggers.
 
 ### Multi-Agent & Task Orchestration
 - **DAG-Based Workflows**: Task orchestration with domain-specific modules (data processing, DevOps, content management, wavelength cryptography).
