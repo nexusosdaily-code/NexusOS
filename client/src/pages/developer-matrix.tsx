@@ -654,6 +654,51 @@ All commits are publicly verifiable at the GitHub repository.`
 - Physics principles (E=hf, Maxwell equations)
 - Mathematical formulas
 - Physical constants`
+      },
+      {
+        heading: "Coherence Verifier v7.1",
+        text: `**Two-Phase Validation:**
+
+\`\`\`python
+class CoherenceVerifier:
+    def verify_v7_frame(self, frame_bytes: bytes) -> VerificationResult:
+        # Phase 1: Temporal Coherence Check
+        temporal_valid = self._check_temporal_attestations(
+            frame['PRE_ATTEST'], 
+            frame['POST_ATTEST'], 
+            frame['COHERENCE_SIG']
+        )
+        
+        # Phase 2: AGPL-3.0 Source Code Check
+        agpl_valid = self._check_agplv3_source_reference(
+            frame['GATE_ID'], 
+            frame['SCR']
+        )
+        
+        return VerificationResult(temporal_valid and agpl_valid)
+\`\`\``
+      },
+      {
+        heading: "AGPL Enforcement Mechanism",
+        text: `When SCR hash doesn't match trusted registry:
+
+\`\`\`python
+def request_source_disclosure(self, gate_id, scr_hash):
+    return {
+        'request_type': 'AGPL_SOURCE_DISCLOSURE',
+        'gate_id': gate_id,
+        'scr_hash': scr_hash,
+        'message': 'Modified Lambda Gate detected. '
+                   'AGPL-3.0 requires source disclosure.',
+        'deadline_hours': 72
+    }
+\`\`\`
+
+**Enforcement Flow:**
+1. Receiver detects SCR mismatch
+2. Source disclosure request generated
+3. Sender has 72 hours to provide source
+4. Non-compliance → network blacklist`
       }
     ]
   }
