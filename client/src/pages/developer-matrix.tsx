@@ -438,6 +438,107 @@ Fundamental: 7.83 Hz
 **Target:** 5×10¹⁶ watts (penultimate step to Type I)`
       }
     ]
+  },
+  masterField: {
+    title: "Λ-Master Field Equation",
+    icon: Atom,
+    color: "from-rose-500 to-orange-500",
+    content: [
+      {
+        heading: "Core Field Equation",
+        text: `The Λ-Master Field Equation governs all Lambda substrate dynamics:
+
+**iℏ ∂Λ/∂t = [-ℏ²/2m_eff ∇² + V_ext + g|Λ|² + P(I,∇ν)]Λ - iγ(I)Λ**
+
+This is a nonlinear Schrödinger/Gross-Pitaevskii equation extended with:
+- Info-coupling via m_eff(I) - effective mass depends on information density
+- Spectrum pressure P(I,∇ν) - pressure from spectral gradients
+- Absorptive decoherence γ(I) - coherence loss mechanism`
+      },
+      {
+        heading: "Spectral Mass-Pressure",
+        text: `**P(I, ∇ν) = βI + ξ|∇ν|²**
+
+Where:
+- I = information density (modal entropy)
+- ∇ν = spectral frequency gradient
+- β = info-pressure coupling constant
+- ξ = spectral gradient coupling
+
+**Effective Mass:**
+m_eff(I) = m₀[1 + αI(x,t)]
+
+The effective mass increases with information density, creating info-coupled dynamics.`
+      },
+      {
+        heading: "Decoherence & Stability",
+        text: `**Decay Rate:** γ(I) = γ₀ + γ₁I
+
+Acts as imaginary potential - higher info density → faster coherence loss.
+
+**Field Decay:** Λ → Λ·exp(-γt)
+
+**Coherence Order Parameter:**
+Φ_order = |∫Λ dx|² / ∫|Λ|² dx
+
+- 1.0 = fully coherent field
+- 0.0 = completely incoherent`
+      },
+      {
+        heading: "WNSP Encoding",
+        text: `Spectral-native signalling encodes messages in frequency/phase:
+
+**Continuous Encoding:**
+s(x,t) = Re{Λ(x,t)} · exp(i·2πν(x)t + iφ(x))
+
+**Shannon Capacity (Lambda mode):**
+C = B · log₂(1 + SNR · |Λ|²/⟨|Λ|²⟩)
+
+Where B = bandwidth, SNR = signal-to-noise ratio.`
+      },
+      {
+        heading: "Λ-Gate Operations",
+        text: `Unitary evolution under gate Hamiltonian:
+
+**Û_gate = exp(-i·Ĥ_gate·τ_gate/ℏ)**
+
+**Gate Hamiltonian:**
+Ĥ_gate = θ_phase·n̂ + θ_spec·Ŝ(ν) + η|Λ|²
+
+Where:
+- θ_phase = phase shift parameter
+- θ_spec = spectral gating parameter
+- η = density-dependent phase velocity`
+      },
+      {
+        heading: "Substrate Compliance Rules",
+        text: `**C1 - Coherence Floor:** |Λ|² ≥ Λ_min
+**C2 - Pressure Bound:** P(I,∇ν) ≤ P_max  
+**C3 - Entropy Constraint:** S[Λ] ≤ S_max
+**C4 - Fairness:** |w_a|² ≤ W_fair (33% max write power)
+
+**Enforcement Methods:**
+- **Projection (A):** Hard enforcement - project onto constraint manifold
+- **Penalty (B):** Soft enforcement - add penalty to agent loss function
+
+**Compliance Score:** χ(t) = Π_k 𝟙[g_k(Λ) ≤ 0] (1 = fully compliant)`
+      },
+      {
+        heading: "Agent Dynamics",
+        text: `Agents interact with the field through write/read kernels:
+
+**Write Action:**
+Λ(x,t+dt) = Λ(x,t) + W_a(x) · action_a
+
+**Read Action:**
+Extracts field state and reduces local info density.
+
+**Policy Gradient:**
+Agents optimize via: ∂L/∂θ = ∂(R - λ·penalty)/∂θ
+
+This ensures agents learn to obey substrate constraints while maximizing their objectives.`
+      }
+    ]
   }
 };
 
