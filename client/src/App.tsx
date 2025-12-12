@@ -63,6 +63,7 @@ function ProtectedRoutes() {
         <Route path="/streaming" component={StreamingPage} />
         <Route path="/streaming/:streamId" component={StreamingPage} />
         <Route path="/developer-matrix" component={DeveloperMatrixPage} />
+        <Route path="/developer-matrix/docs" component={DocsPage} />
         <Route path="/workspace/matrix" component={DeveloperMatrixPage} />
         <Route path="/docs" component={DocsPage} />
         <Route path="/docs/:section" component={DocsPage} />
