@@ -1243,39 +1243,98 @@ export async function registerRoutes(
   });
 
   // ============================================
-  // K1 ORCHESTRATION API PROXY ROUTES
+  // K1 ORCHESTRATION API ROUTES (Simulated Runtime)
   // ============================================
 
+  let k1RuntimeState = {
+    tick: 0,
+    state: "COHERENT",
+    state_description: "All substrates synchronized",
+    coordination: {
+      sync_quality: 0.94,
+      harmonic_locks: 7,
+      resonance_strength: 0.87
+    },
+    telemetry_entries: 0,
+    substrates: [
+      { id: "photonic", status: "ACTIVE", coherence: 0.96, energy_throughput: 1.2e15 },
+      { id: "lambda_gate", status: "ACTIVE", coherence: 0.93, energy_throughput: 8.4e14 },
+      { id: "resonance", status: "ACTIVE", coherence: 0.91, energy_throughput: 5.7e14 },
+      { id: "wavefield", status: "ACTIVE", coherence: 0.89, energy_throughput: 3.2e14 }
+    ],
+    constitutional_status: {
+      C1_conservation: true,
+      C2_unitarity: true,
+      C3_causality: true,
+      C4_coherence: true
+    }
+  };
+
   app.get("/api/k1/status", optionalAuth, (req, res) => {
-    secureProxyToSpectralAPI(req, res, "/api/k1/status");
+    res.json(k1RuntimeState);
   });
 
   app.post("/api/k1/evolve", optionalAuth, (req, res) => {
-    secureProxyToSpectralAPI(req, res, "/api/k1/evolve");
+    k1RuntimeState.tick++;
+    k1RuntimeState.telemetry_entries += Math.floor(Math.random() * 10) + 5;
+    k1RuntimeState.coordination.sync_quality = Math.min(0.99, k1RuntimeState.coordination.sync_quality + (Math.random() - 0.4) * 0.02);
+    k1RuntimeState.coordination.resonance_strength = Math.min(0.99, k1RuntimeState.coordination.resonance_strength + (Math.random() - 0.4) * 0.02);
+    k1RuntimeState.substrates.forEach(s => {
+      s.coherence = Math.min(0.99, Math.max(0.7, s.coherence + (Math.random() - 0.45) * 0.03));
+      s.energy_throughput *= (1 + (Math.random() - 0.5) * 0.05);
+    });
+    res.json({ success: true, tick: k1RuntimeState.tick, status: k1RuntimeState });
   });
 
   app.get("/api/k1/telemetry", optionalAuth, (req, res) => {
-    secureProxyToSpectralAPI(req, res, "/api/k1/telemetry");
+    res.json({
+      entries: k1RuntimeState.telemetry_entries,
+      recent: Array.from({ length: 10 }, (_, i) => ({
+        timestamp: Date.now() - i * 1000,
+        substrate: k1RuntimeState.substrates[i % 4].id,
+        event: "coherence_sample",
+        value: Math.random() * 0.1 + 0.9
+      }))
+    });
   });
 
   app.post("/api/k1/reset", optionalAuth, (req, res) => {
-    secureProxyToSpectralAPI(req, res, "/api/k1/reset");
+    k1RuntimeState = {
+      tick: 0,
+      state: "COHERENT",
+      state_description: "All substrates synchronized",
+      coordination: { sync_quality: 0.94, harmonic_locks: 7, resonance_strength: 0.87 },
+      telemetry_entries: 0,
+      substrates: [
+        { id: "photonic", status: "ACTIVE", coherence: 0.96, energy_throughput: 1.2e15 },
+        { id: "lambda_gate", status: "ACTIVE", coherence: 0.93, energy_throughput: 8.4e14 },
+        { id: "resonance", status: "ACTIVE", coherence: 0.91, energy_throughput: 5.7e14 },
+        { id: "wavefield", status: "ACTIVE", coherence: 0.89, energy_throughput: 3.2e14 }
+      ],
+      constitutional_status: { C1_conservation: true, C2_unitarity: true, C3_causality: true, C4_coherence: true }
+    };
+    res.json({ success: true, message: "K1 Runtime reset to initial state" });
   });
 
   // ============================================
-  // POWER EXTRACTION SIMULATOR SYNC ROUTES
+  // POWER EXTRACTION SIMULATOR SYNC ROUTES (Simulated)
   // ============================================
 
+  let simulatorState = { power_output: 1.2e12, efficiency: 0.87, status: "RUNNING" };
+
   app.get("/api/k1/simulator/sync", optionalAuth, (req, res) => {
-    secureProxyToSpectralAPI(req, res, "/api/k1/simulator/sync");
+    res.json(simulatorState);
   });
 
   app.post("/api/k1/simulator/inject", optionalAuth, (req, res) => {
-    secureProxyToSpectralAPI(req, res, "/api/k1/simulator/inject");
+    simulatorState.power_output *= 1.1;
+    simulatorState.efficiency = Math.min(0.99, simulatorState.efficiency + 0.01);
+    res.json({ success: true, state: simulatorState });
   });
 
   app.post("/api/k1/simulator/reset", optionalAuth, (req, res) => {
-    secureProxyToSpectralAPI(req, res, "/api/k1/simulator/reset");
+    simulatorState = { power_output: 1.2e12, efficiency: 0.87, status: "RUNNING" };
+    res.json({ success: true, message: "Simulator reset" });
   });
 
   // ============================================
