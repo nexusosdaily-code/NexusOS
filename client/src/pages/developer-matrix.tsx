@@ -766,6 +766,113 @@ def _serialize_binary(self, frame_dict: dict) -> bytes:
 - Little-endian for x86/ARM compatibility`
       }
     ]
+  },
+  sdkInstall: {
+    title: "SDK Installation",
+    icon: Code,
+    color: "from-green-500 to-emerald-500",
+    content: [
+      {
+        heading: "Python SDK (pip)",
+        text: `**Install Core Packages:**
+
+\`\`\`bash
+# Core WNSP Protocol
+pip install wnsp-core
+
+# Lambda Gate Substrate
+pip install wnsp-substrate
+
+# Frame Builder & Verifier
+pip install wnsp-encoder
+
+# State Machine
+pip install wnsp-state-machine
+
+# Full SDK (all packages)
+pip install wnsp-sdk
+\`\`\`
+
+**Quick Start:**
+\`\`\`python
+from wnsp_sdk import FrameBuilder, LambdaStateMachine
+from wnsp_sdk.gates import LambdaGateID
+
+builder = FrameBuilder(lcu_id="MY-NODE-001")
+lsm = LambdaStateMachine(builder)
+
+# Build AGPL-compliant frame
+frame = lsm.request_sync_write(b"payload")
+\`\`\``
+      },
+      {
+        heading: "Node.js SDK (npm)",
+        text: `**Install Core Packages:**
+
+\`\`\`bash
+# Core WNSP Protocol
+npm install @wnsp/core
+
+# Lambda Gate Substrate
+npm install @wnsp/substrate
+
+# Frame Builder & Verifier
+npm install @wnsp/encoder
+
+# State Machine
+npm install @wnsp/state-machine
+
+# Full SDK (all packages)
+npm install @wnsp/sdk
+\`\`\`
+
+**Quick Start:**
+\`\`\`typescript
+import { FrameBuilder, LambdaStateMachine } from '@wnsp/sdk';
+import { LambdaGateID } from '@wnsp/substrate';
+
+const builder = new FrameBuilder({ lcuId: 'MY-NODE-001' });
+const lsm = new LambdaStateMachine(builder);
+
+// Build AGPL-compliant frame
+const frame = await lsm.requestSyncWrite(Buffer.from('payload'));
+\`\`\``
+      },
+      {
+        heading: "Package Overview",
+        text: `| Package | Description |
+|---------|-------------|
+| \`wnsp-core\` | Physics constants, wavelength calculations |
+| \`wnsp-substrate\` | 8 Lambda Gate primitives |
+| \`wnsp-encoder\` | Frame Builder v7.1, binary serialization |
+| \`wnsp-verifier\` | Coherence Verifier, AGPL enforcement |
+| \`wnsp-state-machine\` | LSM with 3-state coherence model |
+| \`wnsp-consensus\` | Proof-of-Spectrum consensus |
+| \`wnsp-wallet\` | NXT token management |
+| \`wnsp-governance\` | Constitutional voting, Sigma engine |
+
+**All packages are AGPL-3.0 licensed.**`
+      },
+      {
+        heading: "Source Code Access",
+        text: `**GitHub Repository:**
+\`\`\`bash
+git clone https://github.com/nexusos/wnsp-sdk.git
+cd wnsp-sdk
+pip install -e .  # Development install
+\`\`\`
+
+**Direct File Access:**
+- \`wnsp_v7/frame_builder_v7_1.py\` - Frame Builder
+- \`wnsp_v7/verifier_v7_1.py\` - Coherence Verifier
+- \`wnsp_v7/lambda_state_machine.py\` - State Machine
+- \`wnsp_v7/substrate_v4.py\` - Lambda Gates
+- \`wnsp_v7/master_field_equation.py\` - Physics Engine
+
+**License:** AGPL-3.0 (copyleft)
+All modifications must be disclosed under same license.`
+      }
+    ]
   }
 };
 
