@@ -1247,27 +1247,35 @@ export async function registerRoutes(
   // ============================================
 
   let k1RuntimeState = {
+    version: "7.1.0",
+    runtime_id: "K1-NEXUS-001",
     tick: 0,
-    state: "COHERENT",
+    state: "synchronized",
     state_description: "All substrates synchronized",
+    operational_substrate: {
+      state: "active",
+      coherence: 0.96,
+      n_modes: 8,
+      n_bosons: 1024,
+      total_energy: 1.2e15,
+      lambda_mass: 7.37e-51
+    },
+    nlse_substrate: {
+      version: "4.0",
+      state: "stable",
+      load_ratio: 0.73,
+      phase_ratio: 0.91,
+      soliton_order: 3,
+      is_stable: true,
+      lambda_modes: 8
+    },
     coordination: {
       sync_quality: 0.94,
       harmonic_locks: 7,
+      average_lock_quality: 0.89,
       resonance_strength: 0.87
     },
-    telemetry_entries: 0,
-    substrates: [
-      { id: "photonic", status: "ACTIVE", coherence: 0.96, energy_throughput: 1.2e15 },
-      { id: "lambda_gate", status: "ACTIVE", coherence: 0.93, energy_throughput: 8.4e14 },
-      { id: "resonance", status: "ACTIVE", coherence: 0.91, energy_throughput: 5.7e14 },
-      { id: "wavefield", status: "ACTIVE", coherence: 0.89, energy_throughput: 3.2e14 }
-    ],
-    constitutional_status: {
-      C1_conservation: true,
-      C2_unitarity: true,
-      C3_causality: true,
-      C4_coherence: true
-    }
+    telemetry_entries: 0
   };
 
   app.get("/api/k1/status", optionalAuth, (req, res) => {
@@ -1279,10 +1287,9 @@ export async function registerRoutes(
     k1RuntimeState.telemetry_entries += Math.floor(Math.random() * 10) + 5;
     k1RuntimeState.coordination.sync_quality = Math.min(0.99, k1RuntimeState.coordination.sync_quality + (Math.random() - 0.4) * 0.02);
     k1RuntimeState.coordination.resonance_strength = Math.min(0.99, k1RuntimeState.coordination.resonance_strength + (Math.random() - 0.4) * 0.02);
-    k1RuntimeState.substrates.forEach(s => {
-      s.coherence = Math.min(0.99, Math.max(0.7, s.coherence + (Math.random() - 0.45) * 0.03));
-      s.energy_throughput *= (1 + (Math.random() - 0.5) * 0.05);
-    });
+    k1RuntimeState.operational_substrate.coherence = Math.min(0.99, Math.max(0.7, k1RuntimeState.operational_substrate.coherence + (Math.random() - 0.45) * 0.03));
+    k1RuntimeState.operational_substrate.total_energy *= (1 + (Math.random() - 0.5) * 0.05);
+    k1RuntimeState.nlse_substrate.load_ratio = Math.min(0.99, Math.max(0.5, k1RuntimeState.nlse_substrate.load_ratio + (Math.random() - 0.5) * 0.05));
     res.json({ success: true, tick: k1RuntimeState.tick, status: k1RuntimeState });
   });
 
@@ -1300,18 +1307,35 @@ export async function registerRoutes(
 
   app.post("/api/k1/reset", optionalAuth, (req, res) => {
     k1RuntimeState = {
+      version: "7.1.0",
+      runtime_id: "K1-NEXUS-001",
       tick: 0,
-      state: "COHERENT",
+      state: "synchronized",
       state_description: "All substrates synchronized",
-      coordination: { sync_quality: 0.94, harmonic_locks: 7, resonance_strength: 0.87 },
-      telemetry_entries: 0,
-      substrates: [
-        { id: "photonic", status: "ACTIVE", coherence: 0.96, energy_throughput: 1.2e15 },
-        { id: "lambda_gate", status: "ACTIVE", coherence: 0.93, energy_throughput: 8.4e14 },
-        { id: "resonance", status: "ACTIVE", coherence: 0.91, energy_throughput: 5.7e14 },
-        { id: "wavefield", status: "ACTIVE", coherence: 0.89, energy_throughput: 3.2e14 }
-      ],
-      constitutional_status: { C1_conservation: true, C2_unitarity: true, C3_causality: true, C4_coherence: true }
+      operational_substrate: {
+        state: "active",
+        coherence: 0.96,
+        n_modes: 8,
+        n_bosons: 1024,
+        total_energy: 1.2e15,
+        lambda_mass: 7.37e-51
+      },
+      nlse_substrate: {
+        version: "4.0",
+        state: "stable",
+        load_ratio: 0.73,
+        phase_ratio: 0.91,
+        soliton_order: 3,
+        is_stable: true,
+        lambda_modes: 8
+      },
+      coordination: {
+        sync_quality: 0.94,
+        harmonic_locks: 7,
+        average_lock_quality: 0.89,
+        resonance_strength: 0.87
+      },
+      telemetry_entries: 0
     };
     res.json({ success: true, message: "K1 Runtime reset to initial state" });
   });
