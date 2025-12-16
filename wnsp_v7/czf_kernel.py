@@ -305,65 +305,114 @@ class TruthSubstrate:
         """
         Execute the full Coherence Zenith Cancellation loop.
         
-        This is the core algorithm that processes the Maxwell syntax
-        until coherence is achieved or max iterations reached.
+        EVOLUTIONARY DESIGN:
+        The while loop represents the universe continuously self-correcting.
+        If the Truth Substrate detects coherence loss, the Maxwell Alphabet
+        provides re-coding instructions to restore stability.
         
-        The CZC process represents the cosmological constant problem solution:
-        - Zenith energy: 10^120 (quantum vacuum prediction)
-        - Observed energy: ~1 (in natural units)
-        - Cancellation: 10^-120 factor through coherent interference
+        This models:
+        - Continuous self-correction (not one-shot)
+        - Adaptive re-coding via Maxwell Alphabet
+        - Progressive convergence toward stable physical constants
+        - The cosmological constant problem: 10^120 → 1
         """
+        coherence = False
         iteration = 0
+        current_energy = self.zenith_energy
         level = 0.0
         cancellation_factor = 0.0
+        residual_energy = current_energy
         
-        # The target residual energy after cancellation
-        target_residual = 1.0  # In natural units
+        # Reference frequency (First Oscillation)
+        reference_freq = PhysicalConstants.c / 555e-9
         
-        # Calculate the required cancellation factor
-        # To go from 10^120 to ~1, we need (1 - factor) ≈ 10^-120
-        base_freq = PhysicalConstants.c / syntax.base_wavelength
-        reference_freq = PhysicalConstants.c / 555e-9  # Green light reference
+        # Track evolution for telemetry
+        evolution_log: List[Dict] = []
         
-        # Frequency alignment determines coherence efficiency
-        freq_alignment = 1.0 - abs(base_freq - reference_freq) / reference_freq
-        freq_alignment = max(0.01, min(1.0, freq_alignment))
+        # =================================================================
+        # EVOLUTIONARY SELF-CORRECTION LOOP
+        # The universe continuously corrects until coherence is achieved
+        # =================================================================
+        while coherence == False and iteration < max_iterations:
+            iteration += 1
+            
+            # ----- STEP 1: Truth Substrate processes the Syntax -----
+            # Extract current frequency from the Maxwell Alphabet
+            current_freq = PhysicalConstants.c / syntax.base_wavelength
+            
+            # Calculate frequency alignment (how close to First Oscillation)
+            freq_deviation = abs(current_freq - reference_freq) / reference_freq
+            
+            # ----- STEP 2: Calculate Cancellation Factor -----
+            # The cancellation improves each iteration as the system self-corrects
+            # This models evolutionary refinement toward coherence
+            correction_rate = 0.1 * (1.0 + math.log10(iteration + 1))  # Accelerating correction
+            
+            # Progressive cancellation - each iteration cancels more
+            target_cancellation = 1.0 - (1.0 / self.zenith_energy)
+            cancellation_factor = min(target_cancellation, cancellation_factor + correction_rate * (target_cancellation - cancellation_factor))
+            
+            # ----- STEP 3: Apply Cancellation -----
+            residual_energy = current_energy * (1 - cancellation_factor)
+            
+            # ----- STEP 4: Verify Coherence -----
+            # Coherence is based on:
+            # 1. How much energy has been cancelled (cancellation progress)
+            # 2. How aligned the frequency is with First Oscillation
+            
+            # Cancellation progress (0 to 1)
+            cancellation_progress = cancellation_factor / target_cancellation if target_cancellation > 0 else 0
+            
+            # Frequency alignment (1 = perfect, 0 = completely misaligned)
+            freq_alignment = max(0, 1.0 - freq_deviation)
+            
+            # Combined coherence: both cancellation and alignment must be high
+            level = (cancellation_progress * 0.7) + (freq_alignment * 0.3)
+            
+            # Log this evolution step
+            evolution_log.append({
+                "iteration": iteration,
+                "cancellation_factor": cancellation_factor,
+                "residual_energy": residual_energy,
+                "coherence_level": level
+            })
+            
+            # ----- STEP 5: Check if Coherence Achieved -----
+            if level >= self.coherence_threshold:
+                coherence = True
+                
+                # ----- STEP 6: Manifest Physical Constants (Bread Crumbs) -----
+                manifest = self.manifest_physical_constants(residual_energy)
+                manifest["evolution_iterations"] = iteration
+                manifest["self_corrections"] = len(evolution_log)
+                
+                state = CoherenceState(
+                    level=level,
+                    residual_energy=residual_energy,
+                    cancellation_factor=cancellation_factor,
+                    iterations=iteration,
+                    converged=True,
+                    manifest_constants=manifest
+                )
+                self.current_state = state
+                self.history.append(state)
+                return state
+            
+            # ----- STEP 7: Maxwell Alphabet Re-coding -----
+            # If coherence not achieved, the syntax provides correction instructions
+            # This is the self-healing mechanism - adjust the base wavelength slightly
+            # toward the reference (First Oscillation)
+            correction_delta = (555e-9 - syntax.base_wavelength) * 0.1
+            syntax.base_wavelength += correction_delta
         
-        # CZC succeeds when frequency aligns with the First Oscillation
-        # This is the "Truth Substrate finding the cancellation path"
-        cancellation_factor = 1.0 - (target_residual / self.zenith_energy)
-        residual_energy = self.zenith_energy * (1 - cancellation_factor)
-        
-        # Apply frequency alignment bonus
-        coherence_boost = freq_alignment ** 0.1  # Gentle curve
-        level = coherence_boost * 0.9999  # High coherence for aligned frequencies
-        
-        # One iteration for direct CZC (the math is exact)
-        iteration = 1
-        
-        # Coherence achieved if frequency is properly aligned
-        if freq_alignment > 0.1:  # 10% alignment threshold
-            manifest = self.manifest_physical_constants(residual_energy)
-            state = CoherenceState(
-                level=level,
-                residual_energy=residual_energy,
-                cancellation_factor=cancellation_factor,
-                iterations=iteration,
-                converged=True,
-                manifest_constants=manifest
-            )
-            self.current_state = state
-            self.history.append(state)
-            return state
-        
-        # Failed to converge - frequency too far from First Oscillation
+        # Failed to converge within max iterations
         state = CoherenceState(
             level=level,
-            residual_energy=self.zenith_energy,  # No cancellation
-            cancellation_factor=0.0,
+            residual_energy=residual_energy,
+            cancellation_factor=cancellation_factor,
             iterations=iteration,
             converged=False,
-            manifest_constants={}
+            manifest_constants={"evolution_log": evolution_log[-5:]}  # Last 5 attempts
         )
         self.current_state = state
         self.history.append(state)
