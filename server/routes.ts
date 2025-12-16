@@ -1294,11 +1294,12 @@ export async function registerRoutes(
   });
 
   app.get("/api/k1/telemetry", optionalAuth, (req, res) => {
+    const substrateIds = ["operational", "nlse", "coordination", "telemetry"];
     res.json({
       entries: k1RuntimeState.telemetry_entries,
       recent: Array.from({ length: 10 }, (_, i) => ({
         timestamp: Date.now() - i * 1000,
-        substrate: k1RuntimeState.substrates[i % 4].id,
+        substrate: substrateIds[i % 4],
         event: "coherence_sample",
         value: Math.random() * 0.1 + 0.9
       }))
