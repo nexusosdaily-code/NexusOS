@@ -12,7 +12,7 @@ The matrix answers:
 4. WHERE does my work anchor? (Substrate Connection)
 
 Author: NexusOS / WNSP Protocol
-License: GPL v3.0
+License: AGPL v3.0
 """
 
 import math
