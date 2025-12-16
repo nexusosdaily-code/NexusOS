@@ -35,7 +35,11 @@ import {
   CheckCircle2,
   AlertCircle,
   TrendingUp,
-  Sun
+  Sun,
+  Link2,
+  Unlink2,
+  RefreshCw,
+  Activity
 } from "lucide-react";
 
 const PLANCK_CONSTANT = 6.62607015e-34;
@@ -436,10 +440,87 @@ function QFactorCalculator() {
   );
 }
 
+interface K1SyncData {
+  backend_coherence: number;
+  energy_pool: number;
+  lambda_mass: number;
+  k1_tick: number;
+  k1_state: string;
+  sync_quality: number;
+  resonance_strength: number;
+  simulator_stats: {
+    total_harvested_energy: number;
+    contributions: number;
+  };
+}
+
 function PowerExtractionSimulator() {
   const [collectorAreaKm2, setCollectorAreaKm2] = useState(1000);
   const [harvesterCount, setHarvesterCount] = useState(100);
   const [networkCoherence, setNetworkCoherence] = useState(0.9);
+  const [isSynced, setIsSynced] = useState(false);
+  const [syncData, setSyncData] = useState<K1SyncData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  
+  const fetchSyncData = async () => {
+    try {
+      const response = await fetch('/api/k1/simulator/sync');
+      if (response.ok) {
+        const data = await response.json();
+        setSyncData(data);
+        if (data.backend_coherence) {
+          setNetworkCoherence(prev => prev * 0.8 + data.backend_coherence * 0.2);
+        }
+      }
+    } catch (error) {
+      console.error('K1 sync error:', error);
+    }
+  };
+
+  const injectEnergy = async () => {
+    if (!isSynced) return;
+    try {
+      await fetch('/api/k1/simulator/inject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          harvested_energy: totalPower * 0.001,
+          coherence: networkCoherence,
+          harvester_count: harvesterCount
+        })
+      });
+    } catch (error) {
+      console.error('Inject error:', error);
+    }
+  };
+
+  const toggleSync = async () => {
+    if (isSynced) {
+      setIsSynced(false);
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+      }
+    } else {
+      setIsLoading(true);
+      await fetchSyncData();
+      setIsSynced(true);
+      setIsLoading(false);
+      syncIntervalRef.current = setInterval(() => {
+        fetchSyncData();
+        injectEnergy();
+      }, 2000);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+      }
+    };
+  }, []);
   
   const schumannDensity = 1e-6;
   const qAmplification = 100;
@@ -449,7 +530,8 @@ function PowerExtractionSimulator() {
   const singleHarvesterPower = schumannDensity * (collectorAreaKm2 * 1e6) * qAmplification * couplingEfficiency * oamChannels;
   const basePower = singleHarvesterPower * harvesterCount;
   const coherenceFactor = 1 + (harvesterCount - 1) * networkCoherence ** 2;
-  const totalPower = basePower * coherenceFactor;
+  const resonanceBonus = isSynced && syncData ? (1 + syncData.resonance_strength * 0.15) : 1;
+  const totalPower = basePower * coherenceFactor * resonanceBonus;
   
   const kardashevLevel = totalPower > 0 ? (Math.log10(totalPower) - 6) / 10 : 0;
   const k095Target = 5e16;
@@ -457,13 +539,57 @@ function PowerExtractionSimulator() {
   
   return (
     <Card className="bg-gradient-to-br from-yellow-900/20 to-amber-950/20 border-yellow-500/30 p-6" data-testid="power-extraction-sim">
-      <h3 className="text-xl font-bold text-yellow-400 mb-4 flex items-center gap-2">
-        <Zap className="w-5 h-5" />
-        Power Extraction Simulator
-        <InfoTooltip {...RESEARCH_SOURCES.schumann} />
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xl font-bold text-yellow-400 flex items-center gap-2">
+          <Zap className="w-5 h-5" />
+          Power Extraction Simulator
+          <InfoTooltip {...RESEARCH_SOURCES.schumann} />
+        </h3>
+        <Button
+          onClick={toggleSync}
+          disabled={isLoading}
+          className={isSynced 
+            ? "bg-green-600 hover:bg-green-700 text-white" 
+            : "bg-slate-700 hover:bg-slate-600 text-white"}
+          size="sm"
+          data-testid="button-power-sync"
+        >
+          {isLoading ? (
+            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+          ) : isSynced ? (
+            <Link2 className="w-4 h-4 mr-2" />
+          ) : (
+            <Unlink2 className="w-4 h-4 mr-2" />
+          )}
+          {isSynced ? "K1 Synced" : "Sync to K1"}
+        </Button>
+      </div>
+      
+      {isSynced && syncData && (
+        <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3 mb-4">
+          <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-1">
+              <Activity className="w-4 h-4 text-green-400" />
+              <span className="text-gray-400">K1 Tick:</span>
+              <span className="text-green-400 font-mono">{syncData.k1_tick}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <TrendingUp className="w-4 h-4 text-cyan-400" />
+              <span className="text-gray-400">Resonance:</span>
+              <span className="text-cyan-400 font-mono">{(syncData.resonance_strength * 100).toFixed(1)}%</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Sparkles className="w-4 h-4 text-purple-400" />
+              <span className="text-gray-400">Contributions:</span>
+              <span className="text-purple-400 font-mono">{syncData.simulator_stats.contributions}</span>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <p className="text-sm text-gray-400 mb-6">
         Model the PlanetaryResonanceNetwork power output with your parameters
+        {isSynced && <span className="text-green-400 ml-2">• Live sync with Resonance Simulator</span>}
         <InfoTooltip {...RESEARCH_SOURCES.tesla} className="ml-1" />
       </p>
       
