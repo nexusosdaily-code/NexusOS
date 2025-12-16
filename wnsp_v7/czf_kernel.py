@@ -412,7 +412,7 @@ class TruthSubstrate:
             cancellation_factor=cancellation_factor,
             iterations=iteration,
             converged=False,
-            manifest_constants={"evolution_log": evolution_log[-5:]}  # Last 5 attempts
+            manifest_constants={}  # Failed - no constants manifest
         )
         self.current_state = state
         self.history.append(state)
@@ -437,7 +437,7 @@ class CZFKernel:
     
     FIRST_OSCILLATION: float = 555e12  # Hz (555 THz - green light, peak human vision)
     
-    def __init__(self, coherence_threshold: float = 0.999):
+    def __init__(self, coherence_threshold: float = 0.9999):
         self.truth_substrate = TruthSubstrate(coherence_threshold)
         self.anchor: Optional[LambdaAnchor] = None
         self.syntax: Optional[MaxwellAlphabet] = None
