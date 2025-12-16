@@ -60,6 +60,7 @@ function ProtectedRoutes() {
         <Route path="/workspace/orchestration" component={K1OrchestrationPage} />
         <Route path="/secure-docs" component={SecureDocxPage} />
         <Route path="/research-presentation" component={ResearchPresentationPage} />
+        <Route path="/research-presentation/developer-matrix" component={DeveloperMatrixPage} />
         <Route path="/streaming" component={StreamingPage} />
         <Route path="/streaming/:streamId" component={StreamingPage} />
         <Route path="/developer-matrix" component={DeveloperMatrixPage} />
