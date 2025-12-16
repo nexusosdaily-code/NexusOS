@@ -1345,20 +1345,61 @@ export async function registerRoutes(
   // POWER EXTRACTION SIMULATOR SYNC ROUTES (Simulated)
   // ============================================
 
-  let simulatorState = { power_output: 1.2e12, efficiency: 0.87, status: "RUNNING" };
+  let simulatorState = { 
+    power_output: 1.2e12, 
+    efficiency: 0.87, 
+    status: "RUNNING",
+    energy_pool: 5.2e18,
+    contributions: 147
+  };
 
   app.get("/api/k1/simulator/sync", optionalAuth, (req, res) => {
-    res.json(simulatorState);
+    res.json({
+      backend_coherence: k1RuntimeState.operational_substrate.coherence,
+      energy_pool: simulatorState.energy_pool,
+      lambda_mass: k1RuntimeState.operational_substrate.lambda_mass,
+      k1_tick: k1RuntimeState.tick,
+      k1_state: k1RuntimeState.state,
+      sync_quality: k1RuntimeState.coordination.sync_quality,
+      resonance_strength: k1RuntimeState.coordination.resonance_strength,
+      simulator_stats: {
+        total_harvested_energy: simulatorState.power_output,
+        contributions: simulatorState.contributions
+      }
+    });
   });
 
   app.post("/api/k1/simulator/inject", optionalAuth, (req, res) => {
-    simulatorState.power_output *= 1.1;
-    simulatorState.efficiency = Math.min(0.99, simulatorState.efficiency + 0.01);
-    res.json({ success: true, state: simulatorState });
+    const { harvested_energy, instant_power, coherence, harvester_count } = req.body;
+    
+    const energyToAdd = harvested_energy || instant_power || 1e6;
+    simulatorState.power_output += energyToAdd;
+    simulatorState.energy_pool += energyToAdd * 0.1;
+    simulatorState.contributions += 1;
+    simulatorState.efficiency = Math.min(0.99, simulatorState.efficiency + 0.001);
+    
+    k1RuntimeState.tick++;
+    k1RuntimeState.operational_substrate.coherence = Math.min(0.99, 
+      k1RuntimeState.operational_substrate.coherence * 0.99 + (coherence || 0.85) * 0.01);
+    k1RuntimeState.coordination.resonance_strength = Math.min(0.99,
+      k1RuntimeState.coordination.resonance_strength + 0.002);
+    
+    res.json({ 
+      success: true, 
+      energy_added: energyToAdd,
+      contributions: simulatorState.contributions,
+      state: simulatorState 
+    });
   });
 
   app.post("/api/k1/simulator/reset", optionalAuth, (req, res) => {
-    simulatorState = { power_output: 1.2e12, efficiency: 0.87, status: "RUNNING" };
+    simulatorState = { 
+      power_output: 1.2e12, 
+      efficiency: 0.87, 
+      status: "RUNNING",
+      energy_pool: 5.2e18,
+      contributions: 147
+    };
     res.json({ success: true, message: "Simulator reset" });
   });
 
