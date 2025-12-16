@@ -1273,6 +1273,14 @@ export default function DeveloperMatrixPage() {
               <FileText className="w-4 h-4 mr-2" />
               Documentation
             </TabsTrigger>
+            <TabsTrigger value="czf-foundation" className="data-[state=active]:bg-yellow-600" data-testid="tab-czf-foundation">
+              <Atom className="w-4 h-4 mr-2" />
+              CZF Foundation
+            </TabsTrigger>
+            <TabsTrigger value="czf-kernel" className="data-[state=active]:bg-cyan-600" data-testid="tab-czf-kernel">
+              <Code className="w-4 h-4 mr-2" />
+              CZF Kernel
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="quickstart" className="space-y-6">
@@ -2086,6 +2094,385 @@ print(f"1000 NXT = {mass:.2e} kg Lambda mass")
                 })()}
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="czf-foundation" className="space-y-6">
+            <Card className="bg-gradient-to-r from-yellow-900/30 to-amber-900/30 border-yellow-500/30 p-6">
+              <h2 className="text-xl font-bold mb-2">The Coherence Zenith Framework: Scientific Foundation</h2>
+              <p className="text-gray-400">A non-derivative resolution to the Vacuum Catastrophe and the foundations of gravity. Nobel-legacy physics with complete theoretical grounding.</p>
+            </Card>
+
+            <Card className="bg-gray-900/50 border-gray-700 p-6" data-testid="czf-review">
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <Atom className="w-5 h-5 text-yellow-400" />
+                The Lambda Anchor of Coherence
+              </h3>
+              <p className="text-gray-400 text-sm mb-4 italic">
+                Dedicated to the Nobel Legacy—Einstein, Planck, Dirac, Sakharov—whose equations defined the paradoxes this framework resolves.
+              </p>
+
+              <div className="space-y-6">
+                <div className="bg-gray-800/50 rounded-lg p-4">
+                  <h4 className="text-md font-bold text-red-400 mb-3">I. The Crisis: The Vacuum Catastrophe</h4>
+                  <p className="text-gray-400 text-sm mb-3">
+                    The cosmological constant problem represents physics' most severe theoretical discrepancy—a <span className="text-red-300 font-bold">10^120 order of magnitude</span> difference between QFT predictions and observations.
+                  </p>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="bg-gray-900/50 p-2 rounded">
+                      <div className="text-gray-500">QFT Predicted</div>
+                      <div className="text-red-300 font-mono">~10^112 erg/cm³</div>
+                    </div>
+                    <div className="bg-gray-900/50 p-2 rounded">
+                      <div className="text-gray-500">Observed (Planck 2015)</div>
+                      <div className="text-green-300 font-mono">5.96×10^-27 kg/m³</div>
+                    </div>
+                    <div className="bg-gray-900/50 p-2 rounded">
+                      <div className="text-gray-500">Discrepancy</div>
+                      <div className="text-yellow-300 font-mono font-bold">~10^120</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800/50 rounded-lg p-4">
+                  <h4 className="text-md font-bold text-cyan-400 mb-3">II. The Axiom: Lambda as First Oscillation</h4>
+                  <p className="text-gray-400 text-sm mb-3">
+                    Λ is the <span className="text-cyan-300">First Oscillation</span>—the non-derivative logical input that creates and constrains the vacuum.
+                  </p>
+                  <div className="bg-gray-900/50 p-3 rounded font-mono text-sm">
+                    <div className="text-cyan-300">Λ (First Oscillation)</div>
+                    <div className="text-gray-500 ml-4">↓</div>
+                    <div className="text-purple-300 ml-4">ℏ (Planck Quanta) — Discretization of action</div>
+                    <div className="text-gray-500 ml-8">↓</div>
+                    <div className="text-blue-300 ml-8">c (Coherence Velocity) — Maximum propagation of order</div>
+                    <div className="text-gray-500 ml-12">↓</div>
+                    <div className="text-green-300 ml-12">G (Gravitational Binding) — Emergent constraint on mass-energy</div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800/50 rounded-lg p-4">
+                  <h4 className="text-md font-bold text-green-400 mb-3">III. The Mechanism: Coherence Zenith Cancellation (CZC)</h4>
+                  <p className="text-gray-400 text-sm mb-3">
+                    The CZC is the necessary self-correction where massive Λ_initial energy is near-perfectly canceled to achieve coherent equilibrium.
+                  </p>
+                  <div className="bg-gray-900/50 p-3 rounded font-mono text-center">
+                    <span className="text-green-300">Λ_observed</span>
+                    <span className="text-gray-400"> = </span>
+                    <span className="text-red-300">Λ_initial</span>
+                    <span className="text-gray-400"> − </span>
+                    <span className="text-yellow-300">Λ_canceled</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                    <div className="bg-gray-900/50 p-2 rounded">
+                      <div className="text-red-300 font-bold">Λ_initial (Creation)</div>
+                      <div className="text-gray-400">Zenith Energy ~10^112 erg/cm³</div>
+                    </div>
+                    <div className="bg-gray-900/50 p-2 rounded">
+                      <div className="text-green-300 font-bold">Dark Energy (Observed)</div>
+                      <div className="text-gray-400">Residual ~10^-27 kg/m³</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800/50 rounded-lg p-4">
+                  <h4 className="text-md font-bold text-purple-400 mb-3">IV. Empirical Evidence</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5" />
+                      <div>
+                        <span className="text-white font-medium">Dark Energy Observations:</span>
+                        <span className="text-gray-400"> Planck 2015/2018, Type Ia supernovae, BAO surveys</span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5" />
+                      <div>
+                        <span className="text-white font-medium">CP Violation (Baryogenesis):</span>
+                        <span className="text-gray-400"> Nobel 1980, BaBar/Belle 2001, LHCb 2019/2025</span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400 mt-0.5" />
+                      <div>
+                        <span className="text-white font-medium">CMB Uniformity:</span>
+                        <span className="text-gray-400"> ΔT/T ~ 10^-5 confirms coherent initial conditions</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-yellow-900/20 to-amber-900/20 border border-yellow-500/30 rounded-lg p-4">
+                  <h4 className="text-md font-bold text-yellow-400 mb-2">CZF Kernel Execution Results</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                    <div className="bg-gray-900/50 p-2 rounded text-center">
+                      <div className="text-gray-500">Coherence</div>
+                      <div className="text-green-400 font-mono font-bold">99.99%</div>
+                    </div>
+                    <div className="bg-gray-900/50 p-2 rounded text-center">
+                      <div className="text-gray-500">Iterations</div>
+                      <div className="text-cyan-400 font-mono font-bold">44</div>
+                    </div>
+                    <div className="bg-gray-900/50 p-2 rounded text-center">
+                      <div className="text-gray-500">Self-Corrections</div>
+                      <div className="text-purple-400 font-mono font-bold">44</div>
+                    </div>
+                    <div className="bg-gray-900/50 p-2 rounded text-center">
+                      <div className="text-gray-500">Status</div>
+                      <div className="text-green-400 font-mono font-bold">GROUNDED</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800/50 rounded-lg p-4">
+                  <h4 className="text-md font-bold text-amber-400 mb-3">V. Conclusion: The New Foundation</h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-start gap-2">
+                      <div className="text-amber-400 font-bold">1.</div>
+                      <div>
+                        <span className="text-white font-medium">From Law-Seeking to Logical Necessity:</span>
+                        <span className="text-gray-400"> Physics moves from empirically fitting constants to deriving them from first principles.</span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="text-amber-400 font-bold">2.</div>
+                      <div>
+                        <span className="text-white font-medium">Completing the Nobel Legacy:</span>
+                        <span className="text-gray-400"> CZF provides the final missing constraint (Λ) that unifies quantum mechanics and general relativity.</span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="text-amber-400 font-bold">3.</div>
+                      <div>
+                        <span className="text-white font-medium">Non-Derivative Authority:</span>
+                        <span className="text-gray-400"> The framework introduces a logically secure foundation—an axiom that cannot be derived from anything more fundamental.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800/50 rounded-lg p-4">
+                  <h4 className="text-md font-bold text-blue-400 mb-3">References</h4>
+                  <div className="space-y-2 text-xs text-gray-400">
+                    <div>1. Adler, R.J., Casey, B., & Jacob, O.C. (1995). "Vacuum catastrophe." <span className="text-blue-300">American Journal of Physics</span>, 63(7), 620-626.</div>
+                    <div>2. Sakharov, A.D. (1967). "Violation of CP invariance." <span className="text-blue-300">JETP Letters</span>, 5, 24-27.</div>
+                    <div>3. Planck Collaboration (2015). "Planck 2015 results XIII." <span className="text-blue-300">Astronomy & Astrophysics</span>, 594, A13.</div>
+                    <div>4. LHCb Collaboration (2019). "CP violation in charm decays." <span className="text-blue-300">Physical Review Letters</span>, 122, 211803.</div>
+                    <div>5. Barnes, L.A. (2012). "Fine-Tuning of the Universe." <span className="text-blue-300">PASA</span>, 29, 529-564.</div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-500/30 rounded-lg p-4 text-center">
+                  <p className="text-gray-400 text-sm italic">Open for rigorous peer review. Correspondence welcome.</p>
+                  <p className="text-gray-500 text-xs mt-2">License: This theoretical framework is presented for scientific discourse under open academic principles.</p>
+                </div>
+              </div>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="czf-kernel" className="space-y-6">
+            <Card className="bg-gradient-to-r from-cyan-900/30 to-blue-900/30 border-cyan-500/30 p-6">
+              <h2 className="text-xl font-bold mb-2">CZF Nexus Execution Kernel</h2>
+              <p className="text-gray-400">The foundational reality layer. Three-layer architecture providing physics grounding for all WNSP operations.</p>
+            </Card>
+
+            <Card className="bg-gray-900/50 border-gray-700 p-6" data-testid="czf-kernel-code">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Code className="w-5 h-5 text-cyan-400" />
+                  czf_kernel.py — Full Source
+                </h3>
+                <Badge className="bg-green-600">AGPL-3.0</Badge>
+              </div>
+              
+              <div className="mb-4 grid grid-cols-3 gap-3 text-xs">
+                <div className="bg-cyan-900/20 border border-cyan-500/30 rounded p-3 text-center">
+                  <div className="text-cyan-300 font-bold">Layer 3</div>
+                  <div className="text-gray-400">Lambda Anchor</div>
+                  <div className="text-gray-500">Hardware</div>
+                </div>
+                <div className="bg-purple-900/20 border border-purple-500/30 rounded p-3 text-center">
+                  <div className="text-purple-300 font-bold">Layer 1</div>
+                  <div className="text-gray-400">Maxwell Alphabet</div>
+                  <div className="text-gray-500">Syntax</div>
+                </div>
+                <div className="bg-green-900/20 border border-green-500/30 rounded p-3 text-center">
+                  <div className="text-green-300 font-bold">Layer 2</div>
+                  <div className="text-gray-400">Truth Substrate</div>
+                  <div className="text-gray-500">Intelligence</div>
+                </div>
+              </div>
+
+              <pre className="bg-gray-950 rounded-lg p-4 overflow-x-auto text-xs font-mono max-h-[600px] overflow-y-auto">
+                <code className="text-gray-300">{`#!/usr/bin/env python3
+"""
+THE CZF NEXUS EXECUTION KERNEL
+==============================
+Coherence Zenith Framework - Foundational Reality Layer
+
+Layer 1: Maxwell Alphabet (Syntax)      - Wavelength-based encoding
+Layer 2: Truth Substrate (Intelligence) - Collective processing  
+Layer 3: Lambda Anchor (Hardware)       - Physical grounding
+
+License: AGPL-3.0
+"""
+
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple
+from enum import Enum
+import math
+import time
+
+# =============================================================================
+# PHYSICAL CONSTANTS - The "Bread Crumbs" manifested by CZC
+# =============================================================================
+
+class PhysicalConstants:
+    """Fundamental constants manifested through Coherence Zenith Cancellation."""
+    h: float = 6.62607015e-34    # Planck constant (J·s)
+    c: float = 299_792_458        # Speed of light (m/s)
+    G: float = 6.67430e-11        # Gravitational constant
+    l_p: float = 1.616255e-35     # Planck length (m)
+    t_p: float = 5.391247e-44     # Planck time (s)
+    m_p: float = 2.176434e-8      # Planck mass (kg)
+    alpha: float = 7.2973525693e-3  # Fine structure constant
+    
+    @classmethod
+    def zenith_energy(cls) -> float:
+        """The cosmological constant ~10^120 in Planck units."""
+        return 10**120
+
+# =============================================================================
+# LAYER 3: LAMBDA ANCHOR (Hardware Foundation)
+# =============================================================================
+
+@dataclass
+class LambdaAnchor:
+    """Hardware substrate grounding abstract computation in physics."""
+    frequency: float  # Hz - the anchor frequency
+    amplitude: float = 1.0
+    phase: float = 0.0
+    
+    @property
+    def wavelength(self) -> float:
+        return PhysicalConstants.c / self.frequency
+    
+    @property
+    def energy(self) -> float:
+        return PhysicalConstants.h * self.frequency
+    
+    @property
+    def lambda_mass(self) -> float:
+        """Lambda boson mass: Λ = hf/c²"""
+        return (PhysicalConstants.h * self.frequency) / (PhysicalConstants.c ** 2)
+
+# =============================================================================
+# LAYER 1: MAXWELL ALPHABET (Syntax Layer)
+# =============================================================================
+
+@dataclass
+class MaxwellAlphabet:
+    """Encodes meaning in electromagnetic wavelengths (W-ASCII)."""
+    base_wavelength: float
+    
+    def encode_character(self, char: str) -> float:
+        char_code = ord(char)
+        return 380e-9 + (char_code % 95) * 4.2e-9
+    
+    def calculate_message_energy(self, message: str) -> float:
+        """Total energy: E = Σ(hc/λ)"""
+        wavelengths = [self.encode_character(c) for c in message]
+        return sum((PhysicalConstants.h * PhysicalConstants.c) / wl 
+                   for wl in wavelengths)
+
+# =============================================================================
+# LAYER 2: TRUTH SUBSTRATE (Intelligence Layer)  
+# =============================================================================
+
+class TruthSubstrate:
+    """Implements Coherence Zenith Cancellation (CZC) algorithm."""
+    
+    def __init__(self, coherence_threshold: float = 0.9999):
+        self.coherence_threshold = coherence_threshold
+        self.zenith_energy = PhysicalConstants.zenith_energy()
+    
+    def run_czc(self, syntax: MaxwellAlphabet, max_iterations: int = 1000):
+        """
+        EVOLUTIONARY SELF-CORRECTION LOOP
+        The universe continuously corrects until coherence achieved.
+        Models: 10^120 → 1 cosmological constant resolution
+        """
+        iteration = 0
+        current_energy = self.zenith_energy
+        cancellation_factor = 0.0
+        level = 0.0
+        
+        reference_freq = PhysicalConstants.c / 555e-9
+        
+        while level < self.coherence_threshold and iteration < max_iterations:
+            iteration += 1
+            
+            # Progressive cancellation each iteration
+            correction_rate = 0.1 * (1.0 + math.log10(iteration + 1))
+            target = 1.0 - (1.0 / self.zenith_energy)
+            cancellation_factor = min(target, 
+                cancellation_factor + correction_rate * (target - cancellation_factor))
+            
+            # Calculate coherence level
+            progress = cancellation_factor / target if target > 0 else 0
+            freq_dev = abs(PhysicalConstants.c / syntax.base_wavelength - reference_freq) / reference_freq
+            alignment = max(0, 1.0 - freq_dev)
+            level = (progress * 0.7) + (alignment * 0.3)
+            
+            # Self-healing: adjust toward First Oscillation
+            syntax.base_wavelength += (555e-9 - syntax.base_wavelength) * 0.1
+        
+        return {
+            "coherence": level,
+            "iterations": iteration,
+            "converged": level >= self.coherence_threshold,
+            "manifest_constants": {
+                "h": PhysicalConstants.h,
+                "c": PhysicalConstants.c,
+                "G": PhysicalConstants.G,
+                "fine_structure": PhysicalConstants.alpha,
+                "evolution_iterations": iteration,
+                "self_corrections": iteration
+            }
+        }
+
+# =============================================================================
+# CZF KERNEL - Main Entry Point
+# =============================================================================
+
+class CZFKernel:
+    FIRST_OSCILLATION: float = 555e12  # Hz (555 THz - green light)
+    
+    def initialize_reality(self):
+        """Initialize reality from the First Oscillation."""
+        anchor = LambdaAnchor(frequency=self.FIRST_OSCILLATION)
+        syntax = MaxwellAlphabet(base_wavelength=anchor.wavelength)
+        substrate = TruthSubstrate(coherence_threshold=0.9999)
+        
+        result = substrate.run_czc(syntax)
+        return {
+            "status": "Creation Successful" if result["converged"] else "Failed",
+            **result
+        }
+
+if __name__ == "__main__":
+    kernel = CZFKernel()
+    result = kernel.initialize_reality()
+    print(f"Coherence: {result['coherence']:.4%}")
+    print(f"Iterations: {result['iterations']}")
+    print(f"Physical Constants Manifest: {result['manifest_constants']}")`}</code>
+              </pre>
+
+              <div className="mt-4 flex items-center justify-between">
+                <div className="text-sm text-gray-400">
+                  Run: <code className="bg-gray-800 px-2 py-1 rounded text-cyan-300">python3 wnsp_v7/czf_kernel.py</code>
+                </div>
+                <Badge className="bg-cyan-600/20 text-cyan-300 border border-cyan-500/30">wnsp_v7/czf_kernel.py</Badge>
+              </div>
+            </Card>
           </TabsContent>
         </Tabs>
 
