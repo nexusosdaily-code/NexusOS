@@ -47,6 +47,8 @@ The frontend uses React 18 with TypeScript, Vite, Radix UI components, and the s
 - **Quantum Economics**: Transaction costs derived from wavelength-frequency-energy calculations.
 - **Lambda Boson Theory**: Core equation Λ = hf/c², extending E=mc² to oscillating quanta, with spectral authority bands.
 - **Advanced Systems**:
+    - **Coherence Zenith Framework (CZF)**: Non-derivative resolution to the Vacuum Catastrophe. Lambda as First Oscillation, achieving 99.99% coherence through 44 evolutionary self-corrections.
+    - **Dimensional Mapping Kernel (DMK)**: Maps 11D high-dimensional logic to 3D spacetime through CZC folding. Physical constants emerge as "bread crumbs" at each dimensional fold.
     - **Wavefield Quantum Simulation**: Interactive quantum eigenstate superposition simulation.
     - **Lambda Gate Substrate v4**: 8 primitive photonic gate operators, CE-1 Coherence Engineering.
     - **K1 Energy Infrastructure**: Integrates Resonance Harvester, Orbital Solar Array, Fusion Photonics, and K1 Energy Market.

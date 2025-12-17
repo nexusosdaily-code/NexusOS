@@ -1281,6 +1281,10 @@ export default function DeveloperMatrixPage() {
               <Code className="w-4 h-4 mr-2" />
               CZF Kernel
             </TabsTrigger>
+            <TabsTrigger value="dmk" className="data-[state=active]:bg-pink-600" data-testid="tab-dmk">
+              <Layers className="w-4 h-4 mr-2" />
+              DMK
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="quickstart" className="space-y-6">
@@ -2471,6 +2475,151 @@ if __name__ == "__main__":
                   Run: <code className="bg-gray-800 px-2 py-1 rounded text-cyan-300">python3 wnsp_v7/czf_kernel.py</code>
                 </div>
                 <Badge className="bg-cyan-600/20 text-cyan-300 border border-cyan-500/30">wnsp_v7/czf_kernel.py</Badge>
+              </div>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="dmk" className="space-y-6">
+            <Card className="bg-gradient-to-r from-pink-900/30 to-purple-900/30 border-pink-500/30 p-6">
+              <h2 className="text-xl font-bold mb-2">Dimensional Mapping Kernel (DMK)</h2>
+              <p className="text-gray-400">Maps High-Dimensional Logic to Spacetime Resolution. Explains HOW 10^120 zenith state becomes 3D reality through dimensional folding.</p>
+            </Card>
+
+            <Card className="bg-gray-900/50 border-gray-700 p-6" data-testid="dmk-concept">
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <Layers className="w-5 h-5 text-pink-400" />
+                The Folding Mechanism
+              </h3>
+              <p className="text-gray-400 text-sm mb-4">
+                The DMK completes the theoretical chain: CZF achieves coherence, DMK explains the dimensional reduction, and physical constants emerge as "bread crumbs" at each fold.
+              </p>
+
+              <div className="space-y-4">
+                <div className="bg-gray-800/50 rounded-lg p-4">
+                  <h4 className="text-md font-bold text-pink-400 mb-3">Dimensional Folding Process</h4>
+                  <div className="grid grid-cols-4 gap-2 text-xs text-center">
+                    <div className="bg-gray-900/50 p-2 rounded">
+                      <div className="text-pink-300 font-bold">11D</div>
+                      <div className="text-gray-500">M-Theory</div>
+                    </div>
+                    <div className="bg-gray-900/50 p-2 rounded">
+                      <div className="text-purple-300 font-bold">→ 7D</div>
+                      <div className="text-gray-500">Strong Force</div>
+                    </div>
+                    <div className="bg-gray-900/50 p-2 rounded">
+                      <div className="text-blue-300 font-bold">→ 4D</div>
+                      <div className="text-gray-500">Planck Time</div>
+                    </div>
+                    <div className="bg-gray-900/50 p-2 rounded">
+                      <div className="text-green-300 font-bold">→ 3D</div>
+                      <div className="text-gray-500">Spacetime</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800/50 rounded-lg p-4">
+                  <h4 className="text-md font-bold text-cyan-400 mb-3">Bread Crumbs: Physical Constants at Each Fold</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                    <div className="bg-gray-900/50 p-2 rounded text-center">
+                      <div className="text-gray-500">Dim 9</div>
+                      <div className="text-cyan-300 font-mono">G</div>
+                      <div className="text-gray-500">6.67×10⁻¹¹</div>
+                    </div>
+                    <div className="bg-gray-900/50 p-2 rounded text-center">
+                      <div className="text-gray-500">Dim 6</div>
+                      <div className="text-purple-300 font-mono">α</div>
+                      <div className="text-gray-500">1/137</div>
+                    </div>
+                    <div className="bg-gray-900/50 p-2 rounded text-center">
+                      <div className="text-gray-500">Dim 4</div>
+                      <div className="text-yellow-300 font-mono">t_p</div>
+                      <div className="text-gray-500">5.39×10⁻⁴⁴s</div>
+                    </div>
+                    <div className="bg-gray-900/50 p-2 rounded text-center">
+                      <div className="text-gray-500">Dim 3</div>
+                      <div className="text-green-300 font-mono">c</div>
+                      <div className="text-gray-500">299,792,458</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-pink-900/20 to-purple-900/20 border border-pink-500/30 rounded-lg p-4">
+                  <h4 className="text-md font-bold text-pink-400 mb-2">Core Insight</h4>
+                  <p className="text-gray-400 text-sm">
+                    The Minkowski metric (ds² = -c²dt² + dx² + dy² + dz²) is the <span className="text-pink-300 font-bold">User Interface of Reality</span> — 
+                    the stable 3D output after 8 dimensional folds from the 11D zenith state.
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="bg-gray-900/50 border-gray-700 p-6" data-testid="dmk-code">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Code className="w-5 h-5 text-pink-400" />
+                  dmk_kernel.py — Core Classes
+                </h3>
+                <Badge className="bg-green-600">AGPL-3.0</Badge>
+              </div>
+              
+              <pre className="bg-gray-950 rounded-lg p-4 overflow-x-auto text-xs font-mono max-h-[500px] overflow-y-auto">
+                <code className="text-gray-300">{`# THE DIMENSIONAL MAPPING KERNEL (DMK)
+# Input: Maxwell_Alphabet_Syntax (High-Dimensional Logic)
+# Output: Spacetime_Resolution (3D Physical Residue)
+
+MAX_DIMENSIONS = 11  # String theory compatible
+TARGET_RESOLUTION = 3  # Our observable 3D spacetime
+
+# Physical constants manifested at each dimensional fold
+DIMENSIONAL_RESIDUE = {
+    11: ("M-Theory Compactification", None),
+    10: ("String Tension", 1.0),
+    9: ("Gravitational Coupling", 6.67430e-11),  # G
+    8: ("Electroweak Unification", 246.0),  # GeV
+    7: ("Strong Force Coupling", 0.1179),  # α_s
+    6: ("Fine Structure", 7.2973525693e-3),  # α
+    5: ("Planck Mass", 2.176434e-8),  # m_p
+    4: ("Planck Time", 5.391247e-44),  # t_p
+    3: ("Speed of Light", 299792458),  # c
+}
+
+class CZCFoldingEngine:
+    """Executes dimensional folding through CZC."""
+    
+    def execute_fold(self, logic, from_dim, to_dim):
+        source_entropy = logic.encoded_data[from_dim]
+        folding_efficiency = 1.0 - (1.0 / (source_entropy + 1))
+        folded_entropy = source_entropy * (1.0 - folding_efficiency)
+        
+        # Anchor the physical residue (bread crumb)
+        residue = DIMENSIONAL_RESIDUE.get(from_dim)
+        if residue[1] is not None:
+            self.anchored_residue[residue[0]] = residue[1]
+        
+        return FoldResult(from_dim, to_dim, folded_entropy, residue)
+
+class DimensionalMappingKernel:
+    """Maps 11D Logic → 3D Spacetime"""
+    
+    def map_nexus_to_dimension(self):
+        # 1. Decode high-dimensional logic
+        zenith_logic = ZenithLogic.from_syntax(self.syntax)
+        
+        # 2. Execute full CZC folding (11D → 3D)
+        for dim in range(11, 3, -1):
+            self.engine.execute_fold(zenith_logic, dim, dim - 1)
+        
+        # 3. Generate coherent spacetime matrix
+        spacetime = generate_coherent_matrix(3, self.anchor)
+        
+        return spacetime  # The "User Interface" of Reality`}</code>
+              </pre>
+
+              <div className="mt-4 flex items-center justify-between">
+                <div className="text-sm text-gray-400">
+                  Run: <code className="bg-gray-800 px-2 py-1 rounded text-pink-300">python3 wnsp_v7/dmk_kernel.py</code>
+                </div>
+                <Badge className="bg-pink-600/20 text-pink-300 border border-pink-500/30">wnsp_v7/dmk_kernel.py</Badge>
               </div>
             </Card>
           </TabsContent>
