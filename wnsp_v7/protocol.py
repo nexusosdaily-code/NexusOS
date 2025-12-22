@@ -1091,6 +1091,293 @@ def convert_v7_to_v6(v7_packet: HarmonicPacket) -> Dict[str, Any]:
     }
 
 
+# =============================================================================
+# WCIP COLLISION CHECK — Wave Collision Interference Protocol
+# =============================================================================
+
+@dataclass
+class WaveSignature5D:
+    """
+    5-Dimensional Wave Signature for collision detection.
+    Each dimension must be unique to avoid interference.
+    
+    WCIP Standard requires all 5 dimensions be checked:
+    - λ (wavelength): Spatial identity
+    - A (amplitude): Energy magnitude  
+    - φ (phase): Temporal position
+    - P (polarization): Orientation angle
+    - t (timestamp): Creation epoch
+    """
+    wavelength: float       # λ in meters
+    amplitude: float        # A (normalized 0-1)
+    phase: float           # φ in radians (0 to 2π)
+    polarization: float    # P in degrees (0-180)
+    timestamp: float       # t in seconds (Unix epoch)
+    owner_id: str          # Node/wallet that owns this signature
+    
+    @property
+    def signature_hash(self) -> str:
+        """Generate unique 256-bit hash from 5D parameters."""
+        content = f"{self.wavelength:.15e}:{self.amplitude:.10f}:{self.phase:.10f}:" \
+                  f"{self.polarization:.10f}:{self.timestamp:.6f}:{self.owner_id}"
+        return hashlib.sha256(content.encode()).hexdigest()
+    
+    @property
+    def frequency(self) -> float:
+        """Derived frequency from wavelength."""
+        return SPEED_OF_LIGHT / self.wavelength if self.wavelength > 0 else 0
+    
+    def distance_from(self, other: 'WaveSignature5D') -> float:
+        """
+        Calculate normalized distance in 5D wave space.
+        Returns 0 if signatures are identical, >1 if safely separated.
+        """
+        # Normalize each dimension to 0-1 range
+        lambda_diff = abs(self.wavelength - other.wavelength) / max(self.wavelength, other.wavelength, 1e-15)
+        amp_diff = abs(self.amplitude - other.amplitude)
+        phase_diff = min(abs(self.phase - other.phase), 2 * math.pi - abs(self.phase - other.phase)) / math.pi
+        pol_diff = abs(self.polarization - other.polarization) / 180.0
+        time_diff = min(abs(self.timestamp - other.timestamp) / 1.0, 1.0)  # 1 second = max separation
+        
+        # Euclidean distance in 5D space
+        return math.sqrt(lambda_diff**2 + amp_diff**2 + phase_diff**2 + pol_diff**2 + time_diff**2)
+
+
+class CollisionCheckResult(Enum):
+    """WCIP Collision Check result codes."""
+    CLEAR = (0, "No collision detected - signature is unique")
+    WARNING = (1, "Potential collision - signatures are close in 5D space")
+    COLLISION = (2, "Collision detected - signature already registered")
+    INVALID = (3, "Invalid signature parameters")
+    
+    def __init__(self, code: int, description: str):
+        self.code = code
+        self.description = description
+
+
+@dataclass
+class CollisionReport:
+    """Detailed report from WCIP collision check."""
+    result: CollisionCheckResult
+    candidate_signature: WaveSignature5D
+    nearest_signature: Optional[WaveSignature5D] = None
+    distance: float = float('inf')
+    check_timestamp: float = field(default_factory=time.time)
+    
+    @property
+    def is_safe(self) -> bool:
+        return self.result == CollisionCheckResult.CLEAR
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "result": self.result.name,
+            "result_code": self.result.code,
+            "description": self.result.description,
+            "candidate_hash": self.candidate_signature.signature_hash[:16],
+            "distance_to_nearest": self.distance,
+            "is_safe": self.is_safe,
+            "timestamp": self.check_timestamp
+        }
+
+
+class WCIPCollisionRegistry:
+    """
+    WCIP Collision Registry — maintains all registered wave signatures.
+    
+    The collision check prevents:
+    1. Duplicate wavelength addresses
+    2. Signature interference in 5D wave space
+    3. Replay attacks via timestamp checking
+    
+    Collision threshold: signatures must be >0.01 apart in 5D space.
+    Warning threshold: signatures between 0.01 and 0.05 trigger warnings.
+    """
+    
+    COLLISION_THRESHOLD = 0.01   # Minimum distance for collision
+    WARNING_THRESHOLD = 0.05    # Distance below which warnings are issued
+    
+    def __init__(self):
+        self.registry: Dict[str, WaveSignature5D] = {}  # hash -> signature
+        self.wavelength_index: Dict[int, List[str]] = {}  # binned wavelength -> hashes
+        self.owner_index: Dict[str, List[str]] = {}  # owner_id -> hashes
+        self.creation_time = time.time()
+        self.total_checks = 0
+        self.collisions_prevented = 0
+    
+    def _wavelength_bin(self, wavelength: float) -> int:
+        """Bin wavelengths for faster collision checking."""
+        # Bin by order of magnitude in nanometers
+        nm = wavelength * 1e9
+        if nm <= 0:
+            return 0
+        return int(math.log10(nm) * 100)
+    
+    def check_collision(self, candidate: WaveSignature5D) -> CollisionReport:
+        """
+        WCIP Collision Check — verify signature uniqueness.
+        
+        Returns CollisionReport with:
+        - CLEAR: Safe to register
+        - WARNING: Close to existing signature
+        - COLLISION: Too close, registration blocked
+        - INVALID: Bad parameters
+        """
+        self.total_checks += 1
+        
+        # Validate parameters
+        if candidate.wavelength <= 0 or candidate.amplitude < 0 or candidate.amplitude > 1:
+            return CollisionReport(
+                result=CollisionCheckResult.INVALID,
+                candidate_signature=candidate
+            )
+        
+        # Check exact hash collision first (O(1))
+        candidate_hash = candidate.signature_hash
+        if candidate_hash in self.registry:
+            self.collisions_prevented += 1
+            return CollisionReport(
+                result=CollisionCheckResult.COLLISION,
+                candidate_signature=candidate,
+                nearest_signature=self.registry[candidate_hash],
+                distance=0.0
+            )
+        
+        # Check nearby wavelength bins for proximity collision
+        candidate_bin = self._wavelength_bin(candidate.wavelength)
+        nearby_hashes: Set[str] = set()
+        
+        for bin_offset in range(-2, 3):  # Check ±2 bins
+            bin_key = candidate_bin + bin_offset
+            if bin_key in self.wavelength_index:
+                nearby_hashes.update(self.wavelength_index[bin_key])
+        
+        # Find minimum distance in 5D space
+        min_distance = float('inf')
+        nearest_sig = None
+        
+        for sig_hash in nearby_hashes:
+            existing = self.registry[sig_hash]
+            distance = candidate.distance_from(existing)
+            if distance < min_distance:
+                min_distance = distance
+                nearest_sig = existing
+        
+        # Determine result based on distance
+        if min_distance < self.COLLISION_THRESHOLD:
+            self.collisions_prevented += 1
+            return CollisionReport(
+                result=CollisionCheckResult.COLLISION,
+                candidate_signature=candidate,
+                nearest_signature=nearest_sig,
+                distance=min_distance
+            )
+        elif min_distance < self.WARNING_THRESHOLD:
+            return CollisionReport(
+                result=CollisionCheckResult.WARNING,
+                candidate_signature=candidate,
+                nearest_signature=nearest_sig,
+                distance=min_distance
+            )
+        else:
+            return CollisionReport(
+                result=CollisionCheckResult.CLEAR,
+                candidate_signature=candidate,
+                nearest_signature=nearest_sig,
+                distance=min_distance
+            )
+    
+    def register(self, signature: WaveSignature5D, force: bool = False) -> CollisionReport:
+        """
+        Register a new signature after collision check.
+        
+        Args:
+            signature: The 5D wave signature to register
+            force: If True, skip collision check (use with caution)
+        
+        Returns:
+            CollisionReport indicating success or failure
+        """
+        if not force:
+            report = self.check_collision(signature)
+            if report.result == CollisionCheckResult.COLLISION:
+                return report
+        
+        sig_hash = signature.signature_hash
+        self.registry[sig_hash] = signature
+        
+        # Update indices
+        wl_bin = self._wavelength_bin(signature.wavelength)
+        if wl_bin not in self.wavelength_index:
+            self.wavelength_index[wl_bin] = []
+        self.wavelength_index[wl_bin].append(sig_hash)
+        
+        if signature.owner_id not in self.owner_index:
+            self.owner_index[signature.owner_id] = []
+        self.owner_index[signature.owner_id].append(sig_hash)
+        
+        return CollisionReport(
+            result=CollisionCheckResult.CLEAR,
+            candidate_signature=signature,
+            distance=float('inf')
+        )
+    
+    def lookup_by_owner(self, owner_id: str) -> List[WaveSignature5D]:
+        """Get all signatures owned by a given ID."""
+        hashes = self.owner_index.get(owner_id, [])
+        return [self.registry[h] for h in hashes if h in self.registry]
+    
+    def status(self) -> Dict[str, Any]:
+        """Registry status and statistics."""
+        return {
+            "total_signatures": len(self.registry),
+            "total_checks": self.total_checks,
+            "collisions_prevented": self.collisions_prevented,
+            "collision_rate": self.collisions_prevented / max(self.total_checks, 1),
+            "wavelength_bins": len(self.wavelength_index),
+            "unique_owners": len(self.owner_index),
+            "uptime_seconds": time.time() - self.creation_time
+        }
+
+
+# Global WCIP registry instance
+WCIP_REGISTRY = WCIPCollisionRegistry()
+
+
+def wcip_generate_unique_signature(owner_id: str, base_wavelength: Optional[float] = None) -> WaveSignature5D:
+    """
+    Generate a guaranteed-unique 5D wave signature using WCIP.
+    
+    Automatically retries with parameter variation if collision detected.
+    """
+    max_attempts = 100
+    
+    for attempt in range(max_attempts):
+        # Generate base parameters
+        if base_wavelength is None:
+            # Default to visible spectrum (400-700nm)
+            wl = 400e-9 + secrets.randbelow(300000) * 1e-12
+        else:
+            # Vary around requested wavelength
+            variation = (secrets.randbelow(1000) - 500) * 1e-12 * (1 + attempt * 0.1)
+            wl = base_wavelength + variation
+        
+        candidate = WaveSignature5D(
+            wavelength=wl,
+            amplitude=0.5 + secrets.randbelow(500) / 1000,
+            phase=secrets.randbelow(6283) / 1000,  # 0 to 2π
+            polarization=secrets.randbelow(180),
+            timestamp=time.time() + attempt * 0.001,  # Tiny offset per attempt
+            owner_id=owner_id
+        )
+        
+        report = WCIP_REGISTRY.check_collision(candidate)
+        if report.is_safe or report.result == CollisionCheckResult.WARNING:
+            WCIP_REGISTRY.register(candidate, force=True)
+            return candidate
+    
+    raise RuntimeError(f"WCIP: Failed to generate unique signature after {max_attempts} attempts")
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("WNSP v7.0 — Harmonic Octave Protocol")
