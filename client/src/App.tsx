@@ -78,6 +78,13 @@ function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      {/* Public developer routes - no login required */}
+      <Route path="/developer-matrix" component={DeveloperMatrixPage} />
+      <Route path="/developer-matrix/docs" component={DocsPage} />
+      <Route path="/docs" component={DocsPage} />
+      <Route path="/docs/:section" component={DocsPage} />
+      <Route path="/research-presentation" component={ResearchPresentationPage} />
+      <Route path="/research-presentation/developer-matrix" component={DeveloperMatrixPage} />
       <Route>
         <ProtectedRoutes />
       </Route>
