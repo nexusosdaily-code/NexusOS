@@ -10,6 +10,7 @@ import { InfoTooltip, RESEARCH_SOURCES } from "@/components/InfoTooltip";
 import { LiveResonanceSimulator } from "@/components/LiveResonanceSimulator";
 import { VacuumResonanceSimulator } from "@/components/VacuumResonanceSimulator";
 import { MasslessTechMatrix } from "@/components/MasslessTechMatrix";
+import { CZCCatchBasin } from "@/components/CZCCatchBasin";
 import { CosmologicalDataDashboard } from "@/components/CosmologicalDataDashboard";
 import { NasaApod } from "@/components/NasaApod";
 import {
@@ -989,6 +990,7 @@ export default function ResearchPresentationPage() {
           <TabsContent value="live" className="space-y-6">
             <LiveResonanceSimulator />
             <VacuumResonanceSimulator />
+            <CZCCatchBasin />
             <MasslessTechMatrix />
           </TabsContent>
 

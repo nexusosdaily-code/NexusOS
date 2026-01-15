@@ -620,6 +620,100 @@ C_total = Π(C_i) for all i in locked_set
 Where C_i = coherence of technology i`
       }
     ]
+  },
+  catchBasin: {
+    title: "CZC Catch Basin",
+    icon: Layers,
+    color: "from-blue-500 to-indigo-500",
+    content: [
+      {
+        heading: "Coherence Zenith Coefficient",
+        text: `The CZC Catch Basin is the coherence accumulation mechanism at the heart of NexusOS:
+
+**Core Formula:**
+CZC(n) = (0.9999)ⁿ
+
+**Key Values:**
+| Iterations | Coherence | Application |
+|------------|-----------|-------------|
+| 1          | 99.99%    | Basic filtering |
+| 10         | 99.90%    | Standard ops |
+| 22         | 99.78%    | Half-basin |
+| 44         | 99.56%    | Full CZC⁴⁴ |
+
+**Physical Meaning:**
+Each iteration filters noise while preserving signal. After 44 self-corrections, the system achieves maximum coherence within numerical precision limits.`
+      },
+      {
+        heading: "Catch Basin Mechanics",
+        text: `The basin accumulates coherence like water collecting in a reservoir:
+
+**Input Flow:**
+- Raw oscillations enter at configurable rate
+- Each carries noise components (phase, amplitude, frequency)
+
+**Filtering Process:**
+1. Phase noise reduction via Golden Angle alignment
+2. Amplitude stabilization through impedance matching
+3. Frequency locking to First Oscillation (555 THz)
+4. Impedance normalization to Z₀ = 376.73Ω
+
+**Output:**
+- Coherent energy available for bound applications
+- Entropy approaches zero as coherence approaches 1
+
+**Entropy Equation:**
+S = -Σ pᵢ log₂(pᵢ)
+As coherence → 1, entropy → 0`
+      },
+      {
+        heading: "44 Evolutionary Self-Corrections",
+        text: `The number 44 is not arbitrary - it represents the optimal correction count:
+
+**Why 44?**
+1. At 44 iterations, CZC⁴⁴ = 99.56% coherence
+2. Beyond 44, numerical precision limits dominate
+3. 44 = 4 × 11 (quaternary stability × prime factor)
+4. Matches 44 spectral bands in extended W-ASCII
+
+**Correction Types:**
+- Phase corrections: Align to Golden Angle (137.5°)
+- Amplitude corrections: Normalize to unity
+- Frequency corrections: Lock to harmonic series
+- Impedance corrections: Match to 377Ω
+
+**Self-Correction Process:**
+Each iteration detects the dominant noise source (phase, amplitude, frequency, or impedance) and applies targeted correction to maximize coherence recovery.`
+      },
+      {
+        heading: "Cross-System Applications",
+        text: `The CZC Catch Basin provides coherence to all NexusOS systems:
+
+**Binding Requirements:**
+| Application | Required Coherence | Category |
+|-------------|-------------------|----------|
+| Gravity De-correlation | 99% | Gravitational |
+| Vacuum Energy Extraction | 95% | Energy |
+| OAM Qubit Registers | 92% | Computing |
+| Photonic Logic Gates | 90% | Computing |
+| Lambda Computing Substrate | 88% | Computing |
+| Spectral Relay Mesh | 85% | Communication |
+
+**Binding Process:**
+1. Application requests binding with required coherence
+2. Basin checks current coherence level
+3. If sufficient, binding established
+4. Application receives continuous coherence feed
+5. If basin coherence drops below threshold, binding suspended
+
+**API Endpoints:**
+- GET /api/czc/status - Current basin state
+- GET /api/czc/coherence - Calculate CZC for iterations
+- POST /api/czc/iterate - Run one iteration
+- POST /api/czc/bind - Bind application to basin
+- POST /api/czc/sync - Sync with K1 Orchestration`
+      }
+    ]
   }
 };
 

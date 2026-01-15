@@ -1404,6 +1404,219 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // CZC CATCH BASIN API ROUTES
+  // ============================================
+
+  const CZC_CONSTANTS = {
+    baseCoherence: 0.9999,
+    iterations: 44,
+    goldenAngle: 137.5,
+    firstOscillation: 555e12,
+    impedance: 376.730313668,
+    phi: 1.618033988749895,
+    planck: 6.62607015e-34,
+    c: 299792458,
+  };
+
+  let czcBasinState = {
+    level: 0,
+    coherence: 0,
+    iterations: 0,
+    flowRate: 0,
+    pressure: 0,
+    temperature: 293.15,
+    entropy: 1.0,
+    stability: "unstable" as "stable" | "transitioning" | "unstable",
+    correctionEvents: [] as Array<{
+      id: number;
+      iteration: number;
+      type: string;
+      magnitude: number;
+      coherenceBefore: number;
+      coherenceAfter: number;
+      timestamp: number;
+    }>,
+    boundApplications: [] as string[],
+    lastSync: 0,
+  };
+
+  const calculateCZC = (iterations: number, filterStrength: number = CZC_CONSTANTS.baseCoherence): number => {
+    return Math.pow(filterStrength, iterations);
+  };
+
+  app.get("/api/czc/status", optionalAuth, (req, res) => {
+    res.json({
+      ...czcBasinState,
+      targetCoherence: calculateCZC(44, CZC_CONSTANTS.baseCoherence),
+      constants: CZC_CONSTANTS,
+    });
+  });
+
+  app.get("/api/czc/coherence", optionalAuth, (req, res) => {
+    const iterations = parseInt(req.query.iterations as string) || 44;
+    const filterStrength = parseFloat(req.query.filterStrength as string) || CZC_CONSTANTS.baseCoherence;
+    
+    const coherence = calculateCZC(iterations, filterStrength);
+    const entropy = coherence > 0 && coherence < 1 
+      ? -coherence * Math.log2(coherence) - (1 - coherence) * Math.log2(1 - coherence)
+      : (coherence <= 0 ? 1 : 0);
+    
+    res.json({
+      iterations,
+      filterStrength,
+      coherence,
+      coherencePercent: coherence * 100,
+      entropy,
+      lambdaMass: (CZC_CONSTANTS.planck * CZC_CONSTANTS.firstOscillation) / (CZC_CONSTANTS.c ** 2),
+    });
+  });
+
+  app.post("/api/czc/iterate", optionalAuth, (req, res) => {
+    const { inputRate = 1, filterStrength = CZC_CONSTANTS.baseCoherence, autoCorrect = true } = req.body;
+    
+    czcBasinState.iterations++;
+    const baseCoherence = calculateCZC(czcBasinState.iterations, filterStrength);
+    
+    const phaseNoise = (Math.random() - 0.5) * 0.001;
+    const amplitudeNoise = (Math.random() - 0.5) * 0.0005;
+    let coherence = baseCoherence + phaseNoise + amplitudeNoise;
+    
+    if (autoCorrect && coherence < baseCoherence) {
+      const correctionTypes = ["phase", "amplitude", "frequency", "impedance"];
+      const type = correctionTypes[Math.floor(Math.random() * correctionTypes.length)];
+      const magnitude = Math.random() * 0.001 + 0.0001;
+      const coherenceBefore = coherence;
+      coherence = Math.min(1, coherence + magnitude * (1 - coherence));
+      
+      const event = {
+        id: Date.now(),
+        iteration: czcBasinState.iterations,
+        type,
+        magnitude,
+        coherenceBefore,
+        coherenceAfter: coherence,
+        timestamp: Date.now(),
+      };
+      czcBasinState.correctionEvents = [...czcBasinState.correctionEvents.slice(-43), event];
+    }
+    
+    coherence = Math.max(0, Math.min(1, coherence));
+    
+    czcBasinState.level = Math.min(100, czcBasinState.level + inputRate * (1 - czcBasinState.level / 100));
+    czcBasinState.coherence = coherence;
+    czcBasinState.flowRate = inputRate * coherence;
+    czcBasinState.pressure = czcBasinState.level * coherence * 1.5;
+    czcBasinState.temperature = 293.15 - (coherence * 20);
+    czcBasinState.entropy = coherence > 0 && coherence < 1 
+      ? -coherence * Math.log2(coherence) - (1 - coherence) * Math.log2(1 - coherence)
+      : (coherence <= 0 ? 1 : 0);
+    
+    if (coherence > 0.99) czcBasinState.stability = "stable";
+    else if (coherence > 0.9) czcBasinState.stability = "transitioning";
+    else czcBasinState.stability = "unstable";
+    
+    res.json({
+      success: true,
+      state: czcBasinState,
+    });
+  });
+
+  app.post("/api/czc/bind", optionalAuth, (req, res) => {
+    const { applicationId, requiredCoherence } = req.body;
+    
+    if (!applicationId) {
+      return res.status(400).json({ error: "Application ID required" });
+    }
+    
+    if (czcBasinState.coherence >= (requiredCoherence || 0.85)) {
+      if (!czcBasinState.boundApplications.includes(applicationId)) {
+        czcBasinState.boundApplications.push(applicationId);
+      }
+      res.json({
+        success: true,
+        message: `Application ${applicationId} bound to CZC basin`,
+        boundApplications: czcBasinState.boundApplications,
+        coherence: czcBasinState.coherence,
+      });
+    } else {
+      res.status(400).json({
+        error: "Insufficient coherence",
+        required: requiredCoherence,
+        current: czcBasinState.coherence,
+      });
+    }
+  });
+
+  app.post("/api/czc/unbind", optionalAuth, (req, res) => {
+    const { applicationId } = req.body;
+    
+    czcBasinState.boundApplications = czcBasinState.boundApplications.filter(id => id !== applicationId);
+    
+    res.json({
+      success: true,
+      message: `Application ${applicationId} unbound from CZC basin`,
+      boundApplications: czcBasinState.boundApplications,
+    });
+  });
+
+  app.post("/api/czc/sync", optionalAuth, (req, res) => {
+    const { source, coherence, iterations, stability } = req.body;
+    
+    czcBasinState.lastSync = Date.now();
+    
+    k1RuntimeState.operational_substrate.coherence = Math.min(0.99,
+      k1RuntimeState.operational_substrate.coherence * 0.9 + (coherence || czcBasinState.coherence) * 0.1);
+    k1RuntimeState.coordination.sync_quality = Math.min(0.99,
+      k1RuntimeState.coordination.sync_quality + 0.005);
+    
+    res.json({
+      success: true,
+      message: `CZC synced from ${source || 'unknown'}`,
+      k1_coherence: k1RuntimeState.operational_substrate.coherence,
+      k1_sync_quality: k1RuntimeState.coordination.sync_quality,
+      czc_coherence: czcBasinState.coherence,
+      lastSync: czcBasinState.lastSync,
+    });
+  });
+
+  app.post("/api/czc/reset", optionalAuth, (req, res) => {
+    czcBasinState = {
+      level: 0,
+      coherence: 0,
+      iterations: 0,
+      flowRate: 0,
+      pressure: 0,
+      temperature: 293.15,
+      entropy: 1.0,
+      stability: "unstable",
+      correctionEvents: [],
+      boundApplications: [],
+      lastSync: 0,
+    };
+    res.json({ success: true, message: "CZC Catch Basin reset" });
+  });
+
+  app.get("/api/czc/applications", optionalAuth, (req, res) => {
+    const applications = [
+      { id: "vacuum-extraction", name: "Vacuum Energy Extraction", requiredCoherence: 0.95, category: "energy" },
+      { id: "photonic-logic", name: "Photonic Logic Gates", requiredCoherence: 0.90, category: "computing" },
+      { id: "spectral-relay", name: "Spectral Relay Mesh", requiredCoherence: 0.85, category: "communication" },
+      { id: "gravity-decorrelation", name: "Gravity De-correlation", requiredCoherence: 0.99, category: "gravitational" },
+      { id: "oam-qubits", name: "OAM Qubit Registers", requiredCoherence: 0.92, category: "computing" },
+      { id: "lambda-substrate", name: "Lambda Computing Substrate", requiredCoherence: 0.88, category: "computing" },
+    ];
+    
+    res.json({
+      applications: applications.map(app => ({
+        ...app,
+        bound: czcBasinState.boundApplications.includes(app.id),
+        canBind: czcBasinState.coherence >= app.requiredCoherence,
+      })),
+      currentCoherence: czcBasinState.coherence,
+    });
+  });
+
+  // ============================================
   // FILE UPLOAD ROUTES
   // ============================================
 

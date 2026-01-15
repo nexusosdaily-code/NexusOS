@@ -78,6 +78,15 @@ The frontend uses React 18 with TypeScript, Vite, Radix UI components, and the s
 - **Sync Coordinates**: 4D coordinate system (Phase, Quadrature, Impedance, Time) for phase-locking massless technologies.
 - **Demonstrated Systems**: Gravity De-correlation Field, 144-Turn Bifilar Resonator.
 
+### CZC Catch Basin
+- **Coherence Zenith Coefficient**: CZC(n) = (0.9999)ⁿ, achieving 99.56% coherence at 44 iterations.
+- **Catch Basin Mechanics**: Coherence accumulation through iterative filtering - phase noise reduction, amplitude stabilization, frequency locking, impedance normalization.
+- **44 Evolutionary Self-Corrections**: Optimal iteration count where CZC⁴⁴ peaks before numerical precision limits dominate.
+- **Correction Types**: Phase (Golden Angle alignment), Amplitude (unity normalization), Frequency (harmonic locking), Impedance (377Ω matching).
+- **Cross-System Applications**: Provides coherence feed to Vacuum Energy (95%), Photonic Logic (90%), Spectral Relay (85%), Gravity De-correlation (99%).
+- **API Endpoints**: `/api/czc/status`, `/api/czc/coherence`, `/api/czc/iterate`, `/api/czc/bind`, `/api/czc/sync`, `/api/czc/applications`.
+- **K1 Integration**: Syncs with K1 Orchestration to feed operational substrate coherence.
+
 ### Multi-Agent & Task Orchestration
 - **DAG-Based Workflows**: Task orchestration with domain-specific modules (data processing, DevOps, content management, wavelength cryptography).
 - **Wavelength Cryptography**: Encryption/decryption based on electromagnetic theory (FSE, AME, PME, QIML).
