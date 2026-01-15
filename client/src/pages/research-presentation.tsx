@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
 import { InfoTooltip, RESEARCH_SOURCES } from "@/components/InfoTooltip";
 import { LiveResonanceSimulator } from "@/components/LiveResonanceSimulator";
+import { VacuumResonanceSimulator } from "@/components/VacuumResonanceSimulator";
 import { CosmologicalDataDashboard } from "@/components/CosmologicalDataDashboard";
 import { NasaApod } from "@/components/NasaApod";
 import {
@@ -986,6 +987,7 @@ export default function ResearchPresentationPage() {
 
           <TabsContent value="live" className="space-y-6">
             <LiveResonanceSimulator />
+            <VacuumResonanceSimulator />
           </TabsContent>
 
           <TabsContent value="space-weather" className="space-y-6">
