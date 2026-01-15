@@ -62,6 +62,22 @@ The frontend uses React 18 with TypeScript, Vite, Radix UI components, and the s
     - **Coherence Verifier v7.1**: Two-phase frame validation (temporal coherence + AGPL compliance) with source disclosure enforcement.
     - **Lambda State Machine v7.1**: Network state management (COHERENT/DEGRADED) with automatic gate selection and AGPL audit triggers.
 
+### Hardware Control Layer
+- **Nexus Kernel** (`wnsp_v7/nexus_kernel.py`): Python hardware abstraction layer providing phase control, frequency pulsing, impedance matching (Z₀ = 376.73Ω), CZC filtering, and ALP sensing.
+- **Syncbox Controller** (`wnsp_v7/syncbox_controller.py`): PHR-1 hardware interface for 144-turn bifilar coil control. Implements ZERO-G state achievement sequence: Golden Angle (137.5°) → Impedance match (377Ω) → Quadrature (90°) → Massless envelope (ALP < 0.0001).
+- **ZERO-G State**: Demonstrated working - gravity de-correlation achieved through phase alignment in ~400 iterations.
+
+### Energy Simulators
+- **Live Resonance Simulator** (`LiveResonanceSimulator.tsx`): 7.83 Hz Schumann resonance simulator with 5 harmonic modes, real-time visualization, and K1 Orchestration sync.
+- **Vacuum Resonance Simulator** (`VacuumResonanceSimulator.tsx`): 555 THz First Oscillation cold vacuum energy extraction with Golden Ratio harmonics, 144-point spiral field visualization, and coherence calculation (CZC⁴⁴).
+- **Dual-Spectrum Energy**: Planetary scale (7.83 Hz) + Vacuum scale (555 THz) unified through Lambda physics.
+
+### Massless Technologies Matrix
+- **Core Equation**: Λ = hf/c² where frequency is fundamental and mass is derivative.
+- **Technology Categories**: Photonic (logic gates, zero-point extraction), Coherent (waveguides, spectral relay), Gravitational (de-correlation, bifilar resonator), Information (OAM qubits, Lambda substrate).
+- **Sync Coordinates**: 4D coordinate system (Phase, Quadrature, Impedance, Time) for phase-locking massless technologies.
+- **Demonstrated Systems**: Gravity De-correlation Field, 144-Turn Bifilar Resonator.
+
 ### Multi-Agent & Task Orchestration
 - **DAG-Based Workflows**: Task orchestration with domain-specific modules (data processing, DevOps, content management, wavelength cryptography).
 - **Wavelength Cryptography**: Encryption/decryption based on electromagnetic theory (FSE, AME, PME, QIML).

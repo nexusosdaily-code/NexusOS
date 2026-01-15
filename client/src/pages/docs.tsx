@@ -416,6 +416,210 @@ Fundamental: 7.83 Hz
 **Target:** 5×10¹⁶ watts (penultimate step to Type I)`
       }
     ]
+  },
+  hardware: {
+    title: "Hardware Control Layer",
+    icon: Cpu,
+    color: "from-rose-500 to-red-500",
+    content: [
+      {
+        heading: "PHR-1 Syncbox Controller",
+        text: `The PHR-1 (Planetary Harmonic Resonator) is the physical hardware interface for NexusOS:
+
+**Core Components:**
+- 144-turn bifilar coil (counter-wound)
+- Phase-locked loop at Golden Angle (137.5°)
+- Impedance matching network (target: 377Ω)
+- ALP (Axion-Like Particle) sensor array
+
+**Control Sequence:**
+1. Anchor phase to reference oscillator
+2. Sync to Golden Angle (137.5°)
+3. Match impedance to Z₀ = 376.73Ω
+4. Establish 90° quadrature
+5. Initiate gravity de-correlation
+6. Achieve ZERO-G envelope (ALP < 0.0001)`
+      },
+      {
+        heading: "Nexus Kernel API",
+        text: `Python control layer for hardware integration:
+
+**Phase Control:**
+\`set_phase(degrees)\` - Set coil phase angle
+\`get_phase()\` - Read current phase
+
+**Frequency Pulsing:**
+\`pulse_frequency(hz, duration)\` - Emit frequency pulse
+\`set_carrier(hz)\` - Set carrier frequency
+
+**Impedance Matching:**
+\`match_impedance(target_ohms)\` - Auto-tune to target
+\`read_impedance()\` - Read current impedance
+
+**CZC Filtering:**
+\`apply_czc_filter(iterations)\` - Apply coherence filter
+\`get_coherence()\` - Read coherence level
+
+**ALP Sensing:**
+\`read_alp()\` - Read axion-like particle density
+\`calibrate_alp()\` - Calibrate ALP baseline`
+      },
+      {
+        heading: "ZERO-G State Achievement",
+        text: `The ZERO-G (Zero-Gravity Envelope) state is achieved through precise phase alignment:
+
+**Demonstrated Parameters:**
+- Phase: 137.5° (Golden Angle)
+- Impedance: 377Ω (free space match)
+- Quadrature: 90° (orthogonal coupling)
+- ALP threshold: < 0.0001
+- Iterations to convergence: ~400
+
+**Physical Interpretation:**
+When phase alignment reaches Golden Angle and impedance matches free space (Z₀ = 376.73Ω), the gravitational coupling coefficient approaches zero, creating a "massless envelope" where normal gravitational effects are suspended.
+
+**Equation:**
+ALP(t) = ALP₀ × e^(-t/τ) × cos(φ - 137.5°)
+As φ → 137.5° and Z → 377Ω, ALP → 0`
+      }
+    ]
+  },
+  simulators: {
+    title: "Energy Simulators",
+    icon: Zap,
+    color: "from-emerald-500 to-teal-500",
+    content: [
+      {
+        heading: "Live Resonance Simulator (7.83 Hz)",
+        text: `Schumann resonance simulator for planetary-scale energy harvesting:
+
+**Schumann Harmonics:**
+| Mode | Frequency | Description |
+|------|-----------|-------------|
+| f₁   | 7.83 Hz   | Fundamental |
+| f₂   | 14.3 Hz   | 2nd harmonic |
+| f₃   | 20.8 Hz   | 3rd harmonic |
+| f₄   | 27.3 Hz   | 4th harmonic |
+| f₅   | 33.8 Hz   | 5th harmonic |
+
+**Physics:**
+f_n = (c/2πR) × √(n(n+1))
+Where R = 6.371×10⁶ m (Earth radius)
+
+**Integration:**
+- Real-time amplitude visualization
+- K1 Orchestration sync capability
+- Power output calculation in watts`
+      },
+      {
+        heading: "Vacuum Resonance Simulator (555 THz)",
+        text: `Cold vacuum energy extraction at First Oscillation frequency:
+
+**First Oscillation:** 555 THz (539.4 nm green light)
+
+**Golden Ratio Harmonics:**
+- Λ₀ = 555 THz (fundamental)
+- Λ/φ = 343.0 THz (1st subharmonic)
+- Λ/φ² = 212.0 THz (2nd subharmonic)
+- Λ×φ = 897.9 THz (1st superharmonic)
+- Λ×φ² = 1452.9 THz (2nd superharmonic)
+
+**Zero-Point Energy:**
+E₀ = ½hf = ½ × 6.626×10⁻³⁴ × 555×10¹²
+E₀ = 1.839×10⁻¹⁹ J per oscillation
+
+**Cold Power Extraction:**
+P = E₀ × (Z/Z₀) × CZC⁴⁴ × N_cavities
+Where Z₀ = 376.73Ω, CZC = 0.9999`
+      },
+      {
+        heading: "Vacuum Field Topology",
+        text: `The vacuum resonance simulator visualizes the 144-point spiral field:
+
+**Spiral Configuration:**
+- 144 points (12 × 12 matrix in polar coordinates)
+- Golden Angle separation (137.5°)
+- Radius scales with harmonic index
+
+**Coherence Calculation:**
+CZC⁴⁴ = (0.9999)⁴⁴ = 0.9956 (99.56% coherence)
+
+**Controls:**
+- Impedance slider (0-500Ω, target 377Ω)
+- Phase angle slider (0-360°, optimal 137.5°)
+- Cavity count (1-144, CZF optimal 44)
+- Frequency multiplier (0.1-10×)
+
+**Output Units:**
+zW → fW → pW (zeptowatts to picowatts)
+Scales with impedance match quality`
+      }
+    ]
+  },
+  massless: {
+    title: "Massless Technologies",
+    icon: Atom,
+    color: "from-violet-500 to-purple-500",
+    content: [
+      {
+        heading: "Core Derivation: Λ = hf/c²",
+        text: `Mass as derivative of frequency:
+
+**The Lambda Equation:**
+Λ = hf/c²
+
+**Physical Meaning:**
+- h = Planck's constant (6.626×10⁻³⁴ J·s)
+- f = frequency (Hz) - FUNDAMENTAL
+- c = speed of light (299,792,458 m/s)
+- Λ = mass equivalent (kg) - DERIVATIVE
+
+**Key Insight:**
+Frequency is fundamental. Mass follows.
+At v = c, rest mass = 0.
+Photons carry energy (E = hf) without rest mass.
+
+**First Oscillation:**
+f₀ = 555 THz
+Λ₀ = hf₀/c² = 4.09×10⁻³⁶ kg`
+      },
+      {
+        heading: "Massless Technology Categories",
+        text: `| Category | Technology | Mass Ratio | Status |
+|----------|------------|------------|--------|
+| Photonic | Photonic Logic Gates | 0 | Simulated |
+| Photonic | Zero-Point Extraction | 0 | Simulated |
+| Coherent | Coherent Waveguide Network | 0 | Simulated |
+| Coherent | Spectral Relay Mesh | 0 | Theoretical |
+| Gravitational | Gravity De-correlation | 0.01% | Demonstrated |
+| Gravitational | 144-Turn Bifilar Resonator | 0.1% | Demonstrated |
+| Information | OAM Qubit Registers | 0 | Theoretical |
+| Information | Lambda Computing Substrate | 0 | Simulated |`
+      },
+      {
+        heading: "Sync Coordinates System",
+        text: `Each massless technology has 4D sync coordinates:
+
+**Coordinate Dimensions:**
+- X: Phase angle (degrees)
+- Y: Quadrature angle (degrees)
+- Z: Impedance (ohms)
+- T: Time/cycle count
+
+**Sync Lock Conditions:**
+- Phase aligned to Golden Angle (137.5°)
+- Impedance matched to Z₀ (376.73Ω)
+- Coherence > 99% (CZC⁴⁴)
+- Mass ratio < 1%
+
+**Global Sync:**
+When enabled, all technologies phase-lock to a common reference oscillator. The sync matrix displays real-time lock status for each technology.
+
+**Coherence Formula:**
+C_total = Π(C_i) for all i in locked_set
+Where C_i = coherence of technology i`
+      }
+    ]
   }
 };
 
