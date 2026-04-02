@@ -20,15 +20,29 @@ packages = ["glibcLocales"]
 integrations = ["github:1.0.0"]
 
 [workflows]
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Start application"
 mode = "sequential"
-author = 49759428
+author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
 
 [userenv]
 
