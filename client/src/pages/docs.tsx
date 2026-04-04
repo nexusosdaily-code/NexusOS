@@ -869,6 +869,93 @@ export default function DocsPage() {
               </div>
             </Card>
 
+            {activeSection === 'wascii' && (
+              <Card className="bg-gray-900/60 border-cyan-500/30 p-6 mb-6" data-testid="wnsp-protocol-diagram">
+                <h3 className="text-lg font-bold mb-6 text-cyan-300 flex items-center gap-2">
+                  <Layers className="w-5 h-5" /> WNSP Protocol Stack
+                </h3>
+                <div className="flex flex-col items-center gap-0 font-mono text-sm select-none">
+
+                  {/* CE Layer */}
+                  <div className="w-full max-w-sm border border-blue-500/60 rounded-xl bg-blue-900/20 p-4">
+                    <div className="text-blue-300 font-bold mb-2 text-center tracking-wide">CE Layer — Character Encoding</div>
+                    <div className="text-gray-400 text-xs space-y-1 text-center">
+                      <div>Input: symbols / text</div>
+                      <div>Converts to ordinal tokens <span className="text-blue-300">[0, 1]</span></div>
+                      <div className="text-blue-400 text-xs mt-1">WNSP-CE v1.0</div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center text-gray-500 py-1">
+                    <div className="w-px h-4 bg-gray-600" />
+                    <div className="text-gray-500 text-xs">▼</div>
+                  </div>
+
+                  {/* Legacy Bridge */}
+                  <div className="w-full max-w-sm border border-gray-600/50 border-dashed rounded-xl bg-gray-800/30 p-3">
+                    <div className="text-gray-400 font-bold mb-1 text-center text-xs tracking-wide">Legacy Bridge — Optional / Backwards Compatible</div>
+                    <div className="text-gray-500 text-xs text-center">Preserves char → wavelength compatibility</div>
+                  </div>
+
+                  <div className="flex flex-col items-center text-gray-500 py-1">
+                    <div className="w-px h-4 bg-gray-600" />
+                    <div className="text-gray-500 text-xs">▼</div>
+                  </div>
+
+                  {/* SE Layer */}
+                  <div className="w-full max-w-sm border border-cyan-500/60 rounded-xl bg-cyan-900/20 p-4">
+                    <div className="text-cyan-300 font-bold mb-2 text-center tracking-wide">SE Layer — Spectral / Physical</div>
+                    <div className="text-gray-400 text-xs space-y-1 text-center">
+                      <div>Receives CE tokens</div>
+                      <div>Maps to <span className="text-cyan-300">Ψ_channel</span> Hilbert-space basis</div>
+                      <div className="text-cyan-200 font-mono mt-2">|λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩</div>
+                      <div className="grid grid-cols-3 gap-1 mt-2">
+                        <div className="bg-cyan-900/40 rounded p-1 text-center">
+                          <div className="text-cyan-300">WDM</div>
+                          <div className="text-white font-bold">256</div>
+                        </div>
+                        <div className="bg-cyan-900/40 rounded p-1 text-center">
+                          <div className="text-cyan-300">OAM</div>
+                          <div className="text-white font-bold">50</div>
+                        </div>
+                        <div className="bg-cyan-900/40 rounded p-1 text-center">
+                          <div className="text-cyan-300">Pol</div>
+                          <div className="text-white font-bold">H/V</div>
+                        </div>
+                      </div>
+                      <div className="text-cyan-400 text-xs mt-1">WNSP-SE v1.0</div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center text-gray-500 py-1">
+                    <div className="w-px h-4 bg-gray-600" />
+                    <div className="text-gray-500 text-xs">▼</div>
+                  </div>
+
+                  {/* Physical Transmission */}
+                  <div className="w-full max-w-sm border border-purple-500/60 rounded-xl bg-purple-900/20 p-4">
+                    <div className="text-purple-300 font-bold mb-2 text-center tracking-wide">Physical Transmission — EM Wave Substrate</div>
+                    <div className="text-gray-400 text-xs space-y-1 text-center">
+                      <div><span className="text-white font-bold text-base">25,600</span> orthogonal channels</div>
+                      <div className="text-purple-200 font-mono mt-1">Ψ_ijk = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩</div>
+                      <div className="text-gray-500 mt-1">⟨Ψ_i | Ψ_j⟩ = 0 &nbsp; for i ≠ j</div>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <div className="bg-purple-900/40 rounded p-1 text-center">
+                          <div className="text-purple-300 font-mono">E = hc/λ</div>
+                          <div className="text-gray-500 text-xs">Photon energy</div>
+                        </div>
+                        <div className="bg-purple-900/40 rounded p-1 text-center">
+                          <div className="text-purple-300 font-mono">Λ = E/c²</div>
+                          <div className="text-gray-500 text-xs">Lambda mass</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </Card>
+            )}
+
             <div className="space-y-6">
               {currentSection.content.map((block, index) => (
                 <Card key={index} className="bg-gray-900/50 border-gray-700 p-6" data-testid={`content-block-${index}`}>
