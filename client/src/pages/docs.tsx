@@ -107,53 +107,109 @@ This governs all energy requirements for Lambda mode operations:
     ]
   },
   wascii: {
-    title: "W-ASCII Encoding",
+    title: "WNSP Protocol — Two-Layer Standard",
     icon: Code,
     color: "from-blue-500 to-cyan-500",
     content: [
       {
-        heading: "Wavelength Character Mapping",
-        text: `W-ASCII encodes 170+ characters as electromagnetic wavelengths in the visible spectrum (380-780nm).
+        heading: "Overview — Two Operating Runtimes, One Protocol",
+        text: `NexusOS runs on two distinct runtimes that work in sync:
 
-**Encoding Formula:**
-wavelength = 380 + (char_code % 95) × 4.2 nm
+**Runtime 1 — Node.js / TypeScript (port 5000)**
+Main application server. Handles authentication, wallet, P2P media, governance, and all user-facing APIs. Proxies WNSP protocol calls to the Python runtime.
 
-**Example Mappings:**
-- 'A' (65) → 380 + (65 % 95) × 4.2 = 653 nm (Red)
-- 'Z' (90) → 380 + (90 % 95) × 4.2 = 758 nm (Deep Red)  
-- 'a' (97) → 380 + (97 % 95) × 4.2 = 388.4 nm (Violet)
-- '0' (48) → 380 + (48 % 95) × 4.2 = 581.6 nm (Yellow)`
+**Runtime 2 — Python / Flask (port 5001)**
+Spectral physics engine. Implements the WNSP encoding standards, K1 Orchestration Runtime, and all Lambda Boson physics calculations.
+
+**How They Sync:**
+The Node.js server acts as a secure gateway. Every WNSP protocol call from the frontend is rate-limited, logged, and proxied to the Python engine. The Python engine does the physics and returns structured frames. Neither runtime reaches into the other's domain.
+
+**Protocol Standard:** WNSP/7.1
+**License:** AGPL-3.0 (companies must contribute back to community)`
       },
       {
-        heading: "Spectral Signature",
-        text: `Each message has a unique spectral signature based on its content:
+        heading: "WNSP-CE v1.0 — Character Encoding Standard (Layer 1)",
+        text: `The semantic layer. Converts human-readable symbols into normalised ordinal tokens.
 
-**Signature Components:**
-1. Wavelength array (one per character)
-2. Frequency array (c/λ for each)
-3. Energy array (E=hf for each)
-4. Total message energy (sum of all)
+**Responsibility:** What is being said
+**Physics knowledge:** None — purely numerical
+**Output:** Normalised ordinal codes in [0, 1] per symbol
 
-**Validation:**
-Messages are validated by checking:
-- Maxwell equation compliance (∇×E = -∂B/∂t)
-- Energy conservation
-- Spectral coherence`
+**Encoding Process:**
+1. Accept any Unicode symbol
+2. Compute ordinal value: ord(char) % 256
+3. Normalise to [0, 1]: ordinal / 255
+4. Output structured token: { symbol, ordinal, normalised }
+
+**Example:**
+- 'A' → ordinal 65 → normalised 0.255 → CE token
+- 'λ' → ordinal 955 % 256 = 187 → normalised 0.733 → CE token
+
+**API Endpoint:** POST /api/wnsp/ce/encode
+**Single character:** POST /api/wnsp/ce/char`
       },
       {
-        heading: "Extended Character Set",
-        text: `Beyond ASCII, W-ASCII supports:
+        heading: "WNSP-SE v1.0 — Spectral Encoding Standard (Layer 2)",
+        text: `The physical transmission layer. Maps CE tokens into electromagnetic wave frames governed by Λ = hf/c².
 
-**Scientific Symbols:**
-- Greek letters (α, β, γ, δ, ε, λ, Σ, Φ, Ψ, Ω)
-- Mathematical operators (∇, ∂, ∫, Σ, ∏)
-- Physical constants (ℏ, ℵ)
+**Responsibility:** How information travels through the substrate
+**Input:** WNSP-CE normalised token stream
+**Output:** Photon frames with wavelength, frequency, energy, lambda mass
 
-**Special Mappings:**
-- λ → 555nm (peak human eye sensitivity)
-- Σ → 520nm (green, summation)
-- Φ → 450nm (blue, phase)
-- ∇ → 700nm (red, gradient)`
+**Frame Construction:**
+Two CE tokens are packed per photon frame (dual-wavelength scheme):
+
+token₁ normalised → wavelength λ₁ (nm) → frequency f₁ = c/λ₁ → energy E₁ = hf₁ → mass Λ₁ = hf₁/c²
+token₂ normalised → wavelength λ₂ (nm) → frequency f₂ = c/λ₂ → energy E₂ = hf₂ → mass Λ₂ = hf₂/c²
+
+Frame = (λ₁ → λ₂) oscillation, achieving ≥ 2 chars per photon particle.
+
+**Efficiency:** 2.0 characters per frame (baseline)
+
+**API Endpoint:** POST /api/wnsp/se/encode (accepts CE token stream)
+**Full stack:** POST /api/wnsp/transmit (CE → SE in one call)`
+      },
+      {
+        heading: "Hilbert Space Channel Model",
+        text: `Each transmission channel is a formal basis vector in a 25,600-dimensional Hilbert space:
+
+**Channel Basis Equation:**
+Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩
+
+**Sub-space dimensions:**
+| Sub-space | Basis      | Description                  | dim |
+|-----------|------------|------------------------------|-----|
+| |λ_i⟩    | WDM        | Wavelength channels 380-780nm | 256 |
+| |OAM_j⟩  | OAM modes  | Orbital angular momentum      |  50 |
+| |Pol_k⟩  | Polarisation | H and V states              |   2 |
+
+**Total Hilbert space dimension:**
+dim(H) = 256 × 50 × 2 = 25,600
+
+**Orthogonality guarantee:**
+⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j
+
+All 25,600 channels are simultaneously usable without interference. This is not an engineering approximation — it is a mathematical guarantee from the tensor product structure of the Hilbert space.`
+      },
+      {
+        heading: "Handoff Point — CE to SE",
+        text: `The boundary between the two standards is a clean data contract:
+
+**CE outputs:**
+{ protocol: "WNSP-CE", tokens: [{ symbol, ordinal, normalised }, ...] }
+
+**SE receives that output and maps it to:**
+{ protocol: "WNSP-SE", frames: [{ wavelength_start_nm, wavelength_end_nm, frequency_start_hz, frequency_end_hz, energy_joules, lambda_mass_kg }, ...] }
+
+**Full transmission envelope (WNSP/7.1):**
+{
+  protocol: "WNSP/7.1",
+  layers: { ce: { ... }, se: { ... } },
+  spectral_hash: "16-char hash",
+  summary: { characters, ce_tokens, se_frames, total_mass_kg, efficiency }
+}
+
+**API:** GET /api/wnsp/protocol — returns full spec of both standards`
       }
     ]
   },

@@ -22,12 +22,20 @@ The frontend uses React 18 with TypeScript, Vite, Radix UI components, and the s
 - **State Management**: TanStack React Query
 - **Forms**: React Hook Form with Zod
 
-### Backend
-- **Runtime**: Node.js with TypeScript (ESM)
+### Backend — Two Runtime Architecture
+NexusOS runs two distinct runtimes in sync. Neither reaches into the other's domain.
+
+**Runtime 1 — Node.js / TypeScript (port 5000)**
 - **Framework**: Express.js
 - **Development**: `tsx` for hot-reload
 - **Production**: Compiled CommonJS bundle
 - **Session Management**: PostgreSQL-backed via `connect-pg-simple`
+- **Role**: Main application server — authentication, wallet, P2P media, governance, user APIs. Acts as a secure, rate-limited gateway that proxies all WNSP protocol calls to the Python runtime.
+
+**Runtime 2 — Python / Flask (port 5001)**
+- **Framework**: Flask with flask-cors
+- **Entry point**: `spectral_api.py`
+- **Role**: Spectral physics engine — implements both WNSP encoding standards, K1 Orchestration Runtime, and all Lambda Boson physics calculations. Never handles authentication or user state.
 
 ### Data Layer
 - **Database**: PostgreSQL
@@ -46,6 +54,30 @@ The frontend uses React 18 with TypeScript, Vite, Radix UI components, and the s
 - **Core Protocol**: Replaces cryptographic hashing with electromagnetic wave physics, using Maxwell equation validation and wavelength-based addressing.
 - **Quantum Economics**: Transaction costs derived from wavelength-frequency-energy calculations.
 - **Lambda Boson Theory**: Core equation Λ = hf/c², extending E=mc² to oscillating quanta, with spectral authority bands.
+
+#### WNSP Two-Layer Encoding Standard (implemented in `wnsp_protocol_v7.py` + `spectral_api.py`)
+
+**WNSP-CE v1.0 — Character Encoding Standard (Layer 1 / Semantic)**
+Converts human-readable symbols into normalised ordinal tokens. Has no knowledge of wave physics. Output is consumed exclusively by WNSP-SE. Each symbol maps to a normalised value in [0, 1] via: `normalised = (ord(char) % 256) / 255`.
+
+**WNSP-SE v1.0 — Spectral Encoding Standard (Layer 2 / Physical)**
+Maps WNSP-CE tokens into physical wave frames governed by Λ = hf/c². Two tokens per photon frame (dual-wavelength oscillation). Every frame carries: wavelength (nm), frequency (Hz), energy (J), lambda mass (kg).
+
+**Handoff point:** CE ordinal tokens → SE wave frames. Neither layer crosses into the other's domain.
+
+**Hilbert Space Channel Model:**
+Each channel is an orthogonal basis vector: Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩
+- dim(|λ_i⟩) = 256 (WDM wavelength channels)
+- dim(|OAM_j⟩) = 50 (orbital angular momentum modes)
+- dim(|Pol_k⟩) = 2 (H / V polarisation)
+- Total: dim(H) = 25,600 orthogonal channels — ⟨Ψ_i|Ψ_j⟩ = 0 for i ≠ j
+
+**API endpoints:**
+- `GET /api/wnsp/protocol` — full spec of both standards
+- `POST /api/wnsp/ce/encode` — CE layer only
+- `POST /api/wnsp/se/encode` — SE layer only (accepts CE output)
+- `POST /api/wnsp/transmit` — full CE → SE stack in one call
+
 - **Advanced Systems**:
     - **Coherence Zenith Framework (CZF)**: Non-derivative resolution to the Vacuum Catastrophe. Lambda as First Oscillation, achieving 99.99% coherence through 44 evolutionary self-corrections.
     - **Dimensional Mapping Kernel (DMK)**: Maps 11D high-dimensional logic to 3D spacetime through CZC folding. Physical constants emerge as "bread crumbs" at each dimensional fold.
