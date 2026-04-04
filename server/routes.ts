@@ -1329,6 +1329,17 @@ export async function registerRoutes(
     secureProxyToSpectralAPI(req, res, "/api/kernel/status");
   });
 
+  // ── Nexus Photonic Development Environment ────────────────────
+  app.post("/api/nexus/dev/encode", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/nexus/dev/encode");
+  });
+  app.post("/api/nexus/dev/build", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/nexus/dev/build");
+  });
+  app.get("/api/nexus/dev/spec", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/nexus/dev/spec");
+  });
+
   // SPECTRAL API PROXY ROUTES (Rate Limited & Logged)
   // ============================================
 

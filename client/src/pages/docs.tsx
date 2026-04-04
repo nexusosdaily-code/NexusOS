@@ -967,6 +967,12 @@ export default function DocsPage() {
                     <Cpu className="w-3 h-3" /> AI OS Kernel (5 Components)
                   </Link>
                   <Link
+                    href="/photonic-dev"
+                    className="flex items-center gap-2 text-yellow-400 hover:text-yellow-300 font-medium"
+                  >
+                    <Cpu className="w-3 h-3" /> Photonic Dev Environment
+                  </Link>
+                  <Link
                     href="/encoding-lab"
                     className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
                   >

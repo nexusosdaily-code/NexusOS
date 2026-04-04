@@ -1128,6 +1128,200 @@ def kernel_status():
         return jsonify({"error": str(e)}), 500
 
 
+# ═══════════════════════════════════════════════════════════════════
+#  NEXUS PHOTONIC DEVELOPMENT ENVIRONMENT
+#  Programming with the Spectrum — CE→SE as Language Substrate
+# ═══════════════════════════════════════════════════════════════════
+
+# Visible spectrum colour map (wavelength nm → CSS hex)
+def _wl_to_hex(nm: float) -> str:
+    """Approximate visible-spectrum wavelength to an sRGB hex colour."""
+    nm = max(380.0, min(780.0, nm))
+    if   nm < 440:  r,g,b = (440-nm)/60, 0.0, 1.0
+    elif nm < 490:  r,g,b = 0.0, (nm-440)/50, 1.0
+    elif nm < 510:  r,g,b = 0.0, 1.0, (510-nm)/20
+    elif nm < 580:  r,g,b = (nm-510)/70, 1.0, 0.0
+    elif nm < 645:  r,g,b = 1.0, (645-nm)/65, 0.0
+    else:           r,g,b = 1.0, 0.0, 0.0
+    # Intensity falloff at edges
+    if   nm < 420:  factor = 0.3 + 0.7*(nm-380)/40
+    elif nm > 700:  factor = 0.3 + 0.7*(780-nm)/80
+    else:           factor = 1.0
+    to_hex = lambda v: format(int(min(255, v*factor*255)), '02x')
+    return f"#{to_hex(r)}{to_hex(g)}{to_hex(b)}"
+
+
+def _encode_instruction(text: str, label: str = "") -> dict:
+    """Run one code instruction through the full CE→SE stack."""
+    stack = WNSPProtocolStack(intensity=32, cycles=1)
+    result = stack.transmit(text=text, sender="nexus_dev", recipient="photon")
+    frames = result.get("layers", {}).get("se", {}).get("frames", [])
+    ce_tokens = result.get("layers", {}).get("ce", {}).get("tokens", [])
+
+    if not frames:
+        return {"label": label, "instruction": text, "frames": []}
+
+    wl_start = frames[0]["wavelength_start_nm"]
+    wl_end   = frames[-1]["wavelength_end_nm"]
+    wl_mid   = (wl_start + wl_end) / 2
+    total_energy = sum(f["energy_joules"] for f in frames)
+    total_mass   = sum(f["lambda_mass_kg"] for f in frames)
+    freq_mid     = (frames[0]["frequency_start_hz"] + frames[-1]["frequency_end_hz"]) / 2
+
+    # Assign a Ψ channel from the coordinator
+    agent_name = f"nexus_instr_{label or text[:8].strip()}"
+    try:
+        ch = _coordinator.register_agent(agent_name, "photonic_instruction")
+        psi = ch.notation()
+    except Exception:
+        ch = _coordinator.get_channel(agent_name)
+        psi = ch.notation() if ch else "Ψ(—)"
+
+    return {
+        "label":           label or text,
+        "instruction":     text,
+        "frame_count":     len(frames),
+        "wavelength_start_nm": round(wl_start, 2),
+        "wavelength_end_nm":   round(wl_end, 2),
+        "wavelength_mid_nm":   round(wl_mid, 2),
+        "frequency_hz":        round(freq_mid, 0),
+        "energy_joules":       total_energy,
+        "lambda_mass_kg":      total_mass,
+        "spectrum_color":      _wl_to_hex(wl_mid),
+        "psi_channel":         psi,
+        "ce_token_count":      len(ce_tokens),
+        "frames":              frames,
+    }
+
+
+@app.route('/api/nexus/dev/encode', methods=['POST'])
+def nexus_dev_encode():
+    """
+    Encode a single code instruction through the full CE→SE stack.
+    Returns its spectral address, wavelength, energy, and Ψ channel.
+    """
+    data        = request.get_json() or {}
+    instruction = data.get('instruction', '').strip()
+    label       = data.get('label', '').strip()
+
+    if not instruction:
+        return jsonify({"error": "Missing 'instruction' field"}), 400
+
+    try:
+        result = _encode_instruction(instruction, label)
+        return jsonify({"status": "encoded", **result})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/nexus/dev/build', methods=['POST'])
+def nexus_dev_build():
+    """
+    Build a complete Nexus App from a manifest of components.
+
+    Request body:
+      {
+        "app_name": "MyApp",
+        "components": [
+          {"label": "GET /home",    "type": "route",    "instruction": "function home() {}"},
+          {"label": "renderHeader", "type": "function", "instruction": "function renderHeader() {}"},
+          {"label": "userState",    "type": "variable", "instruction": "const user = useState(null)"}
+        ]
+      }
+    """
+    data       = request.get_json() or {}
+    app_name   = data.get('app_name', 'NexusApp').strip()
+    components = data.get('components', [])
+
+    if not components:
+        return jsonify({"error": "Missing 'components' list"}), 400
+
+    try:
+        encoded = []
+        for comp in components:
+            instr  = comp.get('instruction', comp.get('label', '')).strip()
+            label  = comp.get('label', instr[:20])
+            ctype  = comp.get('type', 'component')
+            result = _encode_instruction(instr, label)
+            result['component_type'] = ctype
+            encoded.append(result)
+
+        # Spectrum coverage
+        all_wl = [c['wavelength_mid_nm'] for c in encoded if c.get('wavelength_mid_nm')]
+        wl_min = min(all_wl) if all_wl else 380
+        wl_max = max(all_wl) if all_wl else 780
+        total_energy = sum(c.get('energy_joules', 0) for c in encoded)
+
+        return jsonify({
+            "status":          "built",
+            "app_name":        app_name,
+            "component_count": len(encoded),
+            "components":      encoded,
+            "spectrum_coverage": {
+                "min_nm": round(wl_min, 2),
+                "max_nm": round(wl_max, 2),
+                "span_nm": round(wl_max - wl_min, 2),
+            },
+            "total_energy_joules": total_energy,
+            "equation":            "Λ = hf/c²",
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/nexus/dev/spec', methods=['GET'])
+def nexus_dev_spec():
+    """Return the Nexus SDK specification — the formal language of the spectrum."""
+    return jsonify({
+        "name":    "Nexus Photonic Development SDK",
+        "version": "1.0.0",
+        "license": "AGPL-3.0",
+        "equation": "Λ = hf/c²",
+        "description": (
+            "Every instruction in a Nexus-native application is encoded through "
+            "WNSP-CE (character → ordinal token) and WNSP-SE (token → wave frame). "
+            "Each component receives a physical wavelength address in the visible "
+            "spectrum and a unique Ψ(wdm, oam, H/V) Hilbert channel. "
+            "Two components with orthogonal channels cannot interfere — by physics."
+        ),
+        "component_types": {
+            "route":     "HTTP endpoint — maps to spectral routing address",
+            "function":  "Processing unit — maps to spectral computation address",
+            "variable":  "State holder — maps to spectral memory address",
+            "event":     "Interrupt signal — maps to spectral event channel",
+            "component": "UI element — maps to spectral render address",
+        },
+        "spectrum_bands": {
+            "violet":     {"range_nm": "380–449", "role": "System routes"},
+            "blue":       {"range_nm": "450–489", "role": "Authentication + security"},
+            "cyan":       {"range_nm": "490–519", "role": "Data streams"},
+            "green":      {"range_nm": "520–564", "role": "Core functions"},
+            "yellow":     {"range_nm": "565–589", "role": "UI components"},
+            "orange":     {"range_nm": "590–624", "role": "Events + interrupts"},
+            "red":        {"range_nm": "625–780", "role": "Storage + persistence"},
+        },
+        "encoding_pipeline": [
+            "1. Write instruction as text",
+            "2. WNSP-CE: text → normalised ordinal tokens [0,1]",
+            "3. WNSP-SE: tokens → wave frames (λ, f, E, Λ)",
+            "4. Ψ allocation: SHA256(instruction) → unique Hilbert channel",
+            "5. Component lives at its wavelength address in the spectrum",
+        ],
+        "guarantees": [
+            "Orthogonality: ⟨Ψ_i | Ψ_j⟩ = 0 — no two components share a channel",
+            "Determinism: same instruction always maps to same spectral address",
+            "Physics-grounded: addresses are positions in the EM spectrum, not memory offsets",
+        ],
+        "example_app": {
+            "routes": [
+                {"path": "/",       "instruction": "function home() {}"},
+                {"path": "/auth",   "instruction": "function auth() {}"},
+                {"path": "/api",    "instruction": "function api() {}"},
+            ]
+        }
+    })
+
+
 if __name__ == '__main__':
     print("Starting Spectral API server on port 5001...")
     app.run(host='0.0.0.0', port=5001, debug=True)

@@ -31,6 +31,7 @@ import DeveloperMatrixPage from "@/pages/developer-matrix";
 import DocsPage from "@/pages/docs";
 import WNSPCoordinator from "@/pages/wnsp-coordinator";
 import KernelPage from "@/pages/kernel";
+import PhotonicDevPage from "@/pages/photonic-dev";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -74,6 +75,8 @@ function ProtectedRoutes() {
         <Route path="/workspace/coordinator" component={WNSPCoordinator} />
         <Route path="/kernel" component={KernelPage} />
         <Route path="/wnsp/kernel" component={KernelPage} />
+        <Route path="/photonic-dev" component={PhotonicDevPage} />
+        <Route path="/nexus/dev" component={PhotonicDevPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
