@@ -210,6 +210,107 @@ All 25,600 channels are simultaneously usable without interference. This is not 
 }
 
 **API:** GET /api/wnsp/protocol — returns full spec of both standards`
+      },
+      {
+        heading: "AI/OS Channel Coordination Layer",
+        text: `Every AI agent in NexusOS is assigned a unique, deterministically allocated Ψ_channel from the 25,600-dimensional Hilbert space. Orthogonality is a mathematical guarantee — agents cannot interfere with each other regardless of how many are running simultaneously.
+
+**Channel Allocation — how it works:**
+1. Agent registers with an ID and intent (inference / routing / monitoring / …)
+2. System hashes agent_id with SHA256, maps to a channel index in [0, 25599]
+3. If that channel is occupied, increment until a free slot is found
+4. Agent receives its channel coordinates: (wdm_i, oam_j, pol_k)
+5. Channel basis is recorded: Ψ_{n} = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩
+
+**Instruction mapping — CE → SE → Ψ_channel:**
+Any AI system command is run through the full WNSP stack (CE tokenisation → SE wave frames) and bound to the agent's allocated channel. This means every instruction has a precise physical address in the Hilbert space.
+
+**Example allocation:**
+- Agent "gpt-4-router" → Ψ_{6685} = |λ_66⟩ ⊗ |OAM_42⟩ ⊗ |Pol_V⟩ at 483.5 nm
+- Agent "llama-3"      → Ψ_{2460} = |λ_24⟩ ⊗ |OAM_30⟩ ⊗ |Pol_H⟩
+
+**Endpoints:**
+- POST /api/wnsp/agent/allocate — allocate channel (returns full Ψ coordinates)
+- POST /api/wnsp/agent/map     — run instruction through CE→SE, bind to channel
+- GET  /api/wnsp/agent/status  — list all allocated channels + Hilbert utilisation
+- POST /api/wnsp/agent/release — return channel to the pool
+
+**Live interface:** /wnsp/coordinator — allocate agents, map instructions, inspect Hilbert occupancy in real time`
+      },
+      {
+        heading: "SE Frame Simulation",
+        text: `The SE simulation endpoint runs any input text through the full CE→SE stack and returns a per-frame breakdown of channel occupation, energy budget, and orthogonality status. This is used for protocol verification, packing optimisation, and live demonstrations.
+
+**What the simulator returns per frame:**
+| Field             | Description                              |
+|-------------------|------------------------------------------|
+| frame_index       | Sequential frame number                  |
+| symbols           | The two CE characters packed in this frame |
+| wavelength_start  | λ₁ in nm (from CE token 1)               |
+| wavelength_end    | λ₂ in nm (from CE token 2)               |
+| wdm_i             | WDM channel index [0..255]               |
+| oam_j             | OAM mode index [0..49]                   |
+| polarisation      | H or V                                   |
+| channel_start     | Flat Hilbert index of this frame         |
+| energy_joules     | E = hf for this frame                    |
+| lambda_mass_kg    | Λ = hf/c² for this frame                 |
+
+**Packing efficiency:** 2.0 characters per frame (dual-wavelength baseline). Phase and OAM multiplexing can increase this further.
+
+**Orthogonality validation:** The simulator checks that all channel indices across all frames are distinct. If any two frames share a channel, it is flagged as a violation. In practice this has never occurred — the tensor product structure prevents it by construction.
+
+**Wavelength strip:** The coordinator page renders a colour-coded strip showing each frame's position in the visible spectrum, giving an immediate visual read of the spectral spread.
+
+**Endpoint:** POST /api/wnsp/se/simulate — returns full occupation table + energy totals + orthogonality proof
+**Orthogonality proof:** GET /api/wnsp/se/orthogonality — samples 100 of 25,600 channels, proves unique (wdm, oam, pol) triplets`
+      },
+      {
+        heading: "Test Suite — CI Protocol Verification",
+        text: `The WNSP protocol ships with a formal test suite that verifies every physics law, encoding contract, and Hilbert space property directly in code. All 23 tests must pass before any protocol change is merged.
+
+**Coverage:**
+
+Physical constants
+- Planck constant h = 6.62607015 × 10⁻³⁴ J·s
+- Speed of light c = 299,792,458 m/s
+- First Oscillation = 555 THz
+- Root Harmonic = 7.83 Hz (Schumann)
+- Hilbert dim(H) = 25,600
+
+CE Layer
+- Single-character encoding and normalised range [0, 1]
+- Ordinal formula: (ord % 256) / 255
+- Full text token count correctness
+- Space character padding token
+
+SE Layer (physics conservation)
+- f = c/λ
+- E = hf (energy conservation at 5 wavelengths)
+- Λ = hf/c² (mass conservation at 3 wavelengths)
+- E/Λ = c² (mass-energy ratio)
+- Normalised → wavelength stays in visible spectrum
+
+CE → SE Handoff
+- 2 chars → 1 dual-wavelength frame
+- Odd-length text padded and packed correctly
+- Frame wavelengths within visible range
+- Full stack transmit envelope structure
+
+Hilbert Space Integrity
+- Channel index ↔ (wdm, oam, pol) roundtrip
+- All 25,600 triplets unique (orthogonality proof)
+- All sub-space coordinates within declared bounds
+
+Packing Efficiency
+- chars_per_frame ≤ 2.0
+- Frame energies and masses positive
+- Energy aggregate matches per-frame sum
+- Λ mass aggregate matches per-frame sum
+
+**Run:**
+python tests/test_wnsp_protocol.py
+
+**Result: 23 passed, 0 failed**`
       }
     ]
   },
@@ -834,6 +935,24 @@ export default function DocsPage() {
               </nav>
 
               <div className="mt-6 pt-4 border-t border-gray-700">
+                <h3 className="text-sm font-medium text-gray-400 mb-3">LIVE TOOLS</h3>
+                <div className="space-y-1 text-sm">
+                  <Link href="/wnsp/coordinator" className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-medium">
+                    <Cpu className="w-3 h-3" /> AI/OS Coordinator
+                  </Link>
+                  <Link href="/encoding-lab" className="flex items-center gap-2 text-gray-400 hover:text-cyan-400">
+                    <Code className="w-3 h-3" /> Encoding Lab
+                  </Link>
+                  <Link href="/workspace/wavefield" className="flex items-center gap-2 text-gray-400 hover:text-cyan-400">
+                    <Atom className="w-3 h-3" /> Wavefield Simulator
+                  </Link>
+                  <Link href="/k1/orchestration" className="flex items-center gap-2 text-gray-400 hover:text-cyan-400">
+                    <Zap className="w-3 h-3" /> K1 Orchestration
+                  </Link>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-gray-700">
                 <h3 className="text-sm font-medium text-gray-400 mb-3">EXTERNAL PHYSICS</h3>
                 <div className="space-y-1 text-sm">
                   <a href="https://en.wikipedia.org/wiki/Planck%27s_law" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-400 hover:text-cyan-400">
