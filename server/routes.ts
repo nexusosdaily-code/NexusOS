@@ -1234,6 +1234,32 @@ export async function registerRoutes(
     secureProxyToSpectralAPI(req, res, "/api/wnsp/transmit");
   });
 
+  // AI/OS Channel Coordination Layer
+  app.post("/api/wnsp/agent/allocate", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/agent/allocate");
+  });
+
+  app.post("/api/wnsp/agent/map", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/agent/map");
+  });
+
+  app.get("/api/wnsp/agent/status", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/agent/status");
+  });
+
+  app.post("/api/wnsp/agent/release", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/agent/release");
+  });
+
+  // SE Simulation + Orthogonality Validation
+  app.post("/api/wnsp/se/simulate", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/se/simulate");
+  });
+
+  app.get("/api/wnsp/se/orthogonality", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/se/orthogonality");
+  });
+
   // SPECTRAL API PROXY ROUTES (Rate Limited & Logged)
   // ============================================
 

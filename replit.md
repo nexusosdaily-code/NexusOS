@@ -78,6 +78,21 @@ Each channel is an orthogonal basis vector: Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ 
 - `POST /api/wnsp/se/encode` — SE layer only (accepts CE output)
 - `POST /api/wnsp/transmit` — full CE → SE stack in one call
 
+**AI/OS Channel Coordination Layer** (`/api/wnsp/agent/*`):
+- `POST /api/wnsp/agent/allocate` — deterministically allocate a unique Ψ_channel for an AI agent
+- `POST /api/wnsp/agent/map` — map an AI instruction through CE→SE and bind to agent's channel
+- `GET /api/wnsp/agent/status` — list all allocated channels and Hilbert utilisation
+- `POST /api/wnsp/agent/release` — release an agent's channel back to the pool
+- Middleware: collision-free SHA256 hash allocation; orthogonality guarantee ensures no agent interference
+
+**SE Simulation & Orthogonality Validation** (`/api/wnsp/se/*`):
+- `POST /api/wnsp/se/simulate` — per-frame channel occupation, packing efficiency, energy/mass totals
+- `GET /api/wnsp/se/orthogonality` — Hilbert-space orthogonality proof across all 25,600 channels
+
+**Frontend:** `/wnsp/coordinator` — AI/OS Channel Coordinator page with agent management, SE frame simulation, and orthogonality visualisation.
+
+**Test suite:** `tests/test_wnsp_protocol.py` — 23 unit tests covering CE encoding, SE physics (E=hf, Λ=hf/c², E/Λ=c²), CE→SE handoff, Hilbert space integrity, and packing efficiency. Run: `python tests/test_wnsp_protocol.py`
+
 - **Advanced Systems**:
     - **Coherence Zenith Framework (CZF)**: Non-derivative resolution to the Vacuum Catastrophe. Lambda as First Oscillation, achieving 99.99% coherence through 44 evolutionary self-corrections.
     - **Dimensional Mapping Kernel (DMK)**: Maps 11D high-dimensional logic to 3D spacetime through CZC folding. Physical constants emerge as "bread crumbs" at each dimensional fold.

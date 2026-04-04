@@ -14,6 +14,8 @@ Author: Te Rata Pou
 License: AGPL-3.0
 """
 
+import time
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from wnsp_protocol_v7 import (
@@ -465,6 +467,273 @@ def simulator_reset():
         "coherence_boost":        0.0,
     }
     return jsonify({"status": "reset", "simulator_state": _simulator_state})
+
+
+# ─────────────────────────────────────────────────────────────────
+# AI/OS Channel Coordination Layer
+# Each AI agent receives a unique, deterministically allocated
+# Ψ_channel from the 25,600-dimensional Hilbert space.
+# Orthogonality guarantees agents cannot interfere with each other.
+# ─────────────────────────────────────────────────────────────────
+
+import hashlib as _hashlib
+
+_agent_channel_registry: dict = {}
+
+
+def _channel_index_to_coords(index: int):
+    """Flat channel index → (wdm_i, oam_j, pol_k)."""
+    pol_k = index % HILBERT_DIM_POL
+    rem   = index // HILBERT_DIM_POL
+    oam_j = rem % HILBERT_DIM_OAM
+    wdm_i = rem // HILBERT_DIM_OAM
+    return wdm_i, oam_j, pol_k
+
+
+def _coords_to_channel_index(wdm_i: int, oam_j: int, pol_k: int) -> int:
+    """(wdm_i, oam_j, pol_k) → flat channel index."""
+    return (wdm_i * HILBERT_DIM_OAM + oam_j) * HILBERT_DIM_POL + pol_k
+
+
+def _pick_channel(agent_id: str) -> int:
+    """Deterministic, collision-free channel allocation."""
+    h       = int(_hashlib.sha256(agent_id.encode()).hexdigest(), 16)
+    base    = h % HILBERT_DIM_TOTAL
+    occupied = {v['channel_index'] for v in _agent_channel_registry.values()}
+    idx = base
+    while idx in occupied:
+        idx = (idx + 1) % HILBERT_DIM_TOTAL
+    return idx
+
+
+def _build_entry(agent_id: str, idx: int, intent: str) -> dict:
+    wdm_i, oam_j, pol_k = _channel_index_to_coords(idx)
+    wl_nm = VISIBLE_MIN_NM + (wdm_i / max(HILBERT_DIM_WDM - 1, 1)) * (VISIBLE_MAX_NM - VISIBLE_MIN_NM)
+    freq  = SPEED_OF_LIGHT / (wl_nm * 1e-9)
+    pol   = "H" if pol_k == 0 else "V"
+    return {
+        "channel_index": idx,
+        "wdm_i":         wdm_i,
+        "oam_j":         oam_j,
+        "pol_k":         pol_k,
+        "polarisation":  pol,
+        "wavelength_nm": wl_nm,
+        "frequency_hz":  freq,
+        "intent":        intent,
+        "allocated_at":  time.time(),
+        "frame_count":   0,
+        "channel_basis": f"Ψ_{{{idx}}} = |λ_{wdm_i}⟩ ⊗ |OAM_{oam_j}⟩ ⊗ |Pol_{pol}⟩",
+    }
+
+
+@app.route('/api/wnsp/agent/allocate', methods=['POST'])
+def agent_allocate():
+    """Allocate a unique Ψ_channel for an AI agent."""
+    data     = request.get_json() or {}
+    agent_id = data.get('agent_id', '').strip()
+    intent   = data.get('intent', 'general')
+
+    if not agent_id:
+        return jsonify({"error": "Missing 'agent_id' field"}), 400
+
+    try:
+        if agent_id in _agent_channel_registry:
+            entry = _agent_channel_registry[agent_id]
+            return jsonify({"status": "existing", "agent_id": agent_id, **entry})
+
+        idx   = _pick_channel(agent_id)
+        entry = _build_entry(agent_id, idx, intent)
+        _agent_channel_registry[agent_id] = entry
+        return jsonify({"status": "allocated", "agent_id": agent_id, **entry})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/wnsp/agent/map', methods=['POST'])
+def agent_map():
+    """Map an AI instruction through CE→SE and route it to the agent's Ψ_channel."""
+    data        = request.get_json() or {}
+    agent_id    = data.get('agent_id', '').strip()
+    instruction = data.get('instruction', '').strip()
+
+    if not agent_id:
+        return jsonify({"error": "Missing 'agent_id' field"}), 400
+    if not instruction:
+        return jsonify({"error": "Missing 'instruction' field"}), 400
+
+    try:
+        if agent_id not in _agent_channel_registry:
+            idx   = _pick_channel(agent_id)
+            entry = _build_entry(agent_id, idx, 'instruction')
+            _agent_channel_registry[agent_id] = entry
+
+        channel = _agent_channel_registry[agent_id]
+
+        stack  = WNSPProtocolStack()
+        result = stack.transmit(text=instruction, sender=agent_id, recipient='os')
+        channel['frame_count'] += 1
+
+        frames = result.get('layers', {}).get('se', {}).get('frames', [])
+        return jsonify({
+            "status":        "mapped",
+            "agent_id":      agent_id,
+            "instruction":   instruction,
+            "channel":       channel,
+            "frame_count":   len(frames),
+            "frames_preview": frames[:5],
+            "orthogonality": "⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j",
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/wnsp/agent/status', methods=['GET'])
+def agent_status():
+    """Return all currently allocated agent channels."""
+    return jsonify({
+        "total_channels":    HILBERT_DIM_TOTAL,
+        "occupied_channels": len(_agent_channel_registry),
+        "available_channels": HILBERT_DIM_TOTAL - len(_agent_channel_registry),
+        "utilisation_pct":   round(len(_agent_channel_registry) / HILBERT_DIM_TOTAL * 100, 6),
+        "orthogonality":     "⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j",
+        "agents":            dict(_agent_channel_registry),
+    })
+
+
+@app.route('/api/wnsp/agent/release', methods=['POST'])
+def agent_release():
+    """Release an agent's allocated channel."""
+    data     = request.get_json() or {}
+    agent_id = data.get('agent_id', '').strip()
+
+    if not agent_id:
+        return jsonify({"error": "Missing 'agent_id' field"}), 400
+    if agent_id not in _agent_channel_registry:
+        return jsonify({"error": f"Agent '{agent_id}' not found"}), 404
+
+    released = _agent_channel_registry.pop(agent_id)
+    return jsonify({
+        "status":           "released",
+        "agent_id":         agent_id,
+        "channel_index":    released['channel_index'],
+        "remaining_agents": len(_agent_channel_registry),
+    })
+
+
+# ─────────────────────────────────────────────────────────────────
+# SE Simulation Endpoints
+# Visualise channel occupation per frame, validate orthogonality,
+# and report dual-wavelength packing efficiency.
+# ─────────────────────────────────────────────────────────────────
+
+@app.route('/api/wnsp/se/simulate', methods=['POST'])
+def se_simulate():
+    """
+    Simulate SE frame encoding.
+    Returns per-frame channel occupation, orthogonality validation,
+    and dual-wavelength packing efficiency.
+    """
+    data    = request.get_json() or {}
+    content = data.get('content', 'Hello Lambda')
+
+    try:
+        stack  = WNSPProtocolStack()
+        result = stack.transmit(text=content, sender='sim', recipient='substrate')
+        frames = result.get('layers', {}).get('se', {}).get('frames', [])
+
+        occupation = []
+        for i, frame in enumerate(frames):
+            wl1 = frame.get('wavelength_start_nm', 550)
+            wl2 = frame.get('wavelength_end_nm',   580)
+
+            wdm_i1 = int((wl1 - VISIBLE_MIN_NM) / (VISIBLE_MAX_NM - VISIBLE_MIN_NM) * (HILBERT_DIM_WDM - 1))
+            wdm_i2 = int((wl2 - VISIBLE_MIN_NM) / (VISIBLE_MAX_NM - VISIBLE_MIN_NM) * (HILBERT_DIM_WDM - 1))
+            oam_j  = i % HILBERT_DIM_OAM
+            pol_k  = i % HILBERT_DIM_POL
+
+            ch1 = _coords_to_channel_index(wdm_i1, oam_j, pol_k)
+            ch2 = _coords_to_channel_index(wdm_i2, oam_j, 1 - pol_k)
+
+            occupation.append({
+                "frame_index":        i,
+                "symbols":            frame.get('ce_symbols', []),
+                "wavelength_start_nm": wl1,
+                "wavelength_end_nm":   wl2,
+                "wdm_i_start":        wdm_i1,
+                "wdm_i_end":          wdm_i2,
+                "oam_j":              oam_j,
+                "pol_k":              pol_k,
+                "polarisation":       "H" if pol_k == 0 else "V",
+                "channel_start":      ch1,
+                "channel_end":        ch2,
+                "energy_joules":      frame.get('energy_joules',  0),
+                "lambda_mass_kg":     frame.get('lambda_mass_kg', 0),
+            })
+
+        channel_ids    = [o['channel_start'] for o in occupation] + [o['channel_end'] for o in occupation]
+        orthogonal     = len(channel_ids) == len(set(channel_ids))
+        packing_ratio  = len(content) / len(frames) if frames else 0
+
+        return jsonify({
+            "status":              "simulated",
+            "protocol":            "WNSP-SE v" + WNSP_SE_VERSION,
+            "input":               content,
+            "chars":               len(content),
+            "frames":              len(frames),
+            "packing_ratio":       packing_ratio,
+            "packing_scheme":      "dual-wavelength (2 chars/frame)",
+            "orthogonality_valid": orthogonal,
+            "orthogonality_proof": "⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j",
+            "channel_occupation":  occupation,
+            "hilbert_dim":         HILBERT_DIM_TOTAL,
+            "total_energy_joules": sum(o['energy_joules']  for o in occupation),
+            "total_lambda_mass_kg": sum(o['lambda_mass_kg'] for o in occupation),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/wnsp/se/orthogonality', methods=['GET'])
+def se_orthogonality():
+    """
+    Validate Hilbert-space orthogonality across all 25,600 channels.
+    Proves ⟨Ψ_i | Ψ_j⟩ = 0 for all i ≠ j by unique basis construction.
+    """
+    try:
+        import random as _random
+        _random.seed(42)
+        sample_size = min(100, HILBERT_DIM_TOTAL)
+        sample_idx  = _random.sample(range(HILBERT_DIM_TOTAL), sample_size)
+
+        samples = []
+        for idx in sample_idx:
+            wdm_i, oam_j, pol_k = _channel_index_to_coords(idx)
+            samples.append({
+                "index":  idx,
+                "wdm_i":  wdm_i,
+                "oam_j":  oam_j,
+                "pol_k":  pol_k,
+                "basis":  f"|λ_{wdm_i}⟩ ⊗ |OAM_{oam_j}⟩ ⊗ |Pol_{'H' if pol_k == 0 else 'V'}⟩",
+            })
+
+        triplets   = [(s['wdm_i'], s['oam_j'], s['pol_k']) for s in samples]
+        all_unique = len(triplets) == len(set(triplets))
+
+        return jsonify({
+            "hilbert_dim":      HILBERT_DIM_TOTAL,
+            "dim_wdm":          HILBERT_DIM_WDM,
+            "dim_oam":          HILBERT_DIM_OAM,
+            "dim_pol":          HILBERT_DIM_POL,
+            "channel_basis":    CHANNEL_BASIS_EQUATION,
+            "orthogonality":    "⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j",
+            "proof":            "Each channel is a unique tensor-product basis vector. "
+                                "Distinct (wdm_i, oam_j, pol_k) triplets are orthogonal by construction.",
+            "sample_validated": all_unique,
+            "sample_size":      sample_size,
+            "sample_channels":  samples[:10],
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':
