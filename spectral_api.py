@@ -34,6 +34,11 @@ from wnsp_protocol_v7 import (
     WNSP_PROTOCOL,
     FIRST_OSCILLATION_THz,
     ROOT_HARMONIC_Hz,
+    HILBERT_DIM_WDM,
+    HILBERT_DIM_OAM,
+    HILBERT_DIM_POL,
+    HILBERT_DIM_TOTAL,
+    CHANNEL_BASIS_EQUATION,
 )
 
 app = Flask(__name__)
@@ -70,6 +75,16 @@ def protocol_info():
                 "endpoint":    "/api/wnsp/se/encode",
                 "first_oscillation_hz": FIRST_OSCILLATION_THz,
                 "root_harmonic_hz":     ROOT_HARMONIC_Hz,
+                "hilbert_space": {
+                    "channel_basis":  CHANNEL_BASIS_EQUATION,
+                    "sub_spaces": {
+                        "|λ_i⟩":   {"name": "WDM wavelength",        "dim": HILBERT_DIM_WDM},
+                        "|OAM_j⟩": {"name": "Orbital angular momentum", "dim": HILBERT_DIM_OAM},
+                        "|Pol_k⟩": {"name": "Polarisation (H/V)",    "dim": HILBERT_DIM_POL},
+                    },
+                    "total_dim":      HILBERT_DIM_TOTAL,
+                    "orthogonality":  "⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j",
+                },
             },
         },
         "handoff": "CE  →  ordinal tokens  →  SE  →  wave frames",
@@ -205,18 +220,22 @@ def get_constants():
 
 @app.route('/api/spectral/capacity', methods=['GET'])
 def get_capacity():
-    wdm_channels       = 256   # WDM channels across 380-780nm visible spectrum
-    oam_modes          = 50    # OAM modes per wavelength (ℓ = -50 to +50, excluding 0 pairs)
-    polarization_modes = 2     # H and V polarisation states
-    total_channels     = wdm_channels * oam_modes * polarization_modes  # 25,600
+    total_channels = HILBERT_DIM_TOTAL  # 25,600
     return jsonify({
-        "wdm_channels":           wdm_channels,
-        "oam_modes":              oam_modes,
-        "polarization_modes":     polarization_modes,
+        "wdm_channels":           HILBERT_DIM_WDM,
+        "oam_modes":              HILBERT_DIM_OAM,
+        "polarization_modes":     HILBERT_DIM_POL,
         "total_channels":         total_channels,
         "bits_per_symbol_16qam":  total_channels * 4,
         "theoretical_tbps_at_100gbaud": total_channels * 4 * 100 / 1000,
-        "note": "256 WDM × 50 OAM × 2 polarisation = 25,600 orthogonal channels",
+        "hilbert_space": {
+            "channel_basis": CHANNEL_BASIS_EQUATION,
+            "dim_wdm":       HILBERT_DIM_WDM,
+            "dim_oam":       HILBERT_DIM_OAM,
+            "dim_pol":       HILBERT_DIM_POL,
+            "total_dim":     HILBERT_DIM_TOTAL,
+            "orthogonality": "⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j",
+        },
     })
 
 

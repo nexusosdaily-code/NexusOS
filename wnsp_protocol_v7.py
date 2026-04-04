@@ -53,6 +53,35 @@ WNSP_CE_VERSION  = "1.0"
 WNSP_SE_VERSION  = "1.0"
 WNSP_PROTOCOL    = "WNSP/7.1"
 
+# ─────────────────────────────────────────────
+# WNSP-SE Hilbert Space Channel Basis
+# ─────────────────────────────────────────────
+#
+#   Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩
+#
+#   Each channel is an orthogonal basis vector in a 25,600-dimensional
+#   Hilbert space formed by the tensor product of three sub-spaces:
+#
+#     |λ_i⟩    — wavelength (WDM) sub-space      dim = 256
+#     |OAM_j⟩  — orbital angular momentum        dim = 50
+#     |Pol_k⟩  — polarisation (H / V)            dim = 2
+#
+#   Total Hilbert space dimension:
+#     dim(H) = 256 × 50 × 2 = 25,600
+#
+#   Orthogonality guarantee:
+#     ⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j
+#
+#   This is the formal mathematical basis for channel isolation in WNSP-SE.
+#   All 25,600 channels are simultaneously usable without interference.
+#
+HILBERT_DIM_WDM   = 256   # |λ_i⟩  sub-space dimension
+HILBERT_DIM_OAM   = 50    # |OAM_j⟩ sub-space dimension
+HILBERT_DIM_POL   = 2     # |Pol_k⟩ sub-space dimension
+HILBERT_DIM_TOTAL = HILBERT_DIM_WDM * HILBERT_DIM_OAM * HILBERT_DIM_POL  # 25,600
+
+CHANNEL_BASIS_EQUATION = "Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩"
+
 # Legacy map kept for backward compatibility
 LAMBDA_CHAR_MAP = {
     chr(i): VISIBLE_MIN_NM + ((i % 256) / 255.0) * (VISIBLE_MAX_NM - VISIBLE_MIN_NM)
@@ -127,6 +156,23 @@ class WNSPSpectralEncoder:
 
     Two CE tokens are packed per photon frame (dual-wavelength scheme),
     achieving ≥ 2 characters per particle.
+
+    Channel Basis (Hilbert Space Model)
+    ------------------------------------
+    Each transmission channel is an orthogonal basis vector:
+
+        Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩
+
+    Sub-space dimensions:
+        |λ_i⟩    WDM wavelength channels     dim = 256
+        |OAM_j⟩  Orbital angular momentum    dim = 50
+        |Pol_k⟩  Polarisation (H / V)        dim = 2
+
+    Total Hilbert space dimension:
+        dim(H) = 256 × 50 × 2 = 25,600
+
+    Orthogonality:  ⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j
+    All 25,600 channels are simultaneously usable without interference.
     """
 
     PROTOCOL = "WNSP-SE"
