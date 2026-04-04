@@ -1203,6 +1203,37 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // WNSP PROTOCOL ROUTES — Two-Layer Standard (CE + SE)
+  // ============================================
+
+  // Protocol information — describes both WNSP-CE and WNSP-SE standards
+  app.get("/api/wnsp/protocol", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/protocol");
+  });
+
+  // WNSP-CE Layer 1: Character Encoding Standard (semantic layer)
+  app.post("/api/wnsp/ce/encode", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/ce/encode");
+  });
+
+  app.post("/api/wnsp/ce/char", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/ce/char");
+  });
+
+  // WNSP-SE Layer 2: Spectral Encoding Standard (physical wave layer)
+  app.post("/api/wnsp/se/encode", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/se/encode");
+  });
+
+  app.post("/api/wnsp/se/wavelength", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/se/wavelength");
+  });
+
+  // Full WNSP stack: CE → SE in one call
+  app.post("/api/wnsp/transmit", optionalAuth, validateRequest(spectralEncodeSchema), (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/transmit");
+  });
+
   // SPECTRAL API PROXY ROUTES (Rate Limited & Logged)
   // ============================================
 
