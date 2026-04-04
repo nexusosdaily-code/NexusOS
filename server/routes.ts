@@ -1290,6 +1290,45 @@ export async function registerRoutes(
     secureProxyToSpectralAPI(req, res, "/api/wnsp/se/orthogonality");
   });
 
+  // ── Kernel Component 1: Boot ──────────────────────────────────
+  app.get("/api/kernel/boot", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/kernel/boot");
+  });
+
+  // ── Kernel Component 2: Persistent State ─────────────────────
+  app.get("/api/kernel/state", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/kernel/state");
+  });
+
+  // ── Kernel Component 3: Authority Layer ──────────────────────
+  app.get("/api/kernel/authority", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/kernel/authority");
+  });
+  app.post("/api/kernel/authority/check", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/kernel/authority/check");
+  });
+
+  // ── Kernel Component 4: Events / Interrupts ───────────────────
+  app.get("/api/kernel/events", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/kernel/events");
+  });
+  app.post("/api/kernel/events/emit", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/kernel/events/emit");
+  });
+
+  // ── Kernel Component 5: Watchdog ─────────────────────────────
+  app.get("/api/kernel/watchdog", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/kernel/watchdog");
+  });
+  app.post("/api/kernel/watchdog/scan", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/kernel/watchdog/scan");
+  });
+
+  // ── Kernel Overview ───────────────────────────────────────────
+  app.get("/api/kernel/status", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/kernel/status");
+  });
+
   // SPECTRAL API PROXY ROUTES (Rate Limited & Logged)
   // ============================================
 

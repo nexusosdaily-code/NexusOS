@@ -14,9 +14,11 @@ Author: Te Rata Pou
 License: AGPL-3.0
 """
 
+import json
 import time
+from typing import Optional
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 from wnsp_protocol_v7 import (
     encode_lambda_message,
@@ -476,10 +478,41 @@ def simulator_reset():
 # ─────────────────────────────────────────────────────────────────
 
 from wnsp_v7.wnsp_coordinator import WNSPCoordinator, WNSPBus
+from wnsp_v7.kernel_authority  import (
+    check_send_permission, band_for_agent, all_bands_summary, AuthorityBand
+)
+from wnsp_v7.kernel_boot     import boot as _kernel_boot, boot_log as _kernel_boot_log
+from wnsp_v7.kernel_watchdog import KernelWatchdog
+from wnsp_v7.kernel_events   import KernelEventBus
+from wnsp_v7               import kernel_persistence as _kp
 
-# Singletons — persist for the lifetime of the process
+# ── Singletons ────────────────────────────────────────────────────
 _coordinator = WNSPCoordinator()
-_bus = WNSPBus(_coordinator)
+_bus         = WNSPBus(_coordinator)
+_events      = KernelEventBus()
+_watchdog    = KernelWatchdog(_coordinator, ttl_seconds=300, reclaim_after=600)
+
+# ── Kernel-aware dispatch wrapper ─────────────────────────────────
+def _kernel_dispatch() -> Optional[dict]:
+    """Call bus.dispatch, then emit interrupt and persist route."""
+    record = _bus.dispatch()
+    if record:
+        _events.emit("MESSAGE_ARRIVED",
+                     agent_id=record.get("dst"),
+                     detail={
+                         "route":   record.get("route"),
+                         "payload": str(record.get("payload", ""))[:120],
+                     })
+        try:
+            _kp.save_bus_route(record)
+        except Exception:
+            pass
+    return record
+
+# ── Boot kernel on first import ───────────────────────────────────
+_boot_report = _kernel_boot(_coordinator, _bus)
+_watchdog.start()
+_events.emit("BOOT_COMPLETE", detail={"phases": len(_boot_report.get("phases", []))})
 
 
 @app.route('/api/wnsp/agent/allocate', methods=['POST'])
@@ -496,6 +529,15 @@ def agent_allocate():
         already = agent_id in _coordinator._registry
         channel = _coordinator.register_agent(agent_id, intent)
         stats   = _coordinator.agent_stats(agent_id)
+        band    = band_for_agent(agent_id, channel.wavelength)
+        if not already:
+            try:
+                _kp.save_agent(agent_id, channel.wavelength, channel.oam,
+                               channel.pol, intent=intent, authority_band=band.name)
+            except Exception:
+                pass
+            _events.emit("AGENT_REGISTERED", agent_id=agent_id,
+                         detail={"channel": channel.notation(), "band": band.name})
         return jsonify({
             "status":   "existing" if already else "allocated",
             "agent_id": agent_id,
@@ -504,6 +546,7 @@ def agent_allocate():
             "intent":         stats["intent"],
             "registered_at":  stats["registered_at"],
             "routed_count":   stats["routed_count"],
+            "authority_band": band.name,
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -579,6 +622,12 @@ def agent_release():
 
     channel_notation = stats["channel"]["notation"]
     _coordinator.unregister_agent(agent_id)
+    try:
+        _kp.delete_agent(agent_id)
+    except Exception:
+        pass
+    _events.emit("AGENT_RELEASED", agent_id=agent_id,
+                 detail={"channel": channel_notation})
     return jsonify({
         "status":           "released",
         "agent_id":         agent_id,
@@ -659,18 +708,32 @@ def bus_send():
         _coordinator.register_agent(src)
         _coordinator.register_agent(dst)
 
-        _bus.send(src, dst, payload, priority)
-        snap = _bus.status()
         src_ch = _coordinator.get_channel(src)
         dst_ch = _coordinator.get_channel(dst)
+
+        # ── Authority check ───────────────────────────────────────
+        permitted, reason = check_send_permission(
+            src, src_ch.wavelength, dst, dst_ch.wavelength
+        )
+        if not permitted:
+            return jsonify({
+                "error":  "AUTHORITY_DENIED",
+                "reason": reason,
+            }), 403
+
+        _bus.send(src, dst, payload, priority)
+        snap = _bus.status()
+        src_band = band_for_agent(src, src_ch.wavelength)
         return jsonify({
-            "status":    "queued",
-            "src":       src,
-            "dst":       dst,
-            "payload":   payload,
-            "priority":  priority,
-            "route":     f"{src} {src_ch.notation()} → {dst} {dst_ch.notation()}",
-            "queue_depth": snap["queued"],
+            "status":       "queued",
+            "src":          src,
+            "dst":          dst,
+            "payload":      payload,
+            "priority":     priority,
+            "route":        f"{src} {src_ch.notation()} → {dst} {dst_ch.notation()}",
+            "queue_depth":  snap["queued"],
+            "authority":    src_band.name,
+            "permitted":    True,
         })
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
@@ -680,9 +743,9 @@ def bus_send():
 
 @app.route('/api/wnsp/bus/dispatch', methods=['POST'])
 def bus_dispatch():
-    """Pop and deliver the highest-priority queued message."""
+    """Pop and deliver the highest-priority queued message (kernel-aware)."""
     try:
-        record = _bus.dispatch()
+        record = _kernel_dispatch()
         if record is None:
             return jsonify({"status": "empty", "message": "No messages in bus queue"})
         return jsonify({"status": "dispatched", **record})
@@ -834,6 +897,232 @@ def se_orthogonality():
             "sample_validated": all_unique,
             "sample_size":      sample_size,
             "sample_channels":  samples[:10],
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  KERNEL COMPONENT 1 — BOOT STATUS
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/api/kernel/boot', methods=['GET'])
+def kernel_boot_status():
+    """Return the boot report and boot log."""
+    try:
+        from wnsp_v7.kernel_boot import boot_log, is_booted
+        return jsonify({
+            "booted":   is_booted(),
+            "log":      boot_log(),
+            "report":   _boot_report,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  KERNEL COMPONENT 2 — PERSISTENT STATE
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/api/kernel/state', methods=['GET'])
+def kernel_state():
+    """Return all persisted agents and recent bus log from DB."""
+    try:
+        if not _kp.is_available():
+            return jsonify({
+                "agents":        [],
+                "bus_log":       [],
+                "kernel_events": [],
+                "live_registry": len(_coordinator._registry),
+                "db_agents":     0,
+                "warning":       "psycopg2 not installed — persistence unavailable (in-memory only)",
+            })
+        agents  = _kp.load_all_agents()
+        bus_log = _kp.load_bus_log(50)
+        events  = _kp.load_kernel_events(50)
+        return jsonify({
+            "agents":         agents,
+            "bus_log":        bus_log,
+            "kernel_events":  events,
+            "live_registry":  len(_coordinator._registry),
+            "db_agents":      len(agents),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  KERNEL COMPONENT 3 — AUTHORITY / PERMISSION LAYER
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/api/kernel/authority', methods=['GET'])
+def kernel_authority():
+    """Return the full authority band model."""
+    return jsonify({
+        "model":  "Spectral Authority Bands",
+        "rule":   "sender.rank ≤ receiver.rank (lower rank = higher authority)",
+        "bands":  all_bands_summary(),
+    })
+
+
+@app.route('/api/kernel/authority/check', methods=['POST'])
+def kernel_authority_check():
+    """Check whether src is permitted to send to dst."""
+    data    = request.get_json() or {}
+    src     = data.get('src', '').strip()
+    dst     = data.get('dst', '').strip()
+
+    if not src or not dst:
+        return jsonify({"error": "Missing 'src' or 'dst'"}), 400
+
+    src_ch = _coordinator.get_channel(src) if src in _coordinator._registry else None
+    dst_ch = _coordinator.get_channel(dst) if dst in _coordinator._registry else None
+
+    src_wdm = src_ch.wavelength if src_ch else 200  # default GUEST wdm
+    dst_wdm = dst_ch.wavelength if dst_ch else 200
+
+    permitted, reason = check_send_permission(src, src_wdm, dst, dst_wdm)
+    src_band = band_for_agent(src, src_wdm)
+    dst_band = band_for_agent(dst, dst_wdm)
+
+    return jsonify({
+        "src":          src,
+        "dst":          dst,
+        "src_band":     src_band.name,
+        "dst_band":     dst_band.name,
+        "permitted":    permitted,
+        "reason":       reason,
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  KERNEL COMPONENT 4 — INTERRUPT / EVENT SYSTEM
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/api/kernel/events', methods=['GET'])
+def kernel_events():
+    """Return recent kernel interrupt events (in-memory log)."""
+    last_n = int(request.args.get('n', 50))
+    since  = int(request.args.get('since', 0))
+    try:
+        if since:
+            events = _events.log_since(since)
+        else:
+            events = _events.log(last_n)
+        return jsonify({
+            "events":  events,
+            "count":   len(events),
+            "status":  _events.status(),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/kernel/events/emit', methods=['POST'])
+def kernel_events_emit():
+    """Manually emit a kernel event (for testing / admin use)."""
+    data       = request.get_json() or {}
+    event_type = data.get('event_type', '').strip()
+    agent_id   = data.get('agent_id')
+    detail     = data.get('detail', {})
+
+    if not event_type:
+        return jsonify({"error": "Missing 'event_type'"}), 400
+
+    try:
+        ev = _events.emit(event_type, agent_id=agent_id, detail=detail)
+        try:
+            _kp.log_kernel_event(event_type, agent_id, detail)
+        except Exception:
+            pass
+        return jsonify({"status": "emitted", "event": ev.to_dict()})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/kernel/events/stream', methods=['GET'])
+def kernel_events_stream():
+    """
+    Server-Sent Events endpoint — push kernel interrupts to HTTP clients.
+
+    Usage:  GET /api/kernel/events/stream?client_id=my_dashboard
+    The client receives events as:  data: {json}\n\n
+    """
+    import time as _time
+    client_id = request.args.get('client_id', f"sse_{int(_time.time())}")
+    _events.register_client(client_id)
+
+    def generate():
+        try:
+            yield f"data: {json.dumps({'type':'CONNECTED','client_id':client_id})}\n\n"
+            while True:
+                pending = _events.drain_client(client_id)
+                for ev in pending:
+                    yield f"data: {json.dumps(ev)}\n\n"
+                _time.sleep(0.5)
+        except GeneratorExit:
+            _events.unregister_client(client_id)
+
+    return app.response_class(
+        generate(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+        },
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  KERNEL COMPONENT 5 — DEAD AGENT WATCHDOG
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/api/kernel/watchdog', methods=['GET'])
+def kernel_watchdog_status():
+    """Return watchdog status and per-agent health scores."""
+    try:
+        return jsonify(_watchdog.status())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/kernel/watchdog/scan', methods=['POST'])
+def kernel_watchdog_scan():
+    """Force an immediate watchdog scan outside the normal interval."""
+    try:
+        result = _watchdog.force_scan()
+        _events.emit("WATCHDOG_SCAN", detail={"triggered": "manual"})
+        return jsonify({"status": "scan_complete", **result})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  KERNEL OVERVIEW
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/api/kernel/status', methods=['GET'])
+def kernel_status():
+    """Single-call overview of all 5 kernel components."""
+    try:
+        from wnsp_v7.kernel_boot import boot_log, is_booted
+        return jsonify({
+            "kernel_version": "1.0.0",
+            "license":        "AGPL-3.0",
+            "booted":         is_booted(),
+            "components": {
+                "boot":        {"status": "ok", "phases": len(_boot_report.get("phases", []))},
+                "persistence": {"status": "ok", "live_agents": len(_coordinator._registry)},
+                "authority":   {"status": "ok", "bands": 4},
+                "events":      _events.status(),
+                "watchdog":    {
+                    "running":   _watchdog._running,
+                    "degraded":  list(_watchdog._degraded),
+                    "reclaimed": _watchdog._reclaim_log[-5:],
+                },
+            },
+            "equation": "Λ = hf/c²",
+            "channels": 25600,
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500

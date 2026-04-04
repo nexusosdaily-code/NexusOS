@@ -30,6 +30,7 @@ import StreamingPage from "@/pages/streaming";
 import DeveloperMatrixPage from "@/pages/developer-matrix";
 import DocsPage from "@/pages/docs";
 import WNSPCoordinator from "@/pages/wnsp-coordinator";
+import KernelPage from "@/pages/kernel";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -71,6 +72,8 @@ function ProtectedRoutes() {
         <Route path="/docs/:section" component={DocsPage} />
         <Route path="/wnsp/coordinator" component={WNSPCoordinator} />
         <Route path="/workspace/coordinator" component={WNSPCoordinator} />
+        <Route path="/kernel" component={KernelPage} />
+        <Route path="/wnsp/kernel" component={KernelPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>

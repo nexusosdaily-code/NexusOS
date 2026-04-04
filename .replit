@@ -1,4 +1,4 @@
-modules = ["python-3.11", "nodejs-20", "postgresql-16"]
+modules = ["python-3.11", "nodejs-20", "postgresql-16", "python3"]
 
 [[ports]]
 localPort = 5000

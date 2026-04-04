@@ -14,7 +14,7 @@ function startFlaskAPI() {
   
   console.log("Starting Spectral API server on port 5001...");
   
-  flaskProcess = spawn("python", ["spectral_api.py"], {
+  flaskProcess = spawn("uv", ["run", "python", "spectral_api.py"], {
     stdio: ["ignore", "pipe", "pipe"],
     detached: false,
   });

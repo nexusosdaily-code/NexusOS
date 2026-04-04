@@ -91,7 +91,40 @@ Each channel is an orthogonal basis vector: Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ 
 
 **Frontend:** `/wnsp/coordinator` — AI/OS Channel Coordinator page with agent management, SE frame simulation, and orthogonality visualisation.
 
-**Test suite:** `tests/test_wnsp_protocol.py` — 23 unit tests covering CE encoding, SE physics (E=hf, Λ=hf/c², E/Λ=c²), CE→SE handoff, Hilbert space integrity, and packing efficiency. Run: `python tests/test_wnsp_protocol.py`
+**Test suite:** `tests/test_wnsp_protocol.py` — 44 unit tests (23 physics+CE+SE, 12 coordinator, 9 bus). Run: `python tests/test_wnsp_protocol.py`
+
+### WNSP AI Operating System Kernel (v1.0.0)
+Five kernel components completing the AI ecosystem. All implemented in `wnsp_v7/kernel_*.py`.
+
+**Component 1 — Boot / Init Sequence** (`wnsp_v7/kernel_boot.py`):
+- 5-phase boot on Flask startup: Schema → Restore → Core → Watchdog → Events
+- Auto-registers 5 core agents: `os_kernel` [SYSTEM], `bus_router` [SYSTEM], `scheduler_daemon` [KERNEL], `watchdog_daemon` [KERNEL], `auth_gateway` [KERNEL]
+
+**Component 2 — Persistent State** (`wnsp_v7/kernel_persistence.py`):
+- PostgreSQL tables: `wnsp_agents`, `wnsp_bus_log`, `wnsp_kernel_events`
+- psycopg2 is optional — degrades gracefully to in-memory mode if not available
+- API: `GET /api/kernel/state`
+
+**Component 3 — Authority / Permission Layer** (`wnsp_v7/kernel_authority.py`):
+- Spectral authority bands mapped to WDM ranges: SYSTEM (0–63), KERNEL (64–127), USER (128–191), GUEST (192–255)
+- Rule: sender.rank ≤ receiver.rank (lower rank = higher authority)
+- Bus send enforces authority; returns 403 AUTHORITY_DENIED if blocked
+- API: `GET /api/kernel/authority`, `POST /api/kernel/authority/check`
+
+**Component 4 — Interrupt / Event System** (`wnsp_v7/kernel_events.py`):
+- `KernelEventBus` with subscribe/emit/drain model
+- 8 interrupt types: MESSAGE_ARRIVED, AGENT_REGISTERED, AGENT_RELEASED, AGENT_DEGRADED, AGENT_RECLAIMED, BOOT_COMPLETE, CHANNEL_COLLISION, WATCHDOG_SCAN
+- SSE streaming: `GET /api/kernel/events/stream`
+- API: `GET /api/kernel/events`, `POST /api/kernel/events/emit`
+
+**Component 5 — Dead Agent Watchdog** (`wnsp_v7/kernel_watchdog.py`):
+- Background `threading.Thread`, scans every 30s
+- TTL 300s → DEGRADED; 600s → RECLAIMED (channel returned to pool)
+- Core system agents are EXEMPT from reclamation
+- API: `GET /api/kernel/watchdog`, `POST /api/kernel/watchdog/scan`
+
+**Kernel overview:** `GET /api/kernel/status` — single call for all 5 components.
+**Frontend:** `/kernel` (also `/wnsp/kernel`) — 5-tab kernel dashboard.
 
 - **Advanced Systems**:
     - **Coherence Zenith Framework (CZF)**: Non-derivative resolution to the Vacuum Catastrophe. Lambda as First Oscillation, achieving 99.99% coherence through 44 evolutionary self-corrections.
