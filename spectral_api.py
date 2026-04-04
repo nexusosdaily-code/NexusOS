@@ -205,10 +205,10 @@ def get_constants():
 
 @app.route('/api/spectral/capacity', methods=['GET'])
 def get_capacity():
-    wdm_channels      = 256
-    oam_modes         = 8
-    polarization_modes = 2
-    total_channels    = wdm_channels * oam_modes * polarization_modes
+    wdm_channels       = 256   # WDM channels across 380-780nm visible spectrum
+    oam_modes          = 50    # OAM modes per wavelength (ℓ = -50 to +50, excluding 0 pairs)
+    polarization_modes = 2     # H and V polarisation states
+    total_channels     = wdm_channels * oam_modes * polarization_modes  # 25,600
     return jsonify({
         "wdm_channels":           wdm_channels,
         "oam_modes":              oam_modes,
@@ -216,6 +216,7 @@ def get_capacity():
         "total_channels":         total_channels,
         "bits_per_symbol_16qam":  total_channels * 4,
         "theoretical_tbps_at_100gbaud": total_channels * 4 * 100 / 1000,
+        "note": "256 WDM × 50 OAM × 2 polarisation = 25,600 orthogonal channels",
     })
 
 
