@@ -1,0 +1,79 @@
+import heapq
+from collections import defaultdict
+
+class WNSPBus:
+
+    def __init__(self, coordinator):
+        self.coordinator = coordinator
+        self.inboxes = defaultdict(list)
+        self.queue = []
+        self.counter = 0
+        self.route_log = []
+
+    # -----------------------------
+    # send message
+    # -----------------------------
+    def send(self, src, dst, payload, priority=5):
+
+        if src not in self.coordinator.agents:
+            raise ValueError("source not registered")
+
+        if dst not in self.coordinator.agents:
+            raise ValueError("destination not registered")
+
+        msg = WNSPMessage(src, dst, payload, priority)
+
+        heapq.heappush(
+            self.queue,
+            (priority, self.counter, msg)
+        )
+
+        self.counter += 1
+
+    # -----------------------------
+    # scheduler dispatch
+    # -----------------------------
+    def dispatch(self):
+
+        if not self.queue:
+            return None
+
+        _, _, msg = heapq.heappop(self.queue)
+
+        src_ch = self.coordinator.agents[msg.src]
+        dst_ch = self.coordinator.agents[msg.dst]
+
+        self.inboxes[msg.dst].append(msg)
+
+        self.route_log.append({
+            "src": msg.src,
+            "dst": msg.dst,
+            "src_channel": src_ch,
+            "dst_channel": dst_ch,
+            "time": msg.timestamp
+        })
+
+        return msg
+
+    # -----------------------------
+    # receive
+    # -----------------------------
+    def receive(self, agent):
+
+        if agent not in self.inboxes:
+            return []
+
+        msgs = self.inboxes[agent]
+        self.inboxes[agent] = []
+        return msgs
+
+    # -----------------------------
+    # runtime status
+    # -----------------------------
+    def status(self):
+
+        return {
+            "queued": len(self.queue),
+            "agents": len(self.coordinator.agents),
+            "routes": len(self.route_log)
+        }

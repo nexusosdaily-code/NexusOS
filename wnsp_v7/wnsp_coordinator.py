@@ -34,6 +34,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Any
 import heapq
+from collections import defaultdict
 
 TOTAL_WDM = 256
 TOTAL_OAM = 50
@@ -364,3 +365,188 @@ class WNSPCoordinator:
             f"agents={len(self._registry)}, "
             f"channels={len(self._channels_in_use)}/{TOTAL_CHANNELS})"
         )
+
+
+# ─────────────────────────────────────────────────────────────────
+# WNSPMessage — an addressed message in Hilbert space
+# ─────────────────────────────────────────────────────────────────
+
+@dataclass
+class WNSPMessage:
+    """
+    An addressed message routed between two Ψ_channels.
+
+    src  → source agent name
+    dst  → destination agent name
+    payload → any serialisable value
+    priority → 1 (highest) … 10 (lowest), default 5
+    timestamp → creation time (Unix epoch, float)
+    """
+    src:       str
+    dst:       str
+    payload:   Any
+    priority:  int   = 5
+    timestamp: float = field(default_factory=time.time)
+
+    def to_dict(self, src_channel: PsiChannel, dst_channel: PsiChannel) -> dict:
+        return {
+            "src":         self.src,
+            "dst":         self.dst,
+            "payload":     self.payload,
+            "priority":    self.priority,
+            "timestamp":   self.timestamp,
+            "src_channel": src_channel.to_dict(),
+            "dst_channel": dst_channel.to_dict(),
+            "route":       f"{self.src} {src_channel.notation()} → {self.dst} {dst_channel.notation()}",
+        }
+
+
+# ─────────────────────────────────────────────────────────────────
+# WNSPBus — message bus layered on top of the coordinator
+# ─────────────────────────────────────────────────────────────────
+
+class WNSPBus:
+    """
+    Agent-to-agent message bus backed by the WNSP Hilbert channel space.
+
+    Architecture
+    ────────────
+    Agent
+      ↓
+    Message Bus   ← WNSPBus.send()
+      ↓
+    Ψ routing     ← channel lookup via WNSPCoordinator
+      ↓
+    Scheduler     ← heapq priority queue
+      ↓
+    Target inbox  ← WNSPBus.receive()
+
+    Usage
+    ─────
+        coordinator = WNSPCoordinator()
+        coordinator.register_agent("vision_ai")
+        coordinator.register_agent("planner_ai")
+
+        bus = WNSPBus(coordinator)
+        bus.send("vision_ai", "planner_ai", "object detected")
+        msg = bus.dispatch()
+        msgs = bus.receive("planner_ai")
+    """
+
+    def __init__(self, coordinator: WNSPCoordinator):
+        self.coordinator = coordinator
+        # Per-agent inboxes: agent_name → [WNSPMessage, ...]
+        self._inboxes: Dict[str, List[WNSPMessage]] = defaultdict(list)
+        # Min-heap: (priority, counter, WNSPMessage)
+        self._queue: List[tuple] = []
+        self._counter: int = 0
+        self._route_log: List[dict] = []
+
+    # ── Send ───────────────────────────────────────────────────────
+
+    def send(self, src: str, dst: str, payload: Any, priority: int = 5) -> WNSPMessage:
+        """
+        Queue a message from src → dst at the given priority.
+
+        Both agents must be registered in the coordinator.
+        """
+        if src not in self.coordinator._registry:
+            raise ValueError(f"Source agent '{src}' not registered")
+        if dst not in self.coordinator._registry:
+            raise ValueError(f"Destination agent '{dst}' not registered")
+
+        msg = WNSPMessage(src=src, dst=dst, payload=payload, priority=priority)
+        heapq.heappush(self._queue, (priority, self._counter, msg))
+        self._counter += 1
+        return msg
+
+    # ── Dispatch ───────────────────────────────────────────────────
+
+    def dispatch(self) -> Optional[dict]:
+        """
+        Pop the highest-priority message from the queue, deliver it to
+        the destination inbox, and log the Ψ-to-Ψ route.
+
+        Returns a dict with full routing info, or None if queue is empty.
+        """
+        if not self._queue:
+            return None
+
+        _, _, msg = heapq.heappop(self._queue)
+
+        src_ch = self.coordinator._registry[msg.src].channel
+        dst_ch = self.coordinator._registry[msg.dst].channel
+
+        record = msg.to_dict(src_ch, dst_ch)
+
+        self._inboxes[msg.dst].append(msg)
+        self._route_log.append(record)
+
+        return record
+
+    def dispatch_all(self) -> List[dict]:
+        """Drain the entire queue and return all route records."""
+        results = []
+        while self._queue:
+            results.append(self.dispatch())
+        return results
+
+    # ── Receive ────────────────────────────────────────────────────
+
+    def receive(self, agent: str) -> List[dict]:
+        """
+        Drain and return an agent's inbox (destructive read).
+
+        Returns a list of message dicts, oldest first.
+        """
+        if agent not in self._inboxes:
+            return []
+        msgs = list(self._inboxes[agent])
+        self._inboxes[agent] = []
+        src_ch = self.coordinator.get_channel(agent) or PsiChannel(0, 0, 0)
+        # Messages were received *at* this agent's channel
+        return [
+            {
+                "src":      m.src,
+                "dst":      m.dst,
+                "payload":  m.payload,
+                "priority": m.priority,
+                "timestamp": m.timestamp,
+                "src_channel": self.coordinator._registry[m.src].channel.to_dict()
+                               if m.src in self.coordinator._registry else {},
+                "dst_channel": src_ch.to_dict(),
+            }
+            for m in msgs
+        ]
+
+    def inbox_depth(self, agent: str) -> int:
+        """Return the number of unread messages in an agent's inbox."""
+        return len(self._inboxes.get(agent, []))
+
+    # ── Status ─────────────────────────────────────────────────────
+
+    def status(self) -> dict:
+        return {
+            "queued":        len(self._queue),
+            "agents":        len(self.coordinator._registry),
+            "routes":        len(self._route_log),
+            "total_sent":    self._counter,
+            "inbox_totals":  {a: len(msgs) for a, msgs in self._inboxes.items()},
+        }
+
+    def route_log(self, last_n: int = 50) -> List[dict]:
+        """Return the most recent N dispatched route records."""
+        return self._route_log[-last_n:]
+
+    def queue_snapshot(self) -> List[dict]:
+        """Non-destructive view of the current queue (sorted by priority)."""
+        return [
+            {
+                "priority":  priority,
+                "src":       msg.src,
+                "dst":       msg.dst,
+                "payload":   str(msg.payload)[:80],
+                "timestamp": msg.timestamp,
+            }
+            for priority, _, msg in sorted(self._queue)
+        ]

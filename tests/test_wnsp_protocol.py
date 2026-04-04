@@ -450,6 +450,143 @@ def test_coordinator_route_log():
 
 
 # ─────────────────────────────────────────────────────────────────
+# WNSPBus Tests
+# ─────────────────────────────────────────────────────────────────
+
+from wnsp_v7.wnsp_coordinator import WNSPBus, WNSPMessage
+
+
+def test_bus_send_queues_message():
+    c = WNSPCoordinator()
+    c.register_agent("vision_ai")
+    c.register_agent("planner_ai")
+    bus = WNSPBus(c)
+    bus.send("vision_ai", "planner_ai", "object detected")
+    assert bus.status()["queued"] == 1
+    print("✓  bus.send() queues the message")
+
+
+def test_bus_dispatch_delivers_to_inbox():
+    c = WNSPCoordinator()
+    c.register_agent("vision_ai")
+    c.register_agent("planner_ai")
+    bus = WNSPBus(c)
+    bus.send("vision_ai", "planner_ai", "object detected")
+    record = bus.dispatch()
+    assert record is not None
+    assert record["src"] == "vision_ai"
+    assert record["dst"] == "planner_ai"
+    assert record["payload"] == "object detected"
+    assert bus.inbox_depth("planner_ai") == 1
+    print(f"✓  dispatch delivers to inbox: {record['route']}")
+
+
+def test_bus_dispatch_empty_returns_none():
+    c = WNSPCoordinator()
+    bus = WNSPBus(c)
+    result = bus.dispatch()
+    assert result is None
+    print("✓  dispatch() on empty queue returns None")
+
+
+def test_bus_receive_drains_inbox():
+    c = WNSPCoordinator()
+    c.register_agent("vision_ai")
+    c.register_agent("os_kernel")
+    bus = WNSPBus(c)
+    bus.send("vision_ai", "os_kernel", "ping")
+    bus.dispatch()
+    msgs = bus.receive("os_kernel")
+    assert len(msgs) == 1
+    assert msgs[0]["payload"] == "ping"
+    assert bus.inbox_depth("os_kernel") == 0
+    print("✓  receive() drains inbox correctly")
+
+
+def test_bus_priority_order():
+    """Lower priority number is dispatched first."""
+    c = WNSPCoordinator()
+    c.register_agent("a")
+    c.register_agent("b")
+    bus = WNSPBus(c)
+    bus.send("a", "b", "low priority",  priority=8)
+    bus.send("a", "b", "high priority", priority=2)
+    bus.send("a", "b", "mid priority",  priority=5)
+    r1 = bus.dispatch()
+    r2 = bus.dispatch()
+    r3 = bus.dispatch()
+    assert r1["payload"] == "high priority"
+    assert r2["payload"] == "mid priority"
+    assert r3["payload"] == "low priority"
+    print("✓  Bus dispatches in priority order (lowest number first)")
+
+
+def test_bus_route_uses_psi_notation():
+    c = WNSPCoordinator()
+    c.register_agent("speech_ai")
+    c.register_agent("os_kernel")
+    bus = WNSPBus(c)
+    bus.send("speech_ai", "os_kernel", "speak hello")
+    record = bus.dispatch()
+    assert "Ψ(" in record["route"]
+    assert "speech_ai" in record["route"]
+    assert "os_kernel" in record["route"]
+    print(f"✓  Bus route uses Ψ notation: {record['route']}")
+
+
+def test_bus_multi_agent_scenario():
+    """Full scenario: vision → planner, planner → os, speech → os."""
+    c = WNSPCoordinator()
+    for name in ["vision_ai", "planner_ai", "os_kernel", "speech_ai"]:
+        c.register_agent(name)
+
+    bus = WNSPBus(c)
+    bus.send("vision_ai",  "planner_ai", "object detected")
+    bus.send("planner_ai", "os_kernel",  "move forward")
+    bus.send("speech_ai",  "os_kernel",  "speak hello")
+
+    bus.dispatch()
+    bus.dispatch()
+    bus.dispatch()
+
+    planner_msgs = bus.receive("planner_ai")
+    os_msgs      = bus.receive("os_kernel")
+
+    assert len(planner_msgs) == 1
+    assert planner_msgs[0]["payload"] == "object detected"
+    assert len(os_msgs) == 2
+    payloads = {m["payload"] for m in os_msgs}
+    assert "move forward" in payloads
+    assert "speak hello" in payloads
+    print("✓  Multi-agent scenario: all messages delivered correctly")
+
+
+def test_bus_status():
+    c = WNSPCoordinator()
+    c.register_agent("a")
+    c.register_agent("b")
+    bus = WNSPBus(c)
+    bus.send("a", "b", "test")
+    bus.dispatch()
+    s = bus.status()
+    assert s["queued"] == 0
+    assert s["routes"] == 1
+    assert s["total_sent"] == 1
+    print("✓  bus.status() returns correct telemetry")
+
+
+def test_bus_unregistered_raises():
+    c = WNSPCoordinator()
+    bus = WNSPBus(c)
+    try:
+        bus.send("ghost_ai", "nobody", "payload")
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+    print("✓  bus.send() raises ValueError for unregistered agents")
+
+
+# ─────────────────────────────────────────────────────────────────
 # Run
 # ─────────────────────────────────────────────────────────────────
 
@@ -491,6 +628,16 @@ if __name__ == "__main__":
         test_coordinator_status,
         test_psi_channel_flat_index_roundtrip,
         test_coordinator_route_log,
+        # WNSPBus
+        test_bus_send_queues_message,
+        test_bus_dispatch_delivers_to_inbox,
+        test_bus_dispatch_empty_returns_none,
+        test_bus_receive_drains_inbox,
+        test_bus_priority_order,
+        test_bus_route_uses_psi_notation,
+        test_bus_multi_agent_scenario,
+        test_bus_status,
+        test_bus_unregistered_raises,
     ]
 
     passed = 0

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Activity, Radio, Cpu, Zap, CheckCircle, AlertCircle,
   Plus, Trash2, Send, BarChart3, Layers, Lock,
-  Clock, ListOrdered, Terminal, RefreshCw,
+  Clock, ListOrdered, Terminal, RefreshCw, GitBranch, Inbox,
 } from "lucide-react";
 
 const API = (path: string) => path;
@@ -56,7 +56,7 @@ function PsiBadge({ notation }: { notation: string }) {
   );
 }
 
-type Tab = "agents" | "scheduler" | "simulation" | "orthogonality" | "monitor";
+type Tab = "agents" | "bus" | "scheduler" | "simulation" | "orthogonality" | "monitor";
 
 export default function WNSPCoordinator() {
   const qc = useQueryClient();
@@ -67,6 +67,11 @@ export default function WNSPCoordinator() {
   const [simContent, setSimContent]     = useState("Hello Lambda");
   const [schedPayload, setSchedPayload] = useState("");
   const [schedPriority, setSchedPriority] = useState("5");
+  const [busSrc, setBusSrc]             = useState("");
+  const [busDst, setBusDst]             = useState("");
+  const [busPayload, setBusPayload]     = useState("");
+  const [busPriority, setBusPriority]   = useState("5");
+  const [busReceiveAgent, setBusReceiveAgent] = useState("");
   const [activeTab, setActiveTab]       = useState<Tab>("agents");
   const [lastResult, setLastResult]     = useState<any>(null);
 
@@ -133,6 +138,29 @@ export default function WNSPCoordinator() {
   const simMut = useMutation({
     mutationFn: (body: { content: string }) =>
       post("/api/wnsp/se/simulate", body),
+  });
+
+  const busSendMut = useMutation({
+    mutationFn: (body: { src: string; dst: string; payload: string; priority: number }) =>
+      post("/api/wnsp/bus/send", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bus-status"] }),
+  });
+
+  const busDispatchMut = useMutation({
+    mutationFn: () => post("/api/wnsp/bus/dispatch", {}),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["bus-status"] }),
+  });
+
+  const busReceiveMut = useMutation({
+    mutationFn: (body: { agent: string }) =>
+      post("/api/wnsp/bus/receive", body),
+  });
+
+  const { data: busStatus, refetch: refetchBus } = useQuery({
+    queryKey: ["bus-status"],
+    queryFn:  () => get("/api/wnsp/bus/status"),
+    enabled:  activeTab === "bus",
+    refetchInterval: 3000,
   });
 
   /* ── handlers ── */
@@ -232,6 +260,9 @@ export default function WNSPCoordinator() {
         <div className="flex gap-2 flex-wrap">
           <button className={tabClass("agents")}        onClick={() => setActiveTab("agents")}>
             <Layers className="w-3.5 h-3.5 inline mr-1" /> Agents
+          </button>
+          <button className={tabClass("bus")}           onClick={() => setActiveTab("bus")}>
+            <GitBranch className="w-3.5 h-3.5 inline mr-1" /> Message Bus
           </button>
           <button className={tabClass("scheduler")}     onClick={() => setActiveTab("scheduler")}>
             <ListOrdered className="w-3.5 h-3.5 inline mr-1" /> Scheduler
@@ -391,6 +422,245 @@ export default function WNSPCoordinator() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
+
+        {/* ── Message Bus tab ── */}
+        {activeTab === "bus" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* Send panel */}
+            <Card className="bg-gray-900/60 border-gray-700 p-5 space-y-4">
+              <h2 className="text-sm font-bold text-gray-200 flex items-center gap-2">
+                <GitBranch className="w-4 h-4 text-green-400" /> Send Message
+              </h2>
+
+              {/* Architecture strip */}
+              <div className="bg-gray-800/50 rounded-lg p-3 font-mono text-xs text-center space-y-0.5 text-gray-400">
+                {["Agent", "Message Bus", "Ψ routing", "Scheduler queue", "Target agent inbox"].map((s, i, arr) => (
+                  <div key={s}>
+                    <span className={i === 2 ? "text-cyan-300" : i === 4 ? "text-green-300" : "text-gray-300"}>{s}</span>
+                    {i < arr.length - 1 && <div className="text-gray-600">↓</div>}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-400">From (src)</label>
+                  <Input
+                    data-testid="input-bus-src"
+                    value={busSrc}
+                    onChange={e => setBusSrc(e.target.value)}
+                    placeholder="vision_ai"
+                    className="bg-gray-800 border-gray-600 text-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-400">To (dst)</label>
+                  <Input
+                    data-testid="input-bus-dst"
+                    value={busDst}
+                    onChange={e => setBusDst(e.target.value)}
+                    placeholder="planner_ai"
+                    className="bg-gray-800 border-gray-600 text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-gray-400">Payload</label>
+                <Textarea
+                  data-testid="input-bus-payload"
+                  value={busPayload}
+                  onChange={e => setBusPayload(e.target.value)}
+                  placeholder="e.g. object detected, move forward, speak hello"
+                  className="bg-gray-800 border-gray-600 text-white h-16 resize-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-gray-400">Priority (1 = highest)</label>
+                <Input
+                  data-testid="input-bus-priority"
+                  type="number" min="1" max="10"
+                  value={busPriority}
+                  onChange={e => setBusPriority(e.target.value)}
+                  className="bg-gray-800 border-gray-600 text-white w-24"
+                />
+              </div>
+
+              <Button
+                data-testid="button-bus-send"
+                onClick={() => busSendMut.mutate({
+                  src: busSrc.trim(), dst: busDst.trim(),
+                  payload: busPayload.trim(),
+                  priority: parseInt(busPriority) || 5,
+                })}
+                disabled={!busSrc.trim() || !busDst.trim() || !busPayload.trim() || busSendMut.isPending}
+                className="w-full bg-green-700 hover:bg-green-600 text-white"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                {busSendMut.isPending ? "Queuing…" : "Send via Bus"}
+              </Button>
+
+              {busSendMut.data && !busSendMut.data.error && (
+                <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg text-xs space-y-1">
+                  <div className="text-green-200 font-mono">{busSendMut.data.route}</div>
+                  <div className="text-gray-400">Payload: {busSendMut.data.payload}</div>
+                  <div className="text-gray-500">Queue depth: {busSendMut.data.queue_depth}</div>
+                </div>
+              )}
+              {busSendMut.data?.error && (
+                <div className="p-2 bg-red-900/20 border border-red-500/30 rounded text-xs text-red-300">
+                  {busSendMut.data.error}
+                </div>
+              )}
+
+              {/* Dispatch + Receive */}
+              <div className="pt-2 border-t border-gray-700 space-y-3">
+                <h3 className="text-xs font-bold text-gray-300 flex items-center gap-2">
+                  <Zap className="w-3 h-3 text-yellow-400" /> Dispatch &amp; Receive
+                </h3>
+
+                <Button
+                  data-testid="button-bus-dispatch"
+                  onClick={() => busDispatchMut.mutate()}
+                  disabled={busDispatchMut.isPending || (busStatus?.queued ?? 0) === 0}
+                  className="w-full bg-yellow-700 hover:bg-yellow-600 text-white"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  {busDispatchMut.isPending ? "Dispatching…" : `Dispatch Next (${busStatus?.queued ?? "?"})`}
+                </Button>
+
+                {busDispatchMut.data?.status === "dispatched" && (
+                  <div className="p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg text-xs space-y-1">
+                    <div className="text-yellow-200 font-mono">{busDispatchMut.data.route}</div>
+                    <div className="text-gray-400">Payload: {String(busDispatchMut.data.payload)}</div>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Input
+                    data-testid="input-bus-receive-agent"
+                    value={busReceiveAgent}
+                    onChange={e => setBusReceiveAgent(e.target.value)}
+                    placeholder="Agent to check inbox…"
+                    className="bg-gray-800 border-gray-600 text-white flex-1"
+                  />
+                  <Button
+                    data-testid="button-bus-receive"
+                    onClick={() => busReceiveMut.mutate({ agent: busReceiveAgent.trim() })}
+                    disabled={!busReceiveAgent.trim() || busReceiveMut.isPending}
+                    variant="outline"
+                    className="border-gray-600 text-gray-300 hover:text-white"
+                  >
+                    <Inbox className="w-4 h-4 mr-1" />
+                    Receive
+                  </Button>
+                </div>
+
+                {busReceiveMut.data && (
+                  <div className="p-3 bg-gray-800/60 rounded-lg text-xs space-y-2">
+                    <div className="text-gray-300 font-medium flex items-center gap-2">
+                      <Inbox className="w-3 h-3 text-cyan-400" />
+                      {busReceiveMut.data.agent} — {busReceiveMut.data.count ?? 0} message{(busReceiveMut.data.count ?? 0) !== 1 ? "s" : ""}
+                      {busReceiveMut.data.channel?.notation && (
+                        <PsiBadge notation={busReceiveMut.data.channel.notation} />
+                      )}
+                    </div>
+                    {busReceiveMut.data.messages?.length === 0 && (
+                      <div className="text-gray-500">Inbox empty.</div>
+                    )}
+                    {busReceiveMut.data.messages?.map((m: any, i: number) => (
+                      <div key={i} className="border border-gray-700 rounded p-2 space-y-1">
+                        <div className="text-green-300 font-mono text-xs">
+                          {m.src_channel?.notation} → {m.dst_channel?.notation}
+                        </div>
+                        <div className="text-gray-200">{String(m.payload)}</div>
+                        <div className="text-gray-500">from {m.src} · priority {m.priority}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Bus status + route log */}
+            <Card className="bg-gray-900/60 border-gray-700 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold text-gray-200 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-green-400" /> Bus Status
+                </h2>
+                <Button onClick={() => refetchBus()} variant="outline"
+                  className="border-gray-600 text-gray-300 hover:text-white h-7 text-xs">
+                  <RefreshCw className="w-3 h-3 mr-1" /> Refresh
+                </Button>
+              </div>
+
+              {busStatus && (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: "Queued",  value: busStatus.queued,       color: "text-yellow-300" },
+                      { label: "Routes",  value: busStatus.routes,       color: "text-cyan-300" },
+                      { label: "Sent",    value: busStatus.total_sent,   color: "text-green-300" },
+                    ].map(s => (
+                      <div key={s.label} className="p-2 bg-gray-800/50 rounded text-center">
+                        <div className="text-xs text-gray-400">{s.label}</div>
+                        <div className={`text-xl font-bold ${s.color}`}>{s.value ?? 0}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Queue snapshot */}
+                  {busStatus.queue?.length > 0 && (
+                    <div>
+                      <div className="text-xs text-gray-400 mb-2">Pending Queue</div>
+                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                        {busStatus.queue.map((item: any, i: number) => (
+                          <div key={i} className="flex items-center gap-2 text-xs p-2 bg-gray-800/40 rounded">
+                            <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30 text-xs w-6 justify-center">
+                              {item.priority}
+                            </Badge>
+                            <span className="text-gray-400">{item.src} → {item.dst}</span>
+                            <span className="text-gray-300 truncate flex-1">{item.payload}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Route log */}
+                  <div>
+                    <div className="text-xs text-gray-400 mb-2">Route Log</div>
+                    {busStatus.route_log?.length === 0 && (
+                      <div className="text-gray-500 text-xs text-center py-4">
+                        No dispatched messages yet.
+                      </div>
+                    )}
+                    <div className="space-y-2 max-h-[340px] overflow-y-auto font-mono">
+                      {[...(busStatus.route_log ?? [])].reverse().map((r: any, i: number) => (
+                        <div key={i} data-testid={`bus-route-${i}`}
+                          className="p-2 bg-gray-800/40 rounded border border-gray-700/50 text-xs space-y-1">
+                          <div className="text-green-300">{r.route}</div>
+                          <div className="text-gray-400 truncate">{String(r.payload)}</div>
+                          <div className="text-gray-600">
+                            {new Date(r.timestamp * 1000).toLocaleTimeString()} · p{r.priority}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {!busStatus && (
+                <div className="text-gray-500 text-sm text-center py-8">
+                  Send a message to see bus activity here.
                 </div>
               )}
             </Card>

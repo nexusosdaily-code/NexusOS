@@ -475,10 +475,11 @@ def simulator_reset():
 # and OS processes onto the 25,600-dimensional Hilbert space.
 # ─────────────────────────────────────────────────────────────────
 
-from wnsp_v7.wnsp_coordinator import WNSPCoordinator
+from wnsp_v7.wnsp_coordinator import WNSPCoordinator, WNSPBus
 
-# Singleton coordinator — persists for the lifetime of the process
+# Singletons — persist for the lifetime of the process
 _coordinator = WNSPCoordinator()
+_bus = WNSPBus(_coordinator)
 
 
 @app.route('/api/wnsp/agent/allocate', methods=['POST'])
@@ -629,6 +630,96 @@ def agent_log():
     return jsonify({
         "log":   _coordinator.route_log(last_n),
         "total": len(_coordinator._route_log),
+    })
+
+
+# ─────────────────────────────────────────────────────────────────
+# WNSP Message Bus
+# Agent → Message Bus → Ψ routing → Scheduler queue → Target inbox
+# ─────────────────────────────────────────────────────────────────
+
+@app.route('/api/wnsp/bus/send', methods=['POST'])
+def bus_send():
+    """Queue a message from one agent to another via the Ψ message bus."""
+    data     = request.get_json() or {}
+    src      = data.get('src', '').strip()
+    dst      = data.get('dst', '').strip()
+    payload  = data.get('payload', '')
+    priority = int(data.get('priority', 5))
+
+    if not src or not dst:
+        return jsonify({"error": "Missing 'src' or 'dst' field"}), 400
+    if not payload:
+        return jsonify({"error": "Missing 'payload' field"}), 400
+    if not (1 <= priority <= 10):
+        return jsonify({"error": "priority must be 1–10"}), 400
+
+    try:
+        # Auto-register agents if needed
+        _coordinator.register_agent(src)
+        _coordinator.register_agent(dst)
+
+        _bus.send(src, dst, payload, priority)
+        snap = _bus.status()
+        src_ch = _coordinator.get_channel(src)
+        dst_ch = _coordinator.get_channel(dst)
+        return jsonify({
+            "status":    "queued",
+            "src":       src,
+            "dst":       dst,
+            "payload":   payload,
+            "priority":  priority,
+            "route":     f"{src} {src_ch.notation()} → {dst} {dst_ch.notation()}",
+            "queue_depth": snap["queued"],
+        })
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/wnsp/bus/dispatch', methods=['POST'])
+def bus_dispatch():
+    """Pop and deliver the highest-priority queued message."""
+    try:
+        record = _bus.dispatch()
+        if record is None:
+            return jsonify({"status": "empty", "message": "No messages in bus queue"})
+        return jsonify({"status": "dispatched", **record})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/wnsp/bus/receive', methods=['POST'])
+def bus_receive():
+    """Drain an agent's inbox and return all unread messages."""
+    data  = request.get_json() or {}
+    agent = data.get('agent', '').strip()
+
+    if not agent:
+        return jsonify({"error": "Missing 'agent' field"}), 400
+
+    try:
+        msgs = _bus.receive(agent)
+        return jsonify({
+            "agent":   agent,
+            "channel": _coordinator.get_channel(agent).to_dict()
+                       if _coordinator.get_channel(agent) else {},
+            "count":   len(msgs),
+            "messages": msgs,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/wnsp/bus/status', methods=['GET'])
+def bus_status():
+    """Return full bus status: queue snapshot, route log, inbox depths."""
+    last_n = int(request.args.get('n', 30))
+    return jsonify({
+        **_bus.status(),
+        "queue":     _bus.queue_snapshot(),
+        "route_log": _bus.route_log(last_n),
     })
 
 
