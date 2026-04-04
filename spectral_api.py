@@ -471,64 +471,19 @@ def simulator_reset():
 
 # ─────────────────────────────────────────────────────────────────
 # AI/OS Channel Coordination Layer
-# Each AI agent receives a unique, deterministically allocated
-# Ψ_channel from the 25,600-dimensional Hilbert space.
-# Orthogonality guarantees agents cannot interfere with each other.
+# Backed by WNSPCoordinator — the formal runtime for mapping agents
+# and OS processes onto the 25,600-dimensional Hilbert space.
 # ─────────────────────────────────────────────────────────────────
 
-import hashlib as _hashlib
+from wnsp_v7.wnsp_coordinator import WNSPCoordinator
 
-_agent_channel_registry: dict = {}
-
-
-def _channel_index_to_coords(index: int):
-    """Flat channel index → (wdm_i, oam_j, pol_k)."""
-    pol_k = index % HILBERT_DIM_POL
-    rem   = index // HILBERT_DIM_POL
-    oam_j = rem % HILBERT_DIM_OAM
-    wdm_i = rem // HILBERT_DIM_OAM
-    return wdm_i, oam_j, pol_k
-
-
-def _coords_to_channel_index(wdm_i: int, oam_j: int, pol_k: int) -> int:
-    """(wdm_i, oam_j, pol_k) → flat channel index."""
-    return (wdm_i * HILBERT_DIM_OAM + oam_j) * HILBERT_DIM_POL + pol_k
-
-
-def _pick_channel(agent_id: str) -> int:
-    """Deterministic, collision-free channel allocation."""
-    h       = int(_hashlib.sha256(agent_id.encode()).hexdigest(), 16)
-    base    = h % HILBERT_DIM_TOTAL
-    occupied = {v['channel_index'] for v in _agent_channel_registry.values()}
-    idx = base
-    while idx in occupied:
-        idx = (idx + 1) % HILBERT_DIM_TOTAL
-    return idx
-
-
-def _build_entry(agent_id: str, idx: int, intent: str) -> dict:
-    wdm_i, oam_j, pol_k = _channel_index_to_coords(idx)
-    wl_nm = VISIBLE_MIN_NM + (wdm_i / max(HILBERT_DIM_WDM - 1, 1)) * (VISIBLE_MAX_NM - VISIBLE_MIN_NM)
-    freq  = SPEED_OF_LIGHT / (wl_nm * 1e-9)
-    pol   = "H" if pol_k == 0 else "V"
-    return {
-        "channel_index": idx,
-        "wdm_i":         wdm_i,
-        "oam_j":         oam_j,
-        "pol_k":         pol_k,
-        "polarisation":  pol,
-        "wavelength_nm": wl_nm,
-        "frequency_hz":  freq,
-        "intent":        intent,
-        "allocated_at":  time.time(),
-        "frame_count":   0,
-        "channel_basis": f"Ψ_{{{idx}}} = |λ_{wdm_i}⟩ ⊗ |OAM_{oam_j}⟩ ⊗ |Pol_{pol}⟩",
-    }
+# Singleton coordinator — persists for the lifetime of the process
+_coordinator = WNSPCoordinator()
 
 
 @app.route('/api/wnsp/agent/allocate', methods=['POST'])
 def agent_allocate():
-    """Allocate a unique Ψ_channel for an AI agent."""
+    """Register an agent and allocate its unique Ψ_channel."""
     data     = request.get_json() or {}
     agent_id = data.get('agent_id', '').strip()
     intent   = data.get('intent', 'general')
@@ -537,21 +492,25 @@ def agent_allocate():
         return jsonify({"error": "Missing 'agent_id' field"}), 400
 
     try:
-        if agent_id in _agent_channel_registry:
-            entry = _agent_channel_registry[agent_id]
-            return jsonify({"status": "existing", "agent_id": agent_id, **entry})
-
-        idx   = _pick_channel(agent_id)
-        entry = _build_entry(agent_id, idx, intent)
-        _agent_channel_registry[agent_id] = entry
-        return jsonify({"status": "allocated", "agent_id": agent_id, **entry})
+        already = agent_id in _coordinator._registry
+        channel = _coordinator.register_agent(agent_id, intent)
+        stats   = _coordinator.agent_stats(agent_id)
+        return jsonify({
+            "status":   "existing" if already else "allocated",
+            "agent_id": agent_id,
+            "display":  f"{agent_id} → {channel.notation()}",
+            **stats["channel"],
+            "intent":         stats["intent"],
+            "registered_at":  stats["registered_at"],
+            "routed_count":   stats["routed_count"],
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/wnsp/agent/map', methods=['POST'])
 def agent_map():
-    """Map an AI instruction through CE→SE and route it to the agent's Ψ_channel."""
+    """Route an AI instruction through CE→SE and bind it to the agent's Ψ_channel."""
     data        = request.get_json() or {}
     agent_id    = data.get('agent_id', '').strip()
     instruction = data.get('instruction', '').strip()
@@ -562,61 +521,114 @@ def agent_map():
         return jsonify({"error": "Missing 'instruction' field"}), 400
 
     try:
-        if agent_id not in _agent_channel_registry:
-            idx   = _pick_channel(agent_id)
-            entry = _build_entry(agent_id, idx, 'instruction')
-            _agent_channel_registry[agent_id] = entry
+        # Auto-register if needed
+        _coordinator.register_agent(agent_id, 'instruction')
 
-        channel = _agent_channel_registry[agent_id]
+        # Route through coordinator
+        record = _coordinator.route(agent_id, instruction)
 
+        # Run instruction through full CE→SE stack for frame data
         stack  = WNSPProtocolStack()
         result = stack.transmit(text=instruction, sender=agent_id, recipient='os')
-        channel['frame_count'] += 1
-
         frames = result.get('layers', {}).get('se', {}).get('frames', [])
+
         return jsonify({
-            "status":        "mapped",
-            "agent_id":      agent_id,
-            "instruction":   instruction,
-            "channel":       channel,
-            "frame_count":   len(frames),
+            "status":         "mapped",
+            "agent_id":       agent_id,
+            "instruction":    instruction,
+            "display":        record["display"],
+            "channel":        record["channel"],
+            "frame_count":    len(frames),
             "frames_preview": frames[:5],
-            "orthogonality": "⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j",
+            "orthogonality":  "⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j",
+            "timestamp":      record["timestamp"],
         })
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/wnsp/agent/status', methods=['GET'])
 def agent_status():
-    """Return all currently allocated agent channels."""
+    """Return coordinator status and all allocated agent channels."""
+    status = _coordinator.status()
+    agents = _coordinator.all_agent_stats()
     return jsonify({
-        "total_channels":    HILBERT_DIM_TOTAL,
-        "occupied_channels": len(_agent_channel_registry),
-        "available_channels": HILBERT_DIM_TOTAL - len(_agent_channel_registry),
-        "utilisation_pct":   round(len(_agent_channel_registry) / HILBERT_DIM_TOTAL * 100, 6),
-        "orthogonality":     "⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j",
-        "agents":            dict(_agent_channel_registry),
+        **status,
+        "total_channels":    status["capacity"],
+        "occupied_channels": status["channels_used"],
+        "available_channels": status["capacity"] - status["channels_used"],
+        "agents": agents,
     })
 
 
 @app.route('/api/wnsp/agent/release', methods=['POST'])
 def agent_release():
-    """Release an agent's allocated channel."""
+    """Release an agent's allocated Ψ_channel back to the pool."""
     data     = request.get_json() or {}
     agent_id = data.get('agent_id', '').strip()
 
     if not agent_id:
         return jsonify({"error": "Missing 'agent_id' field"}), 400
-    if agent_id not in _agent_channel_registry:
+
+    stats = _coordinator.agent_stats(agent_id)
+    if stats is None:
         return jsonify({"error": f"Agent '{agent_id}' not found"}), 404
 
-    released = _agent_channel_registry.pop(agent_id)
+    channel_notation = stats["channel"]["notation"]
+    _coordinator.unregister_agent(agent_id)
     return jsonify({
         "status":           "released",
         "agent_id":         agent_id,
-        "channel_index":    released['channel_index'],
-        "remaining_agents": len(_agent_channel_registry),
+        "channel":          channel_notation,
+        "remaining_agents": len(_coordinator._registry),
+    })
+
+
+@app.route('/api/wnsp/agent/schedule', methods=['POST'])
+def agent_schedule():
+    """Add an instruction to the coordinator's priority queue."""
+    data        = request.get_json() or {}
+    agent_id    = data.get('agent_id', '').strip()
+    payload     = data.get('payload', '')
+    priority    = int(data.get('priority', 5))
+    intent      = data.get('intent', '')
+
+    if not agent_id or not payload:
+        return jsonify({"error": "Missing 'agent_id' or 'payload' field"}), 400
+
+    try:
+        depth = _coordinator.schedule(agent_id, payload, priority=priority, intent=intent)
+        return jsonify({
+            "status":      "scheduled",
+            "agent_id":    agent_id,
+            "priority":    priority,
+            "queue_depth": depth,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/wnsp/agent/dispatch', methods=['POST'])
+def agent_dispatch():
+    """Dispatch the next highest-priority instruction from the queue."""
+    try:
+        record = _coordinator.dispatch_next()
+        if record is None:
+            return jsonify({"status": "empty", "message": "No items in schedule queue"})
+        return jsonify({"status": "dispatched", **record})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/wnsp/agent/log', methods=['GET'])
+def agent_log():
+    """Return the most recent routing log entries (Runtime Monitor)."""
+    last_n = int(request.args.get('n', 50))
+    return jsonify({
+        "log":   _coordinator.route_log(last_n),
+        "total": len(_coordinator._route_log),
     })
 
 

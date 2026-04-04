@@ -19,7 +19,7 @@ import {
   Layers,
   BookOpen,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
 } from "lucide-react";
 
 const DOCS_SECTIONS = {
@@ -40,7 +40,7 @@ Where:
 - A(t) = amplitude envelope  
 - φ(t) = phase evolution
 - ℓ = orbital angular momentum index
-- s = polarization/spin state`
+- s = polarization/spin state`,
       },
       {
         heading: "Master Equation",
@@ -49,7 +49,7 @@ Where:
 This governs all energy requirements for Lambda mode operations:
 - h·ν·I(λ) = base photon energy × intensity
 - α·||K̂||² = phase curvature cost
-- β·O(L̂) = orbital complexity cost`
+- β·O(L̂) = orbital complexity cost`,
       },
       {
         heading: "8 Lambda Gate Primitives",
@@ -83,7 +83,7 @@ This governs all energy requirements for Lambda mode operations:
 
 8. **Stabilizer D(τ)** — Active feedback locking
    - Maintains coherence for duration τ
-   - Used for: storage, memory operations`
+   - Used for: storage, memory operations`,
       },
       {
         heading: "CE-1 Protocol (Coherence Engineering)",
@@ -102,9 +102,9 @@ This governs all energy requirements for Lambda mode operations:
 **Non-Dominance Rules:**
 - No single node > 33% of total Lambda mass
 - Prevents concentration of power
-- Constitutional enforcement at substrate level`
-      }
-    ]
+- Constitutional enforcement at substrate level`,
+      },
+    ],
   },
   wascii: {
     title: "WNSP Protocol — Two-Layer Standard",
@@ -125,7 +125,7 @@ Spectral physics engine. Implements the WNSP encoding standards, K1 Orchestratio
 The Node.js server acts as a secure gateway. Every WNSP protocol call from the frontend is rate-limited, logged, and proxied to the Python engine. The Python engine does the physics and returns structured frames. Neither runtime reaches into the other's domain.
 
 **Protocol Standard:** WNSP/7.1
-**License:** AGPL-3.0 (companies must contribute back to community)`
+**License:** AGPL-3.0 (companies must contribute back to community)`,
       },
       {
         heading: "WNSP-CE v1.0 — Character Encoding Standard (Layer 1)",
@@ -146,7 +146,7 @@ The Node.js server acts as a secure gateway. Every WNSP protocol call from the f
 - 'λ' → ordinal 955 % 256 = 187 → normalised 0.733 → CE token
 
 **API Endpoint:** POST /api/wnsp/ce/encode
-**Single character:** POST /api/wnsp/ce/char`
+**Single character:** POST /api/wnsp/ce/char`,
       },
       {
         heading: "WNSP-SE v1.0 — Spectral Encoding Standard (Layer 2)",
@@ -167,7 +167,7 @@ Frame = (λ₁ → λ₂) oscillation, achieving ≥ 2 chars per photon particle
 **Efficiency:** 2.0 characters per frame (baseline)
 
 **API Endpoint:** POST /api/wnsp/se/encode (accepts CE token stream)
-**Full stack:** POST /api/wnsp/transmit (CE → SE in one call)`
+**Full stack:** POST /api/wnsp/transmit (CE → SE in one call)`,
       },
       {
         heading: "Hilbert Space Channel Model",
@@ -189,7 +189,7 @@ dim(H) = 256 × 50 × 2 = 25,600
 **Orthogonality guarantee:**
 ⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j
 
-All 25,600 channels are simultaneously usable without interference. This is not an engineering approximation — it is a mathematical guarantee from the tensor product structure of the Hilbert space.`
+All 25,600 channels are simultaneously usable without interference. This is not an engineering approximation — it is a mathematical guarantee from the tensor product structure of the Hilbert space.`,
       },
       {
         heading: "Handoff Point — CE to SE",
@@ -209,7 +209,7 @@ All 25,600 channels are simultaneously usable without interference. This is not 
   summary: { characters, ce_tokens, se_frames, total_mass_kg, efficiency }
 }
 
-**API:** GET /api/wnsp/protocol — returns full spec of both standards`
+**API:** GET /api/wnsp/protocol — returns full spec of both standards`,
       },
       {
         heading: "AI/OS Channel Coordination Layer",
@@ -235,7 +235,7 @@ Any AI system command is run through the full WNSP stack (CE tokenisation → SE
 - GET  /api/wnsp/agent/status  — list all allocated channels + Hilbert utilisation
 - POST /api/wnsp/agent/release — return channel to the pool
 
-**Live interface:** /wnsp/coordinator — allocate agents, map instructions, inspect Hilbert occupancy in real time`
+**Live interface:** /wnsp/coordinator — allocate agents, map instructions, inspect Hilbert occupancy in real time`,
       },
       {
         heading: "SE Frame Simulation",
@@ -262,7 +262,7 @@ Any AI system command is run through the full WNSP stack (CE tokenisation → SE
 **Wavelength strip:** The coordinator page renders a colour-coded strip showing each frame's position in the visible spectrum, giving an immediate visual read of the spectral spread.
 
 **Endpoint:** POST /api/wnsp/se/simulate — returns full occupation table + energy totals + orthogonality proof
-**Orthogonality proof:** GET /api/wnsp/se/orthogonality — samples 100 of 25,600 channels, proves unique (wdm, oam, pol) triplets`
+**Orthogonality proof:** GET /api/wnsp/se/orthogonality — samples 100 of 25,600 channels, proves unique (wdm, oam, pol) triplets`,
       },
       {
         heading: "Test Suite — CI Protocol Verification",
@@ -310,9 +310,9 @@ Packing Efficiency
 **Run:**
 python tests/test_wnsp_protocol.py
 
-**Result: 23 passed, 0 failed**`
-      }
-    ]
+**Result: 23 passed, 0 failed**`,
+      },
+    ],
   },
   consensus: {
     title: "Proof of Spectrum Consensus",
@@ -327,7 +327,7 @@ python tests/test_wnsp_protocol.py
 "Just as you cannot create white light with only one wavelength, you cannot create a valid block without multiple spectral regions represented."
 
 **Attack Resistance:**
-An attacker must control validators in ALL 6 spectral bands simultaneously - exponentially harder than controlling 51% of one resource.`
+An attacker must control validators in ALL 6 spectral bands simultaneously - exponentially harder than controlling 51% of one resource.`,
       },
       {
         heading: "Spectral Regions",
@@ -338,7 +338,7 @@ An attacker must control validators in ALL 6 spectral bands simultaneously - exp
 | Green  | 495-570nm  | 10,000+ NXT    |
 | Yellow | 570-590nm  | 5,000+ NXT     |
 | Orange | 590-620nm  | 2,000+ NXT     |
-| Red    | 620-750nm  | 1,000+ NXT     |`
+| Red    | 620-750nm  | 1,000+ NXT     |`,
       },
       {
         heading: "Wave Interference Validation",
@@ -353,9 +353,9 @@ A₁sin(ωt) + A₂sin(ωt+π) = (A₁-A₂)sin(ωt)
 Result: Cancelled signal → Block INVALID
 
 **Consensus Threshold:**
-Block requires signatures from ≥5 of 6 spectral regions (83% spectral coverage).`
-      }
-    ]
+Block requires signatures from ≥5 of 6 spectral regions (83% spectral coverage).`,
+      },
+    ],
   },
   economics: {
     title: "NXT Token Economics",
@@ -370,7 +370,7 @@ Block requires signatures from ≥5 of 6 spectral regions (83% spectral coverage
 
 **Initial Distribution:**
 - New user registration: 500,000,000 units (5 NXT)
-- Energy-backed via Lambda mass`
+- Energy-backed via Lambda mass`,
       },
       {
         heading: "Physics-Based Transaction Fees",
@@ -384,7 +384,7 @@ Where:
 - c = 299,792,458 m/s (speed of light)
 - λ = transaction wavelength (derived from content)
 
-**Result:** Fees are proportional to information complexity, not arbitrary gas prices.`
+**Result:** Fees are proportional to information complexity, not arbitrary gas prices.`,
       },
       {
         heading: "Lambda Mass Valuation",
@@ -397,9 +397,9 @@ This means:
 - Value has physical mass-equivalent
 - Cannot be created from nothing
 - Conservation laws apply to economics
-- Inflation is physically impossible`
-      }
-    ]
+- Inflation is physically impossible`,
+      },
+    ],
   },
   bhls: {
     title: "BHLS Floor System",
@@ -419,7 +419,7 @@ This means:
 4. Transportation (100 NXT)
 5. Communication (100 NXT)
 6. Education (50 NXT)
-7. Emergency Reserve (50 NXT)`
+7. Emergency Reserve (50 NXT)`,
       },
       {
         heading: "Constitutional Protection",
@@ -431,7 +431,7 @@ This means:
 **Enforcement:**
 - Substrate rejects transactions violating BHLS
 - Cannot be overridden by governance
-- Hardcoded into Lambda Gate operations`
+- Hardcoded into Lambda Gate operations`,
       },
       {
         heading: "Funding Mechanism",
@@ -447,9 +447,9 @@ This means:
    - Recovered from dormant accounts
 
 4. **Governance Allocation** (10%)
-   - Voted by Sigma consensus`
-      }
-    ]
+   - Voted by Sigma consensus`,
+      },
+    ],
   },
   governance: {
     title: "Planetary Governance",
@@ -468,7 +468,7 @@ This means:
 | Regional    | 700nm      | 0.4       | Sub-national        |
 | Municipal   | 800nm      | 0.2       | Cities              |
 | Local       | 900nm      | 0.1       | Neighborhoods       |
-| Individual  | 1000nm     | 0.05      | Personal sovereignty|`
+| Individual  | 1000nm     | 0.05      | Personal sovereignty|`,
       },
       {
         heading: "Constitutional Articles",
@@ -485,7 +485,7 @@ Governance proposals require energy escrow (skin in game).
 All decisions require multi-band representation.
 
 **C-0005: Physics Supremacy**
-Laws must be physically valid (Maxwell-compliant).`
+Laws must be physically valid (Maxwell-compliant).`,
       },
       {
         heading: "Sigma Voting",
@@ -501,9 +501,9 @@ Where:
 **Result:**
 - Aligned voters (cos²≈1) have full weight
 - Misaligned voters (cos²≈0) have reduced weight
-- Natural consensus emergence through interference`
-      }
-    ]
+- Natural consensus emergence through interference`,
+      },
+    ],
   },
   infrastructure: {
     title: "K1 Infrastructure",
@@ -522,7 +522,7 @@ Where:
 | Resource Orchestration | 0.85    | ✅ Complete |
 | Planetary Governance   | 0.90    | ✅ Complete |
 | Planetary Resonance    | 0.95    | ✅ Complete |
-| Type I Achieved        | 1.00    | ⏳ Next     |`
+| Type I Achieved        | 1.00    | ⏳ Next     |`,
       },
       {
         heading: "Photonic Computing",
@@ -538,7 +538,7 @@ Where:
 Store data in orbital angular momentum modes (65+ channels per wavelength).
 
 **Wavelength-Division Computing:**
-Parallel computation across spectral channels.`
+Parallel computation across spectral channels.`,
       },
       {
         heading: "Planetary Communications",
@@ -553,7 +553,7 @@ Parallel computation across spectral channels.`
 **Physics:**
 - Friis transmission equation
 - Shannon capacity limits
-- Atmospheric attenuation models`
+- Atmospheric attenuation models`,
       },
       {
         heading: "Planetary Resonance",
@@ -570,9 +570,9 @@ Fundamental: 7.83 Hz
 - Ionospheric Sq currents
 - Tidal electromagnetic effects
 
-**Target:** 5×10¹⁶ watts (penultimate step to Type I)`
-      }
-    ]
+**Target:** 5×10¹⁶ watts (penultimate step to Type I)`,
+      },
+    ],
   },
   hardware: {
     title: "Hardware Control Layer",
@@ -595,7 +595,7 @@ Fundamental: 7.83 Hz
 3. Match impedance to Z₀ = 376.73Ω
 4. Establish 90° quadrature
 5. Initiate gravity de-correlation
-6. Achieve ZERO-G envelope (ALP < 0.0001)`
+6. Achieve ZERO-G envelope (ALP < 0.0001)`,
       },
       {
         heading: "Nexus Kernel API",
@@ -619,7 +619,7 @@ Fundamental: 7.83 Hz
 
 **ALP Sensing:**
 \`read_alp()\` - Read axion-like particle density
-\`calibrate_alp()\` - Calibrate ALP baseline`
+\`calibrate_alp()\` - Calibrate ALP baseline`,
       },
       {
         heading: "ZERO-G State Achievement",
@@ -637,9 +637,9 @@ When phase alignment reaches Golden Angle and impedance matches free space (Z₀
 
 **Equation:**
 ALP(t) = ALP₀ × e^(-t/τ) × cos(φ - 137.5°)
-As φ → 137.5° and Z → 377Ω, ALP → 0`
-      }
-    ]
+As φ → 137.5° and Z → 377Ω, ALP → 0`,
+      },
+    ],
   },
   simulators: {
     title: "Energy Simulators",
@@ -666,7 +666,7 @@ Where R = 6.371×10⁶ m (Earth radius)
 **Integration:**
 - Real-time amplitude visualization
 - K1 Orchestration sync capability
-- Power output calculation in watts`
+- Power output calculation in watts`,
       },
       {
         heading: "Vacuum Resonance Simulator (555 THz)",
@@ -687,7 +687,7 @@ E₀ = 1.839×10⁻¹⁹ J per oscillation
 
 **Cold Power Extraction:**
 P = E₀ × (Z/Z₀) × CZC⁴⁴ × N_cavities
-Where Z₀ = 376.73Ω, CZC = 0.9999`
+Where Z₀ = 376.73Ω, CZC = 0.9999`,
       },
       {
         heading: "Vacuum Field Topology",
@@ -709,9 +709,9 @@ CZC⁴⁴ = (0.9999)⁴⁴ = 0.9956 (99.56% coherence)
 
 **Output Units:**
 zW → fW → pW (zeptowatts to picowatts)
-Scales with impedance match quality`
-      }
-    ]
+Scales with impedance match quality`,
+      },
+    ],
   },
   massless: {
     title: "Massless Technologies",
@@ -738,7 +738,7 @@ Photons carry energy (E = hf) without rest mass.
 
 **First Oscillation:**
 f₀ = 555 THz
-Λ₀ = hf₀/c² = 4.09×10⁻³⁶ kg`
+Λ₀ = hf₀/c² = 4.09×10⁻³⁶ kg`,
       },
       {
         heading: "Massless Technology Categories",
@@ -751,7 +751,7 @@ f₀ = 555 THz
 | Gravitational | Gravity De-correlation | 0.01% | Demonstrated |
 | Gravitational | 144-Turn Bifilar Resonator | 0.1% | Demonstrated |
 | Information | OAM Qubit Registers | 0 | Theoretical |
-| Information | Lambda Computing Substrate | 0 | Simulated |`
+| Information | Lambda Computing Substrate | 0 | Simulated |`,
       },
       {
         heading: "Sync Coordinates System",
@@ -774,9 +774,9 @@ When enabled, all technologies phase-lock to a common reference oscillator. The 
 
 **Coherence Formula:**
 C_total = Π(C_i) for all i in locked_set
-Where C_i = coherence of technology i`
-      }
-    ]
+Where C_i = coherence of technology i`,
+      },
+    ],
   },
   catchBasin: {
     title: "CZC Catch Basin",
@@ -799,7 +799,7 @@ CZC(n) = (0.9999)ⁿ
 | 44         | 99.56%    | Full CZC⁴⁴ |
 
 **Physical Meaning:**
-Each iteration filters noise while preserving signal. After 44 self-corrections, the system achieves maximum coherence within numerical precision limits.`
+Each iteration filters noise while preserving signal. After 44 self-corrections, the system achieves maximum coherence within numerical precision limits.`,
       },
       {
         heading: "Catch Basin Mechanics",
@@ -821,7 +821,7 @@ Each iteration filters noise while preserving signal. After 44 self-corrections,
 
 **Entropy Equation:**
 S = -Σ pᵢ log₂(pᵢ)
-As coherence → 1, entropy → 0`
+As coherence → 1, entropy → 0`,
       },
       {
         heading: "44 Evolutionary Self-Corrections",
@@ -840,7 +840,7 @@ As coherence → 1, entropy → 0`
 - Impedance corrections: Match to 377Ω
 
 **Self-Correction Process:**
-Each iteration detects the dominant noise source (phase, amplitude, frequency, or impedance) and applies targeted correction to maximize coherence recovery.`
+Each iteration detects the dominant noise source (phase, amplitude, frequency, or impedance) and applies targeted correction to maximize coherence recovery.`,
       },
       {
         heading: "Cross-System Applications",
@@ -868,17 +868,18 @@ Each iteration detects the dominant noise source (phase, amplitude, frequency, o
 - GET /api/czc/coherence - Calculate CZC for iterations
 - POST /api/czc/iterate - Run one iteration
 - POST /api/czc/bind - Bind application to basin
-- POST /api/czc/sync - Sync with K1 Orchestration`
-      }
-    ]
-  }
+- POST /api/czc/sync - Sync with K1 Orchestration`,
+      },
+    ],
+  },
 };
 
 export default function DocsPage() {
   const [activeSection, setActiveSection] = useState("substrate");
 
   const sections = Object.entries(DOCS_SECTIONS);
-  const currentSection = DOCS_SECTIONS[activeSection as keyof typeof DOCS_SECTIONS];
+  const currentSection =
+    DOCS_SECTIONS[activeSection as keyof typeof DOCS_SECTIONS];
   const IconComponent = currentSection.icon;
 
   return (
@@ -887,18 +888,30 @@ export default function DocsPage() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Link href="/developer-matrix">
-              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white" data-testid="button-home">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-gray-400 hover:text-white"
+                data-testid="button-home"
+              >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight" data-testid="text-title">NexusOS Builder Documentation</h1>
-              <p className="text-gray-400 text-sm">Technical mechanics for developers building infrastructure</p>
+              <h1
+                className="text-3xl font-bold tracking-tight"
+                data-testid="text-title"
+              >
+                NexusOS Builder Documentation
+              </h1>
+              <p className="text-gray-400 text-sm">
+                Technical mechanics for developers building infrastructure
+              </p>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => window.history.back()}
             className="text-gray-400 hover:text-white border-gray-700 hover:border-gray-500"
             data-testid="button-back-previous"
@@ -911,7 +924,9 @@ export default function DocsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1">
             <Card className="bg-gray-900/50 border-gray-700 p-4 sticky top-6">
-              <h3 className="text-sm font-medium text-gray-400 mb-3">DOCUMENTATION</h3>
+              <h3 className="text-sm font-medium text-gray-400 mb-3">
+                DOCUMENTATION
+              </h3>
               <nav className="space-y-1">
                 {sections.map(([key, section]) => {
                   const SectionIcon = section.icon;
@@ -921,9 +936,9 @@ export default function DocsPage() {
                       key={key}
                       onClick={() => setActiveSection(key)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                        isActive 
-                          ? 'bg-purple-600 text-white' 
-                          : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                        isActive
+                          ? "bg-purple-600 text-white"
+                          : "text-gray-400 hover:bg-gray-800 hover:text-white"
                       }`}
                       data-testid={`nav-${key}`}
                     >
@@ -935,39 +950,80 @@ export default function DocsPage() {
               </nav>
 
               <div className="mt-6 pt-4 border-t border-gray-700">
-                <h3 className="text-sm font-medium text-gray-400 mb-3">LIVE TOOLS</h3>
+                <h3 className="text-sm font-medium text-gray-400 mb-3">
+                  LIVE TOOLS
+                </h3>
                 <div className="space-y-1 text-sm">
-                  <Link href="/wnsp/coordinator" className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-medium">
+                  <Link
+                    href="/wnsp/coordinator"
+                    className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-medium"
+                  >
                     <Cpu className="w-3 h-3" /> AI/OS Coordinator
                   </Link>
-                  <Link href="/encoding-lab" className="flex items-center gap-2 text-gray-400 hover:text-cyan-400">
+                  <Link
+                    href="/encoding-lab"
+                    className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
+                  >
                     <Code className="w-3 h-3" /> Encoding Lab
                   </Link>
-                  <Link href="/workspace/wavefield" className="flex items-center gap-2 text-gray-400 hover:text-cyan-400">
+                  <Link
+                    href="/workspace/wavefield"
+                    className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
+                  >
                     <Atom className="w-3 h-3" /> Wavefield Simulator
                   </Link>
-                  <Link href="/k1/orchestration" className="flex items-center gap-2 text-gray-400 hover:text-cyan-400">
+                  <Link
+                    href="/k1/orchestration"
+                    className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
+                  >
                     <Zap className="w-3 h-3" /> K1 Orchestration
                   </Link>
                 </div>
               </div>
 
               <div className="mt-4 pt-4 border-t border-gray-700">
-                <h3 className="text-sm font-medium text-gray-400 mb-3">EXTERNAL PHYSICS</h3>
+                <h3 className="text-sm font-medium text-gray-400 mb-3">
+                  EXTERNAL PHYSICS
+                </h3>
                 <div className="space-y-1 text-sm">
-                  <a href="https://en.wikipedia.org/wiki/Planck%27s_law" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-400 hover:text-cyan-400">
+                  <a
+                    href="https://en.wikipedia.org/wiki/Planck%27s_law"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
+                  >
                     <ExternalLink className="w-3 h-3" /> Planck's Law
                   </a>
-                  <a href="https://en.wikipedia.org/wiki/Maxwell%27s_equations" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-400 hover:text-cyan-400">
+                  <a
+                    href="https://en.wikipedia.org/wiki/Maxwell%27s_equations"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
+                  >
                     <ExternalLink className="w-3 h-3" /> Maxwell's Equations
                   </a>
-                  <a href="https://en.wikipedia.org/wiki/Orbital_angular_momentum_of_light" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-400 hover:text-cyan-400">
+                  <a
+                    href="https://en.wikipedia.org/wiki/Orbital_angular_momentum_of_light"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
+                  >
                     <ExternalLink className="w-3 h-3" /> OAM of Light
                   </a>
-                  <a href="https://en.wikipedia.org/wiki/Kardashev_scale" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-400 hover:text-cyan-400">
+                  <a
+                    href="https://en.wikipedia.org/wiki/Kardashev_scale"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
+                  >
                     <ExternalLink className="w-3 h-3" /> Kardashev Scale
                   </a>
-                  <a href="https://en.wikipedia.org/wiki/Schumann_resonances" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-400 hover:text-cyan-400">
+                  <a
+                    href="https://en.wikipedia.org/wiki/Schumann_resonances"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
+                  >
                     <ExternalLink className="w-3 h-3" /> Schumann Resonance
                   </a>
                 </div>
@@ -976,32 +1032,45 @@ export default function DocsPage() {
           </div>
 
           <div className="lg:col-span-3">
-            <Card className={`bg-gradient-to-r ${currentSection.color} p-6 mb-6`}>
+            <Card
+              className={`bg-gradient-to-r ${currentSection.color} p-6 mb-6`}
+            >
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center">
                   <IconComponent className="w-7 h-7 text-white" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold">{currentSection.title}</h2>
-                  <p className="text-white/70">Core mechanics for building on this system</p>
+                  <p className="text-white/70">
+                    Core mechanics for building on this system
+                  </p>
                 </div>
               </div>
             </Card>
 
-            {activeSection === 'wascii' && (
-              <Card className="bg-gray-900/60 border-cyan-500/30 p-6 mb-6" data-testid="wnsp-protocol-diagram">
+            {activeSection === "wascii" && (
+              <Card
+                className="bg-gray-900/60 border-cyan-500/30 p-6 mb-6"
+                data-testid="wnsp-protocol-diagram"
+              >
                 <h3 className="text-lg font-bold mb-6 text-cyan-300 flex items-center gap-2">
                   <Layers className="w-5 h-5" /> WNSP Protocol Stack
                 </h3>
                 <div className="flex flex-col items-center gap-0 font-mono text-sm select-none">
-
                   {/* CE Layer */}
                   <div className="w-full max-w-sm border border-blue-500/60 rounded-xl bg-blue-900/20 p-4">
-                    <div className="text-blue-300 font-bold mb-2 text-center tracking-wide">CE Layer — Character Encoding</div>
+                    <div className="text-blue-300 font-bold mb-2 text-center tracking-wide">
+                      CE Layer — Character Encoding
+                    </div>
                     <div className="text-gray-400 text-xs space-y-1 text-center">
                       <div>Input: symbols / text</div>
-                      <div>Converts to ordinal tokens <span className="text-blue-300">[0, 1]</span></div>
-                      <div className="text-blue-400 text-xs mt-1">WNSP-CE v1.0</div>
+                      <div>
+                        Converts to ordinal tokens{" "}
+                        <span className="text-blue-300">[0, 1]</span>
+                      </div>
+                      <div className="text-blue-400 text-xs mt-1">
+                        WNSP-CE v1.0
+                      </div>
                     </div>
                   </div>
 
@@ -1012,8 +1081,12 @@ export default function DocsPage() {
 
                   {/* Legacy Bridge */}
                   <div className="w-full max-w-sm border border-gray-600/50 border-dashed rounded-xl bg-gray-800/30 p-3">
-                    <div className="text-gray-400 font-bold mb-1 text-center text-xs tracking-wide">Legacy Bridge — Optional / Backwards Compatible</div>
-                    <div className="text-gray-500 text-xs text-center">Preserves char → wavelength compatibility</div>
+                    <div className="text-gray-400 font-bold mb-1 text-center text-xs tracking-wide">
+                      Legacy Bridge — Optional / Backwards Compatible
+                    </div>
+                    <div className="text-gray-500 text-xs text-center">
+                      Preserves char → wavelength compatibility
+                    </div>
                   </div>
 
                   <div className="flex flex-col items-center text-gray-500 py-1">
@@ -1023,11 +1096,18 @@ export default function DocsPage() {
 
                   {/* SE Layer */}
                   <div className="w-full max-w-sm border border-cyan-500/60 rounded-xl bg-cyan-900/20 p-4">
-                    <div className="text-cyan-300 font-bold mb-2 text-center tracking-wide">SE Layer — Spectral / Physical</div>
+                    <div className="text-cyan-300 font-bold mb-2 text-center tracking-wide">
+                      SE Layer — Spectral / Physical
+                    </div>
                     <div className="text-gray-400 text-xs space-y-1 text-center">
                       <div>Receives CE tokens</div>
-                      <div>Maps to <span className="text-cyan-300">Ψ_channel</span> Hilbert-space basis</div>
-                      <div className="text-cyan-200 font-mono mt-2">|λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩</div>
+                      <div>
+                        Maps to <span className="text-cyan-300">Ψ_channel</span>{" "}
+                        Hilbert-space basis
+                      </div>
+                      <div className="text-cyan-200 font-mono mt-2">
+                        |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩
+                      </div>
                       <div className="grid grid-cols-3 gap-1 mt-2">
                         <div className="bg-cyan-900/40 rounded p-1 text-center">
                           <div className="text-cyan-300">WDM</div>
@@ -1042,7 +1122,9 @@ export default function DocsPage() {
                           <div className="text-white font-bold">H/V</div>
                         </div>
                       </div>
-                      <div className="text-cyan-400 text-xs mt-1">WNSP-SE v1.0</div>
+                      <div className="text-cyan-400 text-xs mt-1">
+                        WNSP-SE v1.0
+                      </div>
                     </div>
                   </div>
 
@@ -1053,48 +1135,86 @@ export default function DocsPage() {
 
                   {/* Physical Transmission */}
                   <div className="w-full max-w-sm border border-purple-500/60 rounded-xl bg-purple-900/20 p-4">
-                    <div className="text-purple-300 font-bold mb-2 text-center tracking-wide">Physical Transmission — EM Wave Substrate</div>
+                    <div className="text-purple-300 font-bold mb-2 text-center tracking-wide">
+                      Physical Transmission — EM Wave Substrate
+                    </div>
                     <div className="text-gray-400 text-xs space-y-1 text-center">
-                      <div><span className="text-white font-bold text-base">25,600</span> orthogonal channels</div>
-                      <div className="text-purple-200 font-mono mt-1">Ψ_ijk = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩</div>
-                      <div className="text-gray-500 mt-1">⟨Ψ_i | Ψ_j⟩ = 0 &nbsp; for i ≠ j</div>
+                      <div>
+                        <span className="text-white font-bold text-base">
+                          25,600
+                        </span>{" "}
+                        orthogonal channels
+                      </div>
+                      <div className="text-purple-200 font-mono mt-1">
+                        Ψ_ijk = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩
+                      </div>
+                      <div className="text-gray-500 mt-1">
+                        ⟨Ψ_i | Ψ_j⟩ = 0 &nbsp; for i ≠ j
+                      </div>
                       <div className="grid grid-cols-2 gap-2 mt-2">
                         <div className="bg-purple-900/40 rounded p-1 text-center">
-                          <div className="text-purple-300 font-mono">E = hc/λ</div>
-                          <div className="text-gray-500 text-xs">Photon energy</div>
+                          <div className="text-purple-300 font-mono">
+                            E = hc/λ
+                          </div>
+                          <div className="text-gray-500 text-xs">
+                            Photon energy
+                          </div>
                         </div>
                         <div className="bg-purple-900/40 rounded p-1 text-center">
-                          <div className="text-purple-300 font-mono">Λ = E/c²</div>
-                          <div className="text-gray-500 text-xs">Lambda mass</div>
+                          <div className="text-purple-300 font-mono">
+                            Λ = E/c²
+                          </div>
+                          <div className="text-gray-500 text-xs">
+                            Lambda mass
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-
                 </div>
               </Card>
             )}
 
             <div className="space-y-6">
               {currentSection.content.map((block, index) => (
-                <Card key={index} className="bg-gray-900/50 border-gray-700 p-6" data-testid={`content-block-${index}`}>
-                  <h3 className="text-lg font-bold mb-4 text-purple-300">{block.heading}</h3>
+                <Card
+                  key={index}
+                  className="bg-gray-900/50 border-gray-700 p-6"
+                  data-testid={`content-block-${index}`}
+                >
+                  <h3 className="text-lg font-bold mb-4 text-purple-300">
+                    {block.heading}
+                  </h3>
                   <div className="prose prose-invert max-w-none">
-                    {block.text.split('\n\n').map((paragraph, pIndex) => {
-                      if (paragraph.startsWith('|')) {
-                        const rows = paragraph.split('\n').filter(r => r.trim());
+                    {block.text.split("\n\n").map((paragraph, pIndex) => {
+                      if (paragraph.startsWith("|")) {
+                        const rows = paragraph
+                          .split("\n")
+                          .filter((r) => r.trim());
                         return (
                           <div key={pIndex} className="overflow-x-auto my-4">
                             <table className="w-full text-sm">
                               <tbody>
                                 {rows.map((row, rIndex) => {
-                                  if (row.includes('---')) return null;
-                                  const cells = row.split('|').filter(c => c.trim());
-                                  const Tag = rIndex === 0 ? 'th' : 'td';
+                                  if (row.includes("---")) return null;
+                                  const cells = row
+                                    .split("|")
+                                    .filter((c) => c.trim());
+                                  const Tag = rIndex === 0 ? "th" : "td";
                                   return (
-                                    <tr key={rIndex} className={rIndex === 0 ? 'border-b border-gray-700' : ''}>
+                                    <tr
+                                      key={rIndex}
+                                      className={
+                                        rIndex === 0
+                                          ? "border-b border-gray-700"
+                                          : ""
+                                      }
+                                    >
                                       {cells.map((cell, cIndex) => (
-                                        <Tag key={cIndex} className={`px-3 py-2 text-left ${rIndex === 0 ? 'text-gray-400 font-medium' : 'text-gray-300'}`}>
+                                        <Tag
+                                          key={cIndex}
+                                          className={`px-3 py-2 text-left ${rIndex === 0 ? "text-gray-400 font-medium" : "text-gray-300"}`}
+                                        >
                                           {cell.trim()}
                                         </Tag>
                                       ))}
@@ -1106,16 +1226,24 @@ export default function DocsPage() {
                           </div>
                         );
                       }
-                      
+
                       const formattedParagraph = paragraph
-                        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
-                        .replace(/`(.*?)`/g, '<code class="bg-gray-800 px-1 rounded text-cyan-300">$1</code>');
-                      
+                        .replace(
+                          /\*\*(.*?)\*\*/g,
+                          '<strong class="text-white">$1</strong>',
+                        )
+                        .replace(
+                          /`(.*?)`/g,
+                          '<code class="bg-gray-800 px-1 rounded text-cyan-300">$1</code>',
+                        );
+
                       return (
-                        <p 
-                          key={pIndex} 
+                        <p
+                          key={pIndex}
                           className="text-gray-300 mb-3 whitespace-pre-wrap"
-                          dangerouslySetInnerHTML={{ __html: formattedParagraph }}
+                          dangerouslySetInnerHTML={{
+                            __html: formattedParagraph,
+                          }}
                         />
                       );
                     })}
@@ -1147,32 +1275,46 @@ export default function DocsPage() {
                   <div className="text-gray-500 text-xs">Maxwell curl</div>
                 </div>
                 <div className="p-3 bg-gray-800/50 rounded-lg">
-                  <div className="text-pink-300 font-mono">Ĥ = hν + αK̂² + βL̂</div>
+                  <div className="text-pink-300 font-mono">
+                    Ĥ = hν + αK̂² + βL̂
+                  </div>
                   <div className="text-gray-500 text-xs">Hamiltonian</div>
                 </div>
                 <div className="p-3 bg-gray-800/50 rounded-lg">
-                  <div className="text-red-300 font-mono">T = Σ|c|²cos²(Δφ)</div>
-                  <div className="text-gray-500 text-xs">Interference trust</div>
+                  <div className="text-red-300 font-mono">
+                    T = Σ|c|²cos²(Δφ)
+                  </div>
+                  <div className="text-gray-500 text-xs">
+                    Interference trust
+                  </div>
                 </div>
               </div>
             </Card>
 
             {/* AGPL-3.0 License Footer */}
-            <Card className="bg-gray-900/50 border-gray-700 p-6 mt-6" data-testid="license-footer">
+            <Card
+              className="bg-gray-900/50 border-gray-700 p-6 mt-6"
+              data-testid="license-footer"
+            >
               <div className="flex items-start gap-4">
                 <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30">
                   <Shield className="w-6 h-6 text-blue-400" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-bold text-white">AGPL-3.0 License</h3>
-                    <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">Copyleft</Badge>
+                    <h3 className="text-lg font-bold text-white">
+                      AGPL-3.0 License
+                    </h3>
+                    <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+                      Copyleft
+                    </Badge>
                   </div>
                   <p className="text-gray-400 text-sm mb-3">
-                    WNSP Protocol, Lambda Gate Substrate, NXT Token Economics, and all associated implementations are licensed under the 
-                    <a 
-                      href="https://www.gnu.org/licenses/agpl-3.0.en.html" 
-                      target="_blank" 
+                    WNSP Protocol, Lambda Gate Substrate, NXT Token Economics,
+                    and all associated implementations are licensed under the
+                    <a
+                      href="https://www.gnu.org/licenses/agpl-3.0.en.html"
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-400 hover:text-blue-300 mx-1 underline"
                     >
@@ -1182,7 +1324,9 @@ export default function DocsPage() {
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                     <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-                      <div className="text-green-400 font-semibold mb-1">You CAN:</div>
+                      <div className="text-green-400 font-semibold mb-1">
+                        You CAN:
+                      </div>
                       <ul className="text-gray-400 space-y-1">
                         <li>Use commercially</li>
                         <li>Modify and distribute</li>
@@ -1190,7 +1334,9 @@ export default function DocsPage() {
                       </ul>
                     </div>
                     <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-                      <div className="text-amber-400 font-semibold mb-1">You MUST:</div>
+                      <div className="text-amber-400 font-semibold mb-1">
+                        You MUST:
+                      </div>
                       <ul className="text-gray-400 space-y-1">
                         <li>Disclose source code</li>
                         <li>Include license & copyright</li>
@@ -1198,7 +1344,9 @@ export default function DocsPage() {
                       </ul>
                     </div>
                     <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
-                      <div className="text-red-400 font-semibold mb-1">You CANNOT:</div>
+                      <div className="text-red-400 font-semibold mb-1">
+                        You CANNOT:
+                      </div>
                       <ul className="text-gray-400 space-y-1">
                         <li>Sublicense</li>
                         <li>Hold liable</li>
@@ -1211,7 +1359,8 @@ export default function DocsPage() {
                       © 2024-2025 NexusOS. All rights reserved under AGPL-3.0.
                     </p>
                     <p className="text-gray-600 text-xs mt-1">
-                      Physics principles (E=hf, Maxwell's equations) are public domain. Implementation is protected.
+                      Physics principles (E=hf, Maxwell's equations) are public
+                      domain. Implementation is protected.
                     </p>
                   </div>
                 </div>

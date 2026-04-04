@@ -9,6 +9,7 @@ Unit tests for:
   - Energy / mass conservation (E = hf, Λ = hf/c²)
   - AI/OS Coordination Layer channel allocation
   - SE Simulation orthogonality proof
+  - WNSPCoordinator class (register, route, schedule, dispatch, monitor)
 
 Author: Te Rata Pou
 License: AGPL-3.0
@@ -314,6 +315,141 @@ def test_total_mass_sum():
 
 
 # ─────────────────────────────────────────────────────────────────
+# WNSPCoordinator Tests
+# ─────────────────────────────────────────────────────────────────
+
+from wnsp_v7.wnsp_coordinator import WNSPCoordinator, PsiChannel, TOTAL_CHANNELS
+
+
+def test_coordinator_register_returns_psi_channel():
+    c = WNSPCoordinator()
+    ch = c.register_agent("vision_ai")
+    assert isinstance(ch, PsiChannel)
+    assert 0 <= ch.wavelength <= 255
+    assert 0 <= ch.oam <= 49
+    assert ch.pol in (0, 1)
+    print(f"✓  register_agent returns PsiChannel: {ch.notation()}")
+
+
+def test_coordinator_notation_format():
+    c = WNSPCoordinator()
+    ch = c.register_agent("os_kernel")
+    n = ch.notation()
+    assert n.startswith("Ψ(")
+    assert ", H)" in n or ", V)" in n
+    print(f"✓  notation format correct: {n}")
+
+
+def test_coordinator_deterministic():
+    """Same agent_id must always produce the same channel."""
+    c1 = WNSPCoordinator()
+    c2 = WNSPCoordinator()
+    ch1 = c1.register_agent("planner_ai")
+    ch2 = c2.register_agent("planner_ai")
+    assert ch1.wavelength == ch2.wavelength
+    assert ch1.oam == ch2.oam
+    assert ch1.pol == ch2.pol
+    print(f"✓  Channel allocation is deterministic: {ch1.notation()}")
+
+
+def test_coordinator_orthogonality():
+    """No two agents can share the same (wdm, oam, pol) triplet."""
+    c = WNSPCoordinator()
+    agents = ["vision_ai", "planner_ai", "os_kernel", "speech_ai", "sensor_ai"]
+    channels = []
+    for name in agents:
+        ch = c.register_agent(name)
+        triplet = (ch.wavelength, ch.oam, ch.pol)
+        assert triplet not in channels, f"Collision on {triplet}"
+        channels.append(triplet)
+    print(f"✓  All {len(agents)} agents orthogonal — no channel collisions")
+
+
+def test_coordinator_idempotent_register():
+    """Re-registering the same agent returns the same channel."""
+    c = WNSPCoordinator()
+    ch1 = c.register_agent("alpha")
+    ch2 = c.register_agent("alpha")
+    assert ch1.flat_index == ch2.flat_index
+    print("✓  Idempotent registration returns same channel")
+
+
+def test_coordinator_route():
+    c = WNSPCoordinator()
+    c.register_agent("router_ai")
+    record = c.route("router_ai", "detect objects")
+    assert record["agent"] == "router_ai"
+    assert record["payload"] == "detect objects"
+    assert "channel" in record
+    assert record["channel"]["notation"].startswith("Ψ(")
+    print(f"✓  route() returns correct record: {record['display']}")
+
+
+def test_coordinator_route_increments_count():
+    c = WNSPCoordinator()
+    c.register_agent("counter_ai")
+    for _ in range(3):
+        c.route("counter_ai", "ping")
+    stats = c.agent_stats("counter_ai")
+    assert stats["routed_count"] == 3
+    print("✓  routed_count increments correctly")
+
+
+def test_coordinator_unregister():
+    c = WNSPCoordinator()
+    c.register_agent("temp_ai")
+    assert c.unregister_agent("temp_ai") is True
+    assert c.get_channel("temp_ai") is None
+    assert len(c._channels_in_use) == 0
+    print("✓  unregister_agent releases channel back to pool")
+
+
+def test_coordinator_scheduler():
+    c = WNSPCoordinator()
+    c.register_agent("sched_ai")
+    depth = c.schedule("sched_ai", "task A", priority=3)
+    c.schedule("sched_ai", "task B", priority=1)
+    assert c.queue_depth() == 2
+    result = c.dispatch_next()  # priority 1 dispatched first
+    assert result["payload"] == "task B"
+    print("✓  Scheduler dispatches lowest priority number first")
+
+
+def test_coordinator_status():
+    c = WNSPCoordinator()
+    c.register_agent("status_ai")
+    s = c.status()
+    assert s["agents"] == 1
+    assert s["channels_used"] == 1
+    assert s["capacity"] == TOTAL_CHANNELS
+    print(f"✓  status() correct: {s['agents']} agent, {s['capacity']} capacity")
+
+
+def test_psi_channel_flat_index_roundtrip():
+    """Flat index must encode wdm, oam, pol without collision."""
+    seen = set()
+    for wdm in range(0, 256, 16):   # sample 16 wdm values
+        for oam in range(0, 50, 5): # sample 10 oam values
+            for pol in (0, 1):
+                ch = PsiChannel(wdm, oam, pol)
+                idx = ch.flat_index
+                assert idx not in seen, f"Flat index collision at {ch.notation()}"
+                seen.add(idx)
+    print(f"✓  PsiChannel flat_index unique across {len(seen)} sampled channels")
+
+
+def test_coordinator_route_log():
+    c = WNSPCoordinator()
+    c.register_agent("log_ai")
+    c.route("log_ai", "msg 1")
+    c.route("log_ai", "msg 2")
+    log = c.route_log()
+    assert len(log) == 2
+    assert log[0]["payload"] == "msg 1"
+    print("✓  route_log() records entries in order")
+
+
+# ─────────────────────────────────────────────────────────────────
 # Run
 # ─────────────────────────────────────────────────────────────────
 
@@ -342,6 +478,19 @@ if __name__ == "__main__":
         test_frame_energy_positive,
         test_total_energy_sum,
         test_total_mass_sum,
+        # WNSPCoordinator
+        test_coordinator_register_returns_psi_channel,
+        test_coordinator_notation_format,
+        test_coordinator_deterministic,
+        test_coordinator_orthogonality,
+        test_coordinator_idempotent_register,
+        test_coordinator_route,
+        test_coordinator_route_increments_count,
+        test_coordinator_unregister,
+        test_coordinator_scheduler,
+        test_coordinator_status,
+        test_psi_channel_flat_index_roundtrip,
+        test_coordinator_route_log,
     ]
 
     passed = 0

@@ -1251,6 +1251,19 @@ export async function registerRoutes(
     secureProxyToSpectralAPI(req, res, "/api/wnsp/agent/release");
   });
 
+  // Scheduler + Runtime Monitor
+  app.post("/api/wnsp/agent/schedule", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/agent/schedule");
+  });
+
+  app.post("/api/wnsp/agent/dispatch", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/agent/dispatch");
+  });
+
+  app.get("/api/wnsp/agent/log", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/agent/log");
+  });
+
   // SE Simulation + Orthogonality Validation
   app.post("/api/wnsp/se/simulate", optionalAuth, (req, res) => {
     secureProxyToSpectralAPI(req, res, "/api/wnsp/se/simulate");

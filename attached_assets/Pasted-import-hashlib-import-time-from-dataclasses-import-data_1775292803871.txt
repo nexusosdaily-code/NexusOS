@@ -1,0 +1,79 @@
+import hashlib
+import time
+from dataclasses import dataclass
+from typing import Dict, Tuple, Optional
+
+TOTAL_WDM = 256
+TOTAL_OAM = 50
+TOTAL_POL = 2
+
+
+@dataclass
+class PsiChannel:
+    wavelength: int
+    oam: int
+    pol: int
+
+
+class WNSPCoordinator:
+    def __init__(self):
+        self.agents: Dict[str, PsiChannel] = {}
+        self.channels_in_use = set()
+
+    # -----------------------------
+    # Channel allocation
+    # -----------------------------
+    def _allocate_channel(self, agent_id: str) -> PsiChannel:
+        h = hashlib.sha256(agent_id.encode()).digest()
+
+        λ = h[0] % TOTAL_WDM
+        oam = h[1] % TOTAL_OAM
+        pol = h[2] % TOTAL_POL
+
+        channel = (λ, oam, pol)
+
+        # ensure orthogonality
+        while channel in self.channels_in_use:
+            λ = (λ + 1) % TOTAL_WDM
+            channel = (λ, oam, pol)
+
+        self.channels_in_use.add(channel)
+        return PsiChannel(*channel)
+
+    # -----------------------------
+    # Register AI agent
+    # -----------------------------
+    def register_agent(self, name: str) -> PsiChannel:
+        if name in self.agents:
+            return self.agents[name]
+
+        channel = self._allocate_channel(name)
+        self.agents[name] = channel
+
+        return channel
+
+    # -----------------------------
+    # Route message
+    # -----------------------------
+    def route(self, agent: str, payload):
+        if agent not in self.agents:
+            raise ValueError("Agent not registered")
+
+        channel = self.agents[agent]
+
+        return {
+            "agent": agent,
+            "channel": channel,
+            "timestamp": time.time(),
+            "payload": payload
+        }
+
+    # -----------------------------
+    # Runtime status
+    # -----------------------------
+    def status(self):
+        return {
+            "agents": len(self.agents),
+            "channels_used": len(self.channels_in_use),
+            "capacity": TOTAL_WDM * TOTAL_OAM * TOTAL_POL
+        }
