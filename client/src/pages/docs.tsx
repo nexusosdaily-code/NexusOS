@@ -991,6 +991,12 @@ export default function DocsPage() {
                     <Cpu className="w-3 h-3" /> Computing Alternatives
                   </Link>
                   <Link
+                    href="/wavelength-os"
+                    className="flex items-center gap-2 text-violet-400 hover:text-violet-300 font-semibold"
+                  >
+                    <Cpu className="w-3 h-3" /> Wavelength OS — The Case
+                  </Link>
+                  <Link
                     href="/encoding-lab"
                     className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
                   >
