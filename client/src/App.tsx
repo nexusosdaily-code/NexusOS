@@ -37,6 +37,7 @@ import NexusHardwareOsPage from "@/pages/nexus-hardware-os";
 import ComputingAlternativesPage from "@/pages/computing-alternatives";
 import WavelengthOsManifestoPage from "@/pages/wavelength-os-manifesto";
 import CeCodeWriterPage from "@/pages/ce-code-writer";
+import PricingPage from "@/pages/pricing";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -87,6 +88,7 @@ function ProtectedRoutes() {
         <Route path="/computing-alternatives" component={ComputingAlternativesPage} />
         <Route path="/wavelength-os" component={WavelengthOsManifestoPage} />
         <Route path="/ce-writer" component={CeCodeWriterPage} />
+        <Route path="/pricing" component={PricingPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>

@@ -1003,6 +1003,12 @@ export default function DocsPage() {
                     <Cpu className="w-3 h-3" /> CE Code Writer
                   </Link>
                   <Link
+                    href="/pricing"
+                    className="flex items-center gap-2 text-amber-400 hover:text-amber-300 font-semibold"
+                  >
+                    <Cpu className="w-3 h-3" /> Monetisation
+                  </Link>
+                  <Link
                     href="/encoding-lab"
                     className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
                   >
