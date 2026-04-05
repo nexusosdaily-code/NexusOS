@@ -125,8 +125,10 @@ P2P media sharing engine with physics-based cost calculations, mesh networking, 
 -   **Build Tools**: Vite, `tsx`, PostCSS, Autoprefixer.
 -   **Database**: Drizzle ORM, `drizzle-kit`, `drizzle-zod`.
 
-### Recent Pages Added
+### Recent Pages Added (latest first)
 - **`/photonic-dev`** — Nexus Photonic Development Environment: encode any instruction through CE→SE to get a wavelength address + Ψ channel, App Builder, Spectrum Map, SDK Spec.
 - **`/quantum-threshold`** — Moore's Law curve with tunneling threshold, interactive WKB gate slider, silicon vs Λ crossover table, animated 555 THz vs 3 GHz dual clock.
 - **`/nexus-hardware-os`** — Hardware stack (L0 Resonator → L1 Photonic Logic → L2 Channel Layer → L3 Kernel), PHR-1 ZERO-G live simulation, hardware timeline 2024→2035, Why Now rationale.
+- **`/ce-writer`** — NexusOS CE Code Writer: description → CE encode → wavelength → working TypeScript/Python/HTML/SQL code generated per spectral band; App Scaffold tab generates full codebase; Spectral Linter scans existing code and reveals its spectral addresses.
+- **`/wavelength-os`** — Full advocacy manifesto: 3-pillar argument (silicon wall, spectrum as address space, Λ=hf/c² unification), NVIDIA/Intel/Tesla industry cases, 5-audience advocacy strategy, AGPL-3.0 enforcement rationale.
 - **`/computing-alternatives`** — Five post-silicon computing paradigms (Photonic Matrix Multiply, Hybrid Control, CZC Coherent Field, Reservoir Computing, OAM Analog), comparison matrix, Nexus layer integration map, 4-phase roadmap.

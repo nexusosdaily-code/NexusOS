@@ -36,6 +36,7 @@ import QuantumThresholdPage from "@/pages/quantum-threshold";
 import NexusHardwareOsPage from "@/pages/nexus-hardware-os";
 import ComputingAlternativesPage from "@/pages/computing-alternatives";
 import WavelengthOsManifestoPage from "@/pages/wavelength-os-manifesto";
+import CeCodeWriterPage from "@/pages/ce-code-writer";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -85,6 +86,7 @@ function ProtectedRoutes() {
         <Route path="/nexus-hardware-os" component={NexusHardwareOsPage} />
         <Route path="/computing-alternatives" component={ComputingAlternativesPage} />
         <Route path="/wavelength-os" component={WavelengthOsManifestoPage} />
+        <Route path="/ce-writer" component={CeCodeWriterPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>

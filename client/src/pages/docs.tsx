@@ -997,6 +997,12 @@ export default function DocsPage() {
                     <Cpu className="w-3 h-3" /> Wavelength OS — The Case
                   </Link>
                   <Link
+                    href="/ce-writer"
+                    className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold"
+                  >
+                    <Cpu className="w-3 h-3" /> CE Code Writer
+                  </Link>
+                  <Link
                     href="/encoding-lab"
                     className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
                   >
