@@ -32,6 +32,7 @@ import DocsPage from "@/pages/docs";
 import WNSPCoordinator from "@/pages/wnsp-coordinator";
 import KernelPage from "@/pages/kernel";
 import PhotonicDevPage from "@/pages/photonic-dev";
+import QuantumThresholdPage from "@/pages/quantum-threshold";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -77,6 +78,7 @@ function ProtectedRoutes() {
         <Route path="/wnsp/kernel" component={KernelPage} />
         <Route path="/photonic-dev" component={PhotonicDevPage} />
         <Route path="/nexus/dev" component={PhotonicDevPage} />
+        <Route path="/quantum-threshold" component={QuantumThresholdPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
