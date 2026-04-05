@@ -979,6 +979,12 @@ export default function DocsPage() {
                     <Cpu className="w-3 h-3" /> Quantum Tunneling Threshold
                   </Link>
                   <Link
+                    href="/nexus-hardware-os"
+                    className="flex items-center gap-2 text-violet-400 hover:text-violet-300 font-medium"
+                  >
+                    <Cpu className="w-3 h-3" /> Nexus Hardware OS
+                  </Link>
+                  <Link
                     href="/encoding-lab"
                     className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
                   >
