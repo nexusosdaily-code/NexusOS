@@ -985,6 +985,12 @@ export default function DocsPage() {
                     <Cpu className="w-3 h-3" /> Nexus Hardware OS
                   </Link>
                   <Link
+                    href="/computing-alternatives"
+                    className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-medium"
+                  >
+                    <Cpu className="w-3 h-3" /> Computing Alternatives
+                  </Link>
+                  <Link
                     href="/encoding-lab"
                     className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
                   >

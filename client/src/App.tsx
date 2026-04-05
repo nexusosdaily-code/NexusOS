@@ -34,6 +34,7 @@ import KernelPage from "@/pages/kernel";
 import PhotonicDevPage from "@/pages/photonic-dev";
 import QuantumThresholdPage from "@/pages/quantum-threshold";
 import NexusHardwareOsPage from "@/pages/nexus-hardware-os";
+import ComputingAlternativesPage from "@/pages/computing-alternatives";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -81,6 +82,7 @@ function ProtectedRoutes() {
         <Route path="/nexus/dev" component={PhotonicDevPage} />
         <Route path="/quantum-threshold" component={QuantumThresholdPage} />
         <Route path="/nexus-hardware-os" component={NexusHardwareOsPage} />
+        <Route path="/computing-alternatives" component={ComputingAlternativesPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
