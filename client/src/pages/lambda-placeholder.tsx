@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   FileText, Shield, Wallet, Radio, Zap, 
-  Users, FlaskConical, Activity, Waves, Rocket, LogOut, Presentation, Atom, Mail 
+  Users, FlaskConical, Activity, Waves, Rocket, LogOut, Presentation, Atom, Mail,
+  Database, Code2, Cpu, BookOpen, DollarSign, Layers, GitBranch, HardDrive
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -103,6 +104,62 @@ const features = [
     icon: Activity,
     color: "text-red-400",
     bgColor: "bg-red-600/20",
+  },
+  {
+    title: "Spectral Database",
+    description: "Content-addressed storage by wavelength",
+    href: "/spectral-db",
+    icon: Database,
+    color: "text-emerald-400",
+    bgColor: "bg-emerald-600/20",
+  },
+  {
+    title: "Photonic Dev",
+    description: "Nexus development environment",
+    href: "/photonic-dev",
+    icon: Layers,
+    color: "text-cyan-400",
+    bgColor: "bg-cyan-600/20",
+  },
+  {
+    title: "CE Code Writer",
+    description: "Spectral instruction encoder",
+    href: "/ce-writer",
+    icon: Code2,
+    color: "text-violet-400",
+    bgColor: "bg-violet-600/20",
+  },
+  {
+    title: "Wavelength OS",
+    description: "Post-silicon manifesto",
+    href: "/wavelength-os",
+    icon: BookOpen,
+    color: "text-amber-400",
+    bgColor: "bg-amber-600/20",
+  },
+  {
+    title: "Hardware OS",
+    description: "Nexus hardware stack",
+    href: "/nexus-hardware-os",
+    icon: HardDrive,
+    color: "text-orange-400",
+    bgColor: "bg-orange-600/20",
+  },
+  {
+    title: "Quantum Threshold",
+    description: "Moore's Law & tunneling limits",
+    href: "/quantum-threshold",
+    icon: GitBranch,
+    color: "text-pink-400",
+    bgColor: "bg-pink-600/20",
+  },
+  {
+    title: "Pricing & Licensing",
+    description: "API tiers & hardware licensing",
+    href: "/pricing",
+    icon: DollarSign,
+    color: "text-green-400",
+    bgColor: "bg-green-600/20",
   },
 ];
 
