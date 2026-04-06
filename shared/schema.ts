@@ -569,3 +569,36 @@ export const updateStreamSettingsSchema = z.object({
 
 export type CreateStreamInput = z.infer<typeof createStreamSchema>;
 export type UpdateStreamSettingsInput = z.infer<typeof updateStreamSettingsSchema>;
+
+// ============================================
+// SPECTRAL DATABASE — content-addressed storage
+// Data lives at its wavelength, not at an assigned ID
+// ============================================
+export const spectralRecords = pgTable("spectral_records", {
+  id:             varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  label:          text("label").notNull(),
+  content:        text("content").notNull(),
+  wavelengthNm:   decimal("wavelength_nm", { precision: 10, scale: 4 }).notNull(),
+  psiChannel:     text("psi_channel").notNull(),
+  wdm:            integer("wdm").notNull(),
+  oam:            integer("oam").notNull(),
+  polarisation:   text("polarisation").notNull(),
+  band:           text("band").notNull(),
+  energyJoules:   decimal("energy_joules", { precision: 30, scale: 20 }).notNull(),
+  lambdaMassKg:   decimal("lambda_mass_kg", { precision: 30, scale: 20 }).notNull(),
+  frequencyHz:    decimal("frequency_hz", { precision: 30, scale: 4 }).notNull(),
+  data:           jsonb("data"),
+  createdAt:      timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  wavelengthIdx:  index("spectral_records_wavelength_idx").on(table.wavelengthNm),
+  bandIdx:        index("spectral_records_band_idx").on(table.band),
+  psiIdx:         index("spectral_records_psi_idx").on(table.psiChannel),
+}));
+
+export const insertSpectralRecordSchema = createInsertSchema(spectralRecords).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSpectralRecord = z.infer<typeof insertSpectralRecordSchema>;
+export type SpectralRecord = typeof spectralRecords.$inferSelect;

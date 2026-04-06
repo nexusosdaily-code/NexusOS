@@ -38,6 +38,7 @@ import ComputingAlternativesPage from "@/pages/computing-alternatives";
 import WavelengthOsManifestoPage from "@/pages/wavelength-os-manifesto";
 import CeCodeWriterPage from "@/pages/ce-code-writer";
 import PricingPage from "@/pages/pricing";
+import SpectralDbPage from "@/pages/spectral-db";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -89,6 +90,7 @@ function ProtectedRoutes() {
         <Route path="/wavelength-os" component={WavelengthOsManifestoPage} />
         <Route path="/ce-writer" component={CeCodeWriterPage} />
         <Route path="/pricing" component={PricingPage} />
+        <Route path="/spectral-db" component={SpectralDbPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>

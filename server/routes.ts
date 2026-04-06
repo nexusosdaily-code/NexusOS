@@ -2522,5 +2522,112 @@ export async function registerRoutes(
     });
   });
 
+  // ── Spectral Database API ─────────────────────────────────────────
+  // Content-addressed storage: data lives at its wavelength, not an assigned ID
+
+  // Store content — encode through CE→SE then persist at the resulting Ψ channel
+  app.post("/api/spectral-db/store", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { content, label, data } = req.body;
+      if (!content || !label) return res.status(400).json({ error: "content and label required" });
+
+      // Encode through the Python spectral engine
+      const encodeRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction: content, label }),
+      });
+      if (!encodeRes.ok) return res.status(502).json({ error: "Spectral encode failed" });
+      const enc = await encodeRes.json() as any;
+
+      // Parse Ψ channel: "Ψ(wdm, oam, pol)"
+      const psiMatch = enc.psi_channel?.match(/Ψ\((\d+),\s*(\d+),\s*([HV])\)/);
+      const wdm = psiMatch ? parseInt(psiMatch[1]) : 0;
+      const oam = psiMatch ? parseInt(psiMatch[2]) : 0;
+      const pol = psiMatch ? psiMatch[3] : "H";
+
+      const { db } = await import("./db");
+      const { spectralRecords } = await import("@shared/schema");
+
+      const [record] = await db.insert(spectralRecords).values({
+        label,
+        content,
+        wavelengthNm:  String(enc.wavelength_mid_nm ?? 550),
+        psiChannel:    enc.psi_channel ?? "Ψ(0,0,H)",
+        wdm,
+        oam,
+        polarisation:  pol,
+        band:          enc.band ?? "CORE",
+        energyJoules:  String(enc.energy_joules ?? 0),
+        lambdaMassKg:  String(enc.lambda_mass_kg ?? 0),
+        frequencyHz:   String(enc.frequency_hz ?? 0),
+        data:          data ?? null,
+      }).returning();
+
+      res.json({ success: true, record, spectral: enc });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Scan all records — full spectral map
+  app.get("/api/spectral-db/scan", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { spectralRecords } = await import("@shared/schema");
+      const { asc } = await import("drizzle-orm");
+      const records = await db.select().from(spectralRecords).orderBy(asc(spectralRecords.wavelengthNm));
+      res.json({ records, count: records.length });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Proximity search — find records within ±range nm of a target wavelength
+  app.get("/api/spectral-db/search", authenticate, async (req: Request, res: Response) => {
+    try {
+      const wavelength = parseFloat(String(req.query.wavelength ?? "550"));
+      const range      = parseFloat(String(req.query.range ?? "20"));
+      const { db } = await import("./db");
+      const { spectralRecords } = await import("@shared/schema");
+      const { sql: drizzleSql } = await import("drizzle-orm");
+
+      const records = await db.select().from(spectralRecords).where(
+        drizzleSql`CAST(${spectralRecords.wavelengthNm} AS NUMERIC)
+                   BETWEEN ${wavelength - range} AND ${wavelength + range}`
+      );
+      res.json({ records, count: records.length, center: wavelength, range });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Retrieve by Ψ channel
+  app.get("/api/spectral-db/channel/:psi", authenticate, async (req: Request, res: Response) => {
+    try {
+      const psi = decodeURIComponent(req.params.psi);
+      const { db } = await import("./db");
+      const { spectralRecords } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const records = await db.select().from(spectralRecords).where(eq(spectralRecords.psiChannel, psi));
+      res.json({ records, psiChannel: psi });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Delete a record by ID
+  app.delete("/api/spectral-db/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { spectralRecords } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.delete(spectralRecords).where(eq(spectralRecords.id, req.params.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return httpServer;
 }
