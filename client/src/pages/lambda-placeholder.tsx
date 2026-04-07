@@ -1,231 +1,209 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  FileText, Shield, Wallet, Radio, Zap, 
-  Users, FlaskConical, Activity, Waves, Rocket, LogOut, Presentation, Atom, Mail,
-  Database, Code2, Cpu, BookOpen, DollarSign, Layers, GitBranch, HardDrive
+import {
+  Shield, Wallet, Radio, Zap, Users, FlaskConical, Activity, Waves,
+  Rocket, Presentation, Atom, Mail, Database, Code2, BookOpen,
+  DollarSign, Layers, GitBranch, HardDrive, LogOut, ChevronRight,
+  Cpu, Globe2, Lock
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
-const features = [
+// ── Spectral band accent colours ────────────────────────────────────
+const VIOLET = "#8b00ff";
+const BLUE   = "#2563eb";
+const CYAN   = "#06b6d4";
+const GREEN  = "#16a34a";
+const YELLOW = "#ca8a04";
+const ORANGE = "#ea580c";
+const RED    = "#dc2626";
+
+// ── Section definitions ──────────────────────────────────────────────
+const SECTIONS = [
   {
-    title: "Secure Documents",
-    description: "Lambda-signed DOCX vault",
-    href: "/secure-docs",
-    icon: Shield,
-    color: "text-purple-400",
-    bgColor: "bg-purple-600/20",
+    label: "Physics Layer",
+    subtitle: "Λ = hf/c²  ·  The foundation everything else derives from",
+    accent: VIOLET,
+    items: [
+      { title: "Encoding Lab",          description: "CE→SE lambda encoder",               href: "/encoding-lab",          icon: Atom     },
+      { title: "Photonic Dev",          description: "Nexus development environment",      href: "/photonic-dev",          icon: Layers   },
+      { title: "CE Code Writer",        description: "Describe → spectral address → code", href: "/ce-writer",             icon: Code2    },
+      { title: "Spectral Database",     description: "Data stored at its wavelength",      href: "/spectral-db",           icon: Database },
+    ],
   },
   {
-    title: "Wallet",
-    description: "NXT token management",
-    href: "/wallet",
-    icon: Wallet,
-    color: "text-green-400",
-    bgColor: "bg-green-600/20",
+    label: "Kernel & Protocol",
+    subtitle: "WNSP · Hilbert space channels · AI OS runtime",
+    accent: BLUE,
+    items: [
+      { title: "Nexus v10",             description: "Latest protocol interface",          href: "/v10",                   icon: Zap      },
+      { title: "WNSP Coordinator",      description: "Channel allocation & routing",       href: "/wnsp/coordinator",      icon: Globe2   },
+      { title: "Kernel",                description: "5-phase boot · agent bus",           href: "/kernel",                icon: Cpu      },
+      { title: "Wavefield",             description: "Quantum field simulation",           href: "/workspace/wavefield",   icon: Waves    },
+    ],
   },
   {
-    title: "Nexus v10",
-    description: "Latest protocol interface",
-    href: "/v10",
-    icon: Zap,
-    color: "text-yellow-400",
-    bgColor: "bg-yellow-600/20",
+    label: "Energy & Infrastructure",
+    subtitle: "K1 Orchestration · Resonance harvesting · Planetary scale",
+    accent: GREEN,
+    items: [
+      { title: "K1 Infrastructure",     description: "Civilisation energy roadmap",        href: "/k1",                    icon: Rocket   },
+      { title: "K1 Orchestration",      description: "Runtime energy coordination",        href: "/k1/orchestration",      icon: Activity },
+      { title: "Hardware OS",           description: "Nexus photonic hardware stack",      href: "/nexus-hardware-os",     icon: HardDrive},
+      { title: "Quantum Threshold",     description: "Silicon wall & tunneling limits",    href: "/quantum-threshold",     icon: GitBranch},
+    ],
   },
   {
-    title: "Transmission",
-    description: "P2P media sharing",
-    href: "/workspace/transmission",
-    icon: Radio,
-    color: "text-blue-400",
-    bgColor: "bg-blue-600/20",
+    label: "Research & Advocacy",
+    subtitle: "Theory · Presentation · Post-silicon manifesto",
+    accent: YELLOW,
+    items: [
+      { title: "Research",              description: "Lambda Boson theory",                href: "/workspace/research",    icon: FlaskConical },
+      { title: "Research Presentation", description: "Physics bridges & tooltips",         href: "/research-presentation", icon: Presentation },
+      { title: "Wavelength OS",         description: "Post-silicon manifesto",             href: "/wavelength-os",         icon: BookOpen },
+      { title: "Computing Alternatives",description: "Beyond silicon paradigms",           href: "/computing-alternatives",icon: Cpu      },
+    ],
   },
   {
-    title: "Research",
-    description: "Lambda Boson theory",
-    href: "/workspace/research",
-    icon: FlaskConical,
-    color: "text-pink-400",
-    bgColor: "bg-pink-600/20",
+    label: "Network & Identity",
+    subtitle: "P2P · Wallet · Secure comms · Community",
+    accent: ORANGE,
+    items: [
+      { title: "Wallet",                description: "NXT token management",               href: "/wallet",                icon: Wallet   },
+      { title: "Transmission",          description: "P2P media sharing",                  href: "/workspace/transmission",icon: Radio    },
+      { title: "Secure Documents",      description: "Lambda-signed DOCX vault",           href: "/secure-docs",           icon: Shield   },
+      { title: "Friends",               description: "Community & connections",             href: "/friends",               icon: Users    },
+      { title: "Inbox",                 description: "Lambda-encoded messages",             href: "/inbox",                 icon: Mail     },
+      { title: "Live Streaming",        description: "Broadcast & watch live",             href: "/streaming",             icon: Activity },
+    ],
   },
   {
-    title: "Wavefield",
-    description: "Quantum simulation",
-    href: "/workspace/wavefield",
-    icon: Waves,
-    color: "text-cyan-400",
-    bgColor: "bg-cyan-600/20",
-  },
-  {
-    title: "K1 Infrastructure",
-    description: "Civilization energy roadmap",
-    href: "/k1",
-    icon: Rocket,
-    color: "text-orange-400",
-    bgColor: "bg-orange-600/20",
-  },
-  {
-    title: "Inbox",
-    description: "Lambda-encoded messages",
-    href: "/inbox",
-    icon: Mail,
-    color: "text-rose-400",
-    bgColor: "bg-rose-600/20",
-  },
-  {
-    title: "Friends",
-    description: "Community & connections",
-    href: "/friends",
-    icon: Users,
-    color: "text-indigo-400",
-    bgColor: "bg-indigo-600/20",
-  },
-  {
-    title: "Research Presentation",
-    description: "Physics bridges & tooltips",
-    href: "/research-presentation",
-    icon: Presentation,
-    color: "text-amber-400",
-    bgColor: "bg-amber-600/20",
-  },
-  {
-    title: "Encoding Lab",
-    description: "Lambda Boson encoder",
-    href: "/encoding-lab",
-    icon: Atom,
-    color: "text-teal-400",
-    bgColor: "bg-teal-600/20",
-  },
-  {
-    title: "Live Streaming",
-    description: "Broadcast & watch live",
-    href: "/streaming",
-    icon: Activity,
-    color: "text-red-400",
-    bgColor: "bg-red-600/20",
-  },
-  {
-    title: "Spectral Database",
-    description: "Content-addressed storage by wavelength",
-    href: "/spectral-db",
-    icon: Database,
-    color: "text-emerald-400",
-    bgColor: "bg-emerald-600/20",
-  },
-  {
-    title: "Photonic Dev",
-    description: "Nexus development environment",
-    href: "/photonic-dev",
-    icon: Layers,
-    color: "text-cyan-400",
-    bgColor: "bg-cyan-600/20",
-  },
-  {
-    title: "CE Code Writer",
-    description: "Spectral instruction encoder",
-    href: "/ce-writer",
-    icon: Code2,
-    color: "text-violet-400",
-    bgColor: "bg-violet-600/20",
-  },
-  {
-    title: "Wavelength OS",
-    description: "Post-silicon manifesto",
-    href: "/wavelength-os",
-    icon: BookOpen,
-    color: "text-amber-400",
-    bgColor: "bg-amber-600/20",
-  },
-  {
-    title: "Hardware OS",
-    description: "Nexus hardware stack",
-    href: "/nexus-hardware-os",
-    icon: HardDrive,
-    color: "text-orange-400",
-    bgColor: "bg-orange-600/20",
-  },
-  {
-    title: "Quantum Threshold",
-    description: "Moore's Law & tunneling limits",
-    href: "/quantum-threshold",
-    icon: GitBranch,
-    color: "text-pink-400",
-    bgColor: "bg-pink-600/20",
-  },
-  {
-    title: "Pricing & Licensing",
-    description: "API tiers & hardware licensing",
-    href: "/pricing",
-    icon: DollarSign,
-    color: "text-green-400",
-    bgColor: "bg-green-600/20",
+    label: "Platform & Licensing",
+    subtitle: "AGPL-3.0 · API tiers · Hardware licensing",
+    accent: RED,
+    items: [
+      { title: "Pricing & Licensing",   description: "Open / Pro / Kernel / Enterprise",  href: "/pricing",               icon: DollarSign },
+      { title: "Developer Matrix",      description: "SDK & integration docs",             href: "/developer-matrix",      icon: Code2    },
+    ],
   },
 ];
 
+// ── Spectrum bar component ───────────────────────────────────────────
+function SpectrumBar() {
+  return (
+    <div className="w-full h-1 rounded-full"
+      style={{ background: "linear-gradient(to right,#8b00ff,#2563eb,#06b6d4,#16a34a,#ca8a04,#ea580c,#dc2626)" }} />
+  );
+}
+
+// ── Individual item card ─────────────────────────────────────────────
+function ItemCard({ item, accent }: { item: typeof SECTIONS[0]["items"][0]; accent: string }) {
+  return (
+    <Link href={item.href}>
+      <div className="group flex items-center gap-3 p-3 rounded-lg border border-slate-800 bg-slate-900/40
+                      hover:border-slate-600 hover:bg-slate-800/60 transition-all cursor-pointer"
+        data-testid={`card-feature-${item.title.toLowerCase().replace(/\s+/g, "-")}`}>
+        <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
+          style={{ background: `${accent}18`, border: `1px solid ${accent}30` }}>
+          <item.icon className="w-4 h-4" style={{ color: accent }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors truncate">
+            {item.title}
+          </div>
+          <div className="text-xs text-slate-500 truncate">{item.description}</div>
+        </div>
+        <ChevronRight className="w-3.5 h-3.5 text-slate-700 group-hover:text-slate-400 flex-shrink-0 transition-colors" />
+      </div>
+    </Link>
+  );
+}
+
+// ── Section block ────────────────────────────────────────────────────
+function Section({ section }: { section: typeof SECTIONS[0] }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+          style={{ background: section.accent, boxShadow: `0 0 6px ${section.accent}` }} />
+        <div>
+          <span className="text-sm font-bold text-slate-200">{section.label}</span>
+          <span className="text-xs text-slate-600 ml-2 hidden md:inline">{section.subtitle}</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        {section.items.map(item => (
+          <ItemCard key={item.href} item={item} accent={section.accent} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ────────────────────────────────────────────────────────
 export default function LambdaPlaceholder() {
   const { user, logout } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900">
-      <div className="container mx-auto px-4 py-12">
-        <div className="flex justify-end mb-4">
-          <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      {/* Top bar */}
+      <div className="border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 h-12 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-light text-white tracking-widest">Λ</span>
+            <span className="text-sm font-semibold text-slate-300">NexusOS</span>
+            <span className="text-xs text-slate-600 hidden sm:block">· Wavelength Network Signaling Protocol</span>
+          </div>
+          <div className="flex items-center gap-3">
             {user && (
-              <span className="text-gray-400 text-sm" data-testid="text-user-phone">
-                {user.phone}
+              <span className="text-xs text-slate-500 hidden sm:block" data-testid="text-user-phone">
+                {user.username ?? user.phone}
               </span>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={logout}
-              className="border-red-500/30 text-red-300 hover:bg-red-600/20"
-              data-testid="btn-logout"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
+            <button onClick={logout}
+              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-red-400 transition-colors"
+              data-testid="btn-logout">
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Logout</span>
+            </button>
           </div>
         </div>
+      </div>
 
-        <div className="text-center mb-12">
-          <div className="text-6xl md:text-8xl font-light text-white tracking-widest mb-4" data-testid="text-lambda">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Hero */}
+        <div className="text-center mb-10">
+          <div className="text-7xl font-thin text-white tracking-[0.3em] mb-3 select-none"
+            data-testid="text-lambda" style={{ fontFamily: "serif" }}>
             Λ
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2" data-testid="text-title">
-            WNSP P2P Hub
+          <h1 className="text-2xl font-bold text-white mb-1" data-testid="text-title">
+            NexusOS
           </h1>
-          <p className="text-gray-400 text-lg" data-testid="text-subtitle">
-            Wavelength Network Signaling Protocol
+          <p className="text-slate-400 text-sm mb-1" data-testid="text-subtitle">
+            A complete civilisation architecture built on quantum physics
           </p>
+          <p className="text-slate-600 text-xs font-mono">
+            Λ = hf/c²  ·  Z₀ = 376.73 Ω  ·  f₀ = 555 THz  ·  f_r = 7.83 Hz  ·  AGPL-3.0
+          </p>
+          <div className="mt-4 mx-auto max-w-md">
+            <SpectrumBar />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
-          {features.map((feature) => (
-            <Link key={feature.href} href={feature.href}>
-              <Card 
-                className="bg-slate-800/50 border-slate-700 hover:border-slate-500 transition-all cursor-pointer hover:scale-105"
-                data-testid={`card-feature-${feature.title.toLowerCase().replace(/\s+/g, '-')}`}
-              >
-                <CardHeader className="pb-2">
-                  <div className={`w-10 h-10 rounded-lg ${feature.bgColor} flex items-center justify-center mb-2`}>
-                    <feature.icon className={`w-5 h-5 ${feature.color}`} />
-                  </div>
-                  <CardTitle className="text-white text-lg">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-gray-400">
-                    {feature.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            </Link>
+        {/* Sections */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {SECTIONS.map(section => (
+            <Section key={section.label} section={section} />
           ))}
         </div>
 
-        <div className="mt-12 text-center text-gray-500 text-sm">
-          <p>Physics-based blockchain • Lambda Boson cryptography • E=hf economics</p>
+        {/* Footer equation */}
+        <div className="mt-12 pt-6 border-t border-slate-800/40 text-center space-y-1">
+          <SpectrumBar />
+          <p className="text-slate-700 text-xs font-mono mt-3">
+            Physics-based blockchain · Lambda Boson cryptography · E = hf economics ·
+            25,600 orthogonal Ψ channels · Kardashev Type I infrastructure
+          </p>
         </div>
       </div>
     </div>
