@@ -21,71 +21,69 @@ const RED    = "#dc2626";
 // ── Section definitions ──────────────────────────────────────────────
 const SECTIONS = [
   {
-    label: "Physics Layer",
-    subtitle: "Λ = hf/c²  ·  The foundation everything else derives from",
+    label: "Command & Control",
+    subtitle: "All systems from one place — encode, stream, route, store, transact",
     accent: VIOLET,
     items: [
-      { title: "Encoding Lab",          description: "CE→SE lambda encoder",               href: "/encoding-lab",          icon: Atom     },
-      { title: "Photonic Dev",          description: "Nexus development environment",      href: "/photonic-dev",          icon: Layers   },
-      { title: "CE Code Writer",        description: "Describe → spectral address → code", href: "/ce-writer",             icon: Code2    },
-      { title: "Spectral Database",     description: "Data stored at its wavelength",      href: "/spectral-db",           icon: Database },
-      { title: "Wavelength Blockchain", description: "First photonic ledger — Ψ not hash",  href: "/blockchain",            icon: Layers   },
+      { title: "Nexus Command",         description: "Unified mission control — operate every system from one page", href: "/nexus-command",         icon: Activity },
+      { title: "Message Encoder",       description: "Turn any text into a wavelength of light — encode, decode, send", href: "/encoding-lab",      icon: Atom     },
+      { title: "Spectral Live Streams", description: "Broadcast on open spectrum — no platform, no ban button",     href: "/streaming",             icon: Radio    },
+      { title: "P2P Transmission",      description: "Share files peer-to-peer — encrypted by wavelength, no middleman", href: "/transmission",    icon: Waves    },
     ],
   },
   {
-    label: "Kernel & Protocol",
-    subtitle: "WNSP · Hilbert space channels · AI OS runtime",
+    label: "Open Ledger & Data",
+    subtitle: "Blockchain · Spectral DB · Agent Bus — all trustless, all physics",
     accent: BLUE,
     items: [
-      { title: "Nexus v10",             description: "Latest protocol interface",          href: "/v10",                   icon: Zap      },
-      { title: "WNSP Coordinator",      description: "Channel allocation & routing",       href: "/wnsp/coordinator",      icon: Globe2   },
-      { title: "Kernel",                description: "5-phase boot · agent bus",           href: "/kernel",                icon: Cpu      },
-      { title: "Agent Message Bus",     description: "Ψ-channel agent-to-agent messaging", href: "/agent-bus",             icon: Radio    },
-      { title: "Wavefield",             description: "Quantum field simulation",           href: "/workspace/wavefield",   icon: Waves    },
+      { title: "Wavelength Blockchain", description: "Every block is a photonic transaction — energy cost set by physics not policy", href: "/blockchain", icon: Layers },
+      { title: "Spectral Database",     description: "Store data at its natural wavelength address — retrieve by physics not credentials", href: "/spectral-db", icon: Database },
+      { title: "Agent Message Bus",     description: "Route messages across authority bands — intelligent physics-based delivery", href: "/agent-bus", icon: Radio },
+      { title: "Kernel",                description: "5-phase boot OS — root of all spectral authority", href: "/kernel",                icon: Cpu      },
     ],
   },
   {
-    label: "Energy & Infrastructure",
-    subtitle: "K1 Orchestration · Resonance harvesting · Planetary scale",
+    label: "Build on Light",
+    subtitle: "Replace binary — every instruction is a frequency of light",
     accent: GREEN,
     items: [
-      { title: "K1 Infrastructure",     description: "Civilisation energy roadmap",        href: "/k1",                    icon: Rocket   },
-      { title: "K1 Orchestration",      description: "Runtime energy coordination",        href: "/k1/orchestration",      icon: Activity },
-      { title: "Hardware OS",           description: "Nexus photonic hardware stack",      href: "/nexus-hardware-os",     icon: HardDrive},
-      { title: "Quantum Threshold",     description: "Silicon wall & tunneling limits",    href: "/quantum-threshold",     icon: GitBranch},
+      { title: "Photonic Dev",          description: "Code editor where instructions are wavelengths, not binary 0s and 1s", href: "/photonic-dev", icon: Layers },
+      { title: "CE Code Writer",        description: "Describe what you want — get working code at its spectral address",   href: "/ce-writer",    icon: Code2  },
+      { title: "WNSP Coordinator",      description: "25,600 orthogonal channels for collision-free communication",         href: "/wnsp/coordinator", icon: Globe2 },
+      { title: "Nexus v10",             description: "Latest physics protocol interface",                                    href: "/v10",           icon: Zap    },
     ],
   },
   {
-    label: "Research & Advocacy",
-    subtitle: "Theory · Presentation · Post-silicon manifesto",
+    label: "Energy & Planet",
+    subtitle: "K1 Orchestration · Resonance · Planetary-scale infrastructure",
     accent: YELLOW,
     items: [
-      { title: "Research",              description: "Lambda Boson theory",                href: "/workspace/research",    icon: FlaskConical },
-      { title: "Research Presentation", description: "Physics bridges & tooltips",         href: "/research-presentation", icon: Presentation },
-      { title: "Wavelength OS",         description: "Post-silicon manifesto",             href: "/wavelength-os",         icon: BookOpen },
-      { title: "Computing Alternatives",description: "Beyond silicon paradigms",           href: "/computing-alternatives",icon: Cpu      },
+      { title: "K1 Infrastructure",     description: "Energy roadmap from lab to civilisation scale",          href: "/k1",                    icon: Rocket   },
+      { title: "K1 Orchestration",      description: "Runtime coordination of planetary energy sources",       href: "/k1/orchestration",      icon: Activity },
+      { title: "Hardware OS",           description: "Photonic hardware stack — resonators to kernel",         href: "/nexus-hardware-os",     icon: HardDrive},
+      { title: "Quantum Threshold",     description: "Where silicon ends and light computing begins",          href: "/quantum-threshold",     icon: GitBranch},
     ],
   },
   {
-    label: "Network & Identity",
-    subtitle: "P2P · Wallet · Secure comms · Community",
+    label: "Identity & Wallet",
+    subtitle: "NXT tokens · Secure docs · Community — no surveillance",
     accent: ORANGE,
     items: [
-      { title: "Wallet",                description: "NXT token management",               href: "/wallet",                icon: Wallet   },
-      { title: "Transmission",          description: "P2P media sharing",                  href: "/workspace/transmission",icon: Radio    },
-      { title: "Secure Documents",      description: "Lambda-signed DOCX vault",           href: "/secure-docs",           icon: Shield   },
-      { title: "Friends",               description: "Community & connections",             href: "/friends",               icon: Users    },
-      { title: "Inbox",                 description: "Lambda-encoded messages",             href: "/inbox",                 icon: Mail     },
-      { title: "Live Streaming",        description: "Broadcast & watch live",             href: "/streaming",             icon: Activity },
+      { title: "NXT Wallet",            description: "Send and receive NXT — fees computed from E=hf not corporate policy", href: "/wallet",   icon: Wallet   },
+      { title: "Secure Documents",      description: "Documents signed by wavelength — unforgeable without physics",         href: "/secure-docs", icon: Shield },
+      { title: "Friends & Community",   description: "Connect with people on open spectrum — no algorithm curates your feed", href: "/friends", icon: Users    },
+      { title: "Inbox",                 description: "Messages encoded into light — private by the laws of physics",         href: "/inbox",   icon: Mail     },
     ],
   },
   {
-    label: "Platform & Licensing",
-    subtitle: "AGPL-3.0 · API tiers · Hardware licensing",
+    label: "Research & Manifesto",
+    subtitle: "The case for replacing binary computing — theory, evidence, roadmap",
     accent: RED,
     items: [
-      { title: "Pricing & Licensing",   description: "Open / Pro / Kernel / Enterprise",  href: "/pricing",               icon: DollarSign },
-      { title: "Developer Matrix",      description: "SDK & integration docs",             href: "/developer-matrix",      icon: Code2    },
+      { title: "Why Light Not Binary",  description: "Post-silicon manifesto — the case for wavelength computing", href: "/wavelength-os",       icon: BookOpen },
+      { title: "Beyond Silicon",        description: "Five post-silicon computing paradigms ready today",          href: "/computing-alternatives", icon: Cpu   },
+      { title: "Research",              description: "Lambda Boson theory — Λ = hf/c² foundation physics",        href: "/workspace/research",  icon: FlaskConical },
+      { title: "Developer Matrix",      description: "Open SDK & integration docs — build on NexusOS",            href: "/developer-matrix",    icon: Code2  },
     ],
   },
 ];
@@ -245,10 +243,10 @@ export default function LambdaPlaceholder() {
             NexusOS
           </h1>
           <p className="text-slate-400 text-sm mb-1" data-testid="text-subtitle">
-            A complete civilisation architecture built on quantum physics
+            Encode messages into light · Stream without platforms · Build without binary · Transact without banks
           </p>
           <p className="text-slate-600 text-xs font-mono">
-            Λ = hf/c²  ·  Z₀ = 376.73 Ω  ·  f₀ = 555 THz  ·  f_r = 7.83 Hz  ·  AGPL-3.0
+            Open source · Trustless · AGPL-3.0 · Physics-based · Λ = hf/c²
           </p>
           <div className="mt-4 mx-auto max-w-md">
             <SpectrumBar />
