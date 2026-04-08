@@ -40,6 +40,7 @@ import CeCodeWriterPage from "@/pages/ce-code-writer";
 import PricingPage from "@/pages/pricing";
 import SpectralDbPage from "@/pages/spectral-db";
 import BlockchainPage from "@/pages/blockchain";
+import AgentBusPage from "@/pages/agent-bus";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -93,6 +94,7 @@ function ProtectedRoutes() {
         <Route path="/pricing" component={PricingPage} />
         <Route path="/spectral-db" component={SpectralDbPage} />
         <Route path="/blockchain" component={BlockchainPage} />
+        <Route path="/agent-bus" component={AgentBusPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>

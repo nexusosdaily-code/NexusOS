@@ -2522,6 +2522,137 @@ export async function registerRoutes(
     });
   });
 
+  // ── Agent Message Bus API ─────────────────────────────────────────
+  // Proxy to the Python WNSP bus + persistent message history in PostgreSQL
+
+  // All registered agents and their Ψ channels
+  app.get("/api/agent-bus/agents", authenticate, async (req: Request, res: Response) => {
+    try {
+      const r = await fetch(`${SPECTRAL_API_URL}/api/wnsp/agent/status`);
+      const d = await r.json();
+      res.json(d);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Bus queue + route log status
+  app.get("/api/agent-bus/status", authenticate, async (req: Request, res: Response) => {
+    try {
+      const r = await fetch(`${SPECTRAL_API_URL}/api/wnsp/bus/status`);
+      const d = await r.json();
+      res.json(d);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Recent kernel events
+  app.get("/api/agent-bus/events", authenticate, async (req: Request, res: Response) => {
+    try {
+      const n = req.query.n ?? 30;
+      const r = await fetch(`${SPECTRAL_API_URL}/api/kernel/events?n=${n}`);
+      const d = await r.json();
+      res.json(d);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Persistent message history from PostgreSQL
+  app.get("/api/agent-bus/history", authenticate, async (req: Request, res: Response) => {
+    try {
+      const limit = parseInt(String(req.query.limit ?? 50));
+      const { db } = await import("./db");
+      const { sql: drizzleSql } = await import("drizzle-orm");
+      const rows = await db.execute(
+        drizzleSql`SELECT * FROM agent_messages ORDER BY created_at DESC LIMIT ${limit}`
+      );
+      res.json({ messages: rows.rows, count: rows.rows.length });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Send a message — proxy to Python bus AND persist to PostgreSQL
+  app.post("/api/agent-bus/send", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { src, dst, payload, priority = 5, msgType = "MESSAGE" } = req.body;
+      if (!src || !dst || !payload) return res.status(400).json({ error: "src, dst, payload required" });
+
+      const busRes = await fetch(`${SPECTRAL_API_URL}/api/wnsp/bus/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ src, dst, payload, priority }),
+      });
+      const busData = await busRes.json() as any;
+      if (!busRes.ok) return res.status(busRes.status).json(busData);
+
+      // Parse Ψ channels from route string "src Ψ(x,y,P) → dst Ψ(a,b,Q)"
+      const routeMatch = busData.route?.match(/Ψ\([^)]+\).*?Ψ\([^)]+\)/);
+      const psiParts   = busData.route?.match(/Ψ\([^)]+\)/g) ?? ["Ψ(0,0,H)", "Ψ(0,0,H)"];
+
+      // Persist
+      const { db } = await import("./db");
+      const { sql: drizzleSql } = await import("drizzle-orm");
+      await db.execute(drizzleSql`
+        INSERT INTO agent_messages
+          (src_agent, dst_agent, src_psi, dst_psi, src_band, dst_band,
+           payload, msg_type, priority, status, route)
+        VALUES
+          (${src}, ${dst},
+           ${psiParts[0] ?? "Ψ(0,0,H)"},
+           ${psiParts[1] ?? "Ψ(0,0,H)"},
+           ${busData.authority ?? "UNKNOWN"},
+           'UNKNOWN',
+           ${payload}, ${msgType}, ${priority}, 'queued',
+           ${busData.route ?? `${src} → ${dst}`})
+      `);
+
+      res.json({ success: true, ...busData });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Dispatch the next queued message — proxy + update persistence
+  app.post("/api/agent-bus/dispatch", authenticate, async (req: Request, res: Response) => {
+    try {
+      const busRes = await fetch(`${SPECTRAL_API_URL}/api/wnsp/bus/dispatch`, { method: "POST" });
+      const busData = await busRes.json() as any;
+
+      if (busData.status === "dispatched") {
+        const { db } = await import("./db");
+        const { sql: drizzleSql } = await import("drizzle-orm");
+        // Mark the oldest queued message for this route as dispatched
+        await db.execute(drizzleSql`
+          UPDATE agent_messages SET status = 'dispatched', dispatched_at = NOW()
+          WHERE src_agent = ${busData.src} AND dst_agent = ${busData.dst}
+            AND status = 'queued'
+          ORDER BY created_at ASC LIMIT 1
+        `);
+      }
+      res.json(busData);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Drain an agent's inbox
+  app.post("/api/agent-bus/receive", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { agent } = req.body;
+      if (!agent) return res.status(400).json({ error: "agent required" });
+      const r = await fetch(`${SPECTRAL_API_URL}/api/wnsp/bus/receive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agent }),
+      });
+      res.json(await r.json());
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Emit a kernel event manually
+  app.post("/api/agent-bus/emit", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { event_type, agent_id, detail } = req.body;
+      const r = await fetch(`${SPECTRAL_API_URL}/api/kernel/events/emit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_type, agent_id, detail }),
+      });
+      res.json(await r.json());
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── Wavelength Blockchain API ─────────────────────────────────────
   // Block identity = Ψ channel derived from physics, not SHA256
 

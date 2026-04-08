@@ -39,6 +39,7 @@ const SECTIONS = [
       { title: "Nexus v10",             description: "Latest protocol interface",          href: "/v10",                   icon: Zap      },
       { title: "WNSP Coordinator",      description: "Channel allocation & routing",       href: "/wnsp/coordinator",      icon: Globe2   },
       { title: "Kernel",                description: "5-phase boot · agent bus",           href: "/kernel",                icon: Cpu      },
+      { title: "Agent Message Bus",     description: "Ψ-channel agent-to-agent messaging", href: "/agent-bus",             icon: Radio    },
       { title: "Wavefield",             description: "Quantum field simulation",           href: "/workspace/wavefield",   icon: Waves    },
     ],
   },
