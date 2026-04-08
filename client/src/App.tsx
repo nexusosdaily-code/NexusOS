@@ -42,6 +42,7 @@ import SpectralDbPage from "@/pages/spectral-db";
 import BlockchainPage from "@/pages/blockchain";
 import AgentBusPage from "@/pages/agent-bus";
 import NexusCommandPage from "@/pages/nexus-command";
+import KernelGenesisPage from "@/pages/kernel-genesis";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -97,6 +98,7 @@ function ProtectedRoutes() {
         <Route path="/blockchain" component={BlockchainPage} />
         <Route path="/agent-bus" component={AgentBusPage} />
         <Route path="/nexus-command" component={NexusCommandPage} />
+        <Route path="/kernel-genesis" component={KernelGenesisPage} />
         <Route path="/transmission" component={TransmissionPage} />
         <Route component={NotFound} />
       </Switch>

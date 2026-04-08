@@ -2653,6 +2653,21 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ── Genesis Kernel Block API ───────────────────────────────────────
+  // The OS kernel's own boot-state genesis record — root_hash is a Ψ channel
+
+  app.get("/api/kernel/genesis", optionalAuth, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const rows = await db.execute(
+        sql`SELECT * FROM kernel_genesis_blocks ORDER BY created_at ASC LIMIT 1`
+      );
+      if (!rows.rows.length) return res.status(404).json({ error: "Genesis kernel block not found" });
+      res.json({ block: rows.rows[0] });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── Wavelength Blockchain API ─────────────────────────────────────
   // Block identity = Ψ channel derived from physics, not SHA256
 
