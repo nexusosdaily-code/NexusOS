@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Shield, Wallet, Radio, Zap, Users, FlaskConical, Activity, Waves,
@@ -88,6 +89,68 @@ const SECTIONS = [
     ],
   },
 ];
+
+// ── Live Nexus Status strip ──────────────────────────────────────────
+function NexusStatus() {
+  const { data: chainData } = useQuery<any>({ queryKey: ["/api/blockchain/chain"], refetchInterval: 8000 });
+  const { data: busData }   = useQuery<any>({ queryKey: ["/api/agent-bus/status"],  refetchInterval: 6000 });
+  const { data: dbData }    = useQuery<any>({ queryKey: ["/api/spectral-db/scan"],  refetchInterval: 10000 });
+
+  const chainHeight  = (chainData?.blocks ?? []).length;
+  const latestBlock  = (chainData?.blocks ?? []).at(-1);
+  const busQueued    = busData?.queued ?? 0;
+  const busDelivered = busData?.delivered ?? 0;
+  const dbCount      = (dbData?.records ?? []).length;
+
+  const items = [
+    {
+      label: "Blockchain",
+      href:  "/blockchain",
+      value: `Block #${chainHeight}`,
+      sub:   latestBlock ? latestBlock.psiChannel : "genesis",
+      color: "#2563eb",
+      live:  chainHeight > 0,
+    },
+    {
+      label: "Agent Bus",
+      href:  "/agent-bus",
+      value: `${busQueued} queued`,
+      sub:   `${busDelivered} delivered`,
+      color: "#8b00ff",
+      live:  true,
+      pulse: busQueued > 0,
+    },
+    {
+      label: "Spectral DB",
+      href:  "/spectral-db",
+      value: `${dbCount} records`,
+      sub:   "25,600 channels",
+      color: "#16a34a",
+      live:  dbCount > 0,
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-3 gap-2 mb-8">
+      {items.map(item => (
+        <Link key={item.label} href={item.href}>
+          <div className="group rounded-xl border p-3 cursor-pointer transition-all hover:scale-[1.02]"
+            style={{ borderColor: `${item.color}40`, background: `${item.color}08` }}>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${(item as any).pulse ? "animate-ping" : "animate-pulse"}`}
+                style={{ background: item.color }} />
+              <span className="text-xs font-mono font-semibold" style={{ color: item.color }}>
+                {item.label}
+              </span>
+            </div>
+            <div className="text-sm font-mono text-slate-200">{item.value}</div>
+            <div className="text-xs font-mono text-slate-600">{item.sub}</div>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 // ── Spectrum bar component ───────────────────────────────────────────
 function SpectrumBar() {
@@ -191,6 +254,9 @@ export default function LambdaPlaceholder() {
             <SpectrumBar />
           </div>
         </div>
+
+        {/* Live Nexus Status */}
+        <NexusStatus />
 
         {/* Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

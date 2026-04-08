@@ -1,24 +1,26 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Database, Search, Zap, Map, Trash2, Copy, Check } from "lucide-react";
+import { Link } from "wouter";
+import {
+  Database, Search, Zap, Map, Trash2, Copy, Check,
+  Download, Upload, Radio, ArrowRight, Layers
+} from "lucide-react";
 
 // ── Band helpers ──────────────────────────────────────────────────
 function getBand(nm: number) {
-  if (nm < 450) return { name: "SYSTEM",  color: "#8b00ff", emoji: "⚙" };
-  if (nm < 490) return { name: "AUTH",    color: "#0050ff", emoji: "🔐" };
-  if (nm < 520) return { name: "STREAM",  color: "#00cfcf", emoji: "⚡" };
-  if (nm < 565) return { name: "CORE",    color: "#00c800", emoji: "⚙" };
-  if (nm < 590) return { name: "UI",      color: "#cccc00", emoji: "🎨" };
-  if (nm < 625) return { name: "EVENT",   color: "#ff8c00", emoji: "📡" };
-  return         { name: "STORAGE", color: "#cc0000", emoji: "💾" };
+  if (nm < 450) return { name: "SYSTEM",  color: "#8b00ff" };
+  if (nm < 490) return { name: "AUTH",    color: "#0050ff" };
+  if (nm < 520) return { name: "STREAM",  color: "#00cfcf" };
+  if (nm < 565) return { name: "CORE",    color: "#00c800" };
+  if (nm < 590) return { name: "UI",      color: "#cccc00" };
+  if (nm < 625) return { name: "EVENT",   color: "#ff8c00" };
+  return         { name: "STORAGE", color: "#cc0000" };
 }
 
 function bandColor(band: string) {
@@ -40,7 +42,7 @@ function CopyBtn({ text }: { text: string }) {
 }
 
 // ── Record card ───────────────────────────────────────────────────
-function RecordCard({ record, onDelete }: { record: any; onDelete: () => void }) {
+function RecordCard({ record, onDelete, onSendToBus }: { record: any; onDelete: () => void; onSendToBus: (r: any) => void }) {
   const nm   = parseFloat(record.wavelengthNm);
   const band = getBand(nm);
   const bc   = bandColor(record.band ?? band.name);
@@ -53,14 +55,20 @@ function RecordCard({ record, onDelete }: { record: any; onDelete: () => void })
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: bc }} />
           <span className="font-semibold text-sm text-slate-100">{record.label}</span>
-          <Badge className="text-xs px-1.5 py-0 font-mono"
-            style={{ background: `${bc}20`, color: bc, borderColor: `${bc}40` }}>
+          <span className="text-xs px-1.5 py-0.5 rounded font-mono"
+            style={{ background: `${bc}20`, color: bc, border: `1px solid ${bc}40` }}>
             {record.band}
-          </Badge>
+          </span>
         </div>
-        <button onClick={onDelete} className="text-slate-700 hover:text-red-400 transition-colors flex-shrink-0">
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={() => onSendToBus(record)}
+            className="text-slate-700 hover:text-cyan-400 transition-colors" title="Send to agent bus">
+            <Radio className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={onDelete} className="text-slate-700 hover:text-red-400 transition-colors">
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       <p className="text-xs text-slate-400 mb-2 line-clamp-2">{record.content}</p>
@@ -92,19 +100,29 @@ function StoreTab({ onStored }: { onStored: () => void }) {
   const [content, setContent] = useState(PRESETS[0].content);
   const [label,   setLabel]   = useState(PRESETS[0].label);
   const [result,  setResult]  = useState<any>(null);
+  const [mineToo, setMineToo] = useState(false);
+  const [mineResult, setMineResult] = useState<any>(null);
 
   const storeMutation = useMutation({
     mutationFn: () =>
       apiRequest("POST", "/api/spectral-db/store", { content, label })
         .then(r => r.json()),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setResult(data);
       onStored();
+      if (mineToo && data?.success) {
+        try {
+          const mr = await apiRequest("POST", "/api/blockchain/mine", {
+            content: `SPECTRAL_STORE ${label} λ=${data.spectral?.wavelength_mid_nm?.toFixed(1)}nm ${data.spectral?.psi_channel}`,
+          });
+          setMineResult(await mr.json());
+        } catch {}
+      }
     },
   });
 
   const loadPreset = (p: typeof PRESETS[0]) => {
-    setContent(p.content); setLabel(p.label); setResult(null);
+    setContent(p.content); setLabel(p.label); setResult(null); setMineResult(null);
   };
 
   const nm   = result?.spectral?.wavelength_mid_nm;
@@ -115,8 +133,8 @@ function StoreTab({ onStored }: { onStored: () => void }) {
     <div className="space-y-4">
       <p className="text-slate-400 text-sm">
         Describe what you want to store. The CE→SE process encodes it to a
-        physical wavelength — that wavelength IS the address. The data lives
-        there permanently, not at an assigned ID.
+        physical wavelength — that wavelength IS the address. Optionally anchor
+        the store event on the wavelength blockchain.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -131,6 +149,11 @@ function StoreTab({ onStored }: { onStored: () => void }) {
           <Input value={label} onChange={e => setLabel(e.target.value)}
             className="bg-slate-800 border-slate-600 text-slate-200 font-mono text-sm"
             data-testid="input-label" />
+          <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-400">
+            <input type="checkbox" checked={mineToo} onChange={e => setMineToo(e.target.checked)}
+              className="rounded" data-testid="check-mine" />
+            Anchor to blockchain
+          </label>
           <Button className="w-full" onClick={() => storeMutation.mutate()}
             disabled={storeMutation.isPending || !content}
             data-testid="btn-store">
@@ -159,7 +182,6 @@ function StoreTab({ onStored }: { onStored: () => void }) {
             <span className="text-xs font-mono" style={{ color: bc }}>stored</span>
           </div>
 
-          {/* Spectrum marker */}
           <div className="relative h-6">
             <div className="h-2 w-full rounded"
               style={{ background: "linear-gradient(to right,#8b00ff,#0050ff,#00cfcf,#00c800,#cccc00,#ff8c00,#cc0000)", marginTop: "6px" }} />
@@ -183,6 +205,13 @@ function StoreTab({ onStored }: { onStored: () => void }) {
             ))}
           </div>
 
+          {mineResult?.success && (
+            <div className="flex items-center gap-2 text-xs font-mono text-violet-400">
+              <Layers className="w-3 h-3" />
+              Anchored: Block #{mineResult.block.blockNumber} {mineResult.block.psiChannel}
+            </div>
+          )}
+
           <p className="text-xs text-slate-500 font-mono">
             This content is now retrievable by its physical address —
             wavelength {nm.toFixed(1)} nm or channel {result.spectral.psi_channel}.
@@ -194,7 +223,7 @@ function StoreTab({ onStored }: { onStored: () => void }) {
   );
 }
 
-// ── Tab 2: Spectrum Map ───────────────────────────────────────────
+// ── Tab 2: Spectrum Map ────────────────────────────────────────────
 function SpectrumMapTab({ records }: { records: any[] }) {
   const [hovered, setHovered] = useState<any>(null);
 
@@ -204,6 +233,9 @@ function SpectrumMapTab({ records }: { records: any[] }) {
     if (!bandGroups[b]) bandGroups[b] = [];
     bandGroups[b].push(r);
   });
+
+  const BAND_ORDER = ["SYSTEM","AUTH","STREAM","CORE","UI","EVENT","STORAGE"];
+  const bandOrder  = (b: string) => BAND_ORDER.indexOf(b);
 
   return (
     <div className="space-y-5">
@@ -222,7 +254,7 @@ function SpectrumMapTab({ records }: { records: any[] }) {
         <>
           {/* Full spectrum bar with record markers */}
           <div className="relative">
-            <div className="h-8 w-full rounded-lg"
+            <div className="h-10 w-full rounded-lg"
               style={{ background: "linear-gradient(to right,#8b00ff,#0050ff,#00cfcf,#00c800,#cccc00,#ff8c00,#cc0000)" }} />
             {records.map((r, i) => {
               const nm  = parseFloat(r.wavelengthNm);
@@ -235,15 +267,15 @@ function SpectrumMapTab({ records }: { records: any[] }) {
                   onMouseEnter={() => setHovered(r)}
                   onMouseLeave={() => setHovered(null)}
                   data-testid={`marker-${r.id}`}>
-                  <div className="w-2.5 h-8 rounded-full border border-white/60 bg-white/20 hover:bg-white/50 transition-colors" />
+                  <div className="w-3 h-10 rounded-full border border-white/60 bg-white/25 hover:bg-white/60 transition-colors" />
                 </div>
               );
             })}
           </div>
 
           {/* Band labels */}
-          <div className="flex justify-between text-xs font-mono text-slate-600">
-            {["SYSTEM", "AUTH", "STREAM", "CORE", "UI", "EVENT", "STORAGE"].map((b, i) => (
+          <div className="flex justify-between text-xs font-mono">
+            {BAND_ORDER.map((b, i) => (
               <span key={i} style={{ color: bandColor(b) }}>{b}</span>
             ))}
           </div>
@@ -256,13 +288,35 @@ function SpectrumMapTab({ records }: { records: any[] }) {
               <span style={{ color: bandColor(hovered.band) }}>λ = {parseFloat(hovered.wavelengthNm).toFixed(1)} nm</span>
               <span className="text-slate-500 mx-2">·</span>
               <span className="text-slate-400">{hovered.psiChannel}</span>
+              <p className="text-slate-600 mt-1 truncate">{hovered.content}</p>
             </div>
           )}
 
-          {/* Band groups */}
+          {/* Band density chart */}
+          <div>
+            <div className="text-xs text-slate-500 font-mono mb-2">Records per band</div>
+            {Object.entries(bandGroups)
+              .sort(([a], [b]) => bandOrder(a) - bandOrder(b))
+              .map(([band, recs]) => {
+                const bc  = bandColor(band);
+                const pct = Math.min(100, (recs.length / records.length) * 100 * 3);
+                return (
+                  <div key={band} className="flex items-center gap-2 mb-1.5">
+                    <div className="w-14 text-right text-xs font-mono flex-shrink-0" style={{ color: bc }}>{band}</div>
+                    <div className="flex-1 h-3 rounded bg-slate-900 overflow-hidden">
+                      <div className="h-full rounded transition-all"
+                        style={{ width: `${pct}%`, background: bc }} />
+                    </div>
+                    <span className="text-xs font-mono text-slate-600 w-8 text-right">{recs.length}</span>
+                  </div>
+                );
+              })}
+          </div>
+
+          {/* Record list by band */}
           <div className="space-y-3">
             {Object.entries(bandGroups)
-              .sort(([a], [b]) => Object.keys({ SYSTEM:0,AUTH:1,STREAM:2,CORE:3,UI:4,EVENT:5,STORAGE:6 }).indexOf(a) - Object.keys({ SYSTEM:0,AUTH:1,STREAM:2,CORE:3,UI:4,EVENT:5,STORAGE:6 }).indexOf(b))
+              .sort(([a], [b]) => bandOrder(a) - bandOrder(b))
               .map(([band, recs]) => (
                 <div key={band}>
                   <div className="flex items-center gap-2 mb-2">
@@ -289,23 +343,25 @@ function SpectrumMapTab({ records }: { records: any[] }) {
   );
 }
 
-// ── Tab 3: Proximity Search ───────────────────────────────────────
-function ProximitySearchTab() {
+// ── Tab 3: Proximity Search ────────────────────────────────────────
+function ProximitySearchTab({ onSendToBus }: { onSendToBus: (r: any) => void }) {
   const [wavelength, setWavelength] = useState(540);
   const [range,      setRange]      = useState(30);
   const [results,    setResults]    = useState<any[] | null>(null);
   const [searching,  setSearching]  = useState(false);
 
+  const BAND_SHORTCUTS = [
+    { label: "SYSTEM", nm: 420 }, { label: "AUTH", nm: 470 }, { label: "STREAM", nm: 505 },
+    { label: "CORE", nm: 540 }, { label: "UI", nm: 577 }, { label: "EVENT", nm: 607 }, { label: "STORAGE", nm: 700 },
+  ];
+
   const search = async () => {
     setSearching(true);
     try {
-      const res = await apiRequest("GET",
-        `/api/spectral-db/search?wavelength=${wavelength}&range=${range}`);
+      const res = await apiRequest("GET", `/api/spectral-db/search?wavelength=${wavelength}&range=${range}`);
       const data = await res.json();
       setResults(data.records ?? []);
-    } finally {
-      setSearching(false);
-    }
+    } finally { setSearching(false); }
   };
 
   const bandAtWl = getBand(wavelength);
@@ -318,6 +374,19 @@ function ProximitySearchTab() {
         within ± nm of a target wavelength. Similar content clusters near each
         other on the spectrum. Proximity search IS semantic search.
       </p>
+
+      {/* Band shortcuts */}
+      <div className="flex flex-wrap gap-1.5">
+        <span className="text-xs text-slate-600 self-center">Jump to band:</span>
+        {BAND_SHORTCUTS.map(({ label, nm }) => (
+          <button key={label} onClick={() => { setWavelength(nm); setResults(null); }}
+            className="px-2 py-0.5 text-xs rounded font-mono transition-colors"
+            style={{ background: `${bandColor(label)}15`, color: bandColor(label), border: `1px solid ${bandColor(label)}30` }}
+            data-testid={`band-shortcut-${label}`}>
+            {label}
+          </button>
+        ))}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
         <div className="space-y-1">
@@ -347,7 +416,7 @@ function ProximitySearchTab() {
         </Button>
       </div>
 
-      {/* Target marker on spectrum */}
+      {/* Target marker */}
       <div className="relative">
         <div className="h-4 w-full rounded"
           style={{ background: "linear-gradient(to right,#8b00ff,#0050ff,#00cfcf,#00c800,#cccc00,#ff8c00,#cc0000)" }} />
@@ -364,8 +433,7 @@ function ProximitySearchTab() {
       {results !== null && (
         <div className="space-y-2">
           <p className="text-xs font-mono text-slate-500">
-            {results.length} record{results.length !== 1 ? "s" : ""} found
-            within {range} nm of {wavelength} nm
+            {results.length} record{results.length !== 1 ? "s" : ""} found within {range} nm of {wavelength} nm
           </p>
           {results.length === 0 ? (
             <div className="text-slate-600 text-sm font-mono py-4 text-center">
@@ -374,7 +442,7 @@ function ProximitySearchTab() {
           ) : (
             <div className="space-y-2">
               {results.map((r, i) => {
-                const rNm = parseFloat(r.wavelengthNm);
+                const rNm  = parseFloat(r.wavelengthNm);
                 const dist = Math.abs(rNm - wavelength).toFixed(1);
                 const rBc  = bandColor(r.band);
                 return (
@@ -388,9 +456,15 @@ function ProximitySearchTab() {
                       </div>
                       <p className="text-xs text-slate-500 truncate">{r.content}</p>
                     </div>
-                    <div className="flex-shrink-0 text-right text-xs font-mono">
-                      <div style={{ color: rBc }}>{rNm.toFixed(1)} nm</div>
-                      <div className="text-slate-600">Δ {dist} nm</div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => onSendToBus(r)}
+                        className="text-slate-600 hover:text-cyan-400 transition-colors" title="Route to agent bus">
+                        <Radio className="w-3.5 h-3.5" />
+                      </button>
+                      <div className="text-right text-xs font-mono">
+                        <div style={{ color: rBc }}>{rNm.toFixed(1)} nm</div>
+                        <div className="text-slate-600">Δ {dist} nm</div>
+                      </div>
                     </div>
                   </div>
                 );
@@ -404,7 +478,12 @@ function ProximitySearchTab() {
 }
 
 // ── Tab 4: All Records ────────────────────────────────────────────
-function AllRecordsTab({ records, onDelete }: { records: any[]; onDelete: (id: string) => void }) {
+function AllRecordsTab({ records, onDelete, onSendToBus, onExport }: {
+  records: any[];
+  onDelete: (id: string) => void;
+  onSendToBus: (r: any) => void;
+  onExport: () => void;
+}) {
   return (
     <div className="space-y-2">
       {records.length === 0 ? (
@@ -417,18 +496,25 @@ function AllRecordsTab({ records, onDelete }: { records: any[]; onDelete: (id: s
             <p className="text-xs font-mono text-slate-500">
               {records.length} record{records.length !== 1 ? "s" : ""} across the spectrum
             </p>
-            <div className="flex gap-2 text-xs font-mono text-slate-600">
-              {["SYSTEM","AUTH","STREAM","CORE","UI","EVENT","STORAGE"].map(b => {
-                const count = records.filter(r => r.band === b).length;
-                return count > 0 ? (
-                  <span key={b} style={{ color: bandColor(b) }}>{b} {count}</span>
-                ) : null;
-              })}
+            <div className="flex items-center gap-3">
+              <div className="flex gap-2 text-xs font-mono text-slate-600">
+                {["SYSTEM","AUTH","STREAM","CORE","UI","EVENT","STORAGE"].map(b => {
+                  const count = records.filter(r => r.band === b).length;
+                  return count > 0 ? (
+                    <span key={b} style={{ color: bandColor(b) }}>{b} {count}</span>
+                  ) : null;
+                })}
+              </div>
+              <button onClick={onExport}
+                className="flex items-center gap-1 text-xs font-mono text-slate-500 hover:text-slate-300 transition-colors"
+                data-testid="btn-export">
+                <Download className="w-3 h-3" /> Export JSON
+              </button>
             </div>
           </div>
           <div className="space-y-2">
             {records.map(r => (
-              <RecordCard key={r.id} record={r} onDelete={() => onDelete(r.id)} />
+              <RecordCard key={r.id} record={r} onDelete={() => onDelete(r.id)} onSendToBus={onSendToBus} />
             ))}
           </div>
         </>
@@ -437,22 +523,204 @@ function AllRecordsTab({ records, onDelete }: { records: any[]; onDelete: (id: s
   );
 }
 
+// ── Tab 5: Bulk Import ────────────────────────────────────────────
+function BulkImportTab({ onImported }: { onImported: () => void }) {
+  const [text,    setText]    = useState("");
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<any[]>([]);
+
+  const EXAMPLE = `kernel_boot_sequence | five phase operating system kernel boot initialises spectral channels
+lambda_gate | photonic logic gate performing Boolean operations on polarised light
+energy_market | K1 energy market trades resonance units via spectral authority band
+nxt_wallet | NXT token wallet physics-based transaction costs E=hf lambda
+agent_bus_router | WNSP message bus routes agent messages by Psi channel address`;
+
+  const runImport = async () => {
+    const lines = text.trim().split("\n").filter(l => l.includes("|"));
+    if (!lines.length) return;
+    setLoading(true);
+    setResults([]);
+    const out: any[] = [];
+    for (const line of lines) {
+      const [label, ...rest] = line.split("|").map(s => s.trim());
+      const content = rest.join(" | ");
+      if (!label || !content) continue;
+      try {
+        const r = await apiRequest("POST", "/api/spectral-db/store", { content, label });
+        const d = await r.json();
+        out.push({ label, success: d.success, nm: d.spectral?.wavelength_mid_nm, band: d.spectral?.band, psi: d.spectral?.psi_channel });
+      } catch (e: any) {
+        out.push({ label, success: false, error: e.message });
+      }
+    }
+    setResults(out);
+    setLoading(false);
+    onImported();
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-slate-400 text-sm">
+        Import multiple records at once. Each line: <code className="text-slate-300 font-mono">label | content</code>.
+        Each entry is independently encoded through CE→SE to its physical wavelength.
+      </p>
+
+      <div className="space-y-1">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-slate-400">Records (one per line: label | content)</Label>
+          <button onClick={() => setText(EXAMPLE)}
+            className="text-xs font-mono text-slate-500 hover:text-slate-300 transition-colors"
+            data-testid="btn-load-example">
+            Load example
+          </button>
+        </div>
+        <Textarea value={text} onChange={e => setText(e.target.value)}
+          className="bg-slate-800 border-slate-600 text-slate-200 text-xs font-mono min-h-40"
+          placeholder="user_auth | function authenticate validates credentials&#10;lambda_gate | photonic logic gate operator"
+          data-testid="input-bulk" />
+        <div className="text-xs text-slate-600 font-mono">
+          {text.split("\n").filter(l => l.includes("|")).length} records to import
+        </div>
+      </div>
+
+      <Button onClick={runImport}
+        disabled={loading || !text.includes("|")}
+        data-testid="btn-import">
+        <Upload className="w-3 h-3 mr-1" />
+        {loading ? "Importing…" : "Import All"}
+      </Button>
+
+      {results.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="text-xs font-mono text-slate-500">
+            {results.filter(r => r.success).length}/{results.length} imported successfully
+          </div>
+          {results.map((r, i) => {
+            const bc = r.band ? bandColor(r.band) : "#94a3b8";
+            return (
+              <div key={i} className="flex items-center gap-2 text-xs font-mono p-2 rounded bg-slate-900/60"
+                data-testid={`import-result-${i}`}>
+                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ background: r.success ? "#16a34a" : "#dc2626" }} />
+                <span className="text-slate-300">{r.label}</span>
+                {r.success && (
+                  <>
+                    <ArrowRight className="w-3 h-3 text-slate-700 flex-shrink-0" />
+                    <span style={{ color: bc }}>{r.nm?.toFixed(1)}nm</span>
+                    <span className="text-slate-600">{r.psi}</span>
+                  </>
+                )}
+                {!r.success && <span className="text-red-400">{r.error ?? "failed"}</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Bus Send modal (triggered from record) ────────────────────────
+function BusSendPanel({ record, onDone }: { record: any; onDone: () => void }) {
+  const [src, setSrc]       = useState("os_kernel");
+  const [dst, setDst]       = useState("bus_router");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent]       = useState<any>(null);
+
+  const AGENTS = ["os_kernel","bus_router","auth_gateway","scheduler_daemon","watchdog_daemon"];
+  const bc = bandColor(record.band);
+
+  const send = async () => {
+    setSending(true);
+    try {
+      const r = await apiRequest("POST", "/api/agent-bus/send", {
+        src, dst,
+        payload: `SPECTRAL_RECORD ${record.label} λ=${parseFloat(record.wavelengthNm).toFixed(1)}nm ${record.psiChannel} — ${record.content.slice(0, 60)}`,
+        priority: 4,
+        msgType: "EVENT",
+      });
+      setSent(await r.json());
+    } finally { setSending(false); }
+  };
+
+  return (
+    <div className="rounded-xl border p-4 space-y-3 mb-4"
+      style={{ borderColor: `${bc}40`, background: `${bc}08` }}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Radio className="w-4 h-4" style={{ color: bc }} />
+          <span className="text-sm font-semibold text-slate-200">Route record to agent bus</span>
+        </div>
+        <button onClick={onDone} className="text-slate-600 hover:text-slate-400 text-xs">✕</button>
+      </div>
+      <div className="text-xs font-mono" style={{ color: bc }}>
+        {record.label} · {parseFloat(record.wavelengthNm).toFixed(1)}nm · {record.psiChannel}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs text-slate-400">From</Label>
+          <select value={src} onChange={e => setSrc(e.target.value)}
+            className="w-full px-2 py-1.5 rounded bg-slate-800 border border-slate-600 text-slate-200 font-mono text-xs">
+            {AGENTS.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-slate-400">To</Label>
+          <select value={dst} onChange={e => setDst(e.target.value)}
+            className="w-full px-2 py-1.5 rounded bg-slate-800 border border-slate-600 text-slate-200 font-mono text-xs">
+            {AGENTS.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button size="sm" onClick={send} disabled={sending || src === dst}>
+          <Send className="w-3 h-3 mr-1" />
+          {sending ? "Routing…" : "Send to Bus"}
+        </Button>
+        <Link href="/agent-bus" className="text-xs text-slate-600 hover:text-slate-400 font-mono">
+          view bus →
+        </Link>
+      </div>
+      {sent?.success && (
+        <p className="text-xs font-mono text-cyan-400">{sent.route} · depth {sent.queue_depth}</p>
+      )}
+      {sent?.error && (
+        <p className="text-xs font-mono text-red-400">{sent.error} — {sent.reason}</p>
+      )}
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────
 export default function SpectralDbPage() {
   const qc = useQueryClient();
+  const [busPanelRecord, setBusPanelRecord] = useState<any>(null);
 
   const { data: scanData, refetch } = useQuery<any>({
     queryKey: ["/api/spectral-db/scan"],
     refetchInterval: 10000,
   });
+  const { data: chainData } = useQuery<any>({
+    queryKey: ["/api/blockchain/chain"],
+    refetchInterval: 10000,
+  });
 
   const records: any[] = scanData?.records ?? [];
+  const chainHeight = (chainData?.blocks ?? []).length;
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
       apiRequest("DELETE", `/api/spectral-db/${id}`).then(r => r.json()),
     onSuccess: () => refetch(),
   });
+
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(records, null, 2)], { type: "application/json" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = "spectral_db_export.json"; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6">
@@ -468,10 +736,14 @@ export default function SpectralDbPage() {
               Content-addressed storage — data lives at its wavelength, not at an assigned ID
             </p>
           </div>
-          <div className="ml-auto flex items-center gap-3 text-xs font-mono text-slate-500">
-            <span>{records.length} records</span>
-            <div className="w-1 h-1 rounded-full bg-slate-700" />
-            <span>25,600 channels available</span>
+          <div className="ml-auto flex items-center gap-4 text-xs font-mono text-slate-500">
+            <Link href="/blockchain" className="flex items-center gap-1 hover:text-blue-400 transition-colors">
+              <Layers className="w-3 h-3" /> Chain {chainHeight}
+            </Link>
+            <Link href="/agent-bus" className="flex items-center gap-1 hover:text-cyan-400 transition-colors">
+              <Radio className="w-3 h-3" /> Bus
+            </Link>
+            <span>{records.length} records · 25,600 channels</span>
           </div>
         </div>
 
@@ -493,8 +765,13 @@ export default function SpectralDbPage() {
         </div>
       </div>
 
+      {/* Bus send panel */}
+      {busPanelRecord && (
+        <BusSendPanel record={busPanelRecord} onDone={() => setBusPanelRecord(null)} />
+      )}
+
       <Tabs defaultValue="store">
-        <TabsList className="bg-slate-900 border border-slate-700 mb-4">
+        <TabsList className="bg-slate-900 border border-slate-700 mb-4 flex-wrap h-auto gap-1">
           <TabsTrigger value="store"    data-testid="tab-store">
             <Zap className="w-3 h-3 mr-1" /> Store
           </TabsTrigger>
@@ -506,6 +783,9 @@ export default function SpectralDbPage() {
           </TabsTrigger>
           <TabsTrigger value="records"  data-testid="tab-records">
             <Database className="w-3 h-3 mr-1" /> Records ({records.length})
+          </TabsTrigger>
+          <TabsTrigger value="import"   data-testid="tab-import">
+            <Upload className="w-3 h-3 mr-1" /> Bulk Import
           </TabsTrigger>
         </TabsList>
 
@@ -527,14 +807,26 @@ export default function SpectralDbPage() {
           <h2 className="text-sm font-semibold text-violet-300 mb-3">
             Proximity search = semantic search — nearby wavelengths, similar content
           </h2>
-          <ProximitySearchTab />
+          <ProximitySearchTab onSendToBus={r => setBusPanelRecord(r)} />
         </TabsContent>
 
         <TabsContent value="records">
           <h2 className="text-sm font-semibold text-amber-300 mb-3">
             All stored records ordered by wavelength (380 nm → 780 nm)
           </h2>
-          <AllRecordsTab records={records} onDelete={id => deleteMutation.mutate(id)} />
+          <AllRecordsTab
+            records={records}
+            onDelete={id => deleteMutation.mutate(id)}
+            onSendToBus={r => setBusPanelRecord(r)}
+            onExport={handleExport}
+          />
+        </TabsContent>
+
+        <TabsContent value="import">
+          <h2 className="text-sm font-semibold text-orange-300 mb-3">
+            Bulk-import records — each encoded independently through CE→SE
+          </h2>
+          <BulkImportTab onImported={() => refetch()} />
         </TabsContent>
       </Tabs>
     </div>

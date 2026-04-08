@@ -1,24 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Link } from "wouter";
 import {
   Layers, Zap, Send, Clock, ChevronDown, ChevronRight,
-  Link as LinkIcon, Globe2, Hash
+  Link as LinkIcon, Globe2, Hash, Radio, ArrowRight, ExternalLink,
+  Activity, RefreshCw
 } from "lucide-react";
 
-// ── Band colours ──────────────────────────────────────────────────
 const BAND_COLOR: Record<string, string> = {
   SYSTEM: "#8b00ff", AUTH: "#2563eb", STREAM: "#06b6d4",
   CORE: "#16a34a", UI: "#ca8a04", EVENT: "#ea580c", STORAGE: "#dc2626",
+  KERNEL: "#2563eb", USER: "#16a34a", GUEST: "#dc2626",
 };
 const bandColor = (b: string) => BAND_COLOR[b] ?? "#94a3b8";
+
+function bandFromNm(nm: number): string {
+  if (nm < 450) return "SYSTEM";
+  if (nm < 490) return "AUTH";
+  if (nm < 520) return "STREAM";
+  if (nm < 565) return "CORE";
+  if (nm < 590) return "UI";
+  if (nm < 625) return "EVENT";
+  return "STORAGE";
+}
 
 function SpectrumBar() {
   return (
@@ -37,13 +48,59 @@ function PsiTag({ psi, band }: { psi: string; band: string }) {
   );
 }
 
-// ── Genesis badge ─────────────────────────────────────────────────
 function GenesisBadge() {
   return (
     <span className="text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wider"
       style={{ background: "#2563eb20", color: "#2563eb", border: "1px solid #2563eb40" }}>
       Genesis
     </span>
+  );
+}
+
+// ── Animated chain visualiser ─────────────────────────────────────
+function ChainVisualiser({ blocks }: { blocks: any[] }) {
+  const reversed = [...blocks].reverse().slice(0, 8);
+  if (reversed.length === 0) return null;
+  return (
+    <div className="overflow-x-auto pb-2">
+      <div className="flex items-center gap-0 min-w-max">
+        {reversed.map((block, i) => {
+          const bc = bandColor(block.band);
+          const isLatest = i === 0;
+          return (
+            <div key={block.id} className="flex items-center">
+              {i > 0 && (
+                <div className="flex items-center">
+                  <div className="h-px w-6 bg-slate-700" />
+                  <ArrowRight className="w-3 h-3 text-slate-700 flex-shrink-0" />
+                </div>
+              )}
+              <div className="flex flex-col items-center gap-1 px-2">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center text-xs font-mono font-bold transition-all"
+                  style={{
+                    background: `${bc}15`,
+                    border: `2px solid ${isLatest ? bc : bc + "60"}`,
+                    color: bc,
+                    boxShadow: isLatest ? `0 0 16px ${bc}40` : "none",
+                  }}>
+                  #{block.blockNumber}
+                </div>
+                <div className="text-xs font-mono text-center" style={{ color: bc }}>
+                  {parseFloat(block.wavelengthNm).toFixed(0)}nm
+                </div>
+                <div className="text-xs text-slate-600 text-center" style={{ fontSize: "9px" }}>
+                  {block.band}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {blocks.length > 8 && (
+          <div className="text-xs text-slate-600 font-mono pl-2">+{blocks.length - 8} more</div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -57,9 +114,8 @@ function BlockCard({ block, isLatest }: { block: any; isLatest: boolean }) {
   const isGenesis = block.blockNumber === 0;
 
   return (
-    <div className="rounded-xl border overflow-hidden"
+    <div className="rounded-xl border overflow-hidden transition-all"
       style={{ borderColor: isLatest ? `${bc}60` : "#1e293b", background: isLatest ? `${bc}06` : "#0f172a" }}>
-      {/* Header */}
       <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
         onClick={() => setOpen(o => !o)}
         data-testid={`block-header-${block.blockNumber}`}>
@@ -72,7 +128,7 @@ function BlockCard({ block, isLatest }: { block: any; isLatest: boolean }) {
             <span className="text-sm font-semibold text-slate-200">{block.band} band</span>
             {isGenesis && <GenesisBadge />}
             {isLatest && !isGenesis && (
-              <span className="text-xs text-green-400 font-mono">latest</span>
+              <span className="text-xs text-green-400 font-mono animate-pulse">latest</span>
             )}
             <PsiTag psi={block.psiChannel} band={block.band} />
           </div>
@@ -81,7 +137,6 @@ function BlockCard({ block, isLatest }: { block: any; isLatest: boolean }) {
         {open ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-600" />}
       </button>
 
-      {/* Chain link to previous block */}
       {block.previousPsi && (
         <div className="px-4 py-1 flex items-center gap-2 text-xs font-mono text-slate-600 border-t border-slate-800/40">
           <LinkIcon className="w-3 h-3" />
@@ -90,16 +145,14 @@ function BlockCard({ block, isLatest }: { block: any; isLatest: boolean }) {
         </div>
       )}
 
-      {/* Expanded details */}
       {open && (
         <div className="px-4 pb-4 pt-2 border-t border-slate-800/40 space-y-4">
-          {/* Spectrum position */}
           <div>
             <div className="text-xs text-slate-500 mb-1">Block position on spectrum</div>
             <div className="relative h-4">
               <div className="absolute inset-0 rounded"
                 style={{ background: "linear-gradient(to right,#8b00ff,#2563eb,#06b6d4,#16a34a,#ca8a04,#ea580c,#dc2626)" }} />
-              <div className="absolute top-0 bottom-0 w-1 bg-white rounded"
+              <div className="absolute top-0 bottom-0 w-1 bg-white rounded shadow-lg"
                 style={{ left: `${((parseFloat(block.wavelengthNm) - 380) / 400) * 100}%`, transform: "translateX(-50%)" }} />
             </div>
             <div className="flex justify-between text-xs font-mono text-slate-700 mt-0.5">
@@ -107,7 +160,6 @@ function BlockCard({ block, isLatest }: { block: any; isLatest: boolean }) {
             </div>
           </div>
 
-          {/* Physics metrics grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {[
               { label: "Wavelength",  value: `${wl} nm`,          color: bc },
@@ -126,10 +178,19 @@ function BlockCard({ block, isLatest }: { block: any; isLatest: boolean }) {
             ))}
           </div>
 
-          {/* Block content */}
           <div className="p-3 rounded bg-slate-900 border border-slate-800">
             <div className="text-xs text-slate-500 mb-1">Block content</div>
             <p className="text-xs text-slate-300 font-mono leading-relaxed">{block.content}</p>
+          </div>
+
+          {/* Cross-link to Agent Bus */}
+          <div className="flex items-center gap-2 text-xs font-mono">
+            <Radio className="w-3 h-3 text-slate-600" />
+            <span className="text-slate-600">Block minted at</span>
+            <PsiTag psi={block.psiChannel} band={block.band} />
+            <Link href="/agent-bus" className="flex items-center gap-1 text-slate-500 hover:text-slate-300 transition-colors">
+              <ExternalLink className="w-3 h-3" /> route on bus
+            </Link>
           </div>
 
           {isGenesis && (
@@ -147,11 +208,8 @@ function BlockCard({ block, isLatest }: { block: any; isLatest: boolean }) {
   );
 }
 
-// ── Tab: Chain explorer ───────────────────────────────────────────
-function ChainTab() {
-  const { data } = useQuery<any>({ queryKey: ["/api/blockchain/chain"], refetchInterval: 5000 });
-  const blocks: any[] = data?.blocks ?? [];
-
+// ── Chain tab ─────────────────────────────────────────────────────
+function ChainTab({ blocks }: { blocks: any[] }) {
   return (
     <div className="space-y-3">
       {blocks.length === 0 ? (
@@ -165,12 +223,14 @@ function ChainTab() {
   );
 }
 
-// ── Tab: Mine a block ─────────────────────────────────────────────
-function MineTab() {
+// ── Mine tab ─────────────────────────────────────────────────────
+function MineTab({ onMined }: { onMined?: () => void }) {
   const qc = useQueryClient();
   const [content, setContent]     = useState("");
   const [miner,   setMiner]       = useState("");
   const [result,  setResult]      = useState<any>(null);
+  const [sendToBus, setSendToBus] = useState(false);
+  const [busResult, setBusResult] = useState<any>(null);
 
   const PRESETS = [
     "NexusOS kernel event bus register agent auth_gateway spectral band SYSTEM authority",
@@ -178,15 +238,30 @@ function MineTab() {
     "K1 energy infrastructure orbital solar array resonance harvester fusion photonics",
     "Spectral database content addressed storage wavelength is the address AGPL-3.0",
     "NXT token transfer 500 units wallet spectral authority USER band confirmed",
+    "Agent message dispatched os_kernel to auth_gateway verify session TOKEN",
   ];
 
   const mineMutation = useMutation({
     mutationFn: () =>
       apiRequest("POST", "/api/blockchain/mine", { content, minerAddress: miner || undefined })
         .then(r => r.json()),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setResult(data);
       qc.invalidateQueries({ queryKey: ["/api/blockchain/chain"] });
+      onMined?.();
+      // Cross-link: also announce to agent bus if toggled
+      if (sendToBus && data?.block) {
+        try {
+          const busRes = await apiRequest("POST", "/api/agent-bus/send", {
+            src: "os_kernel",
+            dst: "bus_router",
+            payload: `BLOCK_MINED #${data.block.blockNumber} ${data.block.psiChannel} ${data.block.band} λ=${parseFloat(data.block.wavelengthNm).toFixed(1)}nm`,
+            priority: 3,
+            msgType: "EVENT",
+          });
+          setBusResult(await busRes.json());
+        } catch {}
+      }
     },
   });
 
@@ -208,7 +283,7 @@ function MineTab() {
           data-testid="input-block-content" />
         <div className="flex flex-wrap gap-1.5">
           {PRESETS.map((p, i) => (
-            <button key={i} onClick={() => setContent(p)}
+            <button key={i} onClick={() => { setContent(p); setResult(null); setBusResult(null); }}
               className="px-2 py-1 text-xs rounded border border-slate-700 text-slate-500 hover:text-slate-300 hover:border-slate-500 font-mono"
               data-testid={`preset-mine-${i}`}>
               preset {i + 1}
@@ -224,21 +299,28 @@ function MineTab() {
             className="bg-slate-800 border-slate-600 text-slate-200 font-mono text-sm"
             placeholder="your address" data-testid="input-miner" />
         </div>
-        <div className="flex items-end">
-          <Button className="w-full" onClick={() => mineMutation.mutate()}
-            disabled={mineMutation.isPending || !content}
-            data-testid="btn-mine">
-            <Zap className="w-3 h-3 mr-1" />
-            {mineMutation.isPending ? "Encoding & Mining…" : "Mine Block"}
-          </Button>
+        <div className="space-y-1">
+          <Label className="text-xs text-slate-400">Cross-link to Agent Bus</Label>
+          <label className="flex items-center gap-2 cursor-pointer h-9">
+            <input type="checkbox" checked={sendToBus} onChange={e => setSendToBus(e.target.checked)}
+              className="rounded" data-testid="check-bus-link" />
+            <span className="text-xs text-slate-400">Announce mined block to bus</span>
+          </label>
         </div>
       </div>
+
+      <Button className="w-full md:w-auto" onClick={() => mineMutation.mutate()}
+        disabled={mineMutation.isPending || !content}
+        data-testid="btn-mine">
+        <Zap className="w-3 h-3 mr-1" />
+        {mineMutation.isPending ? "Encoding & Mining…" : "Mine Block"}
+      </Button>
 
       {result?.success && (
         <div className="rounded-xl border p-4 space-y-3"
           style={{ borderColor: `${bc}50`, background: `${bc}08` }}>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ background: bc }} />
+            <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: bc }} />
             <span className="font-bold text-slate-100">Block #{result.block.blockNumber} mined</span>
             <PsiTag psi={result.block.psiChannel} band={result.block.band} />
           </div>
@@ -259,15 +341,21 @@ function MineTab() {
           </div>
           <p className="text-xs font-mono text-slate-500">
             Block identity derived from physics — not assigned by an algorithm.
-            This block lives permanently at {result.block.psiChannel} in the electromagnetic spectrum.
+            This block lives permanently at {result.block.psiChannel}.
           </p>
+          {busResult?.success && (
+            <div className="flex items-center gap-2 text-xs font-mono text-cyan-400">
+              <Radio className="w-3 h-3" />
+              <span>Bus notified: {busResult.route}</span>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-// ── Tab: Submit a transaction ─────────────────────────────────────
+// ── Transact tab ──────────────────────────────────────────────────
 function TransactTab() {
   const qc = useQueryClient();
   const [from,   setFrom]   = useState("");
@@ -275,6 +363,12 @@ function TransactTab() {
   const [amount, setAmount] = useState("1.0");
   const [memo,   setMemo]   = useState("");
   const [result, setResult] = useState<any>(null);
+
+  const PRESETS = [
+    { from: "nexus_wallet_01", to: "nexus_wallet_02", amount: "5.0", memo: "K1 energy node subscription payment" },
+    { from: "auth_gateway",    to: "os_kernel",        amount: "0.1", memo: "session authority verification fee" },
+    { from: "spectral_store",  to: "nexus_archive",    amount: "0.5", memo: "lambda record storage fee" },
+  ];
 
   const txMutation = useMutation({
     mutationFn: () =>
@@ -288,14 +382,9 @@ function TransactTab() {
     },
   });
 
-  const bc = result?.wavelengthNm ? bandColor(
-    parseFloat(result.wavelengthNm) < 450 ? "SYSTEM"
-    : parseFloat(result.wavelengthNm) < 490 ? "AUTH"
-    : parseFloat(result.wavelengthNm) < 520 ? "STREAM"
-    : parseFloat(result.wavelengthNm) < 565 ? "CORE"
-    : parseFloat(result.wavelengthNm) < 590 ? "UI"
-    : parseFloat(result.wavelengthNm) < 625 ? "EVENT" : "STORAGE"
-  ) : "#06b6d4";
+  const bc = result?.wavelengthNm
+    ? bandColor(bandFromNm(parseFloat(result.wavelengthNm)))
+    : "#06b6d4";
 
   return (
     <div className="space-y-4">
@@ -305,18 +394,30 @@ function TransactTab() {
         more energy, which costs more NXT. Physics prices the transaction.
       </p>
 
+      {/* Presets */}
+      <div className="flex flex-wrap gap-1.5">
+        {PRESETS.map((p, i) => (
+          <button key={i}
+            onClick={() => { setFrom(p.from); setTo(p.to); setAmount(p.amount); setMemo(p.memo); setResult(null); }}
+            className="px-2 py-1 text-xs rounded border border-slate-700 text-slate-500 hover:text-slate-300 hover:border-slate-500 font-mono"
+            data-testid={`preset-tx-${i}`}>
+            preset {i + 1}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label className="text-xs text-slate-400">From address</Label>
           <Input value={from} onChange={e => setFrom(e.target.value)}
             className="bg-slate-800 border-slate-600 text-slate-200 font-mono text-sm"
-            placeholder="sender wavelength address" data-testid="input-from" />
+            placeholder="sender address" data-testid="input-from" />
         </div>
         <div className="space-y-1">
           <Label className="text-xs text-slate-400">To address</Label>
           <Input value={to} onChange={e => setTo(e.target.value)}
             className="bg-slate-800 border-slate-600 text-slate-200 font-mono text-sm"
-            placeholder="recipient wavelength address" data-testid="input-to" />
+            placeholder="recipient address" data-testid="input-to" />
         </div>
         <div className="space-y-1">
           <Label className="text-xs text-slate-400">Amount (NXT)</Label>
@@ -335,7 +436,7 @@ function TransactTab() {
 
       <Button onClick={() => txMutation.mutate()}
         disabled={txMutation.isPending || !from || !to || !amount}
-        data-testid="btn-transact" className="w-full md:w-auto">
+        data-testid="btn-transact">
         <Send className="w-3 h-3 mr-1" />
         {txMutation.isPending ? "Encoding fee…" : "Submit to Mempool"}
       </Button>
@@ -369,11 +470,11 @@ function TransactTab() {
   );
 }
 
-// ── Tab: Mempool ──────────────────────────────────────────────────
-function MempoolTab() {
+// ── Mempool tab ────────────────────────────────────────────────────
+function MempoolTab({ onMinePending }: { onMinePending: (memo: string) => void }) {
   const { data, refetch } = useQuery<any>({
     queryKey: ["/api/blockchain/mempool"],
-    refetchInterval: 5000,
+    refetchInterval: 4000,
   });
   const txs: any[] = data?.txs ?? [];
 
@@ -383,7 +484,12 @@ function MempoolTab() {
         <p className="text-slate-400 text-sm">
           Pending transactions waiting to be sealed into the next block.
         </p>
-        <span className="text-xs font-mono text-slate-500">{txs.length} pending</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-mono text-slate-500">{txs.length} pending</span>
+          <button onClick={() => refetch()} className="text-slate-600 hover:text-slate-400 transition-colors">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {txs.length === 0 ? (
@@ -392,17 +498,26 @@ function MempoolTab() {
         </div>
       ) : (
         txs.map((tx, i) => {
-          const bc = tx.psiChannel ? "#06b6d4" : "#475569";
+          const bc = tx.wavelengthNm ? bandColor(bandFromNm(parseFloat(tx.wavelengthNm))) : "#475569";
           return (
             <div key={i} className="p-3 rounded-lg border border-slate-800 bg-slate-900/60 space-y-2"
               data-testid={`mempool-tx-${i}`}>
-              <div className="flex items-center gap-2 text-xs font-mono">
-                <Clock className="w-3 h-3 text-yellow-500" />
-                <span className="text-yellow-500 font-semibold">PENDING</span>
-                <span className="text-slate-500">·</span>
-                <span className="text-slate-400">{parseFloat(tx.amountNxt).toFixed(8)} NXT</span>
-                <span className="text-slate-500">·</span>
-                <span className="text-slate-500">fee {parseFloat(tx.feePaid).toFixed(8)} NXT</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-mono">
+                  <Clock className="w-3 h-3 text-yellow-500 animate-pulse" />
+                  <span className="text-yellow-500 font-semibold">PENDING</span>
+                  <span className="text-slate-500">·</span>
+                  <span className="text-slate-400">{parseFloat(tx.amountNxt).toFixed(8)} NXT</span>
+                  <span className="text-slate-500">·</span>
+                  <span className="text-slate-500">fee {parseFloat(tx.feePaid).toFixed(8)} NXT</span>
+                </div>
+                <button
+                  onClick={() => onMinePending(tx.memo ?? `Seal tx ${tx.fromAddress}→${tx.toAddress}`)}
+                  className="text-xs font-mono px-2 py-0.5 rounded border transition-colors"
+                  style={{ borderColor: `${bc}40`, color: bc, background: `${bc}10` }}
+                  title="Mine a block to confirm this tx">
+                  <Zap className="w-3 h-3 inline mr-1" />seal
+                </button>
               </div>
               <div className="flex gap-4 text-xs font-mono text-slate-500">
                 <span><span className="text-slate-600">from</span> {tx.fromAddress}</span>
@@ -426,11 +541,23 @@ function MempoolTab() {
 
 // ── Main page ─────────────────────────────────────────────────────
 export default function BlockchainPage() {
+  const qc = useQueryClient();
+  const [activeTab,  setActiveTab]  = useState("chain");
+  const [minePreset, setMinePreset] = useState("");
+
   const { data } = useQuery<any>({ queryKey: ["/api/blockchain/chain"], refetchInterval: 5000 });
+  const { data: busStatus } = useQuery<any>({ queryKey: ["/api/agent-bus/status"], refetchInterval: 5000 });
+
   const blocks: any[] = data?.blocks ?? [];
   const height  = blocks.length;
   const latest  = blocks.at(-1);
   const genesis = blocks.at(0);
+  const busQueued = busStatus?.queued ?? 0;
+
+  const handleMinePreset = (content: string) => {
+    setMinePreset(content);
+    setActiveTab("mine");
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6">
@@ -447,22 +574,38 @@ export default function BlockchainPage() {
               First photonic ledger — block identity is a Ψ channel, not a hash
             </p>
           </div>
-          <div className="ml-auto text-right text-xs font-mono text-slate-500 space-y-0.5">
-            <div>Height: <span className="text-slate-300">{height}</span></div>
-            {latest && <div>Latest: <span style={{ color: bandColor(latest.band) }}>{latest.psiChannel}</span></div>}
+          <div className="ml-auto flex items-center gap-4 text-xs font-mono text-slate-500">
+            <Link href="/agent-bus" className="flex items-center gap-1 hover:text-cyan-400 transition-colors">
+              <Radio className="w-3 h-3" />
+              <span className={busQueued > 0 ? "text-yellow-400" : ""}>
+                {busQueued > 0 ? `${busQueued} queued` : "Agent Bus"}
+              </span>
+            </Link>
+            <div className="text-right space-y-0.5">
+              <div>Height: <span className="text-slate-300">{height}</span></div>
+              {latest && <div>Latest: <span style={{ color: bandColor(latest.band) }}>{latest.psiChannel}</span></div>}
+            </div>
           </div>
         </div>
 
         <SpectrumBar />
 
+        {/* Chain visualiser */}
+        {blocks.length > 0 && (
+          <div className="mt-4">
+            <div className="text-xs text-slate-600 font-mono mb-2">Chain topology (most recent first)</div>
+            <ChainVisualiser blocks={blocks} />
+          </div>
+        )}
+
         {/* Stats row */}
         {genesis && (
           <div className="flex flex-wrap gap-3 mt-3">
             {[
-              { label: "Genesis Ψ",      value: genesis.psiChannel,                        color: bandColor("AUTH") },
-              { label: "Genesis λ",      value: `${parseFloat(genesis.wavelengthNm).toFixed(1)} nm`, color: bandColor("AUTH") },
-              { label: "Chain height",   value: String(height),                             color: "#e2e8f0" },
-              { label: "AGPL-3.0",       value: "open source",                              color: "#16a34a" },
+              { label: "Genesis Ψ",    value: genesis.psiChannel,                        color: bandColor("AUTH") },
+              { label: "Genesis λ",    value: `${parseFloat(genesis.wavelengthNm).toFixed(1)} nm`, color: bandColor("AUTH") },
+              { label: "Chain height", value: String(height),                             color: "#e2e8f0" },
+              { label: "AGPL-3.0",     value: "open source",                              color: "#16a34a" },
             ].map((s, i) => (
               <div key={i} className="flex items-center gap-1.5 text-xs font-mono">
                 <span className="text-slate-600">{s.label}:</span>
@@ -473,7 +616,7 @@ export default function BlockchainPage() {
         )}
       </div>
 
-      <Tabs defaultValue="chain">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-slate-900 border border-slate-700 mb-4">
           <TabsTrigger value="chain"    data-testid="tab-chain">
             <Layers className="w-3 h-3 mr-1" /> Chain ({height})
@@ -493,25 +636,30 @@ export default function BlockchainPage() {
           <h2 className="text-sm font-semibold text-blue-300 mb-3">
             Each block linked by its predecessor's Ψ channel — not a hash
           </h2>
-          <ChainTab />
+          <ChainTab blocks={blocks} />
         </TabsContent>
+
         <TabsContent value="mine">
           <h2 className="text-sm font-semibold text-violet-300 mb-3">
             Mine by encoding — CE→SE derives the block's physical address
           </h2>
-          <MineTab />
+          <MineTab
+            onMined={() => qc.invalidateQueries({ queryKey: ["/api/blockchain/chain"] })}
+          />
         </TabsContent>
+
         <TabsContent value="transact">
           <h2 className="text-sm font-semibold text-cyan-300 mb-3">
             Transaction fees priced by E=hf — the memo's wavelength sets the cost
           </h2>
           <TransactTab />
         </TabsContent>
+
         <TabsContent value="mempool">
           <h2 className="text-sm font-semibold text-amber-300 mb-3">
             Pending transactions — sealed into the chain when a block is mined
           </h2>
-          <MempoolTab />
+          <MempoolTab onMinePending={handleMinePreset} />
         </TabsContent>
       </Tabs>
     </div>
