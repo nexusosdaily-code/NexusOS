@@ -2522,6 +2522,148 @@ export async function registerRoutes(
     });
   });
 
+  // ── Wavelength Blockchain API ─────────────────────────────────────
+  // Block identity = Ψ channel derived from physics, not SHA256
+
+  // Full chain — ordered by block number
+  app.get("/api/blockchain/chain", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { blockchainBlocks } = await import("@shared/schema");
+      const { asc } = await import("drizzle-orm");
+      const blocks = await db.select().from(blockchainBlocks).orderBy(asc(blockchainBlocks.blockNumber));
+      res.json({ blocks, height: blocks.length, latestPsi: blocks.at(-1)?.psiChannel ?? null });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Single block by number
+  app.get("/api/blockchain/block/:number", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { blockchainBlocks } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [block] = await db.select().from(blockchainBlocks)
+        .where(eq(blockchainBlocks.blockNumber, parseInt(req.params.number)));
+      if (!block) return res.status(404).json({ error: "Block not found" });
+      res.json({ block });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Mempool — pending transactions
+  app.get("/api/blockchain/mempool", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { blockchainTxPool } = await import("@shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      const txs = await db.select().from(blockchainTxPool)
+        .where(eq(blockchainTxPool.status, "pending"))
+        .orderBy(desc(blockchainTxPool.createdAt));
+      res.json({ txs, count: txs.length });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Submit a transaction to the mempool — encodes memo through CE→SE for fee calculation
+  app.post("/api/blockchain/transact", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { fromAddress, toAddress, amountNxt, memo } = req.body;
+      if (!fromAddress || !toAddress || !amountNxt)
+        return res.status(400).json({ error: "fromAddress, toAddress, amountNxt required" });
+
+      let wlNm = null, psiCh = null, energyJ = null, feePaid = "0.00000001";
+      if (memo) {
+        try {
+          const er = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ instruction: memo, label: "tx_memo" }),
+          });
+          const enc = await er.json() as any;
+          wlNm    = String(enc.wavelength_mid_nm ?? 540);
+          psiCh   = enc.psi_channel;
+          energyJ = String(enc.energy_joules ?? 0);
+          // Fee = energy cost in NXT (1 NXT per 10^-17 J)
+          const rawFee = (parseFloat(energyJ) / 1e-17) * 0.00000001;
+          feePaid = String(Math.max(rawFee, 0.00000001).toFixed(8));
+        } catch {}
+      }
+
+      const { db } = await import("./db");
+      const { blockchainTxPool } = await import("@shared/schema");
+      const [tx] = await db.insert(blockchainTxPool).values({
+        fromAddress, toAddress,
+        amountNxt: String(amountNxt),
+        memo: memo ?? null,
+        wavelengthNm: wlNm,
+        psiChannel: psiCh,
+        energyJoules: energyJ,
+        feePaid,
+        status: "pending",
+      }).returning();
+      res.json({ success: true, tx, feePaid, wavelengthNm: wlNm, psiChannel: psiCh });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Mine a new block — encodes content, links to previous block's Ψ channel
+  app.post("/api/blockchain/mine", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { content, minerAddress } = req.body;
+      if (!content) return res.status(400).json({ error: "content required" });
+
+      const encRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction: content, label: "block_content" }),
+      });
+      if (!encRes.ok) return res.status(502).json({ error: "Spectral encode failed" });
+      const enc = await encRes.json() as any;
+
+      const psiMatch = enc.psi_channel?.match(/Ψ\((\d+),\s*(\d+),\s*([HV])\)/);
+      const wdm = psiMatch ? parseInt(psiMatch[1]) : 0;
+      const oam = psiMatch ? parseInt(psiMatch[2]) : 0;
+      const pol = psiMatch ? psiMatch[3] : "H";
+
+      const { db } = await import("./db");
+      const { blockchainBlocks, blockchainTxPool } = await import("@shared/schema");
+      const { desc, eq } = await import("drizzle-orm");
+
+      // Get latest block
+      const [latest] = await db.select().from(blockchainBlocks).orderBy(desc(blockchainBlocks.blockNumber)).limit(1);
+      const nextNumber = (latest?.blockNumber ?? -1) + 1;
+      const prevPsi    = latest?.psiChannel ?? null;
+
+      // Collect pending txs
+      const pendingTxs = await db.select().from(blockchainTxPool).where(eq(blockchainTxPool.status, "pending"));
+      const txIds = pendingTxs.map(t => t.id);
+
+      const [block] = await db.insert(blockchainBlocks).values({
+        blockNumber:  nextNumber,
+        content,
+        wavelengthNm: String(enc.wavelength_mid_nm ?? 550),
+        psiChannel:   enc.psi_channel,
+        wdm, oam, polarisation: pol,
+        band:         enc.band ?? "CORE",
+        energyJoules: String(enc.energy_joules ?? 0),
+        lambdaMassKg: String(enc.lambda_mass_kg ?? 0),
+        frequencyHz:  String(enc.frequency_hz ?? 0),
+        previousPsi:  prevPsi,
+        nxtReward:    "1.00000000",
+        minerAddress: minerAddress ?? req.user?.username ?? "anonymous",
+        txCount:      txIds.length,
+        transactions: txIds as any,
+      }).returning();
+
+      // Mark txs as confirmed
+      if (txIds.length > 0) {
+        const { inArray } = await import("drizzle-orm");
+        await db.update(blockchainTxPool)
+          .set({ status: "confirmed" })
+          .where(inArray(blockchainTxPool.id, txIds));
+      }
+
+      res.json({ success: true, block, spectral: enc, confirmedTxs: txIds.length });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── Spectral Database API ─────────────────────────────────────────
   // Content-addressed storage: data lives at its wavelength, not an assigned ID
 

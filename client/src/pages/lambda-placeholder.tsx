@@ -28,6 +28,7 @@ const SECTIONS = [
       { title: "Photonic Dev",          description: "Nexus development environment",      href: "/photonic-dev",          icon: Layers   },
       { title: "CE Code Writer",        description: "Describe → spectral address → code", href: "/ce-writer",             icon: Code2    },
       { title: "Spectral Database",     description: "Data stored at its wavelength",      href: "/spectral-db",           icon: Database },
+      { title: "Wavelength Blockchain", description: "First photonic ledger — Ψ not hash",  href: "/blockchain",            icon: Layers   },
     ],
   },
   {

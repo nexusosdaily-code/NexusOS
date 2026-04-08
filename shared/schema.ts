@@ -571,6 +571,62 @@ export type CreateStreamInput = z.infer<typeof createStreamSchema>;
 export type UpdateStreamSettingsInput = z.infer<typeof updateStreamSettingsSchema>;
 
 // ============================================
+// WAVELENGTH BLOCKCHAIN — first photonic ledger
+// Block identity is a Ψ channel derived from physics, not SHA256
+// ============================================
+export const blockchainBlocks = pgTable("blockchain_blocks", {
+  id:              varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  blockNumber:     integer("block_number").notNull().unique(),
+  content:         text("content").notNull(),
+  wavelengthNm:    decimal("wavelength_nm", { precision: 10, scale: 4 }).notNull(),
+  psiChannel:      text("psi_channel").notNull().unique(),
+  wdm:             integer("wdm").notNull(),
+  oam:             integer("oam").notNull(),
+  polarisation:    text("polarisation").notNull(),
+  band:            text("band").notNull(),
+  energyJoules:    decimal("energy_joules", { precision: 30, scale: 20 }).notNull(),
+  lambdaMassKg:    decimal("lambda_mass_kg", { precision: 30, scale: 20 }).notNull(),
+  frequencyHz:     decimal("frequency_hz", { precision: 30, scale: 4 }).notNull(),
+  previousPsi:     text("previous_psi"),
+  nxtReward:       decimal("nxt_reward", { precision: 20, scale: 8 }).notNull().default("0"),
+  minerAddress:    text("miner_address"),
+  txCount:         integer("tx_count").notNull().default(0),
+  transactions:    jsonb("transactions").default([]),
+  minedAt:         timestamp("mined_at").notNull().defaultNow(),
+}, (table) => ({
+  blockNumberIdx:  index("blockchain_blocks_number_idx").on(table.blockNumber),
+  psiIdx:          index("blockchain_blocks_psi_idx").on(table.psiChannel),
+  bandIdx:         index("blockchain_blocks_band_idx").on(table.band),
+}));
+
+export const insertBlockchainBlockSchema = createInsertSchema(blockchainBlocks).omit({
+  id: true, minedAt: true,
+});
+export type InsertBlockchainBlock = z.infer<typeof insertBlockchainBlockSchema>;
+export type BlockchainBlock = typeof blockchainBlocks.$inferSelect;
+
+// Pending transactions pool (mempool)
+export const blockchainTxPool = pgTable("blockchain_tx_pool", {
+  id:           varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  fromAddress:  text("from_address").notNull(),
+  toAddress:    text("to_address").notNull(),
+  amountNxt:    decimal("amount_nxt", { precision: 20, scale: 8 }).notNull(),
+  memo:         text("memo"),
+  wavelengthNm: decimal("wavelength_nm", { precision: 10, scale: 4 }),
+  psiChannel:   text("psi_channel"),
+  energyJoules: decimal("energy_joules", { precision: 30, scale: 20 }),
+  feePaid:      decimal("fee_paid", { precision: 20, scale: 8 }).notNull().default("0"),
+  status:       text("status").notNull().default("pending"),
+  createdAt:    timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertBlockchainTxSchema = createInsertSchema(blockchainTxPool).omit({
+  id: true, createdAt: true,
+});
+export type InsertBlockchainTx = z.infer<typeof insertBlockchainTxSchema>;
+export type BlockchainTx = typeof blockchainTxPool.$inferSelect;
+
+// ============================================
 // SPECTRAL DATABASE — content-addressed storage
 // Data lives at its wavelength, not at an assigned ID
 // ============================================
