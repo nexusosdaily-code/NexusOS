@@ -104,40 +104,86 @@ function LiveFeed() {
 }
 
 // ── Quick-action send ─────────────────────────────────────────────
+interface EncodeResult {
+  wl?: number;
+  psi?: string;
+  energy?: number;
+  band?: string;
+  route?: string;
+  routed?: boolean;
+}
+
+function bandOf(nm: number): { label: string; color: string } {
+  if (nm < 450) return { label: "SYSTEM",   color: "#8b00ff" };
+  if (nm < 490) return { label: "AUTH",     color: "#2563eb" };
+  if (nm < 520) return { label: "STREAM",   color: "#06b6d4" };
+  if (nm < 565) return { label: "CORE",     color: "#16a34a" };
+  if (nm < 590) return { label: "UI",       color: "#ca8a04" };
+  if (nm < 625) return { label: "EVENT",    color: "#ea580c" };
+  return          { label: "STORAGE",       color: "#dc2626" };
+}
+
 function QuickCompose() {
   const [text,   setText]   = useState("");
-  const [result, setResult] = useState<{ wl?: number; route?: string } | null>(null);
-  const [step,   setStep]   = useState<"idle" | "encoding" | "sending" | "done">("idle");
+  const [result, setResult] = useState<EncodeResult | null>(null);
+  const [step,   setStep]   = useState<"idle" | "encoding" | "routing" | "done" | "error">("idle");
+  const [errMsg, setErrMsg] = useState("");
+
+  const reset = () => { setText(""); setResult(null); setStep("idle"); setErrMsg(""); };
 
   const go = async () => {
     if (!text.trim()) return;
     setStep("encoding");
-    // Encode
-    const enc = await apiRequest("POST", "/api/spectral-db/store", {
-      content: text, label: `quick_${Date.now()}`,
-    }).then(r => r.json());
-    const wl = enc?.spectral?.wavelength_mid_nm;
-    setStep("sending");
-    // Route on bus
-    const bus = await apiRequest("POST", "/api/agent-bus/send", {
-      src: "os_kernel", dst: "bus_router",
-      payload: `QUICK_MSG λ=${wl?.toFixed(1)}nm ${text.slice(0, 80)}`,
-      priority: 4, msgType: "MESSAGE",
-    }).then(r => r.json());
-    setResult({ wl, route: bus?.route });
-    setStep("done");
+    setResult(null);
+    setErrMsg("");
+    try {
+      // Step 1: encode via public endpoint (no auth required)
+      const encRes = await fetch("/api/nexus/dev/encode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction: text, label: `nexus_cmd_${Date.now()}` }),
+      });
+      if (!encRes.ok) throw new Error(`Encode failed: ${encRes.status}`);
+      const enc = await encRes.json();
+
+      const wl     = enc.wavelength_mid_nm as number;
+      const psi    = enc.psi_channel as string;
+      const energy = enc.energy_joules as number;
+      const band   = bandOf(wl).label;
+
+      setResult({ wl, psi, energy, band });
+      setStep("routing");
+
+      // Step 2: route on bus (requires auth — graceful if not logged in)
+      try {
+        const token = localStorage.getItem("auth_token");
+        const busRes = await fetch("/api/agent-bus/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            src: "os_kernel", dst: "bus_router",
+            payload: `NEXUS_CMD λ=${wl.toFixed(1)}nm ${psi} ${text.slice(0, 80)}`,
+            priority: 4, msgType: "MESSAGE",
+          }),
+        });
+        const bus = busRes.ok ? await busRes.json() : null;
+        setResult(r => ({ ...r!, route: bus?.route ?? "encoded only (sign in to route)", routed: busRes.ok }));
+      } catch {
+        setResult(r => ({ ...r!, route: "encoded · routing unavailable", routed: false }));
+      }
+
+      setStep("done");
+    } catch (err: any) {
+      setErrMsg(err?.message ?? "Encoding failed");
+      setStep("error");
+    }
   };
 
-  let wlColor = "#8b00ff";
-  if (result?.wl) {
-    const nm = result.wl;
-    if (nm >= 450 && nm < 490) wlColor = "#2563eb";
-    else if (nm >= 490 && nm < 520) wlColor = "#06b6d4";
-    else if (nm >= 520 && nm < 565) wlColor = "#16a34a";
-    else if (nm >= 565 && nm < 590) wlColor = "#ca8a04";
-    else if (nm >= 590 && nm < 625) wlColor = "#ea580c";
-    else if (nm >= 625) wlColor = "#dc2626";
-  }
+  const band   = result?.wl ? bandOf(result.wl) : { label: "", color: "#8b00ff" };
+  const wlColor = band.color;
 
   return (
     <div className="rounded-xl border border-slate-700 p-4 space-y-3">
@@ -145,40 +191,93 @@ function QuickCompose() {
         <Send className="w-3 h-3 text-cyan-400" />
         <span className="text-xs font-mono text-slate-400">Quick encode & route</span>
         {result?.wl && (
-          <span className="ml-auto text-xs font-mono" style={{ color: wlColor }}>
-            {result.wl.toFixed(1)} nm
+          <span className="ml-auto text-xs font-mono font-bold" style={{ color: wlColor }}>
+            {result.wl.toFixed(1)} nm · {band.label}
           </span>
         )}
       </div>
-      {step !== "done" ? (
+
+      {/* Input bar — always visible unless done */}
+      {step !== "done" && (
         <div className="flex gap-2">
           <Input value={text} onChange={e => setText(e.target.value)}
-            placeholder="Any message, instruction, or command…"
+            placeholder="Type any message, instruction, or command…"
             className="bg-slate-900 border-slate-700 text-slate-200 text-sm"
-            onKeyDown={e => e.key === "Enter" && go()}
+            onKeyDown={e => e.key === "Enter" && step === "idle" && go()}
+            disabled={step === "encoding" || step === "routing"}
             data-testid="quick-compose-input" />
-          <Button onClick={go} disabled={step !== "idle" || !text}
+          <Button onClick={step === "error" ? reset : go}
+            disabled={(step === "encoding" || step === "routing") || (!text && step === "idle")}
             data-testid="quick-compose-send">
-            {step === "idle" ? "Send" : step === "encoding" ? "Encoding…" : "Routing…"}
-          </Button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2">
-          {result?.wl && (
-            <div className="flex-1 h-6 rounded" style={{
-              background: `linear-gradient(90deg,${wlToRgb(Math.max(380, result.wl - 30))},${wlToRgb(result.wl)},${wlToRgb(Math.min(780, result.wl + 30))})`,
-              boxShadow: `0 0 12px ${wlColor}60`,
-            }} />
-          )}
-          <span className="text-xs font-mono text-green-400 flex-shrink-0">✓ Delivered</span>
-          <Button size="sm" variant="ghost" className="text-slate-600 text-xs"
-            onClick={() => { setText(""); setResult(null); setStep("idle"); }}>
-            Clear
+            {step === "idle"     ? "Encode"      :
+             step === "encoding" ? "Encoding…"   :
+             step === "routing"  ? "Routing…"    :
+             step === "error"    ? "Try again"   : "Send"}
           </Button>
         </div>
       )}
-      {result?.route && (
-        <p className="text-xs font-mono text-slate-600">{result.route}</p>
+
+      {/* Encoding progress */}
+      {(step === "encoding" || step === "routing") && (
+        <div className="flex items-center gap-2 text-xs font-mono text-slate-500">
+          <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#06b6d4" }} />
+          {step === "encoding" ? "Converting characters → CE tokens → SE wave frames…"
+                               : "Assigning Ψ channel and routing on spectral bus…"}
+        </div>
+      )}
+
+      {/* Error state */}
+      {step === "error" && (
+        <div className="flex items-center gap-2 text-xs font-mono text-red-400">
+          <span>✗ {errMsg}</span>
+          <button onClick={reset} className="ml-auto text-slate-600 hover:text-slate-400 underline">reset</button>
+        </div>
+      )}
+
+      {/* Result: spectral card */}
+      {result?.wl && (
+        <div className="rounded-lg border p-3 space-y-2"
+          style={{ borderColor: `${wlColor}30`, background: `${wlColor}08` }}>
+          {/* Spectrum bar with marker */}
+          <div className="relative h-3 rounded overflow-hidden"
+            style={{ background: "linear-gradient(to right,#8b00ff,#2563eb,#06b6d4,#16a34a,#ca8a04,#ea580c,#dc2626)" }}>
+            <div className="absolute top-0 bottom-0 w-1 bg-white/90 rounded shadow"
+              style={{ left: `${Math.min(98, Math.max(1, ((result.wl - 380) / 400) * 100))}%`, transform: "translateX(-50%)" }} />
+          </div>
+
+          {/* Key values */}
+          <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+            {[
+              { label: "Wavelength",  value: `${result.wl.toFixed(2)} nm`,                    color: wlColor },
+              { label: "Ψ Channel",   value: result.psi ?? "—",                               color: wlColor },
+              { label: "Band",        value: result.band ?? "—",                               color: wlColor },
+              { label: "Energy",      value: result.energy ? `${result.energy.toExponential(2)} J` : "—", color: null },
+            ].map((m, i) => (
+              <div key={i} className="p-1.5 rounded bg-slate-900/60">
+                <div className="text-slate-600 mb-0.5">{m.label}</div>
+                <div style={{ color: m.color ?? "#e2e8f0" }}>{m.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Confirmation / route */}
+          {step === "done" && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                <span className="text-xs font-mono text-green-400">Encoded</span>
+                {result.routed && <span className="text-xs font-mono text-cyan-400 ml-2">· Routed</span>}
+              </div>
+              <button onClick={reset}
+                className="text-xs font-mono text-slate-600 hover:text-slate-400 transition-colors">
+                encode another
+              </button>
+            </div>
+          )}
+          {result.route && (
+            <p className="text-xs font-mono text-slate-600 truncate">{result.route}</p>
+          )}
+        </div>
       )}
     </div>
   );
