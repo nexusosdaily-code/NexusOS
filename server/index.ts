@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { spawn, ChildProcess } from "child_process";
+import { seedGenesisBlock } from "./genesis";
 
 const app = express();
 const httpServer = createServer(app);
@@ -148,6 +149,8 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      // Seed genesis block after server is ready (non-blocking)
+      seedGenesisBlock().catch(() => {});
     },
   );
 })();

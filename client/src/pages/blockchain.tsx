@@ -616,6 +616,80 @@ export default function BlockchainPage() {
         )}
       </div>
 
+      {/* Genesis Block Hero */}
+      {genesis && (
+        <div className="mb-6 rounded-2xl border overflow-hidden relative"
+          style={{ borderColor: "#2563eb50", background: "linear-gradient(135deg,#0f172a,#1e1b4b)" }}>
+          {/* animated top line */}
+          <div className="h-0.5 w-full"
+            style={{ background: "linear-gradient(90deg,transparent,#2563eb,#8b00ff,#2563eb,transparent)" }} />
+
+          <div className="p-5 grid md:grid-cols-2 gap-4">
+            {/* Left: identity */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center font-mono font-bold text-lg flex-shrink-0"
+                  style={{ background: "#2563eb20", border: "2px solid #2563eb60", color: "#2563eb",
+                    boxShadow: "0 0 20px #2563eb40" }}>
+                  0
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-100 text-sm">Genesis Block</span>
+                    <span className="text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wider animate-pulse"
+                      style={{ background: "#2563eb20", color: "#60a5fa", border: "1px solid #2563eb40" }}>
+                      Block #0
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-500 font-mono mt-0.5">
+                    Foundation of the wavelength blockchain
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: "Ψ Channel",   value: genesis.psiChannel,                                   color: "#2563eb" },
+                  { label: "Wavelength",  value: `${parseFloat(genesis.wavelengthNm).toFixed(2)} nm`,  color: "#60a5fa" },
+                  { label: "Band",        value: genesis.band,                                          color: "#2563eb" },
+                  { label: "Coinbase",    value: `${(parseFloat(genesis.nxtReward)/1e6).toFixed(0)}M NXT`, color: "#16a34a" },
+                ].map((m, i) => (
+                  <div key={i} className="p-2 rounded bg-slate-900/60 border border-slate-800">
+                    <div className="text-xs text-slate-600">{m.label}</div>
+                    <div className="text-xs font-mono font-semibold" style={{ color: m.color }}>{m.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: meaning */}
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">What makes this different</div>
+              <div className="space-y-1.5 text-xs font-mono text-slate-400 leading-relaxed">
+                {[
+                  { icon: "λ", text: "Block identity is a physical wavelength, not a SHA-256 hash" },
+                  { icon: "Ψ", text: "Every block links to its predecessor via Ψ channel — not a merkle root" },
+                  { icon: "E", text: "Transaction fees derived from E=hf — physics prices the cost, not policy" },
+                  { icon: "Λ", text: "Content lives at its spectral address — encoded by Λ=hf/c²" },
+                ].map((p, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                      style={{ background: "#2563eb15", color: "#2563eb" }}>{p.icon}</span>
+                    <span>{p.text}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-1 text-xs font-mono text-slate-600 italic">
+                Mined by: {genesis.minerAddress} · AGPL-3.0 licensed
+              </div>
+            </div>
+          </div>
+
+          {/* bottom shimmer line */}
+          <div className="h-px w-full" style={{ background: "#2563eb20" }} />
+        </div>
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-slate-900 border border-slate-700 mb-4">
           <TabsTrigger value="chain"    data-testid="tab-chain">
