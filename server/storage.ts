@@ -133,12 +133,11 @@ export interface IStorage {
 }
 
 function generateWalletAddress(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let address = "NXT_";
-  for (let i = 0; i < 32; i++) {
-    address += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return address;
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const seg = (len: number) =>
+    Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  // Standard NXT format: NXT-XXXX-XXXX-XXXX-XXXXX
+  return `NXT-${seg(4)}-${seg(4)}-${seg(4)}-${seg(5)}`;
 }
 
 function generateApiKey(): string {
