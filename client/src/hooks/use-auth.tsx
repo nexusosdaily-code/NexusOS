@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 interface User {
   id: number;
   phone: string;
+  username?: string;
   walletAddress: string;
   balanceUnits: string;
 }

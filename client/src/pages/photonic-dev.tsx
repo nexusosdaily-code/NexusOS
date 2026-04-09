@@ -611,7 +611,7 @@ function SpectrumMapTab() {
 // ─── Tab 4: SDK Spec ─────────────────────────────────────────────
 
 function SdkSpecTab() {
-  const { data } = useQuery({
+  const { data } = useQuery<any>({
     queryKey: ["/api/nexus/dev/spec"],
   });
 

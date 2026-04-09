@@ -110,6 +110,7 @@ function SpectrumStrip({ records, onSelect }: { records: SlimRecord[]; onSelect:
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function SpectralLibrary() {
+  const qc                    = useQueryClient();
   const [q, setQ]             = useState("");
   const [band, setBand]       = useState<Band>("ALL");
   const [activeId, setActiveId] = useState<string | null>(null);

@@ -107,7 +107,7 @@ export default function Ecosystem() {
             { label: "Proof Coverage",    value: `${sum.proofCoverage}%`,             color: sum.proofCoverage === 100 ? "#4ade80" : "#fbbf24" },
             { label: "Blockchain Height", value: `#${sum.blockchainHeight}`,           color: "#8b5cf6" },
             { label: "Spectral Records",  value: sum.spectralRecords.toLocaleString(), color: "#06b6d4" },
-            { label: "Treasury Balance",  value: fmtNxt(sum.totalUnits),              color: "#f43f5e" },
+            { label: "Treasury Balance",  value: fmtNxt(sum.totalNxt),                color: "#f43f5e" },
             { label: "Active Agents",     value: `${sum.activeAgents} / 6`,            color: "#22c55e" },
           ].map(({ label, value, color }) => (
             <div key={label} className="text-center">

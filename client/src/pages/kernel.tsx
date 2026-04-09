@@ -14,6 +14,7 @@ import {
   Activity, Database, Shield, Bell,
   RefreshCw, Zap, CheckCircle, AlertTriangle, XCircle, Power,
 } from "lucide-react";
+import type { JSX } from "react";
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -48,7 +49,7 @@ function ts(t: number) {
 // ─── sub-components ────────────────────────────────────────────────────────
 
 function BootPanel() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<any>({
     queryKey: ["/api/kernel/boot"],
     refetchInterval: 30_000,
   });
@@ -117,7 +118,7 @@ function BootPanel() {
 }
 
 function PersistencePanel() {
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, refetch } = useQuery<any>({
     queryKey: ["/api/kernel/state"],
     refetchInterval: 15_000,
   });
@@ -215,7 +216,7 @@ function AuthorityPanel() {
   const [dst, setDst]     = useState("os_kernel");
   const [result, setResult] = useState<any>(null);
 
-  const { data } = useQuery({ queryKey: ["/api/kernel/authority"] });
+  const { data } = useQuery<any>({ queryKey: ["/api/kernel/authority"] });
 
   const checkMutation = useMutation({
     mutationFn: () =>
@@ -310,7 +311,7 @@ function EventsPanel() {
   const [agentId, setAgentId] = useState("");
   const [emitResult, setEmitResult] = useState<any>(null);
 
-  const { data, refetch } = useQuery({
+  const { data, refetch } = useQuery<any>({
     queryKey: ["/api/kernel/events"],
     refetchInterval: 5_000,
   });
@@ -425,7 +426,7 @@ function EventsPanel() {
 }
 
 function WatchdogPanel() {
-  const { data, refetch } = useQuery({
+  const { data, refetch } = useQuery<any>({
     queryKey: ["/api/kernel/watchdog"],
     refetchInterval: 10_000,
   });
@@ -542,7 +543,7 @@ function WatchdogPanel() {
 // ─── main page ─────────────────────────────────────────────────────────────
 
 export default function KernelPage() {
-  const { data: overview } = useQuery({
+  const { data: overview } = useQuery<any>({
     queryKey: ["/api/kernel/status"],
     refetchInterval: 10_000,
   });

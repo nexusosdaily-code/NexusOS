@@ -39,7 +39,7 @@ interface TreasuryData {
   deposits: {
     id: string; source_label: string; source_wavelength_nm: string; source_frequency_hz: string;
     source_psi_channel: string; source_band: string; ordinal_nxt_units: string;
-    deposited_by: string; deposited_at: string; memo: string;
+    deposited_by: string; deposited_at: string; memo: string; source_record_id?: string;
   }[];
   energy: { total_energy_cost_units: string; operation_count: string; stores: string; retrieves: string; deletes: string; transmits: string };
   byBand: { band: string; count: string; units: string }[];

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";
 import {
   Database, Search, Zap, Map, Trash2, Copy, Check,
-  Download, Upload, Radio, ArrowRight, Layers
+  Download, Upload, Radio, ArrowRight, Layers, Send
 } from "lucide-react";
 
 // ── Band helpers ──────────────────────────────────────────────────
