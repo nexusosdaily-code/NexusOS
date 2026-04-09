@@ -342,6 +342,14 @@ const SYSTEMS = [
     action: "Browse corpus",
   },
   {
+    title: "Spectral Audit Ledger",
+    description: "Blockchain-verified proof of work. Every spectral record is SHA-256 hashed and submitted to the mempool on write. Mine a proof block to confirm records on-chain — the physics is the proof.",
+    href: "/spectral-audit",
+    color: "#22c55e",
+    Icon: FileText,
+    action: "View audit chain",
+  },
+  {
     title: "Spectral Database",
     description: "Store any data at its natural wavelength address. Retrieve by physics. No SQL injection, no admin console.",
     href: "/spectral-db",

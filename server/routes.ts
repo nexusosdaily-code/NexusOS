@@ -2834,8 +2834,12 @@ export async function registerRoutes(
       const oam = psiMatch ? parseInt(psiMatch[2]) : 0;
       const pol = psiMatch ? psiMatch[3] : "H";
 
+      // SHA-256 content hash — the physics-independent proof of content
+      const { createHash } = await import("crypto");
+      const contentHash = createHash("sha256").update(content).digest("hex");
+
       const { db } = await import("./db");
-      const { spectralRecords } = await import("@shared/schema");
+      const { spectralRecords, blockchainTxPool } = await import("@shared/schema");
 
       const [record] = await db.insert(spectralRecords).values({
         label,
@@ -2849,13 +2853,197 @@ export async function registerRoutes(
         energyJoules:  String(enc.energy_joules ?? 0),
         lambdaMassKg:  String(enc.lambda_mass_kg ?? 0),
         frequencyHz:   String(enc.frequency_hz ?? 0),
-        data:          data ?? null,
+        data:          { ...(data ?? {}), contentHash, auditStatus: "pending" },
       }).returning();
 
-      res.json({ success: true, record, spectral: enc });
+      // ── Blockchain audit transaction (auto-submitted to mempool) ─────────────
+      // Proves: this content existed at this wavelength at this timestamp.
+      // Anyone can re-encode the content through Λ=hf/c² and verify the nm matches.
+      const auditMemo = `SPECTRAL_AUDIT:${record.id}:${contentHash.slice(0, 16)}:${enc.wavelength_mid_nm}nm:${enc.psi_channel}`;
+      const energyFee = parseFloat(String(enc.energy_joules ?? 0));
+      const feePaid   = String(Math.max((energyFee / 1e-17) * 0.00000001, 0.00000001).toFixed(8));
+      const fromAddr  = (req as any).user?.walletAddress ?? "NXT-NEXS-OS1K-7F3A-OMEGA";
+
+      const [auditTx] = await db.insert(blockchainTxPool).values({
+        fromAddress:  fromAddr,
+        toAddress:    "SPECTRAL-DB",
+        amountNxt:    "0.00000001",
+        memo:         auditMemo,
+        wavelengthNm: String(enc.wavelength_mid_nm ?? 550),
+        psiChannel:   enc.psi_channel ?? null,
+        energyJoules: String(enc.energy_joules ?? 0),
+        feePaid,
+        status:       "pending",
+      }).returning();
+
+      // Patch data field with auditTxId so the record knows its pending proof
+      await db.update(spectralRecords)
+        .set({ data: { ...(data ?? {}), contentHash, auditStatus: "pending", auditTxId: auditTx.id } })
+        .where((await import("drizzle-orm")).eq(spectralRecords.id, record.id));
+
+      res.json({ success: true, record: { ...record, data: { contentHash, auditStatus: "pending", auditTxId: auditTx.id } }, spectral: enc, auditTx });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
+  });
+
+  // ── Audit mine — bundle all pending audit txs into one proof block ─────────
+  app.post("/api/spectral-db/audit-mine", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { blockchainBlocks, blockchainTxPool, spectralRecords } = await import("@shared/schema");
+      const { eq, inArray, desc, like } = await import("drizzle-orm");
+
+      // Collect all pending SPECTRAL_AUDIT txs
+      const pendingTxs = await db.select().from(blockchainTxPool)
+        .where(eq(blockchainTxPool.status, "pending"));
+      const auditTxs = pendingTxs.filter(t => t.memo?.startsWith("SPECTRAL_AUDIT:"));
+
+      if (auditTxs.length === 0) {
+        return res.json({ success: true, message: "No pending audit transactions", blockMined: false });
+      }
+
+      // Build block content — summary of what's being proven
+      const blockContent = `SPECTRAL_AUDIT_BLOCK: ${auditTxs.length} records proven at λ addresses via Λ=hf/c² | hashes: ${auditTxs.map(t => t.memo?.split(":")[2]).join(",")}`;
+
+      const encRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction: blockContent, label: "audit_block" }),
+      });
+      if (!encRes.ok) return res.status(502).json({ error: "Spectral encode failed" });
+      const enc = await encRes.json() as any;
+
+      const psiMatch = enc.psi_channel?.match(/Ψ\((\d+),\s*(\d+),\s*([HV])\)/);
+      const wdm = psiMatch ? parseInt(psiMatch[1]) : 0;
+      const oam = psiMatch ? parseInt(psiMatch[2]) : 0;
+      const pol = psiMatch ? psiMatch[3] : "H";
+
+      const [latest] = await db.select().from(blockchainBlocks).orderBy(desc(blockchainBlocks.blockNumber)).limit(1);
+      const nextNumber = (latest?.blockNumber ?? -1) + 1;
+
+      const txIds = auditTxs.map(t => t.id);
+      const [block] = await db.insert(blockchainBlocks).values({
+        blockNumber:  nextNumber,
+        content:      blockContent,
+        wavelengthNm: String(enc.wavelength_mid_nm ?? 550),
+        psiChannel:   enc.psi_channel,
+        wdm, oam, polarisation: pol,
+        band:         enc.band ?? "CORE",
+        energyJoules: String(enc.energy_joules ?? 0),
+        lambdaMassKg: String(enc.lambda_mass_kg ?? 0),
+        frequencyHz:  String(enc.frequency_hz ?? 0),
+        previousPsi:  latest?.psiChannel ?? null,
+        nxtReward:    "1.00000000",
+        minerAddress: (req as any).user?.walletAddress ?? "NXT-NEXS-OS1K-7F3A-OMEGA",
+        txCount:      txIds.length,
+        transactions: txIds as any,
+      }).returning();
+
+      // Mark audit txs as confirmed
+      await db.update(blockchainTxPool)
+        .set({ status: "confirmed" })
+        .where(inArray(blockchainTxPool.id, txIds));
+
+      // Update spectral records with proof block number
+      for (const tx of auditTxs) {
+        const recordId = tx.memo?.split(":")[1];
+        if (!recordId) continue;
+        try {
+          const [rec] = await db.select().from(spectralRecords).where(eq(spectralRecords.id, recordId));
+          if (rec) {
+            const existing = (rec.data as any) ?? {};
+            await db.update(spectralRecords)
+              .set({ data: { ...existing, auditStatus: "confirmed", proofBlockNumber: nextNumber, proofBlockPsi: enc.psi_channel } })
+              .where(eq(spectralRecords.id, recordId));
+          }
+        } catch {}
+      }
+
+      res.json({ success: true, block, blockMined: true, recordsProven: auditTxs.length, spectral: enc });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Audit backfill — queue all existing unaudited records into the mempool ──
+  app.post("/api/spectral-db/audit-backfill", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { spectralRecords, blockchainTxPool } = await import("@shared/schema");
+      const { sql: drizzleSql, eq } = await import("drizzle-orm");
+      const { createHash } = await import("crypto");
+
+      // Only records that have no auditTxId in their data yet
+      const unaudited = await db.select({
+        id: spectralRecords.id,
+        label: spectralRecords.label,
+        content: spectralRecords.content,
+        wavelengthNm: spectralRecords.wavelengthNm,
+        psiChannel: spectralRecords.psiChannel,
+        energyJoules: spectralRecords.energyJoules,
+        data: spectralRecords.data,
+      }).from(spectralRecords)
+        .where(drizzleSql`${spectralRecords.data}->>'auditTxId' IS NULL`);
+
+      if (unaudited.length === 0) {
+        return res.json({ success: true, queued: 0, message: "All records already have audit transactions" });
+      }
+
+      const fromAddr = (req as any).user?.walletAddress ?? "NXT-NEXS-OS1K-7F3A-OMEGA";
+      let queued = 0;
+
+      // Batch insert audit txs — reuse existing wavelength data (no re-encode needed)
+      for (const rec of unaudited) {
+        const contentHash = createHash("sha256").update(rec.content).digest("hex");
+        const auditMemo   = `SPECTRAL_AUDIT:${rec.id}:${contentHash.slice(0, 16)}:${rec.wavelengthNm}nm:${rec.psiChannel}`;
+        const energyFee   = parseFloat(String(rec.energyJoules ?? 0));
+        const feePaid     = String(Math.max((energyFee / 1e-17) * 0.00000001, 0.00000001).toFixed(8));
+
+        const [auditTx] = await db.insert(blockchainTxPool).values({
+          fromAddress:  fromAddr,
+          toAddress:    "SPECTRAL-DB",
+          amountNxt:    "0.00000001",
+          memo:         auditMemo,
+          wavelengthNm: String(rec.wavelengthNm),
+          psiChannel:   rec.psiChannel ?? null,
+          energyJoules: String(rec.energyJoules ?? 0),
+          feePaid,
+          status:       "pending",
+        }).returning();
+
+        const existing = (rec.data as any) ?? {};
+        await db.update(spectralRecords)
+          .set({ data: { ...existing, contentHash, auditStatus: "pending", auditTxId: auditTx.id } })
+          .where(eq(spectralRecords.id, rec.id));
+
+        queued++;
+      }
+
+      res.json({ success: true, queued, message: `${queued} records queued for audit — now mine a proof block to confirm them` });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Audit status overview ─────────────────────────────────────────────────
+  app.get("/api/spectral-db/audit-status", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { spectralRecords, blockchainBlocks, blockchainTxPool } = await import("@shared/schema");
+      const { sql: drizzleSql, eq, desc } = await import("drizzle-orm");
+
+      const [{ total }] = await db.select({ total: drizzleSql<number>`count(*)` }).from(spectralRecords);
+      const [{ confirmed }] = await db.select({ confirmed: drizzleSql<number>`count(*)` })
+        .from(spectralRecords).where(drizzleSql`${spectralRecords.data}->>'auditStatus' = 'confirmed'`);
+      const [{ pending }] = await db.select({ pending: drizzleSql<number>`count(*)` })
+        .from(spectralRecords).where(drizzleSql`${spectralRecords.data}->>'auditStatus' = 'pending'`);
+      const [{ blockCount }] = await db.select({ blockCount: drizzleSql<number>`count(*)` }).from(blockchainBlocks);
+      const [{ pendingAuditTxs }] = await db.select({ pendingAuditTxs: drizzleSql<number>`count(*)` })
+        .from(blockchainTxPool)
+        .where(drizzleSql`${blockchainTxPool.status} = 'pending' AND ${blockchainTxPool.memo} LIKE 'SPECTRAL_AUDIT:%'`);
+
+      const latestBlocks = await db.select().from(blockchainBlocks)
+        .orderBy(desc(blockchainBlocks.blockNumber)).limit(5);
+
+      res.json({ total: Number(total), confirmed: Number(confirmed), pending: Number(pending), unaudited: Number(total) - Number(confirmed) - Number(pending), blockCount: Number(blockCount), pendingAuditTxs: Number(pendingAuditTxs), latestBlocks });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
   // Full-text search across label + content
