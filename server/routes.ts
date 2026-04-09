@@ -3186,6 +3186,21 @@ export async function registerRoutes(
     }
   });
 
+  // ── Transmit ordinal — record a P2P TRANSMIT event to treasury ───────────────
+  app.post("/api/transmit/ordinal", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { sql: ds } = await import("drizzle-orm");
+      const { freqHz = 5.45e14, wavelengthNm = 550, psiChannel = "Ψ(0,0,H)", band = "CORE", label = "P2P Transmission" } = req.body;
+      const ordinal = await depositOrdinalForInput({
+        db, ds, freqHz: parseFloat(String(freqHz)), wavelengthNm: parseFloat(String(wavelengthNm)),
+        psiChannel: String(psiChannel), band: String(band), operation: "TRANSMIT",
+        label: String(label), depositor: (req as any).user?.username ?? "system",
+      });
+      res.json({ success: true, ordinal: { units: ordinal.ordinalUnits.toString(), nxt: (Number(ordinal.ordinalUnits) / 1e8).toFixed(8) } });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── Ordinal Input Registry — formal definition of all communication input types ──
   app.get("/api/ordinals/registry", authenticate, async (req: Request, res: Response) => {
     try {
