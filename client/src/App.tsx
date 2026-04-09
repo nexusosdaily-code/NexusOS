@@ -45,6 +45,7 @@ import NexusCommandPage from "@/pages/nexus-command";
 import KernelGenesisPage from "@/pages/kernel-genesis";
 import SpectralWorkspacePage from "@/pages/spectral-workspace";
 import ChroniclePage from "@/pages/chronicle";
+import SpectralLibraryPage from "@/pages/spectral-library";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -103,6 +104,7 @@ function ProtectedRoutes() {
         <Route path="/kernel-genesis" component={KernelGenesisPage} />
         <Route path="/spectral-workspace" component={SpectralWorkspacePage} />
         <Route path="/chronicle" component={ChroniclePage} />
+        <Route path="/spectral-library" component={SpectralLibraryPage} />
         <Route path="/transmission" component={TransmissionPage} />
         <Route component={NotFound} />
       </Switch>

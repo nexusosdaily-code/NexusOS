@@ -2858,6 +2858,56 @@ export async function registerRoutes(
     }
   });
 
+  // Full-text search across label + content
+  app.get("/api/spectral-db/text-search", authenticate, async (req: Request, res: Response) => {
+    try {
+      const q    = String(req.query.q ?? "").trim();
+      const band = String(req.query.band ?? "").trim().toUpperCase();
+      const limit = Math.min(parseInt(String(req.query.limit ?? "200")), 500);
+
+      const { db } = await import("./db");
+      const { spectralRecords } = await import("@shared/schema");
+      const { sql: drizzleSql, and, ilike, eq, or } = await import("drizzle-orm");
+
+      const conditions: any[] = [];
+      if (q) conditions.push(or(ilike(spectralRecords.label, `%${q}%`), ilike(spectralRecords.content, `%${q}%`)));
+      if (band && band !== "ALL") conditions.push(eq(spectralRecords.band, band));
+
+      const records = await db.select({
+        id: spectralRecords.id,
+        label: spectralRecords.label,
+        wavelengthNm: spectralRecords.wavelengthNm,
+        psiChannel: spectralRecords.psiChannel,
+        band: spectralRecords.band,
+        energyJoules: spectralRecords.energyJoules,
+        frequencyHz: spectralRecords.frequencyHz,
+        data: spectralRecords.data,
+        createdAt: spectralRecords.createdAt,
+      }).from(spectralRecords)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(drizzleSql`CAST(${spectralRecords.wavelengthNm} AS NUMERIC) ASC`)
+        .limit(limit);
+
+      res.json({ records, count: records.length, query: q, band });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Fetch full content of a single record by ID
+  app.get("/api/spectral-db/record/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { spectralRecords } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [record] = await db.select().from(spectralRecords).where(eq(spectralRecords.id, req.params.id));
+      if (!record) return res.status(404).json({ error: "Record not found" });
+      res.json({ record });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Scan all records — full spectral map
   app.get("/api/spectral-db/scan", authenticate, async (req: Request, res: Response) => {
     try {

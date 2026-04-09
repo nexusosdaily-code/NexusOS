@@ -334,6 +334,14 @@ const SYSTEMS = [
     action: "Open workspace",
   },
   {
+    title: "Spectral Library",
+    description: "Search and browse 620+ spectral records — every source file, wiki page, and document encoded into the electromagnetic spectrum. Find anything by tuning to its wavelength.",
+    href: "/spectral-library",
+    color: "#06b6d4",
+    Icon: FileText,
+    action: "Browse corpus",
+  },
+  {
     title: "Spectral Database",
     description: "Store any data at its natural wavelength address. Retrieve by physics. No SQL injection, no admin console.",
     href: "/spectral-db",
