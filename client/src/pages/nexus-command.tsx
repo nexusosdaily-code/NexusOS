@@ -397,6 +397,14 @@ const SYSTEMS = [
     Icon: Activity,
     action: "View ecosystem",
   },
+  {
+    title: "Ordinal Input Registry",
+    description: "Formal constitutional definition of all 9 communication input types (STORE, UPLOAD, DELETE, MESSAGE, TRANSMIT, ENCODE, BROADCAST, CALL, RETRIEVE) — each generates NXT ordinals derived from Λ=hf/c².",
+    href: "/ordinal-registry",
+    color: "#f59e0b",
+    Icon: Zap,
+    action: "View registry",
+  },
 ];
 
 // ── Civilization pillars ──────────────────────────────────────────

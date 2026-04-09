@@ -2601,6 +2601,23 @@ export async function registerRoutes(
            ${busData.route ?? `${src} → ${dst}`})
       `);
 
+      // ── ORDINAL: MESSAGE input deposits small ordinal to Treasury ────────────
+      // Message carrier: Schumann microwave harmonic 7.83GHz → tiny ordinal (7,830 units = 0.0000783 NXT)
+      // Higher priority messages use higher carrier: priority×1GHz
+      const msgFreqHz = Math.max(1e9, (priority ?? 5) * 1e9); // 1GHz–5GHz carrier
+      const msgNm = (2.998e8 / msgFreqHz) * 1e9; // convert to nm
+      const { db: dbMsg } = await import("./db");
+      const { sql: dsMsg } = await import("drizzle-orm");
+      depositOrdinalForInput({
+        db: dbMsg, ds: dsMsg,
+        freqHz: msgFreqHz, wavelengthNm: msgNm,
+        psiChannel: psiParts[0] ?? "Ψ(0,0,H)",
+        band: busData.authority ?? "USER",
+        operation: "MESSAGE",
+        label: `MSG:${src}→${dst}`,
+        depositor: (req as any).user?.username ?? "system",
+      }).catch(() => {}); // fire-and-forget — never block message routing
+
       res.json({ success: true, ...busData });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -2881,7 +2898,21 @@ export async function registerRoutes(
         .set({ data: { ...(data ?? {}), contentHash, auditStatus: "pending", auditTxId: auditTx.id } })
         .where((await import("drizzle-orm")).eq(spectralRecords.id, record.id));
 
-      res.json({ success: true, record: { ...record, data: { contentHash, auditStatus: "pending", auditTxId: auditTx.id } }, spectral: enc, auditTx });
+      // ── ORDINAL: STORE input deposits to Orbital Treasury ────────────────────
+      const { sql: dsOrd } = await import("drizzle-orm");
+      const storeOrdinal = await depositOrdinalForInput({
+        db, ds: dsOrd,
+        freqHz: parseFloat(String(enc.frequency_hz ?? 5.45e14)),
+        wavelengthNm: parseFloat(String(enc.wavelength_mid_nm ?? 550)),
+        psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
+        band: enc.band ?? "CORE",
+        operation: "STORE", label,
+        sourceRecordId: record.id,
+        depositor: (req as any).user?.username ?? "system",
+      }).catch(() => null); // never fail the main store operation
+
+      res.json({ success: true, record: { ...record, data: { contentHash, auditStatus: "pending", auditTxId: auditTx.id } }, spectral: enc, auditTx,
+        ordinal: storeOrdinal ? { units: storeOrdinal.ordinalUnits.toString(), nxt: (Number(storeOrdinal.ordinalUnits) / 1e8).toFixed(8) } : null });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -3155,6 +3186,58 @@ export async function registerRoutes(
     }
   });
 
+  // ── Ordinal Input Registry — formal definition of all communication input types ──
+  app.get("/api/ordinals/registry", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { sql: ds } = await import("drizzle-orm");
+
+      // Live stats per operation_type from treasury + energy_ledger
+      const [treasuryStats, energyStats, recentDeposits] = await Promise.all([
+        db.execute(ds`SELECT operation_type, COUNT(*) AS count, COALESCE(SUM(ordinal_nxt_units), 0) AS total_units
+          FROM orbital_treasury GROUP BY operation_type ORDER BY total_units DESC`),
+        db.execute(ds`SELECT operation, COUNT(*) AS count, COALESCE(SUM(cost_nxt_units), 0) AS total_cost
+          FROM energy_ledger GROUP BY operation ORDER BY count DESC`),
+        db.execute(ds`SELECT source_label, source_wavelength_nm, source_frequency_hz, source_psi_channel,
+          source_band, ordinal_nxt_units, operation_type, deposited_by, deposited_at, memo
+          FROM orbital_treasury ORDER BY deposited_at DESC LIMIT 20`),
+      ]);
+
+      const byType: Record<string, any> = {};
+      for (const row of treasuryStats.rows as any[]) {
+        byType[row.operation_type] = { count: parseInt(row.count), totalUnits: parseInt(row.total_units), totalNxt: parseInt(row.total_units) / 1e8 };
+      }
+
+      // Canonical definition of all 9 input types
+      const REGISTRY = [
+        { operation: "STORE",     trigger: "Spectral record written to DB via CE→SE",     energyFactor: 200, example555thz: "555,000,000",  color: "#06b6d4", group: "data" },
+        { operation: "UPLOAD",    trigger: "File or video encoded into spectrum",          energyFactor: 100, example555thz: "555,000,000",  color: "#8b5cf6", group: "media" },
+        { operation: "DELETE",    trigger: "Spectral record removed (Ψ address reclaimed)", energyFactor: 50, example555thz: "555,000,000",  color: "#f43f5e", group: "data" },
+        { operation: "TRANSMIT",  trigger: "P2P file/data transmission initiated",        energyFactor: 30,  example555thz: "555,000,000",  color: "#22c55e", group: "media" },
+        { operation: "ENCODE",    trigger: "CE→SE encoding performed (standalone call)",  energyFactor: 10,  example555thz: "555,000,000",  color: "#f59e0b", group: "compute" },
+        { operation: "MESSAGE",   trigger: "Agent bus message routed",                    energyFactor: 5,   example555thz: "1,000–5,000",  color: "#64748b", group: "comms", note: "carrier = priority×1GHz" },
+        { operation: "BROADCAST", trigger: "Live stream started on spectral channel",     energyFactor: 150, example555thz: "555,000,000",  color: "#ea580c", group: "media" },
+        { operation: "CALL",      trigger: "Voice/video call initiated",                  energyFactor: 120, example555thz: "555,000,000",  color: "#a855f7", group: "comms" },
+        { operation: "RETRIEVE",  trigger: "Spectral record read from DB",                energyFactor: 10,  example555thz: "555,000,000",  color: "#3b82f6", group: "data" },
+      ].map(t => ({
+        ...t,
+        liveStats: byType[t.operation] ?? { count: 0, totalUnits: 0, totalNxt: 0 },
+        formula: "ordinal_nxt_units = ROUND(freq_hz / 1e6)",
+        constitutionalBasis: "Λ = hf/c² — ordinal derived from physical wave frequency, never from policy",
+      }));
+
+      res.json({
+        version: "1.0.0",
+        constitutionalClause: "§8 — Any communication input subject to ordinals must be defined. The ordinal formula is Λ=hf/c². No arbitrary fees.",
+        ordinalFormula: "ordinal_nxt_units = ROUND(frequency_hz / 1e6)",
+        energyCostFormula: "energy_cost_units = ROUND((frequency_hz / 1e12) × energy_factor)",
+        totalTreasuryDeposits: (treasuryStats.rows as any[]).reduce((s, r) => s + parseInt(r.total_units), 0),
+        registry: REGISTRY,
+        recentDeposits: recentDeposits.rows,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── Ecosystem Status — unified cross-system aggregation ──────────────────
   app.get("/api/ecosystem/status", authenticate, async (req: Request, res: Response) => {
     try {
@@ -3262,14 +3345,61 @@ export async function registerRoutes(
   const H_PLANCK = 6.626e-34;
   const C_LIGHT  = 2.998e8;
 
+  type OrdinalOperation = "STORE" | "UPLOAD" | "RETRIEVE" | "DELETE" | "TRANSMIT" | "ENCODE" | "MESSAGE" | "BROADCAST" | "CALL";
+
   function calcOrdinal(frequencyHz: number): bigint {
     // NXT ordinal units = ROUND(frequency_hz / 1e6)
-    // At 555THz → 555,000,000 units = 5.55 NXT
+    // At 555THz → 555,000,000 units = 5.55 NXT  |  7.83GHz → 7,830 units
     return BigInt(Math.round(frequencyHz / 1e6));
   }
-  function calcEnergyCost(frequencyHz: number, op: "STORE" | "RETRIEVE" | "DELETE" | "TRANSMIT"): bigint {
-    const factors: Record<string, number> = { STORE: 200, RETRIEVE: 10, DELETE: 50, TRANSMIT: 30 };
-    return BigInt(Math.round((frequencyHz / 1e12) * factors[op]));
+
+  function calcEnergyCost(frequencyHz: number, op: OrdinalOperation): bigint {
+    const factors: Record<string, number> = {
+      STORE: 200, UPLOAD: 100, RETRIEVE: 10, DELETE: 50,
+      TRANSMIT: 30, ENCODE: 10, MESSAGE: 5, BROADCAST: 150, CALL: 120,
+    };
+    return BigInt(Math.round((frequencyHz / 1e12) * (factors[op] ?? 10)));
+  }
+
+  // ── Universal ordinal deposit — called by every communication input ──────────
+  // "Any communication input subject to ordinals must be defined" — NexusOS Constitution
+  async function depositOrdinalForInput(params: {
+    db: any; ds: any;
+    freqHz: number; wavelengthNm: number; psiChannel: string; band: string;
+    operation: OrdinalOperation; label: string; sourceRecordId?: string; depositor: string;
+  }): Promise<{ ordinalUnits: bigint; energyCost: bigint }> {
+    const { db, ds, freqHz, wavelengthNm, psiChannel, band, operation, label, sourceRecordId, depositor } = params;
+    const ordinalUnits = calcOrdinal(freqHz);
+    const energyCost   = calcEnergyCost(freqHz, operation);
+    const srcId = sourceRecordId ?? "input:" + Date.now();
+    const memo  = `${operation} ordinal: λ=${wavelengthNm.toFixed(2)}nm ${psiChannel} → ${ordinalUnits} NXT units`;
+
+    await Promise.all([
+      // 1. Deposit to Orbital Treasury
+      db.execute(ds`
+        INSERT INTO orbital_treasury (source_record_id, source_label, source_wavelength_nm, source_frequency_hz,
+          source_psi_channel, source_band, ordinal_nxt_units, operation_type, deposited_by, memo)
+        VALUES (${srcId}, ${label}, ${wavelengthNm}, ${freqHz}, ${psiChannel}, ${band},
+                ${ordinalUnits.toString()}, ${operation}, ${depositor}, ${memo})
+      `),
+      // 2. Log energy cost to ledger
+      db.execute(ds`
+        INSERT INTO energy_ledger (record_id, user_address, operation, wavelength_nm, frequency_hz,
+          energy_joules, cost_nxt_units, band, psi_channel, memo)
+        VALUES (${srcId}, ${depositor}, ${operation}, ${wavelengthNm}, ${freqHz},
+                ${H_PLANCK * freqHz}, ${energyCost.toString()}, ${band}, ${psiChannel},
+                ${operation + ' energy cost at λ=' + wavelengthNm.toFixed(2) + 'nm'})
+      `),
+      // 3. Bus log — signals to ecosystem
+      db.execute(ds`
+        INSERT INTO wnsp_bus_log (src, dst, payload, priority, src_wdm, src_oam, src_pol,
+          dst_wdm, dst_oam, dst_pol, route, dispatched_at)
+        VALUES ('spectral_db', 'orbital_treasury',
+                ${`ORDINAL_INPUT[${operation}]: "${label}" λ=${wavelengthNm.toFixed(2)}nm ordinal=${ordinalUnits} NXT units`},
+                2, 0, 0, 0, 0, 0, 0, 'spectral_db→orbital_treasury', ${Date.now() / 1000})
+      `),
+    ]);
+    return { ordinalUnits, energyCost };
   }
 
   // DELETE a spectral record — ordinal flows to Orbital Treasury
@@ -3517,7 +3647,22 @@ export async function registerRoutes(
         data: { type: "video", videoId, mimeType, fileSize },
       }).returning();
 
-      res.json({ success: true, record, spectral: enc, videoId });
+      // ── ORDINAL: UPLOAD input deposits to Orbital Treasury ───────────────────
+      const { sql: dsVid } = await import("drizzle-orm");
+      const uploadOrdinal = await depositOrdinalForInput({
+        db, ds: dsVid,
+        freqHz: parseFloat(String(enc.frequency_hz ?? 5.45e14)),
+        wavelengthNm: parseFloat(String(nm)),
+        psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
+        band,
+        operation: "UPLOAD",
+        label: `VIDEO:${title}`,
+        sourceRecordId: record.id,
+        depositor: (req as any).user?.username ?? "system",
+      }).catch(() => null);
+
+      res.json({ success: true, record, spectral: enc, videoId,
+        ordinal: uploadOrdinal ? { units: uploadOrdinal.ordinalUnits.toString(), nxt: (Number(uploadOrdinal.ordinalUnits) / 1e8).toFixed(8) } : null });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
