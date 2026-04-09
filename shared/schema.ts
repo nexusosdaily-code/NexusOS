@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, decimal, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, decimal, jsonb, index, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -658,3 +658,22 @@ export const insertSpectralRecordSchema = createInsertSchema(spectralRecords).om
 
 export type InsertSpectralRecord = z.infer<typeof insertSpectralRecordSchema>;
 export type SpectralRecord = typeof spectralRecords.$inferSelect;
+
+// ── Video Uploads — Spectral Workspace media ──────────────────────────────────
+export const videoUploads = pgTable("video_uploads", {
+  id:           varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  uploaderId:   varchar("uploader_id").notNull(),
+  uploaderName: text("uploader_name").notNull(),
+  filename:     text("filename").notNull(),
+  mimeType:     text("mime_type").notNull(),
+  fileSize:     integer("file_size").notNull(),
+  duration:     real("duration"),
+  thumbnailUrl: text("thumbnail_url"),
+  videoData:    text("video_data"),
+  status:       text("status").notNull().default("processing"),
+  createdAt:    timestamp("created_at").defaultNow(),
+});
+
+export const insertVideoUploadSchema = createInsertSchema(videoUploads).omit({ id: true, createdAt: true });
+export type InsertVideoUpload = z.infer<typeof insertVideoUploadSchema>;
+export type VideoUpload = typeof videoUploads.$inferSelect;
