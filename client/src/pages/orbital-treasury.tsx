@@ -52,13 +52,16 @@ const CONSTITUTION_TEXT = [
   { clause: "§3", text: "The Orbital Treasury funds system maintenance, deliverables, and infrastructure — governed by the Sigma Constitution Engine." },
   { clause: "§4", text: "No ordinal is destroyed. All spectral addresses are preserved in the blockchain as immutable proof of existence." },
   { clause: "§5", text: "Energy costs scale with frequency: higher bands (SYSTEM/AUTH) carry greater energetic weight." },
+  { clause: "§6", text: "10% of all Orbital Treasury deposits are permanently allocated to the Chairman Founder Nexus Charitable Trust, funding humanitarian deliverables aligned with Kardashev Type I civilization outcomes." },
+  { clause: "§7", text: "The Charitable Trust is non-extractable by any single authority. Disbursements require Sigma Constitution Engine consensus and are recorded immutably on the wavelength blockchain." },
 ];
 
 const FUND_ALLOCATION = [
-  { label: "System Maintenance", pct: 40, color: "#8b5cf6" },
-  { label: "Deliverables Fund",  pct: 30, color: "#3b82f6" },
-  { label: "Research Reserve",   pct: 20, color: "#22c55e" },
-  { label: "Agent Rewards",      pct: 10, color: "#f59e0b" },
+  { label: "System Maintenance",                    pct: 35, color: "#8b5cf6" },
+  { label: "Deliverables Fund",                     pct: 25, color: "#3b82f6" },
+  { label: "Research Reserve",                      pct: 20, color: "#22c55e" },
+  { label: "Agent Rewards",                         pct: 10, color: "#f59e0b" },
+  { label: "Chairman Founder Nexus Charitable Trust", pct: 10, color: "#f43f5e" },
 ];
 
 export default function OrbitalTreasury() {
@@ -198,6 +201,38 @@ export default function OrbitalTreasury() {
                 </div>
               </div>
             )}
+
+            {/* Chairman Founder Nexus Charitable Trust */}
+            <div className="border border-rose-500/30 rounded-xl p-5" style={{ background: "rgba(244,63,94,0.04)" }}>
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: "rgba(244,63,94,0.15)", border: "1px solid rgba(244,63,94,0.3)" }}>
+                  <Globe size={14} className="text-rose-400" />
+                </div>
+                <div>
+                  <div className="text-rose-400 text-xs font-bold uppercase tracking-wider">Chairman Founder Nexus Charitable Trust</div>
+                  <div className="text-white/40 text-[10px] mt-0.5">§6 · §7 Sigma Constitution · 10% of all Orbital Treasury deposits</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {[
+                  { label: "Trust Balance", value: (totalUnits * 0.10 / 1e8).toFixed(8) + " NXT" },
+                  { label: "Raw Units",     value: Math.round(totalUnits * 0.10).toLocaleString() },
+                  { label: "Governance",    value: "Sigma Engine" },
+                ].map(({ label, value }) => (
+                  <div key={label} className="text-center border border-rose-500/15 rounded-lg py-2 px-3" style={{ background: "rgba(244,63,94,0.06)" }}>
+                    <div className="text-rose-300 font-bold text-sm">{value}</div>
+                    <div className="text-white/30 text-[9px] uppercase mt-0.5">{label}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1.5 text-[10px] text-white/40 leading-relaxed">
+                <div>• Funds humanitarian deliverables aligned with Kardashev Type I civilization outcomes</div>
+                <div>• Non-extractable by any single authority — requires consensus-based disbursement</div>
+                <div>• Every disbursement recorded immutably on the wavelength blockchain as public proof</div>
+                <div>• Open, transparent, AGPL-3.0 — <span className="text-rose-400/70">"we prove our work to the people willingly"</span></div>
+              </div>
+            </div>
 
             {/* Constitutional formula */}
             <div className="border border-amber-400/20 rounded-xl p-5" style={{ background: "rgba(251,191,36,0.03)" }}>
