@@ -2917,5 +2917,98 @@ export async function registerRoutes(
     }
   });
 
+  // ── Spectral Workspace — Video API ────────────────────────────────────────
+  // Upload a video clip, encode its title into a wavelength, store at that address
+
+  app.post("/api/spectral-workspace/video", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { title, description, videoData, mimeType, fileSize, filename } = req.body;
+      if (!title || !videoData || !mimeType) {
+        return res.status(400).json({ error: "title, videoData, and mimeType required" });
+      }
+      if (fileSize && fileSize > 100 * 1024 * 1024) {
+        return res.status(413).json({ error: "Video too large — max 100MB" });
+      }
+
+      const encodeText = `${title}${description ? ": " + description : ""}`;
+      const encodeRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction: encodeText, label: title }),
+      });
+      if (!encodeRes.ok) return res.status(502).json({ error: "Spectral encode failed" });
+      const enc = await encodeRes.json() as any;
+
+      const psiMatch = enc.psi_channel?.match(/Ψ\((\d+),\s*(\d+),\s*([HV])\)/);
+      const wdm = psiMatch ? parseInt(psiMatch[1]) : 0;
+      const oam = psiMatch ? parseInt(psiMatch[2]) : 0;
+      const pol = psiMatch ? psiMatch[3] : "H";
+
+      const { db } = await import("./db");
+      const { videoUploads, spectralRecords } = await import("@shared/schema");
+      const { randomUUID } = await import("crypto");
+
+      const videoId = randomUUID();
+      const [video] = await db.insert(videoUploads).values({
+        id: videoId,
+        uploaderId: (req as any).user?.id ?? "anonymous",
+        uploaderName: (req as any).user?.username ?? "anonymous",
+        filename: filename ?? `${title}.mp4`,
+        mimeType,
+        fileSize: fileSize ?? 0,
+        videoData,
+        status: "ready",
+      }).returning();
+
+      const nm = enc.wavelength_mid_nm ?? 550;
+      const band = nm < 450 ? "SYSTEM" : nm < 520 ? "AUTH" : nm < 625 ? "USER" : "GUEST";
+
+      const [record] = await db.insert(spectralRecords).values({
+        id: randomUUID(),
+        label: title,
+        content: description ?? title,
+        wavelengthNm: String(nm),
+        psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
+        wdm, oam, polarisation: pol,
+        band,
+        energyJoules: String(enc.energy_joules ?? 0),
+        lambdaMassKg: String(enc.lambda_mass_kg ?? 0),
+        frequencyHz: String(enc.frequency_hz ?? 0),
+        data: { type: "video", videoId, mimeType, fileSize },
+      }).returning();
+
+      res.json({ success: true, record, spectral: enc, videoId });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/spectral-workspace/video/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { videoUploads } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [video] = await db.select().from(videoUploads).where(eq(videoUploads.id, req.params.id));
+      if (!video) return res.status(404).json({ error: "Video not found" });
+      res.json({ video });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/spectral-workspace/videos", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { spectralRecords } = await import("@shared/schema");
+      const { sql: drizzleSql } = await import("drizzle-orm");
+      const records = await db.select().from(spectralRecords)
+        .where(drizzleSql`${spectralRecords.data}->>'type' = 'video'`)
+        .orderBy(drizzleSql`${spectralRecords.createdAt} DESC`);
+      res.json({ records, count: records.length });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return httpServer;
 }
