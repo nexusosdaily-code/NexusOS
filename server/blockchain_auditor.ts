@@ -74,24 +74,37 @@ async function registerAgent() {
 // ── Log to agent bus ──────────────────────────────────────────────────────────
 async function busLog(payload: string, dst = "bus_router", priority = 3) {
   try {
+    const route = `blockchain_auditor→${dst}`;
     await db.execute(drizzleSql`
       INSERT INTO wnsp_bus_log (src, dst, payload, priority, src_wdm, src_oam, src_pol,
                                 dst_wdm, dst_oam, dst_pol, route, dispatched_at)
       VALUES ('blockchain_auditor', ${dst}, ${payload}, ${priority},
               ${AGENT_PSI.wdm}, ${AGENT_PSI.oam}, ${AGENT_PSI.pol},
-              0, 0, 0, 'blockchain_auditor→${dst}', ${Date.now() / 1000})
+              0, 0, 0, ${route}, ${Date.now() / 1000})
     `);
-  } catch {}
+  } catch (e: any) {
+    console.warn("[AUDITOR] busLog error:", e.message);
+  }
 }
 
-// ── Heartbeat ─────────────────────────────────────────────────────────────────
+// ── Heartbeat (runs every 60s to prevent watchdog reclaim) ────────────────────
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+
 async function heartbeat() {
   try {
+    const now = Date.now() / 1000;
     await db.execute(drizzleSql`
-      UPDATE wnsp_agents SET updated_at = ${Date.now() / 1000}
+      UPDATE wnsp_agents SET updated_at = ${now}
       WHERE agent_id = 'blockchain_auditor'
     `);
-  } catch {}
+  } catch (e: any) {
+    console.warn("[AUDITOR] Heartbeat error:", e.message);
+  }
+}
+
+function startHeartbeat() {
+  if (heartbeatTimer) clearInterval(heartbeatTimer);
+  heartbeatTimer = setInterval(heartbeat, 60_000); // every 60s
 }
 
 // ── Core: run one audit cycle ─────────────────────────────────────────────────
@@ -204,7 +217,9 @@ function startTimer() {
 
 export async function startBlockchainAuditor() {
   await registerAgent();
-  await busLog("AGENT_BOOT: blockchain_auditor online — autonomous spectral audit active", "bus_router", 2);
+  await heartbeat(); // immediate heartbeat to set updated_at
+  startHeartbeat(); // keep alive every 60s (watchdog TTL is typically 300s)
+  await busLog("AGENT_BOOT: blockchain_auditor online — autonomous spectral audit + ecosystem monitor active", "bus_router", 2);
   startTimer();
   // Run first cycle after 30s to let the server settle
   setTimeout(() => { if (config.enabled) runCycle(); }, 30_000);

@@ -48,6 +48,7 @@ import ChroniclePage from "@/pages/chronicle";
 import SpectralLibraryPage from "@/pages/spectral-library";
 import SpectralAuditPage from "@/pages/spectral-audit";
 import OrbitalTreasuryPage from "@/pages/orbital-treasury";
+import EcosystemPage from "@/pages/ecosystem";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -109,6 +110,7 @@ function ProtectedRoutes() {
         <Route path="/spectral-library" component={SpectralLibraryPage} />
         <Route path="/spectral-audit" component={SpectralAuditPage} />
         <Route path="/orbital-treasury" component={OrbitalTreasuryPage} />
+        <Route path="/ecosystem" component={EcosystemPage} />
         <Route path="/transmission" component={TransmissionPage} />
         <Route component={NotFound} />
       </Switch>

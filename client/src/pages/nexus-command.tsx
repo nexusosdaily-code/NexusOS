@@ -381,6 +381,22 @@ const SYSTEMS = [
     Icon: Cpu,
     action: "Open wallet",
   },
+  {
+    title: "Orbital Treasury",
+    description: "Constitutional economy: every file deletion generates NXT ordinals flowing to the Orbital Treasury — 5 buckets including 10% to the Chairman Founder Nexus Charitable Trust.",
+    href: "/orbital-treasury",
+    color: "#f43f5e",
+    Icon: Globe,
+    action: "View treasury",
+  },
+  {
+    title: "Ecosystem Interconnect",
+    description: "All 6 systems — Spectral DB, Blockchain, Treasury, Energy Ledger, Agent Bus, Kernel — sharing data in real time. Every system feeds every other.",
+    href: "/ecosystem",
+    color: "#a855f7",
+    Icon: Activity,
+    action: "View ecosystem",
+  },
 ];
 
 // ── Civilization pillars ──────────────────────────────────────────
@@ -428,10 +444,15 @@ export default function NexusCommand() {
   const blockchainQ = useQuery({ queryKey: ["/api/blockchain/chain"], refetchInterval: 5000 });
   const busQ        = useQuery({ queryKey: ["/api/agent-bus/status"],  refetchInterval: 3000 });
   const dbQ         = useQuery({ queryKey: ["/api/spectral-db/records?limit=1"], refetchInterval: 5000 });
+  const ecoQ        = useQuery({ queryKey: ["/api/ecosystem/status"], refetchInterval: 10_000 });
 
   const chainLen    = (blockchainQ.data as any)?.chain?.length ?? "—";
   const busQueued   = (busQ.data as any)?.queued ?? "—";
   const dbCount     = (dbQ.data as any)?.total ?? "—";
+  const eco         = (ecoQ.data as any)?.summary ?? {};
+  const proofPct    = eco.proofCoverage != null ? `${eco.proofCoverage}%` : "—";
+  const treasuryNxt = eco.totalNxt != null ? `${Number(eco.totalNxt).toFixed(4)} NXT` : "—";
+  const agentCount  = eco.activeAgents != null ? `${eco.activeAgents} / 6` : "—";
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6">
@@ -471,11 +492,14 @@ export default function NexusCommand() {
         </div>
       </div>
 
-      {/* Live status row */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <StatusCard title="Blockchain height"  value={chainLen}   subtitle="photonic blocks mined"   color="#16a34a" href="/blockchain" />
-        <StatusCard title="Bus messages"       value={busQueued}  subtitle="signals in flight"        color="#06b6d4" href="/agent-bus" />
-        <StatusCard title="Spectral records"   value={dbCount}    subtitle="wavelength-addressed data" color="#dc2626" href="/spectral-db" />
+      {/* Live status row — 6 systems */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <StatusCard title="Blockchain height"  value={chainLen}     subtitle="photonic blocks mined"    color="#16a34a" href="/blockchain" />
+        <StatusCard title="Bus messages"       value={busQueued}    subtitle="signals in flight"         color="#06b6d4" href="/agent-bus" />
+        <StatusCard title="Spectral records"   value={dbCount}      subtitle="wavelength-addressed data" color="#dc2626" href="/spectral-db" />
+        <StatusCard title="Proof coverage"     value={proofPct}     subtitle="blockchain-verified"       color="#22c55e" href="/spectral-audit" />
+        <StatusCard title="Treasury balance"   value={treasuryNxt}  subtitle="ordinal economy funded"    color="#f43f5e" href="/orbital-treasury" />
+        <StatusCard title="Active agents"      value={agentCount}   subtitle="kernel agents online"      color="#a855f7" href="/ecosystem" />
       </div>
 
       {/* Quick compose */}

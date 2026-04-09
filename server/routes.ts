@@ -3155,6 +3155,108 @@ export async function registerRoutes(
     }
   });
 
+  // ── Ecosystem Status — unified cross-system aggregation ──────────────────
+  app.get("/api/ecosystem/status", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { sql: ds } = await import("drizzle-orm");
+
+      const [spectral, chain, txPool, treasury, energy, agents, busLog, kernelEvts, auditor] = await Promise.all([
+        db.execute(ds`SELECT COUNT(*) AS total,
+          COUNT(*) FILTER (WHERE data->>'auditStatus'='confirmed') AS confirmed,
+          COUNT(*) FILTER (WHERE data->>'status'='deleted') AS deleted,
+          COUNT(*) FILTER (WHERE data->>'auditStatus' IS NULL) AS unaudited
+          FROM spectral_records`),
+        db.execute(ds`SELECT COUNT(*) AS block_count, MAX(block_number) AS height,
+          COALESCE((SELECT wavelength_nm::float FROM blockchain_blocks ORDER BY block_number DESC LIMIT 1), 0) AS latest_nm,
+          COALESCE((SELECT psi_channel FROM blockchain_blocks ORDER BY block_number DESC LIMIT 1), '') AS latest_psi,
+          COALESCE((SELECT band FROM blockchain_blocks ORDER BY block_number DESC LIMIT 1), '') AS latest_band
+          FROM blockchain_blocks`),
+        db.execute(ds`SELECT COUNT(*) FILTER (WHERE status='pending') AS pending,
+          COUNT(*) FILTER (WHERE status='confirmed') AS confirmed FROM blockchain_tx_pool`),
+        db.execute(ds`SELECT COUNT(*) AS deposit_count,
+          COALESCE(SUM(ordinal_nxt_units), 0) AS total_units,
+          COALESCE(SUM(ordinal_nxt_units), 0)::float8 / 1e8 AS total_nxt
+          FROM orbital_treasury`),
+        db.execute(ds`SELECT COUNT(*) AS op_count,
+          COALESCE(SUM(cost_nxt_units), 0) AS total_cost_units,
+          COUNT(*) FILTER (WHERE operation='STORE') AS stores,
+          COUNT(*) FILTER (WHERE operation='DELETE') AS deletes
+          FROM energy_ledger`),
+        db.execute(ds`SELECT agent_id, authority_band, intent, updated_at FROM wnsp_agents ORDER BY authority_band`),
+        db.execute(ds`SELECT COUNT(*) AS msg_count, MAX(dispatched_at) AS last_at FROM wnsp_bus_log`),
+        db.execute(ds`SELECT COUNT(*) AS event_count, MAX(created_at) AS last_at FROM wnsp_kernel_events`),
+        db.execute(ds`SELECT agent_id, authority_band, intent, updated_at FROM wnsp_agents WHERE agent_id = 'blockchain_auditor'`),
+      ]);
+
+      const sp: any = spectral.rows[0];
+      const ch: any = chain.rows[0];
+      const tx: any = txPool.rows[0];
+      const tr: any = treasury.rows[0];
+      const en: any = energy.rows[0];
+      const ag: any[] = agents.rows as any[];
+      const bl: any = busLog.rows[0];
+      const ke: any = kernelEvts.rows[0];
+      const aud: any = auditor.rows[0] ?? {};
+
+      const proofCoverage = parseInt(sp.total) > 0
+        ? Math.round((parseInt(sp.confirmed) / parseInt(sp.total)) * 100) : 0;
+
+      res.json({
+        timestamp: Date.now(),
+        systems: {
+          spectralDb: {
+            total: parseInt(sp.total), confirmed: parseInt(sp.confirmed),
+            deleted: parseInt(sp.deleted), unaudited: parseInt(sp.unaudited),
+            proofCoverage, status: proofCoverage === 100 ? "VERIFIED" : proofCoverage > 50 ? "PARTIAL" : "NEEDS_AUDIT",
+          },
+          blockchain: {
+            height: parseInt(ch.height ?? 0), blockCount: parseInt(ch.block_count ?? 0),
+            pendingTxs: parseInt(tx.pending ?? 0), confirmedTxs: parseInt(tx.confirmed ?? 0),
+            latestWavelengthNm: parseFloat(ch.latest_nm ?? 0),
+            latestPsiChannel: ch.latest_psi, latestBand: ch.latest_band,
+            status: "ONLINE",
+          },
+          treasury: {
+            depositCount: parseInt(tr.deposit_count ?? 0),
+            totalUnits: parseInt(tr.total_units ?? 0),
+            totalNxt: parseFloat(tr.total_nxt ?? 0),
+            charitableTrustUnits: Math.round(parseInt(tr.total_units ?? 0) * 0.10),
+            status: parseInt(tr.deposit_count ?? 0) > 0 ? "FUNDED" : "EMPTY",
+          },
+          energyLedger: {
+            opCount: parseInt(en.op_count ?? 0), totalCostUnits: parseInt(en.total_cost_units ?? 0),
+            stores: parseInt(en.stores ?? 0), deletes: parseInt(en.deletes ?? 0),
+            status: parseInt(en.op_count ?? 0) > 0 ? "TRACKING" : "IDLE",
+          },
+          agentBus: {
+            agentCount: ag.length,
+            agents: ag.map(a => ({
+              id: a.agent_id, band: a.authority_band, intent: a.intent,
+              lastSeen: a.updated_at, status: (Date.now() / 1000 - parseFloat(a.updated_at)) < 600 ? "ACTIVE" : "DEGRADED",
+            })),
+            msgCount: parseInt(bl.msg_count ?? 0), lastMessageAt: bl.last_at,
+            status: "ONLINE",
+          },
+          kernel: {
+            eventCount: parseInt(ke.event_count ?? 0), lastEventAt: ke.last_at,
+            auditorAgent: aud.agent_id
+              ? { id: aud.agent_id, band: aud.authority_band, lastSeen: aud.updated_at }
+              : null,
+            status: "RUNNING",
+          },
+        },
+        summary: {
+          proofCoverage,
+          totalNxt: parseFloat(tr.total_nxt ?? 0),
+          activeAgents: ag.filter(a => (Date.now() / 1000 - parseFloat(a.updated_at)) < 600).length,
+          blockchainHeight: parseInt(ch.height ?? 0),
+          spectralRecords: parseInt(sp.total),
+        },
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── Orbital Treasury + Energy Ledger (Constitutional Economy) ────────────
   // Physical constants for E=hf ordinal valuation
   const H_PLANCK = 6.626e-34;
