@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Zap, Radio, Layers, Database, Wifi, Lock, Globe,
   Send, Play, RefreshCw, ArrowRight, Activity,
-  Code2, Cpu, Signal, FileText
+  Code2, Cpu, Signal, FileText, BookOpen
 } from "lucide-react";
 
 // ── Spectrum colour ───────────────────────────────────────────────
@@ -316,6 +316,14 @@ const SYSTEMS = [
     color: "#ca8a04",
     Icon: Radio,
     action: "Route a message",
+  },
+  {
+    title: "NexusOS Chronicle",
+    description: "The permanent historical ledger. Every founding event, discovery, and proof encoded into its wavelength address. The record that cannot be censored.",
+    href: "/chronicle",
+    color: "#eab308",
+    Icon: BookOpen,
+    action: "View history",
   },
   {
     title: "Spectral Workspace",

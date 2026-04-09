@@ -44,6 +44,7 @@ import AgentBusPage from "@/pages/agent-bus";
 import NexusCommandPage from "@/pages/nexus-command";
 import KernelGenesisPage from "@/pages/kernel-genesis";
 import SpectralWorkspacePage from "@/pages/spectral-workspace";
+import ChroniclePage from "@/pages/chronicle";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -101,6 +102,7 @@ function ProtectedRoutes() {
         <Route path="/nexus-command" component={NexusCommandPage} />
         <Route path="/kernel-genesis" component={KernelGenesisPage} />
         <Route path="/spectral-workspace" component={SpectralWorkspacePage} />
+        <Route path="/chronicle" component={ChroniclePage} />
         <Route path="/transmission" component={TransmissionPage} />
         <Route component={NotFound} />
       </Switch>
