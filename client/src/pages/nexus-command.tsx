@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Zap, Radio, Layers, Database, Wifi, Lock, Globe,
   Send, Play, RefreshCw, ArrowRight, Activity,
-  Code2, Cpu, Signal
+  Code2, Cpu, Signal, FileText
 } from "lucide-react";
 
 // ── Spectrum colour ───────────────────────────────────────────────
@@ -316,6 +316,14 @@ const SYSTEMS = [
     color: "#ca8a04",
     Icon: Radio,
     action: "Route a message",
+  },
+  {
+    title: "Spectral Workspace",
+    description: "Write documents that live at a wavelength — not a URL. Share a frequency instead of a link. The first application layer of the wavelength internet.",
+    href: "/spectral-workspace",
+    color: "#22c55e",
+    Icon: FileText,
+    action: "Open workspace",
   },
   {
     title: "Spectral Database",
