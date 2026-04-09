@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "wouter";
-import { apiRequest, getAuthHeaders } from "@/lib/queryClient";
+import { getAuthHeaders } from "@/lib/queryClient";
 import {
   Radio, Waves, Zap, ArrowLeft, Play, Pause, RotateCcw,
   Signal, Activity, Send, CheckCircle, Circle, FileText,
