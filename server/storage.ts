@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, gte, lte, desc, isNull } from "drizzle-orm";
+import { eq, and, or, gte, lte, desc, isNull } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import {
@@ -101,6 +101,7 @@ export interface IStorage {
   getLambdaMessage(id: string): Promise<LambdaMessage | undefined>;
   getInbox(userId: string, limit?: number): Promise<Array<{ message: LambdaMessage; sender: User }>>;
   getSentMessages(userId: string, limit?: number): Promise<Array<{ message: LambdaMessage; recipient: User }>>;
+  getMessageThread(userId1: string, userId2: string, limit?: number): Promise<LambdaMessage[]>;
   markMessageAsRead(messageId: string): Promise<LambdaMessage>;
   markMessageAsDecoded(messageId: string): Promise<LambdaMessage>;
   getUnreadCount(userId: string): Promise<number>;
@@ -632,6 +633,20 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
 
     return result.map(r => ({ message: r.lambda_messages, recipient: r.users }));
+  }
+
+  async getMessageThread(userId1: string, userId2: string, limit: number = 100): Promise<LambdaMessage[]> {
+    const result = await db.select()
+      .from(lambdaMessages)
+      .where(
+        or(
+          and(eq(lambdaMessages.senderId, userId1), eq(lambdaMessages.recipientId, userId2)),
+          and(eq(lambdaMessages.senderId, userId2), eq(lambdaMessages.recipientId, userId1))
+        )
+      )
+      .orderBy(lambdaMessages.createdAt)
+      .limit(limit);
+    return result;
   }
 
   async markMessageAsRead(messageId: string): Promise<LambdaMessage> {

@@ -1039,6 +1039,35 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/messages/thread/:userId", authenticate, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
+      const messages = await storage.getMessageThread(req.user!.id, userId, limit);
+      const otherUser = await storage.getUser(userId);
+      if (!otherUser) return res.status(404).json({ error: "User not found" });
+
+      res.json({
+        messages: messages.map(m => ({
+          id: m.id,
+          senderId: m.senderId,
+          recipientId: m.recipientId,
+          content: m.content,
+          wavelengthMin: m.wavelengthMin,
+          wavelengthMax: m.wavelengthMax,
+          spectralHash: m.spectralHash,
+          totalLambdaMass: m.totalLambdaMass,
+          isRead: m.isRead,
+          createdAt: m.createdAt,
+        })),
+        contact: { id: otherUser.id, username: otherUser.username },
+      });
+    } catch (error: any) {
+      console.error("Get thread error:", error);
+      res.status(500).json({ error: "Failed to get thread" });
+    }
+  });
+
   app.get("/api/messages/unread-count", authenticate, async (req, res) => {
     try {
       const count = await storage.getUnreadCount(req.user!.id);
