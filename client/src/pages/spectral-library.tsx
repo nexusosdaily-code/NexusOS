@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
-import { ArrowLeft, Search, X, FileText, Film, Zap, Copy, Check, ChevronRight } from "lucide-react";
+import { ArrowLeft, Search, X, FileText, Film, Zap, Copy, Check, ChevronRight, Trash2, Coins, AlertTriangle } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function wavelengthToColor(nm: number): string {
@@ -163,6 +163,25 @@ export default function SpectralLibrary() {
     setCopied(true); setTimeout(() => setCopied(false), 1800);
   }
 
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleteResult, setDeleteResult] = useState<any>(null);
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/spectral-db/${id}`, undefined);
+      return res.json();
+    },
+    onSuccess: (d) => {
+      setDeleteResult(d);
+      setDeleteConfirm(false);
+      setActiveId(null);
+      setFullRecord(null);
+      qc.invalidateQueries({ queryKey: ["/api/spectral-db/scan"] });
+      qc.invalidateQueries({ queryKey: ["/api/orbital-treasury"] });
+    },
+    onError: (e: any) => { setDeleteConfirm(false); setDeleteResult({ error: e.message }); },
+  });
+
   const activeRecord = records.find(r => r.id === activeId) ?? null;
   const displayRecord = fullRecord ?? (activeRecord as any);
 
@@ -205,6 +224,20 @@ export default function SpectralLibrary() {
         <span className="text-white/20 text-xs">
           {isFetching ? "searching…" : `${data?.count ?? 0} records`}
         </span>
+        <div className="flex-1" />
+        <Link href="/orbital-treasury">
+          <button className="flex items-center gap-1 text-xs rounded px-2.5 py-1 transition-all"
+            style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)", color: "#fbbf24" }}>
+            <Coins size={10} /> Orbital Treasury
+          </button>
+        </Link>
+        {deleteResult && !deleteResult.error && (
+          <div className="flex items-center gap-2 text-[10px]" style={{ color: "#4ade80" }}>
+            <Check size={10} />
+            <span>{parseInt(deleteResult.ordinalReclaimedNxtUnits ?? "0").toLocaleString()} NXT units → Treasury</span>
+            <button onClick={() => setDeleteResult(null)} className="text-white/20 hover:text-white/40">✕</button>
+          </div>
+        )}
       </div>
 
       {/* ── Search + filters ─────────────────────────────────────────── */}
@@ -324,6 +357,7 @@ export default function SpectralLibrary() {
             <>
               {/* Address bar */}
               {displayRecord && (
+                <>
                 <div
                   className="border-b border-white/10 px-5 py-3 flex items-center gap-4 flex-shrink-0"
                   style={{ background: `${wavelengthToColor(parseFloat(displayRecord.wavelengthNm))}08` }}
@@ -351,7 +385,47 @@ export default function SpectralLibrary() {
                     {copied ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
                     {copied ? "Copied" : "Copy path"}
                   </button>
+                  {!deleteConfirm && (
+                    <button onClick={() => setDeleteConfirm(true)}
+                      data-testid="button-delete-record"
+                      className="flex items-center gap-1 text-xs rounded px-2 py-1 transition-colors"
+                      style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+                      <Trash2 size={10} /> Delete
+                    </button>
+                  )}
                 </div>
+
+                {/* Delete confirmation panel */}
+                {deleteConfirm && displayRecord && (
+                  <div className="border-t border-white/10 px-5 py-3 flex flex-col gap-2"
+                    style={{ background: "rgba(239,68,68,0.04)" }}>
+                    <div className="flex items-center gap-2 text-xs text-red-400">
+                      <AlertTriangle size={11} />
+                      <span className="font-bold">Delete this spectral record?</span>
+                    </div>
+                    <div className="text-white/40 text-[10px] leading-relaxed">
+                      The ordinal <span className="text-amber-400 font-bold">
+                        ~{Math.round(parseFloat(displayRecord.frequencyHz ?? "5.45e14") / 1e6).toLocaleString()} NXT units
+                      </span> ({((parseFloat(displayRecord.frequencyHz ?? "5.45e14") / 1e6) / 1e8).toFixed(8)} NXT) will be
+                      deposited to the Orbital Treasury. The Ψ address is preserved on-chain. Content is soft-deleted only.
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => activeId && deleteMut.mutate(activeId)}
+                        disabled={deleteMut.isPending}
+                        data-testid="button-confirm-delete"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-bold transition-all"
+                        style={{ background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>
+                        <Coins size={9} />
+                        {deleteMut.isPending ? "Depositing to treasury…" : "Confirm → Send to Orbital Treasury"}
+                      </button>
+                      <button onClick={() => setDeleteConfirm(false)}
+                        className="px-3 py-1.5 rounded text-xs text-white/30 hover:text-white/60 transition-colors border border-white/10">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+                </>
               )}
 
               {/* Content viewer */}

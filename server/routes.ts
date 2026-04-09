@@ -3155,6 +3155,165 @@ export async function registerRoutes(
     }
   });
 
+  // ── Orbital Treasury + Energy Ledger (Constitutional Economy) ────────────
+  // Physical constants for E=hf ordinal valuation
+  const H_PLANCK = 6.626e-34;
+  const C_LIGHT  = 2.998e8;
+
+  function calcOrdinal(frequencyHz: number): bigint {
+    // NXT ordinal units = ROUND(frequency_hz / 1e6)
+    // At 555THz → 555,000,000 units = 5.55 NXT
+    return BigInt(Math.round(frequencyHz / 1e6));
+  }
+  function calcEnergyCost(frequencyHz: number, op: "STORE" | "RETRIEVE" | "DELETE" | "TRANSMIT"): bigint {
+    const factors: Record<string, number> = { STORE: 200, RETRIEVE: 10, DELETE: 50, TRANSMIT: 30 };
+    return BigInt(Math.round((frequencyHz / 1e12) * factors[op]));
+  }
+
+  // DELETE a spectral record — ordinal flows to Orbital Treasury
+  app.delete("/api/spectral-db/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const user = (req as any).user;
+      const { db } = await import("./db");
+      const { sql: ds } = await import("drizzle-orm");
+
+      // Fetch record
+      const recR = await db.execute(ds`SELECT * FROM spectral_records WHERE id = ${id}`);
+      if (!recR.rows.length) return res.status(404).json({ error: "Record not found" });
+      const rec: any = recR.rows[0];
+
+      const freqHz = parseFloat(rec.frequency_hz) || 5.45e14;
+      const ordinalUnits = calcOrdinal(freqHz);
+      const energyCost   = calcEnergyCost(freqHz, "DELETE");
+      const wavelengthNm = parseFloat(rec.wavelength_nm) || 550;
+      const psiCh        = rec.psi_channel || "Ψ(0,0,H)";
+      const band         = rec.band || "GUEST";
+
+      // 1. Deposit ordinal to Orbital Treasury
+      await db.execute(ds`
+        INSERT INTO orbital_treasury (source_record_id, source_label, source_wavelength_nm, source_frequency_hz,
+          source_psi_channel, source_band, ordinal_nxt_units, operation_type, deposited_by, memo)
+        VALUES (${id}, ${rec.label}, ${wavelengthNm}, ${freqHz}, ${psiCh}, ${band},
+                ${ordinalUnits.toString()}, 'DELETE', ${user?.username ?? 'system'},
+                ${'Ordinal reclaimed from λ=' + wavelengthNm.toFixed(2) + 'nm ' + psiCh})
+      `);
+
+      // 2. Log energy cost
+      await db.execute(ds`
+        INSERT INTO energy_ledger (record_id, user_address, operation, wavelength_nm, frequency_hz,
+          energy_joules, cost_nxt_units, band, psi_channel, memo)
+        VALUES (${id}, ${user?.username ?? 'system'}, 'DELETE', ${wavelengthNm}, ${freqHz},
+                ${H_PLANCK * freqHz}, ${energyCost.toString()}, ${band}, ${psiCh},
+                ${'DELETE processing cost at λ=' + wavelengthNm.toFixed(2) + 'nm'})
+      `);
+
+      // 3. Queue blockchain proof of deletion
+      await db.execute(ds`
+        INSERT INTO blockchain_tx_pool (id, from_address, to_address, amount_nxt, memo, wavelength_nm, psi_channel, energy_joules, fee_paid, status)
+        VALUES (gen_random_uuid()::varchar, ${user?.username ?? 'system'}, 'orbital_treasury',
+                ${ordinalUnits.toString()},
+                ${'TREASURY_DEPOSIT:' + id + ':ordinal_reclaim:' + wavelengthNm.toFixed(2) + ':' + psiCh},
+                ${wavelengthNm}, ${psiCh}, ${H_PLANCK * freqHz}, ${energyCost.toString()}, 'pending')
+      `);
+
+      // 4. Mark record as deleted (soft delete — Ψ address preserved in blockchain)
+      await db.execute(ds`
+        UPDATE spectral_records SET data = COALESCE(data,'{}') ||
+          ${JSON.stringify({ status: 'deleted', deletedAt: new Date().toISOString(),
+            ordinalReclaimedUnits: ordinalUnits.toString(), deletedBy: user?.username ?? 'system' })}::jsonb
+        WHERE id = ${id}
+      `);
+
+      // 5. Log to agent bus
+      await db.execute(ds`
+        INSERT INTO wnsp_bus_log (src, dst, payload, priority, src_wdm, src_oam, src_pol, dst_wdm, dst_oam, dst_pol, route, dispatched_at)
+        VALUES ('spectral_db', 'orbital_treasury',
+                ${'ORDINAL_DEPOSIT: record=' + id + ' ordinal=' + ordinalUnits + ' NXT units λ=' + wavelengthNm.toFixed(2) + 'nm'},
+                2, 0, 0, 0, 0, 0, 0, 'spectral_db→orbital_treasury', ${Date.now() / 1000})
+      `);
+
+      res.json({
+        success: true,
+        recordId: id,
+        label: rec.label,
+        ordinalReclaimedNxtUnits: ordinalUnits.toString(),
+        ordinalNxt: (Number(ordinalUnits) / 1e8).toFixed(8),
+        energyCostNxtUnits: energyCost.toString(),
+        wavelengthNm,
+        psiChannel: psiCh,
+        band,
+        message: `Ordinal reclaimed: ${ordinalUnits.toLocaleString()} NXT units → Orbital Treasury`,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET Orbital Treasury — balance, deposits, energy ledger
+  app.get("/api/orbital-treasury", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { sql: ds } = await import("drizzle-orm");
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      const [totR, depositsR, energyR, bandR, txPending] = await Promise.all([
+        db.execute(ds`SELECT
+          COUNT(*) AS deposit_count,
+          COALESCE(SUM(ordinal_nxt_units), 0) AS total_ordinal_units,
+          COALESCE(SUM(ordinal_nxt_units), 0)::float8 / 1e8 AS total_nxt
+          FROM orbital_treasury`),
+        db.execute(ds`SELECT id, source_label, source_wavelength_nm, source_frequency_hz,
+          source_psi_channel, source_band, ordinal_nxt_units, deposited_by, deposited_at, memo
+          FROM orbital_treasury ORDER BY deposited_at DESC LIMIT ${limit}`),
+        db.execute(ds`SELECT
+          COALESCE(SUM(cost_nxt_units), 0) AS total_energy_cost_units,
+          COUNT(*) AS operation_count,
+          COUNT(*) FILTER (WHERE operation = 'STORE')    AS stores,
+          COUNT(*) FILTER (WHERE operation = 'RETRIEVE') AS retrieves,
+          COUNT(*) FILTER (WHERE operation = 'DELETE')   AS deletes,
+          COUNT(*) FILTER (WHERE operation = 'TRANSMIT') AS transmits
+          FROM energy_ledger`),
+        db.execute(ds`SELECT source_band AS band, COUNT(*) AS count, SUM(ordinal_nxt_units) AS units
+          FROM orbital_treasury GROUP BY source_band ORDER BY units DESC`),
+        db.execute(ds`SELECT COUNT(*) AS cnt FROM blockchain_tx_pool WHERE status = 'pending' AND memo LIKE 'TREASURY_DEPOSIT:%'`),
+      ]);
+
+      res.json({
+        treasury: totR.rows[0],
+        deposits: depositsR.rows,
+        energy:   energyR.rows[0],
+        byBand:   bandR.rows,
+        pendingProofs: (txPending.rows[0] as any)?.cnt ?? 0,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET energy cost preview for any operation
+  app.get("/api/orbital-treasury/cost-preview", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { recordId, operation = "DELETE" } = req.query as any;
+      const { db } = await import("./db");
+      const { sql: ds } = await import("drizzle-orm");
+      const [rec] = (await db.execute(ds`SELECT wavelength_nm, frequency_hz, psi_channel, band, label FROM spectral_records WHERE id = ${recordId}`)).rows;
+      if (!rec) return res.status(404).json({ error: "Record not found" });
+      const r: any = rec;
+      const freqHz = parseFloat(r.frequency_hz) || 5.45e14;
+      const ordinalUnits = calcOrdinal(freqHz);
+      const energyCost   = calcEnergyCost(freqHz, operation);
+      res.json({
+        label: r.label,
+        wavelengthNm: parseFloat(r.wavelength_nm),
+        psiChannel: r.psi_channel,
+        band: r.band,
+        frequencyTHz: (freqHz / 1e12).toFixed(4),
+        ordinalNxtUnits: ordinalUnits.toString(),
+        ordinalNxt: (Number(ordinalUnits) / 1e8).toFixed(8),
+        energyCostNxtUnits: energyCost.toString(),
+        energyCostNxt: (Number(energyCost) / 1e8).toFixed(8),
+        constitutionalFormula: `E=hf: h=${H_PLANCK.toExponential(3)}, f=${(freqHz/1e12).toFixed(4)}THz → ordinal=${ordinalUnits} NXT units`,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── Blockchain Auditor Agent API ──────────────────────────────────────────
   app.get("/api/blockchain-auditor/status", authenticate, async (req: Request, res: Response) => {
     try {
