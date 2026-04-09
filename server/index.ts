@@ -4,6 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { spawn, ChildProcess } from "child_process";
 import { seedGenesisBlock } from "./genesis";
+import { startBlockchainAuditor } from "./blockchain_auditor";
 
 const app = express();
 const httpServer = createServer(app);
@@ -152,6 +153,8 @@ app.use((req, res, next) => {
       log(`serving on port ${port}`);
       // Seed genesis block after server is ready (non-blocking)
       seedGenesisBlock().catch(() => {});
+      // Start autonomous blockchain audit agent
+      startBlockchainAuditor().catch((e) => console.error("[AUDITOR] Boot error:", e));
     },
   );
 })();

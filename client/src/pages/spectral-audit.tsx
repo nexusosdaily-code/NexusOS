@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
-import { ArrowLeft, ShieldCheck, Clock, AlertTriangle, Zap, ChevronRight, Pickaxe, BarChart3, Link2 } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Clock, AlertTriangle, Zap, ChevronRight, Pickaxe, BarChart3, Link2, Bot, Play, Pause, Settings } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function wavelengthToColor(nm: number): string {
@@ -17,6 +17,12 @@ function wavelengthToColor(nm: number): string {
 }
 function fmt(nm: string | number) { return parseFloat(String(nm)).toFixed(2); }
 function shortHash(h: string) { return h ? `${h.slice(0, 8)}…${h.slice(-6)}` : "—"; }
+
+interface AgentStatus {
+  config: { enabled: boolean; intervalMs: number; threshold: number; minerAddress: string };
+  state:  { lastRunAt: string | null; lastResult: string; totalBlocksMined: number; totalRecordsProven: number; cycleCount: number; status: string };
+  recentBusLog: { src: string; dst: string; payload: string; dispatched_at: number }[];
+}
 
 interface AuditStatus {
   total: number;
@@ -56,6 +62,9 @@ export default function SpectralAudit() {
   const qc = useQueryClient();
   const [filter, setFilter] = useState<"all" | "confirmed" | "pending" | "unaudited">("all");
   const [mineLog, setMineLog] = useState<string | null>(null);
+  const [showConfig, setShowConfig] = useState(false);
+  const [intervalMin, setIntervalMin] = useState(5);
+  const [threshold, setThreshold] = useState(1);
 
   // ── Status overview ───────────────────────────────────────────────────────
   const { data: status, isLoading: statusLoading } = useQuery<AuditStatus>({
@@ -109,7 +118,35 @@ export default function SpectralAudit() {
     onError: (e: any) => setMineLog(`Backfill error: ${e.message}`),
   });
 
+  // ── Agent queries + mutations ─────────────────────────────────────────────
+  const { data: agentData, refetch: refetchAgent } = useQuery<AgentStatus>({
+    queryKey: ["/api/blockchain-auditor/status"],
+    refetchInterval: 8_000,
+  });
+
+  const triggerMut = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/blockchain-auditor/trigger", {});
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/spectral-db/audit-status"] });
+      qc.invalidateQueries({ queryKey: ["/api/spectral-db/scan"] });
+      setTimeout(() => refetchAgent(), 1000);
+    },
+  });
+
+  const configMut = useMutation({
+    mutationFn: async (patch: any) => {
+      const res = await apiRequest("POST", "/api/blockchain-auditor/config", patch);
+      return res.json();
+    },
+    onSuccess: () => refetchAgent(),
+  });
+
   const pct = status ? Math.round((status.confirmed / Math.max(status.total, 1)) * 100) : 0;
+  const agentEnabled  = agentData?.config.enabled ?? true;
+  const agentRunning  = agentData?.state.status === "running";
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col" style={{ fontFamily: "monospace" }}>
@@ -186,6 +223,119 @@ export default function SpectralAudit() {
             <div className="flex items-center gap-2 text-xs" style={{ color: mineLog.startsWith("Error") || mineLog.startsWith("Backfill error") ? "#ef4444" : "#22c55e" }}>
               {(mineLog.startsWith("Error") || mineLog.startsWith("Backfill")) ? <AlertTriangle size={11} /> : <ShieldCheck size={11} />}
               {mineLog}
+            </div>
+          )}
+        </div>
+
+        {/* ── AI Blockchain Auditor Agent ───────────────────────────────────── */}
+        <div className="px-6 py-4 border-b border-white/10">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Bot size={13} className="text-cyan-400" />
+              <span className="text-white/30 text-[10px] uppercase tracking-widest">AI Blockchain Auditor Agent</span>
+              <div className={`w-1.5 h-1.5 rounded-full ${agentRunning ? "animate-pulse bg-yellow-400" : agentEnabled ? "bg-emerald-400" : "bg-white/20"}`} />
+              <span className="text-[10px]" style={{ color: agentRunning ? "#facc15" : agentEnabled ? "#4ade80" : "rgba(255,255,255,0.3)" }}>
+                {agentRunning ? "RUNNING" : agentEnabled ? "ACTIVE" : "PAUSED"}
+              </span>
+            </div>
+            <button onClick={() => setShowConfig(!showConfig)}
+              className="text-white/30 hover:text-white/60 transition-colors">
+              <Settings size={13} />
+            </button>
+          </div>
+
+          {/* Stats row */}
+          <div className="grid grid-cols-4 gap-3 mb-3">
+            {[
+              { label: "Blocks Mined",    value: agentData?.state.totalBlocksMined  ?? 0 },
+              { label: "Records Proven",  value: agentData?.state.totalRecordsProven ?? 0 },
+              { label: "Cycles Run",      value: agentData?.state.cycleCount         ?? 0 },
+              { label: "Next in",         value: agentEnabled
+                  ? `${Math.floor((agentData?.config.intervalMs ?? 300_000) / 60000)}m`
+                  : "paused" },
+            ].map(({ label, value }) => (
+              <div key={label} className="border border-white/10 rounded-lg p-2.5 text-center" style={{ background: "rgba(6,182,212,0.04)" }}>
+                <div className="text-cyan-400 font-bold text-base">{value}</div>
+                <div className="text-white/30 text-[9px] uppercase">{label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Last result */}
+          {agentData?.state.lastResult && (
+            <div className="text-[10px] text-white/40 mb-3 font-mono bg-white/5 rounded px-3 py-2">
+              <span className="text-cyan-400/60">LAST:</span> {agentData.state.lastResult}
+            </div>
+          )}
+
+          {/* Config panel */}
+          {showConfig && (
+            <div className="border border-white/10 rounded-lg p-3 mb-3 space-y-3" style={{ background: "rgba(0,0,0,0.4)" }}>
+              <div className="text-white/30 text-[10px] uppercase tracking-widest">Agent Configuration</div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-white/50">Auto-mine interval</span>
+                  <div className="flex items-center gap-2">
+                    <input type="range" min={1} max={60} value={intervalMin} onChange={e => setIntervalMin(+e.target.value)}
+                      className="w-24 accent-cyan-400" data-testid="agent-interval-slider" />
+                    <span className="text-cyan-400 w-12 text-right">{intervalMin}m</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-white/50">Min pending txs to mine</span>
+                  <div className="flex items-center gap-2">
+                    <input type="range" min={1} max={50} value={threshold} onChange={e => setThreshold(+e.target.value)}
+                      className="w-24 accent-cyan-400" data-testid="agent-threshold-slider" />
+                    <span className="text-cyan-400 w-12 text-right">{threshold}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => configMut.mutate({ intervalMs: intervalMin * 60_000, threshold })}
+                  data-testid="agent-save-config"
+                  disabled={configMut.isPending}
+                  className="px-3 py-1 rounded text-xs font-bold transition-all"
+                  style={{ background: "rgba(6,182,212,0.2)", border: "1px solid rgba(6,182,212,0.3)", color: "#22d3ee" }}>
+                  {configMut.isPending ? "Saving…" : "Save Config"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-3">
+            <button onClick={() => triggerMut.mutate()}
+              data-testid="agent-trigger-cycle"
+              disabled={triggerMut.isPending || agentRunning}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition-all"
+              style={{ background: "rgba(6,182,212,0.15)", border: "1px solid rgba(6,182,212,0.25)", color: "#22d3ee",
+                       opacity: (triggerMut.isPending || agentRunning) ? 0.5 : 1 }}>
+              <Play size={10} />
+              {triggerMut.isPending ? "Running cycle…" : "Trigger Cycle Now"}
+            </button>
+            <button onClick={() => configMut.mutate({ enabled: !agentEnabled })}
+              data-testid="agent-toggle-enabled"
+              disabled={configMut.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold transition-all"
+              style={{ background: agentEnabled ? "rgba(239,68,68,0.1)" : "rgba(74,222,128,0.1)",
+                       border: `1px solid ${agentEnabled ? "rgba(239,68,68,0.2)" : "rgba(74,222,128,0.2)"}`,
+                       color: agentEnabled ? "#f87171" : "#4ade80" }}>
+              {agentEnabled ? <><Pause size={10} /> Pause Agent</> : <><Play size={10} /> Resume Agent</>}
+            </button>
+          </div>
+
+          {/* Recent bus log */}
+          {(agentData?.recentBusLog?.length ?? 0) > 0 && (
+            <div className="mt-3 space-y-1">
+              <div className="text-white/20 text-[9px] uppercase tracking-widest mb-1">Agent Bus Log</div>
+              {agentData!.recentBusLog.slice(0, 5).map((entry, i) => (
+                <div key={i} className="text-[9px] font-mono text-white/30 flex items-start gap-2">
+                  <span className="text-cyan-400/40 flex-shrink-0">
+                    {new Date(entry.dispatched_at * 1000).toLocaleTimeString()}
+                  </span>
+                  <span className="truncate">{entry.payload}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>

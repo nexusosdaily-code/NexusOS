@@ -3155,6 +3155,47 @@ export async function registerRoutes(
     }
   });
 
+  // ── Blockchain Auditor Agent API ──────────────────────────────────────────
+  app.get("/api/blockchain-auditor/status", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { getAuditorStatus } = await import("./blockchain_auditor");
+      const status = getAuditorStatus();
+      // Also pull recent bus log entries from this agent
+      const { db } = await import("./db");
+      const { sql: drizzleSql } = await import("drizzle-orm");
+      const logs = await db.execute(drizzleSql`
+        SELECT src, dst, payload, dispatched_at
+        FROM wnsp_bus_log
+        WHERE src = 'blockchain_auditor'
+        ORDER BY dispatched_at DESC
+        LIMIT 10
+      `);
+      res.json({ ...status, recentBusLog: logs.rows });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/blockchain-auditor/config", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { updateAuditorConfig } = await import("./blockchain_auditor");
+      const { enabled, intervalMs, threshold } = req.body;
+      const patch: any = {};
+      if (typeof enabled    === "boolean") patch.enabled    = enabled;
+      if (typeof intervalMs === "number")  patch.intervalMs = Math.max(30_000, intervalMs);
+      if (typeof threshold  === "number")  patch.threshold  = Math.max(1, threshold);
+      updateAuditorConfig(patch);
+      const { getAuditorStatus } = await import("./blockchain_auditor");
+      res.json({ success: true, ...getAuditorStatus() });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/blockchain-auditor/trigger", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { triggerAuditCycle } = await import("./blockchain_auditor");
+      const result = await triggerAuditCycle();
+      res.json({ success: true, result });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── Spectral Workspace — Video API ────────────────────────────────────────
   // Upload a video clip, encode its title into a wavelength, store at that address
 
