@@ -69,7 +69,7 @@ interface Stream {
 
 export default function StreamingPage() {
   const { user } = useAuth();
-  const token = localStorage.getItem("authToken") || "";
+  const token = localStorage.getItem("auth_token") || "";
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/streaming/:streamId");

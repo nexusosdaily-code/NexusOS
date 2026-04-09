@@ -66,6 +66,7 @@ export function VideoStreaming({
   });
   const [connectionStatus, setConnectionStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -94,11 +95,25 @@ export function VideoStreaming({
 
   const startCameraStream = useCallback(async () => {
     try {
+      setCameraError(null);
       const stream = await navigator.mediaDevices.getUserMedia(getMediaConstraints());
       cameraStreamRef.current = stream;
       return stream;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to get camera stream:", error);
+      let msg = "Camera access failed.";
+      if (error?.name === "NotAllowedError" || error?.name === "PermissionDeniedError") {
+        msg = "Camera permission denied. Please allow camera access in your browser and try again.";
+      } else if (error?.name === "NotFoundError" || error?.name === "DevicesNotFoundError") {
+        msg = "No camera found. Please connect a camera or switch to Screen Share.";
+      } else if (error?.name === "NotReadableError" || error?.name === "TrackStartError") {
+        msg = "Camera is already in use by another app. Close the other app and try again.";
+      } else if (error?.name === "OverconstrainedError") {
+        msg = "Camera does not support the requested quality. Try a lower quality setting.";
+      } else if (error?.name === "SecurityError") {
+        msg = "Camera access blocked by browser security policy. This page requires HTTPS.";
+      }
+      setCameraError(msg);
       return null;
     }
   }, [getMediaConstraints]);
@@ -338,15 +353,32 @@ export function VideoStreaming({
 
   const handleStartStream = async () => {
     setConnectionStatus("connecting");
+    setCameraError(null);
     
     if (settings.source === "camera" || settings.source === "both") {
-      await startCameraStream();
+      const camStream = await startCameraStream();
+      // If camera is required and failed — abort with clear error shown in UI
+      if (!camStream && settings.source === "camera") {
+        setConnectionStatus("disconnected");
+        return; // cameraError state is already set by startCameraStream
+      }
     }
     if (settings.source === "screen" || settings.source === "both") {
-      await startScreenStream();
+      const screenStream = await startScreenStream();
+      if (!screenStream && settings.source === "screen") {
+        setConnectionStatus("disconnected");
+        return;
+      }
     }
-    
+
+    // Verify we have at least one track before going live
     combineStreams();
+    if (!combinedStreamRef.current || combinedStreamRef.current.getTracks().length === 0) {
+      setCameraError("Could not start any media stream. Please check your camera/screen share permissions.");
+      setConnectionStatus("disconnected");
+      return;
+    }
+
     connectWebSocket();
     
     setIsLive(true);
@@ -627,16 +659,45 @@ export function VideoStreaming({
         )}
         
         {!isLive && mode === "broadcaster" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-            <Card className="w-full max-w-md bg-slate-800 border-purple-500/50">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/80 overflow-y-auto py-8">
+            <Card className="w-full max-w-md bg-slate-800 border-purple-500/50 mx-4">
               <CardHeader>
-                <CardTitle className="text-white text-center">Start Streaming</CardTitle>
+                <CardTitle className="text-white text-center flex items-center justify-center gap-2">
+                  <Radio className="w-5 h-5 text-cyan-400" />
+                  Start Streaming
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Camera error banner */}
+                {cameraError && (
+                  <div className="rounded-lg border border-red-500/40 bg-red-950/40 p-3 space-y-2" data-testid="camera-error-banner">
+                    <div className="flex items-start gap-2">
+                      <VideoOff className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-red-400">Camera not connected</p>
+                        <p className="text-xs text-red-300/80 mt-0.5">{cameraError}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => { setCameraError(null); updateStreamSettings({ source: "screen" }); }}
+                        className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white flex items-center gap-1"
+                      >
+                        <Monitor className="w-3 h-3" /> Use screen share instead
+                      </button>
+                      <button
+                        onClick={() => setCameraError(null)}
+                        className="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-3 gap-2">
                   <Button
                     variant={settings.source === "camera" ? "default" : "outline"}
-                    onClick={() => updateStreamSettings({ source: "camera" })}
+                    onClick={() => { setCameraError(null); updateStreamSettings({ source: "camera" }); }}
                     className="flex-col h-auto py-4"
                     data-testid="button-source-camera"
                   >
