@@ -66,6 +66,12 @@ function LiveFeed() {
     select: (d: any) => d,
   });
 
+  const nodeQ = useQuery({
+    queryKey: ["/api/network/nodes"],
+    refetchInterval: 8000,
+    select: (d: any) => d,
+  });
+
   useEffect(() => {
     if (busQ.data?.queued) {
       addEvent(`Agent bus: ${busQ.data.queued} message${busQ.data.queued !== 1 ? "s" : ""} queued`, "#06b6d4");
@@ -78,6 +84,16 @@ function LiveFeed() {
       addEvent(`Block #${latest.blockNumber} — ${latest.psiChannel ?? ""}`, "#8b00ff");
     }
   }, [chainQ.data?.chain?.length]);
+
+  useEffect(() => {
+    const nodes = nodeQ.data?.nodes;
+    if (!nodes?.length) return;
+    const live = nodes.filter((n: any) => n.status === "active");
+    if (live.length > 0) {
+      const latest = live[live.length - 1];
+      addEvent(`Node beacon: ${latest.name} @ ${parseFloat(latest.wavelengthNm).toFixed(1)}nm — ${latest.psiChannel}`, "#4ade80");
+    }
+  }, [nodeQ.dataUpdatedAt]);
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-950/60">
@@ -382,6 +398,22 @@ const SYSTEMS = [
     action: "Open wallet",
   },
   {
+    title: "Spectral Network",
+    description: "Register your node and let it emit at its CE→SE wavelength. Other nodes discover it by tuning to that band. No IP registry. No DNS. The name of a node is its address.",
+    href: "/network",
+    color: "#4ade80",
+    Icon: Wifi,
+    action: "Register a node",
+  },
+  {
+    title: "Communication Hub",
+    description: "Spectral messaging between users. Every message is encoded through CE→SE — your words travel as wavelengths of light, not packets of bytes.",
+    href: "/communication",
+    color: "#06b6d4",
+    Icon: Radio,
+    action: "Open messages",
+  },
+  {
     title: "Orbital Treasury",
     description: "Constitutional economy: every file deletion generates NXT ordinals flowing to the Orbital Treasury — 5 buckets including 10% to the Chairman Founder Nexus Charitable Trust.",
     href: "/orbital-treasury",
@@ -453,6 +485,7 @@ export default function NexusCommand() {
   const busQ        = useQuery({ queryKey: ["/api/agent-bus/status"],  refetchInterval: 3000 });
   const dbQ         = useQuery({ queryKey: ["/api/spectral-db/records?limit=1"], refetchInterval: 5000 });
   const ecoQ        = useQuery({ queryKey: ["/api/ecosystem/status"], refetchInterval: 10_000 });
+  const netQ        = useQuery({ queryKey: ["/api/network/nodes"], refetchInterval: 8000 });
 
   const chainLen    = (blockchainQ.data as any)?.chain?.length ?? "—";
   const busQueued   = (busQ.data as any)?.queued ?? "—";
@@ -461,6 +494,7 @@ export default function NexusCommand() {
   const proofPct    = eco.proofCoverage != null ? `${eco.proofCoverage}%` : "—";
   const treasuryNxt = eco.totalNxt != null ? `${Number(eco.totalNxt).toFixed(4)} NXT` : "—";
   const agentCount  = eco.activeAgents != null ? `${eco.activeAgents} / 6` : "—";
+  const nodeCount   = (netQ.data as any)?.active != null ? `${(netQ.data as any).active} live` : "—";
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6">
@@ -500,14 +534,15 @@ export default function NexusCommand() {
         </div>
       </div>
 
-      {/* Live status row — 6 systems */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+      {/* Live status row — 7 systems */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
         <StatusCard title="Blockchain height"  value={chainLen}     subtitle="photonic blocks mined"    color="#16a34a" href="/blockchain" />
         <StatusCard title="Bus messages"       value={busQueued}    subtitle="signals in flight"         color="#06b6d4" href="/agent-bus" />
         <StatusCard title="Spectral records"   value={dbCount}      subtitle="wavelength-addressed data" color="#dc2626" href="/spectral-db" />
         <StatusCard title="Proof coverage"     value={proofPct}     subtitle="blockchain-verified"       color="#22c55e" href="/spectral-audit" />
         <StatusCard title="Treasury balance"   value={treasuryNxt}  subtitle="ordinal economy funded"    color="#f43f5e" href="/orbital-treasury" />
         <StatusCard title="Active agents"      value={agentCount}   subtitle="kernel agents online"      color="#a855f7" href="/ecosystem" />
+        <StatusCard title="Network nodes"      value={nodeCount}    subtitle="emitting on spectrum"      color="#4ade80" href="/network" />
       </div>
 
       {/* Quick compose */}

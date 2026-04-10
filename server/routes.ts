@@ -3288,7 +3288,7 @@ export async function registerRoutes(
       const { db } = await import("./db");
       const { sql: ds } = await import("drizzle-orm");
 
-      const [spectral, chain, txPool, treasury, energy, agents, busLog, kernelEvts, auditor] = await Promise.all([
+      const [spectral, chain, txPool, treasury, energy, agents, busLog, kernelEvts, auditor, netNodes] = await Promise.all([
         db.execute(ds`SELECT COUNT(*) AS total,
           COUNT(*) FILTER (WHERE data->>'auditStatus'='confirmed') AS confirmed,
           COUNT(*) FILTER (WHERE data->>'status'='deleted') AS deleted,
@@ -3314,6 +3314,12 @@ export async function registerRoutes(
         db.execute(ds`SELECT COUNT(*) AS msg_count, MAX(dispatched_at) AS last_at FROM wnsp_bus_log`),
         db.execute(ds`SELECT COUNT(*) AS event_count, MAX(created_at) AS last_at FROM wnsp_kernel_events`),
         db.execute(ds`SELECT agent_id, authority_band, intent, updated_at FROM wnsp_agents WHERE agent_id = 'blockchain_auditor'`),
+        db.execute(ds`SELECT COUNT(*) AS total,
+          COUNT(*) FILTER (WHERE status='active') AS active,
+          COUNT(*) FILTER (WHERE last_beacon_at > NOW() - INTERVAL '5 minutes') AS live,
+          COALESCE((SELECT emission_band FROM network_nodes ORDER BY last_beacon_at DESC LIMIT 1), '') AS top_band,
+          COALESCE((SELECT wavelength_nm::float FROM network_nodes ORDER BY last_beacon_at DESC LIMIT 1), 0) AS latest_nm
+          FROM network_nodes`),
       ]);
 
       const sp: any = spectral.rows[0];
@@ -3325,6 +3331,7 @@ export async function registerRoutes(
       const bl: any = busLog.rows[0];
       const ke: any = kernelEvts.rows[0];
       const aud: any = auditor.rows[0] ?? {};
+      const nn: any = netNodes.rows[0] ?? {};
 
       const proofCoverage = parseInt(sp.total) > 0
         ? Math.round((parseInt(sp.confirmed) / parseInt(sp.total)) * 100) : 0;
@@ -3372,6 +3379,14 @@ export async function registerRoutes(
               : null,
             status: "RUNNING",
           },
+          networkNodes: {
+            total: parseInt(nn.total ?? 0),
+            active: parseInt(nn.active ?? 0),
+            live: parseInt(nn.live ?? 0),
+            topBand: nn.top_band ?? "",
+            latestNm: parseFloat(nn.latest_nm ?? 0),
+            status: parseInt(nn.live ?? 0) > 0 ? "ACTIVE" : parseInt(nn.total ?? 0) > 0 ? "IDLE" : "EMPTY",
+          },
         },
         summary: {
           proofCoverage,
@@ -3379,6 +3394,8 @@ export async function registerRoutes(
           activeAgents: ag.filter(a => (Date.now() / 1000 - parseFloat(a.updated_at)) < 600).length,
           blockchainHeight: parseInt(ch.height ?? 0),
           spectralRecords: parseInt(sp.total),
+          networkNodes: parseInt(nn.total ?? 0),
+          liveNodes: parseInt(nn.live ?? 0),
         },
       });
     } catch (err: any) { res.status(500).json({ error: err.message }); }

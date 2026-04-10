@@ -93,6 +93,17 @@ export default function CommunicationPage() {
     refetchInterval: 10_000,
   });
 
+  // Network nodes — for showing spectral node badge on contacts
+  const { data: nodesData } = useQuery<{ nodes: { name: string; psiChannel: string; wavelengthNm: string; emissionBand: string; status: string }[] }>({
+    queryKey: ["/api/network/nodes"],
+    refetchInterval: 15_000,
+  });
+
+  const nodesByName = (nodesData?.nodes ?? []).reduce<Record<string, { psiChannel: string; wavelengthNm: string; emissionBand: string }>>((acc, n) => {
+    acc[n.name.toLowerCase()] = { psiChannel: n.psiChannel, wavelengthNm: n.wavelengthNm, emissionBand: n.emissionBand };
+    return acc;
+  }, {});
+
   // Send message mutation
   const sendMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -249,6 +260,7 @@ export default function CommunicationPage() {
                 const nm = contact.wavelength ? parseFloat(contact.wavelength) : null;
                 const col = nmToColor(nm);
                 const isSelected = selectedContact?.id === contact.id;
+                const nodeInfo = nodesByName[contact.username.toLowerCase()];
                 return (
                   <button
                     key={contact.id}
@@ -257,19 +269,30 @@ export default function CommunicationPage() {
                     data-testid={`contact-${contact.id}`}
                   >
                     {/* Avatar — wavelength color dot */}
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold border"
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold border relative"
                       style={{ background: col + "18", borderColor: col + "40", color: col }}>
                       {contact.username.charAt(0).toUpperCase()}
+                      {nodeInfo && (
+                        <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-black animate-pulse"
+                          style={{ background: nmToColor(parseFloat(nodeInfo.wavelengthNm)) }} />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-[11px] font-bold text-white truncate">{contact.username}</div>
-                      {nm ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold text-white truncate">{contact.username}</span>
+                        {nodeInfo && (
+                          <span className="text-[7px] px-1 py-0.5 rounded border border-emerald-400/30 text-emerald-400/70 flex-shrink-0">NODE</span>
+                        )}
+                      </div>
+                      {nodeInfo ? (
+                        <div className="text-[9px] text-emerald-400/60">{nodeInfo.psiChannel} · {nodeInfo.emissionBand}</div>
+                      ) : nm ? (
                         <div className="text-[9px]" style={{ color: col }}>{nm.toFixed(1)}nm · Ψ bond</div>
                       ) : (
                         <div className="text-[9px] text-white/25">spectral link</div>
                       )}
                     </div>
-                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: col }} />
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: nodeInfo ? nmToColor(parseFloat(nodeInfo.wavelengthNm)) : col }} />
                   </button>
                 );
               })

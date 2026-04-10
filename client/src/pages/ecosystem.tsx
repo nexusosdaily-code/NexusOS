@@ -48,34 +48,39 @@ interface EcoStatus {
     energyLedger: { opCount: number; totalCostUnits: number; stores: number; deletes: number; status: string };
     agentBus:     { agentCount: number; agents: { id: string; band: string; intent: string; lastSeen: number; status: string }[]; msgCount: number; lastMessageAt: number; status: string };
     kernel:       { eventCount: number; lastEventAt: number; auditorAgent: any; status: string };
+    networkNodes: { total: number; active: number; live: number; topBand: string; latestNm: number; status: string };
   };
-  summary: { proofCoverage: number; totalNxt: number; activeAgents: number; blockchainHeight: number; spectralRecords: number };
+  summary: { proofCoverage: number; totalNxt: number; activeAgents: number; blockchainHeight: number; spectralRecords: number; networkNodes: number; liveNodes: number };
 }
 
 const SYSTEM_CONNECTIONS = [
-  { from: "spectralDb",   to: "blockchain",   label: "SHA-256 audit tx →",     color: "#22c55e" },
-  { from: "blockchain",   to: "agentBus",     label: "block mined event →",     color: "#8b5cf6" },
-  { from: "spectralDb",   to: "treasury",     label: "delete ordinal →",        color: "#f43f5e" },
-  { from: "agentBus",     to: "kernel",       label: "bus log → kernel event →", color: "#06b6d4" },
-  { from: "energyLedger", to: "treasury",     label: "op cost logged →",        color: "#f59e0b" },
-  { from: "kernel",       to: "agentBus",     label: "watchdog heartbeat →",    color: "#a855f7" },
+  { from: "spectralDb",   to: "blockchain",   label: "SHA-256 audit tx →",          color: "#22c55e" },
+  { from: "blockchain",   to: "agentBus",     label: "block mined event →",          color: "#8b5cf6" },
+  { from: "spectralDb",   to: "treasury",     label: "delete ordinal →",             color: "#f43f5e" },
+  { from: "agentBus",     to: "kernel",       label: "bus log → kernel event →",     color: "#06b6d4" },
+  { from: "energyLedger", to: "treasury",     label: "op cost logged →",             color: "#f59e0b" },
+  { from: "kernel",       to: "agentBus",     label: "watchdog heartbeat →",         color: "#a855f7" },
+  { from: "networkNodes", to: "agentBus",     label: "node beacon → bus event →",    color: "#4ade80" },
+  { from: "blockchain",   to: "networkNodes", label: "proof block → node visibility →", color: "#4ade80" },
 ];
 
 const SYSTEM_META: Record<string, { label: string; color: string; icon: any; href: string; description: string }> = {
-  spectralDb:   { label: "Spectral DB",      color: "#06b6d4", icon: Database,    href: "/spectral-library",  description: "620+ files at Ψ wavelength addresses" },
-  blockchain:   { label: "Blockchain",       color: "#8b5cf6", icon: Link2,       href: "/blockchain",         description: "Proof blocks via Λ=hf/c²" },
-  treasury:     { label: "Orbital Treasury", color: "#f43f5e", icon: Coins,       href: "/orbital-treasury",   description: "Ordinal economy — delete → NXT → fund" },
-  energyLedger: { label: "Energy Ledger",    color: "#f59e0b", icon: Zap,         href: "/orbital-treasury",   description: "E=hf cost per operation" },
-  agentBus:     { label: "Agent Bus",        color: "#22c55e", icon: Radio,       href: "/agent-bus",          description: "6 kernel agents on Ψ channels" },
-  kernel:       { label: "WNSP Kernel",      color: "#a855f7", icon: Cpu,         href: "/kernel",             description: "Boot, watchdog, event bus, auth" },
+  spectralDb:   { label: "Spectral DB",       color: "#06b6d4", icon: Database,    href: "/spectral-library",  description: "620+ files at Ψ wavelength addresses" },
+  blockchain:   { label: "Blockchain",        color: "#8b5cf6", icon: Link2,       href: "/blockchain",         description: "Proof blocks via Λ=hf/c²" },
+  treasury:     { label: "Orbital Treasury",  color: "#f43f5e", icon: Coins,       href: "/orbital-treasury",   description: "Ordinal economy — delete → NXT → fund" },
+  energyLedger: { label: "Energy Ledger",     color: "#f59e0b", icon: Zap,         href: "/orbital-treasury",   description: "E=hf cost per operation" },
+  agentBus:     { label: "Agent Bus",         color: "#22c55e", icon: Radio,       href: "/agent-bus",          description: "6 kernel agents on Ψ channels" },
+  kernel:       { label: "WNSP Kernel",       color: "#a855f7", icon: Cpu,         href: "/kernel",             description: "Boot, watchdog, event bus, auth" },
+  networkNodes: { label: "Spectral Network",  color: "#4ade80", icon: Globe,       href: "/network",            description: "P2P nodes discovered by CE→SE emission wavelength" },
 };
 
 const LAYER_STACK = [
-  { layer: "L4", label: "Constitutional Economy",  desc: "Treasury · Governance · Charitable Trust · 100-Year Fund",               color: "#f43f5e" },
-  { layer: "L3", label: "Agent Intelligence",       desc: "6 kernel agents · Ψ channel routing · Watchdog · Event Bus",             color: "#22c55e" },
-  { layer: "L2", label: "Blockchain Proof",         desc: "Λ=hf/c² blocks · Ordinals · Audit trail · AGPL enforcement",            color: "#8b5cf6" },
-  { layer: "L1", label: "Spectral DB & Addressing", desc: "Files at Ψ(wdm, oam, pol) · 25,600 orthogonal channels · E=hf cost",    color: "#06b6d4" },
-  { layer: "L0", label: "ALPHABET SUBSTRATE",       desc: "The foundational discovery — November 2025 — Alphabet embedded in light", color: "#fbbf24", isBase: true },
+  { layer: "L5", label: "Spectral Network Discovery", desc: "P2P nodes emit at CE→SE wavelengths · Discovered by band · No IP registry · No DNS · Physics IS the address", color: "#4ade80", href: "/network" },
+  { layer: "L4", label: "Constitutional Economy",     desc: "Treasury · Governance · Charitable Trust · 100-Year Fund",               color: "#f43f5e", href: "/orbital-treasury" },
+  { layer: "L3", label: "Agent Intelligence",         desc: "6 kernel agents · Ψ channel routing · Watchdog · Event Bus",             color: "#22c55e", href: "/agent-bus" },
+  { layer: "L2", label: "Blockchain Proof",           desc: "Λ=hf/c² blocks · Ordinals · Audit trail · AGPL enforcement",            color: "#8b5cf6", href: "/blockchain" },
+  { layer: "L1", label: "Spectral DB & Addressing",  desc: "Files at Ψ(wdm, oam, pol) · 25,600 orthogonal channels · E=hf cost",    color: "#06b6d4", href: "/spectral-library" },
+  { layer: "L0", label: "ALPHABET SUBSTRATE",         desc: "The foundational discovery — November 2025 — Alphabet embedded in light", color: "#fbbf24", isBase: true, href: "/ecosystem" },
 ];
 
 export default function Ecosystem() {
@@ -221,13 +226,15 @@ export default function Ecosystem() {
 
       {/* Summary bar */}
       {sum && (
-        <div className="border-b border-white/10 px-6 py-3 grid grid-cols-5 gap-4">
+        <div className="border-b border-white/10 px-6 py-3 grid grid-cols-7 gap-3">
           {[
             { label: "Proof Coverage",    value: `${sum.proofCoverage}%`,             color: sum.proofCoverage === 100 ? "#4ade80" : "#fbbf24" },
             { label: "Blockchain Height", value: `#${sum.blockchainHeight}`,           color: "#8b5cf6" },
             { label: "Spectral Records",  value: sum.spectralRecords.toLocaleString(), color: "#06b6d4" },
             { label: "Treasury Balance",  value: fmtNxt(sum.totalNxt),                color: "#f43f5e" },
             { label: "Active Agents",     value: `${sum.activeAgents} / 6`,            color: "#22c55e" },
+            { label: "Network Nodes",     value: sum.networkNodes.toString(),           color: "#4ade80" },
+            { label: "Live Beacons",      value: sum.liveNodes.toString(),             color: sum.liveNodes > 0 ? "#4ade80" : "#6b7280" },
           ].map(({ label, value, color }) => (
             <div key={label} className="text-center">
               <div className="font-bold text-base" style={{ color }}>{value}</div>
@@ -250,23 +257,29 @@ export default function Ecosystem() {
           </div>
           <div className="space-y-2">
             {LAYER_STACK.map((l) => (
-              <div key={l.layer}
-                className={`flex items-start gap-4 rounded-lg px-4 py-3 border transition-all ${l.isBase ? "border-amber-400/30" : "border-white/5"}`}
-                style={{ background: l.isBase ? "rgba(251,191,36,0.05)" : `${l.color}06` }}>
-                <div className="flex-shrink-0 w-8 text-center">
-                  <span className="text-[9px] font-bold" style={{ color: l.color }}>{l.layer}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold mb-0.5" style={{ color: l.color }}>{l.label}</div>
-                  <div className="text-[10px] text-white/30">{l.desc}</div>
-                </div>
-                {l.isBase && (
-                  <div className="flex-shrink-0 flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                    <span className="text-amber-400/60 text-[8px] uppercase tracking-widest">Substrate</span>
+              <Link key={l.layer} href={l.href ?? "#"}>
+                <div
+                  className={`flex items-start gap-4 rounded-lg px-4 py-3 border transition-all cursor-pointer hover:border-white/20 ${l.isBase ? "border-amber-400/30" : "border-white/5"}`}
+                  style={{ background: l.isBase ? "rgba(251,191,36,0.05)" : `${l.color}06` }}>
+                  <div className="flex-shrink-0 w-8 text-center">
+                    <span className="text-[9px] font-bold" style={{ color: l.color }}>{l.layer}</span>
                   </div>
-                )}
-              </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold mb-0.5" style={{ color: l.color }}>{l.label}</div>
+                    <div className="text-[10px] text-white/30">{l.desc}</div>
+                  </div>
+                  {l.isBase ? (
+                    <div className="flex-shrink-0 flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                      <span className="text-amber-400/60 text-[8px] uppercase tracking-widest">Substrate</span>
+                    </div>
+                  ) : (
+                    <div className="flex-shrink-0">
+                      <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: l.color }} />
+                    </div>
+                  )}
+                </div>
+              </Link>
             ))}
           </div>
         </div>

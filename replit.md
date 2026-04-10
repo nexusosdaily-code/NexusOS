@@ -126,9 +126,30 @@ P2P media sharing engine with physics-based cost calculations, mesh networking, 
 -   **Database**: Drizzle ORM, `drizzle-kit`, `drizzle-zod`.
 
 ### Recent Pages Added (latest first)
+- **`/network`** — Spectral Network Node Discovery: register P2P nodes that emit at their CE→SE-derived wavelength. Nodes are visible on a live spectrum bar (380–780nm). No IP registry, no DNS — name = physics address. `network_nodes` table. Routes: `GET /api/network/nodes`, `POST /api/network/nodes/register`, `POST /api/network/nodes/:nodeKey/beacon`. AGPL-3.0 open infrastructure.
+- **`/communication`** / **`/comms`** — Spectral Communication Hub: contacts sidebar (with node badges if a contact has a registered spectral node), message thread with CE→SE encoding preview, spectral bond info panel. Uses `lambdaMessages` + `friendships` tables. Thread API: `GET /api/messages/thread/:userId`.
 - **`/photonic-dev`** — Nexus Photonic Development Environment: encode any instruction through CE→SE to get a wavelength address + Ψ channel, App Builder, Spectrum Map, SDK Spec.
 - **`/quantum-threshold`** — Moore's Law curve with tunneling threshold, interactive WKB gate slider, silicon vs Λ crossover table, animated 555 THz vs 3 GHz dual clock.
 - **`/nexus-hardware-os`** — Hardware stack (L0 Resonator → L1 Photonic Logic → L2 Channel Layer → L3 Kernel), PHR-1 ZERO-G live simulation, hardware timeline 2024→2035, Why Now rationale.
 - **`/ce-writer`** — NexusOS CE Code Writer: description → CE encode → wavelength → working TypeScript/Python/HTML/SQL code generated per spectral band; App Scaffold tab generates full codebase; Spectral Linter scans existing code and reveals its spectral addresses.
 - **`/wavelength-os`** — Full advocacy manifesto: 3-pillar argument (silicon wall, spectrum as address space, Λ=hf/c² unification), NVIDIA/Intel/Tesla industry cases, 5-audience advocacy strategy, AGPL-3.0 enforcement rationale.
 - **`/computing-alternatives`** — Five post-silicon computing paradigms (Photonic Matrix Multiply, Hybrid Control, CZC Coherent Field, Reservoir Computing, OAM Analog), comparison matrix, Nexus layer integration map, 4-phase roadmap.
+
+### Architecture Layer Stack (L0→L5)
+- **L0 — Alphabet Substrate** (PROVED November 2025): Alphabet embedded in electromagnetic spectrum. A=380nm, Z=780nm. Block #4 on-chain proof: "angry birds" 25MB at Ψ(211,35,H) 534.51nm.
+- **L1 — Spectral DB & Addressing**: 620+ records at Ψ(wdm, oam, pol) addresses. 25,600 orthogonal channels. E=hf cost per op.
+- **L2 — Blockchain Proof**: Λ=hf/c² blocks. Ordinals. SHA-256 audit trail. AGPL enforcement.
+- **L3 — Agent Intelligence**: 6 WNSP kernel agents on Ψ channels. Watchdog. KernelEventBus SSE streaming.
+- **L4 — Constitutional Economy**: NXT ordinal economy. Orbital Treasury (5 buckets: 35% maintenance, 25% deliverables, 20% research, 10% agent rewards, 10% Nexus Charitable Trust).
+- **L5 — Spectral Network Discovery** (NEW April 2026): P2P nodes emitting at CE→SE wavelengths. Physics IS the address. No DNS, no IP registry. Node name → avg ASCII → λ → Ψ channel → discoverable. Integrated across: `/network` page, ecosystem summary bar, Nexus Command 7th status card, ecosystem system grid, communication hub node badges, and live feed events.
+
+### Ecosystem Integration Principle
+Every new system MUST connect to existing systems. Current data flows:
+- Node beacon → Agent Bus event (live feed in Nexus Command)
+- Blockchain proof block → node visibility (proof = trust)
+- Network node registration → ecosystem status API (networkNodes + liveNodes in summary)
+- Contact with registered node → shows NODE badge + Ψ channel in Communication Hub
+- Ecosystem page: 7 summary stats, 8 system connections, 6 layers (L0–L5), all clickable
+
+### Open Source Philosophy
+All research and development is open source under AGPL-3.0. Every company that builds on NexusOS must publish their code. The infrastructure of civilisation cannot be owned. The CE→SE character encoding standard is free developer infrastructure for the world.
