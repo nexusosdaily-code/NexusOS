@@ -987,6 +987,31 @@ export async function registerRoutes(
         hasEncoding: !!encodedFrames,
       });
 
+      // Push live delivery via WebSocket to recipient and sender
+      const wsPayload = JSON.stringify({
+        type: "new_message",
+        message: {
+          id: message.id,
+          senderId: message.senderId,
+          recipientId: message.recipientId,
+          content: message.content,
+          wavelengthMin: message.wavelengthMin,
+          wavelengthMax: message.wavelengthMax,
+          spectralHash: message.spectralHash,
+          totalLambdaMass: message.totalLambdaMass,
+          isRead: false,
+          createdAt: message.createdAt,
+        },
+      });
+      const recipientWs = connectedClients.get(recipientId);
+      if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+        recipientWs.send(wsPayload);
+      }
+      const senderWs = connectedClients.get(req.user!.id);
+      if (senderWs && senderWs.readyState === WebSocket.OPEN) {
+        senderWs.send(wsPayload);
+      }
+
       res.status(201).json({
         message: "Message sent successfully",
         data: {

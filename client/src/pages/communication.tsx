@@ -70,7 +70,53 @@ export default function CommunicationPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [addPhone, setAddPhone] = useState("");
   const [showAddContact, setShowAddContact] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const selectedContactRef = useRef<Contact | null>(null);
+
+  // Keep ref in sync so WS handler always sees current contact
+  useEffect(() => { selectedContactRef.current = selectedContact; }, [selectedContact]);
+
+  // ── WebSocket live delivery ───────────────────────────────────────────────
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (!token) return;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/signaling?token=${token}`);
+    wsRef.current = ws;
+
+    ws.onopen = () => setWsConnected(true);
+    ws.onclose = () => setWsConnected(false);
+    ws.onerror = () => setWsConnected(false);
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type !== "new_message") return;
+        const msg: Message = data.message;
+        const contact = selectedContactRef.current;
+
+        // If the message belongs to the open thread, inject it directly
+        if (contact && (msg.senderId === contact.id || msg.recipientId === contact.id)) {
+          qc.setQueryData(
+            ["/api/messages/thread", contact.id],
+            (old: any) => {
+              if (!old) return old;
+              const existing = old.messages ?? [];
+              if (existing.some((m: Message) => m.id === msg.id)) return old;
+              return { ...old, messages: [...existing, msg] };
+            }
+          );
+        }
+        // Always refresh unread count
+        qc.invalidateQueries({ queryKey: ["/api/messages/unread-count"] });
+      } catch {}
+    };
+
+    return () => { ws.close(); wsRef.current = null; };
+  }, [qc]);
 
   const spectralPreview = quickSpectral(compose);
 
@@ -80,11 +126,11 @@ export default function CommunicationPage() {
     refetchInterval: 15_000,
   });
 
-  // Thread
+  // Thread — WebSocket is primary delivery; poll every 30s as fallback
   const { data: threadData, isLoading: threadLoading } = useQuery<{ messages: Message[]; contact: { id: string; username: string } }>({
     queryKey: ["/api/messages/thread", selectedContact?.id],
     enabled: !!selectedContact,
-    refetchInterval: 5_000,
+    refetchInterval: 30_000,
   });
 
   // Unread count
@@ -117,7 +163,10 @@ export default function CommunicationPage() {
     },
     onSuccess: () => {
       setCompose("");
-      qc.invalidateQueries({ queryKey: ["/api/messages/thread", selectedContact?.id] });
+      // WS delivers instantly when connected; only poll-invalidate as fallback
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        qc.invalidateQueries({ queryKey: ["/api/messages/thread", selectedContact?.id] });
+      }
     },
   });
 
@@ -161,9 +210,14 @@ export default function CommunicationPage() {
           <div className="flex items-center gap-2">
             <Radio size={13} className="text-cyan-400" />
             <span className="text-sm font-bold tracking-wider text-cyan-400">NEXUS COMMS</span>
-            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <div
+              title={wsConnected ? "Live — WebSocket connected" : "Connecting…"}
+              className={`w-1.5 h-1.5 rounded-full ${wsConnected ? "bg-emerald-400 animate-pulse" : "bg-white/20"}`}
+            />
           </div>
-          <span className="text-white/20 text-[10px]">Spectral P2P · CE→SE · Λ=hf/c²</span>
+          <span className="text-white/20 text-[10px]">
+            {wsConnected ? "LIVE · " : ""}Spectral P2P · CE→SE · Λ=hf/c²
+          </span>
         </div>
         <div className="flex items-center gap-3">
           {unreadData && unreadData.count > 0 && (
