@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, or, gte, lte, desc, isNull } from "drizzle-orm";
+import { eq, and, or, gte, lte, desc, isNull, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 import {
@@ -169,7 +169,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+    const result = await db.select().from(users).where(
+      sql`lower(${users.username}) = lower(${username})`
+    ).limit(1);
     return result[0];
   }
 
