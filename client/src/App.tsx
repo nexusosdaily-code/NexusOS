@@ -51,6 +51,7 @@ import OrbitalTreasuryPage from "@/pages/orbital-treasury";
 import EcosystemPage from "@/pages/ecosystem";
 import OrdinalRegistryPage from "@/pages/ordinal-registry";
 import CommunicationPage from "@/pages/communication";
+import NetworkPage from "@/pages/network";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -116,6 +117,7 @@ function ProtectedRoutes() {
         <Route path="/ordinal-registry" component={OrdinalRegistryPage} />
         <Route path="/communication" component={CommunicationPage} />
         <Route path="/comms" component={CommunicationPage} />
+        <Route path="/network" component={NetworkPage} />
         <Route path="/transmission" component={TransmissionPage} />
         <Route component={NotFound} />
       </Switch>

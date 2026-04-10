@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 import {
   users, sessions, auditLogs, wallets, transactions,
   versionRegistry, apiKeys, rateLimits, friendships, uploadedFiles, secureDocuments,
-  lambdaMessages, calls, streams, streamViewers, streamRecordings,
+  lambdaMessages, calls, streams, streamViewers, streamRecordings, networkNodes,
   type User, type InsertUser, type Session, type InsertSession,
   type AuditLog, type InsertAuditLog, type Wallet, type InsertWallet,
   type Transaction, type InsertTransaction, type VersionRegistry,
@@ -19,6 +19,7 @@ import {
   type StreamViewer, type InsertStreamViewer,
   type StreamRecording, type InsertStreamRecording,
   type UpdateStreamSettingsInput,
+  type NetworkNode, type InsertNetworkNode,
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
@@ -131,6 +132,13 @@ export interface IStorage {
   createStreamRecording(recording: InsertStreamRecording): Promise<StreamRecording>;
   getStreamRecordings(streamId: string): Promise<StreamRecording[]>;
   getUserRecordings(userId: string): Promise<StreamRecording[]>;
+
+  // Network node operations
+  registerNetworkNode(node: InsertNetworkNode): Promise<NetworkNode>;
+  getNetworkNodes(status?: string): Promise<NetworkNode[]>;
+  getNetworkNode(nodeKey: string): Promise<NetworkNode | undefined>;
+  beaconNetworkNode(nodeKey: string): Promise<NetworkNode>;
+  updateNetworkNodeStatus(nodeKey: string, status: string): Promise<NetworkNode>;
 }
 
 function generateWalletAddress(): string {
@@ -903,6 +911,55 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(streamRecordings)
       .where(eq(streamRecordings.userId, userId))
       .orderBy(desc(streamRecordings.createdAt));
+  }
+
+  // ============================================
+  // NETWORK NODE OPERATIONS
+  // ============================================
+
+  async registerNetworkNode(node: InsertNetworkNode): Promise<NetworkNode> {
+    const existing = await db.select().from(networkNodes)
+      .where(eq(networkNodes.nodeKey, node.nodeKey)).limit(1);
+    if (existing[0]) {
+      const result = await db.update(networkNodes)
+        .set({ ...node, lastBeaconAt: new Date() })
+        .where(eq(networkNodes.nodeKey, node.nodeKey))
+        .returning();
+      return result[0];
+    }
+    const result = await db.insert(networkNodes).values(node).returning();
+    return result[0];
+  }
+
+  async getNetworkNodes(status?: string): Promise<NetworkNode[]> {
+    if (status) {
+      return db.select().from(networkNodes)
+        .where(eq(networkNodes.status, status))
+        .orderBy(networkNodes.wavelengthNm);
+    }
+    return db.select().from(networkNodes).orderBy(networkNodes.wavelengthNm);
+  }
+
+  async getNetworkNode(nodeKey: string): Promise<NetworkNode | undefined> {
+    const result = await db.select().from(networkNodes)
+      .where(eq(networkNodes.nodeKey, nodeKey)).limit(1);
+    return result[0];
+  }
+
+  async beaconNetworkNode(nodeKey: string): Promise<NetworkNode> {
+    const result = await db.update(networkNodes)
+      .set({ lastBeaconAt: new Date(), status: "active" })
+      .where(eq(networkNodes.nodeKey, nodeKey))
+      .returning();
+    return result[0];
+  }
+
+  async updateNetworkNodeStatus(nodeKey: string, status: string): Promise<NetworkNode> {
+    const result = await db.update(networkNodes)
+      .set({ status })
+      .where(eq(networkNodes.nodeKey, nodeKey))
+      .returning();
+    return result[0];
   }
 }
 

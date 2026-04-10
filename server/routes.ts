@@ -3725,6 +3725,77 @@ export async function registerRoutes(
     }
   });
 
+  // ── Network Node Discovery ─────────────────────────────────────────────────
+
+  function ceseEncode(name: string): { wavelengthNm: number; frequencyThz: number; psiChannel: string; emissionBand: string } {
+    const codes = name.toUpperCase().split("").map((c: string) => c.charCodeAt(0)).filter((c: number) => c >= 32 && c <= 126);
+    if (!codes.length) codes.push(77); // fallback to 'M'
+    const avg = codes.reduce((a: number, b: number) => a + b, 0) / codes.length;
+    const nm = parseFloat((380 + ((avg - 32) / 94) * 400).toFixed(4));
+    const thz = parseFloat((299792458 / (nm * 1e-9) / 1e12).toFixed(4));
+    const wdm = Math.floor((nm - 380) / 4) + 1;
+    const oam = codes.reduce((a: number, b: number) => a + b, 0) % 100;
+    const pol = codes.length % 2 === 0 ? "H" : "V";
+    let band = "YELLOW";
+    if (nm < 450) band = "VIOLET";
+    else if (nm < 495) band = "BLUE";
+    else if (nm < 520) band = "CYAN";
+    else if (nm < 565) band = "GREEN";
+    else if (nm < 590) band = "YELLOW";
+    else if (nm < 625) band = "ORANGE";
+    else band = "RED";
+    return { wavelengthNm: nm, frequencyThz: thz, psiChannel: `Ψ(${wdm},${oam},${pol})`, emissionBand: band };
+  }
+
+  app.get("/api/network/nodes", authenticate, async (req, res) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const nodes = await storage.getNetworkNodes(status);
+      const active = nodes.filter(n => {
+        const secsSince = (Date.now() - new Date(n.lastBeaconAt).getTime()) / 1000;
+        return n.status === "active" && secsSince < 300;
+      }).length;
+      res.json({ nodes, total: nodes.length, active });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to get network nodes" });
+    }
+  });
+
+  app.post("/api/network/nodes/register", authenticate, async (req, res) => {
+    try {
+      const { name, purpose, endpoint, capabilities = [] } = req.body;
+      if (!name) return res.status(400).json({ error: "name is required" });
+      const spectral = ceseEncode(name);
+      const nodeKey = `${req.user!.id}-${name.toLowerCase().replace(/\s+/g, "-")}`;
+      const node = await storage.registerNetworkNode({
+        nodeKey,
+        name,
+        purpose: purpose || null,
+        wavelengthNm: spectral.wavelengthNm.toString(),
+        frequencyThz: spectral.frequencyThz.toString(),
+        psiChannel: spectral.psiChannel,
+        emissionBand: spectral.emissionBand,
+        status: "active",
+        endpoint: endpoint || null,
+        capabilities: Array.isArray(capabilities) ? capabilities : [],
+        lastBeaconAt: new Date(),
+      });
+      res.status(201).json({ node, spectral });
+    } catch (error: any) {
+      console.error("Register node error:", error);
+      res.status(500).json({ error: "Failed to register node" });
+    }
+  });
+
+  app.post("/api/network/nodes/:nodeKey/beacon", authenticate, async (req, res) => {
+    try {
+      const node = await storage.beaconNetworkNode(req.params.nodeKey);
+      res.json({ node, beaconedAt: new Date() });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to beacon node" });
+    }
+  });
+
   app.get("/api/spectral-workspace/videos", authenticate, async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");

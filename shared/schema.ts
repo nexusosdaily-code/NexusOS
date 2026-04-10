@@ -677,3 +677,39 @@ export const videoUploads = pgTable("video_uploads", {
 export const insertVideoUploadSchema = createInsertSchema(videoUploads).omit({ id: true, createdAt: true });
 export type InsertVideoUpload = z.infer<typeof insertVideoUploadSchema>;
 export type VideoUpload = typeof videoUploads.$inferSelect;
+
+// ============================================
+// NETWORK NODES — Spectral node discovery
+// Each node emits at its CE→SE frequency so other nodes can see it
+// ============================================
+export const networkNodes = pgTable("network_nodes", {
+  id:             varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  nodeKey:        text("node_key").notNull().unique(),
+  name:           text("name").notNull(),
+  purpose:        text("purpose"),
+  wavelengthNm:   decimal("wavelength_nm", { precision: 10, scale: 4 }).notNull(),
+  frequencyThz:   decimal("frequency_thz", { precision: 10, scale: 4 }).notNull(),
+  psiChannel:     text("psi_channel").notNull(),
+  emissionBand:   text("emission_band").notNull(),
+  status:         text("status").notNull().default("active"),
+  endpoint:       text("endpoint"),
+  capabilities:   jsonb("capabilities").notNull().default("[]"),
+  lastBeaconAt:   timestamp("last_beacon_at").notNull().defaultNow(),
+  createdAt:      timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  nodeKeyIdx:     index("network_nodes_key_idx").on(table.nodeKey),
+  statusIdx:      index("network_nodes_status_idx").on(table.status),
+  wavelengthIdx:  index("network_nodes_wavelength_idx").on(table.wavelengthNm),
+}));
+
+export const insertNetworkNodeSchema = createInsertSchema(networkNodes).omit({ id: true, createdAt: true });
+export type InsertNetworkNode = z.infer<typeof insertNetworkNodeSchema>;
+export type NetworkNode = typeof networkNodes.$inferSelect;
+
+export const registerNodeSchema = z.object({
+  name: z.string().min(1).max(100),
+  purpose: z.string().max(300).optional(),
+  endpoint: z.string().url().optional(),
+  capabilities: z.array(z.string()).optional(),
+});
+export type RegisterNodeInput = z.infer<typeof registerNodeSchema>;
