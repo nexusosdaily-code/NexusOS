@@ -406,6 +406,14 @@ const SYSTEMS = [
     action: "Register a node",
   },
   {
+    title: "WavelengthScript",
+    description: "The first programming language where every symbol has a physical address in light. Transpile from Python, JS, or Rust. Build AI agents that live on Ψ channels. AGPL-3.0 open spec.",
+    href: "/wavelength-lang",
+    color: "#8b00ff",
+    Icon: Code2,
+    action: "Open language spec",
+  },
+  {
     title: "Communication Hub",
     description: "Spectral messaging between users. Every message is encoded through CE→SE — your words travel as wavelengths of light, not packets of bytes.",
     href: "/communication",

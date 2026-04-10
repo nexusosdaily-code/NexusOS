@@ -52,6 +52,7 @@ import EcosystemPage from "@/pages/ecosystem";
 import OrdinalRegistryPage from "@/pages/ordinal-registry";
 import CommunicationPage from "@/pages/communication";
 import NetworkPage from "@/pages/network";
+import WavelengthLangPage from "@/pages/wavelength-lang";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -118,6 +119,7 @@ function ProtectedRoutes() {
         <Route path="/communication" component={CommunicationPage} />
         <Route path="/comms" component={CommunicationPage} />
         <Route path="/network" component={NetworkPage} />
+        <Route path="/wavelength-lang" component={WavelengthLangPage} />
         <Route path="/transmission" component={TransmissionPage} />
         <Route component={NotFound} />
       </Switch>

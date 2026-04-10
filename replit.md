@@ -126,6 +126,7 @@ P2P media sharing engine with physics-based cost calculations, mesh networking, 
 -   **Database**: Drizzle ORM, `drizzle-kit`, `drizzle-zod`.
 
 ### Recent Pages Added (latest first)
+- **`/wavelength-lang`** — WavelengthScript Language Specification: full programming language spec built on CE→SE. Type system using spectral bands (LOGIC=520–564nm, AUTH=450–494nm, STORAGE=625–780nm, etc.). Live transpiler from Python/JS/Rust → WavelengthScript. AI agent channel map + native WLS agent example. SDK reference (Python, JS, Rust). AGPL-3.0 open spec.
 - **`/network`** — Spectral Network Node Discovery: register P2P nodes that emit at their CE→SE-derived wavelength. Nodes are visible on a live spectrum bar (380–780nm). No IP registry, no DNS — name = physics address. `network_nodes` table. Routes: `GET /api/network/nodes`, `POST /api/network/nodes/register`, `POST /api/network/nodes/:nodeKey/beacon`. AGPL-3.0 open infrastructure.
 - **`/communication`** / **`/comms`** — Spectral Communication Hub: contacts sidebar (with node badges if a contact has a registered spectral node), message thread with CE→SE encoding preview, spectral bond info panel. Uses `lambdaMessages` + `friendships` tables. Thread API: `GET /api/messages/thread/:userId`.
 - **`/photonic-dev`** — Nexus Photonic Development Environment: encode any instruction through CE→SE to get a wavelength address + Ψ channel, App Builder, Spectrum Map, SDK Spec.
