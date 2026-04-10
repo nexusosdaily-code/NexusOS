@@ -136,7 +136,7 @@ function transpile(src: string, srcLang: "python" | "javascript" | "rust"): stri
   out.push(`// ── Spectral manifest ───────────────────────────────────────────`);
 
   // Generate manifest from identifiers in source
-  const identifiers = [...new Set(src.match(/\b[a-zA-Z_][a-zA-Z0-9_]{2,}\b/g) ?? [])].slice(0, 8);
+  const identifiers = Array.from(new Set(src.match(/\b[a-zA-Z_][a-zA-Z0-9_]{2,}\b/g) ?? [])).slice(0, 8);
   for (const id of identifiers) {
     const enc = ceEncode(id);
     out.push(`// ${id.padEnd(20)} → ${enc.nm}nm  ${enc.psi}  [${enc.band}]`);

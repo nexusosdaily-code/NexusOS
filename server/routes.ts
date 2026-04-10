@@ -666,6 +666,23 @@ export async function registerRoutes(
     }
   });
 
+  // Wallet balance alias — used by Transmission page
+  app.get("/api/wallet/balance", authenticate, async (req, res) => {
+    try {
+      const wallet = await storage.getWallet(req.user!.id);
+      if (!wallet) return res.status(404).json({ error: "Wallet not found" });
+      res.json({
+        address: wallet.address,
+        balance: wallet.balance,
+        lockedBalance: wallet.lockedBalance,
+        balanceNxt: (parseInt(wallet.balance) / 1e8).toFixed(8),
+      });
+    } catch (error: any) {
+      console.error("Get wallet balance error:", error);
+      res.status(500).json({ error: "Failed to get wallet balance" });
+    }
+  });
+
   app.post("/api/wallet/transfer", authenticate, validateRequest(transferSchema), async (req, res) => {
     try {
       if (!await checkRateLimit(req, res, "/api/wallet/transfer", WALLET_RATE_LIMIT_MAX)) return;
@@ -3156,6 +3173,24 @@ export async function registerRoutes(
     }
   });
 
+  // Records list — returns total count + paginated records (used by Nexus Command)
+  app.get("/api/spectral-db/records", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { spectralRecords } = await import("@shared/schema");
+      const { desc: dDesc, sql: ds } = await import("drizzle-orm");
+      const limit = Math.min(parseInt(String(req.query.limit ?? "20")), 100);
+      const [records, countResult] = await Promise.all([
+        db.select().from(spectralRecords).orderBy(dDesc(spectralRecords.createdAt)).limit(limit),
+        db.execute(ds`SELECT COUNT(*) AS total FROM spectral_records`),
+      ]);
+      const total = parseInt((countResult.rows[0] as any)?.total ?? "0");
+      res.json({ records, total, limit });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Scan all records — full spectral map
   app.get("/api/spectral-db/scan", authenticate, async (req: Request, res: Response) => {
     try {
@@ -3197,19 +3232,6 @@ export async function registerRoutes(
       const { eq } = await import("drizzle-orm");
       const records = await db.select().from(spectralRecords).where(eq(spectralRecords.psiChannel, psi));
       res.json({ records, psiChannel: psi });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  // Delete a record by ID
-  app.delete("/api/spectral-db/:id", authenticate, async (req: Request, res: Response) => {
-    try {
-      const { db } = await import("./db");
-      const { spectralRecords } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      await db.delete(spectralRecords).where(eq(spectralRecords.id, req.params.id));
-      res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
