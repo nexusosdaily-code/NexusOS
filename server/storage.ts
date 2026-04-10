@@ -23,7 +23,7 @@ import {
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
-const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const INITIAL_NXT_BALANCE = "500000000"; // 5 NXT (8 decimals)
 
 export interface IStorage {
