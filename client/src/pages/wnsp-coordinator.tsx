@@ -840,13 +840,15 @@ export default function WNSPCoordinator() {
 
               {simMut.data && !simMut.data.error && (
                 <div className="space-y-4">
+                  {/* ── Stats ── */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
                       { label: "Chars",      value: simMut.data.chars },
-                      { label: "Frames",     value: simMut.data.frames },
-                      { label: "Packing",    value: `${simMut.data.packing_ratio?.toFixed(2)} char/frame` },
+                      { label: "SE Frames",  value: simMut.data.frames },
                       { label: "Orthogonal", value: simMut.data.orthogonality_valid ? "✓ YES" : "✗ NO",
                         color: simMut.data.orthogonality_valid ? "text-green-300" : "text-red-300" },
+                      { label: "Coherence γ", value: simMut.data.coherence_gamma?.toFixed(4) ?? "—",
+                        color: simMut.data.coherence_valid ? "text-green-300" : "text-amber-300" },
                     ].map(s => (
                       <div key={s.label} className="p-3 bg-gray-800/50 rounded-lg">
                         <div className="text-xs text-gray-400">{s.label}</div>
@@ -855,65 +857,114 @@ export default function WNSPCoordinator() {
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* ── PSQ Token + Energy ── */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-1 p-3 bg-cyan-900/20 rounded-lg border border-cyan-500/20">
+                      <div className="text-xs text-gray-400 mb-1">Phase Sequence Token</div>
+                      <div className="text-cyan-300 font-mono text-[10px] break-all">{simMut.data.psq_token ?? "—"}</div>
+                    </div>
                     <div className="p-3 bg-purple-900/20 rounded-lg border border-purple-500/30">
                       <div className="text-xs text-gray-400">Total Energy</div>
-                      <div className="text-purple-300 font-mono">{simMut.data.total_energy_joules?.toExponential(4)} J</div>
+                      <div className="text-purple-300 font-mono text-sm">{simMut.data.total_energy_joules?.toExponential(4)} J</div>
                     </div>
                     <div className="p-3 bg-purple-900/20 rounded-lg border border-purple-500/30">
-                      <div className="text-xs text-gray-400">Total Λ mass (Λ = hf/c²)</div>
-                      <div className="text-purple-300 font-mono">{simMut.data.total_lambda_mass_kg?.toExponential(4)} kg</div>
+                      <div className="text-xs text-gray-400">Total Λ mass (Λ=hf/c²)</div>
+                      <div className="text-purple-300 font-mono text-sm">{simMut.data.total_lambda_mass_kg?.toExponential(4)} kg</div>
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-gray-700 text-gray-400">
-                          <th className="py-2 text-left">Frame</th>
-                          <th className="py-2 text-left">Symbols</th>
-                          <th className="py-2 text-left">λ start (nm)</th>
-                          <th className="py-2 text-left">λ end (nm)</th>
-                          <th className="py-2 text-left">WDM</th>
-                          <th className="py-2 text-left">OAM</th>
-                          <th className="py-2 text-left">Pol</th>
-                          <th className="py-2 text-left">Energy (J)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {simMut.data.channel_occupation?.map((f: any) => (
-                          <tr key={f.frame_index} className="border-b border-gray-800 hover:bg-gray-800/30"
-                            data-testid={`frame-row-${f.frame_index}`}>
-                            <td className="py-1.5 text-gray-300">{f.frame_index}</td>
-                            <td className="py-1.5 font-mono text-cyan-300">[{f.symbols?.join("")}]</td>
-                            <td className="py-1.5 text-gray-300">{f.wavelength_start_nm?.toFixed(1)}</td>
-                            <td className="py-1.5 text-gray-300">{f.wavelength_end_nm?.toFixed(1)}</td>
-                            <td className="py-1.5 text-blue-300">{f.wdm_i_start}</td>
-                            <td className="py-1.5 text-green-300">{f.oam_j}</td>
-                            <td className="py-1.5 text-yellow-300">{f.polarisation}</td>
-                            <td className="py-1.5 text-gray-400">{f.energy_joules?.toExponential(2)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  {/* ── WASCII Spectral Frames (per character) ── */}
+                  {simMut.data.spectral_frames?.length > 0 && (
+                    <div>
+                      <div className="text-xs text-gray-400 mb-2 flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 rounded bg-cyan-900/40 text-cyan-400 font-mono text-[9px]">WASCII</span>
+                        Per-character WnspFrames — WNSP-SE v1.0 canonical encoding
+                      </div>
+                      <div className="flex gap-1 flex-wrap mb-3">
+                        {simMut.data.spectral_frames.map((f: any, i: number) => {
+                          const nm = f.wavelength_nm;
+                          const hue = Math.round(270 - ((Math.min(Math.max(nm, 380), 780) - 380) / 400) * 270);
+                          const bg = nm >= 350 && nm <= 780
+                            ? `hsl(${hue}, 80%, 45%)`
+                            : nm < 350 ? "#4a1580" : "#1a1a2e";
+                          return (
+                            <div
+                              key={i}
+                              className="w-7 h-7 rounded border border-white/10 flex items-center justify-center text-[9px] font-bold text-white cursor-default"
+                              style={{ background: bg }}
+                              title={`sync=0xAA | '${f.symbol}' → ${nm}nm | chk=${f.checksum} | wascii=${f.wascii_defined}`}
+                            >
+                              {f.symbol === " " ? "·" : f.symbol}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b border-gray-700 text-gray-400">
+                              <th className="py-2 text-left">sync</th>
+                              <th className="py-2 text-left">char</th>
+                              <th className="py-2 text-left">λ (nm)</th>
+                              <th className="py-2 text-left">f (Hz)</th>
+                              <th className="py-2 text-left">E (J)</th>
+                              <th className="py-2 text-left">chk</th>
+                              <th className="py-2 text-left">bit</th>
+                              <th className="py-2 text-left">WASCII</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {simMut.data.spectral_frames.map((f: any, i: number) => (
+                              <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/30">
+                                <td className="py-1 font-mono text-green-400">0xAA</td>
+                                <td className="py-1 font-mono text-cyan-300">{f.symbol === " " ? "·" : f.symbol}</td>
+                                <td className="py-1 text-white">{f.wavelength_nm?.toFixed(1)}</td>
+                                <td className="py-1 text-gray-400">{f.frequency_hz?.toExponential(3)}</td>
+                                <td className="py-1 text-gray-400">{f.energy_joules?.toExponential(2)}</td>
+                                <td className="py-1 text-amber-300">{f.checksum}</td>
+                                <td className="py-1 text-gray-500">{f.payload_bit}</td>
+                                <td className="py-1">{f.wascii_defined ? <span className="text-green-400">✓</span> : <span className="text-gray-500">~</span>}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
 
-                  <div className="space-y-1">
-                    <div className="text-xs text-gray-400">Channel Wavelength Strip (per frame)</div>
-                    <div className="flex gap-0.5 flex-wrap">
-                      {simMut.data.channel_occupation?.map((f: any) => {
-                        const hue = Math.round(270 - ((f.wavelength_start_nm - 380) / 400) * 270);
-                        return (
-                          <div
-                            key={f.frame_index}
-                            className="w-6 h-6 rounded-sm border border-white/10 flex items-center justify-center text-[9px] text-white/60"
-                            style={{ background: `hsl(${hue}, 80%, 45%)` }}
-                            title={`Frame ${f.frame_index}: λ=${f.wavelength_start_nm?.toFixed(0)}nm`}
-                          >
-                            {f.frame_index}
-                          </div>
-                        );
-                      })}
+                  {/* ── Dual-wavelength channel occupation ── */}
+                  <div>
+                    <div className="text-xs text-gray-400 mb-2">Hilbert-Space Channel Occupation (dual-wavelength packing)</div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-gray-700 text-gray-400">
+                            <th className="py-2 text-left">Frame</th>
+                            <th className="py-2 text-left">Symbols</th>
+                            <th className="py-2 text-left">λ start</th>
+                            <th className="py-2 text-left">λ end</th>
+                            <th className="py-2 text-left">WDM</th>
+                            <th className="py-2 text-left">OAM</th>
+                            <th className="py-2 text-left">Pol</th>
+                            <th className="py-2 text-left">Energy (J)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {simMut.data.channel_occupation?.map((f: any) => (
+                            <tr key={f.frame_index} className="border-b border-gray-800 hover:bg-gray-800/30"
+                              data-testid={`frame-row-${f.frame_index}`}>
+                              <td className="py-1.5 text-gray-300">{f.frame_index}</td>
+                              <td className="py-1.5 font-mono text-cyan-300">[{f.symbols?.join("")}]</td>
+                              <td className="py-1.5 text-gray-300">{f.wavelength_start_nm?.toFixed(1)}</td>
+                              <td className="py-1.5 text-gray-300">{f.wavelength_end_nm?.toFixed(1)}</td>
+                              <td className="py-1.5 text-blue-300">{f.wdm_i_start}</td>
+                              <td className="py-1.5 text-green-300">{f.oam_j}</td>
+                              <td className="py-1.5 text-yellow-300">{f.polarisation}</td>
+                              <td className="py-1.5 text-gray-400">{f.energy_joules?.toExponential(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
