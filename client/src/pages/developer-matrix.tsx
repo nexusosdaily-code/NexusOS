@@ -600,7 +600,7 @@ class CodeRepoAttestation:
     @classmethod
     def get_repo_url(cls, gate_id) -> str:
         """Full URL to source code."""
-        return f"https://github.com/nexusos/wnsp-protocol/tree/{commit}"
+        return f"https://github.com/nexusosdaily-code/WNSP-P2P-Hub/tree/{commit}"
 \`\`\`
 
 Every gate has a registered commit hash pointing to its exact implementation.`
@@ -791,109 +791,180 @@ def _serialize_binary(self, frame_dict: dict) -> bytes:
     ]
   },
   sdkInstall: {
-    title: "SDK Installation",
+    title: "WNSP SDK — Live API",
     icon: Code,
     color: "from-green-500 to-emerald-500",
     content: [
       {
-        heading: "Python SDK (pip)",
-        text: `**Install Core Packages:**
+        heading: "Base URL & Live Endpoints",
+        text: `The NexusOS API is live and open. All public endpoints below require no authentication.
 
-\`\`\`bash
-# Core WNSP Protocol
-pip install wnsp-core
-
-# Lambda Gate Substrate
-pip install wnsp-substrate
-
-# Frame Builder & Verifier
-pip install wnsp-encoder
-
-# State Machine
-pip install wnsp-state-machine
-
-# Full SDK (all packages)
-pip install wnsp-sdk
+**Live Platform:**
+\`\`\`
+https://0a70fadf-e9ae-4e02-8d6d-f55fdb7924c1-00-kxbvkx18na65.riker.replit.dev
 \`\`\`
 
-**Quick Start:**
+**Public API Endpoints (no auth required):**
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | \`/api/wnsp/wascii/table\` | Full 202-char WASCII wavelength table |
+| POST | \`/api/wnsp/wascii/lookup\` | Encode any string → WnspFrames (per char) |
+| POST | \`/api/wnsp/se/simulate\` | Full SE simulation with Ψ channels, PSQ, coherence γ |
+| GET | \`/api/blockchain/chain\` | Live photonic blockchain (all blocks) |
+| GET | \`/api/ecosystem/status\` | Live system stats (nodes, agents, spectral records) |
+| GET | \`/api/agent-bus/status\` | Kernel agents at Ψ coordinates |
+| GET | \`/api/network/nodes\` | Registered spectral network nodes |`
+      },
+      {
+        heading: "Python SDK — pip install requests",
+        text: `No custom package needed yet — call the live API directly with \`requests\`.
+
 \`\`\`python
-from wnsp_sdk import FrameBuilder, LambdaStateMachine
-from wnsp_sdk.gates import LambdaGateID
+import requests, json
 
-builder = FrameBuilder(lcu_id="MY-NODE-001")
-lsm = LambdaStateMachine(builder)
+BASE = "https://0a70fadf-e9ae-4e02-8d6d-f55fdb7924c1-00-kxbvkx18na65.riker.replit.dev"
 
-# Build AGPL-compliant frame
-frame = lsm.request_sync_write(b"payload")
+# ── 1. Fetch full WASCII table (202 characters)
+table = requests.get(f"{BASE}/api/wnsp/wascii/table").json()
+print(f"WASCII version: {table['version']}, chars: {table['total_characters']}")
+
+# ── 2. Encode a string → per-character WnspFrames
+resp = requests.post(f"{BASE}/api/wnsp/wascii/lookup",
+    json={"text": "NexusOS"},
+    headers={"Content-Type": "application/json"}
+).json()
+
+for frame in resp["frames"]:
+    print(f"  '{frame['symbol']}' → {frame['wavelength_nm']}nm "
+          f"| E={frame['energy_joules']:.2e}J "
+          f"| chk={frame['checksum']} "
+          f"| {'✓' if frame['wascii_defined'] else '~'}")
+
+print(f"PSQ: {resp['psq_token']}")
+print(f"Coherence γ: {resp['coherence_gamma']:.4f} "
+      f"({'valid' if resp['coherence_valid'] else 'BELOW THRESHOLD'})")
+
+# ── 3. Full SE simulation with Ψ channel assignment
+sim = requests.post(f"{BASE}/api/wnsp/se/simulate",
+    json={"content": "Hello World"},
+    headers={"Content-Type": "application/json"}
+).json()
+
+print(f"\\nSE Simulation: {sim['chars']} chars → {sim['frames']} SE frames")
+print(f"Total energy: {sim['total_energy_joules']:.4e} J")
+print(f"Total Λ mass: {sim['total_lambda_mass_kg']:.4e} kg")
 \`\`\``
       },
       {
-        heading: "Node.js SDK (npm)",
-        text: `**Install Core Packages:**
+        heading: "JavaScript / TypeScript SDK",
+        text: `Works in Node.js, browsers, and Deno. Zero dependencies — just \`fetch\`.
 
-\`\`\`bash
-# Core WNSP Protocol
-npm install @wnsp/core
-
-# Lambda Gate Substrate
-npm install @wnsp/substrate
-
-# Frame Builder & Verifier
-npm install @wnsp/encoder
-
-# State Machine
-npm install @wnsp/state-machine
-
-# Full SDK (all packages)
-npm install @wnsp/sdk
-\`\`\`
-
-**Quick Start:**
 \`\`\`typescript
-import { FrameBuilder, LambdaStateMachine } from '@wnsp/sdk';
-import { LambdaGateID } from '@wnsp/substrate';
+const BASE = "https://0a70fadf-e9ae-4e02-8d6d-f55fdb7924c1-00-kxbvkx18na65.riker.replit.dev";
 
-const builder = new FrameBuilder({ lcuId: 'MY-NODE-001' });
-const lsm = new LambdaStateMachine(builder);
+// ── Types (TypeScript)
+interface WnspFrame {
+  symbol: string; wavelength_nm: number; frequency_hz: number;
+  energy_joules: number; lambda_mass_kg: number; checksum: number;
+  payload_bit: number; wascii_defined: boolean;
+}
 
-// Build AGPL-compliant frame
-const frame = await lsm.requestSyncWrite(Buffer.from('payload'));
+// ── 1. WASCII Table
+async function getWasciiTable() {
+  const r = await fetch(\`\${BASE}/api/wnsp/wascii/table\`);
+  return r.json();  // { version, total_characters, characters: {...} }
+}
+
+// ── 2. Encode string → WnspFrames
+async function encode(text: string): Promise<{
+  frames: WnspFrame[]; psq_token: string;
+  coherence_gamma: number; coherence_valid: boolean;
+}> {
+  const r = await fetch(\`\${BASE}/api/wnsp/wascii/lookup\`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  return r.json();
+}
+
+// ── 3. Full SE simulation
+async function simulate(content: string) {
+  const r = await fetch(\`\${BASE}/api/wnsp/se/simulate\`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
+  return r.json();
+}
+
+// Usage
+const result = await encode("NexusOS");
+result.frames.forEach(f =>
+  console.log(\`'\${f.symbol}' → \${f.wavelength_nm}nm | E=\${f.energy_joules.toExponential(2)}J\`)
+);
+console.log("PSQ:", result.psq_token);
+console.log("γ:", result.coherence_gamma.toFixed(4));
 \`\`\``
       },
       {
-        heading: "Package Overview",
-        text: `| Package | Description |
-|---------|-------------|
-| \`wnsp-core\` | Physics constants, wavelength calculations |
-| \`wnsp-substrate\` | 8 Lambda Gate primitives |
-| \`wnsp-encoder\` | Frame Builder v7.1, binary serialization |
-| \`wnsp-verifier\` | Coherence Verifier, AGPL enforcement |
-| \`wnsp-state-machine\` | LSM with 3-state coherence model |
-| \`wnsp-consensus\` | Proof-of-Spectrum consensus |
-| \`wnsp-wallet\` | NXT token management |
-| \`wnsp-governance\` | Constitutional voting, Sigma engine |
+        heading: "curl — No Install Required",
+        text: `Test the entire API from your terminal right now. No signup, no API key.
 
-**All packages are AGPL-3.0 licensed.**`
+\`\`\`bash
+BASE="https://0a70fadf-e9ae-4e02-8d6d-f55fdb7924c1-00-kxbvkx18na65.riker.replit.dev"
+
+# Full WASCII table (202 characters → wavelengths)
+curl "$BASE/api/wnsp/wascii/table" | python3 -m json.tool
+
+# Encode "Hello" → per-character WnspFrames
+curl -s -X POST "$BASE/api/wnsp/wascii/lookup" \\
+  -H "Content-Type: application/json" \\
+  -d '{"text":"Hello"}' | python3 -m json.tool
+
+# SE simulation — Ψ channel assignment, PSQ token, coherence γ
+curl -s -X POST "$BASE/api/wnsp/se/simulate" \\
+  -H "Content-Type: application/json" \\
+  -d '{"content":"NexusOS Genesis"}' | python3 -m json.tool
+
+# Live blockchain
+curl "$BASE/api/blockchain/chain" | python3 -m json.tool
+
+# Ecosystem status (agents, spectral records, nodes)
+curl "$BASE/api/ecosystem/status" | python3 -m json.tool
+\`\`\``
       },
       {
-        heading: "Source Code Access",
-        text: `**GitHub Repository:**
+        heading: "GitHub Source Repositories",
+        text: `All source code is open under AGPL-3.0. If you build on NexusOS, you publish your code.
+
+**Main Application (full stack):**
 \`\`\`bash
-git clone https://github.com/nexusos/wnsp-sdk.git
-cd wnsp-sdk
-pip install -e .  # Development install
+git clone https://github.com/nexusosdaily-code/NexusOS.git
 \`\`\`
+→ Node.js/Express + React + Python Flask + PostgreSQL
 
-**Direct File Access:**
-- \`wnsp_v7/frame_builder_v7_1.py\` - Frame Builder
-- \`wnsp_v7/verifier_v7_1.py\` - Coherence Verifier
-- \`wnsp_v7/lambda_state_machine.py\` - State Machine
-- \`wnsp_v7/substrate_v4.py\` - Lambda Gates
-- \`wnsp_v7/master_field_equation.py\` - Physics Engine
+**WNSP P2P Hub (protocol + media):**
+\`\`\`bash
+git clone https://github.com/nexusosdaily-code/WNSP-P2P-Hub.git
+\`\`\`
+→ WNSP protocol implementation, P2P media, spectral encoding
 
-**License:** AGPL-3.0 (copyleft)
-All modifications must be disclosed under same license.`
+**Genesis Block (origin documentation):**
+\`\`\`bash
+git clone https://github.com/nexusosdaily-code/NexusOS-Genesis-Block.git
+\`\`\`
+→ 377 commits. Genesis SHA: 165d7f9 (16 Nov 2025). Full scientific documentation.
+
+**Key source files for SDK implementers:**
+| File | Description |
+|------|-------------|
+| \`wnsp_protocol_v7.py\` | WASCII table, WnspFrame, PSQ, coherence γ |
+| \`spectral_api.py\` | Flask API server (port 5001) |
+| \`server/routes.ts\` | Express API gateway (port 5000) |
+| \`shared/schema.ts\` | Drizzle ORM schema, all table types |
+
+**License:** AGPL-3.0 · Any derivative must publish source under same terms.`
       }
     ]
   }
