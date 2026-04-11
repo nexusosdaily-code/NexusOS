@@ -383,6 +383,135 @@ export default function CrowdfundPage() {
         </div>
       </section>
 
+      {/* ── HARDWARE BILL OF MATERIALS ── */}
+      <section className="px-6 py-20 border-y border-white/10">
+        <div className="max-w-5xl mx-auto">
+          <p className="text-center text-xs text-gray-500 uppercase tracking-widest mb-4">Complete hardware development kit</p>
+          <h2 className="text-3xl font-bold text-center mb-4">Everything we need to build it</h2>
+          <p className="text-center text-sm text-gray-500 mb-12 max-w-2xl mx-auto">
+            This is the full bill of materials for NexusOS hardware development — every prototype component,
+            lab instrument, and manufacturing tool your shares fund. Nothing hidden.
+          </p>
+
+          {/* L0 — Resonator */}
+          <div className="mb-8 rounded-xl border p-6" style={{ borderColor: "#7c3aed40", background: "#7c3aed08" }}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="px-2 py-0.5 rounded text-xs font-bold" style={{ background: "#7c3aed", color: "white" }}>L0</div>
+              <h3 className="font-bold text-lg" style={{ color: "#a78bfa" }}>Resonator Layer — Physical Field Generation</h3>
+              <Badge className="text-xs" style={{ background: "#7c3aed20", color: "#a78bfa", border: "1px solid #7c3aed40" }}>PROTOTYPE</Badge>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { name: "PHR-1 Bifilar-Toroid Resonator", spec: "144 turns · Golden Angle 137.5° · Impedance 377Ω · ALP < 0.0001", purpose: "Core field generator — the physical power source for the Λ substrate" },
+                { name: "CZC Catch Basin Unit", spec: "44 self-correction iterations · 99.56% coherence output", purpose: "Filters field noise — phase, amplitude, frequency, impedance correction" },
+                { name: "ZERO-G State Sequencer", spec: "4-stage: Golden → 377Ω → 90° quadrature → ALP nulling", purpose: "Achieves gravity de-correlation — massless carrier envelope" },
+                { name: "Precision Winding Jig (CNC)", spec: "Sub-millimetre bifilar spacing · 144-turn repeatability", purpose: "Manufacturing tool for coil winding at golden angle spec" },
+                { name: "High-Current Precision PSU", spec: "0–30V / 0–10A · <0.1% ripple · 4-quadrant capable", purpose: "Powers the resonator at precise current levels for impedance matching" },
+                { name: "Phase-Coherent Signal Generator", spec: "DC–2 GHz · <1 ps jitter · dual-output for bifilar drive", purpose: "Drives both windings of the bifilar coil in phase-quadrature" },
+              ].map(item => (
+                <div key={item.name} className="p-4 rounded-lg border border-white/10 bg-white/5">
+                  <div className="font-bold text-sm mb-1" style={{ color: "#a78bfa" }}>{item.name}</div>
+                  <div className="text-xs text-gray-500 mb-2 font-mono">{item.spec}</div>
+                  <div className="text-xs text-gray-400 leading-relaxed">{item.purpose}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* L1 — Photonic Logic */}
+          <div className="mb-8 rounded-xl border p-6" style={{ borderColor: "#0891b240", background: "#0891b208" }}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="px-2 py-0.5 rounded text-xs font-bold" style={{ background: "#0891b2", color: "white" }}>L1</div>
+              <h3 className="font-bold text-lg" style={{ color: "#22d3ee" }}>Photonic Logic Layer — Lambda Gate Substrate</h3>
+              <Badge className="text-xs" style={{ background: "#0891b220", color: "#22d3ee", border: "1px solid #0891b240" }}>DESIGNED</Badge>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { name: "Lambda Gate v4 ASIC (InP)", spec: "8 operators: AND/OR/NOT/NAND/NOR/XOR/PHASE/ROUTE · Indium Phosphide", purpose: "Replaces MOSFET logic — phase-controlled photon paths, no electron switching" },
+                { name: "OAM Modulator Array", spec: "50 orbital-angular-momentum modes · Spatial Light Modulator core", purpose: "Encodes logical states in photon angular momentum — orthogonal to polarisation" },
+                { name: "WDM Multiplexer (256 ch)", spec: "380–780 nm · 1.56 nm channel spacing · DWDM-class isolation", purpose: "Routes 256 independent wavelength channels on a single waveguide simultaneously" },
+                { name: "Silicon Photonic Waveguide Chip", spec: "Si/SiN current · InP next · pure photonic final · fab: IMEC/GlobalFoundries", purpose: "Carries photons between gates — no electron flow, no tunneling noise" },
+                { name: "Tunable Laser Source (555 THz)", spec: "534–560 nm range · <1 MHz linewidth · single-mode fibre output", purpose: "Reference oscillator at first oscillation frequency (555 THz / 534.51 nm)" },
+                { name: "Optical Spectrum Analyser", spec: "380–780 nm · 0.02 nm resolution · real-time WDM channel monitoring", purpose: "Verifies channel allocation and inter-channel isolation across the spectrum" },
+              ].map(item => (
+                <div key={item.name} className="p-4 rounded-lg border border-white/10 bg-white/5">
+                  <div className="font-bold text-sm mb-1" style={{ color: "#22d3ee" }}>{item.name}</div>
+                  <div className="text-xs text-gray-500 mb-2 font-mono">{item.spec}</div>
+                  <div className="text-xs text-gray-400 leading-relaxed">{item.purpose}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* L2 — Channel / Network */}
+          <div className="mb-8 rounded-xl border p-6" style={{ borderColor: "#05966940", background: "#05966908" }}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="px-2 py-0.5 rounded text-xs font-bold" style={{ background: "#059669", color: "white" }}>L2</div>
+              <h3 className="font-bold text-lg" style={{ color: "#34d399" }}>Channel & Network Layer — Spectral Relay Mesh</h3>
+              <Badge className="text-xs" style={{ background: "#05966920", color: "#34d399", border: "1px solid #05966940" }}>PHASE 2</Badge>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { name: "Spectral Relay Node (×10)", spec: "Free-space optical · CE→SE addressed · 380–780 nm TX/RX", purpose: "Physical P2P network nodes — emitting at their CE→SE wavelength, no DNS" },
+                { name: "OAM Channel Allocator Hardware", spec: "Ψ(wdm, oam, pol) · 25,600 orthogonal channels · deterministic allocation", purpose: "Maps software Ψ channels to physical photon modes in the field" },
+                { name: "Free-Space Optical Transceiver", spec: "Sub-mm beam steering · polarisation-maintaining · <1 ns latency", purpose: "Point-to-point optical link for node-to-node communication on the mesh" },
+                { name: "Schumann Resonance Detector", spec: "7.83 Hz ± 0.5 Hz · ELF antenna · K1 sync reference", purpose: "Locks planetary resonance sync for K1 orchestration timing reference" },
+                { name: "Vector Network Analyser (VNA)", spec: "1 Hz–6 GHz · S-parameter measurement · impedance spectroscopy", purpose: "Characterises impedance matching across the full resonator assembly" },
+                { name: "Lock-In Amplifier", spec: "1 μHz–105 kHz · ALP detection · phase noise floor measurement", purpose: "Detects sub-threshold ALP signals confirming ZERO-G state achievement" },
+              ].map(item => (
+                <div key={item.name} className="p-4 rounded-lg border border-white/10 bg-white/5">
+                  <div className="font-bold text-sm mb-1" style={{ color: "#34d399" }}>{item.name}</div>
+                  <div className="text-xs text-gray-500 mb-2 font-mono">{item.spec}</div>
+                  <div className="text-xs text-gray-400 leading-relaxed">{item.purpose}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Lab Instruments */}
+          <div className="mb-8 rounded-xl border p-6" style={{ borderColor: "#d9770640", background: "#d9770608" }}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="px-2 py-0.5 rounded text-xs font-bold" style={{ background: "#d97706", color: "white" }}>LAB</div>
+              <h3 className="font-bold text-lg" style={{ color: "#fbbf24" }}>Development Lab — Test & Measurement Equipment</h3>
+              <Badge className="text-xs" style={{ background: "#d9770620", color: "#fbbf24", border: "1px solid #d9770640" }}>REQUIRED</Badge>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { name: "High-Bandwidth Oscilloscope", spec: "≥1 GHz · 4-channel · 10 GSa/s · jitter analysis mode", purpose: "Real-time waveform analysis for field phase, bifilar timing, and gate switching" },
+                { name: "Optical Power Meter", spec: "380–780 nm · nW–mW range · calibrated NIST-traceable", purpose: "Measures photon flux at each waveguide output and gate junction" },
+                { name: "Precision Impedance Analyser", spec: "20 Hz–120 MHz · 0.05% accuracy · LCR + Z/θ measurements", purpose: "Confirms 377Ω free-space impedance match at the resonator terminals" },
+                { name: "Thermal Imaging Camera", spec: "<0.05°C sensitivity · 640×480 · real-time thermal map", purpose: "Detects anomalous heating — photonic gates should produce no waste heat" },
+                { name: "EMF Shielded Enclosure (Faraday)", spec: "80 dB isolation · 380 nm–6 GHz · modular test bay", purpose: "Isolates PHR-1 and Lambda Gate measurements from ambient EM interference" },
+                { name: "6.5-Digit Precision Multimeter", spec: "DC: 100 nV resolution · AC: 100 nHz · 4-wire Kelvin connection", purpose: "Baseline current/voltage logging for impedance drift and coil characterisation" },
+                { name: "Cryogenic Cooling Unit (optional)", spec: "4K capable · vibration-isolated · photonic noise floor reduction", purpose: "Reduces thermal photon noise for early Lambda Gate ASIC characterisation" },
+                { name: "3D Printer + Precision Lathe", spec: "FDM/resin + CNC lathe · sub-50μm tolerances", purpose: "Prototype enclosures, jigs, and coil formers for PHR-1 physical assembly" },
+              ].map(item => (
+                <div key={item.name} className="p-4 rounded-lg border border-white/10 bg-white/5">
+                  <div className="font-bold text-sm mb-1" style={{ color: "#fbbf24" }}>{item.name}</div>
+                  <div className="text-xs text-gray-500 mb-2 font-mono">{item.spec}</div>
+                  <div className="text-xs text-gray-400 leading-relaxed">{item.purpose}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Total summary */}
+          <div className="rounded-xl border p-6 text-center" style={{ borderColor: "#ec489940", background: "linear-gradient(135deg,#ec489910,#a855f710)" }}>
+            <div className="text-lg font-bold mb-2" style={{ color: "#ec4899" }}>Every Nexus Share directly funds this hardware</div>
+            <p className="text-sm text-gray-400 max-w-2xl mx-auto mb-4">
+              From the 144-turn bifilar coil to the optical spectrum analyser to the InP ASIC tape-out — 
+              every item on this list is needed to build the world's first spectral communication hardware.
+              Your shares give you a vote on what gets built first.
+            </p>
+            <Link href="/nexus-hardware-os">
+              <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10 text-xs">
+                Full Hardware OS Specification <ExternalLink className="ml-2 h-3 w-3" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ── TREASURY ── */}
       <section className="px-6 py-16 border-y border-white/10 bg-white/2">
         <div className="max-w-3xl mx-auto text-center">
