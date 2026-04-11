@@ -3631,6 +3631,7 @@ export async function registerRoutes(
   app.get("/api/orbital-treasury/cost-preview", authenticate, async (req: Request, res: Response) => {
     try {
       const { recordId, operation = "DELETE" } = req.query as any;
+      if (!recordId) return res.status(400).json({ error: "recordId query parameter is required" });
       const { db } = await import("./db");
       const { sql: ds } = await import("drizzle-orm");
       const [rec] = (await db.execute(ds`SELECT wavelength_nm, frequency_hz, psi_channel, band, label FROM spectral_records WHERE id = ${recordId}`)).rows;

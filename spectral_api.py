@@ -787,6 +787,28 @@ def bus_status():
 
 
 # ─────────────────────────────────────────────────────────────────
+# Hilbert-space channel coordinate helpers
+# ─────────────────────────────────────────────────────────────────
+
+def _coords_to_channel_index(wdm_i: int, oam_j: int, pol_k: int) -> int:
+    """Convert (wdm_i, oam_j, pol_k) Hilbert-space coordinates to a linear channel index."""
+    wdm_i = max(0, min(wdm_i, HILBERT_DIM_WDM - 1))
+    oam_j = max(0, min(oam_j, HILBERT_DIM_OAM - 1))
+    pol_k = max(0, min(pol_k, HILBERT_DIM_POL - 1))
+    return wdm_i * HILBERT_DIM_OAM * HILBERT_DIM_POL + oam_j * HILBERT_DIM_POL + pol_k
+
+
+def _channel_index_to_coords(idx: int):
+    """Convert a linear channel index back to (wdm_i, oam_j, pol_k) Hilbert-space coordinates."""
+    idx    = max(0, min(idx, HILBERT_DIM_TOTAL - 1))
+    pol_k  = idx % HILBERT_DIM_POL
+    tmp    = idx // HILBERT_DIM_POL
+    oam_j  = tmp % HILBERT_DIM_OAM
+    wdm_i  = tmp // HILBERT_DIM_OAM
+    return wdm_i, oam_j, pol_k
+
+
+# ─────────────────────────────────────────────────────────────────
 # SE Simulation Endpoints
 # Visualise channel occupation per frame, validate orthogonality,
 # and report dual-wavelength packing efficiency.
