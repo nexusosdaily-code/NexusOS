@@ -302,6 +302,14 @@ function QuickCompose() {
 // ── System grid ───────────────────────────────────────────────────
 const SYSTEMS = [
   {
+    title: "Fund NexusOS",
+    description: "Crowdfunding campaign for hardware development. AGPL-3.0, open source, publicly traded. PHR-1 hardware prototype, WavelengthScript SDK, Spectral Relay Mesh. Five funding tiers from 100 NXT to 1M NXT.",
+    href: "/crowdfund",
+    color: "#ec4899",
+    Icon: Heart,
+    action: "Fund the mission",
+  },
+  {
     title: "Nexus Message Encoder",
     description: "Turn any text into a wavelength of light. Encode, decode, and send messages that no server can intercept.",
     href: "/encoding-lab",
@@ -340,14 +348,6 @@ const SYSTEMS = [
     color: "#f59e0b",
     Icon: Shield,
     action: "View proof board",
-  },
-  {
-    title: "Fund NexusOS",
-    description: "Crowdfunding campaign for hardware development. AGPL-3.0, open source, publicly traded. PHR-1 hardware prototype, WavelengthScript SDK, Spectral Relay Mesh. Five funding tiers from 100 NXT to 1M NXT.",
-    href: "/crowdfund",
-    color: "#ec4899",
-    Icon: Heart,
-    action: "Fund the mission",
   },
   {
     title: "NexusOS Chronicle",
@@ -557,6 +557,25 @@ export default function NexusCommand() {
           </div>
         </div>
       </div>
+
+      {/* Crowdfund banner */}
+      <Link href="/crowdfund">
+        <div className="mb-6 rounded-xl border p-4 cursor-pointer hover:scale-[1.01] transition-all flex items-center justify-between gap-4"
+          style={{ borderColor: "#ec489960", background: "linear-gradient(135deg,#ec489912,#a855f712)" }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#ec489920" }}>
+              <Heart className="w-5 h-5" style={{ color: "#ec4899" }} />
+            </div>
+            <div>
+              <div className="font-bold text-sm" style={{ color: "#ec4899" }}>Fund NexusOS Hardware Development</div>
+              <div className="text-xs text-slate-400">Open source · AGPL-3.0 · Publicly traded · PHR-1 prototype · 5 tiers from 100 NXT</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-mono flex-shrink-0" style={{ color: "#ec4899" }}>
+            Fund the mission <ArrowRight className="w-3 h-3" />
+          </div>
+        </div>
+      </Link>
 
       {/* Live status row — 7 systems */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
