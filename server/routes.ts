@@ -2606,7 +2606,7 @@ export async function registerRoutes(
   });
 
   // Bus queue + route log status
-  app.get("/api/agent-bus/status", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/agent-bus/status", async (req: Request, res: Response) => {
     try {
       const r = await fetch(`${SPECTRAL_API_URL}/api/wnsp/bus/status`);
       const d = await r.json();
@@ -2760,7 +2760,7 @@ export async function registerRoutes(
   // Block identity = Ψ channel derived from physics, not SHA256
 
   // Full chain — ordered by block number
-  app.get("/api/blockchain/chain", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/blockchain/chain", async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { blockchainBlocks } = await import("@shared/schema");
@@ -3330,7 +3330,7 @@ export async function registerRoutes(
   });
 
   // ── Ecosystem Status — unified cross-system aggregation ──────────────────
-  app.get("/api/ecosystem/status", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/ecosystem/status", async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { sql: ds } = await import("drizzle-orm");
