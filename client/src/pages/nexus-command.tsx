@@ -350,6 +350,14 @@ const SYSTEMS = [
     action: "See the paradigm",
   },
   {
+    title: "Live System Animation",
+    description: "Watch NexusOS breathe. Real-time WASCII encoding pipeline, layer stack L0→L5 with energy flowing upward, orbital system topology, dual-frequency waveforms (7.83 Hz + 555 THz), and the full project timeline — all animated.",
+    href: "/visualizer",
+    color: "#06b6d4",
+    Icon: Activity,
+    action: "Launch animation",
+  },
+  {
     title: "Evidence Ledger",
     description: "On-chain proof of every achievement. Block #4: 'angry birds' 25MB at Ψ(211,35,H) 534.51nm. 479 spectral records. 478 confirmed transactions. 6 agents at Ψ addresses. Every claim verifiable.",
     href: "/evidence",
