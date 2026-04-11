@@ -149,6 +149,13 @@ function Router() {
       <Route path="/docs/:section" component={DocsPage} />
       <Route path="/research-presentation" component={ResearchPresentationPage} />
       <Route path="/research-presentation/developer-matrix" component={DeveloperMatrixPage} />
+      {/* Public showcase & proof pages */}
+      <Route path="/evidence" component={EvidencePage} />
+      <Route path="/blockchain" component={BlockchainPage} />
+      <Route path="/ecosystem" component={EcosystemPage} />
+      <Route path="/network" component={NetworkPage} />
+      <Route path="/wavelength-lang" component={WavelengthLangPage} />
+      <Route path="/nexus-command" component={NexusCommandPage} />
       <Route>
         <ProtectedRoutes />
       </Route>
