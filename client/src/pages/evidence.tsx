@@ -142,6 +142,20 @@ const PROOFS = [
     color: "#06b6d4",
     icon: Radio,
   },
+  {
+    id: "GITHUB-GENESIS",
+    layer: "GH",
+    title: "Genesis Block Repository — Public GitHub Proof",
+    date: "16 November 2025",
+    claim: "The NexusOS Genesis Block is permanently recorded on GitHub under an open MIT license. 377 commits. Genesis commit SHA 165d7f9 (16 Nov 2025). Scientific documentation commit a7ee0ad (22 Nov 2025). Independently retrievable by anyone via the GitHub API — no trust required.",
+    proof: "github.com/nexusosdaily-code/NexusOS-Genesis-Block · genesis SHA 165d7f9 · doc SHA a7ee0ad · 377 commits · MIT · Python 98.8%",
+    coordinate: "SHA:165d7f9 · 377 commits",
+    status: "PUBLIC",
+    color: "#22c55e",
+    icon: GitBranch,
+    github: "https://github.com/nexusosdaily-code/NexusOS-Genesis-Block",
+    highlight: false,
+  },
 ];
 
 export default function EvidencePage() {
@@ -253,6 +267,7 @@ export default function EvidencePage() {
                           className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${
                             p.status === "ON-CHAIN" ? "bg-emerald-400/10 text-emerald-400 border border-emerald-400/20" :
                             p.status === "LIVE" ? "bg-cyan-400/10 text-cyan-400 border border-cyan-400/20" :
+                            p.status === "PUBLIC" ? "bg-green-400/10 text-green-400 border border-green-400/20" :
                             "bg-purple-400/10 text-purple-400 border border-purple-400/20"
                           }`}
                         >
@@ -270,12 +285,99 @@ export default function EvidencePage() {
                         <span className="text-[9px]" style={{ color: p.color + "cc" }}>{p.coordinate}</span>
                       </div>
                       <span className="text-white/20 text-[9px]">{p.proof}</span>
+                      {(p as any).github && (
+                        <a href={(p as any).github} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-2 py-1 rounded border border-green-400/20 text-green-400/70 hover:text-green-400 text-[9px] transition-colors">
+                          <ExternalLink size={8} /> Verify on GitHub
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
             );
           })}
+        </div>
+
+        {/* GitHub Repository Proof — Independent Verification */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-4">
+            <GitBranch size={12} className="text-green-400" />
+            <span className="text-green-400 text-[10px] uppercase tracking-widest font-bold">GitHub Repository — Independent Verification</span>
+            <span className="text-white/20 text-[9px]">(publicly retrievable · no trust required)</span>
+          </div>
+
+          <div className="border border-green-400/20 rounded-2xl p-5 space-y-4" style={{ background: "rgba(34,197,94,0.03)" }}>
+
+            {/* Repo header */}
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <GitBranch size={12} className="text-green-400" />
+                  <span className="text-green-400 text-xs font-bold font-mono">nexusosdaily-code / NexusOS-Genesis-Block</span>
+                  <span className="px-1.5 py-0.5 rounded border border-green-400/20 text-green-400/70 text-[8px] font-bold">PUBLIC · MIT</span>
+                </div>
+                <p className="text-white/40 text-[11px]">"First physics-based blockchain – Genesis block documentation"</p>
+              </div>
+              <a href="https://github.com/nexusosdaily-code/NexusOS-Genesis-Block" target="_blank" rel="noopener noreferrer"
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-green-400/30 text-green-400 hover:bg-green-400/10 text-[10px] transition-all">
+                <ExternalLink size={10} /> Open on GitHub
+              </a>
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { label: "Total Commits", value: "377", sub: "commits on main branch", color: "#22c55e" },
+                { label: "Genesis Commit", value: "165d7f9", sub: "16 Nov 2025 · Initial commit", color: "#a855f7" },
+                { label: "Doc Commit", value: "a7ee0ad", sub: "22 Nov 2025 · Scientific documentation", color: "#3b82f6" },
+                { label: "Language", value: "Python 98.8%", sub: "+ Other 0.2%", color: "#f59e0b" },
+              ].map(s => (
+                <div key={s.label} className="border border-white/8 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.01)" }}>
+                  <div className="text-sm font-bold mb-0.5 font-mono" style={{ color: s.color }}>{s.value}</div>
+                  <div className="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-0.5">{s.label}</div>
+                  <div className="text-white/20 text-[8px]">{s.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Commit chain */}
+            <div className="space-y-2">
+              <div className="text-white/30 text-[9px] uppercase tracking-wider mb-2">Commit Chain (verifiable via GitHub API)</div>
+              {[
+                { sha: "165d7f9", full: "165d7f926e523f952d6aed3520685ffa9a46ac35", msg: "Initial commit", date: "16 Nov 2025 07:33 UTC", tag: "GENESIS" },
+                { sha: "a7ee0ad", full: "a7ee0ad7d803a45e515d6a96552d28ef9cff36f9", msg: "📚 Genesis Block Scientific Documentation — Complete document", date: "22 Nov 2025 10:16 UTC", tag: "DOCUMENTATION" },
+              ].map(c => (
+                <div key={c.sha} className="flex items-start gap-3 p-3 rounded-lg border border-white/6" style={{ background: "rgba(255,255,255,0.01)" }}>
+                  <div className="w-2 h-2 rounded-full bg-green-400 mt-1 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <code className="text-green-400 text-[10px] font-mono bg-green-400/10 px-1.5 py-0.5 rounded">{c.sha}</code>
+                      <span className="px-1.5 py-0.5 rounded text-[8px] font-bold border border-purple-400/20 text-purple-400">{c.tag}</span>
+                      <span className="text-white/25 text-[9px]">{c.date}</span>
+                    </div>
+                    <div className="text-white/50 text-[10px]">{c.msg}</div>
+                    <div className="text-white/15 text-[8px] font-mono mt-0.5 truncate">{c.full}</div>
+                  </div>
+                  <a href={`https://github.com/nexusosdaily-code/NexusOS-Genesis-Block/commit/${c.full}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex-shrink-0 text-white/20 hover:text-green-400 transition-colors">
+                    <ExternalLink size={10} />
+                  </a>
+                </div>
+              ))}
+            </div>
+
+            {/* API verification command */}
+            <div className="rounded-lg border border-white/8 p-3" style={{ background: "rgba(0,0,0,0.3)" }}>
+              <div className="text-white/30 text-[9px] uppercase tracking-wider mb-2">Verify independently — no login required</div>
+              <code className="text-green-300 text-[9px] font-mono break-all">
+                curl https://api.github.com/repos/nexusosdaily-code/NexusOS-Genesis-Block/commits/165d7f926e523f952d6aed3520685ffa9a46ac35
+              </code>
+              <div className="text-white/20 text-[8px] mt-1.5">Returns: sha, author date (2025-11-16T07:33:48Z), message "Initial commit" — immutable public record</div>
+            </div>
+
+          </div>
         </div>
 
         {/* Live Blockchain Blocks */}
