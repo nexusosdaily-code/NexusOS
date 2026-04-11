@@ -150,6 +150,70 @@ def se_encode():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/wnsp/wascii/table', methods=['GET'])
+def wascii_table():
+    """
+    Return the full WASCII lookup table (character → wavelength nm).
+    WNSP Spectral Encoding Standard v1.0, November 2025.
+    """
+    try:
+        from wnsp_protocol_v7 import WASCII_TABLE
+        entries = [
+            {
+                "char":         ch,
+                "wavelength_nm": nm,
+                "frequency_hz":  SPEED_OF_LIGHT / (nm * 1e-9),
+                "energy_joules": PLANCK_CONSTANT * (SPEED_OF_LIGHT / (nm * 1e-9)),
+            }
+            for ch, nm in sorted(WASCII_TABLE.items(), key=lambda x: x[1])
+        ]
+        return jsonify({
+            "standard":   "WASCII — Wavelength-Native Character Standard",
+            "protocol":   "WNSP-SE v1.0",
+            "date":       "November 2025",
+            "total":      len(entries),
+            "range_nm":   {"min": min(nm for _, nm in WASCII_TABLE.items()),
+                           "max": max(nm for _, nm in WASCII_TABLE.items())},
+            "table":      entries,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/wnsp/wascii/lookup', methods=['POST'])
+def wascii_lookup():
+    """
+    Look up a string — return per-character WASCII wavelength + WnspFrame fields.
+    """
+    data = request.get_json() or {}
+    text = data.get('text', '')
+    if not text:
+        return jsonify({"error": "Missing 'text' field"}), 400
+    try:
+        from wnsp_protocol_v7 import WASCII_TABLE, _wascii_wavelength
+        results = []
+        for ch in text:
+            nm, defined = _wascii_wavelength(ch)
+            freq = SPEED_OF_LIGHT / (nm * 1e-9)
+            results.append({
+                "char":           ch,
+                "wavelength_nm":  nm,
+                "frequency_hz":   freq,
+                "energy_joules":  PLANCK_CONSTANT * freq,
+                "lambda_mass_kg": (PLANCK_CONSTANT * freq) / (SPEED_OF_LIGHT ** 2),
+                "wascii_defined": defined,
+                "checksum":       (ord(ch) ^ int(round(nm))) % 256,
+            })
+        return jsonify({
+            "protocol": "WNSP-SE v1.0",
+            "input":    text,
+            "chars":    len(text),
+            "frames":   results,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/wnsp/se/wavelength', methods=['POST'])
 def se_wavelength():
     """WNSP-SE: convert a wavelength (nm) to full wave properties."""
@@ -862,14 +926,25 @@ def se_simulate():
         orthogonal     = len(channel_ids) == len(set(channel_ids))
         packing_ratio  = len(content) / len(frames) if frames else 0
 
+        spectral_frames = result.get('layers', {}).get('se', {}).get('spectral_frames', [])
+        psq_token       = result.get('layers', {}).get('se', {}).get('psq_token', '')
+        coherence       = result.get('layers', {}).get('se', {}).get('coherence_gamma', 0)
+        coherence_valid = result.get('layers', {}).get('se', {}).get('coherence_valid', False)
+
         return jsonify({
             "status":              "simulated",
             "protocol":            "WNSP-SE v" + WNSP_SE_VERSION,
+            "wascii_standard":     "WNSP-SE v1.0 / November 2025",
             "input":               content,
             "chars":               len(content),
             "frames":              len(frames),
             "packing_ratio":       packing_ratio,
             "packing_scheme":      "dual-wavelength (2 chars/frame)",
+            "spectral_frames":     spectral_frames,
+            "psq_token":           psq_token,
+            "coherence_gamma":     coherence,
+            "coherence_valid":     coherence_valid,
+            "coherence_threshold": 0.70,
             "orthogonality_valid": orthogonal,
             "orthogonality_proof": "⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j",
             "channel_occupation":  occupation,

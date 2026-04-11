@@ -1361,6 +1361,15 @@ export async function registerRoutes(
     secureProxyToSpectralAPI(req, res, "/api/wnsp/se/orthogonality");
   });
 
+  // ── WASCII Table & Lookup — public, no auth required ─────────
+  app.get("/api/wnsp/wascii/table", (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/wascii/table");
+  });
+
+  app.post("/api/wnsp/wascii/lookup", (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/wascii/lookup");
+  });
+
   // ── Kernel Component 1: Boot ──────────────────────────────────
   app.get("/api/kernel/boot", optionalAuth, (req, res) => {
     secureProxyToSpectralAPI(req, res, "/api/kernel/boot");

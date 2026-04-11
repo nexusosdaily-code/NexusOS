@@ -32,9 +32,11 @@ License: AGPL-3.0
 """
 
 from typing import Dict, List, Any, Optional, Tuple
+from dataclasses import dataclass, asdict
 from enum import Enum
 import time
 import hashlib
+import math
 
 # ─────────────────────────────────────────────
 # Physics Constants (SE Layer)
@@ -82,11 +84,158 @@ HILBERT_DIM_TOTAL = HILBERT_DIM_WDM * HILBERT_DIM_OAM * HILBERT_DIM_POL  # 25,60
 
 CHANNEL_BASIS_EQUATION = "Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩"
 
-# Legacy map kept for backward compatibility
+# ─────────────────────────────────────────────────────────────────────────────
+# WASCII Table  —  Wavelength-Native Character Standard (WNSP Spectral Encoding
+# Standard v1.0, November 2025)
+#
+# Every character has a canonical wavelength derived from its position in the
+# electromagnetic spectrum.  Bands:
+#   UV (350–394 nm)   — Mathematical operators
+#   Violet (380–416)  — A–G  (uppercase)
+#   Blue   (416–476)  — H–P
+#   Cyan   (476–500)  — Q–T
+#   Green  (500–530)  — U–Z  +  digits 0–9 (536–590)
+#   Yellow-Red (596–758) — Common symbols
+#   Near-IR (760–857) — Greek letters
+#   Far-IR  (860–902) — Physics symbols
+#   Extended-IR (905–1033) — Subscripts, superscripts, arrows, logic
+# ─────────────────────────────────────────────────────────────────────────────
+WASCII_TABLE: Dict[str, float] = {
+    # ── Uppercase Latin (380–530 nm, Δ=6 nm) ──────────────────────────────
+    'A': 380.0, 'B': 386.0, 'C': 392.0, 'D': 398.0, 'E': 404.0,
+    'F': 410.0, 'G': 416.0, 'H': 422.0, 'I': 428.0, 'J': 434.0,
+    'K': 440.0, 'L': 446.0, 'M': 452.0, 'N': 458.0, 'O': 464.0,
+    'P': 470.0, 'Q': 476.0, 'R': 482.0, 'S': 488.0, 'T': 494.0,
+    'U': 500.0, 'V': 506.0, 'W': 512.0, 'X': 518.0, 'Y': 524.0,
+    'Z': 530.0,
+    # ── Digits (536–590 nm, Δ=6 nm) ────────────────────────────────────────
+    '0': 536.0, '1': 542.0, '2': 548.0, '3': 554.0, '4': 560.0,
+    '5': 566.0, '6': 572.0, '7': 578.0, '8': 584.0, '9': 590.0,
+    # ── Common Symbols (596–758 nm, Δ=6 nm) ────────────────────────────────
+    ' ': 596.0, '.': 602.0, ',': 608.0, '!': 614.0, '?': 620.0,
+    '-': 626.0, '_': 632.0, '+': 638.0, '=': 644.0, '*': 650.0,
+    '/': 656.0, '\\':662.0, '|': 668.0, '@': 674.0, '#': 680.0,
+    '$': 686.0, '%': 692.0, '&': 698.0, '(': 704.0, ')': 710.0,
+    '[': 716.0, ']': 722.0, '{': 728.0, '}': 734.0, '<': 740.0,
+    '>': 746.0, ':': 752.0, ';': 758.0,
+    # ── Lowercase Latin (596–756 nm mapped by offset from uppercase) ────────
+    # a-z offset: uppercase_nm + (visible range / 2) mapped into the symbol band
+    # Each lowercase maps to its uppercase wavelength + 3 nm (sub-band offset)
+    'a': 383.0, 'b': 389.0, 'c': 395.0, 'd': 401.0, 'e': 407.0,
+    'f': 413.0, 'g': 419.0, 'h': 425.0, 'i': 431.0, 'j': 437.0,
+    'k': 443.0, 'l': 449.0, 'm': 455.0, 'n': 461.0, 'o': 467.0,
+    'p': 473.0, 'q': 479.0, 'r': 485.0, 's': 491.0, 't': 497.0,
+    'u': 503.0, 'v': 509.0, 'w': 515.0, 'x': 521.0, 'y': 527.0,
+    'z': 533.0,
+    # ── Greek Lowercase (760–826 nm, Δ=3 nm) ───────────────────────────────
+    'α': 760.0, 'β': 763.0, 'γ': 766.0, 'δ': 769.0, 'ε': 772.0,
+    'ζ': 775.0, 'η': 778.0, 'θ': 781.0, 'ι': 784.0, 'κ': 787.0,
+    'λ': 790.0, 'μ': 793.0, 'ν': 796.0, 'ξ': 799.0, 'π': 802.0,
+    'ρ': 805.0, 'σ': 808.0, 'τ': 811.0, 'υ': 814.0, 'φ': 817.0,
+    'χ': 820.0, 'ψ': 823.0, 'ω': 826.0,
+    # ── Greek Uppercase (830–857 nm, Δ=3 nm) ───────────────────────────────
+    'Γ': 830.0, 'Δ': 833.0, 'Θ': 836.0, 'Λ': 839.0, 'Ξ': 842.0,
+    'Π': 845.0, 'Σ': 848.0, 'Φ': 851.0, 'Ψ': 854.0, 'Ω': 857.0,
+    # ── Mathematical Operators (350–394 nm, Near-UV, Δ=3 nm) ────────────────
+    '∫': 350.0, '∂': 353.0, '∇': 356.0, '√': 359.0, '∞': 362.0,
+    '≈': 365.0, '≠': 368.0, '≤': 371.0, '≥': 374.0, '±': 377.0,
+    '∓': 379.0, '×': 382.0, '÷': 385.0, '∑': 388.0, '∏': 391.0,
+    '∆': 394.0,
+    # ── Physics Symbols (860–902 nm, Δ=3 nm) ────────────────────────────────
+    'ℏ': 860.0, 'Å': 863.0, '°': 866.0, '′': 869.0, '″': 872.0,
+    '∝': 875.0, '∈': 878.0, '∉': 881.0, '∅': 884.0, '∪': 887.0,
+    '∩': 890.0, '⊂': 893.0, '⊃': 896.0, '∀': 899.0, '∃': 902.0,
+    # ── Subscripts (905–932 nm, Δ=3 nm) ────────────────────────────────────
+    '₀': 905.0, '₁': 908.0, '₂': 911.0, '₃': 914.0, '₄': 917.0,
+    '₅': 920.0, '₆': 923.0, '₇': 926.0, '₈': 929.0, '₉': 932.0,
+    # ── Superscripts (938–965 nm, Δ=3 nm) ──────────────────────────────────
+    '⁰': 938.0, '¹': 941.0, '²': 944.0, '³': 947.0, '⁴': 950.0,
+    '⁵': 953.0, '⁶': 956.0, '⁷': 959.0, '⁸': 962.0, '⁹': 965.0,
+    # ── Arrows & Logic (970–1033 nm, Δ=3 nm) ────────────────────────────────
+    '→': 970.0,  '←': 973.0,  '↑': 976.0,  '↓': 979.0,  '↔': 982.0,
+    '⇒': 985.0,  '⇐': 988.0,  '⇔': 991.0,  '∧': 994.0,  '∨': 997.0,
+    '¬': 1000.0, '⊕': 1003.0, '⊗': 1006.0, '⊙': 1009.0, '⊥': 1012.0,
+    '∥': 1015.0, '∠': 1018.0, '⟨': 1030.0, '⟩': 1033.0,
+    # ── Quotation / Punctuation ─────────────────────────────────────────────
+    '\u201c': 762.0,  # " left double quote
+    '\u201d': 765.0,  # " right double quote
+    '\u2018': 768.0,  # ' left single quote
+    '\u2019': 771.0,  # ' right single quote
+    '`':      774.0,
+    '^':      777.0,
+    '~':      780.0,
+    '\n':     598.0,
+    '\t':     600.0,
+}
+
+# Legacy map kept for backward compatibility (ordinal → wavelength fallback)
 LAMBDA_CHAR_MAP = {
     chr(i): VISIBLE_MIN_NM + ((i % 256) / 255.0) * (VISIBLE_MAX_NM - VISIBLE_MIN_NM)
     for i in range(256)
 }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WnspFrame  —  Fundamental unit of spectral transmission (WNSP-SE v1.0)
+#
+# Defined in the WNSP Spectral Encoding Standard, Section 3.5.
+# One frame = one character = one photon at its canonical WASCII wavelength.
+# ─────────────────────────────────────────────────────────────────────────────
+@dataclass
+class WnspFrame:
+    sync:            int    # Synchronisation pattern (always 0xAA = 170)
+    symbol:          str    # The character this frame carries
+    wavelength_nm:   float  # WASCII canonical wavelength for this character
+    frequency_hz:    float  # f = c / λ
+    energy_joules:   float  # E = hf
+    lambda_mass_kg:  float  # Λ = hf / c²
+    intensity_level: int    # 0–7 (3-bit amplitude field)
+    checksum:        int    # XOR of ordinal + round(wavelength_nm) mod 256
+    payload_bit:     int    # DAG-linking bit (frame_index mod 2)
+    timestamp_ms:    float  # Transmission timestamp (ms since epoch)
+    wascii_defined:  bool   # True if wavelength came from WASCII table
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+def _wascii_wavelength(char: str) -> Tuple[float, bool]:
+    """
+    Return (wavelength_nm, wascii_defined) for a character.
+    WASCII table is authoritative; ordinal interpolation is the fallback.
+    """
+    if char in WASCII_TABLE:
+        return WASCII_TABLE[char], True
+    # Fallback: ordinal interpolation over [380, 780]
+    code = ord(char) if char else 32
+    nm = VISIBLE_MIN_NM + ((code % 256) / 255.0) * (VISIBLE_MAX_NM - VISIBLE_MIN_NM)
+    return nm, False
+
+
+def _generate_psq(seed: str, counter: int, ttl: int = 10) -> str:
+    """
+    Phase Sequence Token — WNSP-SE v1.0, Section 3.2.
+    PSQ-{hash24}-TTL{n}
+    """
+    content = f"{seed}:{counter}:{time.time()}:{ttl}"
+    token   = hashlib.sha256(content.encode()).hexdigest()[:24]
+    return f"PSQ-{token}-TTL{ttl}"
+
+
+def _coherence(frames: List[WnspFrame]) -> float:
+    """
+    Estimate transmission coherence γ from wavelength variance.
+    γ = 1 - (std_dev / mean) clamped to [0, 1].
+    Perfect coherence = same wavelength throughout (γ = 1).
+    """
+    if not frames:
+        return 0.0
+    wls  = [f.wavelength_nm for f in frames]
+    mean = sum(wls) / len(wls)
+    if mean == 0:
+        return 0.0
+    std  = math.sqrt(sum((w - mean) ** 2 for w in wls) / len(wls))
+    return max(0.0, min(1.0, 1.0 - std / mean))
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -146,33 +295,25 @@ class WNSPSpectralEncoder:
     """
     WNSP-SE v1.0 — Spectral Encoding Standard.
 
-    Receives WNSP-CE normalised tokens and maps them into physical wave
-    frames.  Every frame is a first-class electromagnetic entity:
+    Receives WNSP-CE tokens and maps each character to its canonical WASCII
+    wavelength, producing a sequence of WnspFrame objects:
 
-        wavelength  λ  (nm)
-        frequency   f  (Hz)   f = c / λ
-        energy      E  (J)    E = hf
-        lambda mass Λ  (kg)   Λ = hf / c²
-
-    Two CE tokens are packed per photon frame (dual-wavelength scheme),
-    achieving ≥ 2 characters per particle.
+        sync            0xAA   — synchronisation constant
+        symbol          char   — the character
+        wavelength_nm   λ (nm) — from WASCII table (authoritative)
+        frequency_hz    f (Hz) — f = c / λ
+        energy_joules   E (J)  — E = hf
+        lambda_mass_kg  Λ (kg) — Λ = hf / c²
+        intensity_level 0–7    — 3-bit amplitude
+        checksum        int    — XOR (ordinal XOR round(wavelength)) mod 256
+        payload_bit     0|1    — DAG-linking bit
+        timestamp_ms    float  — ms since epoch
 
     Channel Basis (Hilbert Space Model)
     ------------------------------------
-    Each transmission channel is an orthogonal basis vector:
-
         Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩
-
-    Sub-space dimensions:
-        |λ_i⟩    WDM wavelength channels     dim = 256
-        |OAM_j⟩  Orbital angular momentum    dim = 50
-        |Pol_k⟩  Polarisation (H / V)        dim = 2
-
-    Total Hilbert space dimension:
         dim(H) = 256 × 50 × 2 = 25,600
-
-    Orthogonality:  ⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j
-    All 25,600 channels are simultaneously usable without interference.
+        ⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j
     """
 
     PROTOCOL = "WNSP-SE"
@@ -180,16 +321,11 @@ class WNSPSpectralEncoder:
 
     def __init__(self, intensity: int = 32, cycles: int = 1,
                  scheme: LambdaEncodingScheme = LambdaEncodingScheme.DUAL_WAVELENGTH):
-        self.intensity = intensity
+        self.intensity = max(0, min(7, intensity // 4))  # map 0–31 → 0–7
         self.cycles    = cycles
         self.scheme    = scheme
 
-    # ── Core physics helpers ──────────────────────────────────────
-
-    @staticmethod
-    def normalised_to_wavelength(normalised: float) -> float:
-        """Map a [0,1] token to a wavelength in the visible spectrum."""
-        return VISIBLE_MIN_NM + normalised * (VISIBLE_MAX_NM - VISIBLE_MIN_NM)
+    # ── Physics helpers ───────────────────────────────────────────
 
     @staticmethod
     def wavelength_to_frequency(wavelength_nm: float) -> float:
@@ -206,65 +342,119 @@ class WNSPSpectralEncoder:
         """Λ = hf / c²"""
         return (PLANCK_CONSTANT * freq_hz) / (SPEED_OF_LIGHT ** 2)
 
-    # ── Frame construction ────────────────────────────────────────
+    @staticmethod
+    def _checksum(symbol: str, wavelength_nm: float) -> int:
+        """XOR of character ordinal and rounded wavelength, mod 256."""
+        code = ord(symbol) if symbol else 32
+        return (code ^ int(round(wavelength_nm))) % 256
+
+    # ── Single-character frame (canonical WNSP-SE frame) ─────────
+
+    def encode_char_frame(self, token: Dict, frame_idx: int = 0) -> WnspFrame:
+        """
+        Build a WnspFrame for a single CE token using the WASCII table.
+        This is the authoritative SE encoding for one character.
+        """
+        symbol          = token.get("symbol", " ")
+        wl_nm, defined  = _wascii_wavelength(symbol)
+        freq            = self.wavelength_to_frequency(wl_nm)
+        energy          = self.frequency_to_energy(freq)
+        mass            = self.frequency_to_lambda_mass(freq)
+        chk             = self._checksum(symbol, wl_nm)
+
+        return WnspFrame(
+            sync            = 0xAA,
+            symbol          = symbol,
+            wavelength_nm   = wl_nm,
+            frequency_hz    = freq,
+            energy_joules   = energy,
+            lambda_mass_kg  = mass,
+            intensity_level = self.intensity,
+            checksum        = chk,
+            payload_bit     = frame_idx % 2,
+            timestamp_ms    = time.time() * 1000,
+            wascii_defined  = defined,
+        )
+
+    # ── Dual-wavelength frame (two chars per photon — legacy / simulation) ──
 
     def encode_token_pair(self, token1: Dict, token2: Dict) -> Dict[str, Any]:
         """
-        Encode two CE tokens as a dual-wavelength photon frame (WNSP-SE).
+        Pack two CE tokens as a dual-wavelength frame.
+        Both wavelengths now come from the WASCII table.
         """
-        wl1 = self.normalised_to_wavelength(token1["normalised"])
-        wl2 = self.normalised_to_wavelength(token2["normalised"])
+        wl1, d1 = _wascii_wavelength(token1.get("symbol", " "))
+        wl2, d2 = _wascii_wavelength(token2.get("symbol", " "))
 
-        f1 = self.wavelength_to_frequency(wl1)
-        f2 = self.wavelength_to_frequency(wl2)
-
-        e1, e2   = self.frequency_to_energy(f1), self.frequency_to_energy(f2)
-        m1, m2   = self.frequency_to_lambda_mass(f1), self.frequency_to_lambda_mass(f2)
-
-        avg_energy = (e1 + e2) / 2
-        avg_mass   = (m1 + m2) / 2
+        f1, f2   = self.wavelength_to_frequency(wl1), self.wavelength_to_frequency(wl2)
+        e1, e2   = self.frequency_to_energy(f1),       self.frequency_to_energy(f2)
+        m1, m2   = self.frequency_to_lambda_mass(f1),  self.frequency_to_lambda_mass(f2)
 
         return {
             "protocol":            self.PROTOCOL,
             "version":             self.VERSION,
             "scheme":              self.scheme.value,
-            "ce_symbols":          [token1["symbol"], token2["symbol"]],
+            "ce_symbols":          [token1.get("symbol", " "), token2.get("symbol", " ")],
             "wavelength_start_nm": wl1,
             "wavelength_end_nm":   wl2,
             "frequency_start_hz":  f1,
             "frequency_end_hz":    f2,
-            "energy_joules":       avg_energy,
-            "lambda_mass_kg":      avg_mass,
+            "energy_joules":       (e1 + e2) / 2,
+            "lambda_mass_kg":      (m1 + m2) / 2,
             "intensity":           self.intensity,
             "cycles":              self.cycles,
+            "wascii_defined":      [d1, d2],
         }
+
+    # ── Full token stream → SE frame sequence ────────────────────
 
     def encode_token_stream(self, ce_output: Dict) -> Dict[str, Any]:
         """
         Accept a WNSP-CE token stream and return a WNSP-SE frame sequence.
-        This is the official handoff point between the two protocol layers.
+
+        Returns:
+          - spectral_frames  : one WnspFrame per character (canonical SE output)
+          - dual_wl_frames   : legacy dual-wavelength packing (two chars/frame)
+          - psq_token        : Phase Sequence Token for this transmission
+          - coherence        : γ coherence measure [0, 1]
         """
-        tokens = ce_output["tokens"]
-        if len(tokens) % 2 != 0:
-            pad_token = WNSPCharacterEncoder().encode_char(" ")
-            tokens = tokens + [pad_token]
+        tokens = ce_output.get("tokens", [])
+        seed   = ce_output.get("input_text", "")
 
-        frames = []
-        for i in range(0, len(tokens), 2):
-            frames.append(self.encode_token_pair(tokens[i], tokens[i + 1]))
+        # ── Per-character WnspFrames (authoritative) ──────────────────────
+        spectral_frames: List[WnspFrame] = [
+            self.encode_char_frame(tok, i) for i, tok in enumerate(tokens)
+        ]
 
-        total_mass   = sum(f["lambda_mass_kg"] for f in frames)
-        total_energy = sum(f["energy_joules"]   for f in frames)
+        # ── Dual-wavelength packing (backward compat / simulation) ────────
+        padded = tokens[:]
+        if len(padded) % 2 != 0:
+            padded.append(WNSPCharacterEncoder().encode_char(" "))
+        dual_frames = [
+            self.encode_token_pair(padded[i], padded[i + 1])
+            for i in range(0, len(padded), 2)
+        ]
+
+        total_energy = sum(f.energy_joules  for f in spectral_frames)
+        total_mass   = sum(f.lambda_mass_kg for f in spectral_frames)
+        gamma        = _coherence(spectral_frames)
+        psq          = _generate_psq(seed, len(tokens))
 
         return {
-            "protocol":      self.PROTOCOL,
-            "version":       self.VERSION,
-            "frame_count":   len(frames),
-            "frames":        frames,
-            "total_lambda_mass_kg":  total_mass,
-            "total_energy_joules":   total_energy,
-            "chars_per_frame":       len(ce_output["tokens"]) / len(frames) if frames else 0,
-            "physics_equation":      "Λ = hf/c²",
+            "protocol":             self.PROTOCOL,
+            "version":              self.VERSION,
+            "psq_token":            psq,
+            "coherence_gamma":      round(gamma, 6),
+            "coherence_valid":      gamma >= 0.70,
+            "coherence_threshold":  0.70,
+            "frame_count":          len(spectral_frames),
+            "spectral_frames":      [f.to_dict() for f in spectral_frames],
+            "frames":               dual_frames,          # legacy key
+            "total_energy_joules":  total_energy,
+            "total_lambda_mass_kg": total_mass,
+            "chars_per_dual_frame": len(tokens) / len(dual_frames) if dual_frames else 0,
+            "physics_equation":     "Λ = hf/c²",
+            "wascii_standard":      "WNSP-SE v1.0 / November 2025",
         }
 
 
@@ -312,14 +502,19 @@ class WNSPProtocolStack:
                     "tokens":      ce_output["tokens"],
                 },
                 "se": {
-                    "standard":    "WNSP-SE",
-                    "version":     WNSP_SE_VERSION,
-                    "description": "Spectral Encoding — physical wave layer (Λ = hf/c²)",
-                    "frame_count": se_output["frame_count"],
-                    "frames":      se_output["frames"],
-                    "total_lambda_mass_kg": se_output["total_lambda_mass_kg"],
-                    "total_energy_joules":  se_output["total_energy_joules"],
-                    "chars_per_frame":      se_output["chars_per_frame"],
+                    "standard":         "WNSP-SE",
+                    "version":          WNSP_SE_VERSION,
+                    "description":      "Spectral Encoding — physical wave layer (Λ = hf/c²)",
+                    "wascii_standard":  "WNSP-SE v1.0 / November 2025",
+                    "frame_count":      se_output["frame_count"],
+                    "frames":           se_output["frames"],
+                    "spectral_frames":  se_output["spectral_frames"],
+                    "psq_token":        se_output["psq_token"],
+                    "coherence_gamma":  se_output["coherence_gamma"],
+                    "coherence_valid":  se_output["coherence_valid"],
+                    "total_lambda_mass_kg":  se_output["total_lambda_mass_kg"],
+                    "total_energy_joules":   se_output["total_energy_joules"],
+                    "chars_per_frame":       se_output.get("chars_per_dual_frame", 0),
                 },
             },
 
@@ -328,7 +523,9 @@ class WNSPProtocolStack:
                 "ce_tokens":     ce_output["token_count"],
                 "se_frames":     se_output["frame_count"],
                 "total_mass_kg": se_output["total_lambda_mass_kg"],
-                "efficiency":    f"{se_output['chars_per_frame']:.1f} chars/frame",
+                "efficiency":    f"{se_output.get('chars_per_dual_frame', 0):.1f} chars/dual-frame",
+                "coherence":     se_output["coherence_gamma"],
+                "psq_token":     se_output["psq_token"],
             },
 
             "validation": {
