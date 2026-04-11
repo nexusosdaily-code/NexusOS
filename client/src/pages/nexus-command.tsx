@@ -318,6 +318,14 @@ const SYSTEMS = [
     action: "View campaign",
   },
   {
+    title: "SNIC — Hardware Goal #1",
+    description: "Spectral Network Interface Card. 185,000× silicon speed. Micro-ring resonator at 555 THz. Hardware WASCII-to-Wavelength gates bypass the CPU. 10 TB backup in 144 ms — while NVMe is still waking up.",
+    href: "/snic",
+    color: "#16a34a",
+    Icon: Cpu,
+    action: "See the hardware",
+  },
+  {
     title: "Nexus Message Encoder",
     description: "Turn any text into a wavelength of light. Encode, decode, and send messages that no server can intercept.",
     href: "/encoding-lab",
