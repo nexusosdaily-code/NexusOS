@@ -310,6 +310,14 @@ const SYSTEMS = [
     action: "Fund the mission",
   },
   {
+    title: "Indiegogo Campaign",
+    description: "Back the PHR-1 hardware prototype on Indiegogo with USD. Five perk tiers from $5 (digital Founder) to $5,000 (Strategic Board Seat). Flexible funding — all contributions count. Nexus Shares issued on-chain to every backer.",
+    href: "/indiegogo",
+    color: "#eb1478",
+    Icon: Globe,
+    action: "View campaign",
+  },
+  {
     title: "Nexus Message Encoder",
     description: "Turn any text into a wavelength of light. Encode, decode, and send messages that no server can intercept.",
     href: "/encoding-lab",

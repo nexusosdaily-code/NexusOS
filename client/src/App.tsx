@@ -57,6 +57,7 @@ import EvidencePage from "@/pages/evidence";
 import CrowdfundPage from "@/pages/crowdfund";
 import SpectralVideoPage from "@/pages/spectral-video";
 import VisualizerPage from "@/pages/visualizer";
+import IndiegogoPage from "@/pages/indiegogo";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -141,6 +142,7 @@ function Router() {
       <Route path="/fund" component={CrowdfundPage} />
       <Route path="/spectral-video" component={SpectralVideoPage} />
       <Route path="/visualizer" component={VisualizerPage} />
+      <Route path="/indiegogo" component={IndiegogoPage} />
       <Route path="/developer-matrix" component={DeveloperMatrixPage} />
       <Route path="/developer-matrix/docs" component={DocsPage} />
       <Route path="/docs" component={DocsPage} />
