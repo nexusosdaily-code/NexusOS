@@ -54,6 +54,7 @@ import CommunicationPage from "@/pages/communication";
 import NetworkPage from "@/pages/network";
 import WavelengthLangPage from "@/pages/wavelength-lang";
 import EvidencePage from "@/pages/evidence";
+import CrowdfundPage from "@/pages/crowdfund";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -133,7 +134,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
-      {/* Public developer routes - no login required */}
+      {/* Public routes - no login required */}
+      <Route path="/crowdfund" component={CrowdfundPage} />
+      <Route path="/fund" component={CrowdfundPage} />
       <Route path="/developer-matrix" component={DeveloperMatrixPage} />
       <Route path="/developer-matrix/docs" component={DocsPage} />
       <Route path="/docs" component={DocsPage} />

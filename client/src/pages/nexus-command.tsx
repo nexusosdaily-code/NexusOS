@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Zap, Radio, Layers, Database, Wifi, Lock, Globe,
   Send, Play, RefreshCw, ArrowRight, Activity,
-  Code2, Cpu, Signal, FileText, BookOpen, Shield
+  Code2, Cpu, Signal, FileText, BookOpen, Shield, Heart
 } from "lucide-react";
 
 // ── Spectrum colour ───────────────────────────────────────────────
@@ -340,6 +340,14 @@ const SYSTEMS = [
     color: "#f59e0b",
     Icon: Shield,
     action: "View proof board",
+  },
+  {
+    title: "Fund NexusOS",
+    description: "Crowdfunding campaign for hardware development. AGPL-3.0, open source, publicly traded. PHR-1 hardware prototype, WavelengthScript SDK, Spectral Relay Mesh. Five funding tiers from 100 NXT to 1M NXT.",
+    href: "/crowdfund",
+    color: "#ec4899",
+    Icon: Heart,
+    action: "Fund the mission",
   },
   {
     title: "NexusOS Chronicle",
