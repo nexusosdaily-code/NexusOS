@@ -161,11 +161,10 @@ const PROOFS = [
 export default function EvidencePage() {
   const { data: ecoData } = useQuery<any>({ queryKey: ["/api/ecosystem/status"], refetchInterval: 30_000 });
   const { data: chainData } = useQuery<any>({ queryKey: ["/api/blockchain/chain"] });
-  const { data: agentData } = useQuery<any>({ queryKey: ["/api/agent-bus/status"] });
 
   const blocks: any[] = chainData?.blocks ?? [];
-  const agents: any[] = agentData?.agents ?? [];
   const eco = ecoData?.systems ?? {};
+  const agents: any[] = Array.isArray(eco.agentBus?.agents) ? eco.agentBus.agents : [];
 
   const stats = [
     { label: "Blockchain Blocks", value: eco.blockchain?.height ?? blocks.length ?? "5", sub: "photonic ledger height", color: "#3b82f6" },
