@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Zap, Radio, Layers, Database, Wifi, Lock, Globe,
   Send, Play, RefreshCw, ArrowRight, Activity,
-  Code2, Cpu, Signal, FileText, BookOpen
+  Code2, Cpu, Signal, FileText, BookOpen, Shield
 } from "lucide-react";
 
 // ── Spectrum colour ───────────────────────────────────────────────
@@ -332,6 +332,14 @@ const SYSTEMS = [
     color: "#ca8a04",
     Icon: Radio,
     action: "Route a message",
+  },
+  {
+    title: "Evidence Ledger",
+    description: "On-chain proof of every achievement. Block #4: 'angry birds' 25MB at Ψ(211,35,H) 534.51nm. 479 spectral records. 478 confirmed transactions. 6 agents at Ψ addresses. Every claim verifiable.",
+    href: "/evidence",
+    color: "#f59e0b",
+    Icon: Shield,
+    action: "View proof board",
   },
   {
     title: "NexusOS Chronicle",
