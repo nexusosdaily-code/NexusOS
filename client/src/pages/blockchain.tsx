@@ -554,6 +554,12 @@ export default function BlockchainPage() {
   const genesis = blocks.at(0);
   const busQueued = busStatus?.queued ?? 0;
 
+  // Computed live from chain
+  const totalVerifiedRecords = blocks.reduce((sum: number, b: any) => sum + (parseInt(b.txCount) || 0), 0);
+  const breakthroughBlock = blocks.find((b: any) =>
+    typeof b.content === "string" && b.content.includes("BREAKTHROUGH_PROOF")
+  );
+
   const handleMinePreset = (content: string) => {
     setMinePreset(content);
     setActiveTab("mine");
@@ -600,18 +606,44 @@ export default function BlockchainPage() {
 
         {/* Stats row */}
         {genesis && (
-          <div className="flex flex-wrap gap-3 mt-3">
+          <div className="flex flex-wrap gap-4 mt-3">
             {[
-              { label: "Genesis Ψ",    value: genesis.psiChannel,                        color: bandColor("AUTH") },
-              { label: "Genesis λ",    value: `${parseFloat(genesis.wavelengthNm).toFixed(1)} nm`, color: bandColor("AUTH") },
-              { label: "Chain height", value: String(height),                             color: "#e2e8f0" },
-              { label: "AGPL-3.0",     value: "open source",                              color: "#16a34a" },
+              { label: "Genesis Ψ",         value: genesis.psiChannel,                                    color: bandColor("AUTH") },
+              { label: "Genesis λ",         value: `${parseFloat(genesis.wavelengthNm).toFixed(1)} nm`,   color: bandColor("AUTH") },
+              { label: "Chain height",      value: String(height),                                         color: "#e2e8f0" },
+              { label: "Records verified",  value: totalVerifiedRecords > 0 ? String(totalVerifiedRecords) : "0", color: "#16a34a" },
+              { label: "Latest Ψ",          value: latest?.psiChannel ?? "—",                             color: latest ? bandColor(latest.band) : "#64748b" },
+              { label: "AGPL-3.0",          value: "open source",                                          color: "#16a34a" },
             ].map((s, i) => (
               <div key={i} className="flex items-center gap-1.5 text-xs font-mono">
                 <span className="text-slate-600">{s.label}:</span>
                 <span style={{ color: s.color }}>{s.value}</span>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Breakthrough block callout */}
+        {breakthroughBlock && (
+          <div className="mt-4 rounded-xl border px-4 py-3 flex flex-wrap items-center gap-4"
+            style={{ borderColor: "#ca8a0460", background: "rgba(202,138,4,0.06)" }}>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Breakthrough Proof</span>
+            </div>
+            <div className="text-xs font-mono text-slate-300 flex-1 min-w-0">
+              <span className="text-amber-400">Block #{breakthroughBlock.blockNumber}</span>
+              {" · "}
+              <span style={{ color: bandColor(breakthroughBlock.band) }}>{breakthroughBlock.psiChannel}</span>
+              {" · "}
+              <span className="text-slate-400">{parseFloat(breakthroughBlock.wavelengthNm).toFixed(2)} nm</span>
+              {" · "}
+              <span className="text-slate-300">First video in spectrum — "angry birds" 25MB encoded at Λ=hf/c²</span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0 text-xs font-mono text-slate-500">
+              <Hash className="w-3 h-3" />
+              <span>{breakthroughBlock.txCount} tx confirmed</span>
+            </div>
           </div>
         )}
       </div>
