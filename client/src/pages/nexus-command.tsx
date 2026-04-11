@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Zap, Radio, Layers, Database, Wifi, Lock, Globe,
   Send, Play, RefreshCw, ArrowRight, Activity,
-  Code2, Cpu, Signal, FileText, BookOpen, Shield, Heart
+  Code2, Cpu, Signal, FileText, BookOpen, Shield, Heart, Video
 } from "lucide-react";
 
 // ── Spectrum colour ───────────────────────────────────────────────
@@ -340,6 +340,14 @@ const SYSTEMS = [
     color: "#ca8a04",
     Icon: Radio,
     action: "Route a message",
+  },
+  {
+    title: "Spectral Video",
+    description: "Video bytes as WnspFrames. Each byte gets a canonical WASCII wavelength and a unique Ψ channel. Adaptive bitrate = orthogonal channels. Multicast = receivers tune, not CDN serve. The WNSP philosophy applied to live streaming.",
+    href: "/spectral-video",
+    color: "#a855f7",
+    Icon: Video,
+    action: "See the paradigm",
   },
   {
     title: "Evidence Ledger",

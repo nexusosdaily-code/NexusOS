@@ -55,6 +55,7 @@ import NetworkPage from "@/pages/network";
 import WavelengthLangPage from "@/pages/wavelength-lang";
 import EvidencePage from "@/pages/evidence";
 import CrowdfundPage from "@/pages/crowdfund";
+import SpectralVideoPage from "@/pages/spectral-video";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -137,6 +138,7 @@ function Router() {
       {/* Public routes - no login required */}
       <Route path="/crowdfund" component={CrowdfundPage} />
       <Route path="/fund" component={CrowdfundPage} />
+      <Route path="/spectral-video" component={SpectralVideoPage} />
       <Route path="/developer-matrix" component={DeveloperMatrixPage} />
       <Route path="/developer-matrix/docs" component={DocsPage} />
       <Route path="/docs" component={DocsPage} />
