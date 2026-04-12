@@ -217,6 +217,13 @@ export default function NetworkPage() {
                         </div>
                       ))}
                     </div>
+                    {/* Spectral URI preview */}
+                    <div className="border border-white/8 rounded-lg px-2.5 py-2 space-y-0.5" style={{ background: "rgba(0,0,0,0.3)" }}>
+                      <div className="text-white/20 text-[8px] uppercase tracking-wider">Spectral URI</div>
+                      <div className="font-mono text-[9px] font-bold truncate" style={{ color: nmToColor(preview.nm) }}>
+                        wnsp://{preview.psi}/{form.name.toLowerCase().replace(/[^a-z0-9]/g, "-") || "node"}
+                      </div>
+                    </div>
                     <div className="text-white/20 text-[9px] leading-relaxed">
                       This node will be visible to other nodes listening in the {preview.band.toLowerCase()} band of the spectrum.
                     </div>

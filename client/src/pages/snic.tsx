@@ -474,20 +474,35 @@ export default function SnicPage() {
 
           {/* Data path diagram */}
           <div className="border border-white/8 rounded-2xl p-5" style={{ background: "rgba(255,255,255,0.01)" }}>
-            <div className="text-white/30 text-[9px] uppercase tracking-wider mb-4">Data path — character to photon</div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-white/30 text-[9px] uppercase tracking-wider">Data path — character to photon</div>
+              <Link href="/spectral-uri">
+                <button className="flex items-center gap-1 text-[8px] text-cyan-400/60 hover:text-cyan-400 transition-colors border border-cyan-400/20 rounded px-2 py-0.5">
+                  <Radio size={7} /> Encode your own Ψ address →
+                </button>
+              </Link>
+            </div>
             <div className="flex items-center gap-1 flex-wrap justify-center">
               {[
-                { label: "Input byte", color: "#6b7280" },
-                { label: "WASCII gate", color: "#a855f7" },
-                { label: "Ring resonance", color: ANCHOR_COLOR },
-                { label: "Photon @ λ nm", color: ANCHOR_COLOR },
-                { label: "Ψ(wdm,oam,pol)", color: "#3b82f6" },
-                { label: "Destination", color: "#06b6d4" },
+                { label: "Input byte",     color: "#6b7280", href: null },
+                { label: "WASCII gate",    color: "#a855f7", href: null },
+                { label: "Ring resonance", color: ANCHOR_COLOR, href: null },
+                { label: "Photon @ λ nm",  color: ANCHOR_COLOR, href: null },
+                { label: "Ψ(wdm,oam,pol)", color: "#3b82f6", href: "/spectral-uri" },
+                { label: "Destination",    color: "#06b6d4", href: null },
               ].map((s, i, arr) => (
                 <div key={s.label} className="flex items-center gap-1">
-                  <div className="px-2.5 py-1.5 rounded-lg border text-[9px] font-bold" style={{ borderColor: s.color + "40", color: s.color, background: s.color + "12" }}>
-                    {s.label}
-                  </div>
+                  {s.href ? (
+                    <Link href={s.href}>
+                      <div className="px-2.5 py-1.5 rounded-lg border text-[9px] font-bold cursor-pointer hover:opacity-80 transition-opacity" style={{ borderColor: s.color + "60", color: s.color, background: s.color + "18" }}>
+                        {s.label} ↗
+                      </div>
+                    </Link>
+                  ) : (
+                    <div className="px-2.5 py-1.5 rounded-lg border text-[9px] font-bold" style={{ borderColor: s.color + "40", color: s.color, background: s.color + "12" }}>
+                      {s.label}
+                    </div>
+                  )}
                   {i < arr.length - 1 && <ChevronRight size={10} className="text-white/20" />}
                 </div>
               ))}

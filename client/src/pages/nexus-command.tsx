@@ -79,11 +79,12 @@ function LiveFeed() {
   }, [busQ.data?.queued]);
 
   useEffect(() => {
-    if (chainQ.data?.chain?.length) {
-      const latest = chainQ.data.chain[chainQ.data.chain.length - 1];
-      addEvent(`Block #${latest.blockNumber} — ${latest.psiChannel ?? ""}`, "#8b00ff");
+    const blocks = (chainQ.data as any)?.blocks;
+    if (blocks?.length) {
+      const latest = blocks[blocks.length - 1];
+      addEvent(`Block #${latest.blockNumber} @ ${latest.psiChannel ?? ""} · ${parseFloat(latest.wavelengthNm ?? 550).toFixed(1)} nm`, "#8b00ff");
     }
-  }, [chainQ.data?.chain?.length]);
+  }, [(chainQ.data as any)?.blocks?.length]);
 
   useEffect(() => {
     const nodes = nodeQ.data?.nodes;
@@ -551,8 +552,8 @@ export default function NexusCommand() {
   const ecoQ        = useQuery({ queryKey: ["/api/ecosystem/status"], refetchInterval: 10_000 });
   const netQ        = useQuery({ queryKey: ["/api/network/nodes"], refetchInterval: 8000 });
 
-  const chainLen    = (blockchainQ.data as any)?.chain?.length ?? "—";
-  const busQueued   = (busQ.data as any)?.queued ?? "—";
+  const chainLen    = (blockchainQ.data as any)?.blocks?.length ?? (blockchainQ.data as any)?.height ?? "—";
+  const busQueued   = (busQ.data as any)?.total_sent ?? (busQ.data as any)?.queued ?? "—";
   const dbCount     = (dbQ.data as any)?.total ?? "—";
   const eco         = (ecoQ.data as any)?.summary ?? {};
   const proofPct    = eco.proofCoverage != null ? `${eco.proofCoverage}%` : "—";

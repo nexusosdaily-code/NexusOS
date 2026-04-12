@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ArrowLeft, Radio, Zap, Globe, ExternalLink, Copy, Check, ChevronRight, Database, Shield, Cpu, Code2 } from "lucide-react";
 
@@ -45,15 +46,15 @@ function CopyBtn({ text }: { text: string }) {
   );
 }
 
-// ── Well-known canonical URIs (pre-computed) ──────────────────────────────────
-const KNOWN: { name: string; resource: string; href: string }[] = [
-  { name: "NEXUS",         resource: "",              href: "/" },
-  { name: "EVIDENCE",      resource: "evidence",      href: "/evidence" },
-  { name: "BLOCKCHAIN",    resource: "blockchain",    href: "/blockchain" },
-  { name: "SNIC",          resource: "snic",          href: "/snic" },
-  { name: "WAVELENGTH",    resource: "wavelength-lang", href: "/wavelength-lang" },
-  { name: "NETWORK",       resource: "network",       href: "/network" },
-  { name: "ECOSYSTEM",     resource: "ecosystem",     href: "/ecosystem" },
+// ── Well-known canonical URIs — static definition + live status key ───────────
+const KNOWN: { name: string; resource: string; href: string; ecoKey?: string }[] = [
+  { name: "NEXUS",      resource: "",               href: "/",               ecoKey: "kernel" },
+  { name: "EVIDENCE",   resource: "evidence",       href: "/evidence",       ecoKey: "blockchain" },
+  { name: "BLOCKCHAIN", resource: "blockchain",     href: "/blockchain",     ecoKey: "blockchain" },
+  { name: "SNIC",       resource: "snic",           href: "/snic",           ecoKey: undefined },
+  { name: "WAVELENGTH", resource: "wavelength-lang",href: "/wavelength-lang",ecoKey: undefined },
+  { name: "NETWORK",    resource: "network",        href: "/network",        ecoKey: "networkNodes" },
+  { name: "ECOSYSTEM",  resource: "ecosystem",      href: "/ecosystem",      ecoKey: "agentBus" },
 ];
 
 // ── Animated step-through of one encoding ────────────────────────────────────
@@ -106,10 +107,17 @@ export default function SpectralUriPage() {
   const [debounced, setDebounced] = useState(input);
   useEffect(() => { const t = setTimeout(() => setDebounced(input), 300); return () => clearTimeout(t); }, [input]);
 
+  const { data: ecoData } = useQuery<any>({ queryKey: ["/api/ecosystem/status"], refetchInterval: 15_000 });
+  const systems = ecoData?.systems ?? {};
+
   const enc = ceEncode(debounced);
   const col = nmToColor(enc.nm);
 
-  const knownEncoded = KNOWN.map(k => ({ ...k, enc: ceEncode(k.name) }));
+  const knownEncoded = KNOWN.map(k => {
+    const sysData = k.ecoKey ? systems[k.ecoKey] : null;
+    const status  = sysData?.status ?? (k.ecoKey ? "LOADING" : "SPEC");
+    return { ...k, enc: ceEncode(k.name), liveStatus: status };
+  });
 
   return (
     <div className="min-h-screen bg-black text-white" style={{ fontFamily: "monospace" }}>
@@ -305,30 +313,46 @@ export default function SpectralUriPage() {
           <div className="space-y-2">
             {knownEncoded.map(k => {
               const c = nmToColor(k.enc.nm);
+              const statusColor =
+                k.liveStatus === "ONLINE"  || k.liveStatus === "RUNNING" || k.liveStatus === "VERIFIED" ? "#22c55e" :
+                k.liveStatus === "LOADING" ? "#ca8a04" :
+                k.liveStatus === "SPEC"    ? "#a855f7" :
+                k.liveStatus === "EMPTY"   ? "#6b7280" : "#ef4444";
+              const statusLabel =
+                k.liveStatus === "ONLINE"  || k.liveStatus === "RUNNING" || k.liveStatus === "VERIFIED" ? "LIVE" :
+                k.liveStatus === "LOADING" ? "…" :
+                k.liveStatus === "SPEC"    ? "SPEC" :
+                k.liveStatus === "EMPTY"   ? "EMPTY" : k.liveStatus;
               return (
-                <div key={k.name} className="border border-white/6 rounded-xl px-4 py-3 flex items-center gap-4 hover:border-white/12 transition-colors"
+                <div key={k.name} className="border border-white/6 rounded-xl px-4 py-3 flex items-center gap-4 hover:border-white/12 transition-colors group"
                   style={{ background: "rgba(255,255,255,0.01)" }} data-testid={`uri-row-${k.name.toLowerCase()}`}>
                   {/* Spectrum dot */}
                   <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: c, boxShadow: `0 0 5px ${c}60` }} />
 
                   {/* Old URL */}
-                  <div className="w-44 flex-shrink-0">
-                    <div className="text-white/25 text-[8px] mb-0.5">legacy</div>
-                    <div className="text-red-400/50 text-[9px] font-mono truncate">https://nexusos.com/{k.resource}</div>
+                  <div className="w-40 flex-shrink-0">
+                    <div className="text-white/20 text-[8px] mb-0.5">legacy</div>
+                    <div className="text-red-400/40 text-[9px] font-mono truncate">https://…/{k.resource || ""}</div>
                   </div>
 
                   <ChevronRight size={10} className="text-white/15 flex-shrink-0" />
 
                   {/* Spectral URI */}
                   <div className="flex-1 min-w-0">
-                    <div className="text-white/25 text-[8px] mb-0.5">spectral</div>
+                    <div className="text-white/20 text-[8px] mb-0.5">spectral address</div>
                     <div className="font-mono font-bold text-[10px]" style={{ color: c }}>{k.enc.wnspUri}</div>
                   </div>
 
-                  {/* Ψ details */}
-                  <div className="hidden md:flex items-center gap-3 flex-shrink-0 text-[8px]">
-                    <span className="text-white/25">{k.enc.nm} nm</span>
-                    <span className="text-white/25">{k.enc.band}</span>
+                  {/* Live status badge */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: statusColor, boxShadow: statusLabel === "LIVE" ? `0 0 4px ${statusColor}` : "none" }} />
+                    <span className="text-[8px] font-bold" style={{ color: statusColor }}>{statusLabel}</span>
+                  </div>
+
+                  {/* Ψ + nm */}
+                  <div className="hidden md:flex items-center gap-2 flex-shrink-0 text-[8px] text-white/20">
+                    <span>{k.enc.nm} nm</span>
+                    <span>{k.enc.band}</span>
                   </div>
 
                   <CopyBtn text={k.enc.wnspUri} />

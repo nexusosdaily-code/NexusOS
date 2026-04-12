@@ -172,7 +172,7 @@ export default function EvidencePage() {
     { label: "Spectral Records", value: eco.spectralDb?.total ?? "479", sub: "stored at Ψ addresses", color: "#a855f7" },
     { label: "Kernel Agents", value: agents.length || "6", sub: "at electromagnetic coordinates", color: "#06b6d4" },
     { label: "Wavelength Range", value: "415–611nm", sub: "visible spectrum coverage", color: "#f59e0b" },
-    { label: "Agent Bus Messages", value: "62", sub: "spectral channel dispatches", color: "#ec4899" },
+    { label: "Agent Bus Messages", value: eco.agentBus?.msgCount ?? "—", sub: "spectral channel dispatches", color: "#ec4899" },
   ];
 
   return (
