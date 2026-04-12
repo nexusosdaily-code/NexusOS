@@ -66,3 +66,20 @@ A P2P media sharing engine with physics-based cost calculations, mesh networking
 - **Forms & Validation**: React Hook Form, Zod.
 - **Data Fetching**: TanStack React Query.
 - **Database**: Drizzle ORM, `drizzle-kit`, `drizzle-zod`.
+
+## WNSP Bridge Layer (`/wnsp-bridge`)
+- **Purpose**: TCP/IP overlay for `wnsp://` URIs — Phase 1 of spectral addressing on current infrastructure.
+- **Database table**: `wnsp_registry` — maps `Ψ(wdm,oam,pol)` channels to HTTP resources.
+- **CE→SE (WASCII v1.0)**: Every label derives a deterministic `wnsp://Ψ(wdm,oam,pol)/slug` address from its ASCII ordinals. `λ = 380 + ((avg−32)/94)×400`, `wdm = ⌊(λ−380)/4⌋+1`, `oam = Σ%100`, `pol = len%2?V:H`.
+- **Public API endpoints**:
+  - `GET /api/wnsp/registry` — list all public registered addresses
+  - `GET /api/wnsp/resolve?psi=Ψ(...)` — resolve a Ψ channel to registered resource + spectral DB records
+  - `GET /api/wnsp/user/:username` — get a user's canonical `wnsp://` address
+  - `GET /api/wnsp/preview?text=...` — compute CE→SE without storing
+- **Auth-required API endpoints**:
+  - `POST /api/wnsp/register` — register any label at its derived Ψ address
+  - `POST /api/wnsp/auto-register-me` — register logged-in user's canonical identity (idempotent)
+- **Three-phase roadmap**:
+  - Phase 1 (now): HTTP overlay — `wnsp://` resolves to HTTPS URLs
+  - Phase 2: WavelengthScript code addressed by `wnsp://` URI; CE ordinals = on-chain ownership
+  - Phase 3 (Moore's law): native photonic routing — addresses ARE physical channels

@@ -3998,7 +3998,205 @@ export async function registerRoutes(
     return { wavelengthNm: nm, frequencyThz: thz, psiChannel: `Ψ(${wdm},${oam},${pol})`, emissionBand: band };
   }
 
-  app.get("/api/network/nodes", async (req, res) => {
+  // ════════════════════════════════════════════════════════════════════════════
+  // WNSP REGISTRY — Spectral address bridge (TCP/IP overlay for wnsp:// URIs)
+  // Phase 1: HTTP. Phase 2: native photonic when Moore's law hardware arrives.
+  // CE→SE (WASCII v1.0): every label derives a deterministic Ψ(wdm,oam,pol) address.
+  // ════════════════════════════════════════════════════════════════════════════
+
+  // ── CE→SE helper (server-side WASCII v1.0) ──────────────────────────────
+  function ceSe(text: string) {
+    const codes = text.toUpperCase().split("").map(c => c.charCodeAt(0)).filter(c => c >= 32 && c <= 126);
+    const sum   = codes.reduce((a, b) => a + b, 0);
+    const avg   = sum / (codes.length || 1);
+    const nm    = parseFloat((380 + ((avg - 32) / 94) * 400).toFixed(4));
+    const wdm   = Math.floor((nm - 380) / 4) + 1;
+    const oam   = sum % 100;
+    const pol   = codes.length % 2 === 0 ? "H" : "V";
+    const band  = nm < 450 ? "VIOLET" : nm < 495 ? "BLUE" : nm < 520 ? "CYAN" : nm < 565 ? "GREEN" : nm < 590 ? "YELLOW" : nm < 625 ? "ORANGE" : "RED";
+    const slug  = text.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+    return { nm, wdm, oam, pol, band, psi: `Ψ(${wdm},${oam},${pol})`, uri: `wnsp://Ψ(${wdm},${oam},${pol})/${slug}` };
+  }
+
+  // ── Public registry — list all public addresses ────────────────────────
+  app.get("/api/wnsp/registry", async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { wnspRegistry } = await import("@shared/schema");
+      const { desc, eq } = await import("drizzle-orm");
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const resourceType = req.query.type as string | undefined;
+
+      const query = db.select().from(wnspRegistry)
+        .where(eq(wnspRegistry.isPublic, true))
+        .orderBy(desc(wnspRegistry.createdAt))
+        .limit(limit);
+
+      const entries = await (resourceType
+        ? db.select().from(wnspRegistry).where(eq(wnspRegistry.resourceType, resourceType)).orderBy(desc(wnspRegistry.createdAt)).limit(limit)
+        : query);
+
+      res.json({ entries, total: entries.length });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Resolve a Ψ address → resource ────────────────────────────────────
+  // GET /api/wnsp/resolve?psi=Ψ(39,7,H)&path=nexus
+  app.get("/api/wnsp/resolve", async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { wnspRegistry } = await import("@shared/schema");
+      const { eq, ilike, or } = await import("drizzle-orm");
+      const psi  = decodeURIComponent((req.query.psi as string) || "");
+      const path = decodeURIComponent((req.query.path as string) || "");
+      const uri  = req.query.uri as string | undefined;
+
+      if (!psi && !uri) return res.status(400).json({ error: "Provide psi or uri query param" });
+
+      const lookupUri = uri || `wnsp://${psi}/${path}`.replace(/\/+$/, "");
+      const lookupPsi = psi || lookupUri.match(/Ψ\([^)]+\)/)?.[0] || "";
+
+      // exact URI match first, then Ψ channel match
+      let entries = await db.select().from(wnspRegistry).where(eq(wnspRegistry.wnspUri, lookupUri));
+      if (entries.length === 0 && lookupPsi) {
+        entries = await db.select().from(wnspRegistry).where(eq(wnspRegistry.psiChannel, lookupPsi));
+      }
+
+      // increment resolve count
+      if (entries.length > 0) {
+        const { sql: dsql } = await import("drizzle-orm");
+        await db.update(wnspRegistry)
+          .set({ resolveCount: dsql`${wnspRegistry.resolveCount} + 1` })
+          .where(eq(wnspRegistry.id, entries[0].id));
+      }
+
+      // also search spectral DB for records at this channel
+      const { spectralRecords } = await import("@shared/schema");
+      const spectral = lookupPsi ? await db.select().from(spectralRecords).where(eq(spectralRecords.psiChannel, lookupPsi)).limit(10) : [];
+
+      res.json({ resolved: entries.length > 0, entries, spectral, query: { psi: lookupPsi, path, uri: lookupUri } });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Lookup a user's canonical wnsp:// address ─────────────────────────
+  app.get("/api/wnsp/user/:username", async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { users: usersTable, wnspRegistry } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const { username } = req.params;
+
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username));
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      const enc = ceSe(username);
+
+      // find or return computed address
+      const [entry] = await db.select().from(wnspRegistry)
+        .where(and(eq(wnspRegistry.resourceType, "user"), eq(wnspRegistry.resourceId, user.id)));
+
+      res.json({
+        username,
+        userId: user.id,
+        spectral: {
+          psiChannel: enc.psi, wavelengthNm: enc.nm, wdm: enc.wdm, oam: enc.oam,
+          polarisation: enc.pol, band: enc.band, wnspUri: enc.uri,
+          httpUrl: `/profile/${username}`,
+        },
+        registered: !!entry,
+        entry: entry ?? null,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Register a wnsp:// address (auth required) ─────────────────────────
+  app.post("/api/wnsp/register", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { wnspRegistry } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const { label, resourceType = "user", resourceId, httpUrl, description, isPublic = true } = req.body;
+
+      if (!label) return res.status(400).json({ error: "label is required" });
+      const enc = ceSe(label);
+
+      // check for duplicate
+      const [existing] = await db.select().from(wnspRegistry).where(eq(wnspRegistry.wnspUri, enc.uri));
+      if (existing) return res.status(409).json({ error: "Address already registered", existing });
+
+      const [entry] = await db.insert(wnspRegistry).values({
+        wnspUri:      enc.uri,
+        psiChannel:   enc.psi,
+        wdm:          enc.wdm,
+        oam:          enc.oam,
+        polarisation: enc.pol,
+        wavelengthNm: String(enc.nm),
+        band:         enc.band,
+        label,
+        ceInput:      label,
+        resourceType,
+        resourceId:   resourceId ?? null,
+        httpUrl:      httpUrl ?? null,
+        description:  description ?? null,
+        registeredBy: (req as any).user?.id,
+        isPublic,
+        isCanonical:  false,
+      }).returning();
+
+      res.status(201).json({ success: true, entry, spectral: enc });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Auto-register canonical user address ──────────────────────────────
+  app.post("/api/wnsp/auto-register-me", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { wnspRegistry } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const user = (req as any).user!;
+      const enc  = ceSe(user.username);
+
+      // idempotent: upsert by resource
+      const [existing] = await db.select().from(wnspRegistry)
+        .where(and(eq(wnspRegistry.resourceType, "user"), eq(wnspRegistry.resourceId, user.id)));
+      if (existing) return res.json({ success: true, entry: existing, spectral: enc, created: false });
+
+      const [entry] = await db.insert(wnspRegistry).values({
+        wnspUri:      enc.uri,
+        psiChannel:   enc.psi,
+        wdm:          enc.wdm,
+        oam:          enc.oam,
+        polarisation: enc.pol,
+        wavelengthNm: String(enc.nm),
+        band:         enc.band,
+        label:        user.username,
+        ceInput:      user.username,
+        resourceType: "user",
+        resourceId:   user.id,
+        httpUrl:      `/profile/${user.username}`,
+        description:  `Canonical spectral identity for ${user.username}`,
+        registeredBy: user.id,
+        isPublic:     true,
+        isCanonical:  true,
+      }).returning();
+
+      res.status(201).json({ success: true, entry, spectral: enc, created: true });
+    } catch (err: any) {
+      if (err.message?.includes("unique")) {
+        return res.json({ success: true, note: "Address already claimed at this channel", spectral: ceSe((req as any).user!.username) });
+      }
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── Preview CE→SE for any text without storing ─────────────────────────
+  app.get("/api/wnsp/preview", async (req: Request, res: Response) => {
+    const text = (req.query.text as string) || "";
+    if (!text) return res.status(400).json({ error: "text is required" });
+    res.json(ceSe(text));
+  });
+
+  app.get("/api/network/nodes", async (req: Request, res: Response) => {
     try {
       const status = req.query.status as string | undefined;
       const nodes = await storage.getNetworkNodes(status);

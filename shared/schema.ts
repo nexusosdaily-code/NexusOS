@@ -713,3 +713,41 @@ export const registerNodeSchema = z.object({
   capabilities: z.array(z.string()).optional(),
 });
 export type RegisterNodeInput = z.infer<typeof registerNodeSchema>;
+
+// ============================================
+// WNSP REGISTRY — Spectral address book
+// Maps wnsp://Ψ(wdm,oam,pol)/path → TCP/IP resource (bridge layer).
+// Phase 1: HTTP overlay. Phase 2: native photonic when hardware arrives.
+// Address is deterministic: derived from CE→SE (WASCII v1.0) of the label.
+// ============================================
+export const wnspRegistry = pgTable("wnsp_registry", {
+  id:            varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  wnspUri:       text("wnsp_uri").notNull().unique(),
+  psiChannel:    text("psi_channel").notNull(),
+  wdm:           integer("wdm").notNull(),
+  oam:           integer("oam").notNull(),
+  polarisation:  text("polarisation").notNull().default("H"),
+  wavelengthNm:  decimal("wavelength_nm", { precision: 10, scale: 4 }).notNull(),
+  band:          text("band").notNull().default("GREEN"),
+  label:         text("label").notNull(),
+  ceInput:       text("ce_input").notNull(),
+  resourceType:  text("resource_type").notNull().default("user"),
+  resourceId:    text("resource_id"),
+  httpUrl:       text("http_url"),
+  description:   text("description"),
+  registeredBy:  varchar("registered_by", { length: 36 }).references(() => users.id, { onDelete: "set null" }),
+  isPublic:      boolean("is_public").notNull().default(true),
+  isCanonical:   boolean("is_canonical").notNull().default(false),
+  resolveCount:  integer("resolve_count").notNull().default(0),
+  createdAt:     timestamp("created_at").notNull().defaultNow(),
+  updatedAt:     timestamp("updated_at").notNull().defaultNow(),
+}, (table) => ({
+  psiIdx:        index("wnsp_registry_psi_idx").on(table.psiChannel),
+  labelIdx:      index("wnsp_registry_label_idx").on(table.label),
+  resourceIdx:   index("wnsp_registry_resource_idx").on(table.resourceType, table.resourceId),
+  registeredByIdx: index("wnsp_registry_registered_by_idx").on(table.registeredBy),
+}));
+
+export const insertWnspRegistrySchema = createInsertSchema(wnspRegistry).omit({ id: true, createdAt: true, updatedAt: true, resolveCount: true });
+export type InsertWnspRegistry = z.infer<typeof insertWnspRegistrySchema>;
+export type WnspRegistryEntry = typeof wnspRegistry.$inferSelect;

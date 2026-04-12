@@ -61,6 +61,7 @@ import IndiegogoPage from "@/pages/indiegogo";
 import SnicPage from "@/pages/snic";
 import SpectralUriPage from "@/pages/spectral-uri";
 import OpenPage from "@/pages/open";
+import WnspBridgePage from "@/pages/wnsp-bridge";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -130,6 +131,8 @@ function ProtectedRoutes() {
         <Route path="/wavelength-lang" component={WavelengthLangPage} />
         <Route path="/evidence" component={EvidencePage} />
         <Route path="/transmission" component={TransmissionPage} />
+        <Route path="/wnsp-bridge" component={WnspBridgePage} />
+        <Route path="/wnsp/bridge" component={WnspBridgePage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
@@ -168,6 +171,8 @@ function Router() {
       <Route path="/network" component={NetworkPage} />
       <Route path="/wavelength-lang" component={WavelengthLangPage} />
       <Route path="/nexus-command" component={NexusCommandPage} />
+      <Route path="/wnsp-bridge" component={WnspBridgePage} />
+      <Route path="/wnsp/bridge" component={WnspBridgePage} />
       <Route>
         <ProtectedRoutes />
       </Route>

@@ -327,12 +327,12 @@ const SYSTEMS = [
     action: "See the hardware",
   },
   {
-    title: "Spectral URI — wnsp://",
-    description: "The protocol address that replaces https://. Every resource gets a deterministic Ψ(wdm,oam,pol) coordinate derived from its name via CE→SE. No DNS, no registry, no trust required. Live encoder + formal spec + canonical system addresses.",
-    href: "/spectral-db?tab=write",
+    title: "WNSP Bridge — wnsp://",
+    description: "Spectral addressing on current infrastructure. CE→SE (WASCII v1.0) derives a deterministic Ψ(wdm,oam,pol) address from any text — username, code, content. Phase 1 runs over TCP/IP today. Phase 3: native photonic routing when hardware arrives. Your wnsp:// identity is permanent — physics assigns it, no server can revoke it.",
+    href: "/wnsp-bridge",
     color: "#06b6d4",
     Icon: Radio,
-    action: "Encode a URI",
+    action: "Open WNSP Bridge",
   },
   {
     title: "Open Infrastructure Charter",
