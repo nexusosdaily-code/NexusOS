@@ -1,6 +1,8 @@
 # Overview
 
-NexusOS is a full-stack web application designed as the foundational blueprint for a Kardashev Type I civilization. It integrates a React/TypeScript frontend with an Express/Node.js backend and PostgreSQL, introducing a physics-based blockchain and communication system. Key features include phone-based authentication, NXT token wallets, peer-to-peer media sharing, a live AI OS kernel, and the WNSP spectral communication protocol, all released under AGPL-3.0. The project aims to leverage electromagnetic wave physics and Lambda Boson theory for a decentralized and censorship-resistant infrastructure.
+NexusOS is a full-stack web application designed as the foundational blueprint for a Kardashev Type I civilization. It integrates a React/TypeScript frontend with an Express/Node.js backend and PostgreSQL, introducing a physics-based blockchain and communication system. Key features include phone-based authentication, NXT token wallets, peer-to-peer media sharing, a live AI OS kernel, and the WNSP spectral communication protocol, all released under AGPL-3.0.
+
+The physical foundation is Einstein's Λ (cosmological constant) applied to the first oscillation: Planck energy (E=hf) at its first frequency compresses into mass via Λ=hf/c². As compression increases — wavelength shortens, frequency rises — the mass equivalent grows and temperature increases. Speed of compression is temperature. This is the physics of the origin: energy becoming mass through oscillation. The WNSP spectral addressing system derives from this directly — a wavelength coordinate is not an assigned address but a specific compression state of a quantum. Addressing content at λ=586.8nm specifies a physical state of energy, not a slot in a registry.
 
 # User Preferences
 
@@ -37,14 +39,14 @@ The system employs synchronized Node.js/TypeScript (port 5000) and Python/Flask 
 ### Physics-Based Protocol Layer (WNSP)
 - **Core Protocol**: Replaces cryptographic hashing with electromagnetic wave physics, using Maxwell equation validation and wavelength-based addressing.
 - **Quantum Economics**: Transaction costs are derived from wavelength-frequency-energy calculations.
-- **Lambda Boson Theory**: Extends E=mc² with Λ = hf/c² for oscillating quanta, defining spectral authority bands.
+- **Einstein's Λ — First Oscillation**: Planck energy (E=hf) at the first frequency compresses into mass: Λ=hf/c². As compression increases, wavelength shortens, frequency rises, mass equivalent grows, and temperature increases — speed of compression is temperature. This is the origin physics: energy becoming mass through oscillation. Spectral authority bands are defined by compression state (wavelength), not arbitrary assignment.
 - **WNSP Two-Layer Encoding Standard**: Includes WNSP-CE v1.0 (Character Encoding) and WNSP-SE v1.0 (Spectral Encoding) for mapping human-readable data to physical wave frames, including WASCII v1.0.
 - **WNSP-URI v1.0**: Replaces `https://` with `wnsp://Ψ(wdm,oam,pol)/path` for deterministic, censorship-proof addressing.
 - **Hilbert Space Channel Model**: Defines 25,600 orthogonal communication channels.
 - **AI/OS Channel Coordination Layer**: Manages deterministic allocation of unique Ψ_channels for AI agents.
 
 ### WNSP AI Operating System Kernel (v1.0.0)
-A Python kernel featuring a 5-phase boot process, persistent state via PostgreSQL, an authority/permission layer (SYSTEM, KERNEL, USER, GUEST), a `KernelEventBus` for interrupt/event handling, a dead agent watchdog, and a blockchain auditor.
+A Python kernel featuring a 6-phase boot process (Schema → Restore → Core Agents → Watchdog → Events → Heartbeat), persistent state via PostgreSQL, an authority/permission layer (SYSTEM, KERNEL, USER, GUEST), a `KernelEventBus` for interrupt/event handling, a dead agent watchdog, and a blockchain auditor. All 6 core agents (os_kernel, bus_router, scheduler_daemon, watchdog_daemon, auth_gateway, blockchain_auditor) pulse heartbeats every 120 seconds to maintain ACTIVE status.
 
 ### Content & Media System
 A P2P media sharing engine with physics-based cost calculations, mesh networking, chunk-based distribution, WebRTC/Socket.IO streaming, HTTP Range Request support, and encryption.
