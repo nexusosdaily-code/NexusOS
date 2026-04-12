@@ -3333,7 +3333,24 @@ export async function registerRoutes(
     }
   });
 
-  // Scan all records — full spectral map
+  // ── Public encode-preview — CE→SE physics result with no DB write, no auth ──
+  app.post("/api/spectral-db/encode-preview", async (req: Request, res: Response) => {
+    try {
+      const { text, label } = req.body as { text?: string; label?: string };
+      if (!text) return res.status(400).json({ error: "text is required" });
+      const encodeRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction: text, label: label || "preview" }),
+      });
+      if (!encodeRes.ok) return res.status(502).json({ error: "Spectral encode failed" });
+      const enc = await encodeRes.json() as any;
+      res.json({ success: true, spectral: enc });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/api/spectral-db/scan", async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");

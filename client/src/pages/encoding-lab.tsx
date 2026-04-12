@@ -73,14 +73,31 @@ function EncodeTab({ onEncoded }: { onEncoded: (r: any) => void }) {
     { label: "energy_economics",      text: "Transaction cost derived from physical energy E equals hf not arbitrary fees" },
   ];
 
+  const [stored, setStored] = useState(false);
+
   const encodeMut = useMutation({
+    mutationFn: () =>
+      fetch("/api/spectral-db/encode-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, label }),
+      }).then(async r => {
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || "Encode failed");
+        return d;
+      }),
+    onSuccess: (d) => {
+      setResult(d);
+      setStored(false);
+      if (d.success) onEncoded(d);
+    },
+  });
+
+  const storeMut = useMutation({
     mutationFn: () =>
       apiRequest("POST", "/api/spectral-db/store", { content: text, label })
         .then(r => r.json()),
-    onSuccess: (d) => {
-      setResult(d);
-      if (d.success) onEncoded(d);
-    },
+    onSuccess: () => setStored(true),
   });
 
   const sendBusMut = useMutation({
@@ -144,7 +161,12 @@ function EncodeTab({ onEncoded }: { onEncoded: (r: any) => void }) {
             <Zap className="w-3 h-3 mr-1" />
             {encodeMut.isPending ? "Encoding to light…" : "Encode Message"}
           </Button>
-          <p className="text-xs text-slate-600">This stores the message at its wavelength address in the spectral database.</p>
+          <p className="text-xs text-slate-600">Encodes your message to a wavelength address using CE→SE physics.</p>
+          {encodeMut.isError && (
+            <div className="text-red-400 text-xs border border-red-800/40 rounded px-2 py-1.5 font-mono" data-testid="encode-error">
+              {(encodeMut.error as Error)?.message || "Encode failed"}
+            </div>
+          )}
         </div>
       </div>
 
@@ -196,14 +218,29 @@ function EncodeTab({ onEncoded }: { onEncoded: (r: any) => void }) {
             </div>
 
             <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-400 font-mono leading-relaxed">
-              <span className="text-green-400">✓</span> Stored permanently at {result.spectral.wavelength_mid_nm.toFixed(1)} nm.
-              Anyone with this address can retrieve your message.
-              No company controls it. No algorithm can hide it. No government can erase it.
-              This is what it means to encode data into physics itself.
+              {stored
+                ? <><span className="text-green-400">✓</span> Stored permanently at {result.spectral.wavelength_mid_nm.toFixed(1)} nm. No company controls it. No algorithm can hide it.</>
+                : <>Message encoded to λ {result.spectral.wavelength_mid_nm.toFixed(1)} nm. Log in and click <em>Store to Spectral DB</em> to make it permanent.</>
+              }
             </div>
 
             {/* Cross-system actions */}
             <div className="flex flex-wrap gap-2 pt-1">
+              {!stored && (
+                <Button size="sm" variant="outline"
+                  className="border-cyan-800 text-cyan-300 hover:bg-cyan-900/40 text-xs"
+                  onClick={() => storeMut.mutate()}
+                  disabled={storeMut.isPending}
+                  data-testid="btn-store-db">
+                  <Zap className="w-3 h-3 mr-1" />
+                  {storeMut.isPending ? "Storing…" : "Store to Spectral DB"}
+                </Button>
+              )}
+              {storeMut.isError && (
+                <span className="text-red-400 text-xs self-center font-mono">
+                  {(storeMut.error as Error)?.message?.includes("401") ? "Login required to store" : (storeMut.error as Error)?.message}
+                </span>
+              )}
               <Button size="sm" variant="outline"
                 className="border-slate-700 text-slate-300 hover:bg-slate-800 text-xs"
                 onClick={() => sendBusMut.mutate()}
