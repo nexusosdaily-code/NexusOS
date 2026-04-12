@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import multer from "multer";
 import { storage } from "./storage";
 import { authenticate, optionalAuth, logAction } from "./auth";
 import { 
@@ -114,6 +115,15 @@ async function secureProxyToSpectralAPI(req: Request, res: Response, endpoint: s
     });
   }
 }
+
+const videoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 200 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("video/")) cb(null, true);
+    else cb(new Error("Only video files allowed"));
+  },
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -3706,84 +3716,91 @@ export async function registerRoutes(
   });
 
   // ── Spectral Workspace — Video API ────────────────────────────────────────
-  // Upload a video clip, encode its title into a wavelength, store at that address
+  // Upload a video clip via multipart/form-data, encode title → wavelength, store
 
-  app.post("/api/spectral-workspace/video", authenticate, async (req: Request, res: Response) => {
-    try {
-      const { title, description, videoData, mimeType, fileSize, filename } = req.body;
-      if (!title || !videoData || !mimeType) {
-        return res.status(400).json({ error: "title, videoData, and mimeType required" });
+  app.post("/api/spectral-workspace/video", authenticate, (req: Request, res: Response) => {
+    videoUpload.single("file")(req, res, async (uploadErr) => {
+      try {
+        if (uploadErr) {
+          return res.status(400).json({ error: uploadErr.message });
+        }
+        const file = (req as any).file as Express.Multer.File | undefined;
+        const { title, description } = req.body;
+
+        if (!file) return res.status(400).json({ error: "No video file provided" });
+        if (!title) return res.status(400).json({ error: "title is required" });
+
+        const mimeType = file.mimetype;
+        const fileSize = file.size;
+        const filename = file.originalname;
+        const videoData = file.buffer.toString("base64");
+
+        const encodeText = `${title}${description ? ": " + description : ""}`;
+        const encodeRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ instruction: encodeText, label: title }),
+        });
+        if (!encodeRes.ok) return res.status(502).json({ error: "Spectral encode failed" });
+        const enc = await encodeRes.json() as any;
+
+        const psiMatch = enc.psi_channel?.match(/Ψ\((\d+),\s*(\d+),\s*([HV])\)/);
+        const wdm = psiMatch ? parseInt(psiMatch[1]) : 0;
+        const oam = psiMatch ? parseInt(psiMatch[2]) : 0;
+        const pol = psiMatch ? psiMatch[3] : "H";
+
+        const { db } = await import("./db");
+        const { videoUploads, spectralRecords } = await import("@shared/schema");
+        const { randomUUID } = await import("crypto");
+
+        const videoId = randomUUID();
+        await db.insert(videoUploads).values({
+          id: videoId,
+          uploaderId: (req as any).user?.id ?? "anonymous",
+          uploaderName: (req as any).user?.username ?? "anonymous",
+          filename,
+          mimeType,
+          fileSize,
+          videoData,
+          status: "ready",
+        });
+
+        const nm = enc.wavelength_mid_nm ?? 550;
+        const band = nm < 450 ? "SYSTEM" : nm < 520 ? "AUTH" : nm < 625 ? "USER" : "GUEST";
+
+        const [record] = await db.insert(spectralRecords).values({
+          id: randomUUID(),
+          label: title,
+          content: description ?? title,
+          wavelengthNm: String(nm),
+          psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
+          wdm, oam, polarisation: pol,
+          band,
+          energyJoules: String(enc.energy_joules ?? 0),
+          lambdaMassKg: String(enc.lambda_mass_kg ?? 0),
+          frequencyHz: String(enc.frequency_hz ?? 0),
+          data: { type: "video", videoId, mimeType, fileSize },
+        }).returning();
+
+        const { sql: dsVid } = await import("drizzle-orm");
+        const uploadOrdinal = await depositOrdinalForInput({
+          db, ds: dsVid,
+          freqHz: parseFloat(String(enc.frequency_hz ?? 5.45e14)),
+          wavelengthNm: parseFloat(String(nm)),
+          psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
+          band,
+          operation: "UPLOAD",
+          label: `VIDEO:${title}`,
+          sourceRecordId: record.id,
+          depositor: (req as any).user?.username ?? "system",
+        }).catch(() => null);
+
+        res.json({ success: true, record, spectral: enc, videoId,
+          ordinal: uploadOrdinal ? { units: uploadOrdinal.ordinalUnits.toString(), nxt: (Number(uploadOrdinal.ordinalUnits) / 1e8).toFixed(8) } : null });
+      } catch (err: any) {
+        res.status(500).json({ error: err.message });
       }
-      if (fileSize && fileSize > 100 * 1024 * 1024) {
-        return res.status(413).json({ error: "Video too large — max 100MB" });
-      }
-
-      const encodeText = `${title}${description ? ": " + description : ""}`;
-      const encodeRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instruction: encodeText, label: title }),
-      });
-      if (!encodeRes.ok) return res.status(502).json({ error: "Spectral encode failed" });
-      const enc = await encodeRes.json() as any;
-
-      const psiMatch = enc.psi_channel?.match(/Ψ\((\d+),\s*(\d+),\s*([HV])\)/);
-      const wdm = psiMatch ? parseInt(psiMatch[1]) : 0;
-      const oam = psiMatch ? parseInt(psiMatch[2]) : 0;
-      const pol = psiMatch ? psiMatch[3] : "H";
-
-      const { db } = await import("./db");
-      const { videoUploads, spectralRecords } = await import("@shared/schema");
-      const { randomUUID } = await import("crypto");
-
-      const videoId = randomUUID();
-      const [video] = await db.insert(videoUploads).values({
-        id: videoId,
-        uploaderId: (req as any).user?.id ?? "anonymous",
-        uploaderName: (req as any).user?.username ?? "anonymous",
-        filename: filename ?? `${title}.mp4`,
-        mimeType,
-        fileSize: fileSize ?? 0,
-        videoData,
-        status: "ready",
-      }).returning();
-
-      const nm = enc.wavelength_mid_nm ?? 550;
-      const band = nm < 450 ? "SYSTEM" : nm < 520 ? "AUTH" : nm < 625 ? "USER" : "GUEST";
-
-      const [record] = await db.insert(spectralRecords).values({
-        id: randomUUID(),
-        label: title,
-        content: description ?? title,
-        wavelengthNm: String(nm),
-        psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
-        wdm, oam, polarisation: pol,
-        band,
-        energyJoules: String(enc.energy_joules ?? 0),
-        lambdaMassKg: String(enc.lambda_mass_kg ?? 0),
-        frequencyHz: String(enc.frequency_hz ?? 0),
-        data: { type: "video", videoId, mimeType, fileSize },
-      }).returning();
-
-      // ── ORDINAL: UPLOAD input deposits to Orbital Treasury ───────────────────
-      const { sql: dsVid } = await import("drizzle-orm");
-      const uploadOrdinal = await depositOrdinalForInput({
-        db, ds: dsVid,
-        freqHz: parseFloat(String(enc.frequency_hz ?? 5.45e14)),
-        wavelengthNm: parseFloat(String(nm)),
-        psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
-        band,
-        operation: "UPLOAD",
-        label: `VIDEO:${title}`,
-        sourceRecordId: record.id,
-        depositor: (req as any).user?.username ?? "system",
-      }).catch(() => null);
-
-      res.json({ success: true, record, spectral: enc, videoId,
-        ordinal: uploadOrdinal ? { units: uploadOrdinal.ordinalUnits.toString(), nxt: (Number(uploadOrdinal.ordinalUnits) / 1e8).toFixed(8) } : null });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
+    });
   });
 
   app.get("/api/spectral-workspace/video/:id", optionalAuth, async (req: Request, res: Response) => {

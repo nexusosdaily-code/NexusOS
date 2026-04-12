@@ -126,23 +126,14 @@ export default function SpectralVideoPage() {
       if (!uploadFile) throw new Error("No file selected");
       const token = localStorage.getItem("auth_token");
       if (!token) throw new Error("LOGIN_REQUIRED");
-      const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve, reject) => {
-        reader.onload = e => resolve((e.target?.result as string).split(",")[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(uploadFile);
-      });
+      const form = new FormData();
+      form.append("file", uploadFile);
+      form.append("title", uploadForm.title || uploadFile.name);
+      if (uploadForm.description) form.append("description", uploadForm.description);
       const res = await fetch("/api/spectral-workspace/video", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({
-          title: uploadForm.title || uploadFile.name,
-          description: uploadForm.description,
-          videoData: base64,
-          mimeType: uploadFile.type || "video/mp4",
-          filename: uploadFile.name,
-          fileSize: uploadFile.size,
-        }),
+        headers: { "Authorization": `Bearer ${token}` },
+        body: form,
       });
       if (res.status === 401) throw new Error("LOGIN_REQUIRED");
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Upload failed"); }
@@ -291,7 +282,7 @@ export default function SpectralVideoPage() {
               <div className="flex items-center gap-2">
                 <Upload className="w-4 h-4 text-purple-400" />
                 <h3 className="font-bold text-purple-300">Upload a Video</h3>
-                <span className="text-gray-500 text-xs ml-auto">Max size depends on server limit (150 MB)</span>
+                <span className="text-gray-500 text-xs ml-auto">Max 200 MB per file</span>
               </div>
 
               {uploadSuccess ? (
