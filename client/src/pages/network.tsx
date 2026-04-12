@@ -89,21 +89,22 @@ export default function NetworkPage() {
       if (!token) throw new Error("LOGIN_REQUIRED");
       const res = await fetch("/api/network/nodes/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(body),
       });
       if (res.status === 401) throw new Error("LOGIN_REQUIRED");
       if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: "Registration failed" }));
-        throw new Error(body.error || "Registration failed");
+        const errBody = await res.json().catch(() => ({ error: "Registration failed" }));
+        throw new Error(errBody.error || "Registration failed");
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       setShowRegister(false);
       setForm({ name: "", purpose: "", endpoint: "", capabilities: "" });
       setPreview(null);
-      qc.invalidateQueries({ queryKey: ["/api/network/nodes"] });
+      // Force immediate refetch so the new node appears instantly
+      await qc.refetchQueries({ queryKey: ["/api/network/nodes"] });
     },
   });
 
