@@ -785,6 +785,7 @@ export async function registerRoutes(
       res.json({
         friends: friends.map(f => ({
           id: f.friendship.id,
+          userId: f.friend.id,
           username: f.friend.username,
           phoneNumber: f.friend.phoneNumber ? f.friend.phoneNumber.slice(-4).padStart(f.friend.phoneNumber.length, '*') : null,
           wavelength: f.friendship.wavelength,
