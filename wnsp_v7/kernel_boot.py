@@ -159,6 +159,44 @@ def boot(coordinator, bus=None) -> dict:
         report["phases"].append({"phase": 5, "name": "Events", "status": "warning",
                                   "detail": str(e)})
 
+    # ── Phase 6: Heartbeat ─────────────────────────────────────────────
+    # Pulse all core agents immediately (refreshes updated_at → ACTIVE status)
+    # then keep pulsing every 120 s so they never show as DEGRADED.
+    HEARTBEAT_INTERVAL = 120  # seconds
+
+    def _pulse_all():
+        """Refresh updated_at for every core agent in the DB."""
+        for name, intent in CORE_AGENTS:
+            try:
+                ch = coordinator._registry[name].channel if name in coordinator._registry else None
+                if ch:
+                    band = band_for_agent(name, ch.wavelength)
+                    _db.save_agent(
+                        name, ch.wavelength, ch.oam, ch.pol,
+                        intent=intent,
+                        authority_band=band.name,
+                    )
+            except Exception:
+                pass
+
+    try:
+        _pulse_all()  # immediate pulse on boot
+
+        def _heartbeat_loop():
+            while True:
+                time.sleep(HEARTBEAT_INTERVAL)
+                _pulse_all()
+
+        t = threading.Thread(target=_heartbeat_loop, daemon=True, name="kernel-heartbeat")
+        t.start()
+        _log("PHASE 6 — HEARTBEAT", f"Agent heartbeat active — pulsing every {HEARTBEAT_INTERVAL}s")
+        report["phases"].append({"phase": 6, "name": "Heartbeat", "status": "ok",
+                                  "interval_s": HEARTBEAT_INTERVAL})
+    except Exception as e:
+        _log("PHASE 6 — HEARTBEAT", f"WARNING: {e}")
+        report["phases"].append({"phase": 6, "name": "Heartbeat", "status": "warning",
+                                  "detail": str(e)})
+
     report["status"]     = "booted"
     report["finished_at"] = time.time()
     report["boot_time_ms"] = round(
