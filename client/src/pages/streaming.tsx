@@ -123,6 +123,14 @@ export default function StreamingPage() {
   };
 
   const createStream = async () => {
+    if (!token) {
+      toast({
+        title: "Login required",
+        description: "You need to log in before you can go live.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!newStreamTitle.trim()) {
       toast({
         title: "Error",
@@ -147,7 +155,8 @@ export default function StreamingPage() {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to create stream");
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(res.status === 401 ? "You must be logged in to go live." : errData.error || "Failed to create stream");
       }
 
       const data = await res.json();
@@ -160,10 +169,10 @@ export default function StreamingPage() {
       setActiveStream({ id: data.stream.id, mode: "broadcaster" });
       setNewStreamTitle("");
       setNewStreamDescription("");
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to create stream",
+        description: error?.message || "Failed to create stream",
         variant: "destructive",
       });
     }
@@ -414,6 +423,12 @@ export default function StreamingPage() {
           </TabsContent>
 
           <TabsContent value="create">
+            {!token && (
+              <div className="mb-4 max-w-lg p-3 rounded-lg border border-yellow-500/40 bg-yellow-500/10 text-yellow-300 text-sm flex items-center gap-2">
+                <span>⚠</span>
+                <span>You must be <strong>logged in</strong> to go live. Log in from the home page first.</span>
+              </div>
+            )}
             <Card className="bg-slate-800/50 border-slate-700 max-w-lg">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
