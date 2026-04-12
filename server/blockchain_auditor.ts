@@ -132,7 +132,7 @@ async function runCycle() {
     }
 
     // Build block content
-    const blockContent = `SPECTRAL_AUDIT_BLOCK[auto]: ${pending.length} records proven at λ via Λ=hf/c² | agent: blockchain_auditor | cycle: ${state.cycleCount}`;
+    const blockContent = `SPECTRAL_AUDIT_BLOCK[auto]: ${pending.length} records proven at λ via Λ=hf/c² | agent: blockchain_auditor | cycle: ${state.cycleCount} | t:${Date.now()}`;
 
     // Encode through spectral engine
     const encRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {

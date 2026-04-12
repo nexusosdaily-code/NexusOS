@@ -579,7 +579,7 @@ export const blockchainBlocks = pgTable("blockchain_blocks", {
   blockNumber:     integer("block_number").notNull().unique(),
   content:         text("content").notNull(),
   wavelengthNm:    decimal("wavelength_nm", { precision: 10, scale: 4 }).notNull(),
-  psiChannel:      text("psi_channel").notNull().unique(),
+  psiChannel:      text("psi_channel").notNull(),
   wdm:             integer("wdm").notNull(),
   oam:             integer("oam").notNull(),
   polarisation:    text("polarisation").notNull(),
