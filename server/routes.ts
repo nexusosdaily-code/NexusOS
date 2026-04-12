@@ -2677,7 +2677,7 @@ export async function registerRoutes(
            ${psiParts[1] ?? "Ψ(0,0,H)"},
            ${busData.authority ?? "UNKNOWN"},
            'UNKNOWN',
-           ${payload}, ${msgType}, ${priority}, 'queued',
+           ${payload}, ${msgType}, ${priority}, ${busData.status === 'dispatched' ? 'dispatched' : 'queued'},
            ${busData.route ?? `${src} → ${dst}`})
       `);
 

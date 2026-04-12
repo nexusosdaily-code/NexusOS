@@ -786,10 +786,14 @@ def bus_send():
             }), 403
 
         _bus.send(src, dst, payload, priority)
+
+        # Auto-dispatch immediately so messages never sit in the queue
+        dispatch_record = _kernel_dispatch()
+
         snap = _bus.status()
         src_band = band_for_agent(src, src_ch.wavelength)
         return jsonify({
-            "status":       "queued",
+            "status":       "dispatched" if dispatch_record else "queued",
             "src":          src,
             "dst":          dst,
             "payload":      payload,
@@ -798,6 +802,7 @@ def bus_send():
             "queue_depth":  snap["queued"],
             "authority":    src_band.name,
             "permitted":    True,
+            "delivered":    dispatch_record is not None,
         })
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
