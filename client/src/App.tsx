@@ -143,8 +143,6 @@ function Router() {
       {/* Public routes - no login required */}
       <Route path="/crowdfund" component={CrowdfundPage} />
       <Route path="/fund" component={CrowdfundPage} />
-      <Route path="/spectral-video" component={SpectralVideoPage} />
-      <Route path="/visualizer" component={VisualizerPage} />
       <Route path="/indiegogo" component={IndiegogoPage} />
       <Route path="/developer-matrix" component={DeveloperMatrixPage} />
       <Route path="/developer-matrix/docs" component={DocsPage} />
@@ -152,10 +150,16 @@ function Router() {
       <Route path="/docs/:section" component={DocsPage} />
       <Route path="/research-presentation" component={ResearchPresentationPage} />
       <Route path="/research-presentation/developer-matrix" component={DeveloperMatrixPage} />
+      {/* ── Nexus Spectral Framework (unified) ── */}
+      <Route path="/spectral-db" component={SpectralDbPage} />
+      <Route path="/nexus-spectral" component={SpectralDbPage} />
+      {/* Legacy redirects → unified framework */}
+      <Route path="/spectral-video">{() => { window.location.replace("/spectral-db?tab=media"); return null; }}</Route>
+      <Route path="/spectral-uri">{() => { window.location.replace("/spectral-db?tab=write"); return null; }}</Route>
+      <Route path="/wnsp-uri">{() => { window.location.replace("/spectral-db?tab=write"); return null; }}</Route>
+      <Route path="/visualizer">{() => { window.location.replace("/spectral-db?tab=map"); return null; }}</Route>
       {/* Public showcase & proof pages */}
       <Route path="/snic" component={SnicPage} />
-      <Route path="/spectral-uri" component={SpectralUriPage} />
-      <Route path="/wnsp-uri" component={SpectralUriPage} />
       <Route path="/open" component={OpenPage} />
       <Route path="/charter" component={OpenPage} />
       <Route path="/evidence" component={EvidencePage} />

@@ -3144,7 +3144,7 @@ export async function registerRoutes(
   });
 
   // ── Audit status overview ─────────────────────────────────────────────────
-  app.get("/api/spectral-db/audit-status", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-db/audit-status", async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { spectralRecords, blockchainBlocks, blockchainTxPool } = await import("@shared/schema");
@@ -3168,7 +3168,7 @@ export async function registerRoutes(
   });
 
   // Full-text search across label + content
-  app.get("/api/spectral-db/text-search", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-db/text-search", async (req: Request, res: Response) => {
     try {
       const q    = String(req.query.q ?? "").trim();
       const band = String(req.query.band ?? "").trim().toUpperCase();
@@ -3204,7 +3204,7 @@ export async function registerRoutes(
   });
 
   // Fetch full content of a single record by ID
-  app.get("/api/spectral-db/record/:id", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-db/record/:id", async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { spectralRecords } = await import("@shared/schema");
@@ -3218,7 +3218,7 @@ export async function registerRoutes(
   });
 
   // Records list — returns total count + paginated records (used by Nexus Command)
-  app.get("/api/spectral-db/records", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-db/records", async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { spectralRecords } = await import("@shared/schema");
@@ -3236,7 +3236,7 @@ export async function registerRoutes(
   });
 
   // Scan all records — full spectral map
-  app.get("/api/spectral-db/scan", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-db/scan", async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { spectralRecords } = await import("@shared/schema");
@@ -3249,7 +3249,7 @@ export async function registerRoutes(
   });
 
   // Proximity search — find records within ±range nm of a target wavelength
-  app.get("/api/spectral-db/search", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-db/search", async (req: Request, res: Response) => {
     try {
       const wavelength = parseFloat(String(req.query.wavelength ?? "550"));
       const range      = parseFloat(String(req.query.range ?? "20"));
@@ -3268,7 +3268,7 @@ export async function registerRoutes(
   });
 
   // Retrieve by Ψ channel
-  app.get("/api/spectral-db/channel/:psi", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-db/channel/:psi", async (req: Request, res: Response) => {
     try {
       const psi = decodeURIComponent(req.params.psi);
       const { db } = await import("./db");
