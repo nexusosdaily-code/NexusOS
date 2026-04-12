@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Play, Pause, Radio, Layers, Zap, ArrowRight, Activity,
   Video, Wifi, Globe, Lock, ChevronRight, ExternalLink,
+  Upload, Library, Shield, Check, X, Film,
 } from "lucide-react";
 
 // ── WASCII canonical table (202 chars, WNSP-SE v1.0) ─────────────────────────
@@ -85,6 +87,9 @@ const COMPARISON = [
 ];
 
 export default function SpectralVideoPage() {
+  const [tab, setTab] = useState<"demo" | "library">("library");
+
+  // ── Demo tab state ──
   const [inputText, setInputText] = useState("NEXUS VIDEO STREAM — FRAME 001");
   const [frames, setFrames] = useState<any[]>([]);
   const [streaming, setStreaming] = useState(false);
@@ -93,6 +98,56 @@ export default function SpectralVideoPage() {
   const [totalEnergy, setTotalEnergy] = useState(0);
   const [psqToken, setPsqToken] = useState("");
   const streamRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ── Library tab state ──
+  const qc = useQueryClient();
+  const isLoggedIn = !!localStorage.getItem("auth_token");
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadForm, setUploadForm] = useState({ title: "", description: "" });
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<{ videoId: string } | null>(null);
+
+  const { data: videosData, isLoading: videosLoading } = useQuery<any>({
+    queryKey: ["/api/spectral-workspace/videos"],
+    refetchInterval: 30_000,
+  });
+  const videos: any[] = videosData?.videos ?? [];
+
+  const uploadMutation = useMutation({
+    mutationFn: async () => {
+      if (!uploadFile) throw new Error("No file selected");
+      const token = localStorage.getItem("auth_token");
+      if (!token) throw new Error("LOGIN_REQUIRED");
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = e => resolve((e.target?.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(uploadFile);
+      });
+      const res = await fetch("/api/spectral-workspace/video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({
+          title: uploadForm.title || uploadFile.name,
+          description: uploadForm.description,
+          videoData: base64,
+          mimeType: uploadFile.type || "video/mp4",
+          filename: uploadFile.name,
+          fileSize: uploadFile.size,
+        }),
+      });
+      if (res.status === 401) throw new Error("LOGIN_REQUIRED");
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Upload failed"); }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setUploadSuccess({ videoId: data.videoId });
+      setUploadForm({ title: "", description: "" });
+      setUploadFile(null);
+      qc.refetchQueries({ queryKey: ["/api/spectral-workspace/videos"] });
+    },
+  });
 
   // Encode text → WnspFrames
   const encode = useCallback((text: string) => {
@@ -178,6 +233,190 @@ export default function SpectralVideoPage() {
         </div>
       </div>
 
+      {/* ── Tab navigation ── */}
+      <div className="border-b border-gray-800 px-6">
+        <div className="max-w-5xl mx-auto flex gap-1">
+          {[
+            { id: "library", label: "Video Library", icon: <Library className="w-3.5 h-3.5" /> },
+            { id: "demo",    label: "Protocol Demo", icon: <Activity className="w-3.5 h-3.5" /> },
+          ].map(t => (
+            <button key={t.id} onClick={() => setTab(t.id as any)}
+              className={`flex items-center gap-1.5 px-4 py-3 text-sm border-b-2 transition-all -mb-px ${
+                tab === t.id ? "border-purple-400 text-purple-300" : "border-transparent text-gray-500 hover:text-gray-300"
+              }`}
+              data-testid={`tab-${t.id}`}>
+              {t.icon} {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Video Library tab ── */}
+      {tab === "library" && (
+        <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+
+          {/* Header row */}
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-white">Spectral Video Library</h2>
+              <p className="text-gray-400 text-sm mt-0.5">
+                Videos stored on-chain. Anyone can stream via Ψ channel address. No CDN required.
+              </p>
+            </div>
+            {isLoggedIn ? (
+              <button onClick={() => { setShowUpload(v => !v); setUploadSuccess(null); }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-700 hover:bg-purple-600 text-white text-sm transition-all"
+                data-testid="btn-upload-video">
+                <Upload className="w-4 h-4" /> Upload Video
+              </button>
+            ) : (
+              <Link href="/auth">
+                <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-700 text-gray-400 text-sm hover:text-white transition-all">
+                  <Lock className="w-4 h-4" /> Log in to upload
+                </button>
+              </Link>
+            )}
+          </div>
+
+          {/* Upload form */}
+          {showUpload && isLoggedIn && (
+            <Card className="bg-gray-900/80 border-purple-800/40 p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <Upload className="w-4 h-4 text-purple-400" />
+                <h3 className="font-bold text-purple-300">Upload a Video</h3>
+                <span className="text-gray-500 text-xs ml-auto">Max size depends on server limit (150 MB)</span>
+              </div>
+
+              {uploadSuccess ? (
+                <div className="border border-green-700/40 rounded-lg p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-green-400 font-bold text-sm">
+                    <Check className="w-4 h-4" /> Upload successful — video is now in the library
+                  </div>
+                  <div className="text-gray-400 text-xs font-mono">Video ID: {uploadSuccess.videoId}</div>
+                  <button onClick={() => { setUploadSuccess(null); setShowUpload(false); }}
+                    className="text-xs text-purple-400 hover:text-purple-300 underline">
+                    Close
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Video file *</label>
+                    <input type="file" accept="video/*"
+                      onChange={e => setUploadFile(e.target.files?.[0] ?? null)}
+                      className="block w-full text-sm text-gray-300 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:bg-purple-900/50 file:text-purple-300 hover:file:bg-purple-900"
+                      data-testid="input-video-file" />
+                    {uploadFile && <div className="text-xs text-gray-500 mt-1">{uploadFile.name} — {(uploadFile.size / 1024 / 1024).toFixed(1)} MB</div>}
+                  </div>
+                  <Input placeholder="Title (optional — defaults to filename)"
+                    value={uploadForm.title}
+                    onChange={e => setUploadForm(f => ({ ...f, title: e.target.value }))}
+                    className="bg-gray-800 border-gray-700 text-white text-sm"
+                    data-testid="input-video-title" />
+                  <Textarea placeholder="Description (optional)"
+                    value={uploadForm.description}
+                    onChange={e => setUploadForm(f => ({ ...f, description: e.target.value }))}
+                    className="bg-gray-800 border-gray-700 text-white text-sm resize-none"
+                    rows={2}
+                    data-testid="input-video-description" />
+
+                  {uploadMutation.isError && (
+                    <div className="text-red-400 text-xs border border-red-800/40 rounded px-3 py-2">
+                      {(uploadMutation.error as Error).message}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <button onClick={() => uploadMutation.mutate()}
+                      disabled={!uploadFile || uploadMutation.isPending}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-700 hover:bg-purple-600 disabled:opacity-40 text-white text-sm transition-all"
+                      data-testid="btn-confirm-upload">
+                      <Upload className="w-3.5 h-3.5" />
+                      {uploadMutation.isPending ? "Uploading…" : "Upload & Record"}
+                    </button>
+                    <button onClick={() => setShowUpload(false)}
+                      className="px-3 py-2 text-sm text-gray-400 hover:text-gray-300 transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* Video player */}
+          {playingId && (
+            <Card className="bg-gray-900/80 border-cyan-800/30 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-cyan-400 text-sm font-bold">
+                  <Radio className="w-4 h-4" /> Now streaming via Ψ channel
+                </div>
+                <button onClick={() => setPlayingId(null)} className="text-gray-500 hover:text-gray-300">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <video controls autoPlay
+                src={`/api/spectral-workspace/video/${playingId}/stream`}
+                className="w-full rounded-lg bg-black max-h-[400px]"
+                data-testid="video-player">
+                Your browser does not support the video tag.
+              </video>
+              <div className="text-gray-600 text-xs font-mono">
+                Stream URL: /api/spectral-workspace/video/{playingId}/stream
+              </div>
+            </Card>
+          )}
+
+          {/* Video list */}
+          {videosLoading ? (
+            <div className="text-center py-16 text-gray-500">Loading library…</div>
+          ) : videos.length === 0 ? (
+            <div className="text-center py-16 space-y-3">
+              <Film className="w-12 h-12 text-gray-700 mx-auto" />
+              <div className="text-gray-500">No videos uploaded yet.</div>
+              {isLoggedIn
+                ? <button onClick={() => setShowUpload(true)} className="text-purple-400 hover:text-purple-300 text-sm underline">Be the first to upload</button>
+                : <Link href="/auth"><span className="text-purple-400 hover:text-purple-300 text-sm underline cursor-pointer">Log in to upload a video</span></Link>}
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              {videos.map((v: any) => (
+                <Card key={v.id} className="bg-gray-900/60 border-gray-800 hover:border-gray-700 transition-all"
+                  data-testid={`video-card-${v.id}`}>
+                  {/* Play area */}
+                  <button onClick={() => setPlayingId(playingId === v.id ? null : v.id)}
+                    className="w-full aspect-video bg-black rounded-t-xl flex items-center justify-center group relative overflow-hidden"
+                    data-testid={`btn-play-${v.id}`}>
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-cyan-900/20 group-hover:from-purple-900/30 group-hover:to-cyan-900/30 transition-all" />
+                    {playingId === v.id
+                      ? <div className="relative z-10 flex items-center gap-2 text-cyan-400 text-sm font-bold"><Radio className="w-5 h-5 animate-pulse" /> Streaming…</div>
+                      : <div className="relative z-10 w-12 h-12 rounded-full bg-white/10 group-hover:bg-white/20 flex items-center justify-center transition-all">
+                          <Play className="w-5 h-5 text-white ml-0.5" />
+                        </div>}
+                  </button>
+                  {/* Metadata */}
+                  <div className="p-4 space-y-1">
+                    <div className="font-bold text-white text-sm truncate">{v.filename}</div>
+                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                      <span>by {v.uploaderName}</span>
+                      <span>{v.fileSize ? `${(v.fileSize / 1024 / 1024).toFixed(1)} MB` : ""}</span>
+                      <span>{v.createdAt ? new Date(v.createdAt).toLocaleDateString() : ""}</span>
+                    </div>
+                    <div className="text-[10px] text-gray-600 font-mono">ID: {v.id.slice(0, 20)}…</div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          <p className="text-center text-gray-700 text-xs pb-4">
+            All video streams served via HTTP Range Requests · AGPL-3.0 Open Infrastructure
+          </p>
+        </div>
+      )}
+
+      {/* ── Protocol demo tab ── */}
+      {tab === "demo" && (
       <div className="max-w-5xl mx-auto px-6 py-10 space-y-10">
 
         {/* ── Paradigm comparison ── */}
@@ -501,6 +740,7 @@ export default function SpectralVideoPage() {
           WNSP Spectral Video · AGPL-3.0 Open Infrastructure · NexusOS 2025–2125
         </p>
       </div>
+      )}
     </div>
   );
 }

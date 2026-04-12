@@ -3786,14 +3786,58 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/spectral-workspace/video/:id", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-workspace/video/:id", optionalAuth, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { videoUploads } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      // Return metadata only (no videoData blob) for the info endpoint
+      const [video] = await db.select({
+        id: videoUploads.id, uploaderId: videoUploads.uploaderId,
+        uploaderName: videoUploads.uploaderName, filename: videoUploads.filename,
+        mimeType: videoUploads.mimeType, fileSize: videoUploads.fileSize,
+        duration: videoUploads.duration, status: videoUploads.status,
+        createdAt: videoUploads.createdAt,
+      }).from(videoUploads).where(eq(videoUploads.id, req.params.id));
+      if (!video) return res.status(404).json({ error: "Video not found" });
+      res.json({ video });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── Video stream — serves raw binary so <video> tags can play it ───────────
+  app.get("/api/spectral-workspace/video/:id/stream", async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { videoUploads } = await import("@shared/schema");
       const { eq } = await import("drizzle-orm");
       const [video] = await db.select().from(videoUploads).where(eq(videoUploads.id, req.params.id));
       if (!video) return res.status(404).json({ error: "Video not found" });
-      res.json({ video });
+      if (!video.videoData) return res.status(404).json({ error: "No video data stored" });
+
+      const mimeType = video.mimeType || "video/mp4";
+      const buf = Buffer.from(video.videoData, "base64");
+      const total = buf.length;
+      const rangeHeader = req.headers.range;
+
+      res.setHeader("Accept-Ranges", "bytes");
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader("Cache-Control", "public, max-age=3600");
+
+      if (rangeHeader) {
+        const [startStr, endStr] = rangeHeader.replace(/bytes=/, "").split("-");
+        const start = parseInt(startStr, 10);
+        const end   = endStr ? parseInt(endStr, 10) : total - 1;
+        const chunkSize = end - start + 1;
+        res.status(206);
+        res.setHeader("Content-Range",  `bytes ${start}-${end}/${total}`);
+        res.setHeader("Content-Length", chunkSize);
+        res.end(buf.slice(start, end + 1));
+      } else {
+        res.setHeader("Content-Length", total);
+        res.end(buf);
+      }
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -3870,15 +3914,25 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/spectral-workspace/videos", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-workspace/videos", optionalAuth, async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
-      const { spectralRecords } = await import("@shared/schema");
-      const { sql: drizzleSql } = await import("drizzle-orm");
-      const records = await db.select().from(spectralRecords)
-        .where(drizzleSql`${spectralRecords.data}->>'type' = 'video'`)
-        .orderBy(drizzleSql`${spectralRecords.createdAt} DESC`);
-      res.json({ records, count: records.length });
+      const { videoUploads } = await import("@shared/schema");
+      const { sql: drizzleSql, desc } = await import("drizzle-orm");
+      const videos = await db.select({
+        id: videoUploads.id,
+        uploaderId: videoUploads.uploaderId,
+        uploaderName: videoUploads.uploaderName,
+        filename: videoUploads.filename,
+        mimeType: videoUploads.mimeType,
+        fileSize: videoUploads.fileSize,
+        duration: videoUploads.duration,
+        status: videoUploads.status,
+        createdAt: videoUploads.createdAt,
+      }).from(videoUploads)
+        .where(drizzleSql`${videoUploads.status} = 'ready'`)
+        .orderBy(desc(videoUploads.createdAt));
+      res.json({ videos, count: videos.length });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
