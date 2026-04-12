@@ -134,14 +134,22 @@ function MyIdentityCard({ username }: { username: string }) {
           <code className="text-slate-400">{window.location.origin}/profile/{username.toLowerCase()}</code>
         </div>
 
-        <Button size="sm" onClick={() => autoRegMut.mutate()}
-          disabled={autoRegMut.isPending}
-          className="w-full sm:w-auto text-xs"
-          style={{ background: col, color: "#fff" }}
-          data-testid="btn-register-me">
-          <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
-          {autoRegMut.isPending ? "Registering…" : "Register to WNSP Registry"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" onClick={() => autoRegMut.mutate()}
+            disabled={autoRegMut.isPending}
+            className="text-xs"
+            style={{ background: col, color: "#fff" }}
+            data-testid="btn-register-me">
+            <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
+            {autoRegMut.isPending ? "Registering…" : "Register to WNSP Registry"}
+          </Button>
+          <Link href={`/profile/${username}`} data-testid="link-view-profile">
+            <Button size="sm" variant="outline" className="text-xs border-slate-700 text-slate-300 hover:text-white">
+              <UserCircle className="w-3.5 h-3.5 mr-1.5" />
+              View Profile
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -62,6 +62,7 @@ import SnicPage from "@/pages/snic";
 import SpectralUriPage from "@/pages/spectral-uri";
 import OpenPage from "@/pages/open";
 import WnspBridgePage from "@/pages/wnsp-bridge";
+import ProfilePage from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -173,6 +174,7 @@ function Router() {
       <Route path="/nexus-command" component={NexusCommandPage} />
       <Route path="/wnsp-bridge" component={WnspBridgePage} />
       <Route path="/wnsp/bridge" component={WnspBridgePage} />
+      <Route path="/profile/:username" component={ProfilePage} />
       <Route>
         <ProtectedRoutes />
       </Route>

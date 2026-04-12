@@ -541,6 +541,31 @@ export async function registerRoutes(
       
       await logAction(req, "user_registered", "auth", user.id, { username });
 
+      // ── Auto-register canonical wnsp:// identity on signup ─────────────
+      try {
+        const { db: _db2 } = await import("./db");
+        const { wnspRegistry: _wr2 } = await import("@shared/schema");
+        const enc2 = (() => {
+          const codes = username.toUpperCase().split("").map((c: string) => c.charCodeAt(0)).filter((c: number) => c >= 32 && c <= 126);
+          const sum   = codes.reduce((a: number, b: number) => a + b, 0);
+          const avg   = sum / (codes.length || 1);
+          const nm    = parseFloat((380 + ((avg - 32) / 94) * 400).toFixed(4));
+          const wdm   = Math.floor((nm - 380) / 4) + 1;
+          const oam   = sum % 100;
+          const pol   = codes.length % 2 === 0 ? "H" : "V";
+          const band  = nm < 450 ? "VIOLET" : nm < 495 ? "BLUE" : nm < 520 ? "CYAN" : nm < 565 ? "GREEN" : nm < 590 ? "YELLOW" : nm < 625 ? "ORANGE" : "RED";
+          const slug  = username.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+          return { nm, wdm, oam, pol, band, psi: `Ψ(${wdm},${oam},${pol})`, uri: `wnsp://Ψ(${wdm},${oam},${pol})/${slug}` };
+        })();
+        await _db2.insert(_wr2).values({
+          wnspUri: enc2.uri, psiChannel: enc2.psi, wdm: enc2.wdm, oam: enc2.oam,
+          polarisation: enc2.pol, wavelengthNm: String(enc2.nm), band: enc2.band,
+          label: username, ceInput: username, resourceType: "user", resourceId: user.id,
+          httpUrl: `/profile/${username}`, description: `Canonical spectral identity for ${username}`,
+          registeredBy: user.id, isPublic: true, isCanonical: true,
+        }).onConflictDoNothing();
+      } catch (_e) { /* non-blocking — identity can be registered later */ }
+
       const wallet = await storage.getWallet(user.id);
 
       res.status(201).json({
@@ -4194,6 +4219,65 @@ export async function registerRoutes(
     const text = (req.query.text as string) || "";
     if (!text) return res.status(400).json({ error: "text is required" });
     res.json(ceSe(text));
+  });
+
+  // ── Public profile endpoint ───────────────────────────────────────────
+  app.get("/api/profile/:username", async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { users: usersTable, wallets, spectralRecords, wnspRegistry, blockchainTxPool } = await import("@shared/schema");
+      const { eq, and, desc, count } = await import("drizzle-orm");
+      const { username } = req.params;
+
+      const [user] = await db.select({
+        id: usersTable.id, username: usersTable.username,
+        role: usersTable.role, createdAt: usersTable.createdAt,
+      }).from(usersTable).where(eq(usersTable.username, username));
+
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      // wallet (public address only)
+      const [wallet] = await db.select({ address: wallets.address })
+        .from(wallets).where(eq(wallets.userId, user.id));
+
+      // wnsp identity
+      const enc = ceSe(username);
+      const [wnspEntry] = await db.select().from(wnspRegistry)
+        .where(and(eq(wnspRegistry.resourceType, "user"), eq(wnspRegistry.resourceId, user.id)));
+
+      // spectral records at the user's canonical Ψ channel (content at their wavelength)
+      const channelRecords = await db.select({
+        id: spectralRecords.id, label: spectralRecords.label,
+        band: spectralRecords.band, wavelengthNm: spectralRecords.wavelengthNm,
+        psiChannel: spectralRecords.psiChannel, data: spectralRecords.data,
+        createdAt: spectralRecords.createdAt,
+      }).from(spectralRecords)
+        .where(eq(spectralRecords.psiChannel, enc.psi))
+        .orderBy(desc(spectralRecords.createdAt))
+        .limit(12);
+
+      // blockchain tx count (sent from their wallet)
+      const [{ value: txCount }] = wallet
+        ? await db.select({ value: count() }).from(blockchainTxPool).where(eq(blockchainTxPool.fromAddress, wallet.address))
+        : [{ value: 0 }];
+
+      // wnsp addresses they registered
+      const registered = await db.select().from(wnspRegistry)
+        .where(eq(wnspRegistry.registeredBy, user.id))
+        .orderBy(desc(wnspRegistry.createdAt)).limit(20);
+
+      res.json({
+        user: { id: user.id, username: user.username, role: user.role, createdAt: user.createdAt },
+        wallet: wallet ? { address: wallet.address } : null,
+        spectral: {
+          ...enc, registered: !!wnspEntry, entry: wnspEntry ?? null,
+          httpUrl: `/profile/${username}`,
+        },
+        content: { recent: channelRecords, total: channelRecords.length },
+        blockchain: { txCount: Number(txCount) },
+        wnspAddresses: registered,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
   app.get("/api/network/nodes", async (req: Request, res: Response) => {
