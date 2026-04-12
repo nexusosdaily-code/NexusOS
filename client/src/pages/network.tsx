@@ -340,6 +340,14 @@ export default function NetworkPage() {
                     </div>
                   </div>
 
+                  {/* Spectral URI */}
+                  <div className="flex items-center gap-1.5 mb-2.5 px-2 py-1.5 rounded-lg border border-white/6" style={{ background: "rgba(0,0,0,0.3)" }}>
+                    <Radio size={8} style={{ color: col }} className="flex-shrink-0" />
+                    <span className="font-mono text-[8px] truncate" style={{ color: col + "cc" }}>
+                      {node.psiChannel ? `wnsp://${node.psiChannel}/${node.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}` : "—"}
+                    </span>
+                  </div>
+
                   {/* Emission bar */}
                   <div className="h-1 rounded-full mb-3" style={{
                     background: `linear-gradient(to right, ${nmToColor(nm - 30)}, ${col}, ${nmToColor(nm + 30)})`

@@ -113,3 +113,9 @@ A P2P media sharing engine with physics-based cost calculations, mesh networking
 - **Media & Interaction**: `embla-carousel-react`, `cmdk`.
 - **Build Tools**: Vite, `tsx`, PostCSS, Autoprefixer.
 - **Database**: Drizzle ORM, `drizzle-kit`, `drizzle-zod`.
+
+### Recent Pages Added (latest first)
+- **`/spectral-uri`** (also `/wnsp-uri`) — WNSP-URI v1.0 Spec: replaces `https://` with `wnsp://Ψ(wdm,oam,pol)/path`. Live encoder, animated 6-step CE→SE derivation, spectrum position bar, canonical system URIs for all major pages, 10-row comparison table, formal §1–§4 spec. AGPL-3.0. Public. Linked from Nexus Command. Every node card on `/network` now shows its live `wnsp://` address.
+- **`/snic`** — Spectral Network Interface Card: Hardware Goal #1. 185,000× multiplier (555 THz ÷ 3 GHz), animated resonator waveform, live WASCII-to-Wavelength gate visualiser, interactive 10 TB race demo, 4-layer architecture, full comparison table, funding CTA. Public. Linked from Nexus Command.
+- **`/evidence`** — Evidence Ledger: on-chain proof board. Public (no login). Fix: was using `/api/agent-bus/status` which returns `agents: 5` (a number), not an array — switched to `eco.agentBus.agents` from ecosystem status.
+- **`/blockchain`**, **`/ecosystem`**, **`/network`**, **`/wavelength-lang`**, **`/nexus-command`** — All made public (no login required).

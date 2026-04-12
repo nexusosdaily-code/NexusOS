@@ -326,6 +326,14 @@ const SYSTEMS = [
     action: "See the hardware",
   },
   {
+    title: "Spectral URI — wnsp://",
+    description: "The protocol address that replaces https://. Every resource gets a deterministic Ψ(wdm,oam,pol) coordinate derived from its name via CE→SE. No DNS, no registry, no trust required. Live encoder + formal spec + canonical system addresses.",
+    href: "/spectral-uri",
+    color: "#06b6d4",
+    Icon: Radio,
+    action: "Encode a URI",
+  },
+  {
     title: "Nexus Message Encoder",
     description: "Turn any text into a wavelength of light. Encode, decode, and send messages that no server can intercept.",
     href: "/encoding-lab",
