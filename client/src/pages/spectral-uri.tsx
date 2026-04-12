@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { ArrowLeft, Radio, Zap, Globe, ExternalLink, Copy, Check, ChevronRight, Database, Shield, Cpu, Code2 } from "lucide-react";
+import { ArrowLeft, Radio, Zap, Globe, ExternalLink, Copy, Check, ChevronRight, Database, Shield, Cpu, Code2, Lock } from "lucide-react";
 
 // ── CE→SE engine (same formula used across the whole ecosystem) ───────────────
 function ceEncode(text: string): {
@@ -107,11 +107,37 @@ export default function SpectralUriPage() {
   const [debounced, setDebounced] = useState(input);
   useEffect(() => { const t = setTimeout(() => setDebounced(input), 300); return () => clearTimeout(t); }, [input]);
 
+  const [auditResult, setAuditResult] = useState<{ recordId: string; txId: string; psi: string; nm: number } | null>(null);
+  const [isLoggedIn] = useState(() => !!localStorage.getItem("auth_token"));
+
   const { data: ecoData } = useQuery<any>({ queryKey: ["/api/ecosystem/status"], refetchInterval: 15_000 });
   const systems = ecoData?.systems ?? {};
 
   const enc = ceEncode(debounced);
   const col = nmToColor(enc.nm);
+
+  const recordMutation = useMutation({
+    mutationFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      if (!token) throw new Error("LOGIN_REQUIRED");
+      const res = await fetch("/api/spectral-db/store", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ content: debounced, label: enc.wnspUri, data: { source: "spectral-uri-encoder", wnspUri: enc.wnspUri } }),
+      });
+      if (res.status === 401) throw new Error("LOGIN_REQUIRED");
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Record failed"); }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setAuditResult({
+        recordId: data.record?.id ?? "?",
+        txId:     data.auditTx?.id ?? "?",
+        psi:      data.spectral?.psi_channel ?? enc.psi,
+        nm:       parseFloat(data.spectral?.wavelength_mid_nm ?? enc.nm),
+      });
+    },
+  });
 
   const knownEncoded = KNOWN.map(k => {
     const sysData = k.ecoKey ? systems[k.ecoKey] : null;
@@ -298,6 +324,84 @@ export default function SpectralUriPage() {
             <div className="space-y-2">
               <div className="text-white/20 text-[8px] uppercase tracking-wider">Derivation — step by step</div>
               <EncodingSteps input={debounced} />
+            </div>
+
+            {/* ── Blockchain audit ── */}
+            <div className="border-t border-white/6 pt-4 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <Shield size={10} className="text-green-400" />
+                    <span className="text-green-400 text-[9px] uppercase tracking-widest font-bold">On-Chain Audit</span>
+                  </div>
+                  <div className="text-white/25 text-[8px]">
+                    Commits this encoding to the spectral_records table and writes a SPECTRAL_AUDIT proof to the photonic blockchain mempool.
+                  </div>
+                </div>
+
+                {isLoggedIn ? (
+                  <button
+                    onClick={() => { setAuditResult(null); recordMutation.mutate(); }}
+                    disabled={recordMutation.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                    style={{ background: col + "20", border: `1px solid ${col}40`, color: col }}
+                    data-testid="btn-record-onchain"
+                  >
+                    <Shield size={9} />
+                    {recordMutation.isPending ? "Recording…" : "Record on-chain"}
+                  </button>
+                ) : (
+                  <Link href="/auth">
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border border-white/10 text-white/30 hover:text-white/60 transition-all">
+                      <Lock size={9} /> Log in to record
+                    </button>
+                  </Link>
+                )}
+              </div>
+
+              {/* Error */}
+              {recordMutation.isError && (
+                <div className="border border-red-500/20 rounded-lg px-3 py-2 text-red-400 text-[9px]">
+                  {(recordMutation.error as Error).message === "LOGIN_REQUIRED"
+                    ? <span>Session expired. <Link href="/auth"><span className="underline">Log in again</span></Link></span>
+                    : (recordMutation.error as Error).message}
+                </div>
+              )}
+
+              {/* Success receipt */}
+              {auditResult && (
+                <div className="border border-green-500/20 rounded-xl p-4 space-y-2" style={{ background: "rgba(34,197,94,0.04)" }}>
+                  <div className="flex items-center gap-2 text-green-400 text-[9px] font-bold uppercase tracking-widest">
+                    <Check size={10} /> Recorded — on-chain audit proof created
+                  </div>
+                  <div className="grid grid-cols-1 gap-1 font-mono text-[8px]">
+                    <div className="flex gap-2">
+                      <span className="text-white/25 w-20 flex-shrink-0">Record ID</span>
+                      <span className="text-green-300/70 break-all">{auditResult.recordId}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-white/25 w-20 flex-shrink-0">Audit TX</span>
+                      <span className="text-yellow-300/70 break-all">{auditResult.txId}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-white/25 w-20 flex-shrink-0">Ψ Channel</span>
+                      <span className="text-cyan-300/70">{auditResult.psi}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 pt-1">
+                    <Link href="/blockchain">
+                      <button className="flex items-center gap-1 px-2 py-1 rounded border border-yellow-400/20 text-yellow-400/70 hover:text-yellow-400 text-[8px] transition-colors">
+                        <ExternalLink size={7} /> View blockchain
+                      </button>
+                    </Link>
+                    <Link href="/evidence">
+                      <button className="flex items-center gap-1 px-2 py-1 rounded border border-green-400/20 text-green-400/70 hover:text-green-400 text-[8px] transition-colors">
+                        <Shield size={7} /> Evidence ledger
+                      </button>
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
