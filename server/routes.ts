@@ -3821,7 +3821,7 @@ export async function registerRoutes(
     return { wavelengthNm: nm, frequencyThz: thz, psiChannel: `Ψ(${wdm},${oam},${pol})`, emissionBand: band };
   }
 
-  app.get("/api/network/nodes", authenticate, async (req, res) => {
+  app.get("/api/network/nodes", async (req, res) => {
     try {
       const status = req.query.status as string | undefined;
       const nodes = await storage.getNetworkNodes(status);

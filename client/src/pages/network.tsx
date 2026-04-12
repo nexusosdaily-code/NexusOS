@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
-  ArrowLeft, Radio, Wifi, Plus, Zap, Eye, RefreshCw, Atom, Globe, Activity
+  ArrowLeft, Radio, Wifi, Plus, Zap, Eye, RefreshCw, Atom, Globe, Activity, LogIn, AlertCircle
 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/queryClient";
 
@@ -67,20 +67,36 @@ export default function NetworkPage() {
   const [showRegister, setShowRegister] = useState(false);
   const [form, setForm] = useState({ name: "", purpose: "", endpoint: "", capabilities: "" });
   const [preview, setPreview] = useState<ReturnType<typeof ceEncode> | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem("auth_token"));
+  }, []);
 
   const { data, isLoading, dataUpdatedAt } = useQuery<{ nodes: Node[]; total: number; active: number }>({
     queryKey: ["/api/network/nodes"],
     refetchInterval: 8_000,
+    queryFn: async () => {
+      const res = await fetch("/api/network/nodes");
+      if (!res.ok) throw new Error("Failed to load nodes");
+      return res.json();
+    },
   });
 
   const registerMutation = useMutation({
     mutationFn: async (body: object) => {
+      const token = localStorage.getItem("auth_token");
+      if (!token) throw new Error("LOGIN_REQUIRED");
       const res = await fetch("/api/network/nodes/register", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (res.status === 401) throw new Error("LOGIN_REQUIRED");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: "Registration failed" }));
+        throw new Error(body.error || "Registration failed");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -135,13 +151,24 @@ export default function NetworkPage() {
             className="text-white/30 hover:text-white/60 transition-colors">
             <RefreshCw size={12} />
           </button>
-          <button
-            onClick={() => setShowRegister(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-400/30 text-emerald-400/70 hover:text-emerald-400 hover:border-emerald-400/50 transition-all text-[10px]"
-            data-testid="button-register-node"
-          >
-            <Plus size={10} /> Register node
-          </button>
+          {isLoggedIn ? (
+            <button
+              onClick={() => setShowRegister(v => !v)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-400/30 text-emerald-400/70 hover:text-emerald-400 hover:border-emerald-400/50 transition-all text-[10px]"
+              data-testid="button-register-node"
+            >
+              <Plus size={10} /> Register node
+            </button>
+          ) : (
+            <Link href="/auth">
+              <button
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/20 text-white/40 hover:text-white/70 hover:border-white/30 transition-all text-[10px]"
+                data-testid="button-login-to-register"
+              >
+                <LogIn size={10} /> Log in to register
+              </button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -256,7 +283,20 @@ export default function NetworkPage() {
               </button>
               <button onClick={() => setShowRegister(false)} className="text-white/30 text-[10px] hover:text-white/50">Cancel</button>
               {registerMutation.isError && (
-                <span className="text-red-400 text-[10px]">{(registerMutation.error as Error).message}</span>
+                <div className="flex items-center gap-1.5">
+                  <AlertCircle size={11} className="text-red-400 flex-shrink-0" />
+                  {(registerMutation.error as Error).message === "LOGIN_REQUIRED" ? (
+                    <span className="text-red-400 text-[10px]">
+                      You need to{" "}
+                      <Link href="/auth">
+                        <span className="underline cursor-pointer hover:text-red-300">log in</span>
+                      </Link>{" "}
+                      to register a node.
+                    </span>
+                  ) : (
+                    <span className="text-red-400 text-[10px]">{(registerMutation.error as Error).message}</span>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -313,9 +353,23 @@ export default function NetworkPage() {
           <div className="border border-white/5 rounded-xl p-10 text-center" style={{ background: "rgba(255,255,255,0.01)" }}>
             <Globe size={28} className="text-white/10 mx-auto mb-3" />
             <div className="text-white/30 text-sm font-bold mb-1">No nodes visible yet</div>
-            <div className="text-white/15 text-[11px] leading-relaxed max-w-sm mx-auto">
-              Register your node above. Once registered it will emit at its CE→SE wavelength and become visible to all other nodes on the network.
+            <div className="text-white/15 text-[11px] leading-relaxed max-w-sm mx-auto mb-4">
+              Be the first to register a node. Once registered it will emit at its CE→SE wavelength and become visible to all other nodes on the spectral network.
             </div>
+            {isLoggedIn ? (
+              <button
+                onClick={() => setShowRegister(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-400/30 text-emerald-400/70 hover:text-emerald-400 hover:border-emerald-400/50 transition-all text-[11px]"
+              >
+                <Plus size={11} /> Register the first node
+              </button>
+            ) : (
+              <Link href="/auth">
+                <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-white/20 text-white/40 hover:text-white/60 transition-all text-[11px]">
+                  <LogIn size={11} /> Log in to register
+                </button>
+              </Link>
+            )}
           </div>
         )}
 
