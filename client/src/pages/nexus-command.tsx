@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Zap, Radio, Layers, Database, Wifi, Lock, Globe,
   Send, Play, RefreshCw, ArrowRight, Activity,
-  Code2, Cpu, Signal, FileText, BookOpen, Shield, Heart, Video
+  Code2, Cpu, Signal, FileText, BookOpen, Shield, Heart, Video, Scale
 } from "lucide-react";
 
 // ── Spectrum colour ───────────────────────────────────────────────
@@ -333,6 +333,14 @@ const SYSTEMS = [
     color: "#06b6d4",
     Icon: Radio,
     action: "Encode a URI",
+  },
+  {
+    title: "Open Infrastructure Charter",
+    description: "AGPL-3.0 means this protocol belongs to physics, not to any company. Full explanation of every stack layer — protocol, OS, database, hardware, language, energy — and the blueprint from today's software to the complete Nexus civilization infrastructure.",
+    href: "/open",
+    color: "#f59e0b",
+    Icon: Scale,
+    action: "Read the charter",
   },
   {
     title: "Nexus Message Encoder",
@@ -706,13 +714,29 @@ export default function NexusCommand() {
       </div>
 
       {/* AGPL footer */}
-      <div className="rounded-xl border border-slate-800 p-4 text-center space-y-1">
-        <p className="text-xs font-mono text-slate-600">
-          NexusOS · AGPL-3.0 · All source code public · Any company that uses this must contribute back
+      <div className="rounded-xl border border-yellow-400/15 p-5 text-center space-y-2"
+        style={{ background: "rgba(251,191,36,0.04)" }}>
+        <div className="flex items-center justify-center gap-2">
+          <Scale size={12} className="text-yellow-400/60" />
+          <p className="text-xs font-mono text-yellow-400/60 font-bold">
+            NexusOS · GNU Affero General Public License v3.0
+          </p>
+        </div>
+        <p className="text-[10px] text-slate-600 max-w-xl mx-auto leading-relaxed">
+          All source code is public. Any company or organization that runs a modified version
+          of this stack over a network must publish their source code.
+          The infrastructure of civilisation cannot be privately owned.
         </p>
-        <p className="text-xs text-slate-700">
-          Built for a Kardashev Type I civilisation · Λ = hf/c² · E = hf · f₀ = 555 THz · fᵣ = 7.83 Hz
+        <p className="text-[9px] text-slate-700 font-mono">
+          Λ = hf/c² · E = hf · f₀ = 555 THz · fᵣ = 7.83 Hz · Z₀ = 376.73 Ω
         </p>
+        <div className="pt-1">
+          <Link href="/open">
+            <button className="inline-flex items-center gap-1.5 text-[9px] text-yellow-400/50 hover:text-yellow-400 transition-colors border border-yellow-400/20 rounded px-3 py-1 font-bold">
+              <Scale size={9} /> Read the Open Infrastructure Charter →
+            </button>
+          </Link>
+        </div>
       </div>
     </div>
   );

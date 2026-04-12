@@ -60,6 +60,7 @@ import VisualizerPage from "@/pages/visualizer";
 import IndiegogoPage from "@/pages/indiegogo";
 import SnicPage from "@/pages/snic";
 import SpectralUriPage from "@/pages/spectral-uri";
+import OpenPage from "@/pages/open";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -155,6 +156,8 @@ function Router() {
       <Route path="/snic" component={SnicPage} />
       <Route path="/spectral-uri" component={SpectralUriPage} />
       <Route path="/wnsp-uri" component={SpectralUriPage} />
+      <Route path="/open" component={OpenPage} />
+      <Route path="/charter" component={OpenPage} />
       <Route path="/evidence" component={EvidencePage} />
       <Route path="/blockchain" component={BlockchainPage} />
       <Route path="/ecosystem" component={EcosystemPage} />
