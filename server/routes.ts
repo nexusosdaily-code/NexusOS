@@ -1,3 +1,4 @@
+import path from "path";
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
@@ -116,12 +117,15 @@ async function secureProxyToSpectralAPI(req: Request, res: Response, endpoint: s
   }
 }
 
+const VIDEO_EXTENSIONS = new Set([".mp4",".mov",".avi",".mkv",".webm",".m4v",".wmv",".flv",".ts",".3gp"]);
 const videoUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 200 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith("video/")) cb(null, true);
-    else cb(new Error("Only video files allowed"));
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isVideoMime = file.mimetype.startsWith("video/") || file.mimetype === "application/octet-stream";
+    if (isVideoMime || VIDEO_EXTENSIONS.has(ext)) cb(null, true);
+    else cb(new Error(`Only video files allowed. Received: ${file.mimetype}`));
   },
 });
 
