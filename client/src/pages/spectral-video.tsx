@@ -101,7 +101,14 @@ export default function SpectralVideoPage() {
 
   // ── Library tab state ──
   const qc = useQueryClient();
-  const isLoggedIn = !!localStorage.getItem("auth_token");
+  const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem("auth_token"));
+  useEffect(() => {
+    const check = () => setIsLoggedIn(!!localStorage.getItem("auth_token"));
+    check();
+    window.addEventListener("storage", check);
+    window.addEventListener("focus", check);
+    return () => { window.removeEventListener("storage", check); window.removeEventListener("focus", check); };
+  }, []);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [uploadForm, setUploadForm] = useState({ title: "", description: "" });
@@ -322,7 +329,14 @@ export default function SpectralVideoPage() {
 
                   {uploadMutation.isError && (
                     <div className="text-red-400 text-xs border border-red-800/40 rounded px-3 py-2">
-                      {(uploadMutation.error as Error).message}
+                      {(uploadMutation.error as Error).message === "LOGIN_REQUIRED"
+                        ? "You must be logged in to upload. Go to /auth and sign in first."
+                        : (uploadMutation.error as Error).message}
+                    </div>
+                  )}
+                  {uploadMutation.isPending && (
+                    <div className="text-purple-300 text-xs border border-purple-800/40 rounded px-3 py-2">
+                      Converting and uploading… large files may take 30–60 seconds. Please wait.
                     </div>
                   )}
 
