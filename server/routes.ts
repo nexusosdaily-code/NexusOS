@@ -3012,6 +3012,100 @@ export async function registerRoutes(
     }
   });
 
+  // ── Store file — upload any file (code, PDF, book, assignment) to spectral DB ─
+  const TEXT_EXTENSIONS = /\.(txt|md|markdown|js|ts|jsx|tsx|py|rb|go|java|c|cpp|h|hpp|cs|css|html|htm|json|xml|yml|yaml|sh|bash|sql|rs|swift|kt|scala|r|csv|log|conf|ini|toml|env|vue|svelte|php|lua|pl|ex|exs|clj|hs|ml|elm|dart|zig|v|nim|cr|fs|vb|asm|s|tex|bib|rst|adoc|org|ipynb|graphql|prisma|tf|hcl|dockerfile|makefile|gitignore|editorconfig|license|readme)$/i;
+  const docUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+  app.post("/api/spectral-db/store-file", authenticate, (req: Request, res: Response) => {
+    docUpload.single("file")(req, res, async (uploadErr) => {
+      try {
+        if (uploadErr) return res.status(400).json({ error: uploadErr.message });
+        const file = (req as any).file as Express.Multer.File | undefined;
+        if (!file) return res.status(400).json({ error: "No file provided" });
+
+        const label = (req.body.label || file.originalname).trim();
+        const description = (req.body.description || "").trim();
+
+        const ext = path.extname(file.originalname).toLowerCase();
+        const isText = file.mimetype.startsWith("text/") || TEXT_EXTENSIONS.test(ext);
+        const content = isText
+          ? file.buffer.toString("utf-8")
+          : `[Binary: ${file.originalname} | ${file.mimetype} | ${(file.size / 1024).toFixed(1)} KB]`;
+
+        const encodeText = description ? `${label}: ${description}` : label;
+        const encodeRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ instruction: encodeText, label }),
+        });
+        if (!encodeRes.ok) return res.status(502).json({ error: "Spectral encode failed" });
+        const enc = await encodeRes.json() as any;
+
+        const psiMatch = enc.psi_channel?.match(/Ψ\((\d+),\s*(\d+),\s*([HV])\)/);
+        const wdm = psiMatch ? parseInt(psiMatch[1]) : 0;
+        const oam = psiMatch ? parseInt(psiMatch[2]) : 0;
+        const pol = psiMatch ? psiMatch[3] : "H";
+
+        const { createHash } = await import("crypto");
+        const contentHash = createHash("sha256").update(content).digest("hex");
+
+        const { db } = await import("./db");
+        const { spectralRecords, blockchainTxPool } = await import("@shared/schema");
+
+        const [record] = await db.insert(spectralRecords).values({
+          label,
+          content,
+          wavelengthNm:  String(enc.wavelength_mid_nm ?? 550),
+          psiChannel:    enc.psi_channel ?? "Ψ(0,0,H)",
+          wdm, oam, polarisation: pol,
+          band:          enc.band ?? "CORE",
+          energyJoules:  String(enc.energy_joules ?? 0),
+          lambdaMassKg:  String(enc.lambda_mass_kg ?? 0),
+          frequencyHz:   String(enc.frequency_hz ?? 0),
+          data: {
+            type: "file", filename: file.originalname, mimeType: file.mimetype,
+            fileSize: file.size, isText, contentHash, auditStatus: "pending",
+          },
+        }).returning();
+
+        const auditMemo = `SPECTRAL_FILE:${record.id}:${contentHash.slice(0, 16)}:${enc.wavelength_mid_nm}nm:${enc.psi_channel}`;
+        const energyFee = parseFloat(String(enc.energy_joules ?? 0));
+        const feePaid   = String(Math.max((energyFee / 1e-17) * 0.00000001, 0.00000001).toFixed(8));
+        const [auditTx] = await db.insert(blockchainTxPool).values({
+          fromAddress:  (req as any).user?.walletAddress ?? "NXT-NEXS-OS1K-7F3A-OMEGA",
+          toAddress:    "SPECTRAL-DB",
+          amountNxt:    "0.00000001",
+          memo:         auditMemo,
+          wavelengthNm: String(enc.wavelength_mid_nm ?? 550),
+          psiChannel:   enc.psi_channel ?? null,
+          energyJoules: String(enc.energy_joules ?? 0),
+          feePaid,
+          status:       "pending",
+        }).returning();
+
+        await db.update(spectralRecords)
+          .set({ data: { type: "file", filename: file.originalname, mimeType: file.mimetype, fileSize: file.size, isText, contentHash, auditStatus: "pending", auditTxId: auditTx.id } })
+          .where((await import("drizzle-orm")).eq(spectralRecords.id, record.id));
+
+        const { sql: dsOrd } = await import("drizzle-orm");
+        await depositOrdinalForInput({
+          db, ds: dsOrd,
+          freqHz: parseFloat(String(enc.frequency_hz ?? 5.45e14)),
+          wavelengthNm: parseFloat(String(enc.wavelength_mid_nm ?? 550)),
+          psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
+          band: enc.band ?? "CORE",
+          operation: "STORE", label,
+          sourceRecordId: record.id,
+          depositor: (req as any).user?.username ?? "system",
+        }).catch(() => null);
+
+        res.json({ success: true, record, spectral: enc, filename: file.originalname, isText, contentPreview: isText ? content.slice(0, 300) : content });
+      } catch (err: any) {
+        res.status(500).json({ error: err.message });
+      }
+    });
+  });
+
   // ── Audit mine — bundle all pending audit txs into one proof block ─────────
   app.post("/api/spectral-db/audit-mine", authenticate, async (req: Request, res: Response) => {
     try {

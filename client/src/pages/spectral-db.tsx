@@ -166,13 +166,18 @@ const WRITE_PRESETS = [
 ];
 
 function WriteTab({ onStored, records }: { onStored: () => void; records: any[] }) {
+  const [mode,    setMode]    = useState<"text"|"file">("text");
   const [content, setContent] = useState(WRITE_PRESETS[0].content);
   const [label,   setLabel]   = useState(WRITE_PRESETS[0].label);
   const [mineToo, setMineToo] = useState(false);
   const [result,  setResult]  = useState<any>(null);
   const [mineResult, setMineResult] = useState<any>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [fileLabel, setFileLabel]   = useState("");
+  const [fileDesc,  setFileDesc]    = useState("");
+  const [fileError, setFileError]   = useState<string | null>(null);
 
-  const enc = ceToSe(content);
+  const enc = ceToSe(mode === "text" ? content : (fileLabel || uploadFile?.name || ""));
   const bc  = enc ? nmToHex(enc.nm) : "#06b6d4";
 
   const storeMutation = useMutation({
@@ -191,6 +196,40 @@ function WriteTab({ onStored, records }: { onStored: () => void; records: any[] 
     },
   });
 
+  const fileMutation = useMutation({
+    mutationFn: async () => {
+      if (!uploadFile) throw new Error("No file selected");
+      const token = localStorage.getItem("auth_token");
+      if (!token) throw new Error("Login required to upload files");
+      const form = new FormData();
+      form.append("file", uploadFile);
+      form.append("label", fileLabel || uploadFile.name);
+      if (fileDesc) form.append("description", fileDesc);
+      const res = await fetch("/api/spectral-db/store-file", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      if (res.status === 401) throw new Error("Login required to upload files");
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Upload failed"); }
+      return res.json();
+    },
+    onSuccess: async (data) => {
+      setResult(data);
+      setFileError(null);
+      onStored();
+      if (mineToo && data?.success) {
+        try {
+          const mr = await apiRequest("POST", "/api/blockchain/mine", {
+            content: `SPECTRAL_FILE ${data.filename} λ=${data.spectral?.wavelength_mid_nm?.toFixed(1)}nm ${data.spectral?.psi_channel}`,
+          });
+          setMineResult(await mr.json());
+        } catch {}
+      }
+    },
+    onError: (e: any) => setFileError(e?.message || "Upload failed"),
+  });
+
   return (
     <div className="space-y-5">
       <p className="text-slate-400 text-sm">
@@ -198,6 +237,21 @@ function WriteTab({ onStored, records }: { onStored: () => void; records: any[] 
         that wavelength <em>is</em> the address. No ID is assigned; physics assigns the location.
       </p>
 
+      {/* Mode toggle */}
+      <div className="flex gap-2">
+        <button onClick={() => { setMode("text"); setResult(null); }}
+          className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${mode === "text" ? "bg-cyan-700 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}
+          data-testid="btn-mode-text">
+          ✎ Write text
+        </button>
+        <button onClick={() => { setMode("file"); setResult(null); }}
+          className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${mode === "file" ? "bg-violet-700 text-white" : "bg-slate-800 text-slate-400 hover:text-white"}`}
+          data-testid="btn-mode-file">
+          ↑ Upload file
+        </button>
+      </div>
+
+      {mode === "text" && (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2 space-y-3">
           <div className="space-y-1">
@@ -235,6 +289,57 @@ function WriteTab({ onStored, records }: { onStored: () => void; records: any[] 
           </Button>
         </div>
       </div>
+      )}
+
+      {mode === "file" && (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="md:col-span-2 space-y-3">
+          <div className="space-y-1">
+            <Label className="text-xs text-slate-400">File — code, book, assignment, PDF, any document (max 50 MB)</Label>
+            <input type="file" accept="*/*"
+              onChange={e => { const f = e.target.files?.[0] ?? null; setUploadFile(f); setFileLabel(f?.name ?? ""); setResult(null); setFileError(null); }}
+              className="block w-full text-sm text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:bg-violet-900/50 file:text-violet-300 hover:file:bg-violet-900"
+              data-testid="input-file" />
+            {uploadFile && (
+              <div className="text-xs text-slate-500 font-mono">
+                {uploadFile.name} · {(uploadFile.size / 1024).toFixed(1)} KB · {uploadFile.type || "unknown type"}
+              </div>
+            )}
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-slate-400">Description (optional — appended to label for CE→SE encoding)</Label>
+            <Input value={fileDesc} onChange={e => setFileDesc(e.target.value)}
+              placeholder="e.g. university assignment on quantum mechanics"
+              className="bg-slate-800 border-slate-600 text-slate-200 text-sm"
+              data-testid="input-file-desc" />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label className="text-xs text-slate-400">Label / key (defaults to filename)</Label>
+            <Input value={fileLabel} onChange={e => setFileLabel(e.target.value)}
+              placeholder="my_assignment.pdf"
+              className="bg-slate-800 border-slate-600 text-slate-200 font-mono text-sm"
+              data-testid="input-file-label" />
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-400">
+            <input type="checkbox" checked={mineToo} onChange={e => setMineToo(e.target.checked)}
+              className="rounded" data-testid="check-mine-file" />
+            Anchor to blockchain
+          </label>
+          <Button className="w-full bg-violet-700 hover:bg-violet-600" onClick={() => fileMutation.mutate()}
+            disabled={fileMutation.isPending || !uploadFile}
+            data-testid="btn-store-file">
+            <Upload className="w-3.5 h-3.5 mr-1.5" />
+            {fileMutation.isPending ? "Uploading…" : "Store File at Ψ Address"}
+          </Button>
+          {fileError && (
+            <div className="text-red-400 text-xs border border-red-800/40 rounded px-3 py-2">{fileError}</div>
+          )}
+        </div>
+      </div>
+      )}
 
       {/* Live CE→SE derivation */}
       {enc && content.length > 0 && (
