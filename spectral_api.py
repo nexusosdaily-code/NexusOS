@@ -29,6 +29,9 @@ from wnsp_protocol_v7 import (
     wavelength_to_frequency,
     char_to_wavelength,
     lambda_mass,
+    compute_spectral_vector,
+    compute_wnsp_density,
+    channel_density_at_wdm,
     PLANCK_CONSTANT,
     SPEED_OF_LIGHT,
     VISIBLE_MIN_NM,
@@ -214,6 +217,116 @@ def wascii_lookup():
         return jsonify({"error": str(e)}), 500
 
 
+# ─────────────────────────────────────────────────────────────────
+# WASCII v2.0  —  Wave Density Spectral Vector endpoint
+# ─────────────────────────────────────────────────────────────────
+
+@app.route('/api/wnsp/spectral-vector', methods=['GET', 'POST'])
+def spectral_vector():
+    """
+    WASCII v2.0 — Wave Density Spectral Vector.
+
+    Returns the full compression-state distribution for a string.
+    Each character maps to its WASCII wavelength (compression state).
+    The histogram across 100 WDM bands is the spectral fingerprint.
+
+    GET  /api/wnsp/spectral-vector?text=NexusOS
+    POST /api/wnsp/spectral-vector  body: {"text": "NexusOS"}
+
+    Response includes:
+      bands             — WDM histogram {band_index: count}
+      centroid_nm       — weighted average compression state
+      bandwidth_nm      — spectral spread (standard deviation)
+      spectral_entropy  — Shannon entropy 0-1 (richness score)
+      dominant_band     — most-populated compression band
+      character_states  — per-character compression state details
+      compression_range — [min_nm, max_nm] span of states used
+      unique_states     — number of unique compression states
+    """
+    if request.method == 'GET':
+        text = request.args.get('text', '')
+    else:
+        data = request.get_json() or {}
+        text = data.get('text', '')
+
+    if not text:
+        return jsonify({"error": "Missing 'text' parameter"}), 400
+
+    try:
+        result = compute_spectral_vector(text)
+        result["input"] = text
+        result["theory"] = (
+            "Each character is a compression state on the Λ=hf/c² curve. "
+            "The distribution of those states across WDM bands is the spectral "
+            "fingerprint — unique to this exact string, derived from physics."
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/wnsp/density', methods=['GET', 'POST'])
+def wnsp_density():
+    """
+    WNSP Density Equation v1.0 — D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
+
+    Computes channel capacity via Hilbert space expansion and connects
+    to the Λ=hf/c² compression state curve through energy normalization.
+
+    GET  /api/wnsp/density                              — default parameters
+    GET  /api/wnsp/density?r_sym=16&m=64&wavelength=550
+    POST /api/wnsp/density  body: {"r_sym": 16, "m": 64, "wavelength_nm": 550}
+
+    Response includes:
+      hilbert_space    — N_wdm, N_oam, N_pol, total channels, dimension note
+      density          — d_raw (symbols/cycle), d_energy (symbols/joule)
+      parameters       — r_sym, m, wavelength_nm, frequency, energy, Λ mass
+      scaling_phases   — Phase 1 / 2 / 3 density projections
+      shannon_comparison — traditional vs WNSP density model
+      theory           — physics explanation
+    """
+    if request.method == 'GET':
+        args = request.args
+    else:
+        args = request.get_json() or {}
+
+    def _float(key, default):
+        try:
+            return float(args.get(key, default))
+        except (TypeError, ValueError):
+            return default
+
+    def _int(key, default):
+        try:
+            return int(args.get(key, default))
+        except (TypeError, ValueError):
+            return default
+
+    r_sym        = _float('r_sym',        2.0)
+    m            = _float('m',            1.0)
+    wavelength_nm = _float('wavelength_nm', 550.0)
+    n_wdm        = _int('n_wdm',         256)
+    n_oam        = _int('n_oam',         50)
+    n_pol        = _int('n_pol',         2)
+
+    # Clamp to valid ranges
+    r_sym        = max(1.0,  min(r_sym, 1024.0))
+    m            = max(1.0,  min(m, 256.0))
+    wavelength_nm = max(380.0, min(wavelength_nm, 780.0))
+    n_wdm        = max(1,    min(n_wdm, 256))
+    n_oam        = max(1,    min(n_oam, 100))
+    n_pol        = max(1,    min(n_pol, 4))
+
+    try:
+        result = compute_wnsp_density(
+            n_wdm=n_wdm, n_oam=n_oam, n_pol=n_pol,
+            r_sym=r_sym, m=m, wavelength_nm=wavelength_nm,
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/wnsp/se/wavelength', methods=['POST'])
 def se_wavelength():
     """WNSP-SE: convert a wavelength (nm) to full wave properties."""
@@ -289,6 +402,11 @@ def get_constants():
 @app.route('/api/spectral/capacity', methods=['GET'])
 def get_capacity():
     total_channels = HILBERT_DIM_TOTAL  # 25,600
+    # ── Density equation applied to this capacity report ──────────────────────
+    density_phase1 = compute_wnsp_density(n_wdm=100,             r_sym=2.0, m=1, wavelength_nm=550.0)
+    density_phase2 = compute_wnsp_density(n_wdm=HILBERT_DIM_WDM, r_sym=2.0, m=1, wavelength_nm=550.0)
+    density_phase3 = compute_wnsp_density(n_wdm=HILBERT_DIM_WDM, r_sym=16.0, m=64, wavelength_nm=550.0)
+
     return jsonify({
         "wdm_channels":           HILBERT_DIM_WDM,
         "oam_modes":              HILBERT_DIM_OAM,
@@ -303,6 +421,14 @@ def get_capacity():
             "dim_pol":       HILBERT_DIM_POL,
             "total_dim":     HILBERT_DIM_TOTAL,
             "orthogonality": "⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j",
+        },
+        "density_equation": {
+            "formula":         "D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M",
+            "energy_formula":  "D_energy = D_WNSP · λ / (h · c)",
+            "phase_1_now":     density_phase1["density"]["d_raw"],
+            "phase_2_full":    density_phase2["density"]["d_raw"],
+            "phase_3_photonic": density_phase3["density"]["d_raw"],
+            "shannon_vs_wnsp": "Shannon: C ∝ log(1+SNR). WNSP: D ∝ N·R·M. Orthogonal expansion, not compression.",
         },
     })
 
@@ -602,6 +728,10 @@ def agent_allocate():
                 pass
             _events.emit("AGENT_REGISTERED", agent_id=agent_id,
                          detail={"channel": channel.notation(), "band": band.name})
+        # ── Density at this channel's compression state ───────────────
+        wdm_band = max(1, min(256, int((channel.wavelength - 380) / 4) + 1)) if 380 <= channel.wavelength < 780 else 1
+        ch_density = channel_density_at_wdm(wdm_band)
+
         return jsonify({
             "status":   "existing" if already else "allocated",
             "agent_id": agent_id,
@@ -611,6 +741,19 @@ def agent_allocate():
             "registered_at":  stats["registered_at"],
             "routed_count":   stats["routed_count"],
             "authority_band": band.name,
+            "channel_density": {
+                "wdm_band":           ch_density["wdm_band"],
+                "wavelength_nm":      ch_density["wavelength_nm"],
+                "d_channel":          ch_density["d_channel"],
+                "d_energy_per_joule": ch_density["d_energy_per_joule"],
+                "sub_channels":       ch_density["sub_channels"],
+                "equation":           ch_density["equation"],
+                "note": (
+                    "Density of this specific compression state on the Λ=hf/c² curve. "
+                    "Higher WDM index (longer λ) = lower energy per photon = "
+                    "more symbols per joule."
+                ),
+            },
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -662,12 +805,42 @@ def agent_status():
     """Return coordinator status and all allocated agent channels."""
     status = _coordinator.status()
     agents = _coordinator.all_agent_stats()
+
+    # ── Enrich each agent with density at its compression state ──────────────
+    # all_agent_stats() returns {agent_name: stats_dict}
+    enriched_agents = {}
+    for name, info in agents.items():
+        wl  = info.get("channel", {}).get("wavelength_nm", 550.0)
+        wdm = max(1, min(256, int((wl - 380) / 4) + 1)) if 380 <= wl < 780 else 1
+        cd  = channel_density_at_wdm(wdm)
+        enriched_agents[name] = {
+            **info,
+            "channel_density": {
+                "wdm_band":           cd["wdm_band"],
+                "wavelength_nm":      cd["wavelength_nm"],
+                "d_channel":          cd["d_channel"],
+                "d_energy_per_joule": cd["d_energy_per_joule"],
+                "sub_channels":       cd["sub_channels"],
+            },
+        }
+
+    # ── System-wide density equation at full Hilbert space ───────────────────
+    sys_density = compute_wnsp_density()
+
     return jsonify({
         **status,
         "total_channels":    status["capacity"],
         "occupied_channels": status["channels_used"],
         "available_channels": status["capacity"] - status["channels_used"],
-        "agents": agents,
+        "agents": enriched_agents,
+        "system_density": {
+            "equation":   sys_density["equation"],
+            "d_wnsp":     sys_density["density"]["d_raw"],
+            "hilbert_channels": sys_density["hilbert_space"]["total_channels"],
+            "phase_1":    sys_density["scaling_phases"][0]["d_symbols"],
+            "phase_2":    sys_density["scaling_phases"][1]["d_symbols"],
+            "phase_3":    sys_density["scaling_phases"][2]["d_symbols"],
+        },
     })
 
 
@@ -786,10 +959,14 @@ def bus_send():
             }), 403
 
         _bus.send(src, dst, payload, priority)
+
+        # Auto-dispatch immediately so messages never sit in the queue
+        dispatch_record = _kernel_dispatch()
+
         snap = _bus.status()
         src_band = band_for_agent(src, src_ch.wavelength)
         return jsonify({
-            "status":       "queued",
+            "status":       "dispatched" if dispatch_record else "queued",
             "src":          src,
             "dst":          dst,
             "payload":      payload,
@@ -798,6 +975,7 @@ def bus_send():
             "queue_depth":  snap["queued"],
             "authority":    src_band.name,
             "permitted":    True,
+            "delivered":    dispatch_record is not None,
         })
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
