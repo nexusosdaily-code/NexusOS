@@ -2899,7 +2899,17 @@ export async function registerRoutes(
         feePaid,
         status: "pending",
       }).returning();
-      res.json({ success: true, tx, feePaid, wavelengthNm: wlNm, psiChannel: psiCh });
+      // Density at this transaction's compression state — proves why the fee is correct physics:
+      // lower compression state (longer λ) = lower energy per photon = lower fee = more symbols/joule
+      const txWdm = wlNm ? Math.max(1, Math.min(256, Math.floor((parseFloat(wlNm) - 380) / 4) + 1)) : 39;
+      const txDensity = channelDensity(txWdm);
+      res.json({ success: true, tx, feePaid, wavelengthNm: wlNm, psiChannel: psiCh, density_context: {
+        wdm_band:           txDensity.wdm_band,
+        wavelength_nm:      txDensity.wavelength_nm,
+        d_channel:          txDensity.d_channel,
+        d_energy_per_joule: txDensity.d_energy_per_joule,
+        compression_note:   txDensity.compression_note,
+      }});
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
@@ -4060,6 +4070,46 @@ export async function registerRoutes(
     return { nm, wdm, oam, pol, band, psi: `Ψ(${wdm},${oam},${pol})`, uri: `wnsp://Ψ(${wdm},${oam},${pol})/${slug}` };
   }
 
+  // ── WNSP Density Equation helper (Node.js side) ────────────────────────────
+  // D_channel = 1 · N_OAM · N_Pol · R_sym · M
+  // D_energy  = D_channel · λ / (h · c)
+  // This is the Λ=hf/c² curve applied per WDM channel:
+  // higher WDM (longer λ, lower compression state) → lower energy per photon
+  // → more symbols per joule → cheaper communication.
+  function channelDensity(wdm: number, rSym = 2, m = 1) {
+    const h           = 6.62607015e-34;          // Planck's constant
+    const c           = 299_792_458;             // speed of light
+    const N_OAM       = 50;
+    const N_POL       = 2;
+    const wdmClamped  = Math.max(1, Math.min(256, wdm));
+    const wavelengthNm = 380 + (wdmClamped - 1) * 4 + 2;   // centre of WDM band
+    const wavelengthM = wavelengthNm * 1e-9;
+    const freqHz      = c / wavelengthM;
+    const energyJ     = h * freqHz;
+    const energyEv    = energyJ / 1.602176634e-19;
+    const lambdaMass  = energyJ / (c * c);
+    const subChannels = N_OAM * N_POL;           // 100 per WDM slot
+    const dChannel    = subChannels * rSym * m;
+    const dEnergy     = dChannel * wavelengthM / (h * c);
+    return {
+      equation:          "D_channel = 1 · N_OAM · N_Pol · R_sym · M",
+      energy_equation:   "D_energy = D_channel · λ / (h · c)",
+      wdm_band:          wdmClamped,
+      wavelength_nm:     parseFloat(wavelengthNm.toFixed(2)),
+      frequency_thz:     parseFloat((freqHz / 1e12).toFixed(4)),
+      energy_ev:         parseFloat(energyEv.toFixed(4)),
+      energy_joules:     energyJ,
+      lambda_mass_kg:    lambdaMass,
+      sub_channels:      subChannels,
+      d_channel:         dChannel,                  // symbols / cycle at this WDM slot
+      d_energy_per_joule: parseFloat(dEnergy.toFixed(2)),
+      r_sym:             rSym,
+      m,
+      hilbert_note:      `This WDM band contributes ${subChannels} of the 25,600 Hilbert channels (${N_OAM} OAM × ${N_POL} Pol).`,
+      compression_note:  `Higher λ = lower compression state = lower energy per photon = higher symbols/joule.`,
+    };
+  }
+
   // ── Public registry — list all public addresses ────────────────────────
   app.get("/api/wnsp/registry", async (req: Request, res: Response) => {
     try {
@@ -4116,7 +4166,10 @@ export async function registerRoutes(
       const { spectralRecords } = await import("@shared/schema");
       const spectral = lookupPsi ? await db.select().from(spectralRecords).where(eq(spectralRecords.psiChannel, lookupPsi)).limit(10) : [];
 
-      res.json({ resolved: entries.length > 0, entries, spectral, query: { psi: lookupPsi, path, uri: lookupUri } });
+      // add density at resolved channel compression state
+      const wdmMatch = lookupPsi.match(/Ψ\((\d+),/);
+      const resolvedDensity = wdmMatch ? channelDensity(parseInt(wdmMatch[1])) : null;
+      res.json({ resolved: entries.length > 0, entries, spectral, query: { psi: lookupPsi, path, uri: lookupUri }, channel_density: resolvedDensity });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
@@ -4185,7 +4238,7 @@ export async function registerRoutes(
         isCanonical:  false,
       }).returning();
 
-      res.status(201).json({ success: true, entry, spectral: enc });
+      res.status(201).json({ success: true, entry, spectral: enc, channel_density: channelDensity(enc.wdm) });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
@@ -4201,7 +4254,7 @@ export async function registerRoutes(
       // idempotent: upsert by resource
       const [existing] = await db.select().from(wnspRegistry)
         .where(and(eq(wnspRegistry.resourceType, "user"), eq(wnspRegistry.resourceId, user.id)));
-      if (existing) return res.json({ success: true, entry: existing, spectral: enc, created: false });
+      if (existing) return res.json({ success: true, entry: existing, spectral: enc, created: false, channel_density: channelDensity(enc.wdm) });
 
       const [entry] = await db.insert(wnspRegistry).values({
         wnspUri:      enc.uri,
@@ -4222,10 +4275,12 @@ export async function registerRoutes(
         isCanonical:  true,
       }).returning();
 
-      res.status(201).json({ success: true, entry, spectral: enc, created: true });
+      const cd = channelDensity(enc.wdm);
+      res.status(201).json({ success: true, entry, spectral: enc, created: true, channel_density: cd });
     } catch (err: any) {
       if (err.message?.includes("unique")) {
-        return res.json({ success: true, note: "Address already claimed at this channel", spectral: ceSe((req as any).user!.username) });
+        const e2 = ceSe((req as any).user!.username);
+        return res.json({ success: true, note: "Address already claimed at this channel", spectral: e2, channel_density: channelDensity(e2.wdm) });
       }
       res.status(500).json({ error: err.message });
     }
@@ -4235,7 +4290,11 @@ export async function registerRoutes(
   app.get("/api/wnsp/preview", async (req: Request, res: Response) => {
     const text = (req.query.text as string) || "";
     if (!text) return res.status(400).json({ error: "text is required" });
-    res.json(ceSe(text));
+    const enc = ceSe(text);
+    res.json({
+      ...enc,
+      channel_density: channelDensity(enc.wdm),
+    });
   });
 
   // ── Public profile endpoint ───────────────────────────────────────────
@@ -4283,6 +4342,7 @@ export async function registerRoutes(
         .where(eq(wnspRegistry.registeredBy, user.id))
         .orderBy(desc(wnspRegistry.createdAt)).limit(20);
 
+      const profileDensity = channelDensity(enc.wdm);
       res.json({
         user: { id: user.id, username: user.username, role: user.role, createdAt: user.createdAt },
         wallet: wallet ? { address: wallet.address } : null,
@@ -4290,6 +4350,7 @@ export async function registerRoutes(
           ...enc, registered: !!wnspEntry, entry: wnspEntry ?? null,
           httpUrl: `/profile/${username}`,
         },
+        channel_density: profileDensity,
         content: { recent: channelRecords, total: channelRecords.length },
         blockchain: { txCount: Number(txCount) },
         wnspAddresses: registered,

@@ -805,12 +805,42 @@ def agent_status():
     """Return coordinator status and all allocated agent channels."""
     status = _coordinator.status()
     agents = _coordinator.all_agent_stats()
+
+    # ── Enrich each agent with density at its compression state ──────────────
+    # all_agent_stats() returns {agent_name: stats_dict}
+    enriched_agents = {}
+    for name, info in agents.items():
+        wl  = info.get("channel", {}).get("wavelength_nm", 550.0)
+        wdm = max(1, min(256, int((wl - 380) / 4) + 1)) if 380 <= wl < 780 else 1
+        cd  = channel_density_at_wdm(wdm)
+        enriched_agents[name] = {
+            **info,
+            "channel_density": {
+                "wdm_band":           cd["wdm_band"],
+                "wavelength_nm":      cd["wavelength_nm"],
+                "d_channel":          cd["d_channel"],
+                "d_energy_per_joule": cd["d_energy_per_joule"],
+                "sub_channels":       cd["sub_channels"],
+            },
+        }
+
+    # ── System-wide density equation at full Hilbert space ───────────────────
+    sys_density = compute_wnsp_density()
+
     return jsonify({
         **status,
         "total_channels":    status["capacity"],
         "occupied_channels": status["channels_used"],
         "available_channels": status["capacity"] - status["channels_used"],
-        "agents": agents,
+        "agents": enriched_agents,
+        "system_density": {
+            "equation":   sys_density["equation"],
+            "d_wnsp":     sys_density["density"]["d_raw"],
+            "hilbert_channels": sys_density["hilbert_space"]["total_channels"],
+            "phase_1":    sys_density["scaling_phases"][0]["d_symbols"],
+            "phase_2":    sys_density["scaling_phases"][1]["d_symbols"],
+            "phase_3":    sys_density["scaling_phases"][2]["d_symbols"],
+        },
     })
 
 

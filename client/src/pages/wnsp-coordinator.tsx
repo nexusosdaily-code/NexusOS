@@ -189,10 +189,11 @@ export default function WNSPCoordinator() {
 
   /* ── derived values ── */
   const agents    = Object.entries(agentStatus?.agents ?? {}) as [string, any][];
-  const occupied  = agentStatus?.occupied_channels ?? 0;
-  const available = agentStatus?.available_channels ?? 25600;
-  const total     = agentStatus?.total_channels ?? 25600;
-  const queueDepth = agentStatus?.queue_depth ?? 0;
+  const occupied    = agentStatus?.occupied_channels ?? 0;
+  const available   = agentStatus?.available_channels ?? 25600;
+  const total       = agentStatus?.total_channels ?? 25600;
+  const queueDepth  = agentStatus?.queue_depth ?? 0;
+  const sysDensity  = agentStatus?.system_density ?? null;
 
   const tabClass = (t: Tab) =>
     `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -252,7 +253,13 @@ export default function WNSPCoordinator() {
           <Card className="bg-gray-900/60 border-gray-700 p-4">
             <div className="text-xs text-gray-400 mb-1">Queue Depth</div>
             <div className="text-2xl font-bold text-yellow-300">{queueDepth}</div>
-            <div className="text-xs text-gray-500 mt-1">pending instructions</div>
+            {sysDensity ? (
+              <div className="text-xs text-cyan-400 mt-1 font-mono" data-testid="system-density-wnsp">
+                D_WNSP {(sysDensity.d_wnsp ?? 0).toLocaleString()} sym/cycle
+              </div>
+            ) : (
+              <div className="text-xs text-gray-500 mt-1">pending instructions</div>
+            )}
           </Card>
         </div>
 
@@ -419,6 +426,15 @@ export default function WNSPCoordinator() {
                           <span>{ch.wavelength_nm?.toFixed(1)} nm &nbsp;·&nbsp; {info.intent}</span>
                           <span>{info.routed_count ?? 0} routed &nbsp;·&nbsp; {info.uptime_s?.toFixed(0)}s up</span>
                         </div>
+                        {info.channel_density && (
+                          <div className="mt-2 pt-2 border-t border-gray-700/50 flex items-center gap-3 text-xs font-mono">
+                            <span className="text-gray-500">D_ch</span>
+                            <span className="text-cyan-300" data-testid={`agent-density-${id}`}>{info.channel_density.d_channel} sym/cycle</span>
+                            <span className="text-gray-600">·</span>
+                            <span className="text-gray-500">D_E</span>
+                            <span className="text-purple-300">{info.channel_density.d_energy_per_joule?.toFixed(0)} sym/J</span>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
