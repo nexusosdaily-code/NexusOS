@@ -174,6 +174,27 @@ Address: wnsp://Ψ(wdm, oam, pol)/slug
 
 No registry required. No authority required. Type a name — the compression state of those characters in the WASCII mapping derives a unique position in the electromagnetic spectrum. That position is the address.
 
+### WNSP Density Equation v1.0
+
+```
+D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
+```
+
+Where: N_λ = 256 (WDM), N_OAM = 50 (orbital angular momentum), N_Pol = 2 (polarization), R_sym = symbols/cycle, M = modulation depth.
+
+Hilbert space: dim(H) = 256 × 50 × 2 = **25,600 orthogonal channels**. Current density: 51,200 symbols/cycle (R=2, M=1).
+
+Energy-normalized form: `D_energy = D_WNSP · λ / (h · c)` — connects to Λ=hf/c². At higher frequency (shorter λ, higher compression state), photons carry more energy, so density per joule decreases along the compression state curve.
+
+| Phase | Description | D symbols/cycle |
+|---|---|---|
+| 1 (now) | 100 WDM bands, TCP/IP overlay | 20,000 |
+| 2 | Full 256 WDM, on-chain CE ordinals | 51,200 |
+| 3 (photonic) | Native routing, R₁₆×M₆₄ | 26,214,400 |
+
+Traditional Shannon: C ∝ B·log₂(1+SNR) — compression, diminishing returns.
+WNSP: D ∝ N_λ·N_OAM·N_Pol·R_sym·M — dimensional expansion, linear scaling.
+
 ### WASCII v1.0 — Character Encoding (Single-Point Address)
 
 Every text derives one deterministic Ψ address: `λ = 380 + ((avg−32)/94)×400`, `wdm = ⌊(λ−380)/4⌋+1`, `oam = Σ%100`, `pol = len%2?V:H`.
