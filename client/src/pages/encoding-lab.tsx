@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -58,7 +59,7 @@ function CopyBtn({ text }: { text: string }) {
 }
 
 // ── Tab 1: Encode a message ────────────────────────────────────────
-function EncodeTab({ onEncoded }: { onEncoded: (r: any) => void }) {
+function EncodeTab({ onEncoded, loggedIn }: { onEncoded: (r: any) => void; loggedIn: boolean }) {
   const [text,   setText]   = useState("Open source civilization infrastructure built on physics");
   const [label,  setLabel]  = useState("my_message");
   const [result, setResult] = useState<any>(null);
@@ -73,14 +74,31 @@ function EncodeTab({ onEncoded }: { onEncoded: (r: any) => void }) {
     { label: "energy_economics",      text: "Transaction cost derived from physical energy E equals hf not arbitrary fees" },
   ];
 
+  const [stored, setStored] = useState(false);
+
   const encodeMut = useMutation({
+    mutationFn: () =>
+      fetch("/api/spectral-db/encode-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, label }),
+      }).then(async r => {
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || "Encode failed");
+        return d;
+      }),
+    onSuccess: (d) => {
+      setResult(d);
+      setStored(false);
+      if (d.success) onEncoded(d);
+    },
+  });
+
+  const storeMut = useMutation({
     mutationFn: () =>
       apiRequest("POST", "/api/spectral-db/store", { content: text, label })
         .then(r => r.json()),
-    onSuccess: (d) => {
-      setResult(d);
-      if (d.success) onEncoded(d);
-    },
+    onSuccess: () => setStored(true),
   });
 
   const sendBusMut = useMutation({
@@ -144,7 +162,12 @@ function EncodeTab({ onEncoded }: { onEncoded: (r: any) => void }) {
             <Zap className="w-3 h-3 mr-1" />
             {encodeMut.isPending ? "Encoding to light…" : "Encode Message"}
           </Button>
-          <p className="text-xs text-slate-600">This stores the message at its wavelength address in the spectral database.</p>
+          <p className="text-xs text-slate-600">Encodes your message to a wavelength address using CE→SE physics.</p>
+          {encodeMut.isError && (
+            <div className="text-red-400 text-xs border border-red-800/40 rounded px-2 py-1.5 font-mono" data-testid="encode-error">
+              {(encodeMut.error as Error)?.message || "Encode failed"}
+            </div>
+          )}
         </div>
       </div>
 
@@ -196,14 +219,37 @@ function EncodeTab({ onEncoded }: { onEncoded: (r: any) => void }) {
             </div>
 
             <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-400 font-mono leading-relaxed">
-              <span className="text-green-400">✓</span> Stored permanently at {result.spectral.wavelength_mid_nm.toFixed(1)} nm.
-              Anyone with this address can retrieve your message.
-              No company controls it. No algorithm can hide it. No government can erase it.
-              This is what it means to encode data into physics itself.
+              {stored
+                ? <><span className="text-green-400">✓</span> Stored permanently at {result.spectral.wavelength_mid_nm.toFixed(1)} nm. No company controls it. No algorithm can hide it.</>
+                : <>Message encoded to λ {result.spectral.wavelength_mid_nm.toFixed(1)} nm. Log in and click <em>Store to Spectral DB</em> to make it permanent.</>
+              }
             </div>
 
             {/* Cross-system actions */}
             <div className="flex flex-wrap gap-2 pt-1">
+              {!stored && loggedIn && (
+                <Button size="sm" variant="outline"
+                  className="border-cyan-800 text-cyan-300 hover:bg-cyan-900/40 text-xs"
+                  onClick={() => storeMut.mutate()}
+                  disabled={storeMut.isPending}
+                  data-testid="btn-store-db">
+                  <Zap className="w-3 h-3 mr-1" />
+                  {storeMut.isPending ? "Storing…" : "Store to Spectral DB"}
+                </Button>
+              )}
+              {!stored && !loggedIn && (
+                <Link href="/auth">
+                  <span className="text-xs text-slate-500 font-mono hover:text-cyan-400 transition-colors cursor-pointer"
+                    data-testid="hint-login-to-store">
+                    Log in to save permanently →
+                  </span>
+                </Link>
+              )}
+              {storeMut.isError && loggedIn && (
+                <span className="text-red-400 text-xs self-center font-mono">
+                  {(storeMut.error as Error)?.message}
+                </span>
+              )}
               <Button size="sm" variant="outline"
                 className="border-slate-700 text-slate-300 hover:bg-slate-800 text-xs"
                 onClick={() => sendBusMut.mutate()}
@@ -367,7 +413,7 @@ function DecodeTab() {
 }
 
 // ── Tab 3: Send encoded message ────────────────────────────────────
-function SendTab() {
+function SendTab({ loggedIn }: { loggedIn: boolean }) {
   const [from,     setFrom]    = useState("");
   const [to,       setTo]      = useState("");
   const [message,  setMessage] = useState("");
@@ -407,7 +453,18 @@ function SendTab() {
         </p>
       </div>
 
-      {step === "compose" && (
+      {!loggedIn && (
+        <div className="rounded-xl border border-slate-800 p-6 text-center space-y-2">
+          <p className="text-slate-400 text-sm">You need to be logged in to send wavelength-encoded messages.</p>
+          <Link href="/auth">
+            <Button size="sm" variant="outline" className="border-cyan-800 text-cyan-300 hover:bg-cyan-900/40 text-xs mt-1">
+              Log in to send
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {loggedIn && step === "compose" && (
         <div className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -572,6 +629,7 @@ function CivilizationTab() {
 // ── Main page ─────────────────────────────────────────────────────
 export default function EncodingLab() {
   const [lastEncoded, setLastEncoded] = useState<any>(null);
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6">
@@ -628,7 +686,7 @@ export default function EncodingLab() {
           <h2 className="text-sm font-semibold text-cyan-300 mb-3">
             Type anything — the physics engine converts it to a wavelength of light
           </h2>
-          <EncodeTab onEncoded={setLastEncoded} />
+          <EncodeTab onEncoded={setLastEncoded} loggedIn={!!user} />
         </TabsContent>
 
         <TabsContent value="decode">
@@ -642,7 +700,7 @@ export default function EncodingLab() {
           <h2 className="text-sm font-semibold text-green-300 mb-3">
             Compose, encode, and route a message — no email server, no surveillance
           </h2>
-          <SendTab />
+          <SendTab loggedIn={!!user} />
         </TabsContent>
 
         <TabsContent value="civilization">
