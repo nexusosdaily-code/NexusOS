@@ -30,6 +30,7 @@ from wnsp_protocol_v7 import (
     char_to_wavelength,
     lambda_mass,
     compute_spectral_vector,
+    compute_wnsp_density,
     PLANCK_CONSTANT,
     SPEED_OF_LIGHT,
     VISIBLE_MIN_NM,
@@ -257,6 +258,68 @@ def spectral_vector():
             "Each character is a compression state on the Λ=hf/c² curve. "
             "The distribution of those states across WDM bands is the spectral "
             "fingerprint — unique to this exact string, derived from physics."
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/wnsp/density', methods=['GET', 'POST'])
+def wnsp_density():
+    """
+    WNSP Density Equation v1.0 — D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
+
+    Computes channel capacity via Hilbert space expansion and connects
+    to the Λ=hf/c² compression state curve through energy normalization.
+
+    GET  /api/wnsp/density                              — default parameters
+    GET  /api/wnsp/density?r_sym=16&m=64&wavelength=550
+    POST /api/wnsp/density  body: {"r_sym": 16, "m": 64, "wavelength_nm": 550}
+
+    Response includes:
+      hilbert_space    — N_wdm, N_oam, N_pol, total channels, dimension note
+      density          — d_raw (symbols/cycle), d_energy (symbols/joule)
+      parameters       — r_sym, m, wavelength_nm, frequency, energy, Λ mass
+      scaling_phases   — Phase 1 / 2 / 3 density projections
+      shannon_comparison — traditional vs WNSP density model
+      theory           — physics explanation
+    """
+    if request.method == 'GET':
+        args = request.args
+    else:
+        args = request.get_json() or {}
+
+    def _float(key, default):
+        try:
+            return float(args.get(key, default))
+        except (TypeError, ValueError):
+            return default
+
+    def _int(key, default):
+        try:
+            return int(args.get(key, default))
+        except (TypeError, ValueError):
+            return default
+
+    r_sym        = _float('r_sym',        2.0)
+    m            = _float('m',            1.0)
+    wavelength_nm = _float('wavelength_nm', 550.0)
+    n_wdm        = _int('n_wdm',         256)
+    n_oam        = _int('n_oam',         50)
+    n_pol        = _int('n_pol',         2)
+
+    # Clamp to valid ranges
+    r_sym        = max(1.0,  min(r_sym, 1024.0))
+    m            = max(1.0,  min(m, 256.0))
+    wavelength_nm = max(380.0, min(wavelength_nm, 780.0))
+    n_wdm        = max(1,    min(n_wdm, 256))
+    n_oam        = max(1,    min(n_oam, 100))
+    n_pol        = max(1,    min(n_pol, 4))
+
+    try:
+        result = compute_wnsp_density(
+            n_wdm=n_wdm, n_oam=n_oam, n_pol=n_pol,
+            r_sym=r_sym, m=m, wavelength_nm=wavelength_nm,
         )
         return jsonify(result)
     except Exception as e:

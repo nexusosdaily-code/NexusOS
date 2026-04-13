@@ -57,6 +57,39 @@ A P2P media sharing engine with physics-based cost calculations, mesh networking
 - **Dual-mode Execution**: Supports development and production environments.
 - **Environment Variables**: For secure configuration.
 
+## WNSP Density Equation v1.0
+
+**Core form**: `D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M`
+
+**Where**:
+- `N_λ` = 256 (WDM wavelength channels)
+- `N_OAM` = 50 (orbital angular momentum modes)
+- `N_Pol` = 2 (polarization states — H/V)
+- `R_sym` = symbols per channel per cycle (current: 2)
+- `M` = modulation depth (current: 1, minimal)
+
+**Hilbert space**: dim(H) = 256 × 50 × 2 = **25,600 orthogonal channels** — Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩
+
+**Current density**: D_current = 25,600 × 2 × 1 = **51,200 symbols/cycle**
+
+**Energy-normalized form** (connects to Λ=hf/c²):
+`D_energy = D_WNSP · λ / (h · c)` — density per joule; at higher frequency (more energy), density per joule decreases along the compression state curve
+
+**Phase scaling**:
+| Phase | Config | D_symbols/cycle |
+|---|---|---|
+| 1 (now) | 100 WDM × 50 × 2 × R₂ × M₁ | 20,000 |
+| 2 | 256 WDM × 50 × 2 × R₂ × M₁ | 51,200 |
+| 3 (photonic) | 256 WDM × 50 × 2 × R₁₆ × M₆₄ | 26,214,400 |
+
+**Shannon vs WNSP**:
+- Shannon: `C ∝ B · log₂(1+SNR)` — capacity via compression (diminishing returns)
+- WNSP: `D ∝ N_λ · N_OAM · N_Pol · R_sym · M` — capacity via dimensional expansion (linear with each dimension)
+
+**API**: `GET /api/wnsp/density?r_sym=2&m=1&wavelength_nm=550` (all params optional, fully interactive)
+
+**Display**: The "Density Eq." tab on the WNSP Bridge page shows the equation, Hilbert space breakdown (256×50×2), an interactive calculator with R_sym/M buttons, phase scaling bars, and Shannon comparison.
+
 ## WASCII v2.0 — Wave Density Spectral Vector
 WASCII v2.0 provides a spectral fingerprint for text, mapping each character to a unique compression state and generating a histogram of character-wavelengths across 100 WDM bands. This output includes centroid, bandwidth, spectral entropy, dominant band, unique states, and compression range, enabling spectral similarity search.
 

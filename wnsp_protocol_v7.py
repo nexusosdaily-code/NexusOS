@@ -197,6 +197,169 @@ LAMBDA_CHAR_MAP = {
 #   - Entropy-measurable: spectral richness is a quantifiable property
 # ─────────────────────────────────────────────────────────────────────────────
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WNSP DENSITY EQUATION  v1.0
+#
+#   D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
+#
+#   Where:
+#     N_λ    — wavelength (WDM) channels           = 256
+#     N_OAM  — orbital angular momentum modes       = 50
+#     N_Pol  — polarization states                  = 2
+#     R_sym  — symbols per channel per cycle        (current = 2)
+#     M      — modulation depth                     (current = 1, minimal)
+#
+#   Hilbert space:  dim(H) = 256 × 50 × 2 = 25,600 orthogonal channels
+#   Current density: D_current = 25,600 × 2 × 1 = 51,200 symbols / cycle
+#
+#   Energy-normalized form (connects to Λ = hf/c²):
+#     D_energy = D_WNSP · λ / (h · c)
+#
+#   Key insight:
+#     Traditional: C ∝ log(1+SNR)   — capacity via compression
+#     WNSP:        D ∝ N_λ·N_OAM·N_Pol·R_sym·M — capacity via dimensional expansion
+#
+#   At higher frequency (shorter λ): photons carry more energy (Λ=hf/c²),
+#   so density per unit energy decreases. The compression state curve is the
+#   governing physics — not Shannon.
+# ─────────────────────────────────────────────────────────────────────────────
+def compute_wnsp_density(
+    n_wdm:        int   = HILBERT_DIM_WDM,   # 256
+    n_oam:        int   = HILBERT_DIM_OAM,   # 50
+    n_pol:        int   = HILBERT_DIM_POL,   # 2
+    r_sym:        float = 2.0,               # symbols per channel per cycle
+    m:            float = 1.0,               # modulation depth (1 = minimal)
+    wavelength_nm: float = 550.0,            # reference wavelength for energy calc
+) -> dict:
+    """
+    WNSP Density Equation — D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
+
+    Computes channel capacity via Hilbert space expansion.
+    Energy-normalized form ties density to the Λ=hf/c² compression state curve.
+
+    Returns full breakdown: Hilbert space structure, density metrics,
+    energy normalization, phase scaling comparison, and theory note.
+    """
+    h = PLANCK_CONSTANT
+    c = SPEED_OF_LIGHT
+
+    # ── Hilbert space ─────────────────────────────────────────────────────────
+    hilbert_channels = n_wdm * n_oam * n_pol      # dim(H)
+
+    # ── Core density ──────────────────────────────────────────────────────────
+    d_raw = hilbert_channels * r_sym * m           # symbols per cycle
+
+    # ── Energy-normalized density (symbols per joule) ─────────────────────────
+    wavelength_m  = wavelength_nm * 1e-9
+    frequency_hz  = c / wavelength_m
+    energy_joules = h * frequency_hz               # E = hf
+    lambda_mass   = energy_joules / (c ** 2)       # Λ = hf/c²
+    d_energy      = d_raw * wavelength_m / (h * c) # D · λ / (h·c)
+
+    # Band name for the reference wavelength
+    band_ref = (
+        "UV"     if wavelength_nm < 380 else
+        "VIOLET" if wavelength_nm < 450 else
+        "BLUE"   if wavelength_nm < 495 else
+        "CYAN"   if wavelength_nm < 520 else
+        "GREEN"  if wavelength_nm < 565 else
+        "YELLOW" if wavelength_nm < 590 else
+        "ORANGE" if wavelength_nm < 625 else
+        "RED"    if wavelength_nm < 780 else
+        "NIR"
+    )
+
+    # ── Phase scaling comparison ───────────────────────────────────────────────
+    phases = [
+        {
+            "phase":    1,
+            "label":    "Phase 1 — TCP/IP overlay (now)",
+            "n_wdm":    100,
+            "n_oam":    n_oam,
+            "n_pol":    n_pol,
+            "r_sym":    2.0,
+            "m":        1,
+            "channels": 100 * n_oam * n_pol,
+            "d_symbols": int(100 * n_oam * n_pol * 2.0 * 1),
+            "note":     "100 WDM bands (WASCII v1.0/v2.0), minimal modulation",
+        },
+        {
+            "phase":    2,
+            "label":    "Phase 2 — Full Hilbert, on-chain CE ordinals",
+            "n_wdm":    256,
+            "n_oam":    n_oam,
+            "n_pol":    n_pol,
+            "r_sym":    2.0,
+            "m":        1,
+            "channels": 256 * n_oam * n_pol,
+            "d_symbols": int(256 * n_oam * n_pol * 2.0 * 1),
+            "note":     "All 256 WDM channels active, CE ordinals on-chain",
+        },
+        {
+            "phase":    3,
+            "label":    "Phase 3 — Native photonic routing",
+            "n_wdm":    256,
+            "n_oam":    n_oam,
+            "n_pol":    n_pol,
+            "r_sym":    16.0,
+            "m":        64,
+            "channels": 256 * n_oam * n_pol,
+            "d_symbols": int(256 * n_oam * n_pol * 16.0 * 64),
+            "note":     "Addresses ARE physical channels. Λ=hf/c² governs routing.",
+        },
+    ]
+
+    return {
+        "equation":        "D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M",
+        "energy_equation": "D_energy = D_WNSP · λ / (h · c)",
+        "lambda_equation": "Λ = hf / c²   (compression state at reference wavelength)",
+        "hilbert_space": {
+            "n_wdm":          n_wdm,
+            "n_oam":          n_oam,
+            "n_pol":          n_pol,
+            "total_channels": hilbert_channels,
+            "channel_basis":  CHANNEL_BASIS_EQUATION,
+            "dimension_note": f"dim(H) = {n_wdm} × {n_oam} × {n_pol} = {hilbert_channels:,}",
+        },
+        "parameters": {
+            "r_sym":        r_sym,
+            "m":            m,
+            "wavelength_nm": wavelength_nm,
+            "band":         band_ref,
+            "frequency_thz": round(frequency_hz / 1e12, 4),
+            "energy_ev":    round(energy_joules / 1.602176634e-19, 4),
+            "energy_joules": energy_joules,
+            "lambda_mass_kg": lambda_mass,
+        },
+        "density": {
+            "d_raw":              int(d_raw),
+            "d_energy":           round(d_energy, 2),
+            "d_energy_unit":      "symbols per joule",
+            "d_raw_unit":         "symbols per cycle",
+        },
+        "scaling_phases": phases,
+        "shannon_comparison": {
+            "shannon":   "C ∝ B · log₂(1 + SNR)   — capacity via compression",
+            "wnsp":      "D ∝ N_λ · N_OAM · N_Pol · R_sym · M   — capacity via dimensional expansion",
+            "key_difference": (
+                "Shannon compresses harder into a single channel. "
+                "WNSP adds orthogonal dimensions. These scale differently: "
+                "Shannon hits diminishing returns with SNR; WNSP scales linearly with each new dimension."
+            ),
+        },
+        "theory": (
+            "WNSP scales capacity by expanding the Hilbert space — adding orthogonal "
+            "dimensions rather than compressing a single channel. At higher frequency "
+            "(shorter λ, higher compression state), photons carry more energy (Λ=hf/c²), "
+            "so density per joule decreases along the compression curve. "
+            "The full photonic address space (25,600 channels) is structurally "
+            "identical to the quantum address space of the first wavefunction."
+        ),
+        "version": "WNSP-Density-v1.0",
+    }
+
+
 def compute_spectral_vector(text: str) -> dict:
     """
     WASCII v2.0 — Wave Density Spectral Vector.

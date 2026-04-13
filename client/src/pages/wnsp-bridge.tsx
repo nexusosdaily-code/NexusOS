@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Radio, Zap, Globe, Copy, Check, ChevronRight, ExternalLink,
   Database, Shield, Waves, Code2, ArrowRight, Search, UserCircle,
-  PlusCircle, Lock,
+  PlusCircle, Lock, Activity,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -596,9 +596,229 @@ function BridgeSpec() {
   );
 }
 
+// ── WNSP Density Equation panel ───────────────────────────────────────────────
+function DensityPanel() {
+  const [rSym, setRSym] = useState(2);
+  const [modDepth, setModDepth] = useState(1);
+
+  const { data: density, isLoading } = useQuery<any>({
+    queryKey: ["/api/wnsp/density", rSym, modDepth],
+    queryFn: () =>
+      fetch(`/api/wnsp/density?r_sym=${rSym}&m=${modDepth}&wavelength_nm=550`)
+        .then(r => r.json()),
+    staleTime: 60000,
+  });
+
+  const hilbert = density?.hilbert_space;
+  const params  = density?.parameters;
+  const dens    = density?.density;
+  const phases  = density?.scaling_phases ?? [];
+  const shannon = density?.shannon_comparison;
+
+  const phaseColors = ["#06b6d4", "#8b5cf6", "#f59e0b"];
+
+  // Progress bar showing current config vs Phase 3 max
+  const maxDensity = phases[2]?.d_symbols ?? 1;
+  const curDensity = dens?.d_raw ?? 0;
+  const pct = Math.min(100, Math.round((curDensity / maxDensity) * 100));
+
+  const R_SYM_OPTIONS = [1, 2, 4, 8, 16, 32];
+  const M_OPTIONS     = [1, 2, 4, 8, 16, 32, 64, 128];
+
+  return (
+    <div className="space-y-6">
+
+      {/* Title + equation */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="text-cyan-400 font-mono font-bold text-sm">WNSP Density Equation</div>
+          <Badge variant="outline" className="text-xs border-cyan-800/50 text-cyan-500 font-mono">v1.0</Badge>
+        </div>
+
+        <div className="font-mono text-base text-white bg-slate-950 rounded-lg px-4 py-3 border border-slate-700">
+          D<sub className="text-cyan-400">WNSP</sub>{" "}={" "}
+          <span className="text-violet-400">N<sub>λ</sub></span>{" · "}
+          <span className="text-blue-400">N<sub>OAM</sub></span>{" · "}
+          <span className="text-emerald-400">N<sub>Pol</sub></span>{" · "}
+          <span className="text-amber-400">R<sub>sym</sub></span>{" · "}
+          <span className="text-rose-400">M</span>
+        </div>
+
+        <div className="font-mono text-xs text-slate-500 bg-slate-950 rounded-lg px-4 py-2 border border-slate-800">
+          D<sub>energy</sub> = D<sub>WNSP</sub> · λ / (h · c)
+          <span className="ml-4 text-slate-600">← connects to Λ=hf/c²</span>
+        </div>
+
+        <p className="text-xs text-slate-500 leading-relaxed">
+          Traditional Shannon capacity scales with log(SNR) — diminishing returns, single channel compressed harder.{" "}
+          WNSP scales by <span className="text-cyan-400">adding orthogonal dimensions</span> to the Hilbert space.
+          At higher frequency (shorter λ, higher compression state), photons carry more energy,
+          so density per joule decreases along the Λ=hf/c² curve.
+        </p>
+      </div>
+
+      {/* Hilbert space breakdown */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-5 space-y-3">
+        <div className="text-xs text-slate-400 font-mono font-semibold uppercase tracking-wider">
+          Hilbert Space — dim(H) = {hilbert ? hilbert.total_channels.toLocaleString() : "25,600"}
+        </div>
+        <div className="text-xs text-slate-500 font-mono mb-3">{hilbert?.channel_basis ?? "Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩"}</div>
+
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "N\u03bb — WDM channels",      val: hilbert?.n_wdm   ?? 256,  color: "#8b5cf6", desc: "wavelength sub-space" },
+            { label: "N\u200bOAM — orbital modes",   val: hilbert?.n_oam   ?? 50,   color: "#3b82f6", desc: "angular momentum sub-space" },
+            { label: "N\u200bPol — polarization",    val: hilbert?.n_pol   ?? 2,    color: "#10b981", desc: "H / V states" },
+          ].map(d => (
+            <div key={d.label} className="rounded-lg border border-slate-800 bg-slate-950 p-3 space-y-1.5">
+              <div className="text-xs text-slate-500 font-mono">{d.label}</div>
+              <div className="text-2xl font-bold font-mono" style={{ color: d.color }}>{d.val.toLocaleString()}</div>
+              <div className="text-xs text-slate-600">{d.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3 rounded-lg bg-slate-950 border border-slate-800 px-4 py-3">
+          <div className="font-mono text-xs text-slate-500">
+            <span className="text-violet-400">256</span> × <span className="text-blue-400">50</span> × <span className="text-emerald-400">2</span>
+            {" = "}
+            <span className="text-white font-bold text-sm">25,600</span>
+            <span className="text-slate-600 ml-2">orthogonal channels</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Interactive density calculator */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-5 space-y-4">
+        <div className="text-xs text-slate-400 font-mono font-semibold uppercase tracking-wider">Density Calculator</div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="text-xs font-mono text-slate-500">R<sub>sym</sub> — symbols per channel</div>
+            <div className="flex flex-wrap gap-1.5">
+              {R_SYM_OPTIONS.map(v => (
+                <button key={v} onClick={() => setRSym(v)}
+                  className={`px-2.5 py-1 text-xs font-mono rounded border transition-colors ${
+                    rSym === v ? "border-amber-500/60 bg-amber-500/10 text-amber-400" : "border-slate-700 text-slate-500 hover:border-slate-600"
+                  }`}>
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="text-xs font-mono text-slate-500">M — modulation depth</div>
+            <div className="flex flex-wrap gap-1.5">
+              {M_OPTIONS.map(v => (
+                <button key={v} onClick={() => setModDepth(v)}
+                  className={`px-2.5 py-1 text-xs font-mono rounded border transition-colors ${
+                    modDepth === v ? "border-rose-500/60 bg-rose-500/10 text-rose-400" : "border-slate-700 text-slate-500 hover:border-slate-600"
+                  }`}>
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Live result */}
+        <div className="rounded-lg bg-slate-950 border border-slate-800 px-4 py-3 space-y-2">
+          {isLoading ? (
+            <div className="text-xs text-slate-600 font-mono animate-pulse">computing…</div>
+          ) : (
+            <>
+              <div className="flex items-baseline gap-3">
+                <span className="text-xs text-slate-500 font-mono">D<sub>WNSP</sub> =</span>
+                <span className="text-2xl font-bold font-mono text-white">{dens?.d_raw?.toLocaleString() ?? "—"}</span>
+                <span className="text-xs text-slate-600">symbols / cycle</span>
+              </div>
+              <div className="flex items-baseline gap-3">
+                <span className="text-xs text-slate-500 font-mono">D<sub>energy</sub> =</span>
+                <span className="text-sm font-mono text-slate-300">{dens?.d_energy?.toLocaleString() ?? "—"}</span>
+                <span className="text-xs text-slate-600">symbols / joule</span>
+              </div>
+              <div className="flex items-center gap-3 text-xs font-mono text-slate-600">
+                <span>25,600 × {rSym} × {modDepth} = {(25600 * rSym * modDepth).toLocaleString()}</span>
+              </div>
+              <div className="mt-2">
+                <div className="flex justify-between text-xs font-mono text-slate-600 mb-1">
+                  <span>vs Phase 3 max</span>
+                  <span>{pct}%</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                  <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 transition-all"
+                    style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {params && (
+          <div className="grid grid-cols-3 gap-2 text-xs font-mono">
+            <div className="bg-slate-950/60 rounded p-2">
+              <div className="text-slate-600 mb-0.5">reference λ</div>
+              <div className="text-slate-300">550 nm GREEN</div>
+            </div>
+            <div className="bg-slate-950/60 rounded p-2">
+              <div className="text-slate-600 mb-0.5">frequency</div>
+              <div className="text-slate-300">{params.frequency_thz} THz</div>
+            </div>
+            <div className="bg-slate-950/60 rounded p-2">
+              <div className="text-slate-600 mb-0.5">photon energy</div>
+              <div className="text-slate-300">{params.energy_ev} eV</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Phase scaling */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-5 space-y-3">
+        <div className="text-xs text-slate-400 font-mono font-semibold uppercase tracking-wider">Phase Scaling</div>
+        <div className="space-y-2">
+          {phases.map((ph: any, i: number) => {
+            const phasePct = Math.round((ph.d_symbols / (phases[2]?.d_symbols ?? 1)) * 100);
+            return (
+              <div key={ph.phase} className="rounded-lg border border-slate-800 bg-slate-950 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-mono" style={{ color: phaseColors[i] }}>{ph.label}</div>
+                  <div className="text-xs font-mono text-slate-300">{ph.d_symbols.toLocaleString()} sym/cycle</div>
+                </div>
+                <div className="h-1 rounded-full bg-slate-800 overflow-hidden">
+                  <div className="h-full rounded-full transition-all"
+                    style={{ width: `${phasePct}%`, background: phaseColors[i] }} />
+                </div>
+                <div className="text-xs text-slate-600">{ph.note}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Shannon vs WNSP */}
+      {shannon && (
+        <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-5 space-y-3">
+          <div className="text-xs text-slate-400 font-mono font-semibold uppercase tracking-wider">Shannon vs WNSP</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-slate-700 bg-slate-950 p-3">
+              <div className="text-xs text-slate-500 font-mono mb-1.5">Traditional</div>
+              <div className="text-xs font-mono text-slate-400">{shannon.shannon}</div>
+            </div>
+            <div className="rounded-lg border border-cyan-800/40 bg-slate-950 p-3">
+              <div className="text-xs text-cyan-600 font-mono mb-1.5">WNSP</div>
+              <div className="text-xs font-mono text-slate-300">{shannon.wnsp}</div>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 leading-relaxed">{shannon.key_difference}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function WnspBridgePage() {
-  const [activeTab, setActiveTab] = useState<"identity"|"resolver"|"registry"|"spec">("identity");
+  const [activeTab, setActiveTab] = useState<"identity"|"resolver"|"density"|"registry"|"spec">("identity");
   const token = localStorage.getItem("auth_token");
 
   const { data: meData } = useQuery<{ user: { id: string; username: string } }>({
@@ -616,6 +836,7 @@ export default function WnspBridgePage() {
   const TABS: { key: typeof activeTab; label: string; icon: React.ReactNode }[] = [
     { key: "identity", label: "My Identity",  icon: <UserCircle className="w-3.5 h-3.5" /> },
     { key: "resolver", label: "CE→SE Live",   icon: <Zap className="w-3.5 h-3.5" /> },
+    { key: "density",  label: "Density Eq.",  icon: <Activity className="w-3.5 h-3.5" /> },
     { key: "registry", label: "Registry",     icon: <Database className="w-3.5 h-3.5" /> },
     { key: "spec",     label: "Bridge Spec",  icon: <Code2 className="w-3.5 h-3.5" /> },
   ];
@@ -723,6 +944,7 @@ export default function WnspBridgePage() {
         )}
 
         {activeTab === "resolver" && <LiveResolver />}
+        {activeTab === "density"  && <DensityPanel />}
         {activeTab === "registry" && <RegistryTable />}
         {activeTab === "spec"     && <BridgeSpec />}
       </div>

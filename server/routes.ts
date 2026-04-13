@@ -1419,6 +1419,14 @@ export async function registerRoutes(
     secureProxyToSpectralAPI(req, res, "/api/wnsp/spectral-vector");
   });
 
+  // ── WNSP Density Equation v1.0 ────────────────────────────────
+  app.get("/api/wnsp/density", (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/density");
+  });
+  app.post("/api/wnsp/density", (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/density");
+  });
+
   // ── Kernel Component 1: Boot ──────────────────────────────────
   app.get("/api/kernel/boot", optionalAuth, (req, res) => {
     secureProxyToSpectralAPI(req, res, "/api/kernel/boot");
