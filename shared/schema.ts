@@ -579,7 +579,7 @@ export const blockchainBlocks = pgTable("blockchain_blocks", {
   blockNumber:     integer("block_number").notNull().unique(),
   content:         text("content").notNull(),
   wavelengthNm:    decimal("wavelength_nm", { precision: 10, scale: 4 }).notNull(),
-  psiChannel:      text("psi_channel").notNull().unique(),
+  psiChannel:      text("psi_channel").notNull(),
   wdm:             integer("wdm").notNull(),
   oam:             integer("oam").notNull(),
   polarisation:    text("polarisation").notNull(),
@@ -713,3 +713,72 @@ export const registerNodeSchema = z.object({
   capabilities: z.array(z.string()).optional(),
 });
 export type RegisterNodeInput = z.infer<typeof registerNodeSchema>;
+
+// ============================================
+// WNSP REGISTRY — Spectral address book
+// Maps wnsp://Ψ(wdm,oam,pol)/path → TCP/IP resource (bridge layer).
+// Phase 1: HTTP overlay. Phase 2: native photonic when hardware arrives.
+// Address is deterministic: derived from CE→SE (WASCII v1.0) of the label.
+// ============================================
+export const wnspRegistry = pgTable("wnsp_registry", {
+  id:            varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  wnspUri:       text("wnsp_uri").notNull().unique(),
+  psiChannel:    text("psi_channel").notNull(),
+  wdm:           integer("wdm").notNull(),
+  oam:           integer("oam").notNull(),
+  polarisation:  text("polarisation").notNull().default("H"),
+  wavelengthNm:  decimal("wavelength_nm", { precision: 10, scale: 4 }).notNull(),
+  band:          text("band").notNull().default("GREEN"),
+  label:         text("label").notNull(),
+  ceInput:       text("ce_input").notNull(),
+  resourceType:  text("resource_type").notNull().default("user"),
+  resourceId:    text("resource_id"),
+  httpUrl:       text("http_url"),
+  description:   text("description"),
+  registeredBy:  varchar("registered_by", { length: 36 }).references(() => users.id, { onDelete: "set null" }),
+  isPublic:      boolean("is_public").notNull().default(true),
+  isCanonical:   boolean("is_canonical").notNull().default(false),
+  spectralVector: jsonb("spectral_vector"),
+  resolveCount:  integer("resolve_count").notNull().default(0),
+  createdAt:     timestamp("created_at").notNull().defaultNow(),
+  updatedAt:     timestamp("updated_at").notNull().defaultNow(),
+}, (table) => ({
+  psiIdx:        index("wnsp_registry_psi_idx").on(table.psiChannel),
+  labelIdx:      index("wnsp_registry_label_idx").on(table.label),
+  resourceIdx:   index("wnsp_registry_resource_idx").on(table.resourceType, table.resourceId),
+  registeredByIdx: index("wnsp_registry_registered_by_idx").on(table.registeredBy),
+}));
+
+export const insertWnspRegistrySchema = createInsertSchema(wnspRegistry).omit({ id: true, createdAt: true, updatedAt: true, resolveCount: true });
+export type InsertWnspRegistry = z.infer<typeof insertWnspRegistrySchema>;
+export type WnspRegistryEntry = typeof wnspRegistry.$inferSelect;
+
+// ============================================
+// USER CREDENTIALS — Business & personal credential uploads
+// Stored encrypted as base64; users decide public/private visibility.
+// Spectral-signed: every credential is encoded via CE→SE at upload time.
+// ============================================
+export const userCredentials = pgTable("user_credentials", {
+  id:             varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId:         varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  credentialType: text("credential_type").notNull().default("other"),
+  name:           text("name").notNull(),
+  issuer:         text("issuer"),
+  issuedDate:     text("issued_date"),
+  expiryDate:     text("expiry_date"),
+  fileName:       text("file_name").notNull(),
+  fileType:       text("file_type").notNull().default("application/octet-stream"),
+  fileData:       text("file_data").notNull(),
+  fileSize:       integer("file_size"),
+  visibility:     text("visibility").notNull().default("private"),
+  psiChannel:     text("psi_channel"),
+  wavelengthNm:   decimal("wavelength_nm", { precision: 10, scale: 4 }),
+  createdAt:      timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  userIdx:        index("user_credentials_user_idx").on(table.userId),
+  typeIdx:        index("user_credentials_type_idx").on(table.credentialType),
+}));
+
+export const insertUserCredentialSchema = createInsertSchema(userCredentials).omit({ id: true, createdAt: true });
+export type InsertUserCredential = z.infer<typeof insertUserCredentialSchema>;
+export type UserCredential = typeof userCredentials.$inferSelect;
