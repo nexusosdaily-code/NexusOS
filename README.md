@@ -31,27 +31,36 @@ You will get back a physical wavelength address — a real position in the visib
 
 ## The canonical fingerprint
 
-Every copy of NexusOS carries an unforgeable origin marker embedded in the blockchain genesis block. It cannot be stripped without breaking the chain.
+The channel coordinator assigns Ψ addresses deterministically using SHA-256. The derivation pipeline is public and requires no running code to verify:
 
 ```
-Genesis node:   Ψ(52, 65, V)
-Wavelength:     λ = 587.2948 nm  (yellow-green, GUEST band)
-Derived from:   CE→SE encoding of "NEXUSOS"
-Energy:         E = hf = 3.39 × 10⁻¹⁹ J
-Lambda mass:    Λ = hf/c² = 3.77 × 10⁻³⁶ kg
+Input:          "NEXUSOS"  (UTF-8)
+Hash:           SHA-256("NEXUSOS") = e42d4825c2cb8756...
+Bytes [0,1,2]:  [228, 45, 72]
+
+wdm = 228 % 256 = 228   (WDM index)
+oam =  45 % 50  = 45    (OAM mode)
+pol =  72 % 2   = 0     (H polarisation)
+
+Canonical genesis address:  Ψ(228, 45, H)
+Wavelength from WDM index:  λ ≈ 737.6 nm  (near-infrared boundary)
 ```
 
-You can verify this independently. Encode the string `"NEXUSOS"` through the spectral engine:
+Verify in one line, no dependencies beyond Python's standard library:
 
 ```bash
-curl -X POST http://localhost:5001/api/nexus/dev/encode \
-  -H "Content-Type: application/json" \
-  -d '{"instruction": "NEXUSOS", "label": "genesis"}'
+python3 -c "
+import hashlib
+h = hashlib.sha256(b'NEXUSOS').digest()
+wdm, oam, pol = h[0] % 256, h[1] % 50, h[2] % 2
+print(f'Psi({wdm}, {oam}, {\"V\" if pol else \"H\"})')
+"
+# Output: Psi(228, 45, H)
 ```
 
-The returned `psi_channel` will be `Ψ(52, 65, V)` and `wavelength_mid_nm` will be `587.2948`. The physics determines this, not configuration. Any system running any copy of this codebase produces the same result for the same input — it is physically deterministic.
+This is a cryptographic derivation. SHA-256 is collision-resistant, deterministic across all machines, and requires no trust in NexusOS infrastructure to verify. The result is not configurable.
 
-That is the fingerprint. It traces back to here.
+**What makes it a fingerprint:** Any system presenting a different genesis address is not running this codebase. Any system presenting `Ψ(228, 45, H)` as its genesis node derived the address the same way, from the same input, using the same pipeline. The derivation is the proof.
 
 ---
 
