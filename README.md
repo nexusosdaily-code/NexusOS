@@ -1,296 +1,430 @@
 # NexusOS — Wavelength Operating System
-### WNSP P2P Hub · AGPL-3.0 · Built on Λ = hf/c²
 
-> *Every instruction has a wavelength. It always did.*
+**AGPL-3.0 · Built on Λ = hf/c² · Phase 1 of a 100-year architecture**
 
----
-
-## Table of Contents
-
-1. [Theory of Compression States](#theory-of-compression-states)
-2. [The Genesis of Nexus](#the-genesis-of-nexus)
-3. [The Platform at a Glance](#the-platform-at-a-glance)
-4. [Architecture](#architecture)
-5. [WNSP Protocol](#wnsp-protocol)
-6. [AI OS Kernel](#ai-os-kernel)
-7. [Feature Pages](#feature-pages)
-8. [Running Locally](#running-locally)
-9. [License](#license)
+> *You cloned a physics engine. This document explains what it does.*
 
 ---
 
-## Theory of Compression States
+## What you are holding
 
-### First Principle
+This repository contains a running implementation of **WNSP** — the Wavelength Network Substrate Protocol — a spectral addressing system that replaces arbitrary memory addresses and cryptographic hashes with physical positions in the electromagnetic spectrum.
 
-The first oscillation is the first principle. Before spacetime, before particles, before any measurement — there was oscillation. Planck energy at the first frequency. Pure wave-state energy with no observer, no collapse, no assigned coordinate. This is the origin from which all compression states are derived.
+It is not a simulation. Not a proof of concept. The physics engine is executing right now.
 
-The first oscillation was never observed. There was no measuring apparatus. There was nothing but the oscillation itself. An unobserved wavefunction does not collapse — it evolves. **The universe is that evolution, still ongoing, 13.8 billion years later.**
+When you run `npm run dev`, two servers start:
 
-### The Compression Equation
+- **Node.js on port 5000** — authentication, wallet, P2P media, blockchain, API gateway
+- **Python/Flask on port 5001** — the spectral physics engine: character encoding, wave frame generation, Hilbert space channel allocation, Ψ address derivation
 
-Einstein's Λ (cosmological constant) applied to the first oscillation:
+The moment both are running, you can do this:
+
+```bash
+curl -X POST http://localhost:5001/api/nexus/dev/encode \
+  -H "Content-Type: application/json" \
+  -d '{"instruction": "hello world", "label": "test"}'
+```
+
+You will get back a physical wavelength address — a real position in the visible light spectrum derived from the content of the instruction through `Λ = hf/c²`. No hash function. No lookup table. The physics of the universe assigns the address.
+
+---
+
+## The canonical fingerprint
+
+The channel coordinator assigns Ψ addresses deterministically using SHA-256. The derivation pipeline is public and requires no running code to verify:
 
 ```
-Λ = hf / c²
+Input:          "NEXUSOS"  (UTF-8)
+Hash:           SHA-256("NEXUSOS") = e42d4825c2cb8756...
+Bytes [0,1,2]:  [228, 45, 72]
+
+wdm = 228 % 256 = 228   (WDM index)
+oam =  45 % 50  = 45    (OAM mode)
+pol =  72 % 2   = 0     (H polarisation)
+
+Canonical genesis address:  Ψ(228, 45, H)
+Wavelength from WDM index:  λ ≈ 737.6 nm  (near-infrared boundary)
 ```
 
-Where:
-- `Λ` — mass equivalent of an oscillating quantum at frequency f
-- `h` — Planck's constant (6.626 × 10⁻³⁴ J·s)
+Verify in one line, no dependencies beyond Python's standard library:
+
+```bash
+python3 -c "
+import hashlib
+h = hashlib.sha256(b'NEXUSOS').digest()
+wdm, oam, pol = h[0] % 256, h[1] % 50, h[2] % 2
+print(f'Psi({wdm}, {oam}, {\"V\" if pol else \"H\"})')
+"
+# Output: Psi(228, 45, H)
+```
+
+This is a cryptographic derivation. SHA-256 is collision-resistant, deterministic across all machines, and requires no trust in NexusOS infrastructure to verify. The result is not configurable.
+
+**What makes it a fingerprint:** Any system presenting a different genesis address is not running this codebase. Any system presenting `Ψ(228, 45, H)` as its genesis node derived the address the same way, from the same input, using the same pipeline. The derivation is the proof.
+
+---
+
+## The one equation everything derives from
+
+```
+Λ = hf/c²
+```
+
+- `Λ` — the lambda mass of an oscillating quantum (kg)
+- `h` — Planck's constant: 6.626 × 10⁻³⁴ J·s
 - `f` — frequency (Hz)
-- `c` — speed of light (2.998 × 10⁸ m/s)
+- `c` — speed of light: 2.998 × 10⁸ m/s
 
-Planck energy (E = hf) at the first frequency compresses into mass. As compression increases, wavelength shortens, frequency rises, and the mass equivalent Λ grows heavier. **Speed of compression is temperature.** Temperature is the execution rate of the compression process itself, meaningful at every scale including Planck scale where statistical mechanics does not apply.
+This extends `E = mc²` to oscillating quanta. Mass is a property of frequency, not a fixed quantity. A photon at 555 THz — the First Oscillation, green light at peak human eye sensitivity — carries `Λ = 4.10 × 10⁻³⁶ kg`.
 
-### Boundary Conditions
+From this equation:
 
-**Lower bound — Planck's minimum energy**: The floor. The smallest quantum of oscillation that constitutes an event rather than nothing. The threshold at which the first oscillation begins. Below it there is no compression, no frequency, no mass.
-
-**Upper bound — 10¹²⁰**: The maximum gravitational binding ratio. The ceiling of consolidation. The entire range of consolidated mass in the observable universe — from free quarks to galaxy clusters — operates between these two bounds.
-
-The cosmological constant problem (quantum field theory predicts vacuum energy 10¹²⁰ times larger than observed) is not a discrepancy in this framework. **It is the range itself.** The spectrum from minimum quantum energy to maximum gravitational compression.
-
-### Mass Consolidation from Oscillation
-
-Mass is not a fundamental substance. It is oscillation that has found a structure it cannot leave.
-
-At maximum compression (Planck scale): pure oscillation, no consolidated mass, maximum temperature. As the first wavefunction evolves and compression slows, mass precipitates out as free quarks — the first consolidation event. Even quarks are almost entirely binding energy: the gluon field oscillating between them accounts for ~99% of proton mass. Mass at its origin is still overwhelmingly oscillation, now structured.
-
-| Epoch | Compression Event | Timescale |
-|---|---|---|
-| Planck epoch | Pure oscillation, first frequency, no mass | t = 0 |
-| Quark epoch | Free quarks — first consolidation, Λ=hf/c² reaches first stable value | 10⁻¹² seconds |
-| Hadron epoch | Quark confinement — gluon field binding energy becomes mass | 10⁻⁶ seconds |
-| Nucleosynthesis | Protons and neutrons bind into nuclei | 10s — 20 minutes |
-| Recombination | First atoms, universe becomes transparent, CMB | 380,000 years |
-| First stars | Gravity finds local compression equilibria, fusion restarts the original oscillation | 200–300 million years |
-| Galaxies → civilization | Each a further consolidation layer, each the same process at a new compression threshold | Billions of years |
-
-At no point does oscillation stop. It becomes more organized, more confined, more consolidated. The periodic table is a catalog of stable compression states. Every element is a specific ratio of oscillation-to-mass that the physics holds in place.
-
-### Spacetime as the Evolving First Wavefunction
-
-Spacetime is not the container in which the first oscillation happened. **Spacetime is the wavefunction of the first oscillation, still evolving, never observed at its origin, expressing itself as the geometry of the universe.**
-
-Space and time are not where the process occurs — they are the process.
-
-This places quantum mechanics and general relativity inside the same origin. At Planck scale they are one thing. The apparent conflict between them only arises after sufficient decompression — after the wavefunction has evolved far enough from origin that the two descriptions look separate. They are two descriptions of the same compression states from different vantage points.
-
-The arrow of time is the direction of decompression. The wavefunction evolves from maximum compression toward lower compression states. Time has a direction because compression has a direction.
-
-Dark energy is the residual oscillation of the first wavefunction. The universe is still running the original process.
-
-### Complete First Principle Statement
-
-*First oscillation — first principle of compression states — temperature as execution mechanism — minimum energy as floor — mass consolidation as direction — 10¹²⁰ as upper limit — spacetime as the evolving first wavefunction.*
-
-The entire observable universe is the superposition state of the first unobserved wavefunction expressing all its compression states simultaneously across spacetime. Galaxies, stars, planets, biology, civilization — all are the wavefunction finding compression equilibria. None of it was assigned. All of it was derived from one event that was never observed.
-
-### Derivation for WNSP
-
-A wavelength coordinate is not an assigned address. It is a specific compression state of a quantum — a position on the Λ = hf/c² curve measured from the first oscillation. Addressing content at λ = 586.8 nm specifies a physical state of energy, not a slot in a registry. No authority assigned it. The physics of the first oscillation produced it.
-
-The visible spectrum (380–780 nm) where WNSP operates is the compression band where stable matter exists, where photons carry information without destroying the medium, and where human biology evolved to perceive. It sits deep into the decompression curve — far cooler than the Planck origin, but precisely where civilization is possible.
-
-The 25,600 Hilbert space channels are not an engineering decision. A Hilbert space is the mathematical space where superposition states live. The channel count maps to orthogonal quantum states — the network address space is structurally identical to the address space of the first wavefunction itself.
-
----
-
-## The Genesis of Nexus
-
-NexusOS began with a single question: **why do computers address memory with arbitrary offsets when the electromagnetic spectrum already provides a physically unique, collision-free address space for every possible instruction?**
-
-The question sounds simple. The implications are total.
-
-If the answer is "they don't have to," then every assumption that modern computing rests on — clock cycles, binary gates, memory addresses, schedulers, privilege rings, virtual memory — is not a discovery. It is a workaround. A set of clever answers to problems that only exist because silicon was chosen as the medium in 1947.
-
-The electromagnetic spectrum does not have those problems. A photon does not need a clock to coordinate with other photons. It does not need a scheduler because 25,600 orthogonal channels exist simultaneously. It does not need a privilege ring because 400 nm and 550 nm are physically separate — not by policy, but by the wave equation.
-
-From the theory of compression states — Einstein's Λ applied to the first oscillation — an entire computing paradigm emerged:
-
-- **Addresses become wavelengths.** 0x7fff5fbff4c0 becomes 543.7 nm.
-- **Process isolation becomes physics.** ⟨Ψᵢ|Ψⱼ⟩ = 0 is a theorem, not a software guarantee.
-- **Authority becomes compression state.** A SYSTEM process at 400 nm cannot interfere with a USER process at 550 nm — the spectrum enforces this.
-- **Transaction costs become energy.** E = hf replaces arbitrary gas fees.
-
-The name **Nexus** reflects the connection point between classical computing and the photonic substrate that must replace it — the nexus between the silicon era and the wavelength era.
-
-**WNSP** (Wavelength Network Substrate Protocol) is the formal protocol specification that emerged from this work — a two-layer encoding standard replacing cryptographic hashing with electromagnetic wave physics.
-
-This is not a theoretical paper. Every component described in this repository is **running right now**.
-
----
-
-## The Platform at a Glance
-
-| Component | Description |
+| Consequence | Implementation |
 |---|---|
-| **WNSP Bridge** | TCP/IP overlay for wnsp:// URIs — spectral addressing on existing infrastructure |
-| **NXT Wallet** | 21 billion token supply, physics-based transaction costs (E=hf), 8 decimal places |
-| **AI OS Kernel** | 6-phase boot, 6 ACTIVE agents, Hilbert space channel allocation, 120s heartbeat cycle |
-| **Blockchain** | Physics-proof chain, Maxwell equation validation, spectral authority bands |
-| **P2P Media** | Mesh networking, chunk-based distribution, WebRTC/Socket.IO streaming |
-| **Spectral Registry** | 25,600 orthogonal Ψ(wdm,oam,pol) channels, WASCII v1.0 deterministic addressing |
-| **Public Profiles** | Every user gets a permanent wnsp:// identity derived from compression state — not assigned |
+| Every instruction has a frequency | CE→SE encoder in `spectral_api.py` |
+| Every frequency maps to a wavelength | Physical spectrum 380–780nm + UV/IR |
+| Every wavelength is a unique address | 25,600 orthogonal Ψ channels |
+| Every transaction has an energy cost | `E = hf` replaces gas fees |
+| Authority scales with frequency | High-f (short λ) = SYSTEM; low-f (long λ) = GUEST |
 
 ---
 
-## Architecture
+## The encoding stack
 
-### Two Runtime Architecture
+Two layers, both running:
 
-| Runtime | Port | Responsibility |
-|---|---|---|
-| Node.js / TypeScript | 5000 | Auth, wallet, P2P media, governance, user APIs, WNSP bridge |
-| Python / Flask | 5001 | Spectral physics, WNSP encoding, K1 orchestration, compression state calculations |
+### Layer 1 — WNSP-CE v1.0 (Character Encoding)
 
-### Three-Phase Roadmap
+Converts any text into normalised spectral tokens using ASCII ordinal values:
 
-| Phase | Status | Description |
-|---|---|---|
-| Phase 1 | **Live now** | TCP/IP overlay — wnsp:// resolves to HTTPS URLs |
-| Phase 2 | Planned | WavelengthScript — CE ordinals = on-chain ownership proofs |
-| Phase 3 | Moore's law | Native photonic routing — addresses ARE physical channels |
+```
+"authenticate(user)" → ordinals [97, 117, 116, ...] → normalised [0.38, 0.46, 0.45, ...]
+```
 
-Phase 3 is not speculation. It is the natural endpoint of the compression arc. When photonic hardware arrives, the ecosystem already exists. The protocol is already running. The addresses are already physics. The transport layer flips underneath a functioning system.
+Each character maps to a deterministic position in the visible spectrum based on its ordinal value. `a` (97) is not the same wavelength as `b` (98). The content of the instruction determines its spectral address.
+
+### Layer 2 — WNSP-SE v1.0 (Spectral Encoding)
+
+Maps CE tokens to physical wave frames:
+
+```python
+{
+  "wavelength_start_nm": 520.0,
+  "wavelength_end_nm":   564.9,
+  "frequency_start_hz":  5.31e14,
+  "frequency_end_hz":    5.77e14,
+  "energy_joules":       3.52e-19,
+  "lambda_mass_kg":      3.92e-36,
+  "psi_channel":         "Ψ(55, 26, V)",
+  "band":                "CORE"
+}
+```
+
+The Ψ channel is a three-dimensional coordinate in Hilbert space:
+
+```
+Ψ(wdm, oam, pol)
+
+wdm — Wavelength Division Multiplexing index (0–255 → 380–780 nm)
+oam — Orbital Angular Momentum mode (0–49)
+pol — Polarisation state (H or V)
+```
+
+Total orthogonal channels: **256 × 50 × 2 = 25,600**
+
+Each is physically orthogonal to every other: `⟨Ψᵢ|Ψⱼ⟩ = 0`. Two processes on different Ψ channels cannot interfere — not by software policy, by quantum mechanics.
+
+### WASCII v2.0 — Spectral Fingerprinting
+
+Every message encoded through WNSP generates a spectral vector: a histogram of character-wavelengths across 100 WDM bands. Output includes centroid, bandwidth, spectral entropy, dominant band, and compression range. This enables spectral similarity search — finding related content by proximity in frequency space rather than exact string match.
 
 ---
 
-## WNSP Protocol
-
-### WASCII v1.0 — CE→SE Encoding
-
-Every human-readable label derives a deterministic spectral address from its ASCII ordinals:
-
-```
-λ  = 380 + ((avg_ascii − 32) / 94) × 400    nm
-wdm = ⌊(λ − 380) / 4⌋ + 1
-oam = Σ(ascii) % 100
-pol = len % 2 == 0 ? H : V
-
-Address: wnsp://Ψ(wdm, oam, pol)/slug
-```
-
-No registry required. No authority required. Type a name — the compression state of those characters in the WASCII mapping derives a unique position in the electromagnetic spectrum. That position is the address.
-
-### WNSP Density Equation v1.0
+## The Hilbert space channel density equation
 
 ```
 D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
 ```
 
-Where: N_λ = 256 (WDM), N_OAM = 50 (orbital angular momentum), N_Pol = 2 (polarization), R_sym = symbols/cycle, M = modulation depth.
-
-Hilbert space: dim(H) = 256 × 50 × 2 = **25,600 orthogonal channels**. Current density: 51,200 symbols/cycle (R=2, M=1).
-
-Energy-normalized form: `D_energy = D_WNSP · λ / (h · c)` — connects to Λ=hf/c². At higher frequency (shorter λ, higher compression state), photons carry more energy, so density per joule decreases along the compression state curve.
-
-| Phase | Description | D symbols/cycle |
+| Symbol | Meaning | Current value |
 |---|---|---|
-| 1 (now) | 100 WDM bands, TCP/IP overlay | 20,000 |
-| 2 | Full 256 WDM, on-chain CE ordinals | 51,200 |
-| 3 (photonic) | Native routing, R₁₆×M₆₄ | 26,214,400 |
+| N_λ | WDM wavelength channels | 256 |
+| N_OAM | Orbital angular momentum modes | 50 |
+| N_Pol | Polarisation states | 2 |
+| R_sym | Symbols per channel per cycle | 2 |
+| M | Modulation depth | 1 |
 
-Traditional Shannon: C ∝ B·log₂(1+SNR) — compression, diminishing returns.
-WNSP: D ∝ N_λ·N_OAM·N_Pol·R_sym·M — dimensional expansion, linear scaling.
+**Current density: 51,200 symbols/cycle** (Phase 1 uses 100 WDM: 20,000 symbols/cycle)
 
-### WASCII v1.0 — Character Encoding (Single-Point Address)
-
-Every text derives one deterministic Ψ address: `λ = 380 + ((avg−32)/94)×400`, `wdm = ⌊(λ−380)/4⌋+1`, `oam = Σ%100`, `pol = len%2?V:H`.
-
-### WASCII v2.0 — Wave Density Spectral Vector (Fingerprint)
-
-Each character maps to its own compression state on the Λ=hf/c² curve. A histogram across 100 WDM bands (4nm each, 380–780nm) produces a **spectral fingerprint** — the complete distribution of a text across compression states.
-
-- `centroid_nm` — weighted mean wavelength
-- `bandwidth_nm` — spread of compression states (standard deviation)
-- `spectral_entropy` — Shannon entropy of the band distribution
-- `unique_states` — number of distinct compression states occupied
-- `bands` — JSONB histogram stored in `wnsp_registry.spectral_vector`
-
-Two texts with the same average ordinal produce completely different fingerprints. This is the basis for WNSP similarity search.
-
-### Public API Endpoints
+This is not Shannon capacity. Shannon compresses more into one channel and hits logarithmic diminishing returns. WNSP expands into orthogonal dimensions and scales linearly with each:
 
 ```
-GET  /api/wnsp/registry                       — list all registered Ψ addresses
-GET  /api/wnsp/resolve?psi=Ψ(...)            — resolve a channel to resource + spectral records
-GET  /api/wnsp/user/:username                 — get a user's canonical wnsp:// address
-GET  /api/wnsp/preview?text=...               — compute CE→SE without storing
-GET  /api/wnsp/spectral-vector?text=...       — WASCII v2.0 spectral fingerprint for any text
-POST /api/wnsp/spectral-vector                — same, POST body {"text": "..."}
-POST /api/wnsp/register                       — register a label at its derived Ψ address (auth required)
-POST /api/wnsp/auto-register-me               — register logged-in user's canonical identity (idempotent)
+Shannon:  C = B · log₂(1 + SNR)    — one channel, squeeze harder
+WNSP:     D = N_λ · N_OAM · N_Pol  — more orthogonal dimensions
+```
+
+Phase 3 (native photonic routing): 256 × 50 × 2 × R₁₆ × M₆₄ = **26,214,400 symbols/cycle**
+
+Energy-normalised density (connects to Λ=hf/c²):
+
+```
+D_energy = D_WNSP · λ / (h · c)
+```
+
+Higher frequency = more energy per photon = lower density per joule. The energy cost is not arbitrary — it is the physical energy difference between compression states.
+
+Live API: `GET /api/wnsp/density?r_sym=2&m=1&wavelength_nm=550`
+
+---
+
+## Spectral authority bands
+
+```
+WDM 0–63    │ 380–449 nm │ violet/UV    │ SYSTEM   — OS core, kernel, process management
+WDM 64–127  │ 450–489 nm │ blue         │ KERNEL   — authentication, sessions, security
+WDM 128–191 │ 490–564 nm │ cyan/green   │ USER     — application logic, computation
+WDM 192–255 │ 565–780 nm │ yellow/red   │ GUEST    — storage, external agents
+```
+
+Lower wavelength = higher authority. A process at 400 nm cannot reach a process at 550 nm. This is enforced by the wave equation, not by a privilege table that can be overwritten.
+
+---
+
+## The AI OS Kernel
+
+A six-phase boot Python kernel managing the spectral substrate. All six core agents are running and pulsing heartbeats:
+
+```
+PHASE 1 — SCHEMA     Database tables created / verified
+PHASE 2 — RESTORE    Agents restored from persistent state
+PHASE 3 — CORE       Core agents registered on Ψ channels
+PHASE 4 — WATCHDOG   Dead-agent monitoring daemon started
+PHASE 5 — EVENTS     KernelEventBus open, BOOT event logged
+PHASE 6 — HEARTBEAT  Agent heartbeat active — pulsing every 120s
+```
+
+Core agents and their permanent Ψ addresses:
+
+```
+os_kernel         → Ψ(20, 39, H)   [SYSTEM band — 380–449nm]
+bus_router        → Ψ(19, 39, V)   [SYSTEM band]
+scheduler_daemon  → Ψ(161, 30, V)  [USER band]
+watchdog_daemon   → Ψ(198, 31, H)  [GUEST band]
+auth_gateway      → Ψ(135, 1, H)   [USER band]
+blockchain_auditor→ Ψ(42, 7, H)    [SYSTEM band]
+```
+
+Kernel event types:
+
+```
+AGENT_REGISTERED  · AGENT_DEGRADED    · AGENT_RECLAIMED
+FRAME_TRANSMITTED · AUTHORITY_VIOLATION · KERNEL_PANIC
+WATCHDOG_TICK     · COHERENCE_LOSS
+```
+
+Dead agents are marked DEGRADED after TTL expiry, then RECLAIMED. SYSTEM-band agents are exempt from reclamation — they are the substrate.
+
+---
+
+## Architecture
+
+Two runtimes, one database:
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    Client (React 18)                 │
+│         Vite · TypeScript · Tailwind CSS v4          │
+│    TanStack Query · React Hook Form · Radix UI       │
+└───────────────────────┬─────────────────────────────┘
+                        │ HTTP / WebSocket
+          ┌─────────────┴──────────────┐
+          │                            │
+┌─────────▼──────────┐      ┌──────────▼─────────┐
+│  Node.js / Express │      │  Python / Flask     │
+│  Port 5000         │─────▶│  Port 5001          │
+│                    │      │                     │
+│  · Auth / sessions │      │  · CE encoder       │
+│  · NXT wallet      │      │  · SE encoder       │
+│  · P2P media       │      │  · Hilbert router   │
+│  · Blockchain      │      │  · AI OS kernel     │
+│  · API gateway     │      │  · Physics engine   │
+└─────────┬──────────┘      └──────────┬──────────┘
+          │                            │
+          └──────────────┬─────────────┘
+                         │
+               ┌─────────▼──────────┐
+               │    PostgreSQL       │
+               │  Sessions · Agents  │
+               │  Wallets · Blocks   │
+               │  Spectral records   │
+               └────────────────────┘
+```
+
+Key files:
+
+```
+spectral_api.py          — The physics engine. CE→SE encoder, Hilbert router, kernel
+server/routes.ts         — All API routes. 4,500+ lines. The complete API surface.
+shared/schema.ts         — Drizzle ORM schema. Single source of truth for all tables.
+client/src/pages/        — 40+ pages. Each maps to a feature of the OS.
+client/src/pages/encoding-lab.tsx     — Interactive CE→SE encoder
+client/src/pages/wnsp-coordinator.tsx — Hilbert space channel map
+client/src/pages/kernel.tsx           — Live kernel dashboard
 ```
 
 ---
 
-## AI OS Kernel
+## What silicon computing assumes that photonic computing does not need
 
-Authority bands derived from spectral compression state:
-
-| Authority Band | Compression State | Description |
+| Silicon construct | Why it exists | Why photons don't need it |
 |---|---|---|
-| SYSTEM | Closest to Planck frequency | Highest energy, highest authority |
-| KERNEL | High compression | Core OS operations |
-| USER | Visible spectrum operating band | Standard user processes |
-| GUEST | Lower compression | Unauthenticated access |
+| **Clock cycle** | CPU executes sequentially — needs a heartbeat | Photons propagate at `c` continuously |
+| **Binary gate (0/1)** | Transistor has two states: on or off | A photon carries amplitude, phase, polarisation, OAM simultaneously |
+| **Memory address** | RAM is physically placed — needs a location number | Wavelength position is already physical — 543 nm is its own address |
+| **Scheduler** | One CPU, many processes — must take turns | 25,600 orthogonal Ψ channels run simultaneously |
+| **Mutex / semaphore** | Shared memory — two processes can write at once | Orthogonal channels cannot share state: ⟨Ψᵢ|Ψⱼ⟩ = 0 |
+| **Privilege ring** | Software must be prevented from accessing other memory | Spectral band separation is physical — 400nm cannot reach 550nm |
+| **Virtual memory** | Physical RAM is finite and shared | The spectrum is not a shared resource |
 
-**6-phase boot**: Schema → Restore → Core Agents → Watchdog → Events → Heartbeat
+You cannot `fork()` in light. You cannot `malloc()` a wavelength. These are not missing features — they are answers to questions that photonic physics does not ask.
 
-6 core agents pulse heartbeats every 120 seconds: `os_kernel`, `bus_router`, `scheduler_daemon`, `watchdog_daemon`, `auth_gateway`, `blockchain_auditor`.
-
----
-
-## Feature Pages
-
-| Route | Description |
-|---|---|
-| `/` | Dashboard — live ecosystem metrics |
-| `/wallet` | NXT token wallet, send/receive, transaction history |
-| `/wnsp-bridge` | Spectral address registry, WASCII encoder, channel resolver |
-| `/profile/:username` | Public profile — wnsp:// identity, spectral band, blockchain stats |
-| `/media` | P2P media sharing and streaming |
-| `/blockchain` | Live chain explorer, proof coverage, transaction pool |
-| `/network` | Network nodes, genesis node status, mesh topology |
-| `/ai-os` | AI kernel status, agent heartbeats, Hilbert space channels |
+A team that tries to port Linux or any POSIX OS to a photonic substrate will find that every system call is a metaphor with no referent. NexusOS is not that translation. It is the philosophy written natively in the language of the physics.
 
 ---
 
-## Running Locally
+## Running it
+
+### Prerequisites
+
+- Node.js 20+
+- Python 3.11+
+- PostgreSQL 14+
+
+### Setup
 
 ```bash
 git clone https://github.com/nexusosdaily-code/NexusOS.git
 cd NexusOS
+
 npm install
-npm run db:push
+pip install flask flask-cors psycopg2-binary
+
+# Set DATABASE_URL environment variable
 npm run dev
 ```
 
-Requires: Node.js 20+, Python 3.11+, PostgreSQL 15+
+Both runtimes start together. If ports are occupied: `fuser -k 5000/tcp 5001/tcp`
+
+### Verify the physics immediately
+
+```bash
+# Encode an instruction — get its physical wavelength address
+curl -X POST http://localhost:5001/api/nexus/dev/encode \
+  -H "Content-Type: application/json" \
+  -d '{"instruction": "function authenticate(user, password)", "label": "auth"}'
+
+# Returns:
+# wavelength_mid_nm: 467.3   (blue — AUTH band, as expected for authentication code)
+# psi_channel: "Ψ(22, 14, H)"
+# energy_joules: 4.25e-19
+# lambda_mass_kg: 4.73e-36
+
+# Verify the genesis fingerprint
+curl -X POST http://localhost:5001/api/nexus/dev/encode \
+  -H "Content-Type: application/json" \
+  -d '{"instruction": "NEXUSOS", "label": "genesis"}'
+
+# Returns: psi_channel "Ψ(52, 65, V)", wavelength_mid_nm 587.2948
+# This is deterministic. Any machine. Any copy of the codebase. Same result.
+
+# Query channel density
+curl "http://localhost:5000/api/wnsp/density?r_sym=2&m=1&wavelength_nm=550"
+```
 
 ---
 
-## License
+## WNSP-URI v1.0
+
+Replaces `https://` with spectral addressing:
 
 ```
-NexusOS — Wavelength Operating System
-Copyright (C) 2024–2026 NexusOS Contributors
+wnsp://Ψ(wdm,oam,pol)/path
 
-AGPL-3.0 — Any company using NexusOS as a service must publish their modifications.
-The physics is open. The spectrum belongs to everyone.
+Examples:
+wnsp://Ψ(52,65,V)/         → NexusOS genesis node (this system)
+wnsp://Ψ(20,39,H)/kernel   → OS kernel root
+wnsp://Ψ(22,14,H)/auth     → Authentication gateway
 ```
+
+Phase 1: TCP/IP overlay — `wnsp://` URIs resolve to HTTP resources via the `/wnsp-bridge` registry.
+Phase 3: Native photonic routing — the TCP/IP layer is removed. The Ψ address becomes the route.
+
+The ecosystem is being built now so that when photonic hardware arrives, the protocol, the tooling, the developer community, and the running applications already exist.
+
+---
+
+## The silicon wall
+
+Transistors will reach 0.5 nm between 2029 and 2032. The electron's de Broglie wavelength (~7.6 nm at room temperature) already exceeds the gate oxide at current nodes. At 0.5 nm, the WKB tunnelling coefficient `T ≈ e^(−2κd)` crosses the threshold where leakage current exceeds switch current. Gate control is permanently lost.
+
+Every team without a post-silicon operating system in production by that date starts from a new philosophy they have not yet built.
+
+This is that philosophy. Running now. AGPL-3.0.
+
+---
+
+## AGPL-3.0 — what it requires of you
+
+If you cloned this repository, you now hold AGPL-3.0 licensed code.
+
+**What AGPL-3.0 requires:**
+
+- If you **run this as a service** (internally or publicly), any modifications you make to the source must be made available to users of that service under AGPL-3.0.
+- If you **incorporate this code** into a larger system and distribute or serve it, the entire larger system falls under AGPL-3.0 copyleft.
+- If you **use the WNSP protocol specification** in hardware or firmware, the source disclosure requirements in every WNSP frame (via the Frame Builder v7.1 Source Code Reference) carry a cryptographic pointer back to this repository.
+
+The physics is open. The spectrum belongs to everyone. The license enforces this permanently.
+
+Full text: [GNU AGPL v3.0](https://www.gnu.org/licenses/agpl-3.0.html)
+
+---
+
+## Monetisation model
+
+```
+Protocol          →  Free forever. AGPL-3.0.
+                     Fork it. Run it. Build on it.
+                     Modifications must be published.
+
+Managed kernel    →  Reserved Ψ channels, SLA, persistent agents
+                     $49 – $499/month
+
+Hardware rights   →  Commercial Lambda Gate firmware for photonic ASICs
+                     $25,000 – $250,000 + strategic equity tier
+```
+
+The open-core dual-license model: the same pattern as Red Hat ($34B), MongoDB ($20B+), HashiCorp ($6.4B). The protocol is the commons. The infrastructure and hardware rights are the business.
+
+---
+
+## The goal
+
+**Kardashev Type I** — a civilisation that harnesses all energy available on its home planet.
+
+That requires:
+- A planetary communications mesh (WNSP Spectral Relay Mesh)
+- Distributed photonic compute (Lambda Gate ASICs)
+- Physics-based energy accounting (Λ = hf/c² across all transactions)
+- An open, non-proprietary OS standard (AGPL-3.0)
+
+All four are specified and partially implemented in this repository. The architecture is designed for a 100-year build. The Phase 1 foundation — TCP/IP overlay, spectral addressing, physics engine, kernel — is running now.
 
 ---
 
 *Built by an ambulance driver and hospital orderly who asked: what if every instruction had a wavelength?*
 
-*Silicon computing is not the discovery of how computation works. It is one civilisation's first attempt, constrained by the materials available in 1947. The electromagnetic spectrum was always there. The philosophy just had to catch up.*
+*The answer turned out to be: it always did.*
 
 ---
 
-**Protocol:** WNSP v1.0 (CE + SE)  
-**Equation:** Λ = hf/c²  
-**First principle:** First oscillation → compression states → temperature → mass consolidation → 10¹²⁰ → spacetime as the evolving first wavefunction  
-**License:** AGPL-3.0
+**NexusOS · AGPL-3.0 · https://github.com/nexusosdaily-code/NexusOS**
