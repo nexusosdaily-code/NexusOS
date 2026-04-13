@@ -752,3 +752,33 @@ export const wnspRegistry = pgTable("wnsp_registry", {
 export const insertWnspRegistrySchema = createInsertSchema(wnspRegistry).omit({ id: true, createdAt: true, updatedAt: true, resolveCount: true });
 export type InsertWnspRegistry = z.infer<typeof insertWnspRegistrySchema>;
 export type WnspRegistryEntry = typeof wnspRegistry.$inferSelect;
+
+// ============================================
+// USER CREDENTIALS — Business & personal credential uploads
+// Stored encrypted as base64; users decide public/private visibility.
+// Spectral-signed: every credential is encoded via CE→SE at upload time.
+// ============================================
+export const userCredentials = pgTable("user_credentials", {
+  id:             varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId:         varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  credentialType: text("credential_type").notNull().default("other"),
+  name:           text("name").notNull(),
+  issuer:         text("issuer"),
+  issuedDate:     text("issued_date"),
+  expiryDate:     text("expiry_date"),
+  fileName:       text("file_name").notNull(),
+  fileType:       text("file_type").notNull().default("application/octet-stream"),
+  fileData:       text("file_data").notNull(),
+  fileSize:       integer("file_size"),
+  visibility:     text("visibility").notNull().default("private"),
+  psiChannel:     text("psi_channel"),
+  wavelengthNm:   decimal("wavelength_nm", { precision: 10, scale: 4 }),
+  createdAt:      timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  userIdx:        index("user_credentials_user_idx").on(table.userId),
+  typeIdx:        index("user_credentials_type_idx").on(table.credentialType),
+}));
+
+export const insertUserCredentialSchema = createInsertSchema(userCredentials).omit({ id: true, createdAt: true });
+export type InsertUserCredential = z.infer<typeof insertUserCredentialSchema>;
+export type UserCredential = typeof userCredentials.$inferSelect;

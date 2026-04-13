@@ -48,7 +48,7 @@ function CopyBtn({ text }: { text: string }) {
 
 // ── Well-known canonical URIs — static definition + live status key ───────────
 const KNOWN: { name: string; resource: string; href: string; ecoKey?: string }[] = [
-  { name: "NEXUS",      resource: "",               href: "/",               ecoKey: "kernel" },
+  { name: "NEXUSOS",    resource: "",               href: "/",               ecoKey: "kernel" },
   { name: "EVIDENCE",   resource: "evidence",       href: "/evidence",       ecoKey: "blockchain" },
   { name: "BLOCKCHAIN", resource: "blockchain",     href: "/blockchain",     ecoKey: "blockchain" },
   { name: "SNIC",       resource: "snic",           href: "/snic",           ecoKey: undefined },

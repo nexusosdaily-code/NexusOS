@@ -4358,6 +4358,114 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ── User Credentials — Upload ─────────────────────────────────────────
+  app.post("/api/profile/credentials", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { userCredentials } = await import("@shared/schema");
+      const userId = (req as any).user!.id;
+      const { name, credentialType = "other", issuer, issuedDate, expiryDate,
+              fileName, fileType, fileData, fileSize, visibility = "private" } = req.body;
+
+      if (!name || !fileName || !fileData) {
+        return res.status(400).json({ error: "name, fileName, and fileData are required" });
+      }
+      if (fileData.length > 10 * 1024 * 1024) {
+        return res.status(413).json({ error: "File too large — max 10 MB" });
+      }
+
+      // Derive spectral address from credential name via WASCII CE→SE
+      const enc = ceSe(name);
+
+      const [cred] = await db.insert(userCredentials).values({
+        userId, name, credentialType, issuer: issuer ?? null,
+        issuedDate: issuedDate ?? null, expiryDate: expiryDate ?? null,
+        fileName, fileType: fileType ?? "application/octet-stream",
+        fileData, fileSize: fileSize ?? null, visibility,
+        psiChannel: enc.psi, wavelengthNm: String(enc.nm),
+      }).returning();
+
+      const { fileData: _fd, ...credSafe } = cred as any;
+      res.status(201).json({ success: true, credential: credSafe, spectral: enc });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── User Credentials — List (own = all, others = public only) ─────────────
+  app.get("/api/profile/:username/credentials", optionalAuth, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { users: usersTable, userCredentials } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const { username } = req.params;
+
+      const [targetUser] = await db.select({ id: usersTable.id }).from(usersTable)
+        .where(eq(usersTable.username, username));
+      if (!targetUser) return res.status(404).json({ error: "User not found" });
+
+      const currentUserId = (req as any).user?.id ?? null;
+      const isSelf = currentUserId === targetUser.id;
+
+      const rows = await db.select({
+        id: userCredentials.id,
+        credentialType: userCredentials.credentialType,
+        name: userCredentials.name,
+        issuer: userCredentials.issuer,
+        issuedDate: userCredentials.issuedDate,
+        expiryDate: userCredentials.expiryDate,
+        fileName: userCredentials.fileName,
+        fileType: userCredentials.fileType,
+        fileSize: userCredentials.fileSize,
+        visibility: userCredentials.visibility,
+        psiChannel: userCredentials.psiChannel,
+        wavelengthNm: userCredentials.wavelengthNm,
+        createdAt: userCredentials.createdAt,
+      }).from(userCredentials)
+        .where(
+          isSelf
+            ? eq(userCredentials.userId, targetUser.id)
+            : and(eq(userCredentials.userId, targetUser.id), eq(userCredentials.visibility, "public"))
+        );
+
+      res.json({ credentials: rows, isSelf });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── User Credentials — Download file ──────────────────────────────────────
+  app.get("/api/profile/credentials/:id/download", optionalAuth, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { userCredentials } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [cred] = await db.select().from(userCredentials).where(eq(userCredentials.id, req.params.id));
+      if (!cred) return res.status(404).json({ error: "Credential not found" });
+
+      const currentUserId = (req as any).user?.id ?? null;
+      if (cred.visibility !== "public" && cred.userId !== currentUserId) {
+        return res.status(403).json({ error: "Private credential" });
+      }
+
+      const buf = Buffer.from(cred.fileData.replace(/^data:[^,]+,/, ""), "base64");
+      res.setHeader("Content-Type", cred.fileType ?? "application/octet-stream");
+      res.setHeader("Content-Disposition", `attachment; filename="${cred.fileName}"`);
+      res.send(buf);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── User Credentials — Delete ─────────────────────────────────────────────
+  app.delete("/api/profile/credentials/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { userCredentials } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const userId = (req as any).user!.id;
+      const deleted = await db.delete(userCredentials)
+        .where(and(eq(userCredentials.id, req.params.id), eq(userCredentials.userId, userId)))
+        .returning();
+      if (deleted.length === 0) return res.status(404).json({ error: "Not found or not your credential" });
+      res.json({ success: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   app.get("/api/network/nodes", async (req: Request, res: Response) => {
     try {
       const status = req.query.status as string | undefined;

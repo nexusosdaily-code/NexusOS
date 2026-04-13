@@ -918,7 +918,7 @@ export default function WnspBridgePage() {
             <div className="space-y-3">
               <div className="text-xs text-slate-500 uppercase tracking-wider font-mono">NexusOS canonical addresses</div>
               {[
-                { label: "NEXUS",       href: "/",            desc: "NexusOS home — root of the spectral network" },
+                { label: "NEXUSOS",     href: "/",            desc: "NexusOS home — root of the spectral network" },
                 { label: "SPECTRAL-DB", href: "/spectral-db", desc: "Spectral database — CE→SE encoded content store" },
                 { label: "BLOCKCHAIN",  href: "/blockchain",  desc: "Physics-based blockchain — Λ=hf/c² proof system" },
                 { label: "ENCODING-LAB",href: "/encoding-lab",desc: "CE→SE encoding laboratory" },
