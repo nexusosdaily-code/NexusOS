@@ -360,6 +360,49 @@ def compute_wnsp_density(
     }
 
 
+def channel_density_at_wdm(wdm_band: int, r_sym: float = 2.0, m: float = 1.0) -> dict:
+    """
+    Density of a single WDM channel at a specific compression state.
+
+    Each WDM band occupies one slot in the N_λ dimension. The channel's
+    sub-space is: 1 (WDM slot) × N_OAM × N_Pol = 100 orthogonal modes.
+
+    D_channel = 1 × N_OAM × N_Pol × R_sym × M
+
+    Energy normalization: at this compression state's wavelength,
+    the density per joule = D_channel · λ / (h · c).
+
+    Higher WDM band → longer wavelength → lower frequency →
+    lower energy per photon → higher density per joule.
+    This is the Λ=hf/c² curve applied per channel.
+    """
+    wdm_band   = max(1, min(wdm_band, HILBERT_DIM_WDM))
+    # Center wavelength of this WDM band (4 nm/band, starting at 380 nm)
+    wavelength_nm  = 380.0 + (wdm_band - 1) * 4.0 + 2.0
+    wavelength_m   = wavelength_nm * 1e-9
+    frequency_hz   = SPEED_OF_LIGHT / wavelength_m
+    energy_joules  = PLANCK_CONSTANT * frequency_hz
+    lambda_mass_kg = energy_joules / (SPEED_OF_LIGHT ** 2)
+
+    sub_channels = HILBERT_DIM_OAM * HILBERT_DIM_POL   # 100 per WDM slot
+    d_channel    = sub_channels * r_sym * m
+    d_energy     = d_channel * wavelength_m / (PLANCK_CONSTANT * SPEED_OF_LIGHT)
+
+    return {
+        "wdm_band":           wdm_band,
+        "wavelength_nm":      round(wavelength_nm, 2),
+        "frequency_thz":      round(frequency_hz / 1e12, 4),
+        "energy_ev":          round(energy_joules / 1.602176634e-19, 4),
+        "lambda_mass_kg":     lambda_mass_kg,
+        "sub_channels":       sub_channels,           # OAM × Pol modes in this band
+        "d_channel":          int(d_channel),          # symbols/cycle at this WDM slot
+        "d_energy_per_joule": round(d_energy, 2),     # symbols/joule at this compression state
+        "r_sym":              r_sym,
+        "m":                  m,
+        "equation":           "D_channel = 1 · N_OAM · N_Pol · R_sym · M",
+    }
+
+
 def compute_spectral_vector(text: str) -> dict:
     """
     WASCII v2.0 — Wave Density Spectral Vector.
@@ -801,9 +844,10 @@ class WNSPProtocolStack:
         3. Returns a unified transmission envelope
     """
 
-    def __init__(self, intensity: int = 32, cycles: int = 1):
-        self.ce = WNSPCharacterEncoder()
-        self.se = WNSPSpectralEncoder(intensity=intensity, cycles=cycles)
+    def __init__(self, intensity: int = 32, cycles: int = 1, r_sym: float = 2.0):
+        self.ce    = WNSPCharacterEncoder()
+        self.se    = WNSPSpectralEncoder(intensity=intensity, cycles=cycles)
+        self.r_sym = r_sym  # symbols per channel per cycle (density equation parameter)
 
     def transmit(self, text: str, sender: str = "", recipient: str = "") -> Dict[str, Any]:
         ce_output = self.ce.encode_text(text)
@@ -857,6 +901,25 @@ class WNSPProtocolStack:
                 "status":    "VALID — Lambda mass conserved",
                 "equation":  "Λ = hf/c²",
                 "timestamp": time.time(),
+            },
+
+            # ── WNSP Density Equation ──────────────────────────────────────
+            # D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
+            # Applied at the full Hilbert space (cycles required for this message).
+            "density": {
+                "equation":        "D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M",
+                "d_wnsp":          HILBERT_DIM_TOTAL * self.r_sym * 1,  # R_sym, M=1 (minimal)
+                "hilbert_channels": HILBERT_DIM_TOTAL,
+                "r_sym":           self.r_sym,
+                "m":               1,
+                "cycles_required": max(1, math.ceil(se_output["frame_count"] / max(1, HILBERT_DIM_TOTAL * self.r_sym))),
+                "frames_this_msg": se_output["frame_count"],
+                "unit":            "symbols per cycle",
+                "note": (
+                    "cycles_required = ceil(frames / D_WNSP). "
+                    "At Phase 3 (photonic), all 25,600 channels route simultaneously — "
+                    "a single cycle carries the entire message."
+                ),
             },
         }
 

@@ -31,6 +31,7 @@ from wnsp_protocol_v7 import (
     lambda_mass,
     compute_spectral_vector,
     compute_wnsp_density,
+    channel_density_at_wdm,
     PLANCK_CONSTANT,
     SPEED_OF_LIGHT,
     VISIBLE_MIN_NM,
@@ -401,6 +402,11 @@ def get_constants():
 @app.route('/api/spectral/capacity', methods=['GET'])
 def get_capacity():
     total_channels = HILBERT_DIM_TOTAL  # 25,600
+    # ── Density equation applied to this capacity report ──────────────────────
+    density_phase1 = compute_wnsp_density(n_wdm=100,             r_sym=2.0, m=1, wavelength_nm=550.0)
+    density_phase2 = compute_wnsp_density(n_wdm=HILBERT_DIM_WDM, r_sym=2.0, m=1, wavelength_nm=550.0)
+    density_phase3 = compute_wnsp_density(n_wdm=HILBERT_DIM_WDM, r_sym=16.0, m=64, wavelength_nm=550.0)
+
     return jsonify({
         "wdm_channels":           HILBERT_DIM_WDM,
         "oam_modes":              HILBERT_DIM_OAM,
@@ -415,6 +421,14 @@ def get_capacity():
             "dim_pol":       HILBERT_DIM_POL,
             "total_dim":     HILBERT_DIM_TOTAL,
             "orthogonality": "⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j",
+        },
+        "density_equation": {
+            "formula":         "D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M",
+            "energy_formula":  "D_energy = D_WNSP · λ / (h · c)",
+            "phase_1_now":     density_phase1["density"]["d_raw"],
+            "phase_2_full":    density_phase2["density"]["d_raw"],
+            "phase_3_photonic": density_phase3["density"]["d_raw"],
+            "shannon_vs_wnsp": "Shannon: C ∝ log(1+SNR). WNSP: D ∝ N·R·M. Orthogonal expansion, not compression.",
         },
     })
 
@@ -714,6 +728,10 @@ def agent_allocate():
                 pass
             _events.emit("AGENT_REGISTERED", agent_id=agent_id,
                          detail={"channel": channel.notation(), "band": band.name})
+        # ── Density at this channel's compression state ───────────────
+        wdm_band = max(1, min(256, int((channel.wavelength - 380) / 4) + 1)) if 380 <= channel.wavelength < 780 else 1
+        ch_density = channel_density_at_wdm(wdm_band)
+
         return jsonify({
             "status":   "existing" if already else "allocated",
             "agent_id": agent_id,
@@ -723,6 +741,19 @@ def agent_allocate():
             "registered_at":  stats["registered_at"],
             "routed_count":   stats["routed_count"],
             "authority_band": band.name,
+            "channel_density": {
+                "wdm_band":           ch_density["wdm_band"],
+                "wavelength_nm":      ch_density["wavelength_nm"],
+                "d_channel":          ch_density["d_channel"],
+                "d_energy_per_joule": ch_density["d_energy_per_joule"],
+                "sub_channels":       ch_density["sub_channels"],
+                "equation":           ch_density["equation"],
+                "note": (
+                    "Density of this specific compression state on the Λ=hf/c² curve. "
+                    "Higher WDM index (longer λ) = lower energy per photon = "
+                    "more symbols per joule."
+                ),
+            },
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
