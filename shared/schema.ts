@@ -738,6 +738,7 @@ export const wnspRegistry = pgTable("wnsp_registry", {
   registeredBy:  varchar("registered_by", { length: 36 }).references(() => users.id, { onDelete: "set null" }),
   isPublic:      boolean("is_public").notNull().default(true),
   isCanonical:   boolean("is_canonical").notNull().default(false),
+  spectralVector: jsonb("spectral_vector"),
   resolveCount:  integer("resolve_count").notNull().default(0),
   createdAt:     timestamp("created_at").notNull().defaultNow(),
   updatedAt:     timestamp("updated_at").notNull().defaultNow(),

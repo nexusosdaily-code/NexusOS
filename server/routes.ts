@@ -75,7 +75,8 @@ async function secureProxyToSpectralAPI(req: Request, res: Response, endpoint: s
     
     await storage.incrementRateLimit(identifier, endpoint, RATE_LIMIT_WINDOW_MS);
 
-    const url = `${SPECTRAL_API_URL}${endpoint}`;
+    const qs = new URLSearchParams(req.query as Record<string, string>).toString();
+    const url = `${SPECTRAL_API_URL}${endpoint}${qs ? `?${qs}` : ""}`;
     const options: RequestInit = {
       method: req.method,
       headers: {
@@ -1408,6 +1409,14 @@ export async function registerRoutes(
 
   app.post("/api/wnsp/wascii/lookup", (req, res) => {
     secureProxyToSpectralAPI(req, res, "/api/wnsp/wascii/lookup");
+  });
+
+  // ── WASCII v2.0 — Wave Density Spectral Vector ────────────────
+  app.get("/api/wnsp/spectral-vector", (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/spectral-vector");
+  });
+  app.post("/api/wnsp/spectral-vector", (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/spectral-vector");
   });
 
   // ── Kernel Component 1: Boot ──────────────────────────────────

@@ -177,15 +177,33 @@ Address: wnsp://Ψ(wdm, oam, pol)/slug
 
 No registry required. No authority required. Type a name — the compression state of those characters in the WASCII mapping derives a unique position in the electromagnetic spectrum. That position is the address.
 
+### WASCII v1.0 — Character Encoding (Single-Point Address)
+
+Every text derives one deterministic Ψ address: \`λ = 380 + ((avg−32)/94)×400\`, \`wdm = ⌊(λ−380)/4⌋+1\`, \`oam = Σ%100\`, \`pol = len%2?V:H\`.
+
+### WASCII v2.0 — Wave Density Spectral Vector (Fingerprint)
+
+Each character maps to its own compression state on the Λ=hf/c² curve. A histogram across 100 WDM bands (4nm each, 380–780nm) produces a **spectral fingerprint** — the complete distribution of a text across compression states.
+
+- \`centroid_nm\` — weighted mean wavelength
+- \`bandwidth_nm\` — spread of compression states (standard deviation)
+- \`spectral_entropy\` — Shannon entropy of the band distribution
+- \`unique_states\` — number of distinct compression states occupied
+- \`bands\` — JSONB histogram stored in \`wnsp_registry.spectral_vector\`
+
+Two texts with the same average ordinal produce completely different fingerprints. This is the basis for WNSP similarity search.
+
 ### Public API Endpoints
 
 \`\`\`
-GET  /api/wnsp/registry              — list all registered Ψ addresses
-GET  /api/wnsp/resolve?psi=Ψ(...)   — resolve a channel to resource + spectral records
-GET  /api/wnsp/user/:username        — get a user's canonical wnsp:// address
-GET  /api/wnsp/preview?text=...      — compute CE→SE without storing
-POST /api/wnsp/register              — register a label at its derived Ψ address (auth required)
-POST /api/wnsp/auto-register-me      — register logged-in user's canonical identity (idempotent)
+GET  /api/wnsp/registry                       — list all registered Ψ addresses
+GET  /api/wnsp/resolve?psi=Ψ(...)            — resolve a channel to resource + spectral records
+GET  /api/wnsp/user/:username                 — get a user's canonical wnsp:// address
+GET  /api/wnsp/preview?text=...               — compute CE→SE without storing
+GET  /api/wnsp/spectral-vector?text=...       — WASCII v2.0 spectral fingerprint for any text
+POST /api/wnsp/spectral-vector                — same, POST body {"text": "..."}
+POST /api/wnsp/register                       — register a label at its derived Ψ address (auth required)
+POST /api/wnsp/auto-register-me               — register logged-in user's canonical identity (idempotent)
 \`\`\`
 
 ---

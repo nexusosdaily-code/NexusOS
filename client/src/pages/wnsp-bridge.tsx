@@ -62,6 +62,75 @@ function SpectrumBar({ nm }: { nm: number }) {
   );
 }
 
+// ── WASCII v2.0 — Wave Density Spectral Vector display ───────────────────────
+function SpectralVectorDisplay({ sv }: { sv: any }) {
+  if (!sv || !sv.bands) return null;
+
+  const bands = sv.bands as Record<string, number>;
+  const maxCount = Math.max(1, ...Object.values(bands));
+  const allBars = Array.from({ length: 100 }, (_, i) => {
+    const idx = i + 1;
+    const count = bands[String(idx)] ?? 0;
+    const nm = 380 + (idx - 1) * 4 + 2;
+    return { idx, count, nm, height: Math.round((count / maxCount) * 100) };
+  });
+
+  const entropy = sv.spectral_entropy ?? 0;
+  const entropyPct = Math.round(entropy * 100);
+
+  return (
+    <div className="space-y-2 mt-2">
+      <div className="flex items-center justify-between text-xs font-mono text-slate-500">
+        <span className="text-slate-400 font-semibold">WASCII v2.0 — Spectral Fingerprint</span>
+        <span className="text-slate-600">{sv.unique_states} compression states</span>
+      </div>
+
+      {/* Histogram */}
+      <div className="flex items-end gap-px h-10 rounded overflow-hidden bg-slate-900/60 px-1 py-1">
+        {allBars.map(b => (
+          <div key={b.idx} className="flex-1 rounded-sm transition-all"
+            style={{
+              height: b.count > 0 ? `${Math.max(15, b.height)}%` : "2px",
+              background: b.count > 0 ? nmToColor(b.nm) : "#1e293b",
+              opacity: b.count > 0 ? 0.9 : 0.3,
+            }}
+            title={`WDM ${b.idx} · ${b.nm.toFixed(0)}nm · ${b.count} chars`}
+          />
+        ))}
+      </div>
+
+      {/* Metrics row */}
+      <div className="grid grid-cols-4 gap-2 text-xs font-mono">
+        <div className="bg-slate-900/60 rounded p-2">
+          <div className="text-slate-600 mb-0.5">centroid</div>
+          <div className="text-slate-300">{sv.centroid_nm?.toFixed(1)} nm</div>
+        </div>
+        <div className="bg-slate-900/60 rounded p-2">
+          <div className="text-slate-600 mb-0.5">bandwidth</div>
+          <div className="text-slate-300">±{sv.bandwidth_nm?.toFixed(1)} nm</div>
+        </div>
+        <div className="bg-slate-900/60 rounded p-2">
+          <div className="text-slate-600 mb-0.5">entropy</div>
+          <div style={{ color: `hsl(${entropyPct * 1.2},70%,55%)` }}>{entropyPct}%</div>
+        </div>
+        <div className="bg-slate-900/60 rounded p-2">
+          <div className="text-slate-600 mb-0.5">dominant</div>
+          <div className="text-slate-300" style={{ color: nmToColor(sv.dominant_nm ?? 550) }}>{sv.dominant_band}</div>
+        </div>
+      </div>
+
+      {/* Compression range */}
+      {sv.compression_range && (
+        <div className="text-xs font-mono text-slate-600">
+          compression range: <span className="text-slate-500">{sv.compression_range[0]}–{sv.compression_range[1]} nm</span>
+          {sv.extended_nir > 0 && <span className="ml-2 text-amber-600/70">+{sv.extended_nir} NIR chars</span>}
+          {sv.extended_uv > 0 && <span className="ml-2 text-violet-600/70">+{sv.extended_uv} UV chars</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function authFetch(url: string, opts: RequestInit = {}) {
   const token = localStorage.getItem("auth_token");
   return fetch(url, { ...opts, headers: { Authorization: `Bearer ${token}`, ...(opts.headers ?? {}) } });
@@ -73,6 +142,13 @@ function MyIdentityCard({ username }: { username: string }) {
   const col = nmToColor(enc.nm);
   const qc  = useQueryClient();
   const { toast } = useToast();
+
+  const { data: sv } = useQuery({
+    queryKey: ["/api/wnsp/spectral-vector", username],
+    queryFn: () => fetch(`/api/wnsp/spectral-vector?text=${encodeURIComponent(username)}`).then(r => r.json()),
+    enabled: username.length >= 1,
+    staleTime: 300000,
+  });
 
   const autoRegMut = useMutation({
     mutationFn: async () => {
@@ -122,6 +198,8 @@ function MyIdentityCard({ username }: { username: string }) {
 
         <SpectrumBar nm={enc.nm} />
 
+        {sv && <SpectralVectorDisplay sv={sv} />}
+
         <div className="flex items-center gap-2 bg-slate-900 rounded-lg px-3 py-2">
           <Radio className="w-3.5 h-3.5 flex-shrink-0" style={{ color: col }} />
           <code className="text-xs text-slate-200 flex-1 break-all font-mono">{enc.uri}</code>
@@ -169,6 +247,13 @@ function LiveResolver() {
     },
     enabled: text.length >= 2,
     staleTime: 10000,
+  });
+
+  const { data: sv } = useQuery({
+    queryKey: ["/api/wnsp/spectral-vector", text],
+    queryFn: () => fetch(`/api/wnsp/spectral-vector?text=${encodeURIComponent(text)}`).then(r => r.json()),
+    enabled: text.length >= 1,
+    staleTime: 5000,
   });
 
   return (
@@ -228,6 +313,12 @@ function LiveResolver() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {sv && (
+        <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4">
+          <SpectralVectorDisplay sv={sv} />
         </div>
       )}
 
@@ -467,7 +558,7 @@ function BridgeSpec() {
       items: [
         "Photonic hardware routes data at physical light frequencies",
         "wnsp:// addresses ARE the physical routing — no translation layer",
-        "Λ=hf/c² Lambda Boson field validates each transmission physically",
+        "Einstein's Λ=hf/c² — each transmission validated at its physical compression state",
         "25,600 orthogonal Hilbert space channels replace IP address space",
         "NexusOS becomes the OS of light — the infrastructure of civilization",
       ],
@@ -540,11 +631,13 @@ export default function WnspBridgePage() {
                 <Radio className="w-5 h-5 text-cyan-400" />
                 <h1 className="text-xl font-bold text-white font-mono">WNSP Bridge</h1>
                 <Badge variant="outline" className="text-xs border-cyan-800/50 text-cyan-400 font-mono">v1.0</Badge>
+                <Badge variant="outline" className="text-xs border-violet-800/50 text-violet-400 font-mono">WASCII v2.0</Badge>
               </div>
               <p className="text-slate-400 text-sm max-w-2xl">
                 <strong className="text-slate-200">Spectral addressing on current infrastructure.</strong>{" "}
-                CE→SE (WASCII v1.0) derives a deterministic <code className="text-cyan-400">wnsp://Ψ(wdm,oam,pol)/path</code> address
-                from any text. Phase 1: runs over TCP/IP today. Phase 3: native photonic when hardware arrives.
+                WASCII v1.0 derives a single Ψ address from text. WASCII v2.0 computes the full{" "}
+                <span className="text-violet-400">spectral fingerprint</span> — every character's compression state
+                on the Λ=hf/c² curve, distributed across all 100 WDM bands. Phase 1: TCP/IP. Phase 3: native photonic.
               </p>
             </div>
             <Link href="/">

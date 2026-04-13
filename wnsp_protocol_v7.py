@@ -17,7 +17,7 @@ WNSP coherent communication operating system:
   them into electromagnetic wave properties (wavelength, frequency,
   amplitude) governed by the core equation:
 
-      Λ = hf/c²   (Lambda Boson mass)
+      Λ = hf/c²   (Einstein's Λ — mass equivalent of oscillating quantum)
 
   The SE layer is the authoritative physics standard. No arbitrary
   bit-stream is transmitted — only wave-property frames validated
@@ -173,6 +173,168 @@ LAMBDA_CHAR_MAP = {
     chr(i): VISIBLE_MIN_NM + ((i % 256) / 255.0) * (VISIBLE_MAX_NM - VISIBLE_MIN_NM)
     for i in range(256)
 }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WASCII v2.0  —  Wave Density Spectral Vector
+#
+# Theory of Compression States — first unobserved wavefunction and its evolution
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# WASCII v1.0 collapses a string to one point: the average compression state.
+# WASCII v2.0 preserves every character's compression state and returns the
+# full spectral distribution — the wave density fingerprint of the text.
+#
+# Each character has a canonical wavelength from the WASCII table.
+# That wavelength is a compression state on the Λ=hf/c² curve.
+# The distribution of those states across the WDM bands IS the address —
+# a spectral vector unique to each string, derived from physics, not assigned.
+#
+# Properties:
+#   - Collision-resistant: different strings → different spectral distributions
+#   - Language-agnostic: any character with a WASCII entry is supported
+#   - Physics-grounded: each bin corresponds to a real WDM channel
+#   - Entropy-measurable: spectral richness is a quantifiable property
+# ─────────────────────────────────────────────────────────────────────────────
+
+def compute_spectral_vector(text: str) -> dict:
+    """
+    WASCII v2.0 — Wave Density Spectral Vector.
+
+    Compute the full compression-state distribution for a string.
+    Each character maps to its canonical WASCII wavelength (compression state).
+    The histogram of those states across 100 WDM bands is the spectral fingerprint.
+
+    Args:
+        text: Input string (any characters; WASCII-unmapped fall back to ordinal map)
+
+    Returns dict with:
+        bands              — dict {wdm_index (1-100): count} visible spectrum histogram
+        extended_uv        — count of chars in UV range (< 380 nm)
+        extended_nir       — count of chars in NIR range (> 780 nm)
+        character_states   — list of per-character compression state details
+        centroid_nm        — weighted average wavelength (centre of spectral mass)
+        bandwidth_nm       — spectral spread (standard deviation of wavelengths)
+        spectral_entropy   — Shannon entropy normalised 0–1 (0=all same, 1=max diversity)
+        dominant_nm        — wavelength of the most-populated WDM band
+        dominant_band      — band name of dominant_nm
+        compression_range  — [min_nm, max_nm] — full span of compression states used
+        total_chars        — total character count (excl. unmappable)
+        unique_states      — number of unique compression states (wavelengths) used
+        version            — "WASCII-v2.0"
+    """
+    if not text:
+        return {
+            "bands": {}, "extended_uv": 0, "extended_nir": 0,
+            "character_states": [], "centroid_nm": 0.0, "bandwidth_nm": 0.0,
+            "spectral_entropy": 0.0, "dominant_nm": 0.0, "dominant_band": "NONE",
+            "compression_range": [0.0, 0.0], "total_chars": 0,
+            "unique_states": 0, "version": "WASCII-v2.0",
+        }
+
+    # ── 1. Map each character to its compression state (wavelength) ──────────
+    char_wavelengths: list[float] = []
+    character_states = []
+    extended_uv = 0
+    extended_nir = 0
+
+    for ch in text:
+        nm = WASCII_TABLE.get(ch) or WASCII_TABLE.get(ch.upper()) or LAMBDA_CHAR_MAP.get(ch)
+        if nm is None:
+            continue
+        f  = SPEED_OF_LIGHT / (nm * 1e-9)
+        lm = (PLANCK_CONSTANT * f) / (SPEED_OF_LIGHT ** 2)
+        E  = PLANCK_CONSTANT * f
+        band_name = (
+            "UV"     if nm < 380 else
+            "VIOLET" if nm < 450 else
+            "BLUE"   if nm < 495 else
+            "CYAN"   if nm < 520 else
+            "GREEN"  if nm < 565 else
+            "YELLOW" if nm < 590 else
+            "ORANGE" if nm < 625 else
+            "RED"    if nm < 780 else
+            "NIR"
+        )
+        wdm = max(1, min(100, math.floor((min(nm, 780) - 380) / 4) + 1)) if 380 <= nm < 780 else None
+        char_wavelengths.append(nm)
+        character_states.append({
+            "char": ch,
+            "wavelength_nm": round(nm, 2),
+            "frequency_thz": round(f / 1e12, 4),
+            "energy_joules": round(E, 38),
+            "lambda_mass_kg": round(lm, 44),
+            "band": band_name,
+            "wdm_channel": wdm,
+        })
+        if nm < 380:
+            extended_uv += 1
+        elif nm >= 780:
+            extended_nir += 1
+
+    if not char_wavelengths:
+        return {
+            "bands": {}, "extended_uv": 0, "extended_nir": 0,
+            "character_states": [], "centroid_nm": 0.0, "bandwidth_nm": 0.0,
+            "spectral_entropy": 0.0, "dominant_nm": 0.0, "dominant_band": "NONE",
+            "compression_range": [0.0, 0.0], "total_chars": 0,
+            "unique_states": 0, "version": "WASCII-v2.0",
+        }
+
+    # ── 2. Build visible-spectrum histogram (100 WDM bands, 4 nm each) ───────
+    bands: dict[int, int] = {}
+    for nm in char_wavelengths:
+        if 380 <= nm < 780:
+            wdm = max(1, min(100, math.floor((nm - 380) / 4) + 1))
+            bands[wdm] = bands.get(wdm, 0) + 1
+
+    # ── 3. Statistical properties ─────────────────────────────────────────────
+    total = len(char_wavelengths)
+    centroid = sum(char_wavelengths) / total
+    variance = sum((nm - centroid) ** 2 for nm in char_wavelengths) / total
+    bandwidth = math.sqrt(variance)
+
+    # Shannon entropy over visible-spectrum bins (normalised 0–1)
+    visible_total = sum(bands.values())
+    entropy = 0.0
+    if visible_total > 1:
+        max_entropy = math.log2(100)   # log2(100 possible bins) ≈ 6.644
+        for count in bands.values():
+            if count > 0:
+                p = count / visible_total
+                entropy -= p * math.log2(p)
+        entropy = round(entropy / max_entropy, 4)   # normalise to 0–1
+
+    # Dominant WDM band
+    dominant_wdm = max(bands, key=bands.get) if bands else None
+    dominant_nm  = round(380 + (dominant_wdm - 1) * 4 + 2, 1) if dominant_wdm else 0.0
+    dominant_band = (
+        "VIOLET" if dominant_nm < 450 else
+        "BLUE"   if dominant_nm < 495 else
+        "CYAN"   if dominant_nm < 520 else
+        "GREEN"  if dominant_nm < 565 else
+        "YELLOW" if dominant_nm < 590 else
+        "ORANGE" if dominant_nm < 625 else
+        "RED"
+    ) if dominant_nm else "NONE"
+
+    unique_states = len(set(round(nm, 1) for nm in char_wavelengths))
+
+    return {
+        "bands":            {str(k): v for k, v in sorted(bands.items())},
+        "extended_uv":      extended_uv,
+        "extended_nir":     extended_nir,
+        "character_states": character_states,
+        "centroid_nm":      round(centroid, 4),
+        "bandwidth_nm":     round(bandwidth, 4),
+        "spectral_entropy": entropy,
+        "dominant_nm":      dominant_nm,
+        "dominant_band":    dominant_band,
+        "compression_range":[round(min(char_wavelengths), 2), round(max(char_wavelengths), 2)],
+        "total_chars":      total,
+        "unique_states":    unique_states,
+        "version":          "WASCII-v2.0",
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────

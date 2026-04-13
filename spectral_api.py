@@ -29,6 +29,7 @@ from wnsp_protocol_v7 import (
     wavelength_to_frequency,
     char_to_wavelength,
     lambda_mass,
+    compute_spectral_vector,
     PLANCK_CONSTANT,
     SPEED_OF_LIGHT,
     VISIBLE_MIN_NM,
@@ -210,6 +211,54 @@ def wascii_lookup():
             "chars":    len(text),
             "frames":   results,
         })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────────
+# WASCII v2.0  —  Wave Density Spectral Vector endpoint
+# ─────────────────────────────────────────────────────────────────
+
+@app.route('/api/wnsp/spectral-vector', methods=['GET', 'POST'])
+def spectral_vector():
+    """
+    WASCII v2.0 — Wave Density Spectral Vector.
+
+    Returns the full compression-state distribution for a string.
+    Each character maps to its WASCII wavelength (compression state).
+    The histogram across 100 WDM bands is the spectral fingerprint.
+
+    GET  /api/wnsp/spectral-vector?text=NexusOS
+    POST /api/wnsp/spectral-vector  body: {"text": "NexusOS"}
+
+    Response includes:
+      bands             — WDM histogram {band_index: count}
+      centroid_nm       — weighted average compression state
+      bandwidth_nm      — spectral spread (standard deviation)
+      spectral_entropy  — Shannon entropy 0-1 (richness score)
+      dominant_band     — most-populated compression band
+      character_states  — per-character compression state details
+      compression_range — [min_nm, max_nm] span of states used
+      unique_states     — number of unique compression states
+    """
+    if request.method == 'GET':
+        text = request.args.get('text', '')
+    else:
+        data = request.get_json() or {}
+        text = data.get('text', '')
+
+    if not text:
+        return jsonify({"error": "Missing 'text' parameter"}), 400
+
+    try:
+        result = compute_spectral_vector(text)
+        result["input"] = text
+        result["theory"] = (
+            "Each character is a compression state on the Λ=hf/c² curve. "
+            "The distribution of those states across WDM bands is the spectral "
+            "fingerprint — unique to this exact string, derived from physics."
+        )
+        return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
