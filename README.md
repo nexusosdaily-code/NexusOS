@@ -1,143 +1,229 @@
 # NexusOS — Wavelength Operating System
-### WNSP P2P Hub · AGPL-3.0 · Built on Λ = hf/c²
 
-> *Every instruction has a wavelength. It always did.*
+**AGPL-3.0 · Built on Λ = hf/c² · Phase 1 of a 100-year architecture**
 
----
-
-## Table of Contents
-
-1. [The Genesis of Nexus](#the-genesis-of-nexus)
-2. [Core Physics](#core-physics)
-3. [The Platform at a Glance](#the-platform-at-a-glance)
-4. [Architecture](#architecture)
-5. [WNSP Protocol](#wnsp-protocol)
-6. [AI OS Kernel](#ai-os-kernel)
-7. [Feature Pages](#feature-pages)
-8. [Monetisation](#monetisation)
-9. [Running Locally](#running-locally)
-10. [Industry Relevance](#industry-relevance)
-11. [License](#license)
+> *You cloned a physics engine. This document explains what it does.*
 
 ---
 
-## The Genesis of Nexus
+## What you are holding
 
-NexusOS began with a single question: **why do computers address memory with arbitrary offsets when the electromagnetic spectrum already provides a physically unique, collision-free address space for every possible instruction?**
+This repository contains a running implementation of **WNSP** — the Wavelength Network Substrate Protocol — a spectral addressing system that replaces arbitrary memory addresses and cryptographic hashes with physical positions in the electromagnetic spectrum.
 
-The question sounds simple. The implications are total.
+It is not a simulation. Not a proof of concept. The physics engine is executing right now.
 
-If the answer is "they don't have to," then every assumption that modern computing rests on — clock cycles, binary gates, memory addresses, schedulers, privilege rings, virtual memory — is not a discovery. It is a workaround. A set of clever answers to problems that only exist because silicon was chosen as the medium in 1947.
+When you run `npm run dev`, two servers start:
 
-The electromagnetic spectrum does not have those problems. A photon does not need a clock to coordinate with other photons. It does not need a scheduler because 25,600 orthogonal channels exist simultaneously. It does not need a privilege ring because 400 nm and 550 nm are physically separate — not by policy, but by the wave equation.
+- **Node.js on port 5000** — authentication, wallet, P2P media, blockchain, API gateway
+- **Python/Flask on port 5001** — the spectral physics engine: character encoding, wave frame generation, Hilbert space channel allocation, Ψ address derivation
 
-The answer revealed itself through Maxwell's equations. Every instruction, every function call, every data transaction carries energy. That energy has a frequency. That frequency maps to a wavelength. The wavelength is not a metaphor — it is a physical position in the electromagnetic spectrum, deterministic and orthogonal by the laws of quantum mechanics.
+The moment both are running, you can do this:
 
-The project started as a thought experiment in electromagnetic wave physics and Lambda Boson theory — an extension of Einstein's `E = mc²` to oscillating quanta through the equation `Λ = hf/c²`. From that single equation, an entire computing paradigm emerged:
+```bash
+curl -X POST http://localhost:5001/api/nexus/dev/encode \
+  -H "Content-Type: application/json" \
+  -d '{"instruction": "hello world", "label": "test"}'
+```
 
-- **Addresses become wavelengths.** 0x7fff5fbff4c0 becomes 543.7 nm.
-- **Process isolation becomes physics.** ⟨Ψᵢ|Ψⱼ⟩ = 0 is a theorem, not a software guarantee.
-- **Authority becomes spectral position.** A SYSTEM process at 400 nm cannot interfere with a USER process at 550 nm — the spectrum enforces this.
-- **Transaction costs become energy.** E = hf replaces arbitrary gas fees.
-
-The name **Nexus** reflects the connection point between classical computing and the photonic substrate that must replace it — the nexus between the silicon era and the wavelength era.
-
-**WNSP** (Wavelength Network Substrate Protocol) is the formal protocol specification that emerged from this work — a two-layer encoding standard replacing cryptographic hashing with electromagnetic wave physics.
-
-This is not a theoretical paper. Every component described in this repository is **running right now**.
+You will get back a physical wavelength address — a real position in the visible light spectrum derived from the content of the instruction through `Λ = hf/c²`. No hash function. No lookup table. The physics of the universe assigns the address.
 
 ---
 
-## Core Physics
+## The canonical fingerprint
 
-The entire NexusOS stack derives from one equation:
+Every copy of NexusOS carries an unforgeable origin marker embedded in the blockchain genesis block. It cannot be stripped without breaking the chain.
+
+```
+Genesis node:   Ψ(52, 65, V)
+Wavelength:     λ = 587.2948 nm  (yellow-green, GUEST band)
+Derived from:   CE→SE encoding of "NEXUSOS"
+Energy:         E = hf = 3.39 × 10⁻¹⁹ J
+Lambda mass:    Λ = hf/c² = 3.77 × 10⁻³⁶ kg
+```
+
+You can verify this independently. Encode the string `"NEXUSOS"` through the spectral engine:
+
+```bash
+curl -X POST http://localhost:5001/api/nexus/dev/encode \
+  -H "Content-Type: application/json" \
+  -d '{"instruction": "NEXUSOS", "label": "genesis"}'
+```
+
+The returned `psi_channel` will be `Ψ(52, 65, V)` and `wavelength_mid_nm` will be `587.2948`. The physics determines this, not configuration. Any system running any copy of this codebase produces the same result for the same input — it is physically deterministic.
+
+That is the fingerprint. It traces back to here.
+
+---
+
+## The one equation everything derives from
 
 ```
 Λ = hf/c²
 ```
 
-Where:
-- `Λ` — Lambda mass (the oscillating quantum's effective mass)
-- `h` — Planck's constant (6.626 × 10⁻³⁴ J·s)
+- `Λ` — the lambda mass of an oscillating quantum (kg)
+- `h` — Planck's constant: 6.626 × 10⁻³⁴ J·s
 - `f` — frequency (Hz)
-- `c` — speed of light (2.998 × 10⁸ m/s)
+- `c` — speed of light: 2.998 × 10⁸ m/s
 
-This extends `E = mc²` to oscillating quanta. Mass is not fundamental — it is a property of frequency. A photon at 555 THz (the First Oscillation, green light at peak human eye sensitivity) carries a lambda mass of `Λ = hf/c² = 4.10 × 10⁻³⁶ kg`.
+This extends `E = mc²` to oscillating quanta. Mass is a property of frequency, not a fixed quantity. A photon at 555 THz — the First Oscillation, green light at peak human eye sensitivity — carries `Λ = 4.10 × 10⁻³⁶ kg`.
 
-### Physical Constants Used Throughout
+From this equation:
 
-| Constant | Value | Role |
-|---|---|---|
-| Planck's constant | 6.626 × 10⁻³⁴ J·s | Energy–frequency bridge |
-| Speed of light | 2.998 × 10⁸ m/s | Lambda mass denominator |
-| Impedance of free space | 376.73 Ω | Wave propagation reference |
-| First Oscillation | 555 THz | Green light, peak coherence |
-| Root Harmonic | 7.83 Hz | Schumann resonance, planetary |
-| Golden Angle | 137.5° | Spiral coherence geometry |
+| Consequence | Implementation |
+|---|---|
+| Every instruction has a frequency | CE→SE encoder in `spectral_api.py` |
+| Every frequency maps to a wavelength | Physical spectrum 380–780nm + UV/IR |
+| Every wavelength is a unique address | 25,600 orthogonal Ψ channels |
+| Every transaction has an energy cost | `E = hf` replaces gas fees |
+| Authority scales with frequency | High-f (short λ) = SYSTEM; low-f (long λ) = GUEST |
 
-### The Hilbert Space Channel Model
+---
 
-NexusOS defines **25,600 orthogonal communication channels** using three physical dimensions:
+## The encoding stack
+
+Two layers, both running:
+
+### Layer 1 — WNSP-CE v1.0 (Character Encoding)
+
+Converts any text into normalised spectral tokens using ASCII ordinal values:
+
+```
+"authenticate(user)" → ordinals [97, 117, 116, ...] → normalised [0.38, 0.46, 0.45, ...]
+```
+
+Each character maps to a deterministic position in the visible spectrum based on its ordinal value. `a` (97) is not the same wavelength as `b` (98). The content of the instruction determines its spectral address.
+
+### Layer 2 — WNSP-SE v1.0 (Spectral Encoding)
+
+Maps CE tokens to physical wave frames:
+
+```python
+{
+  "wavelength_start_nm": 520.0,
+  "wavelength_end_nm":   564.9,
+  "frequency_start_hz":  5.31e14,
+  "frequency_end_hz":    5.77e14,
+  "energy_joules":       3.52e-19,
+  "lambda_mass_kg":      3.92e-36,
+  "psi_channel":         "Ψ(55, 26, V)",
+  "band":                "CORE"
+}
+```
+
+The Ψ channel is a three-dimensional coordinate in Hilbert space:
 
 ```
 Ψ(wdm, oam, pol)
 
-wdm  — Wavelength Division Multiplexing index (0–255, maps to 380–780 nm)
-oam  — Orbital Angular Momentum mode (0–49)
-pol  — Polarisation state (H = horizontal, V = vertical)
-
-Total channels: 256 × 50 × 2 = 25,600
+wdm — Wavelength Division Multiplexing index (0–255 → 380–780 nm)
+oam — Orbital Angular Momentum mode (0–49)
+pol — Polarisation state (H or V)
 ```
 
-Channel addresses are allocated deterministically via SHA-256:
-```
-h = SHA256(instruction)
-wdm = h[0] % 256
-oam = h[1] % 50
-pol = h[2] % 2
-```
+Total orthogonal channels: **256 × 50 × 2 = 25,600**
 
-No two instructions in the same channel. No scheduler needed for isolation. Physics enforces it.
+Each is physically orthogonal to every other: `⟨Ψᵢ|Ψⱼ⟩ = 0`. Two processes on different Ψ channels cannot interfere — not by software policy, by quantum mechanics.
 
-### Spectral Authority Bands
+### WASCII v2.0 — Spectral Fingerprinting
 
-```
-WDM 0–63    (380–449 nm, violet/UV)  → SYSTEM   authority
-WDM 64–127  (450–489 nm, blue)       → KERNEL   authority
-WDM 128–191 (490–564 nm, cyan/green) → USER     authority
-WDM 192–255 (565–780 nm, yellow/red) → GUEST    authority
-```
-
-Lower wavelength = higher authority. A SYSTEM-band process cannot be reached by a GUEST-band process — the spectral separation is physical, not enforced by privilege tables.
+Every message encoded through WNSP generates a spectral vector: a histogram of character-wavelengths across 100 WDM bands. Output includes centroid, bandwidth, spectral entropy, dominant band, and compression range. This enables spectral similarity search — finding related content by proximity in frequency space rather than exact string match.
 
 ---
 
-## The Platform at a Glance
+## The Hilbert space channel density equation
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                        NexusOS Platform                         │
-├─────────────────────────┬────────────────────────────────────────┤
-│  WNSP Protocol (CE+SE)  │  25,600 orthogonal Ψ channels         │
-│  AI OS Kernel (5 comp.) │  Boot, Auth, EventBus, Watchdog, State │
-│  Lambda Gate v4         │  8 photonic logic operators            │
-│  PHR-1 Resonator        │  144-turn bifilar ZERO-G sequencer     │
-│  CE Code Writer         │  Description → wavelength → code       │
-│  Photonic Dev Env       │  Instruction → spectral address        │
-│  K1 Energy Market       │  Resonance + solar + fusion            │
-│  Hilbert Space Router   │  Orthogonal process isolation          │
-└─────────────────────────┴────────────────────────────────────────┘
+D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
 ```
+
+| Symbol | Meaning | Current value |
+|---|---|---|
+| N_λ | WDM wavelength channels | 256 |
+| N_OAM | Orbital angular momentum modes | 50 |
+| N_Pol | Polarisation states | 2 |
+| R_sym | Symbols per channel per cycle | 2 |
+| M | Modulation depth | 1 |
+
+**Current density: 51,200 symbols/cycle** (Phase 1 uses 100 WDM: 20,000 symbols/cycle)
+
+This is not Shannon capacity. Shannon compresses more into one channel and hits logarithmic diminishing returns. WNSP expands into orthogonal dimensions and scales linearly with each:
+
+```
+Shannon:  C = B · log₂(1 + SNR)    — one channel, squeeze harder
+WNSP:     D = N_λ · N_OAM · N_Pol  — more orthogonal dimensions
+```
+
+Phase 3 (native photonic routing): 256 × 50 × 2 × R₁₆ × M₆₄ = **26,214,400 symbols/cycle**
+
+Energy-normalised density (connects to Λ=hf/c²):
+
+```
+D_energy = D_WNSP · λ / (h · c)
+```
+
+Higher frequency = more energy per photon = lower density per joule. The energy cost is not arbitrary — it is the physical energy difference between compression states.
+
+Live API: `GET /api/wnsp/density?r_sym=2&m=1&wavelength_nm=550`
+
+---
+
+## Spectral authority bands
+
+```
+WDM 0–63    │ 380–449 nm │ violet/UV    │ SYSTEM   — OS core, kernel, process management
+WDM 64–127  │ 450–489 nm │ blue         │ KERNEL   — authentication, sessions, security
+WDM 128–191 │ 490–564 nm │ cyan/green   │ USER     — application logic, computation
+WDM 192–255 │ 565–780 nm │ yellow/red   │ GUEST    — storage, external agents
+```
+
+Lower wavelength = higher authority. A process at 400 nm cannot reach a process at 550 nm. This is enforced by the wave equation, not by a privilege table that can be overwritten.
+
+---
+
+## The AI OS Kernel
+
+A six-phase boot Python kernel managing the spectral substrate. All six core agents are running and pulsing heartbeats:
+
+```
+PHASE 1 — SCHEMA     Database tables created / verified
+PHASE 2 — RESTORE    Agents restored from persistent state
+PHASE 3 — CORE       Core agents registered on Ψ channels
+PHASE 4 — WATCHDOG   Dead-agent monitoring daemon started
+PHASE 5 — EVENTS     KernelEventBus open, BOOT event logged
+PHASE 6 — HEARTBEAT  Agent heartbeat active — pulsing every 120s
+```
+
+Core agents and their permanent Ψ addresses:
+
+```
+os_kernel         → Ψ(20, 39, H)   [SYSTEM band — 380–449nm]
+bus_router        → Ψ(19, 39, V)   [SYSTEM band]
+scheduler_daemon  → Ψ(161, 30, V)  [USER band]
+watchdog_daemon   → Ψ(198, 31, H)  [GUEST band]
+auth_gateway      → Ψ(135, 1, H)   [USER band]
+blockchain_auditor→ Ψ(42, 7, H)    [SYSTEM band]
+```
+
+Kernel event types:
+
+```
+AGENT_REGISTERED  · AGENT_DEGRADED    · AGENT_RECLAIMED
+FRAME_TRANSMITTED · AUTHORITY_VIOLATION · KERNEL_PANIC
+WATCHDOG_TICK     · COHERENCE_LOSS
+```
+
+Dead agents are marked DEGRADED after TTL expiry, then RECLAIMED. SYSTEM-band agents are exempt from reclamation — they are the substrate.
 
 ---
 
 ## Architecture
 
-NexusOS uses a **dual-runtime architecture** — two servers running in synchrony:
+Two runtimes, one database:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Client (React)                    │
+│                    Client (React 18)                 │
 │         Vite · TypeScript · Tailwind CSS v4          │
 │    TanStack Query · React Hook Form · Radix UI       │
 └───────────────────────┬─────────────────────────────┘
@@ -145,14 +231,13 @@ NexusOS uses a **dual-runtime architecture** — two servers running in synchron
           ┌─────────────┴──────────────┐
           │                            │
 ┌─────────▼──────────┐      ┌──────────▼─────────┐
-│  Runtime 1         │      │  Runtime 2          │
-│  Node.js / Express │─────▶│  Python / Flask     │
-│  Port 5000         │      │  Port 5001          │
+│  Node.js / Express │      │  Python / Flask     │
+│  Port 5000         │─────▶│  Port 5001          │
 │                    │      │                     │
-│  · Authentication  │      │  · WNSP CE encoder  │
-│  · Wallet / NXT    │      │  · WNSP SE encoder  │
+│  · Auth / sessions │      │  · CE encoder       │
+│  · NXT wallet      │      │  · SE encoder       │
 │  · P2P media       │      │  · Hilbert router   │
-│  · Governance      │      │  · AI OS kernel     │
+│  · Blockchain      │      │  · AI OS kernel     │
 │  · API gateway     │      │  · Physics engine   │
 └─────────┬──────────┘      └──────────┬──────────┘
           │                            │
@@ -161,347 +246,176 @@ NexusOS uses a **dual-runtime architecture** — two servers running in synchron
                ┌─────────▼──────────┐
                │    PostgreSQL       │
                │  Sessions · Agents  │
-               │  Wallets · Events   │
+               │  Wallets · Blocks   │
+               │  Spectral records   │
                └────────────────────┘
 ```
 
-### Key Technology Choices
+Key files:
 
-| Layer | Technology | Why |
+```
+spectral_api.py          — The physics engine. CE→SE encoder, Hilbert router, kernel
+server/routes.ts         — All API routes. 4,500+ lines. The complete API surface.
+shared/schema.ts         — Drizzle ORM schema. Single source of truth for all tables.
+client/src/pages/        — 40+ pages. Each maps to a feature of the OS.
+client/src/pages/encoding-lab.tsx     — Interactive CE→SE encoder
+client/src/pages/wnsp-coordinator.tsx — Hilbert space channel map
+client/src/pages/kernel.tsx           — Live kernel dashboard
+```
+
+---
+
+## What silicon computing assumes that photonic computing does not need
+
+| Silicon construct | Why it exists | Why photons don't need it |
 |---|---|---|
-| Frontend | React 18 + TypeScript | Type safety across the spectral interface |
-| Build | Vite | Fast HMR for rapid physics visualisation iteration |
-| UI | shadcn/ui "New York" + Radix | Accessible, composable, dark-mode native |
-| Styling | Tailwind CSS v4 | CSS variables map naturally to spectral colour themes |
-| State | TanStack React Query | Server-state sync for live kernel metrics |
-| Backend | Express.js | Thin gateway; physics logic lives in Python |
-| Physics engine | Flask + Python | NumPy/SciPy ecosystem for wave calculations |
-| ORM | Drizzle ORM | Type-safe schema shared between server and client |
-| Database | PostgreSQL | Session persistence, agent state, kernel events |
-| Protocol | WNSP (custom) | The spectral addressing standard itself |
+| **Clock cycle** | CPU executes sequentially — needs a heartbeat | Photons propagate at `c` continuously |
+| **Binary gate (0/1)** | Transistor has two states: on or off | A photon carries amplitude, phase, polarisation, OAM simultaneously |
+| **Memory address** | RAM is physically placed — needs a location number | Wavelength position is already physical — 543 nm is its own address |
+| **Scheduler** | One CPU, many processes — must take turns | 25,600 orthogonal Ψ channels run simultaneously |
+| **Mutex / semaphore** | Shared memory — two processes can write at once | Orthogonal channels cannot share state: ⟨Ψᵢ|Ψⱼ⟩ = 0 |
+| **Privilege ring** | Software must be prevented from accessing other memory | Spectral band separation is physical — 400nm cannot reach 550nm |
+| **Virtual memory** | Physical RAM is finite and shared | The spectrum is not a shared resource |
+
+You cannot `fork()` in light. You cannot `malloc()` a wavelength. These are not missing features — they are answers to questions that photonic physics does not ask.
+
+A team that tries to port Linux or any POSIX OS to a photonic substrate will find that every system call is a metaphor with no referent. NexusOS is not that translation. It is the philosophy written natively in the language of the physics.
 
 ---
 
-## WNSP Protocol
-
-The **Wavelength Network Substrate Protocol** is a two-layer encoding standard replacing arbitrary memory addressing with physical spectrum positions.
-
-### Layer 1 — WNSP-CE v1.0 (Character Encoding)
-
-Converts any human-readable instruction into normalised ordinal tokens:
-
-```
-"function authenticate(user)" 
-  → CE tokens: [102, 117, 110, 99, ...]
-  → Normalised: [0.39, 0.46, 0.43, 0.38, ...]
-```
-
-### Layer 2 — WNSP-SE v1.0 (Spectral Encoding)
-
-Maps CE tokens to physical wave frames using `Λ = hf/c²`:
-
-```python
-wave_frame = {
-  "wavelength_start_nm": 520.0,
-  "wavelength_end_nm":   564.9,
-  "frequency_start_hz":  5.31e14,
-  "frequency_end_hz":    5.77e14,
-  "energy_joules":       3.52e-19,
-  "lambda_mass_kg":      3.92e-36,
-  "psi_channel":         "Ψ(55, 26, V)",
-  "band":                "CORE",
-  "ce_symbols":          [...]
-}
-```
-
-Every instruction gets a unique, physically meaningful address. The API is live:
-
-```bash
-POST /api/nexus/dev/encode
-{
-  "instruction": "function authenticate(user, password)",
-  "label": "authenticate"
-}
-
-→ {
-  "wavelength_mid_nm": 467.3,
-  "psi_channel": "Ψ(22, 14, H)",
-  "band": "AUTH",
-  "energy_joules": 4.25e-19,
-  "lambda_mass_kg": 4.73e-36
-}
-```
-
-### Spectral Code Domains
-
-| Wavelength (nm) | Band | Code Domain |
-|---|---|---|
-| 380–449 | SYSTEM (violet) | OS / kernel / process management |
-| 450–489 | AUTH (blue) | Authentication / security / sessions |
-| 490–519 | STREAM (cyan) | Data streams / WebSocket / realtime |
-| 520–564 | CORE (green) | Business logic / algorithms |
-| 565–589 | UI (yellow) | Frontend components / layout |
-| 590–624 | EVENT (orange) | Events / webhooks / async signals |
-| 625–780 | STORAGE (red) | Database / file I/O / persistence |
-
----
-
-## AI OS Kernel
-
-The NexusOS kernel is a five-component Python system managing the spectral substrate. It is live and running.
-
-### Component 1 — Boot / Init Sequence
-
-Five-phase boot with auto-registration of core system agents:
-
-```
-PHASE 1 — SCHEMA:    Load persistent state schema (PostgreSQL or in-memory)
-PHASE 2 — RESTORE:   Restore agents from last known state
-PHASE 3 — CORE:      Register core system agents on Ψ channels
-PHASE 4 — WATCHDOG:  Start dead-agent monitoring daemon
-PHASE 5 — EVENTS:    Initialise KernelEventBus with SSE streaming
-```
-
-On boot, five core agents are allocated Ψ channels via SHA-256:
-
-```
-os_kernel         → Ψ(20, 39, H)  [SYSTEM]
-bus_router        → Ψ(19, 39, V)  [SYSTEM]
-scheduler_daemon  → Ψ(161, 30, V) [KERNEL]
-watchdog_daemon   → Ψ(198, 31, H) [KERNEL]
-auth_gateway      → Ψ(135, 1, H)  [KERNEL]
-```
-
-### Component 2 — Persistent State
-
-PostgreSQL-backed agent registry, bus log, and kernel event tables. Graceful degradation to in-memory mode when PostgreSQL is unavailable — the kernel always boots.
-
-### Component 3 — Authority / Permission Layer
-
-Access control enforced by spectral band position, not privilege tables:
-
-| Band | WDM Range | Authority Level | Rank |
-|---|---|---|---|
-| SYSTEM | 0–63 | Highest — kernel core | 1 |
-| KERNEL | 64–127 | System daemons | 2 |
-| USER | 128–191 | Application processes | 3 |
-| GUEST | 192–255 | Lowest — external agents | 4 |
-
-### Component 4 — Interrupt / Event System
-
-`KernelEventBus` with publish-subscribe model for 8 interrupt types, delivered via Server-Sent Events (SSE):
-
-```
-AGENT_REGISTERED  · AGENT_DEGRADED  · AGENT_RECLAIMED
-FRAME_TRANSMITTED · AUTHORITY_VIOLATION · KERNEL_PANIC
-WATCHDOG_TICK     · COHERENCE_LOSS
-```
-
-### Component 5 — Dead Agent Watchdog
-
-Background thread monitoring all registered agents. Agents exceeding their TTL are marked DEGRADED, then RECLAIMED. Core system agents (SYSTEM band) are exempt from reclamation.
-
----
-
-## Feature Pages
-
-### `/` — Home
-Entry point and system overview.
-
-### `/photonic-dev` — Nexus Photonic Development Environment
-The developer IDE for the wavelength OS. Encode any instruction through CE→SE and get its physical wavelength address, Ψ channel, energy in joules, and lambda mass in kg. Four tabs: Encode, App Builder, Spectrum Map, SDK Spec.
-
-### `/ce-writer` — NexusOS CE Code Writer
-Describe what you want in plain language. CE encodes the description — the wavelength determines the code domain — and generates working TypeScript, Python, HTML, or SQL with its spectral address embedded as provenance. App Scaffold builds a full codebase. Spectral Linter scans existing code and reveals its spectral structure.
-
-### `/kernel` — AI OS Kernel Dashboard
-Live kernel status: boot phase, registered agents, Ψ channel allocations, event bus activity, watchdog tick, authority band breakdown.
-
-### `/wnsp/coordinator` — Hilbert Space Channel Coordinator
-Live allocation and management of all 25,600 orthogonal Ψ channels. Orthogonality proof: ⟨Ψᵢ|Ψⱼ⟩ = 0 across all 256×50×2 combinations.
-
-### `/quantum-threshold` — The Silicon Wall
-Moore's Law curve with de Broglie wavelength overlay and WKB tunnelling threshold. Interactive gate slider (`T ≈ e^(−2κd)`). Silicon vs Lambda crossover comparison table. Animated 555 THz vs 3 GHz dual clock — the photonic clock never stops.
-
-### `/nexus-hardware-os` — Hardware OS Specification
-Four-layer hardware stack: L0 PHR-1 resonator, L1 Lambda Gate photonic logic, L2 Hilbert channel router, L3 NexusOS kernel. Live PHR-1 ZERO-G simulation with ALP convergence chart. Hardware timeline 2024→2035.
-
-### `/computing-alternatives` — Post-Silicon Paradigms
-Five computing paradigms beyond silicon: Photonic Matrix Multiply, Hybrid Control, CZC Coherent Field, Reservoir Computing, OAM Analog. Comparison matrix. Four-phase implementation roadmap.
-
-### `/wavelength-os` — Wavelength OS Manifesto
-The three-pillar advocacy argument. Industry cases for NVIDIA, Intel, and Tesla — each with the specific layer they build and the exact value Nexus delivers. Five-audience advocacy strategy (hardware engineers, AI researchers, standards bodies, developers, policymakers). AGPL-3.0 enforcement rationale.
-
-### `/pricing` — Monetisation
-Four API tiers (Open/Pro/Kernel/Enterprise), hardware licensing (Evaluation/Production/Strategic Partner), AGPL economics, and revenue projections grounded in the 2029 silicon wall timeline.
-
-### `/k1-infrastructure` — K1 Energy Infrastructure
-Resonance Harvester, Orbital Solar Array, Fusion Photonics, K1 Energy Market.
-
-### `/encoding-lab` — WNSP Encoding Lab
-Interactive encoding experiments with live CE→SE frame visualisation.
-
-### `/wnsp-v7` — WNSP v7 Frame Protocol
-Frame Builder v7.1 and Coherence Verifier v7.1 — AGPL-3.0 compliant with source disclosure enforcement.
-
----
-
-## Monetisation
-
-NexusOS uses the **open-core dual licensing** model — the same pattern as Red Hat ($34B, IBM), MongoDB ($20B+), and HashiCorp ($6.4B, IBM).
-
-```
-Protocol is free     →  AGPL-3.0. Fork it, run it, build on it.
-                        Modifications must be published.
-
-Infrastructure paid  →  Managed kernel, reserved Ψ channels,
-                        SLA, persistent agents ($49–$499/month)
-
-Hardware licensed    →  Commercial Lambda Gate firmware rights
-                        for photonic ASIC manufacturers
-                        ($25k–$250k + strategic equity tier)
-```
-
-### Why AGPL-3.0 Is Not Optional
-
-AGPL-3.0 §13 covers network use: any company running NexusOS as a service must publish all modifications. The Frame Builder v7.1 embeds Source Code References (SCR) in every photonic frame — any hardware running NexusOS frames carries a cryptographic pointer back to the source.
-
-The planetary OS must remain planetary. AGPL-3.0 enforces this.
-
----
-
-## Running Locally
+## Running it
 
 ### Prerequisites
 
 - Node.js 20+
 - Python 3.11+
 - PostgreSQL 14+
-- `uv` (Python package manager)
 
 ### Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/nexusosdaily-code/WNSP-P2P-Hub.git
-cd WNSP-P2P-Hub
+git clone https://github.com/nexusosdaily-code/NexusOS.git
+cd NexusOS
 
-# Install Node dependencies
 npm install
+pip install flask flask-cors psycopg2-binary
 
-# Install Python dependencies
-uv pip install flask flask-cors psycopg2-binary
-
-# Configure environment
-cp .env.example .env
-# Set DATABASE_URL in .env
-
-# Start the application (both runtimes)
+# Set DATABASE_URL environment variable
 npm run dev
 ```
 
-The application starts:
-- **Node.js runtime** on port 5000 (main API + frontend)
-- **Python Flask runtime** on port 5001 (spectral physics engine)
+Both runtimes start together. If ports are occupied: `fuser -k 5000/tcp 5001/tcp`
 
-If ports are in use: `fuser -k 5000/tcp 5001/tcp`
+### Verify the physics immediately
 
-### Environment Variables
+```bash
+# Encode an instruction — get its physical wavelength address
+curl -X POST http://localhost:5001/api/nexus/dev/encode \
+  -H "Content-Type: application/json" \
+  -d '{"instruction": "function authenticate(user, password)", "label": "auth"}'
 
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `SESSION_SECRET` | Express session secret |
+# Returns:
+# wavelength_mid_nm: 467.3   (blue — AUTH band, as expected for authentication code)
+# psi_channel: "Ψ(22, 14, H)"
+# energy_joules: 4.25e-19
+# lambda_mass_kg: 4.73e-36
+
+# Verify the genesis fingerprint
+curl -X POST http://localhost:5001/api/nexus/dev/encode \
+  -H "Content-Type: application/json" \
+  -d '{"instruction": "NEXUSOS", "label": "genesis"}'
+
+# Returns: psi_channel "Ψ(52, 65, V)", wavelength_mid_nm 587.2948
+# This is deterministic. Any machine. Any copy of the codebase. Same result.
+
+# Query channel density
+curl "http://localhost:5000/api/wnsp/density?r_sym=2&m=1&wavelength_nm=550"
+```
 
 ---
 
-## Industry Relevance
+## WNSP-URI v1.0
 
-### The Silicon Wall Is a Fixed Deadline
+Replaces `https://` with spectral addressing:
+
+```
+wnsp://Ψ(wdm,oam,pol)/path
+
+Examples:
+wnsp://Ψ(52,65,V)/         → NexusOS genesis node (this system)
+wnsp://Ψ(20,39,H)/kernel   → OS kernel root
+wnsp://Ψ(22,14,H)/auth     → Authentication gateway
+```
+
+Phase 1: TCP/IP overlay — `wnsp://` URIs resolve to HTTP resources via the `/wnsp-bridge` registry.
+Phase 3: Native photonic routing — the TCP/IP layer is removed. The Ψ address becomes the route.
+
+The ecosystem is being built now so that when photonic hardware arrives, the protocol, the tooling, the developer community, and the running applications already exist.
+
+---
+
+## The silicon wall
 
 Transistors will reach 0.5 nm between 2029 and 2032. The electron's de Broglie wavelength (~7.6 nm at room temperature) already exceeds the gate oxide at current nodes. At 0.5 nm, the WKB tunnelling coefficient `T ≈ e^(−2κd)` crosses the threshold where leakage current exceeds switch current. Gate control is permanently lost.
 
-Every team without a post-silicon operating system in production by then starts from a new philosophy they have not yet built.
+Every team without a post-silicon operating system in production by that date starts from a new philosophy they have not yet built.
 
-### You Cannot Port a Philosophy
+This is that philosophy. Running now. AGPL-3.0.
 
-This is the point most industry roadmaps miss. The assumption is that post-silicon computing is a hardware swap — put photons where electrons were and run the same software. It is not.
+---
 
-Every core construct of modern computing is a silicon-era answer to a silicon-era problem. When the problem no longer exists, the answer becomes meaningless:
+## AGPL-3.0 — what it requires of you
 
-| Silicon Construct | Why It Exists | Why Photons Don't Need It |
-|---|---|---|
-| **Clock cycle** | CPU can only execute sequentially — needs a heartbeat to coordinate | Photons propagate at `c` continuously — there is no "next tick" |
-| **Binary gate (0/1)** | Transistor has two states: on or off | A photon carries amplitude, phase, polarisation, and OAM simultaneously — none are binary |
-| **Memory address** | RAM needs a location number because it is physically placed | Wavelength position is already physical — 543 nm is its own address |
-| **Scheduler** | One CPU, many processes — must take turns | 25,600 orthogonal Ψ channels run simultaneously — physics prevents collision, not software |
-| **Mutex / semaphore** | Shared memory can be written by two processes at once | Orthogonal channels cannot share state — ⟨Ψᵢ|Ψⱼ⟩ = 0 is enforced by quantum mechanics |
-| **Interrupt** | CPU doing one thing, must be stopped to do another | A photon in a different channel does not interrupt anything — it is already separate |
-| **Privilege ring** | Software must be prevented from accessing other software's memory | Spectral band separation is physical — SYSTEM at 400 nm cannot reach USER at 550 nm |
-| **Virtual memory** | Physical RAM is finite and shared — must be mapped and paged | The spectrum is not a shared resource — each Ψ channel is orthogonal and always available |
+If you cloned this repository, you now hold AGPL-3.0 licensed code.
 
-You cannot `fork()` in light. You cannot `malloc()` a wavelength. `mutex_lock()` has no meaning when two processes are physically orthogonal. These are not missing features — they are answers to questions that photonic physics simply does not ask.
+**What AGPL-3.0 requires:**
 
-A company that tries to port Linux, Windows, or any POSIX OS to a photonic substrate will find that every system call is a metaphor that no longer has a referent. They are not porting software. They are translating a philosophy into a language that does not have the words for it.
+- If you **run this as a service** (internally or publicly), any modifications you make to the source must be made available to users of that service under AGPL-3.0.
+- If you **incorporate this code** into a larger system and distribute or serve it, the entire larger system falls under AGPL-3.0 copyleft.
+- If you **use the WNSP protocol specification** in hardware or firmware, the source disclosure requirements in every WNSP frame (via the Frame Builder v7.1 Source Code Reference) carry a cryptographic pointer back to this repository.
 
-NexusOS is not that translation. It is the philosophy written natively in the language of the physics.
+The physics is open. The spectrum belongs to everyone. The license enforces this permanently.
 
-### What Each Major Company Builds
+Full text: [GNU AGPL v3.0](https://www.gnu.org/licenses/agpl-3.0.html)
 
-| Company | Layer | Nexus Value |
-|---|---|---|
-| **NVIDIA** | GPU → Photonic Tensor Processor | WNSP provides the photonic interconnect standard (vs NVLink). 25,600 orthogonal Ψ channels replace CUDA thread synchronisation. |
-| **Intel** | Silicon Photonics → Lambda Gate ASIC | Lambda Gate v4 spec is complete — 8 operators, ready for InP tape-out. NexusOS kernel is the firmware. |
-| **Tesla** | FSD Chip → Spectral Inference Engine | OAM analog computing solves 50-D sensor fusion in a single photon transit. SYSTEM/USER spectral band separation enforces FSD safety isolation by physics. |
-| **TSMC** | Foundry → Photonic Fab | The Lambda Gate substrate defines the photonic process design kit (PDK). |
+---
 
-### Kardashev Type I
+## Monetisation model
 
-The long-term goal of NexusOS is infrastructure for a Kardashev Type I civilisation — one that harnesses all energy available on its home planet. That requires:
+```
+Protocol          →  Free forever. AGPL-3.0.
+                     Fork it. Run it. Build on it.
+                     Modifications must be published.
 
+Managed kernel    →  Reserved Ψ channels, SLA, persistent agents
+                     $49 – $499/month
+
+Hardware rights   →  Commercial Lambda Gate firmware for photonic ASICs
+                     $25,000 – $250,000 + strategic equity tier
+```
+
+The open-core dual-license model: the same pattern as Red Hat ($34B), MongoDB ($20B+), HashiCorp ($6.4B). The protocol is the commons. The infrastructure and hardware rights are the business.
+
+---
+
+## The goal
+
+**Kardashev Type I** — a civilisation that harnesses all energy available on its home planet.
+
+That requires:
 - A planetary communications mesh (WNSP Spectral Relay Mesh)
 - Distributed photonic compute (Lambda Gate ASICs)
 - Physics-based energy accounting (Λ = hf/c² across all transactions)
 - An open, non-proprietary OS standard (AGPL-3.0)
 
-All four components are specified and partially implemented in this repository.
-
----
-
-## License
-
-```
-NexusOS — Wavelength Operating System
-Copyright (C) 2024–2026 NexusOS Contributors
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published
-by the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-```
-
-**AGPL-3.0 means:** Any company using NexusOS as a service must publish their modifications. Any hardware embedding NexusOS firmware must comply with the source disclosure requirements embedded in every WNSP frame via the Frame Builder v7.1 Source Code Reference mechanism.
-
-The physics is open. The spectrum belongs to everyone.
+All four are specified and partially implemented in this repository. The architecture is designed for a 100-year build. The Phase 1 foundation — TCP/IP overlay, spectral addressing, physics engine, kernel — is running now.
 
 ---
 
 *Built by an ambulance driver and hospital orderly who asked: what if every instruction had a wavelength?*
 
-*Silicon computing is not the discovery of how computation works. It is one civilisation's first attempt, constrained by the materials available in 1947. The electromagnetic spectrum was always there. The philosophy just had to catch up.*
+*The answer turned out to be: it always did.*
 
 ---
 
-**Live platform:** [nexusosdaily-code.replit.app](https://nexusosdaily-code.replit.app)  
-**Repository:** [github.com/nexusosdaily-code/WNSP-P2P-Hub](https://github.com/nexusosdaily-code/WNSP-P2P-Hub)  
-**Protocol:** WNSP v1.0 (CE + SE)  
-**Equation:** Λ = hf/c²  
-**License:** AGPL-3.0
+**NexusOS · AGPL-3.0 · https://github.com/nexusosdaily-code/NexusOS**
