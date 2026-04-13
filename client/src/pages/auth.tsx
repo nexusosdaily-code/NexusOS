@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Sparkles, Lock, User, Mail, Phone, Wallet, ArrowLeft } from "lucide-rea
 export default function AuthPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const inFlight = useRef(false);
   const [loginData, setLoginData] = useState({ username: "", password: "" });
   const [registerData, setRegisterData] = useState({
     username: "",
@@ -22,6 +23,8 @@ export default function AuthPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (inFlight.current) return;
+    inFlight.current = true;
     setIsLoading(true);
 
     try {
@@ -51,6 +54,7 @@ export default function AuthPage() {
         variant: "destructive",
       });
     } finally {
+      inFlight.current = false;
       setIsLoading(false);
     }
   };
@@ -76,6 +80,8 @@ export default function AuthPage() {
       return;
     }
 
+    if (inFlight.current) return;
+    inFlight.current = true;
     setIsLoading(true);
 
     try {
@@ -110,6 +116,7 @@ export default function AuthPage() {
         variant: "destructive",
       });
     } finally {
+      inFlight.current = false;
       setIsLoading(false);
     }
   };
