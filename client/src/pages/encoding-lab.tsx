@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -58,7 +59,7 @@ function CopyBtn({ text }: { text: string }) {
 }
 
 // ── Tab 1: Encode a message ────────────────────────────────────────
-function EncodeTab({ onEncoded }: { onEncoded: (r: any) => void }) {
+function EncodeTab({ onEncoded, loggedIn }: { onEncoded: (r: any) => void; loggedIn: boolean }) {
   const [text,   setText]   = useState("Open source civilization infrastructure built on physics");
   const [label,  setLabel]  = useState("my_message");
   const [result, setResult] = useState<any>(null);
@@ -226,7 +227,7 @@ function EncodeTab({ onEncoded }: { onEncoded: (r: any) => void }) {
 
             {/* Cross-system actions */}
             <div className="flex flex-wrap gap-2 pt-1">
-              {!stored && (
+              {!stored && loggedIn && (
                 <Button size="sm" variant="outline"
                   className="border-cyan-800 text-cyan-300 hover:bg-cyan-900/40 text-xs"
                   onClick={() => storeMut.mutate()}
@@ -236,9 +237,17 @@ function EncodeTab({ onEncoded }: { onEncoded: (r: any) => void }) {
                   {storeMut.isPending ? "Storing…" : "Store to Spectral DB"}
                 </Button>
               )}
-              {storeMut.isError && (
+              {!stored && !loggedIn && (
+                <Link href="/auth">
+                  <span className="text-xs text-slate-500 font-mono hover:text-cyan-400 transition-colors cursor-pointer"
+                    data-testid="hint-login-to-store">
+                    Log in to save permanently →
+                  </span>
+                </Link>
+              )}
+              {storeMut.isError && loggedIn && (
                 <span className="text-red-400 text-xs self-center font-mono">
-                  {(storeMut.error as Error)?.message?.includes("401") ? "Login required to store" : (storeMut.error as Error)?.message}
+                  {(storeMut.error as Error)?.message}
                 </span>
               )}
               <Button size="sm" variant="outline"
@@ -404,7 +413,7 @@ function DecodeTab() {
 }
 
 // ── Tab 3: Send encoded message ────────────────────────────────────
-function SendTab() {
+function SendTab({ loggedIn }: { loggedIn: boolean }) {
   const [from,     setFrom]    = useState("");
   const [to,       setTo]      = useState("");
   const [message,  setMessage] = useState("");
@@ -444,7 +453,18 @@ function SendTab() {
         </p>
       </div>
 
-      {step === "compose" && (
+      {!loggedIn && (
+        <div className="rounded-xl border border-slate-800 p-6 text-center space-y-2">
+          <p className="text-slate-400 text-sm">You need to be logged in to send wavelength-encoded messages.</p>
+          <Link href="/auth">
+            <Button size="sm" variant="outline" className="border-cyan-800 text-cyan-300 hover:bg-cyan-900/40 text-xs mt-1">
+              Log in to send
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {loggedIn && step === "compose" && (
         <div className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -609,6 +629,7 @@ function CivilizationTab() {
 // ── Main page ─────────────────────────────────────────────────────
 export default function EncodingLab() {
   const [lastEncoded, setLastEncoded] = useState<any>(null);
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6">
@@ -665,7 +686,7 @@ export default function EncodingLab() {
           <h2 className="text-sm font-semibold text-cyan-300 mb-3">
             Type anything — the physics engine converts it to a wavelength of light
           </h2>
-          <EncodeTab onEncoded={setLastEncoded} />
+          <EncodeTab onEncoded={setLastEncoded} loggedIn={!!user} />
         </TabsContent>
 
         <TabsContent value="decode">
@@ -679,7 +700,7 @@ export default function EncodingLab() {
           <h2 className="text-sm font-semibold text-green-300 mb-3">
             Compose, encode, and route a message — no email server, no surveillance
           </h2>
-          <SendTab />
+          <SendTab loggedIn={!!user} />
         </TabsContent>
 
         <TabsContent value="civilization">
