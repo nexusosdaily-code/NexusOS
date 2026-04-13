@@ -1,6 +1,8 @@
+import path from "path";
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import multer from "multer";
 import { storage } from "./storage";
 import { authenticate, optionalAuth, logAction } from "./auth";
 import { 
@@ -73,7 +75,8 @@ async function secureProxyToSpectralAPI(req: Request, res: Response, endpoint: s
     
     await storage.incrementRateLimit(identifier, endpoint, RATE_LIMIT_WINDOW_MS);
 
-    const url = `${SPECTRAL_API_URL}${endpoint}`;
+    const qs = new URLSearchParams(req.query as Record<string, string>).toString();
+    const url = `${SPECTRAL_API_URL}${endpoint}${qs ? `?${qs}` : ""}`;
     const options: RequestInit = {
       method: req.method,
       headers: {
@@ -114,6 +117,18 @@ async function secureProxyToSpectralAPI(req: Request, res: Response, endpoint: s
     });
   }
 }
+
+const VIDEO_EXTENSIONS = new Set([".mp4",".mov",".avi",".mkv",".webm",".m4v",".wmv",".flv",".ts",".3gp"]);
+const videoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 200 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isVideoMime = file.mimetype.startsWith("video/") || file.mimetype === "application/octet-stream";
+    if (isVideoMime || VIDEO_EXTENSIONS.has(ext)) cb(null, true);
+    else cb(new Error(`Only video files allowed. Received: ${file.mimetype}`));
+  },
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -527,6 +542,31 @@ export async function registerRoutes(
       
       await logAction(req, "user_registered", "auth", user.id, { username });
 
+      // ── Auto-register canonical wnsp:// identity on signup ─────────────
+      try {
+        const { db: _db2 } = await import("./db");
+        const { wnspRegistry: _wr2 } = await import("@shared/schema");
+        const enc2 = (() => {
+          const codes = username.toUpperCase().split("").map((c: string) => c.charCodeAt(0)).filter((c: number) => c >= 32 && c <= 126);
+          const sum   = codes.reduce((a: number, b: number) => a + b, 0);
+          const avg   = sum / (codes.length || 1);
+          const nm    = parseFloat((380 + ((avg - 32) / 94) * 400).toFixed(4));
+          const wdm   = Math.floor((nm - 380) / 4) + 1;
+          const oam   = sum % 100;
+          const pol   = codes.length % 2 === 0 ? "H" : "V";
+          const band  = nm < 450 ? "VIOLET" : nm < 495 ? "BLUE" : nm < 520 ? "CYAN" : nm < 565 ? "GREEN" : nm < 590 ? "YELLOW" : nm < 625 ? "ORANGE" : "RED";
+          const slug  = username.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+          return { nm, wdm, oam, pol, band, psi: `Ψ(${wdm},${oam},${pol})`, uri: `wnsp://Ψ(${wdm},${oam},${pol})/${slug}` };
+        })();
+        await _db2.insert(_wr2).values({
+          wnspUri: enc2.uri, psiChannel: enc2.psi, wdm: enc2.wdm, oam: enc2.oam,
+          polarisation: enc2.pol, wavelengthNm: String(enc2.nm), band: enc2.band,
+          label: username, ceInput: username, resourceType: "user", resourceId: user.id,
+          httpUrl: `/profile/${username}`, description: `Canonical spectral identity for ${username}`,
+          registeredBy: user.id, isPublic: true, isCanonical: true,
+        }).onConflictDoNothing();
+      } catch (_e) { /* non-blocking — identity can be registered later */ }
+
       const wallet = await storage.getWallet(user.id);
 
       res.status(201).json({
@@ -771,6 +811,7 @@ export async function registerRoutes(
       res.json({
         friends: friends.map(f => ({
           id: f.friendship.id,
+          userId: f.friend.id,
           username: f.friend.username,
           phoneNumber: f.friend.phoneNumber ? f.friend.phoneNumber.slice(-4).padStart(f.friend.phoneNumber.length, '*') : null,
           wavelength: f.friendship.wavelength,
@@ -1368,6 +1409,22 @@ export async function registerRoutes(
 
   app.post("/api/wnsp/wascii/lookup", (req, res) => {
     secureProxyToSpectralAPI(req, res, "/api/wnsp/wascii/lookup");
+  });
+
+  // ── WASCII v2.0 — Wave Density Spectral Vector ────────────────
+  app.get("/api/wnsp/spectral-vector", (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/spectral-vector");
+  });
+  app.post("/api/wnsp/spectral-vector", (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/spectral-vector");
+  });
+
+  // ── WNSP Density Equation v1.0 ────────────────────────────────
+  app.get("/api/wnsp/density", (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/density");
+  });
+  app.post("/api/wnsp/density", (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/density");
   });
 
   // ── Kernel Component 1: Boot ──────────────────────────────────
@@ -2677,7 +2734,7 @@ export async function registerRoutes(
            ${psiParts[1] ?? "Ψ(0,0,H)"},
            ${busData.authority ?? "UNKNOWN"},
            'UNKNOWN',
-           ${payload}, ${msgType}, ${priority}, 'queued',
+           ${payload}, ${msgType}, ${priority}, ${busData.status === 'dispatched' ? 'dispatched' : 'queued'},
            ${busData.route ?? `${src} → ${dst}`})
       `);
 
@@ -2842,7 +2899,17 @@ export async function registerRoutes(
         feePaid,
         status: "pending",
       }).returning();
-      res.json({ success: true, tx, feePaid, wavelengthNm: wlNm, psiChannel: psiCh });
+      // Density at this transaction's compression state — proves why the fee is correct physics:
+      // lower compression state (longer λ) = lower energy per photon = lower fee = more symbols/joule
+      const txWdm = wlNm ? Math.max(1, Math.min(256, Math.floor((parseFloat(wlNm) - 380) / 4) + 1)) : 39;
+      const txDensity = channelDensity(txWdm);
+      res.json({ success: true, tx, feePaid, wavelengthNm: wlNm, psiChannel: psiCh, density_context: {
+        wdm_band:           txDensity.wdm_band,
+        wavelength_nm:      txDensity.wavelength_nm,
+        d_channel:          txDensity.d_channel,
+        d_energy_per_joule: txDensity.d_energy_per_joule,
+        compression_note:   txDensity.compression_note,
+      }});
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
@@ -2998,6 +3065,100 @@ export async function registerRoutes(
     }
   });
 
+  // ── Store file — upload any file (code, PDF, book, assignment) to spectral DB ─
+  const TEXT_EXTENSIONS = /\.(txt|md|markdown|js|ts|jsx|tsx|py|rb|go|java|c|cpp|h|hpp|cs|css|html|htm|json|xml|yml|yaml|sh|bash|sql|rs|swift|kt|scala|r|csv|log|conf|ini|toml|env|vue|svelte|php|lua|pl|ex|exs|clj|hs|ml|elm|dart|zig|v|nim|cr|fs|vb|asm|s|tex|bib|rst|adoc|org|ipynb|graphql|prisma|tf|hcl|dockerfile|makefile|gitignore|editorconfig|license|readme)$/i;
+  const docUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+  app.post("/api/spectral-db/store-file", authenticate, (req: Request, res: Response) => {
+    docUpload.single("file")(req, res, async (uploadErr) => {
+      try {
+        if (uploadErr) return res.status(400).json({ error: uploadErr.message });
+        const file = (req as any).file as Express.Multer.File | undefined;
+        if (!file) return res.status(400).json({ error: "No file provided" });
+
+        const label = (req.body.label || file.originalname).trim();
+        const description = (req.body.description || "").trim();
+
+        const ext = path.extname(file.originalname).toLowerCase();
+        const isText = file.mimetype.startsWith("text/") || TEXT_EXTENSIONS.test(ext);
+        const content = isText
+          ? file.buffer.toString("utf-8")
+          : `[Binary: ${file.originalname} | ${file.mimetype} | ${(file.size / 1024).toFixed(1)} KB]`;
+
+        const encodeText = description ? `${label}: ${description}` : label;
+        const encodeRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ instruction: encodeText, label }),
+        });
+        if (!encodeRes.ok) return res.status(502).json({ error: "Spectral encode failed" });
+        const enc = await encodeRes.json() as any;
+
+        const psiMatch = enc.psi_channel?.match(/Ψ\((\d+),\s*(\d+),\s*([HV])\)/);
+        const wdm = psiMatch ? parseInt(psiMatch[1]) : 0;
+        const oam = psiMatch ? parseInt(psiMatch[2]) : 0;
+        const pol = psiMatch ? psiMatch[3] : "H";
+
+        const { createHash } = await import("crypto");
+        const contentHash = createHash("sha256").update(content).digest("hex");
+
+        const { db } = await import("./db");
+        const { spectralRecords, blockchainTxPool } = await import("@shared/schema");
+
+        const [record] = await db.insert(spectralRecords).values({
+          label,
+          content,
+          wavelengthNm:  String(enc.wavelength_mid_nm ?? 550),
+          psiChannel:    enc.psi_channel ?? "Ψ(0,0,H)",
+          wdm, oam, polarisation: pol,
+          band:          enc.band ?? "CORE",
+          energyJoules:  String(enc.energy_joules ?? 0),
+          lambdaMassKg:  String(enc.lambda_mass_kg ?? 0),
+          frequencyHz:   String(enc.frequency_hz ?? 0),
+          data: {
+            type: "file", filename: file.originalname, mimeType: file.mimetype,
+            fileSize: file.size, isText, contentHash, auditStatus: "pending",
+          },
+        }).returning();
+
+        const auditMemo = `SPECTRAL_FILE:${record.id}:${contentHash.slice(0, 16)}:${enc.wavelength_mid_nm}nm:${enc.psi_channel}`;
+        const energyFee = parseFloat(String(enc.energy_joules ?? 0));
+        const feePaid   = String(Math.max((energyFee / 1e-17) * 0.00000001, 0.00000001).toFixed(8));
+        const [auditTx] = await db.insert(blockchainTxPool).values({
+          fromAddress:  (req as any).user?.walletAddress ?? "NXT-NEXS-OS1K-7F3A-OMEGA",
+          toAddress:    "SPECTRAL-DB",
+          amountNxt:    "0.00000001",
+          memo:         auditMemo,
+          wavelengthNm: String(enc.wavelength_mid_nm ?? 550),
+          psiChannel:   enc.psi_channel ?? null,
+          energyJoules: String(enc.energy_joules ?? 0),
+          feePaid,
+          status:       "pending",
+        }).returning();
+
+        await db.update(spectralRecords)
+          .set({ data: { type: "file", filename: file.originalname, mimeType: file.mimetype, fileSize: file.size, isText, contentHash, auditStatus: "pending", auditTxId: auditTx.id } })
+          .where((await import("drizzle-orm")).eq(spectralRecords.id, record.id));
+
+        const { sql: dsOrd } = await import("drizzle-orm");
+        await depositOrdinalForInput({
+          db, ds: dsOrd,
+          freqHz: parseFloat(String(enc.frequency_hz ?? 5.45e14)),
+          wavelengthNm: parseFloat(String(enc.wavelength_mid_nm ?? 550)),
+          psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
+          band: enc.band ?? "CORE",
+          operation: "STORE", label,
+          sourceRecordId: record.id,
+          depositor: (req as any).user?.username ?? "system",
+        }).catch(() => null);
+
+        res.json({ success: true, record, spectral: enc, filename: file.originalname, isText, contentPreview: isText ? content.slice(0, 300) : content });
+      } catch (err: any) {
+        res.status(500).json({ error: err.message });
+      }
+    });
+  });
+
   // ── Audit mine — bundle all pending audit txs into one proof block ─────────
   app.post("/api/spectral-db/audit-mine", authenticate, async (req: Request, res: Response) => {
     try {
@@ -3134,7 +3295,7 @@ export async function registerRoutes(
   });
 
   // ── Audit status overview ─────────────────────────────────────────────────
-  app.get("/api/spectral-db/audit-status", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-db/audit-status", async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { spectralRecords, blockchainBlocks, blockchainTxPool } = await import("@shared/schema");
@@ -3158,7 +3319,7 @@ export async function registerRoutes(
   });
 
   // Full-text search across label + content
-  app.get("/api/spectral-db/text-search", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-db/text-search", async (req: Request, res: Response) => {
     try {
       const q    = String(req.query.q ?? "").trim();
       const band = String(req.query.band ?? "").trim().toUpperCase();
@@ -3194,7 +3355,7 @@ export async function registerRoutes(
   });
 
   // Fetch full content of a single record by ID
-  app.get("/api/spectral-db/record/:id", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-db/record/:id", async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { spectralRecords } = await import("@shared/schema");
@@ -3208,7 +3369,7 @@ export async function registerRoutes(
   });
 
   // Records list — returns total count + paginated records (used by Nexus Command)
-  app.get("/api/spectral-db/records", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-db/records", async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { spectralRecords } = await import("@shared/schema");
@@ -3225,8 +3386,25 @@ export async function registerRoutes(
     }
   });
 
-  // Scan all records — full spectral map
-  app.get("/api/spectral-db/scan", authenticate, async (req: Request, res: Response) => {
+  // ── Public encode-preview — CE→SE physics result with no DB write, no auth ──
+  app.post("/api/spectral-db/encode-preview", async (req: Request, res: Response) => {
+    try {
+      const { text, label } = req.body as { text?: string; label?: string };
+      if (!text) return res.status(400).json({ error: "text is required" });
+      const encodeRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction: text, label: label || "preview" }),
+      });
+      if (!encodeRes.ok) return res.status(502).json({ error: "Spectral encode failed" });
+      const enc = await encodeRes.json() as any;
+      res.json({ success: true, spectral: enc });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/spectral-db/scan", async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { spectralRecords } = await import("@shared/schema");
@@ -3239,7 +3417,7 @@ export async function registerRoutes(
   });
 
   // Proximity search — find records within ±range nm of a target wavelength
-  app.get("/api/spectral-db/search", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-db/search", async (req: Request, res: Response) => {
     try {
       const wavelength = parseFloat(String(req.query.wavelength ?? "550"));
       const range      = parseFloat(String(req.query.range ?? "20"));
@@ -3258,7 +3436,7 @@ export async function registerRoutes(
   });
 
   // Retrieve by Ψ channel
-  app.get("/api/spectral-db/channel/:psi", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-db/channel/:psi", async (req: Request, res: Response) => {
     try {
       const psi = decodeURIComponent(req.params.psi);
       const { db } = await import("./db");
@@ -3706,94 +3884,145 @@ export async function registerRoutes(
   });
 
   // ── Spectral Workspace — Video API ────────────────────────────────────────
-  // Upload a video clip, encode its title into a wavelength, store at that address
+  // Upload a video clip via multipart/form-data, encode title → wavelength, store
 
-  app.post("/api/spectral-workspace/video", authenticate, async (req: Request, res: Response) => {
+  app.post("/api/spectral-workspace/video", authenticate, (req: Request, res: Response) => {
+    videoUpload.single("file")(req, res, async (uploadErr) => {
+      try {
+        if (uploadErr) {
+          return res.status(400).json({ error: uploadErr.message });
+        }
+        const file = (req as any).file as Express.Multer.File | undefined;
+        const { title, description } = req.body;
+
+        if (!file) return res.status(400).json({ error: "No video file provided" });
+        if (!title) return res.status(400).json({ error: "title is required" });
+
+        const mimeType = file.mimetype;
+        const fileSize = file.size;
+        const filename = file.originalname;
+        const videoData = file.buffer.toString("base64");
+
+        const encodeText = `${title}${description ? ": " + description : ""}`;
+        const encodeRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ instruction: encodeText, label: title }),
+        });
+        if (!encodeRes.ok) return res.status(502).json({ error: "Spectral encode failed" });
+        const enc = await encodeRes.json() as any;
+
+        const psiMatch = enc.psi_channel?.match(/Ψ\((\d+),\s*(\d+),\s*([HV])\)/);
+        const wdm = psiMatch ? parseInt(psiMatch[1]) : 0;
+        const oam = psiMatch ? parseInt(psiMatch[2]) : 0;
+        const pol = psiMatch ? psiMatch[3] : "H";
+
+        const { db } = await import("./db");
+        const { videoUploads, spectralRecords } = await import("@shared/schema");
+        const { randomUUID } = await import("crypto");
+
+        const videoId = randomUUID();
+        await db.insert(videoUploads).values({
+          id: videoId,
+          uploaderId: (req as any).user?.id ?? "anonymous",
+          uploaderName: (req as any).user?.username ?? "anonymous",
+          filename,
+          mimeType,
+          fileSize,
+          videoData,
+          status: "ready",
+        });
+
+        const nm = enc.wavelength_mid_nm ?? 550;
+        const band = nm < 450 ? "SYSTEM" : nm < 520 ? "AUTH" : nm < 625 ? "USER" : "GUEST";
+
+        const [record] = await db.insert(spectralRecords).values({
+          id: randomUUID(),
+          label: title,
+          content: description ?? title,
+          wavelengthNm: String(nm),
+          psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
+          wdm, oam, polarisation: pol,
+          band,
+          energyJoules: String(enc.energy_joules ?? 0),
+          lambdaMassKg: String(enc.lambda_mass_kg ?? 0),
+          frequencyHz: String(enc.frequency_hz ?? 0),
+          data: { type: "video", videoId, mimeType, fileSize },
+        }).returning();
+
+        const { sql: dsVid } = await import("drizzle-orm");
+        const uploadOrdinal = await depositOrdinalForInput({
+          db, ds: dsVid,
+          freqHz: parseFloat(String(enc.frequency_hz ?? 5.45e14)),
+          wavelengthNm: parseFloat(String(nm)),
+          psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
+          band,
+          operation: "UPLOAD",
+          label: `VIDEO:${title}`,
+          sourceRecordId: record.id,
+          depositor: (req as any).user?.username ?? "system",
+        }).catch(() => null);
+
+        res.json({ success: true, record, spectral: enc, videoId,
+          ordinal: uploadOrdinal ? { units: uploadOrdinal.ordinalUnits.toString(), nxt: (Number(uploadOrdinal.ordinalUnits) / 1e8).toFixed(8) } : null });
+      } catch (err: any) {
+        res.status(500).json({ error: err.message });
+      }
+    });
+  });
+
+  app.get("/api/spectral-workspace/video/:id", optionalAuth, async (req: Request, res: Response) => {
     try {
-      const { title, description, videoData, mimeType, fileSize, filename } = req.body;
-      if (!title || !videoData || !mimeType) {
-        return res.status(400).json({ error: "title, videoData, and mimeType required" });
-      }
-      if (fileSize && fileSize > 100 * 1024 * 1024) {
-        return res.status(413).json({ error: "Video too large — max 100MB" });
-      }
-
-      const encodeText = `${title}${description ? ": " + description : ""}`;
-      const encodeRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instruction: encodeText, label: title }),
-      });
-      if (!encodeRes.ok) return res.status(502).json({ error: "Spectral encode failed" });
-      const enc = await encodeRes.json() as any;
-
-      const psiMatch = enc.psi_channel?.match(/Ψ\((\d+),\s*(\d+),\s*([HV])\)/);
-      const wdm = psiMatch ? parseInt(psiMatch[1]) : 0;
-      const oam = psiMatch ? parseInt(psiMatch[2]) : 0;
-      const pol = psiMatch ? psiMatch[3] : "H";
-
       const { db } = await import("./db");
-      const { videoUploads, spectralRecords } = await import("@shared/schema");
-      const { randomUUID } = await import("crypto");
-
-      const videoId = randomUUID();
-      const [video] = await db.insert(videoUploads).values({
-        id: videoId,
-        uploaderId: (req as any).user?.id ?? "anonymous",
-        uploaderName: (req as any).user?.username ?? "anonymous",
-        filename: filename ?? `${title}.mp4`,
-        mimeType,
-        fileSize: fileSize ?? 0,
-        videoData,
-        status: "ready",
-      }).returning();
-
-      const nm = enc.wavelength_mid_nm ?? 550;
-      const band = nm < 450 ? "SYSTEM" : nm < 520 ? "AUTH" : nm < 625 ? "USER" : "GUEST";
-
-      const [record] = await db.insert(spectralRecords).values({
-        id: randomUUID(),
-        label: title,
-        content: description ?? title,
-        wavelengthNm: String(nm),
-        psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
-        wdm, oam, polarisation: pol,
-        band,
-        energyJoules: String(enc.energy_joules ?? 0),
-        lambdaMassKg: String(enc.lambda_mass_kg ?? 0),
-        frequencyHz: String(enc.frequency_hz ?? 0),
-        data: { type: "video", videoId, mimeType, fileSize },
-      }).returning();
-
-      // ── ORDINAL: UPLOAD input deposits to Orbital Treasury ───────────────────
-      const { sql: dsVid } = await import("drizzle-orm");
-      const uploadOrdinal = await depositOrdinalForInput({
-        db, ds: dsVid,
-        freqHz: parseFloat(String(enc.frequency_hz ?? 5.45e14)),
-        wavelengthNm: parseFloat(String(nm)),
-        psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
-        band,
-        operation: "UPLOAD",
-        label: `VIDEO:${title}`,
-        sourceRecordId: record.id,
-        depositor: (req as any).user?.username ?? "system",
-      }).catch(() => null);
-
-      res.json({ success: true, record, spectral: enc, videoId,
-        ordinal: uploadOrdinal ? { units: uploadOrdinal.ordinalUnits.toString(), nxt: (Number(uploadOrdinal.ordinalUnits) / 1e8).toFixed(8) } : null });
+      const { videoUploads } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      // Return metadata only (no videoData blob) for the info endpoint
+      const [video] = await db.select({
+        id: videoUploads.id, uploaderId: videoUploads.uploaderId,
+        uploaderName: videoUploads.uploaderName, filename: videoUploads.filename,
+        mimeType: videoUploads.mimeType, fileSize: videoUploads.fileSize,
+        duration: videoUploads.duration, status: videoUploads.status,
+        createdAt: videoUploads.createdAt,
+      }).from(videoUploads).where(eq(videoUploads.id, req.params.id));
+      if (!video) return res.status(404).json({ error: "Video not found" });
+      res.json({ video });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.get("/api/spectral-workspace/video/:id", authenticate, async (req: Request, res: Response) => {
+  // ── Video stream — serves raw binary so <video> tags can play it ───────────
+  app.get("/api/spectral-workspace/video/:id/stream", async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { videoUploads } = await import("@shared/schema");
       const { eq } = await import("drizzle-orm");
       const [video] = await db.select().from(videoUploads).where(eq(videoUploads.id, req.params.id));
       if (!video) return res.status(404).json({ error: "Video not found" });
-      res.json({ video });
+      if (!video.videoData) return res.status(404).json({ error: "No video data stored" });
+
+      const mimeType = video.mimeType || "video/mp4";
+      const buf = Buffer.from(video.videoData, "base64");
+      const total = buf.length;
+      const rangeHeader = req.headers.range;
+
+      res.setHeader("Accept-Ranges", "bytes");
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader("Cache-Control", "public, max-age=3600");
+
+      if (rangeHeader) {
+        const [startStr, endStr] = rangeHeader.replace(/bytes=/, "").split("-");
+        const start = parseInt(startStr, 10);
+        const end   = endStr ? parseInt(endStr, 10) : total - 1;
+        const chunkSize = end - start + 1;
+        res.status(206);
+        res.setHeader("Content-Range",  `bytes ${start}-${end}/${total}`);
+        res.setHeader("Content-Length", chunkSize);
+        res.end(buf.slice(start, end + 1));
+      } else {
+        res.setHeader("Content-Length", total);
+        res.end(buf);
+      }
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -3821,7 +4050,423 @@ export async function registerRoutes(
     return { wavelengthNm: nm, frequencyThz: thz, psiChannel: `Ψ(${wdm},${oam},${pol})`, emissionBand: band };
   }
 
-  app.get("/api/network/nodes", authenticate, async (req, res) => {
+  // ════════════════════════════════════════════════════════════════════════════
+  // WNSP REGISTRY — Spectral address bridge (TCP/IP overlay for wnsp:// URIs)
+  // Phase 1: HTTP. Phase 2: native photonic when Moore's law hardware arrives.
+  // CE→SE (WASCII v1.0): every label derives a deterministic Ψ(wdm,oam,pol) address.
+  // ════════════════════════════════════════════════════════════════════════════
+
+  // ── CE→SE helper (server-side WASCII v1.0) ──────────────────────────────
+  function ceSe(text: string) {
+    const codes = text.toUpperCase().split("").map(c => c.charCodeAt(0)).filter(c => c >= 32 && c <= 126);
+    const sum   = codes.reduce((a, b) => a + b, 0);
+    const avg   = sum / (codes.length || 1);
+    const nm    = parseFloat((380 + ((avg - 32) / 94) * 400).toFixed(4));
+    const wdm   = Math.floor((nm - 380) / 4) + 1;
+    const oam   = sum % 100;
+    const pol   = codes.length % 2 === 0 ? "H" : "V";
+    const band  = nm < 450 ? "VIOLET" : nm < 495 ? "BLUE" : nm < 520 ? "CYAN" : nm < 565 ? "GREEN" : nm < 590 ? "YELLOW" : nm < 625 ? "ORANGE" : "RED";
+    const slug  = text.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+    return { nm, wdm, oam, pol, band, psi: `Ψ(${wdm},${oam},${pol})`, uri: `wnsp://Ψ(${wdm},${oam},${pol})/${slug}` };
+  }
+
+  // ── WNSP Density Equation helper (Node.js side) ────────────────────────────
+  // D_channel = 1 · N_OAM · N_Pol · R_sym · M
+  // D_energy  = D_channel · λ / (h · c)
+  // This is the Λ=hf/c² curve applied per WDM channel:
+  // higher WDM (longer λ, lower compression state) → lower energy per photon
+  // → more symbols per joule → cheaper communication.
+  function channelDensity(wdm: number, rSym = 2, m = 1) {
+    const h           = 6.62607015e-34;          // Planck's constant
+    const c           = 299_792_458;             // speed of light
+    const N_OAM       = 50;
+    const N_POL       = 2;
+    const wdmClamped  = Math.max(1, Math.min(256, wdm));
+    const wavelengthNm = 380 + (wdmClamped - 1) * 4 + 2;   // centre of WDM band
+    const wavelengthM = wavelengthNm * 1e-9;
+    const freqHz      = c / wavelengthM;
+    const energyJ     = h * freqHz;
+    const energyEv    = energyJ / 1.602176634e-19;
+    const lambdaMass  = energyJ / (c * c);
+    const subChannels = N_OAM * N_POL;           // 100 per WDM slot
+    const dChannel    = subChannels * rSym * m;
+    const dEnergy     = dChannel * wavelengthM / (h * c);
+    return {
+      equation:          "D_channel = 1 · N_OAM · N_Pol · R_sym · M",
+      energy_equation:   "D_energy = D_channel · λ / (h · c)",
+      wdm_band:          wdmClamped,
+      wavelength_nm:     parseFloat(wavelengthNm.toFixed(2)),
+      frequency_thz:     parseFloat((freqHz / 1e12).toFixed(4)),
+      energy_ev:         parseFloat(energyEv.toFixed(4)),
+      energy_joules:     energyJ,
+      lambda_mass_kg:    lambdaMass,
+      sub_channels:      subChannels,
+      d_channel:         dChannel,                  // symbols / cycle at this WDM slot
+      d_energy_per_joule: parseFloat(dEnergy.toFixed(2)),
+      r_sym:             rSym,
+      m,
+      hilbert_note:      `This WDM band contributes ${subChannels} of the 25,600 Hilbert channels (${N_OAM} OAM × ${N_POL} Pol).`,
+      compression_note:  `Higher λ = lower compression state = lower energy per photon = higher symbols/joule.`,
+    };
+  }
+
+  // ── Public registry — list all public addresses ────────────────────────
+  app.get("/api/wnsp/registry", async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { wnspRegistry } = await import("@shared/schema");
+      const { desc, eq } = await import("drizzle-orm");
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const resourceType = req.query.type as string | undefined;
+
+      const query = db.select().from(wnspRegistry)
+        .where(eq(wnspRegistry.isPublic, true))
+        .orderBy(desc(wnspRegistry.createdAt))
+        .limit(limit);
+
+      const entries = await (resourceType
+        ? db.select().from(wnspRegistry).where(eq(wnspRegistry.resourceType, resourceType)).orderBy(desc(wnspRegistry.createdAt)).limit(limit)
+        : query);
+
+      res.json({ entries, total: entries.length });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Resolve a Ψ address → resource ────────────────────────────────────
+  // GET /api/wnsp/resolve?psi=Ψ(39,7,H)&path=nexus
+  app.get("/api/wnsp/resolve", async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { wnspRegistry } = await import("@shared/schema");
+      const { eq, ilike, or } = await import("drizzle-orm");
+      const psi  = decodeURIComponent((req.query.psi as string) || "");
+      const path = decodeURIComponent((req.query.path as string) || "");
+      const uri  = req.query.uri as string | undefined;
+
+      if (!psi && !uri) return res.status(400).json({ error: "Provide psi or uri query param" });
+
+      const lookupUri = uri || `wnsp://${psi}/${path}`.replace(/\/+$/, "");
+      const lookupPsi = psi || lookupUri.match(/Ψ\([^)]+\)/)?.[0] || "";
+
+      // exact URI match first, then Ψ channel match
+      let entries = await db.select().from(wnspRegistry).where(eq(wnspRegistry.wnspUri, lookupUri));
+      if (entries.length === 0 && lookupPsi) {
+        entries = await db.select().from(wnspRegistry).where(eq(wnspRegistry.psiChannel, lookupPsi));
+      }
+
+      // increment resolve count
+      if (entries.length > 0) {
+        const { sql: dsql } = await import("drizzle-orm");
+        await db.update(wnspRegistry)
+          .set({ resolveCount: dsql`${wnspRegistry.resolveCount} + 1` })
+          .where(eq(wnspRegistry.id, entries[0].id));
+      }
+
+      // also search spectral DB for records at this channel
+      const { spectralRecords } = await import("@shared/schema");
+      const spectral = lookupPsi ? await db.select().from(spectralRecords).where(eq(spectralRecords.psiChannel, lookupPsi)).limit(10) : [];
+
+      // add density at resolved channel compression state
+      const wdmMatch = lookupPsi.match(/Ψ\((\d+),/);
+      const resolvedDensity = wdmMatch ? channelDensity(parseInt(wdmMatch[1])) : null;
+      res.json({ resolved: entries.length > 0, entries, spectral, query: { psi: lookupPsi, path, uri: lookupUri }, channel_density: resolvedDensity });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Lookup a user's canonical wnsp:// address ─────────────────────────
+  app.get("/api/wnsp/user/:username", async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { users: usersTable, wnspRegistry } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const { username } = req.params;
+
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username));
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      const enc = ceSe(username);
+
+      // find or return computed address
+      const [entry] = await db.select().from(wnspRegistry)
+        .where(and(eq(wnspRegistry.resourceType, "user"), eq(wnspRegistry.resourceId, user.id)));
+
+      res.json({
+        username,
+        userId: user.id,
+        spectral: {
+          psiChannel: enc.psi, wavelengthNm: enc.nm, wdm: enc.wdm, oam: enc.oam,
+          polarisation: enc.pol, band: enc.band, wnspUri: enc.uri,
+          httpUrl: `/profile/${username}`,
+        },
+        registered: !!entry,
+        entry: entry ?? null,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Register a wnsp:// address (auth required) ─────────────────────────
+  app.post("/api/wnsp/register", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { wnspRegistry } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const { label, resourceType = "user", resourceId, httpUrl, description, isPublic = true } = req.body;
+
+      if (!label) return res.status(400).json({ error: "label is required" });
+      const enc = ceSe(label);
+
+      // check for duplicate
+      const [existing] = await db.select().from(wnspRegistry).where(eq(wnspRegistry.wnspUri, enc.uri));
+      if (existing) return res.status(409).json({ error: "Address already registered", existing });
+
+      const [entry] = await db.insert(wnspRegistry).values({
+        wnspUri:      enc.uri,
+        psiChannel:   enc.psi,
+        wdm:          enc.wdm,
+        oam:          enc.oam,
+        polarisation: enc.pol,
+        wavelengthNm: String(enc.nm),
+        band:         enc.band,
+        label,
+        ceInput:      label,
+        resourceType,
+        resourceId:   resourceId ?? null,
+        httpUrl:      httpUrl ?? null,
+        description:  description ?? null,
+        registeredBy: (req as any).user?.id,
+        isPublic,
+        isCanonical:  false,
+      }).returning();
+
+      res.status(201).json({ success: true, entry, spectral: enc, channel_density: channelDensity(enc.wdm) });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Auto-register canonical user address ──────────────────────────────
+  app.post("/api/wnsp/auto-register-me", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { wnspRegistry } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const user = (req as any).user!;
+      const enc  = ceSe(user.username);
+
+      // idempotent: upsert by resource
+      const [existing] = await db.select().from(wnspRegistry)
+        .where(and(eq(wnspRegistry.resourceType, "user"), eq(wnspRegistry.resourceId, user.id)));
+      if (existing) return res.json({ success: true, entry: existing, spectral: enc, created: false, channel_density: channelDensity(enc.wdm) });
+
+      const [entry] = await db.insert(wnspRegistry).values({
+        wnspUri:      enc.uri,
+        psiChannel:   enc.psi,
+        wdm:          enc.wdm,
+        oam:          enc.oam,
+        polarisation: enc.pol,
+        wavelengthNm: String(enc.nm),
+        band:         enc.band,
+        label:        user.username,
+        ceInput:      user.username,
+        resourceType: "user",
+        resourceId:   user.id,
+        httpUrl:      `/profile/${user.username}`,
+        description:  `Canonical spectral identity for ${user.username}`,
+        registeredBy: user.id,
+        isPublic:     true,
+        isCanonical:  true,
+      }).returning();
+
+      const cd = channelDensity(enc.wdm);
+      res.status(201).json({ success: true, entry, spectral: enc, created: true, channel_density: cd });
+    } catch (err: any) {
+      if (err.message?.includes("unique")) {
+        const e2 = ceSe((req as any).user!.username);
+        return res.json({ success: true, note: "Address already claimed at this channel", spectral: e2, channel_density: channelDensity(e2.wdm) });
+      }
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── Preview CE→SE for any text without storing ─────────────────────────
+  app.get("/api/wnsp/preview", async (req: Request, res: Response) => {
+    const text = (req.query.text as string) || "";
+    if (!text) return res.status(400).json({ error: "text is required" });
+    const enc = ceSe(text);
+    res.json({
+      ...enc,
+      channel_density: channelDensity(enc.wdm),
+    });
+  });
+
+  // ── Public profile endpoint ───────────────────────────────────────────
+  app.get("/api/profile/:username", async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { users: usersTable, wallets, spectralRecords, wnspRegistry, blockchainTxPool } = await import("@shared/schema");
+      const { eq, and, desc, count } = await import("drizzle-orm");
+      const { username } = req.params;
+
+      const [user] = await db.select({
+        id: usersTable.id, username: usersTable.username,
+        role: usersTable.role, createdAt: usersTable.createdAt,
+      }).from(usersTable).where(eq(usersTable.username, username));
+
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      // wallet (public address only)
+      const [wallet] = await db.select({ address: wallets.address })
+        .from(wallets).where(eq(wallets.userId, user.id));
+
+      // wnsp identity
+      const enc = ceSe(username);
+      const [wnspEntry] = await db.select().from(wnspRegistry)
+        .where(and(eq(wnspRegistry.resourceType, "user"), eq(wnspRegistry.resourceId, user.id)));
+
+      // spectral records at the user's canonical Ψ channel (content at their wavelength)
+      const channelRecords = await db.select({
+        id: spectralRecords.id, label: spectralRecords.label,
+        band: spectralRecords.band, wavelengthNm: spectralRecords.wavelengthNm,
+        psiChannel: spectralRecords.psiChannel, data: spectralRecords.data,
+        createdAt: spectralRecords.createdAt,
+      }).from(spectralRecords)
+        .where(eq(spectralRecords.psiChannel, enc.psi))
+        .orderBy(desc(spectralRecords.createdAt))
+        .limit(12);
+
+      // blockchain tx count (sent from their wallet)
+      const [{ value: txCount }] = wallet
+        ? await db.select({ value: count() }).from(blockchainTxPool).where(eq(blockchainTxPool.fromAddress, wallet.address))
+        : [{ value: 0 }];
+
+      // wnsp addresses they registered
+      const registered = await db.select().from(wnspRegistry)
+        .where(eq(wnspRegistry.registeredBy, user.id))
+        .orderBy(desc(wnspRegistry.createdAt)).limit(20);
+
+      const profileDensity = channelDensity(enc.wdm);
+      res.json({
+        user: { id: user.id, username: user.username, role: user.role, createdAt: user.createdAt },
+        wallet: wallet ? { address: wallet.address } : null,
+        spectral: {
+          ...enc, registered: !!wnspEntry, entry: wnspEntry ?? null,
+          httpUrl: `/profile/${username}`,
+        },
+        channel_density: profileDensity,
+        content: { recent: channelRecords, total: channelRecords.length },
+        blockchain: { txCount: Number(txCount) },
+        wnspAddresses: registered,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── User Credentials — Upload ─────────────────────────────────────────
+  app.post("/api/profile/credentials", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { userCredentials } = await import("@shared/schema");
+      const userId = (req as any).user!.id;
+      const { name, credentialType = "other", issuer, issuedDate, expiryDate,
+              fileName, fileType, fileData, fileSize, visibility = "private" } = req.body;
+
+      if (!name || !fileName || !fileData) {
+        return res.status(400).json({ error: "name, fileName, and fileData are required" });
+      }
+      if (fileData.length > 10 * 1024 * 1024) {
+        return res.status(413).json({ error: "File too large — max 10 MB" });
+      }
+
+      // Derive spectral address from credential name via WASCII CE→SE
+      const enc = ceSe(name);
+
+      const [cred] = await db.insert(userCredentials).values({
+        userId, name, credentialType, issuer: issuer ?? null,
+        issuedDate: issuedDate ?? null, expiryDate: expiryDate ?? null,
+        fileName, fileType: fileType ?? "application/octet-stream",
+        fileData, fileSize: fileSize ?? null, visibility,
+        psiChannel: enc.psi, wavelengthNm: String(enc.nm),
+      }).returning();
+
+      const { fileData: _fd, ...credSafe } = cred as any;
+      res.status(201).json({ success: true, credential: credSafe, spectral: enc });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── User Credentials — List (own = all, others = public only) ─────────────
+  app.get("/api/profile/:username/credentials", optionalAuth, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { users: usersTable, userCredentials } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const { username } = req.params;
+
+      const [targetUser] = await db.select({ id: usersTable.id }).from(usersTable)
+        .where(eq(usersTable.username, username));
+      if (!targetUser) return res.status(404).json({ error: "User not found" });
+
+      const currentUserId = (req as any).user?.id ?? null;
+      const isSelf = currentUserId === targetUser.id;
+
+      const rows = await db.select({
+        id: userCredentials.id,
+        credentialType: userCredentials.credentialType,
+        name: userCredentials.name,
+        issuer: userCredentials.issuer,
+        issuedDate: userCredentials.issuedDate,
+        expiryDate: userCredentials.expiryDate,
+        fileName: userCredentials.fileName,
+        fileType: userCredentials.fileType,
+        fileSize: userCredentials.fileSize,
+        visibility: userCredentials.visibility,
+        psiChannel: userCredentials.psiChannel,
+        wavelengthNm: userCredentials.wavelengthNm,
+        createdAt: userCredentials.createdAt,
+      }).from(userCredentials)
+        .where(
+          isSelf
+            ? eq(userCredentials.userId, targetUser.id)
+            : and(eq(userCredentials.userId, targetUser.id), eq(userCredentials.visibility, "public"))
+        );
+
+      res.json({ credentials: rows, isSelf });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── User Credentials — Download file ──────────────────────────────────────
+  app.get("/api/profile/credentials/:id/download", optionalAuth, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { userCredentials } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [cred] = await db.select().from(userCredentials).where(eq(userCredentials.id, req.params.id));
+      if (!cred) return res.status(404).json({ error: "Credential not found" });
+
+      const currentUserId = (req as any).user?.id ?? null;
+      if (cred.visibility !== "public" && cred.userId !== currentUserId) {
+        return res.status(403).json({ error: "Private credential" });
+      }
+
+      const buf = Buffer.from(cred.fileData.replace(/^data:[^,]+,/, ""), "base64");
+      res.setHeader("Content-Type", cred.fileType ?? "application/octet-stream");
+      res.setHeader("Content-Disposition", `attachment; filename="${cred.fileName}"`);
+      res.send(buf);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── User Credentials — Delete ─────────────────────────────────────────────
+  app.delete("/api/profile/credentials/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { userCredentials } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const userId = (req as any).user!.id;
+      const deleted = await db.delete(userCredentials)
+        .where(and(eq(userCredentials.id, req.params.id), eq(userCredentials.userId, userId)))
+        .returning();
+      if (deleted.length === 0) return res.status(404).json({ error: "Not found or not your credential" });
+      res.json({ success: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.get("/api/network/nodes", async (req: Request, res: Response) => {
     try {
       const status = req.query.status as string | undefined;
       const nodes = await storage.getNetworkNodes(status);
@@ -3870,15 +4515,25 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/spectral-workspace/videos", authenticate, async (req: Request, res: Response) => {
+  app.get("/api/spectral-workspace/videos", optionalAuth, async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
-      const { spectralRecords } = await import("@shared/schema");
-      const { sql: drizzleSql } = await import("drizzle-orm");
-      const records = await db.select().from(spectralRecords)
-        .where(drizzleSql`${spectralRecords.data}->>'type' = 'video'`)
-        .orderBy(drizzleSql`${spectralRecords.createdAt} DESC`);
-      res.json({ records, count: records.length });
+      const { videoUploads } = await import("@shared/schema");
+      const { sql: drizzleSql, desc } = await import("drizzle-orm");
+      const videos = await db.select({
+        id: videoUploads.id,
+        uploaderId: videoUploads.uploaderId,
+        uploaderName: videoUploads.uploaderName,
+        filename: videoUploads.filename,
+        mimeType: videoUploads.mimeType,
+        fileSize: videoUploads.fileSize,
+        duration: videoUploads.duration,
+        status: videoUploads.status,
+        createdAt: videoUploads.createdAt,
+      }).from(videoUploads)
+        .where(drizzleSql`${videoUploads.status} = 'ready'`)
+        .orderBy(desc(videoUploads.createdAt));
+      res.json({ videos, count: videos.length });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
