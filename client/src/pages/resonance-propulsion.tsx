@@ -6,7 +6,7 @@ import { Rocket, Zap, Atom, FlaskConical, History, BarChart3, AlertTriangle, Arr
 
 export default function ResonancePropulsionPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 p-4 md:p-8">
       <div className="max-w-7xl mx-auto mb-8">
         <Link href="/">
           <div className="inline-flex items-center gap-2 text-gray-400 hover:text-amber-400 transition-colors cursor-pointer mb-6" data-testid="link-back-home">
@@ -17,7 +17,7 @@ export default function ResonancePropulsionPage() {
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Rocket className="w-12 h-12 text-orange-400 animate-pulse" />
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent" data-testid="heading-main">
+            <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent" data-testid="heading-main">
               Resonance Propulsion
             </h1>
           </div>
