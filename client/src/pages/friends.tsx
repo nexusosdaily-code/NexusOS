@@ -252,8 +252,8 @@ export default function FriendsPage() {
                 <Input
                   id="phone"
                   data-testid="input-phone-number"
-                  type="tel"
-                  placeholder="Enter phone number"
+                  type="text"
+                  placeholder="Phone number or username"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   className="bg-slate-800/50 border-purple-500/30 text-white placeholder:text-slate-500"

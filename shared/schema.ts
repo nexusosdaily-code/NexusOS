@@ -301,7 +301,7 @@ export const transferSchema = z.object({
 });
 
 export const friendRequestSchema = z.object({
-  phoneNumber: z.string().min(10).max(20),
+  phoneNumber: z.string().min(3).max(40),
 });
 
 export const friendActionSchema = z.object({

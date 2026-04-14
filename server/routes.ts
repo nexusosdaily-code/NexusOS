@@ -839,11 +839,13 @@ export async function registerRoutes(
     try {
       if (!await checkRateLimit(req, res, "/api/friends/request", 20)) return;
 
-      const { phoneNumber } = req.body;
-      
-      const addressee = await storage.getUserByPhoneNumber(phoneNumber);
+      const { phoneNumber: query } = req.body;
+
+      const addressee =
+        await storage.getUserByPhoneNumber(query) ||
+        await storage.getUserByUsername(query);
       if (!addressee) {
-        return res.status(404).json({ error: "User not found with that phone number" });
+        return res.status(404).json({ error: "User not found — try their phone number or username" });
       }
 
       if (addressee.id === req.user!.id) {
