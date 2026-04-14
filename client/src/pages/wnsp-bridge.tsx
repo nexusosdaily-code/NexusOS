@@ -100,7 +100,7 @@ function SpectralVectorDisplay({ sv }: { sv: any }) {
       </div>
 
       {/* Metrics row */}
-      <div className="grid grid-cols-4 gap-2 text-xs font-mono">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
         <div className="bg-slate-900/60 rounded p-2">
           <div className="text-slate-600 mb-0.5">centroid</div>
           <div className="text-slate-300">{sv.centroid_nm?.toFixed(1)} nm</div>
@@ -869,7 +869,7 @@ function HilbertPanel() {
             </div>
           </div>
         )}
-        <div className="grid grid-cols-3 gap-3 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
           {[
             { label: "Total channels",   value: HILBERT_TOTAL.toLocaleString(), note: "orthogonal states" },
             { label: "WDM sub-space",    value: HILBERT_WDM.toString(),          note: "λ dimension" },
@@ -976,7 +976,7 @@ function DensityPanel() {
         </div>
         <div className="text-xs text-slate-500 font-mono mb-3">{hilbert?.channel_basis ?? "Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩"}</div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { label: "N\u03bb — WDM channels",      val: hilbert?.n_wdm   ?? 256,  color: "#8b5cf6", desc: "wavelength sub-space" },
             { label: "N\u200bOAM — orbital modes",   val: hilbert?.n_oam   ?? 50,   color: "#3b82f6", desc: "angular momentum sub-space" },
@@ -1195,11 +1195,11 @@ export default function WnspBridgePage() {
       </div>
 
       {/* Tab bar */}
-      <div className="border-b border-slate-800 px-4 sm:px-6">
-        <div className="max-w-5xl mx-auto flex gap-1">
+      <div className="border-b border-slate-800 px-4 sm:px-6 overflow-x-auto">
+        <div className="max-w-5xl mx-auto flex gap-1 min-w-max">
           {TABS.map(t => (
             <button key={t.key} onClick={() => setActiveTab(t.key)}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === t.key
                   ? "border-cyan-400 text-cyan-400"
                   : "border-transparent text-slate-500 hover:text-slate-300"
