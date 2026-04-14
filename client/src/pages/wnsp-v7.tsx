@@ -6,7 +6,7 @@ import { Zap, Waves, Atom, Shield, Lock, Unlock, RotateCcw, Orbit, Check, ArrowL
 
 export default function WNSPv7Page() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 p-4 md:p-8">
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-8">
         <Link href="/">
@@ -18,7 +18,7 @@ export default function WNSPv7Page() {
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Unlock className="w-12 h-12 text-green-400 animate-pulse" />
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
               WNSP v7.0
             </h1>
           </div>
