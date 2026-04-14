@@ -226,7 +226,7 @@ export default function Ecosystem() {
 
       {/* Summary bar */}
       {sum && (
-        <div className="border-b border-white/10 px-6 py-3 grid grid-cols-7 gap-3">
+        <div className="border-b border-white/10 px-4 sm:px-6 py-3 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
           {[
             { label: "Proof Coverage",    value: `${sum.proofCoverage}%`,             color: sum.proofCoverage === 100 ? "#4ade80" : "#fbbf24" },
             { label: "Blockchain Height", value: `#${sum.blockchainHeight}`,           color: "#8b5cf6" },
