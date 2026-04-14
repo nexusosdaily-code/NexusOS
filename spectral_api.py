@@ -1273,6 +1273,146 @@ def kernel_authority_check():
 
 
 # ═══════════════════════════════════════════════════════════════════
+#  SECTOR CONSTITUTIONAL CHANNEL MAP
+#  Each human industry sector is bound to a Ψ_channel derived from
+#  its authority rank and compression state on the Λ=hf/c² curve.
+#  Shorter wavelength = higher frequency = more energy = more authority.
+#  Orthogonality guarantees sectors never interfere at the physics layer.
+# ═══════════════════════════════════════════════════════════════════
+
+_h = 6.626e-34   # Planck constant (J·s)
+_c = 2.998e8     # Speed of light (m/s)
+
+def _sector_physics(wdm: int, oam: int, pol: int) -> dict:
+    nm  = VISIBLE_MIN_NM + (wdm / (HILBERT_DIM_WDM - 1)) * (VISIBLE_MAX_NM - VISIBLE_MIN_NM)
+    hz  = _c / (nm * 1e-9)
+    E_J = _h * hz
+    L_kg = E_J / (_c ** 2)
+    ch  = wdm * HILBERT_DIM_OAM * HILBERT_DIM_POL + oam * HILBERT_DIM_POL + pol
+    return {
+        "wdm": wdm, "oam": oam, "pol": pol,
+        "pol_label":    "H" if pol == 0 else "V",
+        "psi":          f"Ψ({wdm},{oam},{'H' if pol == 0 else 'V'})",
+        "uri":          f"wnsp://Ψ({wdm},{oam},{'H' if pol == 0 else 'V'})/",
+        "channel_index": ch,
+        "nm":           round(nm, 2),
+        "frequency_hz": round(hz, 2),
+        "energy_J":     E_J,
+        "lambda_mass_kg": L_kg,
+    }
+
+SECTOR_CHANNELS = [
+    {
+        "id": "defense",
+        "name": "Military & Sovereign Defense",
+        "band": "SYSTEM",
+        "authority_rank": 0,
+        "color": "#dc2626",
+        "description": "Sovereign security — geometrically inaccessible to lower-authority channels. Orthogonality is the security model.",
+        **_sector_physics(8, 0, 0),
+    },
+    {
+        "id": "governance",
+        "name": "Governance",
+        "band": "SYSTEM",
+        "authority_rank": 0,
+        "color": "#7c3aed",
+        "description": "Constitutional authority — planetary coordination, law, and Σ-field enhanced policy.",
+        **_sector_physics(35, 5, 0),
+    },
+    {
+        "id": "energy",
+        "name": "Energy",
+        "band": "KERNEL",
+        "authority_rank": 1,
+        "color": "#ca8a04",
+        "description": "Planetary-scale power generation, Schumann resonance harvesting, orbital solar, fusion photonics.",
+        **_sector_physics(75, 10, 0),
+    },
+    {
+        "id": "computing",
+        "name": "Computing",
+        "band": "KERNEL",
+        "authority_rank": 1,
+        "color": "#0891b2",
+        "description": "Photonic computation — Lambda Gate processors, OAM qubit registers, wavelength-division parallel processing.",
+        **_sector_physics(95, 15, 0),
+    },
+    {
+        "id": "communications",
+        "name": "Communications",
+        "band": "KERNEL",
+        "authority_rank": 1,
+        "color": "#16a34a",
+        "description": "Global wavelength routing mesh — spectral relay, OAM channel allocation, interplanetary link planning.",
+        **_sector_physics(115, 20, 0),
+    },
+    {
+        "id": "resources",
+        "name": "Resources",
+        "band": "USER",
+        "authority_rank": 2,
+        "color": "#ea580c",
+        "description": "Planetary materials and logistics — wavelength ledger, photonic manufacturing, optimal transport.",
+        **_sector_physics(140, 25, 0),
+    },
+    {
+        "id": "healthcare",
+        "name": "Healthcare",
+        "band": "USER",
+        "authority_rank": 2,
+        "color": "#be185d",
+        "description": "Biomedical systems — spectral diagnostics, pharmaceutical logistics, coherence-based treatment protocols.",
+        **_sector_physics(162, 30, 0),
+    },
+    {
+        "id": "education",
+        "name": "Education",
+        "band": "USER",
+        "authority_rank": 2,
+        "color": "#0284c7",
+        "description": "Knowledge distribution — spectral curriculum, open-access AGPL infrastructure, wavelength-addressed learning.",
+        **_sector_physics(182, 35, 0),
+    },
+    {
+        "id": "individual",
+        "name": "Individual / Personal",
+        "band": "GUEST",
+        "authority_rank": 3,
+        "color": "#6b7280",
+        "description": "Personal sovereignty — every human assigned a unique Ψ_channel derived from their identity compression state.",
+        **_sector_physics(235, 45, 0),
+    },
+]
+
+
+@app.route('/api/wnsp/sectors', methods=['GET'])
+def wnsp_sector_channels():
+    """
+    Return the constitutional sector-to-Ψ_channel binding.
+    Each human industry sector is assigned a unique orthogonal channel
+    derived from its authority rank on the Λ=hf/c² compression curve.
+    Sectors with higher authority (lower rank) occupy shorter wavelengths —
+    higher energy, higher governance weight, geometrically inaccessible
+    to lower-authority channels.
+    """
+    return jsonify({
+        "model":       "WNSP Sector Constitutional Map v1.0",
+        "principle":   "Compression state determines authority. Λ=hf/c².",
+        "orthogonality": "⟨Ψ_i | Ψ_j⟩ = 0 for all i ≠ j — sectors never interfere.",
+        "hilbert_dim": HILBERT_DIM_TOTAL,
+        "phase":       2,
+        "sectors":     SECTOR_CHANNELS,
+        "band_map": {
+            "SYSTEM":  {"wdm_range": "0–63",   "nm": "380–472 nm", "description": "Sovereign — violet/UV"},
+            "KERNEL":  {"wdm_range": "64–127",  "nm": "472–563 nm", "description": "Kernel authority — blue/cyan"},
+            "USER":    {"wdm_range": "128–191", "nm": "563–655 nm", "description": "User authority — green/yellow/orange"},
+            "GUEST":   {"wdm_range": "192–255", "nm": "655–750 nm", "description": "Public access — red"},
+        },
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════
 #  KERNEL COMPONENT 4 — INTERRUPT / EVENT SYSTEM
 # ═══════════════════════════════════════════════════════════════════
 

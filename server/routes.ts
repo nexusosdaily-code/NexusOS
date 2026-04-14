@@ -1325,6 +1325,10 @@ export async function registerRoutes(
     secureProxyToSpectralAPI(req, res, "/api/wnsp/protocol");
   });
 
+  app.get("/api/wnsp/sectors", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/sectors");
+  });
+
   // WNSP-CE Layer 1: Character Encoding Standard (semantic layer)
   app.post("/api/wnsp/ce/encode", optionalAuth, (req, res) => {
     secureProxyToSpectralAPI(req, res, "/api/wnsp/ce/encode");
