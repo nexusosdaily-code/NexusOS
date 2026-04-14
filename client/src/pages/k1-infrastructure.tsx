@@ -674,7 +674,7 @@ export default function K1InfrastructurePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
           {K1_PILLARS.map(pillar => (
             <PillarCard 
               key={pillar.id} 
@@ -686,7 +686,8 @@ export default function K1InfrastructurePage() {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-slate-900/50">
+          <div className="overflow-x-auto pb-1">
+          <TabsList className="grid min-w-[480px] w-full grid-cols-5 bg-slate-900/50">
             <TabsTrigger value="overview" data-testid="tab-overview">
               <Globe className="w-4 h-4 mr-2" /> Overview
             </TabsTrigger>
@@ -703,6 +704,7 @@ export default function K1InfrastructurePage() {
               <Play className="w-4 h-4 mr-2" /> Demo
             </TabsTrigger>
           </TabsList>
+          </div>
 
           <TabsContent value="overview" className="space-y-6">
             <Card className="bg-slate-900/50 border-cyan-500/30 p-6">
