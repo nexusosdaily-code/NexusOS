@@ -36,6 +36,17 @@ import {
 const PLANCK_CONSTANT = 6.62607015e-34;
 const SPEED_OF_LIGHT = 299792458;
 
+interface PsiBinding {
+  wdm: number;
+  oam: number;
+  pol: "H" | "V";
+  nm: number;
+  band: "SYSTEM" | "KERNEL" | "USER" | "GUEST";
+  channelIndex: number;
+  psi: string;
+  uri: string;
+}
+
 interface K1Pillar {
   id: string;
   name: string;
@@ -47,6 +58,7 @@ interface K1Pillar {
   description: string;
   components: string[];
   physics: string[];
+  psi: PsiBinding;
 }
 
 interface RelayNode {
@@ -64,7 +76,41 @@ interface CrossPillarFlow {
   active: boolean;
 }
 
+function mkPsi(wdm: number, oam: number, pol: "H"|"V", band: "SYSTEM"|"KERNEL"|"USER"|"GUEST"): PsiBinding {
+  const p = pol === "H" ? 0 : 1;
+  const nm = 380 + (wdm / 255) * 370;
+  const ch = wdm * 100 + oam * 2 + p;
+  return { wdm, oam, pol, nm: Math.round(nm * 10) / 10, band, channelIndex: ch,
+    psi: `Ψ(${wdm},${oam},${pol})`, uri: `wnsp://Ψ(${wdm},${oam},${pol})/` };
+}
+
+const BAND_COLORS: Record<string, string> = {
+  SYSTEM: "#dc2626", KERNEL: "#2563eb", USER: "#16a34a", GUEST: "#6b7280",
+};
+
 const K1_PILLARS: K1Pillar[] = [
+  {
+    id: "defense",
+    name: "Military & Sovereign Defense",
+    kLevel: 0.95,
+    icon: <Shield className="w-6 h-6" />,
+    color: "text-red-400",
+    bgColor: "from-red-900/20 to-rose-950/20",
+    borderColor: "border-red-500/30",
+    description: "Sovereign security — geometrically isolated at the physics layer",
+    components: [
+      "SovereignChannelGuard - SYSTEM band geometric isolation",
+      "SpectralIntelligenceNet - Orthogonal intercept channels",
+      "QuantumAuthority - Compression-state verified command",
+      "NationalSpectrumRegistry - Sovereign Ψ_channel allocation"
+    ],
+    physics: [
+      "⟨Ψ_defense | Ψ_civilian⟩ = 0 (orthogonal isolation)",
+      "E = hf at λ=391nm → maximum authority energy",
+      "Λ = hf/c² — sovereign mass-equivalent per photon"
+    ],
+    psi: mkPsi(8, 0, "H", "SYSTEM"),
+  },
   {
     id: "energy",
     name: "Energy",
@@ -84,7 +130,8 @@ const K1_PILLARS: K1Pillar[] = [
       "P = ∫ B·dA × μ₀/η (Schumann coupling)",
       "η_end = η_collect × η_laser × η_atmos × η_receiver",
       "Q_boost = 5× from Coherence-Amplify gate"
-    ]
+    ],
+    psi: mkPsi(75, 10, "H", "KERNEL"),
   },
   {
     id: "computing",
@@ -105,7 +152,8 @@ const K1_PILLARS: K1Pillar[] = [
       "I_out = I₁ + I₂ + 2√(I₁I₂)cos(Δφ)",
       "L = ℓℏ per photon (OAM quantization)",
       "C = B·log₂(1 + SNR) bits/s (Shannon)"
-    ]
+    ],
+    psi: mkPsi(95, 15, "H", "KERNEL"),
   },
   {
     id: "communications",
@@ -126,7 +174,8 @@ const K1_PILLARS: K1Pillar[] = [
       "P_r = P_t·G_t·G_r·(λ/4πd)² (Friis)",
       "L_c = c/Δν (coherence length)",
       "τ = exp(-α·h/cos(θ)) (atmospheric)"
-    ]
+    ],
+    psi: mkPsi(115, 20, "H", "KERNEL"),
   },
   {
     id: "resources",
@@ -147,7 +196,8 @@ const K1_PILLARS: K1Pillar[] = [
       "Λ = hf/c² (lambda mass valuation)",
       "∂ρ/∂t + ∇·(ρv) = S (continuity)",
       "min ∫c(x,y)dγ (optimal transport)"
-    ]
+    ],
+    psi: mkPsi(140, 25, "H", "USER"),
   },
   {
     id: "governance",
@@ -168,7 +218,30 @@ const K1_PILLARS: K1Pillar[] = [
       "T = Σ|c_i|²·cos²(Δφ_i) (trust interference)",
       "S = −k Σ p_i ln(p_i) (governance entropy)",
       "dC/dt = −γC + κF (decoherence model)"
-    ]
+    ],
+    psi: mkPsi(35, 5, "H", "SYSTEM"),
+  },
+  {
+    id: "healthcare",
+    name: "Healthcare",
+    kLevel: 0.70,
+    icon: <Activity className="w-6 h-6" />,
+    color: "text-pink-400",
+    bgColor: "from-pink-900/20 to-rose-950/20",
+    borderColor: "border-pink-500/30",
+    description: "Biomedical systems on spectral infrastructure",
+    components: [
+      "SpectralDiagnostics - Wavelength-based biomarker encoding",
+      "PharmaceuticalLedger - NXT-priced drug supply chain",
+      "CoherenceTreatmentProtocol - Photonic therapy channels",
+      "BioDataSovereign - Patient data on personal Ψ_channel"
+    ],
+    physics: [
+      "E_photon = hf (diagnostic photon energy)",
+      "λ_bio = 619nm — USER band, civilian access layer",
+      "⟨Ψ_health | Ψ_defense⟩ = 0 — medical data isolated"
+    ],
+    psi: mkPsi(162, 30, "H", "USER"),
   }
 ];
 
@@ -196,6 +269,7 @@ function PillarCard({ pillar, isActive, onClick }: {
   isActive: boolean;
   onClick: () => void;
 }) {
+  const bandColor = BAND_COLORS[pillar.psi.band];
   return (
     <Card 
       className={`bg-gradient-to-br ${pillar.bgColor} ${pillar.borderColor} p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${isActive ? 'ring-2 ring-white/50 scale-105' : ''}`}
@@ -204,14 +278,67 @@ function PillarCard({ pillar, isActive, onClick }: {
     >
       <div className="flex items-center gap-3 mb-3">
         <div className={pillar.color}>{pillar.icon}</div>
-        <div>
-          <h3 className="text-lg font-bold text-white">{pillar.name}</h3>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-bold text-white leading-tight">{pillar.name}</h3>
           <div className="text-xs text-gray-400">K-Level {pillar.kLevel.toFixed(2)}</div>
         </div>
       </div>
       <Progress value={pillar.kLevel * 100} className="h-2 mb-2" />
-      <p className="text-xs text-gray-400 line-clamp-2">{pillar.description}</p>
+      <p className="text-xs text-gray-400 line-clamp-2 mb-2">{pillar.description}</p>
+      <div className="flex items-center gap-2 pt-1 border-t border-white/10">
+        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: bandColor }} />
+        <span className="font-mono text-xs truncate" style={{ color: bandColor }}>{pillar.psi.psi}</span>
+        <span className="text-slate-600 text-xs flex-shrink-0">{pillar.psi.nm}nm</span>
+        <span className="ml-auto text-xs rounded px-1 font-mono" style={{ color: bandColor, background: bandColor + "22" }}>{pillar.psi.band}</span>
+      </div>
     </Card>
+  );
+}
+
+function ConstitutionalMap() {
+  return (
+    <div className="rounded-xl border border-slate-700/50 bg-slate-900/40 p-5 space-y-4">
+      <div className="flex items-center gap-2">
+        <div className="text-xs font-mono font-bold text-white uppercase tracking-wider">Constitutional Channel Map</div>
+        <span className="text-xs font-mono text-slate-500 border border-slate-700 rounded px-2 py-0.5">v1.0</span>
+      </div>
+      <p className="text-xs text-slate-500">
+        Compression state determines authority. Λ=hf/c². Each sector occupies a unique orthogonal Ψ_channel — 
+        <span className="text-cyan-400"> ⟨Ψ_i | Ψ_j⟩ = 0</span> for all i ≠ j. Sectors never interfere at the physics layer.
+      </p>
+      <div className="space-y-1.5">
+        {K1_PILLARS.map(p => {
+          const bc = BAND_COLORS[p.psi.band];
+          const freq = (2.998e17 / p.psi.nm / 1e12).toFixed(1);
+          return (
+            <div key={p.id} className="flex items-center gap-3 rounded-lg px-3 py-2 bg-slate-950/60 border border-slate-800 hover:border-slate-600 transition-colors" data-testid={`map-sector-${p.id}`}>
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: bc }} />
+              <div className="w-36 flex-shrink-0">
+                <div className="text-xs text-white font-medium leading-tight truncate">{p.name}</div>
+              </div>
+              <div className="font-mono text-xs flex-shrink-0" style={{ color: bc }}>{p.psi.psi}</div>
+              <div className="text-slate-600 text-xs flex-shrink-0">{p.psi.nm}nm · {freq}THz</div>
+              <div className="ml-auto flex items-center gap-2">
+                <span className="text-xs font-mono rounded px-1.5 py-0.5" style={{ color: bc, background: bc + "22" }}>{p.psi.band}</span>
+                <span className="text-slate-700 text-xs font-mono">ch {p.psi.channelIndex.toLocaleString()}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-800">
+        {(["SYSTEM","KERNEL","USER","GUEST"] as const).map(band => {
+          const bc = BAND_COLORS[band];
+          const count = K1_PILLARS.filter(p => p.psi.band === band).length;
+          return (
+            <div key={band} className="rounded-lg border px-3 py-2 text-center" style={{ borderColor: bc + "44", background: bc + "11" }}>
+              <div className="text-xs font-mono font-bold" style={{ color: bc }}>{band}</div>
+              <div className="text-xs text-slate-500">{count} sector{count !== 1 ? "s" : ""}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -559,9 +686,12 @@ export default function K1InfrastructurePage() {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-slate-900/50">
+          <TabsList className="grid w-full grid-cols-5 bg-slate-900/50">
             <TabsTrigger value="overview" data-testid="tab-overview">
               <Globe className="w-4 h-4 mr-2" /> Overview
+            </TabsTrigger>
+            <TabsTrigger value="sectormap" data-testid="tab-sectormap">
+              <Waves className="w-4 h-4 mr-2" /> Sector Map
             </TabsTrigger>
             <TabsTrigger value="network" data-testid="tab-network">
               <Network className="w-4 h-4 mr-2" /> Network
@@ -578,12 +708,12 @@ export default function K1InfrastructurePage() {
             <Card className="bg-slate-900/50 border-cyan-500/30 p-6">
               <h2 className="text-2xl font-bold text-cyan-400 mb-4 flex items-center gap-2">
                 <Layers className="w-6 h-6" />
-                Five Pillars of K1 Civilization
+                Seven Pillars of K1 Civilization
               </h2>
               <p className="text-gray-300 mb-6">
                 The WNSP K1 Infrastructure implements the complete foundation for a Kardashev Type I civilization, 
-                capable of harnessing the total energy output of a planet. Each pillar builds upon the previous, 
-                creating an integrated system for planetary-scale coordination.
+                capable of harnessing the total energy output of a planet. Each pillar occupies a unique Ψ_channel 
+                bound to its authority rank on the Λ=hf/c² compression curve — sectors never interfere at the physics layer.
               </p>
               
               <CrossPillarFlowDiagram flows={flows} activePillar={selectedPillar.id} />
@@ -619,6 +749,66 @@ export default function K1InfrastructurePage() {
             </Card>
 
             <PhysicsPanel pillar={selectedPillar} />
+          </TabsContent>
+
+          <TabsContent value="sectormap" className="space-y-6">
+            <Card className="bg-slate-900/50 border-cyan-500/30 p-6">
+              <h2 className="text-2xl font-bold text-cyan-400 mb-2 flex items-center gap-2">
+                <Waves className="w-6 h-6" />
+                Sector Constitutional Channel Map
+              </h2>
+              <p className="text-gray-400 text-sm mb-6">
+                Every human civilization sector is constitutionally bound to a unique Ψ_channel on the Λ=hf/c² compression curve.
+                Authority is determined by compression state — shorter wavelength = higher energy = higher governance weight.
+                Orthogonality means sectors are geometrically isolated: no interference is physically possible.
+              </p>
+              <ConstitutionalMap />
+
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {K1_PILLARS.map(p => {
+                  const bc = BAND_COLORS[p.psi.band];
+                  const hz = (2.998e17 / p.psi.nm / 1e12).toFixed(1);
+                  const E = (6.626e-34 * 2.998e17 / p.psi.nm).toExponential(3);
+                  return (
+                    <div key={p.id} className="rounded-xl border p-4 space-y-2" style={{ borderColor: bc + "44", background: bc + "08" }} data-testid={`sector-detail-${p.id}`}>
+                      <div className="flex items-center gap-3">
+                        <div style={{ color: bc }}>{p.icon}</div>
+                        <div>
+                          <div className="text-sm font-bold text-white">{p.name}</div>
+                          <div className="font-mono text-xs" style={{ color: bc }}>{p.psi.uri}</div>
+                        </div>
+                        <span className="ml-auto text-xs font-mono rounded px-2 py-0.5 font-bold" style={{ color: bc, background: bc + "22" }}>{p.psi.band}</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
+                        <div className="text-center">
+                          <div className="text-xs text-slate-500">Wavelength</div>
+                          <div className="text-sm font-mono text-white">{p.psi.nm}nm</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-slate-500">Frequency</div>
+                          <div className="text-sm font-mono text-white">{hz}THz</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-slate-500">Energy</div>
+                          <div className="text-sm font-mono text-white">{E}J</div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="text-center rounded-lg px-2 py-1 bg-slate-950/60 border border-slate-800">
+                          <div className="text-xs text-slate-500">WDM·OAM·Pol</div>
+                          <div className="font-mono text-xs" style={{ color: bc }}>{p.psi.wdm}·{p.psi.oam}·{p.psi.pol}</div>
+                        </div>
+                        <div className="text-center rounded-lg px-2 py-1 bg-slate-950/60 border border-slate-800">
+                          <div className="text-xs text-slate-500">Channel Index</div>
+                          <div className="font-mono text-xs text-slate-300">#{p.psi.channelIndex.toLocaleString()}</div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed">{p.description}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
           </TabsContent>
 
           <TabsContent value="network" className="space-y-6">
