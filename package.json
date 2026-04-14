@@ -44,6 +44,7 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-query": "^5.60.5",
+    "@tootallnate/once": "^3.0.1",
     "@types/bcrypt": "^6.0.0",
     "@types/multer": "^2.1.0",
     "@uppy/aws-s3": "^5.1.0",
@@ -111,7 +112,7 @@
     "tailwindcss": "^4.1.14",
     "tsx": "^4.20.5",
     "typescript": "5.6.3",
-    "vite": "^7.1.9"
+    "vite": "^7.3.2"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
