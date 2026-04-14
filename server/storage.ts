@@ -433,10 +433,26 @@ export class DatabaseStorage implements IStorage {
   // ============================================
 
   async getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
-    const result = await db.select().from(users)
-      .where(eq(users.phoneNumber, phoneNumber))
-      .limit(1);
-    return result[0];
+    const stripped = phoneNumber.replace(/[\s\-\(\)\.]/g, "");
+    const variants: string[] = [stripped, phoneNumber.trim()];
+    if (stripped.startsWith("0") && stripped.length >= 9) {
+      variants.push("+61" + stripped.slice(1));
+      variants.push("+61 " + stripped.slice(1));
+    }
+    if (stripped.startsWith("+61")) {
+      variants.push("0" + stripped.slice(3));
+    }
+    if (stripped.startsWith("61") && !stripped.startsWith("+")) {
+      variants.push("+" + stripped);
+      variants.push("0" + stripped.slice(2));
+    }
+    for (const v of [...new Set(variants)]) {
+      const result = await db.select().from(users)
+        .where(eq(users.phoneNumber, v))
+        .limit(1);
+      if (result[0]) return result[0];
+    }
+    return undefined;
   }
 
   async sendFriendRequest(requesterId: string, addresseeId: string): Promise<Friendship> {
