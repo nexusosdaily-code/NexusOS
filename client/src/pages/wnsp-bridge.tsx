@@ -596,6 +596,318 @@ function BridgeSpec() {
   );
 }
 
+// ── Hilbert Space Explorer ─────────────────────────────────────────────────────
+const VISIBLE_MIN_NM = 380;
+const VISIBLE_MAX_NM = 750;
+const HILBERT_WDM = 256;
+const HILBERT_OAM = 50;
+const HILBERT_POL = 2;
+const HILBERT_TOTAL = HILBERT_WDM * HILBERT_OAM * HILBERT_POL; // 25,600
+
+function wdmToNm(wdm: number) {
+  return VISIBLE_MIN_NM + (wdm / (HILBERT_WDM - 1)) * (VISIBLE_MAX_NM - VISIBLE_MIN_NM);
+}
+function wdmToColor(wdm: number) {
+  const t = wdm / (HILBERT_WDM - 1);
+  if (t < 0.15) return "#8b5cf6";
+  if (t < 0.30) return "#6366f1";
+  if (t < 0.50) return "#3b82f6";
+  if (t < 0.65) return "#22c55e";
+  if (t < 0.80) return "#eab308";
+  if (t < 0.90) return "#f97316";
+  return "#ef4444";
+}
+function channelIndex(wdm: number, oam: number, pol: number) {
+  return wdm * HILBERT_OAM * HILBERT_POL + oam * HILBERT_POL + pol;
+}
+
+function HilbertPanel() {
+  const [wdm, setWdm] = useState(114);
+  const [oam, setOam] = useState(24);
+  const [pol, setPol] = useState(0);
+
+  const nm   = wdmToNm(wdm);
+  const freq = 2.998e8 / (nm * 1e-9);
+  const h    = 6.626e-34;
+  const c    = 2.998e8;
+  const E_J  = h * freq;
+  const L_kg = E_J / (c * c);
+  const chIdx = channelIndex(wdm, oam, pol);
+  const col   = wdmToColor(wdm);
+  const psiLabel = `Ψ(${wdm},${oam},${pol === 0 ? "H" : "V"})`;
+
+  const { data: ortho } = useQuery<any>({
+    queryKey: ["/api/wnsp/se/orthogonality"],
+    queryFn: () => fetch("/api/wnsp/se/orthogonality").then(r => r.json()),
+    staleTime: 600000,
+  });
+
+  const spectrumBands = Array.from({ length: 32 }, (_, i) => i * 8);
+
+  return (
+    <div className="space-y-6">
+
+      {/* Header */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 space-y-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="text-cyan-400 font-mono font-bold text-sm">Hilbert Space Explorer</div>
+          <Badge variant="outline" className="text-xs border-cyan-800/50 text-cyan-500 font-mono">dim(H) = 25,600</Badge>
+          <Badge variant="outline" className="text-xs border-violet-800/50 text-violet-400 font-mono">256 × 50 × 2</Badge>
+        </div>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          Three orthogonal quantum sub-spaces form the complete WNSP channel basis.
+          Any two distinct Ψ channels satisfy{" "}
+          <span className="text-cyan-400 font-mono">⟨Ψ_i | Ψ_j⟩ = 0</span> — they never interfere.
+          Navigate the space below, then read your channel's compression-state physics.
+        </p>
+        <div className="font-mono text-sm text-white bg-slate-950 rounded-lg px-4 py-2.5 border border-slate-700">
+          Ψ_channel = |λ<sub className="text-violet-400">i</sub>⟩ ⊗ |OAM<sub className="text-blue-400">j</sub>⟩ ⊗ |Pol<sub className="text-emerald-400">k</sub>⟩
+        </div>
+      </div>
+
+      {/* Three dimension panels */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+        {/* WDM */}
+        <div className="rounded-xl border border-violet-800/40 bg-slate-900/30 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full" style={{ background: col }}></div>
+            <span className="text-xs font-mono font-semibold text-violet-300">N_λ — WDM Channels</span>
+          </div>
+          <div className="text-3xl font-bold font-mono text-violet-300">{HILBERT_WDM}</div>
+          <p className="text-xs text-slate-500">
+            Each band is a distinct compression state on the Λ=hf/c² curve.
+            Shorter λ → higher frequency → more energy per photon.
+          </p>
+          <input
+            type="range" min={0} max={255} value={wdm}
+            onChange={e => setWdm(Number(e.target.value))}
+            className="w-full accent-violet-500 h-1.5"
+            data-testid="slider-wdm"
+          />
+          <div className="font-mono text-xs text-violet-400">
+            |λ<sub>{wdm}</sub>⟩ · band {wdm} → {nm.toFixed(1)} nm
+          </div>
+        </div>
+
+        {/* OAM */}
+        <div className="rounded-xl border border-blue-800/40 bg-slate-900/30 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+            <span className="text-xs font-mono font-semibold text-blue-300">N_OAM — Angular Modes</span>
+          </div>
+          <div className="text-3xl font-bold font-mono text-blue-300">{HILBERT_OAM}</div>
+          <p className="text-xs text-slate-500">
+            Photons carry quantised orbital angular momentum ℓ = 0…49.
+            Completely orthogonal to wavelength — same photon, different spin state.
+          </p>
+          <input
+            type="range" min={0} max={49} value={oam}
+            onChange={e => setOam(Number(e.target.value))}
+            className="w-full accent-blue-500 h-1.5"
+            data-testid="slider-oam"
+          />
+          <div className="font-mono text-xs text-blue-400">
+            |OAM<sub>{oam}</sub>⟩ · mode ℓ = {oam}
+          </div>
+        </div>
+
+        {/* Pol */}
+        <div className="rounded-xl border border-emerald-800/40 bg-slate-900/30 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+            <span className="text-xs font-mono font-semibold text-emerald-300">N_Pol — Polarisation</span>
+          </div>
+          <div className="text-3xl font-bold font-mono text-emerald-300">{HILBERT_POL}</div>
+          <p className="text-xs text-slate-500">
+            Horizontal and vertical polarisation states. Third orthogonal axis —
+            independent of both λ and OAM. Doubles every channel.
+          </p>
+          <div className="flex gap-2 pt-1">
+            {["H — Horizontal", "V — Vertical"].map((label, i) => (
+              <button
+                key={label}
+                onClick={() => setPol(i)}
+                data-testid={`pol-${i === 0 ? "H" : "V"}`}
+                className={`flex-1 py-2 rounded text-xs font-mono font-bold border transition-colors
+                  ${pol === i
+                    ? "border-emerald-500 bg-emerald-900/40 text-emerald-300"
+                    : "border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-400"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="font-mono text-xs text-emerald-400">
+            |Pol<sub>{pol}</sub>⟩ · {pol === 0 ? "H (horizontal)" : "V (vertical)"}
+          </div>
+        </div>
+      </div>
+
+      {/* Derived Ψ channel */}
+      <div className="rounded-xl border bg-slate-950 p-5 space-y-4" style={{ borderColor: col + "55" }}>
+        <div className="text-xs font-mono font-semibold uppercase tracking-wider text-slate-400">Selected Channel</div>
+        <div className="font-mono text-lg sm:text-xl text-white">
+          Ψ<sub style={{ color: col }}>ch</sub>{" "}={" "}
+          |λ<sub className="text-violet-300">{wdm}</sub>⟩ ⊗{" "}
+          |OAM<sub className="text-blue-300">{oam}</sub>⟩ ⊗{" "}
+          |Pol<sub className="text-emerald-300">{pol === 0 ? "H" : "V"}</sub>⟩
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "Channel Index", value: chIdx.toLocaleString(), color: col },
+            { label: "Wavelength",    value: `${nm.toFixed(2)} nm`,  color: "#a78bfa" },
+            { label: "E = hf",        value: `${E_J.toExponential(2)} J`, color: "#f59e0b" },
+            { label: "Λ = hf/c²",     value: `${L_kg.toExponential(2)} kg`, color: "#f43f5e" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+              <div className="text-xs text-slate-500 font-mono mb-1">{label}</div>
+              <div className="font-mono font-bold text-sm" style={{ color }}>{value}</div>
+            </div>
+          ))}
+        </div>
+        <div className="font-mono text-xs text-slate-600">
+          WNSP-URI: <span className="text-cyan-500">wnsp://{psiLabel}/</span>
+        </div>
+      </div>
+
+      {/* WDM spectrum bar */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4 space-y-3">
+        <div className="text-xs font-mono text-slate-400 font-semibold">WDM Spectrum — visible light 380→750 nm</div>
+        <div className="flex rounded overflow-hidden h-5 w-full" data-testid="spectrum-bar">
+          {spectrumBands.map(b => (
+            <div
+              key={b}
+              onClick={() => setWdm(b)}
+              title={`WDM ${b} · ${wdmToNm(b).toFixed(0)} nm`}
+              className="flex-1 cursor-pointer transition-all hover:opacity-80"
+              style={{
+                background: wdmToColor(b),
+                opacity: Math.abs(b - wdm) <= 4 ? 1 : 0.45,
+                outline: Math.abs(b - wdm) <= 4 ? "2px solid white" : "none",
+                outlineOffset: "-2px",
+              }}
+            />
+          ))}
+        </div>
+        <div className="flex justify-between text-xs text-slate-600 font-mono">
+          <span>380 nm · violet</span>
+          <span>← WDM {wdm} · {nm.toFixed(1)} nm →</span>
+          <span>750 nm · red</span>
+        </div>
+      </div>
+
+      {/* OAM × Pol grid for selected WDM band */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4 space-y-3">
+        <div className="text-xs font-mono text-slate-400 font-semibold">
+          OAM × Pol grid — WDM band {wdm} ({nm.toFixed(0)} nm)
+          <span className="text-slate-600 ml-2">100 channels per WDM band</span>
+        </div>
+        <div className="overflow-x-auto">
+          <div className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${HILBERT_OAM}, minmax(0, 1fr))`, minWidth: "600px" }}>
+            {[0, 1].map(p =>
+              Array.from({ length: HILBERT_OAM }, (_, o) => {
+                const isActive = o === oam && p === pol;
+                const idx = channelIndex(wdm, o, p);
+                return (
+                  <div
+                    key={`${o}-${p}`}
+                    onClick={() => { setOam(o); setPol(p); }}
+                    title={`Ψ(${wdm},${o},${p === 0 ? "H" : "V"}) · ch${idx}`}
+                    data-testid={`channel-${wdm}-${o}-${p}`}
+                    className="h-3 rounded-sm cursor-pointer transition-all hover:opacity-100"
+                    style={{
+                      background: isActive ? "#fff" : col,
+                      opacity: isActive ? 1 : 0.3,
+                      gridRow: p + 1,
+                      gridColumn: o + 1,
+                    }}
+                  />
+                );
+              })
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-4 text-xs text-slate-600 font-mono">
+          <span>Row 1 = H · Row 2 = V · Columns = OAM modes 0–49</span>
+          <span className="text-white">■</span><span>= selected channel</span>
+        </div>
+      </div>
+
+      {/* Orthogonality proof */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="text-xs font-mono font-semibold text-slate-300">Orthogonality Proof</div>
+          {ortho?.sample_validated && (
+            <Badge variant="outline" className="text-xs border-emerald-700 text-emerald-400 font-mono">✓ VALIDATED</Badge>
+          )}
+        </div>
+        <div className="font-mono text-sm text-cyan-400 bg-slate-950 px-4 py-3 rounded-lg border border-slate-800">
+          ⟨Ψ_i | Ψ_j⟩ = 0 &nbsp; for all i ≠ j
+        </div>
+        <p className="text-xs text-slate-500">
+          {ortho?.proof ?? "Each channel is a unique tensor-product basis vector. Distinct (wdm_i, oam_j, pol_k) triplets are orthogonal by construction."}
+        </p>
+        {ortho?.sample_channels && (
+          <div className="space-y-1">
+            <div className="text-xs text-slate-600 font-mono mb-2">
+              Sample — {ortho.sample_size} channels checked, all unique:
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              {ortho.sample_channels.map((ch: any) => (
+                <div
+                  key={ch.index}
+                  className="font-mono text-xs rounded px-3 py-1.5 border border-slate-800 bg-slate-950 text-slate-400 flex items-center justify-between cursor-pointer hover:border-slate-600 transition-colors"
+                  onClick={() => { setWdm(ch.wdm_i); setOam(ch.oam_j); setPol(ch.pol_k); }}
+                  data-testid={`ortho-sample-${ch.index}`}
+                  title="Click to navigate to this channel"
+                >
+                  <span className="text-cyan-400">Ψ({ch.wdm_i},{ch.oam_j},{ch.pol_k === 0 ? "H" : "V"})</span>
+                  <span className="text-slate-600">ch {ch.index.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="grid grid-cols-3 gap-3 pt-1">
+          {[
+            { label: "Total channels",   value: HILBERT_TOTAL.toLocaleString(), note: "orthogonal states" },
+            { label: "WDM sub-space",    value: HILBERT_WDM.toString(),          note: "λ dimension" },
+            { label: "OAM × Pol",        value: `${HILBERT_OAM} × ${HILBERT_POL}`, note: "= 100 per band" },
+          ].map(({ label, value, note }) => (
+            <div key={label} className="rounded-lg border border-slate-800 bg-slate-950 p-3 space-y-1">
+              <div className="text-xs text-slate-500 font-mono">{label}</div>
+              <div className="text-xl font-bold font-mono text-white">{value}</div>
+              <div className="text-xs text-slate-600">{note}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Shannon vs WNSP */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-5 space-y-3">
+        <div className="text-xs font-mono text-slate-400 font-semibold">Shannon vs WNSP — Scaling Law</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="rounded-lg border border-amber-900/40 bg-slate-950 p-4 space-y-2">
+            <div className="text-xs text-amber-400 font-mono font-semibold">Shannon (classical)</div>
+            <div className="font-mono text-sm text-white">C = B · log₂(1 + SNR)</div>
+            <p className="text-xs text-slate-500">Squeezes more into one channel. Hits logarithmic diminishing returns. More signal power = less gain.</p>
+          </div>
+          <div className="rounded-lg border border-cyan-900/40 bg-slate-950 p-4 space-y-2">
+            <div className="text-xs text-cyan-400 font-mono font-semibold">WNSP (orthogonal)</div>
+            <div className="font-mono text-sm text-white">D = N_λ · N_OAM · N_Pol · R · M</div>
+            <p className="text-xs text-slate-500">Opens new orthogonal dimensions. Scales linearly with each axis. No SNR wall.</p>
+          </div>
+        </div>
+        <div className="font-mono text-xs text-slate-600 text-center pt-1">
+          256 WDM × 50 OAM × 2 Pol = <span className="text-cyan-400">{HILBERT_TOTAL.toLocaleString()} orthogonal channels</span> — each a non-interfering lane
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 // ── WNSP Density Equation panel ───────────────────────────────────────────────
 function DensityPanel() {
   const [rSym, setRSym] = useState(2);
@@ -818,7 +1130,7 @@ function DensityPanel() {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function WnspBridgePage() {
-  const [activeTab, setActiveTab] = useState<"identity"|"resolver"|"density"|"registry"|"spec">("identity");
+  const [activeTab, setActiveTab] = useState<"identity"|"resolver"|"hilbert"|"density"|"registry"|"spec">("identity");
   const token = localStorage.getItem("auth_token");
 
   const { data: meData } = useQuery<{ user: { id: string; username: string } }>({
@@ -836,6 +1148,7 @@ export default function WnspBridgePage() {
   const TABS: { key: typeof activeTab; label: string; icon: React.ReactNode }[] = [
     { key: "identity", label: "My Identity",  icon: <UserCircle className="w-3.5 h-3.5" /> },
     { key: "resolver", label: "CE→SE Live",   icon: <Zap className="w-3.5 h-3.5" /> },
+    { key: "hilbert",  label: "Hilbert Space", icon: <Waves className="w-3.5 h-3.5" /> },
     { key: "density",  label: "Density Eq.",  icon: <Activity className="w-3.5 h-3.5" /> },
     { key: "registry", label: "Registry",     icon: <Database className="w-3.5 h-3.5" /> },
     { key: "spec",     label: "Bridge Spec",  icon: <Code2 className="w-3.5 h-3.5" /> },
@@ -944,6 +1257,7 @@ export default function WnspBridgePage() {
         )}
 
         {activeTab === "resolver" && <LiveResolver />}
+        {activeTab === "hilbert"  && <HilbertPanel />}
         {activeTab === "density"  && <DensityPanel />}
         {activeTab === "registry" && <RegistryTable />}
         {activeTab === "spec"     && <BridgeSpec />}
