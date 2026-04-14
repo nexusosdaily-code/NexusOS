@@ -92,7 +92,7 @@ export default function AnnouncementsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
               { icon: <Layers className="w-5 h-5" />, title: "7-Layer Protocol Stack", desc: "From physical layer to application layer", color: "cyan" },
-              { icon: <Waves className="w-5 h-5" />, title: "Wavelength Encoding", desc: "100 WDM channels across visible spectrum", color: "blue" },
+              { icon: <Waves className="w-5 h-5" />, title: "Wavelength Encoding", desc: "256 WDM channels across visible spectrum — Phase 2 active", color: "blue" },
               { icon: <Radio className="w-5 h-5" />, title: "OAM Multiplexing", desc: "8 orthogonal angular momentum modes (800+ channels total)", color: "purple" },
               { icon: <Shield className="w-5 h-5" />, title: "7-Band Authority Spectrum", desc: "NANO → MICRO → MILLI → BASE → KILO → MEGA → GIGA", color: "green" },
               { icon: <Zap className="w-5 h-5" />, title: "PoSPECTRUM Consensus", desc: "Proof-of-Spectrum replacing wasteful proof-of-work", color: "amber" },

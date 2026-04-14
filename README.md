@@ -154,7 +154,7 @@ D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
 | R_sym | Symbols per channel per cycle | 2 |
 | M | Modulation depth | 1 |
 
-**Current density: 51,200 symbols/cycle** (Phase 1 uses 100 WDM: 20,000 symbols/cycle)
+**Phase 2 active — 51,200 symbols/cycle** (256 WDM × 50 × 2 × R₂ × M₁ · Phase 1 at 100 WDM: 20,000 symbols/cycle was the baseline)
 
 This is not Shannon capacity. Shannon compresses more into one channel and hits logarithmic diminishing returns. WNSP expands into orthogonal dimensions and scales linearly with each:
 
@@ -417,7 +417,7 @@ That requires:
 - Physics-based energy accounting (Λ = hf/c² across all transactions)
 - An open, non-proprietary OS standard (AGPL-3.0)
 
-All four are specified and partially implemented in this repository. The architecture is designed for a 100-year build. The Phase 1 foundation — TCP/IP overlay, spectral addressing, physics engine, kernel — is running now.
+All four are specified and partially implemented in this repository. The architecture is designed for a 100-year build. The Phase 2 foundation — full 256 WDM spectrum, TCP/IP overlay, spectral addressing, physics engine, kernel — is running now.
 
 ---
 

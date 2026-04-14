@@ -228,7 +228,7 @@ def spectral_vector():
 
     Returns the full compression-state distribution for a string.
     Each character maps to its WASCII wavelength (compression state).
-    The histogram across 100 WDM bands is the spectral fingerprint.
+    The histogram across 256 WDM bands is the spectral fingerprint.
 
     GET  /api/wnsp/spectral-vector?text=NexusOS
     POST /api/wnsp/spectral-vector  body: {"text": "NexusOS"}
@@ -425,9 +425,11 @@ def get_capacity():
         "density_equation": {
             "formula":         "D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M",
             "energy_formula":  "D_energy = D_WNSP · λ / (h · c)",
-            "phase_1_now":     density_phase1["density"]["d_raw"],
-            "phase_2_full":    density_phase2["density"]["d_raw"],
+            "phase_1_complete": density_phase1["density"]["d_raw"],
+            "phase_2_now":      density_phase2["density"]["d_raw"],
             "phase_3_photonic": density_phase3["density"]["d_raw"],
+            "active_phase":     2,
+            "active_wdm_bands": HILBERT_DIM_WDM,
             "shannon_vs_wnsp": "Shannon: C ∝ log(1+SNR). WNSP: D ∝ N·R·M. Orthogonal expansion, not compression.",
         },
     })

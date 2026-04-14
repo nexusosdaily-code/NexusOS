@@ -525,9 +525,9 @@ function RegistryTable() {
 function BridgeSpec() {
   const phases = [
     {
-      phase: "Phase 1 — Now",
+      phase: "Phase 1 — Complete",
       title: "TCP/IP overlay",
-      status: "active",
+      status: "complete",
       color: "#16a34a",
       items: [
         "wnsp:// URIs registered in Nexus WNSP Registry",
@@ -538,10 +538,10 @@ function BridgeSpec() {
       ],
     },
     {
-      phase: "Phase 2 — Near term",
-      title: "WavelengthScript + Ordinal bridge",
-      status: "building",
-      color: "#ca8a04",
+      phase: "Phase 2 — Active",
+      title: "Full 256 WDM · WavelengthScript + Ordinal bridge",
+      status: "active",
+      color: "#16a34a",
       items: [
         "Code labeled in WavelengthScript is addressed by its wnsp:// URI",
         "CE ordinals (NXT tokens) represent on-chain ownership of spectral slots",
@@ -858,7 +858,7 @@ export default function WnspBridgePage() {
                 <strong className="text-slate-200">Spectral addressing on current infrastructure.</strong>{" "}
                 WASCII v1.0 derives a single Ψ address from text. WASCII v2.0 computes the full{" "}
                 <span className="text-violet-400">spectral fingerprint</span> — every character's compression state
-                on the Λ=hf/c² curve, distributed across all 100 WDM bands. Phase 1: TCP/IP. Phase 3: native photonic.
+                on the Λ=hf/c² curve, distributed across all 256 WDM bands. Phase 2: full spectrum active. Phase 3: native photonic.
               </p>
             </div>
             <Link href="/">
