@@ -36,6 +36,7 @@ export interface IStorage {
   createUser(username: string, password: string, email?: string, phoneNumber?: string): Promise<User>;
   verifyPassword(user: User, password: string): Promise<boolean>;
   updateUserLastLogin(userId: string): Promise<void>;
+  updateUserSpectral(userId: string, spectral: { wdm: number; oam: number; pol: string; nm: number; band: string }): Promise<void>;
 
   // Session operations
   createSession(userId: string, ipAddress?: string, userAgent?: string): Promise<Session>;
@@ -214,6 +215,22 @@ export class DatabaseStorage implements IStorage {
   async updateUserLastLogin(userId: string): Promise<void> {
     await db.update(users)
       .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserSpectral(
+    userId: string,
+    spectral: { wdm: number; oam: number; pol: string; nm: number; band: string },
+  ): Promise<void> {
+    await db.update(users)
+      .set({
+        spectralWdm:  spectral.wdm,
+        spectralOam:  spectral.oam,
+        spectralPol:  spectral.pol,
+        spectralNm:   spectral.nm,
+        spectralBand: spectral.band,
+        updatedAt:    new Date(),
+      })
       .where(eq(users.id, userId));
   }
 

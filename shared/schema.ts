@@ -18,6 +18,12 @@ export const users = pgTable("users", {
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  // ── WNSP Spectral Identity ── deterministic channel derived from username hash
+  spectralWdm:  integer("spectral_wdm"),
+  spectralOam:  integer("spectral_oam"),
+  spectralPol:  text("spectral_pol"),
+  spectralNm:   real("spectral_nm"),
+  spectralBand: text("spectral_band"),
 }, (table) => ({
   usernameIdx: index("users_username_idx").on(table.username),
   emailIdx: index("users_email_idx").on(table.email),

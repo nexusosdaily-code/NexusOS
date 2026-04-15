@@ -32,9 +32,20 @@ The system employs synchronized Node.js/TypeScript (port 5000) and Python/Flask 
 
 ## Feature Specifications
 
+### Physics Engine (`server/physics.ts`) — Enforcement Layer v1.0
+The authoritative physics engine that makes WNSP govern every economic action in the ecosystem.
+
+- **Channel Derivation**: Every user gets a deterministic Ψ channel from `SHA-256(username)` → WDM(0–255), OAM(0–49), Pol(H/V). Same username always maps to the same channel. Stored in `users.spectral_wdm/oam/pol/nm/band`.
+- **Fee Calculation**: `fee = base_fee × (E_sender / E_reference)` where reference = 560nm green. SYSTEM-band pays ~1.4× base, GUEST pays ~0.8× base.
+- **Base Fees**: message_send=1 NXT, stream_start=5 NXT, document_create=3 NXT, upload=0.25 NXT/MB, transfer=0.1% of amount.
+- **Authority Bands**: SYSTEM(WDM 0–63), KERNEL(WDM 64–127), USER(WDM 128–191), GUEST(WDM 192–255). Higher authority = shorter wavelength = higher energy = higher fee.
+- **Enforcement**: All fees are enforced server-side. Insufficient balance returns HTTP 402. Fee transactions are recorded in the `transactions` table as `message_fee`, `stream_fee`, `document_fee`.
+- **API**: `GET /api/physics/my` returns channel, full fee schedule, and authority capabilities for the authenticated user.
+
 ### Authentication & Wallet System
 - **Authentication**: Phone number-based registration.
 - **Wallet**: NXT token (8 decimals, 21 billion supply) with physics-based transaction costs (E=hf).
+- **Spectral Identity**: Each user's wallet transfer now uses their real spectral channel wavelength, not a random one.
 
 ### Physics-Based Protocol Layer (WNSP)
 - **Core Protocol**: Replaces cryptographic hashing with electromagnetic wave physics, using Maxwell equation validation and wavelength-based addressing.

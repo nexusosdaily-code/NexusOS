@@ -284,34 +284,57 @@ function FeedCard({ item }: { item: FeedItem }) {
   );
 }
 
+// ── Physics fee data shape ─────────────────────────────────────────────
+interface PhysicsProfile {
+  channel: { wdm: number; nm: number; band: string; psi: string; energyJ: string };
+  fees: Record<string, { feeNxt: string; multiplier: number; band: string }>;
+  authority: Record<string, boolean>;
+}
+
 // ── Quick Actions ──────────────────────────────────────────────────────
 function QuickActions() {
   const [, navigate] = useLocation();
+
+  const { data: physicsData } = useQuery<PhysicsProfile>({
+    queryKey: ["/api/physics/my"],
+    staleTime: 60_000,
+  });
+
   const actions = [
-    { label: "Compose",   Icon: MessageSquarePlus, href: "/inbox",              color: "#22d3ee" },
-    { label: "Go Live",   Icon: MonitorPlay,       href: "/streaming",           color: "#f472b6" },
-    { label: "Upload",    Icon: FilePlus,          href: "/workspace/transmission", color: "#34d399" },
-    { label: "Encode",    Icon: Atom,              href: "/encoding-lab",        color: "#a78bfa" },
+    { label: "Compose",   Icon: MessageSquarePlus, href: "/inbox",               color: "#22d3ee", feeKey: "message_send" },
+    { label: "Go Live",   Icon: MonitorPlay,       href: "/streaming",            color: "#f472b6", feeKey: "stream_start" },
+    { label: "Upload",    Icon: FilePlus,          href: "/workspace/transmission",color: "#34d399", feeKey: "upload_mb" },
+    { label: "Encode",    Icon: Atom,              href: "/encoding-lab",         color: "#a78bfa", feeKey: null },
   ];
 
   return (
     <div className="flex gap-2 flex-wrap">
-      {actions.map(({ label, Icon, href, color }) => (
-        <button
-          key={label}
-          data-testid={`quick-action-${label.toLowerCase()}`}
-          onClick={() => navigate(href)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-[1.03] border"
-          style={{
-            background: `rgba(${color === "#22d3ee" ? "34,211,238" : color === "#f472b6" ? "244,114,182" : color === "#34d399" ? "52,211,153" : "167,139,250"},0.10)`,
-            color,
-            borderColor: `${color}35`,
-          }}
-        >
-          <Icon className="w-4 h-4" />
-          {label}
-        </button>
-      ))}
+      {actions.map(({ label, Icon, href, color, feeKey }) => {
+        const fee = feeKey && physicsData?.fees?.[feeKey];
+        const rgba = color === "#22d3ee" ? "34,211,238"
+          : color === "#f472b6" ? "244,114,182"
+          : color === "#34d399" ? "52,211,153"
+          : "167,139,250";
+        return (
+          <button
+            key={label}
+            data-testid={`quick-action-${label.toLowerCase().replace(" ", "-")}`}
+            onClick={() => navigate(href)}
+            className="flex flex-col items-start px-4 py-2.5 rounded-xl text-sm font-medium transition-all hover:scale-[1.02] border gap-0.5"
+            style={{ background: `rgba(${rgba},0.10)`, color, borderColor: `${color}35` }}
+          >
+            <div className="flex items-center gap-2">
+              <Icon className="w-4 h-4" />
+              {label}
+            </div>
+            {fee && (
+              <span className="text-[10px] font-mono opacity-60">
+                {fee.feeNxt} NXT · {fee.band}
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

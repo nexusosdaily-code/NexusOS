@@ -11,6 +11,7 @@ import {
   createStreamSchema, updateStreamSettingsSchema
 } from "@shared/schema";
 import { z } from "zod";
+import { deriveChannel, calcFee, hasAuthority, getBand } from "./physics";
 
 // WebSocket clients mapped by userId
 const connectedClients = new Map<string, WebSocket>();
@@ -539,7 +540,13 @@ export async function registerRoutes(
 
       const user = await storage.createUser(username, password, email, phoneNumber);
       const session = await storage.createSession(user.id, req.ip, req.headers["user-agent"]);
-      
+
+      // ── Assign deterministic spectral channel from username hash ──────────
+      try {
+        const ch = deriveChannel(username);
+        await storage.updateUserSpectral(user.id, { wdm: ch.wdm, oam: ch.oam, pol: ch.pol, nm: ch.nm, band: ch.band });
+      } catch (_e) { /* non-blocking */ }
+
       await logAction(req, "user_registered", "auth", user.id, { username });
 
       // ── Auto-register canonical wnsp:// identity on signup ─────────────
@@ -658,24 +665,113 @@ export async function registerRoutes(
 
   app.get("/api/auth/me", authenticate, async (req, res) => {
     try {
-      const wallet = await storage.getWallet(req.user!.id);
+      const user   = req.user!;
+      const wallet = await storage.getWallet(user.id);
+
+      // Ensure spectral channel is assigned (backfill if missing)
+      let spectral = {
+        wdm:  user.spectralWdm,
+        oam:  user.spectralOam,
+        pol:  user.spectralPol,
+        nm:   user.spectralNm,
+        band: user.spectralBand,
+      };
+      if (spectral.wdm == null) {
+        const ch = deriveChannel(user.username);
+        await storage.updateUserSpectral(user.id, ch);
+        spectral = { wdm: ch.wdm, oam: ch.oam, pol: ch.pol, nm: ch.nm, band: ch.band };
+      }
+
+      const ch     = deriveChannel(user.username);
+      const feeMsg = calcFee("message_send", spectral.wdm ?? ch.wdm);
+
       res.json({
         user: {
-          id: req.user!.id,
-          username: req.user!.username,
-          email: req.user!.email,
-          role: req.user!.role,
-          isVerified: req.user!.isVerified,
+          id:          user.id,
+          username:    user.username,
+          email:       user.email,
+          role:        user.role,
+          isVerified:  user.isVerified,
+          spectralWdm: spectral.wdm,
+          spectralOam: spectral.oam,
+          spectralPol: spectral.pol,
+          spectralNm:  spectral.nm,
+          spectralBand: spectral.band,
+          psi: `Ψ(${spectral.wdm},${spectral.oam},${spectral.pol})`,
         },
         wallet: wallet ? {
-          address: wallet.address,
-          balance: wallet.balance,
+          address:       wallet.address,
+          balance:       wallet.balance,
           lockedBalance: wallet.lockedBalance,
         } : null,
+        physics: {
+          messageFeeNxt:  feeMsg.feeNxt,
+          multiplier:     feeMsg.multiplier.toFixed(4),
+          energyJ:        feeMsg.energyJ.toExponential(4),
+          lambdaKg:       (feeMsg.energyJ / (299792458 ** 2)).toExponential(4),
+          frequencyTHz:   (feeMsg.frequencyHz / 1e12).toFixed(4),
+        },
       });
     } catch (error: any) {
       console.error("Get user error:", error);
       res.status(500).json({ error: "Failed to get user info" });
+    }
+  });
+
+  // ── Physics Profile ────────────────────────────────────────────────────────
+  app.get("/api/physics/my", authenticate, async (req, res) => {
+    try {
+      const user   = req.user!;
+      const wdm    = user.spectralWdm ?? 200;
+      const ch     = deriveChannel(user.username);
+
+      const fees = {
+        message_send:    calcFee("message_send",    wdm),
+        stream_start:    calcFee("stream_start",    wdm),
+        document_create: calcFee("document_create", wdm),
+        upload_mb:       calcFee("upload_mb",       wdm, { fileSizeBytes: 1024 * 1024 }),
+        wallet_transfer: calcFee("wallet_transfer", wdm, { transferAmount: 100 }),
+      };
+
+      res.json({
+        channel: {
+          wdm:  user.spectralWdm ?? ch.wdm,
+          oam:  user.spectralOam ?? ch.oam,
+          pol:  user.spectralPol ?? ch.pol,
+          nm:   user.spectralNm  ?? ch.nm,
+          band: user.spectralBand ?? ch.band,
+          psi:  `Ψ(${user.spectralWdm ?? ch.wdm},${user.spectralOam ?? ch.oam},${user.spectralPol ?? ch.pol})`,
+          uri:  `wnsp://Ψ(${user.spectralWdm ?? ch.wdm},${user.spectralOam ?? ch.oam},${user.spectralPol ?? ch.pol})/${user.username.toLowerCase()}`,
+          frequencyTHz: (ch.frequencyHz / 1e12).toFixed(4),
+          energyJ:      ch.energyJ.toExponential(6),
+          lambdaKg:     ch.lambdaKg.toExponential(6),
+        },
+        fees: Object.fromEntries(
+          Object.entries(fees).map(([action, f]) => [
+            action,
+            {
+              feeNxt:       f.feeNxt,
+              baseFeeNxt:   f.baseFeeNxt,
+              multiplier:   parseFloat(f.multiplier.toFixed(4)),
+              wavelengthNm: f.wavelengthNm,
+              energyJ:      f.energyJ.toExponential(6),
+              band:         f.band,
+            },
+          ]),
+        ),
+        authority: {
+          band:          user.spectralBand ?? ch.band,
+          canSendMessages:    true,
+          canStartStreams:     true,
+          canCreateDocuments: true,
+          canAccessKernel:    hasAuthority(wdm, "KERNEL"),
+          canAccessSystem:    hasAuthority(wdm, "SYSTEM"),
+          canGovernance:      hasAuthority(wdm, "KERNEL"),
+        },
+      });
+    } catch (error: any) {
+      console.error("Physics profile error:", error);
+      res.status(500).json({ error: "Failed to get physics profile" });
     }
   });
 
@@ -747,10 +843,13 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Insufficient balance" });
       }
 
-      const fee = amountNum * 0.001;
-      const wavelength = 380 + (Math.random() * 400);
-      const frequency = (3e8) / (wavelength * 1e-9);
-      const energyCost = (6.626e-34 * frequency).toString();
+      // Physics fee: 0.1% of amount, wavelength derived from sender's actual spectral channel
+      const senderWdm = req.user!.spectralWdm ?? 200;
+      const physics   = calcFee("wallet_transfer", senderWdm, { transferAmount: amountNum });
+      const fee        = parseFloat(physics.feeNxt);
+      const wavelength = physics.wavelengthNm;
+      const frequency  = physics.frequencyHz;
+      const energyCost = physics.energyJ.toString();
 
       const transaction = await storage.createTransaction({
         fromWalletId: fromWallet.id,
@@ -982,6 +1081,39 @@ export async function registerRoutes(
       if (!isFriend) {
         return res.status(403).json({ error: "Can only send messages to friends" });
       }
+
+      // ── Physics fee enforcement ─────────────────────────────────────────
+      const senderWdm  = req.user!.spectralWdm ?? 200;
+      const msgFee     = calcFee("message_send", senderWdm);
+      const feeNum     = parseFloat(msgFee.feeNxt);
+      const senderWallet = await storage.getWallet(req.user!.id);
+      if (!senderWallet) {
+        return res.status(400).json({ error: "Sender wallet not found" });
+      }
+      const senderBalance = parseFloat(senderWallet.balance);
+      if (senderBalance < feeNum) {
+        return res.status(402).json({
+          error: "Insufficient NXT balance for message fee",
+          required: msgFee.feeNxt,
+          available: senderWallet.balance,
+          physics: { wavelengthNm: msgFee.wavelengthNm, energyJ: msgFee.energyJ, band: msgFee.band },
+        });
+      }
+      // Deduct fee from sender
+      await storage.updateWalletBalance(senderWallet.id, (senderBalance - feeNum).toFixed(8));
+      // Record fee transaction
+      await storage.createTransaction({
+        fromWalletId: senderWallet.id,
+        toWalletId:   undefined,
+        amount:       msgFee.feeNxt,
+        fee:          "0",
+        type:         "message_fee",
+        wavelength:   msgFee.wavelengthNm.toString(),
+        frequency:    msgFee.frequencyHz.toString(),
+        energyCost:   msgFee.energyJ.toString(),
+        metadata:     { action: "message_send", band: msgFee.band, recipientId },
+      });
+      // ────────────────────────────────────────────────────────────────────
 
       let encodedFrames = null;
       let totalLambdaMass = null;
@@ -2112,11 +2244,39 @@ export async function registerRoutes(
         return res.status(400).json({ error: "File too large (max 50MB)" });
       }
       
-      const wavelength = 380 + (originalName.charCodeAt(0) % 120) + ((size % 300));
-      const frequency = (3e8) / (wavelength * 1e-9);
-      const planckConstant = 6.62607015e-34;
-      const energy = planckConstant * frequency;
-      const timestamp = Date.now().toString(36);
+      // ── Physics fee enforcement ─────────────────────────────────────────
+      const docCreatorWdm = req.user!.spectralWdm ?? 200;
+      const docFee        = calcFee("document_create", docCreatorWdm);
+      const docFeeNum     = parseFloat(docFee.feeNxt);
+      const docWallet     = await storage.getWallet(req.user!.id);
+      if (!docWallet) return res.status(400).json({ error: "Wallet not found" });
+      const docBalance    = parseFloat(docWallet.balance);
+      if (docBalance < docFeeNum) {
+        return res.status(402).json({
+          error: "Insufficient NXT to create a spectral document",
+          required: docFee.feeNxt,
+          available: docWallet.balance,
+        });
+      }
+      await storage.updateWalletBalance(docWallet.id, (docBalance - docFeeNum).toFixed(8));
+      await storage.createTransaction({
+        fromWalletId: docWallet.id,
+        toWalletId:   undefined,
+        amount:       docFee.feeNxt,
+        fee:          "0",
+        type:         "document_fee",
+        wavelength:   docFee.wavelengthNm.toString(),
+        frequency:    docFee.frequencyHz.toString(),
+        energyCost:   docFee.energyJ.toString(),
+        metadata:     { action: "document_create", band: docFee.band, filename: originalName },
+      });
+      // ────────────────────────────────────────────────────────────────────
+
+      // Physics wavelength derived from sender's actual channel (not filename)
+      const wavelength = docFee.wavelengthNm;
+      const frequency  = docFee.frequencyHz;
+      const energy     = docFee.energyJ;
+      const timestamp  = Date.now().toString(36);
       const energyHash = `Λ${energy.toExponential(6)}_${timestamp}_${req.user!.id.slice(0, 8)}`;
       const lambdaSignature = `WNSP-Λ-${wavelength.toFixed(4)}nm-${frequency.toExponential(4)}Hz-${timestamp}`;
 
@@ -2357,7 +2517,36 @@ export async function registerRoutes(
   app.post("/api/streams", authenticate, validateRequest(createStreamSchema), async (req, res) => {
     try {
       if (!await checkRateLimit(req, res, "/api/streams", 20)) return;
-      
+
+      // ── Physics fee enforcement ─────────────────────────────────────────
+      const streamerWdm    = req.user!.spectralWdm ?? 200;
+      const streamFee      = calcFee("stream_start", streamerWdm);
+      const streamFeeNum   = parseFloat(streamFee.feeNxt);
+      const streamerWallet = await storage.getWallet(req.user!.id);
+      if (!streamerWallet) return res.status(400).json({ error: "Wallet not found" });
+      const streamerBalance = parseFloat(streamerWallet.balance);
+      if (streamerBalance < streamFeeNum) {
+        return res.status(402).json({
+          error: "Insufficient NXT to open a broadcast channel",
+          required: streamFee.feeNxt,
+          available: streamerWallet.balance,
+          physics: { wavelengthNm: streamFee.wavelengthNm, energyJ: streamFee.energyJ, band: streamFee.band },
+        });
+      }
+      await storage.updateWalletBalance(streamerWallet.id, (streamerBalance - streamFeeNum).toFixed(8));
+      await storage.createTransaction({
+        fromWalletId: streamerWallet.id,
+        toWalletId:   undefined,
+        amount:       streamFee.feeNxt,
+        fee:          "0",
+        type:         "stream_fee",
+        wavelength:   streamFee.wavelengthNm.toString(),
+        frequency:    streamFee.frequencyHz.toString(),
+        energyCost:   streamFee.energyJ.toString(),
+        metadata:     { action: "stream_start", band: streamFee.band },
+      });
+      // ────────────────────────────────────────────────────────────────────
+
       const { title, description, streamType, isPublic, quality, bitrate, frameRate, recordingEnabled } = req.body;
       
       const stream = await storage.createStream({
