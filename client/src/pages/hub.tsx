@@ -11,7 +11,7 @@ import {
   Zap, Atom, Waves, Rocket, Users, Database,
   Shield, BookOpen, HardDrive, GitBranch,
   ChevronRight, LayoutGrid, Rss, Eye, Clock,
-  MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale,
+  MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -121,6 +121,7 @@ function IdentityRail({
   wallet?: { address: string; balance: string };
   unread: number;
 }) {
+  const { logout } = useAuth();
   const wdm  = user.spectralWdm  ?? 228;
   const oam  = user.spectralOam  ?? 45;
   const pol  = user.spectralPol  ?? "H";
@@ -198,6 +199,17 @@ function IdentityRail({
             : balNum.toFixed(4)} NXT
         </div>
       </Link>
+
+      {/* Logout */}
+      <button
+        data-testid="button-logout"
+        onClick={() => logout()}
+        title="Log out"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-zinc-400 hover:text-red-400 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 transition-all"
+      >
+        <LogOut className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline">Log out</span>
+      </button>
     </div>
   );
 }
