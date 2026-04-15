@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 import {
   users, sessions, auditLogs, wallets, transactions,
   versionRegistry, apiKeys, rateLimits, friendships, uploadedFiles, secureDocuments,
-  lambdaMessages, calls, streams, streamViewers, streamRecordings, networkNodes,
+  lambdaMessages, calls, streams, streamViewers, streamRecordings, networkNodes, p2pReceipts,
   type User, type InsertUser, type Session, type InsertSession,
   type AuditLog, type InsertAuditLog, type Wallet, type InsertWallet,
   type Transaction, type InsertTransaction, type VersionRegistry,
@@ -20,6 +20,7 @@ import {
   type StreamRecording, type InsertStreamRecording,
   type UpdateStreamSettingsInput,
   type NetworkNode, type InsertNetworkNode,
+  type P2pReceipt, type InsertP2pReceipt,
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
@@ -139,6 +140,11 @@ export interface IStorage {
   getNetworkNode(nodeKey: string): Promise<NetworkNode | undefined>;
   beaconNetworkNode(nodeKey: string): Promise<NetworkNode>;
   updateNetworkNodeStatus(nodeKey: string, status: string): Promise<NetworkNode>;
+
+  // P2P receipt operations
+  logP2pReceipt(receipt: InsertP2pReceipt): Promise<P2pReceipt>;
+  getP2pReceipts(transmissionId?: string, limit?: number): Promise<P2pReceipt[]>;
+  getRecentP2pReceipts(limit?: number): Promise<P2pReceipt[]>;
 }
 
 function generateWalletAddress(): string {
@@ -978,6 +984,33 @@ export class DatabaseStorage implements IStorage {
       .where(eq(networkNodes.nodeKey, nodeKey))
       .returning();
     return result[0];
+  }
+
+  // ============================================
+  // P2P RECEIPT OPERATIONS
+  // ============================================
+
+  async logP2pReceipt(receipt: InsertP2pReceipt): Promise<P2pReceipt> {
+    const result = await db.insert(p2pReceipts).values(receipt).returning();
+    return result[0];
+  }
+
+  async getP2pReceipts(transmissionId?: string, limit = 50): Promise<P2pReceipt[]> {
+    if (transmissionId) {
+      return db.select().from(p2pReceipts)
+        .where(eq(p2pReceipts.transmissionId, transmissionId))
+        .orderBy(desc(p2pReceipts.receivedAt))
+        .limit(limit);
+    }
+    return db.select().from(p2pReceipts)
+      .orderBy(desc(p2pReceipts.receivedAt))
+      .limit(limit);
+  }
+
+  async getRecentP2pReceipts(limit = 20): Promise<P2pReceipt[]> {
+    return db.select().from(p2pReceipts)
+      .orderBy(desc(p2pReceipts.receivedAt))
+      .limit(limit);
   }
 }
 

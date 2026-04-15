@@ -3998,7 +3998,7 @@ export async function registerRoutes(
   });
 
   // ── Video stream — serves raw binary so <video> tags can play it ───────────
-  app.get("/api/spectral-workspace/video/:id/stream", async (req: Request, res: Response) => {
+  app.get("/api/spectral-workspace/video/:id/stream", optionalAuth, async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { videoUploads } = await import("@shared/schema");
@@ -4016,6 +4016,39 @@ export async function registerRoutes(
       res.setHeader("Content-Type", mimeType);
       res.setHeader("Cache-Control", "public, max-age=3600");
 
+      // Auto-log peer receipt when a peer streams the first chunk (range start=0 or no range)
+      const isFirstChunk = !rangeHeader || rangeHeader.startsWith("bytes=0-");
+      if (isFirstChunk) {
+        const peer = (req as any).user;
+        const peerId = peer?.id ?? null;
+        const peerName = peer?.username ?? (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ?? "anonymous";
+        // Derive a deterministic Ψ channel from the peer's IP/id so each peer has a unique spectral address
+        const seed = peerId ?? peerName;
+        const seedCode = seed.split("").reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0);
+        const peerWdm = seedCode % 256;
+        const peerOam = seedCode % 50;
+        const peerPol = seedCode % 2 === 0 ? "H" : "V";
+        const peerPsi = `Ψ(${peerWdm},${peerOam},${peerPol})`;
+        const peerNm = 380 + (peerWdm / 255) * 400;
+        const peerHz = 299792458 / (peerNm * 1e-9);
+        const peerBand = peerWdm < 64 ? "SYSTEM" : peerWdm < 128 ? "KERNEL" : peerWdm < 192 ? "USER" : "GUEST";
+
+        storage.logP2pReceipt({
+          transmissionId: video.id,
+          transmissionType: "video",
+          filename: video.filename,
+          peerId,
+          peerName,
+          peerPsiChannel: peerPsi,
+          peerWavelengthNm: String(peerNm.toFixed(4)),
+          peerFrequencyHz: String(peerHz.toFixed(4)),
+          peerBand,
+          srcPsiChannel: "Ψ(91,42,V)",
+          bytesReceived: total,
+          status: "received",
+        }).catch(() => {});
+      }
+
       if (rangeHeader) {
         const [startStr, endStr] = rangeHeader.replace(/bytes=/, "").split("-");
         const start = parseInt(startStr, 10);
@@ -4029,6 +4062,62 @@ export async function registerRoutes(
         res.setHeader("Content-Length", total);
         res.end(buf);
       }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── P2P Receipt API ────────────────────────────────────────────────────────
+
+  // Log a receipt manually (called by frontend when peer acknowledges a text/bus transmission)
+  app.post("/api/p2p/receipt", optionalAuth, async (req: Request, res: Response) => {
+    try {
+      const { transmissionId, transmissionType, filename, srcPsiChannel, bytesReceived } = req.body;
+      if (!transmissionId) return res.status(400).json({ error: "transmissionId required" });
+
+      const peer = (req as any).user;
+      const peerId = peer?.id ?? null;
+      const peerName = peer?.username ?? "anonymous";
+      const seed = peerId ?? peerName;
+      const seedCode = seed.split("").reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0);
+      const peerWdm = seedCode % 256;
+      const peerOam = seedCode % 50;
+      const peerPol = seedCode % 2 === 0 ? "H" : "V";
+      const peerPsi = `Ψ(${peerWdm},${peerOam},${peerPol})`;
+      const peerNm = 380 + (peerWdm / 255) * 400;
+      const peerHz = 299792458 / (peerNm * 1e-9);
+      const peerBand = peerWdm < 64 ? "SYSTEM" : peerWdm < 128 ? "KERNEL" : peerWdm < 192 ? "USER" : "GUEST";
+
+      const receipt = await storage.logP2pReceipt({
+        transmissionId,
+        transmissionType: transmissionType ?? "text",
+        filename: filename ?? null,
+        peerId,
+        peerName,
+        peerPsiChannel: peerPsi,
+        peerWavelengthNm: String(peerNm.toFixed(4)),
+        peerFrequencyHz: String(peerHz.toFixed(4)),
+        peerBand,
+        srcPsiChannel: srcPsiChannel ?? null,
+        bytesReceived: bytesReceived ?? null,
+        status: "received",
+      });
+
+      res.json({ success: true, receipt });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get receipts for a specific transmission or all recent receipts
+  app.get("/api/p2p/receipts", optionalAuth, async (req: Request, res: Response) => {
+    try {
+      const transmissionId = req.query.transmissionId as string | undefined;
+      const limit = Math.min(parseInt(req.query.limit as string || "50"), 200);
+      const receipts = transmissionId
+        ? await storage.getP2pReceipts(transmissionId, limit)
+        : await storage.getRecentP2pReceipts(limit);
+      res.json({ receipts, count: receipts.length });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

@@ -782,3 +782,34 @@ export const userCredentials = pgTable("user_credentials", {
 export const insertUserCredentialSchema = createInsertSchema(userCredentials).omit({ id: true, createdAt: true });
 export type InsertUserCredential = z.infer<typeof insertUserCredentialSchema>;
 export type UserCredential = typeof userCredentials.$inferSelect;
+
+// ============================================
+// P2P RECEIPTS — Peer delivery confirmation
+// Every time a peer downloads or acknowledges a P2P transmission,
+// a receipt is logged with their spectral channel address and timestamp.
+// This provides cryptographic proof of delivery to named peers.
+// ============================================
+export const p2pReceipts = pgTable("p2p_receipts", {
+  id:              varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  transmissionId:  varchar("transmission_id", { length: 36 }).notNull(),
+  transmissionType: text("transmission_type").notNull().default("video"),
+  filename:        text("filename"),
+  peerId:          varchar("peer_id", { length: 36 }),
+  peerName:        text("peer_name").notNull().default("anonymous"),
+  peerPsiChannel:  text("peer_psi_channel").notNull(),
+  peerWavelengthNm: decimal("peer_wavelength_nm", { precision: 10, scale: 4 }),
+  peerFrequencyHz: decimal("peer_frequency_hz", { precision: 20, scale: 4 }),
+  peerBand:        text("peer_band"),
+  srcPsiChannel:   text("src_psi_channel"),
+  bytesReceived:   integer("bytes_received"),
+  status:          text("status").notNull().default("received"),
+  receivedAt:      timestamp("received_at").notNull().defaultNow(),
+}, (table) => ({
+  transmissionIdx: index("p2p_receipts_transmission_idx").on(table.transmissionId),
+  peerIdx:         index("p2p_receipts_peer_idx").on(table.peerId),
+  receivedAtIdx:   index("p2p_receipts_received_at_idx").on(table.receivedAt),
+}));
+
+export const insertP2pReceiptSchema = createInsertSchema(p2pReceipts).omit({ id: true, receivedAt: true });
+export type InsertP2pReceipt = z.infer<typeof insertP2pReceiptSchema>;
+export type P2pReceipt = typeof p2pReceipts.$inferSelect;

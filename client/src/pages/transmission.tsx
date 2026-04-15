@@ -110,6 +110,11 @@ export default function TransmissionPage() {
     refetchInterval: 10_000,
   });
 
+  const { data: receiptsData, refetch: refetchReceipts } = useQuery<any>({
+    queryKey: ["/api/p2p/receipts?limit=20"],
+    refetchInterval: 8_000,
+  });
+
   const walletBalance = walletData?.balance
     ? (parseInt(walletData.balance) / 1e8).toFixed(4)
     : null;
@@ -957,6 +962,53 @@ export default function TransmissionPage() {
 
           {/* ── NETWORK ───────────────────────────────────────────────────── */}
           <TabsContent value="network" className="space-y-4">
+
+            {/* ── P2P Receipt Log ───────────────────────────────────────── */}
+            <Card className="bg-slate-900/60 border-green-500/30 p-5" data-testid="card-receipts">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-green-400 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" /> Peer Receipt Log
+                  {receiptsData?.count > 0 && (
+                    <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">{receiptsData.count} confirmed</span>
+                  )}
+                </h2>
+                <button onClick={() => refetchReceipts()} className="text-xs text-gray-500 hover:text-green-400" data-testid="button-refresh-receipts">↻ refresh</button>
+              </div>
+              {receiptsData?.receipts?.length > 0 ? (
+                <div className="space-y-2">
+                  {receiptsData.receipts.map((r: any, i: number) => {
+                    const nm = parseFloat(r.peerWavelengthNm ?? 550);
+                    const color = wavelengthToColor(nm);
+                    return (
+                      <div key={r.id ?? i} className="flex items-start gap-3 bg-slate-800/40 rounded-lg px-3 py-2.5 text-xs" data-testid={`receipt-row-${i}`}>
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-0.5" style={{ background: color }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-white font-semibold">{r.peerName}</span>
+                            <span className="font-mono text-green-400 text-[10px]">{r.peerPsiChannel}</span>
+                            <span className="text-[9px] px-1 py-0.5 rounded" style={{ background: r.peerBand === "SYSTEM" ? "#3b82f620" : r.peerBand === "KERNEL" ? "#a855f720" : "#06b6d420", color: r.peerBand === "SYSTEM" ? "#3b82f6" : r.peerBand === "KERNEL" ? "#a855f7" : "#06b6d4" }}>{r.peerBand}</span>
+                          </div>
+                          <div className="text-gray-500 text-[10px] font-mono">
+                            λ={nm.toFixed(2)}nm · {r.transmissionType} · {r.filename ?? r.transmissionId?.slice(0, 8)}
+                            {r.bytesReceived && <span> · {(r.bytesReceived / 1024 / 1024).toFixed(2)}MB</span>}
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-green-400 text-[10px]">✓ received</div>
+                          <div className="text-gray-600 text-[9px]">{new Date(r.receivedAt).toLocaleTimeString()}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500 text-xs">
+                  <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                  No peer receipts yet — receipts are logged automatically when peers stream your transmissions
+                </div>
+              )}
+            </Card>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Live spectral DB records */}
               <Card className="lg:col-span-2 bg-slate-900/60 border-cyan-500/30 p-5">
