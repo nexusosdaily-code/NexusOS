@@ -117,11 +117,12 @@ function relTime(iso: string): string {
 
 // ── Identity Rail ──────────────────────────────────────────────────────
 function IdentityRail({
-  user, wallet, unread,
+  user, wallet, unread, avatarUrl,
 }: {
   user: { id: string; username: string; spectralWdm?: number; spectralOam?: number; spectralPol?: string };
   wallet?: { address: string; balance: string };
   unread: number;
+  avatarUrl?: string | null;
 }) {
   const { logout } = useAuth();
   const wdm  = user.spectralWdm  ?? 228;
@@ -146,10 +147,13 @@ function IdentityRail({
       <Link href={`/profile/${user.username}`} data-testid="link-my-profile">
         <div className="flex items-center gap-2 min-w-0 cursor-pointer hover:opacity-80 transition-opacity">
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+            className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold flex-shrink-0"
             style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.color}60` }}
           >
-            {user.username[0].toUpperCase()}
+            {avatarUrl
+              ? <img src={avatarUrl} alt={user.username} className="w-full h-full object-cover" data-testid="img-hub-avatar" />
+              : user.username[0].toUpperCase()
+            }
           </div>
           <span className="font-semibold text-white text-sm truncate">{user.username}</span>
         </div>
@@ -440,6 +444,10 @@ export default function HubPage() {
     refetchInterval: 20_000,
   });
 
+  const { data: profileData } = useQuery<{ profile: { avatarUrl: string | null; bio: string | null; country: string | null; stateRegion: string | null } }>({
+    queryKey: ["/api/settings/profile"],
+  });
+
   if (!user) return null;
 
   const allItems: FeedItem[] = feedData?.feed ?? [];
@@ -472,6 +480,7 @@ export default function HubPage() {
         user={user as any}
         wallet={walletData?.wallet}
         unread={unreadData?.count ?? 0}
+        avatarUrl={profileData?.profile?.avatarUrl ?? null}
       />
 
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">

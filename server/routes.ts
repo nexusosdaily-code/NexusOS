@@ -5447,6 +5447,8 @@ export async function registerRoutes(
       const [user] = await db.select({
         id: usersTable.id, username: usersTable.username,
         role: usersTable.role, createdAt: usersTable.createdAt,
+        bio: usersTable.bio, avatarUrl: usersTable.avatarUrl,
+        country: usersTable.country, stateRegion: usersTable.stateRegion,
       }).from(usersTable).where(eq(usersTable.username, username));
 
       if (!user) return res.status(404).json({ error: "User not found" });
@@ -5483,7 +5485,9 @@ export async function registerRoutes(
 
       const profileDensity = channelDensity(enc.wdm);
       res.json({
-        user: { id: user.id, username: user.username, role: user.role, createdAt: user.createdAt },
+        user: { id: user.id, username: user.username, role: user.role, createdAt: user.createdAt,
+          bio: user.bio ?? null, avatarUrl: user.avatarUrl ?? null,
+          country: user.country ?? null, stateRegion: user.stateRegion ?? null },
         wallet: wallet ? { address: wallet.address } : null,
         spectral: {
           ...enc, registered: !!wnspEntry, entry: wnspEntry ?? null,

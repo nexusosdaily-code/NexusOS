@@ -4,6 +4,7 @@ import {
   ArrowLeft, Radio, Database, Zap, Copy, ExternalLink, Check, User,
   Upload, Briefcase, Shield, GraduationCap, FileText, Trash2, Lock,
   Eye, EyeOff, Download, Plus, X, BadgeCheck, Atom, Wallet, Crown, Layers,
+  MapPin, Settings,
 } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -198,7 +199,11 @@ interface Credential {
   createdAt: string;
 }
 interface ProfileData {
-  user: { id: string; username: string; role: string; createdAt: string };
+  user: {
+    id: string; username: string; role: string; createdAt: string;
+    bio: string | null; avatarUrl: string | null;
+    country: string | null; stateRegion: string | null;
+  };
   wallet: { address: string } | null;
   spectral: { nm: number; wdm: number; oam: number; pol: string; band: string; psi: string; uri: string; registered: boolean; entry: Record<string, unknown> | null; httpUrl: string };
   content: { recent: Array<{ id: string; label: string | null; band: string | null; wavelengthNm: string | null; psiChannel: string | null; data: Record<string, unknown> | null; createdAt: string }>; total: number };
@@ -546,10 +551,25 @@ export default function ProfilePage() {
 
           {/* avatar + name */}
           <div className="flex items-start gap-5">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold flex-shrink-0 border-2"
-              style={{ background: `${color}33`, borderColor: `${color}55` }}>
-              {user.username[0].toUpperCase()}
+            {/* Avatar — photo if set, otherwise initial */}
+            <div className="relative flex-shrink-0">
+              <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center text-2xl font-bold border-2"
+                style={{ background: `${color}33`, borderColor: `${color}55` }}>
+                {user.avatarUrl
+                  ? <img src={user.avatarUrl} alt={user.username} className="w-full h-full object-cover" data-testid="img-profile-avatar" />
+                  : <span data-testid="text-avatar-initial">{user.username[0].toUpperCase()}</span>
+                }
+              </div>
+              {isSelf && (
+                <Link href="/settings">
+                  <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 border-2 border-zinc-900 flex items-center justify-center cursor-pointer transition-colors"
+                    title="Edit profile">
+                    <Settings size={13} className="text-zinc-400" />
+                  </div>
+                </Link>
+              )}
             </div>
+
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl font-bold flex items-center gap-2">
                 {user.username}
@@ -558,12 +578,30 @@ export default function ProfilePage() {
                 )}
               </h1>
               <p className="text-zinc-400 text-sm mt-0.5">Member since {fmtDate(user.createdAt)}</p>
+
+              {/* Location */}
+              {(user.country || user.stateRegion) && (
+                <p className="flex items-center gap-1.5 text-zinc-500 text-xs mt-1.5" data-testid="text-profile-location">
+                  <MapPin size={11} />
+                  {[user.stateRegion, user.country].filter(Boolean).join(", ")}
+                </p>
+              )}
+
               <div className="mt-3 flex items-center gap-3">
                 <div className="h-2 w-32 rounded-full" style={{ background: color }} />
                 <span className="text-xs font-mono" style={{ color }}>{spectral.band} · λ={spectral.nm}nm</span>
               </div>
             </div>
           </div>
+
+          {/* Bio */}
+          {user.bio && (
+            <div className="mt-4 rounded-xl px-4 py-3 text-sm text-zinc-300 leading-relaxed"
+              style={{ background: "#00000044", borderLeft: `3px solid ${color}55` }}
+              data-testid="text-profile-bio">
+              {user.bio}
+            </div>
+          )}
 
           {/* WNSP-URI canonical address */}
           <div className="mt-5 rounded-xl border p-3 flex items-center gap-2"
