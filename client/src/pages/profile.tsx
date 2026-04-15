@@ -3,7 +3,7 @@ import { useParams, Link } from "wouter";
 import {
   ArrowLeft, Radio, Database, Zap, Copy, ExternalLink, Check, User,
   Upload, Briefcase, Shield, GraduationCap, FileText, Trash2, Lock,
-  Eye, EyeOff, Download, Plus, X, BadgeCheck,
+  Eye, EyeOff, Download, Plus, X, BadgeCheck, Atom, Wallet, Crown, Layers,
 } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -45,6 +45,137 @@ function CopyButton({ text }: { text: string }) {
     >
       {copied ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
     </button>
+  );
+}
+
+// ── Physics constants ────────────────────────────────────────────────────────
+const H_PLANCK = 6.626e-34;
+const C_LIGHT  = 2.998e8;
+
+// ── Authority band definitions ───────────────────────────────────────────────
+const BAND_META: Record<string, {
+  label: string; color: string; bg: string; border: string;
+  wdmRange: string; governance: string; rights: string[];
+}> = {
+  SYSTEM: {
+    label: "SYSTEM", color: "#dc2626", bg: "#7f1d1d22", border: "#dc262633",
+    wdmRange: "WDM 0–63 (UV–Violet)",
+    governance: "Sovereign authority — maximum compression state, highest Λ mass-equivalent per photon. Constitutional power.",
+    rights: ["Constitutional amendment rights", "Spectral registry administration", "Sovereign channel allocation", "Cross-band policy enforcement"],
+  },
+  KERNEL: {
+    label: "KERNEL", color: "#2563eb", bg: "#1e3a8a22", border: "#2563eb33",
+    wdmRange: "WDM 64–127 (Blue–Cyan)",
+    governance: "Infrastructure authority — controls physical layer protocol. Allocates channels to USER and GUEST bands.",
+    rights: ["Protocol parameter configuration", "OAM channel allocation", "Infrastructure access grants", "Lambda Gate operations"],
+  },
+  USER: {
+    label: "USER", color: "#16a34a", bg: "#14532d22", border: "#16a34a33",
+    wdmRange: "WDM 128–191 (Green–Yellow)",
+    governance: "Civilian authority — full participation in governance, commerce, and communication. Standard NexusOS citizen.",
+    rights: ["Governance vote participation", "NXT token transfers", "Spectral content publishing", "Credential issuance"],
+  },
+  GUEST: {
+    label: "GUEST", color: "#6b7280", bg: "#11182722", border: "#6b728033",
+    wdmRange: "WDM 192–255 (Red–IR)",
+    governance: "Observer status — read-only access to public channels. May request USER upgrade via governance.",
+    rights: ["Read public spectral content", "View WNSP registry", "Observe governance proceedings", "Request identity upgrade"],
+  },
+};
+
+// ── Spectral data shape (used before ProfileData is declared) ────────────────
+interface SpectralData {
+  nm: number; wdm: number; oam: number; pol: string;
+  band: string; psi: string; uri: string; registered: boolean;
+  entry: Record<string, unknown> | null; httpUrl: string;
+}
+
+// ── Authority identity panel ─────────────────────────────────────────────────
+function SpectralIdentityPanel({
+  spectral, isSelf,
+}: {
+  spectral: SpectralData; isSelf: boolean;
+}) {
+  const band = BAND_META[spectral.band] ?? BAND_META.GUEST;
+  const freqHz  = C_LIGHT / (spectral.nm * 1e-9);
+  const energyJ = H_PLANCK * freqHz;
+  const lambdaKg = energyJ / (C_LIGHT * C_LIGHT);
+
+  return (
+    <div className="rounded-2xl border p-5 space-y-5"
+      style={{ background: band.bg, borderColor: band.border }}>
+
+      {/* band + governance weight */}
+      <div className="flex items-start gap-4">
+        <div className="flex-shrink-0">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center"
+            style={{ background: band.color + "22", border: `1px solid ${band.color}44` }}>
+            <Crown size={20} style={{ color: band.color }} />
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-bold uppercase tracking-widest px-2.5 py-0.5 rounded"
+              style={{ background: band.color + "22", color: band.color }}>
+              {band.label}
+            </span>
+            <span className="text-xs text-zinc-500 font-mono">{band.wdmRange}</span>
+          </div>
+          <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">{band.governance}</p>
+        </div>
+      </div>
+
+      {/* physics */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {[
+          { label: "Wavelength",  val: spectral.nm.toFixed(2) + " nm",           color: band.color },
+          { label: "Frequency",   val: (freqHz / 1e12).toFixed(3) + " THz",      color: "#22d3ee" },
+          { label: "E = hf",      val: energyJ.toExponential(3) + " J",           color: "#a78bfa" },
+          { label: "Λ = hf/c²",  val: lambdaKg.toExponential(3) + " kg",         color: "#fbbf24" },
+        ].map(s => (
+          <div key={s.label} className="rounded-lg p-2 text-center" style={{ background: "#00000033" }}>
+            <div className="text-[10px] text-zinc-600 mb-0.5">{s.label}</div>
+            <div className="font-mono text-xs font-bold" style={{ color: s.color }}>{s.val}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* authority rights */}
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <Layers size={12} style={{ color: band.color }} />
+          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: band.color }}>
+            Authority rights on this channel
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          {band.rights.map(r => (
+            <div key={r} className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+              <div className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: band.color }} />
+              {r}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* orthogonality note */}
+      <div className="rounded-lg px-3 py-2 text-[10px] font-mono text-zinc-600"
+        style={{ background: "#00000044", borderLeft: `2px solid ${band.color}44` }}>
+        ⟨Ψ_{spectral.band.toLowerCase()} | Ψ_other⟩ = 0 — your channel is geometrically isolated from all other bands.
+        No interference is physically possible at the protocol layer.
+      </div>
+
+      {isSelf && (
+        <Link href="/wallet">
+          <button className="w-full py-2.5 rounded-xl border text-xs font-semibold transition-colors"
+            style={{ borderColor: band.color + "44", color: band.color, background: band.color + "10" }}
+            data-testid="link-open-wallet">
+            <Wallet size={12} className="inline mr-1.5" />
+            Open NXT Wallet
+          </button>
+        </Link>
+      )}
+    </div>
   );
 }
 
@@ -422,38 +553,37 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* NexusOS Identity block */}
-          <div className="mt-6 rounded-xl border p-4 space-y-2" style={{ background: "#00000066", borderColor: `${color}22` }}>
-            <div className="flex items-center gap-2 mb-1">
-              <Radio size={14} style={{ color }} />
-              <span className="text-xs font-semibold uppercase tracking-widest" style={{ color }}>NexusOS Identity</span>
-              {spectral.registered && (
-                <span className="ml-auto flex items-center gap-1 text-[10px] text-green-400">
-                  <BadgeCheck size={11} /> Registered on-chain
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="font-mono text-sm break-all" data-testid="text-wnsp-uri" style={{ color }}>{spectral.uri}</span>
-              <CopyButton text={spectral.uri} />
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-              {[
-                { label: "Ψ channel",    value: spectral.psi },
-                { label: "WDM slot",     value: String(spectral.wdm) },
-                { label: "OAM mode",     value: String(spectral.oam) },
-                { label: "Polarisation", value: spectral.pol === "V" ? "Vertical" : "Horizontal" },
-              ].map(({ label, value }) => (
-                <div key={label} className="rounded-lg p-2 text-center" style={{ background: `${color}11` }}>
-                  <p className="text-xs text-zinc-500">{label}</p>
-                  <p className="text-sm font-mono font-semibold mt-0.5">{value}</p>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-zinc-600 pt-1">
-              Physics-assigned via WASCII v1.0 · CE→SE · Permanent · No server decides your address
-            </p>
+          {/* WNSP-URI canonical address */}
+          <div className="mt-5 rounded-xl border p-3 flex items-center gap-2"
+            style={{ background: "#00000066", borderColor: `${color}22` }}>
+            <Radio size={13} style={{ color }} className="flex-shrink-0" />
+            <span className="text-[10px] text-zinc-500 uppercase tracking-wider flex-shrink-0">Canonical address</span>
+            <span className="font-mono text-xs truncate flex-1" data-testid="text-wnsp-uri" style={{ color }}>{spectral.uri}</span>
+            <CopyButton text={spectral.uri} />
+            {spectral.registered && (
+              <span className="flex items-center gap-1 text-[10px] text-green-400 flex-shrink-0">
+                <BadgeCheck size={10} /> On-chain
+              </span>
+            )}
           </div>
+
+          {/* Ψ channel params */}
+          <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[
+              { label: "Ψ channel",    value: spectral.psi },
+              { label: "WDM slot",     value: String(spectral.wdm) },
+              { label: "OAM mode",     value: String(spectral.oam) },
+              { label: "Polarisation", value: spectral.pol === "V" ? "Vertical" : "Horizontal" },
+            ].map(({ label, value }) => (
+              <div key={label} className="rounded-lg p-2 text-center" style={{ background: `${color}11` }}>
+                <p className="text-[10px] text-zinc-500">{label}</p>
+                <p className="text-sm font-mono font-semibold mt-0.5">{value}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-zinc-600 mt-2">
+            Physics-assigned via WASCII v1.0 · CE→SE · Permanent · No server decides your address
+          </p>
         </div>
       </div>
 
@@ -474,16 +604,33 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* ── Spectral Authority Identity Panel ── */}
+      <div className="max-w-4xl mx-auto px-4 pb-6">
+        <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+          <Crown size={12} /> Spectral Authority
+        </h2>
+        <SpectralIdentityPanel spectral={spectral} isSelf={isSelf} />
+      </div>
+
       {/* wallet */}
       {wallet && (
         <div className="max-w-4xl mx-auto px-4 pb-6">
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 flex items-center gap-3">
-            <User size={16} className="text-zinc-500 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-zinc-500 mb-0.5">NXT Wallet Address</p>
-              <p className="font-mono text-sm truncate" data-testid="text-wallet-address">{wallet.address}</p>
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+            <div className="flex items-center gap-3">
+              <Wallet size={16} className="text-amber-500 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-zinc-500 mb-0.5">NXT Wallet Address</p>
+                <p className="font-mono text-sm truncate" data-testid="text-wallet-address">{wallet.address}</p>
+              </div>
+              <CopyButton text={wallet.address} />
+              {isSelf && (
+                <Link href="/wallet" data-testid="link-wallet-page">
+                  <button className="text-[10px] font-semibold px-2.5 py-1.5 rounded-lg border border-amber-500/40 text-amber-400 hover:bg-amber-950/40 transition-colors whitespace-nowrap">
+                    Open Wallet
+                  </button>
+                </Link>
+              )}
             </div>
-            <CopyButton text={wallet.address} />
           </div>
         </div>
       )}
