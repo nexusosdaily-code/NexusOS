@@ -6,6 +6,7 @@ import {
   users, sessions, auditLogs, wallets, transactions,
   versionRegistry, apiKeys, rateLimits, friendships, uploadedFiles, secureDocuments,
   lambdaMessages, calls, streams, streamViewers, streamRecordings, networkNodes, p2pReceipts, transmissionReports,
+  governanceParams, governanceProposals, governanceVotes,
   type User, type InsertUser, type Session, type InsertSession,
   type AuditLog, type InsertAuditLog, type Wallet, type InsertWallet,
   type Transaction, type InsertTransaction, type VersionRegistry,
@@ -22,6 +23,7 @@ import {
   type NetworkNode, type InsertNetworkNode,
   type P2pReceipt, type InsertP2pReceipt,
   type TransmissionReportRow, type InsertTransmissionReport,
+  type GovernanceParam, type GovernanceProposal, type GovernanceVote,
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
@@ -154,6 +156,24 @@ export interface IStorage {
   saveTransmissionReport(report: InsertTransmissionReport): Promise<TransmissionReportRow>;
   getTransmissionReports(uploaderId?: string, limit?: number): Promise<TransmissionReportRow[]>;
   getTransmissionReportById(id: string): Promise<TransmissionReportRow | undefined>;
+
+  // Governance operations
+  getGovernanceParams(): Promise<GovernanceParam[]>;
+  getGovernanceParam(key: string): Promise<GovernanceParam | undefined>;
+  setGovernanceParam(key: string, value: string, proposalId?: number): Promise<void>;
+  createGovernanceProposal(p: {
+    proposerId: string; proposerName: string; proposerBand: string;
+    title: string; rationale: string; parameterKey: string;
+    currentValue: string; proposedValue: string; closesAt: Date;
+  }): Promise<GovernanceProposal>;
+  getGovernanceProposals(status?: string): Promise<GovernanceProposal[]>;
+  getGovernanceProposal(id: number): Promise<GovernanceProposal | undefined>;
+  castGovernanceVote(proposalId: number, voterId: string, voterName: string, vote: string, authorityWeight: number, voterBand: string): Promise<GovernanceVote>;
+  getGovernanceVotes(proposalId: number): Promise<GovernanceVote[]>;
+  getUserVoteOnProposal(proposalId: number, userId: string): Promise<GovernanceVote | undefined>;
+  tallyGovernanceProposal(proposalId: number): Promise<GovernanceProposal>;
+  executeGovernanceProposal(proposalId: number): Promise<GovernanceProposal>;
+  rejectGovernanceProposal(proposalId: number): Promise<GovernanceProposal>;
 }
 
 function generateWalletAddress(): string {
@@ -1076,6 +1096,113 @@ export class DatabaseStorage implements IStorage {
     const [row] = await db.select().from(transmissionReports)
       .where(eq(transmissionReports.id, id));
     return row;
+  }
+
+  // ============================================
+  // GOVERNANCE OPERATIONS
+  // ============================================
+
+  async getGovernanceParams(): Promise<GovernanceParam[]> {
+    return db.select().from(governanceParams).orderBy(governanceParams.category, governanceParams.key);
+  }
+
+  async getGovernanceParam(key: string): Promise<GovernanceParam | undefined> {
+    const [row] = await db.select().from(governanceParams).where(eq(governanceParams.key, key));
+    return row;
+  }
+
+  async setGovernanceParam(key: string, value: string, proposalId?: number): Promise<void> {
+    await db.update(governanceParams)
+      .set({ value, updatedAt: new Date(), updatedByProposalId: proposalId ?? null })
+      .where(eq(governanceParams.key, key));
+  }
+
+  async createGovernanceProposal(p: {
+    proposerId: string; proposerName: string; proposerBand: string;
+    title: string; rationale: string; parameterKey: string;
+    currentValue: string; proposedValue: string; closesAt: Date;
+  }): Promise<GovernanceProposal> {
+    const [row] = await db.insert(governanceProposals).values({
+      ...p, status: "active",
+      yesWeight: 0, noWeight: 0, abstainWeight: 0, voteCount: 0,
+    }).returning();
+    return row;
+  }
+
+  async getGovernanceProposals(status?: string): Promise<GovernanceProposal[]> {
+    if (status) {
+      return db.select().from(governanceProposals)
+        .where(eq(governanceProposals.status, status))
+        .orderBy(desc(governanceProposals.createdAt));
+    }
+    return db.select().from(governanceProposals).orderBy(desc(governanceProposals.createdAt));
+  }
+
+  async getGovernanceProposal(id: number): Promise<GovernanceProposal | undefined> {
+    const [row] = await db.select().from(governanceProposals).where(eq(governanceProposals.id, id));
+    return row;
+  }
+
+  async castGovernanceVote(
+    proposalId: number, voterId: string, voterName: string,
+    vote: string, authorityWeight: number, voterBand: string,
+  ): Promise<GovernanceVote> {
+    const [row] = await db.insert(governanceVotes).values({
+      proposalId, voterId, voterName, vote, authorityWeight, voterBand,
+    }).returning();
+    // Update proposal vote tallies
+    await db.update(governanceProposals)
+      .set({
+        yesWeight:     vote === "yes"     ? sql`yes_weight     + ${authorityWeight}` : sql`yes_weight`,
+        noWeight:      vote === "no"      ? sql`no_weight      + ${authorityWeight}` : sql`no_weight`,
+        abstainWeight: vote === "abstain" ? sql`abstain_weight + ${authorityWeight}` : sql`abstain_weight`,
+        voteCount:     sql`vote_count + 1`,
+      })
+      .where(eq(governanceProposals.id, proposalId));
+    return row;
+  }
+
+  async getGovernanceVotes(proposalId: number): Promise<GovernanceVote[]> {
+    return db.select().from(governanceVotes)
+      .where(eq(governanceVotes.proposalId, proposalId))
+      .orderBy(desc(governanceVotes.createdAt));
+  }
+
+  async getUserVoteOnProposal(proposalId: number, userId: string): Promise<GovernanceVote | undefined> {
+    const [row] = await db.select().from(governanceVotes)
+      .where(and(eq(governanceVotes.proposalId, proposalId), eq(governanceVotes.voterId, userId)));
+    return row;
+  }
+
+  async tallyGovernanceProposal(proposalId: number): Promise<GovernanceProposal> {
+    const [proposal] = await db.select().from(governanceProposals).where(eq(governanceProposals.id, proposalId));
+    if (!proposal) throw new Error("Proposal not found");
+    const passed = proposal.voteCount >= 3 && proposal.yesWeight > proposal.noWeight;
+    const newStatus = passed ? "passed" : "rejected";
+    const [updated] = await db.update(governanceProposals)
+      .set({ status: newStatus })
+      .where(eq(governanceProposals.id, proposalId))
+      .returning();
+    return updated;
+  }
+
+  async executeGovernanceProposal(proposalId: number): Promise<GovernanceProposal> {
+    const [proposal] = await db.select().from(governanceProposals).where(eq(governanceProposals.id, proposalId));
+    if (!proposal) throw new Error("Proposal not found");
+    await this.setGovernanceParam(proposal.parameterKey, proposal.proposedValue, proposalId);
+    const [updated] = await db.update(governanceProposals)
+      .set({ status: "executed", executedAt: new Date() })
+      .where(eq(governanceProposals.id, proposalId))
+      .returning();
+    return updated;
+  }
+
+  async rejectGovernanceProposal(proposalId: number): Promise<GovernanceProposal> {
+    const [updated] = await db.update(governanceProposals)
+      .set({ status: "rejected" })
+      .where(eq(governanceProposals.id, proposalId))
+      .returning();
+    return updated;
   }
 }
 

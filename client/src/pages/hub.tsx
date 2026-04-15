@@ -11,7 +11,7 @@ import {
   Zap, Atom, Waves, Rocket, Users, Database,
   Shield, BookOpen, HardDrive, GitBranch,
   ChevronRight, LayoutGrid, Rss, Eye, Clock,
-  MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key,
+  MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -87,6 +87,7 @@ const APP_SECTIONS = [
       { title: "Kernel",        href: "/kernel",          Icon: Cpu },
       { title: "WNSP Coord.",   href: "/wnsp/coordinator",Icon: Globe2 },
       { title: "Nexus Command", href: "/nexus-command",   Icon: Shield },
+      { title: "Governance",    href: "/governance",       Icon: Scale },
     ],
   },
   {

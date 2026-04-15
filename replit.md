@@ -59,6 +59,16 @@ The authoritative physics engine that makes WNSP govern every economic action in
 ### WNSP AI Operating System Kernel (v1.0.0)
 A Python kernel featuring a 6-phase boot process, persistent state via PostgreSQL, an authority/permission layer (SYSTEM, KERNEL, USER, GUEST), a `KernelEventBus` for interrupt/event handling, a dead agent watchdog, and a blockchain auditor. All 6 core agents pulse heartbeats to maintain ACTIVE status.
 
+### Governance System (Stage 5)
+On-chain protocol governance backed by PostgreSQL. KERNEL-band or higher users can submit proposals to change any of the 11 live protocol parameters. Voting is weighted by spectral authority band (SYSTEM=8, KERNEL=4, USER=2, GUEST=1). Proposals require ≥3 votes and a yes-weight majority to pass; early execution triggers at ≥5 votes with ≥80% yes-weighting. When a proposal executes, `applyGovernanceParam()` in `server/physics.ts` updates the in-memory `LIVE_FEES` or `LIVE_BURNS` stores immediately — no restart required. Parameters are persisted in `governance_params` table and reload on boot via seed (unchanged by proposals). UI at `/governance` shows active proposals, vote history, current parameter values, and a proposal creation form.
+
+**Governable parameters (11 total):**
+- Fee params: `fee.message_send`, `fee.stream_start`, `fee.stream_minute`, `fee.document_create`, `fee.upload_mb`, `fee.spectral_record`, `fee.wallet_transfer`
+- Burn ratios: `burn.message` (50%), `burn.stream_join` (20%), `burn.stream_heartbeat` (15%), `burn.document_read` (10%)
+
+### Developer API Layer (Stage 4)
+API key management with NXT creation fee. Keys authenticate external access via `Authorization: Bearer nxt_…`. External endpoints: `GET /api/dev/status|wallet|physics/:username`, `POST /api/dev/message`. Key manager UI at `/developer/keys`. Keys use bcrypt-hashed secrets; only prefix stored in DB.
+
 ### Content & Media System
 A P2P media sharing engine with physics-based cost calculations, mesh networking, chunk-based distribution, WebRTC/Socket.IO streaming, HTTP Range Request support, and encryption.
 

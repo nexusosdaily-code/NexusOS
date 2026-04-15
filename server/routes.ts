@@ -11,7 +11,7 @@ import {
   createStreamSchema, updateStreamSettingsSchema
 } from "@shared/schema";
 import { z } from "zod";
-import { deriveChannel, calcFee, hasAuthority, getBand } from "./physics";
+import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam } from "./physics";
 
 // WebSocket clients mapped by userId
 const connectedClients = new Map<string, WebSocket>();
@@ -5571,6 +5571,166 @@ export async function registerRoutes(
         .where(drizzleSql`${videoUploads.status} = 'ready'`)
         .orderBy(desc(videoUploads.createdAt));
       res.json({ videos, count: videos.length });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── Governance ────────────────────────────────────────────────────────────
+  const BAND_WEIGHT: Record<string, number> = { SYSTEM: 8, KERNEL: 4, USER: 2, GUEST: 1 };
+  const PROPOSAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  // GET /api/governance/params — list all governable protocol parameters
+  app.get("/api/governance/params", async (req: Request, res: Response) => {
+    try {
+      const params = await storage.getGovernanceParams();
+      res.json({ params });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/governance/proposals — list proposals (optional ?status=active|passed|rejected|executed)
+  app.get("/api/governance/proposals", async (req: Request, res: Response) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const proposals = await storage.getGovernanceProposals(status);
+      res.json({ proposals });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/governance/proposals/:id — get single proposal with votes
+  app.get("/api/governance/proposals/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const proposal = await storage.getGovernanceProposal(id);
+      if (!proposal) return res.status(404).json({ error: "Proposal not found" });
+      const votes = await storage.getGovernanceVotes(id);
+      res.json({ proposal, votes });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/governance/proposals — create a proposal (KERNEL+ band required)
+  app.post("/api/governance/proposals", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const channel = deriveChannel(user.username);
+      const band = getBand(channel.wdm);
+      if (!hasAuthority(channel.wdm, "KERNEL")) {
+        return res.status(403).json({ error: `KERNEL band or higher required. Your band: ${band}` });
+      }
+      const { title, rationale, parameterKey, proposedValue } = req.body;
+      if (!title || !rationale || !parameterKey || !proposedValue) {
+        return res.status(400).json({ error: "title, rationale, parameterKey, proposedValue required" });
+      }
+      const param = await storage.getGovernanceParam(parameterKey);
+      if (!param) return res.status(404).json({ error: "Unknown parameter key" });
+      const proposed = parseFloat(proposedValue);
+      if (isNaN(proposed) || proposed < 0) {
+        return res.status(400).json({ error: "proposedValue must be a positive number" });
+      }
+      // Constraint: fees can't exceed 100 NXT, burn ratios must be 0–1
+      if (param.category === "burn" && (proposed < 0 || proposed > 1)) {
+        return res.status(400).json({ error: "Burn ratio must be between 0 and 1" });
+      }
+      if (param.category === "fee" && proposed > 100) {
+        return res.status(400).json({ error: "Fee cannot exceed 100 NXT" });
+      }
+      const closesAt = new Date(Date.now() + PROPOSAL_DURATION_MS);
+      const proposal = await storage.createGovernanceProposal({
+        proposerId:    user.id,
+        proposerName:  user.username,
+        proposerBand:  band,
+        title, rationale, parameterKey,
+        currentValue:  param.value,
+        proposedValue: proposed.toString(),
+        closesAt,
+      });
+      res.status(201).json({ proposal });
+    } catch (err: any) {
+      if (err.message?.includes("unique") || err.code === "23505") {
+        res.status(409).json({ error: "You already have an active proposal for this parameter" });
+      } else {
+        res.status(500).json({ error: err.message });
+      }
+    }
+  });
+
+  // POST /api/governance/proposals/:id/vote — cast a vote (all authenticated users)
+  app.post("/api/governance/proposals/:id/vote", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const proposalId = parseInt(req.params.id);
+      const { vote } = req.body;
+      if (!["yes", "no", "abstain"].includes(vote)) {
+        return res.status(400).json({ error: "vote must be yes, no, or abstain" });
+      }
+      const proposal = await storage.getGovernanceProposal(proposalId);
+      if (!proposal) return res.status(404).json({ error: "Proposal not found" });
+      if (proposal.status !== "active") {
+        return res.status(400).json({ error: `Proposal is ${proposal.status}, not active` });
+      }
+      const existing = await storage.getUserVoteOnProposal(proposalId, user.id);
+      if (existing) return res.status(409).json({ error: "You have already voted on this proposal" });
+      const channel = deriveChannel(user.username);
+      const band = getBand(channel.wdm);
+      const weight = BAND_WEIGHT[band] ?? 1;
+      const govVote = await storage.castGovernanceVote(proposalId, user.id, user.username, vote, weight, band);
+      // Check for early execution threshold (>= 5 votes, yes > 80% of yes+no)
+      const refreshed = await storage.getGovernanceProposal(proposalId);
+      if (refreshed && refreshed.voteCount >= 5) {
+        const total = refreshed.yesWeight + refreshed.noWeight;
+        if (total > 0 && refreshed.yesWeight / total >= 0.8) {
+          const executed = await storage.executeGovernanceProposal(proposalId);
+          applyGovernanceParam(executed.parameterKey, parseFloat(executed.proposedValue));
+          return res.json({ vote: govVote, proposal: executed, earlyExecution: true });
+        }
+      }
+      // Auto-tally when proposal closes
+      if (refreshed && refreshed.closesAt <= new Date()) {
+        const tallied = await storage.tallyGovernanceProposal(proposalId);
+        if (tallied.status === "passed") {
+          const executed = await storage.executeGovernanceProposal(proposalId);
+          applyGovernanceParam(executed.parameterKey, parseFloat(executed.proposedValue));
+          return res.json({ vote: govVote, proposal: executed });
+        }
+        return res.json({ vote: govVote, proposal: tallied });
+      }
+      res.json({ vote: govVote, proposal: refreshed });
+    } catch (err: any) {
+      if (err.message?.includes("unique") || err.code === "23505") {
+        res.status(409).json({ error: "You have already voted on this proposal" });
+      } else {
+        res.status(500).json({ error: err.message });
+      }
+    }
+  });
+
+  // POST /api/governance/proposals/:id/tally — manually finalize a closed proposal (SYSTEM band)
+  app.post("/api/governance/proposals/:id/tally", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const channel = deriveChannel(user.username);
+      if (!hasAuthority(channel.wdm, "SYSTEM")) {
+        return res.status(403).json({ error: "SYSTEM band required to manually tally" });
+      }
+      const proposalId = parseInt(req.params.id);
+      const proposal = await storage.getGovernanceProposal(proposalId);
+      if (!proposal) return res.status(404).json({ error: "Proposal not found" });
+      if (proposal.status !== "active") {
+        return res.status(400).json({ error: `Proposal already ${proposal.status}` });
+      }
+      const tallied = await storage.tallyGovernanceProposal(proposalId);
+      if (tallied.status === "passed") {
+        const executed = await storage.executeGovernanceProposal(proposalId);
+        applyGovernanceParam(executed.parameterKey, parseFloat(executed.proposedValue));
+        return res.json({ proposal: executed });
+      }
+      res.json({ proposal: tallied });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

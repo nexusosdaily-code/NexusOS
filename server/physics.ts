@@ -44,6 +44,29 @@ export const BASE_FEES: Record<string, number> = {
   wallet_transfer:   0.001,  // fraction (0.1%) — existing behaviour preserved
 };
 
+// ── Governance-controlled live fee store ──────────────────────────────────────
+// Starts as a copy of BASE_FEES; governance proposals mutate this at runtime.
+export const LIVE_FEES: Record<string, number> = { ...BASE_FEES };
+
+// ── Governance-controlled burn ratios ─────────────────────────────────────────
+export const LIVE_BURNS: Record<string, number> = {
+  message:            0.50,   // 50% of message fee → protocol burn
+  stream_join:        0.20,   // 20% of join fee → protocol burn
+  stream_heartbeat:   0.15,   // 15% of heartbeat fee → protocol burn
+  document_read:      0.10,   // 10% of read fee → protocol burn
+};
+
+/** Apply a governance-voted parameter change to the live in-memory stores. */
+export function applyGovernanceParam(key: string, value: number): void {
+  if (key.startsWith("fee.")) {
+    const feeKey = key.slice(4);
+    LIVE_FEES[feeKey] = value;
+  } else if (key.startsWith("burn.")) {
+    const burnKey = key.slice(5);
+    LIVE_BURNS[burnKey] = value;
+  }
+}
+
 // ── Channel derivation ────────────────────────────────────────────────────────
 /**
  * Derive a deterministic Ψ channel from a username.
@@ -116,7 +139,7 @@ export interface PhysicsFee {
  * For upload actions, pass fileSizeBytes for per-MB pricing.
  */
 export function calcFee(
-  actionType: keyof typeof BASE_FEES,
+  actionType: string,
   senderWdm: number,
   opts: { fileSizeBytes?: number; transferAmount?: number } = {},
 ): PhysicsFee {
@@ -130,12 +153,12 @@ export function calcFee(
   let baseFeeNxt: number;
 
   if (actionType === "wallet_transfer" && opts.transferAmount != null) {
-    baseFeeNxt = opts.transferAmount * BASE_FEES.wallet_transfer;
+    baseFeeNxt = opts.transferAmount * LIVE_FEES.wallet_transfer;
   } else if (actionType === "upload_mb" && opts.fileSizeBytes != null) {
     const mb = opts.fileSizeBytes / (1024 * 1024);
-    baseFeeNxt = Math.max(mb * BASE_FEES.upload_mb, 0.01);
+    baseFeeNxt = Math.max(mb * LIVE_FEES.upload_mb, 0.01);
   } else {
-    baseFeeNxt = BASE_FEES[actionType] ?? 1.0;
+    baseFeeNxt = LIVE_FEES[actionType] ?? 1.0;
   }
 
   const rawFee   = baseFeeNxt * multiplier;

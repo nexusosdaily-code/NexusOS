@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, decimal, jsonb, index, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, decimal, jsonb, index, real, serial, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -857,3 +857,59 @@ export const transmissionReports = pgTable("transmission_reports", {
 export const insertTransmissionReportSchema = createInsertSchema(transmissionReports).omit({ id: true, createdAt: true });
 export type InsertTransmissionReport = z.infer<typeof insertTransmissionReportSchema>;
 export type TransmissionReportRow = typeof transmissionReports.$inferSelect;
+
+// ── Governance ────────────────────────────────────────────────────────────────
+
+export const governanceParams = pgTable("governance_params", {
+  key:                text("key").primaryKey(),
+  value:              text("value").notNull(),
+  description:        text("description").notNull(),
+  category:           text("category").notNull(),   // "fee" | "burn"
+  unit:               text("unit").notNull(),         // "NXT" | "ratio" | "fraction"
+  updatedAt:          timestamp("updated_at").notNull().defaultNow(),
+  updatedByProposalId: integer("updated_by_proposal_id"),
+});
+
+export const governanceProposals = pgTable("governance_proposals", {
+  id:            serial("id").primaryKey(),
+  proposerId:    text("proposer_id").notNull(),
+  proposerName:  text("proposer_name").notNull(),
+  proposerBand:  text("proposer_band").notNull(),
+  title:         text("title").notNull(),
+  rationale:     text("rationale").notNull(),
+  parameterKey:  text("parameter_key").notNull(),
+  currentValue:  text("current_value").notNull(),
+  proposedValue: text("proposed_value").notNull(),
+  status:        text("status").notNull().default("active"), // active|passed|rejected|executed
+  yesWeight:     integer("yes_weight").notNull().default(0),
+  noWeight:      integer("no_weight").notNull().default(0),
+  abstainWeight: integer("abstain_weight").notNull().default(0),
+  voteCount:     integer("vote_count").notNull().default(0),
+  closesAt:      timestamp("closes_at").notNull(),
+  executedAt:    timestamp("executed_at"),
+  createdAt:     timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  statusIdx:   index("gov_proposals_status_idx").on(table.status),
+  proposerIdx: index("gov_proposals_proposer_idx").on(table.proposerId),
+}));
+
+export const governanceVotes = pgTable("governance_votes", {
+  id:              serial("id").primaryKey(),
+  proposalId:      integer("proposal_id").notNull(),
+  voterId:         text("voter_id").notNull(),
+  voterName:       text("voter_name").notNull(),
+  vote:            text("vote").notNull(),           // yes|no|abstain
+  authorityWeight: integer("authority_weight").notNull(),
+  voterBand:       text("voter_band").notNull(),
+  createdAt:       timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  proposalIdx: index("gov_votes_proposal_idx").on(table.proposalId),
+  voterIdx:    index("gov_votes_voter_idx").on(table.voterId),
+  uniqueVote:  uniqueIndex("gov_votes_unique_idx").on(table.proposalId, table.voterId),
+}));
+
+export const insertGovernanceProposalSchema = createInsertSchema(governanceProposals).omit({ id: true, yesWeight: true, noWeight: true, abstainWeight: true, voteCount: true, executedAt: true, createdAt: true });
+export type InsertGovernanceProposal = z.infer<typeof insertGovernanceProposalSchema>;
+export type GovernanceProposal = typeof governanceProposals.$inferSelect;
+export type GovernanceParam   = typeof governanceParams.$inferSelect;
+export type GovernanceVote    = typeof governanceVotes.$inferSelect;
