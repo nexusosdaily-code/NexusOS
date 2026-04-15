@@ -62,6 +62,11 @@ interface Node {
   createdAt: string;
 }
 
+interface MyPhysics {
+  username: string;
+  channel: { wdm: number; oam: number; pol: string; nm: number; band: string; psi: string };
+}
+
 export default function NetworkPage() {
   const qc = useQueryClient();
   const [showRegister, setShowRegister] = useState(false);
@@ -72,6 +77,20 @@ export default function NetworkPage() {
   useEffect(() => {
     setIsLoggedIn(!!localStorage.getItem("auth_token"));
   }, []);
+
+  // Fetch the logged-in user's spectral identity
+  const { data: myPhysics } = useQuery<MyPhysics>({
+    queryKey: ["/api/physics/my"],
+    enabled: isLoggedIn,
+    queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const res = await fetch("/api/physics/my", {
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Not authenticated");
+      return res.json();
+    },
+  });
 
   const { data, isLoading, dataUpdatedAt } = useQuery<{ nodes: Node[]; total: number; active: number }>({
     queryKey: ["/api/network/nodes"],
@@ -174,6 +193,59 @@ export default function NetworkPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+        {/* Your Spectral Identity — shown when logged in */}
+        {myPhysics && (() => {
+          const { channel, username } = myPhysics;
+          const nm = channel.nm;
+          const col = nmToColor(nm);
+          const uri = `wnsp://${channel.psi}/${username.toLowerCase()}`;
+          return (
+            <div className="border rounded-xl p-5" style={{ borderColor: col + "35", background: col + "07" }}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: col, boxShadow: `0 0 8px ${col}` }} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: col }}>Your Spectral Identity</span>
+                  <span className="text-white/20 text-[9px]">— your node name IS your wavelength address, derived from physics</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setForm(f => ({ ...f, name: username, purpose: `${username}'s node — ${channel.band} band`, capabilities: "messaging,storage" }));
+                    setPreview(ceEncode(username));
+                    setShowRegister(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-bold hover:opacity-90 transition-all flex-shrink-0"
+                  style={{ borderColor: col + "50", color: col, background: col + "15" }}
+                  data-testid="button-announce-my-node"
+                >
+                  <Radio size={10} /> Announce My Node
+                </button>
+              </div>
+
+              <div className="grid grid-cols-4 gap-3 mb-4">
+                {[
+                  { label: "Username → Node Name", value: username, color: col },
+                  { label: "Ψ Channel", value: channel.psi, color: "#06b6d4" },
+                  { label: "λ emission", value: `${nm.toFixed(2)}nm`, color: col },
+                  { label: "Band", value: channel.band, color: col },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="border border-white/5 rounded-lg px-3 py-2.5">
+                    <div className="text-[8px] text-white/25 mb-1">{label}</div>
+                    <div className="text-[11px] font-bold" style={{ color }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="h-1 rounded-full mb-3" style={{ background: `linear-gradient(to right, ${nmToColor(nm - 30)}, ${col}, ${nmToColor(nm + 30)})` }} />
+
+              <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-white/6" style={{ background: "rgba(0,0,0,0.35)" }}>
+                <Radio size={9} style={{ color: col }} className="flex-shrink-0" />
+                <span className="font-mono text-[10px] font-bold" style={{ color: col + "cc" }}>{uri}</span>
+                <span className="text-white/15 text-[8px] ml-auto">Your permanent DNS-free address · No IP · No server</span>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Register form */}
         {showRegister && (

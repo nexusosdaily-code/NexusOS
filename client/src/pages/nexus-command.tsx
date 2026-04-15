@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Zap, Radio, Layers, Database, Wifi, Lock, Globe,
   Send, Play, RefreshCw, ArrowRight, Activity,
-  Code2, Cpu, Signal, FileText, BookOpen, Shield, Heart, Video, Scale
+  Code2, Cpu, Signal, FileText, BookOpen, Shield, Heart, Video, Scale, Smartphone
 } from "lucide-react";
 
 // ── Spectrum colour ───────────────────────────────────────────────
@@ -453,6 +453,14 @@ const SYSTEMS = [
     color: "#8b00ff",
     Icon: Code2,
     action: "Open language spec",
+  },
+  {
+    title: "Mobile SDK",
+    description: "iOS (Swift) and Android (Kotlin) wrappers for the WASCII API. CE→SE encode any word to its Ψ channel, discover peers without DNS, and build spectral-native mobile apps. AGPL-3.0.",
+    href: "/mobile-sdk",
+    color: "#06b6d4",
+    Icon: Smartphone,
+    action: "Open Mobile SDK",
   },
   {
     title: "Communication Hub",

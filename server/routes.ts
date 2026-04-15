@@ -734,6 +734,7 @@ export async function registerRoutes(
       };
 
       res.json({
+        username: user.username,
         channel: {
           wdm:  user.spectralWdm ?? ch.wdm,
           oam:  user.spectralOam ?? ch.oam,

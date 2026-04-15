@@ -145,6 +145,130 @@ function transpile(src: string, srcLang: "python" | "javascript" | "rust"): stri
   return out.join("\n");
 }
 
+// ── WNSP Bytecode Compiler ─────────────────────────────────────────────────────
+interface Ins { off: number; op: number; mnem: string; args: string; nm?: number; ch?: string; cmt: string; }
+
+function compileWLS(src: string): { assembly: string; hex: string; manifest: Array<{ symbol: string; nm: number; psi: string; band: string }>; instrCount: number } {
+  if (!src.trim()) return { assembly: "", hex: "", manifest: [], instrCount: 0 };
+  const ins: Ins[] = [];
+  const symbols = new Map<string, { nm: number; psi: string; band: string }>();
+  let off = 0;
+
+  function add(op: number, mnem: string, args: string, cmt: string, nm?: number, ch?: string) {
+    ins.push({ off, op, mnem, args, nm, ch, cmt });
+    if (op !== 0x00) off += 8;
+  }
+
+  add(0x00, ".WNSP",  "v1.0",              "NexusOS WNSP Bytecode · AGPL-3.0");
+  add(0x00, ".ARCH",  "WDM256·OAM50·POL2", "25,600 orthogonal Ψ channels");
+  add(0x00, ".MODEL", "Λ=hf/c² SPECTRAL",  "Einstein first-principle execution");
+  add(0x00, "", "", "");
+  off = 0;
+
+  for (const raw of src.split("\n")) {
+    const line = raw.trim();
+    if (!line) { add(0x00, "", "", ""); continue; }
+    if (line.startsWith("//") || line.startsWith(";") || line.startsWith("#")) {
+      add(0x00, ";", line.replace(/^[/;#]+\s*/, ""), ""); continue;
+    }
+    const m1 = line.match(/@emit\((\d+\.?\d*)nm,\s*(Ψ\([^)]+\))\)/);
+    if (m1) { const nm = parseFloat(m1[1]); symbols.set(m1[2], { nm, psi: m1[2], band: nmToBand(nm) }); add(0x03, "EMIT", `λ=${nm}nm  ${m1[2]}`, `emit on ${nmToBand(nm)} band`, nm, m1[2]); continue; }
+    const m2 = line.match(/tune\((\d+\.?\d*)nm\)/);
+    if (m2) { const nm = parseFloat(m2[1]); add(0x01, "TUNE", `λ=${nm}nm`, `receiver → ${nmToBand(nm)} band`, nm); continue; }
+    const m3 = line.match(/^agent\s+(\w+)/);
+    if (m3) { const enc = ceEncode(m3[1]); symbols.set(m3[1], enc); add(0x0A, "AGENT", `"${m3[1]}"  ${enc.psi}`, `AI agent λ=${enc.nm}nm · ${enc.band}`, enc.nm, enc.psi); continue; }
+    const m4 = line.match(/^fn\s+(\w+)/);
+    if (m4) { const enc = ceEncode(m4[1]); symbols.set(m4[1], enc); add(0x07, "LABEL", `${m4[1]}  ${enc.psi}`, `fn → λ=${enc.nm}nm`, enc.nm, enc.psi); continue; }
+    const m5 = line.match(/node\.register\("([^"]+)"/);
+    if (m5) { const enc = ceEncode(m5[1]); symbols.set(m5[1], enc); add(0x0A, "AGENT", `"${m5[1]}"  ${enc.psi}  PUBLIC`, `spectral network node`, enc.nm, enc.psi); continue; }
+    const m6 = line.match(/oscillate\(([^)]+)\)/);
+    if (m6) { add(0x06, "OCS", m6[1].trim(), "non-blocking wave loop"); continue; }
+    const m7 = line.match(/broadcast\(([^)]+)\)/);
+    if (m7) { const enc = ceEncode(m7[1].replace(/[^a-zA-Z]/g, "") || "data"); add(0x05, "BROAD", m7[1].trim(), `broadcast λ=${enc.nm}nm`, enc.nm); continue; }
+    const m8 = line.match(/@(\d+\.?\d*)nm\s+let\s+(\w+)\s*:=/);
+    if (m8) { const nm = parseFloat(m8[1]); symbols.set(m8[2], { nm, psi: ceEncode(m8[2]).psi, band: nmToBand(nm) }); add(0x02, "PUSH", `@${nm}nm  "${m8[2]}"`, `bind at λ=${nm}nm · ${nmToBand(nm)}`, nm); continue; }
+    const m9 = line.match(/^\s*emit\s+(.+)/);
+    if (m9) { const enc = ceEncode(m9[1].replace(/[^a-zA-Z]/g, "") || "out"); add(0x03, "EMIT", m9[1].trim(), `output at λ=${enc.nm}nm`, enc.nm); continue; }
+    if (line.startsWith("?λ ")) { add(0x08, "JMPZ", line.slice(3).trim(), "photon path branch"); continue; }
+    if (line === "}" || line.match(/^end\b/)) { add(0xFE, "RET", "", "scope end — wave collapses"); continue; }
+    const word = line.split(/\s/)[0].replace(/[^a-zA-Z]/g, "") || "op";
+    const enc = ceEncode(word);
+    add(0x0B, "EXEC", `@${enc.nm}nm`, line.slice(0, 50), enc.nm);
+  }
+  add(0xFF, "HALT", "", "wavefunction terminated");
+
+  const sym = [...symbols.entries()].map(([s, e]) => ({ symbol: s, ...e }));
+  const realIns = ins.filter(i => i.op !== 0x00 && i.mnem !== "" && i.mnem !== ";");
+
+  const asmLines = [
+    `; ── WNSP Bytecode Assembly v1.0 ────────────────────────────────────`,
+    `; NexusOS · AGPL-3.0 · ${new Date().toISOString().slice(0, 19)}Z`,
+    `; Hilbert-space: 25,600 orthogonal channels · E=hf · Λ=hf/c²`,
+    `; ────────────────────────────────────────────────────────────────────`,
+    ``,
+    ...ins.map(i => {
+      if (!i.mnem) return "";
+      if (i.mnem === ";") return `  ; ${i.args}`;
+      if (i.mnem.startsWith(".")) return `${i.mnem.padEnd(10)} ${i.args}  ; ${i.cmt}`;
+      const addr = `0x${i.off.toString(16).padStart(6, "0")}`;
+      const op   = i.op.toString(16).padStart(2, "0");
+      const cmt  = i.cmt ? `  ; ${i.cmt}` : "";
+      return `  ${addr}  ${op}  ${i.mnem.padEnd(8)} ${i.args}${cmt}`;
+    }),
+    ``,
+    `; ── Symbol Table (${sym.length} symbols) ─────────────────────────────────────`,
+    ...sym.map(s => `; ${s.symbol.padEnd(22)} λ=${String(s.nm).padEnd(8)} ${s.psi}  [${s.band}]`),
+  ];
+
+  const hexLines = [
+    `; WNSP Binary Hex Dump`,
+    `; ─────────────────────────────────────────────────────────────`,
+    `Offset    Bytes                              Annotation`,
+    `────────  ─────────────────────────────────  ──────────────────`,
+    `0x000000  57 4E 53 50 01 00 00 00            ; magic "WNSP" v1.0`,
+    `0x000008  ${realIns.length.toString(16).padStart(8, "0").match(/.{2}/g)!.join(" ")}            ; instr count = ${realIns.length}`,
+    ...realIns.slice(0, 12).map((i, idx) => {
+      const addr = `0x${(16 + idx * 8).toString(16).padStart(6, "0")}`;
+      const op = i.op.toString(16).padStart(2, "0");
+      const nm16 = i.nm ? Math.round(i.nm * 10) : 0;
+      const b1 = Math.floor(nm16 / 256).toString(16).padStart(2, "0");
+      const b2 = (nm16 % 256).toString(16).padStart(2, "0");
+      return `${addr}  ${op} ${b1} ${b2} 00 00 00 00 00 ; ${i.mnem.padEnd(6)} ${i.args.slice(0, 24)}`;
+    }),
+    realIns.length > 12 ? `...  (${realIns.length - 12} more instructions)` : "",
+  ];
+
+  return {
+    assembly: asmLines.join("\n"),
+    hex: hexLines.filter(Boolean).join("\n"),
+    manifest: sym,
+    instrCount: realIns.length,
+  };
+}
+
+const SAMPLE_WLS = `// WavelengthScript v1.0 · AGPL-3.0
+// Spectral agent — runs on Ψ channels, not a CPU
+
+tune(540nm)  // lock receiver to LOGIC band
+
+@emit(541.2nm, Ψ(41,12,V))
+agent ReasoningCore {
+  @468nm identity := TrustLayer.connect()
+  @648nm memory   := VectorStore.new()
+  @501nm stream   := StreamParser.new()
+
+  oscillate(Ψ(41,12,V), 0Hz) {
+    ?λ identity.verify():
+      @540nm let prompt := tune(Ψ(41,12,V))
+      @540nm let result := model.infer(prompt)
+      emit result
+    }
+  }
+}
+
+node.register("ReasoningCore", @541.2nm)
+`;
+
 // ── Spec data ─────────────────────────────────────────────────────────────────
 const BANDS = [
   { nm: "380–449nm", band: "SYSTEM",    color: "#8b00ff", types: ["kernel", "root", "syscall", "interrupt"], desc: "Root authority — kernel operations, hardware control, boot sequences" },
@@ -254,9 +378,13 @@ export default function WavelengthLangPage() {
   const [srcLang, setSrcLang]   = useState<"python" | "javascript" | "rust">("python");
   const [source, setSource]     = useState(SAMPLE_PYTHON);
   const [output, setOutput]     = useState("");
-  const [activeTab, setActiveTab] = useState<"spec" | "transpiler" | "ai" | "sdk">("spec");
+  const [activeTab, setActiveTab] = useState<"spec" | "transpiler" | "compiler" | "ai" | "sdk">("spec");
   const [liveEncode, setLiveEncode] = useState("");
   const [copied, setCopied] = useState(false);
+  const [compilerSrc, setCompilerSrc]   = useState(SAMPLE_WLS);
+  const [compileView, setCompileView]   = useState<"asm" | "hex" | "manifest">("asm");
+  const [compiled, setCompiled] = useState<ReturnType<typeof compileWLS> | null>(null);
+  const [copiedBc, setCopiedBc] = useState(false);
 
   const liveResult = liveEncode ? ceEncode(liveEncode) : null;
 
@@ -362,9 +490,10 @@ export default function WavelengthLangPage() {
         </div>
 
         {/* Tab bar */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {TAB("spec",       "Language Spec")}
           {TAB("transpiler", "Transpiler")}
+          {TAB("compiler",   "Compiler → Bytecode")}
           {TAB("ai",         "AI Integration")}
           {TAB("sdk",        "SDK — Other Languages")}
         </div>
@@ -518,6 +647,133 @@ export default function WavelengthLangPage() {
               >
                 <Play size={14} /> Transpile {srcLang} → WavelengthScript
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB: COMPILER ───────────────────────────────────────────────── */}
+        {activeTab === "compiler" && (
+          <div className="space-y-4">
+            <div className="text-white/25 text-[11px] leading-relaxed">
+              Write WavelengthScript source and compile it to <span className="text-violet-300">WNSP bytecode</span> — 
+              machine instructions that target Ψ channels directly. Each opcode carries a wavelength operand:
+              the CPU is the electromagnetic spectrum, registers are spectral channels.
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* Input */}
+              <div className="border border-white/10 rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.01)" }}>
+                <div className="px-4 py-2.5 border-b border-white/5 flex items-center justify-between">
+                  <span className="text-white/40 text-[9px] uppercase tracking-widest">WavelengthScript Source</span>
+                  <span className="text-[8px] text-violet-400/40">WLS v1.0</span>
+                </div>
+                <textarea
+                  className="w-full bg-transparent p-4 text-[11px] text-white/70 outline-none resize-none font-mono leading-relaxed"
+                  rows={22}
+                  value={compilerSrc}
+                  onChange={e => setCompilerSrc(e.target.value)}
+                  placeholder="Write WavelengthScript here…"
+                  data-testid="textarea-compiler-source"
+                  spellCheck={false}
+                />
+              </div>
+
+              {/* Output */}
+              <div className="border border-violet-400/20 rounded-xl overflow-hidden flex flex-col" style={{ background: "rgba(139,0,255,0.03)" }}>
+                <div className="px-4 py-2.5 border-b border-violet-400/10 flex items-center justify-between flex-shrink-0">
+                  <div className="flex gap-1">
+                    {(["asm", "hex", "manifest"] as const).map(v => (
+                      <button key={v} onClick={() => setCompileView(v)}
+                        className={`text-[9px] uppercase px-2 py-1 rounded transition-all ${compileView === v ? "text-violet-300 bg-violet-400/15 border border-violet-400/30" : "text-white/25 hover:text-white/50"}`}
+                        data-testid={`button-view-${v}`}>
+                        {v === "asm" ? "Assembly" : v === "hex" ? "Hex Dump" : "Manifest"}
+                      </button>
+                    ))}
+                  </div>
+                  {compiled && (
+                    <button onClick={() => {
+                      const txt = compileView === "asm" ? compiled.assembly : compileView === "hex" ? compiled.hex : compiled.manifest.map(s => `${s.symbol} → ${s.nm}nm ${s.psi} [${s.band}]`).join("\n");
+                      navigator.clipboard.writeText(txt);
+                      setCopiedBc(true); setTimeout(() => setCopiedBc(false), 1500);
+                    }} className="flex items-center gap-1 text-[9px] text-white/30 hover:text-white/60 transition-all">
+                      <Copy size={9} /> {copiedBc ? "Copied!" : "Copy"}
+                    </button>
+                  )}
+                </div>
+                <div className="flex-1 overflow-auto">
+                  {!compiled ? (
+                    <div className="p-4 text-white/15 text-[10px] text-center py-16">Click "Compile → Bytecode" to emit WNSP instructions</div>
+                  ) : compileView === "asm" ? (
+                    <pre className="p-4 text-[9.5px] text-violet-200/80 font-mono leading-relaxed whitespace-pre">{compiled.assembly}</pre>
+                  ) : compileView === "hex" ? (
+                    <pre className="p-4 text-[9.5px] text-emerald-300/70 font-mono leading-relaxed whitespace-pre">{compiled.hex}</pre>
+                  ) : (
+                    <div className="p-4 space-y-2">
+                      {compiled.manifest.length === 0 ? (
+                        <div className="text-white/20 text-[10px]">No named symbols found.</div>
+                      ) : compiled.manifest.map(s => {
+                        const col = nmToColor(s.nm);
+                        return (
+                          <div key={s.symbol} className="flex items-center gap-3 border border-white/5 rounded-lg px-3 py-2" style={{ background: col + "06" }}>
+                            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: col }} />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[10px] font-bold truncate" style={{ color: col }}>{s.symbol}</div>
+                              <div className="text-[8px] text-white/30">{s.psi}</div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-[10px] font-bold" style={{ color: col }}>{s.nm}nm</div>
+                              <div className="text-[8px] px-1 rounded" style={{ background: col + "20", color: col }}>{s.band}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Compile button + stats */}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setCompiled(compileWLS(compilerSrc))}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl border border-violet-400/40 text-violet-400 font-bold text-sm hover:border-violet-400/70 hover:bg-violet-400/05 transition-all"
+                data-testid="button-compile"
+              >
+                <Cpu size={14} /> Compile → WNSP Bytecode
+              </button>
+              {compiled && (
+                <div className="flex items-center gap-6 text-[10px] text-white/30">
+                  <span><span className="text-violet-400 font-bold">{compiled.instrCount}</span> instructions</span>
+                  <span><span className="text-cyan-400 font-bold">{compiled.manifest.length}</span> Ψ channels</span>
+                  <span className="text-white/15">· targeting spectral execution model</span>
+                </div>
+              )}
+            </div>
+
+            {/* Opcode reference */}
+            <div className="border border-white/10 rounded-xl p-5" style={{ background: "rgba(255,255,255,0.01)" }}>
+              <div className="text-white/30 text-[10px] uppercase tracking-widest mb-4">WNSP Opcode Reference</div>
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                {[
+                  { op: "01 TUNE",  desc: "Set receiver to λ",        col: "#06b6d4" },
+                  { op: "02 PUSH",  desc: "Bind value at wavelength",  col: "#a78bfa" },
+                  { op: "03 EMIT",  desc: "Broadcast on Ψ channel",    col: "#f59e0b" },
+                  { op: "05 BROAD", desc: "Band-wide broadcast",       col: "#f97316" },
+                  { op: "06 OCS",   desc: "Oscillate — wave loop",     col: "#16a34a" },
+                  { op: "07 LABEL", desc: "Function address in Ψ",     col: "#8b00ff" },
+                  { op: "08 JMPZ",  desc: "Conditional photon branch", col: "#dc2626" },
+                  { op: "0A AGENT", desc: "Register spectral agent",   col: "#0ea5e9" },
+                  { op: "0B EXEC",  desc: "Generic spectral exec",     col: "#6b7280" },
+                  { op: "FE RET",   desc: "Scope end — wave collapses",col: "#4b5563" },
+                  { op: "FF HALT",  desc: "Wavefunction terminated",   col: "#374151" },
+                ].map(({ op, desc, col }) => (
+                  <div key={op} className="border border-white/5 rounded-lg p-2.5">
+                    <code className="text-[9px] font-bold block mb-1" style={{ color: col }}>{op}</code>
+                    <div className="text-[8px] text-white/30 leading-relaxed">{desc}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
