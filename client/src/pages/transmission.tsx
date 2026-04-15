@@ -16,7 +16,7 @@ import {
   Signal, Activity, Send, CheckCircle, Circle, FileText,
   Upload, BarChart3, Download, FileUp, Sparkles, Atom,
   Calculator, Clock, Hash, Lightbulb, Database, MessageSquare,
-  Wallet, Globe, Network, TrendingUp, Eye
+  Wallet, Globe, Network, TrendingUp, Eye, Film, AlertCircle
 } from "lucide-react";
 
 const VISIBLE_MIN_NM = 380;
@@ -81,6 +81,13 @@ export default function TransmissionPage() {
   const [isSendingBus, setIsSendingBus] = useState(false);
   const [busSignalSent, setBusSignalSent] = useState(false);
   const [lastTransmitFreq, setLastTransmitFreq] = useState<number>(5.45e14);
+
+  // ── Video / binary file state ─────────────────────────────────────────────
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const [isVideoMode, setIsVideoMode] = useState(false);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [videoUploadResult, setVideoUploadResult] = useState<any>(null);
 
   // ── Live data from backend ────────────────────────────────────────────────
   const { data: walletData } = useQuery<any>({
@@ -196,6 +203,32 @@ export default function TransmissionPage() {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    event.target.value = "";
+
+    const isBinary =
+      file.type.startsWith("video/") ||
+      file.type.startsWith("audio/") ||
+      file.type.startsWith("image/") ||
+      /\.(mp4|webm|mov|avi|mkv|gif|png|jpg|jpeg|pdf|zip|gz)$/i.test(file.name);
+
+    if (isBinary) {
+      if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
+      const url = URL.createObjectURL(file);
+      setVideoFile(file);
+      setVideoPreviewUrl(url);
+      setIsVideoMode(true);
+      setDocumentName(file.name);
+      setContent("");
+      setVideoUploadResult(null);
+      addLog(`Binary file loaded: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB · ${file.type || "unknown type"})`, 'success');
+      addLog(`Use "Transmit Video" to broadcast via P2P spectral channel`, 'info');
+      return;
+    }
+
+    // Text / document path — safe to read as text
+    setIsVideoMode(false);
+    setVideoFile(null);
+    setVideoPreviewUrl(null);
     setDocumentName(file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -204,6 +237,40 @@ export default function TransmissionPage() {
       addLog(`Loaded: ${file.name} (${text.length} chars)`, 'success');
     };
     reader.readAsText(file);
+  };
+
+  const transmitVideo = async () => {
+    if (!videoFile) return;
+    setIsUploadingVideo(true);
+    setVideoUploadResult(null);
+    const psi = realSpectral?.psi_channel ?? "Ψ(0,0,H)";
+    addLog(`▶ Video transmission started: "${documentName}"`, 'info');
+    addLog(`Spectral channel: ${psi} · binary P2P upload`, 'info');
+    try {
+      const form = new FormData();
+      form.append("file", videoFile);
+      form.append("title", documentName);
+      form.append("description", `P2P spectral transmission via ${psi}`);
+      const res = await fetch("/api/spectral-workspace/video", {
+        method: "POST",
+        headers: { Authorization: authHeaders.Authorization ?? "" },
+        body: form,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setVideoUploadResult(data);
+        addLog(`✅ Video transmitted: ${data.video?.psiChannel ?? psi} · λ=${parseFloat(data.video?.wavelengthNm ?? 550).toFixed(2)}nm`, 'success');
+        addLog(`Spectral DB record: ${data.record?.id ?? "stored"}`, 'success');
+        sendBusSignal("TRANSMIT_START", psi, false).catch(() => {});
+      } else {
+        const err = await res.json().catch(() => ({ error: "Upload failed" }));
+        addLog(`Upload error: ${err.error}`, 'warning');
+      }
+    } catch (e: any) {
+      addLog(`Transmission error: ${e.message}`, 'warning');
+    } finally {
+      setIsUploadingVideo(false);
+    }
   };
 
   const startTransmission = () => {
@@ -453,7 +520,7 @@ export default function TransmissionPage() {
                     <FileText className="w-4 h-4" /> Document
                   </h2>
                   <div className="flex gap-2">
-                    <input ref={fileInputRef} type="file" accept=".txt,.md,.csv,.json,.xml,.html" onChange={handleFileUpload} className="hidden" />
+                    <input ref={fileInputRef} type="file" accept=".txt,.md,.csv,.json,.xml,.html,video/*,.mp4,.webm,.mov,.avi,.mkv,.gif" onChange={handleFileUpload} className="hidden" />
                     <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="border-cyan-500/50 text-cyan-400 h-7 text-xs" data-testid="button-upload">
                       <Upload className="w-3 h-3 mr-1" /> Upload
                     </Button>
@@ -467,16 +534,76 @@ export default function TransmissionPage() {
                     data-testid="input-document-name"
                   />
                 </div>
-                <div>
-                  <Label className="text-gray-400 text-xs">Content</Label>
-                  <Textarea data-testid="textarea-content" value={content} onChange={(e) => setContent(e.target.value)}
-                    className="bg-slate-800 border-slate-600 text-white mt-1 font-mono min-h-[280px] text-sm"
-                    placeholder="Type or paste content to transmit..." disabled={isTransmitting} />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>{content.length.toLocaleString()} characters</span>
-                    <span>{analysis?.wordCount.toLocaleString() || 0} words</span>
+                {isVideoMode && videoPreviewUrl ? (
+                  <div data-testid="video-preview-panel">
+                    <Label className="text-gray-400 text-xs flex items-center gap-1.5 mb-2">
+                      <Film className="w-3 h-3" /> Video Preview
+                    </Label>
+                    <div className="rounded-lg overflow-hidden bg-black border border-cyan-500/30 mb-3">
+                      {videoFile?.type === "image/gif" || videoFile?.name.endsWith(".gif") ? (
+                        <img src={videoPreviewUrl} alt={documentName} className="w-full max-h-64 object-contain" />
+                      ) : (
+                        <video
+                          src={videoPreviewUrl}
+                          controls
+                          className="w-full max-h-64"
+                          data-testid="video-player"
+                        />
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs mb-3">
+                      <div className="bg-slate-800/70 rounded p-2">
+                        <div className="text-gray-500">Size</div>
+                        <div className="text-cyan-400 font-bold">{videoFile ? (videoFile.size / 1024 / 1024).toFixed(2) : "—"} MB</div>
+                      </div>
+                      <div className="bg-slate-800/70 rounded p-2">
+                        <div className="text-gray-500">Type</div>
+                        <div className="text-cyan-400 font-bold truncate">{videoFile?.type || "—"}</div>
+                      </div>
+                      <div className="bg-slate-800/70 rounded p-2">
+                        <div className="text-gray-500">Mode</div>
+                        <div className="text-green-400 font-bold">Binary P2P</div>
+                      </div>
+                    </div>
+                    {videoUploadResult ? (
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-green-950/40 border border-green-500/30 text-xs">
+                        <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                        <span className="text-green-400">Transmitted · {videoUploadResult.video?.psiChannel ?? realSpectral?.psi_channel ?? "Ψ(0,0,H)"} · λ={parseFloat(videoUploadResult.video?.wavelengthNm ?? 550).toFixed(2)}nm</span>
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={transmitVideo}
+                        disabled={isUploadingVideo}
+                        className="w-full bg-cyan-600 hover:bg-cyan-500 text-white text-sm"
+                        data-testid="button-transmit-video"
+                      >
+                        {isUploadingVideo ? (
+                          <><Radio className="w-4 h-4 mr-2 animate-spin" /> Transmitting…</>
+                        ) : (
+                          <><Send className="w-4 h-4 mr-2" /> Transmit Video via P2P</>
+                        )}
+                      </Button>
+                    )}
+                    <button
+                      className="mt-2 text-xs text-gray-500 hover:text-gray-300 underline"
+                      onClick={() => { setIsVideoMode(false); setVideoFile(null); if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl); setVideoPreviewUrl(null); setVideoUploadResult(null); }}
+                      data-testid="button-clear-video"
+                    >
+                      Clear video — switch to text mode
+                    </button>
                   </div>
-                </div>
+                ) : (
+                  <div>
+                    <Label className="text-gray-400 text-xs">Content</Label>
+                    <Textarea data-testid="textarea-content" value={content} onChange={(e) => setContent(e.target.value)}
+                      className="bg-slate-800 border-slate-600 text-white mt-1 font-mono min-h-[280px] text-sm"
+                      placeholder="Type or paste content to transmit..." disabled={isTransmitting} />
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>{content.length.toLocaleString()} characters</span>
+                      <span>{analysis?.wordCount.toLocaleString() || 0} words</span>
+                    </div>
+                  </div>
+                )}
               </Card>
 
               <div className="space-y-3">
