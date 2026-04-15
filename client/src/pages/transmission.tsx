@@ -264,9 +264,11 @@ export default function TransmissionPage() {
       if (res.ok) {
         const data = await res.json();
         setVideoUploadResult(data);
-        addLog(`✅ Video transmitted: ${data.video?.psiChannel ?? psi} · λ=${parseFloat(data.video?.wavelengthNm ?? 550).toFixed(2)}nm`, 'success');
+        const resolvedPsi = data.spectral?.psi_channel ?? data.record?.psiChannel ?? psi;
+        const resolvedNm  = data.spectral?.wavelength_mid_nm ?? parseFloat(data.record?.wavelengthNm ?? "550");
+        addLog(`✅ Video transmitted: ${resolvedPsi} · λ=${resolvedNm.toFixed(2)}nm`, 'success');
         addLog(`Spectral DB record: ${data.record?.id ?? "stored"}`, 'success');
-        sendBusSignal("TRANSMIT_START", psi, false).catch(() => {});
+        sendBusSignal("TRANSMIT_START", resolvedPsi, false).catch(() => {});
       } else {
         const err = await res.json().catch(() => ({ error: "Upload failed" }));
         addLog(`Upload error: ${err.error}`, 'warning');
@@ -573,7 +575,7 @@ export default function TransmissionPage() {
                     {videoUploadResult ? (
                       <div className="flex items-center gap-2 p-3 rounded-lg bg-green-950/40 border border-green-500/30 text-xs">
                         <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                        <span className="text-green-400">Transmitted · {videoUploadResult.video?.psiChannel ?? realSpectral?.psi_channel ?? "Ψ(0,0,H)"} · λ={parseFloat(videoUploadResult.video?.wavelengthNm ?? 550).toFixed(2)}nm</span>
+                        <span className="text-green-400">Transmitted · {videoUploadResult.spectral?.psi_channel ?? videoUploadResult.record?.psiChannel ?? realSpectral?.psi_channel ?? "Ψ(0,0,H)"} · λ={(videoUploadResult.spectral?.wavelength_mid_nm ?? parseFloat(videoUploadResult.record?.wavelengthNm ?? "550")).toFixed(2)}nm</span>
                       </div>
                     ) : (
                       <Button
