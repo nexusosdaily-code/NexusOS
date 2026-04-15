@@ -112,6 +112,8 @@ export const wallets = pgTable("wallets", {
   address: text("address").notNull().unique(),
   balance: decimal("balance", { precision: 20, scale: 8 }).notNull().default("0"),
   lockedBalance: decimal("locked_balance", { precision: 20, scale: 8 }).notNull().default("0"),
+  walletPin: text("wallet_pin"),            // bcrypt hash of 4-digit PIN (null = not set)
+  pinSet: boolean("pin_set").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => ({
@@ -304,6 +306,7 @@ export const transferSchema = z.object({
   toAddress: z.string().min(1),
   amount: z.string().regex(/^\d+(\.\d{1,8})?$/),
   memo: z.string().max(500).optional(),
+  pin: z.string().regex(/^\d{4}$/).optional(), // 4-digit wallet PIN
 });
 
 export const friendRequestSchema = z.object({

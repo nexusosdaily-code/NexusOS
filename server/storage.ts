@@ -157,6 +157,11 @@ export interface IStorage {
   getTransmissionReports(uploaderId?: string, limit?: number): Promise<TransmissionReportRow[]>;
   getTransmissionReportById(id: string): Promise<TransmissionReportRow | undefined>;
 
+  // Wallet PIN operations
+  setWalletPin(userId: string, pin: string): Promise<void>;
+  verifyWalletPin(userId: string, pin: string): Promise<boolean>;
+  isPinSet(userId: string): Promise<boolean>;
+
   // Governance operations
   getGovernanceParams(): Promise<GovernanceParam[]>;
   getGovernanceParam(key: string): Promise<GovernanceParam | undefined>;
@@ -1096,6 +1101,30 @@ export class DatabaseStorage implements IStorage {
     const [row] = await db.select().from(transmissionReports)
       .where(eq(transmissionReports.id, id));
     return row;
+  }
+
+  // ============================================
+  // WALLET PIN OPERATIONS
+  // ============================================
+
+  async setWalletPin(userId: string, pin: string): Promise<void> {
+    const hash = await bcrypt.hash(pin, 12);
+    await db.update(wallets)
+      .set({ walletPin: hash, pinSet: true })
+      .where(eq(wallets.userId, userId));
+  }
+
+  async verifyWalletPin(userId: string, pin: string): Promise<boolean> {
+    const [wallet] = await db.select({ walletPin: wallets.walletPin, pinSet: wallets.pinSet })
+      .from(wallets).where(eq(wallets.userId, userId));
+    if (!wallet?.pinSet || !wallet?.walletPin) return false;
+    return bcrypt.compare(pin, wallet.walletPin);
+  }
+
+  async isPinSet(userId: string): Promise<boolean> {
+    const [wallet] = await db.select({ pinSet: wallets.pinSet })
+      .from(wallets).where(eq(wallets.userId, userId));
+    return wallet?.pinSet ?? false;
   }
 
   // ============================================

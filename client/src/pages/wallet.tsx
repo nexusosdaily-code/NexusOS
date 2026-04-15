@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "wouter";
 import {
   Wallet, Send, ArrowDownLeft, ArrowUpRight, ArrowLeft, Copy, CheckCircle,
-  Clock, Zap, RefreshCw, Shield, Coins, History, Atom, AlertCircle
+  Clock, Zap, RefreshCw, Shield, Coins, History, Atom, AlertCircle,
+  Lock, Delete, KeyRound, X,
 } from "lucide-react";
 
 // ── Physics helpers ────────────────────────────────────────────────────────────
@@ -282,6 +283,129 @@ function StatsPanel({ txs }: { txs: WalletData["recentTransactions"]; }) {
   );
 }
 
+// ── PIN numpad modal ────────────────────────────────────────────────────────────
+function PinModal({
+  mode, onConfirm, onCancel, error, loading,
+}: {
+  mode: "setup" | "confirm";
+  onConfirm: (pin: string, confirmPin?: string) => void;
+  onCancel: () => void;
+  error: string;
+  loading: boolean;
+}) {
+  const [phase, setPhase]   = useState<"enter" | "confirm">("enter");
+  const [digits, setDigits] = useState("");
+  const [conf,   setConf]   = useState("");
+
+  const active = phase === "enter" ? digits : conf;
+  const setActive = (v: string) => phase === "enter" ? setDigits(v) : setConf(v);
+
+  const press = (d: string) => {
+    if (active.length < 4) setActive(active + d);
+  };
+  const del = () => setActive(active.slice(0, -1));
+
+  const next = () => {
+    if (active.length < 4) return;
+    if (mode === "confirm" || phase === "confirm") {
+      onConfirm(mode === "setup" ? digits : active, mode === "setup" ? conf : undefined);
+    } else {
+      // setup first phase done → go to confirm phase
+      setPhase("confirm");
+    }
+  };
+
+  const title = mode === "setup"
+    ? (phase === "enter" ? "Set your wallet PIN" : "Confirm your PIN")
+    : "Enter PIN to confirm";
+  const subtitle = mode === "setup"
+    ? (phase === "enter" ? "Choose a 4-digit PIN for all transfers" : "Re-enter the same PIN")
+    : "Required to authorise this transfer";
+
+  const dots = Array.from({ length: 4 }, (_, i) => (
+    <div
+      key={i}
+      className={`w-4 h-4 rounded-full border-2 transition-all ${
+        i < active.length
+          ? "bg-amber-400 border-amber-400 scale-110"
+          : "bg-transparent border-slate-600"
+      }`}
+    />
+  ));
+
+  const pad = ["1","2","3","4","5","6","7","8","9","","0","⌫"];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div className="relative bg-slate-900 border border-slate-700 rounded-2xl p-6 w-80 shadow-2xl">
+        <button
+          onClick={onCancel}
+          className="absolute top-3 right-3 text-slate-500 hover:text-white"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <div className="text-center mb-5">
+          <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-3">
+            <KeyRound className="w-6 h-6 text-amber-400" />
+          </div>
+          <h3 className="text-white font-semibold">{title}</h3>
+          <p className="text-slate-400 text-sm mt-0.5">{subtitle}</p>
+        </div>
+
+        {/* PIN dots */}
+        <div className="flex justify-center gap-4 mb-5">{dots}</div>
+
+        {/* Error */}
+        {error && (
+          <div className="text-red-400 text-xs text-center mb-3 bg-red-950/40 rounded-lg px-3 py-2 border border-red-500/30">
+            {error}
+          </div>
+        )}
+
+        {/* Numpad */}
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {pad.map((k, i) => (
+            k === "" ? <div key={i} /> :
+            k === "⌫" ? (
+              <button
+                key={i}
+                onClick={del}
+                data-testid="pin-backspace"
+                className="h-12 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center justify-center transition-colors"
+              >
+                <Delete className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                key={i}
+                onClick={() => press(k)}
+                data-testid={`pin-key-${k}`}
+                className="h-12 rounded-xl bg-slate-800 text-white font-bold text-lg hover:bg-slate-700 active:scale-95 transition-all"
+              >
+                {k}
+              </button>
+            )
+          ))}
+        </div>
+
+        <button
+          data-testid="pin-confirm"
+          onClick={next}
+          disabled={active.length < 4 || loading}
+          className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+        >
+          {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+          {loading ? "Processing…"
+            : mode === "setup" && phase === "enter" ? "Next →"
+            : mode === "setup" ? "Set PIN & Send"
+            : "Confirm Transfer"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main wallet page ───────────────────────────────────────────────────────────
 export default function WalletPage() {
   const qc = useQueryClient();
@@ -291,10 +415,19 @@ export default function WalletPage() {
   const [sendError, setSendError] = useState("");
   const [sendSuccess, setSendSuccess] = useState("");
 
+  // PIN state
+  const [pinModal, setPinModal] = useState<"setup" | "confirm" | null>(null);
+  const [pinError, setPinError] = useState("");
+
   const { data, isLoading, isError, refetch } = useQuery<WalletData>({
     queryKey: ["/api/wallet"],
     queryFn: () => fetch("/api/wallet", { credentials: "include" }).then(r => r.json()),
     refetchInterval: 15_000,
+  });
+
+  const { data: pinStatus, refetch: refetchPin } = useQuery<{ pinSet: boolean }>({
+    queryKey: ["/api/wallet/pin/status"],
+    queryFn: () => fetch("/api/wallet/pin/status", { credentials: "include" }).then(r => r.json()),
   });
 
   const wallet = data?.wallet;
@@ -303,8 +436,22 @@ export default function WalletPage() {
   const locked       = wallet ? parseFloat(wallet.lockedBalance) : 0;
   const available    = balance - locked;
 
+  const setPin = useMutation({
+    mutationFn: async (pin: string) => {
+      const r = await fetch("/api/wallet/pin/set", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error ?? "Failed to set PIN");
+      return json;
+    },
+  });
+
   const transfer = useMutation({
-    mutationFn: async (body: { toAddress: string; amount: string; memo?: string }) => {
+    mutationFn: async (body: { toAddress: string; amount: string; memo?: string; pin?: string }) => {
       const r = await fetch("/api/wallet/transfer", {
         method: "POST",
         credentials: "include",
@@ -318,16 +465,38 @@ export default function WalletPage() {
     onSuccess: () => {
       setSendSuccess("Transfer confirmed.");
       setSendAmount(""); setSendAddress(""); setSendMemo(""); setSendError("");
+      setPinModal(null); setPinError("");
       qc.invalidateQueries({ queryKey: ["/api/wallet"] });
       setTimeout(() => setSendSuccess(""), 4000);
     },
-    onError: (e: any) => { setSendError(e.message); },
+    onError: (e: any) => {
+      setPinError(""); setSendError(e.message);
+      setPinModal(null);
+    },
   });
 
   const handleSend = () => {
-    setSendError(""); setSendSuccess("");
+    setSendError(""); setSendSuccess(""); setPinError("");
     if (!sendAmount || !sendAddress) return;
-    transfer.mutate({ toAddress: sendAddress, amount: sendAmount, memo: sendMemo || undefined });
+    if (pinStatus?.pinSet) {
+      setPinModal("confirm");
+    } else {
+      setPinModal("setup");
+    }
+  };
+
+  const handlePinConfirm = async (pin: string, confirmPin?: string) => {
+    setPinError("");
+    try {
+      if (pinModal === "setup") {
+        if (pin !== confirmPin) { setPinError("PINs don't match — try again"); return; }
+        await setPin.mutateAsync(pin);
+        refetchPin();
+      }
+      transfer.mutate({ toAddress: sendAddress, amount: sendAmount, memo: sendMemo || undefined, pin });
+    } catch (e: any) {
+      setPinError(e.message);
+    }
   };
 
   if (isLoading) return (
@@ -351,6 +520,18 @@ export default function WalletPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 p-4 md:p-6">
+
+      {/* PIN modal overlay */}
+      {pinModal && (
+        <PinModal
+          mode={pinModal}
+          onConfirm={handlePinConfirm}
+          onCancel={() => { setPinModal(null); setPinError(""); }}
+          error={pinError}
+          loading={transfer.isPending || setPin.isPending}
+        />
+      )}
+
       <div className="max-w-5xl mx-auto">
 
         {/* header */}
@@ -548,6 +729,16 @@ export default function WalletPage() {
                   </div>
                 )}
 
+                {/* PIN status indicator */}
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs border ${
+                  pinStatus?.pinSet
+                    ? "bg-amber-950/40 border-amber-500/30 text-amber-400"
+                    : "bg-slate-800/50 border-slate-700 text-slate-500"
+                }`}>
+                  <Lock className="w-3.5 h-3.5" />
+                  {pinStatus?.pinSet ? "PIN protected — you'll be prompted to confirm" : "No PIN set — you'll create one on first send"}
+                </div>
+
                 <Button
                   data-testid="button-send"
                   onClick={handleSend}
@@ -556,6 +747,8 @@ export default function WalletPage() {
                 >
                   {transfer.isPending ? (
                     <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Processing…</>
+                  ) : pinStatus?.pinSet ? (
+                    <><Lock className="w-4 h-4 mr-2" /> Send (PIN required)</>
                   ) : (
                     <><Send className="w-4 h-4 mr-2" /> Send Transaction</>
                   )}

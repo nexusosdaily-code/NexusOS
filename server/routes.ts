@@ -819,11 +819,55 @@ export async function registerRoutes(
     }
   });
 
+  // ── Wallet PIN routes ────────────────────────────────────────────────────
+  app.get("/api/wallet/pin/status", authenticate, async (req: Request, res: Response) => {
+    try {
+      const pinSet = await storage.isPinSet(req.user!.id);
+      res.json({ pinSet });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/wallet/pin/set", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { pin, currentPin } = req.body;
+      if (!pin || !/^\d{4}$/.test(pin)) {
+        return res.status(400).json({ error: "PIN must be exactly 4 digits" });
+      }
+      const alreadySet = await storage.isPinSet(req.user!.id);
+      if (alreadySet) {
+        if (!currentPin) return res.status(400).json({ error: "Current PIN required to change PIN" });
+        const valid = await storage.verifyWalletPin(req.user!.id, currentPin);
+        if (!valid) return res.status(401).json({ error: "Current PIN is incorrect" });
+      }
+      await storage.setWalletPin(req.user!.id, pin);
+      res.json({ success: true, message: alreadySet ? "PIN changed" : "PIN set" });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/wallet/pin/verify", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { pin } = req.body;
+      if (!pin || !/^\d{4}$/.test(pin)) {
+        return res.status(400).json({ error: "PIN must be exactly 4 digits" });
+      }
+      const valid = await storage.verifyWalletPin(req.user!.id, pin);
+      res.json({ valid });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   app.post("/api/wallet/transfer", authenticate, validateRequest(transferSchema), async (req, res) => {
     try {
       if (!await checkRateLimit(req, res, "/api/wallet/transfer", WALLET_RATE_LIMIT_MAX)) return;
       
-      const { toAddress, amount, memo } = req.body;
+      const { toAddress, amount, memo, pin } = req.body;
+
+      // ── PIN enforcement ──────────────────────────────────────────────────
+      const pinSet = await storage.isPinSet(req.user!.id);
+      if (pinSet) {
+        if (!pin) return res.status(401).json({ error: "Wallet PIN required", pinRequired: true });
+        const pinValid = await storage.verifyWalletPin(req.user!.id, pin);
+        if (!pinValid) return res.status(401).json({ error: "Incorrect wallet PIN", pinRequired: true });
+      }
       
       const fromWallet = await storage.getWallet(req.user!.id);
       if (!fromWallet) {
