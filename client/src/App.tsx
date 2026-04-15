@@ -66,6 +66,7 @@ import SpectralUriPage from "@/pages/spectral-uri";
 import OpenPage from "@/pages/open";
 import WnspBridgePage from "@/pages/wnsp-bridge";
 import ProfilePage from "@/pages/profile";
+import DirectoryPage from "@/pages/directory";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -140,6 +141,7 @@ function ProtectedRoutes() {
         <Route path="/transmission" component={TransmissionPage} />
         <Route path="/wnsp-bridge" component={WnspBridgePage} />
         <Route path="/wnsp/bridge" component={WnspBridgePage} />
+        <Route path="/directory" component={DirectoryPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>

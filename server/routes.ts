@@ -5217,6 +5217,37 @@ export async function registerRoutes(
     });
   });
 
+  // ── User directory (public) ───────────────────────────────────────────
+  app.get("/api/directory", async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { users: usersTable, wallets } = await import("@shared/schema");
+      const { eq, asc } = await import("drizzle-orm");
+      const rows = await db.select({
+        id: usersTable.id, username: usersTable.username,
+        role: usersTable.role, createdAt: usersTable.createdAt,
+        spectralWdm: usersTable.spectralWdm, spectralOam: usersTable.spectralOam,
+        spectralPol: usersTable.spectralPol, spectralNm: usersTable.spectralNm,
+        spectralBand: usersTable.spectralBand,
+      }).from(usersTable)
+        .where(eq(usersTable.isActive, true))
+        .orderBy(asc(usersTable.spectralWdm));
+
+      const enriched = await Promise.all(rows.map(async u => {
+        const [wallet] = await db.select({ address: wallets.address })
+          .from(wallets).where(eq(wallets.userId, u.id));
+        const enc = ceSe(u.username);
+        return {
+          username: u.username, role: u.role, createdAt: u.createdAt,
+          wallet: wallet ? { address: wallet.address } : null,
+          spectral: { ...enc },
+        };
+      }));
+
+      res.json({ users: enriched, total: enriched.length });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── Public profile endpoint ───────────────────────────────────────────
   app.get("/api/profile/:username", async (req: Request, res: Response) => {
     try {

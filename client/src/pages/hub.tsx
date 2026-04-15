@@ -67,6 +67,7 @@ const APP_SECTIONS = [
       { title: "Live Streams", href: "/streaming",      Icon: Radio },
       { title: "Transmission", href: "/workspace/transmission", Icon: Waves },
       { title: "Encoding Lab", href: "/encoding-lab",   Icon: Atom },
+      { title: "Directory",    href: "/directory",      Icon: Users },
     ],
   },
   {
@@ -318,6 +319,7 @@ function QuickActions() {
     { label: "Compose",   Icon: MessageSquarePlus, href: "/inbox",               color: "#22d3ee", feeKey: "message_send" },
     { label: "Go Live",   Icon: MonitorPlay,       href: "/streaming",            color: "#f472b6", feeKey: "stream_start" },
     { label: "Upload",    Icon: FilePlus,          href: "/workspace/transmission",color: "#34d399", feeKey: "upload_mb" },
+    { label: "Directory", Icon: Users,             href: "/directory",            color: "#67e8f9", feeKey: null },
     { label: "API Keys",  Icon: Key,               href: "/developer/keys",       color: "#86efac", feeKey: null },
     { label: "Encode",    Icon: Atom,              href: "/encoding-lab",         color: "#a78bfa", feeKey: null },
   ];
