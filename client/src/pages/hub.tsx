@@ -11,7 +11,7 @@ import {
   Zap, Atom, Waves, Rocket, Users, Database,
   Shield, BookOpen, HardDrive, GitBranch,
   ChevronRight, LayoutGrid, Rss, Eye, Clock,
-  MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut, Settings,
+  MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut, Settings, User,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -142,16 +142,18 @@ function IdentityRail({
       style={{ borderBottom: `1px solid ${meta.color}30`, background: "hsl(222 47% 6%)" }}
       className="sticky top-0 z-50 flex items-center gap-4 px-6 py-3 flex-wrap"
     >
-      {/* Avatar + username */}
-      <div className="flex items-center gap-2 min-w-0">
-        <div
-          className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-          style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.color}60` }}
-        >
-          {user.username[0].toUpperCase()}
+      {/* Avatar + username → profile */}
+      <Link href={`/profile/${user.username}`} data-testid="link-my-profile">
+        <div className="flex items-center gap-2 min-w-0 cursor-pointer hover:opacity-80 transition-opacity">
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+            style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.color}60` }}
+          >
+            {user.username[0].toUpperCase()}
+          </div>
+          <span className="font-semibold text-white text-sm truncate">{user.username}</span>
         </div>
-        <span className="font-semibold text-white text-sm truncate">{user.username}</span>
-      </div>
+      </Link>
 
       {/* Ψ channel */}
       <div
@@ -322,6 +324,7 @@ interface PhysicsProfile {
 // ── Quick Actions ──────────────────────────────────────────────────────
 function QuickActions() {
   const [, navigate] = useLocation();
+  const { user } = useAuth();
 
   const { data: physicsData } = useQuery<PhysicsProfile>({
     queryKey: ["/api/physics/my"],
@@ -329,12 +332,12 @@ function QuickActions() {
   });
 
   const actions = [
-    { label: "Compose",   Icon: MessageSquarePlus, href: "/inbox",               color: "#22d3ee", feeKey: "message_send" },
-    { label: "Go Live",   Icon: MonitorPlay,       href: "/streaming",            color: "#f472b6", feeKey: "stream_start" },
-    { label: "Upload",    Icon: FilePlus,          href: "/workspace/transmission",color: "#34d399", feeKey: "upload_mb" },
-    { label: "Directory", Icon: Users,             href: "/directory",            color: "#67e8f9", feeKey: null },
-    { label: "API Keys",  Icon: Key,               href: "/developer/keys",       color: "#86efac", feeKey: null },
-    { label: "Encode",    Icon: Atom,              href: "/encoding-lab",         color: "#a78bfa", feeKey: null },
+    { label: "Compose",    Icon: MessageSquarePlus, href: "/inbox",               color: "#22d3ee", feeKey: "message_send" },
+    { label: "Go Live",    Icon: MonitorPlay,       href: "/streaming",            color: "#f472b6", feeKey: "stream_start" },
+    { label: "Wallet",     Icon: Wallet,            href: "/wallet",               color: "#fbbf24", feeKey: null },
+    { label: "My Profile", Icon: User,              href: `/profile/${user?.username ?? ""}`, color: "#a78bfa", feeKey: null },
+    { label: "Directory",  Icon: Users,             href: "/directory",            color: "#67e8f9", feeKey: null },
+    { label: "Encode",     Icon: Atom,              href: "/encoding-lab",         color: "#34d399", feeKey: null },
   ];
 
   return (

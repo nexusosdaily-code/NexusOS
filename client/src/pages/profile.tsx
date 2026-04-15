@@ -522,10 +522,22 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-black text-white">
 
       {/* nav */}
-      <div className="max-w-4xl mx-auto px-4 pt-6">
-        <Link href="/wnsp-bridge" className="inline-flex items-center gap-2 text-zinc-400 hover:text-white text-sm transition-colors">
-          <ArrowLeft size={14} /> WNSP Bridge
+      <div className="max-w-4xl mx-auto px-4 pt-6 flex items-center gap-4">
+        <Link href="/" className="inline-flex items-center gap-2 text-zinc-400 hover:text-white text-sm transition-colors">
+          <ArrowLeft size={14} /> Hub
         </Link>
+        <span className="text-zinc-700">·</span>
+        <Link href="/directory" className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors">
+          Directory
+        </Link>
+        {isSelf && (
+          <>
+            <span className="text-zinc-700">·</span>
+            <Link href="/wallet" className="text-zinc-500 hover:text-amber-400 text-sm transition-colors">
+              NXT Wallet
+            </Link>
+          </>
+        )}
       </div>
 
       {/* ── NexusOS identity hero ── */}
