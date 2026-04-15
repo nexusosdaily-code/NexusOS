@@ -4123,6 +4123,100 @@ export async function registerRoutes(
     }
   });
 
+  // ── Transmission Reports API ───────────────────────────────────────────────
+
+  // Save a new transmission report (called by frontend after text or video transmission)
+  app.post("/api/transmission/report", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const {
+        documentName, transmissionType, psiChannel, wavelengthNm, frequencyHz, band,
+        videoId, spectralRecordId, totalChars, wordCount, avgWavelength, totalEnergy,
+        transmissionTimeMs, successRate, photonsEmitted, ordinalUnits, ordinalNxt,
+        busSignalSent, rawSummary,
+      } = req.body;
+
+      if (!documentName) return res.status(400).json({ error: "documentName required" });
+
+      const report = await storage.saveTransmissionReport({
+        documentName,
+        transmissionType: transmissionType ?? "text",
+        psiChannel: psiChannel ?? null,
+        wavelengthNm: wavelengthNm ? String(wavelengthNm) : null,
+        frequencyHz: frequencyHz ? String(frequencyHz) : null,
+        band: band ?? null,
+        videoId: videoId ?? null,
+        spectralRecordId: spectralRecordId ?? null,
+        totalChars: totalChars ?? 0,
+        wordCount: wordCount ?? 0,
+        avgWavelength: avgWavelength ? String(avgWavelength) : null,
+        totalEnergy: totalEnergy ? String(totalEnergy) : null,
+        transmissionTimeMs: transmissionTimeMs ?? null,
+        successRate: successRate ? String(successRate) : null,
+        photonsEmitted: photonsEmitted ?? 0,
+        ordinalUnits: ordinalUnits ?? null,
+        ordinalNxt: ordinalNxt ?? null,
+        busSignalSent: busSignalSent ?? false,
+        uploaderId: user?.id ?? null,
+        uploaderName: user?.username ?? null,
+        rawSummary: rawSummary ?? null,
+      });
+
+      res.json({ success: true, report });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get all transmission reports, enriched with receipt counts
+  app.get("/api/transmission/reports", optionalAuth, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const limit = Math.min(parseInt(req.query.limit as string || "50"), 200);
+      const uploaderId = req.query.uploaderId as string | undefined;
+
+      const { db: drizzleDb } = await import("./db");
+      const { transmissionReports: txReports, p2pReceipts: receipts } = await import("@shared/schema");
+      const { sql: drizzleSql, desc: drizzleDesc, eq: drizzleEq } = await import("drizzle-orm");
+
+      // Get reports
+      const reports = await storage.getTransmissionReports(uploaderId, limit);
+
+      // For each report, count receipts by matching psiChannel → srcPsiChannel or videoId → transmissionId
+      const enriched = await Promise.all(reports.map(async (r) => {
+        const [countRow] = await drizzleDb.select({
+          count: drizzleSql<number>`count(*)::int`,
+        }).from(receipts).where(
+          r.videoId
+            ? drizzleEq(receipts.transmissionId, r.videoId)
+            : drizzleSql`false`
+        );
+
+        const peerRows = r.videoId
+          ? await drizzleDb.select({
+              peerName: receipts.peerName,
+              peerPsiChannel: receipts.peerPsiChannel,
+              peerWavelengthNm: receipts.peerWavelengthNm,
+              peerBand: receipts.peerBand,
+              receivedAt: receipts.receivedAt,
+            }).from(receipts)
+              .where(drizzleEq(receipts.transmissionId, r.videoId))
+              .limit(10)
+          : [];
+
+        return {
+          ...r,
+          receiptCount: countRow?.count ?? 0,
+          recentReceipts: peerRows,
+        };
+      }));
+
+      res.json({ reports: enriched, count: enriched.length });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ── Network Node Discovery ─────────────────────────────────────────────────
 
   function ceseEncode(name: string): { wavelengthNm: number; frequencyThz: number; psiChannel: string; emissionBand: string } {

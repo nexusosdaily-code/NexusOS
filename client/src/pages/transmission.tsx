@@ -115,6 +115,11 @@ export default function TransmissionPage() {
     refetchInterval: 8_000,
   });
 
+  const { data: dbReportsData, refetch: refetchDbReports } = useQuery<any>({
+    queryKey: ["/api/transmission/reports?limit=50"],
+    refetchInterval: 30_000,
+  });
+
   const walletBalance = walletData?.balance
     ? (parseInt(walletData.balance) / 1e8).toFixed(4)
     : null;
@@ -269,6 +274,22 @@ export default function TransmissionPage() {
         addLog(`✅ Video transmitted: ${resolvedPsi} · λ=${resolvedNm.toFixed(2)}nm`, 'success');
         addLog(`Spectral DB record: ${data.record?.id ?? "stored"}`, 'success');
         sendBusSignal("TRANSMIT_START", resolvedPsi, false).catch(() => {});
+        // Persist transmission report to DB
+        saveReportToDb({
+          documentName,
+          transmissionType: "video",
+          psiChannel: resolvedPsi,
+          wavelengthNm: resolvedNm,
+          frequencyHz: data.spectral?.frequency_hz ?? null,
+          band: data.record?.band ?? null,
+          videoId: data.videoId ?? null,
+          spectralRecordId: data.record?.id ?? null,
+          totalChars: 0,
+          wordCount: 0,
+          ordinalUnits: data.ordinal?.units ?? null,
+          ordinalNxt: data.ordinal?.nxt ?? null,
+          rawSummary: { mimeType: videoFile.type, fileSize: videoFile.size, filename: videoFile.name },
+        });
       } else {
         const err = await res.json().catch(() => ({ error: "Upload failed" }));
         addLog(`Upload error: ${err.error}`, 'warning');
@@ -357,6 +378,33 @@ export default function TransmissionPage() {
                 setOrdinalReceipt({ units: ord.units, nxt: ord.nxt, psi, wavelength: parseFloat(String(nm)) });
                 refetchTreasury();
                 addLog(`💎 Ordinal: ${ord.units} NXT units → Orbital Treasury`, 'success');
+                // Persist report to DB with ordinal
+                saveReportToDb({
+                  documentName, transmissionType: "text",
+                  psiChannel: psi, wavelengthNm: parseFloat(String(nm)),
+                  frequencyHz: freq, band,
+                  totalChars: analysis.totalChars, wordCount: analysis.wordCount,
+                  avgWavelength: analysis.avgWavelength, totalEnergy: analysis.totalEnergy,
+                  transmissionTimeMs: Math.round(transmissionTime * 1000),
+                  successRate: 100 - channelNoise[0],
+                  photonsEmitted: displayChars.length,
+                  ordinalUnits: ord.units, ordinalNxt: ord.nxt,
+                  busSignalSent: false,
+                  rawSummary: analysis,
+                });
+              } else {
+                // Save report even without ordinal
+                saveReportToDb({
+                  documentName, transmissionType: "text",
+                  psiChannel: psi, wavelengthNm: parseFloat(String(nm)),
+                  frequencyHz: freq, band,
+                  totalChars: analysis.totalChars, wordCount: analysis.wordCount,
+                  avgWavelength: analysis.avgWavelength, totalEnergy: analysis.totalEnergy,
+                  transmissionTimeMs: Math.round(transmissionTime * 1000),
+                  successRate: 100 - channelNoise[0],
+                  photonsEmitted: displayChars.length,
+                  rawSummary: analysis,
+                });
               }
             });
 
@@ -385,6 +433,17 @@ export default function TransmissionPage() {
       if (res.ok) { const d = await res.json(); return d.ordinal; }
     } catch { }
     return null;
+  };
+
+  const saveReportToDb = async (payload: Record<string, any>) => {
+    try {
+      await fetch("/api/transmission/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify(payload),
+      });
+      refetchDbReports();
+    } catch { }
   };
 
   const storeInSpectralDB = async () => {
@@ -1098,53 +1157,103 @@ export default function TransmissionPage() {
 
           {/* ── REPORTS ───────────────────────────────────────────────────── */}
           <TabsContent value="reports" className="space-y-4">
-            {reports.length > 0 ? (
-              <div className="space-y-3">
-                {reports.map((report, idx) => (
-                  <Card key={idx} className="bg-slate-900/60 border-rose-500/30 p-4" data-testid={`report-${idx}`}>
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-bold text-white">{report.documentName}</h3>
-                        <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
-                          <Clock className="w-3 h-3" /> {new Date(report.timestamp).toLocaleString()}
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm" onClick={() => exportReport(report)}
-                        className="border-rose-500/40 text-rose-400 text-xs h-7" data-testid={`button-export-${idx}`}>
-                        <Download className="w-3 h-3 mr-1" /> Export
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-                      {[
-                        { label: "Characters", value: report.summary.totalChars.toLocaleString(), color: "text-white" },
-                        { label: "Words", value: report.summary.wordCount.toLocaleString(), color: "text-white" },
-                        { label: "Time", value: report.transmissionTime.toFixed(2) + "s", color: "text-cyan-400" },
-                        { label: "NXT Cost", value: report.summary.estimatedCost.toFixed(6), color: "text-green-400" },
-                        { label: "Avg λ", value: report.summary.avgWavelength.toFixed(1) + "nm", color: "text-purple-400" },
-                      ].map(s => (
-                        <div key={s.label} className="bg-slate-800/50 rounded p-2">
-                          <div className="text-gray-400 text-[10px]">{s.label}</div>
-                          <div className={`font-bold ${s.color}`}>{s.value}</div>
-                        </div>
-                      ))}
-                    </div>
-                    {report.ordinal && (
-                      <div className="mt-2 text-[10px] text-amber-400/70 font-mono">
-                        💎 Ordinal: {report.ordinal.units} NXT units → Treasury
-                      </div>
-                    )}
-                    {report.spectralRecord && (
-                      <div className="mt-1 text-[10px] text-cyan-400/70 font-mono">
-                        📦 Spectral DB: {report.spectralRecord.psiChannel} λ={parseFloat(report.spectralRecord.wavelengthNm).toFixed(2)}nm
-                      </div>
-                    )}
+
+            {/* Summary bar */}
+            {dbReportsData?.count > 0 && (
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Total Transmissions", value: dbReportsData.count, color: "text-rose-400" },
+                  { label: "Video Reports", value: dbReportsData.reports?.filter((r: any) => r.transmissionType === "video").length ?? 0, color: "text-purple-400" },
+                  { label: "Text Reports", value: dbReportsData.reports?.filter((r: any) => r.transmissionType === "text").length ?? 0, color: "text-cyan-400" },
+                ].map(s => (
+                  <Card key={s.label} className="bg-slate-900/60 border-slate-700/50 p-3 text-center">
+                    <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
+                    <div className="text-gray-500 text-[10px] mt-0.5">{s.label}</div>
                   </Card>
                 ))}
+              </div>
+            )}
+
+            {/* DB Report list */}
+            {(dbReportsData?.reports?.length ?? 0) > 0 ? (
+              <div className="space-y-3">
+                {dbReportsData.reports.map((r: any, idx: number) => {
+                  const nm = parseFloat(r.wavelengthNm ?? 550);
+                  const color = wavelengthToColor(nm);
+                  const isVideo = r.transmissionType === "video";
+                  return (
+                    <Card key={r.id ?? idx} className="bg-slate-900/60 border-rose-500/20 p-4" data-testid={`report-db-${idx}`}>
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ background: color }} />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-white text-sm">{r.documentName}</h3>
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${isVideo ? "bg-purple-500/20 text-purple-400" : "bg-cyan-500/20 text-cyan-400"}`}>
+                                {isVideo ? "VIDEO" : "TEXT"}
+                              </span>
+                              {r.receiptCount > 0 && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-bold">
+                                  {r.receiptCount} peer{r.receiptCount !== 1 ? "s" : ""}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-gray-500 mt-0.5 font-mono">
+                              {r.psiChannel} · λ={nm.toFixed(2)}nm · {new Date(r.createdAt).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const txt = `WNSP Transmission Report\n${"=".repeat(40)}\nGenerated: ${new Date(r.createdAt).toLocaleString()}\n\nDocument: ${r.documentName}\nType: ${r.transmissionType}\nSpectral Channel: ${r.psiChannel}\nWavelength: ${nm.toFixed(2)}nm\nBand: ${r.band}\nCharacters: ${r.totalChars}\nWords: ${r.wordCount}\nOrdinal: ${r.ordinalUnits ?? "—"} NXT units\nPeer Receipts: ${r.receiptCount}\n\nWNSP Protocol · Λ=hf/c²`;
+                            const blob = new Blob([txt], { type: "text/plain" });
+                            const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+                            a.download = `tx-report-${r.id?.slice(0, 8)}.txt`; a.click();
+                          }}
+                          className="text-xs text-rose-400/70 hover:text-rose-400 border border-rose-500/30 rounded px-2 py-1 flex-shrink-0"
+                          data-testid={`button-export-db-${idx}`}
+                        >
+                          <Download className="w-3 h-3 inline mr-1" />Export
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs mb-3">
+                        {[
+                          { label: isVideo ? "File Size" : "Characters", value: isVideo ? `${((r.rawSummary?.fileSize ?? 0) / 1024 / 1024).toFixed(2)}MB` : (r.totalChars ?? 0).toLocaleString(), color: "text-white" },
+                          { label: "Avg λ", value: nm.toFixed(1) + "nm", color: "text-purple-400" },
+                          { label: "Ordinal", value: r.ordinalNxt ? `${parseFloat(r.ordinalNxt).toFixed(4)} NXT` : "—", color: "text-amber-400" },
+                          { label: "Peer Receipts", value: r.receiptCount > 0 ? `${r.receiptCount} confirmed` : "awaiting", color: r.receiptCount > 0 ? "text-green-400" : "text-gray-500" },
+                        ].map(s => (
+                          <div key={s.label} className="bg-slate-800/50 rounded p-2">
+                            <div className="text-gray-500 text-[9px]">{s.label}</div>
+                            <div className={`font-bold text-xs ${s.color}`}>{s.value}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Peer receipts inline */}
+                      {r.recentReceipts?.length > 0 && (
+                        <div className="space-y-1 mt-1">
+                          <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Confirmed Peers</div>
+                          {r.recentReceipts.map((p: any, pi: number) => (
+                            <div key={pi} className="flex items-center gap-2 text-[10px] bg-slate-800/30 rounded px-2 py-1">
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ background: wavelengthToColor(parseFloat(p.peerWavelengthNm ?? 550)) }} />
+                              <span className="text-white font-medium">{p.peerName}</span>
+                              <span className="text-green-400 font-mono">{p.peerPsiChannel}</span>
+                              <span className="text-gray-500 ml-auto">{new Date(p.receivedAt).toLocaleTimeString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
               <Card className="bg-slate-900/60 border-slate-700 p-12 text-center">
                 <Activity className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-400">Complete a transmission to generate a report</p>
+                <p className="text-gray-400 text-sm">No reports yet</p>
+                <p className="text-gray-600 text-xs mt-1">Reports are generated automatically after each transmission and persist across sessions</p>
               </Card>
             )}
           </TabsContent>

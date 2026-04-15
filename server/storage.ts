@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 import {
   users, sessions, auditLogs, wallets, transactions,
   versionRegistry, apiKeys, rateLimits, friendships, uploadedFiles, secureDocuments,
-  lambdaMessages, calls, streams, streamViewers, streamRecordings, networkNodes, p2pReceipts,
+  lambdaMessages, calls, streams, streamViewers, streamRecordings, networkNodes, p2pReceipts, transmissionReports,
   type User, type InsertUser, type Session, type InsertSession,
   type AuditLog, type InsertAuditLog, type Wallet, type InsertWallet,
   type Transaction, type InsertTransaction, type VersionRegistry,
@@ -21,6 +21,7 @@ import {
   type UpdateStreamSettingsInput,
   type NetworkNode, type InsertNetworkNode,
   type P2pReceipt, type InsertP2pReceipt,
+  type TransmissionReportRow, type InsertTransmissionReport,
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
@@ -145,6 +146,11 @@ export interface IStorage {
   logP2pReceipt(receipt: InsertP2pReceipt): Promise<P2pReceipt>;
   getP2pReceipts(transmissionId?: string, limit?: number): Promise<P2pReceipt[]>;
   getRecentP2pReceipts(limit?: number): Promise<P2pReceipt[]>;
+
+  // Transmission report operations
+  saveTransmissionReport(report: InsertTransmissionReport): Promise<TransmissionReportRow>;
+  getTransmissionReports(uploaderId?: string, limit?: number): Promise<TransmissionReportRow[]>;
+  getTransmissionReportById(id: string): Promise<TransmissionReportRow | undefined>;
 }
 
 function generateWalletAddress(): string {
@@ -1011,6 +1017,33 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(p2pReceipts)
       .orderBy(desc(p2pReceipts.receivedAt))
       .limit(limit);
+  }
+
+  // ============================================
+  // TRANSMISSION REPORT OPERATIONS
+  // ============================================
+
+  async saveTransmissionReport(report: InsertTransmissionReport): Promise<TransmissionReportRow> {
+    const [row] = await db.insert(transmissionReports).values(report).returning();
+    return row;
+  }
+
+  async getTransmissionReports(uploaderId?: string, limit = 50): Promise<TransmissionReportRow[]> {
+    if (uploaderId) {
+      return db.select().from(transmissionReports)
+        .where(eq(transmissionReports.uploaderId, uploaderId))
+        .orderBy(desc(transmissionReports.createdAt))
+        .limit(limit);
+    }
+    return db.select().from(transmissionReports)
+      .orderBy(desc(transmissionReports.createdAt))
+      .limit(limit);
+  }
+
+  async getTransmissionReportById(id: string): Promise<TransmissionReportRow | undefined> {
+    const [row] = await db.select().from(transmissionReports)
+      .where(eq(transmissionReports.id, id));
+    return row;
   }
 }
 

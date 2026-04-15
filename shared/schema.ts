@@ -813,3 +813,41 @@ export const p2pReceipts = pgTable("p2p_receipts", {
 export const insertP2pReceiptSchema = createInsertSchema(p2pReceipts).omit({ id: true, receivedAt: true });
 export type InsertP2pReceipt = z.infer<typeof insertP2pReceiptSchema>;
 export type P2pReceipt = typeof p2pReceipts.$inferSelect;
+
+// ============================================
+// TRANSMISSION REPORTS
+// Persistent per-transmission analysis reports linking spectral metadata,
+// document analysis, and peer receipt counts into a single audit record.
+// ============================================
+export const transmissionReports = pgTable("transmission_reports", {
+  id:                  varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  documentName:        text("document_name").notNull(),
+  transmissionType:    text("transmission_type").notNull().default("text"),
+  psiChannel:          text("psi_channel"),
+  wavelengthNm:        decimal("wavelength_nm", { precision: 10, scale: 4 }),
+  frequencyHz:         decimal("frequency_hz", { precision: 20, scale: 4 }),
+  band:                text("band"),
+  videoId:             varchar("video_id", { length: 36 }),
+  spectralRecordId:    varchar("spectral_record_id", { length: 36 }),
+  totalChars:          integer("total_chars").default(0),
+  wordCount:           integer("word_count").default(0),
+  avgWavelength:       decimal("avg_wavelength", { precision: 10, scale: 4 }),
+  totalEnergy:         decimal("total_energy", { precision: 30, scale: 20 }),
+  transmissionTimeMs:  integer("transmission_time_ms"),
+  successRate:         decimal("success_rate", { precision: 5, scale: 2 }),
+  photonsEmitted:      integer("photons_emitted").default(0),
+  ordinalUnits:        text("ordinal_units"),
+  ordinalNxt:          text("ordinal_nxt"),
+  busSignalSent:       boolean("bus_signal_sent").default(false),
+  uploaderId:          text("uploader_id"),
+  uploaderName:        text("uploader_name"),
+  rawSummary:          jsonb("raw_summary"),
+  createdAt:           timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  createdAtIdx: index("tx_reports_created_idx").on(table.createdAt),
+  uploaderIdx:  index("tx_reports_uploader_idx").on(table.uploaderId),
+}));
+
+export const insertTransmissionReportSchema = createInsertSchema(transmissionReports).omit({ id: true, createdAt: true });
+export type InsertTransmissionReport = z.infer<typeof insertTransmissionReportSchema>;
+export type TransmissionReportRow = typeof transmissionReports.$inferSelect;
