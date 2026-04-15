@@ -122,7 +122,9 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (shouldRedirect) {
-      setLocation("/auth");
+      // Use replace so pressing back from /auth doesn't return to a protected page
+      // that would immediately redirect back to /auth again.
+      setLocation("/auth", { replace: true });
       setShouldRedirect(false);
     }
   }, [shouldRedirect, setLocation]);

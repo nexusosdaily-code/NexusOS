@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Sparkles, Lock, User, Mail, Phone, Wallet, ArrowLeft } from "lucide-react";
 
 export default function AuthPage() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const inFlight = useRef(false);
   const [loginData, setLoginData] = useState({ username: "", password: "" });
@@ -46,7 +47,8 @@ export default function AuthPage() {
         description: `Welcome back, ${data.user.username}!`,
       });
 
-      window.location.href = "/";
+      // Replace the /auth history entry so back-button doesn't loop back to login.
+      setLocation("/", { replace: true });
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -108,7 +110,7 @@ export default function AuthPage() {
         description: `Welcome to NexusOS! You've received ${Number(data.wallet?.balance || 0) / 100000000} NXT.`,
       });
 
-      window.location.href = "/";
+      setLocation("/", { replace: true });
     } catch (error: any) {
       toast({
         title: "Registration failed",
