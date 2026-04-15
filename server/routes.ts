@@ -4840,6 +4840,13 @@ export async function registerRoutes(
         const peerHz = 299792458 / (peerNm * 1e-9);
         const peerBand = peerWdm < 64 ? "SYSTEM" : peerWdm < 128 ? "KERNEL" : peerWdm < 192 ? "USER" : "GUEST";
 
+        // Derive srcPsiChannel deterministically from the uploader's name
+        const uploaderSeed = ((video as any).uploaderName ?? "nexus").split("").reduce((a: number, c: string) => a + c.charCodeAt(0), 0);
+        const srcWdm = uploaderSeed % 256;
+        const srcOam = uploaderSeed % 50;
+        const srcPol = uploaderSeed % 2 === 0 ? "H" : "V";
+        const srcPsi = `Ψ(${srcWdm},${srcOam},${srcPol})`;
+
         storage.logP2pReceipt({
           transmissionId: video.id,
           transmissionType: "video",
@@ -4850,7 +4857,7 @@ export async function registerRoutes(
           peerWavelengthNm: String(peerNm.toFixed(4)),
           peerFrequencyHz: String(peerHz.toFixed(4)),
           peerBand,
-          srcPsiChannel: "Ψ(91,42,V)",
+          srcPsiChannel: srcPsi,
           bytesReceived: total,
           status: "received",
         }).catch(() => {});

@@ -274,7 +274,7 @@ export default function TransmissionPage() {
         addLog(`✅ Video transmitted: ${resolvedPsi} · λ=${resolvedNm.toFixed(2)}nm`, 'success');
         addLog(`Spectral DB record: ${data.record?.id ?? "stored"}`, 'success');
         sendBusSignal("TRANSMIT_START", resolvedPsi, false).catch(() => {});
-        // Persist transmission report to DB
+        // Persist transmission report to DB, then log a peer receipt for the video
         saveReportToDb({
           documentName,
           transmissionType: "video",
@@ -290,6 +290,10 @@ export default function TransmissionPage() {
           ordinalNxt: data.ordinal?.nxt ?? null,
           rawSummary: { mimeType: videoFile.type, fileSize: videoFile.size, filename: videoFile.name },
         });
+        // Log confirmed receipt — the uploader is the first peer to hold the payload
+        if (data.videoId) {
+          logReceipt(data.videoId, "video", videoFile.name, resolvedPsi, videoFile.size);
+        }
       } else {
         const err = await res.json().catch(() => ({ error: "Upload failed" }));
         addLog(`Upload error: ${err.error}`, 'warning');
@@ -378,7 +382,7 @@ export default function TransmissionPage() {
                 setOrdinalReceipt({ units: ord.units, nxt: ord.nxt, psi, wavelength: parseFloat(String(nm)) });
                 refetchTreasury();
                 addLog(`💎 Ordinal: ${ord.units} NXT units → Orbital Treasury`, 'success');
-                // Persist report to DB with ordinal
+                // Persist report to DB with ordinal, then log self-receipt
                 saveReportToDb({
                   documentName, transmissionType: "text",
                   psiChannel: psi, wavelengthNm: parseFloat(String(nm)),
@@ -391,9 +395,9 @@ export default function TransmissionPage() {
                   ordinalUnits: ord.units, ordinalNxt: ord.nxt,
                   busSignalSent: false,
                   rawSummary: analysis,
-                });
+                }).then(reportId => logReceipt(reportId, "text", documentName, psi, analysis.totalChars));
               } else {
-                // Save report even without ordinal
+                // Save report even without ordinal, then log self-receipt
                 saveReportToDb({
                   documentName, transmissionType: "text",
                   psiChannel: psi, wavelengthNm: parseFloat(String(nm)),
@@ -404,7 +408,7 @@ export default function TransmissionPage() {
                   successRate: 100 - channelNoise[0],
                   photonsEmitted: displayChars.length,
                   rawSummary: analysis,
-                });
+                }).then(reportId => logReceipt(reportId, "text", documentName, psi, analysis.totalChars));
               }
             });
 
@@ -435,14 +439,31 @@ export default function TransmissionPage() {
     return null;
   };
 
-  const saveReportToDb = async (payload: Record<string, any>) => {
+  const saveReportToDb = async (payload: Record<string, any>): Promise<string | null> => {
     try {
-      await fetch("/api/transmission/report", {
+      const res = await fetch("/api/transmission/report", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify(payload),
       });
       refetchDbReports();
+      if (res.ok) {
+        const d = await res.json();
+        return d.report?.id ?? null;
+      }
+    } catch { }
+    return null;
+  };
+
+  const logReceipt = async (transmissionId: string | null, transmissionType = "text", filename?: string, srcPsiChannel?: string, bytesReceived?: number) => {
+    if (!transmissionId) return;
+    try {
+      await fetch("/api/p2p/receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ transmissionId, transmissionType, filename, srcPsiChannel, bytesReceived }),
+      });
+      refetchReceipts();
     } catch { }
   };
 
@@ -484,7 +505,13 @@ export default function TransmissionPage() {
         }),
       });
       if (res.ok) {
-        if (isManual) { setBusSignalSent(true); addLog(`📡 Agent bus signal sent → kernel`, 'success'); }
+        if (isManual) {
+          setBusSignalSent(true);
+          addLog(`📡 Agent bus signal sent → kernel`, 'success');
+          // Log a receipt for this bus broadcast using storedRecord or spectral record as the ID anchor
+          const busId = storedRecord?.id ?? realSpectral?.record_id ?? `bus-${Date.now()}`;
+          logReceipt(busId, "text", documentName, psiChannel, content.length);
+        }
       }
     } catch { }
     finally { if (isManual) setIsSendingBus(false); }
