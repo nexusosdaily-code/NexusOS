@@ -250,7 +250,7 @@ export default function TransmissionPage() {
     setVideoUploadResult(null);
     const psi = realSpectral?.psi_channel ?? "Ψ(0,0,H)";
     addLog(`▶ Video transmission started: "${documentName}"`, 'info');
-    addLog(`Spectral channel: ${psi} · binary P2P upload`, 'info');
+    addLog(`Computing spectral channel from title · binary P2P upload`, 'info');
     try {
       const form = new FormData();
       form.append("file", videoFile);
