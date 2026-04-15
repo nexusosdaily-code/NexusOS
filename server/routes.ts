@@ -4704,6 +4704,167 @@ export async function registerRoutes(
     }
   });
 
+  // ── Unified Feed ──────────────────────────────────────────────────────────
+  app.get("/api/feed", authenticate, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const limit = Math.min(parseInt(req.query.limit as string) || 40, 100);
+      const items: any[] = [];
+
+      // Messages (inbox)
+      try {
+        const inbox = await storage.getInbox(userId, 10);
+        for (const { message, sender } of inbox) {
+          items.push({
+            id: `msg-${message.id}`,
+            type: "message",
+            title: `Message from ${sender.username}`,
+            preview: message.content ? message.content.substring(0, 120) : "[spectral encoded]",
+            meta: {
+              senderId: sender.id,
+              senderUsername: sender.username,
+              isRead: message.isRead,
+              hasEncoding: !!message.encodedFrames,
+              wavelengthMin: message.wavelengthMin,
+              wavelengthMax: message.wavelengthMax,
+              totalLambdaMass: message.totalLambdaMass,
+            },
+            href: `/inbox`,
+            createdAt: message.createdAt,
+          });
+        }
+      } catch (_) {}
+
+      // Live streams
+      try {
+        const liveStreams = await storage.getLiveStreams(8);
+        for (const { stream, broadcaster } of liveStreams) {
+          items.push({
+            id: `stream-${stream.id}`,
+            type: "stream",
+            title: stream.title || `Live: ${broadcaster.username}`,
+            preview: stream.description || "Live broadcast on WNSP channel",
+            meta: {
+              broadcasterId: broadcaster.id,
+              broadcasterUsername: broadcaster.username,
+              status: stream.status,
+              streamType: stream.streamType,
+              viewerCount: stream.viewerCount,
+              spectralChannel: stream.spectralChannel,
+            },
+            href: `/streaming/${stream.id}`,
+            createdAt: stream.createdAt,
+          });
+        }
+      } catch (_) {}
+
+      // User's own streams (recent)
+      try {
+        const myStreams = await storage.getUserStreams(userId, 5);
+        for (const stream of myStreams) {
+          if (stream.status !== "live") {
+            items.push({
+              id: `mystream-${stream.id}`,
+              type: "stream",
+              title: stream.title || "Your stream",
+              preview: stream.description || "Your broadcast archive",
+              meta: {
+                status: stream.status,
+                streamType: stream.streamType,
+                viewerCount: stream.viewerCount,
+                spectralChannel: stream.spectralChannel,
+                isOwn: true,
+              },
+              href: `/streaming/${stream.id}`,
+              createdAt: stream.createdAt,
+            });
+          }
+        }
+      } catch (_) {}
+
+      // Secure documents
+      try {
+        const docs = await storage.getSecureDocuments(userId, 8);
+        for (const doc of docs) {
+          items.push({
+            id: `doc-${doc.id}`,
+            type: "document",
+            title: doc.title || "Secure Document",
+            preview: doc.content ? doc.content.substring(0, 120) : "Encrypted document",
+            meta: {
+              accessLevel: doc.accessLevel,
+              lambdaSignature: doc.lambdaSignature,
+              spectralHash: doc.spectralHash,
+              isEncrypted: doc.isEncrypted,
+            },
+            href: `/secure-docs`,
+            createdAt: doc.createdAt,
+          });
+        }
+      } catch (_) {}
+
+      // Uploaded files
+      try {
+        const files = await storage.getUploadedFiles(userId, 8);
+        for (const file of files) {
+          items.push({
+            id: `file-${file.id}`,
+            type: "upload",
+            title: file.originalName || file.filename,
+            preview: `${(file.fileSize / 1024 / 1024).toFixed(2)} MB · ${file.mimeType}`,
+            meta: {
+              mimeType: file.mimeType,
+              fileSize: file.fileSize,
+              status: file.status,
+              spectralHash: file.spectralHash,
+              downloadUrl: file.fileUrl,
+            },
+            href: `/workspace/transmission`,
+            createdAt: file.createdAt,
+          });
+        }
+      } catch (_) {}
+
+      // Wallet transactions
+      try {
+        const wallet = await storage.getWallet(userId);
+        if (wallet) {
+          const txs = await storage.getTransactions(wallet.id, 10);
+          for (const tx of txs) {
+            const isSend = tx.fromAddress === wallet.address;
+            items.push({
+              id: `tx-${tx.id}`,
+              type: "transaction",
+              title: isSend ? `Sent ${tx.amount} NXT` : `Received ${tx.amount} NXT`,
+              preview: tx.memo || (isSend ? `→ ${tx.toAddress}` : `← ${tx.fromAddress}`),
+              meta: {
+                amount: tx.amount,
+                fee: tx.fee,
+                fromAddress: tx.fromAddress,
+                toAddress: tx.toAddress,
+                status: tx.status,
+                wavelength: tx.wavelength,
+                energyCost: tx.energyCost,
+                isSend,
+              },
+              href: `/wallet`,
+              createdAt: tx.createdAt,
+            });
+          }
+        }
+      } catch (_) {}
+
+      // Sort by createdAt descending, take top `limit`
+      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const feed = items.slice(0, limit);
+
+      res.json({ feed, total: feed.length });
+    } catch (error: any) {
+      console.error("Feed error:", error);
+      res.status(500).json({ error: "Failed to load feed" });
+    }
+  });
+
   app.get("/api/spectral-workspace/videos", optionalAuth, async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");

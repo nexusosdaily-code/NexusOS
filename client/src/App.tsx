@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, ProtectedRoute, AuthLoading } from "@/hooks/use-auth";
+import HubPage from "@/pages/hub";
 import LambdaPlaceholder from "@/pages/lambda-placeholder";
 import WNSPv7Page from "@/pages/wnsp-v7";
 import NexusV10Page from "@/pages/nexus-v10";
@@ -69,7 +70,8 @@ function ProtectedRoutes() {
   return (
     <ProtectedRoute>
       <Switch>
-        <Route path="/" component={LambdaPlaceholder} />
+        <Route path="/" component={HubPage} />
+        <Route path="/apps" component={LambdaPlaceholder} />
         <Route path="/v10" component={NexusV10Page} />
         <Route path="/v9" component={NexusV9Page} />
         <Route path="/v8" component={NexusV8Page} />
