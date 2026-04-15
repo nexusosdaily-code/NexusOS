@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
-  ArrowLeft, Radio, Wifi, Plus, Zap, Eye, RefreshCw, Atom, Globe, Activity, LogIn, AlertCircle
+  ArrowLeft, Radio, Wifi, Plus, Zap, Eye, RefreshCw, Atom, Globe, Activity, LogIn, AlertCircle, Layers, Signal
 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/queryClient";
 
@@ -238,11 +238,41 @@ export default function NetworkPage() {
 
               <div className="h-1 rounded-full mb-3" style={{ background: `linear-gradient(to right, ${nmToColor(nm - 30)}, ${col}, ${nmToColor(nm + 30)})` }} />
 
-              <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-white/6" style={{ background: "rgba(0,0,0,0.35)" }}>
+              <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-white/6 mb-3" style={{ background: "rgba(0,0,0,0.35)" }}>
                 <Radio size={9} style={{ color: col }} className="flex-shrink-0" />
                 <span className="font-mono text-[10px] font-bold" style={{ color: col + "cc" }}>{uri}</span>
                 <span className="text-white/15 text-[8px] ml-auto">Your permanent DNS-free address · No IP · No server</span>
               </div>
+
+              {/* Spectral proximity — nearby nodes */}
+              {(() => {
+                const nearby = nodes
+                  .filter(n => Math.abs(parseFloat(n.wavelengthNm) - nm) <= 60)
+                  .sort((a, b) => Math.abs(parseFloat(a.wavelengthNm) - nm) - Math.abs(parseFloat(b.wavelengthNm) - nm))
+                  .slice(0, 5);
+                if (!nearby.length) return null;
+                return (
+                  <div>
+                    <div className="text-white/20 text-[8px] uppercase tracking-widest mb-2 flex items-center gap-1">
+                      <Signal size={8} /> Spectral peers within ±60nm of your channel ({nearby.length})
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {nearby.map(n => {
+                        const pnm = parseFloat(n.wavelengthNm);
+                        const pcol = nmToColor(pnm);
+                        const delta = (pnm - nm).toFixed(1);
+                        return (
+                          <div key={n.id} className="flex items-center gap-1.5 border border-white/6 rounded-full px-2.5 py-1" style={{ background: pcol + "0a" }}>
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ background: pcol, boxShadow: `0 0 4px ${pcol}` }} />
+                            <span className="text-[9px] font-bold" style={{ color: pcol }}>{n.name}</span>
+                            <span className="text-white/20 text-[8px]">{parseFloat(delta) >= 0 ? "+" : ""}{delta}nm</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           );
         })()}
@@ -416,6 +446,56 @@ export default function NetworkPage() {
             <span>780nm · RED</span>
           </div>
         </div>
+
+        {/* Band distribution stats */}
+        {nodes.length > 0 && (() => {
+          const BANDS = [
+            { name: "VIOLET",  min: 380, max: 450, color: "#6600cc", auth: "SYSTEM" },
+            { name: "BLUE",    min: 450, max: 495, color: "#0044ff", auth: "AUTH"   },
+            { name: "CYAN",    min: 495, max: 520, color: "#00aaff", auth: "STREAM" },
+            { name: "GREEN",   min: 520, max: 565, color: "#00cc44", auth: "LOGIC"  },
+            { name: "YELLOW",  min: 565, max: 590, color: "#aacc00", auth: "INTERFACE" },
+            { name: "ORANGE",  min: 590, max: 625, color: "#ffaa00", auth: "EVENT"  },
+            { name: "RED",     min: 625, max: 780, color: "#ff3300", auth: "STORAGE"},
+          ];
+          const counts = BANDS.map(b => ({
+            ...b,
+            count: nodes.filter(n => {
+              const nm = parseFloat(n.wavelengthNm);
+              return nm >= b.min && nm < b.max;
+            }).length,
+          }));
+          const maxCount = Math.max(...counts.map(b => b.count), 1);
+          return (
+            <div className="border border-white/10 rounded-xl p-5" style={{ background: "rgba(255,255,255,0.01)" }}>
+              <div className="text-white/30 text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2">
+                <Layers size={11} /> Authority Band Distribution — {nodes.length} node{nodes.length !== 1 ? "s" : ""}
+              </div>
+              <div className="space-y-2">
+                {counts.map(({ name, count, color, auth }) => (
+                  <div key={name} className="flex items-center gap-3">
+                    <div className="text-[8px] font-bold w-14 flex-shrink-0" style={{ color }}>{name}</div>
+                    <div className="flex-1 h-3 rounded-full overflow-hidden bg-white/5">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: count > 0 ? `${Math.max(6, (count / maxCount) * 100)}%` : "0%",
+                          background: count > 0 ? color : "transparent",
+                          boxShadow: count > 0 ? `0 0 6px ${color}60` : "none",
+                        }}
+                      />
+                    </div>
+                    <div className="text-[9px] font-bold w-6 text-right flex-shrink-0" style={{ color: count > 0 ? color : "#374151" }}>{count}</div>
+                    <div className="text-[8px] text-white/20 w-20 flex-shrink-0">{auth}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 text-[8px] text-white/15 flex items-center gap-1">
+                <Signal size={8} /> Shorter wavelength = higher authority = higher energy = higher fee multiplier (E=hf)
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Node list */}
         {isLoading && (

@@ -114,6 +114,24 @@ A P2P media sharing engine with physics-based cost calculations, mesh networking
 ## WASCII v2.0 — Wave Density Spectral Vector
 WASCII v2.0 provides a spectral fingerprint for text, mapping each character to a unique compression state and generating a histogram of character-wavelengths across 100 WDM bands. This output includes centroid, bandwidth, spectral entropy, dominant band, unique states, and compression range, enabling spectral similarity search.
 
+## Mobile SDK (`/mobile-sdk`)
+Native iOS and Android SDKs for spectral-native app development. Four tabs:
+- **iOS — Swift**: Full `NexusOSSDK` class (Foundation/URLSession, no dependencies). Uses `content` field for CE encode.
+- **Android — Kotlin**: Full SDK with coroutines + `HttpURLConnection`. Uses `content` field for CE encode.
+- **Offline Physics**: Native `wasciiEncode()` implementation in both Swift and Kotlin — deterministic physics function, zero network calls, same result as the API. Includes verification table.
+- **Live API Playground**: Real-time onChange CE encoder showing Ψ channel, λ, frequency, band, WDM, OAM, Pol, URI, E=hf and Λ=hf/c². Linked from command center.
+
+## Spectral Network (`/network`) — Enhanced
+- **Band Distribution Bar**: Horizontal bar chart showing node count per authority band (VIOLET/BLUE/CYAN/GREEN/YELLOW/ORANGE/RED). Appears when nodes are registered.
+- **Spectral Proximity**: When logged in, shows nearby nodes within ±60nm of the user's own wavelength as pill badges with delta-nm offset.
+
+## WavelengthScript Compiler — Enhanced
+The compiler tab now has four sample programs selectable via pill buttons:
+- **AI Agent**: Spectral reasoning agent on Ψ(41,12,V)
+- **Governance Vote**: KERNEL-band protocol parameter change workflow
+- **P2P Transfer**: STREAM-band file chunking and reassembly
+- **Spectral Wallet**: AUTH-band NXT transfer with E=hf fee calculation
+
 ## WNSP Bridge Layer (`/wnsp-bridge`)
 This layer provides a TCP/IP overlay for `wnsp://` URIs, acting as Phase 1 of spectral addressing. It uses a `wnsp_registry` database table to map `Ψ(wdm,oam,pol)` channels to HTTP resources, allowing for deterministic address derivation from ASCII ordinals. Public and auth-required APIs support resolving and registering `wnsp://` addresses. The roadmap includes transitioning to WavelengthScript code and eventually native photonic routing.
 

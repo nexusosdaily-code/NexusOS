@@ -246,6 +246,123 @@ function compileWLS(src: string): { assembly: string; hex: string; manifest: Arr
   };
 }
 
+const SAMPLE_WLS_GOVERNANCE = `// WavelengthScript v1.0 · AGPL-3.0
+// Governance Vote — on-chain protocol parameter change
+
+tune(468nm)  // KERNEL band — governance requires KERNEL or higher
+
+@emit(469.4nm, Ψ(23,44,V))
+fn submitProposal(param, newValue, proposerKey) {
+  @468nm let proposal := GovernanceRegistry.create({
+    @550nm param    := param,
+    @550nm value    := newValue,
+    @540nm creator  := proposerKey,
+  })
+  emit proposal.id
+}
+
+@emit(471.0nm, Ψ(24,0,V))
+fn castVote(proposalId, voteYes, voterKey) {
+  @468nm let voter    := TrustLayer.verify(voterKey)
+  @540nm let weight   := SpectralAuth.bandWeight(voter.band)
+  @648nm let record   := VoteStore.append(proposalId, voteYes, weight)
+  ?λ record.thresholdMet():
+    broadcast(record.executeNow())
+  }
+  emit record
+}
+
+@emit(472.1nm, Ψ(24,5,H))
+fn executeProposal(proposalId) {
+  @648nm let proposal := VoteStore.get(proposalId)
+  ?λ proposal.passed():
+    @540nm let applied := LIVE_FEES.update(proposal.param, proposal.value)
+    broadcast(applied)  // → notify all KERNEL+ nodes
+  }
+  emit proposal.status
+}
+
+node.register("GovernanceKernel", @469.4nm)
+`;
+
+const SAMPLE_WLS_P2P = `// WavelengthScript v1.0 · AGPL-3.0
+// P2P Spectral File Transfer — no relay, no DNS
+
+tune(501nm)  // STREAM band — live data flow
+
+@emit(501.7nm, Ψ(31,17,V))
+agent StreamParser {
+  @501nm pipeline := ChunkEngine.new(size=512)
+  @648nm store    := VectorStore.new()
+  @468nm auth     := TrustLayer.connect()
+
+  oscillate(Ψ(31,17,V), 0Hz) {
+    ?λ auth.verify():
+      @501nm let chunk   := tune(Ψ(31,17,V))
+      @648nm let written := store.append(chunk.data, chunk.seq)
+      ?λ chunk.isFinal():
+        emit store.assemble()
+      }
+      broadcast(written.ack)
+    }
+  }
+}
+
+@emit(503.2nm, Ψ(32,2,H))
+fn sendFile(filePath, recipientPsi, senderKey) {
+  @648nm let chunks   := ChunkEngine.split(filePath)
+  @540nm let identity := TrustLayer.sign(senderKey)
+  oscillate(chunks, 0Hz) {
+    @501nm let frame := StreamParser.encode(identity, chunk)
+    broadcast(frame)  // → emits to recipient Ψ channel
+  }
+  emit { status: "COMPLETE", chunks: chunks.length }
+}
+
+node.register("StreamParser", @501.7nm)
+`;
+
+const SAMPLE_WLS_WALLET = `// WavelengthScript v1.0 · AGPL-3.0
+// Spectral Wallet — physics-priced NXT transfers
+
+tune(468nm)  // AUTH band — wallet requires identity verification
+
+@emit(468.3nm, Ψ(23,83,V))
+agent TrustLayer {
+  @648nm ledger  := SpectralDB.connect("transactions")
+  @468nm session := SessionStore.new()
+
+  oscillate(Ψ(23,83,V), 0Hz) {
+    ?λ session.active():
+      @550nm let req := tune(Ψ(23,83,V))
+      ?λ req.type == "transfer":
+        @468nm let fee := PhysicsEngine.calcFee(req.sender.nm, req.amount)
+        ?λ req.sender.balance >= (req.amount + fee):
+          @648nm let tx := ledger.write({
+            @540nm from   := req.sender.psi,
+            @540nm to     := req.recipient.psi,
+            @550nm amount := req.amount,
+            @540nm fee    := fee,
+            @540nm lambda := PhysicsEngine.lambda(req.sender.nm),
+          })
+          broadcast(tx)
+        }
+      }
+    }
+  }
+}
+
+@emit(469.9nm, Ψ(23,99,V))
+fn transferNXT(fromKey, toKey, amount) {
+  @468nm let sender    := TrustLayer.verify(fromKey)
+  @468nm let recipient := TrustLayer.verify(toKey)
+  @540nm let result    := TrustLayer.send({ sender, recipient, amount })
+  emit result.txId
+}
+
+node.register("TrustLayer", @468.3nm)
+`;
+
 const SAMPLE_WLS = `// WavelengthScript v1.0 · AGPL-3.0
 // Spectral agent — runs on Ψ channels, not a CPU
 
@@ -658,6 +775,27 @@ export default function WavelengthLangPage() {
               Write WavelengthScript source and compile it to <span className="text-violet-300">WNSP bytecode</span> — 
               machine instructions that target Ψ channels directly. Each opcode carries a wavelength operand:
               the CPU is the electromagnetic spectrum, registers are spectral channels.
+            </div>
+
+            {/* Sample programs picker */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-white/20 text-[9px] uppercase tracking-widest mr-1">Load sample:</span>
+              {([
+                { label: "AI Agent",        src: SAMPLE_WLS,             col: "#a78bfa" },
+                { label: "Governance Vote", src: SAMPLE_WLS_GOVERNANCE,  col: "#2563eb" },
+                { label: "P2P Transfer",    src: SAMPLE_WLS_P2P,         col: "#06b6d4" },
+                { label: "Spectral Wallet", src: SAMPLE_WLS_WALLET,      col: "#ca8a04" },
+              ]).map(({ label, src, col }) => (
+                <button
+                  key={label}
+                  onClick={() => { setCompilerSrc(src); setCompiled(null); }}
+                  className="text-[9px] px-2.5 py-1 rounded-full border transition-all hover:opacity-90"
+                  style={{ borderColor: col + "40", color: col, background: col + "10" }}
+                  data-testid={`button-sample-${label.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
