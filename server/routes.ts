@@ -5217,6 +5217,66 @@ export async function registerRoutes(
     });
   });
 
+  // ── Public ledger — all NXT transactions ─────────────────────────────
+  app.get("/api/ledger", async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { sql: drizzleSql } = await import("drizzle-orm");
+
+      const search  = (req.query.search  as string) || "";
+      const type    = (req.query.type    as string) || "";
+      const limit   = Math.min(parseInt(req.query.limit  as string) || 50, 200);
+      const offset  = parseInt(req.query.offset as string) || 0;
+
+      const whereSearch = search
+        ? drizzleSql`AND (wf.address ILIKE ${'%'+search+'%'} OR wt.address ILIKE ${'%'+search+'%'} OR uf.username ILIKE ${'%'+search+'%'} OR ut.username ILIKE ${'%'+search+'%'})`
+        : drizzleSql``;
+      const whereType = type
+        ? drizzleSql`AND t.type = ${type}`
+        : drizzleSql``;
+
+      const txRows = await db.execute(drizzleSql`
+        SELECT
+          t.id, t.amount, t.fee, t.type, t.status,
+          t.wavelength, t.frequency, t.energy_cost,
+          t.metadata, t.created_at, t.confirmed_at,
+          wf.address AS from_address, uf.username AS from_username,
+          wt.address AS to_address,   ut.username AS to_username
+        FROM transactions t
+        LEFT JOIN wallets wf ON wf.id = t.from_wallet_id
+        LEFT JOIN users   uf ON uf.id = wf.user_id
+        LEFT JOIN wallets wt ON wt.id = t.to_wallet_id
+        LEFT JOIN users   ut ON ut.id = wt.user_id
+        WHERE 1=1 ${whereSearch} ${whereType}
+        ORDER BY t.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `);
+
+      const statsRows = await db.execute(drizzleSql`
+        SELECT
+          COUNT(*)::int                                     AS total_count,
+          COALESCE(SUM(amount::numeric), 0)::text           AS total_volume,
+          COALESCE(SUM(fee::numeric), 0)::text              AS total_fees,
+          COUNT(DISTINCT COALESCE(from_wallet_id::text,''))::int AS unique_senders,
+          MIN(created_at)::text                             AS first_tx,
+          MAX(created_at)::text                             AS last_tx
+        FROM transactions
+      `);
+
+      const typeRows = await db.execute(drizzleSql`
+        SELECT type, COUNT(*)::int AS cnt, COALESCE(SUM(amount::numeric),0)::text AS vol
+        FROM transactions GROUP BY type ORDER BY cnt DESC
+      `);
+
+      res.json({
+        transactions: txRows.rows,
+        stats: statsRows.rows[0] ?? {},
+        types: typeRows.rows,
+        pagination: { limit, offset },
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── User directory (public) ───────────────────────────────────────────
   app.get("/api/directory", async (req: Request, res: Response) => {
     try {

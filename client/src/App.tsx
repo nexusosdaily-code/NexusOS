@@ -67,6 +67,7 @@ import OpenPage from "@/pages/open";
 import WnspBridgePage from "@/pages/wnsp-bridge";
 import ProfilePage from "@/pages/profile";
 import DirectoryPage from "@/pages/directory";
+import LedgerPage from "@/pages/ledger";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -142,6 +143,7 @@ function ProtectedRoutes() {
         <Route path="/wnsp-bridge" component={WnspBridgePage} />
         <Route path="/wnsp/bridge" component={WnspBridgePage} />
         <Route path="/directory" component={DirectoryPage} />
+        <Route path="/ledger" component={LedgerPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>

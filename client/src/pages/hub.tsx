@@ -74,6 +74,7 @@ const APP_SECTIONS = [
     label: "Data & Storage",
     accent: "#2563eb",
     items: [
+      { title: "Ledger",        href: "/ledger",          Icon: Scale },
       { title: "Blockchain",    href: "/blockchain",     Icon: Layers },
       { title: "Spectral DB",   href: "/spectral-db",    Icon: Database },
       { title: "Secure Docs",   href: "/secure-docs",    Icon: FileText },
