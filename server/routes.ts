@@ -1099,15 +1099,34 @@ export async function registerRoutes(
           physics: { wavelengthNm: msgFee.wavelengthNm, energyJ: msgFee.energyJ, band: msgFee.band },
         });
       }
-      // Deduct fee from sender
+      // Deduct full fee from sender
       await storage.updateWalletBalance(senderWallet.id, (senderBalance - feeNum).toFixed(8));
-      // Record fee transaction
+
+      // 50% of fee flows to recipient as spectral earnings — closed economic loop
+      const recipientEarning = feeNum * 0.5;
+      const recipientWallet  = await storage.getWallet(recipientId);
+      if (recipientWallet) {
+        const newRecipientBalance = (parseFloat(recipientWallet.balance) + recipientEarning).toFixed(8);
+        await storage.updateWalletBalance(recipientWallet.id, newRecipientBalance);
+        await storage.createTransaction({
+          fromWalletId: senderWallet.id,
+          toWalletId:   recipientWallet.id,
+          amount:       recipientEarning.toFixed(8),
+          fee:          "0",
+          type:         "message_earning",
+          wavelength:   msgFee.wavelengthNm.toString(),
+          frequency:    msgFee.frequencyHz.toString(),
+          energyCost:   msgFee.energyJ.toString(),
+          metadata:     { action: "message_received", band: msgFee.band, senderId: req.user!.id },
+        });
+      }
+      // Remaining 50% is protocol fee (burned to compress supply)
       await storage.createTransaction({
         fromWalletId: senderWallet.id,
         toWalletId:   undefined,
-        amount:       msgFee.feeNxt,
+        amount:       (feeNum * 0.5).toFixed(8),
         fee:          "0",
-        type:         "message_fee",
+        type:         "protocol_burn",
         wavelength:   msgFee.wavelengthNm.toString(),
         frequency:    msgFee.frequencyHz.toString(),
         energyCost:   msgFee.energyJ.toString(),
@@ -2054,12 +2073,47 @@ export async function registerRoutes(
       if (size > 10 * 1024 * 1024) {
         return res.status(400).json({ error: "File too large (max 10MB)" });
       }
-      
+
+      // ── Physics fee enforcement (authenticated users only) ──────────────
+      if (req.user) {
+        const uploaderWdm   = req.user.spectralWdm ?? 200;
+        const uploadFee     = calcFee("upload_mb", uploaderWdm, { fileSizeBytes: size });
+        const uploadFeeNum  = parseFloat(uploadFee.feeNxt);
+        const uploaderWallet = await storage.getWallet(req.user.id);
+        if (uploaderWallet) {
+          const uploaderBalance = parseFloat(uploaderWallet.balance);
+          if (uploaderBalance < uploadFeeNum) {
+            return res.status(402).json({
+              error: "Insufficient NXT to upload this file",
+              required: uploadFee.feeNxt,
+              available: uploaderWallet.balance,
+              physics: { wavelengthNm: uploadFee.wavelengthNm, band: uploadFee.band },
+            });
+          }
+          await storage.updateWalletBalance(uploaderWallet.id, (uploaderBalance - uploadFeeNum).toFixed(8));
+          await storage.createTransaction({
+            fromWalletId: uploaderWallet.id,
+            toWalletId:   undefined,
+            amount:       uploadFee.feeNxt,
+            fee:          "0",
+            type:         "upload_fee",
+            wavelength:   uploadFee.wavelengthNm.toString(),
+            frequency:    uploadFee.frequencyHz.toString(),
+            energyCost:   uploadFee.energyJ.toString(),
+            metadata:     { action: "file_upload", band: uploadFee.band, filename: originalName, sizeBytes: size },
+          });
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────
+
       const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 255);
       const sanitizedOriginalName = originalName.replace(/[<>:"/\\|?*]/g, "_").slice(0, 255);
 
-      const wavelengthMin = 380 + Math.random() * 50;
-      const wavelengthMax = 700 + Math.random() * 80;
+      // Wavelength derived from uploader's actual spectral channel
+      const uploaderWdm2  = req.user?.spectralWdm ?? 200;
+      const uploadPhysics = calcFee("upload_mb", uploaderWdm2, { fileSizeBytes: size });
+      const wavelengthMin = uploadPhysics.wavelengthNm - 10;
+      const wavelengthMax = uploadPhysics.wavelengthNm + 10;
       const frequencyAvg = (3e8) / (((wavelengthMin + wavelengthMax) / 2) * 1e-9);
       
       const spectralChars = String(content || originalName).slice(0, 64);
@@ -2352,9 +2406,60 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Document not found" });
       }
 
-      if (doc.userId !== req.user!.id) {
+      // ── Authority gate ─────────────────────────────────────────────────
+      // Derive required band from the document's creation wavelength
+      const docNm  = parseFloat(doc.wavelength);
+      const docWdm = Math.round((docNm - 380) / ((780 - 380) / 255));
+      const docBand = getBand(Math.max(0, Math.min(255, docWdm)));
+      const readerWdm = req.user!.spectralWdm ?? 255;
+      if (!hasAuthority(readerWdm, docBand)) {
+        return res.status(403).json({
+          error: `This document requires ${docBand}-band authority`,
+          required: docBand,
+          yourBand: getBand(readerWdm),
+          physics: {
+            documentNm: docNm,
+            documentBand: docBand,
+            readerNm: 380 + readerWdm * ((780 - 380) / 255),
+          },
+        });
+      }
+      // ────────────────────────────────────────────────────────────────────
+
+      // Owner check OR authority — document owner can always access, higher band users too
+      if (doc.userId !== req.user!.id && !hasAuthority(readerWdm, docBand)) {
         return res.status(403).json({ error: "Not authorized to download this document" });
       }
+
+      // ── Reader pays creator — document access fee ─────────────────────
+      if (doc.userId !== req.user!.id) {
+        const readFee    = calcFee("document_create", readerWdm); // same base as creation
+        const readFeeNxt = parseFloat(readFee.feeNxt) * 0.3;     // 30% of create fee to read
+        const readerWallet  = await storage.getWallet(req.user!.id);
+        const creatorWallet = await storage.getWallet(doc.userId);
+        if (readerWallet && creatorWallet && readFeeNxt > 0) {
+          const readerBalance = parseFloat(readerWallet.balance);
+          if (readerBalance >= readFeeNxt) {
+            await storage.updateWalletBalance(readerWallet.id, (readerBalance - readFeeNxt).toFixed(8));
+            const creatorEarning = readFeeNxt * 0.9; // 90% to creator, 10% protocol
+            const newCreatorBalance = (parseFloat(creatorWallet.balance) + creatorEarning).toFixed(8);
+            await storage.updateWalletBalance(creatorWallet.id, newCreatorBalance);
+            await storage.createTransaction({
+              fromWalletId: readerWallet.id,
+              toWalletId:   creatorWallet.id,
+              amount:       creatorEarning.toFixed(8),
+              fee:          (readFeeNxt * 0.1).toFixed(8),
+              type:         "document_earning",
+              wavelength:   readFee.wavelengthNm.toString(),
+              frequency:    readFee.frequencyHz.toString(),
+              energyCost:   readFee.energyJ.toString(),
+              metadata:     { action: "document_read", docId: doc.id, readerWdm, band: readFee.band },
+            });
+          }
+          // If reader can't afford, they can still download (soft gate — authority is the hard gate)
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────
 
       const { ObjectStorageService } = await import("./objectStorage");
       const storageService = new ObjectStorageService();
@@ -2718,7 +2823,43 @@ export async function registerRoutes(
       if (!stream.isPublic && stream.broadcasterId !== req.user!.id) {
         return res.status(403).json({ error: "This stream is private" });
       }
-      
+
+      // ── Viewer physics payment → broadcaster earnings ─────────────────
+      // Broadcaster earns when viewers join — they don't pay the join fee, viewer does
+      if (stream.broadcasterId !== req.user!.id) {
+        const viewerWdm     = req.user!.spectralWdm ?? 200;
+        const viewJoinFee   = calcFee("stream_start", viewerWdm); // same rate as opening a channel
+        const viewFeeNum    = parseFloat(viewJoinFee.feeNxt) * 0.2; // 20% of stream_start as join fee
+        const viewerWallet  = await storage.getWallet(req.user!.id);
+        const broadcasterWallet = await storage.getWallet(stream.broadcasterId);
+
+        if (viewerWallet && viewFeeNum > 0) {
+          const viewerBalance = parseFloat(viewerWallet.balance);
+          if (viewerBalance >= viewFeeNum) {
+            await storage.updateWalletBalance(viewerWallet.id, (viewerBalance - viewFeeNum).toFixed(8));
+            // 80% to broadcaster, 20% protocol burn
+            if (broadcasterWallet) {
+              const broadcasterEarning = viewFeeNum * 0.8;
+              const newBroadcasterBalance = (parseFloat(broadcasterWallet.balance) + broadcasterEarning).toFixed(8);
+              await storage.updateWalletBalance(broadcasterWallet.id, newBroadcasterBalance);
+              await storage.createTransaction({
+                fromWalletId: viewerWallet.id,
+                toWalletId:   broadcasterWallet.id,
+                amount:       broadcasterEarning.toFixed(8),
+                fee:          (viewFeeNum * 0.2).toFixed(8),
+                type:         "stream_earning",
+                wavelength:   viewJoinFee.wavelengthNm.toString(),
+                frequency:    viewJoinFee.frequencyHz.toString(),
+                energyCost:   viewJoinFee.energyJ.toString(),
+                metadata:     { action: "viewer_join", streamId: stream.id, viewerWdm, band: viewJoinFee.band },
+              });
+            }
+          }
+          // If viewer can't afford join fee, they can still watch (soft gate for now)
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────
+
       const viewer = await storage.addStreamViewer(stream.id, req.user!.id);
       const broadcaster = await storage.getUser(stream.broadcasterId);
       
@@ -2753,6 +2894,68 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Leave stream error:", error);
       res.status(500).json({ error: "Failed to leave stream" });
+    }
+  });
+
+  // ── Per-minute viewer billing (call every 60s from client) ─────────────
+  app.post("/api/streams/:streamId/heartbeat", authenticate, async (req, res) => {
+    try {
+      const stream = await storage.getStream(req.params.streamId);
+      if (!stream || stream.status !== "live") {
+        return res.status(404).json({ error: "Stream not found or ended" });
+      }
+      // Broadcaster is never billed for their own heartbeat
+      if (stream.broadcasterId === req.user!.id) {
+        return res.json({ billed: false, reason: "broadcaster" });
+      }
+
+      const viewerWdm      = req.user!.spectralWdm ?? 200;
+      const minuteFee      = calcFee("stream_start", viewerWdm);
+      const minuteFeeNxt   = parseFloat(minuteFee.feeNxt) * 0.1; // 10% of stream_start per minute
+      const viewerWallet   = await storage.getWallet(req.user!.id);
+      const broadcasterWallet = await storage.getWallet(stream.broadcasterId);
+
+      if (!viewerWallet) {
+        return res.status(402).json({ error: "Viewer wallet not found" });
+      }
+
+      const balance = parseFloat(viewerWallet.balance);
+      if (balance < minuteFeeNxt) {
+        return res.status(402).json({
+          error: "Insufficient NXT — cannot sustain stream",
+          required: minuteFeeNxt,
+          available: balance,
+          physics: { wavelengthNm: minuteFee.wavelengthNm, band: minuteFee.band },
+        });
+      }
+
+      await storage.updateWalletBalance(viewerWallet.id, (balance - minuteFeeNxt).toFixed(8));
+      if (broadcasterWallet) {
+        const earning = minuteFeeNxt * 0.85;
+        const newBal  = (parseFloat(broadcasterWallet.balance) + earning).toFixed(8);
+        await storage.updateWalletBalance(broadcasterWallet.id, newBal);
+        await storage.createTransaction({
+          fromWalletId: viewerWallet.id,
+          toWalletId:   broadcasterWallet.id,
+          amount:       earning.toFixed(8),
+          fee:          (minuteFeeNxt * 0.15).toFixed(8),
+          type:         "stream_earning",
+          wavelength:   minuteFee.wavelengthNm.toString(),
+          frequency:    minuteFee.frequencyHz.toString(),
+          energyCost:   minuteFee.energyJ.toString(),
+          metadata:     { action: "viewer_minute", streamId: stream.id, viewerWdm, band: minuteFee.band },
+        });
+      }
+
+      res.json({
+        billed: true,
+        feeNxt: minuteFeeNxt,
+        newBalance: (balance - minuteFeeNxt).toFixed(8),
+        broadcasterEarning: (minuteFeeNxt * 0.85).toFixed(8),
+      });
+    } catch (error: any) {
+      console.error("Stream heartbeat error:", error);
+      res.status(500).json({ error: "Heartbeat failed" });
     }
   });
 

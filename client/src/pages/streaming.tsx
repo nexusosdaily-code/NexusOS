@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -79,6 +79,7 @@ export default function StreamingPage() {
   const [myStreams, setMyStreams] = useState<Stream[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeStream, setActiveStream] = useState<{ id: string; mode: "broadcaster" | "viewer" } | null>(null);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   const [newStreamTitle, setNewStreamTitle] = useState("");
   const [newStreamDescription, setNewStreamDescription] = useState("");
@@ -86,6 +87,7 @@ export default function StreamingPage() {
 
   useEffect(() => {
     fetchStreams();
+    return () => stopHeartbeat();
   }, []);
 
   useEffect(() => {
@@ -199,15 +201,40 @@ export default function StreamingPage() {
     }
   };
 
+  const stopHeartbeat = () => {
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+  };
+
+  const startHeartbeat = (streamId: string) => {
+    stopHeartbeat();
+    heartbeatRef.current = setInterval(async () => {
+      try {
+        const hbRes = await fetch(`/api/streams/${streamId}/heartbeat`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (hbRes.status === 402) {
+          stopHeartbeat();
+          toast({
+            title: "NXT balance low",
+            description: "Insufficient NXT to sustain stream viewing",
+            variant: "destructive",
+          });
+        }
+      } catch {}
+    }, 60_000);
+  };
+
   const joinStreamAsViewer = async (streamId: string) => {
     try {
       const res = await fetch(`/api/streams/${streamId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res.ok) {
-        throw new Error("Stream not found");
-      }
+      if (!res.ok) throw new Error("Stream not found");
 
       const data = await res.json();
       
@@ -220,7 +247,14 @@ export default function StreamingPage() {
         return;
       }
 
+      // Pay join fee and register as viewer
+      await fetch(`/api/streams/${streamId}/join`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
       setActiveStream({ id: streamId, mode: "viewer" });
+      startHeartbeat(streamId);
     } catch (error) {
       toast({
         title: "Error",
@@ -242,7 +276,17 @@ export default function StreamingPage() {
       console.error("Failed to end stream:", error);
     }
 
+    stopHeartbeat();
     setActiveStream(null);
+
+    // Also notify server if leaving as viewer
+    if (activeStream?.mode === "viewer") {
+      fetch(`/api/streams/${activeStream.id}/leave`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+    }
+
     fetchStreams();
   };
 

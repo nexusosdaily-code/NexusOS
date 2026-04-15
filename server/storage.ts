@@ -339,7 +339,10 @@ export class DatabaseStorage implements IStorage {
 
   async getTransactions(walletId: string, limit: number = 50): Promise<Transaction[]> {
     return db.select().from(transactions)
-      .where(eq(transactions.fromWalletId, walletId))
+      .where(or(
+        eq(transactions.fromWalletId, walletId),
+        eq(transactions.toWalletId,   walletId),
+      ))
       .orderBy(desc(transactions.createdAt))
       .limit(limit);
   }

@@ -124,28 +124,54 @@ function FeePreview({ amount }: { amount: string }) {
 }
 
 // ── Transaction row ────────────────────────────────────────────────────────────
+const TX_LABELS: Record<string, string> = {
+  transfer:         "Transfer",
+  message_fee:      "Message Fee",
+  message_earning:  "Message Earned",
+  stream_fee:       "Stream Fee",
+  stream_earning:   "Stream Earned",
+  document_fee:     "Document Fee",
+  document_earning: "Document Earned",
+  upload_fee:       "Upload Fee",
+  protocol_burn:    "Protocol Burn",
+};
+
+const EARNING_TYPES = new Set(["message_earning", "stream_earning", "document_earning"]);
+const BURN_TYPES    = new Set(["protocol_burn"]);
+
 function TxRow({ tx, walletId }: { tx: WalletData["recentTransactions"][0]; walletId: string }) {
-  const isSend    = tx.fromWalletId === walletId || tx.type === "transfer";
-  const isReceive = tx.toWalletId   === walletId && tx.type !== "transfer";
-  const nm   = tx.wavelength ? parseFloat(tx.wavelength) : 550;
+  const isEarning  = EARNING_TYPES.has(tx.type);
+  const isBurn     = BURN_TYPES.has(tx.type);
+  const isIncoming = isEarning || (tx.toWalletId === walletId && !isBurn);
+  const dir        = isIncoming ? "receive" : "send";
+
+  const nm    = tx.wavelength ? parseFloat(tx.wavelength) : 550;
   const color = nmToRgb(nm);
-  const dir  = isSend ? "send" : "receive";
+  const label = TX_LABELS[tx.type] ?? tx.type.replace(/_/g, " ");
+  const meta  = tx.metadata as Record<string, any> | null;
 
   return (
     <div className="flex items-center gap-4 rounded-xl border border-slate-800/60 bg-slate-900/40 px-4 py-3 hover:border-slate-700 transition-colors"
       data-testid={`tx-row-${tx.id}`}>
       <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
-        dir === "send" ? "bg-red-500/15 text-red-400" : "bg-green-500/15 text-green-400"
+        isBurn  ? "bg-orange-500/15 text-orange-400" :
+        dir === "receive" ? "bg-green-500/15 text-green-400"
+                          : "bg-red-500/15 text-red-400"
       }`}>
-        {dir === "send" ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownLeft className="w-4 h-4" />}
+        {isBurn ? "🔥" : dir === "receive"
+          ? <ArrowDownLeft className="w-4 h-4" />
+          : <ArrowUpRight className="w-4 h-4" />}
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-white font-medium capitalize">{tx.type}</span>
+          <span className="text-sm text-white font-medium">{label}</span>
           <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${tx.status === "confirmed" ? "bg-green-500/15 text-green-400" : "bg-amber-500/15 text-amber-400"}`}>
             {tx.status}
           </span>
+          {meta?.band && (
+            <span className="text-[9px] px-1 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">{meta.band}</span>
+          )}
         </div>
         {tx.wavelength && (
           <div className="flex items-center gap-2 text-[10px] mt-0.5">
@@ -154,14 +180,17 @@ function TxRow({ tx, walletId }: { tx: WalletData["recentTransactions"][0]; wall
             {tx.energyCost && <span className="text-slate-600">· Λ={parseFloat(tx.energyCost).toExponential(2)} J</span>}
           </div>
         )}
-        {(tx.metadata as any)?.memo && (
-          <div className="text-[10px] text-slate-600 font-mono truncate mt-0.5">{(tx.metadata as any).memo}</div>
+        {meta?.memo && (
+          <div className="text-[10px] text-slate-600 font-mono truncate mt-0.5">{meta.memo}</div>
         )}
       </div>
 
       <div className="text-right flex-shrink-0">
-        <div className={`font-mono font-bold text-sm ${dir === "send" ? "text-red-400" : "text-green-400"}`}>
-          {dir === "send" ? "−" : "+"}{formatNxt(tx.amount)} NXT
+        <div className={`font-mono font-bold text-sm ${
+          isBurn ? "text-orange-400" :
+          dir === "receive" ? "text-green-400" : "text-red-400"
+        }`}>
+          {isBurn ? "🔥 " : dir === "receive" ? "+" : "−"}{formatNxt(tx.amount)} NXT
         </div>
         <div className="text-[10px] text-slate-600 flex items-center justify-end gap-1 mt-0.5">
           <Clock className="w-3 h-3" /> {fmtTime(tx.createdAt)}
@@ -173,10 +202,14 @@ function TxRow({ tx, walletId }: { tx: WalletData["recentTransactions"][0]; wall
 
 // ── Stats panel ────────────────────────────────────────────────────────────────
 function StatsPanel({ txs }: { txs: WalletData["recentTransactions"]; }) {
-  const sends    = txs.filter(t => t.type === "transfer");
-  const receives = txs.filter(t => t.type !== "transfer");
-  const totalSent = sends.reduce((s, t) => s + parseFloat(t.amount), 0);
-  const totalRcvd = receives.reduce((s, t) => s + parseFloat(t.amount), 0);
+  const earningSet = new Set(["message_earning", "stream_earning", "document_earning"]);
+  const feeSet     = new Set(["message_fee", "stream_fee", "document_fee", "upload_fee", "protocol_burn"]);
+  const sends      = txs.filter(t => t.type === "transfer" || feeSet.has(t.type));
+  const receives   = txs.filter(t => earningSet.has(t.type) || (t.type === "transfer" && t.toWalletId));
+  const earnings   = txs.filter(t => earningSet.has(t.type));
+  const totalSent  = sends.reduce((s, t) => s + parseFloat(t.amount), 0);
+  const totalRcvd  = receives.reduce((s, t) => s + parseFloat(t.amount), 0);
+  const totalEarned = earnings.reduce((s, t) => s + parseFloat(t.amount), 0);
   const avgWl = txs.filter(t => t.wavelength).reduce((s, t) => s + parseFloat(t.wavelength!), 0) / (txs.filter(t => t.wavelength).length || 1);
   const totalEnergy = txs.filter(t => t.energyCost).reduce((s, t) => s + parseFloat(t.energyCost!), 0);
 
@@ -188,11 +221,12 @@ function StatsPanel({ txs }: { txs: WalletData["recentTransactions"]; }) {
         </h3>
         <div className="space-y-3 text-sm">
           {[
-            { label: "Transactions shown",    val: txs.length,                      color: "text-white" },
-            { label: "Outgoing transfers",     val: sends.length,                    color: "text-red-400" },
-            { label: "Incoming transfers",     val: receives.length,                 color: "text-green-400" },
-            { label: "Volume sent",            val: formatNxt(totalSent) + " NXT",   color: "text-red-400" },
-            { label: "Volume received",        val: formatNxt(totalRcvd) + " NXT",   color: "text-green-400" },
+            { label: "Transactions shown",    val: txs.length,                         color: "text-white" },
+            { label: "Fees paid",             val: sends.length,                     color: "text-red-400" },
+            { label: "Payments received",     val: receives.length,                  color: "text-green-400" },
+            { label: "Spectral earnings",     val: earnings.length,                  color: "text-cyan-400" },
+            { label: "Volume out",            val: formatNxt(totalSent) + " NXT",    color: "text-red-400" },
+            { label: "Volume earned",         val: formatNxt(totalEarned) + " NXT",  color: "text-green-400" },
           ].map(r => (
             <div key={r.label} className="flex items-center justify-between">
               <span className="text-slate-400">{r.label}</span>
