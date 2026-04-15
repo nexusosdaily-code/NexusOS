@@ -5217,6 +5217,58 @@ export async function registerRoutes(
     });
   });
 
+  // ── GitHub Bridge ─────────────────────────────────────────────────────
+  app.get("/api/github/profile", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { getGitHubClient } = await import("./github");
+      const octokit = await getGitHubClient();
+      const { data: user } = await octokit.users.getAuthenticated();
+      const { data: repos } = await octokit.repos.listForAuthenticatedUser({ per_page: 100, sort: "updated" });
+      const stars = repos.reduce((s: number, r: any) => s + (r.stargazers_count || 0), 0);
+      const forks = repos.reduce((s: number, r: any) => s + (r.forks_count || 0), 0);
+      res.json({ user, repoCount: repos.length, totalStars: stars, totalForks: forks });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.get("/api/github/repos", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { getGitHubClient } = await import("./github");
+      const octokit = await getGitHubClient();
+      const { data } = await octokit.repos.listForAuthenticatedUser({
+        per_page: 30, sort: "updated", affiliation: "owner",
+      });
+      // attach WNSP-URI derived from repo name
+      const { deriveChannel, buildUri } = await import("./physics");
+      const enriched = data.map((r: any) => {
+        const enc = deriveChannel(r.name);
+        return {
+          id: r.id, name: r.name, full_name: r.full_name,
+          description: r.description, html_url: r.html_url,
+          language: r.language, stargazers_count: r.stargazers_count,
+          forks_count: r.forks_count, open_issues_count: r.open_issues_count,
+          private: r.private, fork: r.fork,
+          updated_at: r.updated_at, pushed_at: r.pushed_at,
+          default_branch: r.default_branch,
+          topics: r.topics ?? [],
+          wnsp: { psi: enc.psi, nm: enc.nm, band: enc.band, uri: buildUri(enc.wdm, enc.oam, enc.pol, r.name) },
+        };
+      });
+      res.json({ repos: enriched, total: enriched.length });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.get("/api/github/activity", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { getGitHubClient } = await import("./github");
+      const octokit = await getGitHubClient();
+      const { data: user } = await octokit.users.getAuthenticated();
+      const { data: events } = await octokit.activity.listPublicEventsForUser({
+        username: user.login, per_page: 30,
+      });
+      res.json({ events, username: user.login });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── Public ledger — all NXT transactions ─────────────────────────────
   app.get("/api/ledger", async (req: Request, res: Response) => {
     try {

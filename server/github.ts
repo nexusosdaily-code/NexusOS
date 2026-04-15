@@ -2,41 +2,39 @@ import { Octokit } from '@octokit/rest';
 
 let connectionSettings: any;
 
-async function getAccessToken() {
-  if (connectionSettings && connectionSettings.settings.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
-    return connectionSettings.settings.access_token;
-  }
-  
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY 
-    ? 'repl ' + process.env.REPL_IDENTITY 
-    : process.env.WEB_REPL_RENEWAL 
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
-    : null;
+async function getOAuthToken(): Promise<string | null> {
+  try {
+    const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+    const xReplitToken = process.env.REPL_IDENTITY
+      ? 'repl ' + process.env.REPL_IDENTITY
+      : process.env.WEB_REPL_RENEWAL
+      ? 'depl ' + process.env.WEB_REPL_RENEWAL
+      : null;
 
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
-  }
+    if (!xReplitToken || !hostname) return null;
 
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=github',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
-      }
+    if (connectionSettings?.settings?.access_token &&
+        connectionSettings?.settings?.expires_at &&
+        new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
+      return connectionSettings.settings.access_token;
     }
-  ).then(res => res.json()).then(data => data.items?.[0]);
 
-  const accessToken = connectionSettings?.settings?.access_token ?? connectionSettings?.settings?.oauth?.credentials?.access_token;
+    connectionSettings = await fetch(
+      'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=github',
+      { headers: { 'Accept': 'application/json', 'X_REPLIT_TOKEN': xReplitToken } }
+    ).then(r => r.json()).then((d: any) => d.items?.[0]);
 
-  if (!connectionSettings || !accessToken) {
-    throw new Error('GitHub not connected');
+    return connectionSettings?.settings?.access_token
+      ?? connectionSettings?.settings?.oauth?.credentials?.access_token
+      ?? null;
+  } catch {
+    return null;
   }
-  return accessToken;
 }
 
-export async function getGitHubClient() {
-  const accessToken = await getAccessToken();
-  return new Octokit({ auth: accessToken });
+export async function getGitHubClient(): Promise<Octokit> {
+  const oauthToken = await getOAuthToken();
+  const token = oauthToken ?? process.env.GITHUB_PAT;
+  if (!token) throw new Error('No GitHub token available — set GITHUB_PAT or connect the GitHub integration');
+  return new Octokit({ auth: token });
 }

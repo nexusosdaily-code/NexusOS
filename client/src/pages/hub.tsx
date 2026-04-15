@@ -97,10 +97,10 @@ const APP_SECTIONS = [
     accent: "#16a34a",
     items: [
       { title: "API Keys",      href: "/developer/keys",  Icon: Key },
-      { title: "Photonic Dev",  href: "/photonic-dev",    Icon: Layers },
+      { title: "GitHub Bridge", href: "/github",          Icon: GitBranch },
       { title: "CE Writer",     href: "/ce-writer",       Icon: Code2 },
       { title: "Spectral Lib.", href: "/spectral-library",Icon: BookOpen },
-      { title: "Analytics",     href: "/workspace/analytics", Icon: GitBranch },
+      { title: "Analytics",     href: "/workspace/analytics", Icon: Activity },
     ],
   },
 ];
