@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUser = useCallback(async () => {
+  const fetchUser = useCallback(async (attempt = 1) => {
     try {
       const token = localStorage.getItem("auth_token");
       if (!token) {
@@ -33,21 +33,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       const res = await fetch("/api/auth/me", {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
+        headers: { "Authorization": `Bearer ${token}` }
       });
+
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
-      } else {
+        setIsLoading(false);
+      } else if (res.status === 401 || res.status === 403) {
+        // Server explicitly rejected the token — it's genuinely invalid, clear it.
         localStorage.removeItem("auth_token");
         setUser(null);
+        setIsLoading(false);
+      } else if (attempt < 3) {
+        // 5xx or unexpected error — server may still be starting up. Retry.
+        setTimeout(() => fetchUser(attempt + 1), 1500 * attempt);
+      } else {
+        // Exhausted retries: keep token, leave user null (will redirect to login).
+        setUser(null);
+        setIsLoading(false);
       }
     } catch {
-      setUser(null);
-    } finally {
-      setIsLoading(false);
+      // Network error — server starting up. Retry up to 3 times before giving up.
+      if (attempt < 3) {
+        setTimeout(() => fetchUser(attempt + 1), 1500 * attempt);
+      } else {
+        setUser(null);
+        setIsLoading(false);
+      }
     }
   }, []);
 
