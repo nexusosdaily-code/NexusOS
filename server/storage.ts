@@ -70,6 +70,8 @@ export interface IStorage {
   getApiKeyByPrefix(prefix: string): Promise<ApiKey | undefined>;
   verifyApiKey(key: string, keyHash: string): Promise<boolean>;
   revokeApiKey(keyId: string): Promise<void>;
+  listApiKeysByUser(userId: string): Promise<ApiKey[]>;
+  updateApiKeyLastUsed(keyId: string): Promise<void>;
 
   // Rate limiting
   checkRateLimit(identifier: string, endpoint: string, limit: number, windowMs: number): Promise<boolean>;
@@ -411,6 +413,16 @@ export class DatabaseStorage implements IStorage {
 
   async revokeApiKey(keyId: string): Promise<void> {
     await db.update(apiKeys).set({ isActive: false }).where(eq(apiKeys.id, keyId));
+  }
+
+  async listApiKeysByUser(userId: string): Promise<ApiKey[]> {
+    return db.select().from(apiKeys)
+      .where(eq(apiKeys.userId, userId))
+      .orderBy(desc(apiKeys.createdAt));
+  }
+
+  async updateApiKeyLastUsed(keyId: string): Promise<void> {
+    await db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, keyId));
   }
 
   // ============================================

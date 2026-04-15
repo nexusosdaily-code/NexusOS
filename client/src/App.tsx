@@ -29,6 +29,7 @@ import SecureDocxPage from "@/pages/secure-docx";
 import ResearchPresentationPage from "@/pages/research-presentation";
 import StreamingPage from "@/pages/streaming";
 import DeveloperMatrixPage from "@/pages/developer-matrix";
+import DeveloperKeysPage from "@/pages/developer-keys";
 import DocsPage from "@/pages/docs";
 import WNSPCoordinator from "@/pages/wnsp-coordinator";
 import KernelPage from "@/pages/kernel";
@@ -101,6 +102,7 @@ function ProtectedRoutes() {
         <Route path="/streaming/:streamId" component={StreamingPage} />
         <Route path="/developer-matrix" component={DeveloperMatrixPage} />
         <Route path="/developer-matrix/docs" component={DocsPage} />
+        <Route path="/developer/keys" component={DeveloperKeysPage} />
         <Route path="/workspace/matrix" component={DeveloperMatrixPage} />
         <Route path="/docs" component={DocsPage} />
         <Route path="/docs/:section" component={DocsPage} />

@@ -901,6 +901,290 @@ export async function registerRoutes(
   // FRIENDS ROUTES
   // ============================================
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // STAGE 4 — DEVELOPER API LAYER
+  // External services authenticate with Bearer nxt_<prefix>_<secret> keys.
+  // Every API call costs NXT (same physics engine as UI), tracked in DB.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ── API key middleware ────────────────────────────────────────────────────
+  async function authenticateApiKey(
+    req: Request, res: Response, next: Function
+  ): Promise<void> {
+    const authHeader = req.headers.authorization ?? "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    if (!token.startsWith("nxt_")) {
+      res.status(401).json({ error: "Missing or invalid API key. Use: Authorization: Bearer nxt_<key>" });
+      return;
+    }
+    const prefix = token.substring(0, 12);
+    const apiKey = await storage.getApiKeyByPrefix(prefix);
+    if (!apiKey || !apiKey.isActive) {
+      res.status(401).json({ error: "Invalid or revoked API key" });
+      return;
+    }
+    if (apiKey.expiresAt && new Date(apiKey.expiresAt) < new Date()) {
+      res.status(401).json({ error: "API key expired" });
+      return;
+    }
+    const valid = await storage.verifyApiKey(token, apiKey.keyHash);
+    if (!valid) {
+      res.status(401).json({ error: "API key verification failed" });
+      return;
+    }
+    const user = await storage.getUser(apiKey.userId);
+    if (!user) {
+      res.status(401).json({ error: "API key owner not found" });
+      return;
+    }
+    // Stamp last-used async — don't block the request
+    storage.updateApiKeyLastUsed(apiKey.id).catch(() => {});
+    req.user = user;
+    req.apiKey = apiKey;
+    next();
+  }
+
+  // ── Key management — session-authenticated ────────────────────────────────
+
+  // List all API keys for authenticated user
+  app.get("/api/keys", authenticate, async (req, res) => {
+    try {
+      const keys = await storage.listApiKeysByUser(req.user!.id);
+      res.json({
+        keys: keys.map(k => ({
+          id:          k.id,
+          name:        k.name,
+          prefix:      k.keyPrefix,
+          permissions: k.permissions,
+          isActive:    k.isActive,
+          lastUsedAt:  k.lastUsedAt,
+          expiresAt:   k.expiresAt,
+          createdAt:   k.createdAt,
+        })),
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to list API keys" });
+    }
+  });
+
+  // Create a new API key — costs 1 NXT (document_create fee via physics)
+  app.post("/api/keys", authenticate, async (req, res) => {
+    try {
+      const { name, permissions = ["read"] } = req.body as { name?: string; permissions?: string[] };
+      if (!name || typeof name !== "string" || name.trim().length < 2) {
+        return res.status(400).json({ error: "Key name is required (min 2 chars)" });
+      }
+
+      // Physics fee: creating a dev key = document_create cost
+      const wdm        = req.user!.spectralWdm ?? 200;
+      const keyFee     = calcFee("document_create", wdm);
+      const keyFeeNum  = parseFloat(keyFee.feeNxt);
+      const userWallet = await storage.getWallet(req.user!.id);
+      if (!userWallet) return res.status(402).json({ error: "Wallet not found" });
+
+      const balance = parseFloat(userWallet.balance);
+      if (balance < keyFeeNum) {
+        return res.status(402).json({
+          error: "Insufficient NXT to create API key",
+          required: keyFeeNum,
+          available: balance,
+          physics: { wavelengthNm: keyFee.wavelengthNm, band: keyFee.band },
+        });
+      }
+
+      // Deduct key creation fee
+      await storage.updateWalletBalance(userWallet.id, (balance - keyFeeNum).toFixed(8));
+      await storage.createTransaction({
+        fromWalletId: userWallet.id,
+        toWalletId:   undefined,
+        amount:       keyFeeNum.toFixed(8),
+        fee:          "0",
+        type:         "document_fee",
+        wavelength:   keyFee.wavelengthNm.toString(),
+        frequency:    keyFee.frequencyHz.toString(),
+        energyCost:   keyFee.energyJ.toString(),
+        metadata:     { action: "api_key_create", name: name.trim() },
+      });
+
+      const { key, apiKey } = await storage.createApiKey(req.user!.id, name.trim(), permissions);
+
+      res.status(201).json({
+        key,  // only shown once — store securely
+        apiKey: {
+          id:          apiKey.id,
+          name:        apiKey.name,
+          prefix:      apiKey.keyPrefix,
+          permissions: apiKey.permissions,
+          createdAt:   apiKey.createdAt,
+        },
+        fee: { nxt: keyFeeNum, band: keyFee.band, nm: keyFee.wavelengthNm },
+        warning: "Store this key now — it will not be shown again.",
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to create API key" });
+    }
+  });
+
+  // Revoke a key
+  app.delete("/api/keys/:keyId", authenticate, async (req, res) => {
+    try {
+      const keys = await storage.listApiKeysByUser(req.user!.id);
+      const target = keys.find(k => k.id === req.params.keyId);
+      if (!target) return res.status(404).json({ error: "Key not found" });
+      await storage.revokeApiKey(target.id);
+      res.json({ revoked: true, keyId: target.id });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to revoke API key" });
+    }
+  });
+
+  // ── External developer endpoints — API key authenticated ─────────────────
+
+  // GET /api/dev/physics/:username — spectral channel + fee schedule
+  app.get("/api/dev/physics/:username", authenticateApiKey, async (req, res) => {
+    try {
+      const { username } = req.params;
+      const channel = deriveChannel(username);
+      const fees = {
+        message_send:     calcFee("message_send",     channel.wdm),
+        stream_start:     calcFee("stream_start",     channel.wdm),
+        document_create:  calcFee("document_create",  channel.wdm),
+        wallet_transfer:  calcFee("wallet_transfer",  channel.wdm),
+      };
+      res.json({ username, channel, fees });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/dev/wallet — caller's wallet balance and recent transactions
+  app.get("/api/dev/wallet", authenticateApiKey, async (req, res) => {
+    try {
+      const wallet = await storage.getWallet(req.user!.id);
+      if (!wallet) return res.status(404).json({ error: "Wallet not found" });
+      const txs = await storage.getTransactions(wallet.id, 10);
+      res.json({
+        address:  wallet.address,
+        balance:  wallet.balance,
+        spectral: {
+          wdm:  req.user!.spectralWdm,
+          nm:   req.user!.spectralNm,
+          band: req.user!.spectralBand,
+        },
+        recentTransactions: txs.map(t => ({
+          type:   t.type,
+          amount: t.amount,
+          status: t.status,
+          createdAt: t.createdAt,
+        })),
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/dev/message — send a message via API key (costs NXT)
+  app.post("/api/dev/message", authenticateApiKey, async (req, res) => {
+    try {
+      const { recipientUsername, content } = req.body as { recipientUsername?: string; content?: string };
+      if (!recipientUsername || !content) {
+        return res.status(400).json({ error: "recipientUsername and content are required" });
+      }
+      if (content.length > 2000) {
+        return res.status(400).json({ error: "content exceeds 2000 characters" });
+      }
+
+      const recipient = await storage.getUserByUsername(recipientUsername);
+      if (!recipient) return res.status(404).json({ error: "Recipient not found" });
+
+      const senderWdm    = req.user!.spectralWdm ?? 200;
+      const msgFee       = calcFee("message_send", senderWdm);
+      const msgFeeNum    = parseFloat(msgFee.feeNxt);
+      const senderWallet = await storage.getWallet(req.user!.id);
+      if (!senderWallet) return res.status(402).json({ error: "Sender wallet not found" });
+
+      const balance = parseFloat(senderWallet.balance);
+      if (balance < msgFeeNum) {
+        return res.status(402).json({
+          error:     "Insufficient NXT",
+          required:  msgFeeNum,
+          available: balance,
+          physics:   { band: msgFee.band, nm: msgFee.wavelengthNm },
+        });
+      }
+
+      // Deduct fee and earn loop (same as UI)
+      await storage.updateWalletBalance(senderWallet.id, (balance - msgFeeNum).toFixed(8));
+      const recipientEarning = msgFeeNum * 0.5;
+      const recipientWallet  = await storage.getWallet(recipient.id);
+      if (recipientWallet) {
+        const newBal = (parseFloat(recipientWallet.balance) + recipientEarning).toFixed(8);
+        await storage.updateWalletBalance(recipientWallet.id, newBal);
+        await storage.createTransaction({
+          fromWalletId: senderWallet.id,
+          toWalletId:   recipientWallet.id,
+          amount:       recipientEarning.toFixed(8),
+          fee:          "0",
+          type:         "message_earning",
+          wavelength:   msgFee.wavelengthNm.toString(),
+          frequency:    msgFee.frequencyHz.toString(),
+          energyCost:   msgFee.energyJ.toString(),
+          metadata:     { action: "message_received", via: "dev_api", senderId: req.user!.id },
+        });
+      }
+      await storage.createTransaction({
+        fromWalletId: senderWallet.id,
+        toWalletId:   undefined,
+        amount:       (msgFeeNum * 0.5).toFixed(8),
+        fee:          "0",
+        type:         "protocol_burn",
+        wavelength:   msgFee.wavelengthNm.toString(),
+        frequency:    msgFee.frequencyHz.toString(),
+        energyCost:   msgFee.energyJ.toString(),
+        metadata:     { action: "message_send", via: "dev_api" },
+      });
+
+      const message = await storage.createLambdaMessage({
+        senderId:        req.user!.id,
+        recipientId:     recipient.id,
+        content,
+        wavelengthMin:   msgFee.wavelengthNm.toFixed(4),
+        wavelengthMax:   msgFee.wavelengthNm.toFixed(4),
+        spectralHash:    `Ψ(${senderWdm})·λ=${msgFee.wavelengthNm.toFixed(2)}nm·dev_api`,
+      });
+
+      res.status(201).json({
+        messageId: message.id,
+        fee:       { nxt: msgFeeNum, band: msgFee.band, nm: msgFee.wavelengthNm },
+        newBalance: (balance - msgFeeNum).toFixed(8),
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/dev/status — platform health check (no fee)
+  app.get("/api/dev/status", authenticateApiKey, async (req, res) => {
+    res.json({
+      status:  "operational",
+      version: "NexusOS v1.0 — WNSP Developer API",
+      caller:  {
+        username: req.user!.username,
+        band:     req.user!.spectralBand,
+        nm:       req.user!.spectralNm,
+      },
+      endpoints: [
+        "GET  /api/dev/status",
+        "GET  /api/dev/wallet",
+        "GET  /api/dev/physics/:username",
+        "POST /api/dev/message",
+      ],
+      economics: "Every action costs NXT — E=hf · WNSP spectral fees apply",
+    });
+  });
+
+  // ── End of Stage 4 Developer API ─────────────────────────────────────────
+
   app.get("/api/friends", authenticate, async (req, res) => {
     try {
       const friends = await storage.getFriends(req.user!.id);

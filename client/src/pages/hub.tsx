@@ -11,7 +11,7 @@ import {
   Zap, Atom, Waves, Rocket, Users, Database,
   Shield, BookOpen, HardDrive, GitBranch,
   ChevronRight, LayoutGrid, Rss, Eye, Clock,
-  MessageSquarePlus, MonitorPlay, FilePlus, Sparkles,
+  MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -93,6 +93,7 @@ const APP_SECTIONS = [
     label: "Developer",
     accent: "#16a34a",
     items: [
+      { title: "API Keys",      href: "/developer/keys",  Icon: Key },
       { title: "Photonic Dev",  href: "/photonic-dev",    Icon: Layers },
       { title: "CE Writer",     href: "/ce-writer",       Icon: Code2 },
       { title: "Spectral Lib.", href: "/spectral-library",Icon: BookOpen },
@@ -304,6 +305,7 @@ function QuickActions() {
     { label: "Compose",   Icon: MessageSquarePlus, href: "/inbox",               color: "#22d3ee", feeKey: "message_send" },
     { label: "Go Live",   Icon: MonitorPlay,       href: "/streaming",            color: "#f472b6", feeKey: "stream_start" },
     { label: "Upload",    Icon: FilePlus,          href: "/workspace/transmission",color: "#34d399", feeKey: "upload_mb" },
+    { label: "API Keys",  Icon: Key,               href: "/developer/keys",       color: "#86efac", feeKey: null },
     { label: "Encode",    Icon: Atom,              href: "/encoding-lab",         color: "#a78bfa", feeKey: null },
   ];
 

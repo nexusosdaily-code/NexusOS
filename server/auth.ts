@@ -1,12 +1,13 @@
 import type { Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
-import type { User, Session } from "@shared/schema";
+import type { User, Session, ApiKey } from "@shared/schema";
 
 declare global {
   namespace Express {
     interface Request {
       user?: User;
       session?: Session;
+      apiKey?: ApiKey;
     }
   }
 }
