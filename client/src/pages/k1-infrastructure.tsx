@@ -1116,6 +1116,9 @@ export default function K1InfrastructurePage() {
             <TabsTrigger value="sectormap" data-testid="tab-sectormap">
               <Waves className="w-4 h-4 mr-1" /> Sectors
             </TabsTrigger>
+            <TabsTrigger value="sectormap" data-testid="tab-sectormap">
+              <Waves className="w-4 h-4 mr-2" /> Sector Map
+            </TabsTrigger>
             <TabsTrigger value="network" data-testid="tab-network">
               <Network className="w-4 h-4 mr-1" /> Network
             </TabsTrigger>
