@@ -1,0 +1,62 @@
+cff-version: 1.2.0
+message: "If you use NexusOS in your research, please cite it as below."
+type: software
+title: "NexusOS: A Physics-Based Civilization Infrastructure Platform"
+abstract: >
+  NexusOS is the foundational blueprint for a Kardashev Type I civilization,
+  built on Einstein's first principle Λ=hf/c². The system replaces cryptographic
+  addressing with electromagnetic wave physics, implementing the Wavelength
+  Navigated Spectral Protocol (WNSP) — a deterministic, censorship-proof
+  communication layer derived from Maxwell's equations and Planck energy
+  quantisation. Every economic action (message fees, stream costs, token
+  transfers) is governed by E=hf calculations anchored to each user's unique
+  spectral identity channel Ψ(WDM, OAM, Pol). The platform introduces the
+  Theory of Compression States, WASCII v2.0 spectral character encoding,
+  a 25,600-channel Hilbert-space addressing model (256 WDM × 50 OAM × 2 Pol),
+  a live AI OS kernel with 6 autonomous agents, on-chain governance, and a
+  physics-enforced NXT token economy. Released as free infrastructure under
+  AGPL-3.0. Genesis fingerprint: Ψ(228,45,H) · λ≈737.6 nm.
+authors:
+  - name: "NexusOS Daily"
+    email: nexusosdaily@gmail.com
+    alias: Nexus
+    orcid: ""
+repository-code: "https://github.com/nexusosdaily-code/NexusOS"
+url: "https://github.com/nexusosdaily-code/NexusOS"
+license: AGPL-3.0
+version: "1.0.0"
+date-released: "2026-04-15"
+keywords:
+  - spectral-addressing
+  - WNSP
+  - physics-based-blockchain
+  - wavelength-division-multiplexing
+  - orbital-angular-momentum
+  - Hilbert-space
+  - NXT-token
+  - Kardashev-Type-I
+  - compression-states
+  - quantum-economics
+  - AI-kernel
+  - AGPL
+references:
+  - type: article
+    title: "Theory of Compression States: The First Unobserved Oscillation"
+    authors:
+      - name: "NexusOS Daily"
+    year: 2026
+    notes: >
+      Foundational theory establishing that universal evolution originates from
+      the first unobserved wavefunction collapse, and that a wavelength coordinate
+      represents a specific compression state of a quantum rather than an assigned
+      address. Encoded in WNSP spectral identity derivation.
+  - type: dataset
+    title: "First Confirmed WNSP P2P Transmission — Multi-Peer Evidence"
+    authors:
+      - name: "NexusOS Daily"
+    date-released: "2026-04-14"
+    repository-code: "https://github.com/nexusosdaily-code/NexusOS"
+    notes: >
+      Timestamped disclosure of the first successful WNSP-encoded peer-to-peer
+      data transmission, with multi-peer confirmation and persistent database
+      evidence. Transmission timestamp: 2026-04-14 22:02:28 UTC.
