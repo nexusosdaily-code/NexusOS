@@ -819,6 +819,28 @@ export async function registerRoutes(
     }
   });
 
+  // ── Account settings — change password ───────────────────────────────────
+  app.post("/api/settings/password", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword)
+        return res.status(400).json({ error: "currentPassword and newPassword are required" });
+      if (newPassword.length < 8)
+        return res.status(400).json({ error: "New password must be at least 8 characters" });
+      const user = await storage.getUser(req.user!.id);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      const valid = await storage.verifyPassword(user, currentPassword);
+      if (!valid) return res.status(401).json({ error: "Current password is incorrect" });
+      const { default: bcrypt } = await import("bcrypt");
+      const hash = await bcrypt.hash(newPassword, 12);
+      const { db } = await import("./db");
+      const { users } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ passwordHash: hash }).where(eq(users.id, req.user!.id));
+      res.json({ success: true, message: "Password updated successfully" });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── Wallet PIN routes ────────────────────────────────────────────────────
   app.get("/api/wallet/pin/status", authenticate, async (req: Request, res: Response) => {
     try {

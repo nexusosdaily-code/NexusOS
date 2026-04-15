@@ -11,7 +11,7 @@ import {
   Zap, Atom, Waves, Rocket, Users, Database,
   Shield, BookOpen, HardDrive, GitBranch,
   ChevronRight, LayoutGrid, Rss, Eye, Clock,
-  MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut,
+  MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut, Settings,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -88,8 +88,8 @@ const APP_SECTIONS = [
       { title: "K1 Platform",   href: "/k1",             Icon: Rocket },
       { title: "Kernel",        href: "/kernel",          Icon: Cpu },
       { title: "WNSP Coord.",   href: "/wnsp/coordinator",Icon: Globe2 },
-      { title: "Nexus Command", href: "/nexus-command",   Icon: Shield },
       { title: "Governance",    href: "/governance",       Icon: Scale },
+      { title: "Settings",      href: "/settings",        Icon: Settings },
     ],
   },
   {
@@ -200,6 +200,18 @@ function IdentityRail({
             ? `${(balNum / 1e3).toFixed(2)}K`
             : balNum.toFixed(4)} NXT
         </div>
+      </Link>
+
+      {/* Settings */}
+      <Link href="/settings">
+        <button
+          data-testid="button-settings"
+          title="Account Settings"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-zinc-400 hover:text-cyan-400 hover:bg-cyan-500/10 border border-white/10 hover:border-cyan-500/30 transition-all"
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Settings</span>
+        </button>
       </Link>
 
       {/* Logout */}
