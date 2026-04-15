@@ -3208,6 +3208,17 @@ export async function registerRoutes(
   // ── Genesis Kernel Block API ───────────────────────────────────────
   // The OS kernel's own boot-state genesis record — root_hash is a Ψ channel
 
+  // ── Kernel Agent Status ────────────────────────────────────────────────────
+  app.get("/api/kernel/agents", optionalAuth, async (req: Request, res: Response) => {
+    try {
+      const { getAllAgentStates } = await import("./kernel_agents");
+      const agents = getAllAgentStates();
+      res.json({ agents, count: agents.length, serverTime: Date.now() });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/api/kernel/genesis", optionalAuth, async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");

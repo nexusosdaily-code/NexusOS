@@ -11,9 +11,20 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Activity, Database, Shield, Bell,
-  RefreshCw, Zap, CheckCircle, AlertTriangle, XCircle, Power,
+  Activity, Database, Shield, Bell, Cpu,
+  RefreshCw, Zap, CheckCircle, AlertTriangle, XCircle, Power, Clock,
 } from "lucide-react";
+
+function nmToRgb(nm: number): string {
+  let r = 0, g = 0, b = 0;
+  if (nm >= 380 && nm < 440) { r = -(nm - 440) / 60; g = 0; b = 1; }
+  else if (nm < 490) { r = 0; g = (nm - 440) / 50; b = 1; }
+  else if (nm < 510) { r = 0; g = 1; b = -(nm - 510) / 20; }
+  else if (nm < 580) { r = (nm - 510) / 70; g = 1; b = 0; }
+  else if (nm < 645) { r = 1; g = -(nm - 645) / 65; b = 0; }
+  else if (nm <= 780) { r = 1; g = 0; b = 0; }
+  return `rgb(${Math.round(r * 220)},${Math.round(g * 220)},${Math.round(b * 220)})`;
+}
 import type { JSX } from "react";
 
 // ─── helpers ───────────────────────────────────────────────────────────────
@@ -540,6 +551,138 @@ function WatchdogPanel() {
   );
 }
 
+// ─── autonomous agents panel ────────────────────────────────────────────────
+
+const BAND_GLOW: Record<string, string> = {
+  SYSTEM: "border-violet-500/60 shadow-violet-900/30",
+  KERNEL: "border-blue-500/60 shadow-blue-900/30",
+  USER:   "border-green-500/60 shadow-green-900/30",
+  GUEST:  "border-orange-500/60 shadow-orange-900/30",
+};
+
+const STATUS_STYLE: Record<string, { dot: string; text: string }> = {
+  ACTIVE:  { dot: "bg-green-400 animate-pulse", text: "text-green-400" },
+  IDLE:    { dot: "bg-slate-500",               text: "text-slate-400" },
+  ERROR:   { dot: "bg-red-500",                 text: "text-red-400"   },
+  BOOTING: { dot: "bg-amber-400 animate-pulse", text: "text-amber-400" },
+};
+
+function AgentCard({ agent }: { agent: any }) {
+  const band   = agent.band ?? "USER";
+  const status = agent.status ?? "IDLE";
+  const style  = STATUS_STYLE[status] ?? STATUS_STYLE.IDLE;
+  const color  = nmToRgb(agent.channelNm ?? 550);
+  const elapsed = Math.round((Date.now() - (agent.lastRunAt ?? 0)) / 1000);
+
+  return (
+    <div className={`rounded-xl border bg-slate-900/60 p-5 shadow ${BAND_GLOW[band]}`}
+         data-testid={`agent-card-${agent.agentId}`}>
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${style.dot}`} />
+            <span className={`text-sm font-bold font-mono ${style.text}`}>{status}</span>
+          </div>
+          <div className="text-white font-semibold mt-1">{agent.displayName}</div>
+          <div className="text-[10px] text-slate-500 font-mono mt-0.5">{agent.agentId}</div>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <span className={`text-[10px] px-2 py-0.5 rounded border font-mono font-bold ${BAND_COLORS[band]}`}>
+            {band}
+          </span>
+          <span className="text-[10px] text-slate-500 font-mono" style={{ color }}>
+            {agent.channelNotation} · {(agent.channelNm ?? 0).toFixed(1)} nm
+          </span>
+        </div>
+      </div>
+
+      <div className="bg-slate-800/60 rounded-lg px-3 py-2 mb-3">
+        <p className="text-xs text-slate-200 leading-relaxed">{agent.lastAction}</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-center">
+        {[
+          { label: "Cycles",   val: agent.cycleCount ?? 0 },
+          { label: "Actions",  val: agent.totalActionsCompleted ?? 0 },
+          { label: "Errors",   val: agent.errorCount ?? 0 },
+        ].map(s => (
+          <div key={s.label} className="bg-slate-800/40 rounded-lg py-1.5">
+            <div className={`text-base font-bold font-mono ${
+              s.label === "Errors" && s.val > 0 ? "text-red-400" : "text-white"
+            }`}>{s.val}</div>
+            <div className="text-[9px] text-slate-500">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-end gap-1 mt-2 text-[10px] text-slate-600">
+        <Clock className="w-3 h-3" />
+        <span>{elapsed}s ago</span>
+      </div>
+
+      {agent.lastError && (
+        <div className="mt-2 text-[10px] text-red-400 bg-red-900/20 rounded px-2 py-1 font-mono truncate">
+          {agent.lastError}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AgentsPanel() {
+  const { data, isLoading, dataUpdatedAt } = useQuery<any>({
+    queryKey: ["/api/kernel/agents"],
+    refetchInterval: 5_000,
+  });
+  const agents: any[] = data?.agents ?? [];
+
+  const activeCount = agents.filter(a => a.status === "ACTIVE").length;
+  const totalActions = agents.reduce((s, a) => s + (a.totalActionsCompleted ?? 0), 0);
+  const totalCycles  = agents.reduce((s, a) => s + (a.cycleCount ?? 0), 0);
+
+  if (isLoading) return (
+    <div className="flex items-center gap-2 text-slate-400 p-8">
+      <RefreshCw className="w-4 h-4 animate-spin" /> Loading agents…
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Summary row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: "Agents Online",    val: `${activeCount} / ${agents.length}`, color: "text-green-400" },
+          { label: "Total Cycles",     val: totalCycles,    color: "text-blue-400" },
+          { label: "Total Actions",    val: totalActions,   color: "text-cyan-400" },
+          { label: "Last Poll",        val: new Date(dataUpdatedAt).toLocaleTimeString(), color: "text-slate-300" },
+        ].map(s => (
+          <div key={s.label} className="bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-3">
+            <div className={`text-lg font-bold font-mono ${s.color}`}>{s.val}</div>
+            <div className="text-[10px] text-slate-500">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Explanatory note */}
+      <p className="text-xs text-slate-500 border-l-2 border-slate-700 pl-3">
+        Each agent runs an autonomous work loop. <strong className="text-slate-300">os_kernel</strong> snapshots
+        system state · <strong className="text-slate-300">scheduler_daemon</strong> confirms pending transactions ·{" "}
+        <strong className="text-slate-300">watchdog_daemon</strong> audits wallets · <strong className="text-slate-300">auth_gateway</strong> assigns missing spectral channels.
+        Polling every 5 s.
+      </p>
+
+      {/* Agent cards */}
+      {agents.length === 0 ? (
+        <p className="text-slate-500 text-sm">No agents registered — restart the server.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {agents.map(a => <AgentCard key={a.agentId} agent={a} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── main page ─────────────────────────────────────────────────────────────
 
 export default function KernelPage() {
@@ -607,6 +750,7 @@ export default function KernelPage() {
           <TabsTrigger value="authority"   data-testid="tab-authority">③ Authority</TabsTrigger>
           <TabsTrigger value="events"      data-testid="tab-events">④ Events</TabsTrigger>
           <TabsTrigger value="watchdog"    data-testid="tab-watchdog">⑤ Watchdog</TabsTrigger>
+          <TabsTrigger value="agents"      data-testid="tab-agents">⑥ Agents</TabsTrigger>
         </TabsList>
 
         <TabsContent value="boot">
@@ -657,6 +801,16 @@ export default function KernelPage() {
             </span>
           </h2>
           <WatchdogPanel />
+        </TabsContent>
+
+        <TabsContent value="agents">
+          <h2 className="text-sm font-semibold text-cyan-300 mb-3 flex items-center gap-2">
+            <Cpu className="w-4 h-4" /> Autonomous Agent Layer
+            <span className="text-slate-500 text-xs font-normal ml-1">
+              — 4 daemon loops with real DB actions · Stage 3
+            </span>
+          </h2>
+          <AgentsPanel />
         </TabsContent>
       </Tabs>
     </div>
