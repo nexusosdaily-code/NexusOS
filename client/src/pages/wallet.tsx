@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getAuthHeaders } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -421,13 +422,13 @@ export default function WalletPage() {
 
   const { data, isLoading, isError, refetch } = useQuery<WalletData>({
     queryKey: ["/api/wallet"],
-    queryFn: () => fetch("/api/wallet", { credentials: "include" }).then(r => r.json()),
+    queryFn: () => fetch("/api/wallet", { credentials: "include", headers: getAuthHeaders() }).then(r => r.json()),
     refetchInterval: 15_000,
   });
 
   const { data: pinStatus, refetch: refetchPin } = useQuery<{ pinSet: boolean }>({
     queryKey: ["/api/wallet/pin/status"],
-    queryFn: () => fetch("/api/wallet/pin/status", { credentials: "include" }).then(r => r.json()),
+    queryFn: () => fetch("/api/wallet/pin/status", { credentials: "include", headers: getAuthHeaders() }).then(r => r.json()),
   });
 
   const wallet = data?.wallet;
@@ -441,7 +442,7 @@ export default function WalletPage() {
       const r = await fetch("/api/wallet/pin/set", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ pin }),
       });
       const json = await r.json();
@@ -455,7 +456,7 @@ export default function WalletPage() {
       const r = await fetch("/api/wallet/transfer", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(body),
       });
       const json = await r.json();
