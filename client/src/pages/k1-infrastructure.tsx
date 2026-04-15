@@ -609,6 +609,422 @@ function DemoRunner({ onFlowUpdate }: { onFlowUpdate: (flows: CrossPillarFlow[])
   );
 }
 
+// ── Physics constants ─────────────────────────────────────────────────────────
+const H = 6.626e-34;
+const C = 2.998e8;
+
+// Per-sector activities generated on each Ψ channel
+const SECTOR_ACTIVITIES: Record<string, string[]> = {
+  defense:        ["Geometric isolation verified","Sovereign channel guard pulse","OAM intercept scan","Spectral auth challenge","Compression-state ID verify"],
+  energy:         ["Schumann resonance harvest","Orbital solar capture","Fusion photon gate open","λ=489nm power burst","Grid frequency sync"],
+  computing:      ["Photonic AND gate execute","OAM qubit register write","WDM parallel channel open","Lambda processor cycle","Coherence-Amp gate apply"],
+  communications: ["Spectral mesh route update","OAM channel allocated","Coherence repeater ping","Planetary relay sync","Dijkstra path computed"],
+  resources:      ["λ-inventory ledger scan","Material signature logged","Logistics wave optimised","Autonomous fleet coord","Monge-Kantorovich solve"],
+  governance:     ["Coherence-weighted vote tally","Constitution block encode","Spectral mediation pulse","Policy directive propagate","Trust interference compute"],
+  healthcare:     ["Biomarker wavelength encode","Patient Ψ_channel pulse","Photonic therapy route","Drug supply ledger update","BioDataSovereign sync"],
+};
+
+// Energy sources feeding the Energy pillar
+const ENERGY_SOURCES = [
+  { id: "schumann", label: "Schumann Resonance",    baseGW: 12.4, color: "#facc15", formula: "P = ∫B·dA×μ₀/η" },
+  { id: "orbital",  label: "Orbital Solar Array",   baseGW: 48.7, color: "#fb923c", formula: "η_end=η_c×η_l×η_a×η_r" },
+  { id: "fusion",   label: "Fusion Photon Gate",    baseGW: 31.2, color: "#38bdf8", formula: "Q_boost = 5× CE-1" },
+  { id: "geo",      label: "Geothermal Tap",         baseGW:  8.1, color: "#4ade80", formula: "P_geo=k·ΔT/d" },
+];
+
+// Distribution cascade — SYSTEM→KERNEL→USER→GUEST with allocation %
+const DISTRIBUTION_CASCADE = [
+  { from: "Energy Grid",    to: "defense",       band: "SYSTEM", pct: 18, color: "#dc2626" },
+  { from: "Energy Grid",    to: "governance",    band: "SYSTEM", pct: 12, color: "#dc2626" },
+  { from: "Energy Grid",    to: "computing",     band: "KERNEL", pct: 22, color: "#2563eb" },
+  { from: "Energy Grid",    to: "communications",band: "KERNEL", pct: 17, color: "#2563eb" },
+  { from: "Energy Grid",    to: "resources",     band: "USER",   pct: 14, color: "#16a34a" },
+  { from: "Energy Grid",    to: "healthcare",    band: "USER",   pct: 11, color: "#16a34a" },
+  { from: "Energy Grid",    to: "reserves",      band: "GUEST",  pct:  6, color: "#6b7280" },
+];
+
+function MultidimensionalActivity() {
+  const [sectorState, setSectorState] = useState(() =>
+    K1_PILLARS.map(p => ({
+      id: p.id, count: 0, lastActivity: "Initialising…", energyJoules: 0, pulsePhase: Math.random() * Math.PI * 2,
+    }))
+  );
+  const [globalTick, setGlobalTick] = useState(0);
+  const tickRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    tickRef.current = setInterval(() => {
+      setGlobalTick(t => t + 1);
+      setSectorState(prev => prev.map(sa => {
+        const pillar = K1_PILLARS.find(p => p.id === sa.id)!;
+        const acts   = SECTOR_ACTIVITIES[sa.id] ?? ["Activity pulse"];
+        const f      = C / (pillar.psi.nm * 1e-9);          // optical frequency
+        const dE     = H * f * pillar.kLevel * 1e12;         // energy per tick (scaled)
+        return {
+          ...sa, count: sa.count + 1,
+          lastActivity: acts[Math.floor(Math.random() * acts.length)],
+          energyJoules: sa.energyJoules + dE,
+          pulsePhase: (sa.pulsePhase + 0.4) % (Math.PI * 2),
+        };
+      }));
+    }, 1_100);
+    return () => { if (tickRef.current) clearInterval(tickRef.current); };
+  }, []);
+
+  // Orthogonality matrix values — ⟨Ψ_i|Ψ_j⟩ = δ_ij by construction
+  const orthMatrix = K1_PILLARS.map(a =>
+    K1_PILLARS.map(b => (a.id === b.id ? 1 : 0))
+  );
+
+  return (
+    <div className="space-y-6">
+
+      {/* Hilbert space header */}
+      <Card className="bg-gradient-to-br from-indigo-950/60 to-slate-900/60 border-indigo-500/30 p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold text-indigo-400 flex items-center gap-2">
+            <Atom className="w-5 h-5" /> Hilbert Space — 25,600 Orthogonal Channels
+          </h2>
+          <div className="text-xs font-mono text-indigo-300/70 bg-indigo-950/50 px-3 py-1 rounded-full">
+            dim(H) = N_λ × N_OAM × N_Pol = 256 × 50 × 2
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">
+          {[
+            { label: "WDM Channels", val: "256", sub: "N_λ wavelength bands", color: "text-cyan-400" },
+            { label: "OAM Modes",    val: "50",  sub: "N_OAM angular modes",  color: "text-purple-400" },
+            { label: "Polarisations",val: "2",   sub: "H / V orthogonal",     color: "text-green-400" },
+            { label: "Active Sectors",val: K1_PILLARS.length.toString(), sub: "Ψ channels bound", color: "text-amber-400" },
+          ].map(s => (
+            <div key={s.label} className="bg-slate-900/60 rounded-lg p-3 border border-indigo-500/10">
+              <div className={`text-2xl font-bold ${s.color}`}>{s.val}</div>
+              <div className="text-slate-400 text-[10px] mt-0.5">{s.sub}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Live sector activity streams */}
+      <Card className="bg-slate-900/60 border-slate-700/50 p-5">
+        <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+          <Activity className="w-4 h-4 text-green-400" /> Live Sector Activity — All Channels Simultaneously
+          <span className="ml-auto text-xs text-slate-500 font-mono">tick #{globalTick}</span>
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {K1_PILLARS.map((pillar, i) => {
+            const sa   = sectorState.find(s => s.id === pillar.id)!;
+            const bc   = BAND_COLORS[pillar.psi.band];
+            const freq = C / (pillar.psi.nm * 1e-9);
+            const pulse = Math.abs(Math.sin(sa.pulsePhase));
+            return (
+              <div key={pillar.id} className="rounded-xl border p-3 space-y-2 transition-all"
+                style={{ borderColor: bc + "44", background: bc + "08" }}
+                data-testid={`activity-sector-${pillar.id}`}>
+                <div className="flex items-center gap-2">
+                  {/* Pulse dot */}
+                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 transition-all duration-300"
+                    style={{ background: bc, opacity: 0.4 + pulse * 0.6, boxShadow: `0 0 ${4 + pulse * 8}px ${bc}` }} />
+                  <div style={{ color: bc }} className="flex-shrink-0">{pillar.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-white leading-tight truncate">{pillar.name}</div>
+                    <div className="font-mono text-[10px]" style={{ color: bc }}>{pillar.psi.psi} · λ={pillar.psi.nm}nm</div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="text-xs font-mono" style={{ color: bc }}>{sa.count} acts</div>
+                    <div className="text-[9px] text-slate-500">{(freq / 1e12).toFixed(1)} THz</div>
+                  </div>
+                </div>
+                <div className="bg-slate-950/60 rounded px-2 py-1 font-mono text-[10px] text-slate-300 truncate">
+                  ▸ {sa.lastActivity}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-slate-800 rounded-full h-1">
+                    <div className="h-1 rounded-full transition-all duration-500"
+                      style={{ width: `${pillar.kLevel * 100}%`, background: bc }} />
+                  </div>
+                  <span className="text-[9px] font-mono" style={{ color: bc }}>K={pillar.kLevel.toFixed(2)}</span>
+                  <span className="text-[9px] font-mono text-slate-500">{pillar.psi.band}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Orthogonality matrix */}
+      <Card className="bg-slate-900/60 border-cyan-500/20 p-5">
+        <h3 className="text-base font-bold text-cyan-400 mb-1 flex items-center gap-2">
+          <Binary className="w-4 h-4" /> Orthogonality Proof — ⟨Ψ_i | Ψ_j⟩ = δ_ij
+        </h3>
+        <p className="text-xs text-slate-500 mb-4 font-mono">
+          Every off-diagonal = 0. No sector can interfere with another at the physics layer. 
+          On-diagonal = 1 (full self-coherence).
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[10px] font-mono">
+            <thead>
+              <tr>
+                <th className="text-slate-600 pr-2 text-right w-24"></th>
+                {K1_PILLARS.map(p => (
+                  <th key={p.id} className="px-1 pb-2 text-center w-10" style={{ color: BAND_COLORS[p.psi.band] }}>
+                    {p.name.split(" ")[0].slice(0, 6)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {K1_PILLARS.map((rowP, ri) => (
+                <tr key={rowP.id}>
+                  <td className="pr-2 text-right py-1 truncate w-24" style={{ color: BAND_COLORS[rowP.psi.band] }}>
+                    {rowP.name.split(" ")[0].slice(0, 8)}
+                  </td>
+                  {orthMatrix[ri].map((val, ci) => (
+                    <td key={ci} className="text-center py-1 w-10">
+                      <span className={`inline-block w-7 h-5 rounded text-center leading-5 font-bold ${
+                        val === 1
+                          ? "bg-cyan-500/30 text-cyan-300"
+                          : "bg-slate-800/50 text-slate-600"
+                      }`}>{val}</span>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-3 flex gap-4 text-[10px] text-slate-500">
+          <span><span className="inline-block w-4 h-3 bg-cyan-500/30 rounded mr-1" />1 = self-coherent</span>
+          <span><span className="inline-block w-4 h-3 bg-slate-800/50 rounded mr-1" />0 = orthogonal (zero interference)</span>
+        </div>
+      </Card>
+
+      {/* Cross-sector resource flows */}
+      <Card className="bg-slate-900/60 border-amber-500/20 p-5">
+        <h3 className="text-base font-bold text-amber-400 mb-4 flex items-center gap-2">
+          <ArrowRight className="w-4 h-4" /> Cross-Pillar Resource Flows — Tick #{globalTick}
+        </h3>
+        <div className="space-y-2">
+          {INITIAL_FLOWS.map((flow, i) => {
+            const fromP = K1_PILLARS.find(p => p.id === flow.from);
+            const toP   = K1_PILLARS.find(p => p.id === flow.to);
+            if (!fromP || !toP) return null;
+            const fromSa = sectorState.find(s => s.id === flow.from);
+            const active = (globalTick % 5) >= i % 5;
+            const bc = BAND_COLORS[fromP.psi.band];
+            return (
+              <div key={i} className="flex items-center gap-3 rounded-lg px-3 py-2 border transition-all"
+                style={{ borderColor: active ? bc + "44" : "#ffffff10", background: active ? bc + "08" : "transparent" }}>
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: active ? bc : "#334155" }} />
+                <span className="text-xs font-mono text-slate-300 w-24 truncate">{fromP.name.split(" ")[0]}</span>
+                <div className="flex-1 h-0.5 rounded-full relative overflow-hidden bg-slate-800">
+                  {active && (
+                    <div className="h-full rounded-full transition-all duration-700"
+                      style={{ width: "100%", background: `linear-gradient(90deg, transparent, ${bc}, transparent)`,
+                        animation: "shimmer 1.5s infinite" }} />
+                  )}
+                </div>
+                <span className="text-xs font-mono text-slate-300 w-24 truncate text-right">{toP.name.split(" ")[0]}</span>
+                <span className="text-[9px] text-slate-500 w-20 text-right font-mono">{flow.resourceType.replace("_", " ")}</span>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+    </div>
+  );
+}
+
+// ── Planet State ───────────────────────────────────────────────────────────────
+function PlanetState() {
+  const [tick, setTick] = useState(0);
+  const [energyOutput, setEnergyOutput] = useState(() =>
+    ENERGY_SOURCES.map(s => ({ ...s, currentGW: s.baseGW + (Math.random() - 0.5) * 2 }))
+  );
+  const [sectorDraw, setSectorDraw] = useState(() =>
+    K1_PILLARS.map(p => ({ id: p.id, drawGW: p.kLevel * 12 + Math.random() * 3 }))
+  );
+  const tickRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    tickRef.current = setInterval(() => {
+      setTick(t => t + 1);
+      setEnergyOutput(prev => prev.map(s => ({
+        ...s, currentGW: Math.max(0, s.baseGW + (Math.random() - 0.5) * 4),
+      })));
+      setSectorDraw(prev => prev.map(s => ({
+        ...s, drawGW: Math.max(1, s.drawGW + (Math.random() - 0.5) * 1.2),
+      })));
+    }, 2_000);
+    return () => { if (tickRef.current) clearInterval(tickRef.current); };
+  }, []);
+
+  const totalGenGW  = energyOutput.reduce((sum, s) => sum + s.currentGW, 0);
+  const totalDrawGW = sectorDraw.reduce((sum, s) => sum + s.drawGW, 0);
+  const surplus     = totalGenGW - totalDrawGW;
+  const overallK    = K1_PILLARS.reduce((s, p) => s + p.kLevel, 0) / K1_PILLARS.length;
+
+  return (
+    <div className="space-y-6">
+
+      {/* Planet-level energy balance */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { label: "Total Generation", val: totalGenGW.toFixed(1) + " GW", sub: `${ENERGY_SOURCES.length} sources active`, color: "text-green-400", border: "border-green-500/30" },
+          { label: "Civilisation Draw", val: totalDrawGW.toFixed(1) + " GW", sub: `${K1_PILLARS.length} sectors running`, color: "text-cyan-400", border: "border-cyan-500/30" },
+          { label: "Net Surplus", val: (surplus >= 0 ? "+" : "") + surplus.toFixed(1) + " GW", sub: surplus >= 0 ? "Reserves accumulating" : "Drawing from reserves", color: surplus >= 0 ? "text-amber-400" : "text-red-400", border: surplus >= 0 ? "border-amber-500/30" : "border-red-500/30" },
+        ].map(s => (
+          <Card key={s.label} className={`bg-slate-900/60 ${s.border} p-4 text-center`}>
+            <div className={`text-2xl font-bold ${s.color}`}>{s.val}</div>
+            <div className="text-xs text-slate-500 mt-1">{s.label}</div>
+            <div className="text-[10px] text-slate-600 mt-0.5">{s.sub}</div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Energy generation sources */}
+      <Card className="bg-slate-900/60 border-yellow-500/20 p-5">
+        <h3 className="text-base font-bold text-yellow-400 mb-4 flex items-center gap-2">
+          <Zap className="w-4 h-4" /> Energy Generation Sources — Live Output
+        </h3>
+        <div className="space-y-3">
+          {energyOutput.map(src => {
+            const pct = (src.currentGW / totalGenGW) * 100;
+            return (
+              <div key={src.id} className="space-y-1" data-testid={`energy-source-${src.id}`}>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium" style={{ color: src.color }}>{src.label}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-slate-400">{src.formula}</span>
+                    <span className="font-bold text-white w-16 text-right">{src.currentGW.toFixed(1)} GW</span>
+                    <span className="text-slate-500 w-10 text-right">{pct.toFixed(1)}%</span>
+                  </div>
+                </div>
+                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-700"
+                    style={{ width: `${pct}%`, background: src.color }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-4 pt-3 border-t border-slate-800 flex justify-between text-xs">
+          <span className="text-slate-500">Total capacity</span>
+          <span className="font-bold text-green-400">{totalGenGW.toFixed(1)} GW</span>
+        </div>
+      </Card>
+
+      {/* Distribution cascade */}
+      <Card className="bg-slate-900/60 border-blue-500/20 p-5">
+        <h3 className="text-base font-bold text-blue-400 mb-2 flex items-center gap-2">
+          <Layers className="w-4 h-4" /> Distribution Cascade — Authority Band Priority
+        </h3>
+        <p className="text-xs text-slate-500 mb-4 font-mono">
+          SYSTEM (highest compression) → KERNEL → USER → GUEST · Allocation determined by Λ=hf/c² authority weight
+        </p>
+        <div className="space-y-2">
+          {DISTRIBUTION_CASCADE.map((d, i) => {
+            const pillar  = K1_PILLARS.find(p => p.id === d.to);
+            const allocGW = (d.pct / 100) * totalGenGW;
+            const drawSec = sectorDraw.find(s => s.id === d.to);
+            const drawGW  = drawSec?.drawGW ?? 0;
+            const ok      = allocGW >= drawGW;
+            return (
+              <div key={i} className="flex items-center gap-3 rounded-lg px-3 py-2 bg-slate-800/40 border border-slate-700/30"
+                data-testid={`distribution-row-${d.to ?? i}`}>
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: d.color }} />
+                <div className="w-16 text-[9px] font-mono font-bold rounded px-1" style={{ color: d.color, background: d.color + "22" }}>{d.band}</div>
+                <span className="text-xs text-white flex-1 truncate">{pillar?.name ?? d.to}</span>
+                <div className="text-right">
+                  <div className="text-xs font-mono text-slate-300">{allocGW.toFixed(1)} GW alloc</div>
+                  <div className={`text-[9px] font-mono ${ok ? "text-green-400" : "text-red-400"}`}>
+                    {ok ? `+${(allocGW - drawGW).toFixed(1)} surplus` : `-${(drawGW - allocGW).toFixed(1)} deficit`}
+                  </div>
+                </div>
+                <div className="w-14">
+                  <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${Math.min(100, (drawGW / allocGW) * 100)}%`, background: ok ? d.color : "#ef4444" }} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Sector draw vs allocation */}
+      <Card className="bg-slate-900/60 border-purple-500/20 p-5">
+        <h3 className="text-base font-bold text-purple-400 mb-4 flex items-center gap-2">
+          <Target className="w-4 h-4" /> Sector Energy Draw vs Allocation — Tick #{tick}
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {K1_PILLARS.map(pillar => {
+            const bc   = BAND_COLORS[pillar.psi.band];
+            const dist = DISTRIBUTION_CASCADE.find(d => d.to === pillar.id);
+            const drawSec = sectorDraw.find(s => s.id === pillar.id);
+            const allocGW = dist ? (dist.pct / 100) * totalGenGW : 0;
+            const drawGW  = drawSec?.drawGW ?? 0;
+            const usePct  = allocGW > 0 ? Math.min(100, (drawGW / allocGW) * 100) : 0;
+            return (
+              <div key={pillar.id} className="rounded-lg border p-3 space-y-2"
+                style={{ borderColor: bc + "33", background: bc + "06" }}
+                data-testid={`planet-sector-${pillar.id}`}>
+                <div className="flex items-center gap-2">
+                  <div style={{ color: bc }}>{pillar.icon}</div>
+                  <span className="text-sm font-bold text-white flex-1 truncate">{pillar.name.split(" ")[0]}</span>
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ color: bc, background: bc + "22" }}>{pillar.psi.band}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1 text-[10px]">
+                  <div className="text-center"><div className="text-slate-500">Alloc</div><div className="font-bold text-white">{allocGW.toFixed(1)}GW</div></div>
+                  <div className="text-center"><div className="text-slate-500">Draw</div><div className="font-bold" style={{ color: bc }}>{drawGW.toFixed(1)}GW</div></div>
+                  <div className="text-center"><div className="text-slate-500">K-Level</div><div className="font-bold text-cyan-400">{pillar.kLevel.toFixed(2)}</div></div>
+                </div>
+                <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${usePct}%`, background: usePct > 90 ? "#ef4444" : bc }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Civilisation K-Level status */}
+      <Card className="bg-gradient-to-br from-slate-900/60 to-indigo-950/40 border-indigo-500/30 p-5">
+        <h3 className="text-base font-bold text-indigo-400 mb-4 flex items-center gap-2">
+          <Globe className="w-4 h-4" /> Civilisation K-Level Progress — Kardashev Scale
+        </h3>
+        <div className="mb-6">
+          <div className="flex justify-between text-xs mb-2">
+            <span className="text-slate-400">Overall K-Level</span>
+            <span className="font-bold text-indigo-400 text-lg">{overallK.toFixed(3)}</span>
+          </div>
+          <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
+            <div className="h-full rounded-full bg-gradient-to-r from-indigo-600 via-cyan-500 to-green-400 transition-all duration-1000"
+              style={{ width: `${overallK * 100}%` }} />
+          </div>
+          <div className="flex justify-between text-[9px] text-slate-600 mt-1">
+            <span>0.0 — Pre-industrial</span><span>0.5 — Early K1</span><span>1.0 — K1 Complete</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {K1_PILLARS.map(p => (
+            <div key={p.id} className="flex items-center gap-2 text-xs">
+              <div style={{ color: BAND_COLORS[p.psi.band] }} className="flex-shrink-0">{p.icon}</div>
+              <span className="text-slate-400 w-28 truncate">{p.name.split(" ")[0]}</span>
+              <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${p.kLevel * 100}%`, background: BAND_COLORS[p.psi.band] }} />
+              </div>
+              <span className="font-mono text-slate-300 w-8 text-right">{(p.kLevel * 100).toFixed(0)}%</span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+    </div>
+  );
+}
+
 export default function K1InfrastructurePage() {
   const [selectedPillar, setSelectedPillar] = useState<K1Pillar>(K1_PILLARS[0]);
   const [flows, setFlows] = useState<CrossPillarFlow[]>(INITIAL_FLOWS);
@@ -687,21 +1103,27 @@ export default function K1InfrastructurePage() {
 
         <Tabs defaultValue="overview" className="space-y-6">
           <div className="overflow-x-auto pb-1">
-          <TabsList className="grid min-w-[480px] w-full grid-cols-5 bg-slate-900/50">
+          <TabsList className="grid min-w-[700px] w-full grid-cols-7 bg-slate-900/50">
             <TabsTrigger value="overview" data-testid="tab-overview">
-              <Globe className="w-4 h-4 mr-2" /> Overview
+              <Globe className="w-4 h-4 mr-1" /> Overview
+            </TabsTrigger>
+            <TabsTrigger value="activity" data-testid="tab-activity">
+              <Atom className="w-4 h-4 mr-1" /> Activity
+            </TabsTrigger>
+            <TabsTrigger value="planet" data-testid="tab-planet">
+              <Zap className="w-4 h-4 mr-1" /> Planet
             </TabsTrigger>
             <TabsTrigger value="sectormap" data-testid="tab-sectormap">
-              <Waves className="w-4 h-4 mr-2" /> Sector Map
+              <Waves className="w-4 h-4 mr-1" /> Sectors
             </TabsTrigger>
             <TabsTrigger value="network" data-testid="tab-network">
-              <Network className="w-4 h-4 mr-2" /> Network
+              <Network className="w-4 h-4 mr-1" /> Network
             </TabsTrigger>
             <TabsTrigger value="specs" data-testid="tab-specs">
-              <BookOpen className="w-4 h-4 mr-2" /> Specs
+              <BookOpen className="w-4 h-4 mr-1" /> Specs
             </TabsTrigger>
             <TabsTrigger value="demo" data-testid="tab-demo">
-              <Play className="w-4 h-4 mr-2" /> Demo
+              <Play className="w-4 h-4 mr-1" /> Demo
             </TabsTrigger>
           </TabsList>
           </div>
@@ -751,6 +1173,14 @@ export default function K1InfrastructurePage() {
             </Card>
 
             <PhysicsPanel pillar={selectedPillar} />
+          </TabsContent>
+
+          <TabsContent value="activity" className="space-y-6">
+            <MultidimensionalActivity />
+          </TabsContent>
+
+          <TabsContent value="planet" className="space-y-6">
+            <PlanetState />
           </TabsContent>
 
           <TabsContent value="sectormap" className="space-y-6">
