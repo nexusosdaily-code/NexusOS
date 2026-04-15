@@ -819,6 +819,60 @@ export async function registerRoutes(
     }
   });
 
+  // ── Account settings — update profile (email, avatar, location, bio) ────────
+  app.patch("/api/settings/profile", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { email, country, stateRegion, bio, avatarUrl } = req.body;
+      const { db } = await import("./db");
+      const { users } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      // validate email if provided
+      if (email !== undefined && email !== null && email !== "") {
+        const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRx.test(email)) return res.status(400).json({ error: "Invalid email address" });
+        // check uniqueness
+        const existing = await db.select({ id: users.id }).from(users)
+          .where(eq(users.email, email));
+        if (existing.length > 0 && existing[0].id !== req.user!.id)
+          return res.status(409).json({ error: "Email already in use by another account" });
+      }
+
+      const updates: Record<string, any> = { updatedAt: new Date() };
+      if (email      !== undefined) updates.email       = email || null;
+      if (country    !== undefined) updates.country     = country || null;
+      if (stateRegion!== undefined) updates.stateRegion = stateRegion || null;
+      if (bio        !== undefined) updates.bio         = bio || null;
+      if (avatarUrl  !== undefined) updates.avatarUrl   = avatarUrl || null;
+
+      await db.update(users).set(updates).where(eq(users.id, req.user!.id));
+      const [updated] = await db.select({
+        email: users.email, country: users.country,
+        stateRegion: users.stateRegion, bio: users.bio, avatarUrl: users.avatarUrl,
+      }).from(users).where(eq(users.id, req.user!.id));
+      res.json({ success: true, profile: updated });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Account settings — get profile ───────────────────────────────────────
+  app.get("/api/settings/profile", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { users } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [row] = await db.select({
+        username: users.username, email: users.email,
+        phoneNumber: users.phoneNumber, country: users.country,
+        stateRegion: users.stateRegion, bio: users.bio, avatarUrl: users.avatarUrl,
+        createdAt: users.createdAt,
+        spectralWdm: users.spectralWdm, spectralOam: users.spectralOam,
+        spectralPol: users.spectralPol, spectralNm: users.spectralNm,
+        spectralBand: users.spectralBand,
+      }).from(users).where(eq(users.id, req.user!.id));
+      res.json({ profile: row ?? null });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── Account settings — change password ───────────────────────────────────
   app.post("/api/settings/password", authenticate, async (req: Request, res: Response) => {
     try {

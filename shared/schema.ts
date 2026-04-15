@@ -24,6 +24,11 @@ export const users = pgTable("users", {
   spectralPol:  text("spectral_pol"),
   spectralNm:   real("spectral_nm"),
   spectralBand: text("spectral_band"),
+  // ── Profile extras ──
+  avatarUrl:    text("avatar_url"),
+  country:      text("country"),
+  stateRegion:  text("state_region"),
+  bio:          text("bio"),
 }, (table) => ({
   usernameIdx: index("users_username_idx").on(table.username),
   emailIdx: index("users_email_idx").on(table.email),
