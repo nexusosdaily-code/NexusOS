@@ -11,7 +11,7 @@ import {
   Zap, Atom, Waves, Rocket, Users, Database,
   Shield, BookOpen, HardDrive, GitBranch,
   ChevronRight, LayoutGrid, Rss, Eye, Clock,
-  MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut, Settings, User,
+  MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut, Settings, User, Search,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -101,6 +101,17 @@ const APP_SECTIONS = [
       { title: "CE Writer",     href: "/ce-writer",       Icon: Code2 },
       { title: "Spectral Lib.", href: "/spectral-library",Icon: BookOpen },
       { title: "Analytics",     href: "/workspace/analytics", Icon: Activity },
+    ],
+  },
+  {
+    label: "Spectral Tools",
+    accent: "#a78bfa",
+    items: [
+      { title: "WNSP VM",          href: "/wnsp-vm",             Icon: Cpu },
+      { title: "Spectral Router",  href: "/spectral-router",     Icon: Radio },
+      { title: "Spectral Search",  href: "/spectral-search",     Icon: Search },
+      { title: "Compression Exp.", href: "/compression-explorer",Icon: Layers },
+      { title: "Spectral Contracts",href: "/spectral-contracts", Icon: FileText },
     ],
   },
 ];
