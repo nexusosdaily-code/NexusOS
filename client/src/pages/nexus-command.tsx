@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Zap, Radio, Layers, Database, Wifi, Lock, Globe,
   Send, Play, RefreshCw, ArrowRight, Activity,
-  Code2, Cpu, Signal, FileText, BookOpen, Shield, Heart, Video, Scale, Smartphone
+  Code2, Cpu, Signal, FileText, BookOpen, Shield, Heart, Video, Scale, Smartphone, Search
 } from "lucide-react";
 
 // ── Spectrum colour ───────────────────────────────────────────────
@@ -461,6 +461,46 @@ const SYSTEMS = [
     color: "#06b6d4",
     Icon: Smartphone,
     action: "Open Mobile SDK",
+  },
+  {
+    title: "WNSP Virtual Machine",
+    description: "Execute WavelengthScript bytecode step by step. Ψ channels are registers. The spectrum is the CPU. Watch each opcode fire at its wavelength — agents pulse, packets flow, AI lives on the spectrum.",
+    href: "/wnsp-vm",
+    color: "#a78bfa",
+    Icon: Cpu,
+    action: "Launch VM",
+  },
+  {
+    title: "Spectral Routing Engine",
+    description: "Route packets between nodes using Ψ channels instead of IP addresses. Nearest-wavelength delivery algorithm. DNS-free. Address any node by name — CE→SE encodes it to λ in real time.",
+    href: "/spectral-router",
+    color: "#4ade80",
+    Icon: Radio,
+    action: "Open router",
+  },
+  {
+    title: "Spectral Search",
+    description: "Search the WNSP network by wavelength proximity. Your query is CE-encoded to λ — results closest on the electromagnetic spectrum rank first. Not keyword frequency. Spectral distance.",
+    href: "/spectral-search",
+    color: "#fbbf24",
+    Icon: Search,
+    action: "Search network",
+  },
+  {
+    title: "Compression State Explorer",
+    description: "Interactive visualisation of Λ=hf/c² across the visible spectrum. Explore how wavelength maps to compression state, authority band, fee multiplier, and mass. The Theory of Compression States, live.",
+    href: "/compression-explorer",
+    color: "#fb923c",
+    Icon: Layers,
+    action: "Explore states",
+  },
+  {
+    title: "Physics-Signed Contracts",
+    description: "Sign documents with your spectral wavelength key — no RSA, no PKI. Signature = SHA-256(content) ⊕ hex(λ). Verifiable by anyone with a CE encoder. The first physics-native signing standard.",
+    href: "/spectral-contracts",
+    color: "#22d3ee",
+    Icon: FileText,
+    action: "Sign a contract",
   },
   {
     title: "Communication Hub",

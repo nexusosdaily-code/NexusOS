@@ -132,6 +132,21 @@ The compiler tab now has four sample programs selectable via pill buttons:
 - **P2P Transfer**: STREAM-band file chunking and reassembly
 - **Spectral Wallet**: AUTH-band NXT transfer with E=hf fee calculation
 
+## WNSP Virtual Machine (`/wnsp-vm`)
+Browser-native bytecode interpreter for WavelengthScript. Compiles WLS source to an instruction stream, then executes it step by step (Step / Run All / Reset). Each Ψ channel acts as a spectral register. Agents register on their wavelength. Output stream shows each instruction firing with its wavelength color. Four preloaded sample programs (AI Agent, Governance Vote, P2P Transfer, Spectral Wallet).
+
+## Spectral Routing Engine (`/spectral-router`)
+DNS-free packet routing between registered network nodes using Ψ channel addressing. Any word or name is CE-encoded to λ on the fly — no pre-registration required. Nearest-wavelength algorithm finds the closest active node and delivers via 2–3 hops. Packet trace visualization shows each hop with Δλ offset. Full packet history log.
+
+## Spectral Search (`/spectral-search`)
+Cross-layer search across nodes, agents, users, documents, and channels. Query is CE-encoded to λ — results ranked by electromagnetic proximity (Δλ from query wavelength), not keyword frequency. Spectral proximity score shown per result. Searches live network nodes, registered users, plus static ecosystem index.
+
+## Compression State Explorer (`/compression-explorer`)
+Interactive SVG visualization of the Λ=hf/c² compression curve across the full visible spectrum (380–780nm). Authority band overlays (SYSTEM → STORAGE). Hover or drag slider to explore any wavelength — shows frequency, photon energy, compression mass, fee multiplier, and normalized Λ. 7 key spectral landmarks clickable (NexusOS Kernel, Genesis fingerprint, reference green, etc.).
+
+## Physics-Signed Contracts (`/spectral-contracts`)
+Document signing using spectral wavelength keys — no RSA, no PKI, no certificate authority. Signature algorithm: `SHA-256(content) ⊕ hex(λ_signer)` → `WNSP-SIG-v1::{username}::{λ}::{sig_fragment}::{check}`. Verification re-derives signer's λ via CE encoding and checks signature integrity. Built-in verify panel for any username + signature + document.
+
 ## WNSP Bridge Layer (`/wnsp-bridge`)
 This layer provides a TCP/IP overlay for `wnsp://` URIs, acting as Phase 1 of spectral addressing. It uses a `wnsp_registry` database table to map `Ψ(wdm,oam,pol)` channels to HTTP resources, allowing for deterministic address derivation from ASCII ordinals. Public and auth-required APIs support resolving and registering `wnsp://` addresses. The roadmap includes transitioning to WavelengthScript code and eventually native photonic routing.
 

@@ -71,6 +71,11 @@ import LedgerPage from "@/pages/ledger";
 import GitHubBridgePage from "@/pages/github-bridge";
 import SettingsPage from "@/pages/settings";
 import MobileSDKPage from "@/pages/mobile-sdk";
+import WnspVMPage from "@/pages/wnsp-vm";
+import SpectralRouterPage from "@/pages/spectral-router";
+import SpectralSearchPage from "@/pages/spectral-search";
+import CompressionExplorerPage from "@/pages/compression-explorer";
+import SpectralContractsPage from "@/pages/spectral-contracts";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -150,6 +155,11 @@ function ProtectedRoutes() {
         <Route path="/github" component={GitHubBridgePage} />
         <Route path="/settings" component={SettingsPage} />
         <Route path="/mobile-sdk" component={MobileSDKPage} />
+        <Route path="/wnsp-vm" component={WnspVMPage} />
+        <Route path="/spectral-router" component={SpectralRouterPage} />
+        <Route path="/spectral-search" component={SpectralSearchPage} />
+        <Route path="/compression-explorer" component={CompressionExplorerPage} />
+        <Route path="/spectral-contracts" component={SpectralContractsPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
