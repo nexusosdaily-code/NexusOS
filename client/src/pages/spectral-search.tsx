@@ -31,13 +31,36 @@ function ceEncode(name: string): { nm: number; psi: string; band: string } {
   const pol = codes.length % 2 === 0 ? "H" : "V";
   return { nm, psi: `Ψ(${wdm},${oam},${pol})`, band: nmToBand(nm) };
 }
-const H = 6.626e-34, C = 3e8;
+const H_PLANCK = 6.626e-34, C = 3e8;
 function calcEnergy(nm: number) {
   const lambda = nm * 1e-9;
   const f = C / lambda;
-  const eJ = H * f;
+  const eJ = H_PLANCK * f;
   const eV = eJ / 1.602e-19;
   return { f: (f / 1e12).toFixed(3), eJ: eJ.toExponential(3), eV: eV.toFixed(3) };
+}
+
+function shannonEntropy(text: string): { H: number; Hnorm: number; coherence: number; occupiedBins: number } {
+  const chars = text.toUpperCase().split("").filter(c => {
+    const code = c.charCodeAt(0);
+    return code >= 32 && code <= 126;
+  });
+  if (chars.length === 0) return { H: 0, Hnorm: 0, coherence: 1, occupiedBins: 0 };
+
+  const bins: Record<number, number> = {};
+  chars.forEach(c => {
+    const code = c.charCodeAt(0);
+    const wdm = Math.floor(((code - 32) / 94) * 255);
+    bins[wdm] = (bins[wdm] || 0) + 1;
+  });
+
+  const total = chars.length;
+  const probs = Object.values(bins).map(count => count / total);
+  const H = -probs.reduce((sum, p) => sum + (p > 0 ? p * Math.log2(p) : 0), 0);
+  const occupied = Object.keys(bins).length;
+  const maxH = occupied > 1 ? Math.log2(occupied) : 1;
+  const Hnorm = maxH > 0 ? H / maxH : 0;
+  return { H: parseFloat(H.toFixed(4)), Hnorm: parseFloat(Hnorm.toFixed(4)), coherence: parseFloat((1 - Hnorm).toFixed(4)), occupiedBins: occupied };
 }
 
 interface SearchResult {
@@ -49,32 +72,41 @@ interface SearchResult {
   psi: string;
   band: string;
   delta: number;
-  relevance: number;
+  proximityScore: number;
+  coherenceScore: number;
+  compositeScore: number;
+  entropy: number;
   extra?: string;
 }
 
 interface Node {
   id: string; name: string; wavelengthNm: string; psiChannel: string; emissionBand: string; status: string;
 }
-interface User {
+interface UserNode {
   id: number; username: string; spectralNm: number; spectralWdm: number; spectralOam: number; spectralPol: string;
 }
 
-const STATIC_CHANNELS: SearchResult[] = [
-  { id: "ch1", type: "channel", title: "NexusOS Kernel", subtitle: "WNSP AI OS — 6-phase boot · all agents ACTIVE", nm: 468, psi: "Ψ(22,45,H)", band: "AUTH", delta: 0, relevance: 0, extra: "KERNEL band" },
-  { id: "ch2", type: "channel", title: "Blockchain Ledger", subtitle: "Spectral blockchain · 10 confirmed blocks", nm: 648, psi: "Ψ(67,23,V)", band: "STORAGE", delta: 0, relevance: 0, extra: "immutable" },
-  { id: "ch3", type: "channel", title: "Governance Registry", subtitle: "On-chain protocol governance · live proposals", nm: 495, psi: "Ψ(28,17,H)", band: "STREAM", delta: 0, relevance: 0, extra: "KERNEL+ only" },
-  { id: "ch4", type: "document", title: "WNSP Two-Layer Encoding Standard", subtitle: "CE v1.0 + SE v1.0 · WASCII v2.0 character mapping", nm: 520, psi: "Ψ(35,0,V)", band: "STREAM", delta: 0, relevance: 0, extra: "AGPL-3.0" },
-  { id: "ch5", type: "document", title: "Compression State Theory", subtitle: "First unobserved oscillation · Λ=hf/c² derivation", nm: 420, psi: "Ψ(10,7,V)", band: "SYSTEM", delta: 0, relevance: 0, extra: "fundamental" },
-  { id: "ch6", type: "agent", title: "ReasoningCore", subtitle: "AI reasoning agent · spectral inference pipeline", nm: 541, psi: "Ψ(41,12,V)", band: "LOGIC", delta: 0, relevance: 0, extra: "ACTIVE" },
-  { id: "ch7", type: "agent", title: "StreamParser", subtitle: "P2P chunk engine · WebRTC mesh node", nm: 502, psi: "Ψ(31,17,V)", band: "STREAM", delta: 0, relevance: 0, extra: "ACTIVE" },
-  { id: "ch8", type: "agent", title: "TrustLayer", subtitle: "Auth · wallet · spectral identity verification", nm: 468, psi: "Ψ(22,83,V)", band: "AUTH", delta: 0, relevance: 0, extra: "ACTIVE" },
+const STATIC_CHANNELS: Omit<SearchResult, "delta" | "proximityScore" | "coherenceScore" | "compositeScore" | "entropy">[] = [
+  { id: "ch1", type: "channel", title: "NexusOS Kernel", subtitle: "WNSP AI OS — 6-phase boot · all agents ACTIVE", nm: 468, psi: "Ψ(22,45,H)", band: "AUTH", extra: "KERNEL band" },
+  { id: "ch2", type: "channel", title: "Blockchain Ledger", subtitle: "Spectral blockchain · 10 confirmed blocks", nm: 648, psi: "Ψ(67,23,V)", band: "STORAGE", extra: "immutable" },
+  { id: "ch3", type: "channel", title: "Governance Registry", subtitle: "On-chain protocol governance · live proposals", nm: 495, psi: "Ψ(28,17,H)", band: "STREAM", extra: "KERNEL+ only" },
+  { id: "ch4", type: "document", title: "WNSP Two-Layer Encoding Standard", subtitle: "CE v1.0 + SE v1.0 · WASCII v2.0 character mapping", nm: 520, psi: "Ψ(35,0,V)", band: "STREAM", extra: "AGPL-3.0" },
+  { id: "ch5", type: "document", title: "Compression State Theory", subtitle: "First unobserved oscillation · Λ=hf/c² derivation", nm: 420, psi: "Ψ(10,7,V)", band: "SYSTEM", extra: "fundamental" },
+  { id: "ch6", type: "agent", title: "ReasoningCore", subtitle: "AI reasoning agent · spectral inference pipeline", nm: 541, psi: "Ψ(41,12,V)", band: "LOGIC", extra: "ACTIVE" },
+  { id: "ch7", type: "agent", title: "StreamParser", subtitle: "P2P chunk engine · WebRTC mesh node", nm: 502, psi: "Ψ(31,17,V)", band: "STREAM", extra: "ACTIVE" },
+  { id: "ch8", type: "agent", title: "TrustLayer", subtitle: "Auth · wallet · spectral identity verification", nm: 468, psi: "Ψ(22,83,V)", band: "AUTH", extra: "ACTIVE" },
 ];
 
-function rankResults(queryNm: number, raw: SearchResult[]): SearchResult[] {
+function rankResults(queryNm: number, raw: Omit<SearchResult, "delta" | "proximityScore" | "coherenceScore" | "compositeScore" | "entropy">[]): SearchResult[] {
   return raw
-    .map(r => ({ ...r, delta: Math.abs(r.nm - queryNm), relevance: 1 / (1 + Math.abs(r.nm - queryNm) / 100) }))
-    .sort((a, b) => a.delta - b.delta);
+    .map(r => {
+      const delta = Math.abs(r.nm - queryNm);
+      const proximityScore = 1 / (1 + delta / 100);
+      const { coherence, H } = shannonEntropy(r.title);
+      const compositeScore = 0.7 * proximityScore + 0.3 * coherence;
+      return { ...r, delta, proximityScore, coherenceScore: coherence, compositeScore, entropy: H };
+    })
+    .sort((a, b) => b.compositeScore - a.compositeScore);
 }
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -97,18 +129,19 @@ export default function SpectralSearchPage() {
     queryKey: ["/api/network/nodes"],
     queryFn: async () => { const r = await fetch("/api/network/nodes"); return r.json(); },
   });
-  const { data: usersData } = useQuery<{ users: User[] }>({
+  const { data: usersData } = useQuery<{ users: UserNode[] }>({
     queryKey: ["/api/directory"],
     queryFn: async () => { const r = await fetch("/api/directory"); return r.json(); },
   });
 
   const enc = query.trim() ? ceEncode(query) : null;
   const energy = enc ? calcEnergy(enc.nm) : null;
+  const queryEntropy = query.trim() ? shannonEntropy(query) : null;
 
   useEffect(() => {
     if (!query.trim() || !enc) { setResults([]); setSearched(false); return; }
     const qNm = enc.nm;
-    const all: SearchResult[] = [...STATIC_CHANNELS];
+    const all: Omit<SearchResult, "delta" | "proximityScore" | "coherenceScore" | "compositeScore" | "entropy">[] = [...STATIC_CHANNELS];
 
     (nodesData?.nodes ?? []).forEach(n => {
       const nm = parseFloat(n.wavelengthNm);
@@ -116,7 +149,7 @@ export default function SpectralSearchPage() {
         id: `node-${n.id}`, type: "node", title: n.name,
         subtitle: `Spectral node · ${n.psiChannel} · ${n.status}`,
         nm, psi: n.psiChannel, band: n.emissionBand ?? nmToBand(nm),
-        delta: 0, relevance: 0, extra: n.status === "active" ? "ACTIVE" : "OFFLINE",
+        extra: n.status === "active" ? "ACTIVE" : "OFFLINE",
       });
     });
     (usersData?.users ?? []).forEach((u: any) => {
@@ -125,7 +158,6 @@ export default function SpectralSearchPage() {
         id: `user-${u.id}`, type: "user", title: u.username,
         subtitle: `User · Ψ(${u.spectralWdm ?? 0},${u.spectralOam ?? 0},${u.spectralPol ?? "H"}) · λ=${nm}nm`,
         nm, psi: `Ψ(${u.spectralWdm ?? 0},${u.spectralOam ?? 0},${u.spectralPol ?? "H"})`, band: nmToBand(nm),
-        delta: 0, relevance: 0,
       });
     });
 
@@ -152,11 +184,10 @@ export default function SpectralSearchPage() {
           <span className="text-sm font-bold tracking-wider text-amber-400">SPECTRAL SEARCH</span>
           <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
         </div>
-        <span className="text-white/20 text-[10px]">Results sorted by electromagnetic proximity — not keyword frequency</span>
+        <span className="text-white/20 text-[10px]">Ranked by EM proximity + Shannon channel coherence · H = −Σpᵢlog₂pᵢ</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full space-y-6">
-        {/* Search bar */}
         <div className="space-y-3">
           <div className="relative">
             <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" />
@@ -170,7 +201,7 @@ export default function SpectralSearchPage() {
             />
           </div>
 
-          {enc && (
+          {enc && queryEntropy && (
             <div className="space-y-2">
               {spectralBar}
               <div className="grid grid-cols-5 gap-2">
@@ -187,20 +218,50 @@ export default function SpectralSearchPage() {
                   </div>
                 ))}
               </div>
+
+              {/* Shannon entropy readout for the query */}
+              <div className="border border-amber-400/10 rounded-lg px-4 py-3 flex items-center gap-6" style={{ background: "rgba(251,191,36,0.03)" }}>
+                <div>
+                  <div className="text-[7px] text-white/20 mb-0.5">H = −Σpᵢlog₂pᵢ</div>
+                  <div className="text-[11px] font-bold text-amber-400">{queryEntropy.H.toFixed(3)} bits</div>
+                </div>
+                <div>
+                  <div className="text-[7px] text-white/20 mb-0.5">Channel coherence</div>
+                  <div className="text-[11px] font-bold" style={{ color: queryEntropy.coherence > 0.6 ? "#22c55e" : queryEntropy.coherence > 0.35 ? "#f59e0b" : "#ef4444" }}>
+                    {(queryEntropy.coherence * 100).toFixed(1)}%
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[7px] text-white/20 mb-0.5">Occupied WDM bins</div>
+                  <div className="text-[11px] font-bold text-white/50">{queryEntropy.occupiedBins}</div>
+                </div>
+                <div className="flex-1">
+                  <div className="text-[7px] text-white/20 mb-1.5">Spectral focus</div>
+                  <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${queryEntropy.coherence * 100}%`, background: queryEntropy.coherence > 0.6 ? "#22c55e" : queryEntropy.coherence > 0.35 ? "#f59e0b" : "#ef4444" }} />
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[7px] text-white/15">Low entropy = narrow spectral focus</div>
+                  <div className="text-[7px] text-white/15">High entropy = scattered across bands</div>
+                </div>
+              </div>
+
               <div className="text-white/20 text-[9px]">
-                Ranking {results.length} results by Δλ from <span style={{ color: nmToColor(enc.nm) }}>{enc.nm}nm</span> · closest wavelength = highest relevance
+                Ranking {results.length} results · composite score = 0.7 × Δλ proximity + 0.3 × channel coherence (1−H_norm)
               </div>
             </div>
           )}
         </div>
 
-        {/* Results */}
         {searched && results.length > 0 && (
           <div className="space-y-2">
             {results.map((r, idx) => {
               const col = nmToColor(r.nm);
               const typeCol = TYPE_COLORS[r.type] ?? "#6b7280";
-              const proximity = Math.max(0, 100 - r.delta / 4);
+              const proximityPct = Math.max(0, 100 - r.delta / 4);
+              const coherencePct = r.coherenceScore * 100;
+              const compositePct = r.compositeScore * 100;
               return (
                 <div key={r.id}
                   className="border border-white/8 rounded-xl p-4 hover:border-white/15 transition-all"
@@ -218,25 +279,46 @@ export default function SpectralSearchPage() {
                         {r.extra && <span className="text-[7px] text-white/25">{r.extra}</span>}
                       </div>
                       <div className="text-[9px] text-white/30 mb-2">{r.subtitle}</div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <div className="flex items-center gap-1">
                           <div className="w-2 h-2 rounded-full" style={{ background: col }} />
                           <span className="text-[8px] font-bold" style={{ color: col }}>{r.nm}nm</span>
                         </div>
                         <span className="text-[8px] text-white/25">{r.psi}</span>
                         <span className="text-[8px] text-white/20">[{r.band}]</span>
-                        {enc && <span className="text-[8px] text-white/20 ml-auto">Δλ = {r.delta.toFixed(2)}nm from query</span>}
+                        {enc && <span className="text-[8px] text-white/20">Δλ={r.delta.toFixed(1)}nm</span>}
+                        <span className="text-[7px] text-white/15">H={r.entropy.toFixed(3)}b</span>
+                        <span className="text-[7px] text-white/15">coherence={(r.coherenceScore * 100).toFixed(0)}%</span>
                       </div>
                     </div>
-                    <div className="flex-shrink-0 text-right">
-                      <div className="text-[8px] text-white/20 mb-1">Spectral score</div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-16 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                          <div className="h-full rounded-full transition-all" style={{ width: `${proximity}%`, background: col }} />
+                    <div className="flex-shrink-0 text-right space-y-1.5">
+                      <div>
+                        <div className="text-[7px] text-white/15 mb-0.5">EM proximity</div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-12 h-1 rounded-full bg-white/5 overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${proximityPct}%`, background: col }} />
+                          </div>
+                          <span className="text-[7px] text-white/30">{proximityPct.toFixed(0)}%</span>
                         </div>
-                        <span className="text-[8px] font-bold" style={{ color: col }}>{proximity.toFixed(0)}%</span>
                       </div>
-                      <div className="text-[7px] text-white/15 mt-0.5">#{idx + 1}</div>
+                      <div>
+                        <div className="text-[7px] text-white/15 mb-0.5">Channel coherence</div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-12 h-1 rounded-full bg-white/5 overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${coherencePct}%`, background: "#22c55e" }} />
+                          </div>
+                          <span className="text-[7px] text-white/30">{coherencePct.toFixed(0)}%</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[7px] text-white/15 mb-0.5">Composite score</div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-12 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${compositePct}%`, background: "#f59e0b" }} />
+                          </div>
+                          <span className="text-[8px] font-bold text-amber-400">#{idx + 1}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -257,9 +339,21 @@ export default function SpectralSearchPage() {
             <div className="text-white/15 text-[10px] uppercase tracking-widest">How spectral search works</div>
             <div className="grid grid-cols-3 gap-4">
               {[
-                { icon: <Zap size={14} />, title: "CE→SE Encoding", desc: "Your search query is CE-encoded to a wavelength. Every word has a unique λ on the spectrum." },
-                { icon: <Activity size={14} />, title: "Electromagnetic Proximity", desc: "Results closest to your query's wavelength rank first. Δλ=0 is a perfect spectral match." },
-                { icon: <Search size={14} />, title: "Cross-Layer Search", desc: "Searches nodes, agents, users, documents, and channels in one unified spectral index." },
+                {
+                  icon: <Zap size={14} />,
+                  title: "CE→SE Encoding",
+                  desc: "Your query is CE-encoded to a wavelength. Every word has a unique λ on the visible spectrum.",
+                },
+                {
+                  icon: <Activity size={14} />,
+                  title: "Shannon Entropy — H = −Σpᵢlog₂pᵢ",
+                  desc: "Each character maps to a WDM bin. Entropy measures how scattered vs focused the query is across the spectrum. Low H = high channel coherence = specialized term.",
+                },
+                {
+                  icon: <Search size={14} />,
+                  title: "Composite Ranking",
+                  desc: "Score = 0.7 × EM proximity + 0.3 × channel coherence. Results closest in wavelength AND most spectrally focused rank first.",
+                },
               ].map(({ icon, title, desc }) => (
                 <div key={title} className="border border-white/8 rounded-xl p-4">
                   <div className="text-amber-400/50 mb-2">{icon}</div>
@@ -267,6 +361,10 @@ export default function SpectralSearchPage() {
                   <div className="text-white/20 text-[9px] leading-relaxed">{desc}</div>
                 </div>
               ))}
+            </div>
+            <div className="border border-white/5 rounded-xl px-5 py-3 text-center" style={{ background: "rgba(251,191,36,0.02)" }}>
+              <span className="text-amber-400/40 text-[9px] font-bold tracking-widest">H = −Σ pᵢ log₂ pᵢ</span>
+              <span className="text-white/15 text-[9px] ml-4">Shannon 1948 · applied to WDM bin probability distributions over query character sets</span>
             </div>
           </div>
         )}

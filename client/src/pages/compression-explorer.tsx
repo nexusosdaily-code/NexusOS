@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, Zap, Activity, Layers } from "lucide-react";
 
-const H = 6.626e-34, C = 3e8, K_B = 1.380649e-23;
+const H_PLANCK = 6.626e-34, C = 3e8, K_B = 1.380649e-23;
 const PLANCK_FREQ = 1.855e43; // Hz — Planck frequency
 const PLANCK_NM = C / PLANCK_FREQ * 1e9; // theoretical — near zero
 
@@ -29,9 +29,29 @@ function nmToBand(nm: number): string {
 function calcLambda(nm: number) {
   const lam = nm * 1e-9;
   const f = C / lam;
-  const E = H * f;
+  const E = H_PLANCK * f;
   const mass = E / (C * C);
   return { f, E, mass, lam };
+}
+
+const BAND_RANGES: Record<string, [number, number]> = {
+  SYSTEM: [380, 450], AUTH: [450, 495], STREAM: [495, 520],
+  LOGIC: [520, 565], INTERFACE: [565, 590], EVENT: [590, 625], STORAGE: [625, 780],
+};
+function calcBoltzmann(nm: number, band: string) {
+  const [bMin, bMax] = BAND_RANGES[band] ?? [380, 780];
+  const wdmStep = 400 / 256;
+  const wdmChannels = Math.max(1, Math.floor((bMax - bMin) / wdmStep));
+  const W = wdmChannels * 50 * 2;
+  const S = K_B * Math.log(W);
+  const S_max = K_B * Math.log(256 * 50 * 2);
+  return {
+    W,
+    S: S.toExponential(3),
+    Sraw: S,
+    wdmChannels,
+    Snorm: parseFloat((S / S_max).toFixed(4)),
+  };
 }
 
 const BANDS = [
@@ -93,13 +113,16 @@ export default function CompressionExplorerPage() {
 
   function getPhysics(nm: number) {
     const { f, E, mass } = calcLambda(nm);
+    const band = nmToBand(nm);
+    const boltz = calcBoltzmann(nm, band);
     return {
       f: (f / 1e12).toFixed(2),
       E: E.toExponential(3),
       mass: mass.toExponential(3),
-      band: nmToBand(nm),
+      band,
       feeMulti: ((520 / nm) * 1.0).toFixed(4),
       normalizedMass: ((mass - massMin) / (massMax - massMin) * 100).toFixed(1),
+      boltz,
     };
   }
 
@@ -286,6 +309,34 @@ export default function CompressionExplorerPage() {
                 </div>
               ))}
             </div>
+
+            {/* Boltzmann entropy block */}
+            <div className="mt-3 border border-orange-400/15 rounded-lg px-4 py-3" style={{ background: "rgba(251,146,60,0.04)" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[7px] text-orange-400/60 font-bold uppercase tracking-widest">Boltzmann Entropy — S = k·ln(W)</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <div className="text-[7px] text-white/20 mb-0.5">W (microstates)</div>
+                  <div className="text-[10px] font-bold text-orange-400">{physics.boltz.W.toLocaleString()}</div>
+                  <div className="text-[7px] text-white/15">{physics.boltz.wdmChannels} WDM × 50 OAM × 2 Pol</div>
+                </div>
+                <div>
+                  <div className="text-[7px] text-white/20 mb-0.5">S = k·ln(W)</div>
+                  <div className="text-[10px] font-bold text-orange-300">{physics.boltz.S} J/K</div>
+                </div>
+                <div>
+                  <div className="text-[7px] text-white/20 mb-1">S / S_max</div>
+                  <div className="h-1.5 rounded-full bg-white/5 overflow-hidden mb-0.5">
+                    <div className="h-full rounded-full bg-orange-400" style={{ width: `${physics.boltz.Snorm * 100}%` }} />
+                  </div>
+                  <div className="text-[8px] font-bold text-orange-400">{(physics.boltz.Snorm * 100).toFixed(1)}%</div>
+                </div>
+              </div>
+              <div className="text-[7px] text-white/15 mt-2">
+                Fewer WDM channels per band → fewer degenerate states → lower entropy → more compressed. SYSTEM band lowest S, STORAGE highest S.
+              </div>
+            </div>
           </div>
 
           {/* Landmarks */}
@@ -322,16 +373,28 @@ export default function CompressionExplorerPage() {
           </div>
         </div>
 
-        {/* Reference equation */}
-        <div className="border border-white/8 rounded-xl px-6 py-4 text-center" style={{ background: "rgba(0,0,0,0.4)" }}>
-          <div className="text-white/40 text-lg font-bold tracking-wider mb-1">Λ = hf / c²</div>
-          <div className="text-white/20 text-[10px] space-x-4">
-            <span>h = 6.626×10⁻³⁴ J·s (Planck constant)</span>
-            <span>f = c/λ (frequency from wavelength)</span>
-            <span>c = 3×10⁸ m/s (speed of light)</span>
+        {/* Reference equations */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="border border-white/8 rounded-xl px-6 py-4 text-center" style={{ background: "rgba(0,0,0,0.4)" }}>
+            <div className="text-white/40 text-lg font-bold tracking-wider mb-1">Λ = hf / c²</div>
+            <div className="text-white/20 text-[10px] space-x-4">
+              <span>h = 6.626×10⁻³⁴ J·s (Planck constant)</span>
+              <span>f = c/λ</span>
+              <span>c = 3×10⁸ m/s</span>
+            </div>
+            <div className="text-white/10 text-[9px] mt-2">
+              At λ=520nm: f={refPhysics.f}THz · E={refPhysics.E}J · Λ={refPhysics.mass}kg · fee=1.0000×
+            </div>
           </div>
-          <div className="text-white/10 text-[9px] mt-2">
-            At reference λ=520nm: f={refPhysics.f}THz · E={refPhysics.E}J · Λ={refPhysics.mass}kg · fee multiplier=1.0000×
+          <div className="border border-orange-400/10 rounded-xl px-6 py-4 text-center" style={{ background: "rgba(251,146,60,0.02)" }}>
+            <div className="text-orange-400/50 text-lg font-bold tracking-wider mb-1">S = k · ln(W)</div>
+            <div className="text-white/20 text-[10px] space-x-4">
+              <span>k = 1.381×10⁻²³ J/K (Boltzmann constant)</span>
+              <span>W = Ψ channel microstates</span>
+            </div>
+            <div className="text-white/10 text-[9px] mt-2">
+              At λ=520nm ({refPhysics.band}): W={refPhysics.boltz.W.toLocaleString()} states · S={refPhysics.boltz.S} J/K · {(refPhysics.boltz.Snorm * 100).toFixed(1)}% of S_max
+            </div>
           </div>
         </div>
       </div>
