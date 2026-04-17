@@ -35,6 +35,13 @@ import {
 
 const PLANCK_CONSTANT = 6.62607015e-34;
 const SPEED_OF_LIGHT = 299792458;
+const NM_SYSTEM_MAX = 380; // shortest wavelength = max energy = K-Level reference
+const E_K1_REF = PLANCK_CONSTANT * SPEED_OF_LIGHT / (NM_SYSTEM_MAX * 1e-9);
+
+function physicsKLevel(nm: number): number {
+  const E = PLANCK_CONSTANT * SPEED_OF_LIGHT / (nm * 1e-9);
+  return Math.round((E / E_K1_REF) * 1000) / 1000;
+}
 
 interface PsiBinding {
   wdm: number;
@@ -88,7 +95,7 @@ const BAND_COLORS: Record<string, string> = {
   SYSTEM: "#dc2626", KERNEL: "#2563eb", USER: "#16a34a", GUEST: "#6b7280",
 };
 
-const K1_PILLARS: K1Pillar[] = [
+const K1_PILLARS: K1Pillar[] = ([
   {
     id: "defense",
     name: "Military & Sovereign Defense",
@@ -243,7 +250,7 @@ const K1_PILLARS: K1Pillar[] = [
     ],
     psi: mkPsi(162, 30, "H", "USER"),
   }
-];
+] as K1Pillar[]).map(p => ({ ...p, kLevel: physicsKLevel(p.psi.nm) }));
 
 const RELAY_NODES: RelayNode[] = [
   { id: "europe", name: "Europe Hub", x: 52, y: 30, active: true },
@@ -533,6 +540,130 @@ function CrossPillarFlowDiagram({ flows, activePillar }: { flows: CrossPillarFlo
             )}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function FirstPrinciplesChain() {
+  const E_REF_NM = 380;
+  const overallK = K1_PILLARS.reduce((s, p) => s + p.kLevel, 0) / K1_PILLARS.length;
+
+  const steps = [
+    {
+      label: "First Oscillation",
+      eq: "ν₀ → ∞",
+      desc: "The universe's first unobserved oscillation. Infinite frequency, infinite compression. The origin of all subsequent states.",
+      color: "#ffffff",
+    },
+    {
+      label: "Planck Relation",
+      eq: "E = hν = hc/λ",
+      desc: "Energy is frequency. Shorter wavelength = higher frequency = higher energy. This is the only rule NexusOS economics obeys.",
+      color: "#a78bfa",
+    },
+    {
+      label: "Lambda Boson",
+      eq: "Λ = hf/c²",
+      desc: "First oscillation compresses energy into mass-equivalent. This mass is the unit of value — not dollars, not gold, but compressed oscillation.",
+      color: "#38bdf8",
+    },
+    {
+      label: "Spectral Compression Curve",
+      eq: "λ ↓ → E ↑ → authority ↑",
+      desc: "The compression curve maps wavelength to authority. SYSTEM band (380–449nm) governs because it physically carries more energy per photon — not by decree.",
+      color: "#34d399",
+    },
+    {
+      label: "K1 Sector Assignment",
+      eq: "Ψ_sector = |λ⟩ ⊗ |OAM⟩ ⊗ |Pol⟩",
+      desc: "Each civilization sector is constitutionally bound to a Ψ_channel on the compression curve. Authority is physics, not politics.",
+      color: "#fb923c",
+    },
+    {
+      label: "K-Level Derivation",
+      eq: `K = E(λ) / E(${E_REF_NM}nm) = (${E_REF_NM}/λ)`,
+      desc: `K-Level is the ratio of each sector's photon energy to the SYSTEM band reference at ${E_REF_NM}nm. Defense at 391nm → K≈0.970. Healthcare at 615nm → K≈0.619. Physics, not opinion.`,
+      color: "#f472b6",
+    },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-white/10 p-4 sm:p-6" style={{ background: "rgba(0,0,0,0.5)" }}>
+        <div className="text-xs text-white/25 uppercase tracking-widest mb-5">
+          First Principles Derivation — How NexusOS K-Level Emerges from E=hf
+        </div>
+
+        <div className="space-y-0">
+          {steps.map((step, i) => (
+            <div key={i} className="flex gap-3 sm:gap-4">
+              <div className="flex flex-col items-center flex-shrink-0">
+                <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[9px] font-bold"
+                  style={{ borderColor: step.color, color: step.color, background: step.color + "15" }}>
+                  {i + 1}
+                </div>
+                {i < steps.length - 1 && (
+                  <div className="w-0.5 flex-1 my-1" style={{ background: step.color + "30" }} />
+                )}
+              </div>
+              <div className="pb-5 flex-1 min-w-0">
+                <div className="text-[10px] font-mono font-bold uppercase tracking-wider mb-1" style={{ color: step.color }}>
+                  {step.label}
+                </div>
+                <div className="font-mono text-sm sm:text-base text-white mb-1.5 break-all">{step.eq}</div>
+                <div className="text-xs text-white/40 leading-relaxed">{step.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-white/10 overflow-hidden" style={{ background: "rgba(0,0,0,0.4)" }}>
+        <div className="px-4 py-3 border-b border-white/5">
+          <div className="text-[10px] text-white/25 uppercase tracking-widest">Sector K-Level — Derived from E=hf (λ_ref = {E_REF_NM}nm)</div>
+        </div>
+        <div className="divide-y divide-white/5">
+          {[...K1_PILLARS].sort((a, b) => b.kLevel - a.kLevel).map(p => {
+            const bc = BAND_COLORS[p.psi.band];
+            const f = (SPEED_OF_LIGHT / (p.psi.nm * 1e-9) / 1e12).toFixed(2);
+            const E = (PLANCK_CONSTANT * SPEED_OF_LIGHT / (p.psi.nm * 1e-9)).toExponential(3);
+            const Lambda = (PLANCK_CONSTANT * SPEED_OF_LIGHT / (p.psi.nm * 1e-9) / (SPEED_OF_LIGHT ** 2)).toExponential(3);
+            return (
+              <div key={p.id} className="flex items-center gap-2 sm:gap-4 px-4 py-3 flex-wrap sm:flex-nowrap"
+                data-testid={`fp-sector-${p.id}`}>
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: bc }} />
+                <div className="w-24 sm:w-32 flex-shrink-0">
+                  <div className="text-xs font-medium text-white truncate">{p.name.split(" ").slice(-1)[0]}</div>
+                  <div className="text-[9px] font-mono" style={{ color: bc }}>{p.psi.psi}</div>
+                </div>
+                <div className="hidden sm:block flex-1 font-mono text-[10px] text-white/30 min-w-0">
+                  <span className="text-white/50">E = hc/λ = </span>{E}J
+                  <span className="ml-3 text-white/30">Λ = </span>{Lambda}kg
+                </div>
+                <div className="font-mono text-[10px] text-white/40 flex-shrink-0">
+                  {p.psi.nm}nm · {f}THz
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0 ml-auto sm:ml-0">
+                  <div className="w-20 sm:w-28 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${p.kLevel * 100}%`, background: bc }} />
+                  </div>
+                  <div className="font-mono text-xs font-bold w-12 text-right" style={{ color: bc }}>
+                    K={p.kLevel.toFixed(3)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="px-4 py-3 border-t border-white/10 flex items-center justify-between">
+          <div className="text-[10px] text-white/25 font-mono">
+            K_overall = Σ(E_i/E_ref) / n = avg of {K1_PILLARS.length} sectors
+          </div>
+          <div className="font-mono text-sm font-bold text-cyan-400">
+            K = {overallK.toFixed(3)}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1258,6 +1389,8 @@ export default function K1InfrastructurePage() {
             </Card>
 
             <PhysicsPanel pillar={selectedPillar} />
+
+            <FirstPrinciplesChain />
           </TabsContent>
 
           <TabsContent value="activity" className="space-y-6">
