@@ -280,45 +280,44 @@ function calcPillarPhysics(nm: number) {
 
 function PillarSpectrumStrip({ pillars }: { pillars: K1Pillar[] }) {
   return (
-    <div className="rounded-xl border border-white/10 p-4 mb-6" style={{ background: "rgba(0,0,0,0.4)" }}>
+    <div className="rounded-xl border border-white/10 p-3 sm:p-4 mb-6" style={{ background: "rgba(0,0,0,0.4)" }}>
       <div className="text-[9px] text-white/25 uppercase tracking-widest mb-3">
         Seven Pillars — Spectral Position (380–780nm visible spectrum)
       </div>
-      <div className="relative h-6 rounded-full overflow-hidden mb-4"
+      <div className="relative h-5 rounded-full overflow-hidden mb-1"
         style={{ background: "linear-gradient(to right, #6600cc,#0044ff,#00aaff,#00cc44,#aacc00,#ffaa00,#ff3300)" }}>
         {pillars.map(p => {
           const pct = ((p.psi.nm - 380) / 400) * 100;
-          const bc = BAND_COLORS[p.psi.band];
           return (
-            <div key={p.id} className="absolute top-0 bottom-0 w-0.5 bg-white/90"
+            <div key={p.id} className="absolute top-0 bottom-0 w-0.5 bg-white/80"
               style={{ left: `${pct}%` }} />
           );
         })}
       </div>
-      <div className="relative h-8">
+      <div className="relative h-7 overflow-hidden">
         {pillars.map(p => {
           const pct = ((p.psi.nm - 380) / 400) * 100;
           const bc = BAND_COLORS[p.psi.band];
           return (
             <div key={p.id} className="absolute flex flex-col items-center"
-              style={{ left: `${pct}%`, transform: "translateX(-50%)" }}>
-              <div className="w-1.5 h-1.5 rounded-full mb-0.5" style={{ background: bc }} />
-              <div className="text-[7px] font-mono whitespace-nowrap" style={{ color: bc }}>
+              style={{ left: `clamp(12px, ${pct}%, calc(100% - 12px))`, transform: "translateX(-50%)" }}>
+              <div className="w-1.5 h-1.5 rounded-full mb-0.5 mt-0.5" style={{ background: bc }} />
+              <div className="text-[6px] font-mono whitespace-nowrap" style={{ color: bc }}>
                 {p.psi.nm}nm
               </div>
             </div>
           );
         })}
       </div>
-      <div className="grid grid-cols-4 gap-1 mt-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 mt-3">
         {pillars.map(p => {
           const bc = BAND_COLORS[p.psi.band];
           const ph = calcPillarPhysics(p.psi.nm);
           return (
-            <div key={p.id} className="border border-white/5 rounded px-2 py-1.5" style={{ background: bc + "06" }}>
-              <div className="text-[7px] font-bold truncate" style={{ color: bc }}>{p.name.split(" ")[0]}</div>
-              <div className="text-[7px] text-white/30 font-mono">E={ph.E}J</div>
-              <div className="text-[7px] text-white/20 font-mono">Λ={ph.mass}kg</div>
+            <div key={p.id} className="border border-white/5 rounded px-2 py-1.5 min-w-0" style={{ background: bc + "06" }}>
+              <div className="text-[8px] font-bold truncate" style={{ color: bc }}>{p.name.split(" ")[0]}</div>
+              <div className="text-[7px] text-white/30 font-mono truncate">E={ph.E}J</div>
+              <div className="text-[7px] text-white/20 font-mono truncate">Λ={ph.mass}kg</div>
             </div>
           );
         })}
@@ -516,23 +515,25 @@ function NetworkTopology({ nodes, selectedPath }: { nodes: RelayNode[]; selected
 
 function CrossPillarFlowDiagram({ flows, activePillar }: { flows: CrossPillarFlow[]; activePillar: string }) {
   return (
-    <div className="flex items-center justify-between gap-2 p-4 bg-slate-900/50 rounded-lg" data-testid="cross-pillar-flows">
-      {K1_PILLARS.map((pillar, i) => (
-        <div key={pillar.id} className="flex items-center gap-2">
-          <div className={`flex flex-col items-center ${activePillar === pillar.id ? 'scale-110' : ''} transition-transform`}>
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${pillar.color} bg-slate-800 border-2 ${activePillar === pillar.id ? 'border-white animate-pulse' : pillar.borderColor}`}>
-              {pillar.icon}
+    <div className="overflow-x-auto pb-2" data-testid="cross-pillar-flows">
+      <div className="flex items-center justify-start gap-1 p-4 bg-slate-900/50 rounded-lg min-w-max">
+        {K1_PILLARS.map((pillar, i) => (
+          <div key={pillar.id} className="flex items-center gap-1">
+            <div className={`flex flex-col items-center ${activePillar === pillar.id ? 'scale-110' : ''} transition-transform`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${pillar.color} bg-slate-800 border-2 ${activePillar === pillar.id ? 'border-white animate-pulse' : pillar.borderColor}`}>
+                {pillar.icon}
+              </div>
+              <span className="text-[9px] text-gray-400 mt-1 text-center w-12 leading-tight">{pillar.name.split(" ")[0]}</span>
             </div>
-            <span className="text-xs text-gray-400 mt-1">{pillar.name}</span>
+            {i < K1_PILLARS.length - 1 && (
+              <div className="flex items-center mb-4">
+                <div className={`h-0.5 w-5 ${flows[i]?.active ? 'bg-gradient-to-r from-cyan-400 to-green-400 animate-pulse' : 'bg-slate-700'}`} />
+                <ChevronRight className={`w-3 h-3 ${flows[i]?.active ? 'text-cyan-400' : 'text-slate-600'}`} />
+              </div>
+            )}
           </div>
-          {i < K1_PILLARS.length - 1 && (
-            <div className="flex items-center">
-              <div className={`h-0.5 w-8 ${flows[i]?.active ? 'bg-gradient-to-r from-cyan-400 to-green-400 animate-pulse' : 'bg-slate-700'}`} />
-              <ChevronRight className={`w-4 h-4 ${flows[i]?.active ? 'text-cyan-400' : 'text-slate-600'}`} />
-            </div>
-          )}
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
