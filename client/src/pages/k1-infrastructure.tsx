@@ -264,12 +264,76 @@ const INITIAL_FLOWS: CrossPillarFlow[] = [
   { from: "governance", to: "energy", resourceType: "policy_directives", active: false }
 ];
 
+function calcPillarPhysics(nm: number) {
+  const lam = nm * 1e-9;
+  const f = 2.998e8 / lam;
+  const E = 6.626e-34 * f;
+  const mass = E / (2.998e8 * 2.998e8);
+  const feeMulti = 520 / nm;
+  return {
+    f: (f / 1e12).toFixed(2),
+    E: E.toExponential(3),
+    mass: mass.toExponential(3),
+    feeMulti: feeMulti.toFixed(4),
+  };
+}
+
+function PillarSpectrumStrip({ pillars }: { pillars: K1Pillar[] }) {
+  return (
+    <div className="rounded-xl border border-white/10 p-4 mb-6" style={{ background: "rgba(0,0,0,0.4)" }}>
+      <div className="text-[9px] text-white/25 uppercase tracking-widest mb-3">
+        Seven Pillars — Spectral Position (380–780nm visible spectrum)
+      </div>
+      <div className="relative h-6 rounded-full overflow-hidden mb-4"
+        style={{ background: "linear-gradient(to right, #6600cc,#0044ff,#00aaff,#00cc44,#aacc00,#ffaa00,#ff3300)" }}>
+        {pillars.map(p => {
+          const pct = ((p.psi.nm - 380) / 400) * 100;
+          const bc = BAND_COLORS[p.psi.band];
+          return (
+            <div key={p.id} className="absolute top-0 bottom-0 w-0.5 bg-white/90"
+              style={{ left: `${pct}%` }} />
+          );
+        })}
+      </div>
+      <div className="relative h-8">
+        {pillars.map(p => {
+          const pct = ((p.psi.nm - 380) / 400) * 100;
+          const bc = BAND_COLORS[p.psi.band];
+          return (
+            <div key={p.id} className="absolute flex flex-col items-center"
+              style={{ left: `${pct}%`, transform: "translateX(-50%)" }}>
+              <div className="w-1.5 h-1.5 rounded-full mb-0.5" style={{ background: bc }} />
+              <div className="text-[7px] font-mono whitespace-nowrap" style={{ color: bc }}>
+                {p.psi.nm}nm
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="grid grid-cols-4 gap-1 mt-2">
+        {pillars.map(p => {
+          const bc = BAND_COLORS[p.psi.band];
+          const ph = calcPillarPhysics(p.psi.nm);
+          return (
+            <div key={p.id} className="border border-white/5 rounded px-2 py-1.5" style={{ background: bc + "06" }}>
+              <div className="text-[7px] font-bold truncate" style={{ color: bc }}>{p.name.split(" ")[0]}</div>
+              <div className="text-[7px] text-white/30 font-mono">E={ph.E}J</div>
+              <div className="text-[7px] text-white/20 font-mono">Λ={ph.mass}kg</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function PillarCard({ pillar, isActive, onClick }: { 
   pillar: K1Pillar; 
   isActive: boolean;
   onClick: () => void;
 }) {
   const bandColor = BAND_COLORS[pillar.psi.band];
+  const ph = calcPillarPhysics(pillar.psi.nm);
   return (
     <Card 
       className={`bg-gradient-to-br ${pillar.bgColor} ${pillar.borderColor} p-4 cursor-pointer transition-all duration-300 hover:scale-105 ${isActive ? 'ring-2 ring-white/50 scale-105' : ''}`}
@@ -285,6 +349,24 @@ function PillarCard({ pillar, isActive, onClick }: {
       </div>
       <Progress value={pillar.kLevel * 100} className="h-2 mb-2" />
       <p className="text-xs text-gray-400 line-clamp-2 mb-2">{pillar.description}</p>
+      <div className="grid grid-cols-2 gap-1 mb-2">
+        <div className="bg-black/20 rounded px-2 py-1">
+          <div className="text-[7px] text-white/25">E = hf</div>
+          <div className="text-[9px] font-mono font-bold" style={{ color: bandColor }}>{ph.E} J</div>
+        </div>
+        <div className="bg-black/20 rounded px-2 py-1">
+          <div className="text-[7px] text-white/25">Λ = hf/c²</div>
+          <div className="text-[9px] font-mono font-bold" style={{ color: bandColor }}>{ph.mass} kg</div>
+        </div>
+        <div className="bg-black/20 rounded px-2 py-1">
+          <div className="text-[7px] text-white/25">Frequency</div>
+          <div className="text-[9px] font-mono font-bold text-white/60">{ph.f} THz</div>
+        </div>
+        <div className="bg-black/20 rounded px-2 py-1">
+          <div className="text-[7px] text-white/25">Fee ×</div>
+          <div className="text-[9px] font-mono font-bold text-white/60">{ph.feeMulti}×</div>
+        </div>
+      </div>
       <div className="flex items-center gap-2 pt-1 border-t border-white/10">
         <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: bandColor }} />
         <span className="font-mono text-xs truncate" style={{ color: bandColor }}>{pillar.psi.psi}</span>
@@ -1090,6 +1172,8 @@ export default function K1InfrastructurePage() {
           </div>
         </div>
 
+        <PillarSpectrumStrip pillars={K1_PILLARS} />
+
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
           {K1_PILLARS.map(pillar => (
             <PillarCard 
@@ -1103,7 +1187,7 @@ export default function K1InfrastructurePage() {
 
         <Tabs defaultValue="overview" className="space-y-6">
           <div className="overflow-x-auto pb-1">
-          <TabsList className="grid min-w-[700px] w-full grid-cols-7 bg-slate-900/50">
+          <TabsList className="grid min-w-[560px] w-full grid-cols-7 bg-slate-900/50">
             <TabsTrigger value="overview" data-testid="tab-overview">
               <Globe className="w-4 h-4 mr-1" /> Overview
             </TabsTrigger>
@@ -1115,9 +1199,6 @@ export default function K1InfrastructurePage() {
             </TabsTrigger>
             <TabsTrigger value="sectormap" data-testid="tab-sectormap">
               <Waves className="w-4 h-4 mr-1" /> Sectors
-            </TabsTrigger>
-            <TabsTrigger value="sectormap" data-testid="tab-sectormap">
-              <Waves className="w-4 h-4 mr-2" /> Sector Map
             </TabsTrigger>
             <TabsTrigger value="network" data-testid="tab-network">
               <Network className="w-4 h-4 mr-1" /> Network
