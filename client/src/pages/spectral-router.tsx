@@ -1,24 +1,19 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { ArrowLeft, Radio, Zap, Send, Activity, Globe, Wifi } from "lucide-react";
+import { ArrowLeft, Radio, Zap, Send, Activity, Globe, Wifi, Brain, TrendingUp, TrendingDown, Minus, RotateCcw } from "lucide-react";
 
+// ── physics helpers ───────────────────────────────────────────────────────────
 function nmToColor(nm: number): string {
-  if (nm < 450) return "#6600cc";
-  if (nm < 495) return "#0044ff";
-  if (nm < 520) return "#00aaff";
-  if (nm < 565) return "#00cc44";
-  if (nm < 590) return "#aacc00";
-  if (nm < 625) return "#ffaa00";
+  if (nm < 450) return "#6600cc"; if (nm < 495) return "#0044ff";
+  if (nm < 520) return "#00aaff"; if (nm < 565) return "#00cc44";
+  if (nm < 590) return "#aacc00"; if (nm < 625) return "#ffaa00";
   return "#ff3300";
 }
 function nmToBand(nm: number): string {
-  if (nm < 450) return "SYSTEM";
-  if (nm < 495) return "AUTH";
-  if (nm < 520) return "STREAM";
-  if (nm < 565) return "LOGIC";
-  if (nm < 590) return "INTERFACE";
-  if (nm < 625) return "EVENT";
+  if (nm < 450) return "SYSTEM"; if (nm < 495) return "AUTH";
+  if (nm < 520) return "STREAM"; if (nm < 565) return "LOGIC";
+  if (nm < 590) return "INTERFACE"; if (nm < 625) return "EVENT";
   return "STORAGE";
 }
 function ceEncode(name: string): { nm: number; psi: string; band: string } {
@@ -32,89 +27,170 @@ function ceEncode(name: string): { nm: number; psi: string; band: string } {
   return { nm, psi: `Ψ(${wdm},${oam},${pol})`, band: nmToBand(nm) };
 }
 
+// ── dynamical system functions (learned from analysis sessions) ───────────────
+function shannonEntropy(scores: number[]): number {
+  const total = scores.reduce((a, b) => a + b, 0);
+  if (!total) return 0;
+  const probs = scores.map(s => s / total);
+  return parseFloat((-probs.reduce((a, p) => a + (p > 0 ? p * Math.log2(p) : 0), 0)).toFixed(4));
+}
+function classifyAttractor(winners: string[]): { label: string; color: string } {
+  if (winners.length < 6) return { label: "CALIBRATING", color: "#6b7280" };
+  const last = winners.slice(-8);
+  if (new Set(last).size === 1) return { label: "FIXED-POINT", color: "#10b981" };
+  const l6 = winners.slice(-6);
+  if (l6.every((w, i) => i < 2 || w === l6[i - 2]) && new Set(l6).size === 2)
+    return { label: "LIMIT-CYCLE", color: "#22d3ee" };
+  if (l6.every((w, i) => i < 3 || w === l6[i - 3])) return { label: "LIMIT-CYCLE", color: "#22d3ee" };
+  return { label: "IRREGULAR", color: "#f59e0b" };
+}
+function instabilityScore(amp: number, decay: number) {
+  return parseFloat((amp * (1 - decay)).toFixed(4));
+}
+
+// Hysteresis constants from analysis sessions
+const E_HIGH = 0.92;  // amplify above this
+const E_LOW  = 0.88;  // dampen below this
+const AMP    = 1.25;
+const DECAY  = 0.92;
+
 interface Node {
-  id: string; nodeKey: string; name: string; wavelengthNm: string; frequencyThz: string;
-  psiChannel: string; emissionBand: string; status: string; endpoint?: string;
+  id: string; nodeKey: string; name: string; wavelengthNm: string;
+  frequencyThz: string; psiChannel: string; emissionBand: string;
+  status: string; endpoint?: string;
 }
-
 interface Hop {
-  step: number;
-  from: string;
-  to: string;
-  nm: number;
-  psi: string;
-  action: string;
-  deltaLambda: number;
+  step: number; from: string; to: string; nm: number;
+  psi: string; action: string; deltaLambda: number;
 }
-
 interface PacketLog {
-  id: string;
-  ts: string;
-  destPsi: string;
-  destNm: number;
-  payload: string;
-  hops: Hop[];
-  delivered: boolean;
-  finalNode?: string;
+  id: string; ts: string; destPsi: string; destNm: number;
+  payload: string; hops: Hop[]; delivered: boolean;
+  finalNodeId?: string; finalNode?: string;
+  entropy: number; fgRatio: number; winnerWeight: number;
+  routingMode: "adaptive" | "static";
 }
 
-function routePacket(destNm: number, destPsi: string, payload: string, nodes: Node[]): PacketLog {
+// ── adaptive routing function ─────────────────────────────────────────────────
+function routeAdaptive(
+  destNm: number, destPsi: string, payload: string,
+  nodes: Node[], weights: Record<string, number>
+): { log: PacketLog; updatedWeights: Record<string, number> } {
   const active = nodes.filter(n => n.status === "active");
-  const sorted = [...active].sort((a, b) => Math.abs(parseFloat(a.wavelengthNm) - destNm) - Math.abs(parseFloat(b.wavelengthNm) - destNm));
   const hops: Hop[] = [];
+  let updatedWeights = { ...weights };
 
-  // Simulate routing algorithm — find path via spectral proximity
   hops.push({
     step: 0, from: "ORIGIN", to: "WNSP-ROUTER",
     nm: destNm, psi: destPsi,
-    action: `Packet addressed to ${destPsi} · λ=${destNm}nm`,
+    action: `Packet → ${destPsi} · λ=${destNm}nm · adaptive routing active`,
     deltaLambda: 0,
   });
 
-  if (sorted.length > 0) {
-    const nearest = sorted[0];
-    const nearNm = parseFloat(nearest.wavelengthNm);
-    hops.push({
-      step: 1, from: "WNSP-ROUTER", to: nearest.name,
-      nm: nearNm, psi: nearest.psiChannel,
-      action: `Nearest spectral node: ${nearest.name} · Δλ = ${Math.abs(nearNm - destNm).toFixed(2)}nm`,
-      deltaLambda: Math.abs(nearNm - destNm),
-    });
+  if (active.length === 0) {
+    return {
+      log: { id: Math.random().toString(36).slice(2, 8).toUpperCase(), ts: new Date().toISOString(), destPsi, destNm, payload, hops, delivered: false, entropy: 0, fgRatio: 0, winnerWeight: 1, routingMode: "adaptive" },
+      updatedWeights,
+    };
+  }
 
-    if (sorted.length > 1 && Math.abs(nearNm - destNm) > 5) {
-      const second = sorted[1];
-      const secNm = parseFloat(second.wavelengthNm);
-      hops.push({
-        step: 2, from: nearest.name, to: second.name,
-        nm: secNm, psi: second.psiChannel,
-        action: `Re-emit via ${second.name} · Δλ = ${Math.abs(secNm - destNm).toFixed(2)}nm`,
-        deltaLambda: Math.abs(secNm - destNm),
-      });
-    }
+  // Score = weight / (Δλ + 1)  — same formula proven in analysis
+  const scored = active.map(n => {
+    const nm = parseFloat(n.wavelengthNm);
+    const w = weights[n.id] ?? 1.0;
+    return { node: n, nm, weight: w, score: w / (Math.abs(nm - destNm) + 1) };
+  }).sort((a, b) => b.score - a.score);
 
+  const entropy = shannonEntropy(scored.map(s => s.score));
+  const winner = scored[0];
+  const winnerNm = winner.nm;
+
+  // Feedback/geometry ratio: (weight-1)/weight
+  const fgRatio = parseFloat(Math.max(0, Math.min(1, (winner.weight - 1) / winner.weight)).toFixed(3));
+
+  // Hysteresis update rule from analysis sessions
+  const newWinnerWeight = entropy > E_HIGH
+    ? Math.min(winner.weight * AMP, 5.0)          // amplify
+    : entropy < E_LOW
+      ? Math.max(winner.weight * (2 - AMP), 0.15) // dampen
+      : winner.weight;                              // dead zone — no change
+
+  updatedWeights = Object.fromEntries(
+    scored.map(s => [
+      s.node.id,
+      s.node.id === winner.node.id
+        ? parseFloat(newWinnerWeight.toFixed(3))
+        : parseFloat(Math.max((weights[s.node.id] ?? 1.0) * DECAY, 0.15).toFixed(3)),
+    ])
+  );
+
+  const weightDelta = newWinnerWeight - winner.weight;
+  const weightTag = weightDelta > 0.001 ? ` ↑ weight ${winner.weight.toFixed(2)}→${newWinnerWeight.toFixed(2)}`
+    : weightDelta < -0.001 ? ` ↓ weight ${winner.weight.toFixed(2)}→${newWinnerWeight.toFixed(2)}`
+    : " [dead zone]";
+
+  hops.push({
+    step: 1, from: "WNSP-ROUTER", to: winner.node.name,
+    nm: winnerNm, psi: winner.node.psiChannel,
+    action: `Selected via adaptive score ${winner.score.toFixed(4)} · H=${entropy} · F/G=${fgRatio}${weightTag}`,
+    deltaLambda: Math.abs(winnerNm - destNm),
+  });
+
+  if (scored.length > 1 && Math.abs(winnerNm - destNm) > 5) {
+    const second = scored[1];
     hops.push({
-      step: hops.length, from: sorted[sorted.length > 1 ? 1 : 0].name, to: destPsi,
-      nm: destNm, psi: destPsi,
-      action: `Delivered to ${destPsi} · payload encoded at λ=${destNm}nm`,
-      deltaLambda: 0,
+      step: 2, from: winner.node.name, to: second.node.name,
+      nm: second.nm, psi: second.node.psiChannel,
+      action: `Re-emit via ${second.node.name} · score=${second.score.toFixed(4)} · Δλ=${Math.abs(second.nm - destNm).toFixed(2)}nm`,
+      deltaLambda: Math.abs(second.nm - destNm),
     });
   }
 
+  hops.push({
+    step: hops.length, from: scored[scored.length > 1 ? 1 : 0].node.name, to: destPsi,
+    nm: destNm, psi: destPsi,
+    action: `Delivered to ${destPsi} · payload encoded at λ=${destNm}nm`,
+    deltaLambda: 0,
+  });
+
   return {
-    id: Math.random().toString(36).slice(2, 8).toUpperCase(),
-    ts: new Date().toISOString(),
-    destPsi, destNm, payload,
-    hops,
-    delivered: sorted.length > 0,
-    finalNode: sorted[0]?.name,
+    log: {
+      id: Math.random().toString(36).slice(2, 8).toUpperCase(),
+      ts: new Date().toISOString(),
+      destPsi, destNm, payload, hops, delivered: true,
+      finalNodeId: winner.node.id, finalNode: winner.node.name,
+      entropy, fgRatio, winnerWeight: newWinnerWeight, routingMode: "adaptive",
+    },
+    updatedWeights,
   };
 }
 
+// ── sparkline ─────────────────────────────────────────────────────────────────
+function SparkLine({ vals, color }: { vals: number[]; color: string }) {
+  if (vals.length < 2) return null;
+  const W = 80; const H = 20;
+  const min = Math.min(...vals); const max = Math.max(...vals); const range = max - min || 0.001;
+  const pts = vals.map((v, i) => `${(i / (vals.length - 1)) * W},${H - ((v - min) / range) * H}`).join(" ");
+  return (
+    <svg width={W} height={H}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// ── page ──────────────────────────────────────────────────────────────────────
 export default function SpectralRouterPage() {
   const [destInput, setDestInput] = useState("ReasoningCore");
   const [payload, setPayload] = useState("Hello from the spectral network");
   const [logs, setLogs] = useState<PacketLog[]>([]);
   const [selected, setSelected] = useState<PacketLog | null>(null);
+
+  // Adaptive state — persists across packets in this session
+  const weightsRef = useRef<Record<string, number>>({});
+  const winnerHistoryRef = useRef<string[]>([]);
+  const [routeCount, setRouteCount] = useState(0);
+  const [liveWeights, setLiveWeights] = useState<Record<string, number>>({});
+  const [liveEntropy, setLiveEntropy] = useState<number[]>([]);
 
   const { data } = useQuery<{ nodes: Node[] }>({
     queryKey: ["/api/network/nodes"],
@@ -125,136 +201,236 @@ export default function SpectralRouterPage() {
 
   const destEnc = destInput.trim() ? ceEncode(destInput) : null;
 
-  function sendPacket() {
+  const sendPacket = useCallback(() => {
     if (!destEnc || !payload.trim()) return;
-    const log = routePacket(destEnc.nm, destEnc.psi, payload, nodes);
+    const { log, updatedWeights } = routeAdaptive(destEnc.nm, destEnc.psi, payload, nodes, weightsRef.current);
+    weightsRef.current = updatedWeights;
+    if (log.finalNode) winnerHistoryRef.current = [...winnerHistoryRef.current, log.finalNode].slice(-20);
     setLogs(prev => [log, ...prev].slice(0, 20));
     setSelected(log);
+    setLiveWeights({ ...updatedWeights });
+    setLiveEntropy(prev => [...prev, log.entropy].slice(-16));
+    setRouteCount(c => c + 1);
+  }, [destEnc, payload, nodes]);
+
+  function resetLearning() {
+    weightsRef.current = {};
+    winnerHistoryRef.current = [];
+    setLiveWeights({});
+    setLiveEntropy([]);
+    setRouteCount(0);
+    setLogs([]);
+    setSelected(null);
   }
+
+  const attractor = classifyAttractor(winnerHistoryRef.current);
+  const iScore = instabilityScore(AMP, DECAY);
+  const lastEntropy = liveEntropy[liveEntropy.length - 1] ?? null;
+  const entropySlope = liveEntropy.length > 3
+    ? liveEntropy[liveEntropy.length - 1] - liveEntropy[0] > 0.01 ? "expanding"
+    : liveEntropy[liveEntropy.length - 1] - liveEntropy[0] < -0.01 ? "collapsing" : "stable"
+    : "—";
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col" style={{ fontFamily: "monospace" }}>
+      {/* header */}
       <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <Link href="/nexus-command">
             <button className="text-white/30 hover:text-white/60 transition-colors"><ArrowLeft size={15} /></button>
           </Link>
-          <div className="flex items-center gap-2">
-            <Radio size={13} className="text-emerald-400" />
-            <span className="text-sm font-bold tracking-wider text-emerald-400">SPECTRAL ROUTING ENGINE</span>
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          </div>
-          <span className="text-white/20 text-[10px]">DNS-free packet routing · Ψ-channel addressing · nearest-wavelength delivery</span>
+          <Radio size={13} className="text-emerald-400" />
+          <span className="text-sm font-bold tracking-wider text-emerald-400">SPECTRAL ROUTING ENGINE</span>
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="flex items-center gap-1 text-[8px] px-2 py-0.5 rounded-full border border-purple-400/40 text-purple-400">
+            <Brain size={7} /> adaptive · learns from traffic
+          </span>
         </div>
-        <div className="text-white/20 text-[9px]">{nodes.filter(n => n.status === "active").length} active nodes · {logs.length} packets routed</div>
+        <div className="flex items-center gap-3">
+          {routeCount > 0 && (
+            <span className="text-[8px]" style={{ color: attractor.color }}>{attractor.label}</span>
+          )}
+          <span className="text-white/20 text-[9px]">{nodes.filter(n => n.status === "active").length} nodes · {routeCount} packets routed</span>
+          {routeCount > 0 && (
+            <button onClick={resetLearning} className="flex items-center gap-1 text-[8px] text-white/20 hover:text-white/50 transition-colors" data-testid="button-reset-learning">
+              <RotateCcw size={8} /> reset
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-        {/* How it works */}
-        <div className="border border-emerald-400/15 rounded-xl p-5" style={{ background: "rgba(52,211,153,0.03)" }}>
-          <div className="grid grid-cols-4 gap-4 text-[9px]">
-            {[
-              { step: "1", label: "Address packet", desc: "Destination = any word. CE→SE encodes it to λ and Ψ channel. No DNS lookup." },
-              { step: "2", label: "Find nearest node", desc: "Router scans all registered nodes and finds the one with the smallest Δλ." },
-              { step: "3", label: "Hop via spectrum", desc: "Packet hops through nodes ordered by spectral proximity to the target." },
-              { step: "4", label: "Deliver at Ψ", desc: "Packet arrives at the final node and is decoded at the target wavelength." },
-            ].map(({ step, label, desc }) => (
-              <div key={step} className="border border-white/8 rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-4 h-4 rounded-full border border-emerald-400/30 text-emerald-400/60 text-[8px] flex items-center justify-center">{step}</div>
-                  <div className="text-emerald-400/70 font-bold">{label}</div>
-                </div>
+      {/* how it works */}
+      <div className="border-b border-white/5 px-6 py-3 flex-shrink-0" style={{ background: "rgba(255,255,255,0.01)" }}>
+        <div className="grid grid-cols-4 gap-4 text-[8px]">
+          {[
+            { step: "1", label: "Address packet", desc: "Any word CE→SE encodes to λ and Ψ. No DNS." },
+            { step: "2", label: "Adaptive score", desc: "weight / (Δλ+1) — combines geometry + learned weight." },
+            { step: "3", label: "Hysteresis update", desc: "Winner weight evolves. H>0.92→amplify, H<0.88→dampen, else dead zone." },
+            { step: "4", label: "Attractor emerges", desc: "Route history classifies network as Fixed-Point, Limit-Cycle, or Irregular." },
+          ].map(({ step, label, desc }) => (
+            <div key={step} className="flex items-start gap-2">
+              <div className="w-3.5 h-3.5 rounded-full border border-emerald-400/30 text-emerald-400/60 text-[7px] flex items-center justify-center flex-shrink-0 mt-0.5">{step}</div>
+              <div>
+                <div className="text-emerald-400/70 font-bold mb-0.5">{label}</div>
                 <div className="text-white/25 leading-relaxed">{desc}</div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
+      </div>
 
-        <div className="grid grid-cols-5 gap-6">
-          {/* Left: send form + routing table */}
+      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <div className="grid grid-cols-5 gap-5">
+          {/* Left: composer + node weights */}
           <div className="col-span-2 space-y-4">
             {/* Packet composer */}
-            <div className="border border-emerald-400/20 rounded-xl p-5" style={{ background: "rgba(52,211,153,0.04)" }}>
-              <div className="text-emerald-400/60 text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Send size={10} /> Compose Spectral Packet
+            <div className="border border-emerald-400/20 rounded-xl p-4" style={{ background: "rgba(52,211,153,0.03)" }}>
+              <div className="text-emerald-400/60 text-[9px] uppercase tracking-widest mb-3 flex items-center gap-2">
+                <Send size={9} /> Compose Spectral Packet
               </div>
-
               <div className="space-y-3">
                 <div>
-                  <label className="text-white/25 text-[9px] uppercase tracking-widest block mb-1">Destination (any word or name)</label>
+                  <label className="text-white/25 text-[8px] uppercase tracking-widest block mb-1">Destination (any word or name)</label>
                   <input
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[11px] text-white outline-none placeholder-white/20 focus:border-emerald-400/30"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white outline-none placeholder-white/20 focus:border-emerald-400/30"
                     placeholder="e.g. ReasoningCore, Alice, DataNode…"
                     value={destInput}
                     onChange={e => setDestInput(e.target.value)}
                     data-testid="input-dest"
                   />
                 </div>
-
                 {destEnc && (
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { label: "Ψ Channel", value: destEnc.psi, color: "#06b6d4" },
-                      { label: "λ emission", value: `${destEnc.nm}nm`, color: nmToColor(destEnc.nm) },
+                      { label: "λ", value: `${destEnc.nm}nm`, color: nmToColor(destEnc.nm) },
                       { label: "Band", value: destEnc.band, color: nmToColor(destEnc.nm) },
                     ].map(({ label, value, color }) => (
                       <div key={label} className="border border-white/5 rounded-lg px-2 py-1.5">
-                        <div className="text-[7px] text-white/20">{label}</div>
+                        <div className="text-[6px] text-white/20">{label}</div>
                         <div className="text-[9px] font-bold" style={{ color }}>{value}</div>
                       </div>
                     ))}
                   </div>
                 )}
-
                 {destEnc && (
                   <div className="h-1 rounded-full" style={{ background: `linear-gradient(to right, ${nmToColor(destEnc.nm - 30)}, ${nmToColor(destEnc.nm)}, ${nmToColor(destEnc.nm + 30)})` }} />
                 )}
-
                 <div>
-                  <label className="text-white/25 text-[9px] uppercase tracking-widest block mb-1">Payload</label>
+                  <label className="text-white/25 text-[8px] uppercase tracking-widest block mb-1">Payload</label>
                   <textarea
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[11px] text-white outline-none placeholder-white/20 focus:border-white/20 resize-none"
-                    rows={3}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] text-white outline-none placeholder-white/20 resize-none"
+                    rows={2}
                     placeholder="Message payload…"
                     value={payload}
                     onChange={e => setPayload(e.target.value)}
                     data-testid="input-payload"
                   />
                 </div>
-
                 <button
                   onClick={sendPacket}
                   disabled={!destEnc || !payload.trim()}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-emerald-400/40 text-emerald-400 font-bold text-[11px] hover:border-emerald-400/70 disabled:opacity-30 transition-all"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-emerald-400/40 text-emerald-400 font-bold text-[10px] hover:border-emerald-400/70 disabled:opacity-30 transition-all"
                   data-testid="button-send-packet"
                 >
-                  <Zap size={11} /> Transmit on Ψ Channel
+                  <Zap size={10} /> Transmit on Ψ Channel
                 </button>
               </div>
             </div>
 
+            {/* Network Dynamics Panel */}
+            <div className="border border-purple-400/20 rounded-xl p-4 space-y-3" style={{ background: "rgba(192,132,252,0.03)" }}>
+              <div className="text-purple-400/60 text-[9px] uppercase tracking-widest flex items-center gap-2">
+                <Brain size={9} /> Network Dynamics
+              </div>
+
+              {/* Attractor + instability */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="border border-white/5 rounded-lg p-2">
+                  <div className="text-white/20 text-[7px] mb-1">Attractor</div>
+                  <div className="text-[9px] font-bold" style={{ color: attractor.color }}>
+                    {routeCount === 0 ? "—" : attractor.label}
+                  </div>
+                </div>
+                <div className="border border-white/5 rounded-lg p-2">
+                  <div className="text-white/20 text-[7px] mb-1">Instability Score</div>
+                  <div className="text-[9px] font-bold text-white/50">{iScore}</div>
+                  <div className="text-[6px] text-white/20">amp×(1−decay)</div>
+                </div>
+              </div>
+
+              {/* Entropy trend */}
+              <div className="border border-white/5 rounded-lg p-2">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-white/20 text-[7px]">Entropy H(t)</div>
+                  {liveEntropy.length > 2 && (
+                    <div className={`flex items-center gap-0.5 text-[7px] ${entropySlope === "expanding" ? "text-emerald-400" : entropySlope === "collapsing" ? "text-amber-400" : "text-white/30"}`}>
+                      {entropySlope === "expanding" ? <TrendingUp size={7} /> : entropySlope === "collapsing" ? <TrendingDown size={7} /> : <Minus size={7} />}
+                      {entropySlope}
+                    </div>
+                  )}
+                </div>
+                {liveEntropy.length > 1
+                  ? <SparkLine vals={liveEntropy} color={entropySlope === "expanding" ? "#10b981" : entropySlope === "collapsing" ? "#f59e0b" : "#94a3b8"} />
+                  : <div className="text-white/15 text-[7px]">{routeCount === 0 ? "send packets to observe" : "building…"}</div>
+                }
+                {lastEntropy !== null && <div className="text-white/20 text-[6px] mt-1">last H={lastEntropy}</div>}
+              </div>
+
+              {/* Node weight bars */}
+              <div className="border border-white/5 rounded-lg p-2">
+                <div className="text-white/20 text-[7px] mb-2">Learned Node Weights</div>
+                {nodes.filter(n => n.status === "active").length === 0
+                  ? <div className="text-white/15 text-[7px]">no active nodes</div>
+                  : nodes.filter(n => n.status === "active").map(n => {
+                    const w = liveWeights[n.id] ?? 1.0;
+                    const nm = parseFloat(n.wavelengthNm);
+                    const col = nmToColor(nm);
+                    const pct = Math.min(100, (w / 5.0) * 100);
+                    return (
+                      <div key={n.id} className="mb-1.5">
+                        <div className="flex items-center justify-between text-[7px] mb-0.5">
+                          <span style={{ color: col }} className="truncate">{n.name}</span>
+                          <span className="text-white/25 ml-1 flex-shrink-0">w={w.toFixed(2)}</span>
+                        </div>
+                        <div className="h-1 rounded-full bg-white/5 overflow-hidden">
+                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: col }} />
+                        </div>
+                      </div>
+                    );
+                  })
+                }
+                {routeCount > 0 && (
+                  <div className="text-white/15 text-[6px] mt-1">
+                    H&gt;{E_HIGH}→×{AMP} · H&lt;{E_LOW}→×{(2-AMP).toFixed(2)} · others×{DECAY}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Routing table */}
-            <div className="border border-white/10 rounded-xl p-4" style={{ background: "rgba(255,255,255,0.01)" }}>
-              <div className="text-white/25 text-[9px] uppercase tracking-widest mb-3 flex items-center gap-2">
-                <Wifi size={9} /> Live Routing Table — {nodes.length} nodes
+            <div className="border border-white/10 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.01)" }}>
+              <div className="text-white/25 text-[8px] uppercase tracking-widest mb-2 flex items-center gap-2">
+                <Wifi size={8} /> Routing Table — {nodes.length} nodes
               </div>
               {nodes.length === 0 ? (
-                <div className="text-white/15 text-[10px] text-center py-4">
-                  No nodes registered. <Link href="/network"><span className="text-emerald-400/60 underline cursor-pointer">Register a node</span></Link> to enable routing.
+                <div className="text-white/15 text-[9px] text-center py-3">
+                  No nodes registered. <Link href="/network"><span className="text-emerald-400/60 underline cursor-pointer">Register one</span></Link>
                 </div>
               ) : (
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   {nodes.map(n => {
                     const nm = parseFloat(n.wavelengthNm);
                     const col = nmToColor(nm);
                     const isActive = n.status === "active";
+                    const w = liveWeights[n.id] ?? 1.0;
                     return (
-                      <div key={n.id} className="flex items-center gap-2 border border-white/5 rounded-lg px-2 py-1.5" style={{ background: isActive ? col + "05" : "transparent" }}>
+                      <div key={n.id} className="flex items-center gap-2 border border-white/5 rounded-lg px-2 py-1" style={{ background: isActive ? col + "05" : "transparent" }}>
                         <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? "animate-pulse" : "opacity-30"}`} style={{ background: col }} />
-                        <span className="text-[9px] font-bold flex-1 truncate" style={{ color: isActive ? col : "#6b7280" }}>{n.name}</span>
-                        <span className="text-[8px] text-white/30 font-mono">{n.psiChannel}</span>
-                        <span className="text-[8px] font-bold" style={{ color: col }}>{nm.toFixed(1)}nm</span>
+                        <span className="text-[8px] font-bold flex-1 truncate" style={{ color: isActive ? col : "#6b7280" }}>{n.name}</span>
+                        <span className="text-[7px] text-white/20 font-mono">{n.psiChannel}</span>
+                        <span className="text-[7px] font-bold" style={{ color: col }}>{nm.toFixed(1)}nm</span>
+                        {routeCount > 0 && <span className="text-[6px] text-purple-400/60">w={w.toFixed(2)}</span>}
                       </div>
                     );
                   })}
@@ -263,56 +439,55 @@ export default function SpectralRouterPage() {
             </div>
           </div>
 
-          {/* Right: packet trace log */}
+          {/* Right: packet trace + history */}
           <div className="col-span-3 space-y-4">
             {selected && (
-              <div className="border border-emerald-400/20 rounded-xl p-5" style={{ background: "rgba(52,211,153,0.03)" }}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-emerald-400/60 text-[10px] uppercase tracking-widest flex items-center gap-2">
-                    <Activity size={10} /> Packet Trace — {selected.id}
+              <div className="border border-emerald-400/20 rounded-xl p-4" style={{ background: "rgba(52,211,153,0.03)" }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-emerald-400/60 text-[9px] uppercase tracking-widest flex items-center gap-2">
+                    <Activity size={9} /> Packet Trace — {selected.id}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold ${selected.delivered ? "bg-emerald-400/15 text-emerald-400" : "bg-red-400/15 text-red-400"}`}>
+                    <span className="text-[7px] px-1.5 py-0.5 rounded-full border border-purple-400/30 text-purple-400">
+                      H={selected.entropy} · F/G={selected.fgRatio}
+                    </span>
+                    <span className={`text-[7px] px-1.5 py-0.5 rounded-full font-bold ${selected.delivered ? "bg-emerald-400/15 text-emerald-400" : "bg-red-400/15 text-red-400"}`}>
                       {selected.delivered ? "DELIVERED" : "NO ROUTE"}
                     </span>
-                    <span className="text-[8px] text-white/20">{selected.ts.slice(11, 19)}</span>
+                    <span className="text-[7px] text-white/20">{selected.ts.slice(11, 19)}</span>
                   </div>
                 </div>
 
-                {/* Route visualization */}
-                <div className="space-y-2 mb-4">
+                <div className="space-y-1.5 mb-3">
                   {selected.hops.map((hop, idx) => {
                     const col = nmToColor(hop.nm);
                     return (
                       <div key={idx}>
-                        <div className="flex items-start gap-3 border border-white/5 rounded-lg px-3 py-2.5" style={{ background: col + "08" }}>
-                          <div className="w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 text-[8px] font-bold" style={{ borderColor: col + "60", color: col }}>{hop.step}</div>
+                        <div className="flex items-start gap-3 border border-white/5 rounded-lg px-3 py-2" style={{ background: col + "08" }}>
+                          <div className="w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 text-[7px] font-bold" style={{ borderColor: col + "60", color: col }}>{hop.step}</div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-[9px] font-bold" style={{ color: col }}>{hop.from}</span>
-                              <span className="text-white/25 text-[8px]">→</span>
-                              <span className="text-[9px] font-bold text-white/60">{hop.to}</span>
+                              <span className="text-[8px] font-bold" style={{ color: col }}>{hop.from}</span>
+                              <span className="text-white/25 text-[7px]">→</span>
+                              <span className="text-[8px] font-bold text-white/60">{hop.to}</span>
                             </div>
-                            <div className="text-[8px] text-white/30">{hop.action}</div>
+                            <div className="text-[7px] text-white/30">{hop.action}</div>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            <div className="text-[9px] font-bold" style={{ color: col }}>{hop.nm}nm</div>
-                            {hop.deltaLambda > 0 && <div className="text-[7px] text-white/25">Δλ={hop.deltaLambda.toFixed(2)}nm</div>}
+                            <div className="text-[8px] font-bold" style={{ color: col }}>{hop.nm}nm</div>
+                            {hop.deltaLambda > 0 && <div className="text-[6px] text-white/20">Δλ={hop.deltaLambda.toFixed(2)}nm</div>}
                           </div>
-                          <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ background: col }} />
+                          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1" style={{ background: col }} />
                         </div>
-                        {idx < selected.hops.length - 1 && (
-                          <div className="ml-5 w-px h-2 bg-white/10" />
-                        )}
+                        {idx < selected.hops.length - 1 && <div className="ml-5 w-px h-1.5 bg-white/10" />}
                       </div>
                     );
                   })}
                 </div>
 
-                {/* Payload preview */}
                 <div className="border border-white/8 rounded-lg px-3 py-2" style={{ background: "rgba(0,0,0,0.3)" }}>
-                  <div className="text-white/20 text-[8px] uppercase tracking-widest mb-1">Payload (encoded at λ={selected.destNm}nm)</div>
-                  <div className="text-emerald-300/60 text-[10px] font-mono">{selected.payload}</div>
+                  <div className="text-white/20 text-[7px] uppercase tracking-widest mb-1">Payload · λ={selected.destNm}nm</div>
+                  <div className="text-emerald-300/60 text-[9px] font-mono">{selected.payload}</div>
                 </div>
               </div>
             )}
@@ -320,21 +495,22 @@ export default function SpectralRouterPage() {
             {/* History */}
             {logs.length > 0 && (
               <div className="border border-white/10 rounded-xl p-4" style={{ background: "rgba(255,255,255,0.01)" }}>
-                <div className="text-white/25 text-[9px] uppercase tracking-widest mb-3">Packet History</div>
-                <div className="space-y-1.5">
+                <div className="text-white/25 text-[8px] uppercase tracking-widest mb-2">Packet History</div>
+                <div className="space-y-1">
                   {logs.map(log => {
                     const col = nmToColor(log.destNm);
                     return (
                       <button key={log.id} onClick={() => setSelected(log)}
-                        className={`w-full flex items-center gap-3 border rounded-lg px-3 py-2 text-left transition-all ${selected?.id === log.id ? "border-emerald-400/30" : "border-white/5 hover:border-white/15"}`}
+                        className={`w-full flex items-center gap-2 border rounded-lg px-3 py-1.5 text-left transition-all ${selected?.id === log.id ? "border-emerald-400/30" : "border-white/5 hover:border-white/15"}`}
                         data-testid={`packet-${log.id}`}>
-                        <span className={`text-[7px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${log.delivered ? "bg-emerald-400/15 text-emerald-400" : "bg-red-400/15 text-red-400"}`}>
+                        <span className={`text-[6px] px-1 py-0.5 rounded-full font-bold flex-shrink-0 ${log.delivered ? "bg-emerald-400/15 text-emerald-400" : "bg-red-400/15 text-red-400"}`}>
                           {log.delivered ? "OK" : "ERR"}
                         </span>
-                        <span className="text-[9px] font-mono text-white/40 flex-shrink-0">{log.id}</span>
-                        <span className="text-[9px] font-bold flex-shrink-0" style={{ color: col }}>{log.destPsi}</span>
-                        <span className="text-[8px] text-white/25 truncate flex-1">{log.payload}</span>
-                        <span className="text-[8px] text-white/20 flex-shrink-0">{log.hops.length} hops</span>
+                        <span className="text-[8px] font-mono text-white/30 flex-shrink-0">{log.id}</span>
+                        <span className="text-[8px] font-bold flex-shrink-0" style={{ color: col }}>{log.destPsi}</span>
+                        <span className="text-[8px] text-white/20 truncate flex-1">{log.payload}</span>
+                        <span className="text-[7px] text-purple-400/50 flex-shrink-0">H={log.entropy}</span>
+                        <span className="text-[7px] text-white/20 flex-shrink-0">{log.hops.length} hops</span>
                       </button>
                     );
                   })}
@@ -344,9 +520,10 @@ export default function SpectralRouterPage() {
 
             {logs.length === 0 && (
               <div className="border border-white/5 rounded-xl p-12 text-center" style={{ background: "rgba(255,255,255,0.01)" }}>
-                <Globe size={28} className="text-white/10 mx-auto mb-3" />
+                <Globe size={24} className="text-white/10 mx-auto mb-3" />
                 <div className="text-white/20 text-sm font-bold mb-1">No packets yet</div>
-                <div className="text-white/10 text-[11px]">Compose a packet on the left and click Transmit to route it through the spectral network.</div>
+                <div className="text-white/10 text-[10px] mb-3">Compose a packet and transmit. Each packet updates node weights — routing learns from traffic.</div>
+                <div className="text-white/8 text-[9px]">score = weight / (Δλ + 1) · hysteresis: H&gt;{E_HIGH}→×{AMP} · H&lt;{E_LOW}→×{2-AMP} · others×{DECAY}</div>
               </div>
             )}
           </div>
