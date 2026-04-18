@@ -72,6 +72,7 @@ import GitHubBridgePage from "@/pages/github-bridge";
 import SettingsPage from "@/pages/settings";
 import MobileSDKPage from "@/pages/mobile-sdk";
 import WnspVMPage from "@/pages/wnsp-vm";
+import DivergenceTestPage from "@/pages/divergence-test";
 import SpectralRouterPage from "@/pages/spectral-router";
 import SpectralSearchPage from "@/pages/spectral-search";
 import CompressionExplorerPage from "@/pages/compression-explorer";
@@ -156,6 +157,7 @@ function ProtectedRoutes() {
         <Route path="/settings" component={SettingsPage} />
         <Route path="/mobile-sdk" component={MobileSDKPage} />
         <Route path="/wnsp-vm" component={WnspVMPage} />
+        <Route path="/divergence-test" component={DivergenceTestPage} />
         <Route path="/spectral-router" component={SpectralRouterPage} />
         <Route path="/spectral-search" component={SpectralSearchPage} />
         <Route path="/compression-explorer" component={CompressionExplorerPage} />

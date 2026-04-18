@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Zap, Radio, Layers, Database, Wifi, Lock, Globe,
   Send, Play, RefreshCw, ArrowRight, Activity,
-  Code2, Cpu, Signal, FileText, BookOpen, Shield, Heart, Video, Scale, Smartphone, Search
+  Code2, Cpu, Signal, FileText, BookOpen, Shield, Heart, Video, Scale, Smartphone, Search, FlaskConical
 } from "lucide-react";
 
 // ── Spectrum colour ───────────────────────────────────────────────
@@ -469,6 +469,14 @@ const SYSTEMS = [
     color: "#a78bfa",
     Icon: Cpu,
     action: "Launch VM",
+  },
+  {
+    title: "Divergence Test",
+    description: "Runnable computation proof. Same ψ_input, two channel states, one perturbation. Proves output = f(state, ψ) — not just f(ψ). Fixed hash. Three assertions. Deterministic every run.",
+    href: "/divergence-test",
+    color: "#10b981",
+    Icon: FlaskConical,
+    action: "Run proof",
   },
   {
     title: "Spectral Routing Engine",
