@@ -55,7 +55,7 @@ UV_NO_SYNC = "1"
 PYTHON_DISABLED = "1"
 
 [deployment]
-run = ["sh", "-c", "npm run start"]
+run = ["sh", "-c", "NODE_ENV=production node dist/index.cjs"]
 build = ["sh", "-c", "npm run build"]
-deploymentTarget = "cloudrun"
+deploymentTarget = "autoscale"
 
