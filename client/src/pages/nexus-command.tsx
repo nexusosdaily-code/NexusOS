@@ -471,12 +471,12 @@ const SYSTEMS = [
     action: "Launch VM",
   },
   {
-    title: "Divergence Test",
-    description: "Runnable computation proof. Same ψ_input, two channel states, one perturbation. Proves output = f(state, ψ) — not just f(ψ). Fixed hash. Three assertions. Deterministic every run.",
+    title: "ChatGPT Analysis Report",
+    description: "Parameterized channel-dynamics engine with causal introspection. Attractor classification, regime prediction, sensitivity presets, Target Regime control, and prediction accuracy tracking across runs.",
     href: "/divergence-test",
     color: "#10b981",
     Icon: FlaskConical,
-    action: "Run proof",
+    action: "Open report",
   },
   {
     title: "Spectral Routing Engine",
