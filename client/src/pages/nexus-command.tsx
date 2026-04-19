@@ -9,7 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Zap, Radio, Layers, Database, Wifi, Lock, Globe, Waves,
   Send, Play, RefreshCw, ArrowRight, Activity,
-  Code2, Cpu, Signal, FileText, BookOpen, Shield, Heart, Video, Scale, Smartphone, Search, FlaskConical
+  Code2, Cpu, Signal, FileText, BookOpen, Shield, Heart, Video, Scale, Smartphone, Search, FlaskConical,
+  CheckCircle2, AlertTriangle
 } from "lucide-react";
 
 // ── Spectrum colour ───────────────────────────────────────────────
@@ -22,6 +23,95 @@ function wlToRgb(nm: number): string {
   else if (nm >= 580 && nm < 645) { r = 1; g = -(nm - 645) / 65; }
   else if (nm >= 645 && nm <= 780) { r = 1; }
   return `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`;
+}
+
+// ── Constitution command card ─────────────────────────────────────
+function ConstitutionCard() {
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/constitution/status"],
+    refetchInterval: 30_000,
+  });
+
+  const con = data?.constitution;
+  const a0001 = con?.articles["C-0001"];
+  const a0002 = con?.articles["C-0002"];
+  const a0005 = con?.articles["C-0005"];
+
+  const allCompliant =
+    a0001?.status === "COMPLIANT" &&
+    a0002?.status === "COMPLIANT" &&
+    a0005?.status === "COMPLIANT";
+
+  const overallColor = isLoading ? "#6b7280" : allCompliant ? "#8b5cf6" : "#ef4444";
+
+  const articles = [
+    { id: "C-0001", label: "Non-Dominance",     status: a0001?.status, short: "≤33% Λ mass" },
+    { id: "C-0002", label: "Immutable Rights",  status: a0002?.status, short: "BHLS 1,150 NXT floor" },
+    { id: "C-0005", label: "Physics Supremacy", status: a0005?.status, short: "Maxwell-valid params" },
+  ];
+
+  return (
+    <Link href="/constitution">
+      <div
+        className="mb-6 rounded-xl border p-4 cursor-pointer hover:scale-[1.005] transition-all"
+        style={{ borderColor: `${overallColor}50`, background: `linear-gradient(135deg,${overallColor}0d,${overallColor}05)` }}
+        data-testid="card-constitution-command"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: `${overallColor}18` }}>
+              <Shield className="w-5 h-5" style={{ color: overallColor }} />
+            </div>
+            <div className="min-w-0">
+              <div className="font-bold text-sm text-white">Constitutional Enforcement</div>
+              <div className="text-[10px] text-slate-500 font-mono">
+                {isLoading ? "Checking…" : allCompliant ? "All three articles compliant — substrate enforcing" : "Violation detected — transfer blocked"}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {isLoading ? (
+              <div className="text-[10px] text-slate-600 font-mono animate-pulse">checking…</div>
+            ) : (
+              articles.map(a => (
+                <div key={a.id} className="flex items-center gap-1 px-2 py-1 rounded-lg border"
+                  style={{
+                    borderColor: a.status === "COMPLIANT" ? "#22c55e30" : "#ef444430",
+                    background: a.status === "COMPLIANT" ? "#22c55e08" : "#ef444410",
+                  }}>
+                  {a.status === "COMPLIANT"
+                    ? <CheckCircle2 size={9} className="text-green-400 flex-shrink-0" />
+                    : <AlertTriangle size={9} className="text-red-400 flex-shrink-0" />
+                  }
+                  <span className="text-[9px] font-mono hidden md:inline"
+                    style={{ color: a.status === "COMPLIANT" ? "#86efac" : "#fca5a5" }}>
+                    {a.id}
+                  </span>
+                </div>
+              ))
+            )}
+            <ArrowRight className="w-3 h-3 text-slate-700 ml-1" />
+          </div>
+        </div>
+
+        {/* Article detail row — visible on wider screens */}
+        <div className="hidden md:grid grid-cols-3 gap-3 mt-3 pt-3 border-t border-white/5">
+          {articles.map(a => (
+            <div key={a.id} className="flex items-center gap-2">
+              <div className="w-1 h-6 rounded-full flex-shrink-0"
+                style={{ background: a.status === "COMPLIANT" ? "#22c55e" : "#ef4444" }} />
+              <div>
+                <div className="text-[10px] font-bold text-white/60">{a.label}</div>
+                <div className="text-[9px] font-mono text-white/25">{a.short}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Link>
+  );
 }
 
 // ── Live status cards ─────────────────────────────────────────────
@@ -673,6 +763,9 @@ export default function NexusCommand() {
           </div>
         </div>
       </Link>
+
+      {/* Constitution live card */}
+      <ConstitutionCard />
 
       {/* Live status row — 7 systems */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
