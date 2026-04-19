@@ -12,6 +12,7 @@ import {
   Shield, BookOpen, HardDrive, GitBranch,
   ChevronRight, LayoutGrid, Rss, Eye, Clock,
   MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut, Settings, User, Search,
+  CheckCircle2, AlertTriangle, ArrowRight,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -89,6 +90,7 @@ const APP_SECTIONS = [
       { title: "Kernel",        href: "/kernel",          Icon: Cpu },
       { title: "WNSP Coord.",   href: "/wnsp/coordinator",Icon: Globe2 },
       { title: "Governance",    href: "/governance",       Icon: Scale },
+      { title: "Constitution",  href: "/constitution",    Icon: Shield },
       { title: "Settings",      href: "/settings",        Icon: Settings },
     ],
   },
@@ -387,7 +389,94 @@ function QuickActions() {
   );
 }
 
-// ── App Grid (compact nav) ─────────────────────────────────────────────
+// ── Constitution live card ─────────────────────────────────────────────
+function ConstitutionCard() {
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/constitution/status"],
+    refetchInterval: 30_000,
+  });
+
+  const con = data?.constitution;
+  const a0001 = con?.articles["C-0001"];
+  const a0002 = con?.articles["C-0002"];
+  const a0005 = con?.articles["C-0005"];
+
+  const allCompliant =
+    a0001?.status === "COMPLIANT" &&
+    a0002?.status === "COMPLIANT" &&
+    a0005?.status === "COMPLIANT";
+
+  const overallColor = isLoading ? "#6b7280" : allCompliant ? "#8b5cf6" : "#ef4444";
+
+  const articles = [
+    { id: "C-0001", label: "Non-Dominance",     short: "≤33% Λ mass",         status: a0001?.status },
+    { id: "C-0002", label: "Immutable Rights",  short: "BHLS 1,150 NXT floor", status: a0002?.status },
+    { id: "C-0005", label: "Physics Supremacy", short: "Maxwell-valid params",  status: a0005?.status },
+  ];
+
+  return (
+    <Link href="/constitution">
+      <div
+        className="rounded-xl border p-4 cursor-pointer hover:scale-[1.005] transition-all"
+        style={{ borderColor: `${overallColor}45`, background: `linear-gradient(135deg,${overallColor}0d,${overallColor}05)` }}
+        data-testid="card-constitution-hub"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: `${overallColor}18` }}>
+              <Shield className="w-4 h-4" style={{ color: overallColor }} />
+            </div>
+            <div className="min-w-0">
+              <div className="font-semibold text-sm text-white">Constitutional Enforcement</div>
+              <div className="text-[10px] text-white/30 font-mono mt-0.5">
+                {isLoading
+                  ? "Checking…"
+                  : allCompliant
+                  ? "All three articles compliant"
+                  : "Violation detected — transfer blocked"}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {!isLoading && articles.map(a => (
+              <div key={a.id}
+                className="flex items-center gap-1 px-1.5 py-1 rounded border"
+                style={{
+                  borderColor: a.status === "COMPLIANT" ? "#22c55e30" : "#ef444430",
+                  background:  a.status === "COMPLIANT" ? "#22c55e08" : "#ef444412",
+                }}>
+                {a.status === "COMPLIANT"
+                  ? <CheckCircle2 size={8} className="text-green-400" />
+                  : <AlertTriangle size={8} className="text-red-400" />
+                }
+                <span className="text-[9px] font-mono hidden sm:inline"
+                  style={{ color: a.status === "COMPLIANT" ? "#86efac" : "#fca5a5" }}>
+                  {a.id}
+                </span>
+              </div>
+            ))}
+            <ArrowRight className="w-3 h-3 text-white/20 ml-1" />
+          </div>
+        </div>
+
+        <div className="hidden sm:grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/5">
+          {articles.map(a => (
+            <div key={a.id} className="flex items-center gap-1.5">
+              <div className="w-0.5 h-5 rounded-full flex-shrink-0"
+                style={{ background: a.status === "COMPLIANT" ? "#22c55e" : a.status === "VIOLATED" ? "#ef4444" : "#6b7280" }} />
+              <div>
+                <div className="text-[10px] font-medium text-white/50">{a.label}</div>
+                <div className="text-[9px] font-mono text-white/20">{a.short}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 function AppGrid() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
@@ -514,6 +603,9 @@ export default function HubPage() {
             {showGrid ? "Hide" : "All apps"}
           </Button>
         </div>
+
+        {/* Constitution live card */}
+        <ConstitutionCard />
 
         {/* Quick actions */}
         <QuickActions />
