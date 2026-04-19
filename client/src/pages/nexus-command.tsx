@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Zap, Radio, Layers, Database, Wifi, Lock, Globe,
+  Zap, Radio, Layers, Database, Wifi, Lock, Globe, Waves,
   Send, Play, RefreshCw, ArrowRight, Activity,
   Code2, Cpu, Signal, FileText, BookOpen, Shield, Heart, Video, Scale, Smartphone, Search, FlaskConical
 } from "lucide-react";
@@ -509,6 +509,14 @@ const SYSTEMS = [
     color: "#22d3ee",
     Icon: FileText,
     action: "Sign a contract",
+  },
+  {
+    title: "Spectral Orthogonal Protocol",
+    description: "SOP v1.0 — formal protocol specification for collision-free communication across orthogonal Hilbert-space channels. ⟨Ψᵢ|Ψⱼ⟩ = δᵢⱼ. No collision detection. No retransmit. Isolation is a physics guarantee, not a convention. Interactive orthogonality calculator included.",
+    href: "/sop",
+    color: "#a78bfa",
+    Icon: Waves,
+    action: "Open protocol spec",
   },
   {
     title: "Communication Hub",

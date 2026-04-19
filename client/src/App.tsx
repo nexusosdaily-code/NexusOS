@@ -77,6 +77,7 @@ import SpectralRouterPage from "@/pages/spectral-router";
 import SpectralSearchPage from "@/pages/spectral-search";
 import CompressionExplorerPage from "@/pages/compression-explorer";
 import SpectralContractsPage from "@/pages/spectral-contracts";
+import SOPPage from "@/pages/sop";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -162,6 +163,7 @@ function ProtectedRoutes() {
         <Route path="/spectral-search" component={SpectralSearchPage} />
         <Route path="/compression-explorer" component={CompressionExplorerPage} />
         <Route path="/spectral-contracts" component={SpectralContractsPage} />
+        <Route path="/sop" component={SOPPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
