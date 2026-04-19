@@ -31,6 +31,7 @@ import StreamingPage from "@/pages/streaming";
 import DeveloperMatrixPage from "@/pages/developer-matrix";
 import DeveloperKeysPage from "@/pages/developer-keys";
 import GovernancePage from "@/pages/governance";
+import ConstitutionPage from "@/pages/constitution";
 import DocsPage from "@/pages/docs";
 import WNSPCoordinator from "@/pages/wnsp-coordinator";
 import KernelPage from "@/pages/kernel";
@@ -117,6 +118,7 @@ function ProtectedRoutes() {
         <Route path="/developer-matrix/docs" component={DocsPage} />
         <Route path="/developer/keys" component={DeveloperKeysPage} />
         <Route path="/governance" component={GovernancePage} />
+        <Route path="/constitution" component={ConstitutionPage} />
         <Route path="/workspace/matrix" component={DeveloperMatrixPage} />
         <Route path="/docs" component={DocsPage} />
         <Route path="/docs/:section" component={DocsPage} />

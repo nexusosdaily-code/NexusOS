@@ -174,3 +174,136 @@ export function buildUri(wdm: number, oam: number, pol: string, path = "/"): str
 
 // ── Kernel address for fee collection ────────────────────────────────────────
 export const KERNEL_WALLET_ADDRESS = "NXT-KRNL-SYS1-0000-NEXUS";
+
+// ════════════════════════════════════════════════════════════════════════════
+// CONSTITUTIONAL ENFORCEMENT LAYER — v1.0
+// Three supreme articles, enforced at the substrate level.
+// No governance vote, no override, no bypass.
+//
+//   C-0001  Non-Dominance    — no entity > 33% of circulating Lambda mass
+//   C-0002  Immutable Rights — no tx may breach the BHLS floor (1,150 NXT)
+//   C-0005  Physics Supremacy — all protocol parameters must be Maxwell-valid
+// ════════════════════════════════════════════════════════════════════════════
+
+/** Monthly Basic Human Living Standard floor — 1,150 NXT */
+export const BHLS_FLOOR_NXT = 1_150;
+
+/** Non-dominance ceiling — 33% of circulating Lambda mass */
+export const NON_DOMINANCE_PCT = 0.33;
+
+/** Physics bounds for fee parameters (NXT) */
+export const PHYSICS_FEE_MIN = 0.00000001;   // smallest photon energy basis — E=hf > 0
+export const PHYSICS_FEE_MAX = 100;          // Maxwell-admissible ceiling for visible-spectrum pricing
+
+/** Physics bounds for burn ratio parameters */
+export const PHYSICS_BURN_MIN = 0;           // lossless lower bound
+export const PHYSICS_BURN_MAX = 1;           // conservation of energy upper bound
+
+export interface ConstitutionViolation {
+  article: "C-0001" | "C-0002" | "C-0005";
+  rule: string;
+  detail: string;
+}
+
+export interface ConstitutionCheck {
+  passed: boolean;
+  violation?: ConstitutionViolation;
+}
+
+/**
+ * C-0001: Non-Dominance
+ * No entity may control more than 33% of total circulating Lambda mass.
+ * Total circulating = sum of all wallet balances.
+ *
+ * @param recipientNewBalanceNxt  recipient's balance after transfer (NXT)
+ * @param totalCirculatingNxt     sum of all wallet balances (NXT)
+ */
+export function checkC0001(
+  recipientNewBalanceNxt: number,
+  totalCirculatingNxt: number,
+): ConstitutionCheck {
+  if (totalCirculatingNxt <= 0) return { passed: true };
+  const pct = recipientNewBalanceNxt / totalCirculatingNxt;
+  if (pct > NON_DOMINANCE_PCT) {
+    return {
+      passed: false,
+      violation: {
+        article: "C-0001",
+        rule: "Non-Dominance",
+        detail: `Transfer would give recipient ${(pct * 100).toFixed(2)}% of circulating Lambda mass — exceeds the constitutional limit of ${(NON_DOMINANCE_PCT * 100).toFixed(0)}%.`,
+      },
+    };
+  }
+  return { passed: true };
+}
+
+/**
+ * C-0002: Immutable Rights
+ * No transaction may reduce a citizen's balance below the BHLS floor of 1,150 NXT.
+ * If a sender's balance is already below the floor, no further debits are permitted.
+ *
+ * @param senderNewBalanceNxt  sender's balance after amount + fee deducted (NXT)
+ */
+export function checkC0002(senderNewBalanceNxt: number): ConstitutionCheck {
+  if (senderNewBalanceNxt < BHLS_FLOOR_NXT) {
+    return {
+      passed: false,
+      violation: {
+        article: "C-0002",
+        rule: "Immutable Rights",
+        detail: `Transfer would reduce sender to ${senderNewBalanceNxt.toFixed(8)} NXT — below the BHLS constitutional floor of ${BHLS_FLOOR_NXT} NXT.`,
+      },
+    };
+  }
+  return { passed: true };
+}
+
+/**
+ * C-0005: Physics Supremacy
+ * All governance parameter values must be derivable from Maxwell's equations.
+ * Fees must satisfy E=hf > 0. Burn ratios must satisfy conservation of energy [0, 1].
+ * A parameter value that cannot be expressed as a valid physics quantity is void.
+ *
+ * @param category   "fee" or "burn"
+ * @param proposed   proposed numeric value
+ */
+export function checkC0005(
+  category: "fee" | "burn" | string,
+  proposed: number,
+): ConstitutionCheck {
+  if (category === "fee") {
+    if (proposed <= 0) {
+      return {
+        passed: false,
+        violation: {
+          article: "C-0005",
+          rule: "Physics Supremacy",
+          detail: `Fee cannot be zero or negative. E=hf requires photon energy > 0 at all wavelengths. Proposed: ${proposed} NXT.`,
+        },
+      };
+    }
+    if (proposed > PHYSICS_FEE_MAX) {
+      return {
+        passed: false,
+        violation: {
+          article: "C-0005",
+          rule: "Physics Supremacy",
+          detail: `Fee ${proposed} NXT exceeds the Maxwell-admissible ceiling of ${PHYSICS_FEE_MAX} NXT for visible-spectrum channel pricing.`,
+        },
+      };
+    }
+  }
+  if (category === "burn") {
+    if (proposed < PHYSICS_BURN_MIN || proposed > PHYSICS_BURN_MAX) {
+      return {
+        passed: false,
+        violation: {
+          article: "C-0005",
+          rule: "Physics Supremacy",
+          detail: `Burn ratio ${proposed} violates conservation of energy — must be in [0, 1]. You cannot destroy more energy than exists in the channel.`,
+        },
+      };
+    }
+  }
+  return { passed: true };
+}

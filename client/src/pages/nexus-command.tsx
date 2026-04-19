@@ -550,6 +550,14 @@ const SYSTEMS = [
     Icon: Zap,
     action: "View registry",
   },
+  {
+    title: "Constitutional Enforcement",
+    description: "Three supreme articles enforced live at the substrate: C-0001 Non-Dominance (≤33% Lambda mass), C-0002 Immutable Rights (BHLS 1,150 NXT floor), C-0005 Physics Supremacy (Maxwell-valid parameters). No governance vote can override them.",
+    href: "/constitution",
+    color: "#8b5cf6",
+    Icon: Shield,
+    action: "View constitution",
+  },
 ];
 
 // ── Civilization pillars ──────────────────────────────────────────

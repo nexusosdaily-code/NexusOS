@@ -56,6 +56,8 @@ export interface IStorage {
   getWalletByAddress(address: string): Promise<Wallet | undefined>;
   createWallet(userId: string): Promise<Wallet>;
   updateWalletBalance(walletId: string, newBalance: string): Promise<Wallet>;
+  getTotalCirculatingSupply(): Promise<number>;
+  getAllWallets(): Promise<{ address: string; balance: string; userId: string }[]>;
 
   // Transaction operations
   createTransaction(tx: InsertTransaction): Promise<Transaction>;
@@ -353,6 +355,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(wallets.id, walletId))
       .returning();
     return result[0];
+  }
+
+  async getTotalCirculatingSupply(): Promise<number> {
+    const result = await db.execute(
+      sql`SELECT COALESCE(SUM(CAST(balance AS numeric)), 0) AS total FROM wallets`
+    );
+    return parseFloat((result.rows[0] as any)?.total ?? "0");
+  }
+
+  async getAllWallets(): Promise<{ address: string; balance: string; userId: string }[]> {
+    const result = await db.select({
+      address: wallets.address,
+      balance: wallets.balance,
+      userId: wallets.userId,
+    }).from(wallets);
+    return result;
   }
 
   // ============================================

@@ -11,7 +11,7 @@ import {
   createStreamSchema, updateStreamSettingsSchema
 } from "@shared/schema";
 import { z } from "zod";
-import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam } from "./physics";
+import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, BHLS_FLOOR_NXT, NON_DOMINANCE_PCT } from "./physics";
 
 // WebSocket clients mapped by userId
 const connectedClients = new Map<string, WebSocket>();
@@ -968,6 +968,32 @@ export async function registerRoutes(
       const senderWdm = req.user!.spectralWdm ?? 200;
       const physics   = calcFee("wallet_transfer", senderWdm, { transferAmount: amountNum });
       const fee        = parseFloat(physics.feeNxt);
+
+      // ── Constitutional checks ─────────────────────────────────────────────
+      const senderNewBalance    = balanceNum - amountNum - fee;
+      const recipientNewBalance = parseFloat(toWallet.balance) + amountNum;
+      const totalCirculating    = await storage.getTotalCirculatingSupply();
+
+      const c0002 = checkC0002(senderNewBalance);
+      if (!c0002.passed) {
+        await logAction(req, "transfer_failed", "wallet", fromWallet.id, { amount, toAddress }, "failed", c0002.violation!.detail);
+        return res.status(403).json({
+          error: `Constitutional violation — ${c0002.violation!.rule}`,
+          detail: c0002.violation!.detail,
+          article: c0002.violation!.article,
+        });
+      }
+
+      const c0001 = checkC0001(recipientNewBalance, totalCirculating);
+      if (!c0001.passed) {
+        await logAction(req, "transfer_failed", "wallet", fromWallet.id, { amount, toAddress }, "failed", c0001.violation!.detail);
+        return res.status(403).json({
+          error: `Constitutional violation — ${c0001.violation!.rule}`,
+          detail: c0001.violation!.detail,
+          article: c0001.violation!.article,
+        });
+      }
+      // ─────────────────────────────────────────────────────────────────────
       const wavelength = physics.wavelengthNm;
       const frequency  = physics.frequencyHz;
       const energyCost = physics.energyJ.toString();
@@ -984,8 +1010,8 @@ export async function registerRoutes(
         metadata: { memo },
       });
 
-      const newFromBalance = (balanceNum - amountNum - fee).toFixed(8);
-      const newToBalance = (parseFloat(toWallet.balance) + amountNum).toFixed(8);
+      const newFromBalance = senderNewBalance.toFixed(8);
+      const newToBalance = recipientNewBalance.toFixed(8);
       
       await storage.updateWalletBalance(fromWallet.id, newFromBalance);
       await storage.updateWalletBalance(toWallet.id, newToBalance);
@@ -5855,6 +5881,80 @@ export async function registerRoutes(
   const BAND_WEIGHT: Record<string, number> = { SYSTEM: 8, KERNEL: 4, USER: 2, GUEST: 1 };
   const PROPOSAL_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+  // ============================================
+  // CONSTITUTION STATUS — live enforcement state
+  // ============================================
+
+  app.get("/api/constitution/status", async (req: Request, res: Response) => {
+    try {
+      const allWallets      = await storage.getAllWallets();
+      const totalCirculating = await storage.getTotalCirculatingSupply();
+
+      // C-0001: Non-Dominance — check every wallet's share
+      const walletShares = allWallets.map(w => {
+        const bal  = parseFloat(w.balance);
+        const pct  = totalCirculating > 0 ? bal / totalCirculating : 0;
+        return { address: w.address, balanceNxt: bal, sharePct: pct, violates: pct > NON_DOMINANCE_PCT };
+      });
+      const c0001Violation = walletShares.find(w => w.violates);
+
+      // C-0002: Immutable Rights — check every wallet vs BHLS floor
+      const bhlsChecks = allWallets.map(w => {
+        const bal = parseFloat(w.balance);
+        return { address: w.address, balanceNxt: bal, floorNxt: BHLS_FLOOR_NXT, aboveFloor: bal >= BHLS_FLOOR_NXT };
+      });
+      const c0002Violation = bhlsChecks.find(w => !w.aboveFloor);
+
+      // C-0005: Physics Supremacy — validate every live parameter
+      const paramChecks = Object.entries(LIVE_FEES).map(([key, val]) => {
+        const r = checkC0005("fee", val);
+        return { key: `fee.${key}`, value: val, passed: r.passed, detail: r.violation?.detail };
+      }).concat(Object.entries(LIVE_BURNS).map(([key, val]) => {
+        const r = checkC0005("burn", val);
+        return { key: `burn.${key}`, value: val, passed: r.passed, detail: r.violation?.detail };
+      }));
+      const c0005Violation = paramChecks.find(p => !p.passed);
+
+      res.json({
+        constitution: {
+          version: "v1.0",
+          enforcedAt: new Date().toISOString(),
+          articles: {
+            "C-0001": {
+              rule:    "Non-Dominance",
+              ceiling: NON_DOMINANCE_PCT,
+              status:  c0001Violation ? "VIOLATED" : "COMPLIANT",
+              detail:  c0001Violation
+                ? `${c0001Violation.address} holds ${(c0001Violation.sharePct * 100).toFixed(2)}% of circulating supply`
+                : `All wallets within the ${(NON_DOMINANCE_PCT * 100).toFixed(0)}% ceiling`,
+              walletShares,
+              totalCirculatingNxt: totalCirculating,
+            },
+            "C-0002": {
+              rule:    "Immutable Rights",
+              floorNxt: BHLS_FLOOR_NXT,
+              status:  c0002Violation ? "VIOLATED" : "COMPLIANT",
+              detail:  c0002Violation
+                ? `${c0002Violation.address} holds ${c0002Violation.balanceNxt.toFixed(8)} NXT — below the ${BHLS_FLOOR_NXT} NXT BHLS floor`
+                : `All wallets at or above the ${BHLS_FLOOR_NXT} NXT BHLS floor`,
+              bhlsChecks,
+            },
+            "C-0005": {
+              rule:    "Physics Supremacy",
+              status:  c0005Violation ? "VIOLATED" : "COMPLIANT",
+              detail:  c0005Violation
+                ? `Parameter ${c0005Violation.key} = ${c0005Violation.value} — ${c0005Violation.detail}`
+                : "All live protocol parameters are Maxwell-compliant",
+              paramChecks,
+            },
+          },
+        },
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // GET /api/governance/params — list all governable protocol parameters
   app.get("/api/governance/params", async (req: Request, res: Response) => {
     try {
@@ -5908,13 +6008,16 @@ export async function registerRoutes(
       if (isNaN(proposed) || proposed < 0) {
         return res.status(400).json({ error: "proposedValue must be a positive number" });
       }
-      // Constraint: fees can't exceed 100 NXT, burn ratios must be 0–1
-      if (param.category === "burn" && (proposed < 0 || proposed > 1)) {
-        return res.status(400).json({ error: "Burn ratio must be between 0 and 1" });
+      // ── C-0005: Physics Supremacy — all parameter values must be Maxwell-valid ─
+      const c0005 = checkC0005(param.category, proposed);
+      if (!c0005.passed) {
+        return res.status(403).json({
+          error: `Constitutional violation — ${c0005.violation!.rule}`,
+          detail: c0005.violation!.detail,
+          article: c0005.violation!.article,
+        });
       }
-      if (param.category === "fee" && proposed > 100) {
-        return res.status(400).json({ error: "Fee cannot exceed 100 NXT" });
-      }
+      // ─────────────────────────────────────────────────────────────────────
       const closesAt = new Date(Date.now() + PROPOSAL_DURATION_MS);
       const proposal = await storage.createGovernanceProposal({
         proposerId:    user.id,
