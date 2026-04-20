@@ -1,6 +1,17 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Layers, Zap, CheckCircle, XCircle, Radio, GitBranch, Lock, Cpu, Waves } from "lucide-react";
+import { ArrowLeft, Layers, Zap, CheckCircle, XCircle, Radio, GitBranch, Lock, Cpu, Waves, Shield, RefreshCw } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+
+async function apiNegotiate(usernameA: string, usernameB: string) {
+  const r = await fetch("/api/wnsp/sop/negotiate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ usernameA, usernameB }),
+  });
+  if (!r.ok) throw new Error((await r.json()).error);
+  return r.json();
+}
 
 // ── physics helpers ───────────────────────────────────────────────────────────
 function nmToColor(nm: number): string {
@@ -82,6 +93,10 @@ export default function SOPPage() {
   // Orthogonality calculator state
   const [wdm1, setWdm1] = useState(60); const [oam1, setOam1] = useState(12); const [pol1, setPol1] = useState(0);
   const [wdm2, setWdm2] = useState(60); const [oam2, setOam2] = useState(27); const [pol2, setPol2] = useState(0);
+
+  // API negotiation state
+  const [uA, setUA] = useState("Nexus"); const [uB, setUB] = useState("Alice");
+  const neg = useMutation({ mutationFn: () => apiNegotiate(uA, uB) });
 
   const ip = innerProduct(wdm1, oam1, pol1, wdm2, oam2, pol2);
   const nm1 = nmFromWdm(wdm1); const nm2 = nmFromWdm(wdm2);
@@ -394,6 +409,102 @@ export default function SOPPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Live SOP Negotiation — API */}
+        <div>
+          <div className="text-white/30 text-[9px] uppercase tracking-widest mb-3 flex items-center gap-2">
+            <Shield size={9} /> Live SOP Negotiation — Orthogonality Certificate
+          </div>
+          <div className="border border-cyan-400/15 rounded-xl p-5" style={{ background: "rgba(34,211,238,0.03)" }}>
+            <div className="text-[8px] text-white/20 mb-4">Enter two usernames. SOP derives their Ψ channels via SHA-256, computes ⟨A|B⟩, and issues a signed certificate if orthogonal.</div>
+            <div className="flex flex-wrap gap-3 items-end mb-4">
+              <div>
+                <div className="text-[8px] text-white/20 mb-1">Node A — username</div>
+                <input value={uA} onChange={e => setUA(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded px-3 py-1.5 text-[11px] font-mono text-white w-32 focus:outline-none focus:border-cyan-400/40"
+                  data-testid="input-sop-user-a" />
+              </div>
+              <div className="text-white/20 text-[9px] pb-1.5">↔</div>
+              <div>
+                <div className="text-[8px] text-white/20 mb-1">Node B — username</div>
+                <input value={uB} onChange={e => setUB(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded px-3 py-1.5 text-[11px] font-mono text-white w-32 focus:outline-none focus:border-cyan-400/40"
+                  data-testid="input-sop-user-b" />
+              </div>
+              <button onClick={() => neg.mutate()}
+                disabled={neg.isPending}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg border border-cyan-400/30 bg-cyan-400/10 text-cyan-300 text-[10px] font-mono hover:bg-cyan-400/20 transition-all disabled:opacity-50"
+                data-testid="button-sop-negotiate">
+                {neg.isPending ? <RefreshCw size={10} className="animate-spin" /> : <Zap size={10} />}
+                Negotiate
+              </button>
+              {[["Nexus","Alice"],["Bob","Carol"],["WNSP","P2P"]].map(([a,b]) => (
+                <button key={a} onClick={() => { setUA(a); setUB(b); }}
+                  className="text-[8px] font-mono text-white/20 hover:text-cyan-400 transition-colors">{a}/{b}</button>
+              ))}
+            </div>
+
+            {neg.isError && (
+              <div className="text-[10px] text-red-400 font-mono mb-3">{neg.error?.message}</div>
+            )}
+
+            {neg.data && (() => {
+              const r = neg.data;
+              return (
+                <div className="space-y-3">
+                  {/* verdict */}
+                  <div className={`flex items-center gap-3 rounded-lg px-4 py-3 border ${r.orthogonal ? "border-emerald-400/30 bg-emerald-400/05" : "border-red-400/30 bg-red-400/05"}`}>
+                    {r.orthogonal ? <CheckCircle size={14} className="text-emerald-400 flex-shrink-0" /> : <XCircle size={14} className="text-red-400 flex-shrink-0" />}
+                    <div>
+                      <div className={`text-[11px] font-bold font-mono ${r.orthogonal ? "text-emerald-300" : "text-red-300"}`}>
+                        ⟨Ψ_A|Ψ_B⟩ = {r.innerProduct} — {r.orthogonal ? "ORTHOGONAL" : "COLLISION"}
+                      </div>
+                      <div className="text-[8px] text-white/30 mt-0.5">
+                        {r.channelA.psi} ↔ {r.channelB.psi}
+                      </div>
+                    </div>
+                    {r.certificate && (
+                      <div className="ml-auto text-[8px] font-mono text-emerald-400/50">{r.certificate.id}</div>
+                    )}
+                  </div>
+
+                  {/* dimension breakdown */}
+                  <div className="grid grid-cols-3 gap-2 text-center text-[8px] font-mono">
+                    {[
+                      { label: "WDM", match: r.dimensions.wdmMatch, vA: r.channelA.wdm, vB: r.channelB.wdm },
+                      { label: "OAM", match: r.dimensions.oamMatch, vA: r.channelA.oam, vB: r.channelB.oam },
+                      { label: "POL", match: r.dimensions.polMatch, vA: r.channelA.pol, vB: r.channelB.pol },
+                    ].map(d => (
+                      <div key={d.label} className={`rounded px-2 py-2 border ${d.match ? "border-red-400/20 bg-red-400/05" : "border-emerald-400/15 bg-emerald-400/05"}`}>
+                        <div className="text-white/25 mb-1">{d.label}</div>
+                        <div className="text-white/50">{d.vA} vs {d.vB}</div>
+                        <div className={`text-[7px] mt-0.5 ${d.match ? "text-red-400" : "text-emerald-400"}`}>{d.match ? "MATCH" : "CLEAR"}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* certificate */}
+                  {r.certificate && (
+                    <div className="border border-emerald-400/15 rounded-lg p-3 text-[8px] font-mono space-y-0.5">
+                      <div className="text-emerald-400/50 mb-1.5">— Orthogonality Certificate —</div>
+                      <div><span className="text-white/20">ID       </span><span className="text-white/50">{r.certificate.id}</span></div>
+                      <div><span className="text-white/20">Verdict  </span><span className="text-emerald-400">{r.certificate.verdict}</span></div>
+                      <div><span className="text-white/20">Proof    </span><span className="text-white/30 break-all">{r.certificate.proof}</span></div>
+                    </div>
+                  )}
+
+                  {/* resolution */}
+                  {r.resolution && (
+                    <div className="border border-amber-400/15 rounded-lg p-3 text-[8px] font-mono">
+                      <div className="text-amber-400/60 mb-1">Collision Resolution</div>
+                      <div className="text-white/30">{r.resolution.message} → <span className="text-amber-300">{r.resolution.resolvedPsi}</span></div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
 

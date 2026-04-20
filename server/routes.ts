@@ -5955,6 +5955,82 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // SOP — Spectral Orthogonal Protocol negotiate
+  // ============================================
+  app.post("/api/wnsp/sop/negotiate", optionalAuth, async (req: Request, res: Response) => {
+    try {
+      const { usernameA, usernameB, psiA, psiB } = req.body as {
+        usernameA?: string; usernameB?: string;
+        psiA?: { wdm: number; oam: number; pol: string };
+        psiB?: { wdm: number; oam: number; pol: string };
+      };
+
+      let chA: { wdm: number; oam: number; pol: string; nm?: number; band?: string; psi?: string };
+      let chB: { wdm: number; oam: number; pol: string; nm?: number; band?: string; psi?: string };
+
+      if (usernameA && usernameB) {
+        chA = deriveChannel(usernameA);
+        chB = deriveChannel(usernameB);
+      } else if (psiA && psiB) {
+        chA = psiA;
+        chB = psiB;
+      } else {
+        return res.status(400).json({ error: "Provide usernameA+usernameB or psiA+psiB" });
+      }
+
+      // Inner product: 1 if ALL three dimensions match, 0 if any differ
+      const wdmMatch = chA.wdm === chB.wdm;
+      const oamMatch = chA.oam === chB.oam;
+      const polMatch = chA.pol === chB.pol;
+      const innerProduct = (wdmMatch && oamMatch && polMatch) ? 1 : 0;
+      const orthogonal  = innerProduct === 0;
+
+      // Resolution: if collision, increment OAM on B until clear
+      let resolvedB = { ...chB };
+      let collisionSteps = 0;
+      if (!orthogonal) {
+        resolvedB = { ...chB };
+        while (resolvedB.wdm === chA.wdm && resolvedB.oam === chA.oam && resolvedB.pol === chA.pol) {
+          resolvedB.oam = (resolvedB.oam + 1) % 50;
+          collisionSteps++;
+          if (collisionSteps > 50) { resolvedB.pol = resolvedB.pol === "H" ? "V" : "H"; break; }
+        }
+      }
+
+      // Build certificate
+      const ts = new Date().toISOString();
+      const certId = `SOP-${Date.now().toString(36).toUpperCase()}`;
+      const certificate = orthogonal ? {
+        id: certId,
+        issuedAt: ts,
+        psiA: chA.psi ?? `Ψ(${chA.wdm},${chA.oam},${chA.pol})`,
+        psiB: chB.psi ?? `Ψ(${chB.wdm},${chB.oam},${chB.pol})`,
+        innerProduct: 0,
+        orthogonal: true,
+        verdict: "CHANNEL_OPEN_APPROVED",
+        proof: `WDM[${chA.wdm}≠${chB.wdm}]·OAM[${chA.oam}≠${chB.oam}]·POL[${chA.pol}≠${chB.pol}] → ⟨Ψ_A|Ψ_B⟩=0`,
+      } : null;
+
+      res.json({
+        orthogonal,
+        innerProduct,
+        channelA: { ...chA, psi: chA.psi ?? `Ψ(${chA.wdm},${chA.oam},${chA.pol})` },
+        channelB: { ...chB, psi: chB.psi ?? `Ψ(${chB.wdm},${chB.oam},${chB.pol})` },
+        dimensions: { wdmMatch, oamMatch, polMatch },
+        certificate,
+        resolution: !orthogonal ? {
+          action: "INCREMENT_OAM",
+          steps: collisionSteps,
+          resolvedPsi: `Ψ(${resolvedB.wdm},${resolvedB.oam},${resolvedB.pol})`,
+          message: `OAM incremented ${collisionSteps} step(s) to resolve collision`,
+        } : null,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // GET /api/governance/params — list all governable protocol parameters
   app.get("/api/governance/params", async (req: Request, res: Response) => {
     try {

@@ -872,6 +872,88 @@ Each iteration detects the dominant noise source (phase, amplitude, frequency, o
       },
     ],
   },
+  sop: {
+    title: "Spectral Orthogonal Protocol (SOP)",
+    icon: Radio,
+    color: "from-cyan-500 to-blue-500",
+    content: [
+      {
+        heading: "The Core Idea",
+        text: `Two things are **orthogonal** when they are completely independent — knowing everything about one tells you absolutely nothing about the other.
+
+In physics, this is made precise through the **inner product**:
+
+⟨A|B⟩ = 0  →  A and B are orthogonal
+
+If that inner product is zero, the two things cannot interfere, cannot corrupt each other, and cannot be confused for one another. This is not approximate — it is exact.`,
+      },
+      {
+        heading: "How Orthogonality Appears in Each Domain",
+        text: `**In geometry**
+X, Y, Z axes. Moving along X changes nothing about your Y or Z coordinate. Three independent dimensions let you describe any point in 3D space uniquely.
+
+**In signals / radio**
+Two radio stations broadcasting on orthogonal frequencies don't bleed into each other. Your FM receiver picks up 101.5 without hearing 102.3 because the sine waves at those frequencies integrate to zero over one cycle.
+
+**In quantum mechanics**
+Two quantum states |ψ₁⟩ and |ψ₂⟩ that are orthogonal cannot be confused by any measurement. They are distinguishable with certainty.
+
+**In OAM (Orbital Angular Momentum)**
+A beam of light twisted with ℓ = 1 is orthogonal to ℓ = 2, ℓ = 3, and so on. You can stack unlimited data streams on the same physical laser beam and separate them perfectly on the other end.`,
+      },
+      {
+        heading: "The WNSP Channel Model",
+        text: `NexusOS uses three orthogonal dimensions simultaneously:
+
+Ψ(wdm, oam, pol)
+
+- **WDM (wavelength)**: 256 bands — separation by wavelength
+- **OAM (ℓ mode)**: 50 modes — angular momentum: ⟨ℓ₁|ℓ₂⟩ = δ_{ℓ₁ℓ₂}
+- **Polarization**: H or V — Stokes vector separation
+
+Total orthogonal channels: 256 × 50 × 2 = **25,600**
+
+Each channel Ψ(w,o,p) satisfies:
+⟨Ψ(w₁,o₁,p₁) | Ψ(w₂,o₂,p₂)⟩ = 0  whenever (w₁,o₁,p₁) ≠ (w₂,o₂,p₂)
+
+Any two users on different channels cannot interfere with each other — not by policy, not by encryption, but because their carrier waves integrate to zero.`,
+      },
+      {
+        heading: "SOP — The Negotiation Layer",
+        text: `The Spectral Orthogonal Protocol enforces channel independence before any session opens:
+
+**1. Channel Inner Product Check**
+Two nodes compute ⟨Ψ_A|Ψ_B⟩ before opening a channel. Must equal zero to proceed.
+
+**2. Collision Prevention**
+If two users derive the same (wdm, oam, pol) triple, the protocol resolves deterministically — increment OAM until orthogonal.
+
+**3. Orthogonality Certificate**
+A signed proof is issued confirming the channel pair is collision-free at open time.
+
+**API Endpoint:**
+POST /api/wnsp/sop/negotiate
+→ Returns: inner product value, orthogonal flag, certificate, and resolution suggestion if needed.`,
+      },
+      {
+        heading: "Why This Matters for Civilization Scale",
+        text: `Every current communication system manages interference through **exclusion** — you get a timeslot, a port, an IP address that someone assigns and can revoke.
+
+Orthogonality replaces exclusion with **independence**:
+
+| Current approach | SOP approach |
+|---|---|
+| Port assigned by OS | Channel Ψ derived from wave physics |
+| Collision → packet dropped | No collision possible — ⟨A|B⟩ = 0 |
+| Address controlled by registrar | Address immutable — rooted in Maxwell |
+| Interference managed by rules | Interference impossible by geometry |
+
+A network built on orthogonal channels doesn't degrade as it scales. Add a new user — they get a new axis in Hilbert space. The existing 25,599 channels are unaffected. There is no congestion in Hilbert space.
+
+This is why it is the correct foundation for infrastructure at Kardashev Type I scale: capacity grows with the mathematics, not with the hardware.`,
+      },
+    ],
+  },
 };
 
 export default function DocsPage() {

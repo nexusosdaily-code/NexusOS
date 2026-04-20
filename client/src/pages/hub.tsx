@@ -91,6 +91,7 @@ const APP_SECTIONS = [
       { title: "WNSP Coord.",   href: "/wnsp/coordinator",Icon: Globe2 },
       { title: "Governance",    href: "/governance",       Icon: Scale },
       { title: "Constitution",  href: "/constitution",    Icon: Shield },
+      { title: "SOP",           href: "/sop",             Icon: Radio },
       { title: "Settings",      href: "/settings",        Icon: Settings },
     ],
   },
