@@ -86,6 +86,7 @@ const APP_SECTIONS = [
     label: "Infrastructure",
     accent: "#d97706",
     items: [
+      { title: "Nexus Command", href: "/nexus-command",   Icon: Layers },
       { title: "K1 Platform",   href: "/k1",             Icon: Rocket },
       { title: "Kernel",        href: "/kernel",          Icon: Cpu },
       { title: "WNSP Coord.",   href: "/wnsp/coordinator",Icon: Globe2 },
