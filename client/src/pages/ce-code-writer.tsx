@@ -877,13 +877,24 @@ function CodeWriterTab() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="md:col-span-2 space-y-2">
-          <Label className="text-xs text-slate-400">Description (plain language)</Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-xs text-slate-400">Description (plain language)</Label>
+            <span className={`text-xs font-mono ${desc.length > 450 ? "text-amber-400" : "text-slate-600"}`}>
+              {desc.length}/500
+            </span>
+          </div>
           <Textarea
             value={desc}
-            onChange={e => setDesc(e.target.value)}
+            onChange={e => setDesc(e.target.value.slice(0, 500))}
             className="bg-slate-800 border-slate-600 text-slate-200 font-mono text-sm min-h-20"
             data-testid="input-desc"
+            placeholder="e.g. authenticate user and return a JWT token"
           />
+          {desc.length >= 500 && (
+            <p className="text-xs text-amber-400">
+              500 character limit reached. For large documents use Spectral DB → Write tab → File upload.
+            </p>
+          )}
         </div>
         <div className="space-y-2">
           <Label className="text-xs text-slate-400">Label / Name</Label>

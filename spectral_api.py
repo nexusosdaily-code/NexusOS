@@ -1616,7 +1616,11 @@ def nexus_dev_encode():
     """
     Encode a single code instruction through the full CE→SE stack.
     Returns its spectral address, wavelength, energy, and Ψ channel.
+    The instruction is capped at 1000 chars — spectral address is derived
+    from the first 1000 characters; additional content does not change the
+    wavelength meaningfully and would only add latency.
     """
+    MAX_CHARS = 1000
     data        = request.get_json() or {}
     instruction = data.get('instruction', '').strip()
     label       = data.get('label', '').strip()
@@ -1624,9 +1628,12 @@ def nexus_dev_encode():
     if not instruction:
         return jsonify({"error": "Missing 'instruction' field"}), 400
 
+    truncated = len(instruction) > MAX_CHARS
+    instruction = instruction[:MAX_CHARS]
+
     try:
         result = _encode_instruction(instruction, label)
-        return jsonify({"status": "encoded", **result})
+        return jsonify({"status": "encoded", "truncated": truncated, **result})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
