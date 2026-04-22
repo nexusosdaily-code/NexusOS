@@ -1,5 +1,5 @@
 {
-  "name": "nexusos-ce-encoder",
+  "name": "@nexusosdaily-code/nexusos-ce-encoder",
   "version": "1.0.0",
   "description": "WNSP Character Encoding v1.0 — maps text to the visible electromagnetic spectrum. ceEncode(text) → { wavelength, band, psiChannel, energy }. AGPL-3.0.",
   "main": "index.js",
@@ -11,11 +11,14 @@
   },
   "keywords": ["spectral", "wavelength", "WNSP", "CE-encoding", "NexusOS", "physics"],
   "license": "AGPL-3.0",
-  "homepage": "https://github.com/NexusOS/ce-encoder",
+  "homepage": "https://github.com/nexusosdaily-code/NexusOS",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NexusOS/ce-encoder"
+    "url": "https://github.com/nexusosdaily-code/NexusOS"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "engines": { "node": ">=14" },
-  "files": ["index.js", "index.mjs", "index.d.ts"]
+  "files": ["index.js", "index.mjs", "index.d.ts", "README.md"]
 }
