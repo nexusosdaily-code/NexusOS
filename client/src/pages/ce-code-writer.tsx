@@ -1312,7 +1312,7 @@ function IntegrationKitTab() {
         <p className="text-xs font-mono text-slate-400 font-semibold">Install</p>
         <div className="space-y-1.5">
           {[
-            { label: "npm", cmd: "npm install @nexusosdaily-code/nexusos-ce-encoder" },
+            { label: "npm", cmd: "npm install nexusos-ce-encoder" },
             { label: "pip", cmd: "pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py" },
           ].map(({ label, cmd }) => (
             <div key={label} className="flex items-center justify-between rounded bg-slate-800 px-3 py-1.5 border border-slate-700">
@@ -1325,8 +1325,8 @@ function IntegrationKitTab() {
           ))}
         </div>
         <p className="text-xs text-slate-500 mt-1">
-          npm: add <span className="text-slate-400 font-mono">@nexusosdaily-code:registry=https://npm.pkg.github.com</span> to your .npmrc first.
-          Python: installs directly from GitHub — no registry needed.
+          npm: published on npmjs.com — no extra config needed.
+          Python: installs directly from GitHub — no registry account required.
         </p>
         <p className="text-xs text-slate-600">
           Or copy the snippet below — zero dependencies, drop anywhere.
