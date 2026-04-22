@@ -6190,5 +6190,42 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/github/adoption — live protocol adoption stats (no auth required, public + traffic data)
+  app.get("/api/github/adoption", async (req: Request, res: Response) => {
+    try {
+      const { getGitHubClient } = await import("./github");
+      const octokit = await getGitHubClient();
+      const owner = "nexusosdaily-code";
+      const repos = ["NexusOS", "SpectrumEncoder", "NexusOS-Blockchain-Hub", "WNSP-P2P-Hub"];
+
+      const results = await Promise.all(repos.map(async (repo) => {
+        const [repoData, clones, views] = await Promise.allSettled([
+          octokit.repos.get({ owner, repo }),
+          octokit.repos.getClones({ owner, repo, per: "week" }),
+          octokit.repos.getViews({ owner, repo, per: "week" }),
+        ]);
+        const r = repoData.status === "fulfilled" ? repoData.value.data : null;
+        const c = clones.status === "fulfilled" ? clones.value.data : null;
+        const v = views.status === "fulfilled" ? views.value.data : null;
+        return {
+          repo,
+          stars: r?.stargazers_count ?? 0,
+          forks: r?.forks_count ?? 0,
+          watchers: r?.watchers_count ?? 0,
+          open_issues: r?.open_issues_count ?? 0,
+          clones_14d: c?.count ?? null,
+          unique_cloners_14d: c?.uniques ?? null,
+          views_14d: v?.count ?? null,
+          unique_visitors_14d: v?.uniques ?? null,
+          updated_at: r?.updated_at ?? null,
+        };
+      }));
+
+      res.json({ repos: results, fetched_at: new Date().toISOString() });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return httpServer;
 }

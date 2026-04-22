@@ -8,7 +8,7 @@ import { Link } from "wouter";
 import {
   Cpu, FlaskConical, Download, Copy, Check, Search, ArrowLeft,
   Zap, Radio, AlertCircle, CheckCircle2, Package,
-  Microscope, Server, Shield
+  Microscope, Server, Shield, Star, GitFork, Eye, TrendingUp, RefreshCw, GitBranch
 } from "lucide-react";
 
 // ── API response types ──────────────────────────────────────────────────────
@@ -737,6 +737,163 @@ function BuildGuide() {
   );
 }
 
+// ── Protocol Adoption Panel ────────────────────────────────────────────────
+interface AdoptionRepo {
+  repo: string;
+  stars: number;
+  forks: number;
+  watchers: number;
+  open_issues: number;
+  clones_14d: number | null;
+  unique_cloners_14d: number | null;
+  views_14d: number | null;
+  unique_visitors_14d: number | null;
+  updated_at: string | null;
+}
+
+interface AdoptionResponse {
+  repos: AdoptionRepo[];
+  fetched_at: string;
+}
+
+const REPO_COLORS: Record<string, string> = {
+  NexusOS: "#7c3aed",
+  SpectrumEncoder: "#16a34a",
+  "NexusOS-Blockchain-Hub": "#2563eb",
+  "WNSP-P2P-Hub": "#ca8a04",
+};
+
+function StatBox({ label, value, icon: Icon, color }: { label: string; value: string | number | null; icon: React.ElementType; color: string }) {
+  return (
+    <div className="flex flex-col items-center gap-1 p-3 rounded-xl border border-slate-800 bg-slate-900/40 min-w-[90px]">
+      <Icon className="w-4 h-4" style={{ color }} />
+      <div className="text-lg font-mono font-bold text-white">{value ?? "—"}</div>
+      <div className="text-xs text-slate-500 text-center leading-tight">{label}</div>
+    </div>
+  );
+}
+
+function AdoptionPanel() {
+  const { data, isLoading, error, refetch, isFetching } = useQuery<AdoptionResponse>({
+    queryKey: ["/api/github/adoption"],
+    staleTime: 1000 * 60 * 5, // 5-minute cache
+  });
+
+  const total = data?.repos.reduce(
+    (acc, r) => ({
+      stars: acc.stars + r.stars,
+      forks: acc.forks + r.forks,
+      clones: acc.clones + (r.clones_14d ?? 0),
+      cloners: acc.cloners + (r.unique_cloners_14d ?? 0),
+    }),
+    { stars: 0, forks: 0, clones: 0, cloners: 0 }
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-slate-400">
+            Live protocol adoption across all NexusOS repositories. Data pulled directly from GitHub — no caching layer.
+          </p>
+          {data?.fetched_at && (
+            <p className="text-xs text-slate-600 mt-1">
+              Last fetched: {new Date(data.fetched_at).toLocaleTimeString()}
+            </p>
+          )}
+        </div>
+        <Button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          variant="outline"
+          size="sm"
+          className="border-slate-700 text-slate-400 hover:bg-slate-800 flex-shrink-0"
+          data-testid="btn-refresh-adoption"
+        >
+          <RefreshCw className={`w-3 h-3 mr-1.5 ${isFetching ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </div>
+
+      {isLoading && (
+        <div className="flex items-center justify-center h-48 text-slate-400 gap-2">
+          <div className="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+          Fetching GitHub data…
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center gap-2 text-red-400 p-4 bg-red-950/20 rounded-xl border border-red-800/40">
+          <AlertCircle className="w-4 h-4" /> Failed to fetch GitHub stats — check GitHub integration
+        </div>
+      )}
+
+      {data && total && (
+        <>
+          {/* Totals banner */}
+          <div className="rounded-xl border border-violet-500/30 bg-violet-950/20 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="w-4 h-4 text-violet-400" />
+              <span className="text-sm font-medium text-violet-300">Protocol Totals — All Repos</span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <StatBox label="Stars" value={total.stars} icon={Star} color="#f59e0b" />
+              <StatBox label="Forks" value={total.forks} icon={GitFork} color="#7c3aed" />
+              <StatBox label="Clones (14d)" value={total.clones || "—"} icon={GitBranch} color="#16a34a" />
+              <StatBox label="Unique cloners" value={total.cloners || "—"} icon={Eye} color="#2563eb" />
+            </div>
+          </div>
+
+          {/* Per-repo cards */}
+          <div className="space-y-3">
+            {data.repos.map((r) => {
+              const color = REPO_COLORS[r.repo] ?? "#64748b";
+              const ghUrl = `https://github.com/nexusosdaily-code/${r.repo}`;
+              return (
+                <div key={r.repo} className="rounded-xl border overflow-hidden" style={{ borderColor: color + "44" }}>
+                  <div className="px-5 py-3 flex items-center justify-between gap-3" style={{ background: color + "11" }}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
+                      <a
+                        href={ghUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-sm font-medium hover:underline truncate"
+                        style={{ color }}
+                        data-testid={`link-repo-${r.repo}`}
+                      >
+                        nexusosdaily-code/{r.repo}
+                      </a>
+                    </div>
+                    {r.updated_at && (
+                      <span className="text-xs text-slate-600 flex-shrink-0">
+                        updated {new Date(r.updated_at).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="px-5 py-4 flex flex-wrap gap-3">
+                    <StatBox label="Stars" value={r.stars} icon={Star} color="#f59e0b" />
+                    <StatBox label="Forks" value={r.forks} icon={GitFork} color="#7c3aed" />
+                    <StatBox label="Watchers" value={r.watchers} icon={Eye} color="#64748b" />
+                    <StatBox label="Clones (14d)" value={r.clones_14d ?? "—"} icon={GitBranch} color="#16a34a" />
+                    <StatBox label="Unique cloners" value={r.unique_cloners_14d ?? "—"} icon={Eye} color="#2563eb" />
+                    <StatBox label="Views (14d)" value={r.views_14d ?? "—"} icon={Eye} color="#ca8a04" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="text-xs text-slate-600">
+            Traffic data (clones, views) requires push-level access. Stars and forks are always public.
+            Clone data reflects the last 14 days as reported by the GitHub API.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Page root ──────────────────────────────────────────────────────────────
 export default function HardwareLabPage() {
   return (
@@ -796,6 +953,9 @@ export default function HardwareLabPage() {
             <TabsTrigger value="build" className="data-[state=active]:bg-slate-800" data-testid="tab-build-guide">
               <Package className="w-3 h-3 mr-1.5" /> Build Guide
             </TabsTrigger>
+            <TabsTrigger value="adoption" className="data-[state=active]:bg-slate-800" data-testid="tab-adoption">
+              <TrendingUp className="w-3 h-3 mr-1.5" /> Adoption
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="table" className="mt-6"><WasciiTable /></TabsContent>
@@ -803,6 +963,7 @@ export default function HardwareLabPage() {
           <TabsContent value="script" className="mt-6"><PiScript /></TabsContent>
           <TabsContent value="calib" className="mt-6"><Calibration /></TabsContent>
           <TabsContent value="build" className="mt-6"><BuildGuide /></TabsContent>
+          <TabsContent value="adoption" className="mt-6"><AdoptionPanel /></TabsContent>
         </Tabs>
 
         <div className="text-xs text-slate-700 border-t border-slate-900 pt-4 flex flex-wrap gap-4">
