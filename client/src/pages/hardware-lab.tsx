@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,50 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "wouter";
 import {
   Cpu, FlaskConical, Download, Copy, Check, Search, ArrowLeft,
-  Zap, Radio, AlertCircle, CheckCircle2, ChevronRight, Package,
-  Microscope, Cable, Server, Shield
+  Zap, Radio, AlertCircle, CheckCircle2, Package,
+  Microscope, Server, Shield
 } from "lucide-react";
+
+// ── API response types ──────────────────────────────────────────────────────
+interface SEFrame {
+  ce_symbols: string[];
+  cycles: number;
+  energy_joules: number;
+  frequency_end_hz: number;
+  frequency_start_hz: number;
+  intensity: number;
+  lambda_mass_kg: number;
+  protocol: string;
+  scheme: string;
+  version: string;
+  wascii_defined: boolean[];
+  wavelength_end_nm: number;
+  wavelength_start_nm: number;
+}
+
+interface EncodeResponse {
+  ce_token_count: number;
+  energy_joules: number;
+  frame_count: number;
+  frames: SEFrame[];
+  wavelength_mid_nm: number;
+  psi_channel: string;
+}
+
+interface WasciiEntry {
+  char: string;
+  wavelength_nm: number;
+  frequency_hz: number;
+  energy_joules: number;
+}
+
+interface WasciiTableResponse {
+  table: WasciiEntry[];
+  date: string;
+  protocol: string;
+  range_nm: { min: number; max: number };
+  standard: string;
+}
 
 // ── Wavelength → RGB colour ─────────────────────────────────────────────────
 function wlToRgb(nm: number): string {
@@ -195,9 +236,7 @@ function WasciiTable() {
   const [search, setSearch] = useState("");
   const [bandFilter, setBandFilter] = useState("all");
 
-  const { data, isLoading, error } = useQuery<{
-    table: { char: string; wavelength_nm: number; frequency_hz: number; energy_joules: number }[];
-  }>({
+  const { data, isLoading, error } = useQuery<WasciiTableResponse>({
     queryKey: ["/api/wnsp/wascii/table"],
     staleTime: Infinity,
   });
@@ -313,20 +352,14 @@ function WasciiTable() {
 function CharTrace() {
   const [input, setInput] = useState("");
 
-  const { mutate, data, isPending, error } = useMutation({
+  const { mutate, data, isPending, error } = useMutation<EncodeResponse, Error, string>({
     mutationFn: async (text: string) => {
       const r = await apiRequest("POST", "/api/nexus/dev/encode", { instruction: text, label: `hw_lab_${Date.now()}` });
-      return r.json();
+      return r.json() as Promise<EncodeResponse>;
     },
   });
 
   const go = useCallback(() => { if (input.trim()) mutate(input.trim()); }, [input, mutate]);
-
-  const frames = (data as any)?.frames ?? [];
-  const wl = (data as any)?.wavelength_mid_nm as number | undefined;
-  const psi = (data as any)?.psi_channel as string | undefined;
-  const energy = (data as any)?.energy_joules as number | undefined;
-  const tokens = (data as any)?.ce_token_count as number | undefined;
 
   return (
     <div className="space-y-5">
@@ -350,35 +383,35 @@ function CharTrace() {
 
       {error && <div className="flex items-center gap-2 text-red-400 text-sm p-3 bg-red-900/20 rounded-lg"><AlertCircle className="w-4 h-4" /> Encoding failed — spectral API unreachable</div>}
 
-      {data && wl && (
+      {data && (
         <div className="space-y-4">
           {/* Summary banner */}
           <div className="rounded-xl border border-violet-500/30 bg-violet-950/20 p-4 flex flex-wrap gap-6 items-center">
-            <div style={{ width: 56, height: 56, borderRadius: 12, background: wlToRgb(wl), boxShadow: `0 0 24px ${wlToRgb(wl)}` }} />
+            <div style={{ width: 56, height: 56, borderRadius: 12, background: wlToRgb(data.wavelength_mid_nm), boxShadow: `0 0 24px ${wlToRgb(data.wavelength_mid_nm)}` }} />
             <div className="space-y-1 flex-1 min-w-0">
               <div className="text-xs text-slate-500 uppercase tracking-wider">Spectral Address</div>
-              <div className="font-mono text-lg text-violet-300">{psi}</div>
-              <div className="text-xs text-slate-400">λ = {wl.toFixed(1)} nm · E = {energy?.toExponential(3)} J · {tokens} CE tokens</div>
+              <div className="font-mono text-lg text-violet-300">{data.psi_channel}</div>
+              <div className="text-xs text-slate-400">λ = {data.wavelength_mid_nm.toFixed(1)} nm · E = {data.energy_joules.toExponential(3)} J · {data.ce_token_count} CE tokens</div>
             </div>
-            <CopyBtn text={`${input} → ${psi} λ=${wl.toFixed(1)}nm`} />
+            <CopyBtn text={`${input} → ${data.psi_channel} λ=${data.wavelength_mid_nm.toFixed(1)}nm`} />
           </div>
 
           {/* Step-by-step trace */}
           <div className="space-y-2">
             <div className="text-xs text-slate-500 uppercase tracking-wider mb-3">CE → SE Trace</div>
-            {frames.map((f: any, i: number) => {
-              const midNm = ((f.wavelength_start_nm ?? wl) + (f.wavelength_end_nm ?? wl)) / 2;
+            {data.frames.map((f: SEFrame, i: number) => {
+              const midNm = (f.wavelength_start_nm + f.wavelength_end_nm) / 2;
               const gpio = wlToGPIO(midNm);
               return (
                 <div key={i} className="rounded-lg border border-slate-800 bg-slate-900/50 p-3 text-xs font-mono space-y-1">
                   <div className="flex items-center gap-3">
                     <div className="w-5 h-5 rounded-full bg-violet-900 text-violet-300 flex items-center justify-center text-xs font-bold flex-shrink-0">{i + 1}</div>
-                    <span className="text-slate-300">Frame {i + 1} · CE tokens: [{(f.ce_symbols ?? []).join(", ")}]</span>
+                    <span className="text-slate-300">Frame {i + 1} · CE tokens: [{f.ce_symbols.join(", ")}]</span>
                     <Swatch nm={midNm} />
                   </div>
                   <div className="pl-8 text-slate-500 space-y-0.5">
-                    <div>λ: {f.wavelength_start_nm?.toFixed(1)}–{f.wavelength_end_nm?.toFixed(1)} nm · f: {(f.frequency_start_hz / 1e12)?.toFixed(3)}–{(f.frequency_end_hz / 1e12)?.toFixed(3)} THz</div>
-                    <div>E: {f.energy_joules?.toExponential(3)} J · Λ-mass: {f.lambda_mass_kg?.toExponential(3)} kg</div>
+                    <div>λ: {f.wavelength_start_nm.toFixed(1)}–{f.wavelength_end_nm.toFixed(1)} nm · f: {(f.frequency_start_hz / 1e12).toFixed(3)}–{(f.frequency_end_hz / 1e12).toFixed(3)} THz</div>
+                    <div>E: {f.energy_joules.toExponential(3)} J · Λ-mass: {f.lambda_mass_kg.toExponential(3)} kg</div>
                     <div className="text-amber-500">GPIO → R:{gpio.r} G:{gpio.g} B:{gpio.b}  {gpioScript(midNm)}</div>
                   </div>
                 </div>
@@ -393,9 +426,7 @@ function CharTrace() {
 
 // ── Pi Script Generator tab ────────────────────────────────────────────────
 function PiScript() {
-  const { data, isLoading } = useQuery<{
-    table: { char: string; wavelength_nm: number; frequency_hz: number; energy_joules: number }[];
-  }>({
+  const { data, isLoading } = useQuery<WasciiTableResponse>({
     queryKey: ["/api/wnsp/wascii/table"],
     staleTime: Infinity,
   });
@@ -454,18 +485,23 @@ function Calibration() {
   const [measured, setMeasured] = useState("");
   const [expected, setExpected] = useState<number | null>(null);
   const TOLERANCE = 2.0;
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { mutate, isPending } = useMutation({
+  const { mutate, isPending } = useMutation<EncodeResponse, Error, string>({
     mutationFn: async (c: string) => {
       const r = await apiRequest("POST", "/api/nexus/dev/encode", { instruction: c, label: "calibration" });
-      return r.json();
+      return r.json() as Promise<EncodeResponse>;
     },
-    onSuccess(d) { setExpected((d as any).wavelength_mid_nm ?? null); },
+    onSuccess(d) { setExpected(d.wavelength_mid_nm ?? null); },
   });
 
+  // Auto-trigger CE lookup on mount and whenever char changes (debounced 300ms)
   useEffect(() => {
-    if (char) mutate(char[0]);
-  }, []);
+    if (!char) { setExpected(null); return; }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => { mutate(char); }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [char, mutate]);
 
   const measNm = parseFloat(measured);
   const diff = expected !== null && !isNaN(measNm) ? Math.abs(measNm - expected) : null;
@@ -474,24 +510,23 @@ function Calibration() {
   return (
     <div className="space-y-5 max-w-lg">
       <p className="text-sm text-slate-400">
-        When your spectrometer arrives, use this to verify hardware accuracy. Enter the character you want to test,
-        then enter the wavelength your spectrometer actually measures. Target tolerance is ±{TOLERANCE}nm.
+        When your spectrometer arrives, use this to verify hardware accuracy. Type a character — the expected
+        wavelength is looked up automatically from the CE encoder. Then enter the wavelength your spectrometer
+        measures. Target tolerance is ±{TOLERANCE}nm.
       </p>
 
       <div className="space-y-4 bg-slate-900/50 border border-slate-800 rounded-xl p-5">
         <div className="space-y-2">
           <label className="text-xs text-slate-500 uppercase tracking-wider">Character to test</label>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
             <Input
               value={char}
-              onChange={e => { setChar(e.target.value.slice(-1)); setExpected(null); }}
+              onChange={e => { setChar(e.target.value.slice(-1)); setExpected(null); setMeasured(""); }}
               maxLength={1}
               className="bg-slate-950 border-slate-700 text-slate-200 w-20 text-center text-xl font-mono"
               data-testid="input-calib-char"
             />
-            <Button onClick={() => char && mutate(char)} disabled={isPending || !char} variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800" data-testid="btn-calib-lookup">
-              {isPending ? <div className="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" /> : "Lookup λ"}
-            </Button>
+            {isPending && <div className="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />}
           </div>
         </div>
 
