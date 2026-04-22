@@ -61,7 +61,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node scripts/publish.cjs"
+args = "node scripts/npm-whoami.cjs && node scripts/publish.cjs"
 
 [userenv]
 
