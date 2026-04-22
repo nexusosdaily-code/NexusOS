@@ -11,6 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Code2, Zap, Copy, Check, Play, Radio, Package, Layers } from "lucide-react";
+import { SpectralPanel } from "@/components/spectral-visuals";
 
 // ── Physics constants ─────────────────────────────────────────────
 const PLANCK_H = 6.626e-34;
@@ -739,6 +740,9 @@ function LiveEncodeTab() {
           <p className="text-xs text-slate-600">Each chip = one character. Color = its wavelength in the visible spectrum.</p>
         </div>
       )}
+
+      {/* Spectral visuals — grid + character table */}
+      {text.trim() && <SpectralPanel text={text.slice(0, 120)} label={band.name} />}
 
       {/* Physics summary — API is source of truth for Ψ, energy, and Λ */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

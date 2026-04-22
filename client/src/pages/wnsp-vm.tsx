@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, Cpu, Play, StepForward, RotateCcw, Zap, Radio, Database, Activity, FlaskConical } from "lucide-react";
+import { RhythmGrid } from "@/components/spectral-visuals";
 
 function nmToColor(nm: number): string {
   if (nm < 450) return "#8b00ff";
@@ -426,6 +427,13 @@ export default function WnspVMPage() {
                 <RotateCcw size={11} /> Reset
               </button>
             </div>
+
+            {/* Spectral grid of source code */}
+            {src.trim() && (
+              <div className="overflow-hidden">
+                <RhythmGrid text={src.slice(0, 80)} title="Source Spectral Grid" showWavelengthData={false} />
+              </div>
+            )}
 
             {/* Gate result panel — only for computation proof */}
             {isProof && vm.gateResult && (

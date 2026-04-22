@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
+import { RhythmGrid } from "@/components/spectral-visuals";
 import {
   ArrowLeft, Save, Radio, Copy, Check, FileText, Plus, Trash2,
   Zap, Eye, Video, Upload, Play, Film
@@ -392,6 +393,12 @@ export default function SpectralWorkspace() {
                 </div>
               )}
             </div>
+
+            {body.trim() && (
+              <div className="border-t border-white/10 px-6 py-4 overflow-y-auto max-h-72">
+                <RhythmGrid text={body.slice(0, 100)} title="Document Spectral Grid" showWavelengthData={false} />
+              </div>
+            )}
 
             <div className="border-t border-white/10 px-6 py-3 flex items-center justify-between bg-black/40">
               <div className="flex items-center gap-3 text-xs text-white/30">

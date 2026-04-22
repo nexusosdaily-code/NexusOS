@@ -12,6 +12,7 @@ import {
   Zap, Search, Send, Radio, Layers, ArrowRight,
   Copy, Check, Globe, Lock, Code2, Wifi
 } from "lucide-react";
+import { SpectralPanel } from "@/components/spectral-visuals";
 
 // ── Wavelength → visible colour ───────────────────────────────────
 function wlToRgb(nm: number): string {
@@ -279,6 +280,9 @@ function EncodeTab({ onEncoded, loggedIn }: { onEncoded: (r: any) => void; logge
           </div>
         </div>
       )}
+
+      {/* Spectral visuals — always live, driven by current text */}
+      {text.trim() && <SpectralPanel text={text.slice(0, 120)} label={label || "encode"} />}
     </div>
   );
 }
