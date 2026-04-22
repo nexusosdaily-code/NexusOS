@@ -39,10 +39,13 @@ function getBand(nm: number) {
   return         { name: "STORAGE", emoji: "💾", color: "#cc0000", desc: "Database / file I/O / persistence"   };
 }
 
+// ── CE 128-band lookup table — one wavelength per ASCII code 0-127 ──
+// 128 entries, evenly distributed 380-780nm (3.125nm per band)
+const CE_TABLE: number[] = Array.from({ length: 128 }, (_, i) => 380 + (i / 128) * 400);
+
 // ── CE character → wavelength (deterministic, silicon-ready) ─────
 function charToWavelength(char: string): number {
-  const code = char.charCodeAt(0) % 128;
-  return 380 + (code / 128) * 400;
+  return CE_TABLE[char.charCodeAt(0) % 128];
 }
 
 // ── Code generation engine ────────────────────────────────────────
@@ -251,33 +254,51 @@ interface ${toPascal(name)}Record { id: string; data: unknown; wavelength: numbe
 
 interface ${toPascal(name)}Store {
   find(id: string): Promise<${toPascal(name)}Record | null>;
-  findAll(): Promise<${toPascal(name)}Record[]>;
-  save(data: unknown): Promise<${toPascal(name)}Record>;
-  update(id: string, data: unknown): Promise<${toPascal(name)}Record>;
+  findAll(filter?: Partial<${toPascal(name)}Record>): Promise<${toPascal(name)}Record[]>;
+  save(record: Omit<${toPascal(name)}Record, "id" | "createdAt" | "updatedAt">): Promise<${toPascal(name)}Record>;
+  update(id: string, data: Partial<${toPascal(name)}Record>): Promise<${toPascal(name)}Record>;
   delete(id: string): Promise<void>;
 }
 
+// In-memory implementation — replace with your DB adapter
 class ${toPascal(name)}MemoryStore implements ${toPascal(name)}Store {
   private records = new Map<string, ${toPascal(name)}Record>();
 
-  async find(id: string) { return this.records.get(id) ?? null; }
-  async findAll() { return Array.from(this.records.values()); }
+  async find(id: string) {
+    return this.records.get(id) ?? null;
+  }
 
-  async save(data: unknown) {
-    const record: ${toPascal(name)}Record = { id: crypto.randomUUID(), data, wavelength: ${nm.toFixed(1)}, createdAt: new Date(), updatedAt: new Date() };
+  async findAll(filter?: Partial<${toPascal(name)}Record>) {
+    const all = Array.from(this.records.values());
+    if (!filter) return all;
+    return all.filter(r =>
+      Object.entries(filter).every(([k, v]) => (r as Record<string, unknown>)[k] === v)
+    );
+  }
+
+  async save(data: Omit<${toPascal(name)}Record, "id" | "createdAt" | "updatedAt">) {
+    const record: ${toPascal(name)}Record = {
+      ...data,
+      id: crypto.randomUUID(),
+      wavelength: ${nm.toFixed(1)},  // ${psi}
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
     this.records.set(record.id, record);
     return record;
   }
 
-  async update(id: string, data: unknown) {
+  async update(id: string, data: Partial<${toPascal(name)}Record>) {
     const existing = this.records.get(id);
     if (!existing) throw new Error(\`Record \${id} not found\`);
-    const updated = { ...existing, data, updatedAt: new Date() };
+    const updated = { ...existing, ...data, updatedAt: new Date() };
     this.records.set(id, updated);
     return updated;
   }
 
-  async delete(id: string) { this.records.delete(id); }
+  async delete(id: string) {
+    this.records.delete(id);
+  }
 }
 
 export { ${toPascal(name)}MemoryStore, ${toPascal(name)}Record, ${toPascal(name)}Store };
@@ -1047,8 +1068,12 @@ const NODE_SNIPPET = `// CE Encoder — WNSP Character Encoding v1.0
 // E = hf  |  λ = c/f  |  Λ = hf/c²
 // Runs on any silicon chip today. No server required.
 
-const PLANCK_H = 6.626e-34;   // J·s
-const SPEED_C  = 2.998e8;     // m/s
+const H = 6.626e-34;   // J·s  (Planck constant)
+const C = 2.998e8;     // m/s  (speed of light)
+
+// CE 128-band lookup table: ASCII code 0–127 → wavelength 380–780 nm
+const CE_TABLE = Array.from({ length: 128 }, (_, i) => 380 + (i / 128) * 400);
+
 const BANDS = [
   { name: "SYSTEM",  min: 380, max: 450 },
   { name: "AUTH",    min: 450, max: 490 },
@@ -1059,40 +1084,35 @@ const BANDS = [
   { name: "STORAGE", min: 625, max: 780 },
 ];
 
-function charToWavelength(char) {
-  // Deterministic CE mapping: ASCII code → visible spectrum (380–780 nm)
-  const code = char.charCodeAt(0) % 128;
-  return 380 + (code / 128) * 400;
-}
-
-function getBand(nm) {
-  return BANDS.find(b => nm >= b.min && nm < b.max) || BANDS[BANDS.length - 1];
-}
+const charToNm  = c => CE_TABLE[c.charCodeAt(0) % 128];
+const getBand   = nm => (BANDS.find(b => nm >= b.min && nm < b.max) || BANDS.at(-1)).name;
+const getPsi    = (nm, text) => {
+  const wdm = Math.floor((nm - 380) / 4) + 1;
+  const oam = [...text].reduce((s, c) => s + c.charCodeAt(0), 0) % 50;
+  const pol = text.length % 2 === 0 ? "H" : "V";
+  return \`Ψ(\${wdm},\${oam},\${pol})\`;
+};
 
 function ceEncode(text) {
   if (!text) return null;
-  const chars = [...text].map(c => ({ char: c, wavelength_nm: charToWavelength(c) }));
-  const avg_nm  = chars.reduce((s, c) => s + c.wavelength_nm, 0) / chars.length;
-  const freq_hz = SPEED_C / (avg_nm * 1e-9);   // E = hf
-  const energy_J = PLANCK_H * freq_hz;
-  const band = getBand(avg_nm);
+  const nms     = [...text].map(charToNm);
+  const wavelength = +(nms.reduce((s, n) => s + n, 0) / nms.length).toFixed(2);
+  const f       = C / (wavelength * 1e-9);   // f = c/λ  (E = hf)
+  const energy  = H * f;                     // E = hf  in joules
   return {
-    text,
-    char_map:            chars,
-    dominant_nm:         +avg_nm.toFixed(2),
-    band:                band.name,
-    frequency_hz:        freq_hz,
-    energy_J:            energy_J,
-    compression_kg:      energy_J / SPEED_C ** 2,   // Λ = hf/c²
+    wavelength,                              // dominant wavelength (nm)
+    band: getBand(wavelength),               // spectral authority band
+    psiChannel: getPsi(wavelength, text),    // Ψ(wdm,oam,pol) channel address
+    energy,                                  // photon energy E = hf (joules)
   };
 }
 
-module.exports = { ceEncode, charToWavelength, getBand };
+module.exports = { ceEncode, charToNm, getBand };
 
 // Usage:
 // const { ceEncode } = require('./ce-encoder');
-// const result = ceEncode("Hello world");
-// console.log(result.dominant_nm, result.band, result.energy_J);
+// const r = ceEncode("Hello world");
+// console.log(r.wavelength, r.band, r.psiChannel, r.energy);
 `;
 
 const PYTHON_SNIPPET = `# CE Encoder — WNSP Character Encoding v1.0
@@ -1100,8 +1120,11 @@ const PYTHON_SNIPPET = `# CE Encoder — WNSP Character Encoding v1.0
 # E = hf  |  λ = c/f  |  Λ = hf/c²
 # Runs on any silicon chip today. No server required.
 
-PLANCK_H = 6.626e-34   # J·s
-SPEED_C  = 2.998e8     # m/s
+H = 6.626e-34   # J·s  (Planck constant)
+C = 2.998e8     # m/s  (speed of light)
+
+# CE 128-band lookup table: ASCII code 0-127 → wavelength 380-780 nm
+CE_TABLE = [380 + (i / 128) * 400 for i in range(128)]
 
 BANDS = [
     ("SYSTEM",  380, 450),
@@ -1114,10 +1137,8 @@ BANDS = [
 ]
 
 
-def char_to_wavelength(char: str) -> float:
-    # Deterministic CE mapping: ASCII code → visible spectrum (380–780 nm)
-    code = ord(char) % 128
-    return 380 + (code / 128) * 400
+def char_to_nm(char: str) -> float:
+    return CE_TABLE[ord(char) % 128]
 
 
 def get_band(nm: float) -> str:
@@ -1127,25 +1148,32 @@ def get_band(nm: float) -> str:
     return "STORAGE"
 
 
-def ce_encode(text: str) -> dict:
-    chars   = [{"char": c, "wavelength_nm": char_to_wavelength(c)} for c in text]
-    avg_nm  = sum(c["wavelength_nm"] for c in chars) / len(chars)
-    freq_hz = SPEED_C / (avg_nm * 1e-9)    # f = c/λ
-    energy  = PLANCK_H * freq_hz           # E = hf
+def get_psi(nm: float, text: str) -> str:
+    wdm = int((nm - 380) / 4) + 1
+    oam = sum(ord(c) for c in text) % 50
+    pol = "H" if len(text) % 2 == 0 else "V"
+    return f"Ψ({wdm},{oam},{pol})"
+
+
+def ceEncode(text: str) -> dict:
+    """CE-encode text → spectral address.
+    Returns: wavelength (nm), band, psiChannel Ψ(wdm,oam,pol), energy (J).
+    """
+    nms        = [char_to_nm(c) for c in text]
+    wavelength = round(sum(nms) / len(nms), 2)
+    f          = C / (wavelength * 1e-9)   # f = c/λ
+    energy     = H * f                     # E = hf in joules
     return {
-        "text":          text,
-        "char_map":      chars,
-        "dominant_nm":   round(avg_nm, 2),
-        "band":          get_band(avg_nm),
-        "frequency_hz":  freq_hz,
-        "energy_J":      energy,
-        "compression_kg": energy / SPEED_C ** 2,   # Λ = hf/c²
+        "wavelength":  wavelength,          # dominant wavelength (nm)
+        "band":        get_band(wavelength), # spectral authority band
+        "psiChannel":  get_psi(wavelength, text),  # Ψ(wdm,oam,pol)
+        "energy":      energy,              # photon energy E = hf (joules)
     }
 
 
 # Usage:
-# result = ce_encode("Hello world")
-# print(result["dominant_nm"], result["band"], result["energy_J"])
+# result = ceEncode("Hello world")
+# print(result["wavelength"], result["band"], result["psiChannel"], result["energy"])
 `;
 
 const BROWSER_SNIPPET = `// CE Encoder — WNSP Character Encoding v1.0
@@ -1154,14 +1182,23 @@ const BROWSER_SNIPPET = `// CE Encoder — WNSP Character Encoding v1.0
 // ES module — paste into any browser project or <script type="module">
 
 const H = 6.626e-34, C = 2.998e8;
+
+// CE 128-band lookup table: ASCII code 0–127 → wavelength 380–780 nm
+const CE_TABLE = Array.from({ length: 128 }, (_, i) => 380 + (i / 128) * 400);
+
 const BANDS = [
   ["SYSTEM",380,450], ["AUTH",450,490], ["STREAM",490,520], ["CORE",520,565],
   ["UI",565,590],     ["EVENT",590,625],["STORAGE",625,780],
 ];
 
-// Deterministic CE mapping: ASCII code → visible spectrum (380–780 nm)
-const charToNm = c => 380 + (c.charCodeAt(0) % 128) / 128 * 400;
+const charToNm = c => CE_TABLE[c.charCodeAt(0) % 128];
 const getBand  = nm => (BANDS.find(([,lo,hi]) => nm >= lo && nm < hi) || BANDS.at(-1))[0];
+const getPsi   = (nm, text) => {
+  const wdm = Math.floor((nm - 380) / 4) + 1;
+  const oam = [...text].reduce((s, c) => s + c.charCodeAt(0), 0) % 50;
+  const pol = text.length % 2 === 0 ? "H" : "V";
+  return \`Ψ(\${wdm},\${oam},\${pol})\`;
+};
 
 // λ → approximate RGB color (for visualization)
 export function nmToRgb(nm) {
@@ -1176,19 +1213,15 @@ export function nmToRgb(nm) {
 }
 
 export function ceEncode(text) {
-  const chars  = [...text].map(c => ({ char: c, nm: charToNm(c) }));
-  const avg_nm = chars.reduce((s,c) => s + c.nm, 0) / chars.length;
-  const f = C / (avg_nm * 1e-9);   // f = c/λ
-  const E = H * f;                  // E = hf
+  const nms      = [...text].map(charToNm);
+  const wavelength = +(nms.reduce((s, n) => s + n, 0) / nms.length).toFixed(2);
+  const f        = C / (wavelength * 1e-9);   // f = c/λ
+  const energy   = H * f;                     // E = hf in joules
   return {
-    text,
-    char_map:       chars,
-    dominant_nm:    +avg_nm.toFixed(2),
-    band:           getBand(avg_nm),
-    color:          nmToRgb(avg_nm),
-    frequency_hz:   f,
-    energy_J:       E,
-    compression_kg: E / C**2,      // Λ = hf/c²
+    wavelength,                              // dominant wavelength (nm)
+    band: getBand(wavelength),               // spectral authority band
+    psiChannel: getPsi(wavelength, text),    // Ψ(wdm,oam,pol) channel address
+    energy,                                  // photon energy E = hf (joules)
   };
 }
 
