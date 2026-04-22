@@ -651,13 +651,16 @@ function LiveEncodeTab() {
   const avgNm = chars.length
     ? chars.reduce((s, c) => s + charToWavelength(c), 0) / chars.length
     : 550;
-  const band = getBand(avgNm);
 
   // API is the source of truth for aggregate Ψ channel and energy figures
   const apiEnergy    = apiResult?.energy_joules;
   const apiPsi       = apiResult?.psi_channel;
   const apiLambdaNm  = apiResult?.wavelength_mid_nm;
   const loading      = encodeMut.isPending;
+
+  // When API result is available, use its wavelength for aggregate display
+  const displayNm = apiLambdaNm ?? avgNm;
+  const band = getBand(displayNm);
 
   // Compression derived from API energy when available, else client estimate
   const compressionKg = apiEnergy != null
@@ -721,7 +724,7 @@ function LiveEncodeTab() {
       {/* Physics summary — API is source of truth for Ψ, energy, and Λ */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: "Dominant λ",  value: `${avgNm.toFixed(1)} nm`,               color: band.color,  client: true  },
+          { label: "Dominant λ",  value: `${displayNm.toFixed(1)} nm`,            color: band.color,  client: true  },
           { label: "Band",         value: `${band.emoji} ${band.name}`,            color: band.color,  client: true  },
           { label: "Ψ channel",    value: apiPsi  ?? (loading ? "…" : "—"),        color: "#94a3b8",   client: false },
           { label: "E = hf",       value: apiEnergy != null ? `${apiEnergy.toExponential(2)} J` : (loading ? "…" : "—"), color: "#94a3b8", client: false },
@@ -743,8 +746,8 @@ function LiveEncodeTab() {
         <div className="relative h-5 w-full rounded"
           style={{ background: "linear-gradient(to right,#8b00ff,#0000ff,#00cfff,#00ff00,#ffff00,#ff8c00,#cc0000)" }}>
           <div className="absolute top-0 h-5 w-1 rounded-sm bg-white shadow-lg"
-            style={{ left: `${Math.min(99, Math.max(0, (avgNm - 380) / 400 * 100)).toFixed(1)}%`, transform: "translateX(-50%)" }}
-            title={`λ=${avgNm.toFixed(1)}nm`} />
+            style={{ left: `${Math.min(99, Math.max(0, (displayNm - 380) / 400 * 100)).toFixed(1)}%`, transform: "translateX(-50%)" }}
+            title={`λ=${displayNm.toFixed(1)}nm`} />
         </div>
         <div className="flex justify-between text-xs font-mono text-slate-700">
           <span>380nm</span><span>780nm</span>
@@ -1228,8 +1231,8 @@ export function ceEncode(text) {
 // Usage:
 // import { ceEncode, nmToRgb } from './ce-encoder.js';
 // const r = ceEncode("Hello world");
-// document.body.style.background = r.color;
-// console.log(r.dominant_nm, r.band);
+// console.log(r.wavelength, r.band, r.psiChannel, r.energy);
+// document.body.style.background = nmToRgb(r.wavelength);
 `;
 
 function IntegrationKitTab() {
