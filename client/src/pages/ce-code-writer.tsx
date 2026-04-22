@@ -326,6 +326,81 @@ def verify_${name}(token: str) -> bool:
     return isinstance(token, str) and len(token) == 64
 `;
 
+  if (B === "STREAM") return `# ${psi}
+# Domain: Data Streams / Realtime
+# Description: ${desc}
+
+import asyncio, json
+from dataclasses import dataclass, field
+from typing import Callable, Any
+
+@dataclass
+class StreamFrame:
+    payload: Any
+    wavelength: float = ${nm.toFixed(1)}
+    channel: str = "${psi.split("Ψ=")[1]?.split(" ")[0] ?? "Ψ(0,0,H)"}"
+    timestamp: float = field(default_factory=lambda: asyncio.get_event_loop().time())
+
+
+class ${cls}Stream:
+    """${desc}
+    Spectral address: λ=${nm.toFixed(1)}nm  ${psi}
+    """
+    def __init__(self):
+        self._handlers: list[Callable] = []
+
+    def subscribe(self, handler: Callable[[StreamFrame], None]) -> None:
+        self._handlers.append(handler)
+
+    async def emit(self, payload: Any) -> None:
+        frame = StreamFrame(payload=payload)
+        coros = [h(frame) for h in self._handlers if asyncio.iscoroutinefunction(h)]
+        sync  = [h for h in self._handlers if not asyncio.iscoroutinefunction(h)]
+        for h in sync:
+            h(frame)
+        if coros:
+            await asyncio.gather(*coros)
+`;
+
+  if (B === "UI") return `# ${psi}
+# Domain: UI / Template Rendering
+# Description: ${desc}
+
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class ${cls}Component:
+    """${desc}
+    Spectral address: λ=${nm.toFixed(1)}nm  ${psi}
+    Band: UI / Yellow (565-589nm)
+    """
+    title: str
+    content: str = ""
+    active: bool = False
+    wavelength: float = ${nm.toFixed(1)}
+
+    def render(self) -> str:
+        active_class = "active" if self.active else ""
+        return f"""
+<div class="nexus-component {active_class}"
+     data-wavelength="{self.wavelength}"
+     style="border-color: hsl(60, 70%, 50%)">
+    <h2>{self.title}</h2>
+    <div class="content">{self.content}</div>
+</div>
+"""
+
+    def to_dict(self) -> dict:
+        return {
+            "title": self.title,
+            "content": self.content,
+            "active": self.active,
+            "wavelength": self.wavelength,
+            "channel": "${psi.split("Ψ=")[1]?.split(" ")[0] ?? "Ψ(0,0,H)"}",
+        }
+`;
+
   if (B === "STORAGE") return `# ${psi}
 # Domain: Storage / Database
 # Description: ${desc}
@@ -547,7 +622,7 @@ function LiveEncodeTab() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       encodeMut.mutate(text.slice(0, 500));
-    }, 400);
+    }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [text]);
 
@@ -557,19 +632,25 @@ function LiveEncodeTab() {
     : 550;
   const band = getBand(avgNm);
 
-  const freqHz = SPEED_C / (avgNm * 1e-9);
-  const energyJ = PLANCK_H * freqHz;
-  const compressionKg = energyJ / (SPEED_C * SPEED_C);
+  // API is the source of truth for aggregate Ψ channel and energy figures
+  const apiEnergy    = apiResult?.energy_joules;
+  const apiPsi       = apiResult?.psi_channel;
+  const apiLambdaNm  = apiResult?.wavelength_mid_nm;
+  const loading      = encodeMut.isPending;
 
+  // Compression derived from API energy when available, else client estimate
+  const compressionKg = apiEnergy != null
+    ? apiEnergy / (SPEED_C * SPEED_C)
+    : (PLANCK_H * (SPEED_C / (avgNm * 1e-9))) / (SPEED_C * SPEED_C);
+
+  // Fingerprint matches spec: { text, char_map: [{char, λ}], dominant_λ, psi, band, energy_J }
   const fingerprint = {
     text: text.slice(0, 200),
-    char_map: chars.map(c => ({ char: c, wavelength_nm: +charToWavelength(c).toFixed(2) })),
-    dominant_nm: +avgNm.toFixed(2),
+    char_map: chars.map(c => ({ char: c, "λ": +charToWavelength(c).toFixed(2) })),
+    "dominant_λ": +(apiLambdaNm ?? avgNm).toFixed(2),
+    psi: apiPsi ?? null,
     band: band.name,
-    psi_channel: apiResult?.psi_channel ?? "—",
-    frequency_hz: +freqHz.toExponential(4),
-    energy_J: +energyJ.toExponential(4),
-    compression_kg: +compressionKg.toExponential(4),
+    energy_J: apiEnergy ?? null,
   };
 
   return (
@@ -616,32 +697,24 @@ function LiveEncodeTab() {
         </div>
       )}
 
-      {/* Physics summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* Physics summary — API is source of truth for Ψ, energy, and Λ */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: "Dominant λ", value: `${avgNm.toFixed(1)} nm`, color: band.color },
-          { label: "Band",        value: `${band.emoji} ${band.name}`, color: band.color },
-          { label: "E = hf",      value: energyJ.toExponential(2) + " J", color: "#94a3b8" },
-          { label: "Λ = hf/c²",  value: compressionKg.toExponential(2) + " kg", color: "#94a3b8" },
+          { label: "Dominant λ",  value: `${avgNm.toFixed(1)} nm`,               color: band.color,  client: true  },
+          { label: "Band",         value: `${band.emoji} ${band.name}`,            color: band.color,  client: true  },
+          { label: "Ψ channel",    value: apiPsi  ?? (loading ? "…" : "—"),        color: "#94a3b8",   client: false },
+          { label: "E = hf",       value: apiEnergy != null ? `${apiEnergy.toExponential(2)} J` : (loading ? "…" : "—"), color: "#94a3b8", client: false },
+          { label: "Λ = hf/c²",   value: apiEnergy != null ? `${compressionKg.toExponential(2)} kg` : (loading ? "…" : "—"), color: "#94a3b8", client: false },
         ].map((item, i) => (
           <div key={i} className="p-3 rounded-lg bg-slate-900/60 border border-slate-800 space-y-1">
             <p className="text-xs text-slate-500 font-mono">{item.label}</p>
-            <p className="text-sm font-mono font-semibold" style={{ color: item.color }}>{item.value}</p>
+            <p className={`text-sm font-mono font-semibold ${loading && !item.client ? "animate-pulse" : ""}`}
+              style={{ color: item.color }}>
+              {item.value}
+            </p>
           </div>
         ))}
       </div>
-
-      {/* Ψ channel from API */}
-      {apiResult && (
-        <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg border border-slate-700 bg-slate-900/40">
-          <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: band.color }} />
-          <span className="font-mono text-sm" style={{ color: band.color }}>{band.name}</span>
-          <Badge className="text-xs bg-slate-700 text-slate-300 font-mono">{apiResult.psi_channel}</Badge>
-          <span className="text-xs font-mono text-slate-500">λ = {apiResult.wavelength_mid_nm?.toFixed(2)} nm</span>
-          <span className="text-xs font-mono text-slate-600">{apiResult.energy_joules?.toExponential(2)} J</span>
-          {encodeMut.isPending && <span className="text-xs text-slate-600 animate-pulse">encoding…</span>}
-        </div>
-      )}
 
       {/* Spectrum bar showing position */}
       <div className="space-y-1">
