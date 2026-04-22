@@ -310,6 +310,8 @@ function WasciiTable() {
               <th className="text-left px-4 py-3 text-slate-400 font-medium">λ (nm)</th>
               <th className="text-left px-4 py-3 text-slate-400 font-medium hidden sm:table-cell">Freq (THz)</th>
               <th className="text-left px-4 py-3 text-slate-400 font-medium hidden md:table-cell">Energy (J)</th>
+              <th className="text-left px-4 py-3 text-slate-400 font-medium hidden lg:table-cell">OAM ℓ</th>
+              <th className="text-left px-4 py-3 text-slate-400 font-medium hidden lg:table-cell">Pol</th>
               <th className="text-left px-4 py-3 text-slate-400 font-medium">Band</th>
               <th className="text-left px-4 py-3 text-slate-400 font-medium">Ψ channel</th>
               <th className="px-4 py-3 w-8"></th>
@@ -332,6 +334,8 @@ function WasciiTable() {
                   <td className="px-4 py-2.5 font-mono text-violet-300">{row.wavelength_nm.toFixed(1)}</td>
                   <td className="px-4 py-2.5 font-mono text-slate-400 hidden sm:table-cell">{(row.frequency_hz / 1e12).toFixed(3)}</td>
                   <td className="px-4 py-2.5 font-mono text-slate-500 hidden md:table-cell text-xs">{row.energy_joules.toExponential(3)}</td>
+                  <td className="px-4 py-2.5 font-mono text-amber-400 hidden lg:table-cell text-xs">{oam}</td>
+                  <td className="px-4 py-2.5 font-mono text-slate-400 hidden lg:table-cell text-xs">H</td>
                   <td className="px-4 py-2.5">
                     <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: b.color + "22", color: b.color }}>{b.label}</span>
                   </td>
@@ -399,6 +403,27 @@ function CharTrace() {
           {/* Step-by-step trace */}
           <div className="space-y-2">
             <div className="text-xs text-slate-500 uppercase tracking-wider mb-3">CE → SE Trace</div>
+
+            {/* Step 0: raw text → CE ordinal tokens */}
+            <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-3 text-xs font-mono space-y-1">
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs font-bold flex-shrink-0">0</div>
+                <span className="text-slate-300">Raw input → CE ordinal tokens</span>
+              </div>
+              <div className="pl-8 text-slate-500 space-y-0.5">
+                <div>
+                  {input.split("").map((ch, j) => (
+                    <span key={j} className="mr-3">
+                      <span className="text-white">'{ch}'</span>
+                      <span className="text-slate-600"> → </span>
+                      <span className="text-amber-400">ord={ch.charCodeAt(0)}</span>
+                    </span>
+                  ))}
+                </div>
+                <div className="text-slate-600">Protocol: WNSP-CE v1.0 · Standard: WASCII v7</div>
+              </div>
+            </div>
+
             {data.frames.map((f: SEFrame, i: number) => {
               const midNm = (f.wavelength_start_nm + f.wavelength_end_nm) / 2;
               const gpio = wlToGPIO(midNm);
