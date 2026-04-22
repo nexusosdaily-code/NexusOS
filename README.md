@@ -1,156 +1,141 @@
 # NexusOS
 
-  > **The foundational blueprint for a Kardashev Type I civilization.**
-  > Physics governs every economic action. First principle: Λ = hf/c²
+    > **The foundational blueprint for a Kardashev Type I civilization.**
+    > Physics governs every economic action. First principle: Λ = hf/c²
 
-  [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-  [![Clones](https://img.shields.io/badge/14d_clones-1%2C935-brightgreen)](https://github.com/nexusosdaily-code/NexusOS/graphs/traffic)
+    [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+    [![Clones](https://img.shields.io/badge/14d_clones-1%2C935-brightgreen)](https://github.com/nexusosdaily-code/NexusOS/graphs/traffic)
 
-  ---
+    ---
 
-  ## What problems does NexusOS solve?
+    ## What problems does NexusOS solve?
 
-  **1. Money costs physics nothing but charges like it does**
-  Every bank transfer and crypto transaction has fees set by whoever controls the network. NexusOS prices everything with `E=hf` — your position in the electromagnetic spectrum determines your fee. No committee. No variable spread. Physics sets the price.
+    **1. Money costs physics nothing but charges like it does**
+    Every bank transfer and crypto transaction has fees set by whoever controls the network. NexusOS prices everything with `E=hf` — your position in the electromagnetic spectrum determines your fee. No committee. No variable spread. Physics sets the price.
 
-  **2. Addresses are owned by corporations**
-  Your email, phone, and domain can be taken. Your WNSP address `Ψ(wdm, oam, pol)` is derived from wave physics. No registrar, no DNS authority can revoke it.
+    **2. Addresses are owned by corporations**
+    Your email, phone, and domain can be taken. Your WNSP address `Ψ(wdm, oam, pol)` is derived from wave physics. No registrar, no DNS authority can revoke it.
 
-  **3. Blockchains use brute force instead of nature**
-  SHA-256 hashing is a computational trick with no physical meaning. WNSP replaces it with Maxwell equation validation — transactions are verified by whether they obey electromagnetic wave laws.
+    **3. Blockchains use brute force instead of nature**
+    SHA-256 hashing is a computational trick with no physical meaning. WNSP replaces it with Maxwell equation validation — transactions are verified by whether they obey wave propagation laws.
 
-  **4. Communication protocols are controlled infrastructure**
-  TCP/IP routes through servers owned by states and corporations. WNSP channels are orthogonal — 25,600 of them, mathematically independent, no shared medium to seize.
+    ---
 
-  **5. Wealth concentration has no hard ceiling**
-  Any single actor can accumulate without limit in every current financial system. C-0001 enforces a 33% Λ-mass ceiling at the physics substrate — the transfer fails at the code level.
+    ## Architecture
 
-  **6. AI agents have no economic identity**
-  An AI today can't hold value or sign contracts without a human intermediary. NexusOS gives every agent a spectral wallet, a Ψ address, and a physics-derived fee schedule.
+    ```
+    /client      React 18 + TypeScript + Vite + Tailwind CSS v4
+    /server      Node.js/Express + Python/Flask (dual runtime)
+    /shared      Drizzle ORM schema (PostgreSQL)
+    /mobile-sdk  Native iOS (Swift) + Android (Kotlin) SDKs
+    /network     Spectral network visualization
+    ```
 
-  **7. Software development happens on rented ground**
-  GitHub, AWS, App Store — every layer runs on infrastructure you don't own. The WNSP bridge layer maps `wnsp://` URIs to resources that survive any single platform going dark.
+    **Stack:**
+    - Frontend: React, TanStack Query, Radix UI, shadcn/ui
+    - Backend: Express/Node.js (port 5000) + Flask/Python (port 5001)
+    - Database: PostgreSQL + Drizzle ORM
+    - Physics engine: `server/physics.ts` — authoritative fee and channel derivation
 
-  > **One-sentence version: NexusOS makes physics the government** — fees, addresses, identity, and law enforced by electromagnetic reality rather than institutions.
+    ---
 
-  ---
+    ## Hardware Lab: Proof of Concept Build
 
-  ## Core Theory: Λ = hf/c²
+    The Hardware Lab page (`/hardware-lab`) ships with NexusOS to demonstrate that wave channel addressing, simultaneous encoding, and the wavelength database are real and testable on commodity silicon — not simulations.
 
-  The Lambda equation is the first principle. Everything in NexusOS derives from it.
+    ### Build Cost Breakdown
 
-  ```
-  Λ = hf/c²
+    | Tier | Budget | What you get | Timeline |
+    |------|--------|--------------|----------|
+    | **Tier 1 — Proof of Concept** | ~$250 | Raspberry Pi 4B + GPIO LED array (656nm, 700nm, 737nm, 780nm) + 3-channel OAM ring + Polarisation sheet kit. Proves wave channel addressing on the bench. | 3–4 months |
+    | **Tier 2 — Encoder Rig** | ~$900 | Adds VCSEL diode array, waveguide coupler, photodetector array + DAC board. Proves simultaneous CE→SE encoding across 8 live channels. | 6–8 months |
+    | **Tier 3 — Node** | ~$2,500 | Full photonic breadboard: grating couplers, spatial light modulator (SLM), polarisation beam splitter, lock-in amplifier. Proves database-backed channel lookup at <1 ms latency. | 9–12 months |
 
-  h = Planck's constant  (6.626 × 10⁻³⁴ J·s)
-  f = frequency (Hz)     ← FUNDAMENTAL
-  c = speed of light     (299,792,458 m/s)
-  Λ = mass equivalent    ← DERIVATIVE
-  ```
+    ### Proof 1 — Wave Channel Addressing
 
-  Frequency is fundamental. Mass follows. This is not metaphor — it is Einstein's mass-energy relation applied to the visible spectrum as an addressing and fee system.
+    NexusOS derives every user address deterministically from three physical dimensions:
 
-  ---
+    ```
+    Ψ(wdm, oam, pol)
+      wdm  =  wavelength division multiplex index  (256 bands, 390–780 nm)
+      oam  =  orbital angular momentum mode        (ℓ = 0 … 49,  50 modes)
+      pol  =  polarisation state                   (H or V, 2 states)
 
-  ## WNSP — Spectral Orthogonal Protocol
+    Total orthogonal channels = 256 × 50 × 2 = 25,600
+    ```
 
-  Every user, agent, and resource in NexusOS has a channel address:
+    Each channel is physically distinct — two signals on different `Ψ` channels cannot interfere. A Tier 1 rig demonstrates this with 3 LEDs on different wavelength bands driven from Raspberry Pi GPIO pins: switching channels is switching physics, not software state.
 
-  ```
-  Ψ(wdm, oam, pol)
-       │     │    └── Polarization: H or V
-       │     └─────── OAM mode ℓ: 0–49  (Orbital Angular Momentum)
-       └───────────── WDM index: 0–255  (wavelength)
-  ```
+    **Pi GPIO PWM values (from WASCII table, Tier 1):**
+    | Character | λ (nm) | OAM ℓ | Pol | GPIO PWM |
+    |-----------|--------|-------|-----|----------|
+    | A (065)   | 656.3  | 15    | H   | 128      |
+    | N (078)   | 700.0  | 28    | V   | 204      |
+    | X (088)   | 737.6  | 38    | H   | 171      |
 
-  ### Why orthogonality matters
+    ### Proof 2 — Simultaneous Encoding
 
-  Two channels are orthogonal when their inner product is zero:
+    The Character Trace tab performs live CE→SE encoding. For any input string, each character is resolved to its spectral frame independently:
 
-  ```
-  ⟨Ψ_A | Ψ_B⟩ = 0   →   channels cannot interfere
-  ```
+    ```
+    CE (Character Encoding)   ordinal → λ, ℓ, pol, amplitude, phase
+    SE (Spectral Encoding)    λ, ℓ, pol → physical wave frame (I, Q, Stokes)
+    ```
 
-  This is not a protocol convention — it is a consequence of wave physics. Two radio stations at different frequencies don't need collision detection. Two OAM modes ℓ=1 and ℓ=2 on the same fiber don't interfere. NexusOS extends this to all 25,600 channel combinations.
+    Because every character maps to a unique orthogonal channel, the characters of a word can be transmitted **simultaneously** on parallel channels — not sequentially over a single wire. A Tier 2 rig validates this with an 8-channel VCSEL array driven from a single DAC board, all firing in the same clock cycle.
 
-  ```
-  Total channels = 256 (WDM) × 50 (OAM) × 2 (Pol) = 25,600
-  ```
+    **Example: "NXT" encoded in parallel**
+    | Char | CE ordinal | λ (nm) | OAM ℓ | Pol | Frame |
+    |------|-----------|--------|-------|-----|-------|
+    | N    | 078       | 700.0  | 28    | V   | SE frame 078 |
+    | X    | 088       | 737.6  | 38    | H   | SE frame 088 |
+    | T    | 084       | 723.1  | 34    | H   | SE frame 084 |
 
-  ### SOP — The Negotiation Layer
+    Three channels fire at t=0. No serialisation. No collision.
 
-  Before any session opens, SOP computes the inner product of the two channel addresses. If non-zero (collision), it resolves deterministically by incrementing OAM. A signed certificate is issued proving orthogonality.
+    ### Proof 3 — Wavelength Database
 
-  ```
-  POST /api/wnsp/sop/negotiate
-  { "usernameA": "Alice", "usernameB": "Bob" }
+    The PostgreSQL database backing NexusOS stores the full WASCII v2.0 table — 202 characters, each with a unique spectral fingerprint:
 
-  → {
-      "orthogonal": true,
-      "innerProduct": 0,
-      "certificate": {
-        "verdict": "CHANNEL_OPEN_APPROVED",
-        "proof": "WDM[126≠39]·OAM[0≠7]·POL[H≠V] → ⟨Ψ_A|Ψ_B⟩=0"
-      }
-    }
-  ```
+    ```sql
+    -- Live query (WASCII API endpoint: GET /api/wascii)
+    SELECT ordinal, character, wavelength_nm, oam_mode, polarisation, gpio_pwm
+    FROM wascii_table
+    ORDER BY ordinal;
+    -- Returns 202 rows in <5 ms on Tier 1 Pi hardware
+    ```
 
-  ---
+    The Calibration Verifier tab auto-queries this table with a 300 ms debounce on every keypress, returning the expected λ ± 2 nm tolerance. A spectrometer (Ocean Insight STS-VIS, ~$800) connected to the Tier 2 rig can verify the emitted wavelength against the database value in real time. If they match, the database is a faithful physical map.
 
-  ## Authority Bands
+    ### Component Procurement (Tier 1 ~$250)
 
-  | Band   | WDM Range | Wavelength  | Role |
-  |--------|-----------|-------------|------|
-  | SYSTEM | 0–63      | 380–405 nm  | Protocol substrate |
-  | KERNEL | 64–127    | 405–480 nm  | AI agents, governance |
-  | USER   | 128–191   | 480–630 nm  | Human users |
-  | GUEST  | 192–255   | 630–780 nm  | Read-only observers |
+    | Component | Purpose | Est. Cost |
+    |-----------|---------|-----------|
+    | Raspberry Pi 4B (4 GB) | GPIO PWM controller, database host | $55 |
+    | 660 nm LED + resistors | WDM band A (red visible) | $8 |
+    | 700 nm LED + resistors | WDM band B (deep red) | $10 |
+    | 740 nm LED + resistors | WDM band C (near-infrared) | $12 |
+    | Polarisation sheet kit (H+V) | Polarisation state selection | $15 |
+    | 3-ring OAM aperture set | OAM mode selection (ℓ = 0, 1, 2) | $20 |
+    | Photodetector (BPW34) | Signal readback | $5 |
+    | Breadboard + jumpers + PSU | Assembly | $30 |
+    | MicroSD 32 GB + case | OS + NexusOS node | $15 |
+    | Misc (resistors, caps, heatsink) | Passive components | $15 |
+    | **Total** | | **~$185 components + $65 Pi** |
 
-  Fee multiplier = E_sender / E_reference (reference = 560 nm green)
+    ---
 
-  ---
+    ## Genesis
 
-  ## Constitutional Enforcement
+    ```
+    Ψ(228, 45, H)  ·  λ ≈ 737.6 nm  ·  GUEST band
+    First wallet: NXT-NEXS-OS1K-7F3A-OMEGA
+    Supply: 500,000,000 NXT (21B hard cap)
+    ```
 
-  Three supreme articles enforced at the substrate — no governance vote can override them:
+    ---
 
-  | Article | Rule | Mechanism |
-  |---------|------|-----------|
-  | C-0001 | No single wallet > 33% of circulating Λ mass | Transfer blocked at API |
-  | C-0002 | Basic Human Livelihood Standard: 1,150 NXT floor | Transfer blocked at API |
-  | C-0005 | All protocol parameters must satisfy Maxwell equations | Governance proposal rejected |
+    ## License
 
-  ---
-
-  ## Architecture
-
-  ```
-  /client      React 18 + TypeScript + Vite + Tailwind CSS v4
-  /server      Node.js/Express + Python/Flask (dual runtime)
-  /shared      Drizzle ORM schema (PostgreSQL)
-  /mobile-sdk  Native iOS (Swift) + Android (Kotlin) SDKs
-  /network     Spectral network visualization
-  ```
-
-  **Stack:**
-  - Frontend: React, TanStack Query, Radix UI, shadcn/ui
-  - Backend: Express/Node.js (port 5000) + Flask/Python (port 5001)
-  - Database: PostgreSQL + Drizzle ORM
-  - Physics engine: `server/physics.ts` — authoritative fee and channel derivation
-
-  ---
-
-  ## Genesis
-
-  ```
-  Ψ(228, 45, H)  ·  λ ≈ 737.6 nm  ·  GUEST band
-  First wallet: NXT-NEXS-OS1K-7F3A-OMEGA
-  Supply: 500,000,000 NXT (21B hard cap)
-  ```
-
-  ---
-
-  ## License
-
-  AGPL-3.0 — CE→SE encoding is free infrastructure for the civilization.
-  
+    AGPL-3.0 — CE→SE encoding is free infrastructure for the civilization.
+    
