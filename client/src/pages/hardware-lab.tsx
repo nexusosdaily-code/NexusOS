@@ -236,9 +236,11 @@ function WasciiTable() {
   const [search, setSearch] = useState("");
   const [bandFilter, setBandFilter] = useState("all");
 
-  const { data, isLoading, error } = useQuery<WasciiTableResponse>({
+  const { data, isLoading, error, refetch } = useQuery<WasciiTableResponse>({
     queryKey: ["/api/wnsp/wascii/table"],
     staleTime: Infinity,
+    retry: 3,
+    retryDelay: 2000,
   });
 
   const bands = ["all", "UV", "Violet", "Blue", "Cyan", "Green", "Yellow", "Orange", "Red", "Near-IR"];
@@ -270,8 +272,14 @@ function WasciiTable() {
     </div>
   );
   if (error) return (
-    <div className="flex items-center gap-2 text-red-400 p-4">
-      <AlertCircle className="w-4 h-4" /> Failed to load table — check spectral API
+    <div className="flex flex-col gap-3 p-4 bg-red-950/20 border border-red-800/40 rounded-xl">
+      <div className="flex items-center gap-2 text-red-400">
+        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+        <span className="text-sm">Spectral API unreachable — the physics engine may still be booting (takes ~5s after restart)</span>
+      </div>
+      <Button onClick={() => refetch()} size="sm" variant="outline" className="w-fit border-red-700 text-red-400 hover:bg-red-950" data-testid="btn-retry-wascii">
+        <RefreshCw className="w-3 h-3 mr-1.5" /> Retry
+      </Button>
     </div>
   );
 
@@ -937,7 +945,7 @@ export default function HardwareLabPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="table">
-          <TabsList className="bg-slate-900 border border-slate-800">
+          <TabsList className="bg-slate-900 border border-slate-800 w-full overflow-x-auto flex-nowrap justify-start h-auto">
             <TabsTrigger value="table" className="data-[state=active]:bg-slate-800" data-testid="tab-wascii-table">
               <Microscope className="w-3 h-3 mr-1.5" /> WASCII Table
             </TabsTrigger>
