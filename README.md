@@ -1,6 +1,8 @@
 # NexusOS — Wavelength Operating System
 
-**AGPL-3.0 · Built on Λ = hf/c² · Phase 1 of a 100-year architecture**
+**AGPL-3.0 · Built on Λ = hf/c² · Phase 2 of a 100-year architecture**
+
+[![npm](https://img.shields.io/npm/v/nexusos-ce-encoder?label=nexusos-ce-encoder&color=5c3eec)](https://www.npmjs.com/package/nexusos-ce-encoder)
 
 > *You cloned a physics engine. This document explains what it does.*
 

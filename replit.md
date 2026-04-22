@@ -51,6 +51,9 @@ Provides API key management with an NXT creation fee for external access to Nexu
 ### Content & Media System
 A P2P media sharing engine with physics-based cost calculations, mesh networking, chunk-based distribution, WebRTC/Socket.IO streaming, HTTP Range Request support, and encryption.
 
+## Photonic Computing Vision
+Silicon is the bridge encoder. Every CE lookup that today runs as a table scan in RAM will execute as a physical wavelength selection in a photonic waveguide (~2032). NexusOS is written in the language of the destination hardware, not the bridge hardware. When photonic ASICs arrive, no rewrite is needed — the architecture already speaks in wavelengths. The 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations) map directly to physical hardware lanes: ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics, not software policy.
+
 ## System Design Choices
 - **Monorepo Structure**: Organized into `/client`, `/server`, and `/shared`.
 - **TypeScript**: Strict configuration with path aliases.
@@ -96,10 +99,10 @@ A parameterized channel-dynamics engine that demonstrates state-dependent routin
 ## CE Code Writer (`/ce-code-writer`)
 Redesigned as the Human First Contact interface for CE-SE encoding. Four tabs: **Live Encode** (character chip visualization with Save-to-Spectral-DB), **Code Builder** (single component + full app scaffold), **Integration Kit** (Node.js/Python/Browser JS self-contained snippets with sync verification and install commands), and **Spectral Linter** (coherence scoring).
 
-## Publishable CE Encoder Packages (`/packages`)
-Two canonical CE encoder packages ready for publishing:
-- **`packages/ce-encoder/`** — npm package (`nexusos-ce-encoder`): CJS + ESM exports, TypeScript types, `ceEncode(text) → { wavelength, band, psiChannel, energy }`.
-- **`packages/ce-encoder-py/`** — pip package (`nexusos-ce-encoder`): Python 3.8+, same `ceEncode()` API, bit-identical output to the npm package for the same input.
+## Published CE Encoder Packages (`/packages`)
+Two canonical CE encoder packages, both live and installable:
+- **`packages/ce-encoder/`** — **Published on npmjs.com** as `nexusos-ce-encoder@1.0.0` (user `wnsp001`). Install: `npm install nexusos-ce-encoder`. CJS + ESM exports, TypeScript types, `ceEncode(text) → { wavelength, band, psiChannel, energy }`.
+- **`packages/ce-encoder-py/`** — **Installs directly from GitHub**: `pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py`. Python 3.8+, same `ceEncode()` API, bit-identical output to the npm package for the same input.
 Both use the CE_TABLE[charCode % 128] algorithm (128-band, 380–780 nm, 3.125 nm/band), AGPL-3.0.
 
 # External Dependencies

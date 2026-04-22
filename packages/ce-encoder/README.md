@@ -1,23 +1,19 @@
-# @nexusosdaily-code/nexusos-ce-encoder
+# nexusos-ce-encoder
 
 WNSP Character Encoding v1.0 — maps any text to the visible electromagnetic spectrum.
 
-Hosted on GitHub Packages · AGPL-3.0 · part of [NexusOS](https://github.com/nexusosdaily-code/NexusOS)
+**Live on npm** · AGPL-3.0 · part of [NexusOS](https://github.com/nexusosdaily-code/NexusOS)
 
 ## Install
 
 ```bash
-# 1. Point your project at GitHub Packages for this scope
-echo "@nexusosdaily-code:registry=https://npm.pkg.github.com" >> .npmrc
-
-# 2. Install
-npm install @nexusosdaily-code/nexusos-ce-encoder
+npm install nexusos-ce-encoder
 ```
 
 ## Usage
 
 ```javascript
-const { ceEncode } = require('@nexusosdaily-code/nexusos-ce-encoder');
+const { ceEncode } = require('nexusos-ce-encoder');
 
 const result = ceEncode("Hello world");
 // {
@@ -31,7 +27,7 @@ const result = ceEncode("Hello world");
 ## ES Module
 
 ```javascript
-import { ceEncode, nmToRgb } from '@nexusosdaily-code/nexusos-ce-encoder';
+import { ceEncode, nmToRgb } from 'nexusos-ce-encoder';
 ```
 
 ## Python
@@ -47,10 +43,18 @@ result = ceEncode("Hello world")
 
 ## Physics
 
-- Algorithm: `CE_TABLE[charCode % 128]` → 380–780 nm (3.125 nm per band)
+- Algorithm: `CE_TABLE[charCode % 128]` → 380–780 nm (3.125 nm per band, 128 bands)
 - Energy: `E = hf` where `f = c/λ`
-- Channel: `Ψ(wdm, oam, pol)` — Hilbert-space address
+- Channel: `Ψ(wdm, oam, pol)` — Hilbert-space address in 25,600-channel orthogonal space
+- 25,600 channels = 256 WDM × 50 OAM modes × 2 polarisations (H/V)
 - Bit-identical output between npm and Python packages for the same input
+
+## Why orthogonal channels matter
+
+Each Ψ channel is physically orthogonal to every other: `⟨Ψᵢ|Ψⱼ⟩ = 0`
+
+Two processes on different channels cannot interfere — not by software policy, by quantum mechanics.
+Silicon runs this as a lookup today. Photonic hardware (~2032) executes it at the speed of light.
 
 ## License
 
