@@ -76,7 +76,8 @@ if (pypiVer === pyLocalVer) {
   const pyDir = __dirname + '/../packages/ce-encoder-py';
   try { run('rm -rf dist build *.egg-info', { cwd: pyDir }); } catch {}
   
-  const buildOut = run('python3 -m build 2>&1', { cwd: pyDir });
+  run('pip install --quiet setuptools wheel build twine 2>&1');
+  const buildOut = run('python3 -m build --no-isolation 2>&1', { cwd: pyDir });
   console.log('Build:', buildOut.trim().split('\n').pop());
 
   const env = { ...process.env, TWINE_PASSWORD: pypiToken };

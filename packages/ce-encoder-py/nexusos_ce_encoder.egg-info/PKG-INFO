@@ -1,0 +1,46 @@
+Metadata-Version: 2.4
+Name: nexusos-ce-encoder
+Version: 1.0.0
+Summary: WNSP Character Encoding v1.0 — maps text to the visible electromagnetic spectrum. ceEncode(text) → { wavelength, band, psiChannel, energy }. AGPL-3.0.
+License: AGPL-3.0
+Project-URL: Homepage, https://github.com/NexusOS/ce-encoder-py
+Project-URL: Repository, https://github.com/NexusOS/ce-encoder-py
+Keywords: spectral,wavelength,WNSP,CE-encoding,NexusOS,physics
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: GNU Affero General Public License v3
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+
+# nexusos-ce-encoder (Python)
+
+WNSP Character Encoding v1.0 — maps any text to the visible electromagnetic spectrum.
+
+```
+pip install nexusos-ce-encoder
+```
+
+## Usage
+
+```python
+from ce_encoder import ceEncode
+
+result = ceEncode("Hello world")
+# {
+#   "wavelength": 588.04,     # dominant wavelength (nm)
+#   "band": "EVENT",          # spectral authority band
+#   "psiChannel": "Ψ(53,9,V)", # Hilbert-space channel address
+#   "energy": 3.38e-19        # photon energy E=hf (joules)
+# }
+```
+
+## Physics
+
+- Algorithm: `CE_TABLE[ord(char) % 128]` → 380–780 nm (3.125 nm per band)
+- Energy: `E = hf` where `f = c/λ`
+- Channel: `Ψ(wdm, oam, pol)` — Hilbert-space address from wavelength + ordinal sum
+- Bit-identical output to the `nexusos-ce-encoder` npm package for the same input
+
+## License
+
+AGPL-3.0 — free civilization infrastructure
