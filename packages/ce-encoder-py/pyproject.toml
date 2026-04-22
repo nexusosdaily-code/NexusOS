@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "nexusos-ce-encoder"
+version = "1.0.0"
+description = "WNSP Character Encoding v1.0 — maps text to the visible electromagnetic spectrum. ceEncode(text) → { wavelength, band, psiChannel, energy }. AGPL-3.0."
+readme = "README.md"
+license = { text = "AGPL-3.0" }
+requires-python = ">=3.8"
+keywords = ["spectral", "wavelength", "WNSP", "CE-encoding", "NexusOS", "physics"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: GNU Affero General Public License v3",
+  "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/NexusOS/ce-encoder-py"
+Repository = "https://github.com/NexusOS/ce-encoder-py"

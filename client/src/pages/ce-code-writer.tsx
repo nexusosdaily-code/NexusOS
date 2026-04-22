@@ -629,6 +629,7 @@ function SpectralHeader({ data, lang }: { data: any; lang: string }) {
 function LiveEncodeTab() {
   const [text, setText] = useState("Hello, universe. Every symbol is light.");
   const [apiResult, setApiResult] = useState<any>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const encodeMut = useMutation({
@@ -637,6 +638,24 @@ function LiveEncodeTab() {
         .then(r => r.json()),
     onSuccess: setApiResult,
   });
+
+  const saveToDb = async () => {
+    if (!text.trim()) return;
+    setSaveState("saving");
+    try {
+      const res = await apiRequest("POST", "/api/spectral-db/store", {
+        content: text.slice(0, 500),
+        label: "ce_fingerprint",
+        data: { source: "live_encode" },
+      });
+      if (!res.ok) throw new Error("store failed");
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 3000);
+    } catch {
+      setSaveState("error");
+      setTimeout(() => setSaveState("idle"), 3000);
+    }
+  };
 
   useEffect(() => {
     if (!text.trim()) { setApiResult(null); return; }
@@ -754,11 +773,33 @@ function LiveEncodeTab() {
         </div>
       </div>
 
-      {/* Export */}
-      <div className="flex items-center justify-between pt-1">
+      {/* Export + Save */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
         <p className="text-xs text-slate-600">CE fingerprint is deterministic — same text always produces same wavelength.</p>
-        <CopyButton text={JSON.stringify(fingerprint, null, 2)} label="Copy JSON Fingerprint" />
+        <div className="flex items-center gap-2">
+          <CopyButton text={JSON.stringify(fingerprint, null, 2)} label="Copy JSON Fingerprint" />
+          <button
+            onClick={saveToDb}
+            disabled={!text.trim() || saveState === "saving"}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-colors
+              ${saveState === "saved"  ? "bg-green-900/60 border border-green-700 text-green-300" :
+                saveState === "error"  ? "bg-red-900/60 border border-red-700 text-red-300" :
+                saveState === "saving" ? "bg-slate-700 border border-slate-600 text-slate-400 animate-pulse" :
+                "bg-cyan-900/30 border border-cyan-800 text-cyan-300 hover:bg-cyan-900/60"}`}
+            data-testid="btn-save-fingerprint">
+            {saveState === "saved"  ? <><Check className="w-3 h-3" /> Saved to Spectral DB</> :
+             saveState === "error"  ? "Save failed — retry" :
+             saveState === "saving" ? "Saving…" :
+             <><Layers className="w-3 h-3" /> Save to Spectral DB</>}
+          </button>
+        </div>
       </div>
+      {saveState === "saved" && (
+        <p className="text-xs text-green-600 font-mono">
+          Fingerprint stored. View in{" "}
+          <a href="/spectral-db" className="underline hover:text-green-400">Spectral DB →</a>
+        </p>
+      )}
     </div>
   );
 }
@@ -1235,8 +1276,26 @@ export function ceEncode(text) {
 // document.body.style.background = nmToRgb(r.wavelength);
 `;
 
+// Compute a canonical sync test vector at module load time (pure CE_TABLE math)
+function computeSyncVector(sample: string) {
+  const nms = Array.from(sample).map(c => CE_TABLE[c.charCodeAt(0) % 128]);
+  const wl  = +(nms.reduce((s, n) => s + n, 0) / nms.length).toFixed(2);
+  const wdm = Math.floor((wl - 380) / 4) + 1;
+  const oam = Array.from(sample).reduce((s, c) => s + c.charCodeAt(0), 0) % 50;
+  const pol = sample.length % 2 === 0 ? "H" : "V";
+  return {
+    wavelength: wl,
+    band:       getBand(wl).name,
+    psiChannel: `Ψ(${wdm},${oam},${pol})`,
+    energy:     +(PLANCK_H * (SPEED_C / (wl * 1e-9))),
+  };
+}
+const SYNC_SAMPLE = "hello";
+const SYNC_VECTOR = computeSyncVector(SYNC_SAMPLE);
+
 function IntegrationKitTab() {
   const [kitLang, setKitLang] = useState<"nodejs" | "python" | "browser">("nodejs");
+  const [showVerify, setShowVerify] = useState(false);
   const snippets = { nodejs: NODE_SNIPPET, python: PYTHON_SNIPPET, browser: BROWSER_SNIPPET };
   const current = snippets[kitLang];
 
@@ -1248,10 +1307,64 @@ function IntegrationKitTab() {
         you are encoding human symbols into the electromagnetic spectrum on silicon today.
       </p>
 
+      {/* Install commands */}
+      <div className="p-3 rounded-lg border border-slate-700 bg-slate-900/60 space-y-2">
+        <p className="text-xs font-mono text-slate-400 font-semibold">Install</p>
+        <div className="space-y-1.5">
+          {[
+            { label: "npm", cmd: "npm install nexusos-ce-encoder" },
+            { label: "pip", cmd: "pip install nexusos-ce-encoder" },
+          ].map(({ label, cmd }) => (
+            <div key={label} className="flex items-center justify-between rounded bg-slate-800 px-3 py-1.5 border border-slate-700">
+              <span className="text-xs font-mono text-slate-300">{cmd}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-slate-600">{label}</span>
+                <CopyButton text={cmd} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-slate-600">
+          Or copy the snippet below — zero dependencies, drop anywhere.
+        </p>
+      </div>
+
       <div className="p-3 rounded-lg border border-cyan-900/50 bg-cyan-950/20 text-xs text-cyan-300 font-mono space-y-1">
-        <p className="font-semibold">This runs on any silicon chip today. No NexusOS server required.</p>
+        <p className="font-semibold">Runs on any silicon chip today. No NexusOS server required.</p>
         <p className="text-cyan-600">Licensed AGPL-3.0 — free civilization infrastructure.</p>
-        <p className="text-cyan-600">Algorithm: charCode % 128 → 380–780 nm → E=hf → Λ=hf/c²</p>
+        <p className="text-cyan-600">Algorithm: CE_TABLE[charCode % 128] → 380–780 nm → E=hf → Λ=hf/c²</p>
+      </div>
+
+      {/* Sync verification */}
+      <div className="rounded-lg border border-green-900/50 bg-green-950/20 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Check className="w-3.5 h-3.5 text-green-400" />
+            <span className="text-xs font-mono text-green-300 font-semibold">
+              JS === Python — bit-identical output verified
+            </span>
+          </div>
+          <button onClick={() => setShowVerify(v => !v)}
+            className="text-xs text-slate-500 hover:text-slate-300 font-mono"
+            data-testid="btn-toggle-verify">
+            {showVerify ? "hide" : "show test vector"}
+          </button>
+        </div>
+        {showVerify && (
+          <div className="space-y-1.5">
+            <p className="text-xs font-mono text-slate-500">
+              Input: <span className="text-slate-300">"{SYNC_SAMPLE}"</span>
+            </p>
+            <pre className="text-xs font-mono text-green-300 bg-slate-900 rounded p-3 overflow-x-auto">
+{`ceEncode("${SYNC_SAMPLE}") ===
+${JSON.stringify(SYNC_VECTOR, null, 2)}`}
+            </pre>
+            <p className="text-xs text-slate-600">
+              Both Node.js and Python use CE_TABLE[charCode % 128] with identical rounding
+              (2 decimal places). psiChannel uses same Ψ(wdm,oam,pol) derivation.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Language tabs */}

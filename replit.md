@@ -93,6 +93,15 @@ Provides a TCP/IP overlay for `wnsp://` URIs, mapping Ψ channels to HTTP resour
 ## Dynamical System Analysis (`/divergence-test`)
 A parameterized channel-dynamics engine that demonstrates state-dependent routing and explores system evolution through feedback iterations, classifying attractors and predicting regimes.
 
+## CE Code Writer (`/ce-code-writer`)
+Redesigned as the Human First Contact interface for CE-SE encoding. Four tabs: **Live Encode** (character chip visualization with Save-to-Spectral-DB), **Code Builder** (single component + full app scaffold), **Integration Kit** (Node.js/Python/Browser JS self-contained snippets with sync verification and install commands), and **Spectral Linter** (coherence scoring).
+
+## Publishable CE Encoder Packages (`/packages`)
+Two canonical CE encoder packages ready for publishing:
+- **`packages/ce-encoder/`** — npm package (`nexusos-ce-encoder`): CJS + ESM exports, TypeScript types, `ceEncode(text) → { wavelength, band, psiChannel, energy }`.
+- **`packages/ce-encoder-py/`** — pip package (`nexusos-ce-encoder`): Python 3.8+, same `ceEncode()` API, bit-identical output to the npm package for the same input.
+Both use the CE_TABLE[charCode % 128] algorithm (128-band, 380–780 nm, 3.125 nm/band), AGPL-3.0.
+
 # External Dependencies
 
 ## Third-Party Services

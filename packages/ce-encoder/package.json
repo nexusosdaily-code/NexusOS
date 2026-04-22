@@ -1,0 +1,21 @@
+{
+  "name": "nexusos-ce-encoder",
+  "version": "1.0.0",
+  "description": "WNSP Character Encoding v1.0 — maps text to the visible electromagnetic spectrum. ceEncode(text) → { wavelength, band, psiChannel, energy }. AGPL-3.0.",
+  "main": "index.js",
+  "exports": {
+    ".": {
+      "require": "./index.js",
+      "import": "./index.mjs"
+    }
+  },
+  "keywords": ["spectral", "wavelength", "WNSP", "CE-encoding", "NexusOS", "physics"],
+  "license": "AGPL-3.0",
+  "homepage": "https://github.com/NexusOS/ce-encoder",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NexusOS/ce-encoder"
+  },
+  "engines": { "node": ">=14" },
+  "files": ["index.js", "index.mjs", "index.d.ts"]
+}
