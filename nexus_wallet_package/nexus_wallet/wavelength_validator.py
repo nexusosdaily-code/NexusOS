@@ -17,6 +17,7 @@ import json
 # Physical Constants (SI units)
 SPEED_OF_LIGHT = 299792458  # m/s
 PLANCK_CONSTANT = 6.62607015e-34  # J·s
+EV_PER_JOULE = 1.602176634e-19  # J/eV (exact, 2019 SI definition)
 JOULES_PER_NXT = 1e-18  # Conversion factor: 1 NXT = 10^18 Joules (for economic scaling)
 
 
@@ -89,7 +90,7 @@ class WaveProperties:
             'spectral_region': self.spectral_region.name,
             'modulation': self.modulation_type.name,
             'frequency_THz': self.frequency / 1e12,
-            'quantum_energy_eV': self.quantum_energy / 1.602176634e-19,
+            'quantum_energy_eV': self.quantum_energy / EV_PER_JOULE,
             'economic_value_NXT': self.energy_in_nxt
         }
 
@@ -477,7 +478,7 @@ def demo_wavelength_vs_hashing():
     print(f"Message 1 Wave Properties:")
     print(f"  Wavelength: {wave1.wavelength*1e9:.1f} nm ({wave1.spectral_region.display_name})")
     print(f"  Frequency: {wave1.frequency/1e12:.2f} THz")
-    print(f"  Quantum Energy: {wave1.quantum_energy/1.602176634e-19:.2f} eV")
+    print(f"  Quantum Energy: {wave1.quantum_energy/EV_PER_JOULE:.2f} eV")
     print(f"  Amplitude: {wave1.amplitude:.3f}")
     print(f"  Phase: {np.degrees(wave1.phase):.1f}°")
     print(f"  Modulation: {wave1.modulation_type.display_name}")
@@ -485,7 +486,7 @@ def demo_wavelength_vs_hashing():
     print(f"\nMessage 2 Wave Properties:")
     print(f"  Wavelength: {wave2.wavelength*1e9:.1f} nm ({wave2.spectral_region.display_name})")
     print(f"  Frequency: {wave2.frequency/1e12:.2f} THz")
-    print(f"  Quantum Energy: {wave2.quantum_energy/1.602176634e-19:.2f} eV")
+    print(f"  Quantum Energy: {wave2.quantum_energy/EV_PER_JOULE:.2f} eV")
     print(f"  Amplitude: {wave2.amplitude:.3f}")
     print(f"  Phase: {np.degrees(wave2.phase):.1f}°")
     print(f"  Modulation: {wave2.modulation_type.display_name}")

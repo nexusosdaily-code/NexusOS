@@ -43,6 +43,7 @@ from enum import Enum
 
 SPEED_OF_LIGHT = 299792458
 PLANCK_CONSTANT = 6.62607015e-34
+EV_PER_JOULE = 1.602176634e-19  # J/eV (exact, 2019 SI definition)
 VACUUM_PERMITTIVITY = 8.854187817e-12
 VACUUM_PERMEABILITY = 1.2566370614e-6
 
@@ -220,7 +221,7 @@ class LambdaBosonField:
     @property
     def photon_energy_ev(self) -> float:
         """Photon energy in electron-volts."""
-        return self.photon_energy / 1.602176634e-19
+        return self.photon_energy / EV_PER_JOULE
     
     @property
     def lambda_mass(self) -> float:
