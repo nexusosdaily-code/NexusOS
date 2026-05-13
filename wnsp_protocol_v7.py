@@ -43,6 +43,7 @@ import math
 # ─────────────────────────────────────────────
 PLANCK_CONSTANT  = 6.62607015e-34   # J·s
 SPEED_OF_LIGHT   = 299_792_458       # m/s
+EV_PER_JOULE     = 1.602_176_634e-19 # J/eV  (CODATA 2018, exact by SI definition)
 VISIBLE_MIN_NM   = 380               # nm  (violet edge)
 VISIBLE_MAX_NM   = 780               # nm  (red edge)
 FIRST_OSCILLATION_THz = 555e12       # Hz  — Λ First Oscillation
@@ -328,7 +329,7 @@ def compute_wnsp_density(
             "wavelength_nm": wavelength_nm,
             "band":         band_ref,
             "frequency_thz": round(frequency_hz / 1e12, 4),
-            "energy_ev":    round(energy_joules / 1.602176634e-19, 4),
+            "energy_ev":    round(energy_joules / EV_PER_JOULE, 4),
             "energy_joules": energy_joules,
             "lambda_mass_kg": lambda_mass,
         },
@@ -392,7 +393,7 @@ def channel_density_at_wdm(wdm_band: int, r_sym: float = 2.0, m: float = 1.0) ->
         "wdm_band":           wdm_band,
         "wavelength_nm":      round(wavelength_nm, 2),
         "frequency_thz":      round(frequency_hz / 1e12, 4),
-        "energy_ev":          round(energy_joules / 1.602176634e-19, 4),
+        "energy_ev":          round(energy_joules / EV_PER_JOULE, 4),
         "lambda_mass_kg":     lambda_mass_kg,
         "sub_channels":       sub_channels,           # OAM × Pol modes in this band
         "d_channel":          int(d_channel),          # symbols/cycle at this WDM slot
