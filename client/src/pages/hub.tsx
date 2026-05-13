@@ -103,7 +103,8 @@ const APP_SECTIONS = [
     items: [
       { title: "API Keys",      href: "/developer/keys",  Icon: Key },
       { title: "GitHub Bridge", href: "/github",          Icon: GitBranch },
-      { title: "CE Writer",     href: "/ce-writer",       Icon: Code2 },
+      { title: "CE Writer",     href: "/ce-code-writer",   Icon: Code2 },
+      { title: "WavelengthScript", href: "/wavelength-lang", Icon: Cpu },
       { title: "Spectral Lib.", href: "/spectral-library",Icon: BookOpen },
       { title: "Analytics",     href: "/workspace/analytics", Icon: Activity },
     ],
