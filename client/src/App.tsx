@@ -81,6 +81,10 @@ import SpectralContractsPage from "@/pages/spectral-contracts";
 import SOPPage from "@/pages/sop";
 import HardwareLabPage from "@/pages/hardware-lab";
 import OscillatingQuantaPage from "@/pages/oscillating-quanta";
+import LearnPage from "@/pages/learn";
+import PipelinePage from "@/pages/pipeline";
+import PlanckAlignmentPage from "@/pages/planck-alignment";
+import SpectralMirrorPage from "@/pages/spectral-mirror";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -170,6 +174,10 @@ function ProtectedRoutes() {
         <Route path="/sop" component={SOPPage} />
         <Route path="/hardware-lab" component={HardwareLabPage} />
         <Route path="/oscillating-quanta" component={OscillatingQuantaPage} />
+        <Route path="/learn" component={LearnPage} />
+        <Route path="/pipeline" component={PipelinePage} />
+        <Route path="/planck-alignment" component={PlanckAlignmentPage} />
+        <Route path="/spectral-mirror" component={SpectralMirrorPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>

@@ -125,6 +125,16 @@ const APP_SECTIONS = [
     accent: "#22d3ee",
     items: [
       { title: "Oscillating Quanta — First Principles", href: "/oscillating-quanta", Icon: Waves },
+      { title: "WavelengthScript Learn",                href: "/learn",              Icon: Code2 },
+      { title: "Planck Alignment",                      href: "/planck-alignment",   Icon: Zap },
+    ],
+  },
+  {
+    label: "Research",
+    accent: "#f472b6",
+    items: [
+      { title: "NexusOS Pipeline",   href: "/pipeline",       Icon: Layers },
+      { title: "Spectral Mirror",    href: "/spectral-mirror", Icon: Radio },
     ],
   },
 ];
