@@ -59,3 +59,7 @@ run = ["sh", "-c", "NODE_ENV=production node dist/index.cjs"]
 build = ["sh", "-c", "npm run build"]
 deploymentTarget = "vm"
 
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 120000
+
