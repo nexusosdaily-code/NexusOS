@@ -114,6 +114,7 @@ const APP_SECTIONS = [
     label: "Spectral Tools",
     accent: "#a78bfa",
     items: [
+      { title: "Photonic Ledger",  href: "/photonic-ledger",     Icon: Layers },
       { title: "WNSP VM",          href: "/wnsp-vm",             Icon: Cpu },
       { title: "Spectral Router",  href: "/spectral-router",     Icon: Radio },
       { title: "Spectral Search",  href: "/spectral-search",     Icon: Search },

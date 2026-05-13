@@ -94,6 +94,7 @@ import WnspPaperPage from "@/pages/wnsp-paper";
 import StartPage from "@/pages/start";
 import ReposedTheoryPage from "@/pages/reposed-theory";
 import ProtocolPage from "@/pages/protocol";
+import PhotonicLedgerPage from "@/pages/photonic-ledger";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -185,6 +186,7 @@ function ProtectedRoutes() {
         <Route path="/oscillating-quanta" component={OscillatingQuantaPage} />
         <Route path="/ce-se-pipeline" component={LearnPage} />
         <Route path="/protocol" component={ProtocolPage} />
+        <Route path="/photonic-ledger" component={PhotonicLedgerPage} />
         <Route path="/learn" component={LearnPage} />
         <Route path="/pipeline" component={PipelinePage} />
         <Route path="/planck-alignment" component={PlanckAlignmentPage} />
