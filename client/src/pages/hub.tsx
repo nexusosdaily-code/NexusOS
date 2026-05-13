@@ -133,8 +133,22 @@ const APP_SECTIONS = [
     label: "Research",
     accent: "#f472b6",
     items: [
-      { title: "NexusOS Pipeline",   href: "/pipeline",       Icon: Layers },
+      { title: "NexusOS Pipeline",   href: "/pipeline",        Icon: Layers },
       { title: "Spectral Mirror",    href: "/spectral-mirror", Icon: Radio },
+      { title: "WNSP Paper",         href: "/wnsp-paper",      Icon: BookOpen },
+      { title: "Reposed Theory",     href: "/reposed-theory",  Icon: Zap },
+      { title: "Start",              href: "/start",            Icon: Rocket },
+    ],
+  },
+  {
+    label: "Community",
+    accent: "#f97316",
+    items: [
+      { title: "Community",    href: "/community",    Icon: Users },
+      { title: "Telegram Hub", href: "/telegram-hub", Icon: Radio },
+      { title: "Quora Kit",    href: "/quora",        Icon: Globe2 },
+      { title: "Reddit Kit",   href: "/reddit",       Icon: Globe2 },
+      { title: "Media Library",href: "/media-library",Icon: Database },
     ],
   },
 ];

@@ -85,6 +85,14 @@ import LearnPage from "@/pages/learn";
 import PipelinePage from "@/pages/pipeline";
 import PlanckAlignmentPage from "@/pages/planck-alignment";
 import SpectralMirrorPage from "@/pages/spectral-mirror";
+import CommunityPage from "@/pages/community";
+import MediaLibraryPage from "@/pages/media-library";
+import QuoraPage from "@/pages/quora";
+import RedditPage from "@/pages/reddit";
+import TelegramHubPage from "@/pages/telegram-hub";
+import WnspPaperPage from "@/pages/wnsp-paper";
+import StartPage from "@/pages/start";
+import ReposedTheoryPage from "@/pages/reposed-theory";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -178,6 +186,15 @@ function ProtectedRoutes() {
         <Route path="/pipeline" component={PipelinePage} />
         <Route path="/planck-alignment" component={PlanckAlignmentPage} />
         <Route path="/spectral-mirror" component={SpectralMirrorPage} />
+        <Route path="/community" component={CommunityPage} />
+        <Route path="/media-library" component={MediaLibraryPage} />
+        <Route path="/quora" component={QuoraPage} />
+        <Route path="/reddit" component={RedditPage} />
+        <Route path="/telegram-hub" component={TelegramHubPage} />
+        <Route path="/wnsp-paper" component={WnspPaperPage} />
+        <Route path="/start" component={StartPage} />
+        <Route path="/reposed-theory" component={ReposedTheoryPage} />
+        <Route path="/ce-code-writer" component={CeCodeWriterPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
