@@ -1903,6 +1903,11 @@ export async function registerRoutes(
   // ============================================
 
   // Protocol information — describes both WNSP-CE and WNSP-SE standards
+  // Hardware: spectrometer live readback (proxied to Python runtime)
+  app.get("/api/hardware/spectrometer/read", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/hardware/spectrometer/read");
+  });
+
   app.get("/api/wnsp/protocol", optionalAuth, (req, res) => {
     secureProxyToSpectralAPI(req, res, "/api/wnsp/protocol");
   });

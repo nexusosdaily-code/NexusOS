@@ -1746,6 +1746,243 @@ def nexus_dev_spec():
     })
 
 
+# ─────────────────────────────────────────────────────────────────
+# Hardware — Spectrometer Readback
+# ─────────────────────────────────────────────────────────────────
+
+import math as _math
+import os as _os
+
+# Attempt to import smbus2.  If the library is missing we fall back to
+# simulation permanently; if it is present we probe per-request (cached).
+try:
+    import smbus2 as _smbus2  # type: ignore
+    _SMBUS2_AVAILABLE = True
+except Exception:
+    _smbus2 = None
+    _SMBUS2_AVAILABLE = False
+
+_I2C_BUS  = int(_os.environ.get("SPECTROMETER_I2C_BUS",  "1"))
+_I2C_ADDR = int(_os.environ.get("SPECTROMETER_I2C_ADDR", "0x49"), 16)
+
+# Per-request hardware probe cache — re-checked every 30 s so hot-plugging
+# a spectrometer after process start is detected without hammering the bus.
+_HW_PROBE_TTL  = 30.0          # seconds between I²C probe attempts
+_hw_probe_last: float = -999.0  # timestamp of last probe
+_hw_probe_ok:   bool  = False   # result of last probe
+
+
+def _probe_hardware() -> bool:
+    """
+    Try to open the I²C bus and read the STATUS register from the AS7265x.
+    Result is cached for _HW_PROBE_TTL seconds to avoid hammering the bus.
+    Returns True when a real device is detected and responsive.
+    """
+    global _hw_probe_last, _hw_probe_ok
+    if not _SMBUS2_AVAILABLE:
+        return False
+    now = time.time()
+    if now - _hw_probe_last < _HW_PROBE_TTL:
+        return _hw_probe_ok
+    try:
+        bus = _smbus2.SMBus(_I2C_BUS)
+        bus.read_byte_data(_I2C_ADDR, 0x00)  # read STATUS register
+        bus.close()
+        _hw_probe_ok = True
+    except Exception:
+        _hw_probe_ok = False
+    _hw_probe_last = now
+    return _hw_probe_ok
+
+
+def _get_bus() -> "smbus2.SMBus":
+    """Return an open SMBus instance for the configured I²C bus."""
+    return _smbus2.SMBus(_I2C_BUS)
+
+# ── AS7265x virtual-register protocol ────────────────────────────────────────
+# The AS7265x uses an I²C virtual-register scheme.  Three physical registers
+# mediate all communication:
+#   0x00  STATUS  — RX_VALID (bit 0) set when READ has data;
+#                   TX_VALID (bit 1) clear when WRITE is ready to accept
+#   0x01  WRITE   — write the virtual-register address here to address it
+#   0x02  READ    — read the result byte here after RX_VALID is set
+#
+# Three sub-sensors share the same I²C address, selected via virtual reg 0x4F:
+#   0b00  AS72651 — visible (G H I J K L)
+#   0b01  AS72652 — UV     (A B C D E F)
+#   0b10  AS72653 — NIR    (R S T U V W)
+#
+# Raw 16-bit channel values for each sub-device sit at virtual regs
+# 0x08–0x13 (high-byte first, 2 bytes per channel, 6 channels = 12 bytes).
+
+_AS_STATUS  = 0x00
+_AS_WRITE   = 0x01
+_AS_READ    = 0x02
+_AS_RX_VALID = 0x01   # bit 0
+_AS_TX_VALID = 0x02   # bit 1
+_AS_DEV_SEL  = 0x4F   # virtual reg: device select
+
+# Sub-device IDs → centre wavelengths (nm) for their 6 channels (order A–F, G–L, R–W)
+_AS_SUB_CHANNELS = {
+    0b01: [410, 435, 460, 485, 510, 535],   # AS72652 UV
+    0b00: [560, 585, 645, 705, 900, 940],   # AS72651 VIS
+    0b10: [610, 680, 730, 760, 810, 860],   # AS72653 NIR
+}
+
+_AS_VREG_RAW_BASE = 0x08   # first raw high-byte register (per sub-device)
+_AS_POLL_TIMEOUT  = 0.5    # seconds before giving up on a single vreg read
+
+
+def _as7265x_vreg_read(bus: "smbus2.SMBus", vReg: int) -> int:
+    """Read one byte from an AS7265x virtual register via the STATUS/WRITE/READ trio."""
+    deadline = time.time() + _AS_POLL_TIMEOUT
+
+    # Wait until the WRITE register is free (TX_VALID == 0)
+    while time.time() < deadline:
+        status = bus.read_byte_data(_I2C_ADDR, _AS_STATUS)
+        if not (status & _AS_TX_VALID):
+            break
+        time.sleep(0.001)
+    else:
+        raise TimeoutError(f"AS7265x TX timeout waiting to write vreg 0x{vReg:02X}")
+
+    bus.write_byte_data(_I2C_ADDR, _AS_WRITE, vReg)
+
+    # Wait until the READ register has valid data (RX_VALID == 1)
+    deadline = time.time() + _AS_POLL_TIMEOUT
+    while time.time() < deadline:
+        status = bus.read_byte_data(_I2C_ADDR, _AS_STATUS)
+        if status & _AS_RX_VALID:
+            break
+        time.sleep(0.001)
+    else:
+        raise TimeoutError(f"AS7265x RX timeout reading vreg 0x{vReg:02X}")
+
+    return bus.read_byte_data(_I2C_ADDR, _AS_READ)
+
+
+def _as7265x_vreg_write(bus: "smbus2.SMBus", vReg: int, value: int) -> None:
+    """Write one byte to an AS7265x virtual register."""
+    deadline = time.time() + _AS_POLL_TIMEOUT
+    while time.time() < deadline:
+        status = bus.read_byte_data(_I2C_ADDR, _AS_STATUS)
+        if not (status & _AS_TX_VALID):
+            break
+        time.sleep(0.001)
+    else:
+        raise TimeoutError(f"AS7265x TX timeout writing vreg 0x{vReg:02X}")
+
+    # Set bit 7 to signal a write operation
+    bus.write_byte_data(_I2C_ADDR, _AS_WRITE, vReg | 0x80)
+
+    deadline = time.time() + _AS_POLL_TIMEOUT
+    while time.time() < deadline:
+        status = bus.read_byte_data(_I2C_ADDR, _AS_STATUS)
+        if not (status & _AS_TX_VALID):
+            break
+        time.sleep(0.001)
+    else:
+        raise TimeoutError(f"AS7265x TX timeout (value write) vreg 0x{vReg:02X}")
+
+    bus.write_byte_data(_I2C_ADDR, _AS_WRITE, value)
+
+
+def _read_as7265x_peak_nm() -> float:
+    """
+    Read the dominant-peak wavelength from an AS7265x over I²C.
+
+    Opens its own SMBus connection (closed when done) so there is no shared
+    global bus state that can become stale after a hot-plug event.
+
+    Uses the chip's virtual-register protocol (STATUS/WRITE/READ triple) to
+    read 16-bit raw counts from all three sub-sensors (18 channels total).
+    Returns the centre wavelength (nm) of the channel with the highest count.
+    """
+    bus = _get_bus()
+    try:
+        all_nm: list[int] = []
+        all_counts: list[int] = []
+
+        for dev_id, wavelengths in _AS_SUB_CHANNELS.items():
+            # Select the sub-device
+            _as7265x_vreg_write(bus, _AS_DEV_SEL, dev_id)
+            time.sleep(0.005)  # brief settle after device select
+
+            for ch_idx, nm in enumerate(wavelengths):
+                hi_reg = _AS_VREG_RAW_BASE + ch_idx * 2
+                lo_reg = hi_reg + 1
+                hi = _as7265x_vreg_read(bus, hi_reg)
+                lo = _as7265x_vreg_read(bus, lo_reg)
+                count = (hi << 8) | lo
+                all_nm.append(nm)
+                all_counts.append(count)
+    finally:
+        bus.close()
+
+    peak_idx = all_counts.index(max(all_counts))
+    return float(all_nm[peak_idx])
+
+
+def _simulated_peak_nm(seed: float | None = None) -> float:
+    """
+    Return a simulated spectrometer reading for dev environments.
+
+    The value drifts gently around 589 nm (sodium D-line) with ±1.5 nm
+    Gaussian noise — realistic for a warm lab instrument.
+    """
+    t = seed if seed is not None else time.time()
+    drift = 1.5 * _math.sin(t / 30.0)
+    noise = (((t * 1234567) % 1000) / 1000.0 - 0.5) * 1.0
+    return round(589.0 + drift + noise, 2)
+
+
+@app.route('/api/hardware/spectrometer/read', methods=['GET'])
+def spectrometer_read():
+    """
+    Return the latest peak wavelength from the connected spectrometer.
+
+    Response shape:
+      {
+        "wavelength_nm": <float>,   # dominant peak in nanometres
+        "device":        <str>,     # "AS7265x" | "simulated"
+        "hardware":      <bool>,    # true when real I²C device is present
+        "timestamp":     <float>    # Unix epoch seconds
+      }
+
+    When no physical device is detected the endpoint returns a
+    realistic simulated value so the frontend degrades gracefully.
+    """
+    ts = time.time()
+
+    if _probe_hardware():
+        try:
+            nm = _read_as7265x_peak_nm()
+            return jsonify({
+                "wavelength_nm": nm,
+                "device": "AS7265x",
+                "hardware": True,
+                "timestamp": ts,
+            })
+        except Exception as exc:
+            # Log the raw exception server-side only; return a generic message
+            # to the client so internal I²C details are not exposed.
+            app.logger.warning("AS7265x read failed: %s", exc)
+            return jsonify({
+                "wavelength_nm": _simulated_peak_nm(ts),
+                "device": "simulated",
+                "hardware": False,
+                "timestamp": ts,
+                "warning": "Spectrometer read failed — falling back to simulation",
+            })
+
+    return jsonify({
+        "wavelength_nm": _simulated_peak_nm(ts),
+        "device": "simulated",
+        "hardware": False,
+        "timestamp": ts,
+    })
+
+
 if __name__ == '__main__':
     print("Starting Spectral API server on port 5001...")
     app.run(host='0.0.0.0', port=5001, debug=True)

@@ -512,10 +512,20 @@ function PiScript() {
   );
 }
 
+// ── Spectrometer readback response type ────────────────────────────────────
+interface SpectrometerReading {
+  wavelength_nm: number;
+  device: string;
+  hardware: boolean;
+  timestamp: number;
+  warning?: string;
+}
+
 // ── Calibration Verifier tab ───────────────────────────────────────────────
 function Calibration() {
   const [char, setChar] = useState("N");
   const [measured, setMeasured] = useState("");
+  const [livePolling, setLivePolling] = useState(false);
   const [expected, setExpected] = useState<number | null>(null);
   const TOLERANCE = 2.0;
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -536,6 +546,28 @@ function Calibration() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [char, mutate]);
 
+  // Live spectrometer polling — 1 Hz while livePolling is active
+  const { data: spectroData, error: spectroError } = useQuery<SpectrometerReading>({
+    queryKey: ["/api/hardware/spectrometer/read"],
+    enabled: livePolling,
+    refetchInterval: livePolling ? 1000 : false,
+    staleTime: 0,
+  });
+
+  // Auto-fill measured field only when actual hardware is present.
+  // When the endpoint returns simulated data the field stays editable so the
+  // user can still type their own reading — the simulated value is shown as a
+  // non-blocking hint in the label row instead.
+  const isHardware = spectroData?.hardware === true;
+  const deviceLabel = spectroData?.device ?? null;
+  const inputLocked = livePolling && isHardware;
+
+  useEffect(() => {
+    if (inputLocked && spectroData?.wavelength_nm !== undefined) {
+      setMeasured(String(spectroData.wavelength_nm));
+    }
+  }, [inputLocked, spectroData]);
+
   const measNm = parseFloat(measured);
   const diff = expected !== null && !isNaN(measNm) ? Math.abs(measNm - expected) : null;
   const pass = diff !== null && diff <= TOLERANCE;
@@ -543,10 +575,45 @@ function Calibration() {
   return (
     <div className="space-y-5 max-w-lg">
       <p className="text-sm text-slate-400">
-        When your spectrometer arrives, use this to verify hardware accuracy. Type a character — the expected
-        wavelength is looked up automatically from the CE encoder. Then enter the wavelength your spectrometer
-        measures. Target tolerance is ±{TOLERANCE}nm.
+        Use this to verify hardware accuracy. Type a character — the expected wavelength is looked up
+        automatically from the CE encoder. Enable live readback to stream the measured wavelength directly
+        from your spectrometer, or enter it manually. Target tolerance is ±{TOLERANCE} nm.
       </p>
+
+      {/* Live polling toggle */}
+      <div className="flex items-center justify-between bg-slate-900/50 border border-slate-800 rounded-xl px-5 py-3">
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${livePolling ? (isHardware ? "bg-green-400 animate-pulse" : "bg-amber-400 animate-pulse") : "bg-slate-600"}`} />
+          <span className="text-sm text-slate-300">
+            {livePolling
+              ? deviceLabel
+                ? `Live · ${deviceLabel}`
+                : "Connecting…"
+              : "Live spectrometer readback"}
+          </span>
+          {spectroData?.warning && (
+            <span className="text-xs text-amber-400 ml-1">⚠ fallback</span>
+          )}
+        </div>
+        <button
+          onClick={() => setLivePolling(p => !p)}
+          data-testid="button-calib-live-toggle"
+          className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+            livePolling
+              ? "border-red-500/50 text-red-300 hover:bg-red-950/30"
+              : "border-violet-500/50 text-violet-300 hover:bg-violet-950/30"
+          }`}
+        >
+          {livePolling ? "Stop" : "Start"}
+        </button>
+      </div>
+
+      {livePolling && spectroError && (
+        <div className="flex items-center gap-2 text-xs text-red-400 bg-red-950/20 border border-red-500/30 rounded-lg px-4 py-2" data-testid="status-calib-spectro-error">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+          Spectrometer endpoint unreachable — enter wavelength manually below
+        </div>
+      )}
 
       <div className="space-y-4 bg-slate-900/50 border border-slate-800 rounded-xl p-5">
         <div className="space-y-2">
@@ -568,32 +635,47 @@ function Calibration() {
             <Swatch nm={expected} />
             <div>
               <div className="text-xs text-slate-500">CE-computed expected wavelength</div>
-              <div className="font-mono text-violet-300 text-lg">{expected.toFixed(2)} nm</div>
+              <div className="font-mono text-violet-300 text-lg" data-testid="text-calib-expected">{expected.toFixed(2)} nm</div>
               <div className="text-xs text-slate-500">{bandOf(expected).label} band · Ψ channel {Math.round((expected - 350) / (1033 - 350) * 255)}</div>
             </div>
           </div>
         )}
 
         <div className="space-y-2">
-          <label className="text-xs text-slate-500 uppercase tracking-wider">Measured λ from spectrometer (nm)</label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-slate-500 uppercase tracking-wider">Measured λ from spectrometer (nm)</label>
+            {livePolling && spectroData && (
+              <span className="text-xs text-slate-500" data-testid="text-calib-live-source">
+                {isHardware
+                  ? "live hardware — auto-filled"
+                  : `no device · hint: ${spectroData.wavelength_nm} nm (simulated)`}
+              </span>
+            )}
+          </div>
           <Input
             value={measured}
-            onChange={e => setMeasured(e.target.value)}
-            placeholder="e.g. 736.8"
+            onChange={e => { if (!inputLocked) setMeasured(e.target.value); }}
+            readOnly={inputLocked}
+            placeholder={inputLocked ? "Waiting for hardware reading…" : "e.g. 736.8"}
             type="number"
             step="0.1"
-            className="bg-slate-950 border-slate-700 text-slate-200"
+            className={`bg-slate-950 border-slate-700 text-slate-200 ${inputLocked ? "cursor-not-allowed opacity-70" : ""}`}
             data-testid="input-calib-measured"
           />
+          {livePolling && !isHardware && (
+            <p className="text-xs text-amber-400/80" data-testid="status-calib-no-device">
+              No spectrometer detected — enter your measured wavelength manually above.
+            </p>
+          )}
         </div>
 
         {diff !== null && (
-          <div className={`flex items-center gap-3 p-4 rounded-xl border ${pass ? "border-green-500/40 bg-green-950/20" : "border-red-500/40 bg-red-950/20"}`}>
+          <div className={`flex items-center gap-3 p-4 rounded-xl border ${pass ? "border-green-500/40 bg-green-950/20" : "border-red-500/40 bg-red-950/20"}`} data-testid="status-calib-result">
             {pass
               ? <CheckCircle2 className="w-6 h-6 text-green-400 flex-shrink-0" />
               : <AlertCircle className="w-6 h-6 text-red-400 flex-shrink-0" />}
             <div>
-              <div className={`font-medium ${pass ? "text-green-300" : "text-red-300"}`}>
+              <div className={`font-medium ${pass ? "text-green-300" : "text-red-300"}`} data-testid="text-calib-verdict">
                 {pass ? "PASS — within tolerance" : "FAIL — outside tolerance"}
               </div>
               <div className="text-xs text-slate-400 mt-0.5">
