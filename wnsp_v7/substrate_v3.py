@@ -33,7 +33,7 @@ import hashlib
 import time
 
 try:
-    from .protocol import PLANCK_CONSTANT, SPEED_OF_LIGHT
+    from .constants import PLANCK_CONSTANT, SPEED_OF_LIGHT
 except ImportError:
     PLANCK_CONSTANT = 6.62607015e-34
     SPEED_OF_LIGHT = 299792458

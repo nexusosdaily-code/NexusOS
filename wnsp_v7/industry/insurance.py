@@ -23,8 +23,7 @@ from .base import (
     Attestation, SpectralBand, calculate_lambda_mass
 )
 
-PLANCK_CONSTANT = 6.62607015e-34
-SPEED_OF_LIGHT = 299792458
+from ..constants import PLANCK_CONSTANT, SPEED_OF_LIGHT
 
 
 class InsuranceType(Enum):

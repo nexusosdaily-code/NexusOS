@@ -28,10 +28,12 @@ from enum import Enum
 # PHYSICAL CONSTANTS
 # =============================================================================
 
-PLANCK_CONSTANT = 6.62607015e-34  # J·s
-SPEED_OF_LIGHT = 299792458  # m/s
-MU_0 = 1.25663706212e-6  # H/m (vacuum permeability)
-EPSILON_0 = 8.8541878128e-12  # F/m (vacuum permittivity)
+from .constants import (
+    PLANCK_CONSTANT,
+    SPEED_OF_LIGHT,
+    VACUUM_PERMEABILITY as MU_0,
+    VACUUM_PERMITTIVITY as EPSILON_0,
+)
 
 # Free space impedance: Z₀ = √(μ₀/ε₀) ≈ 377Ω
 FREE_SPACE_IMPEDANCE = math.sqrt(MU_0 / EPSILON_0)  # 376.730... ≈ 377Ω

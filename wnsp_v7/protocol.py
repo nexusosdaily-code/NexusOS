@@ -44,10 +44,12 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Set, Any
 
-PLANCK_CONSTANT = 6.62607015e-34
-SPEED_OF_LIGHT = 299792458
-PLANCK_FREQUENCY = 1.85e43
-A4_FREQUENCY = 440.0
+from .constants import (
+    PLANCK_CONSTANT,
+    SPEED_OF_LIGHT,
+    PLANCK_FREQUENCY,
+    A4_FREQUENCY,
+)
 
 
 class Octave(Enum):

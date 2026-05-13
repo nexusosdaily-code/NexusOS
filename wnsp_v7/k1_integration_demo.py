@@ -72,8 +72,7 @@ from wnsp_v7.planetary_governance import (
     VoteType
 )
 
-PLANCK_CONSTANT = 6.62607015e-34
-SPEED_OF_LIGHT = 299792458
+from .constants import PLANCK_CONSTANT, SPEED_OF_LIGHT
 NXT_DECIMALS = 8
 NXT_UNIT = 10 ** NXT_DECIMALS
 

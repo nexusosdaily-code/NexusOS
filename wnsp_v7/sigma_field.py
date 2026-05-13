@@ -30,9 +30,7 @@ from typing import Dict, List, Optional, Tuple, Any, Callable, Set
 from enum import Enum
 import random
 
-PLANCK_CONSTANT = 6.62607015e-34
-SPEED_OF_LIGHT = 299792458
-HBAR = PLANCK_CONSTANT / (2 * math.pi)
+from .constants import PLANCK_CONSTANT, SPEED_OF_LIGHT, HBAR
 
 
 # =============================================================================

@@ -25,8 +25,7 @@ from typing import Dict, List, Optional, Set, Tuple, Any
 from enum import Enum
 from collections import deque
 
-PLANCK_CONSTANT = 6.62607015e-34
-SPEED_OF_LIGHT = 299792458
+from .constants import PLANCK_CONSTANT, SPEED_OF_LIGHT
 
 
 class NodeType(Enum):

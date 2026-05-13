@@ -39,15 +39,17 @@ import hashlib
 import math
 
 # ─────────────────────────────────────────────
-# Physics Constants (SE Layer)
+# Physics Constants (SE Layer) — imported from single source of truth
 # ─────────────────────────────────────────────
-PLANCK_CONSTANT  = 6.62607015e-34   # J·s
-SPEED_OF_LIGHT   = 299_792_458       # m/s
-EV_PER_JOULE     = 1.602_176_634e-19 # J/eV  (CODATA 2018, exact by SI definition)
-VISIBLE_MIN_NM   = 380               # nm  (violet edge)
-VISIBLE_MAX_NM   = 780               # nm  (red edge)
-FIRST_OSCILLATION_THz = 555e12       # Hz  — Λ First Oscillation
-ROOT_HARMONIC_Hz      = 7.83         # Hz  — Schumann resonance
+from wnsp_v7.constants import (
+    PLANCK_CONSTANT,
+    SPEED_OF_LIGHT,
+    EV_PER_JOULE,
+    VISIBLE_MIN_NM,
+    VISIBLE_MAX_NM,
+    FIRST_OSCILLATION_THz,
+    ROOT_HARMONIC_Hz,
+)
 
 # ─────────────────────────────────────────────
 # Protocol Version Stamps

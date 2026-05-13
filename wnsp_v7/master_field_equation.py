@@ -41,9 +41,8 @@ import time
 
 
 # Physical Constants
-PLANCK_CONSTANT = 6.62607015e-34  # J·s
-REDUCED_PLANCK = PLANCK_CONSTANT / (2 * math.pi)  # ℏ
-SPEED_OF_LIGHT = 299792458.0  # m/s
+from .constants import PLANCK_CONSTANT, SPEED_OF_LIGHT, HBAR
+REDUCED_PLANCK = HBAR  # ℏ — alias kept for readability within this module
 BOLTZMANN = 1.380649e-23  # J/K
 
 

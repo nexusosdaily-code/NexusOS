@@ -35,8 +35,7 @@ import random
 # PHYSICAL CONSTANTS
 # =============================================================================
 
-PLANCK_CONSTANT = 6.62607015e-34  # J·s
-SPEED_OF_LIGHT = 299792458  # m/s
+from .constants import PLANCK_CONSTANT, SPEED_OF_LIGHT
 PHOTON_ENERGY_550NM = 3.61e-19  # J (green light reference)
 
 

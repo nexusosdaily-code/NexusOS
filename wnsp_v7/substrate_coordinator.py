@@ -28,8 +28,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Any, Callable
 from enum import Enum
 
-PLANCK_CONSTANT = 6.62607015e-34
-SPEED_OF_LIGHT = 299792458
+from .constants import PLANCK_CONSTANT, SPEED_OF_LIGHT
 UNITS_PER_NXT = 100_000_000
 
 FOUNDER_WALLET = "NXS5372697543A0FEF822E453DBC26FA044D14599E9"

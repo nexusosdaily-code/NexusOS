@@ -24,8 +24,7 @@ from .base import (
     calculate_operation_frequency
 )
 
-PLANCK_CONSTANT = 6.62607015e-34
-SPEED_OF_LIGHT = 299792458
+from ..constants import PLANCK_CONSTANT, SPEED_OF_LIGHT
 
 
 class AccountType(Enum):

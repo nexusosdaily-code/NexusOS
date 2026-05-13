@@ -35,10 +35,12 @@ from typing import Dict, List, Optional, Tuple, Any
 from enum import Enum
 
 # Physical constants
-SPEED_OF_LIGHT = 299792458  # m/s
-PLANCK_CONSTANT = 6.62607015e-34  # J·s
-MU_0 = 1.25663706212e-6  # H/m (vacuum permeability)
-EPSILON_0 = 8.8541878128e-12  # F/m (vacuum permittivity)
+from .constants import (
+    SPEED_OF_LIGHT,
+    PLANCK_CONSTANT,
+    VACUUM_PERMEABILITY as MU_0,
+    VACUUM_PERMITTIVITY as EPSILON_0,
+)
 
 # Schumann resonances (Earth-ionosphere cavity)
 SCHUMANN_FUNDAMENTAL = 7.83  # Hz

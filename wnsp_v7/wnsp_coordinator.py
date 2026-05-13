@@ -36,15 +36,17 @@ from typing import Dict, List, Optional, Tuple, Any
 import heapq
 from collections import defaultdict
 
+from .constants import (
+    VISIBLE_MIN_NM,
+    VISIBLE_MAX_NM,
+    SPEED_OF_LIGHT,
+    PLANCK_CONSTANT,
+)
+
 TOTAL_WDM = 256
 TOTAL_OAM = 50
 TOTAL_POL = 2
 TOTAL_CHANNELS = TOTAL_WDM * TOTAL_OAM * TOTAL_POL  # 25,600
-
-VISIBLE_MIN_NM = 380
-VISIBLE_MAX_NM = 780
-SPEED_OF_LIGHT = 299_792_458
-PLANCK_CONSTANT = 6.62607015e-34
 
 
 # ─────────────────────────────────────────────────────────────────

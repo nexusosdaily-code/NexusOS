@@ -41,11 +41,13 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Any
 from enum import Enum
 
-SPEED_OF_LIGHT = 299792458
-PLANCK_CONSTANT = 6.62607015e-34
-EV_PER_JOULE = 1.602176634e-19  # J/eV (exact, 2019 SI definition)
-VACUUM_PERMITTIVITY = 8.854187817e-12
-VACUUM_PERMEABILITY = 1.2566370614e-6
+from .constants import (
+    SPEED_OF_LIGHT,
+    PLANCK_CONSTANT,
+    EV_PER_JOULE,
+    VACUUM_PERMITTIVITY,
+    VACUUM_PERMEABILITY,
+)
 
 
 class SpectralBand(Enum):

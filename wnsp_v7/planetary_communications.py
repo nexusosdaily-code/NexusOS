@@ -32,9 +32,7 @@ from typing import Dict, List, Optional, Tuple, Any, Set, Callable
 from enum import Enum
 import heapq
 
-PLANCK_CONSTANT = 6.62607015e-34
-SPEED_OF_LIGHT = 299792458
-HBAR = PLANCK_CONSTANT / (2 * math.pi)
+from .constants import PLANCK_CONSTANT, SPEED_OF_LIGHT, HBAR
 BOLTZMANN = 1.380649e-23
 
 EARTH_RADIUS = 6.371e6  # meters

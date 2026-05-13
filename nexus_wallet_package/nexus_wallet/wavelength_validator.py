@@ -15,10 +15,12 @@ import json
 
 
 # Physical Constants (SI units)
-SPEED_OF_LIGHT = 299792458  # m/s
-PLANCK_CONSTANT = 6.62607015e-34  # J·s
-EV_PER_JOULE = 1.602176634e-19  # J/eV (exact, 2019 SI definition)
-JOULES_PER_NXT = 1e-18  # Conversion factor: 1 NXT = 10^18 Joules (for economic scaling)
+# Note: these mirror wnsp_v7/constants.py — kept local because nexus_wallet
+# is a standalone distributable package with no runtime dependency on wnsp_v7.
+SPEED_OF_LIGHT  = 299_792_458        # m/s  (exact, 2019 SI definition)
+PLANCK_CONSTANT = 6.62607015e-34     # J·s  (exact, 2019 SI definition)
+EV_PER_JOULE    = 1.602_176_634e-19  # J/eV (exact, 2019 SI definition)
+JOULES_PER_NXT  = 1e-18              # Conversion factor: 1 NXT = 10^18 Joules (for economic scaling)
 
 
 class SpectralRegion(Enum):

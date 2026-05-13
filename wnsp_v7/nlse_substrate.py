@@ -40,9 +40,7 @@ from enum import Enum
 import numpy as np
 from numpy.fft import fft, ifft, fftfreq
 
-PLANCK_CONSTANT = 6.62607015e-34
-HBAR = PLANCK_CONSTANT / (2 * math.pi)
-SPEED_OF_LIGHT = 299792458
+from .constants import PLANCK_CONSTANT, SPEED_OF_LIGHT, HBAR
 BOLTZMANN_CONSTANT = 1.380649e-23
 
 

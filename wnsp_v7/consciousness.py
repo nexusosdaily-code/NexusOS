@@ -26,8 +26,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Set, Any
 
-PLANCK_CONSTANT = 6.62607015e-34
-SPEED_OF_LIGHT = 299792458
+from .constants import PLANCK_CONSTANT, SPEED_OF_LIGHT
 PLANCK_LENGTH = 1.616255e-35
 BOLTZMANN_CONSTANT = 1.380649e-23
 

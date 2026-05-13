@@ -24,8 +24,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
 
-PLANCK_CONSTANT = 6.62607015e-34
-SPEED_OF_LIGHT = 299792458
+from .constants import PLANCK_CONSTANT, SPEED_OF_LIGHT
 EARTH_SOLAR_FLUX = 1.74e17  # Watts hitting Earth from Sun
 CURRENT_HUMAN_POWER = 1.8e13  # Current global power consumption
 K1_POWER_TARGET = 1e17  # Type I target

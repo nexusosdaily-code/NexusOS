@@ -41,15 +41,14 @@ from typing import Dict, List, Optional, Tuple, Any, Callable, Union
 from enum import Enum
 
 try:
+    from .constants import PLANCK_CONSTANT, SPEED_OF_LIGHT, HBAR
     from .substrate_v3 import (
-        LambdaTruthSubstrate, 
-        LambdaField, 
+        LambdaTruthSubstrate,
+        LambdaField,
         TruthOperator,
         RealityState,
         TruthState,
         VacuumChaos,
-        PLANCK_CONSTANT,
-        SPEED_OF_LIGHT
     )
     from .substrate_coordinator import (
         SubstrateCoordinator,
@@ -58,12 +57,13 @@ try:
         get_substrate_coordinator
     )
 except ImportError:
+    import math as _math
     PLANCK_CONSTANT = 6.62607015e-34
     SPEED_OF_LIGHT = 299792458
+    HBAR = PLANCK_CONSTANT / (2 * _math.pi)
     LambdaTruthSubstrate = None
     SubstrateCoordinator = None
 
-HBAR = PLANCK_CONSTANT / (2 * math.pi)
 ALPHA_CURVATURE = 1e-30
 BETA_ORBITAL = 1e-32
 DEFAULT_COHERENCE_MIN = 0.1
