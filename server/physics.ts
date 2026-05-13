@@ -172,6 +172,52 @@ export function buildUri(wdm: number, oam: number, pol: string, path = "/"): str
   return `wnsp://Ψ(${wdm},${oam},${pol})${path}`;
 }
 
+// ── Oscillating Quanta State ──────────────────────────────────────────────────
+// Returns the instantaneous quantum oscillation state for a WDM channel at
+// a given elapsed time.  Uses fractional-cycle phase to avoid float overflow
+// at optical frequencies (~10^14 Hz).
+export interface QuantaOscillation {
+  wdm:         number;
+  tMs:         number;
+  nm:          number;
+  frequencyHz: number;
+  periodS:     number;
+  energyJ:     number;
+  lambdaKg:    number;
+  phaseRad:    number;
+  amplitude:   number;
+  waveform:    number[];  // 128 sin samples spanning one full cycle from phaseRad
+  derivedFrom: string;
+}
+
+export function oscillatingQuantaState(wdm: number, tMs: number): QuantaOscillation {
+  const w   = Math.max(0, Math.min(255, Math.round(wdm)));
+  const nm  = NM_MIN + w * ((NM_MAX - NM_MIN) / (WDM_CHANNELS - 1));
+  const frequencyHz = C_LIGHT / (nm * 1e-9);
+  const periodS     = 1 / frequencyHz;
+  const energyJ     = H_PLANCK * frequencyHz;
+  const lambdaKg    = energyJ / (C_LIGHT * C_LIGHT);
+
+  // Fractional-cycle phase prevents float64 overflow at ~500 THz × large t
+  const cycles     = frequencyHz * (tMs * 1e-3);
+  const fractCycle = cycles - Math.floor(cycles);        // [0, 1)
+  const phaseRad   = fractCycle * 2 * Math.PI;           // [0, 2π)
+  const amplitude  = Math.sin(phaseRad);
+
+  // 128 uniformly spaced samples over one full period, starting at phaseRad
+  const waveform = Array.from({ length: 128 }, (_, i) =>
+    parseFloat(Math.sin(phaseRad + (i / 128) * 2 * Math.PI).toFixed(6))
+  );
+
+  return {
+    wdm: w, tMs, nm, frequencyHz, periodS, energyJ, lambdaKg,
+    phaseRad: parseFloat(phaseRad.toFixed(6)),
+    amplitude: parseFloat(amplitude.toFixed(6)),
+    waveform,
+    derivedFrom: `E=hf · λ=${nm.toFixed(2)}nm · f=${(frequencyHz / 1e12).toFixed(4)}THz`,
+  };
+}
+
 // ── Kernel address for fee collection ────────────────────────────────────────
 export const KERNEL_WALLET_ADDRESS = "NXT-KRNL-SYS1-0000-NEXUS";
 

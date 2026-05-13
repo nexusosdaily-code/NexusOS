@@ -1973,6 +1973,10 @@ export async function registerRoutes(
     secureProxyToSpectralAPI(req, res, "/api/wnsp/bus/status");
   });
 
+  app.post("/api/wnsp/quanta/oscillate", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, "/api/wnsp/quanta/oscillate");
+  });
+
   // Scheduler + Runtime Monitor
   app.post("/api/wnsp/agent/schedule", optionalAuth, (req, res) => {
     secureProxyToSpectralAPI(req, res, "/api/wnsp/agent/schedule");

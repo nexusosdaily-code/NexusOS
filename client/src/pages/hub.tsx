@@ -119,6 +119,13 @@ const APP_SECTIONS = [
       { title: "Spectral Contracts",href: "/spectral-contracts", Icon: FileText },
     ],
   },
+  {
+    label: "Learn",
+    accent: "#22d3ee",
+    items: [
+      { title: "Oscillating Quanta — First Principles", href: "/oscillating-quanta", Icon: Waves },
+    ],
+  },
 ];
 
 // ── Time formatter ─────────────────────────────────────────────────────

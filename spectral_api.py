@@ -1983,6 +1983,59 @@ def spectrometer_read():
     })
 
 
+@app.route('/api/wnsp/quanta/oscillate', methods=['POST'])
+def quanta_oscillate():
+    """
+    Compute the instantaneous oscillation state for a WNSP WDM channel at
+    elapsed time t.
+
+    Payload: { "wdm": 0-255, "t_ms": float }
+
+    Returns: frequency_hz, period_s, energy_j, lambda_kg, phase_rad,
+             amplitude, waveform[128], derived_from
+    """
+    import math
+    data   = request.get_json() or {}
+    wdm    = max(0, min(255, int(data.get('wdm', 128))))
+    t_ms   = float(data.get('t_ms', 0.0))
+
+    NM_MIN_V = 380.0
+    NM_MAX_V = 780.0
+    WDM_CH   = 256
+
+    nm           = NM_MIN_V + wdm * (NM_MAX_V - NM_MIN_V) / (WDM_CH - 1)
+    frequency_hz = SPEED_OF_LIGHT / (nm * 1e-9)
+    period_s     = 1.0 / frequency_hz
+    energy_j     = PLANCK_CONSTANT * frequency_hz
+    lambda_kg    = energy_j / (SPEED_OF_LIGHT ** 2)
+
+    # Fractional-cycle phase: avoids float64 overflow at ~500 THz × large t
+    cycles      = frequency_hz * (t_ms * 1e-3)
+    fract_cycle = cycles - math.floor(cycles)   # [0, 1)
+    phase_rad   = fract_cycle * 2.0 * math.pi   # [0, 2π)
+    amplitude   = math.sin(phase_rad)
+
+    # 128 uniformly spaced samples over one full cycle, starting at phase_rad
+    waveform = [
+        round(math.sin(phase_rad + (i / 128.0) * 2.0 * math.pi), 6)
+        for i in range(128)
+    ]
+
+    return jsonify({
+        "wdm":          wdm,
+        "t_ms":         t_ms,
+        "nm":           round(nm, 4),
+        "frequency_hz": frequency_hz,
+        "period_s":     period_s,
+        "energy_j":     energy_j,
+        "lambda_kg":    lambda_kg,
+        "phase_rad":    round(phase_rad, 6),
+        "amplitude":    round(amplitude, 6),
+        "waveform":     waveform,
+        "derived_from": f"E=hf · λ={nm:.4f}nm · f={frequency_hz/1e12:.4f}THz",
+    })
+
+
 if __name__ == '__main__':
     print("Starting Spectral API server on port 5001...")
     app.run(host='0.0.0.0', port=5001, debug=True)

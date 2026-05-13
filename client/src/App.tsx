@@ -80,6 +80,7 @@ import CompressionExplorerPage from "@/pages/compression-explorer";
 import SpectralContractsPage from "@/pages/spectral-contracts";
 import SOPPage from "@/pages/sop";
 import HardwareLabPage from "@/pages/hardware-lab";
+import OscillatingQuantaPage from "@/pages/oscillating-quanta";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -168,6 +169,7 @@ function ProtectedRoutes() {
         <Route path="/spectral-contracts" component={SpectralContractsPage} />
         <Route path="/sop" component={SOPPage} />
         <Route path="/hardware-lab" component={HardwareLabPage} />
+        <Route path="/oscillating-quanta" component={OscillatingQuantaPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
