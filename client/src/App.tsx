@@ -182,6 +182,7 @@ function ProtectedRoutes() {
         <Route path="/sop" component={SOPPage} />
         <Route path="/hardware-lab" component={HardwareLabPage} />
         <Route path="/oscillating-quanta" component={OscillatingQuantaPage} />
+        <Route path="/ce-se-pipeline" component={LearnPage} />
         <Route path="/learn" component={LearnPage} />
         <Route path="/pipeline" component={PipelinePage} />
         <Route path="/planck-alignment" component={PlanckAlignmentPage} />

@@ -6,6 +6,28 @@ NexusOS is a full-stack web application designed as the foundational blueprint f
 
 Preferred communication style: Simple, everyday language.
 
+# PROTECTED FEATURES — DO NOT REMOVE OR OVERWRITE
+
+The following pages and routes are core to the NexusOS mission. Any agent or developer working on this project MUST preserve them. Never delete, rename, or overwrite these files without explicit user approval.
+
+| Route | File | Description |
+|---|---|---|
+| `/ce-se-pipeline` | `client/src/pages/learn.tsx` | **PRIMARY FEATURE** — Unified 4-stage pipeline: paste any language → transpile to WavelengthScript → compile to bytecode → execute in WNSP VM. This is the central demonstration of the entire NexusOS physics stack. |
+| `/wnsp-vm` | `client/src/pages/wnsp-vm.tsx` | WNSP Virtual Machine — bytecode interpreter, step/run execution, Ψ channel registers |
+| `/wavelength-lang` | `client/src/pages/wavelength-lang.tsx` | WavelengthScript language spec, transpiler, compiler |
+| `/ce-code-writer` | `client/src/pages/ce-code-writer.tsx` | Human First Contact CE-SE encoder, live encode, code builder, integration kit |
+| `/compression-explorer` | `client/src/pages/compression-explorer.tsx` | Interactive Λ=hf/c² compression curve visualisation |
+| `/oscillating-quanta` | `client/src/pages/oscillating-quanta.tsx` | First Principles — Theory of Compression States |
+| `/hardware-lab` | `client/src/pages/hardware-lab.tsx` | Physics calibration verifier, live spectrometer |
+
+## Safeguard Rules for All Future Builds
+
+1. Before touching `App.tsx` routes, verify every existing route is preserved after the edit.
+2. Before touching `hub.tsx`, verify every existing Hub section and item is preserved.
+3. Never rewrite `learn.tsx`, `wnsp-vm.tsx`, or `wavelength-lang.tsx` — only extend them.
+4. If a task adds new pages, add them WITHOUT removing existing ones.
+5. When in doubt, check the route still exists in `App.tsx` before marking a task complete.
+
 # System Architecture
 
 ## UI/UX Decisions

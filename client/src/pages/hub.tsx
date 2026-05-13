@@ -101,6 +101,7 @@ const APP_SECTIONS = [
     label: "Developer",
     accent: "#16a34a",
     items: [
+      { title: "⚡ CE-SE Pipeline", href: "/ce-se-pipeline", Icon: Zap },
       { title: "API Keys",      href: "/developer/keys",  Icon: Key },
       { title: "GitHub Bridge", href: "/github",          Icon: GitBranch },
       { title: "CE Writer",     href: "/ce-code-writer",   Icon: Code2 },
@@ -125,7 +126,7 @@ const APP_SECTIONS = [
     accent: "#22d3ee",
     items: [
       { title: "Oscillating Quanta — First Principles", href: "/oscillating-quanta", Icon: Waves },
-      { title: "WavelengthScript Learn",                href: "/learn",              Icon: Code2 },
+      { title: "CE-SE Pipeline",                         href: "/ce-se-pipeline",     Icon: Zap },
       { title: "Planck Alignment",                      href: "/planck-alignment",   Icon: Zap },
     ],
   },
