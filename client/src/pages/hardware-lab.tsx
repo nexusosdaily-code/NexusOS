@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -205,6 +205,24 @@ def emit(nm: float, duration: float = 0.5):
 def ce_encode_char(char: str) -> float:
     """Look up a character's CE-assigned wavelength."""
     return WASCII_TABLE.get(char, WASCII_TABLE.get(char.lower(), 560.0))
+
+def calculate_calibrated_wavelength(ordinal: int, measured_drift: float = 0.0) -> float:
+    """
+    Return the expected CE wavelength for a given ordinal (charCode % 128),
+    with an optional systematic drift offset discovered during spectrometer calibration.
+
+    Formula: BASE_LAMBDA + (ordinal % 128) / 128 × 400 + measured_drift
+    The % 128 keeps any ordinal within the visible 380–780 nm band.
+
+    Usage:
+        # During calibration you observed the spectrometer always reads +1.2 nm high.
+        # Pass measured_drift=-1.2 to compensate.
+        target = calculate_calibrated_wavelength(ord('A') % 128, measured_drift=-1.2)
+    """
+    BASE_LAMBDA = 380.0
+    BAND_WIDTH  = 400.0  # visible range covered by 128 CE bands
+    theoretical = BASE_LAMBDA + (ordinal % 128) / 128.0 * BAND_WIDTH
+    return round(theoretical + measured_drift, 3)
 
 # ── Main loop ──────────────────────────────────────────────────────────────
 print("NexusOS Pi CE Bridge · WNSP-CE v1.0")
@@ -526,25 +544,13 @@ function Calibration() {
   const [char, setChar] = useState("N");
   const [measured, setMeasured] = useState("");
   const [livePolling, setLivePolling] = useState(false);
-  const [expected, setExpected] = useState<number | null>(null);
   const TOLERANCE = 2.0;
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { mutate, isPending } = useMutation<EncodeResponse, Error, string>({
-    mutationFn: async (c: string) => {
-      const r = await apiRequest("POST", "/api/nexus/dev/encode", { instruction: c, label: "calibration" });
-      return r.json() as Promise<EncodeResponse>;
-    },
-    onSuccess(d) { setExpected(d.wavelength_mid_nm ?? null); },
-  });
-
-  // Auto-trigger CE lookup on mount and whenever char changes (debounced 300ms)
-  useEffect(() => {
-    if (!char) { setExpected(null); return; }
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => { mutate(char); }, 300);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [char, mutate]);
+  // Expected λ is computed entirely in-browser — no network call needed.
+  // Formula: BASE_LAMBDA + (charCode % 128) / 128 × 400 nm
+  // The % 128 keeps Unicode/extended-ASCII chars within the visible 380–780 nm band.
+  const expected = useMemo(() => char ? nmFromChar(char) : null, [char]);
+  const ordinal   = useMemo(() => char ? char.charCodeAt(0) % 128 : null, [char]);
 
   // Live spectrometer polling — 1 Hz while livePolling is active
   const { data: spectroData, error: spectroError } = useQuery<SpectrometerReading>({
@@ -568,16 +574,19 @@ function Calibration() {
     }
   }, [inputLocked, spectroData]);
 
-  const measNm = parseFloat(measured);
-  const diff = expected !== null && !isNaN(measNm) ? Math.abs(measNm - expected) : null;
-  const pass = diff !== null && diff <= TOLERANCE;
+  // Signed deviation: positive means laser reads high, negative means low.
+  const measNm   = parseFloat(measured);
+  const drift    = expected !== null && !isNaN(measNm) ? parseFloat((measNm - expected).toFixed(3)) : null;
+  const absDrift = drift !== null ? Math.abs(drift) : null;
+  const pass     = absDrift !== null && absDrift <= TOLERANCE;
 
   return (
-    <div className="space-y-5 max-w-lg">
+    <div className="space-y-5 max-w-xl">
       <p className="text-sm text-slate-400">
-        Use this to verify hardware accuracy. Type a character — the expected wavelength is looked up
-        automatically from the CE encoder. Enable live readback to stream the measured wavelength directly
-        from your spectrometer, or enter it manually. Target tolerance is ±{TOLERANCE} nm.
+        Verify hardware accuracy against the deterministic WNSP stack. Type a character — the
+        expected wavelength is computed locally from the CE formula. Enable live readback to
+        stream directly from your spectrometer, or enter a reading manually.
+        Tolerance is ±{TOLERANCE} nm.
       </p>
 
       {/* Live polling toggle */}
@@ -586,9 +595,7 @@ function Calibration() {
           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${livePolling ? (isHardware ? "bg-green-400 animate-pulse" : "bg-amber-400 animate-pulse") : "bg-slate-600"}`} />
           <span className="text-sm text-slate-300">
             {livePolling
-              ? deviceLabel
-                ? `Live · ${deviceLabel}`
-                : "Connecting…"
+              ? deviceLabel ? `Live · ${deviceLabel}` : "Connecting…"
               : "Live spectrometer readback"}
           </span>
           {spectroData?.warning && (
@@ -615,76 +622,105 @@ function Calibration() {
         </div>
       )}
 
-      <div className="space-y-4 bg-slate-900/50 border border-slate-800 rounded-xl p-5">
-        <div className="space-y-2">
-          <label className="text-xs text-slate-500 uppercase tracking-wider">Character to test</label>
-          <div className="flex items-center gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Left: inputs */}
+        <div className="space-y-4 bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+          <div className="space-y-2">
+            <label className="text-xs text-slate-500 uppercase tracking-wider">Target character symbol</label>
             <Input
               value={char}
-              onChange={e => { setChar(e.target.value.slice(-1)); setExpected(null); setMeasured(""); }}
+              onChange={e => { setChar(e.target.value.slice(-1)); setMeasured(""); }}
               maxLength={1}
-              className="bg-slate-950 border-slate-700 text-slate-200 w-20 text-center text-xl font-mono"
+              className="bg-slate-950 border-slate-700 text-slate-200 w-full text-center text-2xl font-mono"
               data-testid="input-calib-char"
             />
-            {isPending && <div className="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />}
           </div>
-        </div>
 
-        {expected && (
-          <div className="flex items-center gap-3 p-3 bg-slate-950 rounded-lg border border-slate-800">
-            <Swatch nm={expected} />
-            <div>
-              <div className="text-xs text-slate-500">CE-computed expected wavelength</div>
-              <div className="font-mono text-violet-300 text-lg" data-testid="text-calib-expected">{expected.toFixed(2)} nm</div>
-              <div className="text-xs text-slate-500">{bandOf(expected).label} band · Ψ channel {Math.round((expected - 350) / (1033 - 350) * 255)}</div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-slate-500 uppercase tracking-wider">Spectrometer reading (nm)</label>
+              {livePolling && spectroData && (
+                <span className="text-xs text-slate-500" data-testid="text-calib-live-source">
+                  {isHardware
+                    ? "live hardware — auto-filled"
+                    : `hint: ${spectroData.wavelength_nm} nm (sim)`}
+                </span>
+              )}
             </div>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs text-slate-500 uppercase tracking-wider">Measured λ from spectrometer (nm)</label>
-            {livePolling && spectroData && (
-              <span className="text-xs text-slate-500" data-testid="text-calib-live-source">
-                {isHardware
-                  ? "live hardware — auto-filled"
-                  : `no device · hint: ${spectroData.wavelength_nm} nm (simulated)`}
-              </span>
+            <Input
+              value={measured}
+              onChange={e => { if (!inputLocked) setMeasured(e.target.value); }}
+              readOnly={inputLocked}
+              placeholder={inputLocked ? "Waiting for hardware reading…" : "e.g. 584.125"}
+              type="number"
+              step="0.001"
+              className={`bg-slate-950 border-slate-700 text-slate-200 font-mono ${inputLocked ? "cursor-not-allowed opacity-70" : ""}`}
+              data-testid="input-calib-measured"
+            />
+            {livePolling && !isHardware && (
+              <p className="text-xs text-amber-400/80" data-testid="status-calib-no-device">
+                No spectrometer detected — enter your reading manually above.
+              </p>
             )}
           </div>
-          <Input
-            value={measured}
-            onChange={e => { if (!inputLocked) setMeasured(e.target.value); }}
-            readOnly={inputLocked}
-            placeholder={inputLocked ? "Waiting for hardware reading…" : "e.g. 736.8"}
-            type="number"
-            step="0.1"
-            className={`bg-slate-950 border-slate-700 text-slate-200 ${inputLocked ? "cursor-not-allowed opacity-70" : ""}`}
-            data-testid="input-calib-measured"
-          />
-          {livePolling && !isHardware && (
-            <p className="text-xs text-amber-400/80" data-testid="status-calib-no-device">
-              No spectrometer detected — enter your measured wavelength manually above.
-            </p>
-          )}
         </div>
 
-        {diff !== null && (
-          <div className={`flex items-center gap-3 p-4 rounded-xl border ${pass ? "border-green-500/40 bg-green-950/20" : "border-red-500/40 bg-red-950/20"}`} data-testid="status-calib-result">
-            {pass
-              ? <CheckCircle2 className="w-6 h-6 text-green-400 flex-shrink-0" />
-              : <AlertCircle className="w-6 h-6 text-red-400 flex-shrink-0" />}
-            <div>
-              <div className={`font-medium ${pass ? "text-green-300" : "text-red-300"}`} data-testid="text-calib-verdict">
-                {pass ? "PASS — within tolerance" : "FAIL — outside tolerance"}
-              </div>
-              <div className="text-xs text-slate-400 mt-0.5">
-                Δλ = {diff.toFixed(2)} nm · tolerance ±{TOLERANCE} nm
-                {!pass && " · Check laser calibration or SLM hologram pattern"}
-              </div>
+        {/* Right: live status engine */}
+        <div className="flex flex-col justify-between bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between border-b border-slate-800 pb-2">
+              <span className="text-slate-400">Ordinal (n mod 128)</span>
+              <span className="font-mono text-slate-200" data-testid="text-calib-ordinal">
+                {ordinal !== null ? ordinal : "—"}
+              </span>
+            </div>
+            {expected !== null && (
+              <>
+                <div className="flex justify-between border-b border-slate-800 pb-2 items-center">
+                  <span className="text-slate-400">Expected λ</span>
+                  <div className="flex items-center gap-2">
+                    <Swatch nm={expected} />
+                    <span className="font-mono text-indigo-400 font-bold" data-testid="text-calib-expected">
+                      {expected.toFixed(3)} nm
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-between border-b border-slate-800 pb-2">
+                  <span className="text-slate-400">Band</span>
+                  <span className="font-mono text-slate-300">{bandOf(expected).label}</span>
+                </div>
+              </>
+            )}
+            <div className="flex justify-between pb-1">
+              <span className="text-slate-400">Tolerance</span>
+              <span className="font-mono text-slate-400">±{TOLERANCE.toFixed(1)} nm</span>
             </div>
           </div>
-        )}
+
+          {/* Validation result */}
+          {drift !== null && (
+            <div
+              className={`mt-4 p-3 rounded-lg border flex flex-col items-center transition-colors ${
+                pass
+                  ? "bg-emerald-950/40 border-emerald-500/50 text-emerald-400"
+                  : "bg-rose-950/40 border-rose-500/50 text-rose-400"
+              }`}
+              data-testid="status-calib-result"
+            >
+              <span className="text-xs uppercase font-bold tracking-widest">
+                Hardware Status: {pass ? "PASS" : "FAIL"}
+              </span>
+              <span className="text-xl font-mono font-bold mt-1" data-testid="text-calib-verdict">
+                {drift > 0 ? `+${drift}` : drift} nm drift
+              </span>
+              <span className="text-[10px] text-slate-300 mt-1 text-center">
+                {pass
+                  ? "Within threshold — optical stream is coherent."
+                  : "Outside threshold — recalibrate laser diode mirrors."}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
