@@ -1986,38 +1986,45 @@ def spectrometer_read():
 @app.route('/api/wnsp/quanta/oscillate', methods=['POST'])
 def quanta_oscillate():
     """
-    Compute the instantaneous oscillation state for a WNSP WDM channel at
-    elapsed time t.
+    Compute the instantaneous oscillation state for a WNSP channel.
 
-    Payload: { "wdm": 0-255, "t_ms": float }
+    Accepts EITHER:
+      { "wdm": 0-255, "t_ms": float }          — WDM channel index
+      { "wavelength_nm": float, "t_ms": float } — explicit wavelength in nm
+    Both inputs are accepted simultaneously; wavelength_nm takes priority when
+    both are present.  Missing value is derived from the other.
 
-    Returns: frequency_hz, period_s, energy_j, lambda_kg, phase_rad,
-             amplitude, waveform[128], derived_from
+    Returns: wdm, nm, frequency_hz, period_s, energy_j, lambda_kg,
+             phase_rad, amplitude, waveform[128], derived_from
     """
     import math
-    data   = request.get_json() or {}
-    wdm    = max(0, min(255, int(data.get('wdm', 128))))
-    t_ms   = float(data.get('t_ms', 0.0))
+    data = request.get_json() or {}
+    t_ms = float(data.get('t_ms', 0.0))
 
     NM_MIN_V = 380.0
     NM_MAX_V = 780.0
     WDM_CH   = 256
 
-    nm           = NM_MIN_V + wdm * (NM_MAX_V - NM_MIN_V) / (WDM_CH - 1)
+    if 'wavelength_nm' in data:
+        nm  = max(NM_MIN_V, min(NM_MAX_V, float(data['wavelength_nm'])))
+        wdm = round((nm - NM_MIN_V) / (NM_MAX_V - NM_MIN_V) * (WDM_CH - 1))
+    else:
+        wdm = max(0, min(255, int(data.get('wdm', 128))))
+        nm  = NM_MIN_V + wdm * (NM_MAX_V - NM_MIN_V) / (WDM_CH - 1)
+
     frequency_hz = SPEED_OF_LIGHT / (nm * 1e-9)
     period_s     = 1.0 / frequency_hz
     energy_j     = PLANCK_CONSTANT * frequency_hz
     lambda_kg    = energy_j / (SPEED_OF_LIGHT ** 2)
 
-    # Fractional-cycle phase: avoids float64 overflow at ~500 THz × large t
-    cycles      = frequency_hz * (t_ms * 1e-3)
-    fract_cycle = cycles - math.floor(cycles)   # [0, 1)
-    phase_rad   = fract_cycle * 2.0 * math.pi   # [0, 2π)
-    amplitude   = math.sin(phase_rad)
+    # Normalized phase: (t % T) / T  →  [0, 1)  — avoids float64 overflow
+    phase     = (frequency_hz * (t_ms * 1e-3)) % 1.0
+    phase_rad = phase * 2.0 * math.pi          # [0, 2π)
+    amplitude = math.cos(phase_rad)            # cosine: +1 at t=0
 
-    # 128 uniformly spaced samples over one full cycle, starting at phase_rad
+    # 128 cosine samples over one full period, starting at current phase
     waveform = [
-        round(math.sin(phase_rad + (i / 128.0) * 2.0 * math.pi), 6)
+        round(math.cos(phase_rad + (i / 128.0) * 2.0 * math.pi), 6)
         for i in range(128)
     ]
 

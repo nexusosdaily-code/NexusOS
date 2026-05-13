@@ -191,22 +191,22 @@ export interface QuantaOscillation {
 }
 
 export function oscillatingQuantaState(wdm: number, tMs: number): QuantaOscillation {
-  const w   = Math.max(0, Math.min(255, Math.round(wdm)));
-  const nm  = NM_MIN + w * ((NM_MAX - NM_MIN) / (WDM_CHANNELS - 1));
+  const w           = Math.max(0, Math.min(255, Math.round(wdm)));
+  const nm          = NM_MIN + w * ((NM_MAX - NM_MIN) / (WDM_CHANNELS - 1));
   const frequencyHz = C_LIGHT / (nm * 1e-9);
   const periodS     = 1 / frequencyHz;
   const energyJ     = H_PLANCK * frequencyHz;
   const lambdaKg    = energyJ / (C_LIGHT * C_LIGHT);
 
-  // Fractional-cycle phase prevents float64 overflow at ~500 THz × large t
-  const cycles     = frequencyHz * (tMs * 1e-3);
-  const fractCycle = cycles - Math.floor(cycles);        // [0, 1)
-  const phaseRad   = fractCycle * 2 * Math.PI;           // [0, 2π)
-  const amplitude  = Math.sin(phaseRad);
+  // Normalized phase: fraction of period elapsed [0, 1).
+  // Uses modulo-1 arithmetic to avoid float64 overflow at ~500 THz × large t.
+  const phase    = (frequencyHz * (tMs * 1e-3)) % 1;   // (t % T) / T
+  const phaseRad = phase * 2 * Math.PI;                 // [0, 2π) for waveform calc
+  const amplitude = Math.cos(phaseRad);                 // cosine: starts at +1 at t=0
 
-  // 128 uniformly spaced samples over one full period, starting at phaseRad
+  // 128 cosine samples over one full period, starting at current phase
   const waveform = Array.from({ length: 128 }, (_, i) =>
-    parseFloat(Math.sin(phaseRad + (i / 128) * 2 * Math.PI).toFixed(6))
+    parseFloat(Math.cos(phaseRad + (i / 128) * 2 * Math.PI).toFixed(6))
   );
 
   return {

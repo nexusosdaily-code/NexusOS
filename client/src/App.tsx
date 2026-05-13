@@ -211,6 +211,7 @@ function Router() {
       <Route path="/wnsp-bridge" component={WnspBridgePage} />
       <Route path="/wnsp/bridge" component={WnspBridgePage} />
       <Route path="/profile/:username" component={ProfilePage} />
+      <Route path="/oscillating-quanta" component={OscillatingQuantaPage} />
       <Route>
         <ProtectedRoutes />
       </Route>
