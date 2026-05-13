@@ -1427,6 +1427,55 @@ ${JSON.stringify(SYNC_VECTOR, null, 2)}`}
 }
 
 // ── Tab 4: Spectral Linter ────────────────────────────────────────
+// ── Physics helpers for linter ─────────────────────────────────────
+const H_PLANCK_LINTER = 6.62607015e-34;
+const C_LIGHT_LINTER  = 299_792_458;
+const EV_PER_JOULE    = 1.602176634e-19;
+
+function nmToEnergyEV(nm: number): string {
+  return ((H_PLANCK_LINTER * C_LIGHT_LINTER) / (nm * 1e-9) / EV_PER_JOULE).toFixed(3);
+}
+function nmToWDM(nm: number): number {
+  return Math.min(255, Math.max(0, Math.floor((nm - 380) / 3.125)));
+}
+function nmToOAM(name: string): number {
+  return [...name].reduce((s, c) => s + c.charCodeAt(0), 0) % 50;
+}
+function localCEEncode(name: string): number {
+  const nms = [...name].map(c => CE_TABLE[c.charCodeAt(0) % 128]);
+  return nms.reduce((s, v) => s + v, 0) / nms.length;
+}
+
+type LangMode = "auto" | "js" | "python" | "rust";
+
+function extractFunctionNames(src: string, mode: LangMode): string[] {
+  const names: string[] = [];
+  const add = (n: string | undefined) => { if (n && !names.includes(n)) names.push(n); };
+
+  if (mode === "auto" || mode === "js") {
+    const re = /(?:async\s+)?function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?(?:function|\()/g;
+    let m; while ((m = re.exec(src)) !== null) add(m[1] || m[2]);
+    const method = /^\s*(?:async\s+)?(\w+)\s*\([^)]*\)\s*\{/gm;
+    while ((m = method.exec(src)) !== null) {
+      const n = m[1];
+      if (n && !["if","for","while","switch","catch","constructor"].includes(n)) add(n);
+    }
+  }
+  if (mode === "auto" || mode === "python") {
+    const re = /def\s+([a-zA-Z_]\w*)\s*\(/g;
+    let m; while ((m = re.exec(src)) !== null) add(m[1]);
+  }
+  if (mode === "auto" || mode === "rust") {
+    const re = /fn\s+([a-zA-Z_]\w*)\s*[(<]/g;
+    let m; while ((m = re.exec(src)) !== null) add(m[1]);
+  }
+  return names;
+}
+
+const LANG_LABELS: Record<LangMode, string> = {
+  auto: "Auto-detect", js: "JS / TS", python: "Python", rust: "Rust"
+};
+
 function SpectralLinterTab() {
   const [source, setSource] = useState(`function authenticate(user, password) {
   // validate credentials
@@ -1443,32 +1492,37 @@ function saveUserRecord(data) {
 function onLoginEvent(event) {
   // handle login
 }`);
+  const [lang, setLang] = useState<LangMode>("auto");
   const [results, setResults] = useState<any[]>([]);
   const [running, setRunning] = useState(false);
 
   const lint = async () => {
     setRunning(true);
     setResults([]);
-    const fnRegex = /(?:function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?(?:function|\())/g;
-    const matches: string[] = [];
-    let m;
-    while ((m = fnRegex.exec(source)) !== null) {
-      matches.push(m[1] || m[2]);
-    }
+    const names = extractFunctionNames(source, lang);
     const encoded: any[] = [];
-    for (const fn of matches.slice(0, 8)) {
+    for (const fn of names.slice(0, 16)) {
       const line = source.split("\n").find(l => l.includes(fn)) ?? fn;
       try {
         const res  = await apiRequest("POST", "/api/nexus/dev/encode", { instruction: line.trim(), label: fn });
         const data = await res.json();
         encoded.push({ fn, ...data });
-      } catch {}
+      } catch {
+        const nm  = localCEEncode(fn);
+        const wdm = nmToWDM(nm);
+        const oam = nmToOAM(fn);
+        encoded.push({
+          fn,
+          wavelength_mid_nm: parseFloat(nm.toFixed(2)),
+          psiChannel: `Ψ(${wdm},${oam},H)`,
+          offline: true,
+        });
+      }
     }
     setResults(encoded);
     setRunning(false);
   };
 
-  // Coherence: % of functions in the dominant band
   const coherenceScore = (() => {
     if (results.length < 2) return null;
     const counts: Record<string, number> = {};
@@ -1482,12 +1536,29 @@ function onLoginEvent(event) {
     return { pct, domBand, max, total: results.length };
   })();
 
+  const detectedCount = extractFunctionNames(source, lang).length;
+
   return (
     <div className="space-y-4">
       <p className="text-slate-400 text-sm">
-        Paste any code. The linter CE-encodes each function and reveals whether your codebase has
-        coherent spectral structure or scattered, conflicting addresses.
+        Paste any code. The linter CE-encodes every function name against the canonical 128-band table
+        and reveals whether your codebase has coherent spectral structure or scattered, conflicting addresses.
       </p>
+
+      {/* Language selector */}
+      <div className="flex gap-2 flex-wrap">
+        {(["auto","js","python","rust"] as LangMode[]).map(l => (
+          <button key={l} onClick={() => setLang(l)}
+            className={`px-3 py-1 rounded text-xs font-mono border transition-all ${lang === l ? "bg-indigo-700 border-indigo-500 text-white" : "bg-slate-800 border-slate-700 text-slate-400 hover:text-white"}`}>
+            {LANG_LABELS[l]}
+          </button>
+        ))}
+        {source.trim() && (
+          <span className="text-xs text-slate-500 self-center ml-1 font-mono">
+            {detectedCount} function{detectedCount !== 1 ? "s" : ""} detected
+          </span>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
@@ -1495,7 +1566,7 @@ function onLoginEvent(event) {
           <Textarea
             value={source}
             onChange={e => setSource(e.target.value)}
-            className="bg-slate-800 border-slate-600 text-slate-200 font-mono text-xs min-h-48"
+            className="bg-slate-800 border-slate-600 text-slate-200 font-mono text-xs min-h-56"
             data-testid="input-source"
           />
           <Button className="mt-2 w-full" onClick={lint} disabled={running} data-testid="btn-lint">
@@ -1508,48 +1579,74 @@ function onLoginEvent(event) {
           {results.length > 0 && (
             <div className="space-y-2">
               {/* Coherence score */}
-              {coherenceScore && (
-                <div className="flex items-center gap-2 p-2 rounded border border-slate-700 bg-slate-900/60">
-                  <div className="text-xs font-mono">
-                    <span className="text-slate-400">Coherence: </span>
-                    <span className={`font-bold ${coherenceScore.pct >= 75 ? "text-green-400" : coherenceScore.pct >= 50 ? "text-amber-400" : "text-red-400"}`}>
-                      {coherenceScore.pct}%
-                    </span>
-                    <span className="text-slate-500">
-                      {" "}— {coherenceScore.max} of {coherenceScore.total} functions in{" "}
-                    </span>
-                    <span className="font-semibold" style={{ color: getBand(results.find(r => getBand(r.wavelength_mid_nm).name === coherenceScore.domBand)?.wavelength_mid_nm ?? 550).color }}>
-                      {coherenceScore.domBand}
-                    </span>
+              {coherenceScore && (() => {
+                const b = getBand(results.find(r => getBand(r.wavelength_mid_nm).name === coherenceScore.domBand)?.wavelength_mid_nm ?? 550);
+                return (
+                  <div className="p-3 rounded border border-slate-700 bg-slate-900/60 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Spectral Coherence</span>
+                      <span className={`text-lg font-mono font-bold ${coherenceScore.pct >= 75 ? "text-green-400" : coherenceScore.pct >= 50 ? "text-amber-400" : "text-rose-400"}`}>
+                        {coherenceScore.pct}%
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-500">
+                      {coherenceScore.max} of {coherenceScore.total} functions cluster in{" "}
+                      <span className="font-semibold" style={{ color: b.color }}>{coherenceScore.domBand}</span>
+                      {" "}— {coherenceScore.pct >= 75
+                        ? "tight spectral coherence. Architecture is optically unified."
+                        : coherenceScore.pct >= 50
+                        ? "moderate coherence. Some spectral scatter detected."
+                        : "high scatter. Functions span conflicting spectral domains."}
+                    </p>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
-              <Label className="text-xs text-slate-400">Spectral addresses</Label>
-              <div className="h-6 w-full rounded relative"
-                style={{ background: "linear-gradient(to right,#8b00ff,#0000ff,#00cfff,#00ff00,#ffff00,#ff8c00,#cc0000)" }}>
-                {results.map((r, i) => {
-                  const pct = ((r.wavelength_mid_nm - 380) / 400) * 100;
-                  return (
-                    <div key={i}
-                      className="absolute top-0 h-6 w-0.5"
-                      style={{ left: `${pct}%`, background: "rgba(255,255,255,0.9)" }}
-                      title={`${r.fn}: ${r.wavelength_mid_nm?.toFixed(1)}nm`}
-                    />
-                  );
-                })}
+              {/* Spectrum bar */}
+              <div>
+                <Label className="text-xs text-slate-400">Spectral map — 380–780 nm</Label>
+                <div className="h-7 w-full rounded relative mt-1"
+                  style={{ background: "linear-gradient(to right,#8b00ff,#0000ff,#00cfff,#00ff00,#ffff00,#ff8c00,#cc0000)" }}>
+                  {results.map((r, i) => {
+                    const pct = ((r.wavelength_mid_nm - 380) / 400) * 100;
+                    const b = getBand(r.wavelength_mid_nm);
+                    return (
+                      <div key={i} className="absolute top-0 h-7 flex flex-col items-center"
+                        style={{ left: `${Math.min(98, pct)}%` }}
+                        title={`${r.fn}: ${r.wavelength_mid_nm?.toFixed(1)}nm · ${b.name}`}>
+                        <div className="w-0.5 h-full bg-white/90" />
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-between text-[9px] font-mono text-slate-600 mt-0.5">
+                  {["SYSTEM","AUTH","STREAM","CORE","UI","EVENT","STORAGE"].map(n => <span key={n}>{n}</span>)}
+                </div>
               </div>
 
-              <div className="space-y-1">
+              {/* Per-function results */}
+              <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
                 {results.map((r, i) => {
-                  const b = getBand(r.wavelength_mid_nm);
+                  const b   = getBand(r.wavelength_mid_nm);
+                  const wdm = nmToWDM(r.wavelength_mid_nm);
+                  const oam = nmToOAM(r.fn);
+                  const psi = r.psiChannel ?? `Ψ(${wdm},${oam},H)`;
+                  const ev  = nmToEnergyEV(r.wavelength_mid_nm);
                   return (
-                    <div key={i} className="flex items-center gap-2 p-2 rounded border border-slate-800 bg-slate-900/60"
+                    <div key={i}
+                      className="p-2 rounded border border-slate-800 bg-slate-900/60 font-mono text-xs"
+                      style={{ borderLeftColor: b.color, borderLeftWidth: 3 }}
                       data-testid={`lint-result-${i}`}>
-                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: b.color }} />
-                      <span className="font-mono text-xs text-slate-200 w-40 flex-shrink-0">{r.fn}</span>
-                      <span className="text-xs font-mono text-slate-500">{r.wavelength_mid_nm?.toFixed(1)}nm</span>
-                      <span className="text-xs font-mono ml-auto" style={{ color: b.color }}>{b.name}</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-100 font-bold">{r.fn}()</span>
+                        <span className="text-[10px] font-bold" style={{ color: b.color }}>{b.emoji} {b.name}</span>
+                      </div>
+                      <div className="flex gap-3 mt-1 text-[10px] text-slate-500">
+                        <span>λ <span className="text-slate-300">{r.wavelength_mid_nm?.toFixed(1)} nm</span></span>
+                        <span>E <span className="text-slate-300">{ev} eV</span></span>
+                        <span className="text-slate-400">{psi}</span>
+                        {r.offline && <span className="text-amber-600">offline</span>}
+                      </div>
                     </div>
                   );
                 })}
