@@ -1,0 +1,93 @@
+{
+  "colorScheme": "light",
+  "fonts": [
+    {
+      "family": "sans",
+      "count": 5
+    },
+    {
+      "family": "Arial",
+      "count": 5
+    },
+    {
+      "family": "sans-serif",
+      "count": 5
+    }
+  ],
+  "colors": {
+    "primary": "#4285F4",
+    "accent": "#B4CEF9",
+    "background": "#FFFFFF",
+    "textPrimary": "#202124",
+    "link": "#B4CEF9"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "sans",
+      "heading": "sans"
+    },
+    "fontStacks": {
+      "body": [
+        "sans",
+        "Arial",
+        "sans-serif"
+      ],
+      "heading": [
+        "sans",
+        "Arial",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "sans",
+        "Arial",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "24px",
+      "h2": "24px",
+      "body": "15px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "5px"
+  },
+  "components": {},
+  "images": {
+    "logo": null,
+    "favicon": null,
+    "ogImage": null
+  },
+  "personality": {
+    "tone": "professional",
+    "energy": "medium",
+    "targetAudience": "unknown"
+  },
+  "designSystem": {
+    "framework": "unknown",
+    "componentLibrary": ""
+  },
+  "confidence": {
+    "buttons": 0,
+    "colors": 0,
+    "overall": 0
+  },
+  "__llm_metadata": {
+    "logoSelection": {
+      "llmCalled": false,
+      "llmSucceeded": false,
+      "finalSource": "none",
+      "rawLogoSelection": {
+        "selectedLogoIndex": -1,
+        "selectedLogoReasoning": "LLM failed",
+        "confidence": 0
+      }
+    },
+    "buttonClassification": {
+      "llmCalled": false,
+      "llmSucceeded": false,
+      "error": "LLM call failed or returned fallback values"
+    }
+  }
+}

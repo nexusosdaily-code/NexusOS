@@ -1,0 +1,146 @@
+{
+  "colorScheme": "dark",
+  "fonts": [
+    {
+      "family": "ABC Diatype Plus",
+      "role": "body"
+    }
+  ],
+  "colors": {
+    "primary": "#FF3C00",
+    "secondary": "#1F2C48",
+    "accent": "#FF3C00",
+    "background": "#1E1E1F",
+    "textPrimary": "#1E1E1F",
+    "link": "#1F3728"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "ABC Diatype Plus",
+      "heading": "ABC Diatype Plus"
+    },
+    "fontStacks": {
+      "heading": [
+        "ABC Diatype Plus",
+        "-apple-system",
+        "BlinkMacSystemFont",
+        "Segoe UI",
+        "system-ui",
+        "sans-serif"
+      ],
+      "body": [
+        "ABC Diatype Plus",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "ABC Diatype Plus",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "30px",
+      "h2": "24px",
+      "body": "18px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "4px"
+  },
+  "components": {
+    "input": {
+      "background": "transparent",
+      "textColor": "#F5EFEE",
+      "borderColor": null,
+      "borderRadius": "0px",
+      "borderRadiusCorners": {
+        "topLeft": "0px",
+        "topRight": "0px",
+        "bottomRight": "0px",
+        "bottomLeft": "0px"
+      },
+      "shadow": "none"
+    },
+    "buttonPrimary": {
+      "background": "#1E1E1F",
+      "textColor": "#D5CFCE",
+      "borderColor": "#2E2E2F",
+      "borderRadius": "12px",
+      "borderRadiusCorners": {
+        "topLeft": "12px",
+        "topRight": "0px",
+        "bottomRight": "0px",
+        "bottomLeft": "12px"
+      },
+      "shadow": "none"
+    },
+    "buttonSecondary": {
+      "background": "transparent",
+      "textColor": "#A6A09E",
+      "borderColor": "#292423",
+      "borderRadius": "12px",
+      "borderRadiusCorners": {
+        "topLeft": "12px",
+        "topRight": "12px",
+        "bottomRight": "12px",
+        "bottomLeft": "12px"
+      },
+      "shadow": "none"
+    }
+  },
+  "images": {
+    "favicon": "File saved at: attached_assets/favicon.png",
+    "ogImage": "https://replit.mintlify.app/mintlify-assets/_next/image?url=%2F_mintlify%2Fapi%2Fog%3Fdivision%3DDatabases%26appearance%3Dlight%26title%3DCreate%2Ba%2BProduction%2BDatabase%2BWhen%2BPublishing%26description%3DLearn%2Bhow%2Bto%2Bcreate%2Ba%2Bproduction%2Bdatabase%2Bwhen%2Bpublishing%2Ba%2BReplit%2BApp.%26logoLight%3Dhttps%253A%252F%252Fmintcdn.com%252Freplit%252Fj4of5To8jzehz0JK%252Flogo%252Flight.svg%253Ffit%253Dmax%2526auto%253Dformat%2526n%253Dj4of5To8jzehz0JK%2526q%253D85%2526s%253D6209cb5927b56fd1781133af05428373%26logoDark%3Dhttps%253A%252F%252Fmintcdn.com%252Freplit%252Fj4of5To8jzehz0JK%252Flogo%252Fdark.svg%253Ffit%253Dmax%2526auto%253Dformat%2526n%253Dj4of5To8jzehz0JK%2526q%253D85%2526s%253D9cbba158300d48c49d8b888e71015495%26primaryColor%3D%2523FF3C00%26lightColor%3D%2523FF3C00%26darkColor%3D%2523FF3C00%26backgroundLight%3D%2523F6F5F4%26backgroundDark%3D%25231E1E1F%26background%3Dhttps%253A%252F%252Fmintcdn.com%252Freplit%252Fj4of5To8jzehz0JK%252Fthumb.png%253Ffit%253Dmax%2526auto%253Dformat%2526n%253Dj4of5To8jzehz0JK%2526q%253D85%2526s%253Da7db7f0256b2fa06810fb4d378e63cc5%26fontFamily%3DABC%2BDiatype%2BPlus&w=1200&q=100",
+    "logoHref": "/getting-started/intro-replit",
+    "logoAlt": "dark logo"
+  },
+  "__llm_logo_reasoning": {
+    "selectedIndex": 1,
+    "reasoning": "Selected #1 because it is visible, medium-sized, located in the header, and matches the brand 'Replit' as inferred from the page title and URL.",
+    "confidence": 0.95,
+    "source": "llm"
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": 1,
+      "text": "Copy page",
+      "reasoning": "Button #1 ('Copy page') is selected as the primary CTA because it has a distinct action-oriented text and a unique background color (#1E1E1F) compared to other buttons."
+    },
+    "secondary": {
+      "index": 4,
+      "text": "Production DatabasesPrevious",
+      "reasoning": "Button #4 ('Production DatabasesPrevious') is selected as the secondary button due to its transparent background, making it less prominent than the primary button."
+    },
+    "confidence": 0.9
+  },
+  "personality": {
+    "tone": "modern",
+    "energy": "medium",
+    "targetAudience": "developers"
+  },
+  "designSystem": {
+    "framework": "tailwind",
+    "componentLibrary": "mintlify"
+  },
+  "confidence": {
+    "buttons": 0.9,
+    "colors": 0.9,
+    "overall": 0.9
+  },
+  "__llm_metadata": {
+    "logoSelection": {
+      "llmCalled": true,
+      "llmSucceeded": true,
+      "finalSource": "llm",
+      "rawLogoSelection": {
+        "selectedLogoIndex": 1,
+        "selectedLogoReasoning": "Selected #1 because it is visible, medium-sized, located in the header, and matches the brand 'Replit' as inferred from the page title and URL.",
+        "confidence": 0.95
+      }
+    },
+    "buttonClassification": {
+      "llmCalled": true,
+      "llmSucceeded": true
+    }
+  }
+}
