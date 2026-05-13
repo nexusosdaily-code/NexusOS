@@ -10,22 +10,34 @@ const EV = 1.602176634e-19;  // J/eV (exact 2019 SI)
 const NM_MIN       = 380;
 const NM_MAX       = 780;
 const WDM_CHANNELS = 256;
-// Reference for fee multiplier: green 560 nm
-const REF_NM  = 560;
-const REF_E   = H * (C / (REF_NM * 1e-9));
 
-// ── First Oscillation anchor (Theory of Compression States) ───────────────────
-const FIRST_OSCILLATION_HZ  = 555e12;                                   // 555 THz
-const FIRST_OSCILLATION_NM  = C / FIRST_OSCILLATION_HZ * 1e9;           // ≈ 539.89 nm
-const FIRST_OSCILLATION_J   = H * FIRST_OSCILLATION_HZ;                 // E = hf₀
+// ── First Oscillation anchor (Theory of Compression States) ──────────────────
+const FIRST_OSCILLATION_HZ  = 555e12;
+const FIRST_OSCILLATION_NM  = C / FIRST_OSCILLATION_HZ * 1e9;    // ≈ 539.89 nm
+const FIRST_OSCILLATION_J   = H * FIRST_OSCILLATION_HZ;
 const FIRST_OSCILLATION_EV  = FIRST_OSCILLATION_J / EV;
 const FIRST_OSCILLATION_WDM = Math.round(
   (FIRST_OSCILLATION_NM - NM_MIN) / ((NM_MAX - NM_MIN) / (WDM_CHANNELS - 1))
 );
-// Photon effective mass at f₀ — the canonical lambda_mass constant
-const LAMBDA_MASS_KG = FIRST_OSCILLATION_J / (C * C);                   // h·f₀/c²
+const LAMBDA_MASS_KG = FIRST_OSCILLATION_J / (C * C);             // h·f₀/c²
 
-// ── 5 named channels ──────────────────────────────────────────────────────────
+// ── Reference for fee multiplier (560 nm green midpoint) ─────────────────────
+const REF_NM = 560;
+const REF_E  = H * (C / (REF_NM * 1e-9));
+
+// ── Authority bands ───────────────────────────────────────────────────────────
+const BANDS = [
+  { name: "SYSTEM", wdmMin: 0,   wdmMax: 63,  color: "#8b00ff", bg: "rgba(139,0,255,0.12)" },
+  { name: "KERNEL", wdmMin: 64,  wdmMax: 127, color: "#2563eb", bg: "rgba(37,99,235,0.12)" },
+  { name: "USER",   wdmMin: 128, wdmMax: 191, color: "#16a34a", bg: "rgba(22,163,74,0.12)" },
+  { name: "GUEST",  wdmMin: 192, wdmMax: 255, color: "#dc2626", bg: "rgba(220,38,38,0.12)" },
+] as const;
+
+function bandForWdm(wdm: number) {
+  return BANDS.find(b => wdm >= b.wdmMin && wdm <= b.wdmMax) ?? BANDS[2];
+}
+
+// ── 5 named authority channels (for multi-oscilloscope) ──────────────────────
 const CHANNELS = [
   { id: "SYSTEM",  label: "SYSTEM",  wdm: 32,  color: "#8b00ff", bg: "rgba(139,0,255,0.10)" },
   { id: "KERNEL",  label: "KERNEL",  wdm: 96,  color: "#2563eb", bg: "rgba(37,99,235,0.10)" },
@@ -47,10 +59,10 @@ function computeOscillation(wdm: number, tMs: number) {
   const energyEv    = energyJ / EV;
   const lambdaKg    = energyJ / (C * C);
   const feeMultiplier = energyJ / REF_E;
-  // Normalized phase: (t%T)/T  →  [0,1) — avoids float64 overflow at ~500 THz
+  // Normalized phase [0,1) — avoids float64 overflow at ~500 THz
   const phase    = (frequencyHz * (tMs * 1e-3)) % 1;
   const phaseRad = phase * 2 * Math.PI;
-  const amplitude = Math.cos(phaseRad);            // cosine: +1 at t=0
+  const amplitude = Math.cos(phaseRad);
   const waveform  = Array.from({ length: 128 }, (_, i) =>
     Math.cos(phaseRad + (i / 128) * 2 * Math.PI)
   );
@@ -58,6 +70,14 @@ function computeOscillation(wdm: number, tMs: number) {
 }
 
 function fmtSci(v: number, dp = 4) { return v.toExponential(dp); }
+
+function nmToColor(nm: number): string {
+  const t = (nm - NM_MIN) / (NM_MAX - NM_MIN);
+  const r = Math.round(t < 0.5 ? 0 : (t - 0.5) * 510);
+  const g = Math.round(t < 0.25 ? t * 400 : t < 0.75 ? 100 : (1 - t) * 400);
+  const b = Math.round(t < 0.5 ? (0.5 - t) * 510 : 0);
+  return `rgb(${r},${g},${b})`;
+}
 
 // ── Tiny helpers ──────────────────────────────────────────────────────────────
 function CopyBtn({ text, testId }: { text: string; testId?: string }) {
@@ -74,7 +94,7 @@ function CopyBtn({ text, testId }: { text: string; testId?: string }) {
   );
 }
 
-// ── Dual-layer section wrapper ────────────────────────────────────────────────
+// ── Dual-layer section ────────────────────────────────────────────────────────
 function DualSection({
   title, concept, technical, testId, viewMode,
 }: {
@@ -117,7 +137,42 @@ function DualSection({
   );
 }
 
-// ── 5-channel SVG oscilloscope ─────────────────────────────────────────────────
+// ── Single-channel oscilloscope (original — WDM slider driven) ────────────────
+function SingleOscilloscope({ waveform, color }: { waveform: number[]; color: string }) {
+  const W = 640, H_SVG = 120, PAD = 8;
+  const usable = H_SVG - PAD * 2;
+  const points = waveform.map((y, i) => {
+    const px = (i / (waveform.length - 1)) * W;
+    const py = PAD + ((1 - y) / 2) * usable;
+    return `${px.toFixed(1)},${py.toFixed(1)}`;
+  }).join(" ");
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H_SVG}`}
+      className="w-full rounded-xl"
+      style={{ background: "#050a14", border: "1px solid #1e293b" }}
+      data-testid="oscilloscope-svg"
+    >
+      <line x1="0" y1={H_SVG / 2} x2={W} y2={H_SVG / 2} stroke="#1e293b" strokeWidth="1" />
+      {[0.25, 0.75].map(f => (
+        <line key={f} x1="0" y1={H_SVG * f} x2={W} y2={H_SVG * f} stroke="#0f172a" strokeWidth="1" />
+      ))}
+      <text x="4" y={PAD + 8}     fill="#334155" fontSize="9" fontFamily="monospace">+1</text>
+      <text x="4" y={H_SVG - PAD + 2} fill="#334155" fontSize="9" fontFamily="monospace">−1</text>
+      <polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" />
+      <circle
+        cx={0}
+        cy={PAD + ((1 - waveform[0]) / 2) * usable}
+        r="4"
+        fill={color}
+        opacity="0.9"
+        data-testid="oscilloscope-dot"
+      />
+    </svg>
+  );
+}
+
+// ── Multi-channel oscilloscope (5 authority channels) ────────────────────────
 function MultiOscilloscope({ tMs, active }: { tMs: number; active: Set<ChannelId> }) {
   const W = 640, H_SVG = 140, PAD = 12;
   const usable = H_SVG - PAD * 2;
@@ -126,7 +181,7 @@ function MultiOscilloscope({ tMs, active }: { tMs: number; active: Set<ChannelId
       viewBox={`0 0 ${W} ${H_SVG}`}
       className="w-full rounded-xl"
       style={{ background: "#050a14", border: "1px solid #1e293b" }}
-      data-testid="oscilloscope-svg"
+      data-testid="multi-oscilloscope-svg"
     >
       <line x1="0" y1={H_SVG / 2} x2={W} y2={H_SVG / 2} stroke="#1e293b" strokeWidth="1" />
       {[0.25, 0.75].map(f => (
@@ -149,6 +204,87 @@ function MultiOscilloscope({ tMs, active }: { tMs: number; active: Set<ChannelId
         );
       })}
     </svg>
+  );
+}
+
+// ── Authority band reference table ────────────────────────────────────────────
+function BandTable() {
+  const mid = (b: typeof BANDS[number]) => Math.round((b.wdmMin + b.wdmMax) / 2);
+  return (
+    <div className="overflow-x-auto rounded-xl border border-slate-800">
+      <table className="w-full text-xs font-mono">
+        <thead>
+          <tr className="border-b border-slate-800 text-slate-500 uppercase text-[10px] tracking-widest">
+            <th className="px-4 py-2 text-left">Band</th>
+            <th className="px-4 py-2 text-right">WDM range</th>
+            <th className="px-4 py-2 text-right">λ mid (nm)</th>
+            <th className="px-4 py-2 text-right">f (THz)</th>
+            <th className="px-4 py-2 text-right">T (fs)</th>
+            <th className="px-4 py-2 text-right">E (eV)</th>
+            <th className="px-4 py-2 text-right">Λ (kg)</th>
+            <th className="px-4 py-2 text-right">Fee ×</th>
+          </tr>
+        </thead>
+        <tbody>
+          {BANDS.map(b => {
+            const w = mid(b);
+            const { nm, frequencyHz, periodS, energyEv, lambdaKg, feeMultiplier } = computeOscillation(w, 0);
+            return (
+              <tr key={b.name} className="border-b border-slate-900 hover:bg-slate-900/40 transition-colors">
+                <td className="px-4 py-2.5">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ background: b.bg, color: b.color }}>{b.name}</span>
+                </td>
+                <td className="px-4 py-2.5 text-right text-slate-500">{b.wdmMin}–{b.wdmMax}</td>
+                <td className="px-4 py-2.5 text-right" style={{ color: b.color }}>{nm.toFixed(1)}</td>
+                <td className="px-4 py-2.5 text-right text-slate-300">{(frequencyHz / 1e12).toFixed(2)}</td>
+                <td className="px-4 py-2.5 text-right text-slate-400">{(periodS * 1e15).toFixed(3)}</td>
+                <td className="px-4 py-2.5 text-right text-violet-400">{energyEv.toFixed(4)}</td>
+                <td className="px-4 py-2.5 text-right text-slate-500">{fmtSci(lambdaKg, 3)}</td>
+                <td className="px-4 py-2.5 text-right text-amber-400">{feeMultiplier.toFixed(4)}×</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Per-channel waveform table ────────────────────────────────────────────────
+function ChannelWavefunctionTable() {
+  return (
+    <div className="overflow-x-auto rounded-xl border border-slate-800 text-xs font-mono">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-slate-800 text-slate-500 uppercase text-[9px] tracking-widest">
+            <th className="px-3 py-2 text-left">Channel</th>
+            <th className="px-3 py-2 text-right">λ (nm)</th>
+            <th className="px-3 py-2 text-right">f (THz)</th>
+            <th className="px-3 py-2 text-right">T (fs)</th>
+            <th className="px-3 py-2 text-right">ψ(t=0)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {CHANNELS.map(ch => {
+            const s = computeOscillation(ch.wdm, 0);
+            return (
+              <tr key={ch.id} className="border-b border-slate-900 hover:bg-slate-900/40">
+                <td className="px-3 py-2">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold" style={{ background: ch.bg, color: ch.color }}>{ch.label}</span>
+                </td>
+                <td className="px-3 py-2 text-right">
+                  <span className="inline-block w-2 h-2 rounded-full mr-1 align-middle" style={{ background: ch.color }} />
+                  <span style={{ color: ch.color }}>{s.nm.toFixed(1)}</span>
+                </td>
+                <td className="px-3 py-2 text-right text-slate-300">{(s.frequencyHz / 1e12).toFixed(2)}</td>
+                <td className="px-3 py-2 text-right text-slate-400">{(s.periodS * 1e15).toFixed(3)}</td>
+                <td className="px-3 py-2 text-right text-emerald-400">+1.000000</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -187,49 +323,15 @@ function CompressionTable() {
   );
 }
 
-// ── Waveform band table ───────────────────────────────────────────────────────
-function WavefunctionTable() {
-  return (
-    <div className="overflow-x-auto rounded-xl border border-slate-800 text-xs font-mono">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-slate-800 text-slate-500 uppercase text-[9px] tracking-widest">
-            <th className="px-3 py-2 text-left">Channel</th>
-            <th className="px-3 py-2 text-right">λ (nm)</th>
-            <th className="px-3 py-2 text-right">f (THz)</th>
-            <th className="px-3 py-2 text-right">T (fs)</th>
-            <th className="px-3 py-2 text-right">ψ(t=0)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {CHANNELS.map(ch => {
-            const s = computeOscillation(ch.wdm, 0);
-            return (
-              <tr key={ch.id} className="border-b border-slate-900 hover:bg-slate-900/40">
-                <td className="px-3 py-2">
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold" style={{ background: ch.bg, color: ch.color }}>{ch.label}</span>
-                </td>
-                <td className="px-3 py-2 text-right" style={{ color: ch.color }}>
-                  <span className="inline-block w-2 h-2 rounded-full mr-1 align-middle" style={{ background: ch.color }} />
-                  {s.nm.toFixed(1)}
-                </td>
-                <td className="px-3 py-2 text-right text-slate-300">{(s.frequencyHz / 1e12).toFixed(2)}</td>
-                <td className="px-3 py-2 text-right text-slate-400">{(s.periodS * 1e15).toFixed(3)}</td>
-                <td className="px-3 py-2 text-right text-emerald-400">+1.000000</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function OscillatingQuantaPage() {
-  const [tMs,      setTMs]     = useState(0);
-  const [playing,  setPlaying] = useState(false);
-  const [active,   setActive]  = useState<Set<ChannelId>>(
+  // Single-channel explorer state (from original)
+  const [wdm,     setWdm]     = useState(128);
+  const [tMs,     setTMs]     = useState(0);
+  const [playing, setPlaying] = useState(false);
+
+  // Multi-channel oscilloscope state
+  const [multiActive, setMultiActive] = useState<Set<ChannelId>>(
     new Set(["SYSTEM", "KERNEL", "USER", "GUEST", "Genesis"] as ChannelId[])
   );
   const [focused,  setFocused]  = useState<ChannelId>("USER");
@@ -252,6 +354,7 @@ export default function OscillatingQuantaPage() {
   }, [playing, tick]);
 
   const reset = () => { setPlaying(false); setTMs(0); };
+
   const toggleChannel = (id: ChannelId) =>
     setActive(prev => {
       const next = new Set(prev);
@@ -260,8 +363,20 @@ export default function OscillatingQuantaPage() {
       return next;
     });
 
+  function setActive(updater: (prev: Set<ChannelId>) => Set<ChannelId>) {
+    setMultiActive(updater);
+  }
+
+  const band  = bandForWdm(wdm);
+  const state = computeOscillation(wdm, tMs);
+  const waveColor = nmToColor(state.nm);
+
   const focusedCh = CHANNELS.find(c => c.id === focused)!;
   const fs = computeOscillation(focusedCh.wdm, tMs);
+
+  const curlSingle = `curl -X POST https://nexusos.replit.app/api/wnsp/quanta/oscillate \\
+  -H "Content-Type: application/json" \\
+  -d '{"wdm": ${wdm}}'`;
 
   const curlWdm = `curl -X POST https://nexusos.replit.app/api/wnsp/quanta/oscillate \\
   -H "Content-Type: application/json" \\
@@ -279,7 +394,7 @@ export default function OscillatingQuantaPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Header */}
+      {/* ── Sticky header ──────────────────────────────────────────────────── */}
       <div className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
@@ -293,7 +408,7 @@ export default function OscillatingQuantaPage() {
             <Waves className="w-4 h-4 text-cyan-400" />
             <span className="font-semibold text-white text-sm">Oscillating Quanta — First Principles</span>
           </div>
-          {/* View mode toggle */}
+          {/* View mode toggle controls all 4 dual-layer sections */}
           <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-0.5" data-testid="view-mode-toggle">
             {VIEW_MODES.map(v => (
               <button
@@ -301,9 +416,7 @@ export default function OscillatingQuantaPage() {
                 onClick={() => setViewMode(v.key)}
                 data-testid={`view-mode-${v.key}`}
                 className={`text-xs px-3 py-1.5 rounded transition-colors ${
-                  viewMode === v.key
-                    ? "bg-violet-600 text-white"
-                    : "text-slate-400 hover:text-slate-200"
+                  viewMode === v.key ? "bg-violet-600 text-white" : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 {v.label}
@@ -313,9 +426,13 @@ export default function OscillatingQuantaPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-10 space-y-5">
+      <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
 
-        {/* ── §0 — The First Oscillation ────────────────────────────────────── */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* PART A — Theory (4 dual-layer sections with view toggle)         */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+
+        {/* §0 — The First Oscillation */}
         <DualSection
           testId="section-0-first-oscillation"
           title="§0 — The First Oscillation"
@@ -323,52 +440,47 @@ export default function OscillatingQuantaPage() {
           concept={
             <div className="space-y-3 text-sm text-slate-300 leading-relaxed">
               <p>
-                NexusOS is founded on the Theory of Compression States: the universe began
-                as a single unobserved oscillation — a photon that oscillated before anything
-                existed to detect it. This first oscillation is not a metaphor. It is a
-                measurable frequency embedded into the protocol.
+                NexusOS is founded on the Theory of Compression States: the universe began as a
+                single unobserved oscillation — a photon that oscillated before anything existed to
+                detect it. This first oscillation is not a metaphor. It is a measurable frequency
+                embedded into every fee, every spectral address, and every NXT transfer.
               </p>
               <p>
-                Every WNSP channel, every transaction fee, and every spectral address descends
-                from this originating event. The Genesis Node — channel Ψ(52,65,V) — represents
-                this first oscillation. It is the first node NexusOS registers at boot.
+                Every WNSP channel, every transaction fee, and every spectral address descends from
+                this originating event. The genesis address{" "}
+                <span className="font-mono text-white/60">wnsp://Ψ(228,45,H)</span> encodes this
+                originating event as a WNSP spectral coordinate.
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 italic">
                 "Before observation there was oscillation. The universe collapsed from the wave."
-                The genesis address <span className="font-mono text-white/60">wnsp://Ψ(228,45,H)</span> encodes
-                this originating event as a WNSP spectral coordinate.
               </p>
             </div>
           }
           technical={
             <div className="space-y-3">
               <div className="bg-slate-950 rounded-lg p-4 font-mono text-xs space-y-1.5">
-                <div className="text-slate-500 mb-2">// First Oscillation — canonical constants</div>
-                <div><span className="text-cyan-400">f₀</span>          <span className="text-slate-500">=</span> <span className="text-amber-300">555 THz</span>          <span className="text-slate-600">// FIRST_OSCILLATION_HZ</span></div>
-                <div><span className="text-cyan-400">λ₀</span>          <span className="text-slate-500">=</span> <span className="text-amber-300">{FIRST_OSCILLATION_NM.toFixed(4)} nm</span>  <span className="text-slate-600">// c / f₀</span></div>
-                <div><span className="text-cyan-400">WDM₀</span>        <span className="text-slate-500">=</span> <span className="text-amber-300">{FIRST_OSCILLATION_WDM}</span>              <span className="text-slate-600">// KERNEL band</span></div>
+                <div className="text-slate-500 mb-1">// First Oscillation — canonical constants</div>
+                <div><span className="text-cyan-400">f₀</span>      <span className="text-slate-500">=</span> <span className="text-amber-300">555 THz</span>             <span className="text-slate-600">// FIRST_OSCILLATION_HZ</span></div>
+                <div><span className="text-cyan-400">λ₀</span>      <span className="text-slate-500">=</span> <span className="text-amber-300">{FIRST_OSCILLATION_NM.toFixed(4)} nm</span>  <span className="text-slate-600">// c / f₀</span></div>
+                <div><span className="text-cyan-400">WDM₀</span>    <span className="text-slate-500">=</span> <span className="text-amber-300">{FIRST_OSCILLATION_WDM}</span>               <span className="text-slate-600">// KERNEL band</span></div>
                 <div className="border-t border-slate-800 pt-1 mt-1">
-                  <div><span className="text-cyan-400">E₀</span>        <span className="text-slate-500">=</span> <span className="text-violet-300">{fmtSci(FIRST_OSCILLATION_J, 4)} J</span></div>
-                  <div><span className="text-cyan-400">E₀</span>        <span className="text-slate-500">=</span> <span className="text-violet-300">{FIRST_OSCILLATION_EV.toFixed(6)} eV</span></div>
-                  <div><span className="text-cyan-400">λ_mass</span>    <span className="text-slate-500">=</span> <span className="text-white font-bold">{fmtSci(LAMBDA_MASS_KG, 4)} kg</span>  <span className="text-slate-600">// h·f₀/c²</span></div>
+                  <div><span className="text-cyan-400">E₀</span>    <span className="text-slate-500">=</span> <span className="text-violet-300">{fmtSci(FIRST_OSCILLATION_J, 4)} J</span></div>
+                  <div><span className="text-cyan-400">E₀</span>    <span className="text-slate-500">=</span> <span className="text-violet-300">{FIRST_OSCILLATION_EV.toFixed(6)} eV</span></div>
+                  <div><span className="text-cyan-400">λ_mass</span> <span className="text-slate-500">=</span> <span className="text-white font-bold">{fmtSci(LAMBDA_MASS_KG, 4)} kg</span>  <span className="text-slate-600">// h·f₀/c²</span></div>
                 </div>
-                <div className="border-t border-slate-800 pt-1 mt-1">
-                  <div className="text-slate-500">// Example WNSP genesis address</div>
-                  <div><span className="text-green-300">wnsp://Ψ(228,45,H)</span><span className="text-slate-500">/genesis</span></div>
-                </div>
+                <div className="border-t border-slate-800 pt-1 mt-1 text-slate-500">// Genesis address</div>
+                <div><span className="text-green-300">wnsp://Ψ(228,45,H)</span><span className="text-slate-500">/genesis</span></div>
               </div>
               <p className="text-xs text-slate-500">
-                λ₀ ≈ 539.89 nm is green — the centre of human visual perception and the
-                universe's originating wavelength per the Theory of Compression States.
-                The canonical <span className="font-mono text-violet-400">lambda_mass</span> constant
-                ({fmtSci(LAMBDA_MASS_KG, 2)} kg) is used as the fee-multiplier reference across
-                all NexusOS calculations.
+                λ₀ ≈ 539.89 nm (green) is the centre of human visual perception. The canonical{" "}
+                <span className="font-mono text-violet-400">lambda_mass</span> ({fmtSci(LAMBDA_MASS_KG, 2)} kg)
+                is the fee-multiplier reference across all NexusOS calculations.
               </p>
             </div>
           }
         />
 
-        {/* ── §1 — Energy Quanta Derivation ─────────────────────────────────── */}
+        {/* §1 — Energy Quanta Derivation */}
         <DualSection
           testId="section-1-energy-quanta"
           title="§1 — Energy Quanta Derivation"
@@ -376,27 +488,28 @@ export default function OscillatingQuantaPage() {
           concept={
             <div className="space-y-3 text-sm text-slate-300 leading-relaxed">
               <p>
-                A quanta is the smallest indivisible unit of electromagnetic energy. It cannot
-                exist at rest — existence requires oscillation. The energy of any photon is
-                completely determined by one number: its oscillation frequency.
+                A quanta is the smallest indivisible unit of electromagnetic energy. It cannot exist
+                at rest — existence requires oscillation. The energy of any photon is completely
+                determined by one number: its oscillation frequency.
               </p>
               <p>
-                This is Planck's insight from 1900: energy comes in discrete packets proportional
-                to frequency. The constant of proportionality h (Planck's constant) is now an
-                exact SI-defined value — a fundamental feature of the universe's structure.
+                This is Planck's insight from 1900: energy comes in discrete packets proportional to
+                frequency. The constant h is now an exact SI-defined value — a fundamental feature of
+                the universe's structure, not a measurement.
               </p>
               <p>
-                In NexusOS, every WDM channel is one specific frequency. There is no ambiguity.
-                The channel determines the energy; the energy determines the fee.
+                In NexusOS, every WDM channel is one specific frequency. The channel determines the
+                energy; the energy determines the fee. There is no ambiguity and no governance vote
+                can override it.
               </p>
             </div>
           }
           technical={
             <div className="space-y-2">
               {[
-                { label: "Planck–Einstein relation",   formula: "E = h · f",    note: `h = 6.626 070 15 × 10⁻³⁴ J·s  (exact, 2019 SI)` },
-                { label: "Wave–frequency duality",     formula: "f = c / λ",    note: `c = 299 792 458 m/s  (exact, 1983 SI)` },
-                { label: "Elementary charge (eV)",     formula: "E(eV) = E / e", note: `e = 1.602 176 634 × 10⁻¹⁹ J  (exact, 2019 SI)` },
+                { label: "Planck–Einstein relation",   formula: "E = h · f",     note: "h = 6.626 070 15 × 10⁻³⁴ J·s  (exact, 2019 SI)" },
+                { label: "Wave–frequency duality",     formula: "f = c / λ",     note: "c = 299 792 458 m/s  (exact, 1983 SI)" },
+                { label: "Compression state (NexusOS)", formula: "Λ = h·f / c²", note: "Photon effective mass — direct fee-multiplier basis" },
               ].map(f => (
                 <div key={f.label} className="bg-slate-950 rounded-lg px-4 py-3">
                   <div className="text-[10px] text-cyan-500 uppercase tracking-wider mb-1">{f.label}</div>
@@ -421,7 +534,7 @@ export default function OscillatingQuantaPage() {
           }
         />
 
-        {/* ── §2 — Wavefunction Per Channel ─────────────────────────────────── */}
+        {/* §2 — Wavefunction Per Channel */}
         <DualSection
           testId="section-2-wavefunction"
           title="§2 — Wavefunction Per Channel"
@@ -430,18 +543,18 @@ export default function OscillatingQuantaPage() {
             <div className="space-y-3 text-sm text-slate-300 leading-relaxed">
               <p>
                 Each WNSP channel is an independent oscillator with its own wavefunction
-                ψ(t) = cos(2πft). The cosine starts at +1 (maximum amplitude) at t=0
-                and completes one full cycle every period T = 1/f.
+                ψ(t) = cos(2πft). The cosine starts at +1 (maximum) at t=0 and completes one full
+                cycle every period T = 1/f.
               </p>
               <p>
                 Phase tracks where the oscillator is within its current cycle. NexusOS uses a
-                normalized phase φ = (f × t) mod 1 — a unitless value in [0, 1) representing
-                the fraction of the period elapsed. This avoids float64 overflow when computing
-                with frequencies around 500 THz over long runtimes.
+                normalized phase φ = (f × t) mod 1 — a fraction in [0, 1) representing how far
+                through the current period we are. This avoids float64 overflow when computing with
+                frequencies around 500 THz over long runtimes.
               </p>
               <p>
-                The 5 authority channels oscillate simultaneously and independently. Their
-                waveforms never interfere — they occupy orthogonal dimensions of Hilbert space
+                The 5 authority channels oscillate simultaneously and independently. Their waveforms
+                never interfere — they occupy orthogonal dimensions of Hilbert space
                 (⟨Ψᵢ|Ψⱼ⟩ = 0 for i ≠ j).
               </p>
             </div>
@@ -453,21 +566,21 @@ export default function OscillatingQuantaPage() {
                 <div><span className="text-cyan-400">ψ(t)</span>  <span className="text-slate-500">=</span> <span className="text-violet-300">cos(2π · f · t)</span></div>
                 <div className="pt-1 border-t border-slate-800">
                   <div className="text-slate-500">// Normalized-phase implementation</div>
-                  <div><span className="text-cyan-400">φ</span>  <span className="text-slate-500">= (f × t) mod 1</span>      <span className="text-slate-600">// [0, 1)</span></div>
-                  <div><span className="text-cyan-400">φ_rad</span> <span className="text-slate-500">= φ × 2π</span>             <span className="text-slate-600">// [0, 2π)</span></div>
-                  <div><span className="text-cyan-400">ψ(t)</span>  <span className="text-slate-500">= cos(φ_rad)</span>          <span className="text-slate-600">// +1 at t=0</span></div>
+                  <div><span className="text-cyan-400">φ</span>     <span className="text-slate-500">= (f × t) mod 1</span>    <span className="text-slate-600">// [0, 1)</span></div>
+                  <div><span className="text-cyan-400">φ_rad</span> <span className="text-slate-500">= φ × 2π</span>            <span className="text-slate-600">// [0, 2π)</span></div>
+                  <div><span className="text-cyan-400">ψ(t)</span>  <span className="text-slate-500">= cos(φ_rad)</span>        <span className="text-slate-600">// +1 at t=0</span></div>
                 </div>
                 <div className="pt-1 border-t border-slate-800">
                   <div className="text-slate-500">// 128-sample waveform</div>
                   <div><span className="text-cyan-400">w[i]</span>  <span className="text-slate-500">= cos(φ_rad + i · 2π/128)</span></div>
                 </div>
               </div>
-              <WavefunctionTable />
+              <ChannelWavefunctionTable />
             </div>
           }
         />
 
-        {/* ── §3 — Compression State Oscillation ────────────────────────────── */}
+        {/* §3 — Compression State Oscillation */}
         <DualSection
           testId="section-3-compression-state"
           title="§3 — Compression State Oscillation"
@@ -475,18 +588,19 @@ export default function OscillatingQuantaPage() {
           concept={
             <div className="space-y-3 text-sm text-slate-300 leading-relaxed">
               <p>
-                Every oscillating photon carries a compression state Λ = hf/c², derived
-                directly from Einstein's mass–energy equivalence applied to light. This is the
-                photon's effective mass — not a metaphor, a measurable relativistic quantity.
+                Every oscillating photon carries a compression state Λ = hf/c², derived directly
+                from Einstein's mass–energy equivalence applied to light. This is the photon's
+                effective mass — not a metaphor, a measurable relativistic quantity.
               </p>
               <p>
-                Higher-frequency channels (shorter wavelength, higher WDM authority) carry greater
-                Λ. This is the physical basis for NexusOS fee scaling: SYSTEM-band operators use
+                Higher-frequency channels (shorter wavelength, higher WDM authority) carry greater Λ.
+                This is the physical basis for NexusOS fee scaling: SYSTEM-band operations use
                 higher-energy photons, so their actions cost proportionally more.
               </p>
               <p>
-                The fee multiplier for any channel is simply its photon energy relative to the
-                green reference (560 nm): <span className="font-mono text-violet-300">multiplier = E_ch / E_ref</span>.
+                The fee multiplier for any channel is its photon energy relative to the green
+                reference (560 nm):{" "}
+                <span className="font-mono text-violet-300">multiplier = E_ch / E_ref</span>.
                 Physics — not governance — sets the price.
               </p>
             </div>
@@ -494,9 +608,9 @@ export default function OscillatingQuantaPage() {
           technical={
             <div className="space-y-3">
               {[
-                { label: "Compression state",   formula: "Λ = h·f / c²",         note: "Photon effective mass (kg). Equals E/c²." },
-                { label: "Fee multiplier",      formula: "m = E_ch / E_ref",      note: "E_ref = E at 560 nm (green midpoint). m > 1 for SYSTEM." },
-                { label: "Physics fee (NXT)",   formula: "fee = base × m",        note: "base fee set by governance; multiplier set by physics." },
+                { label: "Compression state",  formula: "Λ = h·f / c²",      note: "Photon effective mass (kg). Equals E/c²." },
+                { label: "Fee multiplier",     formula: "m = E_ch / E_ref",   note: "E_ref = h·f at 560 nm (green midpoint)." },
+                { label: "Physics fee (NXT)",  formula: "fee = base × m",     note: "base set by governance; m set by physics." },
               ].map(f => (
                 <div key={f.label} className="bg-slate-950 rounded-lg px-4 py-3">
                   <div className="text-[10px] text-cyan-500 uppercase tracking-wider mb-1">{f.label}</div>
@@ -509,34 +623,125 @@ export default function OscillatingQuantaPage() {
           }
         />
 
-        {/* ── Live 5-Channel Oscilloscope (full-width interactive) ──────────── */}
-        <section data-testid="section-live-oscilloscope" className="border border-slate-800 rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 bg-slate-900/60 flex items-center justify-between flex-wrap gap-3">
-            <span className="font-semibold text-white">Live 5-Channel Oscilloscope</span>
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* PART B — Authority Band Physics table (restored from original)   */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+
+        <section data-testid="section-band-explorer">
+          <h2 className="text-xl font-bold text-white mb-1">Authority Band Physics</h2>
+          <p className="text-slate-400 text-sm mb-4 leading-relaxed">
+            Each of NexusOS's four authority bands spans 64 WDM channels. Higher authority (shorter λ)
+            means higher frequency, higher photon energy, and a larger compression state — directly
+            governing fee multipliers. Values shown at mid-band.
+          </p>
+          <BandTable />
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* PART C — Single-channel live explorer (restored from original)   */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+
+        <section data-testid="section-live-oscilloscope">
+          <h2 className="text-xl font-bold text-white mb-1">Live Channel Explorer</h2>
+          <p className="text-slate-400 text-sm mb-5 leading-relaxed">
+            Drag the WDM slider to tune to any of the 256 channels and watch the photon waveform
+            evolve in real time. The oscilloscope renders 128 samples of cos(φ + i·2π/128) — one
+            complete cycle from the current phase.
+          </p>
+
+          {/* Controls */}
+          <div className="flex flex-wrap items-center gap-4 mb-4">
+            <div className="flex items-center gap-3 flex-1 min-w-60">
+              <label className="text-xs text-slate-500 uppercase tracking-wider whitespace-nowrap">WDM channel</label>
+              <input
+                type="range"
+                min={0}
+                max={255}
+                value={wdm}
+                onChange={e => setWdm(Number(e.target.value))}
+                className="flex-1 accent-violet-500"
+                data-testid="input-wdm-slider"
+              />
+              <span
+                className="text-sm font-mono font-bold w-8 text-right"
+                style={{ color: band.color }}
+                data-testid="text-wdm-value"
+              >
+                {wdm}
+              </span>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPlaying(p => !p)}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors"
-                style={{ borderColor: playing ? "#ef4444" : "#22d3ee", color: playing ? "#f87171" : "#22d3ee" }}
+                className="flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-full border transition-colors"
+                style={{ borderColor: playing ? "#ef4444" : band.color, color: playing ? "#f87171" : band.color }}
                 data-testid="button-play-pause"
               >
-                {playing ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                 {playing ? "Pause" : "Play"}
               </button>
               <button
                 onClick={reset}
-                className="text-xs px-2.5 py-1.5 rounded-full border border-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full border border-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
                 data-testid="button-reset"
               >
-                <RotateCcw className="w-3 h-3" />
+                <RotateCcw className="w-3.5 h-3.5" />
               </button>
+            </div>
+          </div>
+
+          <SingleOscilloscope waveform={state.waveform} color={waveColor} />
+
+          {/* Metrics grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+            {[
+              { label: "Wavelength",   value: `${state.nm.toFixed(3)} nm`,                  testId: "metric-nm" },
+              { label: "Frequency",    value: `${(state.frequencyHz/1e12).toFixed(4)} THz`, testId: "metric-freq" },
+              { label: "Period",       value: `${(state.periodS * 1e15).toFixed(3)} fs`,    testId: "metric-period" },
+              { label: "Phase (norm)", value: state.phase.toFixed(6),                       testId: "metric-phase" },
+              { label: "Amplitude",    value: state.amplitude.toFixed(6),                   testId: "metric-amp" },
+              { label: "Energy (J)",   value: fmtSci(state.energyJ, 4),                     testId: "metric-energy-j" },
+              { label: "Energy (eV)",  value: `${state.energyEv.toFixed(4)} eV`,            testId: "metric-energy-ev" },
+              { label: "Λ comp. mass", value: fmtSci(state.lambdaKg, 4),                    testId: "metric-lambda-kg" },
+            ].map(m => (
+              <div key={m.label} className="bg-slate-900/50 border border-slate-800 rounded-lg px-3 py-2.5">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">{m.label}</div>
+                <div className="font-mono text-sm text-slate-200" data-testid={m.testId}>{m.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Band badge */}
+          <div className="flex items-center gap-3 mt-3">
+            <span
+              className="text-xs font-bold px-2 py-1 rounded"
+              style={{ background: band.bg, color: band.color }}
+              data-testid="text-band-badge"
+            >
+              {band.name} band · Ψ({wdm}, *, *)
+            </span>
+            <span className="text-xs font-mono text-slate-500" data-testid="text-elapsed">
+              t = {tMs.toFixed(1)} ms elapsed
+            </span>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* PART D — 5-channel authority oscilloscope                        */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+
+        <section data-testid="section-authority-oscilloscope" className="border border-slate-800 rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 bg-slate-900/60 flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="font-semibold text-white">5-Channel Authority Oscilloscope</div>
+              <div className="text-xs text-slate-500 mt-0.5">All 5 authority channels oscillating simultaneously</div>
             </div>
           </div>
           <div className="p-6 space-y-4">
             {/* Channel toggles */}
             <div className="flex flex-wrap gap-2 items-center">
               {CHANNELS.map(ch => {
-                const on = active.has(ch.id);
+                const on = multiActive.has(ch.id);
                 return (
                   <button
                     key={ch.id}
@@ -555,17 +760,17 @@ export default function OscillatingQuantaPage() {
                   </button>
                 );
               })}
-              <span className="text-xs font-mono text-slate-600 ml-1" data-testid="text-elapsed">
+              <span className="text-xs font-mono text-slate-600 ml-1" data-testid="text-multi-elapsed">
                 t = {tMs.toFixed(0)} ms
               </span>
             </div>
 
-            <MultiOscilloscope tMs={tMs} active={active} />
+            <MultiOscilloscope tMs={tMs} active={multiActive} />
 
             {/* Focus selector + metrics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
               <div className="space-y-1.5">
-                <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Focus channel</div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Focus channel metrics</div>
                 {CHANNELS.map(ch => (
                   <button
                     key={ch.id}
@@ -585,14 +790,14 @@ export default function OscillatingQuantaPage() {
               </div>
               <div className="md:col-span-2 grid grid-cols-2 gap-2">
                 {[
-                  { label: "λ (nm)",        value: fs.nm.toFixed(3),                       testId: "metric-nm" },
-                  { label: "f (THz)",        value: (fs.frequencyHz / 1e12).toFixed(4),    testId: "metric-freq" },
-                  { label: "T (fs)",         value: (fs.periodS * 1e15).toFixed(3),        testId: "metric-period" },
-                  { label: "φ (norm.)",      value: fs.phase.toFixed(6),                   testId: "metric-phase" },
-                  { label: "ψ(t) amplitude", value: fs.amplitude.toFixed(6),               testId: "metric-amplitude" },
-                  { label: "E (J)",          value: fmtSci(fs.energyJ, 4),                 testId: "metric-energy-j" },
-                  { label: "E (eV)",         value: `${fs.energyEv.toFixed(4)} eV`,        testId: "metric-energy-ev" },
-                  { label: "Λ (kg)",         value: fmtSci(fs.lambdaKg, 4),                testId: "metric-lambda-kg" },
+                  { label: "λ (nm)",         value: fs.nm.toFixed(3),                    testId: "multi-metric-nm" },
+                  { label: "f (THz)",         value: (fs.frequencyHz/1e12).toFixed(4),   testId: "multi-metric-freq" },
+                  { label: "T (fs)",          value: (fs.periodS * 1e15).toFixed(3),     testId: "multi-metric-period" },
+                  { label: "φ normalized",    value: fs.phase.toFixed(6),                testId: "multi-metric-phase" },
+                  { label: "ψ(t) amplitude",  value: fs.amplitude.toFixed(6),            testId: "multi-metric-amp" },
+                  { label: "E (J)",           value: fmtSci(fs.energyJ, 4),              testId: "multi-metric-energy-j" },
+                  { label: "E (eV)",          value: `${fs.energyEv.toFixed(4)} eV`,     testId: "multi-metric-energy-ev" },
+                  { label: "Λ (kg)",          value: fmtSci(fs.lambdaKg, 4),             testId: "multi-metric-lambda" },
                 ].map(m => (
                   <div key={m.label} className="bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2">
                     <div className="text-[9px] text-slate-500 uppercase tracking-wider">{m.label}</div>
@@ -604,54 +809,59 @@ export default function OscillatingQuantaPage() {
           </div>
         </section>
 
-        {/* ── Run via API ───────────────────────────────────────────────────── */}
-        <section data-testid="section-run-via-api" className="border border-slate-800 rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 bg-slate-900/60">
-            <span className="font-semibold text-white">Run via API</span>
-            <p className="text-xs text-slate-400 mt-1">
-              Every oscillation state is accessible server-side. Supply either a WDM channel index
-              or a wavelength in nm — the server derives the missing value and returns the full
-              oscillation payload at current wall-clock time.
-            </p>
-          </div>
-          <div className="p-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-violet-950/60 text-violet-400 border border-violet-800/50">POST</span>
-                  <code className="text-xs font-mono text-slate-200">/api/wnsp/quanta/oscillate</code>
-                </div>
-                <div className="text-[10px] uppercase tracking-widest text-slate-500 mt-2">Input — via WDM</div>
-                <pre className="bg-slate-950 rounded-lg p-3 text-xs font-mono text-slate-300 overflow-x-auto" data-testid="code-schema-wdm">{`{ "wdm": ${focusedCh.wdm} }`}</pre>
-                <div className="text-[10px] uppercase tracking-widest text-slate-500">Input — via wavelength_nm</div>
-                <pre className="bg-slate-950 rounded-lg p-3 text-xs font-mono text-slate-300 overflow-x-auto" data-testid="code-schema-nm">{`{ "wavelength_nm": ${fs.nm.toFixed(3)} }`}</pre>
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* PART E — API Reference                                           */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+
+        <section data-testid="section-api-reference">
+          <h2 className="text-xl font-bold text-white mb-1">API Reference</h2>
+          <p className="text-slate-400 text-sm mb-5 leading-relaxed">
+            Every oscillation state on this page is available server-side. Supply either a WDM
+            channel index or a wavelength in nm — the server derives the missing value and returns
+            the full oscillation payload at current wall-clock time.
+          </p>
+
+          <div className="space-y-4">
+            {/* Single-channel endpoint card */}
+            <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-violet-950/60 text-violet-400 border border-violet-800/50">POST</span>
+                <code className="text-sm font-mono text-slate-200">/api/wnsp/quanta/oscillate</code>
               </div>
-              <div>
-                <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Response</div>
-                <pre className="bg-slate-950 rounded-lg p-3 text-xs font-mono text-slate-400 overflow-x-auto">{`{
-  "wdm":          ${focusedCh.wdm},
-  "nm":           ${fs.nm.toFixed(4)},
-  "frequency_hz": ${fmtSci(fs.frequencyHz, 3)},
-  "period_s":     ${fmtSci(fs.periodS, 3)},
-  "energy_j":     ${fmtSci(fs.energyJ, 3)},
-  "lambda_kg":    ${fmtSci(fs.lambdaKg, 3)},
-  "phase_rad":    ${fs.phaseRad.toFixed(4)},
-  "amplitude":    ${fs.amplitude.toFixed(4)},
-  "waveform":     [128 floats]
-}`}</pre>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+                <div>
+                  <div className="text-slate-500 mb-1 uppercase tracking-wider text-[10px]">Request body (WDM)</div>
+                  <pre className="bg-slate-950 rounded p-3 text-slate-300 overflow-x-auto" data-testid="code-schema-wdm">{`{ "wdm": ${wdm} }`}</pre>
+                  <div className="text-slate-500 mt-2 mb-1 uppercase tracking-wider text-[10px]">Request body (nm)</div>
+                  <pre className="bg-slate-950 rounded p-3 text-slate-300 overflow-x-auto" data-testid="code-schema-nm">{`{ "wavelength_nm": ${state.nm.toFixed(3)} }`}</pre>
+                </div>
+                <div>
+                  <div className="text-slate-500 mb-1 uppercase tracking-wider text-[10px]">Response fields</div>
+                  <pre className="bg-slate-950 rounded p-3 text-slate-400 overflow-x-auto">{`nm           : ${state.nm.toFixed(4)}
+frequency_hz : ${fmtSci(state.frequencyHz, 4)}
+period_s     : ${fmtSci(state.periodS, 4)}
+energy_j     : ${fmtSci(state.energyJ, 4)}
+lambda_kg    : ${fmtSci(state.lambdaKg, 4)}
+phase_rad    : ${state.phaseRad.toFixed(6)}
+amplitude    : ${state.amplitude.toFixed(6)}
+waveform     : [128 floats]`}</pre>
+                </div>
               </div>
             </div>
-            <div className="space-y-3">
+
+            {/* curl snippets */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[
-                { label: "via WDM",           curl: curlWdm, testId: "code-curl-wdm",  copyId: "button-copy-curl-wdm" },
-                { label: "via wavelength_nm",  curl: curlNm,  testId: "code-curl-nm",   copyId: "button-copy-curl-nm"  },
+                { label: "Current slider channel", curl: curlSingle, testId: "code-curl-slider",  copyId: "button-copy-curl-slider" },
+                { label: "via WDM",                curl: curlWdm,    testId: "code-curl-wdm",     copyId: "button-copy-curl-wdm" },
+                { label: "via wavelength_nm",       curl: curlNm,     testId: "code-curl-nm",      copyId: "button-copy-curl-nm" },
               ].map(s => (
                 <div key={s.label} className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] uppercase tracking-wider text-slate-500">curl — {s.label}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-500">{s.label}</span>
                     <CopyBtn text={s.curl} testId={s.copyId} />
                   </div>
-                  <pre className="text-xs font-mono text-cyan-300 overflow-x-auto leading-relaxed" data-testid={s.testId}>{s.curl}</pre>
+                  <pre className="text-[10px] font-mono text-cyan-300 overflow-x-auto leading-relaxed whitespace-pre-wrap break-all" data-testid={s.testId}>{s.curl}</pre>
                 </div>
               ))}
             </div>
