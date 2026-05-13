@@ -1997,9 +1997,10 @@ def quanta_oscillate():
     Returns: wdm, nm, frequency_hz, period_s, energy_j, lambda_kg,
              phase_rad, amplitude, waveform[128], derived_from
     """
-    import math
+    import math, time as _time
     data = request.get_json() or {}
-    t_ms = float(data.get('t_ms', 0.0))
+    # When t_ms is absent, use wall-clock time so the response is live/dynamic
+    t_ms = float(data['t_ms']) if 't_ms' in data else _time.time() * 1000.0
 
     NM_MIN_V = 380.0
     NM_MAX_V = 780.0

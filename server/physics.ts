@@ -184,9 +184,10 @@ export interface QuantaOscillation {
   periodS:     number;
   energyJ:     number;
   lambdaKg:    number;
-  phaseRad:    number;
-  amplitude:   number;
-  waveform:    number[];  // 128 sin samples spanning one full cycle from phaseRad
+  phase:       number;   // normalized [0, 1) — fraction of period elapsed = (t%T)/T
+  phaseRad:    number;   // phase × 2π, for waveform computation
+  amplitude:   number;   // cos(phaseRad) — +1 at t=0
+  waveform:    number[];  // 128 cosine samples spanning one full cycle from phaseRad
   derivedFrom: string;
 }
 
@@ -211,6 +212,7 @@ export function oscillatingQuantaState(wdm: number, tMs: number): QuantaOscillat
 
   return {
     wdm: w, tMs, nm, frequencyHz, periodS, energyJ, lambdaKg,
+    phase:    parseFloat(phase.toFixed(9)),
     phaseRad: parseFloat(phaseRad.toFixed(6)),
     amplitude: parseFloat(amplitude.toFixed(6)),
     waveform,
