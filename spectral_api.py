@@ -2040,7 +2040,13 @@ def quanta_oscillate():
         "phase_rad":    round(phase_rad, 6),
         "amplitude":    round(amplitude, 6),
         "waveform":     waveform,
-        "derived_from": f"E=hf · λ={nm:.4f}nm · f={frequency_hz/1e12:.4f}THz",
+        "derived_from": (
+            f"Step1: λ={nm:.4f}nm → f=c/λ={frequency_hz:.6e}Hz | "
+            f"Step2: E=h·f={energy_j:.6e}J={(energy_j/1.602176634e-19):.6f}eV | "
+            f"Step3: Λ=E/c²={lambda_kg:.6e}kg | "
+            f"Step4: φ=(f·t)mod1={phase:.9f} → ψ=cos(φ·2π)={amplitude:.6f} | "
+            f"Ref: f₀=555THz, λ_mass=h·f₀/c²={PLANCK_CONSTANT*555e12/SPEED_OF_LIGHT**2:.3e}kg"
+        ),
     })
 
 

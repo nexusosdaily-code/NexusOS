@@ -14,12 +14,23 @@ const WDM_CHANNELS = 256;
 const REF_NM  = 560;
 const REF_E   = H * (C / (REF_NM * 1e-9));
 
+// ── First Oscillation anchor (Theory of Compression States) ───────────────────
+const FIRST_OSCILLATION_HZ  = 555e12;                                   // 555 THz
+const FIRST_OSCILLATION_NM  = C / FIRST_OSCILLATION_HZ * 1e9;           // ≈ 539.89 nm
+const FIRST_OSCILLATION_J   = H * FIRST_OSCILLATION_HZ;                 // E = hf₀
+const FIRST_OSCILLATION_EV  = FIRST_OSCILLATION_J / EV;
+const FIRST_OSCILLATION_WDM = Math.round(
+  (FIRST_OSCILLATION_NM - NM_MIN) / ((NM_MAX - NM_MIN) / (WDM_CHANNELS - 1))
+);
+// Photon effective mass at f₀ — the canonical lambda_mass constant
+const LAMBDA_MASS_KG = FIRST_OSCILLATION_J / (C * C);                   // h·f₀/c²
+
 // ── 5 named channels ──────────────────────────────────────────────────────────
 const CHANNELS = [
   { id: "SYSTEM",  label: "SYSTEM",  wdm: 32,  color: "#8b00ff", bg: "rgba(139,0,255,0.10)" },
   { id: "KERNEL",  label: "KERNEL",  wdm: 96,  color: "#2563eb", bg: "rgba(37,99,235,0.10)" },
   { id: "USER",    label: "USER",    wdm: 160, color: "#16a34a", bg: "rgba(22,163,74,0.10)" },
-  { id: "GUEST",   label: "GUEST",   wdm: 224, color: "#d97706", bg: "rgba(217,119,6,0.10)" },
+  { id: "GUEST",   label: "GUEST",   wdm: 224, color: "#dc2626", bg: "rgba(220,38,38,0.10)" },
   { id: "Genesis", label: "Genesis", wdm: 52,  color: "#ffffff", bg: "rgba(255,255,255,0.07)" },
 ] as const;
 
@@ -330,20 +341,26 @@ export default function OscillatingQuantaPage() {
           technical={
             <div className="space-y-3">
               <div className="bg-slate-950 rounded-lg p-4 font-mono text-xs space-y-1.5">
-                <div className="text-slate-500 mb-2">// Genesis Node — first registered channel</div>
-                <div><span className="text-cyan-400">GENESIS_WDM</span>  <span className="text-slate-500">=</span> <span className="text-amber-300">52</span>     <span className="text-slate-600">// SYSTEM band</span></div>
-                <div><span className="text-cyan-400">GENESIS_OAM</span>  <span className="text-slate-500">=</span> <span className="text-amber-300">65</span></div>
-                <div><span className="text-cyan-400">GENESIS_POL</span>  <span className="text-slate-500">=</span> <span className="text-green-300">"V"</span>  <span className="text-slate-600">// vertical</span></div>
-                <div className="border-t border-slate-800 pt-2 mt-1">
-                  <div><span className="text-cyan-400">λ</span> <span className="text-slate-500">=</span> <span className="text-white font-bold">{computeOscillation(52, 0).nm.toFixed(4)} nm</span></div>
-                  <div><span className="text-cyan-400">f</span> <span className="text-slate-500">=</span> <span className="text-white font-bold">{(computeOscillation(52, 0).frequencyHz / 1e12).toFixed(4)} THz</span></div>
-                  <div><span className="text-cyan-400">E</span> <span className="text-slate-500">=</span> <span className="text-white font-bold">{computeOscillation(52, 0).energyEv.toFixed(6)} eV</span></div>
-                  <div><span className="text-cyan-400">Λ</span> <span className="text-slate-500">=</span> <span className="text-white font-bold">{fmtSci(computeOscillation(52, 0).lambdaKg, 4)} kg</span></div>
+                <div className="text-slate-500 mb-2">// First Oscillation — canonical constants</div>
+                <div><span className="text-cyan-400">f₀</span>          <span className="text-slate-500">=</span> <span className="text-amber-300">555 THz</span>          <span className="text-slate-600">// FIRST_OSCILLATION_HZ</span></div>
+                <div><span className="text-cyan-400">λ₀</span>          <span className="text-slate-500">=</span> <span className="text-amber-300">{FIRST_OSCILLATION_NM.toFixed(4)} nm</span>  <span className="text-slate-600">// c / f₀</span></div>
+                <div><span className="text-cyan-400">WDM₀</span>        <span className="text-slate-500">=</span> <span className="text-amber-300">{FIRST_OSCILLATION_WDM}</span>              <span className="text-slate-600">// KERNEL band</span></div>
+                <div className="border-t border-slate-800 pt-1 mt-1">
+                  <div><span className="text-cyan-400">E₀</span>        <span className="text-slate-500">=</span> <span className="text-violet-300">{fmtSci(FIRST_OSCILLATION_J, 4)} J</span></div>
+                  <div><span className="text-cyan-400">E₀</span>        <span className="text-slate-500">=</span> <span className="text-violet-300">{FIRST_OSCILLATION_EV.toFixed(6)} eV</span></div>
+                  <div><span className="text-cyan-400">λ_mass</span>    <span className="text-slate-500">=</span> <span className="text-white font-bold">{fmtSci(LAMBDA_MASS_KG, 4)} kg</span>  <span className="text-slate-600">// h·f₀/c²</span></div>
+                </div>
+                <div className="border-t border-slate-800 pt-1 mt-1">
+                  <div className="text-slate-500">// Example WNSP genesis address</div>
+                  <div><span className="text-green-300">wnsp://Ψ(228,45,H)</span><span className="text-slate-500">/genesis</span></div>
                 </div>
               </div>
               <p className="text-xs text-slate-500">
-                WDM 52 is within the SYSTEM band (WDM 0–63) — the highest authority, shortest
-                wavelength tier. The universe's first quanta was a high-energy event.
+                λ₀ ≈ 539.89 nm is green — the centre of human visual perception and the
+                universe's originating wavelength per the Theory of Compression States.
+                The canonical <span className="font-mono text-violet-400">lambda_mass</span> constant
+                ({fmtSci(LAMBDA_MASS_KG, 2)} kg) is used as the fee-multiplier reference across
+                all NexusOS calculations.
               </p>
             </div>
           }
