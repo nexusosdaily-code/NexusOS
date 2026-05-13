@@ -134,6 +134,7 @@ const APP_SECTIONS = [
     label: "Research",
     accent: "#f472b6",
     items: [
+      { title: "WNSP Protocol Spec",  href: "/protocol",        Icon: Radio },
       { title: "NexusOS Pipeline",   href: "/pipeline",        Icon: Layers },
       { title: "Spectral Mirror",    href: "/spectral-mirror", Icon: Radio },
       { title: "WNSP Paper",         href: "/wnsp-paper",      Icon: BookOpen },
