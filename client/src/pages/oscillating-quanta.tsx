@@ -334,7 +334,9 @@ export default function OscillatingQuantaPage() {
                 this first oscillation. It is the first node NexusOS registers at boot.
               </p>
               <p className="text-xs text-slate-500">
-                "Before observation there was oscillation. The wave collapsed into the universe."
+                "Before observation there was oscillation. The universe collapsed from the wave."
+                The genesis address <span className="font-mono text-white/60">wnsp://Ψ(228,45,H)</span> encodes
+                this originating event as a WNSP spectral coordinate.
               </p>
             </div>
           }

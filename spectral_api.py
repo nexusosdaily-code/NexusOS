@@ -2009,9 +2009,11 @@ def quanta_oscillate():
     if 'wavelength_nm' in data:
         nm  = max(NM_MIN_V, min(NM_MAX_V, float(data['wavelength_nm'])))
         wdm = round((nm - NM_MIN_V) / (NM_MAX_V - NM_MIN_V) * (WDM_CH - 1))
-    else:
-        wdm = max(0, min(255, int(data.get('wdm', 128))))
+    elif 'wdm' in data:
+        wdm = max(0, min(255, int(data['wdm'])))
         nm  = NM_MIN_V + wdm * (NM_MAX_V - NM_MIN_V) / (WDM_CH - 1)
+    else:
+        return jsonify({"error": "Provide at least one of: wavelength_nm (nm) or wdm (0–255)"}), 400
 
     frequency_hz = SPEED_OF_LIGHT / (nm * 1e-9)
     period_s     = 1.0 / frequency_hz
