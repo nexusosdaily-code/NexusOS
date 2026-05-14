@@ -254,4 +254,20 @@ export class LambdaStateMachine {
   public getToleranceNm(): number {
     return this.toleranceNm;
   }
+
+  /**
+   * Exposes the deterministic block fingerprint so external modules (e.g. P2PSyncEngine)
+   * can verify chain links without re-implementing the hash algorithm.
+   */
+  public computeBlockFingerprint(block: LedgerBlock): string {
+    return blockFingerprint(block);
+  }
+
+  /**
+   * Hot-swaps the internal ledger with a validated incoming chain.
+   * Only P2PSyncEngine should call this after passing all consensus checks.
+   */
+  public replaceChain(blocks: LedgerBlock[]): void {
+    this.ledgerChain = [...blocks];
+  }
 }
