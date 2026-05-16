@@ -501,7 +501,7 @@ function ConstitutionClauses() {
             <div className="text-amber-300 text-lg mb-1">NXT / month</div>
           </div>
           <p className="text-slate-500 text-xs mt-2 font-mono">
-            E_IHR = h × f_IHR — floor derived from physics and international law
+            E_IHR = h × f_IHR — Basic Human Living Standard, derived from physics
           </p>
         </div>
       )}
@@ -1003,7 +1003,7 @@ function AchievementList() {
     { icon: Atom,      title: "Theoretical Foundation",  desc: "Lambda Boson physics (Λ = hf/c²)"      },
     { icon: Orbit,     title: "Cosmological Origin",      desc: "Oscillatory Cosmogenesis"               },
     { icon: Waves,     title: "Technical Specification",  desc: "WNSP protocol stack"                    },
-    { icon: Coins,     title: "Economic Framework",       desc: "Immutable Human Rights floor + Economic Loop" },
+    { icon: Coins,     title: "Economic Framework",       desc: "Basic Human Living Standard service floor + Economic Loop" },
     { icon: Shield,    title: "Governance Architecture",  desc: "Constitutional enforcement"             },
     { icon: BookOpen,  title: "Educational Pathway",      desc: "Four-level curriculum"                  },
     { icon: Users,     title: "Community Infrastructure", desc: "AGPL-3.0 open source"                  },
