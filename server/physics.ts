@@ -232,7 +232,7 @@ export const KERNEL_WALLET_ADDRESS = "NXT-KRNL-SYS1-0000-NEXUS";
 //                              EXCEPTION: GENESIS_EXECUTION_ADDRESS is exempt —
 //                              it received the foundational block reward before
 //                              the constitutional upgrade was ratified.
-//   C-0002  Immutable Rights — no tx may breach the Basic Human Living Standard of 1,150 NXT offered as a service
+//   C-0002  Immutable Rights — no tx may breach the Basic Human Living Standard of 1,150 NXT provided in services
 //   C-0005  Physics Supremacy — all protocol parameters must be Maxwell-valid
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -243,7 +243,7 @@ export const KERNEL_WALLET_ADDRESS = "NXT-KRNL-SYS1-0000-NEXUS";
  */
 export const GENESIS_EXECUTION_ADDRESS = "NXT-NEXS-OS1K-7F3A-OMEGA";
 
-/** Basic Human Living Standard — 1,150 NXT/month — offered by NexusOS as a service */
+/** Basic Human Living Standard — 1,150 NXT/month provided in services by NexusOS */
 export const IHR_FLOOR_NXT = 1_150;
 
 /** Non-dominance ceiling — 33% of circulating Lambda mass */
@@ -309,7 +309,7 @@ export function checkC0001(
 /**
  * C-0002: Immutable Rights
  * No transaction may reduce a citizen's balance below the Basic Human Living Standard of 1,150 NXT/month
- * — the service floor offered by NexusOS through the orbital treasury.
+ * — provided in services by NexusOS through the orbital treasury.
  * If a sender's balance is already below the floor, no further debits are permitted.
  *
  * @param senderNewBalanceNxt  sender's balance after amount + fee deducted (NXT)
@@ -321,7 +321,7 @@ export function checkC0002(senderNewBalanceNxt: number): ConstitutionCheck {
       violation: {
         article: "C-0002",
         rule: "Immutable Rights",
-        detail: `Transfer would reduce sender to ${senderNewBalanceNxt.toFixed(8)} NXT — below the Basic Human Living Standard service floor of ${IHR_FLOOR_NXT} NXT offered by NexusOS.`,
+        detail: `Transfer would reduce sender to ${senderNewBalanceNxt.toFixed(8)} NXT — below the Basic Human Living Standard of ${IHR_FLOOR_NXT} NXT provided in services by NexusOS.`,
       },
     };
   }
