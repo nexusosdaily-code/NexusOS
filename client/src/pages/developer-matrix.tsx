@@ -296,7 +296,7 @@ This means:
     content: [
       {
         heading: "Basic Human Living Standard",
-        text: `NexusOS provides a Basic Human Living Standard in services — a minimum value of services delivered to every citizen:
+        text: `NexusOS provides a Basic Human Living Standard in services — a minimum value of services delivered to every citizen through the charity, which receives funds from the orbital treasury for projects and services:
 
 **Monthly Floor:** 1,150 NXT
 
@@ -314,7 +314,7 @@ This means:
         text: `The Basic Human Living Standard is enforced at the substrate level:
 
 **C-0002: Immutable Rights**
-"No transaction may reduce a citizen's balance below the Basic Human Living Standard of 1,150 NXT/month provided in services through the charity."
+"No transaction may reduce a citizen's balance below the Basic Human Living Standard of 1,150 NXT/month — provided in services through the charity, which receives funds from the orbital treasury to deliver projects and services to every citizen."
 
 **Enforcement:**
 - Substrate rejects transactions violating the Basic Human Living Standard
@@ -323,7 +323,7 @@ This means:
       },
       {
         heading: "Funding Mechanism",
-        text: `The Basic Human Living Standard provided in services through the charity is funded through:
+        text: `The Basic Human Living Standard is delivered as services through the charity. The charity receives funds from the orbital treasury — here is how the treasury is funded:
 
 1. **Transaction Fee Pool** (40%)
    - Portion of all E=hf fees

@@ -275,14 +275,14 @@ export default function Constitution() {
             icon={Lock}
             color="bg-purple-500/20"
             title="Immutable Rights"
-            formal="No transaction may reduce a citizen's balance below the Basic Human Living Standard of 1,150 NXT/month provided in services through the charity."
+            formal="No transaction may reduce a citizen's balance below the Basic Human Living Standard of 1,150 NXT/month — provided in services through the charity, which receives funds from the orbital treasury to deliver projects and services to every citizen."
             status={c0002?.status ?? "COMPLIANT"}
             summary={c0002?.detail ?? "Calculating…"}
           >
             {c0002 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-[10px] font-mono text-white/30 uppercase tracking-wider">
-                  <span>Basic Human Living Standard — 1,150 NXT / month · provided in services through the charity</span>
+                  <span>Basic Human Living Standard — 1,150 NXT / month · charity-funded services from the orbital treasury</span>
                   <span>{c0002.ihrChecks.filter(b => b.aboveFloor).length}/{c0002.ihrChecks.length} above floor</span>
                 </div>
 
