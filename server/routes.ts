@@ -11,7 +11,7 @@ import {
   createStreamSchema, updateStreamSettingsSchema
 } from "@shared/schema";
 import { z } from "zod";
-import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT } from "./physics";
+import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT, GENESIS_EXECUTION_ADDRESS } from "./physics";
 
 // WebSocket clients mapped by userId
 const connectedClients = new Map<string, WebSocket>();
@@ -984,7 +984,7 @@ export async function registerRoutes(
         });
       }
 
-      const c0001 = checkC0001(recipientNewBalance, totalCirculating);
+      const c0001 = checkC0001(recipientNewBalance, totalCirculating, toAddress);
       if (!c0001.passed) {
         await logAction(req, "transfer_failed", "wallet", fromWallet.id, { amount, toAddress }, "failed", c0001.violation!.detail);
         return res.status(403).json({
@@ -5900,10 +5900,12 @@ export async function registerRoutes(
       const totalCirculating = await storage.getTotalCirculatingSupply();
 
       // C-0001: Non-Dominance — check every wallet's share
+      // GENESIS_EXECUTION_ADDRESS is exempt by pre-constitutional right (Block #0 coinbase)
       const walletShares = allWallets.map(w => {
         const bal  = parseFloat(w.balance);
         const pct  = totalCirculating > 0 ? bal / totalCirculating : 0;
-        return { address: w.address, balanceNxt: bal, sharePct: pct, violates: pct > NON_DOMINANCE_PCT };
+        const genesisExempt = w.address === GENESIS_EXECUTION_ADDRESS;
+        return { address: w.address, balanceNxt: bal, sharePct: pct, violates: !genesisExempt && pct > NON_DOMINANCE_PCT, genesisExempt };
       });
       const c0001Violation = walletShares.find(w => w.violates);
 
