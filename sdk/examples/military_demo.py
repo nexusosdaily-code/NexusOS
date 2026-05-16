@@ -23,7 +23,7 @@ def main():
     adapter = MilitaryAdapter()
     
     print(f"\nSector: {adapter.sector_id}")
-    print(f"BHLS Applicable: {adapter.policy.constraints.get('bhls_applicable', True)}")
+    print(f"IHR Applicable: {adapter.policy.constraints.get('bhls_applicable', True)}")  # Immutable Human Rights floor
     print(f"Confined Dominance Allowed: {adapter.policy.constraints.get('confined_dominance_allowed', False)}")
     print(f"\nAvailable Operations:")
     for op_id in adapter.list_operations():
