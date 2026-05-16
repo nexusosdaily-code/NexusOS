@@ -296,7 +296,7 @@ This means:
     content: [
       {
         heading: "Basic Human Living Standard",
-        text: `NexusOS provides a Basic Human Living Standard in services — a minimum value of services delivered to every citizen through the charity, which receives funds from the orbital treasury for projects and services:
+        text: `1,150 NXT/month is the measured monthly service consumption per citizen — the gauge of what the charity delivers. The charity receives funds from the orbital treasury and provides services across 7 categories. C-0002 protects the equivalent wallet balance because the floor and the consumption measure are the same number by design:
 
 **Monthly Floor:** 1,150 NXT
 
@@ -314,7 +314,7 @@ This means:
         text: `The Basic Human Living Standard is enforced at the substrate level:
 
 **C-0002: Immutable Rights**
-"No transaction may reduce a citizen's balance below the Basic Human Living Standard of 1,150 NXT/month — provided in services through the charity, which receives funds from the orbital treasury to deliver projects and services to every citizen."
+"1,150 NXT/month is the measured monthly service consumption per citizen. No transaction may reduce a citizen's wallet below this consumption baseline. The floor and the consumption measure are the same number by design."
 
 **Enforcement:**
 - Substrate rejects transactions violating the Basic Human Living Standard
@@ -364,7 +364,7 @@ This means:
 No entity may control >33% of total Lambda mass.
 
 **C-0002: Immutable Rights**
-The Basic Human Living Standard of 1,150 NXT/month provided in services through the charity cannot be violated by any transaction.
+The monthly service consumption baseline of 1,150 NXT — the gauge of what the charity delivers — cannot be violated by any transaction.
 
 **C-0003: Energy Escrow**
 Governance proposals require energy escrow (skin in game).

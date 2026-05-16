@@ -34,7 +34,7 @@ const PILLARS = [
 // Constitutional safeguards
 const SAFEGUARDS = [
   { article: "C-0001", title: "Non-Dominance",    color: "#fbbf24", text: "No entity — including the founders — may hold more than 33% of total circulating NXT. This applies to the charitable trust itself. Concentration is constitutionally impossible." },
-  { article: "C-0002", title: "Immutable Rights", color: "#a78bfa", text: "No transaction may reduce any citizen's balance below the Basic Human Living Standard of 1,150 NXT/month — provided in services through the charity, which receives funds from the orbital treasury to deliver projects and services. Charitable disbursements cannot override citizen rights." },
+  { article: "C-0002", title: "Immutable Rights", color: "#a78bfa", text: "1,150 NXT/month is the measured monthly service consumption per citizen — the gauge of what the charity delivers across 7 service categories. No transaction may reduce a citizen's wallet below this consumption baseline. The floor and the consumption measure are the same number by design." },
   { article: "§6–§7",  title: "Trust Lock",       color: "#f43f5e", text: "10% of all Orbital Treasury deposits are permanently and irrevocably allocated to the trust. Disbursements require Sigma Constitution Engine consensus — no single authority can extract funds." },
 ];
 

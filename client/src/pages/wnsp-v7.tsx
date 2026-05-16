@@ -117,7 +117,7 @@ export default function WNSPv7Page() {
                   },
                   {
                     title: "Immutable Human Rights Floor",
-                    desc: "1,150 NXT/month Basic Human Living Standard — provided in services through the charity covering connectivity, fresh water, healthcare and essential services",
+                    desc: "1,150 NXT/month — the measured monthly service consumption per citizen across 7 categories delivered by the charity",
                     status: "ACTIVE"
                   }
                 ].map((feature, i) => (
