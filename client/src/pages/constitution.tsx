@@ -9,7 +9,7 @@ interface WalletShare {
   violates: boolean;
 }
 
-interface BhlsCheck {
+interface IhrCheck {
   address: string;
   balanceNxt: number;
   floorNxt: number;
@@ -37,7 +37,7 @@ interface ArticleC0002 {
   floorNxt: number;
   status: "COMPLIANT" | "VIOLATED";
   detail: string;
-  bhlsChecks: BhlsCheck[];
+  ihrChecks: IhrCheck[];
 }
 
 interface ArticleC0005 {
@@ -267,19 +267,19 @@ export default function Constitution() {
             icon={Lock}
             color="bg-purple-500/20"
             title="Immutable Rights"
-            formal="No transaction may reduce a citizen's balance below the BHLS floor of 1,150 NXT per month."
+            formal="No transaction may reduce a citizen's balance below the Immutable Human Rights floor of 1,150 NXT per month, as guaranteed under international law."
             status={c0002?.status ?? "COMPLIANT"}
             summary={c0002?.detail ?? "Calculating…"}
           >
             {c0002 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-[10px] font-mono text-white/30 uppercase tracking-wider">
-                  <span>BHLS floor — 1,150 NXT / month</span>
-                  <span>{c0002.bhlsChecks.filter(b => b.aboveFloor).length}/{c0002.bhlsChecks.length} above floor</span>
+                  <span>Immutable Human Rights floor — 1,150 NXT / month · international law</span>
+                  <span>{c0002.ihrChecks.filter(b => b.aboveFloor).length}/{c0002.ihrChecks.length} above floor</span>
                 </div>
 
                 <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3 space-y-1">
-                  <div className="text-[10px] font-mono text-white/30 uppercase tracking-wider mb-2">Monthly entitlement breakdown</div>
+                  <div className="text-[10px] font-mono text-white/30 uppercase tracking-wider mb-2">Monthly human rights entitlement breakdown</div>
                   {[
                     ["Shelter",          350],
                     ["Food & Nutrition", 300],
@@ -300,11 +300,11 @@ export default function Constitution() {
                   </div>
                 </div>
 
-                {c0002.bhlsChecks.length === 0 ? (
+                {c0002.ihrChecks.length === 0 ? (
                   <div className="text-xs text-white/20 text-center py-4">No wallets found</div>
                 ) : (
-                  c0002.bhlsChecks.map((b) => (
-                    <div key={b.address} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0" data-testid={`bhls-check-${b.address}`}>
+                  c0002.ihrChecks.map((b) => (
+                    <div key={b.address} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0" data-testid={`ihr-check-${b.address}`}>
                       <span className="text-xs font-mono text-white/50 truncate max-w-[220px]">{b.address}</span>
                       <div className="flex items-center gap-3">
                         <span className="text-xs font-mono text-white/40">
@@ -320,7 +320,7 @@ export default function Constitution() {
                 )}
 
                 <div className="pt-1 border-t border-white/5 text-[10px] font-mono text-white/20">
-                  Enforced at: wallet transfer endpoint — transfer rejected if sender would drop below 1,150 NXT after deduction
+                  Enforced at: wallet transfer endpoint — transfer rejected if sender would drop below the Immutable Human Rights floor of 1,150 NXT · governed by international law
                 </div>
               </div>
             )}
