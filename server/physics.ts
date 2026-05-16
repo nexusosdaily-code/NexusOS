@@ -229,9 +229,19 @@ export const KERNEL_WALLET_ADDRESS = "NXT-KRNL-SYS1-0000-NEXUS";
 // No governance vote, no override, no bypass.
 //
 //   C-0001  Non-Dominance    — no entity > 33% of circulating Lambda mass
+//                              EXCEPTION: GENESIS_EXECUTION_ADDRESS is exempt —
+//                              it received the foundational block reward before
+//                              the constitutional upgrade was ratified.
 //   C-0002  Immutable Rights — no tx may breach the IHR floor (1,150 NXT) — governed by international law
 //   C-0005  Physics Supremacy — all protocol parameters must be Maxwell-valid
 // ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Genesis execution address — the wallet that received the foundational block
+ * reward (Block #0 coinbase) before the constitutional upgrade was ratified.
+ * This address is exempt from C-0001 Non-Dominance by pre-constitutional right.
+ */
+export const GENESIS_EXECUTION_ADDRESS = "NXT-NEXS-OS1K-7F3A-OMEGA";
 
 /** Monthly Immutable Human Rights floor — 1,150 NXT — governed by international law */
 export const IHR_FLOOR_NXT = 1_150;
@@ -263,14 +273,25 @@ export interface ConstitutionCheck {
  * No entity may control more than 33% of total circulating Lambda mass.
  * Total circulating = sum of all wallet balances.
  *
+ * EXCEPTION: GENESIS_EXECUTION_ADDRESS is permanently exempt — it received
+ * the foundational Block #0 coinbase reward before this article was ratified.
+ * Applying C-0001 retroactively to a pre-constitutional reward would itself
+ * be unconstitutional.
+ *
  * @param recipientNewBalanceNxt  recipient's balance after transfer (NXT)
  * @param totalCirculatingNxt     sum of all wallet balances (NXT)
+ * @param recipientAddress        wallet address of the recipient (for genesis exemption)
  */
 export function checkC0001(
   recipientNewBalanceNxt: number,
   totalCirculatingNxt: number,
+  recipientAddress?: string,
 ): ConstitutionCheck {
   if (totalCirculatingNxt <= 0) return { passed: true };
+  // Genesis execution address is exempt from Non-Dominance by pre-constitutional right
+  if (recipientAddress && recipientAddress === GENESIS_EXECUTION_ADDRESS) {
+    return { passed: true };
+  }
   const pct = recipientNewBalanceNxt / totalCirculatingNxt;
   if (pct > NON_DOMINANCE_PCT) {
     return {

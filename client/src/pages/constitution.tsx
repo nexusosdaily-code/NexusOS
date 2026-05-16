@@ -226,7 +226,7 @@ export default function Constitution() {
             icon={Scale}
             color="bg-amber-500/20"
             title="Non-Dominance"
-            formal="No entity may control more than 33% of total circulating Lambda mass."
+            formal="No entity may control more than 33% of total circulating Lambda mass. Exception: the genesis execution address (NXT-NEXS-OS1K-7F3A-OMEGA) is exempt by pre-constitutional right — it received the foundational Block #0 coinbase reward before this article was ratified."
             status={c0001?.status ?? "COMPLIANT"}
             summary={c0001?.detail ?? "Calculating…"}
           >
@@ -239,23 +239,31 @@ export default function Constitution() {
                 {c0001.walletShares.length === 0 ? (
                   <div className="text-xs text-white/20 text-center py-4">No wallets found</div>
                 ) : (
-                  c0001.walletShares.map((w) => (
+                  c0001.walletShares.map((w: any) => (
                     <div key={w.address} className="space-y-1.5" data-testid={`wallet-share-${w.address}`}>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono text-white/50 truncate max-w-[240px]">{w.address}</span>
-                        <span className={`text-xs font-bold font-mono ${w.violates ? "text-red-400" : "text-cyan-400"}`}>
-                          {(w.sharePct * 100).toFixed(2)}%
-                        </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-mono text-white/50 truncate max-w-[200px]">{w.address}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {w.genesisExempt && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-mono border border-amber-500/30 text-amber-400 bg-amber-500/10">
+                              GENESIS EXEMPT
+                            </span>
+                          )}
+                          <span className={`text-xs font-bold font-mono ${w.violates ? "text-red-400" : w.genesisExempt ? "text-amber-400" : "text-cyan-400"}`}>
+                            {(w.sharePct * 100).toFixed(2)}%
+                          </span>
+                        </div>
                       </div>
                       <PctBar pct={w.sharePct} ceiling={c0001.ceiling} />
                       <div className="text-[10px] text-white/20 font-mono">
                         {w.balanceNxt.toLocaleString(undefined, { maximumFractionDigits: 2 })} NXT of {c0001.totalCirculatingNxt.toLocaleString(undefined, { maximumFractionDigits: 2 })} circulating
+                        {w.genesisExempt && " · pre-constitutional Block #0 coinbase — exempt"}
                       </div>
                     </div>
                   ))
                 )}
                 <div className="pt-1 border-t border-white/5 text-[10px] font-mono text-white/20">
-                  Enforced at: wallet transfer endpoint — transfer rejected if recipient share would exceed 33%
+                  Enforced at: wallet transfer endpoint — transfer rejected if recipient share would exceed 33% · genesis execution address permanently exempt
                 </div>
               </div>
             )}
