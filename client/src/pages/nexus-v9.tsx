@@ -155,7 +155,7 @@ export default function NexusV9Page() {
           <div className="flex flex-wrap gap-2">
             <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30" data-testid="badge-evolved-1">Networks → Constitution</Badge>
             <Badge className="bg-green-500/20 text-green-300 border-green-500/30" data-testid="badge-evolved-2">Truth → Governance</Badge>
-            <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30" data-testid="badge-evolved-3">Multiscale → BHLS</Badge>
+            <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30" data-testid="badge-evolved-3">Multiscale → IHR</Badge>
           </div>
         </Card>
 
