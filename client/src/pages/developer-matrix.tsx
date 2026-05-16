@@ -295,8 +295,8 @@ This means:
     color: "from-red-500 to-pink-500",
     content: [
       {
-        heading: "Immutable Human Rights",
-        text: `Immutable Human Rights guarantees every citizen a minimum floor of resources, governed by international law:
+        heading: "Basic Human Living Standard",
+        text: `NexusOS provides a Basic Human Living Standard in services — a minimum value of services delivered to every citizen:
 
 **Monthly Floor:** 1,150 NXT
 
@@ -311,19 +311,19 @@ This means:
       },
       {
         heading: "Constitutional Protection",
-        text: `Immutable Human Rights is enforced at the substrate level:
+        text: `The Basic Human Living Standard is enforced at the substrate level:
 
 **C-0002: Immutable Rights**
-"No transaction may reduce a citizen's balance below their Immutable Human Rights entitlement, as guaranteed under international law."
+"No transaction may reduce a citizen's balance below the Basic Human Living Standard of 1,150 NXT/month provided in services through the charity."
 
 **Enforcement:**
-- Substrate rejects transactions violating the IHR floor
+- Substrate rejects transactions violating the Basic Human Living Standard
 - Cannot be overridden by governance
 - Hardcoded into Lambda Gate operations`
       },
       {
         heading: "Funding Mechanism",
-        text: `The Immutable Human Rights floor is funded through:
+        text: `The Basic Human Living Standard provided in services through the charity is funded through:
 
 1. **Transaction Fee Pool** (40%)
    - Portion of all E=hf fees
@@ -364,7 +364,7 @@ This means:
 No entity may control >33% of total Lambda mass.
 
 **C-0002: Immutable Rights**
-Immutable Human Rights floor cannot be violated by any transaction, as guaranteed under international law.
+The Basic Human Living Standard of 1,150 NXT/month provided in services through the charity cannot be violated by any transaction.
 
 **C-0003: Energy Escrow**
 Governance proposals require energy escrow (skin in game).
@@ -1004,7 +1004,7 @@ const INTERNAL_RESOURCES = [
     color: "from-green-500 to-emerald-500",
     links: [
       { name: "NXT Token Economics", docSection: "economics", description: "21B supply, 8 decimals, E=hf transaction fees" },
-      { name: "Immutable Human Rights Floor", docSection: "ihr", description: "1,150 NXT/month guaranteed under international law" },
+      { name: "Basic Human Living Standard", docSection: "ihr", description: "1,150 NXT/month provided in services through the charity" },
       { name: "Planetary Governance", docSection: "governance", description: "Authority bands, constitutional articles, Sigma voting" }
     ]
   },
@@ -1108,7 +1108,7 @@ const BUILD_CATEGORIES = [
       "NXT wallet implementations",
       "Multi-sig wallets",
       "Payment gateways",
-      "Immutable Human Rights floor enforcement",
+      "Basic Human Living Standard floor enforcement",
       "Transaction validators"
     ],
     sdks: ["wnsp-wallet", "wnsp-payments"]
@@ -1251,7 +1251,7 @@ const KNOWLEDGE_DOMAINS = [
   { id: "lambda_gates", name: "Lambda Gates", level: 3, description: "8 photonic gate primitives", icon: Cpu, color: "from-green-500 to-emerald-600" },
   { id: "ce1_protocol", name: "CE-1 Protocol", level: 3, description: "Coherence Engineering protocol", icon: Zap, color: "from-emerald-500 to-green-600" },
   { id: "constitutional", name: "Constitutional Law", level: 4, description: "C-0001, C-0002, C-0003 clauses", icon: Scale, color: "from-yellow-500 to-orange-600" },
-  { id: "ihr_economics", name: "IHR Economics", level: 4, description: "1,150 NXT floor, 7 categories, governed by international law", icon: Shield, color: "from-orange-500 to-red-600" },
+  { id: "ihr_economics", name: "Living Standard Economics", level: 4, description: "Basic Human Living Standard — 1,150 NXT/month, 7 service categories, offered by NexusOS", icon: Shield, color: "from-orange-500 to-red-600" },
   { id: "authority_bands", name: "Authority Bands", level: 5, description: "7-tier spectral hierarchy", icon: Layers, color: "from-red-500 to-pink-600" },
   { id: "sigma_voting", name: "Sigma Voting", level: 5, description: "Coherence-weighted voting", icon: Users, color: "from-pink-500 to-rose-600" },
   { id: "photonic_computing", name: "Photonic Computing", level: 6, description: "Photonic logic gates", icon: Cpu, color: "from-indigo-500 to-violet-600" },

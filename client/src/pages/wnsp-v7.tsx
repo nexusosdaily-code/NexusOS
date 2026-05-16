@@ -117,7 +117,7 @@ export default function WNSPv7Page() {
                   },
                   {
                     title: "Immutable Human Rights Floor",
-                    desc: "1,150 NXT/month covering connectivity, fresh water, healthcare and services — guaranteed under international law",
+                    desc: "1,150 NXT/month Basic Human Living Standard — provided in services through the charity covering connectivity, fresh water, healthcare and essential services",
                     status: "ACTIVE"
                   }
                 ].map((feature, i) => (

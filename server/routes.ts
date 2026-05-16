@@ -5909,7 +5909,7 @@ export async function registerRoutes(
       });
       const c0001Violation = walletShares.find(w => w.violates);
 
-      // C-0002: Immutable Rights — check every wallet vs IHR floor (governed by international law)
+      // C-0002: Immutable Rights — check every wallet vs Basic Human Living Standard (1,150 NXT provided in services through the charity)
       const ihrChecks = allWallets.map(w => {
         const bal = parseFloat(w.balance);
         return { address: w.address, balanceNxt: bal, floorNxt: IHR_FLOOR_NXT, aboveFloor: bal >= IHR_FLOOR_NXT };
@@ -5946,8 +5946,8 @@ export async function registerRoutes(
               floorNxt: IHR_FLOOR_NXT,
               status:  c0002Violation ? "VIOLATED" : "COMPLIANT",
               detail:  c0002Violation
-                ? `${c0002Violation.address} holds ${c0002Violation.balanceNxt.toFixed(8)} NXT — below the Immutable Human Rights floor of ${IHR_FLOOR_NXT} NXT`
-                : `All wallets at or above the Immutable Human Rights floor of ${IHR_FLOOR_NXT} NXT`,
+                ? `${c0002Violation.address} holds ${c0002Violation.balanceNxt.toFixed(8)} NXT — below the Basic Human Living Standard of ${IHR_FLOOR_NXT} NXT provided in services through the charity`
+                : `All wallets at or above the Basic Human Living Standard of ${IHR_FLOOR_NXT} NXT provided in services through the charity`,
               ihrChecks,
             },
             "C-0005": {
