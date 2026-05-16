@@ -95,6 +95,7 @@ import StartPage from "@/pages/start";
 import ReposedTheoryPage from "@/pages/reposed-theory";
 import ProtocolPage from "@/pages/protocol";
 import PhotonicLedgerPage from "@/pages/photonic-ledger";
+import HardwareSpecPage from "@/pages/hardware-spec";
 import P2PTerminalPage from "@/pages/p2p-terminal";
 import NotFound from "@/pages/not-found";
 
@@ -188,6 +189,7 @@ function ProtectedRoutes() {
         <Route path="/ce-se-pipeline" component={LearnPage} />
         <Route path="/protocol" component={ProtocolPage} />
         <Route path="/photonic-ledger" component={PhotonicLedgerPage} />
+        <Route path="/hardware-spec" component={HardwareSpecPage} />
         <Route path="/p2p-terminal" component={P2PTerminalPage} />
         <Route path="/learn" component={LearnPage} />
         <Route path="/pipeline" component={PipelinePage} />

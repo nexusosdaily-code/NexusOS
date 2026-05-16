@@ -115,6 +115,7 @@ const APP_SECTIONS = [
     accent: "#a78bfa",
     items: [
       { title: "Photonic Ledger",  href: "/photonic-ledger",     Icon: Layers },
+      { title: "Hardware Spec",    href: "/hardware-spec",       Icon: Shield },
       { title: "P2P Sync Terminal",href: "/p2p-terminal",        Icon: Radio },
       { title: "WNSP VM",          href: "/wnsp-vm",             Icon: Cpu },
       { title: "Spectral Router",  href: "/spectral-router",     Icon: Radio },
