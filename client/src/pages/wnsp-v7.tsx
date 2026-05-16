@@ -116,8 +116,8 @@ export default function WNSPv7Page() {
                     status: "ACTIVE"
                   },
                   {
-                    title: "BHLS Floor System",
-                    desc: "1,150 NXT/month basic income guaranteed",
+                    title: "Immutable Human Rights Floor",
+                    desc: "1,150 NXT/month guaranteed under international law",
                     status: "ACTIVE"
                   }
                 ].map((feature, i) => (
