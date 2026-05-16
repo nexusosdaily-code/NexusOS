@@ -314,7 +314,7 @@ This means:
         text: `The Basic Human Living Standard is enforced at the substrate level:
 
 **C-0002: Immutable Rights**
-"No transaction may reduce a citizen's balance below the Basic Human Living Standard of 1,150 NXT/month provided in services by NexusOS through the orbital treasury."
+"No transaction may reduce a citizen's balance below the Basic Human Living Standard of 1,150 NXT/month provided in services through the charity."
 
 **Enforcement:**
 - Substrate rejects transactions violating the Basic Human Living Standard
@@ -323,7 +323,7 @@ This means:
       },
       {
         heading: "Funding Mechanism",
-        text: `The Basic Human Living Standard provided in services is funded through:
+        text: `The Basic Human Living Standard provided in services through the charity is funded through:
 
 1. **Transaction Fee Pool** (40%)
    - Portion of all E=hf fees
@@ -364,7 +364,7 @@ This means:
 No entity may control >33% of total Lambda mass.
 
 **C-0002: Immutable Rights**
-The Basic Human Living Standard of 1,150 NXT/month provided in services cannot be violated by any transaction.
+The Basic Human Living Standard of 1,150 NXT/month provided in services through the charity cannot be violated by any transaction.
 
 **C-0003: Energy Escrow**
 Governance proposals require energy escrow (skin in game).
@@ -1004,7 +1004,7 @@ const INTERNAL_RESOURCES = [
     color: "from-green-500 to-emerald-500",
     links: [
       { name: "NXT Token Economics", docSection: "economics", description: "21B supply, 8 decimals, E=hf transaction fees" },
-      { name: "Basic Human Living Standard", docSection: "ihr", description: "1,150 NXT/month provided in services by NexusOS through the orbital treasury" },
+      { name: "Basic Human Living Standard", docSection: "ihr", description: "1,150 NXT/month provided in services through the charity" },
       { name: "Planetary Governance", docSection: "governance", description: "Authority bands, constitutional articles, Sigma voting" }
     ]
   },
