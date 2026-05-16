@@ -275,19 +275,19 @@ export default function Constitution() {
             icon={Lock}
             color="bg-purple-500/20"
             title="Immutable Rights"
-            formal="No transaction may reduce a citizen's balance below the Immutable Human Rights floor of 1,150 NXT per month, as guaranteed under international law."
+            formal="No transaction may reduce a citizen's balance below the Basic Human Living Standard of 1,150 NXT/month — the service floor offered by NexusOS through the orbital treasury."
             status={c0002?.status ?? "COMPLIANT"}
             summary={c0002?.detail ?? "Calculating…"}
           >
             {c0002 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-[10px] font-mono text-white/30 uppercase tracking-wider">
-                  <span>Immutable Human Rights floor — 1,150 NXT / month · international law</span>
+                  <span>Basic Human Living Standard — 1,150 NXT / month · NexusOS service offering</span>
                   <span>{c0002.ihrChecks.filter(b => b.aboveFloor).length}/{c0002.ihrChecks.length} above floor</span>
                 </div>
 
                 <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3 space-y-1">
-                  <div className="text-[10px] font-mono text-white/30 uppercase tracking-wider mb-2">Monthly human rights entitlement breakdown</div>
+                  <div className="text-[10px] font-mono text-white/30 uppercase tracking-wider mb-2">Monthly Basic Human Living Standard breakdown</div>
                   {[
                     ["Shelter",          350],
                     ["Food & Nutrition", 300],
@@ -328,7 +328,7 @@ export default function Constitution() {
                 )}
 
                 <div className="pt-1 border-t border-white/5 text-[10px] font-mono text-white/20">
-                  Enforced at: wallet transfer endpoint — transfer rejected if sender would drop below the Immutable Human Rights floor of 1,150 NXT · governed by international law
+                  Enforced at: wallet transfer endpoint — transfer rejected if sender would drop below the Basic Human Living Standard of 1,150 NXT · NexusOS service floor
                 </div>
               </div>
             )}
