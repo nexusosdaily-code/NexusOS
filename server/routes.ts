@@ -11,7 +11,7 @@ import {
   createStreamSchema, updateStreamSettingsSchema
 } from "@shared/schema";
 import { z } from "zod";
-import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, BHLS_FLOOR_NXT, NON_DOMINANCE_PCT } from "./physics";
+import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT } from "./physics";
 
 // WebSocket clients mapped by userId
 const connectedClients = new Map<string, WebSocket>();
@@ -5907,12 +5907,12 @@ export async function registerRoutes(
       });
       const c0001Violation = walletShares.find(w => w.violates);
 
-      // C-0002: Immutable Rights — check every wallet vs BHLS floor
-      const bhlsChecks = allWallets.map(w => {
+      // C-0002: Immutable Rights — check every wallet vs IHR floor (governed by international law)
+      const ihrChecks = allWallets.map(w => {
         const bal = parseFloat(w.balance);
-        return { address: w.address, balanceNxt: bal, floorNxt: BHLS_FLOOR_NXT, aboveFloor: bal >= BHLS_FLOOR_NXT };
+        return { address: w.address, balanceNxt: bal, floorNxt: IHR_FLOOR_NXT, aboveFloor: bal >= IHR_FLOOR_NXT };
       });
-      const c0002Violation = bhlsChecks.find(w => !w.aboveFloor);
+      const c0002Violation = ihrChecks.find(w => !w.aboveFloor);
 
       // C-0005: Physics Supremacy — validate every live parameter
       const paramChecks = Object.entries(LIVE_FEES).map(([key, val]) => {
@@ -5941,12 +5941,12 @@ export async function registerRoutes(
             },
             "C-0002": {
               rule:    "Immutable Rights",
-              floorNxt: BHLS_FLOOR_NXT,
+              floorNxt: IHR_FLOOR_NXT,
               status:  c0002Violation ? "VIOLATED" : "COMPLIANT",
               detail:  c0002Violation
-                ? `${c0002Violation.address} holds ${c0002Violation.balanceNxt.toFixed(8)} NXT — below the ${BHLS_FLOOR_NXT} NXT BHLS floor`
-                : `All wallets at or above the ${BHLS_FLOOR_NXT} NXT BHLS floor`,
-              bhlsChecks,
+                ? `${c0002Violation.address} holds ${c0002Violation.balanceNxt.toFixed(8)} NXT — below the Immutable Human Rights floor of ${IHR_FLOOR_NXT} NXT`
+                : `All wallets at or above the Immutable Human Rights floor of ${IHR_FLOOR_NXT} NXT`,
+              ihrChecks,
             },
             "C-0005": {
               rule:    "Physics Supremacy",

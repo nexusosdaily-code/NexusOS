@@ -3,7 +3,7 @@ Community Health Sector Demo
 
 Universal health programs for ALL peoples worldwide.
 Nutrition, fitness, health education in local languages, and remote infrastructure.
-BHLS floor of 1,150 NXT/month guaranteed for every person.
+Immutable Human Rights floor of 1,150 NXT/month guaranteed for every person under international law.
 
 Run: python sdk/examples/community_health_demo.py
 """
@@ -24,7 +24,7 @@ def main():
     adapter = CommunityHealthAdapter()
     
     print(f"\nSector: {adapter.sector_id}")
-    print(f"BHLS Monthly Floor: {adapter.BHLS_MONTHLY_FLOOR:,} NXT per person")
+    print(f"IHR Monthly Floor: {adapter.BHLS_MONTHLY_FLOOR:,} NXT per person (Immutable Human Rights — international law)")
     print(f"Universal Coverage: {adapter.policy.constraints.get('universal_coverage', True)}")
     
     print("\n" + "-" * 70)
@@ -79,7 +79,7 @@ def main():
     print(f"Result: {'REGISTERED' if result.success else 'FAILED'}")
     
     print("\n" + "-" * 70)
-    print("2. ENROLL MEMBERS WITH BHLS GUARANTEE (ATTO-Level)")
+    print("2. ENROLL MEMBERS WITH IHR GUARANTEE (ATTO-Level)")
     print("-" * 70)
     
     identity = Attestation(
@@ -95,9 +95,9 @@ def main():
         band_level=SpectralBand.ATTO
     )
     bhls_eligible = Attestation(
-        type="bhls_eligibility",
+        type="ihr_eligibility",
         value="ELIGIBLE",
-        issuer="BHLSAuthority",
+        issuer="IHRAuthority",
         band_level=SpectralBand.ATTO
     )
     
@@ -128,7 +128,7 @@ def main():
         print(f"{name} (age {age}): {member.get('bhls_amount', 0):,.0f} NXT/month{supplement_type}")
     
     total_bhls, member_count = adapter.calculate_total_bhls_required()
-    print(f"\nTotal BHLS Required: {total_bhls:,.0f} NXT/month for {member_count} members")
+    print(f"\nTotal IHR Floor Required: {total_bhls:,.0f} NXT/month for {member_count} members")
     
     print("\n" + "-" * 70)
     print("3. ALLOCATE FUNDS TO PROGRAMS (ZEPTO-Level)")
@@ -389,13 +389,13 @@ def main():
     print(f"Progress: {len(project['completed_milestones'])}/{len(project['milestones'])} milestones")
     
     print("\n" + "-" * 70)
-    print("9. BHLS DISTRIBUTION - 1,150 NXT/MONTH FOR ALL")
+    print("9. IHR DISTRIBUTION - 1,150 NXT/MONTH FOR ALL (Immutable Human Rights)")
     print("-" * 70)
     
     eligibility = Attestation(
         type="eligibility_verification",
         value="ELIGIBLE",
-        issuer="BHLSAuthority",
+        issuer="IHRAuthority",
         band_level=SpectralBand.ATTO
     )
     identity_conf = Attestation(
@@ -411,7 +411,7 @@ def main():
         band_level=SpectralBand.ATTO
     )
     
-    print("\nDistributing BHLS for January 2025:")
+    print("\nDistributing IHR floor for January 2025:")
     for member_id, name, age in members:
         result = adapter.distribute_bhls(
             member_id=member_id,
@@ -423,13 +423,13 @@ def main():
         print(f"  {name}: {member.get('bhls_amount', 0):,.0f} NXT distributed")
     
     community = adapter.get_community_stats("VILLAGE-SUNRISE")
-    print(f"\nTotal BHLS Distributed to Sunrise Village: {community['total_bhls_distributed']:,.0f} NXT")
+    print(f"\nTotal IHR Floor Distributed to Sunrise Village: {community['total_bhls_distributed']:,.0f} NXT")
     
     print("\n" + "=" * 70)
-    print("UNIVERSAL HEALTH GUARANTEE")
+    print("UNIVERSAL HEALTH GUARANTEE — IMMUTABLE HUMAN RIGHTS")
     print("=" * 70)
     print("""
-    BHLS Floor: 1,150 NXT/month for EVERY person
+    IHR Floor: 1,150 NXT/month for EVERY person (governed by international law)
     
     Supplements:
     - Children: +25% (1,437.50 NXT/month)
@@ -444,7 +444,7 @@ def main():
     - Infrastructure: water, solar, connectivity
     
     Physics Guarantee:
-    - BHLS_distributed >= population x 1,150 NXT
+    - IHR_distributed >= population x 1,150 NXT
     - Fund conservation: disbursed <= allocated
     - Every person covered regardless of location
     

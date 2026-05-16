@@ -486,12 +486,12 @@ function ConstitutionClauses() {
         </div>
       ))}
 
-      {/* BHLS */}
+      {/* IHR */}
       {revealed >= 4 && (
         <div className="rounded-xl border border-amber-500/30 p-5 bg-amber-950/20 fade-slide">
           <div className="flex items-center gap-3 mb-4">
             <Coins className="w-6 h-6 text-amber-400" />
-            <span className="font-bold text-amber-300 text-lg">Basic Human Living Standard</span>
+            <span className="font-bold text-amber-300 text-lg">Immutable Human Rights</span>
           </div>
           <div className="flex items-end gap-3">
             <div className="font-mono text-5xl font-bold text-amber-400"
@@ -501,7 +501,7 @@ function ConstitutionClauses() {
             <div className="text-amber-300 text-lg mb-1">NXT / month</div>
           </div>
           <p className="text-slate-500 text-xs mt-2 font-mono">
-            E_BHLS = h × f_BHLS — floor derived from physics, not policy
+            E_IHR = h × f_IHR — floor derived from physics and international law
           </p>
         </div>
       )}
@@ -1003,7 +1003,7 @@ function AchievementList() {
     { icon: Atom,      title: "Theoretical Foundation",  desc: "Lambda Boson physics (Λ = hf/c²)"      },
     { icon: Orbit,     title: "Cosmological Origin",      desc: "Oscillatory Cosmogenesis"               },
     { icon: Waves,     title: "Technical Specification",  desc: "WNSP protocol stack"                    },
-    { icon: Coins,     title: "Economic Framework",       desc: "BHLS floor + Economic Loop"             },
+    { icon: Coins,     title: "Economic Framework",       desc: "Immutable Human Rights floor + Economic Loop" },
     { icon: Shield,    title: "Governance Architecture",  desc: "Constitutional enforcement"             },
     { icon: BookOpen,  title: "Educational Pathway",      desc: "Four-level curriculum"                  },
     { icon: Users,     title: "Community Infrastructure", desc: "AGPL-3.0 open source"                  },
