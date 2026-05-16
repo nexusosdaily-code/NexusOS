@@ -19,6 +19,7 @@ The following pages and routes are core to the NexusOS mission. Any agent or dev
 | `/compression-explorer` | `client/src/pages/compression-explorer.tsx` | Interactive Λ=hf/c² compression curve visualisation |
 | `/oscillating-quanta` | `client/src/pages/oscillating-quanta.tsx` | First Principles — Theory of Compression States |
 | `/hardware-lab` | `client/src/pages/hardware-lab.tsx` | Physics calibration verifier, live spectrometer |
+| `/hardware-spec` | `client/src/pages/hardware-spec.tsx` | **AGPL-3.0 Protected** — Formal specification of SNIC, PHR-1, Spectral Relay Mesh v1, WavelengthScript Compiler α. First public disclosure 2026-05-16. |
 
 ## Safeguard Rules for All Future Builds
 
