@@ -275,14 +275,14 @@ export default function Constitution() {
             icon={Lock}
             color="bg-purple-500/20"
             title="Immutable Rights"
-            formal="No transaction may reduce a citizen's balance below the Basic Human Living Standard of 1,150 NXT/month provided in services by NexusOS through the orbital treasury."
+            formal="No transaction may reduce a citizen's balance below the Basic Human Living Standard of 1,150 NXT/month provided in services through the charity."
             status={c0002?.status ?? "COMPLIANT"}
             summary={c0002?.detail ?? "Calculating…"}
           >
             {c0002 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-[10px] font-mono text-white/30 uppercase tracking-wider">
-                  <span>Basic Human Living Standard — 1,150 NXT / month · provided in services by NexusOS</span>
+                  <span>Basic Human Living Standard — 1,150 NXT / month · provided in services through the charity</span>
                   <span>{c0002.ihrChecks.filter(b => b.aboveFloor).length}/{c0002.ihrChecks.length} above floor</span>
                 </div>
 
@@ -328,7 +328,7 @@ export default function Constitution() {
                 )}
 
                 <div className="pt-1 border-t border-white/5 text-[10px] font-mono text-white/20">
-                  Enforced at: wallet transfer endpoint — transfer rejected if sender would drop below the Basic Human Living Standard of 1,150 NXT provided in services
+                  Enforced at: wallet transfer endpoint — transfer rejected if sender would drop below the Basic Human Living Standard of 1,150 NXT provided in services through the charity
                 </div>
               </div>
             )}
