@@ -98,6 +98,7 @@ import ProtocolPage from "@/pages/protocol";
 import PhotonicLedgerPage from "@/pages/photonic-ledger";
 import HardwareSpecPage from "@/pages/hardware-spec";
 import P2PTerminalPage from "@/pages/p2p-terminal";
+import CampaignPage from "@/pages/campaign";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -206,6 +207,7 @@ function ProtectedRoutes() {
         <Route path="/start" component={StartPage} />
         <Route path="/reposed-theory" component={ReposedTheoryPage} />
         <Route path="/ce-code-writer" component={CeCodeWriterPage} />
+        <Route path="/campaign" component={CampaignPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>

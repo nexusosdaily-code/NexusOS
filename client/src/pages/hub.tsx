@@ -147,6 +147,17 @@ const APP_SECTIONS = [
     ],
   },
   {
+    label: "Campaign",
+    accent: "#f97316",
+    items: [
+      { title: "🚀 Campaign Hub",  href: "/campaign",     Icon: Rocket },
+      { title: "Indiegogo",        href: "/indiegogo",    Icon: Zap },
+      { title: "Crowdfund",        href: "/crowdfund",    Icon: Users },
+      { title: "Evidence",         href: "/evidence",     Icon: Eye },
+      { title: "SNIC Spec",        href: "/snic",         Icon: Cpu },
+    ],
+  },
+  {
     label: "Community",
     accent: "#f97316",
     items: [
