@@ -229,12 +229,12 @@ export const KERNEL_WALLET_ADDRESS = "NXT-KRNL-SYS1-0000-NEXUS";
 // No governance vote, no override, no bypass.
 //
 //   C-0001  Non-Dominance    — no entity > 33% of circulating Lambda mass
-//   C-0002  Immutable Rights — no tx may breach the BHLS floor (1,150 NXT)
+//   C-0002  Immutable Rights — no tx may breach the IHR floor (1,150 NXT) — governed by international law
 //   C-0005  Physics Supremacy — all protocol parameters must be Maxwell-valid
 // ════════════════════════════════════════════════════════════════════════════
 
-/** Monthly Basic Human Living Standard floor — 1,150 NXT */
-export const BHLS_FLOOR_NXT = 1_150;
+/** Monthly Immutable Human Rights floor — 1,150 NXT — governed by international law */
+export const IHR_FLOOR_NXT = 1_150;
 
 /** Non-dominance ceiling — 33% of circulating Lambda mass */
 export const NON_DOMINANCE_PCT = 0.33;
@@ -287,19 +287,20 @@ export function checkC0001(
 
 /**
  * C-0002: Immutable Rights
- * No transaction may reduce a citizen's balance below the BHLS floor of 1,150 NXT.
- * If a sender's balance is already below the floor, no further debits are permitted.
+ * No transaction may reduce a citizen's balance below the Immutable Human Rights floor of 1,150 NXT,
+ * as guaranteed under international law. If a sender's balance is already below the floor,
+ * no further debits are permitted.
  *
  * @param senderNewBalanceNxt  sender's balance after amount + fee deducted (NXT)
  */
 export function checkC0002(senderNewBalanceNxt: number): ConstitutionCheck {
-  if (senderNewBalanceNxt < BHLS_FLOOR_NXT) {
+  if (senderNewBalanceNxt < IHR_FLOOR_NXT) {
     return {
       passed: false,
       violation: {
         article: "C-0002",
         rule: "Immutable Rights",
-        detail: `Transfer would reduce sender to ${senderNewBalanceNxt.toFixed(8)} NXT — below the BHLS constitutional floor of ${BHLS_FLOOR_NXT} NXT.`,
+        detail: `Transfer would reduce sender to ${senderNewBalanceNxt.toFixed(8)} NXT — below the Immutable Human Rights floor of ${IHR_FLOOR_NXT} NXT, as guaranteed under international law.`,
       },
     };
   }
