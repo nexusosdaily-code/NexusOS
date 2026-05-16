@@ -27,14 +27,14 @@ const PILLARS = [
   { icon: "🌊", title: "Clean Water & Sanitation",   desc: "IoT sensor mesh networks using WNSP spectral addressing to monitor water quality in real time." },
   { icon: "📡", title: "Connectivity for All",       desc: "LoRaWAN + Spectral Relay Mesh nodes deployed to communities without internet access." },
   { icon: "🎓", title: "Open Education",             desc: "NexusOS codebase, spectral physics curriculum, and WavelengthScript taught openly — AGPL-3.0." },
-  { icon: "🏥", title: "Healthcare Infrastructure",  desc: "BHLS floor (1,150 NXT/month) ensures every network citizen can access basic healthcare by constitutional right." },
+  { icon: "🏥", title: "Healthcare Infrastructure",  desc: "The charity provides healthcare care and wellbeing through its services delivered by the orbital treasury, ensuring every citizen is supported under international law." },
   { icon: "🌱", title: "Climate Research",           desc: "Spectral sensor arrays measuring atmospheric compression states — Λ=hf/c² as an environmental monitoring tool." },
 ];
 
 // Constitutional safeguards
 const SAFEGUARDS = [
   { article: "C-0001", title: "Non-Dominance",    color: "#fbbf24", text: "No entity — including the founders — may hold more than 33% of total circulating NXT. This applies to the charitable trust itself. Concentration is constitutionally impossible." },
-  { article: "C-0002", title: "Immutable Rights", color: "#a78bfa", text: "No transaction may reduce any citizen's balance below the BHLS floor of 1,150 NXT/month. Charitable disbursements cannot override citizen rights." },
+  { article: "C-0002", title: "Immutable Rights", color: "#a78bfa", text: "No transaction may reduce any citizen's balance below the Immutable Human Rights floor of 1,150 NXT/month, as guaranteed under international law. Charitable disbursements cannot override citizen rights." },
   { article: "§6–§7",  title: "Trust Lock",       color: "#f43f5e", text: "10% of all Orbital Treasury deposits are permanently and irrevocably allocated to the trust. Disbursements require Sigma Constitution Engine consensus — no single authority can extract funds." },
 ];
 
