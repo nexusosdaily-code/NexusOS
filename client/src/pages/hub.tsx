@@ -12,7 +12,7 @@ import {
   Shield, BookOpen, HardDrive, GitBranch,
   ChevronRight, LayoutGrid, Rss, Eye, Clock,
   MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut, Settings, User, Search,
-  CheckCircle2, AlertTriangle, ArrowRight, FlaskConical,
+  CheckCircle2, AlertTriangle, ArrowRight, FlaskConical, Heart,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -92,6 +92,7 @@ const APP_SECTIONS = [
       { title: "WNSP Coord.",   href: "/wnsp/coordinator",Icon: Globe2 },
       { title: "Governance",    href: "/governance",       Icon: Scale },
       { title: "Constitution",  href: "/constitution",    Icon: Shield },
+      { title: "Founders Charity", href: "/founders-charity", Icon: Heart },
       { title: "SOP",           href: "/sop",             Icon: Radio },
       { title: "Hardware Lab",  href: "/hardware-lab",    Icon: FlaskConical },
       { title: "Settings",      href: "/settings",        Icon: Settings },

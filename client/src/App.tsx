@@ -52,6 +52,7 @@ import ChroniclePage from "@/pages/chronicle";
 import SpectralLibraryPage from "@/pages/spectral-library";
 import SpectralAuditPage from "@/pages/spectral-audit";
 import OrbitalTreasuryPage from "@/pages/orbital-treasury";
+import FoundersCharityPage from "@/pages/founders-charity";
 import EcosystemPage from "@/pages/ecosystem";
 import OrdinalRegistryPage from "@/pages/ordinal-registry";
 import CommunicationPage from "@/pages/communication";
@@ -162,6 +163,7 @@ function ProtectedRoutes() {
         <Route path="/spectral-library" component={SpectralLibraryPage} />
         <Route path="/spectral-audit" component={SpectralAuditPage} />
         <Route path="/orbital-treasury" component={OrbitalTreasuryPage} />
+        <Route path="/founders-charity" component={FoundersCharityPage} />
         <Route path="/ecosystem" component={EcosystemPage} />
         <Route path="/ordinal-registry" component={OrdinalRegistryPage} />
         <Route path="/communication" component={CommunicationPage} />
