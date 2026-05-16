@@ -23,12 +23,12 @@ const TOKEN_DISTRIBUTION = [
 
 // Humanitarian pillars
 const PILLARS = [
-  { icon: "📡", title: "Connectivity",               desc: "The charity provides connectivity services through the orbital treasury — Spectral Relay Mesh nodes and LoRaWAN infrastructure deployed to every community without internet access." },
-  { icon: "🌊", title: "Fresh Water",                desc: "The charity provides clean fresh water through the orbital treasury — IoT sensor mesh networks using WNSP spectral addressing to monitor and distribute safe water in real time." },
-  { icon: "🏥", title: "Healthcare",                 desc: "The charity provides healthcare and wellbeing services through the orbital treasury — ensuring every citizen receives care and support as guaranteed under international law." },
-  { icon: "🛠️", title: "Essential Services",         desc: "The charity provides essential community services through the orbital treasury — sanitation, local infrastructure, and emergency support funded automatically on-chain." },
-  { icon: "⚡", title: "Universal Energy Access",    desc: "The charity provides energy access through the orbital treasury — funding photonic infrastructure in energy-scarce regions as a first step toward Kardashev Type I civilisation outcomes." },
-  { icon: "🎓", title: "Open Education",             desc: "The charity provides open education through the orbital treasury — NexusOS codebase, spectral physics curriculum, and WavelengthScript taught freely under AGPL-3.0." },
+  { icon: "🏥", title: "Major Healthcare Projects",      desc: "The charity provides funds to establish major healthcare projects — hospitals, clinics, remote medical infrastructure, and population-scale health programmes funded through the orbital treasury." },
+  { icon: "🌍", title: "Environmental Projects",          desc: "The charity provides funds to establish major environmental projects — clean water systems, atmospheric monitoring, land restoration, and climate resilience programmes funded through the orbital treasury." },
+  { icon: "🤝", title: "Humanitarian Projects",           desc: "The charity provides funds to establish major humanitarian projects — emergency relief, shelter, food security, and community development programmes funded through the orbital treasury." },
+  { icon: "📡", title: "Connectivity Infrastructure",    desc: "The charity provides funds to establish major connectivity projects — Spectral Relay Mesh, LoRaWAN networks, and open internet access for communities currently without coverage." },
+  { icon: "⚡", title: "Energy & Resource Access",       desc: "The charity provides funds to establish major energy access projects — photonic infrastructure and off-grid power for energy-scarce regions, advancing toward Kardashev Type I outcomes." },
+  { icon: "🎓", title: "Education & Open Knowledge",     desc: "The charity provides funds to establish major education projects — open curricula, local-language programmes, and free access to the NexusOS spectral physics stack under AGPL-3.0." },
 ];
 
 // Constitutional safeguards
@@ -114,10 +114,10 @@ export default function FoundersCharityPage() {
             The Chairman Founder Nexus Charitable Trust exists as an irrevocable constitutional obligation
             within NexusOS. Ten percent of every NXT ordinal reclaimed into the Orbital Treasury flows
             directly here — automatically, on-chain, with no human intermediary required. The trust is
-            governed by the Sigma Constitution Engine, not by any individual. Its purpose is to provide
-            connectivity, fresh water, healthcare, and essential services to every person on the planet —
-            the four pillars delivered through the orbital treasury — moving humanity toward the full
-            energy output of the planet, what physicist Nikolai Kardashev classified as a Type I civilisation.
+            governed by the Sigma Constitution Engine, not by any individual. Its mandate is to provide
+            funds to establish major healthcare, environmental, and humanitarian projects worldwide —
+            disbursed through the orbital treasury to move humanity toward harnessing the full energy
+            output of the planet, what physicist Nikolai Kardashev classified as a Type I civilisation.
           </p>
           <div className="flex flex-wrap gap-2 pt-1">
             <Pill text="AGPL-3.0" color="#a78bfa" />
