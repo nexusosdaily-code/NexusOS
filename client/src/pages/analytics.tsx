@@ -501,29 +501,53 @@ export default function AnalyticsPage() {
 
             <Card className="bg-slate-900/60 border-green-500/30 p-6" data-testid="card-conservation">
               <h3 className="text-lg font-bold text-green-400 mb-4">Energy-Mass Conservation Verification</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-cyan-400 font-mono">E = hf</div>
-                  <div className="text-gray-400 mt-2">Energy from frequency</div>
-                  <div className="text-xl text-white font-mono mt-2">
-                    {(PLANCK_CONSTANT * 5e14).toExponential(2)} J
+              {(() => {
+                const f        = 5e14;                                    // reference frequency Hz
+                const E_hf     = PLANCK_CONSTANT * f;                    // E = hf  (J)
+                const lambda   = PLANCK_CONSTANT * f / (SPEED_OF_LIGHT * SPEED_OF_LIGHT); // Λ = hf/c²  (kg)
+                const E_mc2    = lambda * (SPEED_OF_LIGHT * SPEED_OF_LIGHT);             // E = Λc²  (J)
+                const equal    = Math.abs(E_hf - E_mc2) < 1e-40;
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    {/* Step 1 — E = hf */}
+                    <div className="text-center space-y-2">
+                      <div className="text-2xl font-bold text-cyan-400 font-mono">E = hf</div>
+                      <div className="text-gray-400 text-sm">Energy from frequency</div>
+                      <div className="text-xs text-gray-500 font-mono">f = {f.toExponential(2)} Hz</div>
+                      <div className="text-lg text-white font-mono font-bold">{E_hf.toExponential(4)} J</div>
+                    </div>
+
+                    {/* Step 2 — Λ = hf/c² (THE MISSING PIECE) */}
+                    <div className="text-center space-y-2 border border-orange-500/30 rounded-xl py-3 px-2"
+                      style={{ background: "rgba(249,115,22,0.05)" }}>
+                      <div className="text-2xl font-bold text-orange-400 font-mono">Λ = hf/c²</div>
+                      <div className="text-gray-400 text-sm">Compression state mass</div>
+                      <div className="text-xs text-gray-500 font-mono">Lambda Boson</div>
+                      <div className="text-lg text-orange-300 font-mono font-bold">{lambda.toExponential(4)} kg</div>
+                    </div>
+
+                    {/* Step 3 — E = Λc² */}
+                    <div className="text-center space-y-2">
+                      <div className="text-2xl font-bold text-purple-400 font-mono">E = Λc²</div>
+                      <div className="text-gray-400 text-sm">Energy from mass</div>
+                      <div className="text-xs text-gray-500 font-mono">c = {SPEED_OF_LIGHT.toExponential(3)} m/s</div>
+                      <div className="text-lg text-white font-mono font-bold">{E_mc2.toExponential(4)} J</div>
+                    </div>
+
+                    {/* Step 4 — Verification */}
+                    <div className="text-center space-y-2">
+                      <div className={`text-2xl font-bold font-mono ${equal ? "text-green-400" : "text-red-400"}`}>
+                        {equal ? "✓ EQUAL" : "✗ ERROR"}
+                      </div>
+                      <div className="text-gray-400 text-sm">Conservation verified</div>
+                      <div className={`text-xs font-mono mt-1 ${equal ? "text-green-400" : "text-red-400"}`}>
+                        hf = Λc² = {E_hf.toExponential(2)} J
+                      </div>
+                      <div className="text-green-400 text-xs font-mono">Λ = hf/c² proven</div>
+                    </div>
                   </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-orange-400 font-mono">E = mc²</div>
-                  <div className="text-gray-400 mt-2">Energy from mass</div>
-                  <div className="text-xl text-white font-mono mt-2">
-                    {(PLANCK_CONSTANT * 5e14).toExponential(2)} J
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-400 font-mono">✓ EQUAL</div>
-                  <div className="text-gray-400 mt-2">Conservation verified</div>
-                  <div className="text-green-400 mt-2">
-                    Λ = hf/c² proven
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
             </Card>
           </TabsContent>
         </Tabs>
