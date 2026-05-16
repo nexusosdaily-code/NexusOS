@@ -243,7 +243,7 @@ export const KERNEL_WALLET_ADDRESS = "NXT-KRNL-SYS1-0000-NEXUS";
  */
 export const GENESIS_EXECUTION_ADDRESS = "NXT-NEXS-OS1K-7F3A-OMEGA";
 
-/** Basic Human Living Standard — 1,150 NXT/month provided in services through the charity */
+/** Basic Human Living Standard — 1,150 NXT/month = measured monthly service consumption per citizen */
 export const IHR_FLOOR_NXT = 1_150;
 
 /** Non-dominance ceiling — 33% of circulating Lambda mass */
@@ -308,9 +308,12 @@ export function checkC0001(
 
 /**
  * C-0002: Immutable Rights
- * No transaction may reduce a citizen's balance below the Basic Human Living Standard of 1,150 NXT/month
- * — provided in services through the charity.
- * If a sender's balance is already below the floor, no further debits are permitted.
+ * 1,150 NXT/month is the measured monthly service consumption per citizen —
+ * the gauge of what the charity delivers across 7 service categories.
+ * C-0002 protects this figure in the wallet because it represents the citizen's
+ * consumption baseline. The floor and the consumption measure are the same number by design.
+ * No transaction may reduce a citizen's balance below their monthly consumption baseline.
+ * If a sender's balance is already below the baseline, no further debits are permitted.
  *
  * @param senderNewBalanceNxt  sender's balance after amount + fee deducted (NXT)
  */
@@ -321,7 +324,7 @@ export function checkC0002(senderNewBalanceNxt: number): ConstitutionCheck {
       violation: {
         article: "C-0002",
         rule: "Immutable Rights",
-        detail: `Transfer would reduce sender to ${senderNewBalanceNxt.toFixed(8)} NXT — below the Basic Human Living Standard of ${IHR_FLOOR_NXT} NXT provided in services through the charity.`,
+        detail: `Transfer would reduce sender to ${senderNewBalanceNxt.toFixed(8)} NXT — below the monthly service consumption baseline of ${IHR_FLOOR_NXT} NXT guaranteed by C-0002.`,
       },
     };
   }
