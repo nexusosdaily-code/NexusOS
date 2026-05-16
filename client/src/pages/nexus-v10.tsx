@@ -1003,7 +1003,7 @@ function AchievementList() {
     { icon: Atom,      title: "Theoretical Foundation",  desc: "Lambda Boson physics (Λ = hf/c²)"      },
     { icon: Orbit,     title: "Cosmological Origin",      desc: "Oscillatory Cosmogenesis"               },
     { icon: Waves,     title: "Technical Specification",  desc: "WNSP protocol stack"                    },
-    { icon: Coins,     title: "Economic Framework",       desc: "Basic Human Living Standard provided in services through the charity + Economic Loop" },
+    { icon: Coins,     title: "Economic Framework",       desc: "1,150 NXT/month service consumption gauge + Economic Loop" },
     { icon: Shield,    title: "Governance Architecture",  desc: "Constitutional enforcement"             },
     { icon: BookOpen,  title: "Educational Pathway",      desc: "Four-level curriculum"                  },
     { icon: Users,     title: "Community Infrastructure", desc: "AGPL-3.0 open source"                  },
