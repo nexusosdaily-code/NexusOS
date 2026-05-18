@@ -6,8 +6,20 @@ uri = "file://attached_assets/phase0_campaign.png"
 type = "image"
 title = "phase0 photonic campaign hero"
 
+[[generated]]
+id = "qCh2ETZcBTojHxGSsA4do"
+uri = "file://attached_assets/phase1_snic_campaign.png"
+type = "image"
+title = "phase1 SNIC photonic circuit card"
+
 [[outputs]]
 id = "H5DxipQLmLvHtAwbjOE_f"
 uri = "file://attached_assets/phase0_campaign.png"
 type = "image"
 title = "Phase 0 — Campaign Hero Image (16:9)"
+
+[[outputs]]
+id = "Wq2aHnlqtkNKXvzAimly7"
+uri = "file://attached_assets/phase1_snic_campaign.png"
+type = "image"
+title = "Phase 1 — SNIC Campaign Image (16:9)"
