@@ -12,6 +12,12 @@ uri = "file://attached_assets/phase1_snic_campaign.png"
 type = "image"
 title = "phase1 SNIC photonic circuit card"
 
+[[generated]]
+id = "8bv-y38Rnucv8C99sqYKS"
+uri = "file://attached_assets/phase2_phr1_campaign.png"
+type = "image"
+title = "phase2 PHR1 photonic router nodes"
+
 [[outputs]]
 id = "H5DxipQLmLvHtAwbjOE_f"
 uri = "file://attached_assets/phase0_campaign.png"
@@ -23,3 +29,9 @@ id = "Wq2aHnlqtkNKXvzAimly7"
 uri = "file://attached_assets/phase1_snic_campaign.png"
 type = "image"
 title = "Phase 1 — SNIC Campaign Image (16:9)"
+
+[[outputs]]
+id = "BD0OSd2Tc8N5cu3vqpWNB"
+uri = "file://attached_assets/phase2_phr1_campaign.png"
+type = "image"
+title = "Phase 2 — PHR-1 Campaign Image (16:9)"
