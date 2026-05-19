@@ -18,6 +18,12 @@ uri = "file://attached_assets/phase2_phr1_campaign.png"
 type = "image"
 title = "phase2 PHR1 photonic router nodes"
 
+[[generated]]
+id = "rTMY-N51ZXeSikeOcyzHD"
+uri = "file://attached_assets/phase3_mesh_campaign.png"
+type = "image"
+title = "phase3 spectral relay mesh censorship proof"
+
 [[outputs]]
 id = "H5DxipQLmLvHtAwbjOE_f"
 uri = "file://attached_assets/phase0_campaign.png"
@@ -35,3 +41,9 @@ id = "BD0OSd2Tc8N5cu3vqpWNB"
 uri = "file://attached_assets/phase2_phr1_campaign.png"
 type = "image"
 title = "Phase 2 — PHR-1 Campaign Image (16:9)"
+
+[[outputs]]
+id = "lvXpChRm9520lJ_IKHLPN"
+uri = "file://attached_assets/phase3_mesh_campaign.png"
+type = "image"
+title = "Phase 3 — Spectral Relay Mesh Campaign Image (16:9)"
