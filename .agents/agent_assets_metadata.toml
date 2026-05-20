@@ -24,6 +24,12 @@ uri = "file://attached_assets/phase3_mesh_campaign.png"
 type = "image"
 title = "phase3 spectral relay mesh censorship proof"
 
+[[generated]]
+id = "OVZE_RjeBkmMb3rk5VJSx"
+uri = "file://attached_assets/phase4_compiler_campaign.png"
+type = "image"
+title = "phase4 wavelengthscript compiler photonic hardware campaign"
+
 [[outputs]]
 id = "H5DxipQLmLvHtAwbjOE_f"
 uri = "file://attached_assets/phase0_campaign.png"
@@ -47,3 +53,9 @@ id = "lvXpChRm9520lJ_IKHLPN"
 uri = "file://attached_assets/phase3_mesh_campaign.png"
 type = "image"
 title = "Phase 3 — Spectral Relay Mesh Campaign Image (16:9)"
+
+[[outputs]]
+id = "HwadKhI-RyjvU6Dz4ofGv"
+uri = "file://attached_assets/phase4_compiler_campaign.png"
+type = "image"
+title = "Phase 4 — WavelengthScript Compiler α Campaign Image (16:9)"
