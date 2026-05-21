@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import TelegramVideoGallery from "@/components/TelegramVideoGallery";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -731,6 +732,17 @@ export default function HubPage() {
 
         {/* Campaign promo videos */}
         <CampaignVideos />
+
+        {/* Telegram video feed */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs uppercase tracking-widest text-white/30">Latest Videos</p>
+            <Link href="/videos">
+              <span className="text-[10px] text-blue-400 hover:text-blue-300 cursor-pointer font-mono">View all →</span>
+            </Link>
+          </div>
+          <TelegramVideoGallery compact maxVideos={3} showLink accentColor="#3b82f6" />
+        </div>
 
         {/* Quick actions */}
         <QuickActions />

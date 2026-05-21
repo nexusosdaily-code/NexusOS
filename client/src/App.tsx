@@ -99,6 +99,7 @@ import PhotonicLedgerPage from "@/pages/photonic-ledger";
 import HardwareSpecPage from "@/pages/hardware-spec";
 import P2PTerminalPage from "@/pages/p2p-terminal";
 import CampaignPage from "@/pages/campaign";
+import VideosPage from "@/pages/videos";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -221,6 +222,7 @@ function Router() {
       {/* Public routes - no login required */}
       <Route path="/crowdfund" component={CrowdfundPage} />
       <Route path="/fund" component={CrowdfundPage} />
+      <Route path="/videos" component={VideosPage} />
       <Route path="/indiegogo" component={IndiegogoPage} />
       <Route path="/developer-matrix" component={DeveloperMatrixPage} />
       <Route path="/developer-matrix/docs" component={DocsPage} />

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "wouter";
+import TelegramVideoGallery from "@/components/TelegramVideoGallery";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -794,6 +795,22 @@ export default function CrowdfundPage() {
           </a>
         </p>
       </section>
+
+      {/* ── TELEGRAM VIDEO FEED ── */}
+      <section className="px-6 py-16 border-t border-white/10 max-w-5xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Latest from Telegram</p>
+            <h2 className="text-xl font-bold">Video updates</h2>
+          </div>
+          <a href="https://t.me/nexusosdaily" target="_blank" rel="noopener noreferrer"
+            className="text-xs text-blue-400 hover:text-blue-300 transition-colors font-mono flex items-center gap-1">
+            Follow on Telegram →
+          </a>
+        </div>
+        <TelegramVideoGallery compact maxVideos={6} showLink accentColor="#3b82f6" />
+      </section>
+
     </div>
   );
 }

@@ -6,7 +6,7 @@ import {
   users, sessions, auditLogs, wallets, transactions,
   versionRegistry, apiKeys, rateLimits, friendships, uploadedFiles, secureDocuments,
   lambdaMessages, calls, streams, streamViewers, streamRecordings, networkNodes, p2pReceipts, transmissionReports,
-  governanceParams, governanceProposals, governanceVotes,
+  governanceParams, governanceProposals, governanceVotes, telegramVideos,
   type User, type InsertUser, type Session, type InsertSession,
   type AuditLog, type InsertAuditLog, type Wallet, type InsertWallet,
   type Transaction, type InsertTransaction, type VersionRegistry,
@@ -24,6 +24,7 @@ import {
   type P2pReceipt, type InsertP2pReceipt,
   type TransmissionReportRow, type InsertTransmissionReport,
   type GovernanceParam, type GovernanceProposal, type GovernanceVote,
+  type TelegramVideo, type InsertTelegramVideo,
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
@@ -163,6 +164,12 @@ export interface IStorage {
   setWalletPin(userId: string, pin: string): Promise<void>;
   verifyWalletPin(userId: string, pin: string): Promise<boolean>;
   isPinSet(userId: string): Promise<boolean>;
+
+  // Telegram video operations
+  saveTelegramVideo(video: InsertTelegramVideo): Promise<TelegramVideo>;
+  getTelegramVideos(limit?: number): Promise<TelegramVideo[]>;
+  getTelegramVideo(id: number): Promise<TelegramVideo | undefined>;
+  getTelegramVideoByFileUniqueId(fileUniqueId: string): Promise<TelegramVideo | undefined>;
 
   // Governance operations
   getGovernanceParams(): Promise<GovernanceParam[]>;
@@ -1250,6 +1257,29 @@ export class DatabaseStorage implements IStorage {
       .where(eq(governanceProposals.id, proposalId))
       .returning();
     return updated;
+  }
+
+  // ── Telegram video operations ──────────────────────────────────────────────
+  async saveTelegramVideo(video: InsertTelegramVideo): Promise<TelegramVideo> {
+    const [saved] = await db.insert(telegramVideos).values(video).returning();
+    return saved;
+  }
+
+  async getTelegramVideos(limit = 50): Promise<TelegramVideo[]> {
+    return db.select().from(telegramVideos)
+      .where(eq(telegramVideos.isPublished, true))
+      .orderBy(desc(telegramVideos.createdAt))
+      .limit(limit);
+  }
+
+  async getTelegramVideo(id: number): Promise<TelegramVideo | undefined> {
+    const [video] = await db.select().from(telegramVideos).where(eq(telegramVideos.id, id));
+    return video;
+  }
+
+  async getTelegramVideoByFileUniqueId(fileUniqueId: string): Promise<TelegramVideo | undefined> {
+    const [video] = await db.select().from(telegramVideos).where(eq(telegramVideos.fileUniqueId, fileUniqueId));
+    return video;
   }
 }
 

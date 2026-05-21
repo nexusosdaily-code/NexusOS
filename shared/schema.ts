@@ -921,3 +921,32 @@ export type InsertGovernanceProposal = z.infer<typeof insertGovernanceProposalSc
 export type GovernanceProposal = typeof governanceProposals.$inferSelect;
 export type GovernanceParam   = typeof governanceParams.$inferSelect;
 export type GovernanceVote    = typeof governanceVotes.$inferSelect;
+
+// ============================================
+// TELEGRAM VIDEOS TABLE
+// ============================================
+export const telegramVideos = pgTable("telegram_videos", {
+  id:              serial("id").primaryKey(),
+  fileId:          text("file_id").notNull(),
+  fileUniqueId:    text("file_unique_id").notNull().unique(),
+  caption:         text("caption"),
+  mimeType:        text("mime_type").default("video/mp4"),
+  fileSize:        integer("file_size"),
+  duration:        integer("duration"),
+  width:           integer("width"),
+  height:          integer("height"),
+  thumbFileId:     text("thumb_file_id"),
+  messageId:       integer("message_id"),
+  chatId:          text("chat_id"),
+  source:          text("source").notNull().default("bot"),
+  channelUsername: text("channel_username"),
+  channelPostId:   integer("channel_post_id"),
+  isPublished:     boolean("is_published").notNull().default(true),
+  createdAt:       timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  publishedIdx: index("telegram_videos_published_idx").on(table.isPublished),
+}));
+
+export const insertTelegramVideoSchema = createInsertSchema(telegramVideos).omit({ id: true, createdAt: true });
+export type InsertTelegramVideo = z.infer<typeof insertTelegramVideoSchema>;
+export type TelegramVideo = typeof telegramVideos.$inferSelect;

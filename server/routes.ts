@@ -6367,6 +6367,154 @@ export async function registerRoutes(
     }
   });
 
+  // ── TELEGRAM VIDEO ENDPOINTS ──────────────────────────────────────────────
+
+  const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
+  const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
+
+  // Helper: fetch a Telegram file URL
+  async function getTelegramFileUrl(fileId: string): Promise<string | null> {
+    try {
+      const r = await fetch(`${TG_API}/getFile?file_id=${encodeURIComponent(fileId)}`);
+      const data = await r.json() as any;
+      if (!data.ok || !data.result?.file_path) return null;
+      return `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${data.result.file_path}`;
+    } catch { return null; }
+  }
+
+  // POST /api/telegram/webhook — receives Telegram bot updates (no auth)
+  app.post("/api/telegram/webhook", async (req: Request, res: Response) => {
+    try {
+      const update = req.body;
+      const message = update?.message || update?.channel_post;
+      if (!message) return res.json({ ok: true });
+
+      const video = message.video || message.document;
+      if (!video) return res.json({ ok: true });
+
+      const isVideo = !!(message.video || (message.document?.mime_type?.startsWith("video/")));
+      if (!isVideo) return res.json({ ok: true });
+
+      // De-duplicate by file_unique_id
+      const existing = await storage.getTelegramVideoByFileUniqueId(video.file_unique_id);
+      if (existing) return res.json({ ok: true, duplicate: true });
+
+      const caption = message.caption || message.text || null;
+      const thumb = video.thumbnail || video.thumb;
+
+      await storage.saveTelegramVideo({
+        fileId:       video.file_id,
+        fileUniqueId: video.file_unique_id,
+        caption,
+        mimeType:     video.mime_type || "video/mp4",
+        fileSize:     video.file_size || null,
+        duration:     video.duration || null,
+        width:        video.width || null,
+        height:       video.height || null,
+        thumbFileId:  thumb?.file_id || null,
+        messageId:    message.message_id || null,
+        chatId:       String(message.chat?.id || ""),
+        source:       "bot",
+        channelUsername: message.chat?.username || null,
+        channelPostId:   update.channel_post ? message.message_id : null,
+        isPublished:  true,
+      });
+
+      return res.json({ ok: true });
+    } catch (err: any) {
+      console.error("[TELEGRAM WEBHOOK]", err.message);
+      return res.status(500).json({ ok: false });
+    }
+  });
+
+  // GET /api/telegram/videos — list all published videos (public)
+  app.get("/api/telegram/videos", async (req: Request, res: Response) => {
+    try {
+      const limit = Math.min(parseInt(String(req.query.limit || "50")), 100);
+      const videos = await storage.getTelegramVideos(limit);
+      res.json({ videos });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/telegram/video/:fileId/stream — proxy video bytes (keeps token server-side)
+  app.get("/api/telegram/video/:fileId/stream", async (req: Request, res: Response) => {
+    try {
+      const fileUrl = await getTelegramFileUrl(req.params.fileId);
+      if (!fileUrl) return res.status(404).json({ error: "File not found" });
+
+      const upstream = await fetch(fileUrl, {
+        headers: req.headers.range ? { Range: req.headers.range } : {},
+      });
+
+      res.status(upstream.status);
+      const ct = upstream.headers.get("content-type");
+      const cl = upstream.headers.get("content-length");
+      const cr = upstream.headers.get("content-range");
+      if (ct) res.setHeader("Content-Type", ct);
+      if (cl) res.setHeader("Content-Length", cl);
+      if (cr) res.setHeader("Content-Range", cr);
+      res.setHeader("Accept-Ranges", "bytes");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+
+      if (!upstream.body) return res.end();
+      const { Readable } = await import("stream");
+      Readable.fromWeb(upstream.body as any).pipe(res);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/telegram/video/:fileId/thumb — proxy thumbnail bytes
+  app.get("/api/telegram/video/:fileId/thumb", async (req: Request, res: Response) => {
+    try {
+      const fileUrl = await getTelegramFileUrl(req.params.fileId);
+      if (!fileUrl) return res.status(404).json({ error: "Thumb not found" });
+      const upstream = await fetch(fileUrl);
+      res.status(upstream.status);
+      const ct = upstream.headers.get("content-type") || "image/jpeg";
+      res.setHeader("Content-Type", ct);
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      if (!upstream.body) return res.end();
+      const { Readable } = await import("stream");
+      Readable.fromWeb(upstream.body as any).pipe(res);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/telegram/setup-webhook — register webhook URL with Telegram (auth required)
+  app.post("/api/telegram/setup-webhook", authenticate, async (req: Request, res: Response) => {
+    try {
+      if (!TELEGRAM_BOT_TOKEN) return res.status(400).json({ error: "TELEGRAM_BOT_TOKEN not configured" });
+      const domains = process.env.REPLIT_DOMAINS || "";
+      const domain = domains.split(",")[0]?.trim();
+      if (!domain) return res.status(400).json({ error: "Cannot determine app URL (REPLIT_DOMAINS not set)" });
+      const webhookUrl = `https://${domain}/api/telegram/webhook`;
+      const r = await fetch(`${TG_API}/setWebhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: webhookUrl, allowed_updates: ["message", "channel_post"] }),
+      });
+      const data = await r.json();
+      res.json({ webhookUrl, telegram: data });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/telegram/webhook-info — check current webhook status
+  app.get("/api/telegram/webhook-info", authenticate, async (req: Request, res: Response) => {
+    try {
+      const r = await fetch(`${TG_API}/getWebhookInfo`);
+      const data = await r.json();
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // GET /api/github/adoption — live protocol adoption stats (no auth required, public + traffic data)
   app.get("/api/github/adoption", async (req: Request, res: Response) => {
     try {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import TelegramVideoGallery from "@/components/TelegramVideoGallery";
 import {
   Zap, Cpu, Radio, Waves, Shield, Globe, Layers, Activity,
   ArrowRight, ExternalLink, Check, ChevronDown, ChevronUp,
@@ -1040,6 +1041,22 @@ export default function CampaignPage() {
         </div>
 
       </div>
+
+      {/* Telegram video feed */}
+      <div className="mt-8 px-1">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-wider text-white/30 mb-0.5">Latest from Telegram</div>
+            <div className="text-sm font-bold text-white">Video updates</div>
+          </div>
+          <a href="https://t.me/nexusosdaily" target="_blank" rel="noopener noreferrer"
+            className="text-[10px] text-blue-400 hover:text-blue-300 transition-colors font-mono">
+            Follow →
+          </a>
+        </div>
+        <TelegramVideoGallery compact maxVideos={3} showLink accentColor="#22d3ee" />
+      </div>
+
       <p className="mt-6 text-center text-xs text-gray-700 pb-8">
         Built on{" "}
         <a
