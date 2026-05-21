@@ -575,6 +575,76 @@ function EmptyFeed({ filter }: { filter: FeedType }) {
   );
 }
 
+// ── Campaign promo videos ──────────────────────────────────────────────
+const CAMPAIGN_VIDEOS = [
+  {
+    id: "Mi9ix3AOr-k",
+    title: "Assigning electromagnetic coordinates to alphabets opens doors to new technologies",
+    label: "CE Encoding — How it works",
+    tag: "Ad",
+  },
+];
+
+function CampaignVideos() {
+  return (
+    <div className="rounded-2xl overflow-hidden"
+         style={{ background: "hsl(222 47% 7%)", border: "1px solid rgba(34,211,238,0.15)" }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b"
+           style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+        <div className="flex items-center gap-2">
+          <MonitorPlay className="w-4 h-4 text-cyan-400" />
+          <span className="text-xs font-semibold text-white/70 uppercase tracking-wider">
+            NexusOS Campaign
+          </span>
+        </div>
+        <Link href="/campaign">
+          <span className="text-[11px] font-mono text-cyan-400/70 hover:text-cyan-300 transition-colors flex items-center gap-1 cursor-pointer">
+            Back the campaign <ChevronRight className="w-3 h-3" />
+          </span>
+        </Link>
+      </div>
+
+      {/* Videos */}
+      <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {CAMPAIGN_VIDEOS.map((v) => (
+          <div key={v.id} className="space-y-2">
+            {/* Responsive 16:9 embed */}
+            <div className="relative w-full rounded-xl overflow-hidden"
+                 style={{ paddingBottom: "56.25%", background: "#050a14" }}>
+              <iframe
+                className="absolute inset-0 w-full h-full"
+                src={`https://www.youtube.com/embed/${v.id}?rel=0&modestbranding=1`}
+                title={v.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+            {/* Meta */}
+            <div className="flex items-start gap-2">
+              <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 mt-0.5"
+                    style={{ background: "rgba(34,211,238,0.15)", color: "#22d3ee" }}>
+                {v.tag}
+              </span>
+              <div>
+                <p className="text-xs text-white/70 leading-snug">{v.title}</p>
+                <p className="text-[10px] text-white/30 mt-0.5 font-mono">{v.label}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Placeholder for next video */}
+        <div className="rounded-xl flex flex-col items-center justify-center gap-2 py-8"
+             style={{ border: "1px dashed rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.01)" }}>
+          <MonitorPlay className="w-6 h-6 text-white/15" />
+          <p className="text-[11px] text-white/20 text-center font-mono">More videos coming soon</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Hub Page ──────────────────────────────────────────────────────
 export default function HubPage() {
   const { user } = useAuth();
@@ -658,6 +728,9 @@ export default function HubPage() {
 
         {/* Constitution live card */}
         <ConstitutionCard />
+
+        {/* Campaign promo videos */}
+        <CampaignVideos />
 
         {/* Quick actions */}
         <QuickActions />
