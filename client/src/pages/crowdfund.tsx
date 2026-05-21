@@ -536,6 +536,53 @@ export default function CrowdfundPage() {
         </div>
       </section>
 
+      {/* ── CAMPAIGN VIDEO ── */}
+      <section className="px-6 py-12 border-y border-white/10 bg-white/[0.01]">
+        <div className="max-w-4xl mx-auto">
+          <p className="text-center text-xs text-gray-500 uppercase tracking-widest mb-3">See it in action</p>
+          <h2 className="text-2xl font-bold text-center mb-8">The physics — explained</h2>
+          <div className="grid md:grid-cols-2 gap-6 items-start">
+            {/* Video embed */}
+            <div className="space-y-3">
+              <div className="relative w-full rounded-xl overflow-hidden" style={{ paddingBottom: "56.25%", background: "#050a14", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src="https://www.youtube.com/embed/Mi9ix3AOr-k?rel=0&modestbranding=1"
+                  title="Assigning electromagnetic coordinates to alphabets opens doors to new technologies"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Assigning electromagnetic coordinates to alphabets opens doors to new technologies.
+              </p>
+            </div>
+            {/* Why it matters */}
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl border border-white/10 bg-white/5">
+                <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: wlToRgb(534.51) }}>What you just saw</div>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  Every character in every language has a unique electromagnetic frequency. This is not abstraction —
+                  it is physics. When this runs on photonic hardware, those frequencies become the actual light
+                  your device emits.
+                </p>
+              </div>
+              <div className="p-4 rounded-xl border border-white/10 bg-white/5">
+                <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: wlToRgb(460) }}>What your shares fund</div>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  The PHR-1 resonator, the Lambda Gate Substrate, and the Spectral Relay Mesh are the hardware
+                  that turns this encoding into real light. Software is proven. Hardware is next.
+                </p>
+              </div>
+              <a href="#tiers" className="flex items-center gap-2 text-sm font-bold transition-colors" style={{ color: wlToRgb(534.51) }}>
+                <span>Get your Nexus Shares below</span>
+                <span>↓</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── FUNDING TIERS ── */}
       <section id="tiers" className="px-6 py-20">
         <p className="text-center text-xs text-gray-500 uppercase tracking-widest mb-4">Share classes</p>
