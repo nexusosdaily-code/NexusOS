@@ -42,6 +42,18 @@ uri = "file://attached_assets/nexus_operations_lab_campaign.png"
 type = "image"
 title = "nexus operations secure lab facility"
 
+[[generated]]
+id = "o78MOHg7jQRqScycFcDD4"
+uri = "file://attached_assets/nexus_operations_floor_plan.png"
+type = "image"
+title = "nexus operations lab floor plan"
+
+[[generated]]
+id = "h0xuBBr5tgjN9K35ie0WM"
+uri = "file://attached_assets/nexus_operations_tokenomics.png"
+type = "image"
+title = "nexus operations hardware tokenomics tiers"
+
 [[outputs]]
 id = "H5DxipQLmLvHtAwbjOE_f"
 uri = "file://attached_assets/phase0_campaign.png"
@@ -83,3 +95,15 @@ id = "Ne_Ktxk2UYNokd15nHorv"
 uri = "file://attached_assets/nexus_operations_lab_campaign.png"
 type = "image"
 title = "Nexus Operations — Secure Testing Lab Campaign Image"
+
+[[outputs]]
+id = "rnTeO1eKH96hqGVz0-baj"
+uri = "file://attached_assets/nexus_operations_floor_plan.png"
+type = "image"
+title = "Nexus Operations — Facility Floor Plan v1.0"
+
+[[outputs]]
+id = "fIj-UJXMLpyfJGLk_nLWT"
+uri = "file://attached_assets/nexus_operations_tokenomics.png"
+type = "image"
+title = "Nexus Operations — Hardware Tokenomics Tiers"
