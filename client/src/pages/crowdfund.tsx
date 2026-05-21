@@ -782,6 +782,17 @@ export default function CrowdfundPage() {
         <p className="mt-8 text-xs text-gray-700">
           NexusOS · AGPL-3.0 · Λ=hf/c² · Hardware R&D · 2024–2124
         </p>
+        <p className="mt-3 text-xs text-gray-700">
+          Built on{" "}
+          <a
+            href="https://replit.com/refer/nexusosdaily"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-gray-400 transition-colors underline underline-offset-2"
+          >
+            Replit
+          </a>
+        </p>
       </section>
     </div>
   );

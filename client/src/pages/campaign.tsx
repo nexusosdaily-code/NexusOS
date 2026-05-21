@@ -1001,6 +1001,17 @@ export default function CampaignPage() {
         </div>
 
       </div>
+      <p className="mt-6 text-center text-xs text-gray-700 pb-8">
+        Built on{" "}
+        <a
+          href="https://replit.com/refer/nexusosdaily"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-gray-400 transition-colors underline underline-offset-2"
+        >
+          Replit
+        </a>
+      </p>
     </div>
   );
 }
