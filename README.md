@@ -8,6 +8,41 @@
 
 ---
 
+## Live now
+
+The system is deployed and running. Everything below is accessible today:
+
+| Page | What it does |
+|---|---|
+| [Campaign](https://nexusos.replit.app/campaign) | Lab funding tiers — support the hardware build |
+| [Crowdfund](https://nexusos.replit.app/crowdfund) | Nexus Shares — equity in the physics stack |
+| [Videos](https://nexusos.replit.app/videos) | Auto-published Telegram video feed |
+| [WNSP Paper](https://nexusos.replit.app/wnsp-paper) | Formal WNSP protocol specification (AGPL-3.0) |
+| [Hardware Spec](https://nexusos.replit.app/hardware-spec) | SNIC, PHR-1, Spectral Relay Mesh v1 — first public disclosure 2026-05-16 |
+| [CE-SE Pipeline](https://nexusos.replit.app/ce-se-pipeline) | Paste any language → transpile → compile → execute in WNSP VM |
+| [WNSP VM](https://nexusos.replit.app/wnsp-vm) | Browser-native bytecode interpreter, step/run execution |
+| [Compression Explorer](https://nexusos.replit.app/compression-explorer) | Interactive Λ=hf/c² compression curve visualisation |
+
+### Telegram video feed
+
+Every video sent to the NexusOS Telegram bot is automatically published to the [/videos](https://nexusos.replit.app/videos) page with no manual step. The bot webhook proxies video bytes through the server — the bot token is never exposed to the browser. The video gallery also appears on the Hub, Campaign, and Crowdfund pages.
+
+**Telegram channel:** [t.me/nexusosdaily](https://t.me/nexusosdaily)
+
+### Published packages
+
+```bash
+# CE encoder — npm (CJS + ESM + TypeScript types)
+npm install nexusos-ce-encoder
+
+# CE encoder — Python (bit-identical output to the npm package)
+pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py
+```
+
+Both use `CE_TABLE[charCode % 128]` — 128 bands, 380–780 nm, 3.125 nm/band. AGPL-3.0.
+
+---
+
 ## What you are holding
 
 This repository contains a running implementation of **WNSP** — the Wavelength Network Substrate Protocol — a spectral addressing system that replaces arbitrary memory addresses and cryptographic hashes with physical positions in the electromagnetic spectrum.
@@ -250,6 +285,7 @@ Two runtimes, one database:
 │  · P2P media       │      │  · Hilbert router   │
 │  · Blockchain      │      │  · AI OS kernel     │
 │  · API gateway     │      │  · Physics engine   │
+│  · Telegram feed   │      │                     │
 └─────────┬──────────┘      └──────────┬──────────┘
           │                            │
           └──────────────┬─────────────┘
@@ -259,6 +295,7 @@ Two runtimes, one database:
                │  Sessions · Agents  │
                │  Wallets · Blocks   │
                │  Spectral records   │
+               │  Telegram videos    │
                └────────────────────┘
 ```
 
@@ -272,6 +309,7 @@ client/src/pages/        — 40+ pages. Each maps to a feature of the OS.
 client/src/pages/encoding-lab.tsx     — Interactive CE→SE encoder
 client/src/pages/wnsp-coordinator.tsx — Hilbert space channel map
 client/src/pages/kernel.tsx           — Live kernel dashboard
+client/src/pages/videos.tsx           — Auto-published Telegram video feed
 ```
 
 ---
@@ -406,6 +444,11 @@ Hardware rights   →  Commercial Lambda Gate firmware for photonic ASICs
 ```
 
 The open-core dual-license model: the same pattern as Red Hat ($34B), MongoDB ($20B+), HashiCorp ($6.4B). The protocol is the commons. The infrastructure and hardware rights are the business.
+
+**Support the build:**
+- [Campaign — lab funding tiers](https://nexusos.replit.app/campaign)
+- [Crowdfund — Nexus Shares equity](https://nexusos.replit.app/crowdfund)
+- [Referral — earn NXT tokens via Replit](https://replit.com/refer/nexusosdaily)
 
 ---
 
