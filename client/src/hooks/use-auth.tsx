@@ -2,11 +2,12 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { useLocation } from "wouter";
 
 interface User {
-  id: number;
-  phone: string;
+  id: string;
   username?: string;
-  walletAddress: string;
-  balanceUnits: string;
+  email?: string | null;
+  role?: string;
+  walletAddress?: string;
+  balanceUnits?: string;
 }
 
 interface AuthContextType {
@@ -26,14 +27,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUser = useCallback(async (attempt = 1) => {
     try {
       const token = localStorage.getItem("auth_token");
-      if (!token) {
-        setUser(null);
-        setIsLoading(false);
-        return;
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
       }
-      
+
       const res = await fetch("/api/auth/me", {
-        headers: { "Authorization": `Bearer ${token}` }
+        headers,
+        credentials: "include",
       });
 
       if (res.ok) {
@@ -41,20 +42,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user);
         setIsLoading(false);
       } else if (res.status === 401 || res.status === 403) {
-        // Server explicitly rejected the token — it's genuinely invalid, clear it.
         localStorage.removeItem("auth_token");
         setUser(null);
         setIsLoading(false);
       } else if (attempt < 3) {
-        // 5xx or unexpected error — server may still be starting up. Retry.
         setTimeout(() => fetchUser(attempt + 1), 1500 * attempt);
       } else {
-        // Exhausted retries: keep token, leave user null (will redirect to login).
         setUser(null);
         setIsLoading(false);
       }
     } catch {
-      // Network error — server starting up. Retry up to 3 times before giving up.
       if (attempt < 3) {
         setTimeout(() => fetchUser(attempt + 1), 1500 * attempt);
       } else {
@@ -71,9 +68,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     try {
       const token = localStorage.getItem("auth_token");
-      await fetch("/api/auth/logout", { 
+      await fetch("/api/auth/logout", {
         method: "POST",
-        headers: token ? { "Authorization": `Bearer ${token}` } : {}
+        headers: token ? { "Authorization": `Bearer ${token}` } : {},
+        credentials: "include",
       });
     } finally {
       localStorage.removeItem("auth_token");
@@ -122,8 +120,6 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (shouldRedirect) {
-      // Use replace so pressing back from /auth doesn't return to a protected page
-      // that would immediately redirect back to /auth again.
       setLocation("/auth", { replace: true });
       setShouldRedirect(false);
     }

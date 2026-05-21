@@ -15,13 +15,16 @@ declare global {
 export async function authenticate(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
-    
-    if (!authHeader) {
-      return res.status(401).json({ error: "No authorization header provided" });
+    const cookieToken: string | undefined = (req as any).cookies?.auth_token;
+
+    if (!authHeader && !cookieToken) {
+      return res.status(401).json({ error: "No authorization provided" });
     }
 
-    if (authHeader.startsWith("Bearer ")) {
-      const token = authHeader.substring(7);
+    if (authHeader?.startsWith("Bearer ") || cookieToken) {
+      const token = authHeader?.startsWith("Bearer ")
+        ? authHeader.substring(7)
+        : cookieToken!;
       const session = await storage.getSessionByToken(token);
       
       if (!session) {
@@ -40,7 +43,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       return next();
     }
 
-    if (authHeader.startsWith("ApiKey ")) {
+    if (authHeader?.startsWith("ApiKey ")) {
       const key = authHeader.substring(7);
       const prefix = key.substring(0, 12);
       const apiKey = await storage.getApiKeyByPrefix(prefix);

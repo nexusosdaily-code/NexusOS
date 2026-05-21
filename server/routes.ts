@@ -576,6 +576,14 @@ export async function registerRoutes(
 
       const wallet = await storage.getWallet(user.id);
 
+      res.cookie("auth_token", session.token, {
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      });
+
       res.status(201).json({
         message: "Registration successful",
         user: {
@@ -628,6 +636,14 @@ export async function registerRoutes(
 
       const wallet = await storage.getWallet(user.id);
 
+      res.cookie("auth_token", session.token, {
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      });
+
       res.json({
         message: "Login successful",
         user: {
@@ -656,6 +672,7 @@ export async function registerRoutes(
         await storage.deleteSession(req.session.id);
       }
       await logAction(req, "user_logout", "auth", req.user?.id);
+      res.clearCookie("auth_token", { path: "/" });
       res.json({ message: "Logged out successfully" });
     } catch (error: any) {
       console.error("Logout error:", error);
