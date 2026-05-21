@@ -950,3 +950,28 @@ export const telegramVideos = pgTable("telegram_videos", {
 export const insertTelegramVideoSchema = createInsertSchema(telegramVideos).omit({ id: true, createdAt: true });
 export type InsertTelegramVideo = z.infer<typeof insertTelegramVideoSchema>;
 export type TelegramVideo = typeof telegramVideos.$inferSelect;
+
+// ============================================
+// SOCIAL BROADCASTS TABLE
+// ============================================
+export const socialBroadcasts = pgTable("social_broadcasts", {
+  id:            serial("id").primaryKey(),
+  videoId:       integer("video_id").notNull().references(() => telegramVideos.id),
+  platform:      text("platform").notNull(),           // "instagram" | "youtube"
+  status:        text("status").notNull().default("pending"), // pending | broadcasting | posted | failed | skipped
+  postUrl:       text("post_url"),
+  errorMessage:  text("error_message"),
+  agentNote:     text("agent_note"),
+  attemptCount:  integer("attempt_count").notNull().default(0),
+  scheduledAt:   timestamp("scheduled_at").notNull().defaultNow(),
+  broadcastAt:   timestamp("broadcast_at"),
+  createdAt:     timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  videoIdx:   index("social_broadcasts_video_idx").on(table.videoId),
+  statusIdx:  index("social_broadcasts_status_idx").on(table.status),
+  platformIdx: index("social_broadcasts_platform_idx").on(table.platform),
+}));
+
+export const insertSocialBroadcastSchema = createInsertSchema(socialBroadcasts).omit({ id: true, createdAt: true });
+export type InsertSocialBroadcast = z.infer<typeof insertSocialBroadcastSchema>;
+export type SocialBroadcast = typeof socialBroadcasts.$inferSelect;

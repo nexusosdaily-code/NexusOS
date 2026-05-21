@@ -8,6 +8,7 @@ import { seedGenesisBlock } from "./genesis";
 import { startBlockchainAuditor } from "./blockchain_auditor";
 import { seedGenesisNode } from "./genesis_node";
 import { startKernelAgents } from "./kernel_agents";
+import { startSocialBroadcastAgent } from "./social_broadcast_agent";
 
 const app = express();
 const httpServer = createServer(app);
@@ -161,6 +162,8 @@ app.use((req, res, next) => {
       startBlockchainAuditor().catch((e) => console.error("[AUDITOR] Boot error:", e));
       // Start 4 autonomous kernel agent loops (Stage 3)
       startKernelAgents();
+      // Start Social Broadcast Agent — Telegram → Instagram / YouTube
+      startSocialBroadcastAgent();
       // Seed genesis network node + start beacon loop
       seedGenesisNode().catch((e) => console.error("[GENESIS NODE] Error:", e));
     },

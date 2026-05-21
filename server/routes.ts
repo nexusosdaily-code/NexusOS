@@ -6402,7 +6402,7 @@ export async function registerRoutes(
       const caption = message.caption || message.text || null;
       const thumb = video.thumbnail || video.thumb;
 
-      await storage.saveTelegramVideo({
+      const saved = await storage.saveTelegramVideo({
         fileId:       video.file_id,
         fileUniqueId: video.file_unique_id,
         caption,
@@ -6419,6 +6419,14 @@ export async function registerRoutes(
         channelPostId:   update.channel_post ? message.message_id : null,
         isPublished:  true,
       });
+
+      // Fire VIDEO_RECEIVED → Social Broadcast Agent queues Instagram + YouTube jobs
+      try {
+        const { queueBroadcastsForVideo } = await import("./social_broadcast_agent");
+        await queueBroadcastsForVideo(saved.id);
+      } catch (broadcastErr: any) {
+        console.error("[TELEGRAM WEBHOOK] broadcast queue error:", broadcastErr.message);
+      }
 
       return res.json({ ok: true });
     } catch (err: any) {
@@ -6547,6 +6555,63 @@ export async function registerRoutes(
       }));
 
       res.json({ repos: results, fetched_at: new Date().toISOString() });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── SOCIAL BROADCAST AGENT ENDPOINTS ─────────────────────────────────────────
+
+  const { getBroadcastAgentState, queueBroadcastsForVideo } = await import("./social_broadcast_agent");
+
+  // GET /api/social/agent — agent status + platform info
+  app.get("/api/social/agent", authenticate, async (req: Request, res: Response) => {
+    res.json(getBroadcastAgentState());
+  });
+
+  const socialAgent = await import("./social_broadcast_agent");
+
+  // GET /api/social/broadcasts — full broadcast log
+  app.get("/api/social/broadcasts", authenticate, async (req: Request, res: Response) => {
+    try {
+      const broadcasts = await socialAgent.getBroadcastLog();
+      res.json({ broadcasts });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/social/queue/:videoId — manually queue a video for broadcast
+  app.post("/api/social/queue/:videoId", authenticate, async (req: Request, res: Response) => {
+    try {
+      const videoId = parseInt(req.params.videoId);
+      if (isNaN(videoId)) return res.status(400).json({ error: "Invalid videoId" });
+      await socialAgent.queueBroadcastsForVideo(videoId);
+      res.json({ ok: true, message: `Queued video ${videoId} for broadcast on all platforms` });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/social/retry/:broadcastId — retry a failed broadcast
+  app.post("/api/social/retry/:broadcastId", authenticate, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.broadcastId);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid broadcastId" });
+      await socialAgent.retryBroadcast(id);
+      res.json({ ok: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // DELETE /api/social/broadcasts/:id — dismiss a broadcast entry
+  app.delete("/api/social/broadcasts/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+      await socialAgent.skipBroadcast(id);
+      res.json({ ok: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

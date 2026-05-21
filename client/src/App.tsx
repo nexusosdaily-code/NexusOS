@@ -100,6 +100,7 @@ import HardwareSpecPage from "@/pages/hardware-spec";
 import P2PTerminalPage from "@/pages/p2p-terminal";
 import CampaignPage from "@/pages/campaign";
 import VideosPage from "@/pages/videos";
+import SocialBroadcastPage from "@/pages/social-broadcast";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoutes() {
@@ -209,6 +210,7 @@ function ProtectedRoutes() {
         <Route path="/reposed-theory" component={ReposedTheoryPage} />
         <Route path="/ce-code-writer" component={CeCodeWriterPage} />
         <Route path="/campaign" component={CampaignPage} />
+        <Route path="/social-broadcast" component={SocialBroadcastPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
