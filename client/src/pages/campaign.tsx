@@ -301,11 +301,12 @@ const LAB_TIERS = [
   },
 ];
 
+// Total Phase 1 pool = 1,050,000,000 NXT (5% of 21B supply)
+// Breakdown of how campaign funds are allocated:
 const LAB_POOL = [
-  { label: "Backer Rewards",         nxt: "1,050,000,000", pct: 100 },
-  { label: "Lab Operations Reserve", nxt: "150,000,000",   pct: 14.3 },
-  { label: "Equipment Procurement",  nxt: "500,000,000",   pct: 47.6 },
-  { label: "Prototype Distribution", nxt: "400,000,000",   pct: 38.1 },
+  { label: "Equipment Procurement",  nxt: "500,000,000", pct: 47.6, color: "#22d3ee" },
+  { label: "Prototype Distribution", nxt: "400,000,000", pct: 38.1, color: "#a78bfa" },
+  { label: "Lab Operations Reserve", nxt: "150,000,000", pct: 14.3, color: "#34d399" },
 ];
 
 function BarSegment({ pct, color, label }: { pct: number; color: string; label: string }) {
@@ -492,24 +493,50 @@ function DonateModal({ t, onClose }: { t: typeof LAB_TIERS[0]; onClose: () => vo
                 )}
               </div>
 
-              {/* Zone + contract preview */}
+              {/* Step 1 — External payment */}
+              <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-4 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">STEP 1</span>
+                  <span className="text-xs font-semibold text-white/80">Complete your payment first</span>
+                </div>
+                <p className="text-[11px] text-amber-200/50 leading-relaxed">
+                  NXT is issued as an on-chain reward <span className="text-amber-200/80 font-medium">after</span> your external
+                  contribution is confirmed. Back the campaign on Indiegogo (or contact the team directly), then return here to
+                  record it on-chain.
+                </p>
+                <a
+                  href="/indiegogo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-[11px] font-mono text-amber-400 hover:text-amber-300 transition-colors"
+                >
+                  <ExternalLink size={10} />
+                  Go to campaign page → {t.usd} · {t.name} tier
+                </a>
+              </div>
+
+              {/* Step 2 — On-chain record */}
               <div className="rounded-lg bg-white/[0.02] border border-white/5 p-4 space-y-2">
                 <div className="flex items-center gap-2 mb-2">
-                  <MapPin size={11} style={{ color: t.color }} />
-                  <span className="text-xs text-white/60">Zone funded: <span className="text-white/80">{t.zone}</span></span>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-white/10 text-white/50">STEP 2</span>
+                  <span className="text-xs font-semibold text-white/70">Record your contribution on-chain</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <FileText size={11} className="text-white/30" />
-                  <span className="text-[11px] text-white/40">
-                    A spectral-signed AGPL-3.0 public works contract will be generated at your
-                    Ψ channel wavelength and recorded on the WNSP network.
-                  </span>
+                  <MapPin size={11} style={{ color: t.color }} />
+                  <span className="text-[11px] text-white/50">Zone funded: <span className="text-white/70">{t.zone}</span></span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Wallet size={11} className="text-white/30" />
                   <span className="text-[11px] text-white/40">
-                    <span className="text-white/60 font-mono">{t.nxtLabel}</span> transferred from the
-                    Hardware Campaign pool to your wallet address.
+                    <span className="text-white/60 font-mono">{t.nxtLabel}</span> will be issued from the
+                    Hardware Campaign pool to your wallet as your on-chain backer receipt.
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FileText size={11} className="text-white/30" />
+                  <span className="text-[11px] text-white/40">
+                    A spectral-signed AGPL-3.0 public works contract is generated at your
+                    Ψ channel wavelength and permanently recorded on the WNSP network.
                   </span>
                 </div>
               </div>
@@ -532,7 +559,7 @@ function DonateModal({ t, onClose }: { t: typeof LAB_TIERS[0]; onClose: () => vo
                 className="w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
                 style={{ backgroundColor: t.color + "30", border: `1px solid ${t.color}60`, color: t.color }}
               >
-                {donate.isPending ? "Recording on-chain…" : isLoggedIn ? `Confirm — ${t.name} Tier` : "Log in to continue"}
+                {donate.isPending ? "Recording on-chain…" : isLoggedIn ? `Record contribution on-chain — ${t.name}` : "Log in to continue"}
               </button>
             </>
           ) : (
