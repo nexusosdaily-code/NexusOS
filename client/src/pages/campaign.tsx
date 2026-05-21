@@ -4,7 +4,7 @@ import {
   Zap, Cpu, Radio, Waves, Shield, Globe, Layers, Activity,
   ArrowRight, ExternalLink, Check, ChevronDown, ChevronUp,
   Atom, FlaskConical, Code2, BookOpen, Rocket, Target,
-  Users, Coins, Star, Lock, Eye, GitBranch, Network,
+  Users, Coins, Star, Lock, Eye, GitBranch, Network, MapPin,
 } from "lucide-react";
 
 // ── Token distribution ────────────────────────────────────────────────────
@@ -202,6 +202,110 @@ const AUDIENCES = [
   },
 ];
 
+// ── Lab donation tiers ─────────────────────────────────────────────────────
+const LAB_TIERS = [
+  {
+    tier: 1,
+    name: "Photon",
+    usd: "$50",
+    nxt: 50_000,
+    nxtLabel: "50,000 NXT",
+    color: "#22d3ee",
+    gradient: "from-cyan-500/20 to-cyan-900/10",
+    border: "border-cyan-500/30",
+    zone: "ESD Workstation",
+    icon: Zap,
+    availability: "Unlimited",
+    rewards: [
+      "Name in on-chain backer registry",
+      "ESD Workstation access badge",
+      "Spectral observer status in launch broadcast",
+    ],
+  },
+  {
+    tier: 2,
+    name: "Wavelength",
+    usd: "$250",
+    nxt: 250_000,
+    nxtLabel: "250,000 NXT",
+    color: "#a78bfa",
+    gradient: "from-violet-500/20 to-violet-900/10",
+    border: "border-violet-500/30",
+    zone: "Spectrometer Suite",
+    icon: Waves,
+    availability: "Unlimited",
+    rewards: [
+      "Everything in Photon",
+      "Spectrometer Suite virtual tour (live stream)",
+      "Early access: monthly lab progress reports",
+    ],
+  },
+  {
+    tier: 3,
+    name: "Spectrum",
+    usd: "$1,000",
+    nxt: 1_000_000,
+    nxtLabel: "1,000,000 NXT",
+    color: "#34d399",
+    gradient: "from-emerald-500/20 to-emerald-900/10",
+    border: "border-emerald-500/30",
+    zone: "SNIC Fabrication Bench",
+    icon: Radio,
+    availability: "100 slots",
+    rewards: [
+      "Everything in Wavelength",
+      "SNIC prototype unit (shipped post-fabrication)",
+      "Fabrication Bench dedication plaque (physical + on-chain)",
+    ],
+  },
+  {
+    tier: 4,
+    name: "Relay",
+    usd: "$5,000",
+    nxt: 5_000_000,
+    nxtLabel: "5,000,000 NXT",
+    color: "#fb923c",
+    gradient: "from-orange-500/20 to-orange-900/10",
+    border: "border-orange-500/30",
+    zone: "PHR-1 Alignment Chamber",
+    icon: Activity,
+    availability: "25 slots",
+    rewards: [
+      "Everything in Spectrum",
+      "PHR-1 prototype unit (shipped post-fabrication)",
+      "Alignment Chamber naming rights (on-chain + plaque)",
+      "Private lab walkthrough session (video call with team)",
+    ],
+  },
+  {
+    tier: 5,
+    name: "Genesis Node",
+    usd: "$25,000",
+    nxt: 25_000_000,
+    nxtLabel: "25,000,000 NXT",
+    color: "#f59e0b",
+    gradient: "from-amber-500/20 to-amber-900/10",
+    border: "border-amber-500/30",
+    zone: "Optical Testing Bay + Server Room",
+    icon: Star,
+    availability: "5 slots",
+    rewards: [
+      "Everything in Relay",
+      "Optical Testing Bay naming rights",
+      "Server Room co-location slot (one rack unit)",
+      "Founding Partner status — permanent on-chain recognition",
+      "Direct line to core team for hardware collaboration",
+    ],
+  },
+];
+
+const LAB_POOL = [
+  { label: "Backer Rewards",         nxt: "1,050,000,000", pct: 100 },
+  { label: "Lab Operations Reserve", nxt: "150,000,000",   pct: 14.3 },
+  { label: "Equipment Procurement",  nxt: "500,000,000",   pct: 47.6 },
+  { label: "Prototype Distribution", nxt: "400,000,000",   pct: 38.1 },
+];
+
 function BarSegment({ pct, color, label }: { pct: number; color: string; label: string }) {
   return (
     <div
@@ -269,8 +373,58 @@ function PhaseCard({ p, expanded, onToggle }: { p: typeof PHASES[0]; expanded: b
   );
 }
 
+function LabTierCard({ t, expanded, onToggle }: { t: typeof LAB_TIERS[0]; expanded: boolean; onToggle: () => void }) {
+  return (
+    <div className={`rounded-xl border ${t.border} bg-gradient-to-br ${t.gradient} overflow-hidden`}>
+      <button
+        className="w-full text-left p-5 flex items-start gap-4"
+        onClick={onToggle}
+      >
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+          style={{ backgroundColor: `${t.color}22`, border: `1px solid ${t.color}55`, color: t.color }}
+        >
+          <t.icon size={16} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-white text-sm">{t.name}</span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ backgroundColor: `${t.color}22`, color: t.color }}>
+              {t.nxtLabel}
+            </span>
+            <span className="text-[10px] font-mono text-white/30">{t.usd}</span>
+          </div>
+          <div className="flex items-center gap-1.5 mt-1">
+            <MapPin size={10} style={{ color: t.color }} className="shrink-0" />
+            <span className="text-white/50 text-xs">{t.zone}</span>
+          </div>
+          <div className="text-[11px] text-white/30 mt-0.5">{t.availability}</div>
+        </div>
+        <div className="shrink-0 text-white/30 mt-1">
+          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="px-5 pb-5 border-t border-white/5 pt-4">
+          <div className="text-[10px] font-mono uppercase tracking-wider mb-3" style={{ color: t.color }}>Rewards</div>
+          <div className="space-y-2">
+            {t.rewards.map((r, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs text-white/60">
+                <Check size={12} className="shrink-0 mt-0.5" style={{ color: t.color }} />
+                {r}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CampaignPage() {
   const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
+  const [expandedTier, setExpandedTier] = useState<number | null>(null);
   const [expandedAudience, setExpandedAudience] = useState<number | null>(null);
 
   return (
@@ -368,6 +522,80 @@ export default function CampaignPage() {
                 onToggle={() => setExpandedPhase(expandedPhase === p.phase ? null : p.phase)}
               />
             ))}
+          </div>
+        </div>
+
+        {/* Nexus Operations — Lab Funding */}
+        <div>
+          <div className="mb-5">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-white/30 mb-1">Nexus Operations</div>
+            <h2 className="text-lg font-bold text-white">Nexus Operations — Lab Funding</h2>
+            <p className="text-white/40 text-xs mt-1 leading-relaxed">
+              Each donation funds a specific zone of the physical testing facility.
+            </p>
+          </div>
+
+          {/* Campaign images */}
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="flex-1 rounded-xl overflow-hidden border border-white/5 bg-white/[0.02]">
+              <img
+                src="/attached_assets/nexus_operations_floor_plan.png"
+                alt="Nexus Operations Facility Layout"
+                className="w-full object-cover"
+              />
+              <div className="px-3 py-2 text-[10px] font-mono text-white/30 text-center">Facility Layout v1.0</div>
+            </div>
+            <div className="flex-1 rounded-xl overflow-hidden border border-white/5 bg-white/[0.02]">
+              <img
+                src="/attached_assets/nexus_operations_tokenomics.png"
+                alt="Nexus Operations Donation Tiers"
+                className="w-full object-cover"
+              />
+              <div className="px-3 py-2 text-[10px] font-mono text-white/30 text-center">Donation Tiers</div>
+            </div>
+          </div>
+
+          {/* Pool breakdown bar */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-white/30">Hardware Campaign Pool</div>
+              <div className="text-[10px] font-mono text-white/30">1,050,000,000 NXT</div>
+            </div>
+            <div className="w-full h-4 rounded-full overflow-hidden flex mb-3">
+              <BarSegment pct={47.6} color="#22d3ee" label="Equipment Procurement" />
+              <BarSegment pct={38.1} color="#a78bfa" label="Prototype Distribution" />
+              <BarSegment pct={14.3} color="#34d399" label="Lab Operations Reserve" />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { label: "Equipment Procurement", color: "#22d3ee", nxt: "500,000,000", pct: "47.6%" },
+                { label: "Prototype Distribution", color: "#a78bfa", nxt: "400,000,000", pct: "38.1%" },
+                { label: "Lab Operations Reserve", color: "#34d399", nxt: "150,000,000", pct: "14.3%" },
+              ].map((seg) => (
+                <div key={seg.label} className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+                  <span className="text-[11px] text-white/40">{seg.label}</span>
+                  <span className="text-[11px] font-mono text-white/30">{seg.pct}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Lab tier cards */}
+          <div className="space-y-3">
+            {LAB_TIERS.map((t) => (
+              <LabTierCard
+                key={t.tier}
+                t={t}
+                expanded={expandedTier === t.tier}
+                onToggle={() => setExpandedTier(expandedTier === t.tier ? null : t.tier)}
+              />
+            ))}
+          </div>
+
+          {/* Footer note */}
+          <div className="mt-4 text-center text-[11px] font-mono text-white/20">
+            All lab milestones recorded on-chain · AGPL-3.0 · Open science
           </div>
         </div>
 
