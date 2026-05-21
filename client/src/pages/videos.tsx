@@ -46,7 +46,7 @@ function SetupPanel() {
       <div className="space-y-3 text-xs text-gray-400">
         <div className="flex items-start gap-2">
           <span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
-          <span>Open Telegram and find your bot (or create one with <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">@BotFather</a>)</span>
+          <span>Open Telegram and message <a href="https://t.me/Nexuswnspbot" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">@Nexuswnspbot</a></span>
         </div>
         <div className="flex items-start gap-2">
           <span className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>

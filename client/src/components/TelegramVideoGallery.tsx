@@ -171,7 +171,7 @@ export default function TelegramVideoGallery({
     return (
       <div className="text-center py-8 text-gray-600 text-xs font-mono">
         <Tv size={24} className="mx-auto mb-2 opacity-30" />
-        <p>No videos yet — send a video to the NexusOS bot to publish it here.</p>
+        <p>No videos yet — send a video to <a href="https://t.me/Nexuswnspbot" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">@Nexuswnspbot</a> to publish it here.</p>
       </div>
     );
   }
