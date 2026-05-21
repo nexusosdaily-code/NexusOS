@@ -6442,7 +6442,7 @@ export async function registerRoutes(
   app.get("/api/telegram/video/:fileId/stream", async (req: Request, res: Response) => {
     try {
       const fileUrl = await getTelegramFileUrl(req.params.fileId);
-      if (!fileUrl) return res.status(404).json({ error: "File not found" });
+      if (!fileUrl) return res.status(422).json({ error: "FILE_TOO_LARGE", message: "Video exceeds Telegram's 20 MB bot download limit — watch it on Telegram directly." });
 
       const upstream = await fetch(fileUrl, {
         headers: req.headers.range ? { Range: req.headers.range } : {},
