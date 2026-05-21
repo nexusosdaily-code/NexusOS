@@ -772,6 +772,45 @@ export default function CampaignPage() {
           </div>
         </div>
 
+        {/* WNSP Research Paper */}
+        <div>
+          <div className="mb-4">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-white/30 mb-1">Peer-Reviewable Research</div>
+            <h2 className="text-lg font-bold text-white">The physics is published. Read it yourself.</h2>
+          </div>
+          <Link href="/wnsp-paper">
+            <div className="group rounded-xl border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-blue-900/10 p-5 hover:border-violet-500/50 hover:from-violet-500/15 hover:to-blue-900/15 transition-all cursor-pointer">
+              <div className="flex items-start justify-between gap-4 mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: "#8b5cf620", border: "1px solid #8b5cf640" }}>
+                    <BookOpen size={14} style={{ color: "#8b5cf6" }} />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-mono text-violet-400/70 uppercase tracking-wider">NexusOS Research · May 2026</div>
+                    <div className="text-sm font-bold text-white group-hover:text-violet-300 transition-colors leading-snug">
+                      Multidimensional Orthogonal Communication via WDM, OAM, and Polarization
+                    </div>
+                  </div>
+                </div>
+                <ArrowRight size={14} className="text-violet-400 shrink-0 mt-1 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+              </div>
+              <p className="text-xs text-white/50 leading-relaxed mb-3 pl-10">
+                We present WNSP — a communication framework replacing software-defined addressing with
+                physics-derived channel allocation across three orthogonal electromagnetic dimensions: WDM (256 channels),
+                OAM (50 modes), and polarization (2 states). The combined Hilbert space yields{" "}
+                <span className="text-emerald-400 font-semibold">25,600 mutually orthogonal channels</span>{" "}
+                satisfying ⟨Ψ<sub>i</sub>|Ψ<sub>j</sub>⟩ = 0 by quantum mechanical principle — enforced by physics, not software policy.
+              </p>
+              <div className="flex flex-wrap gap-1.5 pl-10">
+                {["WNSP", "WDM", "OAM", "Spectral Addressing", "Quantum Orthogonality", "Photonic Computing", "Security"].map(tag => (
+                  <span key={tag} className="text-[10px] bg-white/5 border border-white/10 rounded px-2 py-0.5 text-white/40 font-mono">{tag}</span>
+                ))}
+                <span className="text-[10px] bg-violet-500/10 border border-violet-500/30 rounded px-2 py-0.5 text-violet-400 font-mono ml-1">Read Paper →</span>
+              </div>
+            </div>
+          </Link>
+        </div>
+
         {/* Hardware Phases */}
         <div>
           <div className="mb-5">
