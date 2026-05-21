@@ -30,6 +30,12 @@ uri = "file://attached_assets/phase4_compiler_campaign.png"
 type = "image"
 title = "phase4 wavelengthscript compiler photonic hardware campaign"
 
+[[generated]]
+id = "J8fDBiaf557f4ldz9jsFp"
+uri = "file://attached_assets/hardware_lab_campaign.png"
+type = "image"
+title = "hardware lab nexus operations campaign"
+
 [[outputs]]
 id = "H5DxipQLmLvHtAwbjOE_f"
 uri = "file://attached_assets/phase0_campaign.png"
@@ -59,3 +65,9 @@ id = "HwadKhI-RyjvU6Dz4ofGv"
 uri = "file://attached_assets/phase4_compiler_campaign.png"
 type = "image"
 title = "Phase 4 — WavelengthScript Compiler α Campaign Image (16:9)"
+
+[[outputs]]
+id = "xNqAZf4XwYK908JrwPavN"
+uri = "file://attached_assets/hardware_lab_campaign.png"
+type = "image"
+title = "Hardware Lab — Nexus Operations Campaign Image"
