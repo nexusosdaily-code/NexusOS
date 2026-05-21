@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Link } from "wouter";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Zap, Cpu, Radio, Waves, Shield, Globe, Layers, Activity,
   ArrowRight, ExternalLink, Check, ChevronDown, ChevronUp,
   Atom, FlaskConical, Code2, BookOpen, Rocket, Target,
   Users, Coins, Star, Lock, Eye, GitBranch, Network, MapPin,
+  FileText, X, Copy, CheckCircle2, Wallet,
 } from "lucide-react";
 
 // ── Token distribution ────────────────────────────────────────────────────
@@ -373,7 +375,235 @@ function PhaseCard({ p, expanded, onToggle }: { p: typeof PHASES[0]; expanded: b
   );
 }
 
-function LabTierCard({ t, expanded, onToggle }: { t: typeof LAB_TIERS[0]; expanded: boolean; onToggle: () => void }) {
+// ── Donate Modal ──────────────────────────────────────────────────────────
+interface DonateResult {
+  txId: string; tierName: string; nxtLabel: string; usd: string; zone: string;
+  psiChannel: string; wavelengthNm: number; band: string; walletAddress: string;
+  contractText: string; signature: string; contentHash: string; timestamp: string;
+  newBalance: string;
+}
+
+function DonateModal({ t, onClose }: { t: typeof LAB_TIERS[0]; onClose: () => void }) {
+  const [result, setResult] = useState<DonateResult | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const { data: auth } = useQuery<any>({
+    queryKey: ["/api/auth/me"],
+    queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const r = await fetch("/api/auth/me", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+      });
+      return r.ok ? r.json() : null;
+    },
+  });
+
+  const { data: physics } = useQuery<any>({
+    queryKey: ["/api/physics/my"],
+    queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const r = await fetch("/api/physics/my", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+      });
+      return r.ok ? r.json() : null;
+    },
+    enabled: !!auth,
+  });
+
+  const donate = useMutation({
+    mutationFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const r = await fetch("/api/campaign/donate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({ tier: t.tier }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error ?? "Donation failed");
+      return data as DonateResult;
+    },
+    onSuccess: (data) => setResult(data),
+  });
+
+  const psi  = physics?.channel?.psi ?? "—";
+  const nm   = physics?.channel?.wavelength_nm ?? null;
+  const band = physics?.channel?.band ?? "—";
+  const addr = auth?.wallet?.address ?? "—";
+  const isLoggedIn = !!auth?.user;
+
+  function copyContract() {
+    if (!result) return;
+    const full = result.contractText + "\n\nSIGNATURE: " + result.signature;
+    navigator.clipboard.writeText(full);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="w-full max-w-lg bg-[#0d1117] border rounded-2xl overflow-hidden shadow-2xl"
+           style={{ borderColor: t.color + "40" }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center"
+                 style={{ backgroundColor: t.color + "22", border: `1px solid ${t.color}55`, color: t.color }}>
+              <t.icon size={14} />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-white">Back Tier — {t.name}</div>
+              <div className="text-[10px] font-mono text-white/30">{t.nxtLabel} · {t.usd}</div>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-white/30 hover:text-white/70 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          {!result ? (
+            <>
+              {/* Channel info */}
+              <div className="rounded-lg bg-white/[0.03] border border-white/5 p-4 space-y-2">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-white/30 mb-3">
+                  Your Spectral Identity
+                </div>
+                <div className="grid grid-cols-[120px_1fr] gap-y-2 text-xs">
+                  <span className="text-white/40">Ψ Channel</span>
+                  <span className="font-mono text-cyan-300">{psi}</span>
+                  <span className="text-white/40">Wavelength</span>
+                  <span className="font-mono text-white/70">{nm ? `${nm}nm` : "—"}</span>
+                  <span className="text-white/40">Band</span>
+                  <span className="font-mono text-white/70">{band}</span>
+                  <span className="text-white/40">Wallet</span>
+                  <span className="font-mono text-white/50 text-[10px] break-all">{addr}</span>
+                </div>
+                {!isLoggedIn && (
+                  <div className="mt-3 text-[11px] text-amber-400/70 bg-amber-500/10 rounded px-3 py-2">
+                    Log in to record your donation on-chain and receive your spectral contract.
+                  </div>
+                )}
+              </div>
+
+              {/* Zone + contract preview */}
+              <div className="rounded-lg bg-white/[0.02] border border-white/5 p-4 space-y-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin size={11} style={{ color: t.color }} />
+                  <span className="text-xs text-white/60">Zone funded: <span className="text-white/80">{t.zone}</span></span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FileText size={11} className="text-white/30" />
+                  <span className="text-[11px] text-white/40">
+                    A spectral-signed AGPL-3.0 public works contract will be generated at your
+                    Ψ channel wavelength and recorded on the WNSP network.
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Wallet size={11} className="text-white/30" />
+                  <span className="text-[11px] text-white/40">
+                    <span className="text-white/60 font-mono">{t.nxtLabel}</span> transferred from the
+                    Hardware Campaign pool to your wallet address.
+                  </span>
+                </div>
+              </div>
+
+              {/* AGPL / GitHub notice */}
+              <div className="text-[10px] font-mono text-white/20 text-center leading-relaxed">
+                AGPL-3.0 · Free Public Works · github.com/nexusosdaily-code/NexusOS<br />
+                First disclosure 2026-05-16 · Not a financial instrument
+              </div>
+
+              {donate.error && (
+                <div className="text-xs text-red-400 bg-red-500/10 rounded px-3 py-2 text-center">
+                  {(donate.error as Error).message}
+                </div>
+              )}
+
+              <button
+                onClick={() => donate.mutate()}
+                disabled={!isLoggedIn || donate.isPending}
+                className="w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
+                style={{ backgroundColor: t.color + "30", border: `1px solid ${t.color}60`, color: t.color }}
+              >
+                {donate.isPending ? "Recording on-chain…" : isLoggedIn ? `Confirm — ${t.name} Tier` : "Log in to continue"}
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Success state */}
+              <div className="flex items-center gap-3 p-4 rounded-xl"
+                   style={{ backgroundColor: t.color + "15", border: `1px solid ${t.color}30` }}>
+                <CheckCircle2 size={20} style={{ color: t.color }} className="shrink-0" />
+                <div>
+                  <div className="text-sm font-bold text-white">Donation recorded on-chain</div>
+                  <div className="text-[11px] text-white/40 font-mono mt-0.5">TX: {result.txId}</div>
+                </div>
+              </div>
+
+              {/* Wallet update */}
+              <div className="rounded-lg bg-white/[0.03] border border-white/5 p-3 space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-white/40">Ψ Channel</span>
+                  <span className="font-mono text-cyan-300">{result.psiChannel}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/40">NXT received</span>
+                  <span className="font-mono text-emerald-400">+{result.nxtLabel}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/40">Zone funded</span>
+                  <span className="text-white/60">{result.zone}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/40">Signature</span>
+                  <span className="font-mono text-white/30 text-[10px]">{result.signature.slice(0, 40)}…</span>
+                </div>
+              </div>
+
+              {/* Contract text */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-white/30">
+                    Spectral Contract
+                  </div>
+                  <button onClick={copyContract}
+                          className="flex items-center gap-1 text-[10px] text-white/30 hover:text-white/60 transition-colors">
+                    {copied ? <CheckCircle2 size={10} className="text-emerald-400" /> : <Copy size={10} />}
+                    {copied ? "Copied" : "Copy"}
+                  </button>
+                </div>
+                <pre className="bg-[#060a0f] border border-white/5 rounded-lg p-3 text-[9px] font-mono text-emerald-300/70 overflow-x-auto whitespace-pre leading-relaxed max-h-48 overflow-y-auto">
+                  {result.contractText}
+                  {"\n\nSIGNATURE: " + result.signature}
+                </pre>
+              </div>
+
+              <div className="text-[10px] font-mono text-white/20 text-center">
+                AGPL-3.0 · Free public works declaration · Verified at {result.psiChannel}
+              </div>
+
+              <button onClick={onClose}
+                      className="w-full py-2.5 rounded-xl text-sm text-white/60 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                Close
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LabTierCard({ t, expanded, onToggle, onDonate }: {
+  t: typeof LAB_TIERS[0]; expanded: boolean; onToggle: () => void; onDonate: () => void;
+}) {
   return (
     <div className={`rounded-xl border ${t.border} bg-gradient-to-br ${t.gradient} overflow-hidden`}>
       <button
@@ -406,15 +636,27 @@ function LabTierCard({ t, expanded, onToggle }: { t: typeof LAB_TIERS[0]; expand
       </button>
 
       {expanded && (
-        <div className="px-5 pb-5 border-t border-white/5 pt-4">
-          <div className="text-[10px] font-mono uppercase tracking-wider mb-3" style={{ color: t.color }}>Rewards</div>
-          <div className="space-y-2">
-            {t.rewards.map((r, i) => (
-              <div key={i} className="flex items-start gap-2 text-xs text-white/60">
-                <Check size={12} className="shrink-0 mt-0.5" style={{ color: t.color }} />
-                {r}
-              </div>
-            ))}
+        <div className="px-5 pb-5 border-t border-white/5 pt-4 space-y-4">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-wider mb-3" style={{ color: t.color }}>Rewards</div>
+            <div className="space-y-2">
+              {t.rewards.map((r, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs text-white/60">
+                  <Check size={12} className="shrink-0 mt-0.5" style={{ color: t.color }} />
+                  {r}
+                </div>
+              ))}
+            </div>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDonate(); }}
+            className="w-full py-2.5 rounded-lg text-xs font-bold transition-all hover:opacity-90"
+            style={{ backgroundColor: t.color + "25", border: `1px solid ${t.color}50`, color: t.color }}
+          >
+            Back this tier — {t.nxtLabel} · {t.usd}
+          </button>
+          <div className="text-[10px] font-mono text-white/20 text-center">
+            Spectral-signed AGPL-3.0 contract issued to your Ψ channel on confirmation
           </div>
         </div>
       )}

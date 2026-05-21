@@ -1,4 +1,5 @@
 import path from "path";
+import crypto from "crypto";
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
@@ -677,6 +678,154 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Logout error:", error);
       res.status(500).json({ error: "Logout failed" });
+    }
+  });
+
+  // ── Nexus Operations Lab Tier Donations ────────────────────────────────
+  const LAB_TIER_DEF = [
+    { tier: 1, name: "Photon",       nxt: 50_000,      usd: "$50",     zone: "ESD Workstation" },
+    { tier: 2, name: "Wavelength",   nxt: 250_000,     usd: "$250",    zone: "Spectrometer Suite" },
+    { tier: 3, name: "Spectrum",     nxt: 1_000_000,   usd: "$1,000",  zone: "SNIC Fabrication Bench" },
+    { tier: 4, name: "Relay",        nxt: 5_000_000,   usd: "$5,000",  zone: "PHR-1 Alignment Chamber" },
+    { tier: 5, name: "Genesis Node", nxt: 25_000_000,  usd: "$25,000", zone: "Optical Testing Bay + Server Room" },
+  ];
+
+  app.post("/api/campaign/donate", authenticate, async (req, res) => {
+    try {
+      const tierNum = Number(req.body.tier);
+      const tierDef = LAB_TIER_DEF.find(t => t.tier === tierNum);
+      if (!tierDef) return res.status(400).json({ error: "Invalid tier — must be 1–5" });
+
+      const user = req.user!;
+      const userWallet = await storage.getWallet(user.id);
+      if (!userWallet) return res.status(404).json({ error: "Wallet not found" });
+
+      const genesisWallet = await storage.getWalletByAddress(GENESIS_EXECUTION_ADDRESS);
+      if (!genesisWallet) return res.status(503).json({ error: "Genesis wallet unavailable" });
+
+      const genesisBalance = parseFloat(genesisWallet.balance);
+      if (genesisBalance < tierDef.nxt) {
+        return res.status(400).json({ error: "Hardware campaign pool exhausted" });
+      }
+
+      // Spectral channel
+      const wdm          = user.spectralWdm ?? 100;
+      const oam          = user.spectralOam ?? 25;
+      const pol          = user.spectralPolarisation ?? "H";
+      const wavelengthNm = parseFloat((380 + (wdm / 256) * 400).toFixed(4));
+      const frequencyHz  = (3e8) / (wavelengthNm * 1e-9);
+      const energyJ      = 6.626e-34 * frequencyHz;
+      const psiChannel   = `Ψ(${wdm},${oam},${pol})`;
+      const band         = getBand(wavelengthNm);
+
+      // Transfer NXT: Genesis → user wallet
+      await storage.updateWalletBalance(genesisWallet.id, (genesisBalance - tierDef.nxt).toFixed(8));
+      const userBalance = parseFloat(userWallet.balance);
+      await storage.updateWalletBalance(userWallet.id, (userBalance + tierDef.nxt).toFixed(8));
+
+      const ts = new Date().toISOString();
+
+      const tx = await storage.createTransaction({
+        fromWalletId: genesisWallet.id,
+        toWalletId:   userWallet.id,
+        amount:       tierDef.nxt.toFixed(8),
+        fee:          "0.00000000",
+        type:         "lab_donation",
+        wavelength:   wavelengthNm.toString(),
+        frequency:    frequencyHz.toFixed(2),
+        energyCost:   energyJ.toExponential(8),
+        metadata: {
+          tier: tierNum,
+          tierName: tierDef.name,
+          zone: tierDef.zone,
+          usd: tierDef.usd,
+          psiChannel,
+          walletAddress: userWallet.address,
+          timestamp: ts,
+          source: "nexus_operations_lab_funding",
+          github: "https://github.com/nexusosdaily-code/NexusOS",
+        },
+      });
+
+      await storage.updateTransactionStatus(tx.id, "confirmed");
+
+      // Build free public works contract text
+      const contractLines = [
+        "NEXUSOS LAB CONTRIBUTION CONTRACT v1.0",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        "",
+        "This document certifies a contribution to the Nexus Operations Hardware Lab",
+        "— a free public works infrastructure project, open-source under AGPL-3.0.",
+        "",
+        `CONTRIBUTOR CHANNEL  : ${psiChannel}`,
+        `WAVELENGTH           : ${wavelengthNm}nm`,
+        `AUTHORITY BAND       : ${band}`,
+        `WALLET ADDRESS       : ${userWallet.address}`,
+        `CONTRIBUTION TIER    : ${tierDef.name} (Tier ${tierNum})`,
+        `NXT ALLOCATION       : ${tierDef.nxt.toLocaleString()} NXT`,
+        `USD EQUIVALENT       : ${tierDef.usd}`,
+        `LAB ZONE FUNDED      : ${tierDef.zone}`,
+        `TRANSACTION ID       : ${tx.id}`,
+        `TIMESTAMP            : ${ts}`,
+        "",
+        "OPEN-SOURCE COMMITMENT",
+        "All hardware schematics, calibration data, and test results produced by",
+        "Nexus Operations are published under AGPL-3.0 as permanent public works.",
+        "No intellectual property restrictions apply to any facility output.",
+        "",
+        "GITHUB REPOSITORY    : https://github.com/nexusosdaily-code/NexusOS",
+        "FIRST DISCLOSURE     : 2026-05-16 (SNIC · PHR-1 · Spectral Relay Mesh v1 · WavelengthScript Compiler α)",
+        "HARDWARE SPEC        : /hardware-spec (AGPL-3.0 Protected)",
+        "LICENSE              : GNU Affero General Public License v3.0",
+        "",
+        "WAVE CHANNEL OPERABILITY",
+        `The contributor's spectral address ${psiChannel} is permanently registered`,
+        "as a Nexus Operations Founding Contributor. This channel receives",
+        "tier-appropriate hardware access rights on the WNSP network.",
+        "",
+        "Signed under NexusOS Physics Engine v1.0 · WNSP-CE v1.0 · WNSP-SE v1.0",
+        "This contract is a free public works declaration, not a financial instrument.",
+      ];
+      const contractText = contractLines.join("\n");
+
+      // WNSP spectral signature (SHA-256 ⊕ hex(λ_signer))
+      const contentHash = crypto.createHash("sha256").update(contractText, "utf8").digest("hex");
+      const nmHex       = Math.round(wavelengthNm * 100).toString(16).padStart(8, "0");
+      const nmRepeated  = nmHex.repeat(Math.ceil(contentHash.length / nmHex.length)).slice(0, contentHash.length);
+      let rawSig = "";
+      for (let i = 0; i < contentHash.length; i += 2) {
+        rawSig += ((parseInt(contentHash.slice(i, i + 2), 16) ^ parseInt(nmRepeated.slice(i, i + 2), 16)) & 0xff)
+          .toString(16).padStart(2, "0");
+      }
+      const sigBody   = `WNSP-SIG-v1::${user.username}::${psiChannel}::${wavelengthNm}::${rawSig}`;
+      const checkHash = crypto.createHash("sha256").update(sigBody, "utf8").digest("hex");
+      const signature = `WNSP-SIG-v1::${user.username}::${wavelengthNm}::${rawSig.slice(0, 16)}…::${checkHash.slice(0, 8)}`;
+
+      await logAction(req, "lab_donation", "campaign", tx.id, {
+        tier: tierNum, tierName: tierDef.name, nxt: tierDef.nxt, psiChannel,
+      }, "success");
+
+      res.json({
+        txId:          tx.id,
+        tier:          tierNum,
+        tierName:      tierDef.name,
+        nxtAllocation: tierDef.nxt,
+        nxtLabel:      `${tierDef.nxt.toLocaleString()} NXT`,
+        usd:           tierDef.usd,
+        zone:          tierDef.zone,
+        psiChannel,
+        wavelengthNm,
+        band,
+        walletAddress: userWallet.address,
+        contractText,
+        signature,
+        contentHash:   contentHash.slice(0, 16) + "…",
+        timestamp:     ts,
+        newBalance:    (userBalance + tierDef.nxt).toFixed(8),
+      });
+    } catch (error: any) {
+      console.error("Campaign donate error:", error);
+      res.status(500).json({ error: "Donation recording failed" });
     }
   });
 
