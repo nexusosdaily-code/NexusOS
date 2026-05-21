@@ -36,6 +36,12 @@ uri = "file://attached_assets/hardware_lab_campaign.png"
 type = "image"
 title = "hardware lab nexus operations campaign"
 
+[[generated]]
+id = "WwtlEFxkOhXnZX1ULvT0w"
+uri = "file://attached_assets/nexus_operations_lab_campaign.png"
+type = "image"
+title = "nexus operations secure lab facility"
+
 [[outputs]]
 id = "H5DxipQLmLvHtAwbjOE_f"
 uri = "file://attached_assets/phase0_campaign.png"
@@ -71,3 +77,9 @@ id = "xNqAZf4XwYK908JrwPavN"
 uri = "file://attached_assets/hardware_lab_campaign.png"
 type = "image"
 title = "Hardware Lab — Nexus Operations Campaign Image"
+
+[[outputs]]
+id = "Ne_Ktxk2UYNokd15nHorv"
+uri = "file://attached_assets/nexus_operations_lab_campaign.png"
+type = "image"
+title = "Nexus Operations — Secure Testing Lab Campaign Image"
