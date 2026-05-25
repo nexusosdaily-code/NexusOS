@@ -34,10 +34,15 @@ export default function AuthPage() {
         body: JSON.stringify(loginData),
       });
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("Server is starting up — please wait a moment and try again.");
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || "Login failed");
+        throw new Error(data.error || data.details?.[0]?.message || "Invalid credentials");
       }
 
       localStorage.setItem("auth_token", data.token);
