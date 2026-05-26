@@ -107,3 +107,21 @@ id = "fIj-UJXMLpyfJGLk_nLWT"
 uri = "file://attached_assets/nexus_operations_tokenomics.png"
 type = "image"
 title = "Nexus Operations — Hardware Tokenomics Tiers"
+
+[[outputs]]
+id = "CvtZvdgtCbsyiboXqhpwA"
+uri = "file://attached_assets/generated_videos/nexusos-infrastructure-vision.mp4"
+type = "video"
+title = "Clip 1 — Infrastructure Vision (NexusOS network nodes)"
+
+[[outputs]]
+id = "Dqni0sx9k26z3p41coPDd"
+uri = "file://attached_assets/generated_videos/nexusos-donor-tiers.mp4"
+type = "video"
+title = "Clip 2 — Donor Tiers (5 rising crystal pillars)"
+
+[[outputs]]
+id = "QxO5eVdNA-OrifFR_vfeI"
+uri = "file://attached_assets/generated_videos/nexusos-tokenomics-flow.mp4"
+type = "video"
+title = "Clip 3 — Tokenomics Flow (tokens distributing across network)"
