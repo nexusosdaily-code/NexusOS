@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Smartphone, Copy, Play, Cpu, Radio, Zap, Globe, BookOpen } from "lucide-react";
+import { ArrowLeft, Smartphone, Copy, Play, Cpu, Radio, Zap, Globe, BookOpen, Wifi, Signal } from "lucide-react";
 
 function nmToColor(nm: number): string {
   if (nm < 450) return "#8b00ff";
@@ -129,6 +129,46 @@ public final class NexusOSSDK {
         let (data, _) = try await URLSession.shared.data(from: comps.url!)
         return data
     }
+
+    // MARK: - Register this device as a NexusOS network node
+    /// Call once on app launch. Your phone becomes a live node on the spectral network.
+    /// The Ψ channel is derived automatically from the node name via CE encoding.
+    @discardableResult
+    public func registerAsNode(
+        name: String,
+        purpose: String? = nil,
+        capabilities: [String] = ["ce-encoder", "spectral-relay", "p2p-media"]
+    ) async throws -> Data {
+        var req = URLRequest(url: baseURL.appendingPathComponent("/api/network/nodes/register"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let key = apiKey { req.setValue("Bearer \\(key)", forHTTPHeaderField: "Authorization") }
+        var body: [String: Any] = ["name": name, "capabilities": capabilities]
+        if let p = purpose { body["purpose"] = p }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return data
+    }
+
+    // MARK: - Beacon (heartbeat — keeps your node ACTIVE)
+    /// Call every 60–90 seconds. If beacons stop the node goes IDLE after 5 minutes.
+    public func beacon(nodeKey: String) async throws {
+        var req = URLRequest(url: baseURL.appendingPathComponent("/api/network/nodes/\\(nodeKey)/beacon"))
+        req.httpMethod = "POST"
+        if let key = apiKey { req.setValue("Bearer \\(key)", forHTTPHeaderField: "Authorization") }
+        _ = try await URLSession.shared.data(for: req)
+    }
+
+    // MARK: - Start automatic beacon loop
+    /// Call after registerAsNode. Fires every 90 s for the app lifetime.
+    public func startBeaconLoop(nodeKey: String) -> Task<Void, Never> {
+        Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 90_000_000_000) // 90s
+                try? await beacon(nodeKey: nodeKey)
+            }
+        }
+    }
 }
 
 // ── SwiftUI Usage Example ─────────────────────────────────────────────
@@ -256,6 +296,50 @@ class NexusOSSDK(
         val conn = url.openConnection() as HttpURLConnection
         JSONObject(conn.inputStream.bufferedReader().readText())
     }
+
+    // Register this device as a NexusOS network node
+    // Call once on app launch — your phone becomes a live node on the spectral network.
+    // The Ψ channel is derived automatically from the node name via CE encoding.
+    suspend fun registerAsNode(
+        name: String,
+        purpose: String? = null,
+        capabilities: List<String> = listOf("ce-encoder", "spectral-relay", "p2p-media")
+    ): JSONObject = withContext(Dispatchers.IO) {
+        val url = URL("\$baseUrl/api/network/nodes/register")
+        val conn = url.openConnection() as HttpURLConnection
+        conn.apply {
+            requestMethod = "POST"
+            setRequestProperty("Content-Type", "application/json")
+            apiKey?.let { setRequestProperty("Authorization", "Bearer \$it") }
+            doOutput = true
+        }
+        val body = JSONObject().put("name", name).put("capabilities", capabilities)
+        purpose?.let { body.put("purpose", it) }
+        conn.outputStream.write(body.toString().toByteArray())
+        JSONObject(conn.inputStream.bufferedReader().readText())
+    }
+
+    // Beacon — heartbeat that keeps your node ACTIVE on the network.
+    // Call every 60–90 seconds. Node goes IDLE after 5 minutes without a beacon.
+    suspend fun beacon(nodeKey: String) = withContext(Dispatchers.IO) {
+        val url = URL("\$baseUrl/api/network/nodes/\$nodeKey/beacon")
+        val conn = url.openConnection() as HttpURLConnection
+        conn.apply {
+            requestMethod = "POST"
+            apiKey?.let { setRequestProperty("Authorization", "Bearer \$it") }
+        }
+        conn.responseCode // fire and forget
+    }
+
+    // Start automatic beacon loop — call after registerAsNode.
+    // Uses a coroutine that fires every 90 seconds for the app lifetime.
+    fun startBeaconLoop(scope: CoroutineScope, nodeKey: String): Job =
+        scope.launch(Dispatchers.IO) {
+            while (isActive) {
+                delay(90_000L)
+                runCatching { beacon(nodeKey) }
+            }
+        }
 }
 
 // ── Jetpack Compose Usage Example ────────────────────────────────────
@@ -445,21 +529,189 @@ fun main() {
 }`;
 
 const API_METHODS = [
-  { method: "POST /api/wnsp/ce/encode",   body: '{"content": "..."}',   desc: "CE-encode any word → Ψ channel, wavelength, band, URI" },
-  { method: "POST /api/wnsp/se/encode",   body: '{"text": "..."}',      desc: "SE-encode a payload onto WNSP spectral frame" },
-  { method: "POST /api/wnsp/ce/char",     body: '{"char": "A"}',        desc: "Single character → compression state (WASCII v2.0)" },
-  { method: "GET  /api/physics/my",       body: "Bearer token",         desc: "Your spectral identity, fees, authority band" },
-  { method: "GET  /api/network/nodes",    body: "—",                    desc: "All active nodes — DNS-free peer discovery" },
-  { method: "GET  /api/wnsp/density",     body: "?r_sym=2&m=1",        desc: "WNSP density equation — symbols per cycle" },
-  { method: "GET  /api/wnsp/sectors",     body: "—",                    desc: "All 7 authority bands with wavelength ranges" },
-  { method: "POST /api/wnsp/se/simulate", body: '{"text": "..."}',      desc: "Simulate full SE encoding — step-by-step breakdown" },
+  { method: "POST /api/wnsp/ce/encode",              body: '{"content": "..."}',                      desc: "CE-encode any word → Ψ channel, wavelength, band, URI" },
+  { method: "POST /api/wnsp/se/encode",              body: '{"text": "..."}',                         desc: "SE-encode a payload onto WNSP spectral frame" },
+  { method: "POST /api/wnsp/ce/char",                body: '{"char": "A"}',                           desc: "Single character → compression state (WASCII v2.0)" },
+  { method: "GET  /api/physics/my",                  body: "Bearer token",                            desc: "Your spectral identity, fees, authority band" },
+  { method: "GET  /api/network/nodes",               body: "—",                                       desc: "All active nodes — DNS-free peer discovery" },
+  { method: "POST /api/network/nodes/register",      body: '{"name":"...","capabilities":[...]}',     desc: "Register this device as a live network node" },
+  { method: "POST /api/network/nodes/:key/beacon",   body: "—",                                       desc: "Heartbeat — keeps your node ACTIVE on the map" },
+  { method: "GET  /api/wnsp/density",                body: "?r_sym=2&m=1",                            desc: "WNSP density equation — symbols per cycle" },
+  { method: "GET  /api/wnsp/sectors",                body: "—",                                       desc: "All 7 authority bands with wavelength ranges" },
+  { method: "POST /api/wnsp/se/simulate",            body: '{"text": "..."}',                         desc: "Simulate full SE encoding — step-by-step breakdown" },
 ];
 
+const NODE_SWIFT = `// Join the NexusOS Network — Swift
+// One function call makes your iPhone a live spectral node.
+
+import UIKit
+
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    private var sdk = NexusOSSDK()
+    private var beaconTask: Task<Void, Never>?
+    private var myNodeKey: String?
+
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        Task {
+            do {
+                // 1. Derive this device's spectral identity (offline — no network)
+                let deviceName = UIDevice.current.name  // e.g. "Alice's iPhone"
+                let identity   = wasciiEncode(deviceName)
+                print("[WNSP] My channel: \\(identity.psi)  λ=\\(identity.wavelengthNm)nm  \\(identity.band)")
+
+                // 2. Register as a live node — one POST, then you're on the map
+                let nodeKey = "mobile-\\(UIDevice.current.identifierForVendor!.uuidString.prefix(8).lowercased())"
+                myNodeKey   = nodeKey
+                try await sdk.registerAsNode(
+                    name: deviceName,
+                    purpose: "Mobile node — \\(identity.band) band · \\(identity.psi)",
+                    capabilities: ["ce-encoder", "spectral-relay", "p2p-media"]
+                )
+                print("[WNSP] Node registered ✓  key=\\(nodeKey)")
+
+                // 3. Start automatic beacon — keeps the node ACTIVE indefinitely
+                beaconTask = sdk.startBeaconLoop(nodeKey: nodeKey)
+                print("[WNSP] Beacon loop started — pulsing every 90s")
+            } catch {
+                print("[WNSP] Node registration failed: \\(error)")
+            }
+        }
+        return true
+    }
+
+    func applicationWillTerminate(_ application: UIApplication) {
+        beaconTask?.cancel()  // clean shutdown
+    }
+}`;
+
+const NODE_KOTLIN = `// Join the NexusOS Network — Kotlin / Android
+// One suspend call makes your Android device a live spectral node.
+
+import android.app.Application
+import kotlinx.coroutines.*
+
+class NexusOSApp : Application() {
+    private val sdk = NexusOSSDK()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var beaconJob: Job? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        scope.launch {
+            try {
+                // 1. Derive this device's spectral identity (offline — no network)
+                val deviceName = android.os.Build.MODEL  // e.g. "Pixel 8 Pro"
+                val identity   = wasciiEncode(deviceName)
+                android.util.Log.d("WNSP", "My channel: \${identity.psi}  λ=\${identity.wavelengthNm}nm  \${identity.band}")
+
+                // 2. Register as a live node — one POST, then you're on the map
+                val nodeKey = "mobile-\${identity.wdm}-\${identity.oam}-\${identity.pol.lowercase()}"
+                sdk.registerAsNode(
+                    name = deviceName,
+                    purpose = "Mobile node — \${identity.band} band · \${identity.psi}",
+                    capabilities = listOf("ce-encoder", "spectral-relay", "p2p-media")
+                )
+                android.util.Log.d("WNSP", "Node registered ✓  key=\$nodeKey")
+
+                // 3. Start automatic beacon — keeps the node ACTIVE indefinitely
+                beaconJob = sdk.startBeaconLoop(scope, nodeKey)
+                android.util.Log.d("WNSP", "Beacon loop started — pulsing every 90s")
+            } catch (e: Exception) {
+                android.util.Log.e("WNSP", "Node registration failed: \${e.message}")
+            }
+        }
+    }
+
+    override fun onTerminate() {
+        beaconJob?.cancel()
+        scope.cancel()
+        super.onTerminate()
+    }
+}`;
+
+type Tab = "ios" | "android" | "offline" | "api" | "node";
+
+type NodeStep = { ts: string; msg: string; color: string; done: boolean };
+
+function useNodeSimulator(nodeName: string, active: boolean) {
+  const [steps, setSteps] = useState<NodeStep[]>([]);
+  const [beaconCount, setBeaconCount] = useState(0);
+  const [nodeKey, setNodeKey] = useState("");
+  const [psi, setPsi] = useState("");
+  const [nodeColor, setNodeColor] = useState("#06b6d4");
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const beaconRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function reset() {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (beaconRef.current) clearInterval(beaconRef.current);
+    setSteps([]);
+    setBeaconCount(0);
+    setNodeKey("");
+    setPsi("");
+  }
+
+  useEffect(() => {
+    if (!active || !nodeName.trim()) return;
+    reset();
+    const enc = ceEncode(nodeName);
+    const key = "mobile-" + nodeName.toLowerCase().replace(/\s+/g, "-").slice(0, 12);
+    const col = nmToColor(enc.nm);
+    setPsi(enc.psi);
+    setNodeKey(key);
+    setNodeColor(col);
+
+    const now = () => new Date().toLocaleTimeString("en-GB", { hour12: false });
+    const push = (msg: string, color: string, delay: number) =>
+      new Promise<void>(res => {
+        timerRef.current = setTimeout(() => {
+          setSteps(s => [...s, { ts: now(), msg, color, done: true }]);
+          res();
+        }, delay);
+      });
+
+    (async () => {
+      await push(`[WASCII] Encoding device name offline…`, "#a78bfa", 300);
+      await push(`[WASCII] λ=${enc.nm}nm · f=${enc.thz}THz · band=${enc.band}`, col, 700);
+      await push(`[WASCII] Ψ channel assigned: ${enc.psi}`, col, 1100);
+      await push(`[NODE]   Registering node: POST /api/network/nodes/register`, "#06b6d4", 1700);
+      await push(`[NODE]   Payload → { name: "${nodeName}", capabilities: ["ce-encoder","spectral-relay","p2p-media"] }`, "#06b6d4", 2100);
+      await push(`[NODE]   ✓ Node registered — key=${key}`, "#4ade80", 2700);
+      await push(`[BEACON] Starting heartbeat loop — pulse every 90s`, "#f59e0b", 3200);
+      await push(`[BEACON] ♦ Pulse 1 sent → node is ACTIVE on the spectral network`, "#4ade80", 3700);
+
+      let count = 1;
+      beaconRef.current = setInterval(() => {
+        count++;
+        setBeaconCount(count);
+        setSteps(s => [...s, { ts: now(), msg: `[BEACON] ♦ Pulse ${count} sent → ACTIVE`, color: "#4ade80", done: true }]);
+      }, 6000);
+    })();
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (beaconRef.current) clearInterval(beaconRef.current);
+    };
+  }, [active, nodeName]);
+
+  return { steps, beaconCount, nodeKey, psi, nodeColor, reset };
+}
+
 export default function MobileSDKPage() {
-  const [tab, setTab] = useState<"ios" | "android" | "offline" | "api">("ios");
+  const [tab, setTab] = useState<Tab>("ios");
   const [copied, setCopied] = useState<string | null>(null);
   const [apiInput, setApiInput] = useState("NexusOS");
   const [apiResult, setApiResult] = useState<ReturnType<typeof ceEncode> | null>(() => ceEncode("NexusOS"));
+  const [nodeInput, setNodeInput] = useState("My iPhone");
+  const [nodeRunning, setNodeRunning] = useState(false);
+  const [nodePlatform, setNodePlatform] = useState<"ios" | "android">("ios");
+  const logRef = useRef<HTMLDivElement>(null);
+  const { steps, beaconCount, nodeKey, psi, nodeColor, reset } = useNodeSimulator(nodeInput, nodeRunning);
+
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [steps]);
 
   function copy(text: string, key: string) {
     navigator.clipboard.writeText(text);
@@ -556,6 +808,13 @@ export default function MobileSDKPage() {
           {TAB("android", "Android — Kotlin")}
           {TAB("offline", "Offline Physics")}
           {TAB("api",     "Live API Playground")}
+          <button
+            onClick={() => setTab("node")}
+            className={`px-4 py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 ${tab === "node" ? "text-emerald-300 bg-emerald-400/10 border border-emerald-400/30" : "text-emerald-400/40 hover:text-emerald-400/70"}`}
+            data-testid="tab-join-network"
+          >
+            <Signal size={11} /> Join Network
+          </button>
         </div>
 
         {/* ── iOS Tab ──────────────────────────────────────────────────────── */}
@@ -826,6 +1085,171 @@ export default function MobileSDKPage() {
                 <div className="text-amber-400/60 text-[10px] font-bold mb-0.5">SDK Base URL</div>
                 <code className="text-[10px] text-white/50 font-mono">https://nexusos.replit.app</code>
                 <div className="text-[9px] text-white/20 mt-1">All endpoints work without authentication. Auth endpoints require <code className="text-violet-300/60">Authorization: Bearer &lt;token&gt;</code>.</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Join Network Tab ─────────────────────────────────────────────── */}
+        {tab === "node" && (
+          <div className="space-y-6">
+            <div className="text-white/25 text-[11px] leading-relaxed">
+              Every phone that runs NexusOS becomes a live node on the spectral network.
+              Your device name is CE-encoded offline into a unique Ψ channel — no registration form, no DNS, no IP allocation.
+              One function call and your phone is on the map.
+            </div>
+
+            {/* Simulator */}
+            <div className="border border-emerald-400/20 rounded-xl overflow-hidden" style={{ background: "rgba(74,222,128,0.03)" }}>
+              <div className="px-5 py-3 border-b border-emerald-400/10 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Wifi size={12} className="text-emerald-400" />
+                  <span className="text-emerald-400/70 text-[10px] font-bold uppercase tracking-wider">Node Registration Simulator</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setNodePlatform("ios")}
+                    className={`text-[9px] px-2 py-1 rounded border transition-all ${nodePlatform === "ios" ? "border-cyan-400/40 text-cyan-400" : "border-white/10 text-white/25"}`}
+                    data-testid="button-platform-ios"
+                  >iOS</button>
+                  <button
+                    onClick={() => setNodePlatform("android")}
+                    className={`text-[9px] px-2 py-1 rounded border transition-all ${nodePlatform === "android" ? "border-green-400/40 text-green-400" : "border-white/10 text-white/25"}`}
+                    data-testid="button-platform-android"
+                  >Android</button>
+                </div>
+              </div>
+
+              <div className="p-5 space-y-4">
+                {/* Input row */}
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <div className="text-white/25 text-[9px] mb-1">Device / node name</div>
+                    <input
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none placeholder-white/20 focus:border-emerald-400/30"
+                      placeholder="e.g. Alice's iPhone, Pixel 8 Pro, Nexus Node Alpha…"
+                      value={nodeInput}
+                      onChange={e => { setNodeInput(e.target.value); if (nodeRunning) { setNodeRunning(false); reset(); } }}
+                      data-testid="input-node-name"
+                    />
+                  </div>
+                  <div className="flex flex-col justify-end">
+                    <button
+                      onClick={() => { if (nodeRunning) { setNodeRunning(false); reset(); } else { setNodeRunning(true); } }}
+                      className={`px-4 py-2 rounded-lg border font-bold text-[11px] transition-all flex items-center gap-2 ${nodeRunning ? "border-red-400/40 text-red-400 hover:border-red-400/70" : "border-emerald-400/40 text-emerald-400 hover:border-emerald-400/70"}`}
+                      data-testid="button-node-start"
+                    >
+                      {nodeRunning ? <><Signal size={12} /> Stop</> : <><Signal size={12} /> Join Network</>}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Spectral identity preview */}
+                {nodeInput.trim() && (() => {
+                  const enc = ceEncode(nodeInput);
+                  const col = nmToColor(enc.nm);
+                  return (
+                    <div className="border border-white/5 rounded-lg p-3 flex items-center gap-4 flex-wrap">
+                      <div className="w-3 h-3 rounded-full flex-shrink-0 animate-pulse" style={{ background: col, boxShadow: `0 0 8px ${col}` }} />
+                      <div>
+                        <div className="text-[9px] text-white/30 mb-0.5">Spectral identity (derived offline)</div>
+                        <div className="text-[11px] font-bold font-mono" style={{ color: col }}>{enc.psi}</div>
+                      </div>
+                      <div className="text-[9px] text-white/30">λ={enc.nm}nm</div>
+                      <div className="text-[9px] text-white/30">{enc.band} band</div>
+                      <div className="text-[9px] text-white/30">{enc.thz}THz</div>
+                      <div className="ml-auto text-[9px] font-mono text-white/20">mobile-{nodeInput.toLowerCase().replace(/\s+/g, "-").slice(0, 12)}</div>
+                    </div>
+                  );
+                })()}
+
+                {/* Live terminal log */}
+                <div
+                  ref={logRef}
+                  className="rounded-lg border border-white/5 h-52 overflow-y-auto p-3 space-y-1 font-mono text-[10px]"
+                  style={{ background: "rgba(0,0,0,0.6)" }}
+                  data-testid="node-terminal"
+                >
+                  {steps.length === 0 && (
+                    <div className="text-white/15 italic">Enter a device name and press "Join Network" to simulate registration…</div>
+                  )}
+                  {steps.map((s, i) => (
+                    <div key={i} className="flex gap-2">
+                      <span className="text-white/20 flex-shrink-0">{s.ts}</span>
+                      <span style={{ color: s.color }}>{s.msg}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Status badges */}
+                {nodeRunning && steps.length > 0 && (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className={`flex items-center gap-1.5 text-[9px] px-2 py-1 rounded-full border ${nodeKey ? "border-emerald-400/30 text-emerald-400" : "border-white/10 text-white/20"}`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${nodeKey ? "bg-emerald-400 animate-pulse" : "bg-white/20"}`} />
+                      {nodeKey ? "ACTIVE" : "REGISTERING…"}
+                    </div>
+                    {psi && <div className="text-[9px] font-mono" style={{ color: nodeColor }}>{psi}</div>}
+                    {beaconCount > 0 && <div className="text-[9px] text-amber-400/60">{beaconCount} beacon{beaconCount !== 1 ? "s" : ""} sent</div>}
+                    <div className="ml-auto">
+                      <Link href="/network">
+                        <button className="text-[9px] text-emerald-400/60 hover:text-emerald-400 border border-emerald-400/20 rounded-lg px-3 py-1 transition-all" data-testid="button-view-network">
+                          View on Network Map →
+                        </button>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Code — platform toggle */}
+            <div className="space-y-3">
+              <div className="text-white/30 text-[10px] uppercase tracking-widest">
+                {nodePlatform === "ios" ? "iOS (Swift) — AppDelegate.swift" : "Android (Kotlin) — NexusOSApp.kt"}
+              </div>
+              <div className="border border-white/10 rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.01)" }}>
+                <div className="px-4 py-2.5 border-b border-white/5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {nodePlatform === "ios"
+                      ? <><div className="w-2.5 h-2.5 rounded-full bg-red-400/60" /><div className="w-2.5 h-2.5 rounded-full bg-yellow-400/60" /><div className="w-2.5 h-2.5 rounded-full bg-green-400/60" /></>
+                      : <div className="w-2 h-2 rounded-full bg-green-400/60" />}
+                    <span className="text-white/25 text-[9px]">{nodePlatform === "ios" ? "AppDelegate.swift" : "NexusOSApp.kt"}</span>
+                  </div>
+                  <button
+                    onClick={() => copy(nodePlatform === "ios" ? NODE_SWIFT : NODE_KOTLIN, "node-code")}
+                    className="flex items-center gap-1 text-[9px] text-white/30 hover:text-white/60 transition-all"
+                    data-testid="button-copy-node-code"
+                  >
+                    <Copy size={9} /> {copied === "node-code" ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+                <pre className={`p-5 text-[10px] font-mono leading-relaxed overflow-x-auto ${nodePlatform === "ios" ? "text-cyan-200/75" : "text-green-200/75"}`}>
+                  {nodePlatform === "ios" ? NODE_SWIFT : NODE_KOTLIN}
+                </pre>
+              </div>
+            </div>
+
+            {/* How it works */}
+            <div className="border border-violet-400/15 rounded-xl p-5" style={{ background: "rgba(167,139,250,0.03)" }}>
+              <div className="text-violet-400/60 text-[10px] uppercase tracking-widest mb-4">How Phone-as-Node Works</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {[
+                  { step: "1", title: "Identity", body: "Your device name is CE-encoded into a unique Ψ channel using pure offline physics — no server call needed.", color: "#a78bfa" },
+                  { step: "2", title: "Register", body: "One POST to /api/network/nodes/register puts your phone on the spectral network map. Any device, anywhere.", color: "#06b6d4" },
+                  { step: "3", title: "Beacon", body: "Every 90 seconds your phone sends a heartbeat. Stop beaconing and the node goes IDLE — fully self-healing.", color: "#4ade80" },
+                ].map(({ step, title, body, color }) => (
+                  <div key={step} className="border border-white/5 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-bold flex-shrink-0" style={{ borderColor: color + "50", color }}>{step}</div>
+                      <div className="text-[10px] font-bold" style={{ color }}>{title}</div>
+                    </div>
+                    <div className="text-[9px] text-white/30 leading-relaxed">{body}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 border-t border-white/5 pt-4 text-[9px] text-white/20 leading-relaxed">
+                8 billion phones = 8 billion potential nodes. Each one adds relay capacity, CE encoding power, and P2P media
+                distribution to the network — without NexusOS paying for a single server. The more people join, the stronger it gets.
               </div>
             </div>
           </div>
