@@ -125,3 +125,21 @@ id = "QxO5eVdNA-OrifFR_vfeI"
 uri = "file://attached_assets/generated_videos/nexusos-tokenomics-flow.mp4"
 type = "video"
 title = "Clip 3 — Tokenomics Flow (tokens distributing across network)"
+
+[[outputs]]
+id = "dOAAMV4g04bPdxFyj0qk2"
+uri = "file://attached_assets/generated_videos/nexusos-mobile-planet-network.mp4"
+type = "video"
+title = "Clip 4 — Every Phone Lights the Planet"
+
+[[outputs]]
+id = "wP5f7ibhrkj2ok4v3UiIU"
+uri = "file://attached_assets/generated_videos/nexusos-phone-as-infrastructure.mp4"
+type = "video"
+title = "Clip 5 — Your Phone IS the Infrastructure"
+
+[[outputs]]
+id = "Up8r4Ufmmw4oSpxRB2szx"
+uri = "file://attached_assets/generated_videos/nexusos-people-are-the-network.mp4"
+type = "video"
+title = "Clip 6 — People Are the Network"
