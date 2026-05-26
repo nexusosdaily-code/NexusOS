@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -11,7 +11,7 @@ import {
   Activity, Layers, Cpu, Code2, Wallet, Globe2,
   Zap, Atom, Waves, Rocket, Users, Database,
   Shield, BookOpen, HardDrive, GitBranch,
-  ChevronRight, LayoutGrid, Rss, Eye, Clock,
+  ChevronRight, Rss, Eye, Clock,
   MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut, Settings, User, Search,
   CheckCircle2, AlertTriangle, ArrowRight, FlaskConical, Heart,
 } from "lucide-react";
@@ -530,30 +530,92 @@ function ConstitutionCard() {
   );
 }
 
-function AppGrid() {
+function NavDropdowns() {
+  const [open, setOpen] = useState<string | null>(null);
+  const [, navigate] = useLocation();
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (barRef.current && !barRef.current.contains(e.target as Node)) {
+        setOpen(null);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
-      {APP_SECTIONS.map((section) => (
-        <div key={section.label}
-          className="rounded-xl p-4"
-          style={{ background: "hsl(222 47% 8%)", border: `1px solid ${section.accent}25` }}>
-          <p className="text-xs font-bold mb-3 tracking-widest uppercase"
-            style={{ color: section.accent }}>
-            {section.label}
-          </p>
-          <div className="space-y-1">
-            {section.items.map(({ title, href, Icon }) => (
-              <Link key={href} href={href}>
-                <div className="flex items-center gap-2 px-2 py-2 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-all cursor-pointer group">
-                  <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: section.accent }} />
-                  <span className="truncate">{title}</span>
-                  <ChevronRight className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              </Link>
-            ))}
+    <div ref={barRef} className="relative">
+      {/* Section title bar */}
+      <div
+        className="flex flex-wrap gap-1 px-2 py-2 rounded-xl"
+        style={{ background: "hsl(222 47% 8%)", border: "1px solid rgba(255,255,255,0.06)" }}
+      >
+        {APP_SECTIONS.map((section) => {
+          const isOpen = open === section.label;
+          return (
+            <button
+              key={section.label}
+              data-testid={`nav-section-${section.label.toLowerCase().replace(/\s+/g, "-")}`}
+              onMouseEnter={() => setOpen(section.label)}
+              onClick={() => setOpen(isOpen ? null : section.label)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold tracking-widest uppercase transition-all"
+              style={{
+                color: isOpen ? section.accent : `${section.accent}80`,
+                background: isOpen ? `${section.accent}15` : "transparent",
+                border: `1px solid ${isOpen ? section.accent + "40" : "transparent"}`,
+              }}
+            >
+              {section.label}
+              <ChevronRight
+                className="w-3 h-3 transition-transform duration-200"
+                style={{ transform: isOpen ? "rotate(90deg)" : "rotate(0deg)" }}
+              />
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Dropdown panel */}
+      {open && (() => {
+        const section = APP_SECTIONS.find(s => s.label === open);
+        if (!section) return null;
+        return (
+          <div
+            className="absolute left-0 right-0 z-50 mt-1 rounded-xl p-3 shadow-2xl"
+            style={{
+              background: "hsl(222 47% 7%)",
+              border: `1px solid ${section.accent}35`,
+              boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${section.accent}20`,
+            }}
+            onMouseLeave={() => setOpen(null)}
+          >
+            <p className="text-[10px] font-bold tracking-widest uppercase mb-2 px-1"
+              style={{ color: section.accent }}>
+              {section.label}
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-0.5">
+              {section.items.map(({ title, href, Icon }) => (
+                <Link key={href} href={href}>
+                  <div
+                    onClick={() => setOpen(null)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:text-white transition-all cursor-pointer group"
+                    style={{ ["--hover-bg" as any]: `${section.accent}12` }}
+                    onMouseEnter={e => (e.currentTarget.style.background = `${section.accent}15`)}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                    data-testid={`nav-link-${href.replace(/\//g, "-")}`}
+                  >
+                    <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: section.accent }} />
+                    <span className="truncate text-xs">{title}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })()}
     </div>
   );
 }
@@ -650,7 +712,6 @@ function CampaignVideos() {
 export default function HubPage() {
   const { user } = useAuth();
   const [filter, setFilter] = useState<FeedType>("all");
-  const [showGrid, setShowGrid] = useState(false);
 
   const { data: walletData } = useQuery<{ wallet: { address: string; balance: string } }>({
     queryKey: ["/api/wallet"],
@@ -708,23 +769,11 @@ export default function HubPage() {
 
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-white">NexusOS Hub</h1>
-            <p className="text-sm text-white/40 mt-0.5">
-              Your unified activity feed — messages, streams, documents, files, transactions.
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-white/50 hover:text-white border border-white/10 gap-2"
-            onClick={() => setShowGrid(v => !v)}
-            data-testid="toggle-app-grid"
-          >
-            <LayoutGrid className="w-4 h-4" />
-            {showGrid ? "Hide" : "All apps"}
-          </Button>
+        <div>
+          <h1 className="text-2xl font-bold text-white">NexusOS Hub</h1>
+          <p className="text-sm text-white/40 mt-0.5">
+            Your unified activity feed — messages, streams, documents, files, transactions.
+          </p>
         </div>
 
         {/* Constitution live card */}
@@ -747,13 +796,8 @@ export default function HubPage() {
         {/* Quick actions */}
         <QuickActions />
 
-        {/* App Grid (collapsible) */}
-        {showGrid && (
-          <div>
-            <p className="text-xs uppercase tracking-widest text-white/30 mb-3">Navigate</p>
-            <AppGrid />
-          </div>
-        )}
+        {/* Nav Dropdowns */}
+        <NavDropdowns />
 
         {/* Feed */}
         <div>
