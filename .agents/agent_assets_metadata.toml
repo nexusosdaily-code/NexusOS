@@ -173,3 +173,33 @@ id = "EeQA2TwlCXYmjSbaWGFwF"
 uri = "file://attached_assets/generated_videos/nexusos_campaign_back_receive.mp4"
 type = "video"
 title = "5 — Campaign Back & Receive (Indiegogo → NXT on-chain)"
+
+[[outputs]]
+id = "nVJJ7MbG9DSfj08X-0TTX"
+uri = "file://attached_assets/generated_videos/campaign_every_photon_counts.mp4"
+type = "video"
+title = "1 — Every Photon Counts (lone photon joins the network)"
+
+[[outputs]]
+id = "DDvqvH0bVCb4JavUTzsLb"
+uri = "file://attached_assets/generated_videos/campaign_1dollar_to_nxt.mp4"
+type = "video"
+title = "2 — $1 → 1,000 NXT (split screen coin-to-tokens)"
+
+[[outputs]]
+id = "JElW4nUzs0rs3YT9byFns"
+uri = "file://attached_assets/generated_videos/campaign_spectral_receipt.mp4"
+type = "video"
+title = "3 — Spectral Receipt (physics-signed contract seal)"
+
+[[outputs]]
+id = "LSWqLG1rkQvGmjAcijqVJ"
+uri = "file://attached_assets/generated_videos/campaign_network_grows.mp4"
+type = "video"
+title = "4 — Network Grows (global node time-lapse)"
+
+[[outputs]]
+id = "Zzk5MPudiGKWl1b68Olh8"
+uri = "file://attached_assets/generated_videos/campaign_cta_tap_tier.mp4"
+type = "video"
+title = "5 — CTA — Tap a Tier ($1 Quanta button → NXT cascade)"
