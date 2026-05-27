@@ -683,18 +683,20 @@ export async function registerRoutes(
 
   // ── Nexus Operations Lab Tier Donations ────────────────────────────────
   const LAB_TIER_DEF = [
-    { tier: 1, name: "Photon",       nxt: 50_000,      usd: "$50",     zone: "ESD Workstation" },
-    { tier: 2, name: "Wavelength",   nxt: 250_000,     usd: "$250",    zone: "Spectrometer Suite" },
-    { tier: 3, name: "Spectrum",     nxt: 1_000_000,   usd: "$1,000",  zone: "SNIC Fabrication Bench" },
-    { tier: 4, name: "Relay",        nxt: 5_000_000,   usd: "$5,000",  zone: "PHR-1 Alignment Chamber" },
-    { tier: 5, name: "Genesis Node", nxt: 25_000_000,  usd: "$25,000", zone: "Optical Testing Bay + Server Room" },
+    { tier: -1, name: "Quanta",       nxt: 1_000,       usd: "$1",      zone: "Community Supporter" },
+    { tier: 0,  name: "Signal",       nxt: 10_000,      usd: "$10",     zone: "Community Supporter" },
+    { tier: 1,  name: "Photon",       nxt: 50_000,      usd: "$50",     zone: "ESD Workstation" },
+    { tier: 2,  name: "Wavelength",   nxt: 250_000,     usd: "$250",    zone: "Spectrometer Suite" },
+    { tier: 3,  name: "Spectrum",     nxt: 1_000_000,   usd: "$1,000",  zone: "SNIC Fabrication Bench" },
+    { tier: 4,  name: "Relay",        nxt: 5_000_000,   usd: "$5,000",  zone: "PHR-1 Alignment Chamber" },
+    { tier: 5,  name: "Genesis Node", nxt: 25_000_000,  usd: "$25,000", zone: "Optical Testing Bay + Server Room" },
   ];
 
   app.post("/api/campaign/donate", authenticate, async (req, res) => {
     try {
       const tierNum = Number(req.body.tier);
       const tierDef = LAB_TIER_DEF.find(t => t.tier === tierNum);
-      if (!tierDef) return res.status(400).json({ error: "Invalid tier — must be 1–5" });
+      if (!tierDef) return res.status(400).json({ error: "Invalid tier" });
 
       const user = req.user!;
       const userWallet = await storage.getWallet(user.id);

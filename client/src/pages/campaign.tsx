@@ -205,6 +205,47 @@ const AUDIENCES = [
   },
 ];
 
+// ── Community micro-donation tiers ─────────────────────────────────────────
+const COMMUNITY_TIERS = [
+  {
+    tier: -1,
+    name: "Quanta",
+    usd: "$1",
+    nxt: 1_000,
+    nxtLabel: "1,000 NXT",
+    color: "#94a3b8",
+    gradient: "from-slate-500/20 to-slate-900/10",
+    border: "border-slate-500/30",
+    zone: "Community Supporter",
+    icon: Zap,
+    description: "Every photon counts. A $1 contribution gets you recorded on-chain as a NexusOS community backer — permanently.",
+    rewards: [
+      "1,000 NXT issued on-chain instantly",
+      "Physics-signed spectral contract as your receipt",
+      "Name recorded in the community backer registry",
+    ],
+  },
+  {
+    tier: 0,
+    name: "Signal",
+    usd: "$10",
+    nxt: 10_000,
+    nxtLabel: "10,000 NXT",
+    color: "#38bdf8",
+    gradient: "from-sky-500/20 to-sky-900/10",
+    border: "border-sky-500/30",
+    zone: "Community Supporter",
+    icon: Radio,
+    description: "Ten dollars, ten thousand NXT. Your signal joins the network — recorded on-chain with a spectral contract.",
+    rewards: [
+      "10,000 NXT issued on-chain instantly",
+      "Physics-signed spectral contract as your receipt",
+      "Name recorded in the community backer registry",
+      "Spectral Observer badge on your NexusOS profile",
+    ],
+  },
+];
+
 // ── Lab donation tiers ─────────────────────────────────────────────────────
 const LAB_TIERS = [
   {
@@ -692,10 +733,43 @@ function LabTierCard({ t, expanded, onToggle, onDonate }: {
   );
 }
 
+function CommunityTierCard({ t, onDonate }: {
+  t: typeof COMMUNITY_TIERS[0]; onDonate: () => void;
+}) {
+  return (
+    <div className={`rounded-xl border ${t.border} bg-gradient-to-br ${t.gradient} p-5 flex items-center gap-4`}>
+      <div
+        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+        style={{ backgroundColor: `${t.color}22`, border: `1px solid ${t.color}55`, color: t.color }}
+      >
+        <t.icon size={16} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-bold text-white text-sm">{t.name}</span>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ backgroundColor: `${t.color}22`, color: t.color }}>
+            {t.nxtLabel}
+          </span>
+          <span className="text-[10px] font-mono text-white/30">{t.usd}</span>
+        </div>
+        <p className="text-[11px] text-white/40 mt-1 leading-relaxed">{t.description}</p>
+      </div>
+      <button
+        onClick={onDonate}
+        className="shrink-0 px-4 py-2 rounded-lg text-xs font-bold transition-all hover:opacity-90 whitespace-nowrap"
+        style={{ backgroundColor: t.color + "25", border: `1px solid ${t.color}50`, color: t.color }}
+      >
+        Back — {t.usd}
+      </button>
+    </div>
+  );
+}
+
 export default function CampaignPage() {
   const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
   const [expandedTier, setExpandedTier] = useState<number | null>(null);
   const [expandedAudience, setExpandedAudience] = useState<number | null>(null);
+  const [donatingTier, setDonatingTier] = useState<typeof LAB_TIERS[0] | typeof COMMUNITY_TIERS[0] | null>(null);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -890,6 +964,31 @@ export default function CampaignPage() {
             </div>
           </div>
 
+          {/* Community tiers */}
+          <div className="mb-8 space-y-3">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px bg-white/5" />
+              <div className="text-[10px] font-mono uppercase tracking-wider text-white/30 px-2">Community — Any Budget Welcome</div>
+              <div className="flex-1 h-px bg-white/5" />
+            </div>
+            <p className="text-[11px] text-white/30 text-center -mt-2 mb-4">
+              Can't afford $50? No problem. Even $1 earns NXT, gets recorded on-chain, and makes you a permanent part of this.
+            </p>
+            {COMMUNITY_TIERS.map((t) => (
+              <CommunityTierCard
+                key={t.tier}
+                t={t}
+                onDonate={() => setDonatingTier(t as any)}
+              />
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 h-px bg-white/5" />
+            <div className="text-[10px] font-mono uppercase tracking-wider text-white/30 px-2">Hardware Lab Tiers</div>
+            <div className="flex-1 h-px bg-white/5" />
+          </div>
+
           {/* Lab tier cards */}
           <div className="space-y-3">
             {LAB_TIERS.map((t) => (
@@ -898,6 +997,7 @@ export default function CampaignPage() {
                 t={t}
                 expanded={expandedTier === t.tier}
                 onToggle={() => setExpandedTier(expandedTier === t.tier ? null : t.tier)}
+                onDonate={() => setDonatingTier(t)}
               />
             ))}
           </div>
@@ -1068,6 +1168,10 @@ export default function CampaignPage() {
           Replit
         </a>
       </p>
+
+      {donatingTier && (
+        <DonateModal t={donatingTier as any} onClose={() => setDonatingTier(null)} />
+      )}
     </div>
   );
 }
