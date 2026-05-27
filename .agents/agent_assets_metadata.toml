@@ -233,3 +233,33 @@ id = "_olATvsHBBV3pMdOvoP4z"
 uri = "file://attached_assets/generated_videos/campaign_launch_two_ownership_tiers.mp4"
 type = "video"
 title = "5 — Campaign Launch (both tier cards together, one network)"
+
+[[outputs]]
+id = "3QSh5PsF6oczMy5kxgI7z"
+uri = "file://attached_assets/generated_videos/spectral_ownership_invisible_forever_v2.mp4"
+type = "video"
+title = "Spectral Ownership — Invisible Forever (v2, no text)"
+
+[[outputs]]
+id = "uv3dSKpr_6I41u5naMZ1-"
+uri = "file://attached_assets/generated_videos/two_tiers_two_ownerships_v2.mp4"
+type = "video"
+title = "Two Tiers, Two Ownerships (v2, no text)"
+
+[[outputs]]
+id = "WpigVpykPlGJcWrMBgo4T"
+uri = "file://attached_assets/generated_videos/hardware_ownership_physical_lab_v2.mp4"
+type = "video"
+title = "Hardware Ownership — Physical Lab (v2, no text)"
+
+[[outputs]]
+id = "5BY9UoVE1VubF4k0lNa1S"
+uri = "file://attached_assets/generated_videos/civilisation_spectral_shareholders_v2.mp4"
+type = "video"
+title = "Civilisation — Spectral Shareholders (v2, no text)"
+
+[[outputs]]
+id = "b212vEJVmh48F7sijcBUO"
+uri = "file://attached_assets/generated_videos/campaign_launch_two_ownership_tiers_v2.mp4"
+type = "video"
+title = "Campaign Launch — Two Ownership Tiers (v2, no text)"
