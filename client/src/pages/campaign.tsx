@@ -607,14 +607,26 @@ function DonateModal({ t, onClose }: { t: typeof LAB_TIERS[0]; onClose: () => vo
           ) : (
             <>
               {/* Success state */}
-              <div className="flex items-center gap-3 p-4 rounded-xl"
-                   style={{ backgroundColor: t.color + "15", border: `1px solid ${t.color}30` }}>
-                <CheckCircle2 size={20} style={{ color: t.color }} className="shrink-0" />
-                <div>
-                  <div className="text-sm font-bold text-white">Donation recorded on-chain</div>
-                  <div className="text-[11px] text-white/40 font-mono mt-0.5">TX: {result.txId}</div>
+              {t.tier <= 0 ? (
+                <div className="flex items-center gap-3 p-4 rounded-xl"
+                     style={{ backgroundColor: t.color + "15", border: `1px solid ${t.color}30` }}>
+                  <CheckCircle2 size={20} style={{ color: t.color }} className="shrink-0" />
+                  <div>
+                    <div className="text-sm font-bold text-white">Shareholder declaration recorded on-chain</div>
+                    <div className="text-[11px] text-white/50 mt-0.5">You are now a permanent co-owner of NexusOS public infrastructure.</div>
+                    <div className="text-[10px] text-white/30 font-mono mt-0.5">TX: {result.txId}</div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-center gap-3 p-4 rounded-xl"
+                     style={{ backgroundColor: t.color + "15", border: `1px solid ${t.color}30` }}>
+                  <CheckCircle2 size={20} style={{ color: t.color }} className="shrink-0" />
+                  <div>
+                    <div className="text-sm font-bold text-white">Donation recorded on-chain</div>
+                    <div className="text-[11px] text-white/40 font-mono mt-0.5">TX: {result.txId}</div>
+                  </div>
+                </div>
+              )}
 
               {/* Wallet update */}
               <div className="rounded-lg bg-white/[0.03] border border-white/5 p-3 space-y-1.5 text-xs">
@@ -626,21 +638,40 @@ function DonateModal({ t, onClose }: { t: typeof LAB_TIERS[0]; onClose: () => vo
                   <span className="text-white/40">NXT received</span>
                   <span className="font-mono text-emerald-400">+{result.nxtLabel}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-white/40">Zone funded</span>
-                  <span className="text-white/60">{result.zone}</span>
-                </div>
+                {t.tier <= 0 ? (
+                  <div className="flex justify-between">
+                    <span className="text-white/40">Shareholder status</span>
+                    <span className="text-white/60">Permanent · Non-revocable</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between">
+                    <span className="text-white/40">Zone funded</span>
+                    <span className="text-white/60">{result.zone}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-white/40">Signature</span>
                   <span className="font-mono text-white/30 text-[10px]">{result.signature.slice(0, 40)}…</span>
                 </div>
               </div>
 
+              {/* Community tier: ownership explainer */}
+              {t.tier <= 0 && (
+                <div className="rounded-lg bg-white/[0.02] border border-white/5 p-3 text-[10px] font-mono text-white/30 leading-relaxed space-y-1">
+                  <div className="text-white/50 font-bold mb-1">What you own</div>
+                  <div>· WNSP spectral relay nodes (present + future)</div>
+                  <div>· SNIC photonic compute units</div>
+                  <div>· PHR-1 routing hardware</div>
+                  <div>· All AGPL-3.0 public works produced by NexusOS</div>
+                  <div className="pt-1 text-white/20">This declaration persists on-chain permanently — regardless of whether any founding team member is alive or active.</div>
+                </div>
+              )}
+
               {/* Contract text */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-[10px] font-mono uppercase tracking-wider text-white/30">
-                    Spectral Contract
+                    {t.tier <= 0 ? "Shareholder Declaration" : "Spectral Contract"}
                   </div>
                   <button onClick={copyContract}
                           className="flex items-center gap-1 text-[10px] text-white/30 hover:text-white/60 transition-colors">
@@ -655,7 +686,9 @@ function DonateModal({ t, onClose }: { t: typeof LAB_TIERS[0]; onClose: () => vo
               </div>
 
               <div className="text-[10px] font-mono text-white/20 text-center">
-                AGPL-3.0 · Free public works declaration · Verified at {result.psiChannel}
+                {t.tier <= 0
+                  ? "AGPL-3.0 · Publicly owned infrastructure · Civilisation-grade permanence"
+                  : "AGPL-3.0 · Free public works declaration · Verified at " + result.psiChannel}
               </div>
 
               <button onClick={onClose}
