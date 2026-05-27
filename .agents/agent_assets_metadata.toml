@@ -203,3 +203,33 @@ id = "Zzk5MPudiGKWl1b68Olh8"
 uri = "file://attached_assets/generated_videos/campaign_cta_tap_tier.mp4"
 type = "video"
 title = "5 — CTA — Tap a Tier ($1 Quanta button → NXT cascade)"
+
+[[outputs]]
+id = "23mOSLJ4M1e_-QsyHrKiE"
+uri = "file://attached_assets/generated_videos/two_tiers_two_ownerships.mp4"
+type = "video"
+title = "1 — The Split (spectral vs hardware ownership side by side)"
+
+[[outputs]]
+id = "Fee9WcyTTOZXByfmFZPkx"
+uri = "file://attached_assets/generated_videos/spectral_ownership_invisible_forever.mp4"
+type = "video"
+title = "2 — Spectral Ownership ($1 → invisible photonic infrastructure, yours forever)"
+
+[[outputs]]
+id = "OHbEIW1Ihhc6AvY26z9fS"
+uri = "file://attached_assets/generated_videos/hardware_ownership_physical_lab.mp4"
+type = "video"
+title = "3 — Hardware Ownership ($50 funds the physical lab bench)"
+
+[[outputs]]
+id = "wFDBvUstUp4a298NYxbaW"
+uri = "file://attached_assets/generated_videos/civilisation_spectral_shareholders.mp4"
+type = "video"
+title = "4 — Civilisation Scale (billions of $1 nodes outlasting everyone)"
+
+[[outputs]]
+id = "_olATvsHBBV3pMdOvoP4z"
+uri = "file://attached_assets/generated_videos/campaign_launch_two_ownership_tiers.mp4"
+type = "video"
+title = "5 — Campaign Launch (both tier cards together, one network)"
