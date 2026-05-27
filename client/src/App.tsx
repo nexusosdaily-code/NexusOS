@@ -102,6 +102,7 @@ import CampaignPage from "@/pages/campaign";
 import VideosPage from "@/pages/videos";
 import SocialBroadcastPage from "@/pages/social-broadcast";
 import NotFound from "@/pages/not-found";
+import WnspLandingPage from "@/pages/wnsp-landing";
 
 function ProtectedRoutes() {
   return (
@@ -241,6 +242,7 @@ function Router() {
       <Route path="/wnsp-uri">{() => { window.location.replace("/spectral-db?tab=write"); return null; }}</Route>
       <Route path="/visualizer">{() => { window.location.replace("/spectral-db?tab=map"); return null; }}</Route>
       {/* Public showcase & proof pages */}
+      <Route path="/wnsp" component={WnspLandingPage} />
       <Route path="/snic" component={SnicPage} />
       <Route path="/open" component={OpenPage} />
       <Route path="/charter" component={OpenPage} />
