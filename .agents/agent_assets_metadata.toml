@@ -143,3 +143,33 @@ id = "Up8r4Ufmmw4oSpxRB2szx"
 uri = "file://attached_assets/generated_videos/nexusos-people-are-the-network.mp4"
 type = "video"
 title = "Clip 6 — People Are the Network"
+
+[[outputs]]
+id = "XjWSmz9jjfSnTzsaxVlDa"
+uri = "file://attached_assets/generated_videos/nexusos_civilization_opener.mp4"
+type = "video"
+title = "1 — Civilization Opener (Earth + light node network)"
+
+[[outputs]]
+id = "g_RehsPgM81pvyEN8LpBT"
+uri = "file://attached_assets/generated_videos/nexusos_snic_hardware.mp4"
+type = "video"
+title = "2 — SNIC Hardware (photonic chip macro)"
+
+[[outputs]]
+id = "oYy_iG1Bm6QiOeqEx3624"
+uri = "file://attached_assets/generated_videos/nexusos_nxt_donation_flow.mp4"
+type = "video"
+title = "3 — NXT Donation Flow (tier tap → tokens cascade)"
+
+[[outputs]]
+id = "S8U5vjEgM-ZctMfEbsBee"
+uri = "file://attached_assets/generated_videos/nexusos_spectral_contract_receipt.mp4"
+type = "video"
+title = "4 — Spectral Contract Receipt (physics-signed doc)"
+
+[[outputs]]
+id = "EeQA2TwlCXYmjSbaWGFwF"
+uri = "file://attached_assets/generated_videos/nexusos_campaign_back_receive.mp4"
+type = "video"
+title = "5 — Campaign Back & Receive (Indiegogo → NXT on-chain)"
