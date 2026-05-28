@@ -238,13 +238,21 @@ export async function inscribeText(
   const inscScript = buildInscriptionScript(internalPubkey, contentType, contentBuf, opts.parentInscriptionId);
   const scriptTree = { output: inscScript };
 
-  // Commit P2TR address (script-path)
+  // Commit P2TR: script-path spend with inscription envelope.
+  // Must pass `redeem` so bitcoinjs-lib generates witness/controlBlock.
+  const redeemArg = { output: inscScript, redeemVersion: 0xC0 as const };
   const commitP2tr = bitcoin.payments.p2tr({
     internalPubkey,
     scriptTree,
+    redeem: redeemArg,
     network: NETWORK,
   });
+  if (!commitP2tr.witness || commitP2tr.witness.length < 2) {
+    throw new Error("Failed to derive P2TR witness for commit address — check bitcoinjs-lib version");
+  }
   const commitAddress = commitP2tr.address!;
+  // Control block is the last item in the witness stack (scriptTree path)
+  const controlBlock = commitP2tr.witness[commitP2tr.witness.length - 1];
 
   // ── Estimate fees ───────────────────────────────────────────────────────
   // Commit: ~150 vbytes base + content overhead
@@ -253,18 +261,21 @@ export async function inscribeText(
   const commitVbytes = 150;
   const revealFee    = revealVbytes * feeRate;
   const commitFee    = commitVbytes * feeRate;
-  const postageValue = 546; // dust limit (satoshis) — the sat that carries the inscription
+  const postageValue = 546; // dust limit — the sat that carries the inscription
   const commitAmount = postageValue + revealFee; // commit sends enough for reveal + postage
 
   // ── Get UTXOs from service wallet ───────────────────────────────────────
   const utxos = await getUTXOs(wallet.address);
   const confirmed = utxos.filter(u => u.status.confirmed);
-  if (confirmed.length === 0) throw new Error(`No confirmed UTXOs on service wallet ${wallet.address}. Send BTC to this address first.`);
+  // Allow unconfirmed UTXOs if no confirmed ones yet (CPFP — both TXs confirm together)
+  const spendable = confirmed.length > 0 ? confirmed : utxos;
+  if (spendable.length === 0) throw new Error(`No UTXOs on service wallet ${wallet.address}. Send BTC to this address first.`);
+  if (confirmed.length === 0) console.log(`[BTC Inscription] Using ${utxos.length} unconfirmed UTXO(s) — CPFP chain`);
 
   // Select UTXOs to cover commitAmount + commitFee
   const needed = commitAmount + commitFee;
   let selected: UTXO[] = [], total = 0;
-  for (const u of confirmed.sort((a, b) => b.value - a.value)) {
+  for (const u of spendable.sort((a, b) => b.value - a.value)) {
     selected.push(u); total += u.value;
     if (total >= needed) break;
   }
@@ -272,6 +283,13 @@ export async function inscribeText(
 
   const change = total - commitAmount - commitFee;
   const changeAddress = opts.changeAddress ?? wallet.address;
+
+  // ── Tweak the private key for key-path spend (BIP341) ───────────────────
+  // Service wallet is key-path only (no script tree), so tweak = TapTweak(pubkey)
+  const rawPrivKey = wallet.keyPair.privateKey!;
+  const tweak = bitcoin.crypto.taggedHash("TapTweak", internalPubkey);
+  const tweakedPrivKeyBuf = Buffer.from(tinysecp.privateAdd(rawPrivKey, tweak)!);
+  const tweakedKeyPair = ECPair.fromPrivateKey(tweakedPrivKeyBuf, { network: NETWORK });
 
   // ── Build Commit TX ─────────────────────────────────────────────────────
   const commitPsbt = new bitcoin.Psbt({ network: NETWORK });
@@ -281,20 +299,16 @@ export async function inscribeText(
       index: u.vout,
       witnessUtxo: {
         script: wallet.p2tr.output!,
-        value: u.value,
+        value: BigInt(u.value),
       },
       tapInternalKey: internalPubkey,
     });
   }
-  commitPsbt.addOutput({ address: commitAddress, value: commitAmount });
-  if (change > 546) commitPsbt.addOutput({ address: changeAddress, value: change });
+  commitPsbt.addOutput({ address: commitAddress, value: BigInt(commitAmount) });
+  if (change > 546) commitPsbt.addOutput({ address: changeAddress, value: BigInt(change) });
 
-  // Sign commit inputs
-  const tweakedSigner = wallet.keyPair.tweak(
-    bitcoin.crypto.taggedHash("TapTweak", internalPubkey)
-  );
   for (let i = 0; i < selected.length; i++) {
-    commitPsbt.signInput(i, tweakedSigner);
+    commitPsbt.signInput(i, tweakedKeyPair);
   }
   commitPsbt.finalizeAllInputs();
   const commitTx = commitPsbt.extractTransaction();
@@ -305,16 +319,17 @@ export async function inscribeText(
   revealPsbt.addInput({
     hash: commitTxid,
     index: 0,
-    witnessUtxo: { script: commitP2tr.output!, value: commitAmount },
+    witnessUtxo: { script: commitP2tr.output!, value: BigInt(commitAmount) },
     tapInternalKey: internalPubkey,
     tapLeafScript: [{
       leafVersion: 0xC0,
       script: inscScript,
-      controlBlock: commitP2tr.witness![commitP2tr.witness!.length - 1],
+      controlBlock,
     }],
   });
-  revealPsbt.addOutput({ address: wallet.address, value: postageValue });
+  revealPsbt.addOutput({ address: wallet.address, value: BigInt(postageValue) });
 
+  // Script-path spend: sign with the original untweaked key
   revealPsbt.signInput(0, wallet.keyPair);
   revealPsbt.finalizeInput(0);
   const revealTx = revealPsbt.extractTransaction();

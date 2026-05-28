@@ -35,27 +35,33 @@ export function buildInscriptionContent(event: BridgeEvent, anchorPsi = "Ψ(27,5
   const ts = new Date().toISOString(), enc = wasciiEncodeText(event.type);
   const lines = [
     "WASCII-v2.0 NEXUSOS EVENT INSCRIPTION",
-    "Wavelength Network Spectral Protocol — Bitcoin Audit Layer",
-    `Anchor: wnsp.sats | ${anchorPsi} | KERNEL band`,
-    `AGPL-3.0 | https://wnsp.io | ${ts.split("T")[0]}`,
+    "Wavelength Network Spectral Protocol (WNSP) — Bitcoin Audit Layer",
+    `Platform : wnsp.tech  |  Organization: wnsp.io`,
+    `Anchor   : wnsp.sats  |  ${anchorPsi}  |  KERNEL band`,
+    `BTC Name : wnsp.btc   |  AGPL-3.0  |  ${ts.split("T")[0]}`,
     SEP, `EVENT   : ${event.type}`, `REF     : ${event.ref}`,
     `TRIGGER : ${event.triggeredBy}`, `TIME    : ${ts}`, SEP, "EVENT DATA", SEP2,
   ];
   Object.entries(event.data).forEach(([k, v]) => { if (v !== null && v !== undefined) lines.push(`${k.padEnd(14)}: ${v}`); });
   lines.push(SEP, "SPECTRAL FINGERPRINT (WASCII-v2.0)", SEP2);
-  Array.from(event.type).forEach((ch, i) => {
+  Array.from(event.type).forEach((ch) => {
     const nm = wNm(ch); lines.push(`${ch.padEnd(4)} → ${nm.toFixed(2)}nm   ${wBand(nm)}`);
   });
   lines.push(SEP2, `MEAN λ  : ${enc.meanNm.toFixed(4)} nm`, `Ψ       : ${enc.psi}`, `BAND    : ${enc.band}`,
     `WNSP URI: wnsp://${enc.psi}/${event.type.toLowerCase().replace(/_/g, "-")}`,
     SEP, "CHAIN ANCHOR", SEP2,
     "Parent  : wnsp.sats (Sats Names Protocol · Bitcoin)",
-    `Anchor Ψ: ${anchorPsi}`, "Protocol: NexusOS WNSP-CE v1.0 / WNSP-SE v1.0",
+    "BTC Name: wnsp.btc  (Bitcoin Name System)",
+    `Anchor Ψ: ${anchorPsi}`,
+    "Protocol: WNSP-CE v1.0 / WNSP-SE v1.0 / WASCII-v2.0",
     "Network : Bitcoin (Taproot · Ordinals)", SEP,
     "This inscription is a permanent audit record of a NexusOS",
-    "blockchain event, anchored to wnsp.sats on Bitcoin.",
+    "blockchain event. Developed at wnsp.tech, governed by wnsp.io.",
     "The physics cannot be altered. The record cannot be burned.",
-    SEP, "SOURCE  : https://wnsp.io", "LICENSE : AGPL-3.0");
+    SEP,
+    "PLATFORM: https://wnsp.tech",
+    "ORG     : https://wnsp.io",
+    "LICENSE : AGPL-3.0");
   return lines.join("\n");
 }
 
@@ -77,8 +83,8 @@ export interface ProcessorStatus {
 
 // ── BtcBridgeService ──────────────────────────────────────────────────────────
 export class BtcBridgeService {
-  private anchorName = "wnsp.sats";
-  private anchorPsi  = "Ψ(27,56,H)";
+  private anchorName = "wnsp.sats";      // Sats Names Protocol anchor
+  private anchorPsi  = "Ψ(27,56,H)";    // KERNEL band, 485nm
   private anchorAddress: string | null = null;
   private parentInscriptionId: string | null = null;
 
@@ -217,12 +223,15 @@ export class BtcBridgeService {
       const wallet = getServiceWallet();
       if (!wallet) { this._busy = false; return; } // no key configured
 
-      // Check balance
-      let balance: { confirmed: number } | null = null;
+      // Check balance (total = confirmed + unconfirmed mempool UTXOs)
+      let balance: { confirmed: number; unconfirmed: number; total: number } | null = null;
       try { balance = await getWalletBalance(wallet.address); } catch { this._busy = false; return; }
-      if (!balance || balance.confirmed < this.minBalanceSats) {
-        if (balance) console.log(`[BTC Bridge] Low balance: ${balance.confirmed} sats — pausing`);
+      if (!balance || balance.total < this.minBalanceSats) {
+        if (balance) console.log(`[BTC Bridge] Low balance: ${balance.total} sats (${balance.confirmed} confirmed, ${balance.unconfirmed} unconfirmed) — pausing`);
         this._busy = false; return;
+      }
+      if (balance.confirmed < this.minBalanceSats) {
+        console.log(`[BTC Bridge] Using unconfirmed UTXOs: ${balance.unconfirmed} sats pending confirmation`);
       }
 
       // Get oldest pending item
