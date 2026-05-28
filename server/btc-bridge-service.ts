@@ -130,6 +130,12 @@ export class BtcBridgeService {
   readonly intervalMs = 30_000;      // check every 30 seconds
   readonly minBalanceSats = 5_000;   // ~$5 minimum before pausing
 
+  // Backoff map: itemId → earliest next retry timestamp (ms)
+  private _backoff = new Map<number, number>();
+  private _backoffBase = 60_000;     // 1 min initial backoff
+  private _backoffMax  = 3_600_000;  // 1 hour cap
+  private _backoffCount = new Map<number, number>(); // itemId → fail count
+
   // ── Persistent anchor (survives restarts) ──────────────────────────────────
   async saveAnchor(address: string | null, parentId: string | null) {
     this.anchorAddress = address;
@@ -277,31 +283,39 @@ export class BtcBridgeService {
       const wallet = getServiceWallet();
       if (!wallet) { this._busy = false; return; } // no key configured
 
-      // Check balance (total = confirmed + unconfirmed mempool UTXOs)
+      // Check CONFIRMED balance only — unconfirmed UTXOs cannot fund new txs reliably
       let balance: { confirmed: number; unconfirmed: number; total: number } | null = null;
       try { balance = await getWalletBalance(wallet.address); } catch { this._busy = false; return; }
-      if (!balance || balance.total < this.minBalanceSats) {
-        if (balance) console.log(`[BTC Bridge] Low balance: ${balance.total} sats (${balance.confirmed} confirmed, ${balance.unconfirmed} unconfirmed) — pausing`);
+      if (!balance) { this._busy = false; return; }
+
+      if (balance.confirmed < this.minBalanceSats) {
+        console.log(`[BTC Bridge] Waiting for confirmations — ${balance.confirmed} confirmed / ${balance.unconfirmed} unconfirmed sats (need ${this.minBalanceSats} confirmed)`);
         this._busy = false; return;
       }
-      if (balance.confirmed < this.minBalanceSats) {
-        console.log(`[BTC Bridge] Using unconfirmed UTXOs: ${balance.unconfirmed} sats pending confirmation`);
-      }
 
-      // Get oldest pending item
+      // Get oldest pending item that is not in backoff
       const { db } = await import("./db");
       const { btcInscriptionQueue } = await import("../shared/schema");
       const { eq, asc } = await import("drizzle-orm");
-      const [item] = await db.select().from(btcInscriptionQueue)
+
+      const allPending = await db.select().from(btcInscriptionQueue)
         .where(eq(btcInscriptionQueue.status, "pending"))
-        .orderBy(asc(btcInscriptionQueue.createdAt))
-        .limit(1);
+        .orderBy(asc(btcInscriptionQueue.createdAt));
 
-      // Update queue depth
-      const pending = await db.select().from(btcInscriptionQueue).where(eq(btcInscriptionQueue.status, "pending"));
-      this._queueDepth = pending.length;
+      this._queueDepth = allPending.length;
 
-      if (!item) { this._busy = false; return; }
+      const now = Date.now();
+      const item = allPending.find(i => {
+        const nextRetry = this._backoff.get(i.id) ?? 0;
+        return now >= nextRetry;
+      });
+
+      if (!item) {
+        const next = Math.min(...[...this._backoff.values()].filter(t => t > now));
+        const waitSec = isFinite(next) ? Math.round((next - now) / 1000) : 0;
+        if (waitSec > 0) console.log(`[BTC Bridge] All pending items in backoff — next retry in ${waitSec}s`);
+        this._busy = false; return;
+      }
 
       console.log(`[BTC Bridge] Auto-inscribing queue item #${item.id} (${item.eventType})`);
 
@@ -319,18 +333,26 @@ export class BtcBridgeService {
           confirmedAt: new Date(),
         }).where(eq(btcInscriptionQueue.id, item.id));
 
+        // Clear backoff on success
+        this._backoff.delete(item.id);
+        this._backoffCount.delete(item.id);
         this._totalProcessed++;
         this._lastInscriptionId   = result.inscriptionId;
         this._lastInscriptionTime = new Date().toISOString();
         this._queueDepth          = Math.max(0, this._queueDepth - 1);
         console.log(`[BTC Bridge] ✓ Inscribed #${item.id} → ${result.inscriptionId} (fee: ${result.feeSats} sats)`);
       } catch (inscribeErr: any) {
-        // Roll back to pending so it can be retried
+        // Roll back to pending with exponential backoff — do NOT immediately re-queue
         await db.update(btcInscriptionQueue).set({ status: "pending" }).where(eq(btcInscriptionQueue.id, item.id));
+        const failCount = (this._backoffCount.get(item.id) ?? 0) + 1;
+        this._backoffCount.set(item.id, failCount);
+        const delay = Math.min(this._backoffBase * Math.pow(2, failCount - 1), this._backoffMax);
+        this._backoff.set(item.id, Date.now() + delay);
         this._totalFailed++;
         this._lastError     = inscribeErr.message;
         this._lastErrorTime = new Date().toISOString();
-        console.error(`[BTC Bridge] ✗ Inscription failed for #${item.id}:`, inscribeErr.message);
+        const retryIn = Math.round(delay / 1000);
+        console.error(`[BTC Bridge] ✗ Inscription failed for #${item.id} (attempt ${failCount}): ${inscribeErr.message} — retry in ${retryIn}s`);
       }
     } catch (err: any) {
       this._lastError     = err.message;
