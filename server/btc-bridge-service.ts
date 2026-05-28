@@ -52,6 +52,9 @@ export type BridgeEventType =
   // ── BRC-20 (raw JSON inscriptions — no WASCII wrapper)
   | "BRC20_DEPLOY"        // deploy a BRC-20 token
   | "BRC20_MINT"          // mint BRC-20 tokens
+  | "RUNE_ETCH"           // etch (create) a new Rune linked to a WNSP spectral channel
+  | "RUNE_MINT"           // mint units of an existing Rune
+  | "RUNE_TRANSFER"       // transfer Rune balance
   | "BRC20_TRANSFER";     // transfer BRC-20 tokens
 
 export interface BridgeEvent {

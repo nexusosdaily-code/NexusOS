@@ -7143,6 +7143,126 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ── RUNES BRIDGE ─────────────────────────────────────────────────────────────
+  // Canonical WNSP-band → Rune-name mapping
+  const WNSP_RUNE_MAP = [
+    { band: "SYSTEM",  nm: [380,450], color: "#8b5cf6", runeName: "NEXUSOS•SYSTEM•BAND",  symbol: "Υ", supply: "21000000000", desc: "UV authority band — root orchestration layer" },
+    { band: "KERNEL",  nm: [450,490], color: "#3b82f6", runeName: "NEXUSOS•KERNEL•BAND",  symbol: "Κ", supply: "21000000000", desc: "Blue band — OS kernel & boot events" },
+    { band: "STREAM",  nm: [490,520], color: "#22d3ee", runeName: "NEXUSOS•STREAM•BAND",  symbol: "Σ", supply: "21000000000", desc: "Cyan band — real-time data streams" },
+    { band: "CORE",    nm: [520,565], color: "#34d399", runeName: "NEXUSOS•CORE•BAND",    symbol: "Ω", supply: "21000000000", desc: "Green band — protocol core operations" },
+    { band: "UI",      nm: [565,590], color: "#fbbf24", runeName: "NEXUSOS•UI•BAND",      symbol: "Φ", supply: "21000000000", desc: "Yellow band — user interface events" },
+    { band: "EVENT",   nm: [590,625], color: "#f97316", runeName: "NEXUSOS•EVENT•BAND",   symbol: "Ε", supply: "21000000000", desc: "Orange band — governance & triggers" },
+    { band: "STORAGE", nm: [625,780], color: "#f87171", runeName: "NEXUSOS•STORAGE•BAND", symbol: "Δ", supply: "21000000000", desc: "Red band — persistent state & files" },
+    { band: "NXT",     nm: [380,780], color: "#a78bfa", runeName: "NEXUSOS•NXT•TOKEN",    symbol: "N", supply: "21000000000", desc: "Full-spectrum — NexusOS native currency" },
+    { band: "WNSP",    nm: [380,780], color: "#fb923c", runeName: "NEXUSOS•WNSP•PROTOCOL",symbol: "Ψ", supply: "25600",       desc: "25,600 orthogonal Ψ channels — Hilbert space density" },
+  ];
+
+  app.get("/api/btc-bridge/runes", async (req: Request, res: Response) => {
+    try {
+      const { getServiceWallet } = await import("./btc-inscription-engine");
+      const wallet = getServiceWallet();
+      const address = wallet?.address ?? null;
+
+      // On-chain Rune balances via Hiro (free, no key)
+      let chainBalances: any[] = [];
+      let hiroError: string | null = null;
+      if (address) {
+        try {
+          const r = await fetch(
+            `https://api.hiro.so/runes/v1/addresses/${address}/balances`,
+            { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(8000) }
+          );
+          if (r.ok) { const d = await r.json(); chainBalances = d.results ?? []; }
+          else hiroError = `Hiro API ${r.status}`;
+        } catch (e: any) { hiroError = e.message; }
+      }
+
+      // Queued Rune events from our DB
+      const { db } = await import("./db");
+      const { btcInscriptionQueue } = await import("../shared/schema");
+      const { inArray } = await import("drizzle-orm");
+      const runeQueue = await db.select().from(btcInscriptionQueue)
+        .where(inArray(btcInscriptionQueue.eventType as any, ["RUNE_ETCH","RUNE_MINT","RUNE_TRANSFER"] as any));
+
+      res.json({
+        address,
+        unisatRunesUrl: address ? `https://unisat.io/runes/address/${address}` : null,
+        hiroRunesUrl:   address ? `https://api.hiro.so/runes/v1/addresses/${address}/balances` : null,
+        etchWizardUrl:  "https://unisat.io/runes/etch",
+        wnspRuneMap:    WNSP_RUNE_MAP.map(r => ({
+          ...r,
+          unisatUrl:   `https://unisat.io/runes/${r.runeName}`,
+          hiroUrl:     `https://api.hiro.so/runes/v1/etchings/${r.runeName}`,
+          marketUrl:   `https://unisat.io/market/rune?tick=${r.runeName}`,
+        })),
+        chainBalances,
+        hiroError,
+        runeQueue: runeQueue.map(i => ({
+          id: i.id, eventType: i.eventType, status: i.status,
+          inscriptionId: i.inscriptionId,
+          contentPreview: i.inscriptionContent.slice(0, 200),
+          confirmedAt: i.confirmedAt,
+        })),
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Etch a new Rune linked to a WNSP spectral channel — inscribes the claim on Bitcoin
+  app.post("/api/btc-bridge/runes/etch", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { runeName, band, symbol, supply, decimals = 0, mintCap, mintAmount, premine = "0", turbo = true, note } = req.body;
+      if (!runeName || !band) return res.status(400).json({ error: "runeName and band required" });
+
+      const cleanName = String(runeName).toUpperCase().replace(/[^A-Z•]/g, "").trim();
+      if (cleanName.length < 3) return res.status(400).json({ error: "Rune name too short" });
+
+      const content = JSON.stringify({
+        p: "wnsp-rune",
+        op: "etch",
+        rune: cleanName,
+        band,
+        symbol: symbol ?? "Ψ",
+        supply: supply ?? "21000000000",
+        decimals,
+        ...(mintCap   ? { mint_cap: String(mintCap) }    : {}),
+        ...(mintAmount? { mint_amount: String(mintAmount)}: {}),
+        premine: String(premine),
+        turbo,
+        psi: `WNSP-RUNE-ETCH-${cleanName}`,
+        note: note ?? `NexusOS WNSP spectral channel claim — ${band} band`,
+        timestamp: new Date().toISOString(),
+        protocol: "wnsp://runes/v1",
+      });
+
+      const { btcBridge } = await import("./btc-bridge-service");
+      const queued = await btcBridge.queueRawContent({
+        eventType:   "RUNE_ETCH",
+        ref:         `rune-etch-${cleanName}-${Date.now()}`,
+        content,
+        triggeredBy: (req as any).user?.username ?? "wnsp.io",
+      });
+
+      await logAction(req, "rune_etch_queued", "runes", queued.id?.toString(), {}, "success",
+        `Rune etch queued: ${cleanName} (${band} band)`);
+      res.json({ ok: true, queued, runeName: cleanName, content,
+        unisatEtchUrl: "https://unisat.io/runes/etch",
+        note: "Inscription claims this Rune name on Bitcoin. Complete the on-chain etch via Unisat wallet to activate the Rune protocol." });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Mint units of an existing Rune
+  app.post("/api/btc-bridge/runes/mint", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { runeName, amount } = req.body;
+      if (!runeName || !amount) return res.status(400).json({ error: "runeName and amount required" });
+      const cleanName = String(runeName).toUpperCase().replace(/[^A-Z•]/g, "").trim();
+      const content = JSON.stringify({ p: "wnsp-rune", op: "mint", rune: cleanName, amt: String(amount), timestamp: new Date().toISOString() });
+      const { btcBridge } = await import("./btc-bridge-service");
+      const queued = await btcBridge.queueRawContent({ eventType: "RUNE_MINT", ref: `rune-mint-${cleanName}-${Date.now()}`, content, triggeredBy: (req as any).user?.username ?? "wnsp.io" });
+      res.json({ ok: true, queued, runeName: cleanName });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // Unisat Bridge — fetch on-chain inscriptions for our service wallet and cross-ref DB
   app.get("/api/btc-bridge/unisat-bridge", async (req: Request, res: Response) => {
     try {

@@ -1196,7 +1196,297 @@ function Brc20Tab() {
   );
 }
 
-// TAB 5 — UNISAT BRIDGE
+// TAB 5 — RUNES BRIDGE
+// ══════════════════════════════════════════════════════════════════════════════
+function RunesTab() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/btc-bridge/runes"],
+    refetchInterval: 60_000,
+  });
+
+  const [etchMode, setEtchMode] = useState(false);
+  const [selectedBand, setSelectedBand] = useState<any>(null);
+  const [customName, setCustomName] = useState("");
+  const [mintCap, setMintCap]   = useState("210000");
+  const [mintAmt, setMintAmt]   = useState("100000");
+  const [etchBusy, setEtchBusy] = useState(false);
+  const [etchMsg, setEtchMsg]   = useState("");
+  const [etchJson, setEtchJson] = useState("");
+  const [mintRuneName, setMintRuneName] = useState("");
+  const [mintAmt2, setMintAmt2] = useState("100000");
+  const [mintBusy, setMintBusy] = useState(false);
+  const [mintMsg, setMintMsg]   = useState("");
+
+  const wnspRuneMap: any[] = data?.wnspRuneMap ?? [];
+  const chainBalances: any[] = data?.chainBalances ?? [];
+  const runeQueue: any[] = data?.runeQueue ?? [];
+
+  async function apiFetch(url: string, opts: RequestInit = {}) {
+    const res = await fetch(url, { ...opts, headers: { "Content-Type": "application/json", ...(opts.headers ?? {}) }, credentials: "include" });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error ?? "Request failed");
+    return d;
+  }
+
+  async function handleEtch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedBand) return;
+    setEtchBusy(true); setEtchMsg(""); setEtchJson("");
+    try {
+      const runeName = customName.trim() || selectedBand.runeName;
+      const result = await apiFetch("/api/btc-bridge/runes/etch", {
+        method: "POST",
+        body: JSON.stringify({ runeName, band: selectedBand.band, symbol: selectedBand.symbol, supply: selectedBand.supply, mintCap, mintAmount: mintAmt, turbo: true }),
+      });
+      setEtchJson(JSON.stringify(result.queued ?? {}, null, 2));
+      setEtchMsg(`Claim inscription queued for ${runeName}`);
+      qc.invalidateQueries({ queryKey: ["/api/btc-bridge/runes"] });
+    } catch (err: any) { setEtchMsg(`Error: ${err.message}`); }
+    finally { setEtchBusy(false); }
+  }
+
+  async function handleMint(e: React.FormEvent) {
+    e.preventDefault();
+    setMintBusy(true); setMintMsg("");
+    try {
+      const result = await apiFetch("/api/btc-bridge/runes/mint", {
+        method: "POST",
+        body: JSON.stringify({ runeName: mintRuneName, amount: mintAmt2 }),
+      });
+      setMintMsg(`Mint queued for ${result.runeName}`);
+      qc.invalidateQueries({ queryKey: ["/api/btc-bridge/runes"] });
+    } catch (err: any) { setMintMsg(`Error: ${err.message}`); }
+    finally { setMintBusy(false); }
+  }
+
+  const bandBg: Record<string, string> = {
+    SYSTEM: "#8b5cf622", KERNEL: "#3b82f622", STREAM: "#22d3ee22", CORE: "#34d39922",
+    UI: "#fbbf2422", EVENT: "#f9731622", STORAGE: "#f8717122", NXT: "#a78bfa22", WNSP: "#fb923c22",
+  };
+
+  return (
+    <div className="space-y-6">
+
+      {/* Header */}
+      <div className="rounded-2xl border border-purple-500/20 bg-purple-500/5 p-5 space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Zap size={13} className="text-purple-400" />
+            <span className="text-xs font-mono font-bold text-purple-400 uppercase tracking-wider">WNSP × Runes Protocol</span>
+          </div>
+          {data?.address && (
+            <a href={data.unisatRunesUrl} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 text-[10px] text-orange-400 hover:text-orange-300 font-mono transition-colors">
+              <ExternalLink size={9} /> View on Unisat
+            </a>
+          )}
+        </div>
+        <p className="text-[11px] text-white/50 leading-relaxed">
+          Each WNSP authority band maps to a canonical Rune name. Etching these Runes on Bitcoin permanently links NexusOS spectral encoding standards to the Runes protocol — every band becomes a tradeable, physics-named Bitcoin asset.
+        </p>
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          {[
+            { label: "7 spectral bands", sub: "→ 7 canonical Rune names", color: "#a78bfa" },
+            { label: "21B supply each", sub: "mirrors NXT token economics", color: "#34d399" },
+            { label: "Unisat + Hiro", sub: "live chain discovery", color: "#f97316" },
+          ].map(({ label, sub, color }) => (
+            <div key={label} className="rounded-xl border border-white/5 bg-white/[0.02] p-2.5">
+              <div className="text-[10px] font-mono font-bold" style={{ color }}>{label}</div>
+              <div className="text-[9px] text-white/30 mt-0.5">{sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* On-chain Rune balances */}
+      {chainBalances.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Wallet size={12} className="text-emerald-400" />
+            <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">On-Chain Rune Balances</span>
+          </div>
+          <div className="space-y-1.5">
+            {chainBalances.map((b: any, i: number) => (
+              <div key={i} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2">
+                <div>
+                  <div className="font-mono text-xs text-white/80">{b.name ?? b.rune}</div>
+                  <div className="text-[9px] text-white/30">Balance: {Number(b.balance ?? 0).toLocaleString()}</div>
+                </div>
+                <a href={`https://unisat.io/runes/${b.name ?? b.rune}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[10px] text-orange-400 hover:text-orange-300 transition-colors">
+                  <ExternalLink size={9} /> Unisat
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* WNSP → Rune name mapping table */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Waves size={12} className="text-cyan-400" />
+            <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-wider">Spectral Band → Rune Mapping</span>
+          </div>
+          <button onClick={() => qc.invalidateQueries({ queryKey: ["/api/btc-bridge/runes"] })}
+            className="text-white/30 hover:text-white/60 transition-colors"><RefreshCw size={12} /></button>
+        </div>
+
+        {isLoading && <div className="text-xs text-white/30 text-center py-4 font-mono">Loading Rune map…</div>}
+
+        <div className="space-y-2">
+          {wnspRuneMap.map((r: any) => (
+            <div key={r.band} className="rounded-xl border border-white/8 p-3 space-y-2 cursor-pointer hover:border-white/20 transition-all"
+              style={{ background: bandBg[r.band] ?? "#ffffff08" }}
+              onClick={() => { setSelectedBand(r); setCustomName(r.runeName); setEtchMode(true); }}>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-lg" style={{ color: r.color }}>{r.symbol}</span>
+                  <div>
+                    <div className="font-mono text-xs font-bold" style={{ color: r.color }}>{r.band}</div>
+                    <div className="text-[9px] text-white/30">{r.nm[0]}–{r.nm[1]}nm</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a href={r.unisatUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                    className="flex items-center gap-1 text-[10px] text-orange-400 hover:text-orange-300 font-mono transition-colors">
+                    <ExternalLink size={9} /> Unisat
+                  </a>
+                  <a href={r.hiroUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                    className="flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 font-mono transition-colors">
+                    <ExternalLink size={9} /> Hiro
+                  </a>
+                  <a href={r.marketUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                    className="flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono transition-colors">
+                    <ExternalLink size={9} /> Market
+                  </a>
+                </div>
+              </div>
+              <div className="font-mono text-[11px] text-white/60 tracking-wider">{r.runeName}</div>
+              <div className="text-[9px] text-white/30">{r.desc}</div>
+              <div className="text-[9px] text-white/20">Supply: {Number(r.supply).toLocaleString()} · Click to etch</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Etch form */}
+      {etchMode && selectedBand && (
+        <div className="rounded-2xl border border-purple-500/30 bg-purple-500/5 p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Hash size={12} className="text-purple-400" />
+              <span className="text-xs font-mono font-bold text-purple-400 uppercase">Etch Rune — {selectedBand.band} Band</span>
+            </div>
+            <button onClick={() => setEtchMode(false)} className="text-white/30 hover:text-white/60 text-xs">✕</button>
+          </div>
+          <p className="text-[10px] text-white/40 leading-relaxed">
+            This inscribes the spectral channel claim permanently on Bitcoin via an Ordinal, then links to the Unisat Rune etch wizard to complete the on-chain Rune creation. Two-step: claim first, etch second.
+          </p>
+          <form onSubmit={handleEtch} className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-[10px] text-white/40 font-mono uppercase">Rune Name</label>
+              <input value={customName} onChange={e => setCustomName(e.target.value.toUpperCase().replace(/[^A-Z•]/g, ""))}
+                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 font-mono text-xs text-white focus:outline-none focus:border-purple-500/50"
+                placeholder="NEXUSOS•KERNEL•BAND" />
+              <div className="text-[9px] text-white/20">A-Z and • separator only</div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-[10px] text-white/40 font-mono uppercase">Mint Cap</label>
+                <input value={mintCap} onChange={e => setMintCap(e.target.value)}
+                  className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 font-mono text-xs text-white focus:outline-none focus:border-purple-500/50"
+                  placeholder="210000" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] text-white/40 font-mono uppercase">Amount / Mint</label>
+                <input value={mintAmt} onChange={e => setMintAmt(e.target.value)}
+                  className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 font-mono text-xs text-white focus:outline-none focus:border-purple-500/50"
+                  placeholder="100000" />
+              </div>
+            </div>
+            <button type="submit" disabled={etchBusy || !customName.trim()}
+              className="w-full py-2 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs font-mono font-bold transition-all">
+              {etchBusy ? "Inscribing claim…" : `Inscribe Claim → ${customName || selectedBand.runeName}`}
+            </button>
+            {etchMsg && <div className={`text-[10px] font-mono p-2 rounded-lg ${etchMsg.startsWith("Error") ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"}`}>{etchMsg}</div>}
+            {etchJson && (
+              <>
+                <div className="text-[9px] text-white/30 font-mono">Then complete the etch on Unisat:</div>
+                <a href={data?.etchWizardUrl ?? "https://unisat.io/runes/etch"} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-2 rounded-xl border border-orange-500/30 text-orange-400 hover:bg-orange-500/10 text-xs font-mono transition-all">
+                  <ExternalLink size={11} /> Open Unisat Rune Etch Wizard
+                </a>
+                <pre className="text-[9px] text-white/30 font-mono bg-black/30 rounded-lg p-2 overflow-auto max-h-32">{etchJson}</pre>
+              </>
+            )}
+          </form>
+        </div>
+      )}
+
+      {/* Mint existing Rune */}
+      <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Play size={12} className="text-emerald-400" />
+          <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Mint Existing Rune</span>
+        </div>
+        <form onSubmit={handleMint} className="flex items-end gap-2 flex-wrap">
+          <div className="flex-1 space-y-1 min-w-32">
+            <label className="text-[10px] text-white/40 font-mono uppercase">Rune Name</label>
+            <input value={mintRuneName} onChange={e => setMintRuneName(e.target.value.toUpperCase().replace(/[^A-Z•]/g, ""))}
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 font-mono text-xs text-white focus:outline-none focus:border-emerald-500/50"
+              placeholder="NEXUSOS•KERNEL•BAND" />
+          </div>
+          <div className="w-28 space-y-1">
+            <label className="text-[10px] text-white/40 font-mono uppercase">Amount</label>
+            <input value={mintAmt2} onChange={e => setMintAmt2(e.target.value)}
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 font-mono text-xs text-white focus:outline-none focus:border-emerald-500/50"
+              placeholder="100000" />
+          </div>
+          <button type="submit" disabled={mintBusy || !mintRuneName.trim()}
+            className="py-2 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 text-white text-xs font-mono font-bold transition-all">
+            {mintBusy ? "…" : "Mint"}
+          </button>
+        </form>
+        {mintMsg && <div className={`text-[10px] font-mono p-2 rounded-lg ${mintMsg.startsWith("Error") ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"}`}>{mintMsg}</div>}
+      </div>
+
+      {/* Queued Rune operations */}
+      {runeQueue.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs font-mono font-bold text-white/40 uppercase tracking-wider">Queued Rune Operations ({runeQueue.length})</div>
+          {runeQueue.map((item: any) => (
+            <div key={item.id} className="rounded-xl border border-white/8 bg-white/[0.02] p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono text-purple-400">{item.eventType}</span>
+                <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${item.status === "confirmed" ? "bg-emerald-500/20 text-emerald-400" : item.status === "pending" ? "bg-amber-500/20 text-amber-400" : "bg-cyan-500/20 text-cyan-400"}`}>{item.status}</span>
+              </div>
+              <div className="font-mono text-[9px] text-white/30 truncate">{item.contentPreview}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Protocol explanation */}
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4 space-y-2">
+        <div className="text-[10px] font-mono text-white/40 uppercase tracking-wider">Why Runes + WNSP</div>
+        <ul className="text-[10px] text-white/30 space-y-1">
+          <li>→ Runes use base-26 naming (A-Z + •) — the same conceptual space as WASCII spectral encoding</li>
+          <li>→ A Rune name <em>is</em> a spectral fingerprint: <span className="text-purple-400">NEXUSOS•KERNEL•BAND</span> encodes authority, wavelength range, and function</li>
+          <li>→ 21B supply per band mirrors NXT economics — physics-consistent scarcity</li>
+          <li>→ Runes use OP_RETURN (more efficient than BRC-20 inscriptions) — lower fees, faster confirmation</li>
+          <li>→ WNSP•PROTOCOL supply = 25,600 — exactly the number of orthogonal Ψ channels in Hilbert space</li>
+          <li>→ Once etched, each Rune is permanently owned by Bitcoin — no server, no permission required</li>
+        </ul>
+      </div>
+
+    </div>
+  );
+}
+
+// TAB 6 — UNISAT BRIDGE
 // ══════════════════════════════════════════════════════════════════════════════
 function UniSatBridgeTab() {
   const qc = useQueryClient();
@@ -1424,6 +1714,7 @@ const TABS = [
   { id: "bridge",       label: "Auto-Bridge",   icon: Zap   },
   { id: "identity",     label: "Identity",      icon: Bitcoin },
   { id: "brc20",        label: "BRC-20",        icon: Activity },
+  { id: "runes",        label: "Runes",         icon: Hash   },
   { id: "unisat",       label: "Unisat Bridge", icon: Globe  },
 ];
 
@@ -1491,6 +1782,7 @@ export default function WnspOrdinalsPage() {
         {tab === "bridge"       && <AutoBridgeTab />}
         {tab === "identity"     && <IdentityTab />}
         {tab === "brc20"        && <Brc20Tab />}
+        {tab === "runes"        && <RunesTab />}
         {tab === "unisat"       && <UniSatBridgeTab />}
 
         {/* Footer */}
