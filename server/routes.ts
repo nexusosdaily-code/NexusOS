@@ -667,6 +667,34 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/auth/recover", async (req: Request, res: Response) => {
+    try {
+      const { username, newPassword, recoveryKey } = req.body;
+      if (!username || !newPassword || !recoveryKey)
+        return res.status(400).json({ error: "username, newPassword, and recoveryKey required" });
+      if (newPassword.length < 8)
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+
+      const wif = process.env.BTC_INSCRIPTION_WALLET_WIF ?? "";
+      const trimmed = recoveryKey.trim();
+      if (!wif || trimmed !== wif.trim())
+        return res.status(401).json({ error: "Invalid recovery key" });
+
+      const user = await storage.getUserByUsername(username);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      const bcrypt = await import("bcrypt");
+      const hash = await bcrypt.hash(newPassword, 12);
+      const { db } = await import("./db");
+      const { users } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ passwordHash: hash }).where(eq(users.id, user.id));
+
+      await logAction(req, "password_recovered", "auth", user.id, {}, "success", "Recovery via wallet key");
+      res.json({ ok: true, message: "Password updated — you can now log in" });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   app.post("/api/auth/logout", authenticate, async (req, res) => {
     try {
       if (req.session) {

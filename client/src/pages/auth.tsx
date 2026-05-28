@@ -20,6 +20,9 @@ export default function AuthPage() {
     password: "",
     confirmPassword: "",
   });
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [recoveryData, setRecoveryData] = useState({ username: "Nexus", newPassword: "", confirmPassword: "", recoveryKey: "" });
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +66,32 @@ export default function AuthPage() {
       inFlight.current = false;
       setIsLoading(false);
     }
+  };
+
+  const handleRecover = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (recoveryData.newPassword !== recoveryData.confirmPassword) {
+      toast({ title: "Passwords don't match", variant: "destructive" }); return;
+    }
+    if (recoveryData.newPassword.length < 8) {
+      toast({ title: "Password must be 8+ characters", variant: "destructive" }); return;
+    }
+    setRecoveryLoading(true);
+    try {
+      const res = await fetch("/api/auth/recover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: recoveryData.username, newPassword: recoveryData.newPassword, recoveryKey: recoveryData.recoveryKey }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Recovery failed");
+      toast({ title: "Password updated", description: "You can now log in with your new password." });
+      setShowRecovery(false);
+      setLoginData({ username: recoveryData.username, password: "" });
+      setRecoveryData({ username: "Nexus", newPassword: "", confirmPassword: "", recoveryKey: "" });
+    } catch (err: any) {
+      toast({ title: "Recovery failed", description: err.message, variant: "destructive" });
+    } finally { setRecoveryLoading(false); }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -198,7 +227,84 @@ export default function AuthPage() {
                 >
                   {isLoading ? "Logging in..." : "Login"}
                 </Button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowRecovery(v => !v)}
+                  className="w-full text-xs text-gray-500 hover:text-amber-400 transition-colors pt-1"
+                >
+                  {showRecovery ? "▲ Hide recovery" : "Forgot password? Recover with wallet key"}
+                </button>
               </form>
+
+              {showRecovery && (
+                <form onSubmit={handleRecover} className="mt-4 pt-4 border-t border-amber-500/20 space-y-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="text-amber-400 text-xs">🔑</div>
+                    <div>
+                      <div className="text-xs font-semibold text-amber-400">Account Recovery</div>
+                      <div className="text-[10px] text-gray-500">Prove wallet ownership to reset your password</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-gray-400 text-xs">Username</Label>
+                    <Input
+                      value={recoveryData.username}
+                      onChange={e => setRecoveryData(d => ({ ...d, username: e.target.value }))}
+                      className="bg-slate-800/50 border-slate-700 text-sm"
+                      placeholder="Nexus"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-gray-400 text-xs">New Password</Label>
+                    <Input
+                      type="password"
+                      value={recoveryData.newPassword}
+                      onChange={e => setRecoveryData(d => ({ ...d, newPassword: e.target.value }))}
+                      className="bg-slate-800/50 border-slate-700 text-sm"
+                      placeholder="8+ characters"
+                      autoComplete="new-password"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-gray-400 text-xs">Confirm Password</Label>
+                    <Input
+                      type="password"
+                      value={recoveryData.confirmPassword}
+                      onChange={e => setRecoveryData(d => ({ ...d, confirmPassword: e.target.value }))}
+                      className="bg-slate-800/50 border-slate-700 text-sm"
+                      placeholder="Repeat password"
+                      autoComplete="new-password"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-gray-400 text-xs">Wallet Recovery Key (WIF)</Label>
+                    <Input
+                      type="password"
+                      value={recoveryData.recoveryKey}
+                      onChange={e => setRecoveryData(d => ({ ...d, recoveryKey: e.target.value }))}
+                      className="bg-slate-800/50 border-amber-500/30 text-sm font-mono"
+                      placeholder="Your Bitcoin wallet WIF key"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                    />
+                    <p className="text-[10px] text-gray-600">Your BTC_INSCRIPTION_WALLET_WIF from Replit Secrets — only the wallet owner can reset the password.</p>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={recoveryLoading || !recoveryData.recoveryKey || !recoveryData.newPassword}
+                    className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    {recoveryLoading ? "Resetting..." : "Reset Password"}
+                  </Button>
+                </form>
+              )}
             </TabsContent>
 
             <TabsContent value="register">
