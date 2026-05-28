@@ -1266,6 +1266,16 @@ export async function registerRoutes(
         fee: fee.toFixed(8),
       });
 
+      // ── BTC auto-inscription hook ───────────────────────────────────────
+      import("./btc-bridge-service").then(({ btcBridge }) => {
+        btcBridge.triggerFromTransaction({
+          id: transaction.id, type: "transfer", amount,
+          fromWalletId: fromWallet.id, toWalletId: toWallet.id,
+          wavelength: wavelength.toString(), frequency: frequency.toString(),
+          status: "confirmed", triggeredBy: (req as any).user?.username ?? "user",
+        }).catch(() => {});
+      }).catch(() => {});
+
       res.json({
         message: "Transfer successful",
         transaction: {
@@ -6435,6 +6445,10 @@ export async function registerRoutes(
       if (tallied.status === "passed") {
         const executed = await storage.executeGovernanceProposal(proposalId);
         applyGovernanceParam(executed.parameterKey, parseFloat(executed.proposedValue));
+        // ── BTC auto-inscription hook ─────────────────────────────────────
+        import("./btc-bridge-service").then(({ btcBridge }) => {
+          btcBridge.triggerFromGovernance({ id: executed.id, title: executed.title, status: "executed", executor: user.username }).catch(() => {});
+        }).catch(() => {});
         return res.json({ proposal: executed });
       }
       res.json({ proposal: tallied });
@@ -6902,6 +6916,22 @@ export async function registerRoutes(
   });
 
   // ── BTC Full-Auto Inscription Bridge ─────────────────────────────────────
+  app.get("/api/btc-bridge/status", async (_req: Request, res: Response) => {
+    try {
+      const { btcBridge } = await import("./btc-bridge-service");
+      res.json(btcBridge.getStatus());
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/btc-bridge/processor/toggle", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { enabled } = req.body;
+      const { btcBridge } = await import("./btc-bridge-service");
+      btcBridge.setEnabled(!!enabled);
+      res.json({ ok: true, enabled: !!enabled });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   app.get("/api/btc-bridge/wallet", async (_req: Request, res: Response) => {
     try {
       const { getServiceWalletInfo, getWalletBalance } = await import("./btc-inscription-engine");

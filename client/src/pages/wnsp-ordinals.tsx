@@ -355,8 +355,9 @@ function AutoBridgeTab() {
   const [triggerBusy, setTriggerBusy] = useState(false);
 
   const { data: walletData, isLoading: walletLoading } = useQuery<any>({ queryKey: ["/api/btc-bridge/wallet"], refetchInterval: 30_000 });
-  const { data: queueData, isLoading: queueLoading } = useQuery<any>({ queryKey: ["/api/btc-bridge/queue"], refetchInterval: 10_000 });
+  const { data: queueData, isLoading: queueLoading } = useQuery<any>({ queryKey: ["/api/btc-bridge/queue"], refetchInterval: 8_000 });
   const { data: feeData } = useQuery<any>({ queryKey: ["/api/btc-bridge/fee-rate"], refetchInterval: 60_000 });
+  const { data: statusData } = useQuery<any>({ queryKey: ["/api/btc-bridge/status"], refetchInterval: 5_000 });
 
   async function handleAutoInscribe(id: number) {
     setInscribingId(id); setInscribeMsg(m => ({ ...m, [id]: "" }));
@@ -384,8 +385,86 @@ function AutoBridgeTab() {
     finally { setTriggerBusy(false); }
   }
 
+  async function toggleProcessor(enabled: boolean) {
+    try {
+      await apiFetch("/api/btc-bridge/processor/toggle", { method: "POST", body: JSON.stringify({ enabled }) });
+      qc.invalidateQueries({ queryKey: ["/api/btc-bridge/status"] });
+    } catch { /* ignore */ }
+  }
+
+  const isLive   = statusData?.running && statusData?.enabled;
+  const isPaused = statusData?.running && !statusData?.enabled;
+
   return (
     <div className="space-y-6">
+      {/* ── Auto-Processor Live Status ─────────────────────────────────── */}
+      <div className={`rounded-2xl border p-4 space-y-3 ${isLive ? "border-emerald-500/30 bg-emerald-500/5" : isPaused ? "border-amber-500/30 bg-amber-500/5" : "border-white/8 bg-white/[0.02]"}`}>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className={`relative flex h-2.5 w-2.5 shrink-0`}>
+              <span className={`${isLive ? "animate-ping bg-emerald-400" : isPaused ? "bg-amber-400" : "bg-white/20"} absolute inline-flex h-full w-full rounded-full opacity-75`} />
+              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isLive ? "bg-emerald-400" : isPaused ? "bg-amber-400" : "bg-white/20"}`} />
+            </span>
+            <div>
+              <div className="text-[11px] font-mono font-bold text-white/80">
+                Auto-Processor&nbsp;
+                <span className={isLive ? "text-emerald-400" : isPaused ? "text-amber-400" : "text-white/30"}>
+                  {isLive ? "LIVE" : isPaused ? "PAUSED" : statusData ? "STOPPED" : "—"}
+                </span>
+              </div>
+              <div className="text-[9px] font-mono text-white/30">
+                Checks queue every {statusData ? Math.round(statusData.intervalMs / 1000) : 30}s · min {statusData?.minBalanceSats?.toLocaleString() ?? "5,000"} sats to inscribe
+              </div>
+            </div>
+          </div>
+          {statusData && (
+            <button
+              onClick={() => toggleProcessor(!statusData.enabled)}
+              data-testid="button-processor-toggle"
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-mono border transition-all ${statusData.enabled ? "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"}`}>
+              {statusData.enabled ? "Pause" : "Resume"}
+            </button>
+          )}
+        </div>
+
+        {statusData && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[
+              { label: "Inscribed", value: statusData.totalProcessed ?? 0, color: "text-emerald-400" },
+              { label: "Failed",    value: statusData.totalFailed ?? 0,    color: "text-red-400" },
+              { label: "Pending",  value: statusData.queueDepth ?? 0,      color: "text-amber-400" },
+              { label: "Wallet",   value: statusData.walletConfigured ? "READY" : "NOT SET", color: statusData.walletConfigured ? "text-emerald-400" : "text-red-400" },
+            ].map(s => (
+              <div key={s.label} className="rounded-lg bg-black/30 border border-white/5 px-3 py-2">
+                <div className="text-[8px] font-mono text-white/25 uppercase">{s.label}</div>
+                <div className={`text-sm font-mono font-bold ${s.color}`}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {statusData?.lastInscriptionId && (
+          <div className="rounded-lg bg-black/40 border border-white/5 px-3 py-2">
+            <div className="text-[8px] font-mono text-white/25 uppercase mb-1">Last Inscription</div>
+            <div className="text-[10px] font-mono text-emerald-400 truncate">{statusData.lastInscriptionId}</div>
+            {statusData.lastInscriptionTime && (
+              <div className="text-[9px] font-mono text-white/30 mt-0.5">{new Date(statusData.lastInscriptionTime).toLocaleString()}</div>
+            )}
+          </div>
+        )}
+
+        {statusData?.lastError && (
+          <div className="rounded-lg bg-red-500/5 border border-red-500/20 px-3 py-2">
+            <div className="text-[8px] font-mono text-red-400/60 uppercase mb-0.5">Last Error {statusData.lastErrorTime ? `· ${new Date(statusData.lastErrorTime).toLocaleTimeString()}` : ""}</div>
+            <div className="text-[10px] font-mono text-red-300/70">{statusData.lastError}</div>
+          </div>
+        )}
+
+        <div className="text-[9px] font-mono text-white/25 border-t border-white/5 pt-2">
+          Auto-inscribes NXT transfers ≥100 NXT + governance executions → wnsp.sats anchor on Bitcoin
+        </div>
+      </div>
+
       {/* Flow */}
       <div className="flex items-center gap-2 text-[10px] font-mono text-white/30 overflow-x-auto pb-1">
         {["NexusOS Event", "→", "WASCII Encoder", "→", "BTC Queue", "→", "Taproot Inscription", "→", "wnsp.sats anchor"].map((s, i) => (

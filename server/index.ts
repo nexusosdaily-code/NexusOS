@@ -166,6 +166,10 @@ app.use((req, res, next) => {
       startSocialBroadcastAgent();
       // Seed genesis network node + start beacon loop
       seedGenesisNode().catch((e) => console.error("[GENESIS NODE] Error:", e));
+      // Start BTC Bridge auto-inscription processor
+      import("./btc-bridge-service").then(({ btcBridge }) => {
+        btcBridge.startAutoProcessor();
+      }).catch((e) => console.error("[BTC Bridge] Boot error:", e));
     },
   );
 })();
