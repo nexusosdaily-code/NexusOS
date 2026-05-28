@@ -41,18 +41,27 @@ export interface InscriptionResult {
 // ── Wallet ───────────────────────────────────────────────────────────────────
 function loadKeyPair(raw: string): ReturnType<typeof ECPair.fromWIF> | null {
   const trimmed = raw.trim();
-  // Try as WIF (starts with K, L, or 5)
-  if (/^[KL5]/.test(trimmed)) {
-    try { return ECPair.fromWIF(trimmed, NETWORK); } catch {}
-  }
-  // Try as 64-char hex private key
+
+  // Try as 64-char hex private key first
   if (/^[0-9a-fA-F]{64}$/.test(trimmed)) {
     try {
       const buf = Buffer.from(trimmed, "hex");
       return ECPair.fromPrivateKey(buf, { network: NETWORK, compressed: true });
     } catch {}
   }
-  // Try WIF anyway (fallback, in case prefix detection wrong)
+
+  // Try WIF as-is
+  if (/^[KL5]/.test(trimmed)) {
+    try { return ECPair.fromWIF(trimmed, NETWORK); } catch {}
+    // Try truncating to standard WIF lengths (52 for compressed K/L, 51 for uncompressed 5)
+    for (const len of [52, 51]) {
+      if (trimmed.length > len) {
+        try { return ECPair.fromWIF(trimmed.slice(0, len), NETWORK); } catch {}
+      }
+    }
+  }
+
+  // Last resort: try WIF anyway
   try { return ECPair.fromWIF(trimmed, NETWORK); } catch {}
   return null;
 }
