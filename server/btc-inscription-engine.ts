@@ -50,13 +50,41 @@ function loadKeyPair(raw: string): ReturnType<typeof ECPair.fromWIF> | null {
     } catch {}
   }
 
-  // Try WIF as-is
+  // Base58 alphabet — "0", "O", "I", "l" are excluded from base58
+  const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+  // Try WIF as-is (exact string)
   if (/^[KL5]/.test(trimmed)) {
     try { return ECPair.fromWIF(trimmed, NETWORK); } catch {}
-    // Try truncating to standard WIF lengths (52 for compressed K/L, 51 for uncompressed 5)
-    for (const len of [52, 51]) {
-      if (trimmed.length > len) {
+
+    // Sweep every length (handles trailing garbage)
+    for (let len = 52; len >= 51; len--) {
+      if (trimmed.length >= len) {
         try { return ECPair.fromWIF(trimmed.slice(0, len), NETWORK); } catch {}
+      }
+    }
+    for (let len = 53; len <= trimmed.length; len++) {
+      try { return ECPair.fromWIF(trimmed.slice(0, len), NETWORK); } catch {}
+    }
+
+    // Strip invalid base58 chars (like '0', 'O', 'I', 'l') and retry
+    const stripped = trimmed.split("").filter(c => B58.includes(c)).join("");
+    if (stripped !== trimmed && /^[KL5]/.test(stripped)) {
+      try { return ECPair.fromWIF(stripped, NETWORK); } catch {}
+      for (let len = 51; len <= Math.min(stripped.length, 54); len++) {
+        try { return ECPair.fromWIF(stripped.slice(0, len), NETWORK); } catch {}
+      }
+    }
+
+    // Try every starting position (prefix contamination)
+    for (let start = 1; start < trimmed.length - 50; start++) {
+      for (const len of [52, 51]) {
+        if (start + len <= trimmed.length) {
+          const sub = trimmed.slice(start, start + len);
+          if (/^[KL5]/.test(sub) && ![...sub].some(c => !B58.includes(c))) {
+            try { return ECPair.fromWIF(sub, NETWORK); } catch {}
+          }
+        }
       }
     }
   }

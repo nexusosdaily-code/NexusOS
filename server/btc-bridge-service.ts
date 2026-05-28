@@ -96,6 +96,54 @@ export class BtcBridgeService {
   readonly intervalMs = 30_000;      // check every 30 seconds
   readonly minBalanceSats = 5_000;   // ~$5 minimum before pausing
 
+  // ── Persistent anchor (survives restarts) ──────────────────────────────────
+  async saveAnchor(address: string | null, parentId: string | null) {
+    this.anchorAddress = address;
+    this.parentInscriptionId = parentId;
+    try {
+      const { db } = await import("./db");
+      const { btcBridgeConfig } = await import("../shared/schema");
+      // Ensure table exists
+      await db.execute(`CREATE TABLE IF NOT EXISTS btc_bridge_config (
+        key TEXT PRIMARY KEY, value TEXT, updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )` as any);
+      // Upsert both values
+      const upsert = async (k: string, v: string | null) =>
+        db.execute(`INSERT INTO btc_bridge_config (key, value, updated_at)
+          VALUES ('${k}', ${v === null ? "NULL" : `'${v.replace(/'/g, "''")}'`}, NOW())
+          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()` as any);
+      await upsert("anchor_address",          address);
+      await upsert("parent_inscription_id",   parentId);
+      console.log(`[BTC Bridge] Anchor saved → address=${address ?? "null"} parent=${parentId ?? "null"}`);
+    } catch (e: any) {
+      console.error("[BTC Bridge] Failed to persist anchor:", e.message);
+    }
+  }
+
+  async loadAnchor() {
+    try {
+      const { db } = await import("./db");
+      await db.execute(`CREATE TABLE IF NOT EXISTS btc_bridge_config (
+        key TEXT PRIMARY KEY, value TEXT, updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      )` as any);
+      const rows = await db.execute(`SELECT key, value FROM btc_bridge_config WHERE key IN ('anchor_address','parent_inscription_id')` as any);
+      const map: Record<string, string | null> = {};
+      for (const r of (rows as any).rows ?? []) map[r.key] = r.value ?? null;
+      this.anchorAddress       = map["anchor_address"]        ?? null;
+      this.parentInscriptionId = map["parent_inscription_id"] ?? null;
+      if (this.anchorAddress || this.parentInscriptionId) {
+        console.log(`[BTC Bridge] Anchor loaded → address=${this.anchorAddress ?? "null"} parent=${this.parentInscriptionId ?? "null"}`);
+      }
+    } catch (e: any) {
+      console.error("[BTC Bridge] Failed to load anchor:", e.message);
+    }
+  }
+
+  getAnchor() {
+    return { address: this.anchorAddress, parentInscriptionId: this.parentInscriptionId };
+  }
+
+  // In-memory only (legacy, kept for compat)
   setAnchor(address: string | null, parentId: string | null) {
     this.anchorAddress = address;
     this.parentInscriptionId = parentId;
@@ -149,9 +197,11 @@ export class BtcBridgeService {
   startAutoProcessor() {
     if (this._timer) return; // already running
     console.log(`[BTC Bridge] Auto-processor started — checking every ${this.intervalMs / 1000}s`);
+    // Load persisted anchor config before first cycle
+    this.loadAnchor().catch(() => {});
     this._timer = setInterval(() => this._processCycle(), this.intervalMs);
-    // Run immediately on start
-    setTimeout(() => this._processCycle(), 2000);
+    // Run first cycle shortly after anchor loads
+    setTimeout(() => this._processCycle(), 4000);
   }
 
   stopAutoProcessor() {

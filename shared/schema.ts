@@ -1057,3 +1057,10 @@ export const btcInscriptionQueue = pgTable("btc_inscription_queue", {
 export const insertBtcInscriptionQueueSchema = createInsertSchema(btcInscriptionQueue).omit({ id: true, createdAt: true });
 export type InsertBtcInscriptionQueue = z.infer<typeof insertBtcInscriptionQueueSchema>;
 export type BtcInscriptionQueueItem = typeof btcInscriptionQueue.$inferSelect;
+
+// ── BTC Bridge persistent config (anchor address + parent inscription ID) ──
+export const btcBridgeConfig = pgTable("btc_bridge_config", {
+  key:       text("key").primaryKey(),
+  value:     text("value"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

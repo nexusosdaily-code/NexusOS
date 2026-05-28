@@ -358,6 +358,13 @@ function AutoBridgeTab() {
   const { data: queueData, isLoading: queueLoading } = useQuery<any>({ queryKey: ["/api/btc-bridge/queue"], refetchInterval: 8_000 });
   const { data: feeData } = useQuery<any>({ queryKey: ["/api/btc-bridge/fee-rate"], refetchInterval: 60_000 });
   const { data: statusData } = useQuery<any>({ queryKey: ["/api/btc-bridge/status"], refetchInterval: 5_000 });
+  const { data: anchorData } = useQuery<any>({ queryKey: ["/api/btc-bridge/anchor"] });
+
+  // Pre-populate anchor fields from saved DB values
+  useEffect(() => {
+    if (anchorData?.address    && !anchorAddress) setAnchorAddress(anchorData.address);
+    if (anchorData?.parentInscriptionId && !parentId) setParentId(anchorData.parentInscriptionId);
+  }, [anchorData]);
 
   async function handleAutoInscribe(id: number) {
     setInscribingId(id); setInscribeMsg(m => ({ ...m, [id]: "" }));
