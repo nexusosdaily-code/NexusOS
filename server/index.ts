@@ -9,6 +9,7 @@ import { startBlockchainAuditor } from "./blockchain_auditor";
 import { seedGenesisNode } from "./genesis_node";
 import { startKernelAgents } from "./kernel_agents";
 import { startSocialBroadcastAgent } from "./social_broadcast_agent";
+import { startTelegramBot } from "./telegram-bot";
 
 const app = express();
 const httpServer = createServer(app);
@@ -170,6 +171,8 @@ app.use((req, res, next) => {
       import("./btc-bridge-service").then(({ btcBridge }) => {
         btcBridge.startAutoProcessor();
       }).catch((e) => console.error("[BTC Bridge] Boot error:", e));
+      // Start Telegram advocacy bot
+      startTelegramBot();
     },
   );
 })();
