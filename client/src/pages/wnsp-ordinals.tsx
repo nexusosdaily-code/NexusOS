@@ -851,6 +851,13 @@ function Brc20Tab() {
   const { data: queueData } = useQuery<any>({ queryKey: ["/api/btc-bridge/queue"], refetchInterval: 8_000 });
   const brc20Items = (queueData?.items ?? []).filter((i: any) => ["BRC20_DEPLOY","BRC20_MINT","BRC20_TRANSFER"].includes(i.eventType));
 
+  function authErr(e: any): string {
+    const msg = e?.message ?? "";
+    if (msg.toLowerCase().includes("authoriz") || msg.toLowerCase().includes("401") || msg.toLowerCase().includes("log in") || msg.toLowerCase().includes("session"))
+      return "AUTH";
+    return msg;
+  }
+
   async function doDeploy() {
     setDeployBusy(true); setDeployMsg(""); setDeployJson("");
     try {
@@ -859,21 +866,20 @@ function Brc20Tab() {
       setDeployMsg(`✓ Queued #${res.queued?.id} — auto-inscribing to Bitcoin`);
       setDeployJson(res.content ?? "");
       qc.invalidateQueries({ queryKey: ["/api/btc-bridge/queue"] });
-    } catch (e: any) { setDeployMsg("Error: " + e.message); }
+    } catch (e: any) { setDeployMsg(authErr(e) === "AUTH" ? "AUTH" : "Error: " + e.message); }
     finally { setDeployBusy(false); }
   }
 
   async function doMint(count = 1) {
     setMintBusy(true); setMintMsg("");
     try {
-      let last: any;
       for (let i = 0; i < count; i++) {
-        last = await apiFetch("/api/btc-bridge/brc20/mint", { method: "POST",
+        await apiFetch("/api/btc-bridge/brc20/mint", { method: "POST",
           body: JSON.stringify({ tick: mintTick, amt: mintAmt }) });
       }
       setMintMsg(`✓ ${count}× mint queued — auto-inscribing`);
       qc.invalidateQueries({ queryKey: ["/api/btc-bridge/queue"] });
-    } catch (e: any) { setMintMsg("Error: " + e.message); }
+    } catch (e: any) { setMintMsg(authErr(e) === "AUTH" ? "AUTH" : "Error: " + e.message); }
     finally { setMintBusy(false); }
   }
 
@@ -884,8 +890,23 @@ function Brc20Tab() {
         body: JSON.stringify({ tick: mintTick, amt: xfrAmt }) });
       setXfrMsg(`✓ Transfer queued #${res.queued?.id}`);
       qc.invalidateQueries({ queryKey: ["/api/btc-bridge/queue"] });
-    } catch (e: any) { setXfrMsg("Error: " + e.message); }
+    } catch (e: any) { setXfrMsg(authErr(e) === "AUTH" ? "AUTH" : "Error: " + e.message); }
     finally { setXfrBusy(false); }
+  }
+
+  function AuthBanner() {
+    return (
+      <div className="flex items-start gap-3 rounded-xl bg-amber-500/8 border border-amber-500/25 px-4 py-3">
+        <div className="text-amber-400 mt-0.5">⚠</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[12px] font-mono font-bold text-amber-400">Log in to NexusOS first</div>
+          <div className="text-[11px] text-white/50 mt-0.5">BRC-20 operations queue a real Bitcoin transaction — authentication is required to authorise it.</div>
+        </div>
+        <a href="/auth" className="shrink-0 text-[11px] font-mono px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 transition-all">
+          Log in →
+        </a>
+      </div>
+    );
   }
 
   const previewJson = JSON.stringify({ p: "brc-20", op: "deploy", tick: deployTick.toLowerCase(), max: deployMax, lim: deployLim }, null, 2);
@@ -961,7 +982,7 @@ function Brc20Tab() {
           Deploy {deployTick.toLowerCase()} BRC-20
         </button>
 
-        {deployMsg && (
+        {deployMsg === "AUTH" ? <AuthBanner /> : deployMsg && (
           <div className={`text-[11px] font-mono px-3 py-2 rounded-lg border ${deployMsg.startsWith("Error") ? "bg-red-500/5 border-red-500/20 text-red-400" : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"}`}>
             {deployMsg}
           </div>
@@ -1011,7 +1032,7 @@ function Brc20Tab() {
           {mintBusy ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
           Queue {mintCount > 1 ? `${mintCount}× ` : ""}Mint
         </button>
-        {mintMsg && <div className={`text-[11px] font-mono px-3 py-2 rounded-lg border ${mintMsg.startsWith("Error") ? "bg-red-500/5 border-red-500/20 text-red-400" : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"}`}>{mintMsg}</div>}
+        {mintMsg === "AUTH" ? <AuthBanner /> : mintMsg && <div className={`text-[11px] font-mono px-3 py-2 rounded-lg border ${mintMsg.startsWith("Error") ? "bg-red-500/5 border-red-500/20 text-red-400" : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"}`}>{mintMsg}</div>}
       </div>
 
       {/* TRANSFER */}
@@ -1040,7 +1061,7 @@ function Brc20Tab() {
           {xfrBusy ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
           Queue Transfer
         </button>
-        {xfrMsg && <div className={`text-[11px] font-mono px-3 py-2 rounded-lg border ${xfrMsg.startsWith("Error") ? "bg-red-500/5 border-red-500/20 text-red-400" : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"}`}>{xfrMsg}</div>}
+        {xfrMsg === "AUTH" ? <AuthBanner /> : xfrMsg && <div className={`text-[11px] font-mono px-3 py-2 rounded-lg border ${xfrMsg.startsWith("Error") ? "bg-red-500/5 border-red-500/20 text-red-400" : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"}`}>{xfrMsg}</div>}
       </div>
 
       {/* BRC-20 queue items */}
