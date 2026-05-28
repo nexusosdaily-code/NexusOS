@@ -351,6 +351,11 @@ function AutoBridgeTab() {
   const [anchorSaved, setAnchorSaved] = useState(false);
   const [triggerType, setTriggerType] = useState("WASCII_MANUAL");
   const [triggerNote, setTriggerNote] = useState("");
+  const [triggerWallet, setTriggerWallet] = useState("");
+  const [triggerToWallet, setTriggerToWallet] = useState("");
+  const [triggerAmount, setTriggerAmount] = useState("");
+  const [triggerLabel, setTriggerLabel] = useState("");
+  const [triggerPsi, setTriggerPsi] = useState("");
   const [triggerMsg, setTriggerMsg] = useState("");
   const [triggerBusy, setTriggerBusy] = useState(false);
 
@@ -385,8 +390,18 @@ function AutoBridgeTab() {
   async function triggerQueue() {
     setTriggerBusy(true); setTriggerMsg("");
     try {
-      const res = await apiFetch("/api/btc-bridge/queue/trigger", { method: "POST", body: JSON.stringify({ eventType: triggerType, data: { note: triggerNote } }) });
-      setTriggerMsg(`Queued #${res.queued?.id} — ready to inscribe`);
+      const data: Record<string, string> = {};
+      if (triggerNote)     data.note        = triggerNote;
+      if (triggerWallet)   data.from_wallet = triggerWallet;
+      if (triggerToWallet) data.to_wallet   = triggerToWallet;
+      if (triggerAmount)   data.amount_nxt  = triggerAmount;
+      if (triggerLabel)    data.label       = triggerLabel;
+      if (triggerPsi)      data.psi_channel = triggerPsi;
+      data.platform = "wnsp.tech"; data.org = "wnsp.io";
+      const res = await apiFetch("/api/btc-bridge/queue/trigger", {
+        method: "POST", body: JSON.stringify({ eventType: triggerType, data }),
+      });
+      setTriggerMsg(`✓ Queued #${res.queued?.id} (${res.queued?.psi ?? "Ψ..."}) — auto-inscribing to Bitcoin`);
       qc.invalidateQueries({ queryKey: ["/api/btc-bridge/queue"] });
     } catch (e: any) { setTriggerMsg("Error: " + e.message); }
     finally { setTriggerBusy(false); }
@@ -513,20 +528,132 @@ function AutoBridgeTab() {
         </div>
       </div>
 
-      {/* Manual trigger */}
-      <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4 space-y-3">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-white/30">Manual Queue Trigger</div>
-        <div className="flex gap-2 flex-wrap">
-          <select value={triggerType} onChange={e => setTriggerType(e.target.value)} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-white/20">
-            {["NXT_TRANSFER","GOVERNANCE","KERNEL","WASCII_MANUAL","ORDINAL_DEPOSIT"].map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <input value={triggerNote} onChange={e => setTriggerNote(e.target.value)} placeholder="Optional note..."
-            className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 min-w-32" />
-          <button onClick={triggerQueue} disabled={triggerBusy} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-violet-500/20 border border-violet-500/30 text-violet-400 text-xs font-mono hover:bg-violet-500/30 transition-all disabled:opacity-40" data-testid="button-manual-trigger">
-            {triggerBusy ? <RefreshCw size={11} className="animate-spin" /> : <Zap size={11} />} Queue
-          </button>
+      {/* Manual trigger — full ecosystem */}
+      <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-white/30">Manual Queue Trigger</div>
+          <div className="text-[9px] font-mono text-white/20">Inscribes to Bitcoin via wnsp.sats anchor</div>
         </div>
-        {triggerMsg && <div className={`text-[11px] font-mono ${triggerMsg.startsWith("Error") ? "text-red-400" : "text-emerald-400"}`}>{triggerMsg}</div>}
+
+        {/* Category tabs */}
+        {(() => {
+          const cats: { label: string; color: string; types: string[] }[] = [
+            { label: "Tokenomics", color: "#f59e0b", types: ["NXT_TRANSFER","NXT_BURN","NXT_EMISSION"] },
+            { label: "Governance", color: "#8b5cf6", types: ["GOVERNANCE","PROTOCOL_UPDATE"] },
+            { label: "Spectral",   color: "#22d3ee", types: ["SPECTRAL_RECORD","WASCII_ENCODE","WASCII_MANUAL","CHANNEL_OPEN"] },
+            { label: "Network",    color: "#34d399", types: ["NODE_REGISTER","CONTRACT_SIGN","ORDINAL_DEPOSIT"] },
+            { label: "Campaign",   color: "#f97316", types: ["CAMPAIGN_LAUNCH","CAMPAIGN_MILESTONE"] },
+            { label: "Kernel/AI",  color: "#a78bfa", types: ["KERNEL","AGENT_ACTION"] },
+          ];
+          const activeCat = cats.find(c => c.types.includes(triggerType)) ?? cats[0];
+          return (
+            <div className="space-y-3">
+              {/* Category pills */}
+              <div className="flex gap-1.5 flex-wrap">
+                {cats.map(c => {
+                  const active = c.types.includes(triggerType);
+                  return (
+                    <button key={c.label} onClick={() => setTriggerType(c.types[0])}
+                      className="px-2.5 py-1 rounded-full text-[10px] font-mono border transition-all"
+                      style={active ? { backgroundColor: c.color + "20", color: c.color, borderColor: c.color + "40" } : { color: "#ffffff40", borderColor: "#ffffff10" }}>
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Event type within category */}
+              <div className="flex gap-2 flex-wrap">
+                <select value={triggerType} onChange={e => setTriggerType(e.target.value)}
+                  className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-white/20 flex-1"
+                  style={{ color: activeCat.color }}>
+                  {cats.map(c => (
+                    <optgroup key={c.label} label={`── ${c.label} ──`}>
+                      {c.types.map(t => <option key={t} value={t} style={{ color: "#fff" }}>{t}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
+              {/* Context-sensitive fields */}
+              <div className="space-y-2">
+                {/* Wallet address fields — Tokenomics & Network */}
+                {["NXT_TRANSFER","NXT_BURN","NXT_EMISSION","CONTRACT_SIGN","NODE_REGISTER","ORDINAL_DEPOSIT"].includes(triggerType) && (
+                  <input value={triggerWallet} onChange={e => setTriggerWallet(e.target.value)}
+                    placeholder="From wallet address (NXT-... or bc1p...)"
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-amber-500/30" />
+                )}
+                {["NXT_TRANSFER","NXT_EMISSION"].includes(triggerType) && (
+                  <input value={triggerToWallet} onChange={e => setTriggerToWallet(e.target.value)}
+                    placeholder="To wallet address (NXT-... or bc1p...)"
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-amber-500/30" />
+                )}
+                {/* Amount — Tokenomics */}
+                {["NXT_TRANSFER","NXT_BURN","NXT_EMISSION"].includes(triggerType) && (
+                  <input value={triggerAmount} onChange={e => setTriggerAmount(e.target.value)}
+                    placeholder="Amount NXT (e.g. 1000.00000000)"
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-amber-500/30" />
+                )}
+                {/* Wallet — Spectral, Campaign, Agent */}
+                {["SPECTRAL_RECORD","WASCII_ENCODE","CHANNEL_OPEN","CAMPAIGN_LAUNCH","CAMPAIGN_MILESTONE","AGENT_ACTION"].includes(triggerType) && (
+                  <input value={triggerWallet} onChange={e => setTriggerWallet(e.target.value)}
+                    placeholder="Wallet address (NXT-... or bc1p...) — optional"
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/30" />
+                )}
+                {/* Label / Name */}
+                {["SPECTRAL_RECORD","CHANNEL_OPEN","CAMPAIGN_LAUNCH","CAMPAIGN_MILESTONE","CONTRACT_SIGN","NODE_REGISTER","AGENT_ACTION"].includes(triggerType) && (
+                  <input value={triggerLabel} onChange={e => setTriggerLabel(e.target.value)}
+                    placeholder={
+                      triggerType === "CAMPAIGN_LAUNCH" || triggerType === "CAMPAIGN_MILESTONE" ? "Campaign name" :
+                      triggerType === "CONTRACT_SIGN" ? "Contract title" :
+                      triggerType === "AGENT_ACTION"  ? "Agent name / action" :
+                      triggerType === "NODE_REGISTER" ? "Node ID / alias" :
+                      "Label / record name"
+                    }
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/30" />
+                )}
+                {/* Milestone */}
+                {triggerType === "CAMPAIGN_MILESTONE" && (
+                  <input value={triggerNote} onChange={e => setTriggerNote(e.target.value)}
+                    placeholder="Milestone description (e.g. 1000 users, $10k raised)"
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-orange-500/30" />
+                )}
+                {/* PSI channel */}
+                {["SPECTRAL_RECORD","WASCII_ENCODE","CHANNEL_OPEN","NODE_REGISTER"].includes(triggerType) && (
+                  <input value={triggerPsi} onChange={e => setTriggerPsi(e.target.value)}
+                    placeholder="Ψ channel (e.g. Ψ(27,56,H)) — optional"
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/30" />
+                )}
+                {/* Universal note */}
+                {triggerType !== "CAMPAIGN_MILESTONE" && (
+                  <input value={triggerNote} onChange={e => setTriggerNote(e.target.value)}
+                    placeholder="Note / description (optional)"
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-white/20" />
+                )}
+              </div>
+
+              {/* Inscribe preview label */}
+              <div className="rounded-lg bg-black/30 border border-white/5 px-3 py-2 text-[10px] font-mono text-white/30 flex items-center gap-2">
+                <span style={{ color: activeCat.color }}>⬡</span>
+                <span>Will inscribe: <span className="text-white/50">{triggerType}</span> · WASCII-v2.0 · wnsp.sats anchor · wnsp.tech / wnsp.io</span>
+              </div>
+
+              <button onClick={triggerQueue} disabled={triggerBusy}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all font-mono text-xs disabled:opacity-40"
+                style={{ backgroundColor: activeCat.color + "15", color: activeCat.color, borderColor: activeCat.color + "30" }}
+                data-testid="button-manual-trigger">
+                {triggerBusy ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
+                Queue {triggerType} Inscription
+              </button>
+            </div>
+          );
+        })()}
+
+        {triggerMsg && (
+          <div className={`text-[11px] font-mono px-3 py-2 rounded-lg border ${triggerMsg.startsWith("Error") ? "bg-red-500/5 border-red-500/20 text-red-400" : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"}`}>
+            {triggerMsg}
+          </div>
+        )}
       </div>
 
       {/* Queue */}

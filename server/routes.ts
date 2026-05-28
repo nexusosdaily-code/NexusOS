@@ -1531,7 +1531,7 @@ export async function registerRoutes(
           metadata:     { action: "message_received", via: "dev_api", senderId: req.user!.id },
         });
       }
-      await storage.createTransaction({
+      const burnTxMsg = await storage.createTransaction({
         fromWalletId: senderWallet.id,
         toWalletId:   undefined,
         amount:       (msgFeeNum * 0.5).toFixed(8),
@@ -1542,6 +1542,17 @@ export async function registerRoutes(
         energyCost:   msgFee.energyJ.toString(),
         metadata:     { action: "message_send", via: "dev_api" },
       });
+      // ── BTC auto-inscription hook — NXT burn ────────────────────────────────
+      import("./btc-bridge-service").then(({ btcBridge }) => {
+        btcBridge.triggerFromBurn({
+          id: String(burnTxMsg?.id ?? Date.now()),
+          amountNxt: (msgFeeNum * 0.5).toFixed(8),
+          fromWalletAddress: senderWallet.address,
+          reason: "message_send fee burn (50%)",
+          wavelength: msgFee.wavelengthNm.toString(),
+          triggeredBy: (req as any).user?.username ?? "protocol",
+        }).catch(() => {});
+      }).catch(() => {});
 
       const message = await storage.createLambdaMessage({
         senderId:        req.user!.id,
@@ -4120,6 +4131,16 @@ export async function registerRoutes(
         frequencyHz:   String(enc.frequency_hz ?? 0),
         data:          { ...(data ?? {}), contentHash, auditStatus: "pending" },
       }).returning();
+
+      // ── BTC auto-inscription hook — spectral record ──────────────────────────
+      import("./btc-bridge-service").then(({ btcBridge }) => {
+        btcBridge.triggerFromSpectralRecord({
+          id: record.id, label, psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
+          band: enc.band ?? "CORE", wavelengthNm: String(enc.wavelength_mid_nm ?? 550),
+          contentHash, walletAddress: (req as any).user?.walletAddress,
+          triggeredBy: (req as any).user?.username ?? "system",
+        }).catch(() => {});
+      }).catch(() => {});
 
       // ── Blockchain audit transaction (auto-submitted to mempool) ─────────────
       // Proves: this content existed at this wavelength at this timestamp.

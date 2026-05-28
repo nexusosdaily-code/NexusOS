@@ -27,8 +27,31 @@ export function wasciiEncodeText(text: string): { meanNm: number; wdm: number; o
 
 // ── Inscription content builder ──────────────────────────────────────────────
 const SEP = "═".repeat(63), SEP2 = "─".repeat(63);
+export type BridgeEventType =
+  // ── Tokenomics
+  | "NXT_TRANSFER"        // peer transfer ≥100 NXT
+  | "NXT_BURN"            // protocol fee burn
+  | "NXT_EMISSION"        // new token emission / genesis
+  // ── Governance & Kernel
+  | "GOVERNANCE"          // proposal executed
+  | "PROTOCOL_UPDATE"     // live parameter changed
+  | "KERNEL"              // kernel event (boot, watchdog, agent)
+  | "AGENT_ACTION"        // AI agent significant action
+  // ── Spectral / Physics
+  | "SPECTRAL_RECORD"     // spectral DB record saved
+  | "WASCII_ENCODE"       // WASCII encoding anchored
+  | "WASCII_MANUAL"       // manual inscription
+  | "CHANNEL_OPEN"        // new Ψ channel registered
+  // ── Network & Identity
+  | "NODE_REGISTER"       // spectral node joined network
+  | "CONTRACT_SIGN"       // physics-signed contract
+  | "ORDINAL_DEPOSIT"     // ordinal deposited to treasury
+  // ── Campaigns
+  | "CAMPAIGN_LAUNCH"     // campaign started
+  | "CAMPAIGN_MILESTONE"; // campaign milestone reached
+
 export interface BridgeEvent {
-  type: "NXT_TRANSFER" | "GOVERNANCE" | "KERNEL" | "WASCII_MANUAL" | "ORDINAL_DEPOSIT";
+  type: BridgeEventType;
   ref: string; data: Record<string, string | number | null>; triggeredBy: string;
 }
 export function buildInscriptionContent(event: BridgeEvent, anchorPsi = "Ψ(27,56,H)"): string {
@@ -318,6 +341,114 @@ export class BtcBridgeService {
     return this.queueEvent({
       type: "KERNEL", ref: event.ref, triggeredBy: "kernel",
       data: event.data,
+    });
+  }
+
+  async triggerFromBurn(burn: {
+    id: string; amountNxt: string; fromWalletAddress: string;
+    reason: string; wavelength?: string; triggeredBy?: string;
+  }) {
+    const amt = parseFloat(burn.amountNxt);
+    if (amt < 1) return null; // only inscribe meaningful burns
+    return this.queueEvent({
+      type: "NXT_BURN", ref: `burn-${burn.id}`, triggeredBy: burn.triggeredBy ?? "protocol",
+      data: {
+        amount_nxt:      amt.toFixed(8),
+        from_wallet:     burn.fromWalletAddress,
+        burn_reason:     burn.reason,
+        wavelength:      burn.wavelength ? `${parseFloat(burn.wavelength).toFixed(4)} nm` : null,
+        destination:     "VOID (deflationary)",
+        circulating_impact: `-${amt.toFixed(8)} NXT`,
+      },
+    });
+  }
+
+  async triggerFromSpectralRecord(rec: {
+    id: number; label: string; psiChannel: string; band: string;
+    wavelengthNm: string; contentHash: string; walletAddress?: string; triggeredBy?: string;
+  }) {
+    return this.queueEvent({
+      type: "SPECTRAL_RECORD", ref: `spectral-${rec.id}`, triggeredBy: rec.triggeredBy ?? "system",
+      data: {
+        record_id:     rec.id,
+        label:         rec.label,
+        psi_channel:   rec.psiChannel,
+        band:          rec.band,
+        wavelength:    `${parseFloat(rec.wavelengthNm).toFixed(4)} nm`,
+        content_hash:  rec.contentHash,
+        wallet:        rec.walletAddress ?? null,
+        layer:         "NexusOS Spectral Database",
+      },
+    });
+  }
+
+  async triggerFromAgentAction(agent: {
+    agentId: string; agentName: string; action: string;
+    psiChannel?: string; walletAddress?: string; data?: Record<string, any>;
+  }) {
+    return this.queueEvent({
+      type: "AGENT_ACTION", ref: `agent-${agent.agentId}-${Date.now()}`, triggeredBy: agent.agentName,
+      data: {
+        agent_id:    agent.agentId,
+        agent_name:  agent.agentName,
+        action:      agent.action,
+        psi_channel: agent.psiChannel ?? null,
+        wallet:      agent.walletAddress ?? null,
+        layer:       "NexusOS AI Kernel",
+        ...(agent.data ?? {}),
+      },
+    });
+  }
+
+  async triggerFromNodeRegister(node: {
+    nodeId: string; psiChannel: string; band: string;
+    wavelengthNm: string; walletAddress?: string; triggeredBy?: string;
+  }) {
+    return this.queueEvent({
+      type: "NODE_REGISTER", ref: `node-${node.nodeId}`, triggeredBy: node.triggeredBy ?? "network",
+      data: {
+        node_id:    node.nodeId,
+        psi_channel: node.psiChannel,
+        band:       node.band,
+        wavelength: `${parseFloat(node.wavelengthNm).toFixed(4)} nm`,
+        wallet:     node.walletAddress ?? null,
+        network:    "WNSP Spectral Mesh",
+      },
+    });
+  }
+
+  async triggerFromCampaign(campaign: {
+    id: string; name: string; type: "CAMPAIGN_LAUNCH" | "CAMPAIGN_MILESTONE";
+    milestone?: string; walletAddress?: string; triggeredBy?: string;
+  }) {
+    return this.queueEvent({
+      type: campaign.type, ref: `campaign-${campaign.id}`, triggeredBy: campaign.triggeredBy ?? "wnsp.io",
+      data: {
+        campaign_id:   campaign.id,
+        campaign_name: campaign.name,
+        milestone:     campaign.milestone ?? null,
+        wallet:        campaign.walletAddress ?? null,
+        platform:      "wnsp.tech",
+        org:           "wnsp.io",
+      },
+    });
+  }
+
+  async triggerFromContractSign(contract: {
+    id: string; title: string; signerWallet: string;
+    contentHash: string; wavelength?: string; triggeredBy?: string;
+  }) {
+    return this.queueEvent({
+      type: "CONTRACT_SIGN", ref: `contract-${contract.id}`, triggeredBy: contract.triggeredBy ?? contract.signerWallet,
+      data: {
+        contract_id:   contract.id,
+        title:         contract.title,
+        signer_wallet: contract.signerWallet,
+        content_hash:  contract.contentHash,
+        wavelength:    contract.wavelength ? `${parseFloat(contract.wavelength).toFixed(4)} nm` : null,
+        algorithm:     "SHA-256(content) ⊕ hex(λ_signer)",
+        layer:         "NexusOS Physics-Signed Contracts",
+      },
     });
   }
 }
