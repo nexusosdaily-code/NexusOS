@@ -1075,6 +1075,102 @@ function Brc20Tab() {
           <p>4. Service wallet: <span className="font-mono text-amber-400/70">bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m</span></p>
         </div>
       </div>
+
+      {/* Economic Integration Bridge */}
+      <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-950/30 to-black p-5 space-y-5">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-violet-500/15 border border-violet-500/30 flex items-center justify-center">
+            <Waves size={13} className="text-violet-400" />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-white">Economic Integration</div>
+            <div className="text-[10px] font-mono text-white/30">wnsp BRC-20 ↔ NXT ↔ Campaign Tiers ↔ Hardware</div>
+          </div>
+        </div>
+
+        <p className="text-[12px] text-white/50 leading-relaxed">
+          Both NXT and wnsp BRC-20 share the same <span className="text-amber-400 font-mono">21,000,000,000</span> maximum supply — natural 1:1 parity.
+          Holding wnsp on Bitcoin unlocks the same campaign tiers as holding NXT, giving anyone on UniSat or OKX a Bitcoin-native entry into the NexusOS hardware economy.
+        </p>
+
+        {/* Tier mapping table */}
+        <div className="space-y-1.5">
+          <div className="text-[9px] font-mono uppercase tracking-wider text-white/25 mb-2">Tier Equivalents — hold wnsp BRC-20 to unlock</div>
+          {[
+            { tier: "Photon",          nxt: "100",         wnsp: "100",         color: "#a78bfa", shares: "100 Nexus Shares",      class: "Class C" },
+            { tier: "Resonator",       nxt: "1,000",       wnsp: "1,000",       color: "#34d399", shares: "1,000 Nexus Shares",    class: "Class C" },
+            { tier: "Kernel Agent",    nxt: "10,000",      wnsp: "10,000",      color: "#fbbf24", shares: "10,000 Nexus Shares",   class: "Class B" },
+            { tier: "Hardware Founder",nxt: "100,000",     wnsp: "100,000",     color: "#f87171", shares: "100,000 Nexus Shares",  class: "Class A + PHR-1 unit" },
+            { tier: "Nexus Partner",   nxt: "1,000,000",   wnsp: "1,000,000",   color: "#60a5fa", shares: "1,000,000 Nexus Shares",class: "Class A+ Board Seat" },
+          ].map(t => (
+            <div key={t.tier} className="flex items-center gap-2 rounded-xl bg-black/40 border border-white/5 px-3 py-2">
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] font-mono text-white/80">{t.tier}</div>
+                <div className="text-[9px] text-white/30">{t.shares} · {t.class}</div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-[10px] font-mono text-amber-400">{t.wnsp} wnsp</div>
+                <div className="text-[9px] font-mono text-white/25">= {t.nxt} NXT</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Campaign phase allocation */}
+        <div className="space-y-1.5">
+          <div className="text-[9px] font-mono uppercase tracking-wider text-white/25 mb-2">Campaign Phase Supplement — wnsp BRC-20 allocation per phase</div>
+          {[
+            { phase: "Phase 1 — SNIC",                 pct: "5%", nxt: "1.05 B NXT", wnsp: "1.05 B wnsp", color: "#22d3ee" },
+            { phase: "Phase 2 — PHR-1",                pct: "5%", nxt: "1.05 B NXT", wnsp: "1.05 B wnsp", color: "#a78bfa" },
+            { phase: "Phase 3 — Spectral Relay Mesh",  pct: "5%", nxt: "1.05 B NXT", wnsp: "1.05 B wnsp", color: "#34d399" },
+            { phase: "Phase 4 — WavelengthScript α",   pct: "5%", nxt: "1.05 B NXT", wnsp: "1.05 B wnsp", color: "#fb923c" },
+          ].map(p => (
+            <div key={p.phase} className="flex items-center gap-2 rounded-xl bg-black/40 border border-white/5 px-3 py-2">
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+              <div className="flex-1 text-[11px] font-mono text-white/70">{p.phase}</div>
+              <div className="text-right shrink-0 space-y-0.5">
+                <div className="text-[10px] font-mono text-amber-400">{p.wnsp}</div>
+                <div className="text-[9px] font-mono text-white/25">{p.pct} supply</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Flow */}
+        <div className="rounded-xl bg-black/50 border border-amber-500/10 p-3 space-y-1">
+          <div className="text-[9px] font-mono uppercase tracking-wider text-white/25 mb-2">Participation Flow</div>
+          {[
+            { step: "1", label: "Mint wnsp BRC-20 on Bitcoin", detail: "1,000 per inscription · anyone can mint · UniSat / OKX", color: "#fbbf24" },
+            { step: "2", label: "Accumulate to tier threshold",  detail: "100 → Photon · 1,000 → Resonator · 100,000 → Hardware Founder", color: "#a78bfa" },
+            { step: "3", label: "Prove holdings → unlock NXT",  detail: "wnsp holding verification → equivalent NXT campaign allocation", color: "#34d399" },
+            { step: "4", label: "Hardware pre-order priority",   detail: "100,000 wnsp = Class A Hardware Founder · PHR-1 first batch", color: "#f87171" },
+          ].map(s => (
+            <div key={s.step} className="flex gap-2.5 items-start py-1">
+              <div className="w-5 h-5 rounded-full border shrink-0 flex items-center justify-center text-[9px] font-bold font-mono mt-0.5" style={{ borderColor: s.color, color: s.color }}>
+                {s.step}
+              </div>
+              <div>
+                <div className="text-[11px] text-white/70 font-mono">{s.label}</div>
+                <div className="text-[10px] text-white/30">{s.detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <a href="https://unisat.io/brc20" target="_blank" rel="noopener noreferrer"
+            className="text-[10px] font-mono px-3 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500/20 transition-all flex items-center gap-1">
+            <ExternalLink size={9} /> UniSat BRC-20
+          </a>
+          <a href="/crowdfund" className="text-[10px] font-mono px-3 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:bg-violet-500/20 transition-all flex items-center gap-1">
+            <Waves size={9} /> Campaign Tiers
+          </a>
+          <a href="/campaign" className="text-[10px] font-mono px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-all flex items-center gap-1">
+            <Zap size={9} /> Tokenomics
+          </a>
+        </div>
+      </div>
     </div>
   );
 }

@@ -729,6 +729,97 @@ export default function CrowdfundPage() {
         </section>
       )}
 
+      {/* ── BRC-20 BITCOIN GATEWAY ── */}
+      <section className="px-6 py-20 border-t border-white/10">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 text-xs px-4 py-1.5 rounded-full border mb-4" style={{ borderColor: "#f97316", color: "#f97316", background: "#f9731610" }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M11.19 2.25c.28-1.07 1.34-1.72 2.42-1.44l1.29.34c1.07.28 1.72 1.34 1.44 2.42l-.11.43 1.48.39.12-.43c.28-1.07 1.34-1.72 2.42-1.44l1.29.34c1.07.28 1.72 1.34 1.44 2.42l-.43 1.64H22v1.5h-.84l-.98 3.73H21v1.5h-.24l-.41 1.54c-.28 1.07-1.34 1.72-2.42 1.44l-1.29-.34c-.51-.13-.93-.44-1.21-.84L15 16.5H9l.43 1.6c-.28.4-.7.71-1.21.84l-1.29.34c-1.08.28-2.14-.37-2.42-1.44l-.41-1.54H3.82v-1.5h.37L3.21 11H2.84V9.5h.25L2.5 7.86C2.22 6.79 2.87 5.73 3.94 5.45l1.29-.34c1.07-.28 2.14.37 2.42 1.44l.12.43 1.48-.39-.11-.43z"/></svg>
+              Bitcoin Native — wnsp BRC-20
+            </div>
+            <h2 className="text-3xl font-bold mb-4">The Bitcoin Gateway into NexusOS</h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-sm leading-relaxed">
+              wnsp BRC-20 is the Bitcoin-native entry point into the NexusOS economy. Both NXT and wnsp share an identical <strong className="text-white">21 billion supply</strong>, creating natural 1:1 parity. Hold wnsp on Bitcoin → unlock the same campaign tiers as holding NXT.
+            </p>
+          </div>
+
+          {/* Dual-token comparison */}
+          <div className="grid md:grid-cols-2 gap-6 mb-10">
+            <div className="rounded-2xl border p-6 space-y-3" style={{ borderColor: "#a78bfa40", background: "#a78bfa08" }}>
+              <div className="text-xs font-mono uppercase tracking-widest" style={{ color: "#a78bfa" }}>NXT Token — NexusOS Native</div>
+              <div className="text-2xl font-bold text-white">21,000,000,000</div>
+              <div className="space-y-1.5 text-sm text-gray-400">
+                <div className="flex items-center gap-2"><span style={{ color: "#a78bfa" }}>•</span> Physics-based fees (E=hf)</div>
+                <div className="flex items-center gap-2"><span style={{ color: "#a78bfa" }}>•</span> Spectral wallet — Ψ channel addressing</div>
+                <div className="flex items-center gap-2"><span style={{ color: "#a78bfa" }}>•</span> Governance voting weight</div>
+                <div className="flex items-center gap-2"><span style={{ color: "#a78bfa" }}>•</span> On-chain via NexusOS blockchain</div>
+              </div>
+            </div>
+            <div className="rounded-2xl border p-6 space-y-3" style={{ borderColor: "#f9731640", background: "#f9731608" }}>
+              <div className="text-xs font-mono uppercase tracking-widest" style={{ color: "#f97316" }}>wnsp BRC-20 — Bitcoin Native</div>
+              <div className="text-2xl font-bold text-white">21,000,000,000</div>
+              <div className="space-y-1.5 text-sm text-gray-400">
+                <div className="flex items-center gap-2"><span style={{ color: "#f97316" }}>•</span> 1,000 per mint — open to anyone</div>
+                <div className="flex items-center gap-2"><span style={{ color: "#f97316" }}>•</span> Tradeable on UniSat, OKX, marketplaces</div>
+                <div className="flex items-center gap-2"><span style={{ color: "#f97316" }}>•</span> Anchored to wnsp.sats inscription</div>
+                <div className="flex items-center gap-2"><span style={{ color: "#f97316" }}>•</span> Bitcoin-level security and liquidity</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tier unlock table */}
+          <div className="rounded-2xl border border-white/10 bg-white/2 overflow-hidden mb-8">
+            <div className="px-5 py-3 border-b border-white/10 flex items-center justify-between">
+              <span className="text-xs font-mono uppercase tracking-widest text-gray-500">wnsp BRC-20 Holdings → Campaign Tier Unlock</span>
+              <span className="text-xs text-gray-600 font-mono">1 wnsp = 1 NXT</span>
+            </div>
+            <div className="divide-y divide-white/5">
+              {[
+                { tier: "Photon",           wnsp: "100",         color: "#a78bfa", shares: "100 Nexus Shares",       class: "Class C",       availability: "Unlimited" },
+                { tier: "Resonator",        wnsp: "1,000",       color: "#34d399", shares: "1,000 Nexus Shares",     class: "Class C",       availability: "Unlimited" },
+                { tier: "Kernel Agent",     wnsp: "10,000",      color: "#fbbf24", shares: "10,000 Nexus Shares",    class: "Class B Dev",   availability: "100 slots" },
+                { tier: "Hardware Founder", wnsp: "100,000",     color: "#f87171", shares: "100,000 + PHR-1 Unit",   class: "Class A",       availability: "25 slots" },
+                { tier: "Nexus Partner",    wnsp: "1,000,000",   color: "#60a5fa", shares: "1,000,000 + Board Seat", class: "Class A+",      availability: "5 slots" },
+              ].map(t => (
+                <div key={t.tier} className="flex items-center gap-4 px-5 py-3">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold" style={{ color: t.color }}>{t.tier}</div>
+                    <div className="text-xs text-gray-500">{t.shares} · {t.class}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-mono font-bold" style={{ color: "#f97316" }}>{t.wnsp} wnsp</div>
+                    <div className="text-xs text-gray-600">{t.availability}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Campaign phase supplement */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+            {[
+              { phase: "SNIC",             color: "#22d3ee", alloc: "1.05 B wnsp", pct: "5%" },
+              { phase: "PHR-1",            color: "#a78bfa", alloc: "1.05 B wnsp", pct: "5%" },
+              { phase: "Relay Mesh v1",    color: "#34d399", alloc: "1.05 B wnsp", pct: "5%" },
+              { phase: "WavelengthScript", color: "#fb923c", alloc: "1.05 B wnsp", pct: "5%" },
+            ].map(p => (
+              <div key={p.phase} className="rounded-xl border p-4 text-center" style={{ borderColor: p.color + "30", background: p.color + "08" }}>
+                <div className="text-xs font-mono font-bold mb-1" style={{ color: p.color }}>{p.phase}</div>
+                <div className="text-sm font-bold text-white">{p.alloc}</div>
+                <div className="text-[10px] text-gray-600 font-mono">{p.pct} of 21B supply</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center">
+            <a href="/wnsp-ordinals" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-mono text-sm border" style={{ borderColor: "#f97316", color: "#f97316", background: "#f9731610" }}>
+              Deploy & Mint wnsp BRC-20 → <ExternalLink className="h-4 w-4" />
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* ── FAQ ── */}
       <section className="px-6 py-20 max-w-3xl mx-auto">
         <p className="text-center text-xs text-gray-500 uppercase tracking-widest mb-4">Questions</p>

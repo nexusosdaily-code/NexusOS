@@ -7,7 +7,7 @@ import {
   ArrowRight, ExternalLink, Check, ChevronDown, ChevronUp,
   Atom, FlaskConical, Code2, BookOpen, Rocket, Target,
   Users, Coins, Star, Lock, Eye, GitBranch, Network, MapPin,
-  FileText, X, Copy, CheckCircle2, Wallet,
+  FileText, X, Copy, CheckCircle2, Wallet, Bitcoin,
 } from "lucide-react";
 
 // ── Token distribution ────────────────────────────────────────────────────
@@ -1076,6 +1076,73 @@ export default function CampaignPage() {
 
           <div className="mt-4 p-3 rounded-lg bg-violet-500/10 border border-violet-500/20 text-xs text-violet-300/70 leading-relaxed">
             C-0001 Non-Dominance: no single entity may hold more than 33% of circulating NXT. The charity trust funds the Basic Human Living Standard — 1,150 NXT/month measured monthly service consumption per citizen, delivered through the charity which receives funds from the orbital treasury.
+          </div>
+        </div>
+
+        {/* BRC-20 Economic Supplement */}
+        <div>
+          <div className="mb-3">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-white/30 mb-1">Bitcoin Economic Layer</div>
+            <h2 className="text-lg font-bold text-white">wnsp BRC-20 — The Bitcoin Gateway</h2>
+            <p className="text-white/40 text-xs mt-1 leading-relaxed">
+              wnsp BRC-20 and NXT share an identical 21B maximum supply — 1:1 parity. BRC-20 is the Bitcoin-native entry into the NexusOS economy. Minting wnsp on Bitcoin signals participation and unlocks the same campaign tiers as holding NXT.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-950/20 to-black overflow-hidden">
+            {/* Header bar */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-orange-500/10">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
+                  <Bitcoin size={11} className="text-orange-400" />
+                </div>
+                <span className="text-[11px] font-mono text-orange-400 font-bold">wnsp BRC-20</span>
+              </div>
+              <div className="flex gap-3 text-[10px] font-mono text-white/25">
+                <span>tick: <span className="text-amber-400">wnsp</span></span>
+                <span>max: <span className="text-amber-400">21,000,000,000</span></span>
+                <span>limit: <span className="text-amber-400">1,000/mint</span></span>
+              </div>
+            </div>
+
+            {/* Supplement rows: NXT tranche → BRC-20 equivalent */}
+            <div className="divide-y divide-white/5">
+              {[
+                { label: "Campaign Phase 1 — SNIC",        nxt: "1.05 B", wnsp: "1.05 B", pct: "5%",  color: "#22d3ee" },
+                { label: "Campaign Phase 2 — PHR-1",       nxt: "1.05 B", wnsp: "1.05 B", pct: "5%",  color: "#a78bfa" },
+                { label: "Campaign Phase 3 — Mesh",        nxt: "1.05 B", wnsp: "1.05 B", pct: "5%",  color: "#34d399" },
+                { label: "Campaign Phase 4 — Compiler",    nxt: "1.05 B", wnsp: "1.05 B", pct: "5%",  color: "#fb923c" },
+                { label: "Developer Ecosystem (bonus)",    nxt: "3.15 B", wnsp: "3.15 B", pct: "15%", color: "#4ade80" },
+                { label: "Citizens / Public Mint",         nxt: "6.85 B", wnsp: "6.85 B", pct: "32.62%",color: "#94a3b8" },
+              ].map(row => (
+                <div key={row.label} className="flex items-center gap-3 px-4 py-2.5">
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: row.color }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] text-white/70">{row.label}</div>
+                  </div>
+                  <div className="flex gap-4 items-center shrink-0">
+                    <div className="text-right">
+                      <div className="text-[10px] font-mono text-white/40">{row.nxt} NXT</div>
+                    </div>
+                    <div className="text-[9px] text-white/20 font-mono">=</div>
+                    <div className="text-right min-w-[80px]">
+                      <div className="text-[10px] font-mono text-amber-400">{row.wnsp} wnsp</div>
+                      <div className="text-[9px] font-mono text-white/25">{row.pct} supply</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer CTA */}
+            <div className="px-4 py-3 border-t border-orange-500/10 flex items-center justify-between">
+              <div className="text-[10px] font-mono text-white/25">Anchored to wnsp.sats · inscribed to Bitcoin permanently</div>
+              <Link href="/wnsp-ordinals">
+                <button className="text-[10px] font-mono px-3 py-1.5 rounded-lg bg-orange-500/15 border border-orange-500/25 text-orange-400 hover:bg-orange-500/25 transition-all flex items-center gap-1">
+                  <Zap size={9} /> Deploy & Mint
+                </button>
+              </Link>
+            </div>
           </div>
         </div>
 
