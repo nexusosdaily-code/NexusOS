@@ -7208,6 +7208,157 @@ export async function registerRoutes(
   });
 
   // Etch a new Rune linked to a WNSP spectral channel — inscribes the claim on Bitcoin
+  // ── Band art SVG generator ──────────────────────────────────────────────────
+  const BAND_PHYSICS: Record<string, { nm: [number,number]; color: string; symbol: string; runeName: string; desc: string }> = {
+    SYSTEM:  { nm:[380,450], color:"#8b5cf6", symbol:"Υ", runeName:"NEXUSOS•SYSTEM•BAND",  desc:"UV authority band — root orchestration layer" },
+    KERNEL:  { nm:[450,490], color:"#3b82f6", symbol:"Κ", runeName:"NEXUSOS•KERNEL•BAND",  desc:"Blue band — OS kernel & boot events" },
+    STREAM:  { nm:[490,520], color:"#22d3ee", symbol:"Σ", runeName:"NEXUSOS•STREAM•BAND",  desc:"Cyan band — real-time data streams" },
+    CORE:    { nm:[520,565], color:"#34d399", symbol:"Ω", runeName:"NEXUSOS•CORE•BAND",    desc:"Green band — protocol core operations" },
+    UI:      { nm:[565,590], color:"#fbbf24", symbol:"Φ", runeName:"NEXUSOS•UI•BAND",      desc:"Yellow band — user interface events" },
+    EVENT:   { nm:[590,625], color:"#f97316", symbol:"Ε", runeName:"NEXUSOS•EVENT•BAND",   desc:"Orange band — governance & triggers" },
+    STORAGE: { nm:[625,780], color:"#f87171", symbol:"Δ", runeName:"NEXUSOS•STORAGE•BAND", desc:"Red band — persistent state & files" },
+    NXT:     { nm:[380,780], color:"#a78bfa", symbol:"N", runeName:"NEXUSOS•NXT•TOKEN",    desc:"Full-spectrum — NexusOS native currency" },
+    WNSP:    { nm:[380,780], color:"#fb923c", symbol:"Ψ", runeName:"NEXUSOS•WNSP•PROTOCOL",desc:"25,600 orthogonal Ψ channels — Hilbert space" },
+  };
+
+  function xmlEsc(s: string) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+  function generateBandSvg(band: string): string {
+    const b = BAND_PHYSICS[band];
+    if (!b) return "";
+    const C = 3e8, H = 6.626e-34, EV = 1.602e-19;
+    const midNm = (b.nm[0] + b.nm[1]) / 2;
+    const freqTHz = (C / (midNm * 1e-9) / 1e12).toFixed(3);
+    const energyEv = (H * (C / (midNm * 1e-9)) / EV).toExponential(3);
+
+    // Spectrum gradient stops (380→780nm, 7 colour stops)
+    const specStops = [
+      {pct:0,   c:"#8b5cf6"}, {pct:17,  c:"#3b82f6"}, {pct:27,  c:"#22d3ee"},
+      {pct:43,  c:"#34d399"}, {pct:57,  c:"#fbbf24"}, {pct:68,  c:"#f97316"},
+      {pct:100, c:"#f87171"},
+    ];
+
+    // Band highlight x/width on 400nm span
+    const specW = 520, specX = 40;
+    const hlStart = (b.nm[0] - 380) / 400 * specW + specX;
+    const hlEnd   = (b.nm[1] - 380) / 400 * specW + specX;
+    const hlW     = Math.max(hlEnd - hlStart, 4);
+
+    const stopTags = specStops.map(s => `<stop offset="${s.pct}%" stop-color="${s.c}"/>`).join("");
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420" viewBox="0 0 600 420">
+  <defs>
+    <linearGradient id="spectrum" x1="0" y1="0" x2="1" y2="0">${stopTags}</linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0a1a"/><stop offset="100%" stop-color="#050510"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="420" fill="url(#bg)"/>
+  <rect width="600" height="420" fill="${b.color}" fill-opacity="0.04"/>
+
+  <!-- Top accent line -->
+  <rect x="0" y="0" width="600" height="2" fill="${b.color}" opacity="0.6"/>
+
+  <!-- Spectrum bar -->
+  <rect x="${specX}" y="50" width="${specW}" height="28" rx="4" fill="url(#spectrum)" opacity="0.85"/>
+
+  <!-- Band highlight overlay -->
+  <rect x="${hlStart}" y="46" width="${hlW}" height="36" rx="3" fill="${b.color}" fill-opacity="0.35"/>
+  <rect x="${hlStart}" y="46" width="${hlW}" height="36" rx="3" fill="none" stroke="${b.color}" stroke-width="2" filter="url(#glow)"/>
+
+  <!-- Spectrum labels -->
+  <text x="${specX}" y="98" fill="#ffffff30" font-size="9" font-family="monospace">380nm</text>
+  <text x="${specX + specW - 30}" y="98" fill="#ffffff30" font-size="9" font-family="monospace">780nm</text>
+
+  <!-- Band tick marks -->
+  <line x1="${hlStart}" y1="82" x2="${hlStart}" y2="95" stroke="${b.color}" stroke-width="1" opacity="0.7"/>
+  <line x1="${hlEnd}"   y1="82" x2="${hlEnd}"   y2="95" stroke="${b.color}" stroke-width="1" opacity="0.7"/>
+  <text x="${(hlStart+hlEnd)/2}" y="108" fill="${b.color}" font-size="9" font-family="monospace" text-anchor="middle">${b.nm[0]}&#8211;${b.nm[1]}nm</text>
+
+  <!-- Big symbol -->
+  <text x="54" y="190" fill="${b.color}" font-size="80" font-family="serif" opacity="0.18">${xmlEsc(b.symbol)}</text>
+  <text x="50" y="185" fill="${b.color}" font-size="80" font-family="serif" filter="url(#glow)" opacity="0.9">${xmlEsc(b.symbol)}</text>
+
+  <!-- Band name -->
+  <text x="150" y="148" fill="${b.color}" font-size="28" font-family="monospace" font-weight="bold" letter-spacing="3">${xmlEsc(band)}</text>
+  <text x="150" y="172" fill="#ffffff60" font-size="12" font-family="monospace">WNSP Authority Band</text>
+
+  <!-- Rune name -->
+  <rect x="40" y="210" width="520" height="38" rx="6" fill="${b.color}" fill-opacity="0.1" stroke="${b.color}" stroke-opacity="0.3" stroke-width="1"/>
+  <text x="300" y="234" fill="${b.color}" font-size="15" font-family="monospace" font-weight="bold" text-anchor="middle" letter-spacing="2">${xmlEsc(b.runeName)}</text>
+
+  <!-- Physics data -->
+  <text x="40" y="280" fill="#ffffff40" font-size="10" font-family="monospace">&#955;  (mid)</text>
+  <text x="160" y="280" fill="#ffffff80" font-size="10" font-family="monospace">${midNm.toFixed(1)} nm</text>
+  <text x="40" y="298" fill="#ffffff40" font-size="10" font-family="monospace">&#957;  (freq)</text>
+  <text x="160" y="298" fill="#ffffff80" font-size="10" font-family="monospace">${freqTHz} THz</text>
+  <text x="40" y="316" fill="#ffffff40" font-size="10" font-family="monospace">E  (photon)</text>
+  <text x="160" y="316" fill="#ffffff80" font-size="10" font-family="monospace">${xmlEsc(energyEv)} eV</text>
+  <text x="40" y="334" fill="#ffffff40" font-size="10" font-family="monospace">E=hf / c&#178;</text>
+  <text x="160" y="334" fill="#ffffff80" font-size="10" font-family="monospace">Compression State &#923;</text>
+
+  <!-- Right column -->
+  <text x="340" y="280" fill="#ffffff40" font-size="10" font-family="monospace">Protocol</text>
+  <text x="420" y="280" fill="#ffffff80" font-size="10" font-family="monospace">WNSP v1.0</text>
+  <text x="340" y="298" fill="#ffffff40" font-size="10" font-family="monospace">Standard</text>
+  <text x="420" y="298" fill="#ffffff80" font-size="10" font-family="monospace">Runes + Ordinals</text>
+  <text x="340" y="316" fill="#ffffff40" font-size="10" font-family="monospace">License</text>
+  <text x="420" y="316" fill="#ffffff80" font-size="10" font-family="monospace">AGPL-3.0</text>
+  <text x="340" y="334" fill="#ffffff40" font-size="10" font-family="monospace">Channels</text>
+  <text x="420" y="334" fill="#ffffff80" font-size="10" font-family="monospace">25,600 &#936; (Hilbert)</text>
+
+  <!-- Desc -->
+  <text x="300" y="374" fill="#ffffff30" font-size="10" font-family="monospace" text-anchor="middle">${xmlEsc(b.desc)}</text>
+
+  <!-- Footer -->
+  <line x1="40" y1="388" x2="560" y2="388" stroke="${b.color}" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="40"  y="408" fill="${b.color}" font-size="9" font-family="monospace" opacity="0.5">NexusOS &#183; wnsp.io &#183; Bitcoin Ordinals &#183; First disclosure 2026</text>
+  <text x="560" y="408" fill="${b.color}" font-size="9" font-family="monospace" opacity="0.5" text-anchor="end">Inscription Art v1.0</text>
+</svg>`;
+  }
+
+  // Serve SVG preview (no auth needed — public art)
+  app.get("/api/btc-bridge/runes/band-art/:band", (req: Request, res: Response) => {
+    const band = req.params.band.toUpperCase();
+    const svg = generateBandSvg(band);
+    if (!svg) return res.status(404).json({ error: `Unknown band: ${band}` });
+    res.setHeader("Content-Type", "image/svg+xml");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.send(svg);
+  });
+
+  // Inscribe band art as an Ordinal (queues the SVG on-chain)
+  app.post("/api/btc-bridge/runes/inscribe-art", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { band } = req.body;
+      if (!band) return res.status(400).json({ error: "band required" });
+      const bp = BAND_PHYSICS[band.toUpperCase()];
+      if (!bp) return res.status(404).json({ error: `Unknown band: ${band}` });
+      const svg = generateBandSvg(band.toUpperCase());
+      const { btcBridge } = await import("./btc-bridge-service");
+      const queued = await btcBridge.queueRawContent({
+        eventType:   "RUNE_ETCH",
+        ref:         `rune-art-${band.toUpperCase()}-${Date.now()}`,
+        content:     svg,
+        triggeredBy: (req as any).user?.username ?? "wnsp.io",
+        psiChannel:  `Ψ(ART,${band},SVG)`,
+      });
+      await logAction(req, "rune_art_inscribed", "runes", queued.id?.toString(), {}, "success",
+        `Band art inscription queued: ${band}`);
+      res.json({
+        ok: true, queued, band, svgBytes: svg.length,
+        note: "Once this inscription confirms, use its inscription ID as the icon when etching the Rune on Unisat.",
+        unisatEtchUrl: "https://unisat.io/runes/etch",
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   app.post("/api/btc-bridge/runes/etch", authenticate, async (req: Request, res: Response) => {
     try {
       const { runeName, band, symbol, supply, decimals = 0, mintCap, mintAmount, premine = "0", turbo = true, note } = req.body;

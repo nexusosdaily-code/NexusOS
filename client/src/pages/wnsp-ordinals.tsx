@@ -1210,6 +1210,7 @@ function RunesTab() {
   const [customName, setCustomName] = useState("");
   const [mintCap, setMintCap]   = useState("210000");
   const [mintAmt, setMintAmt]   = useState("100000");
+  const [iconInscriptionId, setIconInscriptionId] = useState("");
   const [etchBusy, setEtchBusy] = useState(false);
   const [etchMsg, setEtchMsg]   = useState("");
   const [etchJson, setEtchJson] = useState("");
@@ -1217,6 +1218,9 @@ function RunesTab() {
   const [mintAmt2, setMintAmt2] = useState("100000");
   const [mintBusy, setMintBusy] = useState(false);
   const [mintMsg, setMintMsg]   = useState("");
+  // Art inscription state: band → { busy, msg, queueId }
+  const [artState, setArtState] = useState<Record<string, { busy: boolean; msg: string; queueId?: number }>>({});
+  const [previewBand, setPreviewBand] = useState<string | null>(null);
 
   const wnspRuneMap: any[] = data?.wnspRuneMap ?? [];
   const chainBalances: any[] = data?.chainBalances ?? [];
@@ -1229,6 +1233,19 @@ function RunesTab() {
     return d;
   }
 
+  async function handleInscribeArt(band: string) {
+    setArtState(prev => ({ ...prev, [band]: { busy: true, msg: "" } }));
+    try {
+      const result = await apiFetch("/api/btc-bridge/runes/inscribe-art", {
+        method: "POST", body: JSON.stringify({ band }),
+      });
+      setArtState(prev => ({ ...prev, [band]: { busy: false, msg: `Queued #${result.queued?.id} — use inscription ID as Rune icon once confirmed`, queueId: result.queued?.id } }));
+      qc.invalidateQueries({ queryKey: ["/api/btc-bridge/runes"] });
+    } catch (err: any) {
+      setArtState(prev => ({ ...prev, [band]: { busy: false, msg: `Error: ${err.message}` } }));
+    }
+  }
+
   async function handleEtch(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedBand) return;
@@ -1237,7 +1254,7 @@ function RunesTab() {
       const runeName = customName.trim() || selectedBand.runeName;
       const result = await apiFetch("/api/btc-bridge/runes/etch", {
         method: "POST",
-        body: JSON.stringify({ runeName, band: selectedBand.band, symbol: selectedBand.symbol, supply: selectedBand.supply, mintCap, mintAmount: mintAmt, turbo: true }),
+        body: JSON.stringify({ runeName, band: selectedBand.band, symbol: selectedBand.symbol, supply: selectedBand.supply, mintCap, mintAmount: mintAmt, turbo: true, iconInscriptionId: iconInscriptionId.trim() || undefined }),
       });
       setEtchJson(JSON.stringify(result.queued ?? {}, null, 2));
       setEtchMsg(`Claim inscription queued for ${runeName}`);
@@ -1337,38 +1354,86 @@ function RunesTab() {
         {isLoading && <div className="text-xs text-white/30 text-center py-4 font-mono">Loading Rune map…</div>}
 
         <div className="space-y-2">
-          {wnspRuneMap.map((r: any) => (
-            <div key={r.band} className="rounded-xl border border-white/8 p-3 space-y-2 cursor-pointer hover:border-white/20 transition-all"
-              style={{ background: bandBg[r.band] ?? "#ffffff08" }}
-              onClick={() => { setSelectedBand(r); setCustomName(r.runeName); setEtchMode(true); }}>
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-lg" style={{ color: r.color }}>{r.symbol}</span>
-                  <div>
-                    <div className="font-mono text-xs font-bold" style={{ color: r.color }}>{r.band}</div>
-                    <div className="text-[9px] text-white/30">{r.nm[0]}–{r.nm[1]}nm</div>
+          {wnspRuneMap.map((r: any) => {
+            const art = artState[r.band];
+            const artUrl = `/api/btc-bridge/runes/band-art/${r.band}`;
+            return (
+              <div key={r.band} className="rounded-xl border border-white/8 space-y-0 overflow-hidden transition-all hover:border-white/20"
+                style={{ background: bandBg[r.band] ?? "#ffffff08" }}>
+
+                {/* Card header — click to etch */}
+                <div className="p-3 space-y-2 cursor-pointer" onClick={() => { setSelectedBand(r); setCustomName(r.runeName); setIconInscriptionId(""); setEtchMode(true); }}>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-lg" style={{ color: r.color }}>{r.symbol}</span>
+                      <div>
+                        <div className="font-mono text-xs font-bold" style={{ color: r.color }}>{r.band}</div>
+                        <div className="text-[9px] text-white/30">{r.nm[0]}–{r.nm[1]}nm</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a href={r.unisatUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                        className="flex items-center gap-1 text-[10px] text-orange-400 hover:text-orange-300 font-mono transition-colors">
+                        <ExternalLink size={9} /> Unisat
+                      </a>
+                      <a href={r.hiroUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                        className="flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 font-mono transition-colors">
+                        <ExternalLink size={9} /> Hiro
+                      </a>
+                      <a href={r.marketUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                        className="flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono transition-colors">
+                        <ExternalLink size={9} /> Market
+                      </a>
+                    </div>
                   </div>
+                  <div className="font-mono text-[11px] text-white/60 tracking-wider">{r.runeName}</div>
+                  <div className="text-[9px] text-white/30">{r.desc}</div>
+                  <div className="text-[9px] text-white/20">Supply: {Number(r.supply).toLocaleString()} · Click card to etch</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <a href={r.unisatUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                    className="flex items-center gap-1 text-[10px] text-orange-400 hover:text-orange-300 font-mono transition-colors">
-                    <ExternalLink size={9} /> Unisat
-                  </a>
-                  <a href={r.hiroUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                    className="flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 font-mono transition-colors">
-                    <ExternalLink size={9} /> Hiro
-                  </a>
-                  <a href={r.marketUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                    className="flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono transition-colors">
-                    <ExternalLink size={9} /> Market
-                  </a>
+
+                {/* Art strip */}
+                <div className="border-t border-white/5 px-3 py-2 flex items-center gap-3">
+                  {/* Thumbnail toggle */}
+                  <button onClick={() => setPreviewBand(previewBand === r.band ? null : r.band)}
+                    className="flex items-center gap-1 text-[10px] font-mono transition-colors"
+                    style={{ color: r.color }}>
+                    {previewBand === r.band ? "▲ Hide art" : "◀ Preview art"}
+                  </button>
+
+                  <div className="flex-1" />
+
+                  {/* Inscribe art button */}
+                  <button disabled={art?.busy}
+                    onClick={e => { e.stopPropagation(); handleInscribeArt(r.band); }}
+                    className="flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded-lg border transition-all disabled:opacity-40"
+                    style={{ color: r.color, borderColor: r.color + "44" }}>
+                    {art?.busy ? "Queuing…" : "Inscribe Band Art →"}
+                  </button>
                 </div>
+
+                {/* Art status */}
+                {art?.msg && (
+                  <div className={`mx-3 mb-2 text-[9px] font-mono p-1.5 rounded ${art.msg.startsWith("Error") ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"}`}>
+                    {art.msg}
+                  </div>
+                )}
+
+                {/* SVG preview panel */}
+                {previewBand === r.band && (
+                  <div className="mx-3 mb-3 rounded-xl overflow-hidden border border-white/10">
+                    <img src={artUrl} alt={`${r.band} band art`} className="w-full block" loading="lazy" />
+                    <div className="px-3 py-2 bg-black/40 flex items-center justify-between">
+                      <span className="text-[9px] text-white/30 font-mono">600×420px SVG · inscription-ready</span>
+                      <a href={artUrl} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-[10px]" style={{ color: r.color }}>
+                        <ExternalLink size={9} /> Open SVG
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="font-mono text-[11px] text-white/60 tracking-wider">{r.runeName}</div>
-              <div className="text-[9px] text-white/30">{r.desc}</div>
-              <div className="text-[9px] text-white/20">Supply: {Number(r.supply).toLocaleString()} · Click to etch</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -1407,6 +1472,34 @@ function RunesTab() {
                   placeholder="100000" />
               </div>
             </div>
+
+            {/* Icon inscription — links band art SVG to this Rune on Unisat */}
+            <div className="space-y-1">
+              <label className="text-[10px] text-white/40 font-mono uppercase flex items-center gap-2">
+                Icon Inscription ID <span className="text-white/20 normal-case">(optional — paste art inscription ID to set Rune image)</span>
+              </label>
+              <div className="flex gap-2">
+                <input value={iconInscriptionId} onChange={e => setIconInscriptionId(e.target.value.trim())}
+                  className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 font-mono text-xs text-white focus:outline-none focus:border-amber-500/50"
+                  placeholder="abc123…i0" />
+                {iconInscriptionId && (
+                  <a href={`https://unisat.io/inscription/${iconInscriptionId}`} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[10px] text-orange-400 px-2 border border-orange-500/30 rounded-lg hover:bg-orange-500/10 transition-all whitespace-nowrap">
+                    <ExternalLink size={9} /> Preview
+                  </a>
+                )}
+              </div>
+              <div className="text-[9px] text-white/20">
+                Inscribe the band art first (button on the card), paste the confirmed inscription ID here → Unisat shows your SVG as the Rune icon permanently.
+              </div>
+              {selectedBand && (
+                <div className="rounded-lg overflow-hidden border border-white/5 mt-1">
+                  <img src={`/api/btc-bridge/runes/band-art/${selectedBand.band}`} alt="band art preview"
+                    className="w-full block max-h-32 object-cover object-top" />
+                </div>
+              )}
+            </div>
+
             <button type="submit" disabled={etchBusy || !customName.trim()}
               className="w-full py-2 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs font-mono font-bold transition-all">
               {etchBusy ? "Inscribing claim…" : `Inscribe Claim → ${customName || selectedBand.runeName}`}
