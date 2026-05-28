@@ -6693,5 +6693,213 @@ export async function registerRoutes(
     }
   });
 
+  // ── BTC Names Bridge ─────────────────────────────────────────────────────
+  // Resolve .sats / .btc names or raw bc1p addresses → WNSP Ψ channel
+
+  function addressToWnspChannel(addr: string) {
+    const BAND_WIDTH = 400 / 128;
+    const Cspeed = 3e8, Hconst = 6.626e-34, EVconst = 1.602e-19;
+    let sumLambda = 0, sumCode = 0;
+    for (let i = 0; i < addr.length; i++) {
+      const code = addr.charCodeAt(i);
+      const band = code % 128;
+      const lambda = 380 + band * BAND_WIDTH + BAND_WIDTH / 2;
+      sumLambda += lambda; sumCode += code;
+    }
+    const meanLambda = sumLambda / addr.length;
+    const wdm = Math.floor(((meanLambda - 380) / 400) * 256);
+    const oam = sumCode % 50;
+    const pol = sumCode % 2 === 0 ? "H" : "V";
+    const freq = (Cspeed / (meanLambda * 1e-9)) / 1e12;
+    const energy = (Hconst * freq * 1e12) / EVconst;
+    return { wdm, oam, pol, lambda: meanLambda, freq, energy, psi: `Ψ(${wdm},${oam},${pol})` };
+  }
+
+  app.get("/api/btc-bridge/resolve/:name", async (req: Request, res: Response) => {
+    const rawName = decodeURIComponent(req.params.name).trim().toLowerCase();
+    try {
+      // Raw bc1p / bc1q / 1... / 3... address → derive channel directly
+      if (rawName.startsWith("bc1") || /^[13]/.test(rawName)) {
+        const ch = addressToWnspChannel(rawName);
+        return res.json({
+          name: rawName, nameType: "address", btcAddress: rawName,
+          psi: ch.psi, wdm: ch.wdm, oam: ch.oam, pol: ch.pol,
+          lambdaNm: ch.lambda.toFixed(4), freqThz: ch.freq.toFixed(6), energyEv: ch.energy.toFixed(6),
+          source: "direct", status: "live",
+        });
+      }
+
+      // .btc → Stacks BNS API
+      if (rawName.endsWith(".btc")) {
+        const namePart = rawName.replace(/\.btc$/, "");
+        const bnsUrl = `https://api.mainnet.hiro.so/v1/names/${namePart}.btc`;
+        const bnsRes = await fetch(bnsUrl, { headers: { "Accept": "application/json" } });
+        if (bnsRes.ok) {
+          const bnsData: any = await bnsRes.json();
+          const btcAddr = bnsData.address || bnsData.zonefile_hash || null;
+          if (btcAddr) {
+            const ch = addressToWnspChannel(btcAddr);
+            return res.json({
+              name: rawName, nameType: "btc", btcAddress: btcAddr,
+              psi: ch.psi, wdm: ch.wdm, oam: ch.oam, pol: ch.pol,
+              lambdaNm: ch.lambda.toFixed(4), freqThz: ch.freq.toFixed(6), energyEv: ch.energy.toFixed(6),
+              source: "Stacks BNS API", status: "live", raw: bnsData,
+            });
+          }
+        }
+        // Not yet registered — derive channel from the name string itself
+        const ch = addressToWnspChannel(rawName);
+        return res.json({
+          name: rawName, nameType: "btc", btcAddress: null,
+          psi: ch.psi, wdm: ch.wdm, oam: ch.oam, pol: ch.pol,
+          lambdaNm: ch.lambda.toFixed(4), freqThz: ch.freq.toFixed(6), energyEv: ch.energy.toFixed(6),
+          source: "name-derived (not yet registered)", status: "unregistered",
+        });
+      }
+
+      // .sats → Unisat public lookup or name-derived fallback
+      if (rawName.endsWith(".sats") || !rawName.includes(".")) {
+        const cleanName = rawName.replace(/\.sats$/, "");
+        // Try Unisat public API (no key required for basic lookup)
+        try {
+          const unisatUrl = `https://open-api.unisat.io/v1/indexer/brc20/transferable-inscriptions?ticker=${encodeURIComponent(cleanName)}&start=0&limit=1`;
+          const uRes = await fetch(unisatUrl, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(4000) });
+          // Unisat public endpoints may 403 without key — fall through gracefully
+          if (uRes.ok) {
+            const uData: any = await uRes.json();
+            if (uData?.data?.inscriptions?.length > 0) {
+              const insc = uData.data.inscriptions[0];
+              const addr = insc.address || insc.currentAddress;
+              if (addr) {
+                const ch = addressToWnspChannel(addr);
+                return res.json({
+                  name: rawName.endsWith(".sats") ? rawName : `${rawName}.sats`,
+                  nameType: "sats", btcAddress: addr,
+                  psi: ch.psi, wdm: ch.wdm, oam: ch.oam, pol: ch.pol,
+                  lambdaNm: ch.lambda.toFixed(4), freqThz: ch.freq.toFixed(6), energyEv: ch.energy.toFixed(6),
+                  source: "Unisat API", status: "live",
+                });
+              }
+            }
+          }
+        } catch (_) { /* fall through to name-derived */ }
+
+        // Name-derived channel (pre-registration preview)
+        const ch = addressToWnspChannel(rawName.endsWith(".sats") ? rawName : `${rawName}.sats`);
+        return res.json({
+          name: rawName.endsWith(".sats") ? rawName : `${rawName}.sats`,
+          nameType: "sats", btcAddress: null,
+          psi: ch.psi, wdm: ch.wdm, oam: ch.oam, pol: ch.pol,
+          lambdaNm: ch.lambda.toFixed(4), freqThz: ch.freq.toFixed(6), energyEv: ch.energy.toFixed(6),
+          source: "name-derived (register at unisat.io)", status: "unregistered",
+        });
+      }
+
+      return res.status(400).json({ error: "Unrecognised name format. Try: wnsp.sats, wnsp.btc, or a bc1p... address." });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/btc-bridge/inscription/:id — check inscription on ordinals.com
+  app.get("/api/btc-bridge/inscription/:id", async (req: Request, res: Response) => {
+    const id = req.params.id;
+    try {
+      const r = await fetch(`https://ordinals.com/inscription/${id}`, {
+        headers: { "Accept": "application/json" },
+        signal: AbortSignal.timeout(6000),
+      });
+      if (!r.ok) return res.status(404).json({ error: "Inscription not found" });
+      const data = await r.json().catch(() => null);
+      res.json({ inscriptionId: id, url: `https://ordinals.com/inscription/${id}`, data });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/btc-bridge/names — list known WNSP Bitcoin names
+  app.get("/api/btc-bridge/names", async (_req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { btcNames } = await import("../shared/schema");
+      const rows = await db.select().from(btcNames).orderBy(btcNames.createdAt);
+      res.json({ names: rows });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/btc-bridge/names — register a Bitcoin name for WNSP
+  app.post("/api/btc-bridge/names", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { btcNames } = await import("../shared/schema");
+      const { name, nameType, btcAddress, inscriptionId, notes } = req.body;
+      if (!name || !nameType) return res.status(400).json({ error: "name and nameType required" });
+      const ch = btcAddress ? addressToWnspChannel(btcAddress) : addressToWnspChannel(name);
+      const [row] = await db.insert(btcNames).values({
+        name: name.toLowerCase().trim(),
+        nameType,
+        btcAddress: btcAddress || null,
+        inscriptionId: inscriptionId || null,
+        psiChannel: ch.psi,
+        wdm: ch.wdm, oam: ch.oam, pol: ch.pol,
+        lambdaNm: ch.lambda.toFixed(4),
+        freqThz: ch.freq.toFixed(6),
+        energyEv: ch.energy.toFixed(6),
+        status: btcAddress ? "registered" : "pending",
+        notes: notes || null,
+        ownedByUserId: (req as any).user?.id || null,
+      }).onConflictDoUpdate({
+        target: btcNames.name,
+        set: { btcAddress, inscriptionId, status: btcAddress ? "registered" : "pending", notes },
+      }).returning();
+      res.json({ ok: true, name: row });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/btc-bridge/inscriptions — list tracked WNSP inscriptions
+  app.get("/api/btc-bridge/inscriptions", async (_req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { btcInscriptions } = await import("../shared/schema");
+      const rows = await db.select().from(btcInscriptions).orderBy(btcInscriptions.createdAt);
+      res.json({ inscriptions: rows });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/btc-bridge/inscriptions/:key — update inscription ID once confirmed on-chain
+  app.post("/api/btc-bridge/inscriptions/:key", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { btcInscriptions } = await import("../shared/schema");
+      const { inscriptionId, blockHeight, satoshi, notes } = req.body;
+      const key = req.params.key;
+      await db.insert(btcInscriptions).values({
+        inscriptionKey: key,
+        title: req.body.title || key,
+        inscriptionId: inscriptionId || null,
+        contentType: "text/plain",
+        byteSize: req.body.byteSize || null,
+        status: inscriptionId ? "inscribed" : "pending",
+        blockHeight: blockHeight || null,
+        satoshi: satoshi || null,
+        ordinalsCom: inscriptionId ? `https://ordinals.com/inscription/${inscriptionId}` : null,
+        notes: notes || null,
+        inscribedAt: inscriptionId ? new Date() : null,
+      }).onConflictDoUpdate({
+        target: btcInscriptions.inscriptionKey,
+        set: { inscriptionId, blockHeight, satoshi, status: inscriptionId ? "inscribed" : "pending", inscribedAt: inscriptionId ? new Date() : null, notes },
+      });
+      res.json({ ok: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return httpServer;
 }

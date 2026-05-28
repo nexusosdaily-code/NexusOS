@@ -975,3 +975,55 @@ export const socialBroadcasts = pgTable("social_broadcasts", {
 export const insertSocialBroadcastSchema = createInsertSchema(socialBroadcasts).omit({ id: true, createdAt: true });
 export type InsertSocialBroadcast = z.infer<typeof insertSocialBroadcastSchema>;
 export type SocialBroadcast = typeof socialBroadcasts.$inferSelect;
+
+// ============================================
+// BTC NAMES BRIDGE TABLE
+// ============================================
+export const btcNames = pgTable("btc_names", {
+  id:            serial("id").primaryKey(),
+  name:          text("name").notNull().unique(),        // e.g. "wnsp.sats" or "wnsp.btc"
+  nameType:      text("name_type").notNull(),             // "sats" | "btc" | "4letter" | "bitmap"
+  btcAddress:    text("btc_address"),                     // resolved Bitcoin address
+  inscriptionId: text("inscription_id"),                  // ordinal inscription ID
+  psiChannel:    text("psi_channel"),                     // derived WNSP Ψ channel
+  wdm:           integer("wdm"),
+  oam:           integer("oam"),
+  pol:           text("pol"),
+  lambdaNm:      text("lambda_nm"),
+  freqThz:       text("freq_thz"),
+  energyEv:      text("energy_ev"),
+  status:        text("status").notNull().default("pending"),   // "pending" | "registered" | "verified"
+  resolvedAt:    timestamp("resolved_at"),
+  ownedByUserId: integer("owned_by_user_id"),
+  notes:         text("notes"),
+  createdAt:     timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertBtcNameSchema = createInsertSchema(btcNames).omit({ id: true, createdAt: true });
+export type InsertBtcName = z.infer<typeof insertBtcNameSchema>;
+export type BtcName = typeof btcNames.$inferSelect;
+
+// ============================================
+// BTC ORDINAL INSCRIPTIONS TABLE
+// ============================================
+export const btcInscriptions = pgTable("btc_inscriptions", {
+  id:            serial("id").primaryKey(),
+  inscriptionKey: text("inscription_key").notNull().unique(), // "CE-TABLE-v1" | "SPEC-v1" | etc.
+  title:         text("title").notNull(),
+  inscriptionId: text("inscription_id"),                      // actual on-chain ID once inscribed
+  contentType:   text("content_type").notNull().default("text/plain"),
+  contentHash:   text("content_hash"),                        // SHA-256 of inscribed content
+  byteSize:      integer("byte_size"),
+  status:        text("status").notNull().default("pending"),  // "pending" | "inscribed" | "verified"
+  blockHeight:   integer("block_height"),
+  satoshi:       text("satoshi"),                              // specific sat number
+  inscribedAt:   timestamp("inscribed_at"),
+  verifiedAt:    timestamp("verified_at"),
+  ordinalsCom:   text("ordinals_com_url"),
+  notes:         text("notes"),
+  createdAt:     timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertBtcInscriptionSchema = createInsertSchema(btcInscriptions).omit({ id: true, createdAt: true });
+export type InsertBtcInscription = z.infer<typeof insertBtcInscriptionSchema>;
+export type BtcInscription = typeof btcInscriptions.$inferSelect;
