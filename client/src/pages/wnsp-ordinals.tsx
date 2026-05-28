@@ -1,10 +1,226 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
   Copy, CheckCircle2, ExternalLink, Bitcoin, Shield, Zap, Waves,
-  ChevronDown, ChevronUp, Search, RefreshCw, Link2, Globe, Hash
+  ChevronDown, ChevronUp, Search, RefreshCw, Link2, Globe, Hash, Activity
 } from "lucide-react";
+
+// ── WASCII v2.0 — Wave Density Spectral Vector ──────────────────────────────
+const WASCII_TABLE: Record<string, number> = {
+  ...Object.fromEntries(Array.from({ length: 26 }, (_, i) => [String.fromCharCode(65 + i), 380 + i * 6])),  // A-Z
+  ...Object.fromEntries(Array.from({ length: 26 }, (_, i) => [String.fromCharCode(97 + i), 383 + i * 6])),  // a-z
+  ...Object.fromEntries(Array.from({ length: 10 }, (_, i) => [String(i), 536 + i * 6])),                    // 0-9
+  " ": 596, ".": 602, ",": 608, "!": 614, "?": 620, ":": 626, ";": 632,
+  "-": 638, "_": 644, "/": 650, "\\": 656, "@": 662, "#": 668, "$": 674,
+  "%": 680, "&": 686, "*": 692, "(": 698, ")": 704, "[": 710, "]": 716,
+  "{": 722, "}": 728, "|": 734, "<": 740, ">": 746, "=": 752, "+": 758,
+};
+
+function wasciiNm(ch: string): number {
+  return WASCII_TABLE[ch] ?? (380 + (ch.charCodeAt(0) % 256) / 255 * 400);
+}
+
+function wasciiband(nm: number): { name: string; color: string } {
+  if (nm < 450) return { name: "SYSTEM",  color: "#8b5cf6" };
+  if (nm < 490) return { name: "KERNEL",  color: "#3b82f6" };
+  if (nm < 520) return { name: "STREAM",  color: "#22d3ee" };
+  if (nm < 565) return { name: "CORE",    color: "#34d399" };
+  if (nm < 590) return { name: "UI",      color: "#fbbf24" };
+  if (nm < 625) return { name: "EVENT",   color: "#f97316" };
+  return               { name: "STORAGE", color: "#f87171" };
+}
+
+interface WasciiChar { ch: string; nm: number; freq: number; energy: number; band: string; bandColor: string; unicode: string; }
+
+function encodeWascii(text: string): { chars: WasciiChar[]; meanNm: number; wdm: number; oam: number; pol: string; psi: string; uri: string; freq: number; energy: number; } | null {
+  if (!text.trim()) return null;
+  const CL = 3e8, HL = 6.626e-34, EVL = 1.602e-19;
+  const chars: WasciiChar[] = Array.from(text).map(ch => {
+    const nm = wasciiNm(ch);
+    const freq = CL / (nm * 1e-9);
+    const energy = (HL * freq) / EVL;
+    const b = wasciiband(nm);
+    return { ch, nm, freq: freq / 1e12, energy, band: b.name, bandColor: b.color, unicode: `U+${ch.charCodeAt(0).toString(16).padStart(4, "0").toUpperCase()}` };
+  });
+  const meanNm = chars.reduce((s, c) => s + c.nm, 0) / chars.length;
+  const sumCode = Array.from(text).reduce((s, c) => s + c.charCodeAt(0), 0);
+  const wdm = Math.floor((meanNm - 380) / 4) + 1;
+  const oam = sumCode % 100;
+  const pol = text.length % 2 === 0 ? "H" : "V";
+  const freq = (CL / (meanNm * 1e-9)) / 1e12;
+  const energy = (HL * (CL / (meanNm * 1e-9))) / EVL;
+  const psi = `Ψ(${wdm},${oam},${pol})`;
+  const slug = text.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  const uri = `wnsp://${psi}/${slug}`;
+  return { chars, meanNm, wdm, oam, pol, psi, uri, freq, energy };
+}
+
+function buildWasciiInscription(text: string, enc: ReturnType<typeof encodeWascii>): string {
+  if (!enc) return "";
+  const sep = "═".repeat(63);
+  const sep2 = "─".repeat(63);
+  const lines: string[] = [
+    "WASCII-v2.0 SPECTRAL INSCRIPTION",
+    "NexusOS · Wavelength Network Spectral Protocol",
+    "AGPL-3.0 | https://wnsp.io | " + new Date().toISOString().split("T")[0],
+    sep,
+    `TEXT    : "${text}"`,
+    `CHARS   : ${enc.chars.length}`,
+    `ENCODING: WASCII-v2.0 CE→SE (charCode → nm → Ψ)`,
+    sep,
+    "SPECTRAL CHARACTER MAP",
+    sep2,
+    "CHAR  UNICODE   λ(nm)     FREQ(THz)  ENERGY(eV)  BAND",
+    sep2,
+  ];
+  enc.chars.forEach(c => {
+    lines.push(
+      `${c.ch === " " ? "SPC" : c.ch.padEnd(6)}${c.unicode.padEnd(10)}${c.nm.toFixed(2).padEnd(10)}${c.freq.toFixed(4).padEnd(11)}${c.energy.toExponential(3).padEnd(12)}${c.band}`
+    );
+  });
+  lines.push(sep);
+  lines.push("AGGREGATE SPECTRAL CHANNEL");
+  lines.push(sep2);
+  lines.push(`mean_λ  : ${enc.meanNm.toFixed(4)} nm`);
+  lines.push(`freq    : ${enc.freq.toFixed(6)} THz`);
+  lines.push(`energy  : ${enc.energy.toExponential(6)} J`);
+  lines.push(`WDM     : ${enc.wdm}`);
+  lines.push(`OAM     : ${enc.oam}`);
+  lines.push(`POL     : ${enc.pol}`);
+  lines.push(`Ψ       : ${enc.psi}`);
+  lines.push(`WNSP URI: ${enc.uri}`);
+  lines.push(`BAND    : ${wasciiband(enc.meanNm).name}`);
+  lines.push(sep);
+  // Density histogram (sorted by nm)
+  lines.push("WASCII DENSITY VECTOR");
+  lines.push(sep2);
+  const sorted = [...enc.chars].sort((a, b) => a.nm - b.nm);
+  sorted.forEach(c => {
+    const bar = "█".repeat(Math.max(1, Math.round((c.nm - 380) / 400 * 20)));
+    lines.push(`${c.nm.toFixed(1).padEnd(8)} ${c.band.padEnd(8)} ${bar.padEnd(20)} ${c.ch === " " ? "SPC" : c.ch}`);
+  });
+  lines.push(sep);
+  lines.push("ALGORITHM : WASCII-v2.0 | CE→SE | 202-char spectral table");
+  lines.push("STANDARD  : WNSP-CE v1.0 / WNSP-SE v1.0");
+  lines.push("SOURCE    : https://wnsp.io | npm install nexusos-ce-encoder");
+  lines.push("LICENSE   : AGPL-3.0");
+  lines.push("NOTE      : This inscription is permanent on Bitcoin.");
+  return lines.join("\n");
+}
+
+// ── WASCII Inscription Generator component ──────────────────────────────────
+function WasciiGenerator() {
+  const [text, setText] = useState("wnsp");
+  const enc = useMemo(() => encodeWascii(text), [text]);
+  const inscription = useMemo(() => enc ? buildWasciiInscription(text, enc) : "", [text, enc]);
+  const [showRaw, setShowRaw] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  function copy() {
+    navigator.clipboard.writeText(inscription);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-teal-900/5 overflow-hidden">
+      <div className="p-5 space-y-4">
+        <div>
+          <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-400/60 mb-1">WASCII-v2.0 Inscription Generator</div>
+          <h2 className="text-lg font-bold text-white">Encode text as a spectral inscription.</h2>
+          <p className="text-xs text-white/50 mt-1 leading-relaxed">
+            Every character maps to a physical wavelength. The result is a spectral vector document ready to inscribe on Bitcoin.
+          </p>
+        </div>
+
+        {/* Input */}
+        <div className="flex gap-2">
+          <input
+            value={text}
+            onChange={e => setText(e.target.value.slice(0, 120))}
+            placeholder="Enter text to encode..."
+            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-emerald-500/40"
+            data-testid="input-wascii-text"
+          />
+          <div className="text-[10px] font-mono text-white/20 self-center px-2">{text.length}/120</div>
+        </div>
+
+        {enc && (
+          <>
+            {/* Character chips */}
+            <div className="flex flex-wrap gap-1.5">
+              {enc.chars.map((c, i) => (
+                <div key={i} className="rounded-lg px-2 py-1 text-center" style={{ backgroundColor: c.bandColor + "18", border: `1px solid ${c.bandColor}30` }}>
+                  <div className="text-xs font-mono font-bold" style={{ color: c.bandColor }}>{c.ch === " " ? "·" : c.ch}</div>
+                  <div className="text-[9px] font-mono text-white/40">{c.nm.toFixed(0)}nm</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Aggregate channel */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { label: "Ψ Channel", value: enc.psi, color: "#22d3ee" },
+                { label: "mean λ", value: `${enc.meanNm.toFixed(2)} nm`, color: "#34d399" },
+                { label: "Freq", value: `${enc.freq.toFixed(3)} THz`, color: "#fbbf24" },
+                { label: "Band", value: wasciiband(enc.meanNm).name, color: wasciiband(enc.meanNm).color },
+              ].map(item => (
+                <div key={item.label} className="rounded-lg bg-black/40 border border-white/5 p-2.5">
+                  <div className="text-[9px] font-mono text-white/30 uppercase mb-0.5">{item.label}</div>
+                  <div className="text-xs font-mono font-bold" style={{ color: item.color }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* WNSP URI */}
+            <div className="rounded-lg bg-black/40 border border-emerald-500/20 px-3 py-2 font-mono text-xs text-emerald-300 flex items-center justify-between gap-3">
+              <span className="truncate">{enc.uri}</span>
+              <button onClick={() => navigator.clipboard.writeText(enc.uri)} className="text-white/30 hover:text-white/60 shrink-0">
+                <Copy size={11} />
+              </button>
+            </div>
+
+            {/* Density bar */}
+            <div>
+              <div className="text-[9px] font-mono text-white/30 uppercase mb-1.5">Spectral density — 380nm → 780nm</div>
+              <div className="h-4 rounded-lg overflow-hidden flex">
+                {[...enc.chars].sort((a, b) => a.nm - b.nm).map((c, i) => (
+                  <div key={i} title={`${c.ch} → ${c.nm.toFixed(1)}nm`}
+                    className="flex-1 opacity-80 hover:opacity-100 transition-opacity"
+                    style={{ backgroundColor: c.bandColor }} />
+                ))}
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <button onClick={copy}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-mono hover:bg-emerald-500/30 transition-all"
+                data-testid="button-copy-wascii">
+                {copied ? <><CheckCircle2 size={12} /> Copied — paste into Unisat</> : <><Copy size={12} /> Copy WASCII Inscription</>}
+              </button>
+              <button onClick={() => setShowRaw(!showRaw)}
+                className="flex items-center gap-1 text-[10px] font-mono text-white/30 hover:text-white/60 transition-colors">
+                {showRaw ? <><ChevronUp size={11} /> Hide</> : <><ChevronDown size={11} /> Preview inscription</>}
+              </button>
+              <div className="ml-auto text-[10px] font-mono text-white/20">
+                {new TextEncoder().encode(inscription).length.toLocaleString()} bytes
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Raw inscription preview */}
+      {showRaw && enc && (
+        <div className="border-t border-white/5 bg-black/50 p-4 max-h-80 overflow-y-auto">
+          <pre className="text-[10px] font-mono text-white/60 leading-relaxed whitespace-pre-wrap">{inscription}</pre>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── CE Table generator ──────────────────────────────────────────────────────
 const BAND_WIDTH = 400 / 128;
@@ -389,6 +605,9 @@ export default function WnspOrdinalsPage() {
             One bridge resolves all of it to WNSP Ψ channels — automatically.
           </p>
         </div>
+
+        {/* WASCII Inscription Generator */}
+        <WasciiGenerator />
 
         {/* Live Bridge Resolver */}
         <LiveResolver />
