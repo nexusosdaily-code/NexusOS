@@ -290,7 +290,7 @@ function QueueCard({ item, onInscribe, inscribing }: { item: any; onInscribe: (i
   const [manualId, setManualId] = useState("");
   const qc = useQueryClient();
   const statusStyle = STATUS_STYLES[item.status] ?? STATUS_STYLES.pending;
-  const eventColor = EVENT_COLORS[item.event_type] ?? "#94a3b8";
+  const eventColor = EVENT_COLORS[item.eventType] ?? "#94a3b8";
 
   async function confirmManual() {
     if (!manualId.trim()) return;
@@ -303,20 +303,20 @@ function QueueCard({ item, onInscribe, inscribing }: { item: any; onInscribe: (i
       <div className="p-4">
         <div className="flex items-start justify-between gap-3 mb-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border" style={{ backgroundColor: eventColor + "15", color: eventColor, borderColor: eventColor + "30" }}>{item.event_type}</span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border" style={{ backgroundColor: eventColor + "15", color: eventColor, borderColor: eventColor + "30" }}>{item.eventType}</span>
             <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${statusStyle.bg} ${statusStyle.text}`}>{statusStyle.label}</span>
-            {item.psi_channel && <span className="text-[10px] font-mono text-cyan-400/60">{item.psi_channel}</span>}
+            {item.psiChannel && <span className="text-[10px] font-mono text-cyan-400/60">{item.psiChannel}</span>}
           </div>
           <span className="text-[9px] font-mono text-white/20 shrink-0">#{item.id}</span>
         </div>
         <div className="flex items-center gap-3 text-[10px] font-mono text-white/30 mb-3 flex-wrap">
-          {item.triggered_by && <span>by {item.triggered_by}</span>}
-          {item.content_bytes && <span>{item.content_bytes.toLocaleString()} bytes</span>}
-          <span>{new Date(item.created_at).toLocaleString()}</span>
+          {item.triggeredBy && <span>by {item.triggeredBy}</span>}
+          {item.contentBytes && <span>{item.contentBytes.toLocaleString()} bytes</span>}
+          <span>{item.createdAt ? new Date(item.createdAt).toLocaleString() : "—"}</span>
         </div>
-        {item.inscription_id ? (
-          <a href={`https://ordinals.com/inscription/${item.inscription_id}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[11px] font-mono text-orange-400 hover:text-orange-300 transition-colors">
-            <ExternalLink size={10} /> {item.inscription_id.slice(0, 24)}...i0
+        {item.inscriptionId ? (
+          <a href={`https://ordinals.com/inscription/${item.inscriptionId}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[11px] font-mono text-orange-400 hover:text-orange-300 transition-colors">
+            <ExternalLink size={10} /> {item.inscriptionId.slice(0, 24)}...i0
           </a>
         ) : item.status === "pending" ? (
           <div className="flex items-center gap-2 flex-wrap">
@@ -333,11 +333,11 @@ function QueueCard({ item, onInscribe, inscribing }: { item: any; onInscribe: (i
           </div>
         ) : null}
         <div className="flex items-center gap-2 mt-2">
-          <button onClick={() => navigator.clipboard.writeText(item.inscription_content)} className="flex items-center gap-1 text-[10px] font-mono text-white/30 hover:text-white/60 transition-colors"><Copy size={9} /> Copy content</button>
+          <button onClick={() => navigator.clipboard.writeText(item.inscriptionContent)} className="flex items-center gap-1 text-[10px] font-mono text-white/30 hover:text-white/60 transition-colors"><Copy size={9} /> Copy content</button>
           <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 text-[10px] font-mono text-white/30 hover:text-white/60 transition-colors ml-auto">{expanded ? <><ChevronUp size={10} /> Hide</> : <><ChevronDown size={10} /> Preview</>}</button>
         </div>
       </div>
-      {expanded && <div className="border-t border-white/5 bg-black/50 p-3 max-h-48 overflow-y-auto"><pre className="text-[9px] font-mono text-white/50 leading-relaxed whitespace-pre-wrap">{item.inscription_content}</pre></div>}
+      {expanded && <div className="border-t border-white/5 bg-black/50 p-3 max-h-48 overflow-y-auto"><pre className="text-[9px] font-mono text-white/50 leading-relaxed whitespace-pre-wrap">{item.inscriptionContent}</pre></div>}
     </div>
   );
 }
