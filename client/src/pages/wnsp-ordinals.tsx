@@ -539,6 +539,7 @@ function AutoBridgeTab() {
         {(() => {
           const cats: { label: string; color: string; types: string[] }[] = [
             { label: "Tokenomics", color: "#f59e0b", types: ["NXT_TRANSFER","NXT_BURN","NXT_EMISSION"] },
+            // NXT_BURN = Orbital Treasury deposit (wnsp.io) — NXT is never destroyed on-chain
             { label: "Governance", color: "#8b5cf6", types: ["GOVERNANCE","PROTOCOL_UPDATE"] },
             { label: "Spectral",   color: "#22d3ee", types: ["SPECTRAL_RECORD","WASCII_ENCODE","WASCII_MANUAL","CHANNEL_OPEN"] },
             { label: "Network",    color: "#34d399", types: ["NODE_REGISTER","CONTRACT_SIGN","ORDINAL_DEPOSIT"] },
@@ -569,7 +570,9 @@ function AutoBridgeTab() {
                   style={{ color: activeCat.color }}>
                   {cats.map(c => (
                     <optgroup key={c.label} label={`── ${c.label} ──`}>
-                      {c.types.map(t => <option key={t} value={t} style={{ color: "#fff" }}>{t}</option>)}
+                      {c.types.map(t => <option key={t} value={t} style={{ color: "#fff" }}>
+                        {t === "NXT_BURN" ? "NXT_BURN  →  Orbital Treasury (wnsp.io)" : t}
+                      </option>)}
                     </optgroup>
                   ))}
                 </select>

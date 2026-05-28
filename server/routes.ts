@@ -1548,7 +1548,7 @@ export async function registerRoutes(
           id: String(burnTxMsg?.id ?? Date.now()),
           amountNxt: (msgFeeNum * 0.5).toFixed(8),
           fromWalletAddress: senderWallet.address,
-          reason: "message_send fee burn (50%)",
+          reason: "message_send fee → Orbital Treasury (50%)",
           wavelength: msgFee.wavelengthNm.toString(),
           triggeredBy: (req as any).user?.username ?? "protocol",
         }).catch(() => {});

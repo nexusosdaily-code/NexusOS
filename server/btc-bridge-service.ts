@@ -349,16 +349,18 @@ export class BtcBridgeService {
     reason: string; wavelength?: string; triggeredBy?: string;
   }) {
     const amt = parseFloat(burn.amountNxt);
-    if (amt < 1) return null; // only inscribe meaningful burns
+    if (amt < 1) return null; // only inscribe meaningful treasury deposits
     return this.queueEvent({
       type: "NXT_BURN", ref: `burn-${burn.id}`, triggeredBy: burn.triggeredBy ?? "protocol",
       data: {
-        amount_nxt:      amt.toFixed(8),
-        from_wallet:     burn.fromWalletAddress,
-        burn_reason:     burn.reason,
-        wavelength:      burn.wavelength ? `${parseFloat(burn.wavelength).toFixed(4)} nm` : null,
-        destination:     "VOID (deflationary)",
-        circulating_impact: `-${amt.toFixed(8)} NXT`,
+        amount_nxt:    amt.toFixed(8),
+        from_wallet:   burn.fromWalletAddress,
+        reason:        burn.reason,
+        wavelength:    burn.wavelength ? `${parseFloat(burn.wavelength).toFixed(4)} nm` : null,
+        destination:   "Orbital Treasury (wnsp.io)",
+        settlement:    "NXT held in orbital treasury — not destroyed",
+        treasury_org:  "wnsp.io",
+        platform:      "wnsp.tech",
       },
     });
   }
