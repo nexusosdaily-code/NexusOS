@@ -48,7 +48,11 @@ export type BridgeEventType =
   | "ORDINAL_DEPOSIT"     // ordinal deposited to treasury
   // ── Campaigns
   | "CAMPAIGN_LAUNCH"     // campaign started
-  | "CAMPAIGN_MILESTONE"; // campaign milestone reached
+  | "CAMPAIGN_MILESTONE"  // campaign milestone reached
+  // ── BRC-20 (raw JSON inscriptions — no WASCII wrapper)
+  | "BRC20_DEPLOY"        // deploy a BRC-20 token
+  | "BRC20_MINT"          // mint BRC-20 tokens
+  | "BRC20_TRANSFER";     // transfer BRC-20 tokens
 
 export interface BridgeEvent {
   type: BridgeEventType;
@@ -196,6 +200,32 @@ export class BtcBridgeService {
       intervalMs:          this.intervalMs,
       minBalanceSats:      this.minBalanceSats,
     };
+  }
+
+  // ── Raw content queue (bypasses WASCII template — used for BRC-20 JSON) ────
+  async queueRawContent(opts: {
+    eventType: string; ref: string; content: string;
+    triggeredBy: string; psiChannel?: string;
+  }): Promise<{ id: number; content: string; psi: string }> {
+    const { db } = await import("./db");
+    const { btcInscriptionQueue } = await import("../shared/schema");
+    const enc = wasciiEncodeText(opts.eventType);
+    const psi = opts.psiChannel ?? enc.psi;
+    const [row] = await db.insert(btcInscriptionQueue).values({
+      eventType:          opts.eventType,
+      eventRef:           opts.ref,
+      anchorName:         this.anchorName,
+      anchorAddress:      this.anchorAddress,
+      parentInscriptionId: this.parentInscriptionId,
+      inscriptionContent: opts.content,
+      contentBytes:       new TextEncoder().encode(opts.content).length,
+      psiChannel:         psi,
+      status:             "pending",
+      triggeredBy:        opts.triggeredBy,
+    }).returning();
+    this._queueDepth++;
+    console.log(`[BTC Bridge] Queued ${opts.eventType} #${row.id} (raw, ${opts.content.length} chars)`);
+    return { id: row.id, content: opts.content, psi };
   }
 
   // ── Queue management ────────────────────────────────────────────────────────

@@ -823,12 +823,269 @@ function IdentityTab() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// TAB 4 — BRC-20 (deploy · mint · transfer)
+// ══════════════════════════════════════════════════════════════════════════════
+function Brc20Tab() {
+  const qc = useQueryClient();
+
+  // Deploy state
+  const [deployTick, setDeployTick]   = useState("wnsp");
+  const [deployMax,  setDeployMax]    = useState("21000000000");
+  const [deployLim,  setDeployLim]    = useState("1000");
+  const [deployBusy, setDeployBusy]   = useState(false);
+  const [deployMsg,  setDeployMsg]    = useState("");
+  const [deployJson, setDeployJson]   = useState("");
+
+  // Mint state
+  const [mintTick,   setMintTick]     = useState("wnsp");
+  const [mintAmt,    setMintAmt]      = useState("1000");
+  const [mintBusy,   setMintBusy]     = useState(false);
+  const [mintMsg,    setMintMsg]      = useState("");
+  const [mintCount,  setMintCount]    = useState(1);
+
+  // Transfer state
+  const [xfrAmt,     setXfrAmt]       = useState("");
+  const [xfrBusy,    setXfrBusy]      = useState(false);
+  const [xfrMsg,     setXfrMsg]       = useState("");
+
+  const { data: queueData } = useQuery<any>({ queryKey: ["/api/btc-bridge/queue"], refetchInterval: 8_000 });
+  const brc20Items = (queueData?.items ?? []).filter((i: any) => ["BRC20_DEPLOY","BRC20_MINT","BRC20_TRANSFER"].includes(i.eventType));
+
+  async function doDeploy() {
+    setDeployBusy(true); setDeployMsg(""); setDeployJson("");
+    try {
+      const res = await apiFetch("/api/btc-bridge/brc20/deploy", { method: "POST",
+        body: JSON.stringify({ tick: deployTick, max: deployMax, lim: deployLim }) });
+      setDeployMsg(`✓ Queued #${res.queued?.id} — auto-inscribing to Bitcoin`);
+      setDeployJson(res.content ?? "");
+      qc.invalidateQueries({ queryKey: ["/api/btc-bridge/queue"] });
+    } catch (e: any) { setDeployMsg("Error: " + e.message); }
+    finally { setDeployBusy(false); }
+  }
+
+  async function doMint(count = 1) {
+    setMintBusy(true); setMintMsg("");
+    try {
+      let last: any;
+      for (let i = 0; i < count; i++) {
+        last = await apiFetch("/api/btc-bridge/brc20/mint", { method: "POST",
+          body: JSON.stringify({ tick: mintTick, amt: mintAmt }) });
+      }
+      setMintMsg(`✓ ${count}× mint queued — auto-inscribing`);
+      qc.invalidateQueries({ queryKey: ["/api/btc-bridge/queue"] });
+    } catch (e: any) { setMintMsg("Error: " + e.message); }
+    finally { setMintBusy(false); }
+  }
+
+  async function doTransfer() {
+    setXfrBusy(true); setXfrMsg("");
+    try {
+      const res = await apiFetch("/api/btc-bridge/brc20/transfer", { method: "POST",
+        body: JSON.stringify({ tick: mintTick, amt: xfrAmt }) });
+      setXfrMsg(`✓ Transfer queued #${res.queued?.id}`);
+      qc.invalidateQueries({ queryKey: ["/api/btc-bridge/queue"] });
+    } catch (e: any) { setXfrMsg("Error: " + e.message); }
+    finally { setXfrBusy(false); }
+  }
+
+  const previewJson = JSON.stringify({ p: "brc-20", op: "deploy", tick: deployTick.toLowerCase(), max: deployMax, lim: deployLim }, null, 2);
+  const maxNum = parseFloat(deployMax) || 0;
+  const limNum = parseFloat(deployLim) || 0;
+  const totalMints = limNum > 0 ? Math.ceil(maxNum / limNum) : 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/5 to-amber-900/5 p-5 space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center">
+            <Bitcoin size={15} className="text-orange-400" />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-white">BRC-20 Token Operations</div>
+            <div className="text-[10px] font-mono text-white/30">Deploy · Mint · Transfer — inscribed directly to Bitcoin via NexusOS</div>
+          </div>
+        </div>
+        <div className="flex gap-2 flex-wrap pt-1">
+          {["wnsp.btc","wnsp.unisat","wnsp.sats","wnsp.sat"].map(n => (
+            <span key={n} className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20">{n}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* DEPLOY */}
+      <div className="rounded-2xl border border-amber-500/20 bg-white/[0.02] p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-amber-400/70">1. Deploy BRC-20 Token</div>
+          <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">4-byte classic</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="space-y-1">
+            <div className="text-[9px] font-mono text-white/30 uppercase">Tick</div>
+            <input value={deployTick} onChange={e => setDeployTick(e.target.value.slice(0,5))}
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono font-bold text-amber-400 focus:outline-none focus:border-amber-500/40"
+              data-testid="input-brc20-tick" />
+          </div>
+          <div className="space-y-1">
+            <div className="text-[9px] font-mono text-white/30 uppercase">Max Supply</div>
+            <input value={deployMax} onChange={e => setDeployMax(e.target.value)}
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-amber-500/40"
+              data-testid="input-brc20-max" />
+          </div>
+          <div className="space-y-1">
+            <div className="text-[9px] font-mono text-white/30 uppercase">Limit / Mint</div>
+            <input value={deployLim} onChange={e => setDeployLim(e.target.value)}
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-amber-500/40"
+              data-testid="input-brc20-lim" />
+          </div>
+        </div>
+
+        {/* JSON preview */}
+        <div className="rounded-xl bg-black/50 border border-amber-500/10 p-3 font-mono text-[11px] text-amber-300/80">
+          <div className="text-[9px] text-white/20 uppercase tracking-wider mb-1.5">Inscription content (text/plain)</div>
+          <pre className="whitespace-pre-wrap break-all">{previewJson}</pre>
+        </div>
+
+        {maxNum > 0 && limNum > 0 && (
+          <div className="flex gap-4 text-[10px] font-mono text-white/40">
+            <span>Max: <span className="text-amber-400">{parseInt(deployMax).toLocaleString()}</span></span>
+            <span>Mints needed: <span className="text-amber-400">{totalMints.toLocaleString()}</span></span>
+            <span>Limit/mint: <span className="text-amber-400">{parseInt(deployLim).toLocaleString()}</span></span>
+          </div>
+        )}
+
+        <button onClick={doDeploy} disabled={deployBusy || !deployTick}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 font-mono text-sm hover:bg-amber-500/25 transition-all disabled:opacity-40"
+          data-testid="button-brc20-deploy">
+          {deployBusy ? <RefreshCw size={13} className="animate-spin" /> : <Zap size={13} />}
+          Deploy {deployTick.toLowerCase()} BRC-20
+        </button>
+
+        {deployMsg && (
+          <div className={`text-[11px] font-mono px-3 py-2 rounded-lg border ${deployMsg.startsWith("Error") ? "bg-red-500/5 border-red-500/20 text-red-400" : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"}`}>
+            {deployMsg}
+          </div>
+        )}
+        {deployJson && (
+          <div className="text-[10px] font-mono text-white/30 bg-black/30 rounded-lg px-3 py-2 border border-white/5">
+            Inscribed: <span className="text-amber-400">{deployJson}</span>
+          </div>
+        )}
+      </div>
+
+      {/* MINT */}
+      <div className="rounded-2xl border border-emerald-500/20 bg-white/[0.02] p-5 space-y-4">
+        <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-400/70">2. Mint</div>
+        <div className="text-[11px] text-white/40 font-mono">
+          Deploy must confirm on Bitcoin first (~30 min). Each mint inscription claims up to {deployLim} {deployTick.toLowerCase()}.
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <div className="text-[9px] font-mono text-white/30 uppercase">Tick</div>
+            <input value={mintTick} onChange={e => setMintTick(e.target.value.slice(0,5))}
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500/40"
+              data-testid="input-brc20-mint-tick" />
+          </div>
+          <div className="space-y-1">
+            <div className="text-[9px] font-mono text-white/30 uppercase">Amount</div>
+            <input value={mintAmt} onChange={e => setMintAmt(e.target.value)}
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500/40"
+              data-testid="input-brc20-mint-amt" />
+          </div>
+        </div>
+        <div className="flex gap-2 items-center">
+          <div className="text-[10px] font-mono text-white/30">Batch:</div>
+          {[1, 5, 10, 50].map(n => (
+            <button key={n} onClick={() => setMintCount(n)}
+              className={`px-3 py-1 rounded-lg text-[11px] font-mono border transition-all ${mintCount === n ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400" : "border-white/10 text-white/30 hover:text-white/60"}`}>
+              ×{n}
+            </button>
+          ))}
+        </div>
+        <div className="rounded-xl bg-black/50 border border-emerald-500/10 p-3 font-mono text-[11px] text-emerald-300/70">
+          {JSON.stringify({ p: "brc-20", op: "mint", tick: mintTick.toLowerCase(), amt: mintAmt })}
+        </div>
+        <button onClick={() => doMint(mintCount)} disabled={mintBusy}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono text-xs hover:bg-emerald-500/25 transition-all disabled:opacity-40"
+          data-testid="button-brc20-mint">
+          {mintBusy ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
+          Queue {mintCount > 1 ? `${mintCount}× ` : ""}Mint
+        </button>
+        {mintMsg && <div className={`text-[11px] font-mono px-3 py-2 rounded-lg border ${mintMsg.startsWith("Error") ? "bg-red-500/5 border-red-500/20 text-red-400" : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"}`}>{mintMsg}</div>}
+      </div>
+
+      {/* TRANSFER */}
+      <div className="rounded-2xl border border-cyan-500/20 bg-white/[0.02] p-5 space-y-4">
+        <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-400/70">3. Transfer Inscription</div>
+        <div className="text-[11px] text-white/40">Creates a BRC-20 transfer inscription. Send it to the recipient's address to complete the transfer.</div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <div className="text-[9px] font-mono text-white/30 uppercase">Tick</div>
+            <input value={mintTick} onChange={e => setMintTick(e.target.value.slice(0,5))}
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-cyan-500/40" />
+          </div>
+          <div className="space-y-1">
+            <div className="text-[9px] font-mono text-white/30 uppercase">Amount</div>
+            <input value={xfrAmt} onChange={e => setXfrAmt(e.target.value)} placeholder="e.g. 1000"
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-cyan-500/40"
+              data-testid="input-brc20-xfr-amt" />
+          </div>
+        </div>
+        <div className="rounded-xl bg-black/50 border border-cyan-500/10 p-3 font-mono text-[11px] text-cyan-300/70">
+          {JSON.stringify({ p: "brc-20", op: "transfer", tick: mintTick.toLowerCase(), amt: xfrAmt || "..." })}
+        </div>
+        <button onClick={doTransfer} disabled={xfrBusy || !xfrAmt}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 font-mono text-xs hover:bg-cyan-500/25 transition-all disabled:opacity-40"
+          data-testid="button-brc20-transfer">
+          {xfrBusy ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
+          Queue Transfer
+        </button>
+        {xfrMsg && <div className={`text-[11px] font-mono px-3 py-2 rounded-lg border ${xfrMsg.startsWith("Error") ? "bg-red-500/5 border-red-500/20 text-red-400" : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"}`}>{xfrMsg}</div>}
+      </div>
+
+      {/* BRC-20 queue items */}
+      {brc20Items.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-white/30">BRC-20 Queue</div>
+          {brc20Items.map((item: any) => (
+            <div key={item.id} className="rounded-xl border border-white/8 bg-black/30 p-3 flex items-center gap-3">
+              <div className={`text-[9px] font-mono px-2 py-0.5 rounded-full ${item.status === "confirmed" ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25" : item.status === "signed" ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" : "bg-white/5 text-white/40 border border-white/10"}`}>{item.status}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] font-mono text-white/70 truncate">{item.eventType}</div>
+                <div className="text-[10px] font-mono text-white/30 truncate">{item.inscriptionContent}</div>
+              </div>
+              {item.inscriptionId && (
+                <a href={`https://unisat.io/inscription/${item.inscriptionId}`} target="_blank" rel="noopener noreferrer"
+                  className="text-[9px] font-mono text-orange-400 hover:text-orange-300 flex items-center gap-0.5">
+                  <ExternalLink size={9} /> UniSat
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Note */}
+      <div className="rounded-xl border border-white/5 bg-black/20 p-4 space-y-1">
+        <div className="text-[10px] font-mono text-white/30 uppercase tracking-wider">How BRC-20 works via NexusOS</div>
+        <div className="text-[11px] text-white/40 space-y-1 leading-relaxed">
+          <p>1. Each operation queues a raw JSON inscription to Bitcoin — <span className="text-white/60">no WASCII wrapper</span>, just the exact BRC-20 format indexers expect.</p>
+          <p>2. The auto-processor picks it up within 30s and broadcasts via commit+reveal Taproot.</p>
+          <p>3. After ~3 Bitcoin blocks (~30 min) the inscription is indexed by UniSat, OKX, and all BRC-20 indexers.</p>
+          <p>4. Service wallet: <span className="font-mono text-amber-400/70">bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m</span></p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // MAIN PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 const TABS = [
   { id: "inscriptions", label: "Inscriptions",  icon: Waves },
   { id: "bridge",       label: "Auto-Bridge",   icon: Zap   },
   { id: "identity",     label: "Identity",      icon: Bitcoin },
+  { id: "brc20",        label: "BRC-20",        icon: Activity },
 ];
 
 export default function WnspOrdinalsPage() {
@@ -894,6 +1151,7 @@ export default function WnspOrdinalsPage() {
         {tab === "inscriptions" && <WasciiTab />}
         {tab === "bridge"       && <AutoBridgeTab />}
         {tab === "identity"     && <IdentityTab />}
+        {tab === "brc20"        && <Brc20Tab />}
 
         {/* Footer */}
         <div className="text-center text-[10px] font-mono text-white/20 flex items-center justify-center gap-4 pb-4 flex-wrap">

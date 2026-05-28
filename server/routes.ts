@@ -7063,6 +7063,58 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ── BRC-20 routes ───────────────────────────────────────────────────────────
+
+  app.post("/api/btc-bridge/brc20/deploy", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { tick = "wnsp", max = "21000000000", lim = "1000" } = req.body;
+      if (!tick || tick.length > 5) return res.status(400).json({ error: "tick required (max 5 chars)" });
+      const content = JSON.stringify({ p: "brc-20", op: "deploy", tick: tick.toLowerCase(), max: String(max), lim: String(lim) });
+      const { btcBridge } = await import("./btc-bridge-service");
+      const queued = await btcBridge.queueRawContent({
+        eventType:  "BRC20_DEPLOY",
+        ref:        `brc20-deploy-${tick}-${Date.now()}`,
+        content,
+        triggeredBy: (req as any).user?.username ?? "wnsp.io",
+        psiChannel: "Ψ(27,56,H)", // KERNEL band — same as wnsp.sats anchor
+      });
+      res.json({ ok: true, queued, content, note: "BRC-20 deploy queued — auto-inscribing to Bitcoin" });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/btc-bridge/brc20/mint", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { tick = "wnsp", amt = "1000" } = req.body;
+      if (!tick) return res.status(400).json({ error: "tick required" });
+      if (parseFloat(amt) <= 0) return res.status(400).json({ error: "amt must be > 0" });
+      const content = JSON.stringify({ p: "brc-20", op: "mint", tick: tick.toLowerCase(), amt: String(amt) });
+      const { btcBridge } = await import("./btc-bridge-service");
+      const queued = await btcBridge.queueRawContent({
+        eventType:  "BRC20_MINT",
+        ref:        `brc20-mint-${tick}-${Date.now()}`,
+        content,
+        triggeredBy: (req as any).user?.username ?? "wnsp.io",
+      });
+      res.json({ ok: true, queued, content });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/btc-bridge/brc20/transfer", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { tick = "wnsp", amt } = req.body;
+      if (!tick || !amt) return res.status(400).json({ error: "tick and amt required" });
+      const content = JSON.stringify({ p: "brc-20", op: "transfer", tick: tick.toLowerCase(), amt: String(amt) });
+      const { btcBridge } = await import("./btc-bridge-service");
+      const queued = await btcBridge.queueRawContent({
+        eventType:  "BRC20_TRANSFER",
+        ref:        `brc20-transfer-${tick}-${Date.now()}`,
+        content,
+        triggeredBy: (req as any).user?.username ?? "wnsp.io",
+      });
+      res.json({ ok: true, queued, content });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   app.patch("/api/btc-bridge/queue/:id/confirm", authenticate, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
