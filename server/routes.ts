@@ -6901,5 +6901,124 @@ export async function registerRoutes(
     }
   });
 
+  // ── BTC Full-Auto Inscription Bridge ─────────────────────────────────────
+  app.get("/api/btc-bridge/wallet", async (_req: Request, res: Response) => {
+    try {
+      const { getServiceWalletInfo, getWalletBalance } = await import("./btc-inscription-engine");
+      const info = getServiceWalletInfo();
+      let balance = null;
+      if (info.address) {
+        try { balance = await getWalletBalance(info.address); } catch { balance = null; }
+      }
+      res.json({ ...info, balance });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.get("/api/btc-bridge/queue", async (req: Request, res: Response) => {
+    try {
+      const { btcBridge } = await import("./btc-bridge-service");
+      const status = req.query.status as string | undefined;
+      const items = await btcBridge.getQueue(status);
+      res.json({ items, total: items.length });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/btc-bridge/inscribe/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+      const { db } = await import("./db");
+      const { btcInscriptionQueue } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [item] = await db.select().from(btcInscriptionQueue).where(eq(btcInscriptionQueue.id, id));
+      if (!item) return res.status(404).json({ error: "Queue item not found" });
+      if (item.status !== "pending") return res.status(400).json({ error: `Item already ${item.status}` });
+
+      const { inscribeText } = await import("./btc-inscription-engine");
+      const result = await inscribeText(item.inscriptionContent, {
+        parentInscriptionId: item.parentInscriptionId ?? undefined,
+        feeRate: req.body.feeRate,
+      });
+
+      await db.update(btcInscriptionQueue)
+        .set({
+          status: "confirmed",
+          inscriptionId: result.inscriptionId,
+          signedAt: new Date(),
+          confirmedAt: new Date(),
+        })
+        .where(eq(btcInscriptionQueue.id, id));
+
+      // Also update btcInscriptions table if this is a known inscription key
+      res.json({ ok: true, ...result });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/btc-bridge/inscribe-manual", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { content, eventType, eventRef, parentInscriptionId } = req.body;
+      if (!content) return res.status(400).json({ error: "content required" });
+      const { btcBridge } = await import("./btc-bridge-service");
+      const queued = await btcBridge.queueEvent({
+        type: eventType ?? "WASCII_MANUAL",
+        ref: eventRef ?? `manual-${Date.now()}`,
+        triggeredBy: (req as any).user?.username ?? "user",
+        data: { content_preview: content.slice(0, 80) },
+      });
+      const { inscribeText } = await import("./btc-inscription-engine");
+      const result = await inscribeText(content, { parentInscriptionId });
+      const { db } = await import("./db");
+      const { btcInscriptionQueue } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(btcInscriptionQueue).set({ status: "confirmed", inscriptionId: result.inscriptionId, confirmedAt: new Date(), signedAt: new Date() }).where(eq(btcInscriptionQueue.id, queued.id));
+      res.json({ ok: true, queueId: queued.id, ...result });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/btc-bridge/queue/trigger", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { eventType, data, parentInscriptionId } = req.body;
+      if (!eventType) return res.status(400).json({ error: "eventType required" });
+      const { btcBridge } = await import("./btc-bridge-service");
+      btcBridge.setAnchor(null, parentInscriptionId ?? null);
+      const queued = await btcBridge.queueEvent({
+        type: eventType,
+        ref: `manual-${Date.now()}`,
+        triggeredBy: (req as any).user?.username ?? "user",
+        data: data ?? {},
+      });
+      res.json({ ok: true, queued });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.patch("/api/btc-bridge/queue/:id/confirm", authenticate, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { inscriptionId } = req.body;
+      const { db } = await import("./db");
+      const { btcInscriptionQueue } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(btcInscriptionQueue).set({ status: "confirmed", inscriptionId, confirmedAt: new Date(), signedAt: new Date() }).where(eq(btcInscriptionQueue.id, id));
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/btc-bridge/anchor", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { address, parentInscriptionId } = req.body;
+      const { btcBridge } = await import("./btc-bridge-service");
+      btcBridge.setAnchor(address ?? null, parentInscriptionId ?? null);
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.get("/api/btc-bridge/fee-rate", async (_req: Request, res: Response) => {
+    try {
+      const { getFeeRate } = await import("./btc-inscription-engine");
+      const [fast, medium, slow] = await Promise.all([getFeeRate("fast"), getFeeRate("medium"), getFeeRate("slow")]);
+      res.json({ fast, medium, slow, unit: "sat/vbyte" });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   return httpServer;
 }

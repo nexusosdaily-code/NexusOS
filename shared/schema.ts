@@ -1027,3 +1027,33 @@ export const btcInscriptions = pgTable("btc_inscriptions", {
 export const insertBtcInscriptionSchema = createInsertSchema(btcInscriptions).omit({ id: true, createdAt: true });
 export type InsertBtcInscription = z.infer<typeof insertBtcInscriptionSchema>;
 export type BtcInscription = typeof btcInscriptions.$inferSelect;
+
+// ============================================
+// BTC INSCRIPTION QUEUE — NexusOS → Bitcoin bridge
+// ============================================
+export const btcInscriptionQueue = pgTable("btc_inscription_queue", {
+  id:              serial("id").primaryKey(),
+  eventType:       text("event_type").notNull(),   // "NXT_TRANSFER" | "GOVERNANCE" | "KERNEL" | "WASCII_MANUAL"
+  eventRef:        text("event_ref"),               // NexusOS tx id / proposal id / kernel event id
+  anchorName:      text("anchor_name").notNull().default("wnsp.sats"),
+  anchorAddress:   text("anchor_address"),          // bc1p... Taproot address of anchor name
+  parentInscriptionId: text("parent_inscription_id"), // wnsp.sats inscription ID for parent linking
+  inscriptionContent: text("inscription_content").notNull(),  // full WASCII text ready to paste
+  contentBytes:    integer("content_bytes"),
+  psiChannel:      text("psi_channel"),             // Ψ channel derived from event
+  status:          text("status").notNull().default("pending"), // "pending" | "signed" | "confirmed" | "failed"
+  unisatDeepLink:  text("unisat_deep_link"),
+  inscriptionId:   text("inscription_id"),          // Bitcoin inscription ID once confirmed
+  blockHeight:     integer("block_height"),
+  triggeredBy:     text("triggered_by"),            // username who triggered
+  signedAt:        timestamp("signed_at"),
+  confirmedAt:     timestamp("confirmed_at"),
+  createdAt:       timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  statusIdx: index("btc_queue_status_idx").on(table.status),
+  eventTypeIdx: index("btc_queue_event_type_idx").on(table.eventType),
+}));
+
+export const insertBtcInscriptionQueueSchema = createInsertSchema(btcInscriptionQueue).omit({ id: true, createdAt: true });
+export type InsertBtcInscriptionQueue = z.infer<typeof insertBtcInscriptionQueueSchema>;
+export type BtcInscriptionQueueItem = typeof btcInscriptionQueue.$inferSelect;
