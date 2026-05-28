@@ -39,23 +39,46 @@ export interface InscriptionResult {
 }
 
 // ── Wallet ───────────────────────────────────────────────────────────────────
+function loadKeyPair(raw: string): ReturnType<typeof ECPair.fromWIF> | null {
+  const trimmed = raw.trim();
+  // Try as WIF (starts with K, L, or 5)
+  if (/^[KL5]/.test(trimmed)) {
+    try { return ECPair.fromWIF(trimmed, NETWORK); } catch {}
+  }
+  // Try as 64-char hex private key
+  if (/^[0-9a-fA-F]{64}$/.test(trimmed)) {
+    try {
+      const buf = Buffer.from(trimmed, "hex");
+      return ECPair.fromPrivateKey(buf, { network: NETWORK, compressed: true });
+    } catch {}
+  }
+  // Try WIF anyway (fallback, in case prefix detection wrong)
+  try { return ECPair.fromWIF(trimmed, NETWORK); } catch {}
+  return null;
+}
+
 export function getServiceWallet(): { wif: string; keyPair: ReturnType<typeof ECPair.fromWIF>; address: string; p2tr: bitcoin.payments.Payment } | null {
-  const wif = process.env.BTC_INSCRIPTION_WALLET_WIF;
-  if (!wif) return null;
+  const raw = process.env.BTC_INSCRIPTION_WALLET_WIF;
+  if (!raw) return null;
+  const keyPair = loadKeyPair(raw);
+  if (!keyPair) {
+    console.error("[BTC Engine] Could not parse BTC_INSCRIPTION_WALLET_WIF — check format (WIF or 64-char hex)");
+    return null;
+  }
   try {
-    const keyPair = ECPair.fromWIF(wif, NETWORK);
-    const internalPubkey = Buffer.from(keyPair.publicKey).slice(1, 33); // x-only
+    const internalPubkey = Buffer.from(keyPair.publicKey).slice(1, 33);
     const p2tr = bitcoin.payments.p2tr({ internalPubkey, network: NETWORK });
-    return { wif, keyPair, address: p2tr.address!, p2tr };
+    return { wif: keyPair.toWIF(), keyPair, address: p2tr.address!, p2tr };
   } catch (e) {
-    console.error("[BTC Engine] Invalid WIF key:", (e as Error).message);
+    console.error("[BTC Engine] Failed to derive Taproot address:", (e as Error).message);
     return null;
   }
 }
 
-export function deriveServiceAddress(wif: string): string | null {
+export function deriveServiceAddress(raw: string): string | null {
+  const keyPair = loadKeyPair(raw);
+  if (!keyPair) return null;
   try {
-    const keyPair = ECPair.fromWIF(wif, NETWORK);
     const internalPubkey = Buffer.from(keyPair.publicKey).slice(1, 33);
     const p2tr = bitcoin.payments.p2tr({ internalPubkey, network: NETWORK });
     return p2tr.address!;
