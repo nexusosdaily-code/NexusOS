@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Mail, Radio, FileText, Upload, ArrowRightLeft,
+  Mail, Radio, FileText, Upload, ArrowRightLeft, Bitcoin,
   Activity, Layers, Cpu, Code2, Wallet, Globe2,
   Zap, Atom, Waves, Rocket, Users, Database,
   Shield, BookOpen, HardDrive, GitBranch,
@@ -156,6 +156,7 @@ const APP_SECTIONS = [
       { title: "Crowdfund",        href: "/crowdfund",    Icon: Users },
       { title: "Evidence",         href: "/evidence",     Icon: Eye },
       { title: "SNIC Spec",        href: "/snic",         Icon: Cpu },
+      { title: "Bitcoin Ordinals", href: "/wnsp/ordinals", Icon: Bitcoin },
     ],
   },
   {
