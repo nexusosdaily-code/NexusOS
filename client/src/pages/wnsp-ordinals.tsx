@@ -1196,6 +1196,227 @@ function Brc20Tab() {
   );
 }
 
+// TAB 5 — UNISAT BRIDGE
+// ══════════════════════════════════════════════════════════════════════════════
+function UniSatBridgeTab() {
+  const qc = useQueryClient();
+  const { data, isLoading, error } = useQuery<any>({
+    queryKey: ["/api/btc-bridge/unisat-bridge"],
+    refetchInterval: 60_000,
+  });
+
+  const eventColor: Record<string, string> = {
+    KERNEL: "#3b82f6", NXT_TRANSFER: "#34d399", GOVERNANCE_VOTE: "#a78bfa",
+    GOVERNANCE_PROPOSAL: "#f97316", KERNEL_HEARTBEAT: "#22d3ee",
+    BRC20_DEPLOY: "#fbbf24", BRC20_MINT: "#fb923c", BRC20_TRANSFER: "#4ade80",
+    AGENT_ACTION: "#e879f9",
+  };
+
+  function shortId(id: string | null) {
+    if (!id) return "—";
+    return id.length > 16 ? `${id.slice(0, 8)}…${id.slice(-8)}` : id;
+  }
+  function ago(d: string | null) {
+    if (!d) return "";
+    const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+    if (s < 60) return `${s}s ago`;
+    if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+    if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+    return `${Math.floor(s / 86400)}d ago`;
+  }
+
+  const dbItems: any[] = data?.dbItems ?? [];
+  const hiroInscriptions: any[] = data?.hiroInscriptions ?? [];
+  const brc20Ticks: any[] = data?.brc20Ticks ?? [];
+
+  // On-chain IDs not yet in our DB (discovered via Hiro)
+  const dbIds = new Set(dbItems.map((i: any) => i.inscriptionId).filter(Boolean));
+  const chainOnly = hiroInscriptions.filter((h: any) => !dbIds.has(h.id));
+
+  return (
+    <div className="space-y-6">
+
+      {/* Wallet identity card */}
+      <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Globe size={13} className="text-orange-400" />
+          <span className="text-xs font-mono font-bold text-orange-400 uppercase tracking-wider">Service Wallet — On Every Explorer</span>
+        </div>
+
+        {data?.address ? (
+          <>
+            <div className="font-mono text-[11px] text-white/60 break-all bg-black/20 rounded-lg px-3 py-2 border border-white/5">
+              {data.address}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {[
+                { label: "Unisat", url: data.unisatWalletUrl,   color: "#f97316", desc: "Wallet + Ordinals + BRC-20" },
+                { label: "Ordinals", url: data.ordinalsWalletUrl, color: "#fbbf24", desc: "Canonical Ordinals explorer" },
+                { label: "Mempool", url: data.mempoolUrl,        color: "#22d3ee", desc: "UTXO & transaction history" },
+              ].map(({ label, url, color, desc }) => (
+                <a key={label} href={url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5 hover:bg-white/[0.06] transition-all group">
+                  <ExternalLink size={11} style={{ color }} />
+                  <div>
+                    <div className="text-xs font-mono font-bold" style={{ color }}>{label}</div>
+                    <div className="text-[9px] text-white/30 group-hover:text-white/50">{desc}</div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="text-xs text-white/40">No service wallet configured</div>
+        )}
+      </div>
+
+      {/* BRC-20 tokens on Unisat */}
+      {brc20Ticks.length > 0 && (
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Activity size={13} className="text-amber-400" />
+            <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">BRC-20 Tokens on Unisat</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {brc20Ticks.map(({ tick, unisatUrl, marketUrl }: any) => (
+              <div key={tick} className="rounded-xl border border-white/8 bg-white/[0.03] p-3 space-y-2">
+                <div className="font-mono text-sm font-bold text-amber-300">{tick}</div>
+                <div className="flex flex-col gap-1">
+                  <a href={unisatUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[10px] text-orange-400 hover:text-orange-300 transition-colors">
+                    <ExternalLink size={9} /> Token page
+                  </a>
+                  <a href={marketUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-300 transition-colors">
+                    <ExternalLink size={9} /> Marketplace
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Confirmed inscriptions from our DB */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Hash size={13} className="text-cyan-400" />
+            <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-wider">
+              Confirmed Inscriptions ({dbItems.length})
+            </span>
+          </div>
+          <button onClick={() => qc.invalidateQueries({ queryKey: ["/api/btc-bridge/unisat-bridge"] })}
+            className="text-white/30 hover:text-white/60 transition-colors" title="Refresh">
+            <RefreshCw size={12} />
+          </button>
+        </div>
+
+        {isLoading && <div className="text-xs text-white/30 font-mono py-4 text-center">Fetching inscriptions…</div>}
+
+        {dbItems.length === 0 && !isLoading && (
+          <div className="text-xs text-white/30 text-center py-6">No confirmed inscriptions yet — waiting for UTXOs to confirm.</div>
+        )}
+
+        <div className="space-y-2">
+          {dbItems.map((item: any) => (
+            <div key={item.id} className="rounded-xl border border-white/8 bg-white/[0.02] p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+                    style={{ background: (eventColor[item.eventType] ?? "#888") + "22", color: eventColor[item.eventType] ?? "#888" }}>
+                    {item.eventType}
+                  </span>
+                  <span className="text-[10px] text-white/30">{ago(item.confirmedAt)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {item.unisatUrl && (
+                    <a href={item.unisatUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-[10px] text-orange-400 hover:text-orange-300 font-mono transition-colors">
+                      <ExternalLink size={9} /> Unisat
+                    </a>
+                  )}
+                  {item.ordinalsUrl && (
+                    <a href={item.ordinalsUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-[10px] text-amber-400 hover:text-amber-300 font-mono transition-colors">
+                      <ExternalLink size={9} /> Ordinals
+                    </a>
+                  )}
+                  {item.gamma && (
+                    <a href={item.gamma} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-[10px] text-purple-400 hover:text-purple-300 font-mono transition-colors">
+                      <ExternalLink size={9} /> Gamma
+                    </a>
+                  )}
+                </div>
+              </div>
+              <div className="font-mono text-[10px] text-white/40 break-all">
+                ID: {shortId(item.inscriptionId)}
+              </div>
+              <div className="font-mono text-[9px] text-white/20 truncate">
+                {item.contentPreview}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Chain-discovered inscriptions not yet in our DB */}
+      {chainOnly.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Globe size={13} className="text-violet-400" />
+            <span className="text-xs font-mono font-bold text-violet-400 uppercase tracking-wider">
+              On-Chain Only ({chainOnly.length}) — not yet synced to NexusOS
+            </span>
+          </div>
+          <div className="space-y-2">
+            {chainOnly.map((h: any) => (
+              <div key={h.id} className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="font-mono text-[10px] text-violet-300 break-all">{shortId(h.id)}</span>
+                  <div className="flex items-center gap-2">
+                    <a href={`https://unisat.io/inscription/${h.id}`} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-[10px] text-orange-400 hover:text-orange-300 font-mono transition-colors">
+                      <ExternalLink size={9} /> Unisat
+                    </a>
+                    <a href={`https://ordinals.com/inscription/${h.id}`} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-[10px] text-amber-400 hover:text-amber-300 font-mono transition-colors">
+                      <ExternalLink size={9} /> Ordinals
+                    </a>
+                  </div>
+                </div>
+                {h.content_type && (
+                  <div className="text-[9px] text-white/30 font-mono">{h.content_type} · #{h.number}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data?.hiroError && (
+        <div className="text-[10px] text-white/20 font-mono text-center">
+          Chain sync: {data.hiroError} — showing DB records only
+        </div>
+      )}
+
+      {/* Info callout */}
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4 space-y-2">
+        <div className="text-[10px] font-mono text-white/40 uppercase tracking-wider">How the Bridge Works</div>
+        <ul className="text-[10px] text-white/30 space-y-1 list-none">
+          <li>→ Every confirmed NexusOS inscription is permanently visible on Unisat, Ordinals.com, and Gamma</li>
+          <li>→ BRC-20 ticks (wnsp) are tradeable on Unisat marketplace — fully decentralized</li>
+          <li>→ Hiro API cross-checks on-chain state to discover any inscriptions not yet indexed here</li>
+          <li>→ No API key required — all public Bitcoin infrastructure</li>
+          <li>→ Links are permanent: even if NexusOS goes offline, the content lives on Bitcoin forever</li>
+        </ul>
+      </div>
+
+    </div>
+  );
+}
+
 // MAIN PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 const TABS = [
@@ -1203,6 +1424,7 @@ const TABS = [
   { id: "bridge",       label: "Auto-Bridge",   icon: Zap   },
   { id: "identity",     label: "Identity",      icon: Bitcoin },
   { id: "brc20",        label: "BRC-20",        icon: Activity },
+  { id: "unisat",       label: "Unisat Bridge", icon: Globe  },
 ];
 
 export default function WnspOrdinalsPage() {
@@ -1269,6 +1491,7 @@ export default function WnspOrdinalsPage() {
         {tab === "bridge"       && <AutoBridgeTab />}
         {tab === "identity"     && <IdentityTab />}
         {tab === "brc20"        && <Brc20Tab />}
+        {tab === "unisat"       && <UniSatBridgeTab />}
 
         {/* Footer */}
         <div className="text-center text-[10px] font-mono text-white/20 flex items-center justify-center gap-4 pb-4 flex-wrap">

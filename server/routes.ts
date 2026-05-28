@@ -7143,6 +7143,76 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // Unisat Bridge — fetch on-chain inscriptions for our service wallet and cross-ref DB
+  app.get("/api/btc-bridge/unisat-bridge", async (req: Request, res: Response) => {
+    try {
+      const { getServiceWallet } = await import("./btc-inscription-engine");
+      const wallet = getServiceWallet();
+      const address = wallet?.address ?? null;
+
+      const { db } = await import("./db");
+      const { btcInscriptionQueue } = await import("../shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+
+      // All confirmed items from our DB
+      const dbItems = await db.select().from(btcInscriptionQueue)
+        .where(eq(btcInscriptionQueue.status, "confirmed"))
+        .orderBy(desc(btcInscriptionQueue.confirmedAt));
+
+      // Attempt to fetch on-chain inscriptions from Hiro API (free, no key)
+      let hiroInscriptions: any[] = [];
+      let hiroError: string | null = null;
+      if (address) {
+        try {
+          const hiroRes = await fetch(
+            `https://api.hiro.so/ordinals/v1/inscriptions?address=${address}&limit=60`,
+            { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(8000) }
+          );
+          if (hiroRes.ok) {
+            const hiroData = await hiroRes.json();
+            hiroInscriptions = hiroData.results ?? [];
+          } else {
+            hiroError = `Hiro API returned ${hiroRes.status}`;
+          }
+        } catch (e: any) { hiroError = e.message; }
+      }
+
+      // BRC-20 ticks we've deployed/minted
+      const brc20Items = await db.select().from(btcInscriptionQueue)
+        .where(eq(btcInscriptionQueue.status, "confirmed"));
+      const brc20Ticks = [...new Set(
+        brc20Items
+          .filter(i => ["BRC20_DEPLOY","BRC20_MINT","BRC20_TRANSFER"].includes(i.eventType))
+          .map(i => { try { return JSON.parse(i.inscriptionContent).tick; } catch { return null; } })
+          .filter(Boolean)
+      )];
+
+      res.json({
+        address,
+        unisatWalletUrl:  address ? `https://unisat.io/address/${address}` : null,
+        ordinalsWalletUrl: address ? `https://ordinals.com/address/${address}` : null,
+        mempoolUrl:       address ? `https://mempool.space/address/${address}` : null,
+        dbItems: dbItems.map(i => ({
+          id: i.id,
+          inscriptionId: i.inscriptionId,
+          eventType: i.eventType,
+          contentPreview: i.inscriptionContent.slice(0, 120),
+          confirmedAt: i.confirmedAt,
+          unisatUrl: i.inscriptionId ? `https://unisat.io/inscription/${i.inscriptionId}` : null,
+          ordinalsUrl: i.inscriptionId ? `https://ordinals.com/inscription/${i.inscriptionId}` : null,
+          gamma: i.inscriptionId ? `https://gamma.io/ordinals/inscriptions/${i.inscriptionId}` : null,
+        })),
+        hiroInscriptions,
+        hiroError,
+        brc20Ticks: brc20Ticks.map(tick => ({
+          tick,
+          unisatUrl: `https://unisat.io/brc20/${tick}`,
+          marketUrl: `https://unisat.io/market/brc20?tick=${tick}`,
+        })),
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   app.patch("/api/btc-bridge/queue/:id/confirm", authenticate, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
