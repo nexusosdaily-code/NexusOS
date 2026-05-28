@@ -1814,8 +1814,8 @@ export async function registerRoutes(
           metadata:     { action: "message_received", band: msgFee.band, senderId: req.user!.id },
         });
       }
-      // Remaining 50% is protocol fee (burned to compress supply)
-      await storage.createTransaction({
+      // Remaining 50% is protocol fee → Orbital Treasury
+      const burnTxMain = await storage.createTransaction({
         fromWalletId: senderWallet.id,
         toWalletId:   undefined,
         amount:       (feeNum * 0.5).toFixed(8),
@@ -1826,6 +1826,17 @@ export async function registerRoutes(
         energyCost:   msgFee.energyJ.toString(),
         metadata:     { action: "message_send", band: msgFee.band, recipientId },
       });
+      // ── BTC auto-inscription hook — NXT fee → Orbital Treasury ────────────
+      import("./btc-bridge-service").then(({ btcBridge }) => {
+        btcBridge.triggerFromBurn({
+          id:               String(burnTxMain?.id ?? Date.now()),
+          amountNxt:        (feeNum * 0.5).toFixed(8),
+          fromWalletAddress: senderWallet.address,
+          reason:           `message_send fee → Orbital Treasury (50%) · band:${msgFee.band}`,
+          wavelength:       msgFee.wavelengthNm.toString(),
+          triggeredBy:      (req as any).user?.username ?? "protocol",
+        }).catch(() => {});
+      }).catch(() => {});
       // ────────────────────────────────────────────────────────────────────
 
       let encodedFrames = null;
@@ -5959,6 +5970,17 @@ export async function registerRoutes(
         lastBeaconAt: new Date(),
       });
       res.status(201).json({ node, spectral });
+      // ── BTC auto-inscription hook — node registration ──────────────────────
+      import("./btc-bridge-service").then(({ btcBridge }) => {
+        btcBridge.triggerFromNodeRegister({
+          nodeId:      node.nodeKey,
+          psiChannel:  spectral.psiChannel,
+          band:        spectral.emissionBand,
+          wavelengthNm: String(spectral.wavelengthNm),
+          walletAddress: (req as any).user?.walletAddress,
+          triggeredBy:  (req as any).user?.username ?? "network",
+        }).catch(() => {});
+      }).catch(() => {});
     } catch (error: any) {
       console.error("Register node error:", error);
       res.status(500).json({ error: "Failed to register node" });

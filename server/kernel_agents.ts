@@ -151,6 +151,16 @@ async function osKernelTick() {
   });
 
   console.log(`[OS_KERNEL] Snapshot: ${JSON.stringify(snap)}`);
+  // ── BTC inscription on every 10th cycle (~30 min cadence) ──────────────────
+  const osCycle = _agents.get("os_kernel")?.cycleCount ?? 0;
+  if (osCycle % 10 === 0) {
+    import("./btc-bridge-service").then(({ btcBridge }) => {
+      btcBridge.triggerFromKernel({
+        type: "HEALTH_SNAPSHOT", ref: `os-kernel-cycle-${osCycle}`,
+        data: { ...snap, cycle: osCycle, layer: "NexusOS OS Kernel", platform: "wnsp.tech", org: "wnsp.io" },
+      }).catch(() => {});
+    }).catch(() => {});
+  }
 }
 
 // ── 2. scheduler_daemon — Confirm pending transactions (every 60s) ───────────
@@ -221,6 +231,15 @@ async function watchdogTick() {
 
   if (anomalies.length > 0) {
     console.log(`[WATCHDOG] Anomalies: ${anomalies.join(", ")}`);
+    // ── BTC inscription — anomaly correction event ────────────────────────────
+    import("./btc-bridge-service").then(({ btcBridge }) => {
+      btcBridge.triggerFromAgentAction({
+        agentId: "watchdog_daemon", agentName: "Watchdog Daemon",
+        action:  `Corrected ${anomalies.length} wallet anomaly(s) across ${allWallets.length} wallets`,
+        psiChannel: "Ψ(95,10,V)",
+        data: { anomalies_fixed: anomalies.length, wallet_count: allWallets.length, layer: "NexusOS Watchdog" },
+      }).catch(() => {});
+    }).catch(() => {});
   }
 }
 
@@ -264,6 +283,15 @@ async function authGatewayTick() {
 
   if (assigned > 0) {
     console.log(`[AUTH_GATEWAY] Assigned ${assigned} spectral channels`);
+    // ── BTC inscription — spectral channel assignment event ───────────────────
+    import("./btc-bridge-service").then(({ btcBridge }) => {
+      btcBridge.triggerFromAgentAction({
+        agentId: "auth_gateway", agentName: "Auth Gateway",
+        action:  `Assigned spectral channels to ${assigned} user(s)`,
+        psiChannel: "Ψ(110,15,H)",
+        data: { channels_assigned: assigned, layer: "NexusOS Auth Gateway", platform: "wnsp.tech" },
+      }).catch(() => {});
+    }).catch(() => {});
   }
 }
 
