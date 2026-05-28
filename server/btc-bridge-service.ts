@@ -326,8 +326,11 @@ export class BtcBridgeService {
       await db.update(btcInscriptionQueue).set({ status: "signed", signedAt: new Date() }).where(eq(btcInscriptionQueue.id, item.id));
 
       try {
+        const { getFeeRate: getRate } = await import("./btc-inscription-engine");
+        const slowRate = await getRate("slow");
         const result = await inscribeText(item.inscriptionContent, {
           parentInscriptionId: item.parentInscriptionId ?? undefined,
+          feeRate: slowRate,
         });
 
         await db.update(btcInscriptionQueue).set({

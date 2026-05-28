@@ -848,8 +848,13 @@ function Brc20Tab() {
   const [xfrBusy,    setXfrBusy]      = useState(false);
   const [xfrMsg,     setXfrMsg]       = useState("");
 
-  const { data: queueData } = useQuery<any>({ queryKey: ["/api/btc-bridge/queue"], refetchInterval: 8_000 });
+  const { data: queueData }  = useQuery<any>({ queryKey: ["/api/btc-bridge/queue"],  refetchInterval: 8_000 });
+  const { data: liveWallet } = useQuery<any>({ queryKey: ["/api/btc-bridge/wallet"], refetchInterval: 15_000 });
   const brc20Items = (queueData?.items ?? []).filter((i: any) => ["BRC20_DEPLOY","BRC20_MINT","BRC20_TRANSFER"].includes(i.eventType));
+
+  const confirmedSats   = liveWallet?.balance?.confirmed   ?? 0;
+  const unconfirmedSats = liveWallet?.balance?.unconfirmed ?? 0;
+  const canInscribe     = confirmedSats >= 5000;
 
   function authErr(e: any): string {
     const msg = e?.message ?? "";
@@ -965,12 +970,36 @@ function Brc20Tab() {
           ))}
         </div>
 
-        {/* Wallet status */}
-        <div className="flex items-start gap-3 rounded-xl bg-blue-500/8 border border-blue-500/20 px-4 py-3">
-          <div className="text-blue-400 mt-0.5 text-sm">ℹ</div>
-          <div className="text-[11px] text-white/50 leading-relaxed">
-            Service wallet has <span className="text-amber-400 font-mono">~609,355 unconfirmed sats</span> — enough to deploy, waiting for the next Bitcoin block (~10 min) to confirm. Once confirmed the bridge broadcasts automatically.
+        {/* Live wallet status */}
+        <div className={`flex items-center gap-3 rounded-xl px-4 py-3 border ${canInscribe ? "bg-emerald-500/8 border-emerald-500/20" : "bg-amber-500/8 border-amber-500/20"}`}>
+          <div className={`w-2 h-2 rounded-full shrink-0 ${canInscribe ? "bg-emerald-400 animate-pulse" : "bg-amber-400 animate-pulse"}`} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-[10px] font-mono text-white/40 uppercase tracking-wider">Service Wallet — live</span>
+              <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full border ${canInscribe ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25" : "bg-amber-500/15 text-amber-400 border-amber-500/25"}`}>
+                {canInscribe ? "Ready to inscribe" : "Waiting for block"}
+              </span>
+            </div>
+            <div className="flex gap-4 mt-1 flex-wrap">
+              <span className="text-[11px] font-mono">
+                <span className="text-white/30">Confirmed: </span>
+                <span className={canInscribe ? "text-emerald-400 font-bold" : "text-white/60"}>{confirmedSats.toLocaleString()} sats</span>
+              </span>
+              <span className="text-[11px] font-mono">
+                <span className="text-white/30">Pending: </span>
+                <span className="text-amber-400">{Math.abs(unconfirmedSats).toLocaleString()} sats</span>
+              </span>
+            </div>
+            {!canInscribe && (
+              <div className="text-[10px] text-white/30 mt-1 font-mono">
+                Pending sats confirm with the next Bitcoin block (~10 min avg). Bridge auto-fires once ready.
+              </div>
+            )}
           </div>
+          <a href={`https://mempool.space/address/${liveWallet?.address ?? ""}`} target="_blank" rel="noopener noreferrer"
+            className="text-[9px] font-mono text-cyan-400/60 hover:text-cyan-400 flex items-center gap-0.5 shrink-0 transition-colors">
+            <ExternalLink size={9} /> mempool
+          </a>
         </div>
 
         <button onClick={doDeploy} disabled={deployBusy}
