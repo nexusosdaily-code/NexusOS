@@ -104,7 +104,6 @@ import SocialBroadcastPage from "@/pages/social-broadcast";
 import NotFound from "@/pages/not-found";
 import WnspLandingPage from "@/pages/wnsp-landing";
 import WnspOrdinalsPage from "@/pages/wnsp-ordinals";
-import BtcBridgePage from "@/pages/btc-bridge";
 
 function ProtectedRoutes() {
   return (
@@ -247,7 +246,7 @@ function Router() {
       <Route path="/wnsp" component={WnspLandingPage} />
       <Route path="/wnsp/ordinals" component={WnspOrdinalsPage} />
       <Route path="/bitcoin-ordinals" component={WnspOrdinalsPage} />
-      <Route path="/btc-bridge" component={BtcBridgePage} />
+      <Route path="/btc-bridge">{() => { window.location.replace("/wnsp/ordinals"); return null; }}</Route>
       <Route path="/snic" component={SnicPage} />
       <Route path="/open" component={OpenPage} />
       <Route path="/charter" component={OpenPage} />

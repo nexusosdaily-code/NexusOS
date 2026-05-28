@@ -156,8 +156,7 @@ const APP_SECTIONS = [
       { title: "Crowdfund",        href: "/crowdfund",    Icon: Users },
       { title: "Evidence",         href: "/evidence",     Icon: Eye },
       { title: "SNIC Spec",        href: "/snic",         Icon: Cpu },
-      { title: "Bitcoin Ordinals", href: "/wnsp/ordinals", Icon: Bitcoin },
-      { title: "BTC Auto-Bridge",  href: "/btc-bridge",    Icon: Zap },
+      { title: "₿ Bitcoin Bridge", href: "/wnsp/ordinals", Icon: Bitcoin },
     ],
   },
   {
