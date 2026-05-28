@@ -6852,7 +6852,7 @@ export async function registerRoutes(
         });
       }
 
-      return res.status(400).json({ error: "Unrecognised name format. Try: wnsp.sats, wnsp.btc, or a bc1p... address." });
+      return res.status(400).json({ error: "Unrecognised name format. Try: wnsp.sats, wnsp.sat, wnsp.btc, wnsp.unisat, or a bc1p... address." });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

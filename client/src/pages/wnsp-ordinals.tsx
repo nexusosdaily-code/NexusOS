@@ -699,9 +699,10 @@ function AutoBridgeTab() {
 // TAB 3 — IDENTITY (naming + resolver)
 // ══════════════════════════════════════════════════════════════════════════════
 const NAME_TYPES = [
-  { key: "sats", icon: Hash, color: "#f59e0b", badge: "wnsp.sats", title: ".sats Names", protocol: "Sats Names Protocol · Bitcoin", desc: "Inscribe 'wnsp.sats' directly on Bitcoin via the Sats Names protocol. Tradeable, transferable, permanent Ordinal. Resolves to your Taproot address.", steps: ["Open Unisat → Names tab", "Search 'wnsp'", "Mint wnsp.sats", "Costs ~$10–30 in BTC fees"], registryUrl: "https://unisat.io/market/name" },
-  { key: "btc", icon: Globe, color: "#22d3ee", badge: "wnsp.btc", title: ".btc Domains", protocol: "Bitcoin Name System · Stacks L2", desc: "BNS (.btc) domains live on Stacks, a Bitcoin L2. Resolves to a Bitcoin address and can serve a site via IPFS. Owned forever with one upfront payment.", steps: ["Visit app.stacks.id or btc.us", "Search 'wnsp'", "Register wnsp.btc", "Link to bc1p Taproot address"], registryUrl: "https://btc.us" },
-  { key: "4letter", icon: Bitcoin, color: "#a78bfa", badge: '"wnsp"', title: "4-Letter Ordinal", protocol: "Raw Bitcoin Ordinal Inscription", desc: "Inscribe the 4 characters 'wnsp' as a raw text Ordinal. 4-letter inscriptions are genuinely scarce — an immutable on-chain timestamp at a specific block height.", steps: ["Open Unisat → Inscribe → Text", "Type exactly: wnsp", "Set content-type: text/plain", "Confirm with Taproot (bc1p) wallet"], registryUrl: "https://unisat.io/inscribe" },
+  { key: "sats", icon: Hash, color: "#f59e0b", badge: "wnsp.sats", title: ".sats Names", protocol: "Sats Names Protocol · Bitcoin", owned: true, desc: "wnsp.sats is confirmed — permanently inscribed on Bitcoin via the Sats Names protocol. This is the primary anchor for all NexusOS auto-inscriptions.", steps: ["wnsp.sats registered ✓", "Configured as inscription anchor", "All auto-queue events child of wnsp.sats", "Resolves to bc1pkpap9g... Taproot address"], registryUrl: "https://unisat.io/market/name" },
+  { key: "btc", icon: Globe, color: "#22d3ee", badge: "wnsp.btc", title: ".btc Domains", protocol: "Bitcoin Name System · BNS", owned: true, desc: "wnsp.btc is confirmed — registered on the Bitcoin Name System (BNS), a Stacks L2 protocol. Resolves to a Bitcoin address and serves wnsp.tech via IPFS.", steps: ["wnsp.btc registered ✓", "Resolves to bc1p Taproot address", "Links to wnsp.tech platform", "Permanent — no renewal fee"], registryUrl: "https://btc.us" },
+  { key: "unisat", icon: Bitcoin, color: "#a78bfa", badge: "wnsp.unisat", title: "UniSat Name", protocol: "UniSat Name Service · Bitcoin", owned: true, desc: "wnsp.unisat is confirmed — registered on UniSat's naming layer. Resolves on the UniSat explorer and links to the wnsp.io organisation wallet and inscription history.", steps: ["wnsp.unisat registered ✓", "Visible on unisat.io profile", "Links to wnsp.io org", "Full inscription history indexed"], registryUrl: "https://unisat.io" },
+  { key: "sat", icon: Hash, color: "#34d399", badge: "wnsp.sat", title: ".sat Names", protocol: "UniSat .sat Protocol · Bitcoin", owned: true, desc: "wnsp.sat is confirmed — registered on UniSat's .sat naming protocol. Complementary to wnsp.sats, providing dual-name coverage across both Sats naming standards.", steps: ["wnsp.sat registered ✓", "UniSat .sat TLD", "Resolves alongside wnsp.sats", "Cross-resolver compatible"], registryUrl: "https://unisat.io/market/name" },
 ];
 
 function IdentityTab() {
@@ -733,7 +734,7 @@ function IdentityTab() {
           <p className="text-xs text-white/50">Enter a Bitcoin name → get its WNSP Ψ channel instantly.</p>
         </div>
         <div className="flex gap-2">
-          <input value={resolveInput} onChange={e => setResolveInput(e.target.value)} onKeyDown={e => e.key === "Enter" && resolve()} placeholder="wnsp.sats  /  wnsp.btc  /  bc1p..."
+          <input value={resolveInput} onChange={e => setResolveInput(e.target.value)} onKeyDown={e => e.key === "Enter" && resolve()} placeholder="wnsp.sats  /  wnsp.btc  /  wnsp.unisat  /  wnsp.sat  /  bc1p..."
             className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/40" data-testid="input-btc-resolver" />
           <button onClick={resolve} disabled={resolveLoading} className="px-4 py-2.5 rounded-xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-sm font-mono hover:bg-cyan-500/30 transition-all disabled:opacity-40 flex items-center gap-2" data-testid="button-btc-resolve">
             {resolveLoading ? <RefreshCw size={13} className="animate-spin" /> : <Search size={13} />} Resolve
@@ -766,7 +767,7 @@ function IdentityTab() {
         <div className="mb-4">
           <div className="text-[10px] font-mono uppercase tracking-wider text-white/30 mb-1">Bitcoin Identity Layer</div>
           <h2 className="text-lg font-bold text-white">Claim wnsp on Bitcoin's naming systems.</h2>
-          <p className="text-white/40 text-xs mt-1">Three protocols, all on-chain, all censorship-proof. Each maps to a WNSP Ψ channel.</p>
+          <p className="text-white/40 text-xs mt-1">Four confirmed Bitcoin names — all on-chain, all censorship-proof. Each maps to a WNSP Ψ channel.</p>
         </div>
         <div className="space-y-4">
           {NAME_TYPES.map(item => (
@@ -775,16 +776,17 @@ function IdentityTab() {
                 <div className="flex items-start gap-3 mb-3">
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: item.color + "18", border: `1px solid ${item.color}33` }}><item.icon size={16} style={{ color: item.color }} /></div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
+                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
                       <span className="text-sm font-bold text-white">{item.title}</span>
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ backgroundColor: item.color + "15", color: item.color, border: `1px solid ${item.color}30` }}>{item.badge}</span>
+                      {(item as any).owned && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">CONFIRMED ✓</span>}
                     </div>
                     <div className="text-[10px] font-mono text-white/30">{item.protocol}</div>
                   </div>
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed mb-4">{item.desc}</p>
                 <div className="flex items-center gap-3">
-                  <a href={item.registryUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[11px] font-mono hover:opacity-80 transition-opacity" style={{ color: item.color }}><ExternalLink size={10} /> Register now</a>
+                  <a href={item.registryUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[11px] font-mono hover:opacity-80 transition-opacity" style={{ color: item.color }}><ExternalLink size={10} /> {(item as any).owned ? "View on explorer" : "Register now"}</a>
                   <button onClick={() => setOpen(open === item.key ? null : item.key)} className="flex items-center gap-1 text-[10px] font-mono text-white/30 hover:text-white/60 transition-colors ml-auto">{open === item.key ? <><ChevronUp size={11} /> Hide steps</> : <><ChevronDown size={11} /> How to</>}</button>
                 </div>
               </div>
@@ -804,10 +806,10 @@ function IdentityTab() {
         <h2 className="text-base font-bold text-white">Name → Address → Ψ Channel. Fully automated.</h2>
         <div className="space-y-2.5">
           {[
-            { step: "01", color: "#f59e0b", label: "Resolve name", detail: "wnsp.sats → Unisat API → bc1p... Taproot address." },
+            { step: "01", color: "#f59e0b", label: "Resolve name", detail: "wnsp.sats / wnsp.sat / wnsp.btc / wnsp.unisat → resolver API → bc1p... Taproot address." },
             { step: "02", color: "#22d3ee", label: "CE-encode the address", detail: "Every character of the Bitcoin address maps to a wavelength (380–780nm)." },
             { step: "03", color: "#a78bfa", label: "Derive the Ψ channel", detail: "Mean wavelength → WDM. Sum of char codes → OAM (% 50). Parity → Polarisation. Result: Ψ(wdm, oam, pol)." },
-            { step: "04", color: "#34d399", label: "Physics-routed traffic", detail: "Any WNSP packet addressed to wnsp.sats is routed through the derived Ψ channel — deterministic and reproducible by anyone." },
+            { step: "04", color: "#34d399", label: "Physics-routed traffic", detail: "Any WNSP packet addressed to wnsp.sats, wnsp.sat, wnsp.btc, or wnsp.unisat routes through the same derived Ψ channel — deterministic and reproducible by anyone." },
           ].map(s => (
             <div key={s.step} className="flex gap-4 p-3 rounded-xl border border-white/5 bg-black/20">
               <div className="text-xl font-bold font-mono shrink-0 opacity-30" style={{ color: s.color }}>{s.step}</div>
