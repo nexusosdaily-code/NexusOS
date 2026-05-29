@@ -149,6 +149,21 @@ const BANDS: Record<string,string> = {
 
 const userQuizState = new Map<number, number>();
 
+// ── Admin alert (called from btc-bridge-service) ──────────────────────────────
+export async function sendAdminAlert(message: string): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+  try {
+    const adminId = process.env.TELEGRAM_ADMIN_ID;
+    if (!adminId) return;
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: adminId, text: message, parse_mode: "HTML" }),
+    });
+  } catch { /* silent */ }
+}
+
 // ── Bot factory ───────────────────────────────────────────────────────────────
 export function startTelegramBot() {
   const token = process.env.TELEGRAM_BOT_TOKEN;

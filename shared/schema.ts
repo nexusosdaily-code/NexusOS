@@ -1064,3 +1064,39 @@ export const btcBridgeConfig = pgTable("btc_bridge_config", {
   value:     text("value"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// ── wnsp Staking ─────────────────────────────────────────────────────────────
+export const wnspStakes = pgTable("wnsp_stakes", {
+  id:              serial("id").primaryKey(),
+  userId:          integer("user_id").notNull(),
+  inscriptionId:   text("inscription_id").notNull().unique(),
+  wnspAmount:      integer("wnsp_amount").notNull().default(1000),
+  status:          text("status").notNull().default("active"),  // active | unstaked | claimed
+  epochsCompleted: integer("epochs_completed").notNull().default(0),
+  nxtEarned:       decimal("nxt_earned", { precision: 20, scale: 8 }).notNull().default("0"),
+  nxtClaimed:      decimal("nxt_claimed", { precision: 20, scale: 8 }).notNull().default("0"),
+  stakedAt:        timestamp("staked_at").notNull().defaultNow(),
+  lastClaimAt:     timestamp("last_claim_at"),
+  unstakedAt:      timestamp("unstaked_at"),
+}, (t) => ({ userIdx: index("wnsp_stakes_user_idx").on(t.userId) }));
+
+export const insertWnspStakeSchema = createInsertSchema(wnspStakes).omit({ id: true, stakedAt: true });
+export type InsertWnspStake = z.infer<typeof insertWnspStakeSchema>;
+export type WnspStake = typeof wnspStakes.$inferSelect;
+
+// ── Community Mint Requests ──────────────────────────────────────────────────
+export const communityMints = pgTable("community_mints", {
+  id:            serial("id").primaryKey(),
+  userId:        integer("user_id").notNull(),
+  username:      text("username").notNull(),
+  nxtFeePaid:    decimal("nxt_fee_paid", { precision: 20, scale: 8 }).notNull(),
+  inscriptionId: text("inscription_id"),
+  queueId:       integer("queue_id"),
+  status:        text("status").notNull().default("queued"),  // queued | confirmed | failed
+  createdAt:     timestamp("created_at").notNull().defaultNow(),
+  confirmedAt:   timestamp("confirmed_at"),
+}, (t) => ({ userIdx: index("community_mints_user_idx").on(t.userId) }));
+
+export const insertCommunityMintSchema = createInsertSchema(communityMints).omit({ id: true, createdAt: true });
+export type InsertCommunityMint = z.infer<typeof insertCommunityMintSchema>;
+export type CommunityMint = typeof communityMints.$inferSelect;

@@ -7520,5 +7520,312 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── COMMUNITY MINT PORTAL ─────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  const COMMUNITY_MINT_NXT_FEE = "50.00000000";
+  const COMMUNITY_MINT_WNSP_AMT = "1000";
+
+  app.post("/api/community/mint", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const wallet = await storage.getWallet(user.id);
+      if (!wallet) return res.status(404).json({ error: "Wallet not found" });
+
+      const balance = parseFloat(wallet.balance);
+      const fee = parseFloat(COMMUNITY_MINT_NXT_FEE);
+      if (balance < fee) {
+        return res.status(402).json({
+          error: `Insufficient NXT balance. Need ${COMMUNITY_MINT_NXT_FEE} NXT to mint.`,
+          balance: wallet.balance,
+          required: COMMUNITY_MINT_NXT_FEE,
+        });
+      }
+
+      // Deduct fee (burned — goes to protocol)
+      const newBalance = (balance - fee).toFixed(8);
+      await storage.updateWalletBalance(wallet.id, newBalance);
+
+      // Queue BRC-20 mint inscription
+      const content = JSON.stringify({ p: "brc-20", op: "mint", tick: "wnsp", amt: COMMUNITY_MINT_WNSP_AMT });
+      const { btcBridge } = await import("./btc-bridge-service");
+      const queued = await btcBridge.queueRawContent({
+        eventType:  "BRC20_MINT",
+        ref:        `community-mint-${user.username}-${Date.now()}`,
+        content,
+        triggeredBy: user.username,
+      });
+
+      // Record in community_mints table
+      const { db } = await import("./db");
+      const { communityMints } = await import("../shared/schema");
+      const [row] = await db.insert(communityMints).values({
+        userId:     user.id,
+        username:   user.username,
+        nxtFeePaid: COMMUNITY_MINT_NXT_FEE,
+        queueId:    queued.id ? parseInt(String(queued.id)) : null,
+        status:     "queued",
+      }).returning();
+
+      res.json({
+        ok: true,
+        mintId: row.id,
+        queueId: queued.id,
+        wnspAmount: COMMUNITY_MINT_WNSP_AMT,
+        nxtFeeBurned: COMMUNITY_MINT_NXT_FEE,
+        newBalance,
+        message: `Mint queued! ${COMMUNITY_MINT_WNSP_AMT} wnsp will be inscribed to Bitcoin. ${COMMUNITY_MINT_NXT_FEE} NXT burned.`,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.get("/api/community/mints", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { db } = await import("./db");
+      const { communityMints, btcInscriptionQueue } = await import("../shared/schema");
+      const { desc, eq } = await import("drizzle-orm");
+
+      const userMints = await db.select().from(communityMints)
+        .where(eq(communityMints.userId, user.id))
+        .orderBy(desc(communityMints.createdAt))
+        .limit(20);
+
+      // Enrich with queue status
+      const enriched = await Promise.all(userMints.map(async (m) => {
+        if (!m.queueId) return m;
+        const [qItem] = await db.select().from(btcInscriptionQueue).where(eq(btcInscriptionQueue.id, m.queueId));
+        return { ...m, queueStatus: qItem?.status, inscriptionId: qItem?.inscriptionId ?? m.inscriptionId };
+      }));
+
+      res.json(enriched);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.get("/api/community/mints/all", async (_req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { communityMints } = await import("../shared/schema");
+      const { desc } = await import("drizzle-orm");
+      const rows = await db.select().from(communityMints).orderBy(desc(communityMints.createdAt)).limit(50);
+      res.json(rows);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── WNSP STAKING DASHBOARD ────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  const STAKING_NXT_PER_EPOCH = 100;    // NXT per epoch per stake
+  const EPOCH_DURATION_MS     = 86_400_000;  // 24 hours
+
+  function calcEpochsAndReward(stakedAt: Date, lastClaimAt: Date | null): { epochs: number; reward: number } {
+    const from = lastClaimAt ?? stakedAt;
+    const elapsed = Date.now() - from.getTime();
+    const epochs = Math.floor(elapsed / EPOCH_DURATION_MS);
+    return { epochs, reward: epochs * STAKING_NXT_PER_EPOCH };
+  }
+
+  app.post("/api/staking/stake", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { inscriptionId, wnspAmount = 1000 } = req.body;
+      if (!inscriptionId) return res.status(400).json({ error: "inscriptionId required" });
+
+      const { db } = await import("./db");
+      const { wnspStakes } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      // Check not already staked
+      const existing = await db.select().from(wnspStakes).where(eq(wnspStakes.inscriptionId, inscriptionId)).limit(1);
+      if (existing.length > 0) return res.status(409).json({ error: "Inscription already staked" });
+
+      const [stake] = await db.insert(wnspStakes).values({
+        userId: user.id,
+        inscriptionId,
+        wnspAmount: Math.min(Math.max(parseInt(String(wnspAmount)), 1), 100000),
+        status: "active",
+        epochsCompleted: 0,
+        nxtEarned: "0",
+        nxtClaimed: "0",
+      }).returning();
+
+      res.json({ ok: true, stake, message: `Inscription ${inscriptionId} staked. Earning ${STAKING_NXT_PER_EPOCH} NXT per 24h epoch.` });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/staking/claim", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { stakeId } = req.body;
+      if (!stakeId) return res.status(400).json({ error: "stakeId required" });
+
+      const { db } = await import("./db");
+      const { wnspStakes } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+
+      const [stake] = await db.select().from(wnspStakes)
+        .where(and(eq(wnspStakes.id, parseInt(String(stakeId))), eq(wnspStakes.userId, user.id)));
+      if (!stake) return res.status(404).json({ error: "Stake not found" });
+      if (stake.status !== "active") return res.status(400).json({ error: "Stake is not active" });
+
+      const { epochs, reward } = calcEpochsAndReward(stake.stakedAt, stake.lastClaimAt);
+      if (epochs === 0) return res.status(400).json({ error: "No complete epochs yet. Check back in 24 hours.", nextClaimIn: "24h" });
+
+      // Credit NXT to user wallet
+      const wallet = await storage.getWallet(user.id);
+      if (!wallet) return res.status(404).json({ error: "Wallet not found" });
+      const newBalance = (parseFloat(wallet.balance) + reward).toFixed(8);
+      await storage.updateWalletBalance(wallet.id, newBalance);
+
+      // Update stake record
+      const totalEarned = (parseFloat(stake.nxtEarned) + reward).toFixed(8);
+      const totalClaimed = (parseFloat(stake.nxtClaimed) + reward).toFixed(8);
+      await db.update(wnspStakes).set({
+        epochsCompleted: stake.epochsCompleted + epochs,
+        nxtEarned: totalEarned,
+        nxtClaimed: totalClaimed,
+        lastClaimAt: new Date(),
+      }).where(eq(wnspStakes.id, stake.id));
+
+      res.json({ ok: true, epochsClaimed: epochs, nxtRewarded: reward.toFixed(8), newBalance, message: `Claimed ${reward} NXT for ${epochs} epoch(s)!` });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/staking/unstake", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { stakeId } = req.body;
+      if (!stakeId) return res.status(400).json({ error: "stakeId required" });
+
+      const { db } = await import("./db");
+      const { wnspStakes } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+
+      const [stake] = await db.select().from(wnspStakes)
+        .where(and(eq(wnspStakes.id, parseInt(String(stakeId))), eq(wnspStakes.userId, user.id)));
+      if (!stake) return res.status(404).json({ error: "Stake not found" });
+      if (stake.status !== "active") return res.status(400).json({ error: "Stake is not active" });
+
+      // Auto-claim any pending rewards before unstaking
+      const { epochs, reward } = calcEpochsAndReward(stake.stakedAt, stake.lastClaimAt);
+      if (reward > 0) {
+        const wallet = await storage.getWallet(user.id);
+        if (wallet) {
+          const newBalance = (parseFloat(wallet.balance) + reward).toFixed(8);
+          await storage.updateWalletBalance(wallet.id, newBalance);
+        }
+      }
+
+      const totalEarned = (parseFloat(stake.nxtEarned) + reward).toFixed(8);
+      const totalClaimed = (parseFloat(stake.nxtClaimed) + reward).toFixed(8);
+      await db.update(wnspStakes).set({
+        status: "unstaked",
+        unstakedAt: new Date(),
+        epochsCompleted: stake.epochsCompleted + epochs,
+        nxtEarned: totalEarned,
+        nxtClaimed: totalClaimed,
+      }).where(eq(wnspStakes.id, stake.id));
+
+      res.json({ ok: true, finalRewardClaimed: reward.toFixed(8), message: "Unstaked successfully. Auto-claimed remaining rewards." });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.get("/api/staking/positions", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { db } = await import("./db");
+      const { wnspStakes } = await import("../shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      const stakes = await db.select().from(wnspStakes)
+        .where(eq(wnspStakes.userId, user.id))
+        .orderBy(desc(wnspStakes.stakedAt));
+      // Enrich with pending reward
+      const enriched = stakes.map(s => {
+        if (s.status !== "active") return { ...s, pendingReward: "0", pendingEpochs: 0 };
+        const { epochs, reward } = calcEpochsAndReward(s.stakedAt, s.lastClaimAt);
+        return { ...s, pendingReward: reward.toFixed(8), pendingEpochs: epochs };
+      });
+      res.json(enriched);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.get("/api/staking/stats", async (_req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { wnspStakes } = await import("../shared/schema");
+      const { eq, count, sum } = await import("drizzle-orm");
+      const [{ total }] = await db.select({ total: count() }).from(wnspStakes).where(eq(wnspStakes.status, "active"));
+      const [{ totalWnsp }] = await db.select({ totalWnsp: sum(wnspStakes.wnspAmount) }).from(wnspStakes).where(eq(wnspStakes.status, "active"));
+      const [{ totalNxtPaid }] = await db.select({ totalNxtPaid: sum(wnspStakes.nxtClaimed) }).from(wnspStakes);
+      res.json({
+        activeStakes: total ?? 0,
+        totalWnspStaked: totalWnsp ?? "0",
+        totalNxtRewarded: totalNxtPaid ?? "0",
+        nxtPerEpoch: STAKING_NXT_PER_EPOCH,
+        epochDurationHours: 24,
+        apy_estimate: "~36500% NXT yield on wnsp",
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── FRACTAL BITCOIN BRIDGE ────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  const FRACTAL_MEMPOOL = "https://mempool.fractalbitcoin.io/api";
+
+  app.get("/api/fractal/balance/:address", async (req: Request, res: Response) => {
+    try {
+      const { address } = req.params;
+      const r = await fetch(`${FRACTAL_MEMPOOL}/address/${address}`);
+      if (!r.ok) return res.status(502).json({ error: "Fractal mempool unavailable" });
+      const data = await r.json() as any;
+      res.json({
+        address,
+        confirmed:   data.chain_stats?.funded_txo_sum - data.chain_stats?.spent_txo_sum,
+        unconfirmed: data.mempool_stats?.funded_txo_sum - data.mempool_stats?.spent_txo_sum,
+        txCount:     data.chain_stats?.tx_count,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.get("/api/fractal/fee-rate", async (_req: Request, res: Response) => {
+    try {
+      const r = await fetch(`${FRACTAL_MEMPOOL}/v1/fees/recommended`);
+      if (!r.ok) return res.status(502).json({ error: "Fractal mempool unavailable" });
+      const data = await r.json() as any;
+      res.json({ ...data, network: "fractal-bitcoin" });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/fractal/inscribe", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { content, contentType = "text/plain", receiverAddress } = req.body;
+      if (!content || !receiverAddress) return res.status(400).json({ error: "content and receiverAddress required" });
+      // Queue as a bridge event — Fractal Bitcoin uses same Taproot inscription format
+      const { btcBridge } = await import("./btc-bridge-service");
+      const queued = await btcBridge.queueRawContent({
+        eventType:  "BRC20_MINT",
+        ref:        `fractal-inscribe-${Date.now()}`,
+        content:    typeof content === "string" ? content : JSON.stringify(content),
+        triggeredBy: (req as any).user?.username ?? "fractal",
+      });
+      res.json({ ok: true, queued, network: "fractal-bitcoin", note: "Inscription queued. Fractal Bitcoin uses same Taproot format as mainnet." });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.get("/api/fractal/inscriptions/:address", async (req: Request, res: Response) => {
+    try {
+      const { address } = req.params;
+      const r = await fetch(`https://open-api.unisat.io/v1/indexer/fractal/address/${address}/inscription-data?size=10`, {
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!r.ok) {
+        return res.json({ address, inscriptions: [], note: "Fractal indexer not available — check UniSat Fractal explorer manually" });
+      }
+      const data = await r.json() as any;
+      res.json({ address, inscriptions: data?.data?.detail ?? [], total: data?.data?.total ?? 0 });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   return httpServer;
 }

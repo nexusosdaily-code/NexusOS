@@ -296,6 +296,28 @@ export class BtcBridgeService {
         this._busy = false; return;
       }
 
+      // ── Low-balance early warning (Telegram alert once per hour) ─────────
+      const LOW_WARN = 20_000;
+      if (balance.confirmed < LOW_WARN) {
+        const now = Date.now();
+        const lastAlert = (this as any)._lastLowBalanceAlert ?? 0;
+        if (now - lastAlert > 3_600_000) {
+          (this as any)._lastLowBalanceAlert = now;
+          try {
+            const { sendAdminAlert } = await import("./telegram-bot");
+            await sendAdminAlert(
+              `⚠️ BTC Service Wallet LOW BALANCE\n\n` +
+              `Confirmed: ${balance.confirmed.toLocaleString()} sats\n` +
+              `Pending:   ${balance.unconfirmed.toLocaleString()} sats\n` +
+              `Threshold: ${LOW_WARN.toLocaleString()} sats\n\n` +
+              `Please top up the service wallet:\n` +
+              `bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m\n\n` +
+              `Queue depth: ${this._queueDepth} pending inscriptions`
+            );
+          } catch { /* telegram optional */ }
+        }
+      }
+
       // Get oldest pending item that is not in backoff
       const { db } = await import("./db");
       const { btcInscriptionQueue } = await import("../shared/schema");

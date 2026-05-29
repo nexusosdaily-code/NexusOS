@@ -26,6 +26,9 @@ const PAGES: { route: string; title: string; desc: string; keywords: string[] }[
   { route: "/auth", title: "Login / Register", desc: "Phone-based authentication — log in or create an account", keywords: ["login","register","auth","sign in","phone","account","create","access"] },
   { route: "/k1-orchestration", title: "K1 Orchestration", desc: "Kardashev Type I orchestration layer — AI agent coordination", keywords: ["k1","kardashev","orchestration","agent","ai","coordinate","type 1"] },
   { route: "/spectral-search", title: "Spectral Search", desc: "Search nodes, agents, channels by wavelength proximity", keywords: ["wavelength proximity","shannon","coherence","ranking"] },
+  { route: "/community-mint", title: "Community Mint Portal", desc: "Mint 1,000 wnsp BRC-20 on Bitcoin — burn 50 NXT fee, auto-inscribed", keywords: ["community mint","mint wnsp","brc20 mint","burn nxt","inscribe","bitcoin mint","wnsp mint","community"] },
+  { route: "/wnsp-staking", title: "wnsp Staking Dashboard", desc: "Lock wnsp inscription ID → earn 100 NXT per 24h epoch, claim anytime", keywords: ["staking","stake","earn","nxt reward","epoch","lock","yield","wnsp stake","inscription stake"] },
+  { route: "/fractal-btc", title: "Fractal Bitcoin Bridge", desc: "Bridge inscriptions to Fractal Bitcoin L2 — same Taproot format, faster blocks", keywords: ["fractal","fractal bitcoin","l2","layer 2","bridge","faster","scaling","fractal inscription"] },
 ];
 
 type Msg = { from: "user" | "bot"; text: string; route?: string; title?: string };
