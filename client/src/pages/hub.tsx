@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import TelegramVideoGallery from "@/components/TelegramVideoGallery";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Mail, Radio, FileText, Upload, ArrowRightLeft, Bitcoin,
   Activity, Layers, Cpu, Code2, Wallet, Globe2,
@@ -14,6 +17,7 @@ import {
   ChevronRight, Rss, Eye, Clock,
   MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut, Settings, User, Search,
   CheckCircle2, AlertTriangle, ArrowRight, FlaskConical, Heart,
+  Copy, ExternalLink, RefreshCw, ChevronDown, ChevronUp,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -713,6 +717,268 @@ function CampaignVideos() {
   );
 }
 
+// ── Canonical Address Panel ────────────────────────────────────────────
+function CanonicalAddressPanel({ username }: { username: string }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [expanded, setExpanded] = useState(false);
+  const [lookupQuery, setLookupQuery] = useState("");
+  const [lookupResults, setLookupResults] = useState<any[] | null>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
+
+  const { data: canonical, isLoading } = useQuery({
+    queryKey: ["/api/spectral/my-canonical"],
+    refetchInterval: 60_000,
+  });
+
+  const c = canonical as any;
+  const sp = c?.spectral;
+  const color = sp ? (() => {
+    const band = sp.band as string;
+    if (band === "SYSTEM") return "#8b00ff";
+    if (band === "KERNEL") return "#2563eb";
+    if (band === "USER")   return "#16a34a";
+    return "#d97706";
+  })() : "#22d3ee";
+
+  const registerMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/spectral/register-canonical", {}),
+    onSuccess: async (res: any) => {
+      const d = await res.json();
+      toast({ title: d.action === "created" ? "Canonical address registered!" : "Address refreshed", description: `WavelengthScript stored in spectral database at ${sp?.psi}` });
+      qc.invalidateQueries({ queryKey: ["/api/spectral/my-canonical"] });
+    },
+    onError: () => toast({ title: "Registration failed", variant: "destructive" }),
+  });
+
+  async function runLookup() {
+    const q = lookupQuery.trim();
+    if (!q) return;
+    setLookupLoading(true);
+    setLookupResults(null);
+    try {
+      const r = await fetch(`/api/spectral/channel-lookup?q=${encodeURIComponent(q)}`);
+      const d = await r.json();
+      setLookupResults(d.results ?? []);
+    } catch { setLookupResults([]); }
+    setLookupLoading(false);
+  }
+
+  function copyText(text: string, label: string) {
+    navigator.clipboard.writeText(text).then(() =>
+      toast({ title: `Copied ${label}`, description: text.length > 60 ? text.slice(0, 57) + "…" : text })
+    );
+  }
+
+  if (isLoading) return null;
+
+  return (
+    <div
+      data-testid="canonical-address-panel"
+      style={{ borderBottom: `1px solid ${color}22`, background: "hsl(222 47% 5.5%)" }}
+      className="w-full"
+    >
+      {/* Collapsed strip */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-3 px-6 py-2 hover:bg-white/[0.02] transition-colors text-left"
+        data-testid="button-canonical-expand"
+      >
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: color }} />
+          <span className="text-[10px] uppercase tracking-widest font-mono" style={{ color }}>
+            Canonical
+          </span>
+        </div>
+
+        {sp ? (
+          <>
+            <span className="font-mono text-xs truncate flex-1" style={{ color }}>
+              {sp.uri}
+            </span>
+            <span className="text-[10px] font-mono text-white/30 hidden sm:block flex-shrink-0">
+              {sp.nm.toFixed(1)}nm · {(sp.freqTHz / 1000).toFixed(2)}PHz
+            </span>
+            {c.registered ? (
+              <span className="flex items-center gap-1 text-[10px] text-green-400 flex-shrink-0">
+                <CheckCircle2 className="w-3 h-3" /> On-chain
+              </span>
+            ) : (
+              <span className="text-[10px] text-yellow-500 flex-shrink-0">Unregistered</span>
+            )}
+          </>
+        ) : (
+          <span className="text-xs text-white/30 flex-1 font-mono">Computing spectral address…</span>
+        )}
+
+        {expanded ? <ChevronUp className="w-3.5 h-3.5 text-white/30 flex-shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />}
+      </button>
+
+      {/* Expanded panel */}
+      {expanded && sp && (
+        <div className="px-6 pb-5 pt-1 space-y-4">
+          {/* Two-column: physics grid + WLS code */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            {/* Physics params */}
+            <div className="space-y-3">
+              <p className="text-[10px] uppercase tracking-widest text-white/30 font-mono">Spectral Parameters</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: "Ψ channel",  value: sp.psi },
+                  { label: "Band",       value: sp.band },
+                  { label: "λ (nm)",     value: `${sp.nm.toFixed(3)} nm` },
+                  { label: "f (THz)",    value: `${(sp.freqTHz).toFixed(2)} THz` },
+                  { label: "E (J)",      value: sp.energyJ.toExponential(3) },
+                  { label: "Λ (kg)",     value: sp.massKg.toExponential(3) },
+                  { label: "WDM slot",   value: String(sp.wdm) },
+                  { label: "OAM mode",   value: String(sp.oam) },
+                ].map(({ label, value }) => (
+                  <div key={label} className="rounded p-2" style={{ background: `${color}0d`, border: `1px solid ${color}22` }}>
+                    <p className="text-[9px] text-white/30 uppercase tracking-wider">{label}</p>
+                    <p className="text-xs font-mono font-semibold mt-0.5" style={{ color }}>{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* URI row with copy */}
+              <div className="flex items-center gap-2 rounded px-3 py-2" style={{ background: `${color}0d`, border: `1px solid ${color}22` }}>
+                <span className="font-mono text-xs truncate flex-1" style={{ color }}>{sp.uri}</span>
+                <button onClick={() => copyText(sp.uri, "WNSP URI")} className="text-white/30 hover:text-white transition-colors flex-shrink-0">
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+                <a href={`/wnsp-bridge?uri=${encodeURIComponent(sp.uri)}`} className="text-white/30 hover:text-white transition-colors flex-shrink-0">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+
+              {/* Register button */}
+              <div className="flex items-center gap-2">
+                <Button
+                  data-testid="button-register-canonical"
+                  size="sm"
+                  onClick={() => registerMutation.mutate()}
+                  disabled={registerMutation.isPending}
+                  className="flex-1 h-8 text-xs font-mono"
+                  style={{ background: `${color}22`, border: `1px solid ${color}44`, color }}
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${registerMutation.isPending ? "animate-spin" : ""}`} />
+                  {registerMutation.isPending ? "Registering…" : c.registered ? "Refresh in spectral DB" : "Register canonical address"}
+                </Button>
+                {c.registered && (
+                  <span className="text-[10px] text-green-400 font-mono flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    {c.spectral.resolveCount} lookups
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* WavelengthScript code block */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] uppercase tracking-widest text-white/30 font-mono">WavelengthScript Declaration</p>
+                <button
+                  onClick={() => copyText(c.wavelengthScript, "WLS code")}
+                  className="flex items-center gap-1 text-[10px] text-white/30 hover:text-white transition-colors font-mono"
+                >
+                  <Copy className="w-3 h-3" /> Copy
+                </button>
+              </div>
+              <pre
+                data-testid="text-wls-code"
+                className="rounded-lg p-3 text-[10px] font-mono leading-relaxed overflow-x-auto"
+                style={{ background: "#010510", border: `1px solid ${color}22`, color: "#94a3b8" }}
+              >
+                {c.wavelengthScript.split("\n").map((line: string, i: number) => {
+                  if (line.startsWith("//")) return <span key={i} style={{ color: "#475569" }}>{line}{"\n"}</span>;
+                  if (line.startsWith("@") && line.includes("declare")) return <span key={i} style={{ color }}>{line}{"\n"}</span>;
+                  if (line.startsWith("@emit")) return <span key={i} style={{ color: "#7c3aed" }}>{line}{"\n"}</span>;
+                  if (line.startsWith("  label") || line.startsWith("  psi") || line.startsWith("  uri")) return <span key={i}><span style={{ color: "#60a5fa" }}>{line.split(":=")[0]}</span><span style={{ color: "#94a3b8" }}>:={line.split(":=")[1]}{"\n"}</span></span>;
+                  if (line === "}") return <span key={i} style={{ color }}>{line}{"\n"}</span>;
+                  if (line.includes("broadcast")) return <span key={i} style={{ color: "#f59e0b" }}>{line}{"\n"}</span>;
+                  return <span key={i}>{line}{"\n"}</span>;
+                })}
+              </pre>
+              <div className="flex gap-2">
+                <Link href="/wavelength-lang">
+                  <button className="text-[10px] text-white/30 hover:text-cyan-400 font-mono transition-colors">WavelengthScript spec →</button>
+                </Link>
+                <Link href="/wnsp-bridge">
+                  <button className="text-[10px] text-white/30 hover:text-cyan-400 font-mono transition-colors ml-3">WNSP Bridge →</button>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Channel Lookup */}
+          <div className="space-y-2" style={{ borderTop: `1px solid ${color}15`, paddingTop: "1rem" }}>
+            <p className="text-[10px] uppercase tracking-widest text-white/30 font-mono">Channel Lookup — Query any Ψ channel</p>
+            <div className="flex gap-2">
+              <Input
+                data-testid="input-channel-lookup"
+                value={lookupQuery}
+                onChange={(e) => setLookupQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && runLookup()}
+                placeholder="Ψ(84,23,H) · wnsp://… · or label"
+                className="flex-1 h-8 text-xs font-mono bg-black/40 border-white/10 text-white placeholder:text-white/20 focus:border-cyan-500/40"
+              />
+              <Button
+                data-testid="button-channel-lookup"
+                size="sm"
+                onClick={runLookup}
+                disabled={lookupLoading || !lookupQuery.trim()}
+                className="h-8 px-3 text-xs bg-white/5 border border-white/10 hover:bg-white/10 text-white"
+              >
+                {lookupLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+              </Button>
+            </div>
+
+            {lookupResults !== null && (
+              lookupResults.length === 0 ? (
+                <p className="text-xs text-white/30 font-mono">No channels found for "{lookupQuery}"</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {lookupResults.map((r: any, i: number) => (
+                    <div key={i} data-testid={`lookup-result-${i}`}
+                      className="rounded p-2.5 flex items-start gap-2.5"
+                      style={{ background: `${color}08`, border: `1px solid ${color}20` }}>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-semibold" style={{ color }}>{r.psiChannel}</span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded font-mono"
+                            style={{ background: `${color}20`, color }}>{r.band}</span>
+                          {r.isCanonical && <span className="text-[9px] text-green-400 font-mono">canonical</span>}
+                          <span className="text-[9px] text-white/30 font-mono">{r.resourceType}</span>
+                        </div>
+                        <p className="font-mono text-[10px] text-white/50 truncate">{r.wnspUri}</p>
+                        {r.httpUrl && (
+                          <a href={r.httpUrl} className="text-[10px] text-cyan-500 hover:underline font-mono">
+                            {r.httpUrl}
+                          </a>
+                        )}
+                        <p className="text-[10px] text-white/30">{r.description}</p>
+                        <p className="text-[9px] text-white/20 font-mono">{parseFloat(r.wavelengthNm).toFixed(2)}nm · {r.resolveCount} lookups</p>
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button onClick={() => copyText(r.wnspUri, "URI")} className="text-white/20 hover:text-white transition-colors">
+                          <Copy className="w-3 h-3" />
+                        </button>
+                        <button onClick={() => { setLookupQuery(""); setExpanded(true); copyText(r.wavelengthScript, "WLS"); toast({ title: "WLS copied!", description: r.psiChannel }); }} className="text-white/20 hover:text-cyan-400 transition-colors" title="Copy WavelengthScript">
+                          <Code2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Hub Page ──────────────────────────────────────────────────────
 export default function HubPage() {
   const { user } = useAuth();
@@ -771,6 +1037,9 @@ export default function HubPage() {
         unread={unreadData?.count ?? 0}
         avatarUrl={profileData?.profile?.avatarUrl ?? null}
       />
+
+      {/* Canonical Address Panel — WNSP address linked in WavelengthScript + spectral DB */}
+      <CanonicalAddressPanel username={user.username} />
 
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         {/* Header */}

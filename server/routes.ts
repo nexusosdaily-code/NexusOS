@@ -7828,6 +7828,228 @@ export async function registerRoutes(
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // ── SPECTRAL CANONICAL ADDRESS — WavelengthScript registration & lookup ───────
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  /** Generate deterministic WavelengthScript code block for a canonical address */
+  function buildWavelengthScript(opts: {
+    username: string; wdm: number; oam: number; pol: string;
+    nm: number; band: string; uri: string; psi: string;
+    registeredAt?: string;
+  }): string {
+    const C = 299_792_458;
+    const H = 6.626e-34;
+    const freqHz  = C / (opts.nm * 1e-9);
+    const freqTHz = (freqHz / 1e12).toFixed(2);
+    const energyJ = H * freqHz;
+    const massKg  = energyJ / (C * C);
+    const date    = opts.registeredAt
+      ? new Date(opts.registeredAt).toISOString().slice(0, 10)
+      : new Date().toISOString().slice(0, 10);
+
+    return [
+      `// WavelengthScript v1.0 — Canonical Address Declaration`,
+      `// User: ${opts.username} | Band: ${opts.band} | Date: ${date}`,
+      `@${opts.nm.toFixed(1)}nm declare canonical {`,
+      `  label    := "${opts.username}"`,
+      `  psi      := ${opts.psi}`,
+      `  uri      := "${opts.uri}"`,
+      `  band     := ${opts.band}`,
+      `  freq_THz := ${freqTHz}`,
+      `  energy_J := ${energyJ.toExponential(3)}`,
+      `  mass_kg  := ${massKg.toExponential(3)}`,
+      `}`,
+      `@emit(${opts.nm.toFixed(1)}nm, ${opts.psi}) fn resolveCanonical() {`,
+      `  broadcast(psi.lookup.canonical("${opts.username}"))`,
+      `}`,
+    ].join("\n");
+  }
+
+  // ── GET my canonical address + WavelengthScript block ──────────────────────
+  app.get("/api/spectral/my-canonical", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { wnspRegistry } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const user = (req as any).user!;
+      const enc  = ceSe(user.username);
+
+      // Look up registration
+      const [entry] = await db.select().from(wnspRegistry)
+        .where(and(eq(wnspRegistry.resourceType, "user"), eq(wnspRegistry.resourceId, user.id)));
+
+      const C = 299_792_458;
+      const H = 6.626e-34;
+      const freqHz  = C / (enc.nm * 1e-9);
+      const freqTHz = freqHz / 1e12;
+      const energyJ = H * freqHz;
+      const massKg  = energyJ / (C * C);
+
+      const wls = buildWavelengthScript({
+        username:     user.username,
+        wdm:          enc.wdm,
+        oam:          enc.oam,
+        pol:          enc.pol,
+        nm:           enc.nm,
+        band:         enc.band,
+        uri:          enc.uri,
+        psi:          enc.psi,
+        registeredAt: entry?.createdAt?.toISOString(),
+      });
+
+      res.json({
+        username:    user.username,
+        spectral: {
+          psi:          enc.psi,
+          wdm:          enc.wdm,
+          oam:          enc.oam,
+          pol:          enc.pol,
+          nm:           enc.nm,
+          band:         enc.band,
+          uri:          enc.uri,
+          freqTHz,
+          energyJ,
+          massKg,
+          resolveCount: entry?.resolveCount ?? 0,
+        },
+        registered:       !!entry,
+        registeredAt:     entry?.createdAt ?? null,
+        isCanonical:      entry?.isCanonical ?? false,
+        registryId:       entry?.id ?? null,
+        wavelengthScript: wls,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Register/refresh canonical address + attach WLS to spectralVector ───────
+  app.post("/api/spectral/register-canonical", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { wnspRegistry } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const user = (req as any).user!;
+      const enc  = ceSe(user.username);
+
+      const [existing] = await db.select().from(wnspRegistry)
+        .where(and(eq(wnspRegistry.resourceType, "user"), eq(wnspRegistry.resourceId, user.id)));
+
+      const wls = buildWavelengthScript({
+        username:     user.username,
+        wdm:          enc.wdm,
+        oam:          enc.oam,
+        pol:          enc.pol,
+        nm:           enc.nm,
+        band:         enc.band,
+        uri:          enc.uri,
+        psi:          enc.psi,
+        registeredAt: existing?.createdAt?.toISOString() ?? new Date().toISOString(),
+      });
+
+      const C = 299_792_458;
+      const H = 6.626e-34;
+      const freqHz = C / (enc.nm * 1e-9);
+
+      const spectralVector = {
+        wlsCode:   wls,
+        freqTHz:   freqHz / 1e12,
+        energyJ:   H * freqHz,
+        massKg:    (H * freqHz) / (C * C),
+        registeredBy: user.username,
+        protocol:  "WNSP-CE-SE v1.0",
+        version:   "WavelengthScript v1.0",
+      };
+
+      if (existing) {
+        // Refresh WLS stored in spectralVector
+        const [updated] = await db.update(wnspRegistry)
+          .set({ spectralVector, isCanonical: true, updatedAt: new Date() })
+          .where(eq(wnspRegistry.id, existing.id))
+          .returning();
+        return res.json({ success: true, action: "refreshed", entry: updated, wavelengthScript: wls });
+      }
+
+      // Insert new canonical entry
+      const [entry] = await db.insert(wnspRegistry).values({
+        wnspUri:      enc.uri,
+        psiChannel:   enc.psi,
+        wdm:          enc.wdm,
+        oam:          enc.oam,
+        polarisation: enc.pol,
+        wavelengthNm: String(enc.nm),
+        band:         enc.band,
+        label:        user.username,
+        ceInput:      user.username,
+        resourceType: "user",
+        resourceId:   user.id,
+        httpUrl:      `/profile/${user.username}`,
+        description:  `Canonical spectral identity for ${user.username} — WavelengthScript encoded`,
+        registeredBy: user.id,
+        isPublic:     true,
+        isCanonical:  true,
+        spectralVector,
+      }).returning();
+
+      res.status(201).json({ success: true, action: "created", entry, wavelengthScript: wls });
+    } catch (err: any) {
+      if (err.message?.includes("unique")) {
+        const enc = ceSe((req as any).user!.username);
+        return res.json({ success: true, action: "exists", note: "URI already registered at this channel", spectral: enc });
+      }
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── Channel lookup — search wnsp_registry by Ψ, URI, or label ──────────────
+  app.get("/api/spectral/channel-lookup", async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { wnspRegistry } = await import("@shared/schema");
+      const { eq, or, ilike, desc } = await import("drizzle-orm");
+
+      const q = String(req.query.q ?? "").trim();
+      if (!q) return res.status(400).json({ error: "q param required" });
+
+      let results: any[] = [];
+
+      // Try exact URI match first
+      if (q.startsWith("wnsp://")) {
+        results = await db.select().from(wnspRegistry).where(eq(wnspRegistry.wnspUri, q)).limit(5);
+      }
+      // Try Ψ channel match (e.g. "Ψ(84,23,H)" or "84,23,H")
+      else if (q.startsWith("Ψ(") || q.match(/^\d+,\d+/)) {
+        const psi = q.startsWith("Ψ(") ? q : `Ψ(${q})`;
+        results = await db.select().from(wnspRegistry).where(eq(wnspRegistry.psiChannel, psi)).limit(5);
+      }
+      // Fallback: label / description ilike
+      else {
+        results = await db.select().from(wnspRegistry)
+          .where(or(ilike(wnspRegistry.label, `%${q}%`), ilike(wnspRegistry.wnspUri, `%${q}%`)))
+          .orderBy(desc(wnspRegistry.isCanonical), desc(wnspRegistry.resolveCount))
+          .limit(10);
+      }
+
+      // Attach WLS to each result that has it stored; generate on-the-fly if not
+      const enriched = results.map((r) => {
+        const sv = r.spectralVector as any;
+        const wls = sv?.wlsCode ?? buildWavelengthScript({
+          username:  r.label,
+          wdm:       r.wdm,
+          oam:       r.oam,
+          pol:       r.polarisation,
+          nm:        parseFloat(r.wavelengthNm),
+          band:      r.band,
+          uri:       r.wnspUri,
+          psi:       r.psiChannel,
+          registeredAt: r.createdAt?.toISOString(),
+        });
+        return { ...r, wavelengthScript: wls };
+      });
+
+      res.json({ query: q, results: enriched, count: enriched.length });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // ── NXT ↔ FRACTAL BITCOIN SWAP BRIDGE ────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
   //   Rate: 1 NXT = 20 wnsp  (0.05 NXT per wnsp — physics-governed)
