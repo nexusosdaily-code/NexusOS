@@ -843,13 +843,21 @@ function Brc20Tab() {
   const [mintMsg,    setMintMsg]      = useState("");
   const [mintCount,  setMintCount]    = useState(1);
 
-  // Transfer state
+  // BRC-20 Transfer state
   const [xfrAmt,     setXfrAmt]       = useState("");
   const [xfrBusy,    setXfrBusy]      = useState(false);
   const [xfrMsg,     setXfrMsg]       = useState("");
 
+  // NXT WaveChannel Transfer state
+  const [nxtTo,      setNxtTo]        = useState("");
+  const [nxtAmt,     setNxtAmt]       = useState("");
+  const [nxtMemo,    setNxtMemo]      = useState("");
+  const [nxtBusy,    setNxtBusy]      = useState(false);
+  const [nxtMsg,     setNxtMsg]       = useState("");
+
   const { data: queueData }  = useQuery<any>({ queryKey: ["/api/btc-bridge/queue"],  refetchInterval: 8_000 });
   const { data: liveWallet } = useQuery<any>({ queryKey: ["/api/btc-bridge/wallet"], refetchInterval: 15_000 });
+  const { data: nxtWallet }  = useQuery<any>({ queryKey: ["/api/wallet"],            refetchInterval: 15_000 });
   const brc20Items = (queueData?.items ?? []).filter((i: any) => ["BRC20_DEPLOY","BRC20_MINT","BRC20_TRANSFER"].includes(i.eventType));
 
   const confirmedSats   = liveWallet?.balance?.confirmed   ?? 0;
@@ -897,6 +905,19 @@ function Brc20Tab() {
       qc.invalidateQueries({ queryKey: ["/api/btc-bridge/queue"] });
     } catch (e: any) { setXfrMsg(authErr(e) === "AUTH" ? "AUTH" : "Error: " + e.message); }
     finally { setXfrBusy(false); }
+  }
+
+  async function doNxtTransfer() {
+    setNxtBusy(true); setNxtMsg("");
+    try {
+      const body: any = { toAddress: nxtTo.trim(), amount: nxtAmt.trim() };
+      if (nxtMemo.trim()) body.memo = nxtMemo.trim();
+      await apiFetch("/api/wallet/transfer", { method: "POST", body: JSON.stringify(body) });
+      setNxtMsg(`✓ Sent ${nxtAmt} NXT → ${nxtTo.trim().slice(0, 20)}…`);
+      setNxtAmt(""); setNxtMemo("");
+      qc.invalidateQueries({ queryKey: ["/api/wallet"] });
+    } catch (e: any) { setNxtMsg(authErr(e) === "AUTH" ? "AUTH" : "Error: " + e.message); }
+    finally { setNxtBusy(false); }
   }
 
   function AuthBanner() {
@@ -1092,6 +1113,95 @@ function Brc20Tab() {
           Queue Transfer
         </button>
         {xfrMsg === "AUTH" ? <AuthBanner /> : xfrMsg && <div className={`text-[11px] font-mono px-3 py-2 rounded-lg border ${xfrMsg.startsWith("Error") ? "bg-red-500/5 border-red-500/20 text-red-400" : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"}`}>{xfrMsg}</div>}
+      </div>
+
+      {/* NXT WAVECHANNEL TRANSFER */}
+      <div className="rounded-2xl border border-violet-500/25 bg-gradient-to-br from-violet-950/20 to-black p-5 space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-violet-500/15 border border-violet-500/30 flex items-center justify-center">
+              <Zap size={13} className="text-violet-400" />
+            </div>
+            <div>
+              <div className="text-xs font-mono font-bold text-white/80">NXT WaveChannel Transfer</div>
+              <div className="text-[9px] font-mono text-white/30">Send NXT to any spectral wallet address on-platform</div>
+            </div>
+          </div>
+          {/* Live NXT balance */}
+          {nxtWallet?.wallet && (
+            <div className="flex items-center gap-2 rounded-lg bg-violet-500/8 border border-violet-500/20 px-3 py-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+              <span className="text-[10px] font-mono text-white/50">Balance:</span>
+              <span className="text-[11px] font-mono font-bold text-violet-300">
+                {parseFloat(nxtWallet.wallet.balance ?? "0").toLocaleString(undefined, { maximumFractionDigits: 2 })} NXT
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Destination address */}
+        <div className="space-y-1.5">
+          <div className="text-[9px] font-mono text-white/30 uppercase tracking-wider">WaveChannel Wallet Address</div>
+          <input
+            value={nxtTo}
+            onChange={e => setNxtTo(e.target.value)}
+            placeholder="NXT-XXXX-XXXX-XXXX-XXXXX"
+            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-violet-500/40"
+            data-testid="input-nxt-to"
+          />
+        </div>
+
+        {/* Amount + Memo row */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1.5">
+            <div className="text-[9px] font-mono text-white/30 uppercase tracking-wider">Amount (NXT)</div>
+            <input
+              value={nxtAmt}
+              onChange={e => setNxtAmt(e.target.value)}
+              placeholder="e.g. 1000"
+              type="number"
+              min="0"
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-violet-500/40"
+              data-testid="input-nxt-amount"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <div className="text-[9px] font-mono text-white/30 uppercase tracking-wider">Memo (optional)</div>
+            <input
+              value={nxtMemo}
+              onChange={e => setNxtMemo(e.target.value)}
+              placeholder="e.g. wnsp mint reward"
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-violet-500/40"
+              data-testid="input-nxt-memo"
+            />
+          </div>
+        </div>
+
+        {/* Preview row */}
+        {nxtTo && nxtAmt && (
+          <div className="rounded-xl bg-black/50 border border-violet-500/10 px-3 py-2.5 flex items-center gap-3">
+            <div className="flex-1 text-[10px] font-mono text-violet-300/60 truncate">
+              {parseFloat(nxtAmt).toLocaleString()} NXT → {nxtTo.trim()}
+            </div>
+            {nxtMemo && <div className="text-[10px] font-mono text-white/30 truncate max-w-[120px]">"{nxtMemo}"</div>}
+          </div>
+        )}
+
+        <button
+          onClick={doNxtTransfer}
+          disabled={nxtBusy || !nxtTo.trim() || !nxtAmt}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-violet-500/20 border border-violet-500/35 text-violet-400 font-mono text-sm font-bold hover:bg-violet-500/30 transition-all disabled:opacity-40"
+          data-testid="button-nxt-transfer">
+          {nxtBusy ? <RefreshCw size={14} className="animate-spin" /> : <Zap size={14} />}
+          Send NXT via WaveChannel
+        </button>
+
+        {nxtMsg === "AUTH" ? <AuthBanner /> : nxtMsg && (
+          <div className={`text-[11px] font-mono px-3 py-2 rounded-lg border ${nxtMsg.startsWith("Error") ? "bg-red-500/5 border-red-500/20 text-red-400" : "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"}`}>
+            {nxtMsg}
+          </div>
+        )}
       </div>
 
       {/* BRC-20 queue items */}
