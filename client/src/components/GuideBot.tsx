@@ -29,6 +29,7 @@ const PAGES: { route: string; title: string; desc: string; keywords: string[] }[
   { route: "/community-mint", title: "Community Mint Portal", desc: "Mint 1,000 wnsp BRC-20 on Bitcoin — burn 50 NXT fee, auto-inscribed", keywords: ["community mint","mint wnsp","brc20 mint","burn nxt","inscribe","bitcoin mint","wnsp mint","community"] },
   { route: "/wnsp-staking", title: "wnsp Staking Dashboard", desc: "Lock wnsp inscription ID → earn 100 NXT per 24h epoch, claim anytime", keywords: ["staking","stake","earn","nxt reward","epoch","lock","yield","wnsp stake","inscription stake"] },
   { route: "/fractal-btc", title: "Fractal Bitcoin Bridge", desc: "Bridge inscriptions to Fractal Bitcoin L2 — same Taproot format, faster blocks", keywords: ["fractal","fractal bitcoin","l2","layer 2","bridge","faster","scaling","fractal inscription"] },
+  { route: "/nxt-fb-swap", title: "NXT ↔ Fractal Bitcoin Swap", desc: "Swap NXT for wnsp on Fractal Bitcoin — or redeem wnsp back to NXT at physics rate 1 NXT = 20 wnsp", keywords: ["swap","exchange","nxt to wnsp","wnsp to nxt","fractal swap","atomic swap","defi","bridge swap","convert","nxt fb","fb to nxt"] },
 ];
 
 type Msg = { from: "user" | "bot"; text: string; route?: string; title?: string };

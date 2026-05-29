@@ -160,6 +160,7 @@ const APP_SECTIONS = [
       { title: "🟠 Community Mint",   href: "/community-mint",   Icon: Zap },
       { title: "💎 wnsp Staking",     href: "/wnsp-staking",     Icon: Database },
       { title: "🔵 Fractal BTC",      href: "/fractal-btc",      Icon: Globe2 },
+      { title: "↔ NXT↔FB Swap",      href: "/nxt-fb-swap",      Icon: ArrowRightLeft },
     ],
   },
   {

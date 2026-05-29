@@ -1100,3 +1100,31 @@ export const communityMints = pgTable("community_mints", {
 export const insertCommunityMintSchema = createInsertSchema(communityMints).omit({ id: true, createdAt: true });
 export type InsertCommunityMint = z.infer<typeof insertCommunityMintSchema>;
 export type CommunityMint = typeof communityMints.$inferSelect;
+
+// ── NXT ↔ Fractal Bitcoin Swap Bridge ────────────────────────────────────────
+export const nxtFbSwaps = pgTable("nxt_fb_swaps", {
+  id:              serial("id").primaryKey(),
+  userId:          integer("user_id").notNull(),
+  username:        text("username").notNull(),
+  direction:       text("direction").notNull(),          // "nxt_to_fb" | "fb_to_nxt"
+  nxtAmount:       decimal("nxt_amount", { precision: 20, scale: 8 }).notNull(),
+  wnspAmount:      integer("wnsp_amount").notNull(),
+  fractalAddress:  text("fractal_address").notNull(),    // Fractal Bitcoin address
+  fractalTxHash:   text("fractal_tx_hash"),              // for fb_to_nxt: submitted TX
+  queueId:         integer("queue_id"),                  // for nxt_to_fb: inscription queue
+  inscriptionId:   text("inscription_id"),               // confirmed inscription ID
+  status:          text("status").notNull().default("pending"),
+  // pending | broadcasting | confirmed | failed | refunded
+  rateNxtPerWnsp:  decimal("rate_nxt_per_wnsp", { precision: 10, scale: 6 }).notNull().default("0.05"),
+  errorMsg:        text("error_msg"),
+  createdAt:       timestamp("created_at").notNull().defaultNow(),
+  completedAt:     timestamp("completed_at"),
+}, (t) => ({
+  userIdx:      index("nxt_fb_swaps_user_idx").on(t.userId),
+  statusIdx:    index("nxt_fb_swaps_status_idx").on(t.status),
+  directionIdx: index("nxt_fb_swaps_dir_idx").on(t.direction),
+}));
+
+export const insertNxtFbSwapSchema = createInsertSchema(nxtFbSwaps).omit({ id: true, createdAt: true });
+export type InsertNxtFbSwap = z.infer<typeof insertNxtFbSwapSchema>;
+export type NxtFbSwap = typeof nxtFbSwaps.$inferSelect;

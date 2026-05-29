@@ -108,6 +108,7 @@ import WnspOrdinalsPage from "@/pages/wnsp-ordinals";
 import CommunityMintPage from "@/pages/community-mint";
 import WnspStakingPage from "@/pages/wnsp-staking";
 import FractalBtcBridgePage from "@/pages/fractal-btc-bridge";
+import NxtFbSwapPage from "@/pages/nxt-fb-swap";
 
 function ProtectedRoutes() {
   return (
@@ -255,6 +256,8 @@ function Router() {
       <Route path="/wnsp-staking" component={WnspStakingPage} />
       <Route path="/fractal-btc" component={FractalBtcBridgePage} />
       <Route path="/fractal-bitcoin" component={FractalBtcBridgePage} />
+      <Route path="/nxt-fb-swap" component={NxtFbSwapPage} />
+      <Route path="/swap" component={NxtFbSwapPage} />
       <Route path="/snic" component={SnicPage} />
       <Route path="/open" component={OpenPage} />
       <Route path="/charter" component={OpenPage} />

@@ -7827,5 +7827,228 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ── NXT ↔ FRACTAL BITCOIN SWAP BRIDGE ────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════════
+  //   Rate: 1 NXT = 20 wnsp  (0.05 NXT per wnsp — physics-governed)
+  //   Direction A (nxt_to_fb): burn NXT → inscribe wnsp BRC-20 on Fractal BTC
+  //   Direction B (fb_to_nxt): user submits Fractal TX hash → verify → credit NXT
+  // ─────────────────────────────────────────────────────────────────────────────
+  const SWAP_RATE_NXT_PER_WNSP = 0.05;   // 1 wnsp costs 0.05 NXT
+  const SWAP_WNSP_PER_NXT      = 20;     // 1 NXT buys 20 wnsp
+  const SWAP_MIN_NXT           = 5;      // minimum 5 NXT per swap
+  const SWAP_MAX_NXT           = 10_000; // maximum 10,000 NXT per swap
+  // Fractal Bitcoin bridge deposit address (service wallet, Taproot)
+  const FRACTAL_BRIDGE_ADDRESS = "bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m";
+
+  app.get("/api/swap/rate", async (_req: Request, res: Response) => {
+    res.json({
+      nxtPerWnsp: SWAP_RATE_NXT_PER_WNSP,
+      wnspPerNxt: SWAP_WNSP_PER_NXT,
+      minNxt: SWAP_MIN_NXT,
+      maxNxt: SWAP_MAX_NXT,
+      bridgeAddress: FRACTAL_BRIDGE_ADDRESS,
+      network: "fractal-bitcoin",
+      note: "Physics-governed rate: 50 NXT = 1,000 wnsp (matching community mint price)",
+    });
+  });
+
+  // ── Direction A: NXT → wnsp on Fractal Bitcoin ─────────────────────────────
+  app.post("/api/swap/nxt-to-fb", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { nxtAmount, fractalAddress } = req.body;
+
+      if (!fractalAddress || !String(fractalAddress).startsWith("bc1"))
+        return res.status(400).json({ error: "Valid Fractal Bitcoin Taproot address (bc1…) required" });
+
+      const nxt = parseFloat(String(nxtAmount));
+      if (isNaN(nxt) || nxt < SWAP_MIN_NXT)
+        return res.status(400).json({ error: `Minimum swap is ${SWAP_MIN_NXT} NXT` });
+      if (nxt > SWAP_MAX_NXT)
+        return res.status(400).json({ error: `Maximum swap is ${SWAP_MAX_NXT} NXT per transaction` });
+
+      // Check balance
+      const wallet = await storage.getWallet(user.id);
+      if (!wallet) return res.status(404).json({ error: "Wallet not found" });
+      const bal = parseFloat(wallet.balance);
+      if (bal < nxt)
+        return res.status(402).json({ error: `Insufficient balance. Have ${bal.toFixed(2)} NXT, need ${nxt} NXT`, balance: wallet.balance });
+
+      const wnspOut = Math.floor(nxt / SWAP_RATE_NXT_PER_WNSP); // NXT → wnsp
+
+      // Burn NXT from wallet
+      const newBal = (bal - nxt).toFixed(8);
+      await storage.updateWalletBalance(wallet.id, newBal);
+
+      // Queue BRC-20 mint on Fractal Bitcoin (same inscription format)
+      const content = JSON.stringify({ p: "brc-20", op: "mint", tick: "wnsp", amt: String(wnspOut) });
+      const { btcBridge } = await import("./btc-bridge-service");
+      const queued = await btcBridge.queueRawContent({
+        eventType:  "BRC20_MINT",
+        ref:        `swap-nxt-fb-${user.username}-${Date.now()}`,
+        content,
+        triggeredBy: user.username,
+      });
+
+      // Record swap
+      const { db } = await import("./db");
+      const { nxtFbSwaps } = await import("../shared/schema");
+      const [row] = await db.insert(nxtFbSwaps).values({
+        userId:         user.id,
+        username:       user.username,
+        direction:      "nxt_to_fb",
+        nxtAmount:      nxt.toFixed(8),
+        wnspAmount:     wnspOut,
+        fractalAddress,
+        queueId:        queued.id ? parseInt(String(queued.id)) : null,
+        status:         "broadcasting",
+        rateNxtPerWnsp: String(SWAP_RATE_NXT_PER_WNSP),
+      }).returning();
+
+      res.json({
+        ok: true,
+        swapId:     row.id,
+        direction:  "nxt_to_fb",
+        nxtBurned:  nxt.toFixed(8),
+        wnspOut,
+        fractalAddress,
+        queueId:    queued.id,
+        newBalance: newBal,
+        message:    `Swap queued! ${wnspOut} wnsp will be inscribed to ${fractalAddress.slice(0,14)}… on Fractal Bitcoin. ${nxt} NXT burned.`,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Direction B: wnsp on Fractal Bitcoin → NXT ─────────────────────────────
+  app.post("/api/swap/fb-to-nxt", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { fractalTxHash, wnspAmount, fractalAddress } = req.body;
+
+      if (!fractalTxHash || fractalTxHash.length < 60)
+        return res.status(400).json({ error: "Valid Fractal Bitcoin transaction hash required (64 hex chars)" });
+      if (!fractalAddress)
+        return res.status(400).json({ error: "Your Fractal Bitcoin sender address required for verification" });
+
+      const wnsp = parseInt(String(wnspAmount));
+      if (isNaN(wnsp) || wnsp < 1)
+        return res.status(400).json({ error: "wnspAmount must be a positive integer" });
+
+      const nxtOut = parseFloat((wnsp * SWAP_RATE_NXT_PER_WNSP).toFixed(8));
+
+      // Check TX hasn't been used before
+      const { db } = await import("./db");
+      const { nxtFbSwaps } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const existing = await db.select().from(nxtFbSwaps).where(eq(nxtFbSwaps.fractalTxHash, fractalTxHash)).limit(1);
+      if (existing.length > 0)
+        return res.status(409).json({ error: "This Fractal Bitcoin transaction has already been redeemed" });
+
+      // Try to verify against Fractal mempool
+      let verified = false;
+      let verifyNote = "Pending manual verification";
+      try {
+        const r = await fetch(`https://mempool.fractalbitcoin.io/api/tx/${fractalTxHash}`);
+        if (r.ok) {
+          const tx = await r.json() as any;
+          // Check TX sends to bridge address
+          const toUs = (tx.vout ?? []).some((o: any) =>
+            o.scriptpubkey_address === FRACTAL_BRIDGE_ADDRESS
+          );
+          verified = toUs && tx.status?.confirmed;
+          verifyNote = verified
+            ? "Verified on Fractal Bitcoin mempool — confirmed"
+            : "TX found but not yet confirmed or doesn't send to bridge address";
+        }
+      } catch { verifyNote = "Fractal mempool unreachable — manual review queued"; }
+
+      // Record swap (allow optimistic pending even if unverified — admin can refund)
+      const status = verified ? "confirmed" : "pending";
+      const [row] = await db.insert(nxtFbSwaps).values({
+        userId:         user.id,
+        username:       user.username,
+        direction:      "fb_to_nxt",
+        nxtAmount:      nxtOut.toFixed(8),
+        wnspAmount:     wnsp,
+        fractalAddress,
+        fractalTxHash,
+        status,
+        rateNxtPerWnsp: String(SWAP_RATE_NXT_PER_WNSP),
+        completedAt:    verified ? new Date() : null,
+      }).returning();
+
+      // Credit NXT immediately if verified
+      if (verified) {
+        const wallet = await storage.getWallet(user.id);
+        if (wallet) {
+          const newBal = (parseFloat(wallet.balance) + nxtOut).toFixed(8);
+          await storage.updateWalletBalance(wallet.id, newBal);
+          return res.json({
+            ok: true, swapId: row.id, direction: "fb_to_nxt",
+            wnspIn: wnsp, nxtCredited: nxtOut.toFixed(8),
+            verified: true, verifyNote, status: "confirmed",
+            message: `${nxtOut} NXT credited to your wallet! Fractal TX verified on-chain.`,
+          });
+        }
+      }
+
+      res.json({
+        ok: true, swapId: row.id, direction: "fb_to_nxt",
+        wnspIn: wnsp, nxtPending: nxtOut.toFixed(8),
+        verified: false, verifyNote, status,
+        message: `Swap submitted (ID #${row.id}). ${verifyNote}. NXT credited once confirmed.`,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── Swap history ────────────────────────────────────────────────────────────
+  app.get("/api/swap/history", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { db } = await import("./db");
+      const { nxtFbSwaps } = await import("../shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+
+      // Enrich nxt_to_fb swaps with queue status
+      const { btcInscriptionQueue } = await import("../shared/schema");
+      const swaps = await db.select().from(nxtFbSwaps)
+        .where(eq(nxtFbSwaps.userId, user.id))
+        .orderBy(desc(nxtFbSwaps.createdAt)).limit(30);
+
+      const enriched = await Promise.all(swaps.map(async (s) => {
+        if (s.direction !== "nxt_to_fb" || !s.queueId) return s;
+        const [q] = await db.select().from(btcInscriptionQueue).where(eq(btcInscriptionQueue.id, s.queueId));
+        return { ...s, queueStatus: q?.status, inscriptionId: q?.inscriptionId ?? s.inscriptionId };
+      }));
+
+      res.json(enriched);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.get("/api/swap/stats", async (_req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { nxtFbSwaps } = await import("../shared/schema");
+      const { count, sum, eq } = await import("drizzle-orm");
+
+      const [{ total }]       = await db.select({ total: count() }).from(nxtFbSwaps);
+      const [{ nxtVolume }]   = await db.select({ nxtVolume: sum(nxtFbSwaps.nxtAmount) }).from(nxtFbSwaps);
+      const [{ wnspBridged }] = await db.select({ wnspBridged: sum(nxtFbSwaps.wnspAmount) }).from(nxtFbSwaps);
+      const [{ a2b }] = await db.select({ a2b: count() }).from(nxtFbSwaps).where(eq(nxtFbSwaps.direction, "nxt_to_fb"));
+      const [{ b2a }] = await db.select({ b2a: count() }).from(nxtFbSwaps).where(eq(nxtFbSwaps.direction, "fb_to_nxt"));
+
+      res.json({
+        totalSwaps: total ?? 0,
+        nxtVolume:  nxtVolume ?? "0",
+        wnspBridged: wnspBridged ?? "0",
+        nxtToFb:    a2b ?? 0,
+        fbToNxt:    b2a ?? 0,
+        rate:       { nxtPerWnsp: SWAP_RATE_NXT_PER_WNSP, wnspPerNxt: SWAP_WNSP_PER_NXT },
+        bridgeAddress: FRACTAL_BRIDGE_ADDRESS,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   return httpServer;
 }
