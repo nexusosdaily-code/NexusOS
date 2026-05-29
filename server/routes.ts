@@ -7163,18 +7163,18 @@ export async function registerRoutes(
       const wallet = getServiceWallet();
       const address = wallet?.address ?? null;
 
-      // On-chain Rune balances via Hiro (free, no key)
+      // On-chain Rune balances — Hiro v1 deprecated, use UniSat open API
       let chainBalances: any[] = [];
       let hiroError: string | null = null;
       if (address) {
         try {
           const r = await fetch(
-            `https://api.hiro.so/runes/v1/addresses/${address}/balances`,
-            { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(8000) }
+            `https://open-api.unisat.io/v1/indexer/address/${address}/runes/balance-list?start=0&limit=20`,
+            { headers: { "Accept": "application/json", "Authorization": "Bearer " }, signal: AbortSignal.timeout(8000) }
           );
-          if (r.ok) { const d = await r.json(); chainBalances = d.results ?? []; }
-          else hiroError = `Hiro API ${r.status}`;
-        } catch (e: any) { hiroError = e.message; }
+          if (r.ok) { const d = await r.json(); chainBalances = d.data?.detail ?? []; }
+          else hiroError = `UniSat API ${r.status} — check balance on unisat.io`;
+        } catch (e: any) { hiroError = "External rune balance API unavailable — verify on UniSat directly"; }
       }
 
       // Queued Rune events from our DB
@@ -7186,14 +7186,14 @@ export async function registerRoutes(
 
       res.json({
         address,
-        unisatRunesUrl: address ? `https://unisat.io/runes/address/${address}` : null,
-        hiroRunesUrl:   address ? `https://api.hiro.so/runes/v1/addresses/${address}/balances` : null,
-        etchWizardUrl:  "https://unisat.io/runes/etch",
+        unisatRunesUrl:   address ? `https://unisat.io/runes/address/${address}` : null,
+        mempoolRunesUrl:  address ? `https://mempool.space/address/${address}` : null,
+        etchWizardUrl:    "https://unisat.io/runes/etch",
         wnspRuneMap:    WNSP_RUNE_MAP.map(r => ({
           ...r,
-          unisatUrl:   `https://unisat.io/runes/${r.runeName}`,
-          hiroUrl:     `https://api.hiro.so/runes/v1/etchings/${r.runeName}`,
-          marketUrl:   `https://unisat.io/market/rune?tick=${r.runeName}`,
+          unisatUrl:   `https://unisat.io/runes/detail/${encodeURIComponent(r.runeName)}`,
+          ordinalsUrl: `https://magiceden.io/runes/${encodeURIComponent(r.runeName)}`,
+          marketUrl:   `https://unisat.io/market/rune?tick=${encodeURIComponent(r.runeName)}`,
         })),
         chainBalances,
         hiroError,
@@ -7430,22 +7430,22 @@ export async function registerRoutes(
         .where(eq(btcInscriptionQueue.status, "confirmed"))
         .orderBy(desc(btcInscriptionQueue.confirmedAt));
 
-      // Attempt to fetch on-chain inscriptions from Hiro API (free, no key)
+      // Attempt to fetch on-chain inscriptions via Ordiscan (Hiro v1 deprecated)
       let hiroInscriptions: any[] = [];
       let hiroError: string | null = null;
       if (address) {
         try {
-          const hiroRes = await fetch(
-            `https://api.hiro.so/ordinals/v1/inscriptions?address=${address}&limit=60`,
+          const res = await fetch(
+            `https://api.hiro.so/ordinals/v2/inscriptions?address=${address}&limit=60`,
             { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(8000) }
           );
-          if (hiroRes.ok) {
-            const hiroData = await hiroRes.json();
-            hiroInscriptions = hiroData.results ?? [];
+          if (res.ok) {
+            const d = await res.json();
+            hiroInscriptions = d.results ?? [];
           } else {
-            hiroError = `Hiro API returned ${hiroRes.status}`;
+            hiroError = `Ordinals API ${res.status} — showing DB records only`;
           }
-        } catch (e: any) { hiroError = e.message; }
+        } catch (e: any) { hiroError = "Ordinals chain sync unavailable — showing DB records only"; }
       }
 
       // BRC-20 ticks we've deployed/minted

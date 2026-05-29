@@ -1516,9 +1516,9 @@ function RunesTab() {
                         className="flex items-center gap-1 text-[10px] text-orange-400 hover:text-orange-300 font-mono transition-colors">
                         <ExternalLink size={9} /> Unisat
                       </a>
-                      <a href={r.hiroUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                      <a href={r.ordinalsUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                         className="flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 font-mono transition-colors">
-                        <ExternalLink size={9} /> Hiro
+                        <ExternalLink size={9} /> Magic Eden
                       </a>
                       <a href={r.marketUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                         className="flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono transition-colors">
