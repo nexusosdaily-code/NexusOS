@@ -1128,3 +1128,38 @@ export const nxtFbSwaps = pgTable("nxt_fb_swaps", {
 export const insertNxtFbSwapSchema = createInsertSchema(nxtFbSwaps).omit({ id: true, createdAt: true });
 export type InsertNxtFbSwap = z.infer<typeof insertNxtFbSwapSchema>;
 export type NxtFbSwap = typeof nxtFbSwaps.$inferSelect;
+
+// ── Lightning Network / LNbits Integration ────────────────────────────────────
+export const lightningWallets = pgTable("lightning_wallets", {
+  id:             serial("id").primaryKey(),
+  userId:         varchar("user_id", { length: 36 }).notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  satsBalance:    integer("sats_balance").notNull().default(0),
+  totalDeposited: integer("total_deposited").notNull().default(0),
+  totalWithdrawn: integer("total_withdrawn").notNull().default(0),
+  createdAt:      timestamp("created_at").notNull().defaultNow(),
+  updatedAt:      timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const lightningTransactions = pgTable("lightning_transactions", {
+  id:               serial("id").primaryKey(),
+  userId:           varchar("user_id", { length: 36 }).notNull().references(() => users.id),
+  type:             text("type").notNull(), // "deposit" | "withdrawal" | "swap_to_nxt" | "swap_to_sats"
+  amountSats:       integer("amount_sats").notNull(),
+  nxtAmount:        decimal("nxt_amount", { precision: 20, scale: 8 }),
+  paymentHash:      text("payment_hash"),
+  paymentRequest:   text("payment_request"),
+  memo:             text("memo"),
+  status:           text("status").notNull().default("pending"), // pending | completed | failed
+  lnbitsPaymentId:  text("lnbits_payment_id"),
+  createdAt:        timestamp("created_at").notNull().defaultNow(),
+  completedAt:      timestamp("completed_at"),
+}, (t) => ({
+  userIdx:   index("ln_tx_user_idx").on(t.userId),
+  statusIdx: index("ln_tx_status_idx").on(t.status),
+  typeIdx:   index("ln_tx_type_idx").on(t.type),
+}));
+
+export const insertLightningTransactionSchema = createInsertSchema(lightningTransactions).omit({ id: true, createdAt: true });
+export type InsertLightningTransaction = z.infer<typeof insertLightningTransactionSchema>;
+export type LightningTransaction = typeof lightningTransactions.$inferSelect;
+export type LightningWallet = typeof lightningWallets.$inferSelect;

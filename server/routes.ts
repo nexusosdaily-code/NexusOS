@@ -8248,6 +8248,323 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ── Lightning Network / LNbits Integration ─────────────────────────────────
+  const LN_SATS_PER_NXT = 1000; // 1 NXT = 1000 sats
+
+  async function lnbitsReq(path: string, method: string, body?: any, useAdmin = false) {
+    const baseUrl = (process.env.LNBITS_URL ?? "").replace(/\/$/, "");
+    const apiKey  = useAdmin
+      ? (process.env.LNBITS_ADMIN_KEY ?? "")
+      : (process.env.LNBITS_INVOICE_KEY ?? "");
+    if (!baseUrl || !apiKey) throw new Error("LNbits not configured — set LNBITS_URL, LNBITS_ADMIN_KEY, LNBITS_INVOICE_KEY in Secrets");
+    const r = await fetch(`${baseUrl}${path}`, {
+      method,
+      headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || data.message || `LNbits error ${r.status}`);
+    return data;
+  }
+
+  async function ensureLnWallet(userId: string) {
+    const { db } = await import("./db");
+    const { lightningWallets } = await import("../shared/schema");
+    const { eq } = await import("drizzle-orm");
+    const [existing] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, userId));
+    if (existing) return existing;
+    const [created] = await db.insert(lightningWallets).values({ userId }).returning();
+    return created;
+  }
+
+  // Ensure DB tables exist
+  (async () => {
+    try {
+      const { db } = await import("./db");
+      const { sql: drizzleSql } = await import("drizzle-orm");
+      await db.execute(drizzleSql`
+        CREATE TABLE IF NOT EXISTS lightning_wallets (
+          id SERIAL PRIMARY KEY,
+          user_id VARCHAR(36) NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+          sats_balance INTEGER NOT NULL DEFAULT 0,
+          total_deposited INTEGER NOT NULL DEFAULT 0,
+          total_withdrawn INTEGER NOT NULL DEFAULT 0,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS lightning_transactions (
+          id SERIAL PRIMARY KEY,
+          user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+          type TEXT NOT NULL,
+          amount_sats INTEGER NOT NULL,
+          nxt_amount DECIMAL(20,8),
+          payment_hash TEXT,
+          payment_request TEXT,
+          memo TEXT,
+          status TEXT NOT NULL DEFAULT 'pending',
+          lnbits_payment_id TEXT,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          completed_at TIMESTAMP
+        );
+      `);
+    } catch (e: any) { console.error("[Lightning] Table init error:", e.message); }
+  })();
+
+  // GET /api/lightning/status — check if LNbits is reachable
+  app.get("/api/lightning/status", authenticate, async (_req: Request, res: Response) => {
+    const configured = !!(process.env.LNBITS_URL && process.env.LNBITS_ADMIN_KEY && process.env.LNBITS_INVOICE_KEY);
+    if (!configured) return res.json({ configured: false, message: "LNbits secrets not set" });
+    try {
+      const wallet = await lnbitsReq("/api/v1/wallet", "GET");
+      res.json({ configured: true, lnbitsBalance: wallet.balance, name: wallet.name });
+    } catch (err: any) {
+      res.json({ configured: true, reachable: false, error: err.message });
+    }
+  });
+
+  // GET /api/lightning/balance — user's NexusOS sats balance
+  app.get("/api/lightning/balance", authenticate, async (req: Request, res: Response) => {
+    try {
+      const lnWallet = await ensureLnWallet(req.user!.id);
+      res.json({
+        satsBalance: lnWallet.satsBalance,
+        totalDeposited: lnWallet.totalDeposited,
+        totalWithdrawn: lnWallet.totalWithdrawn,
+        satsPerNxt: LN_SATS_PER_NXT,
+        nxtEquivalent: (lnWallet.satsBalance / LN_SATS_PER_NXT).toFixed(8),
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/lightning/invoice — create a deposit invoice
+  app.post("/api/lightning/invoice", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { amountSats, memo } = req.body;
+      if (!amountSats || amountSats < 1) return res.status(400).json({ error: "amountSats must be >= 1" });
+      if (amountSats > 10_000_000) return res.status(400).json({ error: "Max deposit: 10,000,000 sats" });
+
+      const invoice = await lnbitsReq("/api/v1/payments", "POST", {
+        out: false,
+        amount: amountSats,
+        memo: memo || `NexusOS deposit — ${req.user!.username}`,
+      });
+
+      const { db } = await import("./db");
+      const { lightningTransactions } = await import("../shared/schema");
+      const [tx] = await db.insert(lightningTransactions).values({
+        userId: req.user!.id,
+        type: "deposit",
+        amountSats,
+        paymentHash: invoice.payment_hash,
+        paymentRequest: invoice.payment_request,
+        memo: memo || "",
+        status: "pending",
+        lnbitsPaymentId: invoice.payment_hash,
+      }).returning();
+
+      res.json({
+        txId: tx.id,
+        paymentHash: invoice.payment_hash,
+        paymentRequest: invoice.payment_request,
+        amountSats,
+        expiresIn: 3600,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/lightning/invoice/:hash — poll invoice payment status
+  app.get("/api/lightning/invoice/:hash", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { hash } = req.params;
+      const { db } = await import("./db");
+      const { lightningTransactions, lightningWallets } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+
+      const [tx] = await db.select().from(lightningTransactions)
+        .where(and(eq(lightningTransactions.paymentHash, hash), eq(lightningTransactions.userId, req.user!.id)));
+      if (!tx) return res.status(404).json({ error: "Invoice not found" });
+
+      if (tx.status === "completed") return res.json({ paid: true, tx });
+
+      // Check LNbits
+      const payment = await lnbitsReq(`/api/v1/payments/${hash}`, "GET");
+      if (payment.paid) {
+        // Credit sats to user
+        const lnWallet = await ensureLnWallet(req.user!.id);
+        await db.update(lightningWallets)
+          .set({
+            satsBalance: lnWallet.satsBalance + tx.amountSats,
+            totalDeposited: lnWallet.totalDeposited + tx.amountSats,
+            updatedAt: new Date(),
+          })
+          .where(eq(lightningWallets.userId, req.user!.id));
+        await db.update(lightningTransactions)
+          .set({ status: "completed", completedAt: new Date() })
+          .where(eq(lightningTransactions.id, tx.id));
+        await logAction(req, "lightning_deposit", "lightning", req.user!.id, { amountSats: tx.amountSats });
+        return res.json({ paid: true, amountSats: tx.amountSats });
+      }
+      res.json({ paid: false, tx });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/lightning/pay — pay a Lightning invoice (withdraw sats)
+  app.post("/api/lightning/pay", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { bolt11 } = req.body;
+      if (!bolt11) return res.status(400).json({ error: "bolt11 invoice required" });
+
+      // Decode invoice amount via LNbits
+      const decoded = await lnbitsReq(`/api/v1/payments/decode`, "POST", { data: bolt11 });
+      const amountSats = Math.ceil((decoded.amount_msat ?? 0) / 1000);
+      if (amountSats < 1) return res.status(400).json({ error: "Cannot decode invoice amount" });
+
+      const lnWallet = await ensureLnWallet(req.user!.id);
+      if (lnWallet.satsBalance < amountSats) {
+        return res.status(400).json({ error: `Insufficient sats. Have ${lnWallet.satsBalance}, need ${amountSats}` });
+      }
+
+      const { db } = await import("./db");
+      const { lightningTransactions, lightningWallets } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      // Deduct first, then pay
+      await db.update(lightningWallets)
+        .set({
+          satsBalance: lnWallet.satsBalance - amountSats,
+          totalWithdrawn: lnWallet.totalWithdrawn + amountSats,
+          updatedAt: new Date(),
+        })
+        .where(eq(lightningWallets.userId, req.user!.id));
+
+      const [tx] = await db.insert(lightningTransactions).values({
+        userId: req.user!.id,
+        type: "withdrawal",
+        amountSats,
+        paymentRequest: bolt11,
+        memo: decoded.description || "",
+        status: "pending",
+      }).returning();
+
+      try {
+        const payment = await lnbitsReq("/api/v1/payments", "POST", { out: true, bolt11 }, true);
+        await db.update(lightningTransactions)
+          .set({ status: "completed", paymentHash: payment.payment_hash, lnbitsPaymentId: payment.payment_hash, completedAt: new Date() })
+          .where(eq(lightningTransactions.id, tx.id));
+        await logAction(req, "lightning_withdrawal", "lightning", req.user!.id, { amountSats });
+        res.json({ ok: true, paymentHash: payment.payment_hash, amountSats });
+      } catch (payErr: any) {
+        // Refund on failure
+        const fresh = await ensureLnWallet(req.user!.id);
+        await db.update(lightningWallets)
+          .set({ satsBalance: fresh.satsBalance + amountSats, totalWithdrawn: fresh.totalWithdrawn - amountSats, updatedAt: new Date() })
+          .where(eq(lightningWallets.userId, req.user!.id));
+        await db.update(lightningTransactions)
+          .set({ status: "failed" })
+          .where(eq(lightningTransactions.id, tx.id));
+        res.status(500).json({ error: payErr.message });
+      }
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/lightning/transactions — history
+  app.get("/api/lightning/transactions", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { lightningTransactions } = await import("../shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      const txs = await db.select().from(lightningTransactions)
+        .where(eq(lightningTransactions.userId, req.user!.id))
+        .orderBy(desc(lightningTransactions.createdAt))
+        .limit(50);
+      res.json({ transactions: txs });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/lightning/swap/to-nxt — sats → NXT
+  app.post("/api/lightning/swap/to-nxt", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { amountSats } = req.body;
+      if (!amountSats || amountSats < 100) return res.status(400).json({ error: "Minimum swap: 100 sats" });
+      const lnWallet = await ensureLnWallet(req.user!.id);
+      if (lnWallet.satsBalance < amountSats) return res.status(400).json({ error: `Insufficient sats (have ${lnWallet.satsBalance})` });
+
+      const nxtAmount = amountSats / LN_SATS_PER_NXT;
+      const { db } = await import("./db");
+      const { lightningWallets, lightningTransactions, wallets } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      // Deduct sats
+      await db.update(lightningWallets)
+        .set({ satsBalance: lnWallet.satsBalance - amountSats, updatedAt: new Date() })
+        .where(eq(lightningWallets.userId, req.user!.id));
+
+      // Credit NXT
+      const nxtRaw = Math.round(nxtAmount * 1e8);
+      const [userWallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
+      if (userWallet) {
+        const newBal = (BigInt(userWallet.balance) + BigInt(nxtRaw)).toString();
+        await db.update(wallets).set({ balance: newBal }).where(eq(wallets.userId, req.user!.id));
+      }
+
+      await db.insert(lightningTransactions).values({
+        userId: req.user!.id,
+        type: "swap_to_nxt",
+        amountSats,
+        nxtAmount: nxtAmount.toFixed(8),
+        memo: `Swap ${amountSats} sats → ${nxtAmount.toFixed(8)} NXT`,
+        status: "completed",
+        completedAt: new Date(),
+      });
+
+      await logAction(req, "lightning_swap_to_nxt", "lightning", req.user!.id, { amountSats, nxtAmount });
+      res.json({ ok: true, amountSats, nxtAmount: nxtAmount.toFixed(8), rate: LN_SATS_PER_NXT });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/lightning/swap/to-sats — NXT → sats
+  app.post("/api/lightning/swap/to-sats", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { nxtAmount } = req.body;
+      if (!nxtAmount || nxtAmount < 0.001) return res.status(400).json({ error: "Minimum swap: 0.001 NXT" });
+      const amountSats = Math.floor(nxtAmount * LN_SATS_PER_NXT);
+
+      const { db } = await import("./db");
+      const { lightningWallets, lightningTransactions, wallets } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      const [userWallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
+      if (!userWallet) return res.status(400).json({ error: "NXT wallet not found" });
+      const nxtRaw = Math.round(nxtAmount * 1e8);
+      if (BigInt(userWallet.balance) < BigInt(nxtRaw)) return res.status(400).json({ error: "Insufficient NXT balance" });
+
+      // Deduct NXT
+      const newBal = (BigInt(userWallet.balance) - BigInt(nxtRaw)).toString();
+      await db.update(wallets).set({ balance: newBal }).where(eq(wallets.userId, req.user!.id));
+
+      // Credit sats
+      const lnWallet = await ensureLnWallet(req.user!.id);
+      await db.update(lightningWallets)
+        .set({ satsBalance: lnWallet.satsBalance + amountSats, updatedAt: new Date() })
+        .where(eq(lightningWallets.userId, req.user!.id));
+
+      await db.insert(lightningTransactions).values({
+        userId: req.user!.id,
+        type: "swap_to_sats",
+        amountSats,
+        nxtAmount: nxtAmount.toFixed(8),
+        memo: `Swap ${nxtAmount.toFixed(8)} NXT → ${amountSats} sats`,
+        status: "completed",
+        completedAt: new Date(),
+      });
+
+      await logAction(req, "lightning_swap_to_sats", "lightning", req.user!.id, { amountSats, nxtAmount });
+      res.json({ ok: true, amountSats, nxtAmount: nxtAmount.toFixed(8), rate: LN_SATS_PER_NXT });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── End Lightning ─────────────────────────────────────────────────────────
+
   app.get("/api/swap/stats", async (_req: Request, res: Response) => {
     try {
       const { db } = await import("./db");

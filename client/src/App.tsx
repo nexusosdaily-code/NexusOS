@@ -109,6 +109,7 @@ import CommunityMintPage from "@/pages/community-mint";
 import WnspStakingPage from "@/pages/wnsp-staking";
 import FractalBtcBridgePage from "@/pages/fractal-btc-bridge";
 import NxtFbSwapPage from "@/pages/nxt-fb-swap";
+import LightningWalletPage from "@/pages/lightning-wallet";
 
 function ProtectedRoutes() {
   return (
@@ -218,6 +219,8 @@ function ProtectedRoutes() {
         <Route path="/ce-code-writer" component={CeCodeWriterPage} />
         <Route path="/campaign" component={CampaignPage} />
         <Route path="/social-broadcast" component={SocialBroadcastPage} />
+        <Route path="/lightning-wallet" component={LightningWalletPage} />
+        <Route path="/lightning" component={LightningWalletPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
