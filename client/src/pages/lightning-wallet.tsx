@@ -182,15 +182,33 @@ export default function LightningWalletPage() {
           <Card className="bg-amber-900/20 border-amber-500/30 p-4 mb-6">
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
-              <div>
-                <div className="text-amber-400 font-semibold mb-1">LNbits not configured</div>
-                <p className="text-amber-200/70 text-sm">Add these secrets in Replit Secrets to enable Lightning payments:</p>
-                <ul className="mt-2 space-y-1 font-mono text-xs text-amber-300">
-                  <li><span className="text-yellow-400">LNBITS_URL</span> — your LNbits instance URL (e.g. https://lnbits.yourdomain.com)</li>
-                  <li><span className="text-yellow-400">LNBITS_ADMIN_KEY</span> — admin API key from LNbits wallet settings</li>
-                  <li><span className="text-yellow-400">LNBITS_INVOICE_KEY</span> — invoice/read key from LNbits wallet settings</li>
-                </ul>
-                <p className="text-amber-200/50 text-xs mt-2">Self-host LNbits: <a href="https://github.com/lnbits/lnbits" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-300">github.com/lnbits/lnbits</a></p>
+              <div className="w-full">
+                <div className="text-amber-400 font-semibold mb-2">Connect a Lightning provider</div>
+
+                {/* Option A — Alby (recommended) */}
+                <div className="bg-yellow-900/20 border border-yellow-500/20 rounded-lg p-3 mb-3">
+                  <div className="text-yellow-300 font-semibold text-sm mb-1">⚡ Option A — Alby (free, 2 minutes)</div>
+                  <ol className="text-amber-200/80 text-xs space-y-1 list-decimal list-inside mb-2">
+                    <li>Go to <a href="https://getalby.com" target="_blank" rel="noopener noreferrer" className="text-yellow-400 underline">getalby.com</a> → create free account</li>
+                    <li>Go to <strong>Wallet → Settings → Developer → Access Token</strong></li>
+                    <li>Generate a token and copy it</li>
+                    <li>Add to Replit Secrets:</li>
+                  </ol>
+                  <div className="font-mono text-xs bg-black/30 rounded p-2 text-yellow-300">
+                    ALBY_ACCESS_TOKEN = &lt;your token&gt;
+                  </div>
+                </div>
+
+                {/* Option B — LNbits */}
+                <div className="bg-slate-800/30 border border-slate-700/40 rounded-lg p-3">
+                  <div className="text-gray-300 font-semibold text-sm mb-1">🔧 Option B — Self-hosted LNbits</div>
+                  <div className="font-mono text-xs bg-black/30 rounded p-2 text-gray-400 space-y-0.5">
+                    <div>LNBITS_URL = https://your-lnbits-domain.com</div>
+                    <div>LNBITS_ADMIN_KEY = &lt;admin key&gt;</div>
+                    <div>LNBITS_INVOICE_KEY = &lt;invoice key&gt;</div>
+                  </div>
+                  <p className="text-gray-500 text-xs mt-1">Deploy free on <a href="https://railway.app" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">railway.app</a> using the lnbits/lnbits repo.</p>
+                </div>
               </div>
             </div>
           </Card>

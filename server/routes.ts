@@ -8248,23 +8248,133 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  // ── Lightning Network / LNbits Integration ─────────────────────────────────
+  // ── Lightning Network — Alby + LNbits unified adapter ──────────────────────
   const LN_SATS_PER_NXT = 1000; // 1 NXT = 1000 sats
 
-  async function lnbitsReq(path: string, method: string, body?: any, useAdmin = false) {
-    const baseUrl = (process.env.LNBITS_URL ?? "").replace(/\/$/, "");
-    const apiKey  = useAdmin
-      ? (process.env.LNBITS_ADMIN_KEY ?? "")
-      : (process.env.LNBITS_INVOICE_KEY ?? "");
-    if (!baseUrl || !apiKey) throw new Error("LNbits not configured — set LNBITS_URL, LNBITS_ADMIN_KEY, LNBITS_INVOICE_KEY in Secrets");
-    const r = await fetch(`${baseUrl}${path}`, {
-      method,
-      headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.detail || data.message || `LNbits error ${r.status}`);
-    return data;
+  function detectLnProvider(): "alby" | "lnbits" | null {
+    if (process.env.ALBY_ACCESS_TOKEN) return "alby";
+    if (process.env.LNBITS_URL && process.env.LNBITS_ADMIN_KEY && process.env.LNBITS_INVOICE_KEY) return "lnbits";
+    return null;
+  }
+
+  async function lnCreateInvoice(amountSats: number, memo: string): Promise<{ payment_hash: string; payment_request: string }> {
+    const provider = detectLnProvider();
+    if (provider === "alby") {
+      const r = await fetch("https://api.getalby.com/invoices", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.ALBY_ACCESS_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: amountSats, description: memo }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.message || `Alby error ${r.status}`);
+      return { payment_hash: d.payment_hash, payment_request: d.payment_request };
+    }
+    if (provider === "lnbits") {
+      const base = (process.env.LNBITS_URL ?? "").replace(/\/$/, "");
+      const r = await fetch(`${base}/api/v1/payments`, {
+        method: "POST",
+        headers: { "X-Api-Key": process.env.LNBITS_INVOICE_KEY!, "Content-Type": "application/json" },
+        body: JSON.stringify({ out: false, amount: amountSats, memo }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || d.message || `LNbits error ${r.status}`);
+      return { payment_hash: d.payment_hash, payment_request: d.payment_request };
+    }
+    throw new Error("No Lightning provider configured. Add ALBY_ACCESS_TOKEN (free) or LNBITS_URL + LNBITS_ADMIN_KEY + LNBITS_INVOICE_KEY to Secrets.");
+  }
+
+  async function lnCheckInvoice(hash: string): Promise<boolean> {
+    const provider = detectLnProvider();
+    if (provider === "alby") {
+      const r = await fetch(`https://api.getalby.com/invoices/${hash}`, {
+        headers: { Authorization: `Bearer ${process.env.ALBY_ACCESS_TOKEN}` },
+      });
+      const d = await r.json();
+      return d.settled === true;
+    }
+    if (provider === "lnbits") {
+      const base = (process.env.LNBITS_URL ?? "").replace(/\/$/, "");
+      const r = await fetch(`${base}/api/v1/payments/${hash}`, {
+        headers: { "X-Api-Key": process.env.LNBITS_INVOICE_KEY! },
+      });
+      const d = await r.json();
+      return d.paid === true;
+    }
+    throw new Error("No Lightning provider configured.");
+  }
+
+  async function lnPayInvoice(bolt11: string): Promise<string> {
+    const provider = detectLnProvider();
+    if (provider === "alby") {
+      const r = await fetch("https://api.getalby.com/payments/bolt11", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.ALBY_ACCESS_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ invoice: bolt11 }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.message || `Alby pay error ${r.status}`);
+      return d.payment_hash ?? "";
+    }
+    if (provider === "lnbits") {
+      const base = (process.env.LNBITS_URL ?? "").replace(/\/$/, "");
+      const r = await fetch(`${base}/api/v1/payments`, {
+        method: "POST",
+        headers: { "X-Api-Key": process.env.LNBITS_ADMIN_KEY!, "Content-Type": "application/json" },
+        body: JSON.stringify({ out: true, bolt11 }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || d.message || `LNbits pay error ${r.status}`);
+      return d.payment_hash ?? "";
+    }
+    throw new Error("No Lightning provider configured.");
+  }
+
+  async function lnDecodeInvoice(bolt11: string): Promise<number> {
+    const provider = detectLnProvider();
+    if (provider === "alby") {
+      const r = await fetch("https://api.getalby.com/decode/bolt11", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.ALBY_ACCESS_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ invoice: bolt11 }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.message || "Alby decode error");
+      return d.amount_in_sat ?? 0;
+    }
+    if (provider === "lnbits") {
+      const base = (process.env.LNBITS_URL ?? "").replace(/\/$/, "");
+      const r = await fetch(`${base}/api/v1/payments/decode`, {
+        method: "POST",
+        headers: { "X-Api-Key": process.env.LNBITS_INVOICE_KEY!, "Content-Type": "application/json" },
+        body: JSON.stringify({ data: bolt11 }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || "LNbits decode error");
+      return Math.ceil((d.amount_msat ?? 0) / 1000);
+    }
+    throw new Error("No Lightning provider configured.");
+  }
+
+  async function lnGetBalance(): Promise<{ sats: number; name: string }> {
+    const provider = detectLnProvider();
+    if (provider === "alby") {
+      const r = await fetch("https://api.getalby.com/balance", {
+        headers: { Authorization: `Bearer ${process.env.ALBY_ACCESS_TOKEN}` },
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.message || "Alby balance error");
+      return { sats: d.balance ?? 0, name: "Alby wallet" };
+    }
+    if (provider === "lnbits") {
+      const base = (process.env.LNBITS_URL ?? "").replace(/\/$/, "");
+      const r = await fetch(`${base}/api/v1/wallet`, {
+        headers: { "X-Api-Key": process.env.LNBITS_INVOICE_KEY! },
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || "LNbits balance error");
+      return { sats: Math.floor((d.balance ?? 0) / 1000), name: d.name ?? "LNbits wallet" };
+    }
+    throw new Error("No Lightning provider configured.");
   }
 
   async function ensureLnWallet(userId: string) {
@@ -8310,15 +8420,15 @@ export async function registerRoutes(
     } catch (e: any) { console.error("[Lightning] Table init error:", e.message); }
   })();
 
-  // GET /api/lightning/status — check if LNbits is reachable
+  // GET /api/lightning/status — check provider & reachability
   app.get("/api/lightning/status", authenticate, async (_req: Request, res: Response) => {
-    const configured = !!(process.env.LNBITS_URL && process.env.LNBITS_ADMIN_KEY && process.env.LNBITS_INVOICE_KEY);
-    if (!configured) return res.json({ configured: false, message: "LNbits secrets not set" });
+    const provider = detectLnProvider();
+    if (!provider) return res.json({ configured: false, message: "No Lightning provider set" });
     try {
-      const wallet = await lnbitsReq("/api/v1/wallet", "GET");
-      res.json({ configured: true, lnbitsBalance: wallet.balance, name: wallet.name });
+      const bal = await lnGetBalance();
+      res.json({ configured: true, provider, balance: bal.sats, name: bal.name });
     } catch (err: any) {
-      res.json({ configured: true, reachable: false, error: err.message });
+      res.json({ configured: true, provider, reachable: false, error: err.message });
     }
   });
 
@@ -8343,11 +8453,7 @@ export async function registerRoutes(
       if (!amountSats || amountSats < 1) return res.status(400).json({ error: "amountSats must be >= 1" });
       if (amountSats > 10_000_000) return res.status(400).json({ error: "Max deposit: 10,000,000 sats" });
 
-      const invoice = await lnbitsReq("/api/v1/payments", "POST", {
-        out: false,
-        amount: amountSats,
-        memo: memo || `NexusOS deposit — ${req.user!.username}`,
-      });
+      const invoice = await lnCreateInvoice(amountSats, memo || `NexusOS deposit — ${req.user!.username}`);
 
       const { db } = await import("./db");
       const { lightningTransactions } = await import("../shared/schema");
@@ -8386,9 +8492,8 @@ export async function registerRoutes(
 
       if (tx.status === "completed") return res.json({ paid: true, tx });
 
-      // Check LNbits
-      const payment = await lnbitsReq(`/api/v1/payments/${hash}`, "GET");
-      if (payment.paid) {
+      const paid = await lnCheckInvoice(hash);
+      if (paid) {
         // Credit sats to user
         const lnWallet = await ensureLnWallet(req.user!.id);
         await db.update(lightningWallets)
@@ -8414,9 +8519,7 @@ export async function registerRoutes(
       const { bolt11 } = req.body;
       if (!bolt11) return res.status(400).json({ error: "bolt11 invoice required" });
 
-      // Decode invoice amount via LNbits
-      const decoded = await lnbitsReq(`/api/v1/payments/decode`, "POST", { data: bolt11 });
-      const amountSats = Math.ceil((decoded.amount_msat ?? 0) / 1000);
+      const amountSats = await lnDecodeInvoice(bolt11);
       if (amountSats < 1) return res.status(400).json({ error: "Cannot decode invoice amount" });
 
       const lnWallet = await ensureLnWallet(req.user!.id);
@@ -8447,12 +8550,12 @@ export async function registerRoutes(
       }).returning();
 
       try {
-        const payment = await lnbitsReq("/api/v1/payments", "POST", { out: true, bolt11 }, true);
+        const payHash = await lnPayInvoice(bolt11);
         await db.update(lightningTransactions)
-          .set({ status: "completed", paymentHash: payment.payment_hash, lnbitsPaymentId: payment.payment_hash, completedAt: new Date() })
+          .set({ status: "completed", paymentHash: payHash, lnbitsPaymentId: payHash, completedAt: new Date() })
           .where(eq(lightningTransactions.id, tx.id));
         await logAction(req, "lightning_withdrawal", "lightning", req.user!.id, { amountSats });
-        res.json({ ok: true, paymentHash: payment.payment_hash, amountSats });
+        res.json({ ok: true, paymentHash: payHash, amountSats });
       } catch (payErr: any) {
         // Refund on failure
         const fresh = await ensureLnWallet(req.user!.id);
