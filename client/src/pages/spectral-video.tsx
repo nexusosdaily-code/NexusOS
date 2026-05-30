@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ChannelConnect } from "@/components/channel-connect";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -229,6 +230,11 @@ export default function SpectralVideoPage() {
             <span className="flex items-center gap-1.5"><Globe className="w-4 h-4 text-purple-400" />No CDN, no routing, just physics</span>
           </div>
         </div>
+      </div>
+
+      {/* ── Channel Connect ── */}
+      <div className="max-w-5xl mx-auto px-6 pt-5">
+        <ChannelConnect label="Top up ⚡" />
       </div>
 
       {/* ── Tab navigation ── */}

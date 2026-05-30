@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import { ChannelConnect } from "@/components/channel-connect";
 import {
   Key, Plus, Trash2, Copy, CheckCircle, AlertTriangle,
   ArrowLeft, Code, Zap, Globe, Clock, Shield,
@@ -141,6 +142,8 @@ export default function DeveloperKeysPage() {
             </p>
           </div>
         </div>
+
+        <ChannelConnect requiredNxt={fee ? parseFloat(fee.feeNxt) : 3} label="Top up ⚡" />
 
         {/* Stats row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">

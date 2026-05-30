@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ChannelConnect } from "@/components/channel-connect";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,6 +82,8 @@ export default function CommunityMintPage() {
             Your inscription is queued and auto-inscribed by the NexusOS service wallet.
           </p>
         </div>
+
+        <ChannelConnect requiredNxt={50} label="Top up ⚡" />
 
         {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

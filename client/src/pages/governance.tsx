@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
+import { ChannelConnect } from "@/components/channel-connect";
 import {
   Scale, ChevronLeft, Shield, Clock, CheckCircle2, XCircle,
   Zap, AlertTriangle, Plus, Vote, ArrowRight, RefreshCw,
@@ -362,6 +363,8 @@ export default function GovernancePage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 pt-4 space-y-4">
+        <ChannelConnect label="Channel Dashboard ⚡" />
+
         {/* Quorum notice */}
         <div className="p-3 rounded-xl bg-violet-950/40 border border-violet-500/20 text-[11px] text-violet-300 flex items-center gap-2">
           <Vote className="w-3.5 h-3.5 shrink-0" />

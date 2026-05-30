@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { ChannelConnect } from "@/components/channel-connect";
 import { ArrowLeft, FileText, Shield, CheckCircle, XCircle, Zap, Copy, Lock } from "lucide-react";
 
 const H = 6.626e-34, C = 3e8;
@@ -179,6 +180,8 @@ Signed under the NexusOS AGPL-3.0 open-source license.`);
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <ChannelConnect requiredNxt={3} label="Top up ⚡" />
+
         {/* How it works */}
         <div className="border border-cyan-400/15 rounded-xl p-5" style={{ background: "rgba(6,182,212,0.03)" }}>
           <div className="grid grid-cols-4 gap-4 text-[9px]">

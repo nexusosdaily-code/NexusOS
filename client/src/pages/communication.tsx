@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { ChannelConnect } from "@/components/channel-connect";
 import {
   ArrowLeft, Send, Radio, Phone, Video, Paperclip, UserPlus,
   MessageSquare, Zap, Atom, Search, ChevronRight, Wifi
