@@ -156,11 +156,77 @@ export async function verifyWnspInscription(inscriptionId: string): Promise<Insc
   }
 }
 
+// ── LEB128 decoder — Bitcoin Rune protocol integer encoding ──────────────────
+// Runes encode integers as LEB128 (Little-Endian Base-128).
+// Each byte: low 7 bits = data, bit 7 = "more bytes follow".
+// Returns { value: bigint, bytesRead: number }.
+function decodeLEB128(buf: Buffer, offset: number): { value: bigint; bytesRead: number } {
+  let value = 0n;
+  let shift = 0n;
+  let bytesRead = 0;
+  while (offset + bytesRead < buf.length) {
+    const byte = buf[offset + bytesRead];
+    bytesRead++;
+    value |= BigInt(byte & 0x7f) << shift;
+    shift += 7n;
+    if ((byte & 0x80) === 0) break; // MSB clear → last byte
+  }
+  return { value, bytesRead };
+}
+
+// ── Runestone decoder — parse OP_RETURN OP_13 payload ─────────────────────────
+// A runestone is embedded in: OP_RETURN (0x6a) OP_13 (0x5d) <LEB128 data...>
+// The LEB128 stream encodes tag–value pairs:
+//   tag 2 = block (Rune ID high word)
+//   tag 4 = tx    (Rune ID low word)
+//   tag 20 = amount per edict
+//   tag 22 = output index of edict
+// Returns null if script is not a valid runestone.
+export interface ParsedRunestone {
+  runeId: string;     // "block:tx"
+  block: bigint;
+  tx: bigint;
+  amounts: bigint[];  // edict amounts
+  outputs: bigint[];  // edict output indices
+}
+
+export function decodeRunestone(scriptHex: string): ParsedRunestone | null {
+  try {
+    const buf = Buffer.from(scriptHex, "hex");
+    // Must start with OP_RETURN (0x6a) followed by OP_13 (0x5d)
+    if (buf[0] !== 0x6a || buf[1] !== 0x5d) return null;
+
+    // Remaining bytes are a LEB128-encoded sequence of integers
+    let cursor = 2;
+    const integers: bigint[] = [];
+    while (cursor < buf.length) {
+      const { value, bytesRead } = decodeLEB128(buf, cursor);
+      integers.push(value);
+      cursor += bytesRead;
+    }
+
+    // Decode tag–value pairs
+    let block = 0n, tx = 0n;
+    const amounts: bigint[] = [], outputs: bigint[] = [];
+
+    for (let i = 0; i + 1 < integers.length; i += 2) {
+      const tag = integers[i], val = integers[i + 1];
+      if (tag === 2n) block = val;
+      else if (tag === 4n) tx = val;
+      else if (tag === 20n) amounts.push(val);
+      else if (tag === 22n) outputs.push(val);
+    }
+
+    if (block === 0n && tx === 0n) return null;
+    return { runeId: `${block}:${tx}`, block, tx, amounts, outputs };
+  } catch {
+    return null;
+  }
+}
+
 // ── OP_RETURN Rune UTXO verifier ──────────────────────────────────────────────
 // Rune protocol: outputs with OP_RETURN OP_13 (0x6a 0x5d) contain runestones.
-// We check:
-//   1. The UTXO is unspent on-chain
-//   2. The tx has a runestone output matching NEXUS•WAVELENGTH rune ID prefix
+// Uses the LEB128 decoder to extract the exact Rune ID and edict amounts.
 
 export interface RuneVerifyResult {
   valid: boolean;
@@ -170,6 +236,7 @@ export interface RuneVerifyResult {
   blockHeight?: number;
   confirmedAt?: string;
   isUnspent?: boolean;
+  runestone?: ParsedRunestone;
   error?: string;
 }
 
@@ -191,12 +258,7 @@ export async function verifyRuneUtxo(utxo: string): Promise<RuneVerifyResult> {
     if (!isHexTxid) {
       // It's a Rune ID format (e.g., "840000:8473") — verify internally
       if (txid === RUNE_ID_PREFIX || txid.startsWith(RUNE_ID_PREFIX)) {
-        return {
-          valid: true,
-          runeName: RUNE_NAME,
-          runeId: utxo,
-          amount: 1000,
-        };
+        return { valid: true, runeName: RUNE_NAME, runeId: utxo, amount: 1000 };
       }
       return { valid: false, error: `Not a valid txid (got "${txid}")` };
     }
@@ -209,33 +271,24 @@ export async function verifyRuneUtxo(utxo: string): Promise<RuneVerifyResult> {
     // 3. Check UTXO is unspent
     let isUnspent = false;
     try {
-      const utxos = await esploraGet(`/tx/${txid}/outspends`);
-      if (Array.isArray(utxos) && utxos[vout]) {
-        isUnspent = !utxos[vout].spent;
+      const outspends = await esploraGet(`/tx/${txid}/outspends`);
+      if (Array.isArray(outspends) && outspends[vout]) {
+        isUnspent = !outspends[vout].spent;
       }
     } catch { /* continue */ }
 
-    // 4. Scan tx outputs for OP_RETURN OP_13 (runestone marker: 0x6a 0x5d)
-    let hasRunestone = false;
-    let runeId: string | undefined;
+    // 4. Scan tx outputs for OP_RETURN OP_13 runestone and decode via LEB128
+    let runestone: ParsedRunestone | null = null;
 
     for (const voutData of (tx.vout ?? [])) {
       const script = voutData.scriptpubkey as string;
-      if (script?.startsWith("6a5d") || script?.startsWith("6a4c") || script?.startsWith("6a")) {
-        // OP_RETURN output — likely a runestone
-        hasRunestone = true;
-        // The rune ID embedded in the runestone CBOR; for NEXUS•WAVELENGTH
-        // we check if the tx was etched at block 840000
-        if (blockHeight && Math.abs(blockHeight - 840000) < 200) {
-          runeId = `${blockHeight}:${vout}`;
-        }
-        break;
-      }
+      if (!script?.startsWith("6a5d")) continue; // must be OP_RETURN OP_13
+      runestone = decodeRunestone(script);
+      if (runestone) break;
     }
 
-    if (!hasRunestone) {
-      // No runestone but the UTXO exists — could be a Rune transfer (balance tracked by indexer)
-      // Accept as valid if the UTXO exists and is unspent
+    if (!runestone) {
+      // No runestone — could be a Rune transfer UTXO (balance tracked by indexer, no OP_RETURN in this tx)
       return {
         valid: isUnspent,
         runeName: RUNE_NAME,
@@ -245,11 +298,29 @@ export async function verifyRuneUtxo(utxo: string): Promise<RuneVerifyResult> {
       };
     }
 
+    // 5. Verify the decoded Rune ID matches NEXUS•WAVELENGTH (block 840000)
+    const runeBlockMatch = runestone.block === BigInt(RUNE_ID_PREFIX) ||
+      Math.abs(Number(runestone.block) - 840000) < 200;
+
+    if (!runeBlockMatch) {
+      return {
+        valid: false,
+        runeName: RUNE_NAME,
+        runeId: runestone.runeId,
+        isUnspent, blockHeight, confirmedAt, runestone,
+        error: `Runestone Rune ID ${runestone.runeId} does not match NEXUS•WAVELENGTH (expected block ~840000)`,
+      };
+    }
+
+    const amount = runestone.amounts[0] ? Number(runestone.amounts[0]) : undefined;
+    console.log(`[BTC Scanner] Runestone decoded: Rune=${runestone.runeId} amount=${amount} outputs=[${runestone.outputs}]`);
+
     return {
       valid: true,
       runeName: RUNE_NAME,
-      runeId: runeId ?? `${txid}:${vout}`,
-      isUnspent, blockHeight, confirmedAt,
+      runeId: runestone.runeId,
+      amount,
+      isUnspent, blockHeight, confirmedAt, runestone,
     };
   } catch (err: any) {
     return { valid: false, error: err.message };
@@ -282,6 +353,10 @@ export interface PsbtParams {
   serviceWalletAddress: string;
   priceSats: number;
   feeSats: number;
+  // For Rune trades: include a Runestone edict directing token balance to buyer
+  runeId?: string;          // "BLOCK:TX" e.g. "840000:8472"
+  runeAmount?: bigint;      // amount of Rune units to transfer
+  runeOutputIndex?: number; // which output receives the Rune balance (default: 0 = buyer output)
 }
 
 export async function constructMarketplacePsbt(params: PsbtParams): Promise<{ psbtHex: string; psbtBase64: string }> {
@@ -323,11 +398,11 @@ export async function constructMarketplacePsbt(params: PsbtParams): Promise<{ ps
     },
   });
 
-  // Output 0: Asset (inscription sat) → buyer
+  // Output 0: Asset sat → buyer (inscription sat or Rune UTXO allocation)
   const buyerScript = bitcoin.address.toOutputScript(params.buyerBtcAddress, network);
   psbt.addOutput({ script: buyerScript, value: BigInt(546) }); // dust limit
 
-  // Output 1: Payment → seller
+  // Output 1: Payment (sats) → seller
   const sellerScript = bitcoin.address.toOutputScript(params.sellerBtcAddress, network);
   psbt.addOutput({ script: sellerScript, value: BigInt(params.priceSats) });
 
@@ -335,6 +410,42 @@ export async function constructMarketplacePsbt(params: PsbtParams): Promise<{ ps
   if (params.feeSats > 0) {
     const feeScript = bitcoin.address.toOutputScript(params.serviceWalletAddress, network);
     psbt.addOutput({ script: feeScript, value: BigInt(params.feeSats) });
+  }
+
+  // Output 3 (Rune trades only): OP_RETURN Runestone edict directing Rune balance to buyer
+  // Encodes: tag 2 = block, tag 4 = tx, tag 20 = amount, tag 22 = output index (0 = buyer output)
+  if (params.runeId && params.runeAmount !== undefined) {
+    const [runeBlock, runeTx] = params.runeId.split(":").map(BigInt);
+    const targetOutput = BigInt(params.runeOutputIndex ?? 0);
+    const runeAmount = params.runeAmount;
+
+    // Encode LEB128 integers for tag–value pairs
+    function encodeLEB128(value: bigint): Buffer {
+      const bytes: number[] = [];
+      do {
+        let byte = Number(value & 0x7fn);
+        value >>= 7n;
+        if (value !== 0n) byte |= 0x80;
+        bytes.push(byte);
+      } while (value !== 0n);
+      return Buffer.from(bytes);
+    }
+
+    const runestonePayload = Buffer.concat([
+      encodeLEB128(2n), encodeLEB128(runeBlock),   // tag 2: block
+      encodeLEB128(4n), encodeLEB128(runeTx),       // tag 4: tx
+      encodeLEB128(20n), encodeLEB128(runeAmount),  // tag 20: amount
+      encodeLEB128(22n), encodeLEB128(targetOutput),// tag 22: output index
+    ]);
+
+    // OP_RETURN (0x6a) OP_13 (0x5d) <payload>
+    const runestoneScript = Buffer.concat([
+      Buffer.from([0x6a, 0x5d]),
+      runestonePayload,
+    ]);
+
+    psbt.addOutput({ script: runestoneScript, value: BigInt(0) });
+    console.log(`[PSBT] Added Runestone edict: ${params.runeId} → amount=${runeAmount} → output ${targetOutput}`);
   }
 
   const psbtBuffer = psbt.toBuffer();
@@ -363,7 +474,57 @@ export async function fetchUtxoDetails(txid: string, vout: number): Promise<Psbt
   }
 }
 
-// ── Polling loop — auto-confirm pending stakes ────────────────────────────────
+// ── Settlement poller — auto-mark marketplace listings as "sold" ──────────────
+// After a buyer broadcasts a PSBT, the listing status should flip to "sold" once
+// the transaction has 1+ confirmation. We track pending PSBT txids in
+// marketplace_listing_txids (in-memory map for now; persisted via the listing's
+// btcTxid column once added to the schema, or via logAction audit trail).
+const _pendingSettlements = new Map<string, { listingId: number; addedAt: number }>();
+
+export function trackSettlement(txid: string, listingId: number): void {
+  _pendingSettlements.set(txid, { listingId, addedAt: Date.now() });
+  console.log(`[BTC Scanner] Tracking settlement: listing ${listingId} → txid ${txid.slice(0, 16)}…`);
+}
+
+async function scanPendingSettlements(): Promise<number> {
+  let settled = 0;
+  if (_pendingSettlements.size === 0) return 0;
+
+  const { db } = await import("./db");
+  const { marketplaceListings } = await import("../shared/schema");
+  const { eq } = await import("drizzle-orm");
+
+  for (const [txid, { listingId, addedAt }] of _pendingSettlements.entries()) {
+    // Drop tracking after 48 hours (tx unlikely to confirm)
+    if (Date.now() - addedAt > 48 * 60 * 60 * 1000) {
+      _pendingSettlements.delete(txid);
+      continue;
+    }
+    try {
+      const tx = await esploraGet(`/tx/${txid}`);
+      const confirmed = tx.status?.confirmed === true;
+      if (!confirmed) continue;
+
+      const blockHeight: number = tx.status?.block_height;
+      const confirmations = blockHeight ? 1 : 0; // Esplora doesn't return confirmations directly
+      if (confirmations < 1) continue;
+
+      // Update listing status to "sold" and record the settlement txid
+      await db.update(marketplaceListings)
+        .set({ status: "sold" } as any)
+        .where(eq(marketplaceListings.id, listingId));
+
+      console.log(`[BTC Scanner] ✅ Settlement confirmed: listing ${listingId} → txid ${txid.slice(0, 16)}… (block ${blockHeight})`);
+      _pendingSettlements.delete(txid);
+      settled++;
+    } catch {
+      // tx not found yet — keep polling
+    }
+  }
+  return settled;
+}
+
+// ── Polling loop — auto-confirm pending stakes + settlements ──────────────────
 let _scanRunning = false;
 
 export async function startStakeScanner(): Promise<void> {
@@ -377,6 +538,7 @@ async function scanLoop(): Promise<void> {
   while (true) {
     try {
       await scanPendingStakes();
+      await scanPendingSettlements();
     } catch (err: any) {
       console.error("[BTC Scanner] Scan error:", err.message);
     }

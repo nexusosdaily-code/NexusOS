@@ -8947,6 +8947,18 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // POST /api/btc/track-settlement — register a txid for settlement polling (called after pushPsbt)
+  app.post("/api/btc/track-settlement", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { txid, listingId } = req.body;
+      if (!txid || !listingId) return res.status(400).json({ error: "txid and listingId required" });
+      const { trackSettlement } = await import("./btc-block-scanner");
+      trackSettlement(txid, parseInt(listingId));
+      await logAction(req, "settlement_tracked", "marketplace", req.user!.id, { txid, listingId });
+      res.json({ ok: true, message: `Tracking txid ${txid.slice(0, 16)}… for listing ${listingId}` });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // POST /api/btc/broadcast — broadcast a fully-signed PSBT hex to Bitcoin network
   app.post("/api/btc/broadcast", authenticate, async (req: Request, res: Response) => {
     try {
@@ -8959,24 +8971,28 @@ export async function registerRoutes(
       psbt.finalizeAllInputs();
       const txHex = psbt.extractTransaction().toHex();
 
-      // Broadcast
-      const res1 = await fetch("https://blockstream.info/api/tx", {
-        method: "POST", headers: { "Content-Type": "text/plain" }, body: txHex,
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!res1.ok) {
-        const res2 = await fetch("https://mempool.space/api/tx", {
-          method: "POST", headers: { "Content-Type": "text/plain" }, body: txHex,
-          signal: AbortSignal.timeout(15000),
-        });
-        if (!res2.ok) throw new Error("Broadcast failed on all APIs");
-        const txid = await res2.text();
-        await logAction(req, "psbt_broadcast", "marketplace", req.user!.id, { txid, listingId });
-        return res.json({ ok: true, txid: txid.trim() });
+      // Broadcast — Blockstream first, mempool.space fallback
+      let txid: string | null = null;
+      for (const url of ["https://blockstream.info/api/tx", "https://mempool.space/api/tx"]) {
+        try {
+          const br = await fetch(url, {
+            method: "POST", headers: { "Content-Type": "text/plain" }, body: txHex,
+            signal: AbortSignal.timeout(15000),
+          });
+          if (br.ok) { txid = (await br.text()).trim(); break; }
+        } catch { /* try next */ }
       }
-      const txid = await res1.text();
+      if (!txid) throw new Error("Broadcast failed on all APIs");
+
       await logAction(req, "psbt_broadcast", "marketplace", req.user!.id, { txid, listingId });
-      res.json({ ok: true, txid: txid.trim() });
+
+      // Wire into settlement poller — auto-marks listing as "sold" once 1 confirmation
+      if (listingId) {
+        const { trackSettlement } = await import("./btc-block-scanner");
+        trackSettlement(txid, parseInt(listingId));
+      }
+
+      res.json({ ok: true, txid });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 

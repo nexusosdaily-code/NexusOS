@@ -28,6 +28,8 @@ export interface UseUnisatReturn {
   connect: () => Promise<void>;
   disconnect: () => void;
   signPsbt: (psbtHex: string, opts?: SignPsbtOpts) => Promise<string>;
+  /** pushPsbt — signs AND broadcasts a PSBT in one step (UniSat native, preferred over signPsbt+pushTx) */
+  pushPsbt: (psbtHex: string, opts?: SignPsbtOpts) => Promise<string>;
   pushTx: (txHex: string) => Promise<string>;
   signMessage: (message: string) => Promise<string>;
   refreshBalance: () => Promise<void>;
@@ -176,6 +178,42 @@ export function useUnisat(): UseUnisatReturn {
     return res.text();
   }, []);
 
+  /**
+   * pushPsbt — the preferred one-step method.
+   * UniSat's native `window.unisat.pushPsbt()` signs AND broadcasts the PSBT
+   * internally and returns the txid directly. This avoids a separate broadcast
+   * call and matches the spec from the NexusOS architecture document.
+   * For Xverse/OKX we fall back to signPsbt + broadcast via mempool.space.
+   */
+  const pushPsbt = useCallback(async (psbtHex: string, opts: SignPsbtOpts = {}): Promise<string> => {
+    const { api, provider: p } = detectProvider();
+    if (!api) throw new Error("No Bitcoin wallet connected");
+
+    if (p === "unisat") {
+      // UniSat native: signs + finalizes + broadcasts, returns txid
+      return api.pushPsbt(psbtHex);
+    }
+
+    // Xverse / OKX: sign first, then broadcast
+    let signedHex: string;
+    if (p === "xverse") {
+      const resp = await api.signPsbt({ psbt: psbtHex, signInputs: opts.toSignInputs ?? [], broadcast: true });
+      if (resp.txid) return resp.txid; // Xverse can auto-broadcast
+      signedHex = resp.psbt;
+    } else if (p === "okx") {
+      signedHex = await api.signPsbt(psbtHex);
+    } else {
+      throw new Error("Unsupported wallet for pushPsbt");
+    }
+
+    // Manual broadcast fallback via mempool.space
+    const res = await fetch("https://mempool.space/api/tx", {
+      method: "POST", headers: { "Content-Type": "text/plain" }, body: signedHex,
+    });
+    if (!res.ok) throw new Error(`Broadcast failed: ${await res.text()}`);
+    return (await res.text()).trim();
+  }, []);
+
   const signMessage = useCallback(async (message: string): Promise<string> => {
     const { api, provider: p } = detectProvider();
     if (!api) throw new Error("No Bitcoin wallet connected");
@@ -194,6 +232,7 @@ export function useUnisat(): UseUnisatReturn {
     connect,
     disconnect,
     signPsbt,
+    pushPsbt,
     pushTx,
     signMessage,
     refreshBalance,
