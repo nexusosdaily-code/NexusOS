@@ -8844,6 +8844,164 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ── NEXUS•WAVELENGTH RUNE ────────────────────────────────────────────────────
+  const RUNE_NAME        = "NEXUS•WAVELENGTH";
+  const RUNE_SYMBOL      = "Ψ";
+  const RUNE_DECIMALS    = 8;
+  const RUNE_SUPPLY      = 21_000_000;
+  const RUNE_MINT_AMOUNT = 1_000;
+  const RUNE_MAX_MINTS   = 21_000;
+  const RUNE_NXT_COST    = 100;
+  const RUNE_STAKE_NXT_PER_EPOCH = 150; // NXT per epoch per 1,000 runes staked
+  // Placeholder etched Rune ID (real etching tx to be submitted on mainnet)
+  const RUNE_ID          = "840000:8472";
+  const RUNE_BLOCK       = 840000;
+
+  // GET /api/rune/info
+  app.get("/api/rune/info", async (_req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { runeMints, runeStakes } = await import("../shared/schema");
+      const { eq, sql } = await import("drizzle-orm");
+      const [mintStats] = await db.select({ count: sql<number>`count(*)`, total: sql<number>`coalesce(sum(rune_amount),0)` }).from(runeMints).where(eq(runeMints.status, "confirmed"));
+      const [stakeStats] = await db.select({ count: sql<number>`count(*)`, staked: sql<number>`coalesce(sum(rune_amount),0)` }).from(runeStakes).where(eq(runeStakes.status, "active"));
+      res.json({
+        name: RUNE_NAME, symbol: RUNE_SYMBOL, decimals: RUNE_DECIMALS,
+        totalSupply: RUNE_SUPPLY, mintAmount: RUNE_MINT_AMOUNT,
+        maxMints: RUNE_MAX_MINTS, nxtCost: RUNE_NXT_COST,
+        runeId: RUNE_ID, block: RUNE_BLOCK,
+        mintCount: Number(mintStats.count), mintedSupply: Number(mintStats.total),
+        activeStakes: Number(stakeStats.count), totalStaked: Number(stakeStats.staked),
+        stakeReward: RUNE_STAKE_NXT_PER_EPOCH,
+        remaining: RUNE_MAX_MINTS - Number(mintStats.count),
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/rune/my-mints
+  app.get("/api/rune/my-mints", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { runeMints } = await import("../shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      const mints = await db.select().from(runeMints).where(eq(runeMints.userId, req.user!.id)).orderBy(desc(runeMints.createdAt)).limit(50);
+      res.json({ mints });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/rune/mint
+  app.post("/api/rune/mint", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { btcAddress } = req.body;
+      if (!btcAddress) return res.status(400).json({ error: "btcAddress required" });
+      const { db } = await import("./db");
+      const { runeMints } = await import("../shared/schema");
+      const { eq, sql } = await import("drizzle-orm");
+      // Check supply cap
+      const [mintStats] = await db.select({ count: sql<number>`count(*)` }).from(runeMints).where(eq(runeMints.status, "confirmed"));
+      if (Number(mintStats.count) >= RUNE_MAX_MINTS)
+        return res.status(400).json({ error: "All mints exhausted — 21,000 mints complete" });
+      // Deduct NXT
+      const wallet = await storage.getWallet(req.user!.id);
+      if (!wallet) return res.status(400).json({ error: "Wallet not found" });
+      const bal = parseFloat(wallet.balance);
+      const cost = RUNE_NXT_COST * 1e8;
+      if (bal < cost) return res.status(402).json({ error: `Need ${RUNE_NXT_COST} NXT, have ${(bal / 1e8).toFixed(2)}` });
+      await storage.updateWalletBalance(wallet.id, (bal - cost).toFixed(8));
+      // Generate a deterministic Rune ID for this mint
+      const mintNum = Number(mintStats.count) + 1;
+      const runeId = `${RUNE_BLOCK}:${8472 + mintNum}`;
+      const [mint] = await db.insert(runeMints).values({
+        userId: req.user!.id, username: req.user!.username,
+        btcAddress, runeAmount: RUNE_MINT_AMOUNT,
+        nxtPaid: RUNE_NXT_COST.toFixed(8), runeId, status: "confirmed",
+      }).returning();
+      await logAction(req, "rune_mint", "rune", req.user!.id, { runeId, btcAddress, nxtPaid: RUNE_NXT_COST });
+      res.json({ ok: true, mint });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/rune/my-stakes
+  app.get("/api/rune/my-stakes", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { runeStakes } = await import("../shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      const stakes = await db.select().from(runeStakes).where(eq(runeStakes.userId, req.user!.id)).orderBy(desc(runeStakes.stakedAt)).limit(50);
+      res.json({ stakes });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/rune/stake
+  app.post("/api/rune/stake", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { runeUtxo, runeAmount } = req.body;
+      if (!runeUtxo) return res.status(400).json({ error: "runeUtxo required (format: BLOCK:TX or txid:vout)" });
+      const amount = Math.max(1, parseInt(String(runeAmount ?? 1000)));
+      const { db } = await import("./db");
+      const { runeStakes } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      // Prevent duplicate UTXO staking
+      const [existing] = await db.select().from(runeStakes).where(and(eq(runeStakes.runeUtxo, runeUtxo), eq(runeStakes.status, "active")));
+      if (existing) return res.status(400).json({ error: "This Rune UTXO is already staked" });
+      const [stake] = await db.insert(runeStakes).values({
+        userId: req.user!.id, username: req.user!.username,
+        runeAmount: amount, runeUtxo, epoch: 0,
+        nxtEarned: "0", nxtClaimed: "0", status: "active",
+      }).returning();
+      await logAction(req, "rune_stake", "rune", req.user!.id, { runeUtxo, runeAmount: amount });
+      res.json({ ok: true, stake });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/rune/claim/:id — claim earned NXT from a stake
+  app.post("/api/rune/claim/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const stakeId = parseInt(req.params.id);
+      const { db } = await import("./db");
+      const { runeStakes } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const [stake] = await db.select().from(runeStakes)
+        .where(and(eq(runeStakes.id, stakeId), eq(runeStakes.userId, req.user!.id), eq(runeStakes.status, "active")));
+      if (!stake) return res.status(404).json({ error: "Active stake not found" });
+      // Calculate pending: each epoch earns RUNE_STAKE_NXT_PER_EPOCH NXT per 1000 runes
+      const now   = Date.now();
+      const since = stake.lastClaimAt ? new Date(stake.lastClaimAt).getTime() : new Date(stake.stakedAt).getTime();
+      const hoursElapsed = (now - since) / 3_600_000;
+      const epochsEarned = Math.floor(hoursElapsed / 24); // 1 epoch = 24 hours
+      if (epochsEarned < 1) return res.status(400).json({ error: "No completed epochs yet — come back in 24h" });
+      const rewardNxt = epochsEarned * RUNE_STAKE_NXT_PER_EPOCH * (stake.runeAmount / 1000);
+      const rewardRaw = Math.round(rewardNxt * 1e8);
+      // Credit NXT
+      const wallet = await storage.getWallet(req.user!.id);
+      if (wallet) await storage.updateWalletBalance(wallet.id, (parseFloat(wallet.balance) + rewardRaw).toFixed(8));
+      const newEarned  = (parseFloat(stake.nxtEarned)  + rewardNxt).toFixed(8);
+      const newClaimed = (parseFloat(stake.nxtClaimed) + rewardNxt).toFixed(8);
+      await db.update(runeStakes).set({
+        epoch: stake.epoch + epochsEarned,
+        nxtEarned: newEarned, nxtClaimed: newClaimed,
+        lastClaimAt: new Date(),
+      }).where(eq(runeStakes.id, stakeId));
+      res.json({ ok: true, epochsClaimed: epochsEarned, rewardNxt, newClaimed });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/rune/unstake/:id
+  app.post("/api/rune/unstake/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const stakeId = parseInt(req.params.id);
+      const { db } = await import("./db");
+      const { runeStakes } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const [stake] = await db.select().from(runeStakes)
+        .where(and(eq(runeStakes.id, stakeId), eq(runeStakes.userId, req.user!.id), eq(runeStakes.status, "active")));
+      if (!stake) return res.status(404).json({ error: "Active stake not found" });
+      await db.update(runeStakes).set({ status: "unstaked" }).where(eq(runeStakes.id, stakeId));
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+  // ─────────────────────────────────────────────────────────────────────────────
+
   // ── MARKETPLACE ──────────────────────────────────────────────────────────────
   const MARKETPLACE_FEE_PCT = 0.025; // 2.5% total: 1.25% burn + 1.25% treasury
 

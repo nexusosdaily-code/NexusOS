@@ -1191,3 +1191,35 @@ export const marketplaceListings = pgTable("marketplace_listings", {
 export const insertMarketplaceListingSchema = createInsertSchema(marketplaceListings).omit({ id: true, createdAt: true });
 export type InsertMarketplaceListing = z.infer<typeof insertMarketplaceListingSchema>;
 export type MarketplaceListing = typeof marketplaceListings.$inferSelect;
+
+// ── NEXUS•WAVELENGTH Rune ─────────────────────────────────────────────────────
+export const runeMints = pgTable("rune_mints", {
+  id:          serial("id").primaryKey(),
+  userId:      text("user_id").notNull(),
+  username:    text("username").notNull(),
+  btcAddress:  text("btc_address").notNull(),
+  runeAmount:  integer("rune_amount").notNull().default(1000),
+  nxtPaid:     decimal("nxt_paid", { precision: 20, scale: 8 }).notNull(),
+  runeId:      text("rune_id").notNull().default("pending"),
+  btcTxid:     text("btc_txid"),
+  status:      text("status").notNull().default("pending"),
+  createdAt:   timestamp("created_at").notNull().defaultNow(),
+});
+export const insertRuneMintSchema = createInsertSchema(runeMints).omit({ id: true, createdAt: true });
+export type RuneMint = typeof runeMints.$inferSelect;
+
+export const runeStakes = pgTable("rune_stakes", {
+  id:           serial("id").primaryKey(),
+  userId:       text("user_id").notNull(),
+  username:     text("username").notNull(),
+  runeAmount:   integer("rune_amount").notNull(),
+  runeUtxo:     text("rune_utxo").notNull(),
+  epoch:        integer("epoch").notNull().default(0),
+  nxtEarned:    decimal("nxt_earned", { precision: 20, scale: 8 }).notNull().default("0"),
+  nxtClaimed:   decimal("nxt_claimed", { precision: 20, scale: 8 }).notNull().default("0"),
+  status:       text("status").notNull().default("active"),
+  lastClaimAt:  timestamp("last_claim_at"),
+  stakedAt:     timestamp("staked_at").notNull().defaultNow(),
+});
+export const insertRuneStakeSchema = createInsertSchema(runeStakes).omit({ id: true, stakedAt: true });
+export type RuneStake = typeof runeStakes.$inferSelect;

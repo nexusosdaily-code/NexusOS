@@ -108,6 +108,9 @@ import WnspOrdinalsPage from "@/pages/wnsp-ordinals";
 import CommunityMintPage from "@/pages/community-mint";
 import WnspStakingPage from "@/pages/wnsp-staking";
 import MarketplacePage from "@/pages/marketplace";
+import RuneEtchingPage from "@/pages/rune-etching";
+import RuneMintPage from "@/pages/rune-mint";
+import RuneStakingPage from "@/pages/rune-staking";
 import FractalBtcBridgePage from "@/pages/fractal-btc-bridge";
 import NxtFbSwapPage from "@/pages/nxt-fb-swap";
 import LightningWalletPage from "@/pages/lightning-wallet";
@@ -259,6 +262,9 @@ function Router() {
       <Route path="/community-mint" component={CommunityMintPage} />
       <Route path="/wnsp-staking" component={WnspStakingPage} />
       <Route path="/marketplace" component={MarketplacePage} />
+      <Route path="/rune-etching" component={RuneEtchingPage} />
+      <Route path="/rune-mint" component={RuneMintPage} />
+      <Route path="/rune-staking" component={RuneStakingPage} />
       <Route path="/fractal-btc" component={FractalBtcBridgePage} />
       <Route path="/fractal-bitcoin" component={FractalBtcBridgePage} />
       <Route path="/nxt-fb-swap" component={NxtFbSwapPage} />

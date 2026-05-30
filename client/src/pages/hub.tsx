@@ -18,6 +18,7 @@ import {
   MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut, Settings, User, Search,
   CheckCircle2, AlertTriangle, ArrowRight, FlaskConical, Heart,
   Copy, ExternalLink, RefreshCw, ChevronDown, ChevronUp, ShoppingBag,
+  Gem, Coins, TrendingUp,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -164,6 +165,9 @@ const APP_SECTIONS = [
       { title: "🟠 Community Mint",   href: "/community-mint",   Icon: Zap },
       { title: "💎 wnsp Staking",     href: "/wnsp-staking",     Icon: Database },
       { title: "🛒 Marketplace",      href: "/marketplace",      Icon: ShoppingBag },
+      { title: "💜 NEXUS•WAVELENGTH", href: "/rune-etching",     Icon: Gem },
+      { title: "🔮 Mint Runes",       href: "/rune-mint",        Icon: Coins },
+      { title: "📈 Rune Staking",     href: "/rune-staking",     Icon: TrendingUp },
       { title: "🔵 Fractal BTC",      href: "/fractal-btc",      Icon: Globe2 },
       { title: "↔ NXT↔FB Swap",      href: "/nxt-fb-swap",      Icon: ArrowRightLeft },
       { title: "⚡ Lightning Wallet",  href: "/lightning-wallet", Icon: Zap },
