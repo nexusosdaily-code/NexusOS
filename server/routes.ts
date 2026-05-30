@@ -1528,22 +1528,12 @@ export async function registerRoutes(
 
       const senderWdm    = req.user!.spectralWdm ?? 200;
       const msgFee       = calcFee("message_send", senderWdm);
-      const msgFeeNum    = parseFloat(msgFee.feeNxt);
+      const msgFeeNum    = 0; // Text messages are free
       const senderWallet = await storage.getWallet(req.user!.id);
       if (!senderWallet) return res.status(402).json({ error: "Sender wallet not found" });
 
       const balance = parseFloat(senderWallet.balance);
-      if (balance < msgFeeNum) {
-        return res.status(402).json({
-          error:     "Insufficient NXT",
-          required:  msgFeeNum,
-          available: balance,
-          physics:   { band: msgFee.band, nm: msgFee.wavelengthNm },
-        });
-      }
-
-      // Deduct fee and earn loop (same as UI)
-      await storage.updateWalletBalance(senderWallet.id, (balance - msgFeeNum).toFixed(8));
+      // No fee deduction — text messages are free
       const recipientEarning = msgFeeNum * 0.5;
       const recipientWallet  = await storage.getWallet(recipient.id);
       if (recipientWallet) {
@@ -1807,24 +1797,16 @@ export async function registerRoutes(
       }
 
       // ── Physics fee enforcement ─────────────────────────────────────────
+      // Text messages are free — fee calculated for physics metadata only
       const senderWdm  = req.user!.spectralWdm ?? 200;
       const msgFee     = calcFee("message_send", senderWdm);
-      const feeNum     = parseFloat(msgFee.feeNxt);
+      const feeNum     = 0; // Text messages are free
       const senderWallet = await storage.getWallet(req.user!.id);
       if (!senderWallet) {
         return res.status(400).json({ error: "Sender wallet not found" });
       }
       const senderBalance = parseFloat(senderWallet.balance);
-      if (senderBalance < feeNum) {
-        return res.status(402).json({
-          error: "Insufficient NXT balance for message fee",
-          required: msgFee.feeNxt,
-          available: senderWallet.balance,
-          physics: { wavelengthNm: msgFee.wavelengthNm, energyJ: msgFee.energyJ, band: msgFee.band },
-        });
-      }
-      // Deduct full fee from sender
-      await storage.updateWalletBalance(senderWallet.id, (senderBalance - feeNum).toFixed(8));
+      // No deduction — text messages are free
 
       // 50% of fee flows to recipient as spectral earnings — closed economic loop
       const recipientEarning = feeNum * 0.5;
@@ -2819,7 +2801,9 @@ export async function registerRoutes(
       }
 
       // ── Physics fee enforcement (authenticated users only) ──────────────
-      if (req.user) {
+      // Files ≤ 5 MB are free; larger files pay the physics-based upload fee
+      const FREE_UPLOAD_THRESHOLD = 5 * 1024 * 1024; // 5 MB
+      if (req.user && size > FREE_UPLOAD_THRESHOLD) {
         const uploaderWdm   = req.user.spectralWdm ?? 200;
         const uploadFee     = calcFee("upload_mb", uploaderWdm, { fileSizeBytes: size });
         const uploadFeeNum  = parseFloat(uploadFee.feeNxt);
@@ -2832,6 +2816,7 @@ export async function registerRoutes(
               required: uploadFee.feeNxt,
               available: uploaderWallet.balance,
               physics: { wavelengthNm: uploadFee.wavelengthNm, band: uploadFee.band },
+              freeThresholdMB: 5,
             });
           }
           await storage.updateWalletBalance(uploaderWallet.id, (uploaderBalance - uploadFeeNum).toFixed(8));
