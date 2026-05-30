@@ -1068,7 +1068,7 @@ export const btcBridgeConfig = pgTable("btc_bridge_config", {
 // ── wnsp Staking ─────────────────────────────────────────────────────────────
 export const wnspStakes = pgTable("wnsp_stakes", {
   id:              serial("id").primaryKey(),
-  userId:          integer("user_id").notNull(),
+  userId:          text("user_id").notNull(),
   inscriptionId:   text("inscription_id").notNull().unique(),
   wnspAmount:      integer("wnsp_amount").notNull().default(1000),
   status:          text("status").notNull().default("active"),  // active | unstaked | claimed
@@ -1087,7 +1087,7 @@ export type WnspStake = typeof wnspStakes.$inferSelect;
 // ── Community Mint Requests ──────────────────────────────────────────────────
 export const communityMints = pgTable("community_mints", {
   id:            serial("id").primaryKey(),
-  userId:        integer("user_id").notNull(),
+  userId:        text("user_id").notNull(),
   username:      text("username").notNull(),
   nxtFeePaid:    decimal("nxt_fee_paid", { precision: 20, scale: 8 }).notNull(),
   inscriptionId: text("inscription_id"),
