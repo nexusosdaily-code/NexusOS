@@ -1163,3 +1163,31 @@ export const insertLightningTransactionSchema = createInsertSchema(lightningTran
 export type InsertLightningTransaction = z.infer<typeof insertLightningTransactionSchema>;
 export type LightningTransaction = typeof lightningTransactions.$inferSelect;
 export type LightningWallet = typeof lightningWallets.$inferSelect;
+
+// ── NexusOS Marketplace ───────────────────────────────────────────────────────
+export const marketplaceListings = pgTable("marketplace_listings", {
+  id:             serial("id").primaryKey(),
+  sellerId:       text("seller_id").notNull(),
+  sellerUsername: text("seller_username").notNull(),
+  assetType:      text("asset_type").notNull(),         // wnsp_brc20 | rune | ordinal
+  assetId:        text("asset_id").notNull(),            // inscription_id or rune_id
+  assetName:      text("asset_name").notNull(),          // display name e.g. "wnsp", "NEXUS•WAVELENGTH"
+  amount:         integer("amount").notNull().default(1000),
+  priceNxt:       decimal("price_nxt", { precision: 20, scale: 8 }).notNull(),
+  priceSats:      integer("price_sats"),                 // optional BTC price in sats
+  status:         text("status").notNull().default("active"), // active | sold | cancelled
+  buyerId:        text("buyer_id"),
+  buyerUsername:  text("buyer_username"),
+  soldAt:         timestamp("sold_at"),
+  cancelledAt:    timestamp("cancelled_at"),
+  createdAt:      timestamp("created_at").notNull().defaultNow(),
+  description:    text("description"),
+}, (t) => ({
+  sellerIdx: index("marketplace_seller_idx").on(t.sellerId),
+  statusIdx: index("marketplace_status_idx").on(t.status),
+  assetTypeIdx: index("marketplace_asset_type_idx").on(t.assetType),
+}));
+
+export const insertMarketplaceListingSchema = createInsertSchema(marketplaceListings).omit({ id: true, createdAt: true });
+export type InsertMarketplaceListing = z.infer<typeof insertMarketplaceListingSchema>;
+export type MarketplaceListing = typeof marketplaceListings.$inferSelect;

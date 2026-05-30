@@ -17,7 +17,7 @@ import {
   ChevronRight, Rss, Eye, Clock,
   MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut, Settings, User, Search,
   CheckCircle2, AlertTriangle, ArrowRight, FlaskConical, Heart,
-  Copy, ExternalLink, RefreshCw, ChevronDown, ChevronUp,
+  Copy, ExternalLink, RefreshCw, ChevronDown, ChevronUp, ShoppingBag,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -163,6 +163,7 @@ const APP_SECTIONS = [
       { title: "₿ Bitcoin Bridge",    href: "/wnsp/ordinals",    Icon: Bitcoin },
       { title: "🟠 Community Mint",   href: "/community-mint",   Icon: Zap },
       { title: "💎 wnsp Staking",     href: "/wnsp-staking",     Icon: Database },
+      { title: "🛒 Marketplace",      href: "/marketplace",      Icon: ShoppingBag },
       { title: "🔵 Fractal BTC",      href: "/fractal-btc",      Icon: Globe2 },
       { title: "↔ NXT↔FB Swap",      href: "/nxt-fb-swap",      Icon: ArrowRightLeft },
       { title: "⚡ Lightning Wallet",  href: "/lightning-wallet", Icon: Zap },

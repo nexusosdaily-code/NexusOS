@@ -8844,5 +8844,161 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ── MARKETPLACE ──────────────────────────────────────────────────────────────
+  const MARKETPLACE_FEE_PCT = 0.025; // 2.5% total: 1.25% burn + 1.25% treasury
+
+  // GET /api/marketplace/listings — browse all active listings
+  app.get("/api/marketplace/listings", async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { marketplaceListings } = await import("../shared/schema");
+      const { eq, desc, and } = await import("drizzle-orm");
+      const assetType = req.query.assetType as string | undefined;
+      const conditions = [eq(marketplaceListings.status, "active")];
+      if (assetType) conditions.push(eq(marketplaceListings.assetType, assetType));
+      const listings = await db.select().from(marketplaceListings)
+        .where(and(...conditions))
+        .orderBy(desc(marketplaceListings.createdAt))
+        .limit(100);
+      res.json({ listings });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/marketplace/my-listings — seller's own listings
+  app.get("/api/marketplace/my-listings", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { marketplaceListings } = await import("../shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      const listings = await db.select().from(marketplaceListings)
+        .where(eq(marketplaceListings.sellerId, req.user!.id))
+        .orderBy(desc(marketplaceListings.createdAt))
+        .limit(50);
+      res.json({ listings });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/marketplace/list — create a new listing
+  app.post("/api/marketplace/list", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { assetType, assetId, assetName, amount, priceNxt, priceSats, description } = req.body;
+      if (!assetType || !assetId || !assetName || !priceNxt)
+        return res.status(400).json({ error: "assetType, assetId, assetName, priceNxt required" });
+      if (!["wnsp_brc20", "rune", "ordinal"].includes(assetType))
+        return res.status(400).json({ error: "assetType must be wnsp_brc20 | rune | ordinal" });
+      const priceNum = parseFloat(String(priceNxt));
+      if (isNaN(priceNum) || priceNum <= 0)
+        return res.status(400).json({ error: "priceNxt must be > 0" });
+
+      const { db } = await import("./db");
+      const { marketplaceListings } = await import("../shared/schema");
+
+      const [listing] = await db.insert(marketplaceListings).values({
+        sellerId:       req.user!.id,
+        sellerUsername: req.user!.username,
+        assetType,
+        assetId,
+        assetName,
+        amount:         Math.max(1, parseInt(String(amount ?? 1000))),
+        priceNxt:       priceNum.toFixed(8),
+        priceSats:      priceSats ? parseInt(String(priceSats)) : null,
+        status:         "active",
+        description:    description || null,
+      }).returning();
+
+      await logAction(req, "marketplace_list", "marketplace", req.user!.id, { assetType, assetId, priceNxt: priceNum });
+      res.json({ ok: true, listing });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/marketplace/buy/:id — purchase a listing
+  app.post("/api/marketplace/buy/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const listingId = parseInt(req.params.id);
+      const { db } = await import("./db");
+      const { marketplaceListings, wallets } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+
+      const [listing] = await db.select().from(marketplaceListings)
+        .where(and(eq(marketplaceListings.id, listingId), eq(marketplaceListings.status, "active")));
+      if (!listing) return res.status(404).json({ error: "Listing not found or already sold" });
+      if (listing.sellerId === req.user!.id)
+        return res.status(400).json({ error: "Cannot buy your own listing" });
+
+      const price = parseFloat(listing.priceNxt);
+      const fee   = price * MARKETPLACE_FEE_PCT;
+      const total = price + fee;
+
+      // Check buyer balance
+      const buyerWallet = await storage.getWallet(req.user!.id);
+      if (!buyerWallet) return res.status(400).json({ error: "Buyer wallet not found" });
+      const buyerBal = parseFloat(buyerWallet.balance);
+      if (buyerBal < total)
+        return res.status(402).json({ error: `Insufficient NXT. Need ${total.toFixed(4)}, have ${buyerBal.toFixed(4)}` });
+
+      // Deduct from buyer (price + fee)
+      await storage.updateWalletBalance(buyerWallet.id, (buyerBal - total).toFixed(8));
+
+      // Credit seller (price only, not fee)
+      const sellerWallet = await storage.getWallet(listing.sellerId);
+      if (sellerWallet) {
+        const newSellerBal = (parseFloat(sellerWallet.balance) + price).toFixed(8);
+        await storage.updateWalletBalance(sellerWallet.id, newSellerBal);
+      }
+
+      // Mark listing sold
+      await db.update(marketplaceListings)
+        .set({ status: "sold", buyerId: req.user!.id, buyerUsername: req.user!.username, soldAt: new Date() })
+        .where(eq(marketplaceListings.id, listingId));
+
+      // Log transactions
+      await storage.createTransaction({
+        fromWalletId: buyerWallet.id,
+        toWalletId:   sellerWallet?.id,
+        amount:       price.toFixed(8),
+        fee:          fee.toFixed(8),
+        type:         "marketplace_sale",
+        metadata:     { action: "marketplace_buy", listingId, assetType: listing.assetType, assetId: listing.assetId },
+      });
+
+      await logAction(req, "marketplace_buy", "marketplace", req.user!.id, { listingId, assetType: listing.assetType, price, fee });
+      res.json({ ok: true, listing: { ...listing, status: "sold" }, paid: total.toFixed(8), fee: fee.toFixed(8) });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/marketplace/cancel/:id — cancel own listing
+  app.post("/api/marketplace/cancel/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const listingId = parseInt(req.params.id);
+      const { db } = await import("./db");
+      const { marketplaceListings } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+
+      const [listing] = await db.select().from(marketplaceListings)
+        .where(and(eq(marketplaceListings.id, listingId), eq(marketplaceListings.sellerId, req.user!.id)));
+      if (!listing) return res.status(404).json({ error: "Listing not found" });
+      if (listing.status !== "active") return res.status(400).json({ error: "Listing is not active" });
+
+      await db.update(marketplaceListings)
+        .set({ status: "cancelled", cancelledAt: new Date() })
+        .where(eq(marketplaceListings.id, listingId));
+
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/marketplace/stats — volume, listings count, sales
+  app.get("/api/marketplace/stats", async (_req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { marketplaceListings } = await import("../shared/schema");
+      const { eq, sql } = await import("drizzle-orm");
+      const [active] = await db.select({ count: sql<number>`count(*)` }).from(marketplaceListings).where(eq(marketplaceListings.status, "active"));
+      const [sold]   = await db.select({ count: sql<number>`count(*)`, vol: sql<string>`coalesce(sum(price_nxt::numeric),0)` }).from(marketplaceListings).where(eq(marketplaceListings.status, "sold"));
+      res.json({ activeListings: Number(active.count), totalSales: Number(sold.count), volumeNxt: sold.vol ?? "0" });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+  // ─────────────────────────────────────────────────────────────────────────────
+
   return httpServer;
 }

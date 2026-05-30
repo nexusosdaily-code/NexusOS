@@ -107,6 +107,7 @@ import WnspLandingPage from "@/pages/wnsp-landing";
 import WnspOrdinalsPage from "@/pages/wnsp-ordinals";
 import CommunityMintPage from "@/pages/community-mint";
 import WnspStakingPage from "@/pages/wnsp-staking";
+import MarketplacePage from "@/pages/marketplace";
 import FractalBtcBridgePage from "@/pages/fractal-btc-bridge";
 import NxtFbSwapPage from "@/pages/nxt-fb-swap";
 import LightningWalletPage from "@/pages/lightning-wallet";
@@ -257,6 +258,7 @@ function Router() {
       <Route path="/btc-bridge">{() => { window.location.replace("/wnsp/ordinals"); return null; }}</Route>
       <Route path="/community-mint" component={CommunityMintPage} />
       <Route path="/wnsp-staking" component={WnspStakingPage} />
+      <Route path="/marketplace" component={MarketplacePage} />
       <Route path="/fractal-btc" component={FractalBtcBridgePage} />
       <Route path="/fractal-bitcoin" component={FractalBtcBridgePage} />
       <Route path="/nxt-fb-swap" component={NxtFbSwapPage} />
