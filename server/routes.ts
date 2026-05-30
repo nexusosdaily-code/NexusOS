@@ -8259,18 +8259,53 @@ export async function registerRoutes(
   }
 
   // ── Coinos helpers ──────────────────────────────────────────────────────────
-  async function coinosReq(path: string, method = "GET", body?: any) {
-    const r = await fetch(`https://coinos.io/api${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${process.env.COINOS_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: body ? JSON.stringify(body) : undefined,
+
+  // Derives Lightning Address from an nsec Nostr private key (Coinos Nostr accounts
+  // use their hex pubkey as the username: {pubkey}@coinos.io)
+  function coinosNsecToAddress(nsec: string): string {
+    const { bech32: b32 } = require("bech32");
+    const secp = require("tiny-secp256k1");
+    const { words } = b32.decode(nsec, 100);
+    const privKey = Buffer.from(b32.fromWords(words));
+    const pubKey = Buffer.from(secp.xOnlyPointFromScalar(privKey)).toString("hex");
+    return `${pubKey}@coinos.io`;
+  }
+
+  async function coinosGetLightningAddress(): Promise<string> {
+    const token = process.env.COINOS_TOKEN ?? "";
+    if (token.startsWith("nsec1")) return coinosNsecToAddress(token);
+    // JWT path — get username from /me
+    const r = await fetch("https://coinos.io/api/me", {
+      headers: { Authorization: `Bearer ${token}` },
     });
+    if (!r.ok) throw new Error("Coinos /me failed — check COINOS_TOKEN");
     const d = await r.json();
-    if (!r.ok) throw new Error(d.message || d.error || `Coinos error ${r.status}`);
-    return d;
+    return d.username ? `${d.username}@coinos.io` : "";
+  }
+
+  // Create a Lightning invoice via Coinos LNURL-pay (works with nsec — no JWT required).
+  // Returns { payment_hash, payment_request } where payment_hash is the LUD-21 verify URL
+  // prefixed with "lnurlv:" for later payment checking.
+  async function coinosLnurlInvoice(amountSats: number, memo: string): Promise<{ payment_hash: string; payment_request: string }> {
+    const lightningAddr = await coinosGetLightningAddress();
+    const [name, domain] = lightningAddr.split("@");
+    const meta = await fetch(`https://${domain}/.well-known/lnurlp/${name}`).then(r => r.json());
+    if (meta.status === "ERROR") throw new Error(meta.reason || "Coinos LNURL-pay metadata failed");
+
+    const amountMsats = amountSats * 1000;
+    if (amountMsats < (meta.minSendable ?? 1)) throw new Error(`Minimum is ${Math.ceil((meta.minSendable ?? 1) / 1000)} sats`);
+    if (meta.maxSendable && amountMsats > meta.maxSendable) throw new Error(`Maximum is ${Math.floor(meta.maxSendable / 1000)} sats`);
+
+    const cbUrl = new URL(meta.callback);
+    cbUrl.searchParams.set("amount", String(amountMsats));
+    if (memo && meta.commentAllowed && memo.length <= meta.commentAllowed) cbUrl.searchParams.set("comment", memo);
+
+    const inv = await fetch(cbUrl.toString()).then(r => r.json());
+    if (inv.status === "ERROR") throw new Error(inv.reason || "Coinos invoice callback failed");
+
+    // Store the LUD-21 verify URL as payment_hash — used by lnCheckInvoice
+    const payment_hash = inv.verify ? `lnurlv:${inv.verify}` : inv.pr;
+    return { payment_hash, payment_request: inv.pr };
   }
 
   // Fetch the Alby account's Lightning Address (e.g. "nexusosdaily@getalby.com")
@@ -8324,8 +8359,7 @@ export async function registerRoutes(
   async function lnCreateInvoice(amountSats: number, memo: string): Promise<{ payment_hash: string; payment_request: string }> {
     const provider = detectLnProvider();
     if (provider === "coinos") {
-      const d = await coinosReq("/invoice", "POST", { amount: amountSats, type: "lightning", memo });
-      return { payment_hash: d.hash, payment_request: d.text };
+      return await coinosLnurlInvoice(amountSats, memo);
     }
     if (provider === "alby") {
       // Use LNURL-pay via the account's Lightning Address — works without Alby Hub
@@ -8350,7 +8384,14 @@ export async function registerRoutes(
     const provider = detectLnProvider();
     if (provider === "coinos") {
       try {
-        const d = await coinosReq(`/invoice/${hash}`);
+        // hash may be a LUD-21 verify URL (prefixed "lnurlv:") or a raw bolt11
+        const verifyUrl = hash.startsWith("lnurlv:") ? hash.slice(7) : null;
+        if (verifyUrl) {
+          const d = await fetch(verifyUrl).then(r => r.json());
+          return d.settled === true;
+        }
+        // Fallback: try Coinos public invoice endpoint (no auth needed)
+        const d = await fetch(`https://coinos.io/api/invoice/${hash}`).then(r => r.json());
         return (d.received ?? 0) > 0;
       } catch { return false; }
     }
@@ -8435,7 +8476,15 @@ export async function registerRoutes(
   async function lnGetBalance(): Promise<{ sats: number; name: string }> {
     const provider = detectLnProvider();
     if (provider === "coinos") {
-      const d = await coinosReq("/me");
+      const token = process.env.COINOS_TOKEN ?? "";
+      if (token.startsWith("nsec1")) {
+        // nsec-based: balance not available without JWT, return address info only
+        const addr = coinosNsecToAddress(token);
+        return { sats: 0, name: addr };
+      }
+      const r = await fetch("https://coinos.io/api/me", { headers: { Authorization: `Bearer ${token}` } });
+      if (!r.ok) return { sats: 0, name: "coinos" };
+      const d = await r.json();
       return { sats: Math.floor(d.balance ?? 0), name: d.username ? `coinos/${d.username}` : "Coinos wallet" };
     }
     if (provider === "alby") {
@@ -8510,6 +8559,8 @@ export async function registerRoutes(
       let lightningAddress: string | undefined;
       if (provider === "alby") {
         try { lightningAddress = await albyGetLightningAddress(); } catch {}
+      } else if (provider === "coinos") {
+        try { lightningAddress = await coinosGetLightningAddress(); } catch {}
       }
       res.json({ configured: true, provider, balance: bal.sats, name: bal.name, lightningAddress });
     } catch (err: any) {
