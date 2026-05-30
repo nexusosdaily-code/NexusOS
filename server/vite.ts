@@ -22,7 +22,16 @@ export async function setupVite(server: Server, app: Express) {
       ...viteLogger,
       error: (msg, options) => {
         viteLogger.error(msg, options);
-        process.exit(1);
+        // Only exit on true fatal build/transform errors, not on transient
+        // network errors (HMR WebSocket failures, ECONNREFUSED, etc.)
+        if (
+          !msg.includes("WebSocket") &&
+          !msg.includes("ECONNREFUSED") &&
+          !msg.includes("hmr") &&
+          !msg.includes("failed to connect")
+        ) {
+          process.exit(1);
+        }
       },
     },
     server: serverOptions,
