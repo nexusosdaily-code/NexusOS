@@ -2,6 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Suppress HMR WebSocket errors — Vite's dev client cannot reach
+      // the HMR WebSocket through Replit's reverse proxy, so these errors
+      // are expected and should not propagate as unhandled rejections.
+      window.addEventListener('unhandledrejection', function(e) {
+        var msg = e.reason && (e.reason.message || String(e.reason));
+        if (msg && (msg.includes('WebSocket') || msg.includes('vite-hmr') || msg.includes('failed to connect'))) {
+          e.preventDefault();
+        }
+      });
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>NexusOS — Physics-Based Civilization OS</title>
     <meta name="description" content="NexusOS is the foundational blueprint for a Kardashev Type I civilization. Built on the Theory of Compression States — physics-based blockchain, WNSP spectral communication, WavelengthScript, and a CE-SE pipeline that maps every symbol to a photon frequency." />
