@@ -1,5 +1,7 @@
 import path from "path";
 import crypto from "crypto";
+import { bech32 as _bech32 } from "bech32";
+import * as tinySecp from "tiny-secp256k1";
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
@@ -8263,11 +8265,9 @@ export async function registerRoutes(
   // Derives Lightning Address from an nsec Nostr private key (Coinos Nostr accounts
   // use their hex pubkey as the username: {pubkey}@coinos.io)
   function coinosNsecToAddress(nsec: string): string {
-    const { bech32: b32 } = require("bech32");
-    const secp = require("tiny-secp256k1");
-    const { words } = b32.decode(nsec, 100);
-    const privKey = Buffer.from(b32.fromWords(words));
-    const pubKey = Buffer.from(secp.xOnlyPointFromScalar(privKey)).toString("hex");
+    const { words } = _bech32.decode(nsec, 100);
+    const privKey = Buffer.from(_bech32.fromWords(words));
+    const pubKey = Buffer.from(tinySecp.xOnlyPointFromScalar(privKey)!).toString("hex");
     return `${pubKey}@coinos.io`;
   }
 
