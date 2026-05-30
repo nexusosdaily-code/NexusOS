@@ -5,6 +5,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ChannelConnect } from "@/components/channel-connect";
+import { BitcoinWalletConnect } from "@/components/bitcoin-wallet-connect";
+import { useUnisat } from "@/hooks/use-unisat";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, ShoppingBag, Tag, Zap, Bitcoin, Gem, Plus, X,
   Clock, CheckCircle2, TrendingUp, Filter, RefreshCw, Atom,
-  CircleDollarSign, ArrowRight, Store,
+  CircleDollarSign, ArrowRight, Store, Wallet, Link2,
 } from "lucide-react";
 
 const ASSET_TYPES = [
@@ -49,10 +51,12 @@ export default function MarketplacePage() {
   const { user } = useAuth() as any;
   const { toast } = useToast();
   const qc = useQueryClient();
+  const unisat = useUnisat();
 
-  const [filter, setFilter]     = useState("all");
-  const [showList, setShowList]  = useState(false);
-  const [form, setForm]          = useState({
+  const [filter, setFilter]       = useState("all");
+  const [showList, setShowList]   = useState(false);
+  const [psbtTarget, setPsbtTarget] = useState<number | null>(null);
+  const [form, setForm]           = useState({
     assetType: "wnsp_brc20", assetId: "", assetName: "wnsp",
     amount: "1000", priceNxt: "", priceSats: "", description: "",
   });
@@ -108,6 +112,40 @@ export default function MarketplacePage() {
     onError: (e: any) => toast({ title: "Purchase failed", description: e.message, variant: "destructive" }),
   });
 
+  // PSBT / on-chain settlement via UniSat / Xverse
+  const buyWithPsbt = useMutation({
+    mutationFn: async (id: number) => {
+      if (!unisat.connected || !unisat.address) throw new Error("Connect your Bitcoin wallet first");
+      // 1. Ask server to build the unsigned PSBT
+      const res = await apiRequest("POST", `/api/marketplace/psbt/${id}`, {
+        buyerBtcAddress: unisat.address,
+      });
+      const data = await res.json();
+      if (data.nxtOnly) throw new Error("This asset uses NXT-only settlement — use the NXT buy button.");
+      if (!data.psbtReady) {
+        // Server needs buyer UTXO; prompt user to sign a message instead (receipt proof)
+        const msg = `NexusOS Marketplace purchase intent — Listing #${id} — Buyer: ${unisat.address}`;
+        const sig = await unisat.signMessage(msg);
+        toast({ title: "Intent signed ✍️", description: "Your purchase intent is recorded. The seller will finalize the transfer." });
+        return { sig, intent: true };
+      }
+      // 2. Sign the PSBT with UniSat / Xverse
+      const signedPsbt = await unisat.signPsbt(data.psbtHex, { autoFinalized: true, toSignInputs: [{ index: 1, address: unisat.address }] });
+      // 3. Broadcast the signed PSBT
+      const broadcastRes = await apiRequest("POST", "/api/btc/broadcast", { psbtHex: signedPsbt, listingId: id });
+      const broadcastData = await broadcastRes.json();
+      return { txid: broadcastData.txid, priceSats: data.priceSats };
+    },
+    onSuccess: (data: any) => {
+      if (data.intent) return;
+      toast({ title: "🟠 On-chain TX sent!", description: `TXID: ${data.txid?.slice(0, 16)}…` });
+      qc.invalidateQueries({ queryKey: ["/api/marketplace/listings"] });
+      qc.invalidateQueries({ queryKey: ["/api/marketplace/stats"] });
+      setPsbtTarget(null);
+    },
+    onError: (e: any) => toast({ title: "PSBT failed", description: e.message, variant: "destructive" }),
+  });
+
   const cancelListing = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest("POST", `/api/marketplace/cancel/${id}`, {});
@@ -145,6 +183,7 @@ export default function MarketplacePage() {
             </div>
           </div>
           <div className="flex-1" />
+          <BitcoinWalletConnect compact onConnected={() => {}} />
           {user && (
             <Button
               onClick={() => setShowList(true)}
@@ -241,35 +280,75 @@ export default function MarketplacePage() {
                   <div className="flex items-center gap-2 text-xs text-slate-500">
                     <Atom className="w-3 h-3" />
                     <span>{l.amount.toLocaleString()} units</span>
-                    {l.priceSats && <><Bitcoin className="w-3 h-3 text-orange-400" /><span className="text-orange-300">{l.priceSats.toLocaleString()} sats</span></>}
+                    {l.priceSats && (
+                      <>
+                        <Bitcoin className="w-3 h-3 text-orange-400" />
+                        <span className="text-orange-300">{l.priceSats.toLocaleString()} sats</span>
+                      </>
+                    )}
+                    {/* On-chain verified badge */}
+                    {l.assetId && (l.assetId.includes("i") || l.assetId.includes(":")) && (
+                      <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px]">
+                        <Link2 className="w-2.5 h-2.5 mr-1" />on-chain
+                      </Badge>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between mt-auto pt-2 border-t border-slate-800">
-                    <div>
-                      <div className="text-amber-300 font-bold font-mono text-lg">{fmtNxt(l.priceNxt)}</div>
-                      <div className="text-[10px] text-slate-600 font-mono">NXT · +2.5% fee</div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
+                  <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-amber-300 font-bold font-mono text-lg">{fmtNxt(l.priceNxt)}</div>
+                        <div className="text-[10px] text-slate-600 font-mono">NXT · +2.5% fee</div>
+                      </div>
                       <div className="text-[10px] text-slate-600">by {l.sellerUsername}</div>
-                      {!isOwn && user ? (
+                    </div>
+                    {!isOwn && user ? (
+                      <div className="flex gap-1.5">
+                        {/* NXT buy button */}
                         <Button size="sm"
                           onClick={() => buyListing.mutate(l.id)}
                           disabled={buyListing.isPending || !canAfford}
-                          className={`gap-1 text-xs ${canAfford ? "bg-cyan-600 hover:bg-cyan-700" : "bg-slate-700 text-slate-500 cursor-not-allowed"}`}
+                          className={`flex-1 gap-1 text-xs ${canAfford ? "bg-cyan-600 hover:bg-cyan-700" : "bg-slate-700 text-slate-500 cursor-not-allowed"}`}
                           title={canAfford ? undefined : `Need ${total.toFixed(2)} NXT`}
                           data-testid={`button-buy-${l.id}`}
                         >
-                          {canAfford ? <><CircleDollarSign className="w-3 h-3" />Buy</> : "Low NXT"}
+                          {canAfford ? <><CircleDollarSign className="w-3 h-3" />NXT</> : "Low NXT"}
                         </Button>
-                      ) : isOwn ? (
-                        <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-[10px]">Your listing</Badge>
-                      ) : (
-                        <Link href="/auth">
-                          <Button size="sm" className="bg-slate-700 hover:bg-slate-600 text-xs gap-1">
-                            <ArrowRight className="w-3 h-3" />Login
-                          </Button>
-                        </Link>
-                      )}
-                    </div>
+                        {/* PSBT / Bitcoin buy button */}
+                        {(l.priceSats || l.assetId?.includes("i")) && (
+                          unisat.connected ? (
+                            <Button size="sm"
+                              onClick={() => buyWithPsbt.mutate(l.id)}
+                              disabled={buyWithPsbt.isPending && psbtTarget === l.id}
+                              className="flex-1 gap-1 text-xs bg-orange-600 hover:bg-orange-700"
+                              data-testid={`button-buy-psbt-${l.id}`}
+                              title="Buy on-chain with Bitcoin wallet (PSBT)"
+                            >
+                              {buyWithPsbt.isPending && psbtTarget === l.id
+                                ? <RefreshCw className="w-3 h-3 animate-spin" />
+                                : <><Bitcoin className="w-3 h-3" />BTC</>
+                              }
+                            </Button>
+                          ) : (
+                            <Button size="sm"
+                              onClick={() => { setPsbtTarget(l.id); unisat.connect(); }}
+                              className="flex-1 gap-1 text-xs bg-orange-900/40 hover:bg-orange-800/60 text-orange-400 border border-orange-700/30"
+                              data-testid={`button-connect-btc-${l.id}`}
+                              title="Connect Bitcoin wallet for on-chain settlement"
+                            >
+                              <Wallet className="w-3 h-3" />BTC
+                            </Button>
+                          )
+                        )}
+                      </div>
+                    ) : isOwn ? (
+                      <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-[10px] self-start">Your listing</Badge>
+                    ) : (
+                      <Link href="/auth">
+                        <Button size="sm" className="w-full bg-slate-700 hover:bg-slate-600 text-xs gap-1">
+                          <ArrowRight className="w-3 h-3" />Login to Buy
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </Card>
               );

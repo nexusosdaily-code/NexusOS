@@ -171,6 +171,10 @@ app.use((req, res, next) => {
       import("./btc-bridge-service").then(({ btcBridge }) => {
         btcBridge.startAutoProcessor();
       }).catch((e) => console.error("[BTC Bridge] Boot error:", e));
+      // Start BTC Block Scanner — verifies wnsp + Rune stakes on-chain every 5 min
+      import("./btc-block-scanner").then(({ startStakeScanner }) => {
+        startStakeScanner();
+      }).catch((e) => console.error("[BTC Scanner] Boot error:", e));
       // Start Telegram advocacy bot
       startTelegramBot();
     },

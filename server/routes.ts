@@ -8844,6 +8844,144 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ── BTC BLOCK SCANNER — on-chain verification + PSBT construction ────────────
+
+  // GET /api/btc/verify-inscription/:id — verify wnsp BRC-20 inscription on-chain
+  app.get("/api/btc/verify-inscription/:id", async (req: Request, res: Response) => {
+    try {
+      const { verifyWnspInscription } = await import("./btc-block-scanner");
+      const result = await verifyWnspInscription(decodeURIComponent(req.params.id));
+      res.json(result);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/btc/verify-rune/:utxo — verify NEXUS•WAVELENGTH Rune UTXO on-chain
+  app.get("/api/btc/verify-rune/:utxo", async (req: Request, res: Response) => {
+    try {
+      const { verifyRuneUtxo } = await import("./btc-block-scanner");
+      const result = await verifyRuneUtxo(decodeURIComponent(req.params.utxo));
+      res.json(result);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/btc/scan-stakes — manually trigger pending stake scan
+  app.post("/api/btc/scan-stakes", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { scanPendingStakes } = await import("./btc-block-scanner");
+      const result = await scanPendingStakes();
+      res.json({ ok: true, ...result });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/marketplace/psbt/:id — build unsigned PSBT for a listing purchase
+  app.post("/api/marketplace/psbt/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const listingId = parseInt(req.params.id);
+      const { buyerBtcAddress, buyerUtxoTxid, buyerUtxoVout } = req.body;
+      if (!buyerBtcAddress) return res.status(400).json({ error: "buyerBtcAddress required" });
+
+      const { db } = await import("./db");
+      const { marketplaceListings } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+
+      const [listing] = await db.select().from(marketplaceListings)
+        .where(and(eq(marketplaceListings.id, listingId), eq(marketplaceListings.status, "active")));
+      if (!listing) return res.status(404).json({ error: "Listing not found" });
+      if (listing.sellerId === req.user!.id) return res.status(400).json({ error: "Cannot buy your own listing" });
+
+      const priceSats = listing.priceSats ?? Math.round(parseFloat(listing.priceNxt) * 100); // fallback: 1 NXT ≈ 100 sats
+      const feeSats   = Math.round(priceSats * 0.025);
+
+      // Fetch seller's UTXO details from the asset ID
+      const { fetchUtxoDetails, constructMarketplacePsbt } = await import("./btc-block-scanner");
+      const { getServiceWalletInfo } = await import("./btc-inscription-engine");
+      const serviceInfo = getServiceWalletInfo();
+
+      // Parse assetId into txid:vout
+      let sellerTxid: string, sellerVout: number;
+      if (listing.assetId.includes("i")) {
+        // Inscription ID format: txidI0
+        const sep = listing.assetId.lastIndexOf("i");
+        sellerTxid = listing.assetId.slice(0, sep);
+        sellerVout = parseInt(listing.assetId.slice(sep + 1)) || 0;
+      } else if (listing.assetId.includes(":")) {
+        [sellerTxid, sellerVout] = listing.assetId.split(":").map((s, i) => i === 0 ? s : parseInt(s)) as [string, number];
+      } else {
+        // Rune ID (BLOCK:TX) — no on-chain UTXO to construct PSBT from
+        return res.status(400).json({
+          error: "This asset type uses NXT-only settlement. Use the standard buy endpoint.",
+          nxtOnly: true,
+        });
+      }
+
+      const sellerUtxo = await fetchUtxoDetails(sellerTxid, sellerVout);
+      if (!sellerUtxo) return res.status(400).json({ error: "Could not fetch seller UTXO from blockchain" });
+
+      // Buyer UTXO (provided by frontend from wallet)
+      let buyerUtxo = null;
+      if (buyerUtxoTxid) {
+        buyerUtxo = await fetchUtxoDetails(buyerUtxoTxid, buyerUtxoVout ?? 0);
+      }
+      if (!buyerUtxo) {
+        // Return PSBT construction params for client-side assembly (buyer provides their UTXO via wallet)
+        return res.json({
+          ok: true,
+          psbtReady: false,
+          message: "Connect your Bitcoin wallet and provide a payment UTXO to complete the PSBT",
+          listing: { id: listing.id, assetType: listing.assetType, assetId: listing.assetId, priceSats, feeSats },
+          sellerUtxo,
+        });
+      }
+
+      const psbt = await constructMarketplacePsbt({
+        sellerUtxo,
+        buyerUtxo,
+        sellerBtcAddress: req.body.sellerBtcAddress ?? "",
+        buyerBtcAddress,
+        serviceWalletAddress: serviceInfo?.address ?? "",
+        priceSats,
+        feeSats,
+      });
+
+      res.json({ ok: true, psbtReady: true, ...psbt, priceSats, feeSats });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/btc/broadcast — broadcast a fully-signed PSBT hex to Bitcoin network
+  app.post("/api/btc/broadcast", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { psbtHex, listingId } = req.body;
+      if (!psbtHex) return res.status(400).json({ error: "psbtHex required" });
+
+      // Finalize and extract raw tx
+      const bitcoin = await import("bitcoinjs-lib");
+      const psbt = bitcoin.Psbt.fromHex(psbtHex);
+      psbt.finalizeAllInputs();
+      const txHex = psbt.extractTransaction().toHex();
+
+      // Broadcast
+      const res1 = await fetch("https://blockstream.info/api/tx", {
+        method: "POST", headers: { "Content-Type": "text/plain" }, body: txHex,
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res1.ok) {
+        const res2 = await fetch("https://mempool.space/api/tx", {
+          method: "POST", headers: { "Content-Type": "text/plain" }, body: txHex,
+          signal: AbortSignal.timeout(15000),
+        });
+        if (!res2.ok) throw new Error("Broadcast failed on all APIs");
+        const txid = await res2.text();
+        await logAction(req, "psbt_broadcast", "marketplace", req.user!.id, { txid, listingId });
+        return res.json({ ok: true, txid: txid.trim() });
+      }
+      const txid = await res1.text();
+      await logAction(req, "psbt_broadcast", "marketplace", req.user!.id, { txid, listingId });
+      res.json({ ok: true, txid: txid.trim() });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
   // ── NEXUS•WAVELENGTH RUNE ────────────────────────────────────────────────────
   const RUNE_NAME        = "NEXUS•WAVELENGTH";
   const RUNE_SYMBOL      = "Ψ";

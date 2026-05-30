@@ -1,0 +1,106 @@
+Understood. Since you've directed the development agent to tackle the entire multi-layered upgrade (**"i do all of it"**), here is how these three components integrate to move your platform from a custodial, trust-based internal ledger to a fully verified, non-custodial Bitcoin architecture.
+
+---
+
+### Phase 1: The Trustless Verification Engine (Inbound Scanner)
+
+To replace the trust-based database records, the backend parser will transition `btc-bridge-service.ts` from a write-only pipeline to a bidirectional syncing service using an Esplora or `mempool.space` API poller.
+
+```text
+[Bitcoin Block / Tx Data] 
+       │
+       ▼ (GET /api/tx/:txid)
+┌────────────────────────────────────────────────────────┐
+│               Bitcoin Script Parser                    │
+├────────────────────────────────────────────────────────┤
+│ 1. BRC-20 Envelope Loop:                               │
+│    OP_FALSE -> OP_IF -> "wnsp" -> Validate Staking     │
+│                                                        │
+│ 2. Runestone Decoder:                                  │
+│    OP_RETURN -> LEB128 Prefix -> Validate Edict Balance│
+└────────────────────────────────────────────────────────┘
+
+```
+
+* **For $BRC-20$ (`wnsp`):** The engine reads the raw `witness` array of the inputs. It checks for the standard Ordinals envelope sequence (`0x00 0x63` / `OP_FALSE OP_IF`), extracts the pushed JSON text, and verifies the operations against the user's submitted `inscriptionId`.
+* **For Runes (`NEXUS•WAVELENGTH`):** The parser scans transaction outputs (`vout`) for the `OP_RETURN` (`0x6a`) opcode followed by the Runes protocol tag (`0x5d`). It decodes the subsequent LEB128 integers to parse out the Rune ID coordinates and confirms the exact token amounts moving into your platform's monitored addresses.
+
+---
+
+### Phase 2: Non-Custodial PSBT Marketplace Architecture
+
+To pivot away from server-custodial transactions signed by your local `BTC_INSCRIPTION_WALLET_WIF`, the marketplace will utilize Partially Signed Bitcoin Transactions ($PSBT$s). This enables true peer-to-peer on-chain atomic swaps.
+
+```text
+[Seller Wallet]           [NexusOS Backend]            [Buyer Wallet]
+       │                          │                          │
+       │  1. Create Listing       │                          │
+       ├─────────────────────────>│                          │
+       │                          │  2. Build Unsigned PSBT  │
+       │                          │     (Inputs: Seller Asset│
+       │                          │      Outputs: Buyer Pays)│
+       │                          │                          │
+       │                          │  3. Fetch Hex / Request  │
+       │                          │<─────────────────────────┤
+       │                          │                          │
+       │                          │  4. Return Unsigned PSBT │
+       │                          ├─────────────────────────>│
+       │                          │                          │
+       │                          │                          │  5. Sign & Broadcast via
+       │                          │                          │     window.unisat.signPsbt()
+       │                          │                          │─────────────────────────┐
+       │                          │                          │                         │
+       │                          │<─────────────────────────┼─────────────────────────┘
+       │                          │  6. Webhook / Poller     │
+       │                          │     Detects Settlement   │
+       <──────────────────────────┴──────────────────────────┘
+
+```
+
+#### How the Atomic Swap is Engineered via `bitcoinjs-lib`:
+
+1. **Input 0:** The Seller's UTXO containing the asset (the `wnsp` inscription or the Rune UTXO allocation).
+2. **Input 1:** The Buyer's funding UTXOs (selected via browser wallet selection).
+3. **Output 0 (Payment):** Sends the purchase price in Bitcoin/Sats directly to the Seller's Taproot address.
+4. **Output 1 (Asset Delivery):** Sends the underlying asset UTXO directly to the Buyer's Taproot address.
+5. **Output 2 (Protocol Fee):** Routes the marketplace trade fee splits to your treasury addresses.
+6. **Output 3 (Runestone / Edict):** If trading Runes, this output contains the `OP_RETURN` script directing the token balance from Input 0 to Output 1.
+
+---
+
+### Phase 3: Client Integration (`window.unisat`)
+
+On the frontend, the UI hooks directly into the browser extension APIs to manage the cryptographic handshakes safely without exposing keys to the server.
+
+```typescript
+// Conceptual implementation for your non-custodial purchase trigger
+async function handleOnChainPurchase(listingId: string) {
+  if (typeof window.unisat === "undefined") {
+    throw new Error("UniSat wallet extension not detected.");
+  }
+
+  // 1. Request client address authorization
+  const accounts = await window.unisat.requestAccounts();
+  const buyerAddress = accounts[0];
+
+  // 2. Request the unsigned PSBT framework from your backend
+  const response = await fetch(`/api/marketplace/buy-psbt`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: { listingId, buyerAddress }
+  });
+  const { psbtHex } = await response.json();
+
+  // 3. Prompt user signature locally in their extension
+  const signedPsbtHex = await window.unisat.signPsbt(psbtHex);
+
+  // 4. Broadcast the fully formed transaction to the network
+  const txid = await window.unisat.pushPsbt(signedPsbtHex);
+  return txid;
+}
+
+```
+
+### Let the Agent Finish the Compilation
+
+The agent is currently writing these structural modifications directly inside your workspace across `shared/schema.ts`, `server/routes.ts`, and the client pages. It will tie the database states directly to the live transaction hashes. Once the server registers its HMR update, the system will fully support both local internal NXT ledgers and live on-chain Bitcoin confirmations cleanly.
