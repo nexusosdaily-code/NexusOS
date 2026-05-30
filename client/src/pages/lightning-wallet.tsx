@@ -141,7 +141,10 @@ export default function ChannelDashboard() {
   });
 
   const payInvoice = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/lightning/pay", { bolt11 }),
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/lightning/pay", { bolt11 });
+      return res.json();
+    },
     onSuccess: (data: any) => {
       setBolt11("");
       refetchBal();
@@ -152,14 +155,30 @@ export default function ChannelDashboard() {
   });
 
   const swapToNxt = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/lightning/swap/to-nxt", { amountSats: parseInt(swapSats) }),
-    onSuccess: (data: any) => { refetchBal(); qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] }); toast({ title: "Channel swap complete", description: `${data.amountSats} sats → ${data.nxtAmount} NXT` }); },
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/lightning/swap/to-nxt", { amountSats: parseInt(swapSats) });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      refetchBal();
+      qc.invalidateQueries({ queryKey: ["/api/wallet"] });
+      qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] });
+      toast({ title: "Channel swap complete", description: `${data.amountSats} sats → ${data.nxtAmount} NXT` });
+    },
     onError: (e: any) => toast({ title: "Swap failed", description: e.message, variant: "destructive" }),
   });
 
   const swapToSats = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/lightning/swap/to-sats", { nxtAmount: parseFloat(swapNxt) }),
-    onSuccess: (data: any) => { refetchBal(); qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] }); toast({ title: "Channel swap complete", description: `${data.nxtAmount} NXT → ${data.amountSats} sats` }); },
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/lightning/swap/to-sats", { nxtAmount: parseFloat(swapNxt) });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      refetchBal();
+      qc.invalidateQueries({ queryKey: ["/api/wallet"] });
+      qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] });
+      toast({ title: "Channel swap complete", description: `${data.nxtAmount} NXT → ${data.amountSats} sats` });
+    },
     onError: (e: any) => toast({ title: "Swap failed", description: e.message, variant: "destructive" }),
   });
 

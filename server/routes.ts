@@ -8712,7 +8712,7 @@ export async function registerRoutes(
         type: "withdrawal",
         amountSats,
         paymentRequest: bolt11,
-        memo: decoded.description || "",
+        memo: "",
         status: "pending",
       }).returning();
 
