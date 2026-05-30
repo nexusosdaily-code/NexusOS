@@ -115,7 +115,7 @@ export default function ChannelDashboard() {
     if (!invoice || depositPaid) return;
     const check = async () => {
       try {
-        const r = await fetch(`/api/lightning/invoice/${invoice.paymentHash}`, { credentials: "include" });
+        const r = await fetch(`/api/lightning/invoice/check?txId=${invoice.txId}`, { credentials: "include" });
         const d = await r.json();
         if (d.paid) {
           setDepositPaid(true);
@@ -132,7 +132,10 @@ export default function ChannelDashboard() {
   }, [invoice, depositPaid]);
 
   const createInvoice = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/lightning/invoice", { amountSats: parseInt(depositSats), memo: depositMemo }),
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/lightning/invoice", { amountSats: parseInt(depositSats), memo: depositMemo });
+      return res.json();
+    },
     onSuccess: (data: any) => { setInvoice(data); setDepositPaid(false); toast({ title: "Channel open", description: "Invoice ready — awaiting incoming transmission." }); },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });

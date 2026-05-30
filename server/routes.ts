@@ -8614,7 +8614,38 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  // GET /api/lightning/invoice/:hash — poll invoice payment status
+  // GET /api/lightning/invoice/check?txId=N — poll invoice payment status by DB row id
+  app.get("/api/lightning/invoice/check", authenticate, async (req: Request, res: Response) => {
+    try {
+      const txId = parseInt(req.query.txId as string);
+      if (!txId) return res.status(400).json({ error: "txId required" });
+      const { db } = await import("./db");
+      const { lightningTransactions, lightningWallets } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+
+      const [tx] = await db.select().from(lightningTransactions)
+        .where(and(eq(lightningTransactions.id, txId), eq(lightningTransactions.userId, req.user!.id)));
+      if (!tx) return res.status(404).json({ error: "Invoice not found" });
+
+      if (tx.status === "completed") return res.json({ paid: true, amountSats: tx.amountSats });
+
+      const paid = await lnCheckInvoice(tx.paymentHash);
+      if (paid) {
+        const lnWallet = await ensureLnWallet(req.user!.id);
+        await db.update(lightningWallets)
+          .set({ satsBalance: lnWallet.satsBalance + tx.amountSats, totalDeposited: lnWallet.totalDeposited + tx.amountSats, updatedAt: new Date() })
+          .where(eq(lightningWallets.userId, req.user!.id));
+        await db.update(lightningTransactions)
+          .set({ status: "completed", completedAt: new Date() })
+          .where(eq(lightningTransactions.id, tx.id));
+        await logAction(req, "lightning_deposit", "lightning", req.user!.id, { amountSats: tx.amountSats });
+        return res.json({ paid: true, amountSats: tx.amountSats });
+      }
+      return res.json({ paid: false });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/lightning/invoice/:hash — legacy hash-based poll (kept for backwards compat)
   app.get("/api/lightning/invoice/:hash", authenticate, async (req: Request, res: Response) => {
     try {
       const { hash } = req.params;
