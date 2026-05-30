@@ -162,9 +162,10 @@ export default function ChannelDashboard() {
 
   const copy = (text: string) => { navigator.clipboard.writeText(text); toast({ title: "Copied to clipboard" }); };
 
-  const configured = status?.configured;
-  const provider   = status?.provider ?? "—";
-  const sats       = lnBalance?.satsBalance ?? 0;
+  const configured       = status?.configured;
+  const provider         = status?.provider ?? "—";
+  const lightningAddress = status?.lightningAddress as string | undefined;
+  const sats             = lnBalance?.satsBalance ?? 0;
   const nxtBalance = nxtData?.wallet ? parseFloat(nxtData.wallet.balance) : 0;
   const nxtAddress = nxtData?.wallet?.address ?? "";
   const nxtLocked  = nxtData?.wallet ? parseFloat(nxtData.wallet.lockedBalance) : 0;
@@ -275,6 +276,14 @@ export default function ChannelDashboard() {
               {satsDisplay(sats)}
             </div>
             <div className="text-yellow-400/40 text-[10px] font-mono mt-0.5">sats · ≈ {lnBalance?.nxtEquivalent ?? "0"} NXT</div>
+            {lightningAddress && (
+              <div className="flex items-center gap-1 mt-1">
+                <span className="text-[10px] font-mono text-yellow-400/50 truncate">{lightningAddress}</span>
+                <button onClick={() => copy(lightningAddress)} className="text-yellow-400/30 hover:text-yellow-400 shrink-0">
+                  <Copy className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            )}
             <div className="flex items-center gap-2 mt-1">
               <div className="text-[10px] font-mono text-gray-600">↓ {satsDisplay(lnBalance?.totalDeposited ?? 0)}</div>
               <div className="text-[10px] font-mono text-gray-600">↑ {satsDisplay(lnBalance?.totalWithdrawn ?? 0)}</div>
@@ -292,21 +301,23 @@ export default function ChannelDashboard() {
               <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
               <div className="w-full">
                 <div className="text-amber-400 font-semibold mb-2">Connect a Lightning provider to activate your channel</div>
-                <div className="bg-yellow-900/20 border border-yellow-500/20 rounded-lg p-3 mb-3">
-                  <div className="text-yellow-300 font-semibold text-sm mb-1">⚡ Option A — Alby (free, ~2 min)</div>
-                  <ol className="text-amber-200/80 text-xs space-y-1 list-decimal list-inside mb-2">
-                    <li>Go to <a href="https://getalby.com" target="_blank" rel="noopener noreferrer" className="text-yellow-400 underline">getalby.com</a> → create free account</li>
-                    <li>Wallet → Settings → Developer → Access Token → Generate</li>
+
+                {/* Option A — Coinos (recommended) */}
+                <div className="bg-green-900/20 border border-green-500/20 rounded-lg p-3 mb-2">
+                  <div className="text-green-300 font-semibold text-sm mb-1">✅ Option A — Coinos (free, works now)</div>
+                  <ol className="text-green-200/70 text-xs space-y-1 list-decimal list-inside mb-2">
+                    <li>Go to <a href="https://coinos.io" target="_blank" rel="noopener noreferrer" className="text-green-400 underline">coinos.io</a> → Register free</li>
+                    <li>Top-right menu → <strong>Settings → API Token</strong> → copy it</li>
                     <li>Add to Replit Secrets:</li>
                   </ol>
-                  <div className="font-mono text-xs bg-black/30 rounded p-2 text-yellow-300">ALBY_ACCESS_TOKEN = &lt;your token&gt;</div>
+                  <div className="font-mono text-xs bg-black/30 rounded p-2 text-green-300">COINOS_TOKEN = &lt;your token&gt;</div>
                 </div>
+
+                {/* Option B — LNbits */}
                 <div className="bg-slate-800/30 border border-slate-700/40 rounded-lg p-3">
-                  <div className="text-gray-300 font-semibold text-sm mb-1">🔧 Option B — Self-hosted LNbits</div>
-                  <div className="font-mono text-xs bg-black/30 rounded p-2 text-gray-400 space-y-0.5">
-                    <div>LNBITS_URL = https://your-lnbits-domain.com</div>
-                    <div>LNBITS_ADMIN_KEY = &lt;admin key&gt;</div>
-                    <div>LNBITS_INVOICE_KEY = &lt;invoice key&gt;</div>
+                  <div className="text-gray-400 font-semibold text-xs mb-1">Option B — Self-hosted LNbits</div>
+                  <div className="font-mono text-xs bg-black/30 rounded p-2 text-gray-500 space-y-0.5">
+                    <div>LNBITS_URL · LNBITS_ADMIN_KEY · LNBITS_INVOICE_KEY</div>
                   </div>
                 </div>
               </div>

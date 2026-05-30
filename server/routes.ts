@@ -8251,23 +8251,86 @@ export async function registerRoutes(
   // ── Lightning Network — Alby + LNbits unified adapter ──────────────────────
   const LN_SATS_PER_NXT = 1000; // 1 NXT = 1000 sats
 
-  function detectLnProvider(): "alby" | "lnbits" | null {
+  function detectLnProvider(): "coinos" | "alby" | "lnbits" | null {
+    if (process.env.COINOS_TOKEN) return "coinos";
     if (process.env.ALBY_ACCESS_TOKEN) return "alby";
     if (process.env.LNBITS_URL && process.env.LNBITS_ADMIN_KEY && process.env.LNBITS_INVOICE_KEY) return "lnbits";
     return null;
   }
 
+  // ── Coinos helpers ──────────────────────────────────────────────────────────
+  async function coinosReq(path: string, method = "GET", body?: any) {
+    const r = await fetch(`https://coinos.io/api${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${process.env.COINOS_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.message || d.error || `Coinos error ${r.status}`);
+    return d;
+  }
+
+  // Fetch the Alby account's Lightning Address (e.g. "nexusosdaily@getalby.com")
+  async function albyGetLightningAddress(): Promise<string> {
+    const r = await fetch("https://api.getalby.com/user/me", {
+      headers: { Authorization: `Bearer ${process.env.ALBY_ACCESS_TOKEN}` },
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.message || "Alby: could not fetch account info");
+    if (!d.lightning_address) throw new Error("Alby account has no Lightning Address — set one at getalby.com/settings");
+    return d.lightning_address as string;
+  }
+
+  // Generate invoice via LNURL-pay (works without Alby Hub / funding source)
+  async function lnurlPayCreateInvoice(lightningAddress: string, amountSats: number, memo: string): Promise<{ payment_hash: string; payment_request: string }> {
+    const [name, domain] = lightningAddress.split("@");
+    if (!name || !domain) throw new Error(`Invalid Lightning Address: ${lightningAddress}`);
+
+    // Step 1 — fetch LNURL-pay metadata from the Lightning Address
+    const metaR = await fetch(`https://${domain}/.well-known/lnurlp/${name}`);
+    const meta  = await metaR.json();
+    if (!metaR.ok || meta.status === "ERROR") throw new Error(meta.reason || "LNURL-pay metadata fetch failed");
+
+    const amountMsats = amountSats * 1000;
+    if (amountMsats < (meta.minSendable ?? 1) || amountMsats > (meta.maxSendable ?? Infinity)) {
+      throw new Error(`Amount out of range — min ${Math.ceil((meta.minSendable ?? 1) / 1000)} sats, max ${Math.floor((meta.maxSendable ?? 0) / 1000)} sats`);
+    }
+
+    // Step 2 — request the bolt11 invoice
+    const cbUrl = new URL(meta.callback);
+    cbUrl.searchParams.set("amount", String(amountMsats));
+    if (memo && meta.commentAllowed && memo.length <= (meta.commentAllowed as number)) {
+      cbUrl.searchParams.set("comment", memo);
+    }
+    const invR = await fetch(cbUrl.toString());
+    const inv  = await invR.json();
+    if (!invR.ok || inv.status === "ERROR") throw new Error(inv.reason || "LNURL-pay invoice request failed");
+    const payment_request: string = inv.pr;
+
+    // Step 3 — decode bolt11 via Alby to get payment_hash
+    const decR = await fetch("https://api.getalby.com/decode/bolt11", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.ALBY_ACCESS_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ invoice: payment_request }),
+    });
+    const dec = await decR.json();
+    if (!decR.ok) throw new Error(dec.message || "Failed to decode invoice for payment_hash");
+    return { payment_hash: dec.payment_hash, payment_request };
+  }
+
   async function lnCreateInvoice(amountSats: number, memo: string): Promise<{ payment_hash: string; payment_request: string }> {
     const provider = detectLnProvider();
+    if (provider === "coinos") {
+      const d = await coinosReq("/invoice", "POST", { amount: amountSats, type: "lightning", memo });
+      return { payment_hash: d.hash, payment_request: d.text };
+    }
     if (provider === "alby") {
-      const r = await fetch("https://api.getalby.com/invoices", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${process.env.ALBY_ACCESS_TOKEN}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: amountSats, description: memo }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.message || `Alby error ${r.status}`);
-      return { payment_hash: d.payment_hash, payment_request: d.payment_request };
+      // Use LNURL-pay via the account's Lightning Address — works without Alby Hub
+      const lightningAddress = await albyGetLightningAddress();
+      return await lnurlPayCreateInvoice(lightningAddress, amountSats, memo);
     }
     if (provider === "lnbits") {
       const base = (process.env.LNBITS_URL ?? "").replace(/\/$/, "");
@@ -8285,6 +8348,12 @@ export async function registerRoutes(
 
   async function lnCheckInvoice(hash: string): Promise<boolean> {
     const provider = detectLnProvider();
+    if (provider === "coinos") {
+      try {
+        const d = await coinosReq(`/invoice/${hash}`);
+        return (d.received ?? 0) > 0;
+      } catch { return false; }
+    }
     if (provider === "alby") {
       const r = await fetch(`https://api.getalby.com/invoices/${hash}`, {
         headers: { Authorization: `Bearer ${process.env.ALBY_ACCESS_TOKEN}` },
@@ -8305,6 +8374,10 @@ export async function registerRoutes(
 
   async function lnPayInvoice(bolt11: string): Promise<string> {
     const provider = detectLnProvider();
+    if (provider === "coinos") {
+      const d = await coinosReq("/payments", "POST", { address: bolt11, type: "lightning" });
+      return d.hash ?? d.id ?? "";
+    }
     if (provider === "alby") {
       const r = await fetch("https://api.getalby.com/payments/bolt11", {
         method: "POST",
@@ -8331,6 +8404,10 @@ export async function registerRoutes(
 
   async function lnDecodeInvoice(bolt11: string): Promise<number> {
     const provider = detectLnProvider();
+    if (provider === "coinos") {
+      const d = await coinosReq(`/decode?invoice=${encodeURIComponent(bolt11)}`);
+      return Math.ceil((d.amount ?? d.amount_msat ?? 0) / (d.amount_msat ? 1000 : 1));
+    }
     if (provider === "alby") {
       const r = await fetch("https://api.getalby.com/decode/bolt11", {
         method: "POST",
@@ -8357,6 +8434,10 @@ export async function registerRoutes(
 
   async function lnGetBalance(): Promise<{ sats: number; name: string }> {
     const provider = detectLnProvider();
+    if (provider === "coinos") {
+      const d = await coinosReq("/me");
+      return { sats: Math.floor(d.balance ?? 0), name: d.username ? `coinos/${d.username}` : "Coinos wallet" };
+    }
     if (provider === "alby") {
       const r = await fetch("https://api.getalby.com/balance", {
         headers: { Authorization: `Bearer ${process.env.ALBY_ACCESS_TOKEN}` },
@@ -8426,7 +8507,11 @@ export async function registerRoutes(
     if (!provider) return res.json({ configured: false, message: "No Lightning provider set" });
     try {
       const bal = await lnGetBalance();
-      res.json({ configured: true, provider, balance: bal.sats, name: bal.name });
+      let lightningAddress: string | undefined;
+      if (provider === "alby") {
+        try { lightningAddress = await albyGetLightningAddress(); } catch {}
+      }
+      res.json({ configured: true, provider, balance: bal.sats, name: bal.name, lightningAddress });
     } catch (err: any) {
       res.json({ configured: true, provider, reachable: false, error: err.message });
     }
