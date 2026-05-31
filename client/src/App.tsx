@@ -115,6 +115,7 @@ import FractalBtcBridgePage from "@/pages/fractal-btc-bridge";
 import NxtFbSwapPage from "@/pages/nxt-fb-swap";
 import LightningWalletPage from "@/pages/lightning-wallet";
 import BtcSentinelPage from "@/pages/btc-sentinel";
+import BtcAssetsSentinelPage from "@/pages/btc-assets-sentinel";
 
 function ProtectedRoutes() {
   return (
@@ -271,6 +272,7 @@ function Router() {
       <Route path="/nxt-fb-swap" component={NxtFbSwapPage} />
       <Route path="/swap" component={NxtFbSwapPage} />
       <Route path="/btc-sentinel" component={BtcSentinelPage} />
+      <Route path="/btc-assets-sentinel" component={BtcAssetsSentinelPage} />
       <Route path="/snic" component={SnicPage} />
       <Route path="/open" component={OpenPage} />
       <Route path="/charter" component={OpenPage} />

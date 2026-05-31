@@ -179,6 +179,10 @@ app.use((req, res, next) => {
       import("./btc-wallet-sentinel").then(({ startWalletSentinel }) => {
         startWalletSentinel();
       }).catch((e) => console.error("[Sentinel] Boot error:", e));
+      // Start BTC Assets Sentinel — monitors Ordinals / Runes / BRC-20 every 2 min
+      import("./btc-assets-sentinel").then(({ startAssetsSentinel }) => {
+        startAssetsSentinel();
+      }).catch((e) => console.error("[Assets Sentinel] Boot error:", e));
       // Start Telegram advocacy bot
       startTelegramBot();
     },

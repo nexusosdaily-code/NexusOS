@@ -9046,6 +9046,39 @@ export async function registerRoutes(
     });
   });
 
+  // GET /api/btc/assets-sentinel — assets sentinel snapshot (REST fallback)
+  app.get("/api/btc/assets-sentinel", authenticate, async (_req: Request, res: Response) => {
+    try {
+      const { getAssetsSnapshot, getAssetsEvents } = await import("./btc-assets-sentinel");
+      res.json({ ok: true, snapshot: getAssetsSnapshot(), events: getAssetsEvents() });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/btc/assets-sentinel/stream — SSE live push (Ordinals / Runes / BRC-20)
+  app.get("/api/btc/assets-sentinel/stream", authenticate, async (req: Request, res: Response) => {
+    const { registerAssetsSSEClient, unregisterAssetsSSEClient, getAssetsSnapshot, getAssetsEvents } = await import("./btc-assets-sentinel");
+
+    res.setHeader("Content-Type",      "text/event-stream");
+    res.setHeader("Cache-Control",     "no-cache");
+    res.setHeader("Connection",        "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    // Send current state immediately
+    res.write(`data: ${JSON.stringify({ snapshot: getAssetsSnapshot(), events: getAssetsEvents() })}\n\n`);
+
+    registerAssetsSSEClient(res);
+
+    const ping = setInterval(() => {
+      try { res.write(": ping\n\n"); } catch { clearInterval(ping); }
+    }, 25_000);
+
+    req.on("close", () => {
+      clearInterval(ping);
+      unregisterAssetsSSEClient(res);
+    });
+  });
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   // ── NEXUS•WAVELENGTH RUNE ────────────────────────────────────────────────────
