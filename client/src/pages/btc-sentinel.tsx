@@ -575,7 +575,7 @@ function BtcDepositPanel() {
   const minSats    = info?.minDepositSats ?? 3300;
 
   return (
-    <Card className="mb-4 border border-orange-500/20 overflow-hidden"
+    <Card id="btc-deposit-panel" className="mb-4 border border-orange-500/20 overflow-hidden"
       style={{ background: "linear-gradient(135deg, #f97316 06, #0f172a 100%)" }}>
       {/* Header */}
       <div className="p-4 border-b border-orange-500/20">

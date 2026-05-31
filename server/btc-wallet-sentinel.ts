@@ -601,19 +601,37 @@ async function fetchUserWallet(address: string): Promise<UserWalletData | null> 
   }
 }
 
-/** Batch-poll all registered user addresses (runs non-blocking after each service-wallet cycle). */
+/** In-flight guard — prevents overlapping batch-poll runs. */
+let _userPollRunning = false;
+
+/** Batch-poll ALL registered user addresses (runs non-blocking after each service-wallet cycle). */
 async function pollUserWallets(): Promise<void> {
+  if (_userPollRunning) return; // prevent overlap
+  _userPollRunning = true;
   try {
     const { db } = await import("./db");
     const { sql: S } = await import("drizzle-orm");
-    const rows = await db.execute(S`SELECT btc_address FROM btc_address_registry LIMIT 100`);
-    const addresses: string[] = (rows.rows as any[]).map(r => r.btc_address);
-    for (const addr of addresses) {
-      await fetchUserWallet(addr).catch(() => {});
-      // Small delay between addresses to be polite to the API
-      await new Promise(r => setTimeout(r, 400));
+    // Page through all rows — no LIMIT so every registered address is covered
+    const PAGE = 50;
+    let offset = 0;
+    while (true) {
+      const rows = await db.execute(S`
+        SELECT btc_address FROM btc_address_registry
+        ORDER BY id OFFSET ${offset} LIMIT ${PAGE}
+      `);
+      const page = (rows.rows as any[]);
+      if (page.length === 0) break;
+      for (const row of page) {
+        if (!_running) return; // bail if sentinel stopped
+        await fetchUserWallet(row.btc_address).catch(() => {});
+        // Small delay between addresses to stay polite to the API
+        await new Promise(r => setTimeout(r, 400));
+      }
+      if (page.length < PAGE) break; // last page
+      offset += PAGE;
     }
   } catch { /* table may not exist yet — silently skip */ }
+  finally { _userPollRunning = false; }
 }
 
 /** Public: fetch user wallet data from cache or live. Used by the API proxy endpoint. */
