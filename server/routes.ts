@@ -2194,6 +2194,59 @@ export async function registerRoutes(
     secureProxyToSpectralAPI(req, res, "/api/hardware/spectrometer/read");
   });
 
+  // ── WNSP Genesis Inscription — Bitcoin on-chain proof of NexusOS origin ─────
+  const GENESIS = {
+    inscriptionId: "ee8f6461ea2e39577b83350cb33c7bed0ae51ab1161a131369b054bb12939542i0",
+    txid:          "ee8f6461ea2e39577b83350cb33c7bed0ae51ab1161a131369b054bb12939542",
+    btcAddress:    "bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m",
+    content:       "nexustech_wnsp://Ψ(52,3,V).btc",
+    outputSats:    330,
+    wnspUri:       "wnsp://Ψ(52,3,V)",
+    psiChannel:    "Ψ(52,3,V)",
+    wdm:           52,
+    oam:           3,
+    pol:           "V",
+    wavelengthNm:  586.8085,
+    band:          "YELLOW",
+    freqTHz:       510.886,
+    disclosedAt:   "2026-05-16",
+    inscribedAt:   "2026-05-31",
+    uniscanUrl:    "https://uniscan.cc/inscription/ee8f6461ea2e39577b83350cb33c7bed0ae51ab1161a131369b054bb12939542i0",
+    mempoolUrl:    "https://mempool.space/tx/ee8f6461ea2e39577b83350cb33c7bed0ae51ab1161a131369b054bb12939542",
+    ordinalUrl:    "https://ordinals.com/inscription/ee8f6461ea2e39577b83350cb33c7bed0ae51ab1161a131369b054bb12939542i0",
+  };
+
+  // Seed genesis entry into wnsp_registry on startup (idempotent)
+  (async () => {
+    try {
+      const { db } = await import("./db");
+      const { sql: S } = await import("drizzle-orm");
+      await db.execute(S`
+        INSERT INTO wnsp_registry (
+          wnsp_uri, psi_channel, wdm, oam, polarisation, wavelength_nm, band,
+          label, ce_input, resource_type, resource_id,
+          http_url, description, is_public, is_canonical
+        ) VALUES (
+          ${GENESIS.wnspUri}, ${GENESIS.psiChannel}, ${GENESIS.wdm}, ${GENESIS.oam},
+          ${GENESIS.pol}, ${GENESIS.wavelengthNm}, ${GENESIS.band},
+          'NexusOS Genesis Node', 'nexusos', 'system', 'genesis',
+          'https://nexusos.replit.app',
+          ${'Bitcoin inscription ' + GENESIS.inscriptionId + ' — first public disclosure of wnsp://Ψ(52,3,V) on 2026-05-31'},
+          true, true
+        )
+        ON CONFLICT (wnsp_uri) DO NOTHING
+      `);
+      console.log(`[Genesis] ✅ wnsp://Ψ(52,3,V) seeded in registry — inscription ${GENESIS.inscriptionId.slice(0, 16)}…`);
+    } catch (e: any) {
+      console.warn("[Genesis] Registry seed skipped:", e.message);
+    }
+  })();
+
+  // GET /api/wnsp/genesis — returns Bitcoin inscription proof for the genesis node
+  app.get("/api/wnsp/genesis", optionalAuth, (_req, res) => {
+    res.json({ ok: true, genesis: GENESIS });
+  });
+
   app.get("/api/wnsp/protocol", optionalAuth, (req, res) => {
     secureProxyToSpectralAPI(req, res, "/api/wnsp/protocol");
   });

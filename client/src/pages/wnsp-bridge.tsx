@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Radio, Zap, Globe, Copy, Check, ChevronRight, ExternalLink,
   Database, Shield, Waves, Code2, ArrowRight, Search, UserCircle,
-  PlusCircle, Lock, Activity,
+  PlusCircle, Lock, Activity, Bitcoin,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -134,6 +134,103 @@ function SpectralVectorDisplay({ sv }: { sv: any }) {
 function authFetch(url: string, opts: RequestInit = {}) {
   const token = localStorage.getItem("auth_token");
   return fetch(url, { ...opts, headers: { Authorization: `Bearer ${token}`, ...(opts.headers ?? {}) } });
+}
+
+// ── Bitcoin Genesis Inscription Proof Banner ──────────────────────────────────
+function GenesisProofBanner() {
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const { data } = useQuery<{ ok: boolean; genesis: any }>({
+    queryKey: ["/api/wnsp/genesis"],
+    queryFn: () => fetch("/api/wnsp/genesis").then(r => r.json()),
+    staleTime: Infinity,
+  });
+
+  const g = data?.genesis;
+
+  function copy(text: string, key: string) {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 1500);
+  }
+
+  if (!g) return null;
+
+  return (
+    <div className="border-b border-yellow-900/40 bg-yellow-950/20 px-4 sm:px-6 py-3">
+      <div className="max-w-5xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          {/* Left — verified badge */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-orange-500/20 border border-orange-500/40 flex items-center justify-center">
+              <Bitcoin className="w-4 h-4 text-orange-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-orange-300 font-mono uppercase tracking-wider">Genesis On-Chain</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-900/60 border border-green-700/40 text-green-400 font-mono font-bold">VERIFIED</span>
+              </div>
+              <div className="text-[10px] text-slate-500 font-mono">Bitcoin Ordinals Inscription · Taproot · 330 sats</div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="hidden sm:block w-px h-8 bg-slate-700/60" />
+
+          {/* Center — WNSP address + inscription ID */}
+          <div className="flex-1 min-w-0 space-y-0.5">
+            <div className="flex items-center gap-1.5 font-mono">
+              <span className="text-[11px] text-slate-500">content:</span>
+              <span className="text-sm text-yellow-300 font-bold">{g.content}</span>
+              <button onClick={() => copy(g.content, "content")} className="text-slate-600 hover:text-white transition-colors">
+                {copied === "content" ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+              </button>
+            </div>
+            <div className="flex items-center gap-1.5 font-mono">
+              <span className="text-[11px] text-slate-500">inscription:</span>
+              <span className="text-[11px] text-slate-400 truncate max-w-[280px] sm:max-w-xs">{g.inscriptionId}</span>
+              <button onClick={() => copy(g.inscriptionId, "id")} className="text-slate-600 hover:text-white transition-colors flex-shrink-0">
+                {copied === "id" ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Right — spectral data + links */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="text-center">
+              <div className="text-[10px] text-slate-600 font-mono">λ</div>
+              <div className="text-xs font-bold font-mono" style={{ color: "#ca8a04" }}>{g.wavelengthNm} nm</div>
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] text-slate-600 font-mono">ψ</div>
+              <div className="text-xs font-bold font-mono text-yellow-400">{g.psiChannel}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-[10px] text-slate-600 font-mono">band</div>
+              <div className="text-xs font-bold font-mono text-yellow-300">{g.band}</div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <a href={g.uniscanUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1 text-[10px] text-orange-400 hover:text-orange-300 transition-colors font-mono"
+                data-testid="link-genesis-uniscan">
+                UniScan <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+              <a href={g.mempoolUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1 text-[10px] text-sky-400 hover:text-sky-300 transition-colors font-mono"
+                data-testid="link-genesis-mempool">
+                Mempool <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+              <a href={g.ordinalUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1 text-[10px] text-violet-400 hover:text-violet-300 transition-colors font-mono"
+                data-testid="link-genesis-ordinals">
+                Ordinals <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Identity card for the logged-in user ─────────────────────────────────────
@@ -1193,6 +1290,9 @@ export default function WnspBridgePage() {
           </div>
         </div>
       </div>
+
+      {/* Bitcoin Genesis Inscription proof */}
+      <GenesisProofBanner />
 
       {/* Tab bar */}
       <div className="border-b border-slate-800 px-4 sm:px-6 overflow-x-auto">
