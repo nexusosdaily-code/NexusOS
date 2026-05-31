@@ -9322,8 +9322,11 @@ export async function registerRoutes(
       if (!btcAddress || typeof btcAddress !== "string")
         return res.status(400).json({ error: "btcAddress required" });
       const trimmed = btcAddress.trim();
-      if (!/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/.test(trimmed))
-        return res.status(400).json({ error: "Invalid Bitcoin address format" });
+      // Accept all mainnet BTC address formats:
+      // Legacy P2PKH (1…), P2SH (3…), native segwit bech32 (bc1q…), taproot bech32m (bc1p…)
+      // bech32/bech32m max 90 chars total
+      if (!/^(bc1[a-z0-9]{6,87}|[13][a-zA-HJ-NP-Z0-9]{25,34})$/.test(trimmed))
+        return res.status(400).json({ error: "Invalid Bitcoin address. Paste your bc1p (Taproot), bc1q (Native SegWit), or legacy 1… / 3… address." });
       // Upsert — one registered address per user
       await _db.execute(S`
         INSERT INTO btc_address_registry (user_id, username, btc_address, label)

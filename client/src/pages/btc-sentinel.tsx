@@ -663,7 +663,7 @@ function BtcDepositPanel() {
               <input
                 value={addrInput}
                 onChange={e => setAddrInput(e.target.value)}
-                placeholder="bc1q… or 1… or 3…"
+                placeholder="bc1p… (Taproot) or bc1q… or 1… or 3…"
                 className="w-full bg-slate-800/60 border border-slate-700 rounded-lg px-3 py-2 text-[11px] font-mono text-white placeholder:text-gray-600 focus:outline-none focus:border-orange-500/50"
                 data-testid="input-btc-deposit-address"
               />
