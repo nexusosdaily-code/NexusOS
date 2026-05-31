@@ -8996,6 +8996,22 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // GET /api/btc/sentinel — wallet sentinel live status
+  app.get("/api/btc/sentinel", authenticate, async (_req: Request, res: Response) => {
+    try {
+      const { getSnapshot, getEvents } = await import("./btc-wallet-sentinel");
+      const snapshot = getSnapshot();
+      const events   = getEvents();
+      const LOW_WARN = 20_000, LOW_CRIT = 5_000;
+      const health = !snapshot ? "unknown"
+        : snapshot.confirmed < LOW_CRIT ? "critical"
+        : snapshot.confirmed < LOW_WARN ? "warning"
+        : "ok";
+      res.json({ ok: true, snapshot, events, health,
+        mempoolUrl: snapshot ? `https://mempool.space/address/${snapshot.address}` : null });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   // ── NEXUS•WAVELENGTH RUNE ────────────────────────────────────────────────────

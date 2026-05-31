@@ -175,6 +175,10 @@ app.use((req, res, next) => {
       import("./btc-block-scanner").then(({ startStakeScanner }) => {
         startStakeScanner();
       }).catch((e) => console.error("[BTC Scanner] Boot error:", e));
+      // Start BTC Wallet Sentinel — monitors service wallet mempool every 30s
+      import("./btc-wallet-sentinel").then(({ startWalletSentinel }) => {
+        startWalletSentinel();
+      }).catch((e) => console.error("[Sentinel] Boot error:", e));
       // Start Telegram advocacy bot
       startTelegramBot();
     },

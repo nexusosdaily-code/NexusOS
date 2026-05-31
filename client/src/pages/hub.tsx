@@ -171,6 +171,7 @@ const APP_SECTIONS = [
       { title: "🔵 Fractal BTC",      href: "/fractal-btc",      Icon: Globe2 },
       { title: "↔ NXT↔FB Swap",      href: "/nxt-fb-swap",      Icon: ArrowRightLeft },
       { title: "⚡ Lightning Wallet",  href: "/lightning-wallet", Icon: Zap },
+      { title: "🛡 Wallet Sentinel",  href: "/btc-sentinel",     Icon: Shield },
     ],
   },
   {
