@@ -4,8 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Shield, Wifi, WifiOff, AlertTriangle, CheckCircle2,
-  XCircle, Clock, Copy, ExternalLink, RefreshCw, Zap,
-  ArrowDownLeft, Bitcoin,
+  XCircle, Clock, Copy, ExternalLink, Zap,
+  ArrowDownLeft, Bitcoin, Key, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,12 +28,13 @@ function fmtTime(ts: string) {
 }
 
 const EVENT_ICONS: Record<string, JSX.Element> = {
-  incoming:  <ArrowDownLeft className="w-3.5 h-3.5 text-orange-400" />,
-  confirmed: <CheckCircle2  className="w-3.5 h-3.5 text-green-400" />,
-  low_warn:  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />,
-  low_crit:  <XCircle       className="w-3.5 h-3.5 text-red-400" />,
-  recovered: <CheckCircle2  className="w-3.5 h-3.5 text-emerald-400" />,
-  startup:   <Wifi          className="w-3.5 h-3.5 text-cyan-400" />,
+  incoming:   <ArrowDownLeft className="w-3.5 h-3.5 text-orange-400" />,
+  confirmed:  <CheckCircle2  className="w-3.5 h-3.5 text-green-400" />,
+  low_warn:   <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />,
+  low_crit:   <XCircle       className="w-3.5 h-3.5 text-red-400" />,
+  recovered:  <CheckCircle2  className="w-3.5 h-3.5 text-emerald-400" />,
+  startup:    <Wifi          className="w-3.5 h-3.5 text-cyan-400" />,
+  utxo_alert: <Key           className="w-3.5 h-3.5 text-violet-400" />,
 };
 
 function HealthBadge({ health }: { health: string }) {
@@ -252,6 +253,9 @@ export default function BtcSentinelPage() {
           </Card>
         )}
 
+        {/* UTXO Analysis */}
+        {snap?.utxo && <UtxoCard utxo={snap.utxo} address={snap.address} />}
+
         {/* Event log */}
         <Card className="bg-slate-900/60 border-slate-700/50 p-4">
           <div className="flex items-center gap-2 mb-4">
@@ -300,6 +304,145 @@ export default function BtcSentinelPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ── UTXO Analysis Card ────────────────────────────────────────────────────────
+function UtxoCard({ utxo, address }: { utxo: any; address: string }) {
+  const [open, setOpen] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+
+  const healthColor =
+    utxo.needsConsolidation ? "#a78bfa" :
+    utxo.dustCount > 0       ? "#f59e0b" : "#22c55e";
+
+  const displayUtxos = showAll ? utxo.utxos : utxo.utxos.slice(0, 8);
+
+  return (
+    <Card
+      className="mb-4 border overflow-hidden"
+      style={{ borderColor: healthColor + "33", background: `linear-gradient(135deg, ${healthColor}06 0%, #0f172a 100%)` }}
+    >
+      <button className="w-full flex items-center gap-2 p-4 text-left" onClick={() => setOpen(o => !o)}>
+        <Key className="w-4 h-4" style={{ color: healthColor }} />
+        <span className="text-white font-semibold text-sm">UTXO Analysis</span>
+        <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded"
+          style={{ background: healthColor + "22", color: healthColor }}>
+          {utxo.count} UTXO{utxo.count !== 1 ? "s" : ""}
+        </span>
+        {utxo.needsConsolidation && (
+          <span className="text-[10px] font-mono text-violet-300 bg-violet-500/20 px-1.5 py-0.5 rounded">
+            consolidate
+          </span>
+        )}
+        {utxo.dustCount > 0 && (
+          <span className="text-[10px] font-mono text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded">
+            {utxo.dustCount} dust
+          </span>
+        )}
+        <div className="flex-1" />
+        {open ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pt-0">
+          {/* Summary grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+            {[
+              { label: "Total",       value: utxo.count,            unit: "UTXOs",    color: healthColor },
+              { label: "Confirmed",   value: utxo.confirmedCount,   unit: "UTXOs",    color: "#22c55e" },
+              { label: "Pending",     value: utxo.unconfirmedCount, unit: "UTXOs",    color: "#f97316" },
+              { label: "Dust <330",   value: utxo.dustCount,        unit: "UTXOs",    color: utxo.dustCount > 0 ? "#f59e0b" : "#6b7280" },
+            ].map(s => (
+              <div key={s.label} className="bg-slate-800/50 rounded-lg p-2.5 text-center">
+                <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">{s.label}</div>
+                <div className="text-base font-bold font-mono" style={{ color: s.color }}>{s.value}</div>
+                <div className="text-[9px] text-gray-600 font-mono">{s.unit}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Value stats */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {[
+              { label: "Largest",  value: utxo.largestSats,  color: "#6ee7b7" },
+              { label: "Average",  value: utxo.avgSats,      color: "#93c5fd" },
+              { label: "Smallest", value: utxo.smallestSats, color: utxo.smallestSats < 330 ? "#fbbf24" : "#9ca3af" },
+            ].map(s => (
+              <div key={s.label} className="bg-slate-800/40 rounded-lg p-2.5 text-center">
+                <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">{s.label}</div>
+                <div className="text-sm font-bold font-mono" style={{ color: s.color }}>
+                  {satsDisplay(s.value)}
+                </div>
+                <div className="text-[9px] text-gray-600 font-mono">sats</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Consolidation banner */}
+          {utxo.needsConsolidation && (
+            <div className="flex items-start gap-2 bg-violet-500/10 border border-violet-500/20 rounded-lg p-3 mb-4">
+              <AlertTriangle className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
+              <div>
+                <div className="text-violet-300 font-semibold text-xs mb-0.5">Consolidation recommended</div>
+                <div className="text-violet-200/60 text-[10px] leading-relaxed">
+                  {utxo.count} UTXOs increases TX size and fees. Send all inputs to yourself in a single TX during low-fee periods to consolidate.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Dust warning */}
+          {utxo.dustCount > 0 && !utxo.needsConsolidation && (
+            <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="text-amber-200/70 text-[10px] leading-relaxed">
+                {utxo.dustCount} UTXO{utxo.dustCount > 1 ? "s are" : " is"} below the P2TR dust limit (330 sats) and may be unspendable.
+              </div>
+            </div>
+          )}
+
+          {/* UTXO list */}
+          {utxo.utxos.length > 0 && (
+            <div>
+              <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-2 font-mono">UTXO Set</div>
+              <div className="space-y-1 max-h-64 overflow-y-auto">
+                {displayUtxos.map((u: any, i: number) => {
+                  const isDust = u.value < 330;
+                  return (
+                    <div key={`${u.txid}-${u.vout}-${i}`}
+                      className={`flex items-center gap-2 py-1.5 px-2 rounded text-[10px] font-mono ${isDust ? "bg-amber-500/5" : "bg-slate-800/30"}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${u.confirmed ? "bg-green-500" : "bg-orange-400 animate-pulse"}`} />
+                      <span className="text-gray-500 truncate flex-1" title={`${u.txid}:${u.vout}`}>
+                        {u.txid.slice(0, 12)}…:{u.vout}
+                      </span>
+                      <span className={`shrink-0 font-semibold ${isDust ? "text-amber-400" : "text-gray-300"}`}>
+                        {u.value.toLocaleString()} sats
+                        {isDust && " ⚠"}
+                      </span>
+                      <a href={`https://mempool.space/tx/${u.txid}`} target="_blank" rel="noopener noreferrer"
+                        className="text-gray-700 hover:text-orange-400 shrink-0">
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </div>
+                  );
+                })}
+              </div>
+              {utxo.utxos.length > 8 && (
+                <button onClick={() => setShowAll(s => !s)}
+                  className="mt-2 text-[10px] text-gray-500 hover:text-gray-300 font-mono w-full text-center">
+                  {showAll ? "show less" : `+ ${utxo.utxos.length - 8} more UTXOs`}
+                </button>
+              )}
+            </div>
+          )}
+
+          {utxo.utxos.length === 0 && (
+            <div className="text-gray-600 text-xs text-center py-3">No UTXOs — wallet is empty</div>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }
 

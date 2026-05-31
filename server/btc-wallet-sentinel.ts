@@ -13,10 +13,13 @@ import type { Response } from "express";
 
 const ESPLORA = "https://blockstream.info/api";
 const MEMPOOL  = "https://mempool.space/api";
-const POLL_MS  = 30_000;          // 30-second poll
-const LOW_WARN = 20_000;          // sats — amber alert
-const LOW_CRIT =  5_000;          // sats — red alert
-const ALERT_COOLDOWN = 3_600_000; // 1 h between same-severity alerts
+const POLL_MS  = 30_000;           // 30-second poll
+const LOW_WARN = 20_000;           // sats — amber alert
+const LOW_CRIT =  5_000;           // sats — red alert
+const ALERT_COOLDOWN     = 3_600_000; // 1 h between same-severity alerts
+const UTXO_ALERT_COOLDOWN = 86_400_000; // 24 h between consolidation alerts
+const DUST_THRESHOLD     = 330;    // sats — P2TR dust limit
+const CONSOLIDATE_WARN   = 10;     // UTXO count that triggers consolidation advice
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 async function fetchJson(url: string): Promise<any> {
@@ -31,17 +34,38 @@ async function esplora(path: string): Promise<any> {
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+export interface Utxo {
+  txid:      string;
+  vout:      number;
+  value:     number;  // sats
+  confirmed: boolean;
+}
+
+export interface UtxoAnalysis {
+  utxos:            Utxo[];
+  count:            number;
+  confirmedCount:   number;
+  unconfirmedCount: number;
+  dustCount:        number;       // UTXOs below P2TR dust limit (330 sats)
+  totalSats:        number;
+  largestSats:      number;
+  smallestSats:     number;
+  avgSats:          number;
+  needsConsolidation: boolean;   // count >= CONSOLIDATE_WARN
+}
+
 export interface WalletSnapshot {
   address:     string;
   confirmed:   number;
   unconfirmed: number;
   total:       number;
   txCount:     number;
+  utxo:        UtxoAnalysis | null;
   checkedAt:   string;
 }
 
 export interface SentinelEvent {
-  type:      "incoming" | "confirmed" | "low_warn" | "low_crit" | "recovered" | "startup";
+  type:      "incoming" | "confirmed" | "low_warn" | "low_crit" | "recovered" | "startup" | "utxo_alert";
   message:   string;
   sats?:     number;
   txid?:     string;
@@ -62,7 +86,9 @@ let _snapshot: WalletSnapshot | null = null;
 let _knownTxids      = new Set<string>();
 let _lastLowAlert    = 0;
 let _lastRecovAlert  = 0;
+let _lastUtxoAlert   = 0;
 let _wasLow          = false;
+let _prevUtxoCount   = -1;             // -1 = not yet seeded
 const _events: SentinelEvent[] = [];   // rolling last-50 events
 
 // ── SSE client registry ───────────────────────────────────────────────────────
@@ -110,19 +136,51 @@ async function alert(msg: string) {
   } catch { /* telegram is optional */ }
 }
 
+// ── UTXO analysis ─────────────────────────────────────────────────────────────
+function analyzeUtxos(raw: any[]): UtxoAnalysis {
+  const utxos: Utxo[] = raw.map((u: any) => ({
+    txid:      u.txid,
+    vout:      u.vout,
+    value:     u.value,
+    confirmed: !!u.status?.confirmed,
+  }));
+
+  const confirmed   = utxos.filter(u => u.confirmed);
+  const unconfirmed = utxos.filter(u => !u.confirmed);
+  const dust        = utxos.filter(u => u.value < DUST_THRESHOLD);
+  const values      = utxos.map(u => u.value);
+  const totalSats   = values.reduce((a, b) => a + b, 0);
+  const sorted      = [...values].sort((a, b) => a - b);
+
+  return {
+    utxos,
+    count:              utxos.length,
+    confirmedCount:     confirmed.length,
+    unconfirmedCount:   unconfirmed.length,
+    dustCount:          dust.length,
+    totalSats,
+    largestSats:        sorted.length ? sorted[sorted.length - 1] : 0,
+    smallestSats:       sorted.length ? sorted[0] : 0,
+    avgSats:            sorted.length ? Math.round(totalSats / sorted.length) : 0,
+    needsConsolidation: utxos.length >= CONSOLIDATE_WARN,
+  };
+}
+
 // ── Core poll ─────────────────────────────────────────────────────────────────
 async function poll(address: string) {
   let balance: { funded_txo_sum: number; spent_txo_sum: number; unconfirmed_delta: number };
   let txs: { txid: string; status: { confirmed: boolean } }[];
+  let rawUtxos: any[] = [];
 
   try {
-    [balance, txs] = await Promise.all([
+    [balance, txs, rawUtxos] = await Promise.all([
       esplora(`/address/${address}`).then((d: any) => ({
         funded_txo_sum:    d.chain_stats.funded_txo_sum   + d.mempool_stats.funded_txo_sum,
         spent_txo_sum:     d.chain_stats.spent_txo_sum    + d.mempool_stats.spent_txo_sum,
         unconfirmed_delta: d.mempool_stats.funded_txo_sum - d.mempool_stats.spent_txo_sum,
       })),
       esplora(`/address/${address}/txs`),
+      esplora(`/address/${address}/utxo`).catch(() => []),
     ]);
   } catch (e: any) {
     console.warn("[Sentinel] poll error:", e.message);
@@ -133,8 +191,9 @@ async function poll(address: string) {
   const unconfirmed = balance.unconfirmed_delta;
   const total       = confirmed + unconfirmed;
 
-  const now = new Date().toISOString();
-  _snapshot = { address, confirmed, unconfirmed, total, txCount: txs.length, checkedAt: now };
+  const utxo = analyzeUtxos(rawUtxos);
+  const now  = new Date().toISOString();
+  _snapshot  = { address, confirmed, unconfirmed, total, txCount: txs.length, utxo, checkedAt: now };
 
   // ── 1. Detect new mempool transactions ───────────────────────────────────
   const unconfirmedTxs = txs.filter(t => !t.status.confirmed);
@@ -224,6 +283,50 @@ async function poll(address: string) {
       (btcBridge as any)._busy = false;
       console.log("[Sentinel] ✅ Wallet recovered — kicked inscription queue");
     } catch { /* bridge optional */ }
+  }
+
+  // ── 5. UTXO alerts (consolidation + dust) ────────────────────────────────
+  const isFirstSeed = _prevUtxoCount === -1;
+  if (!isFirstSeed && utxo.count !== _prevUtxoCount) {
+    // UTXO count changed — log every change as a quick info event
+    pushEvent({
+      type:      "utxo_alert",
+      message:   `🔑 UTXO set changed: ${_prevUtxoCount} → ${utxo.count} UTXOs (${utxo.confirmedCount} confirmed, ${utxo.unconfirmedCount} pending)`,
+      timestamp: now,
+    });
+  }
+  _prevUtxoCount = utxo.count;
+
+  if (utxo.needsConsolidation && nowMs - _lastUtxoAlert > UTXO_ALERT_COOLDOWN) {
+    _lastUtxoAlert = nowMs;
+    const lines = [
+      `🔑 <b>UTXO Consolidation Recommended</b>`,
+      ``,
+      `UTXOs: <b>${utxo.count}</b> (confirmed: ${utxo.confirmedCount} · pending: ${utxo.unconfirmedCount})`,
+      `Dust (&lt;330 sats): <b>${utxo.dustCount}</b>`,
+      `Largest: ${utxo.largestSats.toLocaleString()} sats`,
+      `Smallest: ${utxo.smallestSats.toLocaleString()} sats`,
+      `Average: ${utxo.avgSats.toLocaleString()} sats`,
+      ``,
+      `Consolidate UTXOs to reduce future TX fees.`,
+    ];
+    pushEvent({
+      type:    "utxo_alert",
+      message: `⚠️ ${utxo.count} UTXOs — consolidation recommended (dust: ${utxo.dustCount})`,
+      timestamp: now,
+    });
+    await alert(lines.join("\n"));
+    console.log(`[Sentinel] ⚠️ UTXO alert: ${utxo.count} UTXOs, ${utxo.dustCount} dust`);
+  } else if (utxo.dustCount > 0 && !utxo.needsConsolidation && nowMs - _lastUtxoAlert > UTXO_ALERT_COOLDOWN) {
+    _lastUtxoAlert = nowMs;
+    pushEvent({
+      type:    "utxo_alert",
+      message: `🌫️ ${utxo.dustCount} dust UTXO${utxo.dustCount > 1 ? "s" : ""} detected (<330 sats each) — may be unspendable`,
+      timestamp: now,
+    });
+    await alert(
+      `🌫️ <b>Dust UTXOs Detected</b>\n\nWallet has ${utxo.dustCount} UTXO${utxo.dustCount > 1 ? "s" : ""} below the P2TR dust limit (330 sats). These may be unspendable.`
+    );
   }
 
   // Always broadcast current snapshot after every poll
