@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft, Shield, Wifi, WifiOff, AlertTriangle, CheckCircle2,
   XCircle, Clock, Copy, ExternalLink, Zap,
   ArrowDownLeft, Bitcoin, Key, ChevronDown, ChevronUp,
+  Download, RefreshCw, Plus, Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -296,6 +298,9 @@ export default function BtcSentinelPage() {
           </div>
         </Card>
 
+        {/* BTC → NXT Deposit Panel */}
+        <BtcDepositPanel />
+
         {/* Footer */}
         <div className="mt-4 text-center text-xs text-gray-600 font-mono space-y-1">
           <div>Server-sent events — page updates instantly when sentinel detects activity</div>
@@ -304,6 +309,264 @@ export default function BtcSentinelPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ── BTC → NXT Deposit Panel ───────────────────────────────────────────────────
+const SERVICE_WALLET = "bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m";
+
+function BtcDepositPanel() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [addrInput, setAddrInput]   = useState("");
+  const [claimTxid, setClaimTxid]   = useState("");
+  const [tab, setTab]               = useState<"register" | "history" | "claim">("register");
+
+  const { data: info } = useQuery<any>({
+    queryKey: ["/api/btc/deposit/info"],
+    queryFn: () => fetch("/api/btc/deposit/info").then(r => r.json()),
+    staleTime: 60_000,
+  });
+  const { data: regData, refetch: refetchReg } = useQuery<any>({
+    queryKey: ["/api/btc/deposit/address"],
+    queryFn: () => fetch("/api/btc/deposit/address").then(r => r.json()),
+    staleTime: 10_000,
+  });
+  const { data: histData, refetch: refetchHist } = useQuery<any>({
+    queryKey: ["/api/btc/deposits"],
+    queryFn: () => fetch("/api/btc/deposits").then(r => r.json()),
+    staleTime: 15_000,
+  });
+
+  const registered = regData?.registered ?? null;
+  const deposits: any[] = histData?.deposits ?? [];
+
+  const registerMut = useMutation({
+    mutationFn: (btcAddress: string) =>
+      fetch("/api/btc/deposit/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ btcAddress }),
+      }).then(r => r.json()),
+    onSuccess: (d) => {
+      if (d.ok) {
+        toast({ title: "Address registered", description: "NXT will auto-credit when BTC arrives from this address." });
+        qc.invalidateQueries({ queryKey: ["/api/btc/deposit/address"] });
+      } else {
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    },
+  });
+
+  const unregisterMut = useMutation({
+    mutationFn: () =>
+      fetch("/api/btc/deposit/address", { method: "DELETE" }).then(r => r.json()),
+    onSuccess: () => {
+      toast({ title: "Address removed" });
+      qc.invalidateQueries({ queryKey: ["/api/btc/deposit/address"] });
+    },
+  });
+
+  const claimMut = useMutation({
+    mutationFn: (txid: string) =>
+      fetch("/api/btc/deposit/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ txid }),
+      }).then(r => r.json()),
+    onSuccess: (d) => {
+      if (d.ok) {
+        toast({ title: "Deposit claimed!", description: `+${d.nxtCredited} NXT credited to your wallet.` });
+        setClaimTxid("");
+        qc.invalidateQueries({ queryKey: ["/api/btc/deposits"] });
+      } else {
+        toast({ title: "Claim failed", description: d.error, variant: "destructive" });
+      }
+    },
+  });
+
+  const copy = (t: string) => { navigator.clipboard.writeText(t); toast({ title: "Copied" }); };
+
+  const satsPerNxt = info?.satsPerNxt ?? 1000;
+  const minSats    = info?.minDepositSats ?? 3300;
+
+  return (
+    <Card className="mb-4 border border-orange-500/20 overflow-hidden"
+      style={{ background: "linear-gradient(135deg, #f97316 06, #0f172a 100%)" }}>
+      {/* Header */}
+      <div className="p-4 border-b border-orange-500/20">
+        <div className="flex items-center gap-2">
+          <Download className="w-4 h-4 text-orange-400" />
+          <span className="text-white font-semibold text-sm">BTC → NXT Auto-Deposit</span>
+          <span className="ml-auto text-[10px] font-mono text-orange-300 bg-orange-500/10 px-2 py-0.5 rounded">
+            {satsPerNxt.toLocaleString()} sats / NXT
+          </span>
+        </div>
+        <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
+          Register your BTC address below. When you send BTC to the service wallet from that address,
+          NXT is credited to your account automatically within ~30 s of broadcast.
+        </p>
+      </div>
+
+      {/* Deposit destination */}
+      <div className="px-4 pt-3 pb-2">
+        <div className="text-[10px] text-gray-500 uppercase tracking-widest mb-1 font-mono">Send BTC to</div>
+        <div className="flex items-center gap-2 bg-slate-800/60 rounded-lg p-2.5">
+          <Bitcoin className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+          <span className="text-orange-200 font-mono text-[10px] flex-1 truncate" data-testid="text-service-wallet">
+            {SERVICE_WALLET}
+          </span>
+          <button onClick={() => copy(SERVICE_WALLET)} className="text-gray-500 hover:text-orange-400 shrink-0">
+            <Copy className="w-3 h-3" />
+          </button>
+          <a href={`https://mempool.space/address/${SERVICE_WALLET}`} target="_blank" rel="noopener noreferrer"
+            className="text-gray-500 hover:text-orange-400 shrink-0">
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+        <div className="text-[10px] text-gray-600 font-mono mt-1 text-right">
+          min {minSats.toLocaleString()} sats = {(minSats / satsPerNxt).toFixed(2)} NXT
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex px-4 gap-1 mb-3">
+        {(["register", "history", "claim"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`text-[10px] font-mono px-3 py-1 rounded transition-colors ${
+              tab === t
+                ? "bg-orange-500/20 text-orange-300 border border-orange-500/40"
+                : "text-gray-500 hover:text-gray-300"
+            }`}>
+            {t === "register" ? "My Address" : t === "history" ? `History (${deposits.length})` : "Claim TX"}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab: My Address */}
+      {tab === "register" && (
+        <div className="px-4 pb-4">
+          {registered ? (
+            <div className="space-y-3">
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                  <span className="text-green-300 text-[11px] font-semibold">Address registered</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-green-200 font-mono text-[10px] flex-1 truncate" data-testid="text-registered-btc-address">
+                    {registered.btc_address}
+                  </span>
+                  <button onClick={() => copy(registered.btc_address)} className="text-gray-500 hover:text-green-400">
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+                <div className="text-[10px] text-gray-500 font-mono mt-1">
+                  Registered {new Date(registered.registered_at).toLocaleDateString()}
+                </div>
+              </div>
+              <button onClick={() => unregisterMut.mutate()}
+                disabled={unregisterMut.isPending}
+                className="w-full flex items-center justify-center gap-2 text-[11px] font-mono text-red-400/60 hover:text-red-400 py-1.5 transition-colors"
+                data-testid="button-unregister-btc-address">
+                <Trash2 className="w-3 h-3" />
+                {unregisterMut.isPending ? "Removing…" : "Remove address"}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="text-[10px] text-gray-500 font-mono">Your BTC sending address</div>
+              <input
+                value={addrInput}
+                onChange={e => setAddrInput(e.target.value)}
+                placeholder="bc1q… or 1… or 3…"
+                className="w-full bg-slate-800/60 border border-slate-700 rounded-lg px-3 py-2 text-[11px] font-mono text-white placeholder:text-gray-600 focus:outline-none focus:border-orange-500/50"
+                data-testid="input-btc-deposit-address"
+              />
+              <button
+                onClick={() => registerMut.mutate(addrInput.trim())}
+                disabled={!addrInput.trim() || registerMut.isPending}
+                className="w-full bg-orange-500/20 hover:bg-orange-500/30 disabled:opacity-40 border border-orange-500/40 text-orange-300 text-[11px] font-mono py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                data-testid="button-register-btc-address">
+                <Plus className="w-3.5 h-3.5" />
+                {registerMut.isPending ? "Registering…" : "Register address"}
+              </button>
+              <p className="text-[10px] text-gray-600 leading-relaxed">
+                Send from this exact address — the sentinel matches the TX input to your account.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: History */}
+      {tab === "history" && (
+        <div className="px-4 pb-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Deposit history</span>
+            <button onClick={() => refetchHist()} className="text-gray-600 hover:text-gray-400">
+              <RefreshCw className="w-3 h-3" />
+            </button>
+          </div>
+          {deposits.length === 0 ? (
+            <div className="text-gray-600 text-xs text-center py-4 font-mono">No deposits yet</div>
+          ) : (
+            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              {deposits.map((d: any) => (
+                <div key={d.id} className="flex items-center gap-2 bg-slate-800/40 rounded-lg p-2.5 text-[10px] font-mono"
+                  data-testid={`row-deposit-${d.id}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                    d.status === "credited" || d.status === "claimed" ? "bg-green-500" :
+                    d.status === "unmatched" ? "bg-amber-400" : "bg-gray-500"
+                  }`} />
+                  <span className="text-gray-400 truncate flex-1">{d.txid?.slice(0, 14)}…</span>
+                  <span className="text-gray-300 shrink-0">{Number(d.sats_received).toLocaleString()} sats</span>
+                  {d.nxt_credited && (
+                    <span className="text-green-400 shrink-0">+{parseFloat(d.nxt_credited).toFixed(2)} NXT</span>
+                  )}
+                  <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] ${
+                    d.status === "credited" || d.status === "claimed"
+                      ? "bg-green-500/20 text-green-400"
+                      : "bg-amber-500/20 text-amber-400"
+                  }`}>{d.status}</span>
+                  <a href={`https://mempool.space/tx/${d.txid}`} target="_blank" rel="noopener noreferrer"
+                    className="text-gray-600 hover:text-orange-400 shrink-0">
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Claim TX */}
+      {tab === "claim" && (
+        <div className="px-4 pb-4 space-y-2">
+          <p className="text-[11px] text-gray-400 leading-relaxed">
+            Sent BTC without a registered address? Paste the TX hash to claim your NXT.
+          </p>
+          <input
+            value={claimTxid}
+            onChange={e => setClaimTxid(e.target.value)}
+            placeholder="64-character transaction ID"
+            className="w-full bg-slate-800/60 border border-slate-700 rounded-lg px-3 py-2 text-[11px] font-mono text-white placeholder:text-gray-600 focus:outline-none focus:border-orange-500/50"
+            data-testid="input-claim-txid"
+          />
+          <button
+            onClick={() => claimMut.mutate(claimTxid.trim())}
+            disabled={claimTxid.trim().length !== 64 || claimMut.isPending}
+            className="w-full bg-orange-500/20 hover:bg-orange-500/30 disabled:opacity-40 border border-orange-500/40 text-orange-300 text-[11px] font-mono py-2 rounded-lg transition-colors"
+            data-testid="button-claim-deposit">
+            {claimMut.isPending ? "Claiming…" : "Claim deposit"}
+          </button>
+          <p className="text-[10px] text-gray-600 leading-relaxed">
+            The TX must have been detected by the sentinel first (wait ~30 s after broadcast).
+            Each TX can only be claimed once.
+          </p>
+        </div>
+      )}
+    </Card>
   );
 }
 

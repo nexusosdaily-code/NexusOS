@@ -11,6 +11,10 @@
 
 import type { Response } from "express";
 
+// ── Deposit processor constants ───────────────────────────────────────────────
+const BTC_DEPOSIT_SATS_PER_NXT = 1000; // 1000 sats = 1 NXT (matches Lightning rate)
+const BTC_DEPOSIT_MIN_SATS     = 3_300; // minimum deposit (10× P2TR dust limit)
+
 const ESPLORA = "https://blockstream.info/api";
 const MEMPOOL  = "https://mempool.space/api";
 const POLL_MS  = 30_000;           // 30-second poll
@@ -217,6 +221,10 @@ async function poll(address: string) {
         `<a href="https://mempool.space/tx/${tx.txid}">View on mempool.space</a>`
       );
       console.log(`[Sentinel] 🟠 New incoming TX: ${tx.txid} (+${unconfirmed} unconfirmed sats)`);
+      // Auto-process BTC → NXT deposit
+      processIncomingDeposit(tx.txid, unconfirmed).catch(e =>
+        console.error(`[Sentinel] Deposit processor error: ${e.message}`)
+      );
     }
   }
 
@@ -388,3 +396,124 @@ export function stopWalletSentinel() {
   if (_timer) { clearTimeout(_timer); _timer = null; }
   console.log("[Sentinel] Stopped");
 }
+
+// ── BTC → NXT Deposit Processor ──────────────────────────────────────────────
+// Called for every newly-detected incoming TX.
+// Resolves the sender address via esplora, checks the registry, credits NXT.
+export async function processIncomingDeposit(txid: string, satsReceived: number): Promise<void> {
+  if (satsReceived < BTC_DEPOSIT_MIN_SATS) {
+    console.log(`[Deposit] TX ${txid.slice(0,16)}… — ${satsReceived} sats below minimum (${BTC_DEPOSIT_MIN_SATS}), skipping`);
+    return;
+  }
+
+  const { db } = await import("./db");
+  const { sql, eq } = await import("drizzle-orm");
+
+  // Ensure tables exist (idempotent)
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS btc_address_registry (
+      id           SERIAL PRIMARY KEY,
+      user_id      VARCHAR(36) NOT NULL,
+      username     VARCHAR(100) NOT NULL,
+      btc_address  TEXT NOT NULL UNIQUE,
+      label        TEXT DEFAULT 'My BTC Sender Address',
+      registered_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS btc_deposits (
+      id             SERIAL PRIMARY KEY,
+      txid           TEXT NOT NULL UNIQUE,
+      sender_address TEXT,
+      sats_received  INTEGER NOT NULL,
+      nxt_credited   DECIMAL(20,8),
+      user_id        VARCHAR(36),
+      username       TEXT,
+      status         TEXT NOT NULL DEFAULT 'unmatched',
+      detected_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+      credited_at    TIMESTAMP
+    )
+  `);
+
+  // Skip if already processed
+  const existing = await db.execute(sql`SELECT id FROM btc_deposits WHERE txid = ${txid}`);
+  if ((existing.rows as any[]).length > 0) return;
+
+  // Fetch TX from esplora to get input (sender) address
+  let senderAddress: string | null = null;
+  try {
+    const txData = await fetchJson(`${ESPLORA}/tx/${txid}`);
+    const addrs: string[] = [];
+    for (const inp of (txData.vin ?? [])) {
+      const a = inp?.prevout?.scriptpubkey_address;
+      if (a) addrs.push(a);
+    }
+    senderAddress = addrs[0] ?? null; // use first input's address
+  } catch (e: any) {
+    console.warn(`[Deposit] Could not fetch TX ${txid}: ${e.message}`);
+  }
+
+  // Check registry for this sender address
+  let matched: { user_id: string; username: string } | null = null;
+  if (senderAddress) {
+    const rows = await db.execute(sql`
+      SELECT user_id, username FROM btc_address_registry
+      WHERE btc_address = ${senderAddress}
+      LIMIT 1
+    `);
+    if ((rows.rows as any[]).length > 0) {
+      matched = rows.rows[0] as any;
+    }
+  }
+
+  if (matched) {
+    // Credit NXT to matched user
+    const nxtAmount = satsReceived / BTC_DEPOSIT_SATS_PER_NXT;
+    const { storage } = await import("./storage");
+    const { GENESIS_EXECUTION_ADDRESS } = await import("./physics");
+
+    const userWallets = await db.execute(sql`
+      SELECT id, balance FROM wallets WHERE user_id = ${matched.user_id} LIMIT 1
+    `);
+    if ((userWallets.rows as any[]).length > 0) {
+      const w = userWallets.rows[0] as any;
+      const newBal = (parseFloat(w.balance) + nxtAmount).toFixed(8);
+      await db.execute(sql`UPDATE wallets SET balance = ${newBal} WHERE id = ${w.id}`);
+
+      // Record treasury_deposit transaction (NXT created from BTC is sourced from treasury reserve)
+      const treasuryWallet = await storage.getWalletByAddress(GENESIS_EXECUTION_ADDRESS);
+      if (treasuryWallet) {
+        const tBal = parseFloat(treasuryWallet.balance);
+        const tNew = Math.max(0, tBal - nxtAmount).toFixed(8);
+        await db.execute(sql`UPDATE wallets SET balance = ${tNew} WHERE id = ${treasuryWallet.id}`);
+      }
+
+      await db.execute(sql`
+        INSERT INTO btc_deposits (txid, sender_address, sats_received, nxt_credited, user_id, username, status, credited_at)
+        VALUES (${txid}, ${senderAddress}, ${satsReceived}, ${nxtAmount.toFixed(8)}, ${matched.user_id}, ${matched.username}, 'credited', NOW())
+      `);
+
+      console.log(`[Deposit] ✅ Credited ${nxtAmount.toFixed(2)} NXT to ${matched.username} for ${satsReceived} sats (TX ${txid.slice(0,16)}…)`);
+      await alert(
+        `💰 <b>BTC → NXT Deposit Auto-Credited</b>\n\n` +
+        `User:    <b>${matched.username}</b>\n` +
+        `Sats:    <b>${satsReceived.toLocaleString()} sats</b>\n` +
+        `NXT:     <b>+${nxtAmount.toFixed(2)} NXT</b>\n` +
+        `Rate:    ${BTC_DEPOSIT_SATS_PER_NXT} sats/NXT\n` +
+        `Sender:  <code>${senderAddress}</code>\n` +
+        `TXID:    <code>${txid}</code>\n\n` +
+        `<a href="https://mempool.space/tx/${txid}">View TX</a>`
+      );
+    }
+  } else {
+    // Record as unmatched — user can claim via /api/btc/deposit/claim
+    await db.execute(sql`
+      INSERT INTO btc_deposits (txid, sender_address, sats_received, status)
+      VALUES (${txid}, ${senderAddress}, ${satsReceived}, 'unmatched')
+      ON CONFLICT (txid) DO NOTHING
+    `);
+    console.log(`[Deposit] 🔍 Unmatched deposit ${txid.slice(0,16)}… — ${satsReceived} sats from ${senderAddress ?? "unknown"}. User can claim via API.`);
+  }
+}
+
+export { BTC_DEPOSIT_SATS_PER_NXT, BTC_DEPOSIT_MIN_SATS };

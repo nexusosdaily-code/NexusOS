@@ -9254,6 +9254,163 @@ export async function registerRoutes(
   });
   // ─────────────────────────────────────────────────────────────────────────────
 
+  // ── BTC → NXT DEPOSIT PROCESSOR ──────────────────────────────────────────────
+  const { BTC_DEPOSIT_SATS_PER_NXT, BTC_DEPOSIT_MIN_SATS } = await import("./btc-wallet-sentinel");
+
+  // Ensure deposit tables exist on startup (IIFE — matches Lightning pattern)
+  (async () => {
+    try {
+      const { db: _ddb } = await import("./db");
+      const { sql: _sql } = await import("drizzle-orm");
+      await _ddb.execute(_sql`
+        CREATE TABLE IF NOT EXISTS btc_address_registry (
+          id            SERIAL PRIMARY KEY,
+          user_id       VARCHAR(36) NOT NULL,
+          username      VARCHAR(100) NOT NULL,
+          btc_address   TEXT NOT NULL UNIQUE,
+          label         TEXT DEFAULT 'My BTC Sender Address',
+          registered_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )
+      `);
+      await _ddb.execute(_sql`
+        CREATE TABLE IF NOT EXISTS btc_deposits (
+          id             SERIAL PRIMARY KEY,
+          txid           TEXT NOT NULL UNIQUE,
+          sender_address TEXT,
+          sats_received  INTEGER NOT NULL,
+          nxt_credited   DECIMAL(20,8),
+          user_id        VARCHAR(36),
+          username       TEXT,
+          status         TEXT NOT NULL DEFAULT 'unmatched',
+          detected_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+          credited_at    TIMESTAMP
+        )
+      `);
+      console.log("[BTC Deposit] Tables ready");
+    } catch (e: any) {
+      console.error("[BTC Deposit] Table init error:", e.message);
+    }
+  })();
+
+  // GET /api/btc/deposit/info — rate + deposit address (public)
+  app.get("/api/btc/deposit/info", async (_req: Request, res: Response) => {
+    res.json({
+      depositAddress: "bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m",
+      satsPerNxt:     BTC_DEPOSIT_SATS_PER_NXT,
+      minDepositSats: BTC_DEPOSIT_MIN_SATS,
+      minDepositNxt:  BTC_DEPOSIT_MIN_SATS / BTC_DEPOSIT_SATS_PER_NXT,
+      note:           "Send BTC from your registered address. NXT credited automatically within ~30 s of broadcast.",
+    });
+  });
+
+  // GET /api/btc/deposit/address — get user's registered sender address
+  app.get("/api/btc/deposit/address", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db: _db } = await import("./db");
+      const { sql: S } = await import("drizzle-orm");
+      const rows = await _db.execute(S`SELECT * FROM btc_address_registry WHERE user_id = ${req.user!.id} LIMIT 1`);
+      res.json({ registered: rows.rows[0] ?? null });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/btc/deposit/register — register or update sender BTC address
+  app.post("/api/btc/deposit/register", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db: _db } = await import("./db");
+      const { sql: S } = await import("drizzle-orm");
+      const { btcAddress, label } = req.body;
+      if (!btcAddress || typeof btcAddress !== "string")
+        return res.status(400).json({ error: "btcAddress required" });
+      const trimmed = btcAddress.trim();
+      if (!/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/.test(trimmed))
+        return res.status(400).json({ error: "Invalid Bitcoin address format" });
+      // Upsert — one registered address per user
+      await _db.execute(S`
+        INSERT INTO btc_address_registry (user_id, username, btc_address, label)
+        VALUES (${req.user!.id}, ${req.user!.username}, ${trimmed}, ${label ?? "My BTC Sender Address"})
+        ON CONFLICT (btc_address) DO UPDATE
+          SET user_id = EXCLUDED.user_id, username = EXCLUDED.username,
+              label = EXCLUDED.label, registered_at = NOW()
+      `);
+      // One address per user — remove any old registration
+      await _db.execute(S`
+        DELETE FROM btc_address_registry
+        WHERE user_id = ${req.user!.id} AND btc_address != ${trimmed}
+      `);
+      await logAction(req, "btc_deposit_register", "btc", req.user!.id, { btcAddress: trimmed });
+      res.json({ ok: true, btcAddress: trimmed, label: label ?? "My BTC Sender Address" });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // DELETE /api/btc/deposit/address — unregister
+  app.delete("/api/btc/deposit/address", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db: _db } = await import("./db");
+      const { sql: S } = await import("drizzle-orm");
+      await _db.execute(S`DELETE FROM btc_address_registry WHERE user_id = ${req.user!.id}`);
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/btc/deposits — user's deposit history (last 50)
+  app.get("/api/btc/deposits", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db: _db } = await import("./db");
+      const { sql: S } = await import("drizzle-orm");
+      const rows = await _db.execute(S`
+        SELECT * FROM btc_deposits
+        WHERE user_id = ${req.user!.id}
+        ORDER BY detected_at DESC LIMIT 50
+      `);
+      res.json({ deposits: rows.rows });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/btc/deposit/claim — claim an unmatched deposit by TX hash
+  app.post("/api/btc/deposit/claim", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db: _db } = await import("./db");
+      const { sql: S } = await import("drizzle-orm");
+      const { txid } = req.body;
+      if (!txid || typeof txid !== "string" || !/^[a-f0-9]{64}$/i.test(txid.trim()))
+        return res.status(400).json({ error: "Valid 64-char txid required" });
+      const trimmed = txid.trim().toLowerCase();
+      const rows = await _db.execute(S`SELECT * FROM btc_deposits WHERE txid = ${trimmed} LIMIT 1`);
+      const dep = (rows.rows as any[])[0];
+      if (!dep)
+        return res.status(404).json({ error: "TX not found. Wait up to 30 s after broadcast, then try again." });
+      if (dep.status === "credited" || dep.status === "claimed")
+        return res.status(409).json({ error: `Deposit already ${dep.status} to ${dep.username ?? "another user"}.` });
+
+      // Credit NXT to user
+      const nxtAmount = dep.sats_received / BTC_DEPOSIT_SATS_PER_NXT;
+      const wRows = await _db.execute(S`SELECT id, balance FROM wallets WHERE user_id = ${req.user!.id} LIMIT 1`);
+      if ((wRows.rows as any[]).length === 0)
+        return res.status(404).json({ error: "No NXT wallet found for your account" });
+      const w = wRows.rows[0] as any;
+      await _db.execute(S`UPDATE wallets SET balance = ${(parseFloat(w.balance) + nxtAmount).toFixed(8)} WHERE id = ${w.id}`);
+
+      // Debit treasury reserve (NXT comes from treasury)
+      const { GENESIS_EXECUTION_ADDRESS: _GEA } = await import("./physics");
+      const tRows = await _db.execute(S`SELECT id, balance FROM wallets WHERE address = ${_GEA} LIMIT 1`);
+      if ((tRows.rows as any[]).length > 0) {
+        const tw = tRows.rows[0] as any;
+        await _db.execute(S`UPDATE wallets SET balance = ${Math.max(0, parseFloat(tw.balance) - nxtAmount).toFixed(8)} WHERE id = ${tw.id}`);
+      }
+
+      // Mark claimed
+      await _db.execute(S`
+        UPDATE btc_deposits SET status = 'claimed',
+          user_id = ${req.user!.id}, username = ${req.user!.username},
+          nxt_credited = ${nxtAmount.toFixed(8)}, credited_at = NOW()
+        WHERE txid = ${trimmed}
+      `);
+      await logAction(req, "btc_deposit_claim", "btc", req.user!.id, { txid: trimmed, satsReceived: dep.sats_received, nxtAmount });
+      res.json({ ok: true, txid: trimmed, satsReceived: dep.sats_received, nxtCredited: nxtAmount.toFixed(8), newBalance: (parseFloat(w.balance) + nxtAmount).toFixed(8) });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+  // ─────────────────────────────────────────────────────────────────────────────
+
   // ── MARKETPLACE ──────────────────────────────────────────────────────────────
   const MARKETPLACE_FEE_PCT = 0.025; // 2.5% → Orbital Treasury (NXT is never destroyed)
 

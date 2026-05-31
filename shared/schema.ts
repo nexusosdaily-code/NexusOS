@@ -1223,3 +1223,29 @@ export const runeStakes = pgTable("rune_stakes", {
 });
 export const insertRuneStakeSchema = createInsertSchema(runeStakes).omit({ id: true, stakedAt: true });
 export type RuneStake = typeof runeStakes.$inferSelect;
+
+// ── BTC Deposit Address Registry ─────────────────────────────────────────────
+export const btcAddressRegistry = pgTable("btc_address_registry", {
+  id:           serial("id").primaryKey(),
+  userId:       varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  username:     varchar("username", { length: 100 }).notNull(),
+  btcAddress:   text("btc_address").notNull().unique(),
+  label:        text("label").default("My BTC Sender Address"),
+  registeredAt: timestamp("registered_at").notNull().defaultNow(),
+});
+export type BtcAddressRegistryEntry = typeof btcAddressRegistry.$inferSelect;
+
+// ── BTC Deposits — every detected incoming TX ─────────────────────────────────
+export const btcDeposits = pgTable("btc_deposits", {
+  id:            serial("id").primaryKey(),
+  txid:          text("txid").notNull().unique(),
+  senderAddress: text("sender_address"),
+  satsReceived:  integer("sats_received").notNull(),
+  nxtCredited:   decimal("nxt_credited", { precision: 20, scale: 8 }),
+  userId:        varchar("user_id", { length: 36 }),
+  username:      text("username"),
+  status:        text("status").notNull().default("unmatched"), // unmatched | credited | claimed
+  detectedAt:    timestamp("detected_at").notNull().defaultNow(),
+  creditedAt:    timestamp("credited_at"),
+});
+export type BtcDeposit = typeof btcDeposits.$inferSelect;
