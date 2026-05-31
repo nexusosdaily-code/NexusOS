@@ -8086,9 +8086,24 @@ export async function registerRoutes(
 
       const wnspOut = Math.floor(nxt / SWAP_RATE_NXT_PER_WNSP); // NXT → wnsp
 
-      // Burn NXT from wallet
+      // Redirect NXT to Orbital Treasury — NXT is NEVER destroyed
       const newBal = (bal - nxt).toFixed(8);
       await storage.updateWalletBalance(wallet.id, newBal);
+      const { GENESIS_EXECUTION_ADDRESS } = await import("./physics");
+      const treasuryWallet = await storage.getWalletByAddress(GENESIS_EXECUTION_ADDRESS);
+      if (treasuryWallet) {
+        const tBal = parseFloat(treasuryWallet.balance);
+        await storage.updateWalletBalance(treasuryWallet.id, (tBal + nxt).toFixed(8));
+        await storage.createTransaction({
+          fromWalletId: wallet.id,
+          toWalletId:   treasuryWallet.id,
+          amount:       nxt.toFixed(8),
+          fee:          "0.00000000",
+          type:         "treasury_deposit",
+          status:       "completed",
+          metadata:     { reason: "nxt_to_fb_swap", fractalAddress, wnspOut, note: "NXT redirected to Orbital Treasury — not destroyed" },
+        });
+      }
 
       // Queue BRC-20 mint on Fractal Bitcoin (same inscription format)
       const content = JSON.stringify({ p: "brc-20", op: "mint", tick: "wnsp", amt: String(wnspOut) });
@@ -8119,12 +8134,12 @@ export async function registerRoutes(
         ok: true,
         swapId:     row.id,
         direction:  "nxt_to_fb",
-        nxtBurned:  nxt.toFixed(8),
+        nxtToTreasury: nxt.toFixed(8),
         wnspOut,
         fractalAddress,
         queueId:    queued.id,
         newBalance: newBal,
-        message:    `Swap queued! ${wnspOut} wnsp will be inscribed to ${fractalAddress.slice(0,14)}… on Fractal Bitcoin. ${nxt} NXT burned.`,
+        message:    `Swap queued! ${wnspOut} wnsp will be inscribed to ${fractalAddress.slice(0,14)}… on Fractal Bitcoin. ${nxt} NXT redirected to Orbital Treasury.`,
       });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -9240,7 +9255,7 @@ export async function registerRoutes(
   // ─────────────────────────────────────────────────────────────────────────────
 
   // ── MARKETPLACE ──────────────────────────────────────────────────────────────
-  const MARKETPLACE_FEE_PCT = 0.025; // 2.5% total: 1.25% burn + 1.25% treasury
+  const MARKETPLACE_FEE_PCT = 0.025; // 2.5% → Orbital Treasury (NXT is never destroyed)
 
   // GET /api/marketplace/listings — browse all active listings
   app.get("/api/marketplace/listings", async (req: Request, res: Response) => {
@@ -9339,6 +9354,23 @@ export async function registerRoutes(
       if (sellerWallet) {
         const newSellerBal = (parseFloat(sellerWallet.balance) + price).toFixed(8);
         await storage.updateWalletBalance(sellerWallet.id, newSellerBal);
+      }
+
+      // Redirect marketplace fee to Orbital Treasury — NXT is NEVER destroyed
+      const { GENESIS_EXECUTION_ADDRESS: TREASURY_ADDR } = await import("./physics");
+      const treasuryWlt = await storage.getWalletByAddress(TREASURY_ADDR);
+      if (treasuryWlt) {
+        const tBal2 = parseFloat(treasuryWlt.balance);
+        await storage.updateWalletBalance(treasuryWlt.id, (tBal2 + fee).toFixed(8));
+        await storage.createTransaction({
+          fromWalletId: buyerWallet.id,
+          toWalletId:   treasuryWlt.id,
+          amount:       fee.toFixed(8),
+          fee:          "0.00000000",
+          type:         "treasury_deposit",
+          status:       "completed",
+          metadata:     { reason: "marketplace_fee", listingId, pct: "2.5%", note: "Fee redirected to Orbital Treasury — not destroyed" },
+        });
       }
 
       // Mark listing sold

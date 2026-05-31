@@ -1,0 +1,1 @@
+- [NXT Indestructibility Rule](nxt-indestructibility.md) — NXT is never burned; always redirect to GENESIS_EXECUTION_ADDRESS (NXT-NEXS-OS1K-7F3A-OMEGA).
