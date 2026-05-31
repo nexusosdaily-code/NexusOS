@@ -9409,6 +9409,36 @@ export async function registerRoutes(
       res.json({ ok: true, txid: trimmed, satsReceived: dep.sats_received, nxtCredited: nxtAmount.toFixed(8), newBalance: (parseFloat(w.balance) + nxtAmount).toFixed(8) });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
+  // GET /api/btc/wallet/mempool — proxy user's registered BTC address mempool data
+  app.get("/api/btc/wallet/mempool", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { sql: S } = await import("drizzle-orm");
+
+      // Look up the user's registered BTC address
+      const regRows = await db.execute(S`
+        SELECT btc_address FROM btc_address_registry
+        WHERE user_id = ${req.user!.id}
+        LIMIT 1
+      `);
+      if ((regRows.rows as any[]).length === 0) {
+        return res.json({ ok: false, noAddress: true, error: "No BTC address registered" });
+      }
+      const btcAddress: string = (regRows.rows as any[])[0].btc_address;
+
+      // Serve from sentinel cache if fresh
+      const { getOrFetchUserWallet } = await import("./btc-wallet-sentinel");
+      const walletData = await getOrFetchUserWallet(btcAddress);
+      if (!walletData) {
+        return res.status(502).json({ ok: false, error: "Could not fetch wallet data from mempool.space" });
+      }
+      return res.json({ ok: true, wallet: walletData });
+    } catch (err: any) {
+      console.error("[BTC wallet/mempool]", err.message);
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   // ── MARKETPLACE ──────────────────────────────────────────────────────────────

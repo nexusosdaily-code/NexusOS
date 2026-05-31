@@ -301,6 +301,9 @@ export default function BtcSentinelPage() {
         {/* BTC → NXT Deposit Panel */}
         <BtcDepositPanel />
 
+        {/* My BTC Wallet */}
+        <MyBtcWalletCard />
+
         {/* Footer */}
         <div className="mt-4 text-center text-xs text-gray-600 font-mono space-y-1">
           <div>Server-sent events — page updates instantly when sentinel detects activity</div>
@@ -309,6 +312,187 @@ export default function BtcSentinelPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ── My BTC Wallet Card ────────────────────────────────────────────────────────
+function MyBtcWalletCard() {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(0);
+
+  const { data, isLoading, isError, refetch, isFetching } = useQuery<any>({
+    queryKey: ["/api/btc/wallet/mempool"],
+    queryFn: () => fetch("/api/btc/wallet/mempool").then(r => r.json()),
+    staleTime: 25_000,
+    refetchInterval: 30_000,
+  });
+
+  // Track last successful refresh
+  useEffect(() => {
+    if (data?.ok && data.wallet) setLastRefresh(Date.now());
+  }, [data]);
+
+  const copy = (t: string) => { navigator.clipboard.writeText(t); toast({ title: "Copied" }); };
+
+  const noAddress = data?.noAddress;
+  const wallet    = data?.wallet ?? null;
+
+  const netColor = (v: number) =>
+    v > 0 ? "#22c55e" : v < 0 ? "#f87171" : "#6b7280";
+  const dirIcon  = (v: number) =>
+    v > 0 ? "↓" : v < 0 ? "↑" : "·";
+
+  return (
+    <Card className="mb-4 border border-cyan-500/20 overflow-hidden"
+      style={{ background: "linear-gradient(135deg, #0e7490 04, #0f172a 100%)" }}>
+      {/* Header */}
+      <div
+        className="w-full flex items-center gap-2 p-4 border-b border-cyan-500/20 cursor-pointer select-none"
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen(o => !o)}
+        onKeyDown={e => e.key === "Enter" && setOpen(o => !o)}>
+        <Bitcoin className="w-4 h-4 text-cyan-400" />
+        <span className="text-white font-semibold text-sm">My BTC Wallet</span>
+        {wallet && (
+          <span className="text-[10px] font-mono text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded ml-1">
+            {satsDisplay(wallet.confirmed)} sats
+          </span>
+        )}
+        {(isLoading || isFetching) && (
+          <span className="text-[10px] text-cyan-400/50 font-mono ml-1 animate-pulse">fetching…</span>
+        )}
+        <div className="flex-1" />
+        {wallet && (
+          <span className="text-[10px] font-mono text-gray-600 mr-1">
+            {lastRefresh ? fmtTime(new Date(lastRefresh).toISOString()) : "—"}
+          </span>
+        )}
+        <button
+          onClick={e => { e.stopPropagation(); refetch(); }}
+          className="text-gray-600 hover:text-cyan-400 mr-1"
+          title="Refresh">
+          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
+        </button>
+        {open ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+      </div>
+
+      {open && (
+        <div className="p-4">
+          {/* No address registered — nudge */}
+          {noAddress && (
+            <div className="flex items-start gap-3 bg-cyan-500/5 border border-cyan-500/20 rounded-lg p-3">
+              <Bitcoin className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+              <div>
+                <div className="text-cyan-300 font-semibold text-xs mb-1">Connect your BTC wallet</div>
+                <div className="text-cyan-200/50 text-[10px] leading-relaxed mb-2">
+                  Register your BTC address in the deposit panel below to unlock live mempool monitoring of your personal wallet.
+                </div>
+                <button
+                  onClick={() => document.getElementById("btc-deposit-panel")?.scrollIntoView({ behavior: "smooth" })}
+                  className="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 px-2 py-1 rounded transition-colors">
+                  Register address ↓
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Error state */}
+          {isError && !noAddress && (
+            <div className="text-red-400/70 text-xs text-center py-4 font-mono">
+              Failed to fetch wallet data — sentinel may be offline
+            </div>
+          )}
+
+          {/* Loading skeleton */}
+          {isLoading && !wallet && (
+            <div className="text-cyan-400/50 text-xs text-center py-6 font-mono animate-pulse">
+              Fetching from mempool.space…
+            </div>
+          )}
+
+          {/* Wallet data */}
+          {wallet && (
+            <>
+              {/* Address row */}
+              <div className="flex items-center gap-2 mb-4 bg-slate-800/50 rounded-lg p-2.5">
+                <Bitcoin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                <span className="text-cyan-200 font-mono text-[10px] flex-1 truncate" data-testid="text-my-btc-address">
+                  {wallet.address}
+                </span>
+                <button onClick={() => copy(wallet.address)} className="text-gray-500 hover:text-cyan-400 shrink-0">
+                  <Copy className="w-3 h-3" />
+                </button>
+                <a href={`https://mempool.space/address/${wallet.address}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="text-gray-500 hover:text-cyan-400 shrink-0">
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+
+              {/* Balance grid */}
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                {[
+                  { label: "Confirmed",   value: satsDisplay(wallet.confirmed),   unit: "sats", color: "#22c55e"  },
+                  { label: "Unconfirmed", value: wallet.unconfirmed !== 0 ? (wallet.unconfirmed > 0 ? `+${satsDisplay(wallet.unconfirmed)}` : satsDisplay(wallet.unconfirmed)) : "—", unit: "sats", color: wallet.unconfirmed > 0 ? "#f97316" : wallet.unconfirmed < 0 ? "#f87171" : "#4b5563" },
+                  { label: "UTXOs",       value: wallet.utxoCount,                unit: "unspent", color: "#38bdf8" },
+                  { label: "Total TXs",   value: wallet.txCount,                  unit: "on-chain", color: "#94a3b8" },
+                ].map(s => (
+                  <div key={s.label} className="bg-slate-800/50 rounded-lg p-2.5 text-center">
+                    <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">{s.label}</div>
+                    <div className="text-sm font-bold font-mono" style={{ color: s.color }}
+                      data-testid={`text-my-btc-${s.label.toLowerCase().replace(" ", "-")}`}>
+                      {s.value}
+                    </div>
+                    <div className="text-[9px] text-gray-600 font-mono">{s.unit}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Recent transactions */}
+              {wallet.recentTxs.length > 0 && (
+                <div>
+                  <div className="text-[10px] text-gray-500 uppercase tracking-widest font-mono mb-2">
+                    Recent Transactions
+                  </div>
+                  <div className="space-y-1 max-h-52 overflow-y-auto">
+                    {wallet.recentTxs.map((tx: any, i: number) => (
+                      <div key={`${tx.txid}-${i}`}
+                        className="flex items-center gap-2 py-1.5 px-2.5 rounded bg-slate-800/30 text-[10px] font-mono"
+                        data-testid={`row-my-btc-tx-${i}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${tx.confirmed ? "bg-green-500" : "bg-orange-400 animate-pulse"}`} />
+                        <span className="font-bold shrink-0" style={{ color: netColor(tx.value) }}>
+                          {dirIcon(tx.value)} {tx.value !== 0 ? `${satsDisplay(Math.abs(tx.value))} sats` : "—"}
+                        </span>
+                        <span className="text-gray-500 truncate flex-1">
+                          {tx.txid.slice(0, 14)}…
+                        </span>
+                        <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] ${tx.confirmed ? "bg-green-500/15 text-green-400" : "bg-orange-500/15 text-orange-400"}`}>
+                          {tx.confirmed ? (tx.blockHeight ? `#${tx.blockHeight.toLocaleString()}` : "confirmed") : "mempool"}
+                        </span>
+                        <a href={`https://mempool.space/tx/${tx.txid}`} target="_blank" rel="noopener noreferrer"
+                          className="text-gray-600 hover:text-cyan-400 shrink-0">
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {wallet.recentTxs.length === 0 && (
+                <div className="text-gray-600 text-xs text-center py-3 font-mono">No transactions found for this address</div>
+              )}
+
+              <div className="text-[10px] text-gray-600 font-mono mt-3 text-right">
+                Cached 25 s · data via mempool.space + blockstream.info · refreshes every 30 s
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }
 

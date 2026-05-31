@@ -386,6 +386,8 @@ export async function startWalletSentinel() {
   const loop = async () => {
     if (!_running) return;
     await poll(address);
+    // Non-blocking batch poll for registered user addresses
+    setImmediate(() => pollUserWallets().catch(() => {}));
     _timer = setTimeout(loop, POLL_MS);
   };
   _timer = setTimeout(loop, POLL_MS);
@@ -517,3 +519,106 @@ export async function processIncomingDeposit(txid: string, satsReceived: number)
 }
 
 export { BTC_DEPOSIT_SATS_PER_NXT, BTC_DEPOSIT_MIN_SATS };
+
+// ── Per-user wallet cache (populated by sentinel batch-poll) ──────────────────
+// Key = btc_address string, value = { data, cachedAt }
+const _userWalletCache = new Map<string, { data: UserWalletData; cachedAt: number }>();
+const USER_CACHE_TTL_MS = 25_000;
+
+export interface UserWalletTx {
+  txid:       string;
+  confirmed:  boolean;
+  value:      number;   // net sats for this address (positive = received, negative = sent)
+  blockHeight?: number;
+  blockTime?:   number;
+}
+
+export interface UserWalletData {
+  address:     string;
+  confirmed:   number;
+  unconfirmed: number;
+  total:       number;
+  txCount:     number;
+  utxoCount:   number;
+  recentTxs:   UserWalletTx[];
+  checkedAt:   string;
+}
+
+/** Returns cached user wallet data if fresh, or null if stale/missing. */
+export function getUserWalletSnapshot(address: string): UserWalletData | null {
+  const entry = _userWalletCache.get(address);
+  if (!entry) return null;
+  if (Date.now() - entry.cachedAt > USER_CACHE_TTL_MS) return null;
+  return entry.data;
+}
+
+/** Fetch & cache wallet data for a single BTC address. */
+async function fetchUserWallet(address: string): Promise<UserWalletData | null> {
+  try {
+    const [addrData, txsRaw, utxos] = await Promise.all([
+      esplora(`/address/${address}`),
+      esplora(`/address/${address}/txs`),
+      esplora(`/address/${address}/utxo`).catch(() => []),
+    ]);
+
+    const confirmed   = (addrData.chain_stats.funded_txo_sum  - addrData.chain_stats.spent_txo_sum);
+    const unconfirmed = (addrData.mempool_stats.funded_txo_sum - addrData.mempool_stats.spent_txo_sum);
+
+    const recentTxs: UserWalletTx[] = (txsRaw as any[]).slice(0, 10).map((tx: any) => {
+      // Net value for this address: sum outputs to addr minus sum inputs from addr
+      let netSats = 0;
+      for (const vout of (tx.vout ?? [])) {
+        if (vout.scriptpubkey_address === address) netSats += vout.value;
+      }
+      for (const vin of (tx.vin ?? [])) {
+        if (vin.prevout?.scriptpubkey_address === address) netSats -= vin.prevout.value;
+      }
+      return {
+        txid:       tx.txid,
+        confirmed:  !!tx.status?.confirmed,
+        value:      netSats,
+        blockHeight: tx.status?.block_height,
+        blockTime:   tx.status?.block_time,
+      };
+    });
+
+    const data: UserWalletData = {
+      address,
+      confirmed,
+      unconfirmed,
+      total: confirmed + unconfirmed,
+      txCount:   addrData.chain_stats.tx_count + addrData.mempool_stats.tx_count,
+      utxoCount: (utxos as any[]).length,
+      recentTxs,
+      checkedAt: new Date().toISOString(),
+    };
+
+    _userWalletCache.set(address, { data, cachedAt: Date.now() });
+    return data;
+  } catch (e: any) {
+    console.warn(`[Sentinel] User wallet fetch error for ${address.slice(0, 12)}…:`, e.message);
+    return null;
+  }
+}
+
+/** Batch-poll all registered user addresses (runs non-blocking after each service-wallet cycle). */
+async function pollUserWallets(): Promise<void> {
+  try {
+    const { db } = await import("./db");
+    const { sql: S } = await import("drizzle-orm");
+    const rows = await db.execute(S`SELECT btc_address FROM btc_address_registry LIMIT 100`);
+    const addresses: string[] = (rows.rows as any[]).map(r => r.btc_address);
+    for (const addr of addresses) {
+      await fetchUserWallet(addr).catch(() => {});
+      // Small delay between addresses to be polite to the API
+      await new Promise(r => setTimeout(r, 400));
+    }
+  } catch { /* table may not exist yet — silently skip */ }
+}
+
+/** Public: fetch user wallet data from cache or live. Used by the API proxy endpoint. */
+export async function getOrFetchUserWallet(address: string): Promise<UserWalletData | null> {
+  const cached = getUserWalletSnapshot(address);
+  if (cached) return cached;
+  return fetchUserWallet(address);
+}
