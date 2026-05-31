@@ -6,8 +6,10 @@
  * vs unconfirmed balance, fires Telegram alerts, and auto-kicks the
  * inscription queue when funds arrive.
  *
- * No full node, no subscription socket — pure polling via Esplora/mempool.space.
+ * Pushes real-time updates to connected browsers via Server-Sent Events.
  */
+
+import type { Response } from "express";
 
 const ESPLORA = "https://blockstream.info/api";
 const MEMPOOL  = "https://mempool.space/api";
@@ -16,7 +18,7 @@ const LOW_WARN = 20_000;          // sats — amber alert
 const LOW_CRIT =  5_000;          // sats — red alert
 const ALERT_COOLDOWN = 3_600_000; // 1 h between same-severity alerts
 
-// ── API helpers ──────────────────────────────────────────────────────────────
+// ── API helpers ───────────────────────────────────────────────────────────────
 async function fetchJson(url: string): Promise<any> {
   const r = await fetch(url, { signal: AbortSignal.timeout(12_000), headers: { Accept: "application/json" } });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -28,7 +30,7 @@ async function esplora(path: string): Promise<any> {
   catch { return await fetchJson(`${MEMPOOL}${path}`); }
 }
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 export interface WalletSnapshot {
   address:     string;
   confirmed:   number;
@@ -46,7 +48,14 @@ export interface SentinelEvent {
   timestamp: string;
 }
 
-// ── State ────────────────────────────────────────────────────────────────────
+export interface SentinelPush {
+  snapshot: WalletSnapshot | null;
+  events:   SentinelEvent[];
+  health:   string;
+  mempoolUrl: string | null;
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
 let _running         = false;
 let _timer: ReturnType<typeof setTimeout> | null = null;
 let _snapshot: WalletSnapshot | null = null;
@@ -56,9 +65,41 @@ let _lastRecovAlert  = 0;
 let _wasLow          = false;
 const _events: SentinelEvent[] = [];   // rolling last-50 events
 
+// ── SSE client registry ───────────────────────────────────────────────────────
+const _sseClients = new Set<Response>();
+
+export function registerSSEClient(res: Response) {
+  _sseClients.add(res);
+}
+export function unregisterSSEClient(res: Response) {
+  _sseClients.delete(res);
+}
+
+function broadcastSSE() {
+  if (_sseClients.size === 0) return;
+  const LOW_WARN_L = 20_000, LOW_CRIT_L = 5_000;
+  const health = !_snapshot ? "unknown"
+    : _snapshot.confirmed < LOW_CRIT_L ? "critical"
+    : _snapshot.confirmed < LOW_WARN_L ? "warning"
+    : "ok";
+  const payload: SentinelPush = {
+    snapshot:   _snapshot,
+    events:     [..._events],
+    health,
+    mempoolUrl: _snapshot ? `https://mempool.space/address/${_snapshot.address}` : null,
+  };
+  const data = `data: ${JSON.stringify(payload)}\n\n`;
+  for (const res of _sseClients) {
+    try { res.write(data); } catch { _sseClients.delete(res); }
+  }
+}
+
+// ── Event log ─────────────────────────────────────────────────────────────────
 function pushEvent(e: SentinelEvent) {
   _events.unshift(e);
   if (_events.length > 50) _events.pop();
+  // Push immediately to any open browser tabs
+  broadcastSSE();
 }
 
 // ── Telegram helper ───────────────────────────────────────────────────────────
@@ -69,7 +110,7 @@ async function alert(msg: string) {
   } catch { /* telegram is optional */ }
 }
 
-// ── Core poll ────────────────────────────────────────────────────────────────
+// ── Core poll ─────────────────────────────────────────────────────────────────
 async function poll(address: string) {
   let balance: { funded_txo_sum: number; spent_txo_sum: number; unconfirmed_delta: number };
   let txs: { txid: string; status: { confirmed: boolean } }[];
@@ -77,8 +118,8 @@ async function poll(address: string) {
   try {
     [balance, txs] = await Promise.all([
       esplora(`/address/${address}`).then((d: any) => ({
-        funded_txo_sum:   d.chain_stats.funded_txo_sum   + d.mempool_stats.funded_txo_sum,
-        spent_txo_sum:    d.chain_stats.spent_txo_sum    + d.mempool_stats.spent_txo_sum,
+        funded_txo_sum:    d.chain_stats.funded_txo_sum   + d.mempool_stats.funded_txo_sum,
+        spent_txo_sum:     d.chain_stats.spent_txo_sum    + d.mempool_stats.spent_txo_sum,
         unconfirmed_delta: d.mempool_stats.funded_txo_sum - d.mempool_stats.spent_txo_sum,
       })),
       esplora(`/address/${address}/txs`),
@@ -95,29 +136,19 @@ async function poll(address: string) {
   const now = new Date().toISOString();
   _snapshot = { address, confirmed, unconfirmed, total, txCount: txs.length, checkedAt: now };
 
-  // ── 1. Detect new mempool transactions ──────────────────────────────────
-  for (const tx of txs) {
-    if (!_knownTxids.has(tx.txid)) {
-      _knownTxids.add(tx.txid);
-      if (_knownTxids.size === txs.length && _knownTxids.size > txs.length - 1) {
-        // First-run seed: don't alert for historical TXs — just record them
-        continue;
-      }
-    }
-  }
-  // Detect brand-new TXs (unconfirmed ones we haven't seen)
+  // ── 1. Detect new mempool transactions ───────────────────────────────────
   const unconfirmedTxs = txs.filter(t => !t.status.confirmed);
   for (const tx of unconfirmedTxs) {
     if (!_knownTxids.has(tx.txid + ":alerted")) {
       _knownTxids.add(tx.txid + ":alerted");
       const ev: SentinelEvent = {
         type:      "incoming",
-        message:   `🟠 Incoming TX detected on service wallet\nTXID: ${tx.txid.slice(0, 16)}…\nBalance now: ${unconfirmed > 0 ? `+${unconfirmed.toLocaleString()}` : "0"} unconfirmed / ${confirmed.toLocaleString()} confirmed sats`,
+        message:   `🟠 Incoming TX detected\nTXID: ${tx.txid.slice(0, 16)}…\n+${unconfirmed.toLocaleString()} unconfirmed / ${confirmed.toLocaleString()} confirmed sats`,
         sats:      unconfirmed,
         txid:      tx.txid,
         timestamp: now,
       };
-      pushEvent(ev);
+      pushEvent(ev);  // also broadcasts SSE
       await alert(
         `⚡ <b>NexusOS Service Wallet — Incoming TX</b>\n\n` +
         `TXID: <code>${tx.txid}</code>\n` +
@@ -190,10 +221,13 @@ async function poll(address: string) {
     // ── 4. Auto-kick inscription queue ────────────────────────────────────
     try {
       const { btcBridge } = await import("./btc-bridge-service");
-      (btcBridge as any)._busy = false;  // unlock if stuck
+      (btcBridge as any)._busy = false;
       console.log("[Sentinel] ✅ Wallet recovered — kicked inscription queue");
     } catch { /* bridge optional */ }
   }
+
+  // Always broadcast current snapshot after every poll
+  broadcastSSE();
 
   // ── 5. Log summary every 10 polls (~5 min) ───────────────────────────────
   if (!((nowMs / POLL_MS) % 10 | 0)) {
@@ -207,7 +241,7 @@ async function seed(address: string) {
     const txs: { txid: string }[] = await esplora(`/address/${address}/txs`);
     for (const tx of txs) {
       _knownTxids.add(tx.txid);
-      _knownTxids.add(tx.txid + ":alerted");  // suppress alerts for existing TXs
+      _knownTxids.add(tx.txid + ":alerted");
     }
     console.log(`[Sentinel] Seeded ${txs.length} known TXs for ${address.slice(0, 12)}…`);
   } catch (e: any) {
@@ -235,9 +269,7 @@ export async function startWalletSentinel() {
 
   pushEvent({ type: "startup", message: `Sentinel started — watching ${address}`, timestamp: new Date().toISOString() });
 
-  // Seed first so we don't spam alerts for historical TXs
   await seed(address);
-  // First poll immediately
   await poll(address);
 
   const loop = async () => {

@@ -1,15 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft, Shield, Wifi, AlertTriangle, CheckCircle2,
+  ArrowLeft, Shield, Wifi, WifiOff, AlertTriangle, CheckCircle2,
   XCircle, Clock, Copy, ExternalLink, RefreshCw, Zap,
   ArrowDownLeft, Bitcoin,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function satsDisplay(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(4)}M`;
   if (n >= 1_000)     return `${(n / 1_000).toFixed(2)}K`;
@@ -43,18 +43,76 @@ function HealthBadge({ health }: { health: string }) {
   return <Badge className="bg-slate-500/20 text-slate-400 border-slate-500/30"><Clock className="w-3 h-3 mr-1" />Connecting…</Badge>;
 }
 
+// ── SSE hook ──────────────────────────────────────────────────────────────────
+interface SentinelData {
+  snapshot:   any;
+  events:     any[];
+  health:     string;
+  mempoolUrl: string | null;
+}
+
+function useSentinelStream(): { data: SentinelData | null; connected: boolean; lastPush: number } {
+  const [data, setData]           = useState<SentinelData | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [lastPush, setLastPush]   = useState(0);
+  const esRef = useRef<EventSource | null>(null);
+
+  useEffect(() => {
+    let retryTimer: ReturnType<typeof setTimeout>;
+
+    function connect() {
+      if (esRef.current) esRef.current.close();
+
+      const es = new EventSource("/api/btc/sentinel/stream");
+      esRef.current = es;
+
+      es.onopen = () => setConnected(true);
+
+      es.onmessage = (e) => {
+        try {
+          const payload = JSON.parse(e.data) as SentinelData;
+          setData(payload);
+          setLastPush(Date.now());
+        } catch { /* malformed frame */ }
+      };
+
+      es.onerror = () => {
+        setConnected(false);
+        es.close();
+        esRef.current = null;
+        // Reconnect after 5 s
+        retryTimer = setTimeout(connect, 5_000);
+      };
+    }
+
+    connect();
+
+    return () => {
+      clearTimeout(retryTimer);
+      esRef.current?.close();
+      esRef.current = null;
+    };
+  }, []);
+
+  return { data, connected, lastPush };
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function BtcSentinelPage() {
   const { toast } = useToast();
+  const { data, connected, lastPush } = useSentinelStream();
 
-  const { data, isLoading, refetch, dataUpdatedAt } = useQuery({
-    queryKey: ["/api/btc/sentinel"],
-    refetchInterval: 30_000,
-  });
+  // Tick every second so "just now / Xs ago" timestamps stay fresh
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick(n => n + 1), 1_000);
+    return () => clearInterval(t);
+  }, []);
 
-  const snap    = (data as any)?.snapshot;
-  const events  = ((data as any)?.events ?? []) as any[];
-  const health  = (data as any)?.health ?? "unknown";
-  const memUrl  = (data as any)?.mempoolUrl;
+  const snap     = data?.snapshot ?? null;
+  const events   = data?.events   ?? [];
+  const health   = data?.health   ?? "unknown";
+  const memUrl   = data?.mempoolUrl ?? null;
 
   const copy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -81,13 +139,13 @@ export default function BtcSentinelPage() {
           <span className="text-gray-400 text-sm font-mono">Wallet Sentinel</span>
           <div className="flex-1" />
           <HealthBadge health={health} />
-          <button
-            onClick={() => refetch()}
-            className="text-gray-500 hover:text-white transition-colors"
-            data-testid="button-refresh-sentinel"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
+          {/* Live indicator */}
+          <div className="flex items-center gap-1.5 text-xs font-mono">
+            {connected
+              ? <><div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /><span className="text-green-400">LIVE</span></>
+              : <><WifiOff className="w-3 h-3 text-gray-500" /><span className="text-gray-500">reconnecting…</span></>
+            }
+          </div>
         </div>
 
         {/* Live balance card */}
@@ -104,8 +162,10 @@ export default function BtcSentinelPage() {
             <span className="text-xs font-mono text-gray-500 uppercase tracking-widest">Service Wallet</span>
           </div>
 
-          {!snap && isLoading && (
-            <div className="text-gray-500 text-sm animate-pulse">Connecting to mempool…</div>
+          {!snap && (
+            <div className="text-gray-500 text-sm animate-pulse">
+              {connected ? "Loading balance…" : "Connecting to mempool…"}
+            </div>
           )}
 
           {snap && (
@@ -127,14 +187,14 @@ export default function BtcSentinelPage() {
               <div className="grid grid-cols-3 gap-3 mb-4">
                 <div className="bg-slate-800/50 rounded-lg p-3 text-center">
                   <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Confirmed</div>
-                  <div className="text-lg font-bold font-mono" style={{ color: healthColor }} data-testid="text-confirmed-sats">
+                  <div className="text-lg font-bold font-mono transition-all duration-500" style={{ color: healthColor }} data-testid="text-confirmed-sats">
                     {satsDisplay(snap.confirmed)}
                   </div>
                   <div className="text-[10px] text-gray-600 font-mono">sats</div>
                 </div>
                 <div className="bg-slate-800/50 rounded-lg p-3 text-center">
                   <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Unconfirmed</div>
-                  <div className={`text-lg font-bold font-mono ${snap.unconfirmed > 0 ? "text-orange-400" : "text-gray-600"}`} data-testid="text-unconfirmed-sats">
+                  <div className={`text-lg font-bold font-mono transition-all duration-500 ${snap.unconfirmed > 0 ? "text-orange-400" : "text-gray-600"}`} data-testid="text-unconfirmed-sats">
                     {snap.unconfirmed > 0 ? `+${satsDisplay(snap.unconfirmed)}` : "—"}
                   </div>
                   <div className="text-[10px] text-gray-600 font-mono">sats</div>
@@ -150,12 +210,13 @@ export default function BtcSentinelPage() {
 
               {/* Thresholds */}
               <div className="space-y-2">
-                <ThresholdBar label="Critical floor" value={snap.confirmed} threshold={5_000} color="#ef4444" />
+                <ThresholdBar label="Critical floor" value={snap.confirmed} threshold={5_000}  color="#ef4444" />
                 <ThresholdBar label="Low-balance warn" value={snap.confirmed} threshold={20_000} color="#f59e0b" />
               </div>
 
               <div className="text-[10px] text-gray-600 font-mono mt-3">
-                Last checked: {fmtTime(snap.checkedAt)} · polling every 30s
+                Last push: {lastPush ? fmtTime(new Date(lastPush).toISOString()) : "—"}
+                {" · "}sentinel polls every 30 s
               </div>
             </>
           )}
@@ -207,7 +268,7 @@ export default function BtcSentinelPage() {
 
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {events.map((ev: any, i: number) => (
-              <div key={i} className="flex items-start gap-2.5 py-2 border-b border-slate-800/50 last:border-0">
+              <div key={`${ev.timestamp}-${i}`} className="flex items-start gap-2.5 py-2 border-b border-slate-800/50 last:border-0">
                 <div className="mt-0.5 shrink-0">
                   {EVENT_ICONS[ev.type] ?? <Clock className="w-3.5 h-3.5 text-gray-500" />}
                 </div>
@@ -231,11 +292,11 @@ export default function BtcSentinelPage() {
           </div>
         </Card>
 
-        {/* Info */}
+        {/* Footer */}
         <div className="mt-4 text-center text-xs text-gray-600 font-mono space-y-1">
-          <div>Polling mempool.space + blockstream.info every 30 s</div>
-          <div>Telegram alerts fire instantly on new TXs · hourly on low balance</div>
-          <div>Queue auto-resumes when confirmed balance recovers above 5 000 sats</div>
+          <div>Server-sent events — page updates instantly when sentinel detects activity</div>
+          <div>Sentinel polls mempool.space + blockstream.info every 30 s</div>
+          <div>Telegram alerts fire on new TXs · queue auto-resumes when balance recovers</div>
         </div>
       </div>
     </div>
@@ -243,19 +304,21 @@ export default function BtcSentinelPage() {
 }
 
 function ThresholdBar({ label, value, threshold, color }: { label: string; value: number; threshold: number; color: string }) {
-  const pct = Math.min(100, (value / threshold) * 100);
+  const pct  = Math.min(100, (value / threshold) * 100);
   const over = value >= threshold;
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-[10px] font-mono text-gray-500">
         <span>{label}</span>
         <span style={{ color: over ? "#6b7280" : color }}>
-          {over ? `✓ ${satsDisplay(value)} / ${satsDisplay(threshold)}` : `${satsDisplay(value)} / ${satsDisplay(threshold)} sats`}
+          {over
+            ? `✓ ${satsDisplay(value)} / ${satsDisplay(threshold)}`
+            : `${satsDisplay(value)} / ${satsDisplay(threshold)} sats`}
         </span>
       </div>
       <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
         <div
-          className="h-full rounded-full transition-all"
+          className="h-full rounded-full transition-all duration-700"
           style={{ width: `${pct}%`, background: over ? "#374151" : color }}
         />
       </div>
