@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, ProtectedRoute, AuthLoading } from "@/hooks/use-auth";
+import { UniSatProvider } from "@/hooks/use-unisat";
 import HubPage from "@/pages/hub";
 import LambdaPlaceholder from "@/pages/lambda-placeholder";
 import WNSPv7Page from "@/pages/wnsp-v7";
@@ -318,14 +319,16 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <Toaster />
-          <AuthLoading>
-            <Router />
-          </AuthLoading>
-          <TelegramFloat />
-          <GuideBot />
-        </AuthProvider>
+        <UniSatProvider>
+          <AuthProvider>
+            <Toaster />
+            <AuthLoading>
+              <Router />
+            </AuthLoading>
+            <TelegramFloat />
+            <GuideBot />
+          </AuthProvider>
+        </UniSatProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

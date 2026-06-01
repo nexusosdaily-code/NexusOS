@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useUnisat } from "@/hooks/use-unisat";
 import TelegramVideoGallery from "@/components/TelegramVideoGallery";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import {
   MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut, Settings, User, Search,
   CheckCircle2, AlertTriangle, ArrowRight, FlaskConical, Heart,
   Copy, ExternalLink, RefreshCw, ChevronDown, ChevronUp, ShoppingBag,
-  Gem, Coins, TrendingUp,
+  Gem, Coins, TrendingUp, Unplug,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -199,6 +200,94 @@ function relTime(iso: string): string {
 }
 
 // ── Identity Rail ──────────────────────────────────────────────────────
+function BtcWalletPill() {
+  const { available, connected, address, balance, connect, disconnect, providerName } = useUnisat();
+  const [open, setOpen] = useState(false);
+
+  const fmtAddr = (a: string) => a.slice(0, 7) + "…" + a.slice(-5);
+  const fmtSats = (n: number) => n >= 100_000_000 ? (n / 100_000_000).toFixed(4) + " BTC" : n >= 1_000 ? (n / 1_000).toFixed(1) + "K sats" : n + " sats";
+
+  if (!available) return (
+    <a href="https://unisat.io" target="_blank" rel="noreferrer"
+      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-orange-500/60 hover:text-orange-400 border border-orange-500/10 hover:border-orange-500/30 transition-all"
+      title="Install UniSat to connect Bitcoin wallet"
+    >
+      <Bitcoin className="w-3.5 h-3.5" />
+      <span className="hidden md:inline">Install UniSat</span>
+    </a>
+  );
+
+  if (!connected) return (
+    <button onClick={connect}
+      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-orange-400/70 hover:text-orange-300 border border-orange-500/20 hover:border-orange-400/50 hover:bg-orange-500/10 transition-all"
+      data-testid="button-btc-connect-rail"
+      title={`Connect ${providerName}`}
+    >
+      <Bitcoin className="w-3.5 h-3.5" />
+      <span className="hidden md:inline">Connect BTC</span>
+    </button>
+  );
+
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs border transition-all"
+        style={{ background: "rgba(249,115,22,0.12)", color: "#fb923c", border: "1px solid rgba(249,115,22,0.35)" }}
+        data-testid="button-btc-wallet-pill"
+        title={address ?? ""}
+      >
+        <Bitcoin className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline font-mono">{address ? fmtAddr(address) : "Connected"}</span>
+        {balance && <span className="hidden lg:inline text-orange-300/70">· {fmtSats(balance.confirmed)}</span>}
+        <ChevronDown className="w-3 h-3 text-orange-500/60" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-50 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-3 min-w-[220px]"
+          onMouseLeave={() => setOpen(false)}>
+          <div className="text-[10px] text-orange-400 font-semibold uppercase tracking-wider mb-2">Bitcoin Wallet</div>
+          <div className="text-[10px] text-slate-500 font-mono break-all mb-1">{address}</div>
+          {balance && (
+            <div className="text-xs text-slate-300 mb-3">
+              <span className="text-orange-300 font-mono">{fmtSats(balance.confirmed)}</span>
+              {balance.unconfirmed > 0 && <span className="text-slate-600 ml-2">(+{fmtSats(balance.unconfirmed)} unconfirmed)</span>}
+            </div>
+          )}
+          <div className="flex flex-col gap-1">
+            <Link href="/marketplace">
+              <button className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-2"
+                onClick={() => setOpen(false)}>
+                <ShoppingBag className="w-3 h-3 text-orange-400" />Marketplace
+              </button>
+            </Link>
+            <Link href="/wnsp-ordinals">
+              <button className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-2"
+                onClick={() => setOpen(false)}>
+                <Gem className="w-3 h-3 text-purple-400" />My Ordinals
+              </button>
+            </Link>
+            <Link href="/btc-assets-sentinel">
+              <button className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-2"
+                onClick={() => setOpen(false)}>
+                <Activity className="w-3 h-3 text-cyan-400" />Asset Sentinel
+              </button>
+            </Link>
+            <Link href="/rune-staking">
+              <button className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-2"
+                onClick={() => setOpen(false)}>
+                <Coins className="w-3 h-3 text-yellow-400" />Rune Staking
+              </button>
+            </Link>
+          </div>
+          <button onClick={() => { disconnect(); setOpen(false); }}
+            className="mt-2 flex items-center gap-1.5 w-full px-2 py-1.5 text-xs text-red-400 hover:bg-red-900/10 rounded transition-colors border-t border-slate-800 pt-2">
+            <Unplug className="w-3 h-3" />Disconnect wallet
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function IdentityRail({
   user, wallet, unread, avatarUrl,
 }: {
@@ -278,7 +367,7 @@ function IdentityRail({
         </Link>
       )}
 
-      {/* Balance */}
+      {/* NXT Balance */}
       <Link href="/wallet">
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded cursor-pointer text-xs font-mono"
           style={{ background: "rgba(251,191,36,0.10)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.25)" }}>
@@ -290,6 +379,9 @@ function IdentityRail({
             : balNum.toFixed(4)} NXT
         </div>
       </Link>
+
+      {/* BTC Wallet — persistent pill in global nav */}
+      <BtcWalletPill />
 
       {/* Settings */}
       <Link href="/settings">

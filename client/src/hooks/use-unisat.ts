@@ -1,21 +1,21 @@
 /**
  * useUnisat — Bitcoin wallet hook for NexusOS
- * Detects and connects to:
- *   1. UniSat Wallet  (window.unisat)
- *   2. Xverse Wallet  (window.XverseProviders?.BitcoinProvider)
- *   3. OKX Wallet     (window.okxwallet?.bitcoin)
+ * Context-based: connect once anywhere → connected everywhere.
  *
- * Provides: connect, signPsbt, pushTx, signMessage, getBalance
+ * Usage:
+ *   1. Wrap your app with <UniSatProvider>
+ *   2. Call useUnisat() in any component
  */
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, createContext, useContext, useMemo } from "react";
+import type { ReactNode } from "react";
 
 export type WalletProvider = "unisat" | "xverse" | "okx" | null;
 
 export interface UnisatBalance {
-  confirmed: number;    // sats
-  unconfirmed: number;  // sats
-  total: number;        // sats
+  confirmed: number;
+  unconfirmed: number;
+  total: number;
 }
 
 export interface WalletInscription {
@@ -53,7 +53,6 @@ export interface UseUnisatReturn {
   connect: () => Promise<void>;
   disconnect: () => void;
   signPsbt: (psbtHex: string, opts?: SignPsbtOpts) => Promise<string>;
-  /** pushPsbt — signs AND broadcasts a PSBT in one step (UniSat native, preferred over signPsbt+pushTx) */
   pushPsbt: (psbtHex: string, opts?: SignPsbtOpts) => Promise<string>;
   pushTx: (txHex: string) => Promise<string>;
   signMessage: (message: string) => Promise<string>;
@@ -83,25 +82,26 @@ const PROVIDER_NAMES: Record<string, string> = {
   okx:    "OKX",
 };
 
-export function useUnisat(): UseUnisatReturn {
-  const [available,   setAvailable]   = useState(false);
-  const [provider,    setProvider]    = useState<WalletProvider>(null);
-  const [connected,   setConnected]   = useState(false);
-  const [address,     setAddress]     = useState<string | null>(null);
-  const [balance,     setBalance]     = useState<UnisatBalance | null>(null);
-  const [error,       setError]       = useState<string | null>(null);
-  const [_api,        _setApi]        = useState<any>(null);
+// ── Context ────────────────────────────────────────────────────────────────────
+const UniSatContext = createContext<UseUnisatReturn | null>(null);
 
-  // Detect on mount + after page load
+// ── Provider ───────────────────────────────────────────────────────────────────
+export function UniSatProvider({ children }: { children: ReactNode }) {
+  const [available, setAvailable]   = useState(false);
+  const [provider,  setProvider]    = useState<WalletProvider>(null);
+  const [connected, setConnected]   = useState(false);
+  const [address,   setAddress]     = useState<string | null>(null);
+  const [balance,   setBalance]     = useState<UnisatBalance | null>(null);
+  const [error,     setError]       = useState<string | null>(null);
+
+  // Detect wallet on mount (some wallets inject after DOMContentLoaded)
   useEffect(() => {
     const detect = () => {
-      const { provider: p, api } = detectProvider();
+      const { provider: p } = detectProvider();
       setAvailable(!!p);
       setProvider(p);
-      _setApi(api);
     };
     detect();
-    // Some wallets inject after DOMContentLoaded
     const t = setTimeout(detect, 500);
     return () => clearTimeout(t);
   }, []);
@@ -119,17 +119,17 @@ export function useUnisat(): UseUnisatReturn {
   }, []);
 
   const refreshBalance = useCallback(async () => {
-    const { api } = detectProvider();
+    const { api, provider: p } = detectProvider();
     if (!api) return;
     try {
-      if (provider === "unisat") {
+      if (p === "unisat") {
         const bal = await api.getBalance();
         setBalance({ confirmed: bal.confirmed, unconfirmed: bal.unconfirmed, total: bal.total });
       }
     } catch (e: any) {
       console.warn("[useUnisat] balance fetch failed:", e.message);
     }
-  }, [provider]);
+  }, []);
 
   const connect = useCallback(async () => {
     setError(null);
@@ -143,7 +143,6 @@ export function useUnisat(): UseUnisatReturn {
       if (p === "unisat") {
         accounts = await api.requestAccounts();
       } else if (p === "xverse") {
-        // Xverse uses a different connect API
         await api.connect();
         const resp = await api.getAccounts();
         accounts = resp.map((a: any) => a.address);
@@ -154,9 +153,7 @@ export function useUnisat(): UseUnisatReturn {
       if (accounts.length > 0) {
         setConnected(true);
         setAddress(accounts[0]);
-        _setApi(api);
         setProvider(p);
-        // Fetch balance
         try {
           if (p === "unisat") {
             const bal = await api.getBalance();
@@ -178,18 +175,9 @@ export function useUnisat(): UseUnisatReturn {
   const signPsbt = useCallback(async (psbtHex: string, opts: SignPsbtOpts = {}): Promise<string> => {
     const { api, provider: p } = detectProvider();
     if (!api) throw new Error("No Bitcoin wallet connected");
-    if (p === "unisat") {
-      return api.signPsbt(psbtHex, {
-        autoFinalized: opts.autoFinalized ?? true,
-        toSignInputs: opts.toSignInputs,
-      });
-    } else if (p === "xverse") {
-      // Xverse PSBT signing
-      const resp = await api.signPsbt({ psbt: psbtHex, signInputs: opts.toSignInputs ?? [] });
-      return resp.psbt;
-    } else if (p === "okx") {
-      return api.signPsbt(psbtHex);
-    }
+    if (p === "unisat") return api.signPsbt(psbtHex, { autoFinalized: opts.autoFinalized ?? true, toSignInputs: opts.toSignInputs });
+    if (p === "xverse") { const r = await api.signPsbt({ psbt: psbtHex, signInputs: opts.toSignInputs ?? [] }); return r.psbt; }
+    if (p === "okx")    return api.signPsbt(psbtHex);
     throw new Error("Unsupported wallet for PSBT signing");
   }, []);
 
@@ -198,46 +186,26 @@ export function useUnisat(): UseUnisatReturn {
     if (!api) throw new Error("No Bitcoin wallet connected");
     if (p === "unisat") return api.pushTx({ rawtx: txHex });
     if (p === "okx")    return api.pushTx(txHex);
-    // Fallback: broadcast via mempool.space
-    const res = await fetch("https://mempool.space/api/tx", {
-      method: "POST", headers: { "Content-Type": "text/plain" }, body: txHex,
-    });
+    const res = await fetch("https://mempool.space/api/tx", { method: "POST", headers: { "Content-Type": "text/plain" }, body: txHex });
     if (!res.ok) throw new Error(`Broadcast failed: ${await res.text()}`);
     return res.text();
   }, []);
 
-  /**
-   * pushPsbt — the preferred one-step method.
-   * UniSat's native `window.unisat.pushPsbt()` signs AND broadcasts the PSBT
-   * internally and returns the txid directly. This avoids a separate broadcast
-   * call and matches the spec from the NexusOS architecture document.
-   * For Xverse/OKX we fall back to signPsbt + broadcast via mempool.space.
-   */
   const pushPsbt = useCallback(async (psbtHex: string, opts: SignPsbtOpts = {}): Promise<string> => {
     const { api, provider: p } = detectProvider();
     if (!api) throw new Error("No Bitcoin wallet connected");
-
-    if (p === "unisat") {
-      // UniSat native: signs + finalizes + broadcasts, returns txid
-      return api.pushPsbt(psbtHex);
-    }
-
-    // Xverse / OKX: sign first, then broadcast
+    if (p === "unisat") return api.pushPsbt(psbtHex);
     let signedHex: string;
     if (p === "xverse") {
       const resp = await api.signPsbt({ psbt: psbtHex, signInputs: opts.toSignInputs ?? [], broadcast: true });
-      if (resp.txid) return resp.txid; // Xverse can auto-broadcast
+      if (resp.txid) return resp.txid;
       signedHex = resp.psbt;
     } else if (p === "okx") {
       signedHex = await api.signPsbt(psbtHex);
     } else {
       throw new Error("Unsupported wallet for pushPsbt");
     }
-
-    // Manual broadcast fallback via mempool.space
-    const res = await fetch("https://mempool.space/api/tx", {
-      method: "POST", headers: { "Content-Type": "text/plain" }, body: signedHex,
-    });
+    const res = await fetch("https://mempool.space/api/tx", { method: "POST", headers: { "Content-Type": "text/plain" }, body: signedHex });
     if (!res.ok) throw new Error(`Broadcast failed: ${await res.text()}`);
     return (await res.text()).trim();
   }, []);
@@ -253,15 +221,9 @@ export function useUnisat(): UseUnisatReturn {
   const getInscriptions = useCallback(async (cursor = 0, size = 100) => {
     const { api, provider: p } = detectProvider();
     if (!api) throw new Error("No Bitcoin wallet connected");
-    if (p === "unisat") {
-      const res = await api.getInscriptions(cursor, size);
-      return { total: res.total, list: res.list ?? [] };
-    }
-    // Xverse/OKX: fallback via UniSat open API using connected address
+    if (p === "unisat") { const res = await api.getInscriptions(cursor, size); return { total: res.total, list: res.list ?? [] }; }
     if (!address) throw new Error("No address connected");
-    const r = await fetch(`https://open-api.unisat.io/v1/indexer/address/${address}/inscription-data?cursor=${cursor}&size=${size}`, {
-      headers: { "X-Client": "NexusOS" },
-    });
+    const r = await fetch(`https://open-api.unisat.io/v1/indexer/address/${address}/inscription-data?cursor=${cursor}&size=${size}`, { headers: { "X-Client": "NexusOS" } });
     const d = await r.json();
     return { total: d.data?.total ?? 0, list: d.data?.inscription ?? [] };
   }, [address]);
@@ -269,23 +231,18 @@ export function useUnisat(): UseUnisatReturn {
   const getBRC20s = useCallback(async (cursor = 0, size = 100) => {
     const { api, provider: p } = detectProvider();
     if (!api) throw new Error("No Bitcoin wallet connected");
-    if (p === "unisat") {
-      const res = await api.getBRC20s(cursor, size);
-      return { total: res.total, list: res.list ?? [] };
-    }
+    if (p === "unisat") { const res = await api.getBRC20s(cursor, size); return { total: res.total, list: res.list ?? [] }; }
     return { total: 0, list: [] };
   }, []);
 
   const getRunes = useCallback(async () => {
     if (!address) throw new Error("No address connected");
-    const r = await fetch(`https://open-api.unisat.io/v1/indexer/address/${address}/runes/balance-list?cursor=0&size=100`, {
-      headers: { "X-Client": "NexusOS" },
-    });
+    const r = await fetch(`https://open-api.unisat.io/v1/indexer/address/${address}/runes/balance-list?cursor=0&size=100`, { headers: { "X-Client": "NexusOS" } });
     const d = await r.json();
     return { total: d.data?.total ?? 0, list: d.data?.detail ?? [] };
   }, [address]);
 
-  return {
+  const value = useMemo<UseUnisatReturn>(() => ({
     available,
     provider,
     providerName: provider ? (PROVIDER_NAMES[provider] ?? provider) : "Bitcoin Wallet",
@@ -303,5 +260,18 @@ export function useUnisat(): UseUnisatReturn {
     getBRC20s,
     getRunes,
     error,
-  };
+  }), [
+    available, provider, connected, address, balance, error,
+    connect, disconnect, signPsbt, pushPsbt, pushTx, signMessage,
+    refreshBalance, getInscriptions, getBRC20s, getRunes,
+  ]);
+
+  return React.createElement(UniSatContext.Provider, { value }, children);
+}
+
+// ── Hook ───────────────────────────────────────────────────────────────────────
+export function useUnisat(): UseUnisatReturn {
+  const ctx = useContext(UniSatContext);
+  if (!ctx) throw new Error("useUnisat must be used inside <UniSatProvider>");
+  return ctx;
 }
