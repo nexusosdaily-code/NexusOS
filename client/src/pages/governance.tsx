@@ -234,9 +234,18 @@ export default function GovernancePage() {
   });
 
   const myBand = physicsData?.channel?.band ?? "USER";
-  const myBandWeight = { SYSTEM: 8, KERNEL: 4, USER: 2, GUEST: 1 }[myBand] ?? 1;
+  const myBandBase = { SYSTEM: 8, KERNEL: 4, USER: 2, GUEST: 1 }[myBand] ?? 1;
   const canPropose = ["SYSTEM", "KERNEL"].includes(myBand);
   const isSYSTEM = myBand === "SYSTEM";
+
+  const { data: lnBalData } = useQuery<{ satsBalance: number }>({
+    queryKey: ["/api/lightning/balance"],
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+  const mySats = lnBalData?.satsBalance ?? 0;
+  const mySatsBonus = Math.min(5, Math.floor(mySats / 10000));
+  const myBandWeight = myBandBase + mySatsBonus;
 
   const { data: paramsData } = useQuery<{ params: GovernanceParam[] }>({
     queryKey: ["/api/governance/params"],
@@ -352,12 +361,19 @@ export default function GovernancePage() {
             <h1 className="text-sm font-bold text-white">NexusOS Governance</h1>
             <p className="text-[11px] text-zinc-500">Protocol parameter voting · Spectral authority weighted</p>
           </div>
-          <div
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold"
-            style={{ color: BAND_COLOR[myBand] ?? "#9ca3af", borderColor: `${BAND_COLOR[myBand] ?? "#9ca3af"}40`, background: `${BAND_COLOR[myBand] ?? "#9ca3af"}15` }}
-          >
-            <Shield className="w-3 h-3" />
-            {myBand} · W{myBandWeight}
+          <div className="text-right">
+            <div
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold"
+              style={{ color: BAND_COLOR[myBand] ?? "#9ca3af", borderColor: `${BAND_COLOR[myBand] ?? "#9ca3af"}40`, background: `${BAND_COLOR[myBand] ?? "#9ca3af"}15` }}
+            >
+              <Shield className="w-3 h-3" />
+              {myBand} · W{myBandWeight}
+            </div>
+            {mySatsBonus > 0 && (
+              <div className="text-[9px] text-yellow-400/60 font-mono mt-0.5 text-right">
+                +{mySatsBonus} from ⚡ sats
+              </div>
+            )}
           </div>
         </div>
       </div>

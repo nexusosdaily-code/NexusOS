@@ -6506,7 +6506,10 @@ export async function registerRoutes(
       if (existing) return res.status(409).json({ error: "You have already voted on this proposal" });
       const channel = deriveChannel(user.username);
       const band = getBand(channel.wdm);
-      const weight = BAND_WEIGHT[band] ?? 1;
+      const bandBase = BAND_WEIGHT[band] ?? 1;
+      const lnWalletGov = await ensureLnWallet(user.id);
+      const satsBonus = Math.min(5, Math.floor(lnWalletGov.satsBalance / 10000));
+      const weight = bandBase + satsBonus;
       const govVote = await storage.castGovernanceVote(proposalId, user.id, user.username, vote, weight, band);
       // Check for early execution threshold (>= 5 votes, yes > 80% of yes+no)
       const refreshed = await storage.getGovernanceProposal(proposalId);
@@ -8883,6 +8886,117 @@ export async function registerRoutes(
 
       await logAction(req, "lightning_swap_to_sats", "lightning", req.user!.id, { amountSats, nxtAmount });
       res.json({ ok: true, amountSats, nxtAmount: nxtAmount.toFixed(8), rate: LN_SATS_PER_NXT });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/lightning/send — P2P sats transfer to another NexusOS user by username
+  app.post("/api/lightning/send", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { recipientUsername, amountSats, memo } = req.body;
+      if (!recipientUsername) return res.status(400).json({ error: "recipientUsername required" });
+      if (!amountSats || amountSats < 1) return res.status(400).json({ error: "Minimum 1 sat" });
+      const { db } = await import("./db");
+      const { lightningWallets, lightningTransactions, users: usersTable } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [recipient] = await db.select().from(usersTable).where(eq(usersTable.username, recipientUsername));
+      if (!recipient) return res.status(404).json({ error: `User '${recipientUsername}' not found` });
+      if (recipient.id === req.user!.id) return res.status(400).json({ error: "Cannot send to yourself" });
+      const senderWallet = await ensureLnWallet(req.user!.id);
+      if (senderWallet.satsBalance < amountSats) return res.status(400).json({ error: `Insufficient sats (have ${senderWallet.satsBalance})` });
+      await db.update(lightningWallets).set({ satsBalance: senderWallet.satsBalance - amountSats, updatedAt: new Date() }).where(eq(lightningWallets.userId, req.user!.id));
+      const recipientWallet = await ensureLnWallet(recipient.id);
+      await db.update(lightningWallets).set({ satsBalance: recipientWallet.satsBalance + amountSats, updatedAt: new Date() }).where(eq(lightningWallets.userId, recipient.id));
+      const txMemo = memo || `P2P: ${req.user!.username} → ${recipientUsername}`;
+      await db.insert(lightningTransactions).values({ userId: req.user!.id, type: "send_p2p", amountSats, memo: txMemo, status: "completed", completedAt: new Date() });
+      await db.insert(lightningTransactions).values({ userId: recipient.id, type: "receive_p2p", amountSats, memo: txMemo, status: "completed", completedAt: new Date() });
+      await logAction(req, "lightning_p2p_send", "lightning", req.user!.id, { recipientUsername, amountSats });
+      res.json({ ok: true, amountSats, to: recipientUsername });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/lightning/stake — stake sats for NXT yield
+  app.post("/api/lightning/stake", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { amountSats, lockDays } = req.body;
+      if (!amountSats || amountSats < 1000) return res.status(400).json({ error: "Minimum stake: 1,000 sats" });
+      if (![7, 14, 30].includes(lockDays)) return res.status(400).json({ error: "lockDays must be 7, 14, or 30" });
+      const RATES: Record<number, string> = { 7: "5.00", 14: "12.00", 30: "28.00" };
+      const { db } = await import("./db");
+      const { lightningWallets, satsStakes } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const wallet = await ensureLnWallet(req.user!.id);
+      if (wallet.satsBalance < amountSats) return res.status(400).json({ error: "Insufficient sats" });
+      await db.update(lightningWallets).set({ satsBalance: wallet.satsBalance - amountSats, updatedAt: new Date() }).where(eq(lightningWallets.userId, req.user!.id));
+      const nxtYield = ((amountSats / 1000) * (parseFloat(RATES[lockDays]) / 100)).toFixed(8);
+      const maturesAt = new Date(Date.now() + lockDays * 86_400_000);
+      const [stake] = await db.insert(satsStakes).values({ userId: req.user!.id, amountSats, lockDays, yieldRatePercent: RATES[lockDays], maturesAt, nxtYield, status: "active" }).returning();
+      await logAction(req, "sats_stake", "lightning", req.user!.id, { amountSats, lockDays, nxtYield });
+      res.json({ ok: true, stake });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/lightning/stakes — get user's staking positions
+  app.get("/api/lightning/stakes", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { satsStakes } = await import("../shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      const stakes = await db.select().from(satsStakes).where(eq(satsStakes.userId, req.user!.id)).orderBy(desc(satsStakes.stakedAt));
+      const now = new Date();
+      res.json({ stakes: stakes.map(s => ({ ...s, isMatured: s.status === "active" && s.maturesAt <= now })) });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/lightning/unstake/:id — claim a matured staking position
+  app.post("/api/lightning/unstake/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const stakeId = parseInt(req.params.id);
+      const { db } = await import("./db");
+      const { satsStakes, lightningWallets, wallets } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const [stake] = await db.select().from(satsStakes).where(and(eq(satsStakes.id, stakeId), eq(satsStakes.userId, req.user!.id)));
+      if (!stake) return res.status(404).json({ error: "Stake not found" });
+      if (stake.status !== "active") return res.status(400).json({ error: `Stake already ${stake.status}` });
+      if (stake.maturesAt > new Date()) return res.status(400).json({ error: `Stake matures at ${stake.maturesAt.toISOString()}` });
+      const lnWallet = await ensureLnWallet(req.user!.id);
+      await db.update(lightningWallets).set({ satsBalance: lnWallet.satsBalance + stake.amountSats, updatedAt: new Date() }).where(eq(lightningWallets.userId, req.user!.id));
+      const [nxtWallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
+      if (nxtWallet && stake.nxtYield) {
+        const newBal = (parseFloat(nxtWallet.balance) + parseFloat(stake.nxtYield)).toFixed(8);
+        await db.update(wallets).set({ balance: newBal }).where(eq(wallets.userId, req.user!.id));
+      }
+      await db.update(satsStakes).set({ status: "claimed", claimedAt: new Date() }).where(eq(satsStakes.id, stakeId));
+      await logAction(req, "sats_unstake", "lightning", req.user!.id, { stakeId, amountSats: stake.amountSats, nxtYield: stake.nxtYield });
+      res.json({ ok: true, amountSats: stake.amountSats, nxtYield: stake.nxtYield });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/lightning/tip — tip a content creator / streamer with sats
+  app.post("/api/lightning/tip", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { recipientUserId: rawId, recipientUsername, amountSats, memo } = req.body;
+      if (!rawId && !recipientUsername) return res.status(400).json({ error: "recipientUserId or recipientUsername required" });
+      if (!amountSats || amountSats < 1) return res.status(400).json({ error: "Minimum 1 sat" });
+      const { db } = await import("./db");
+      const { lightningWallets, lightningTransactions, users: usersTable } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      let recipientUserId = rawId;
+      if (!recipientUserId && recipientUsername) {
+        const [u] = await db.select().from(usersTable).where(eq(usersTable.username, recipientUsername));
+        if (!u) return res.status(404).json({ error: `User '${recipientUsername}' not found` });
+        recipientUserId = u.id;
+      }
+      if (recipientUserId === req.user!.id) return res.status(400).json({ error: "Cannot tip yourself" });
+      const senderWallet = await ensureLnWallet(req.user!.id);
+      if (senderWallet.satsBalance < amountSats) return res.status(400).json({ error: "Insufficient sats" });
+      await db.update(lightningWallets).set({ satsBalance: senderWallet.satsBalance - amountSats, updatedAt: new Date() }).where(eq(lightningWallets.userId, req.user!.id));
+      const recipientWallet = await ensureLnWallet(recipientUserId);
+      await db.update(lightningWallets).set({ satsBalance: recipientWallet.satsBalance + amountSats, updatedAt: new Date() }).where(eq(lightningWallets.userId, recipientUserId));
+      const txMemo = memo || `⚡ Tip from ${req.user!.username}`;
+      await db.insert(lightningTransactions).values({ userId: req.user!.id, type: "tip_sent", amountSats, memo: txMemo, status: "completed", completedAt: new Date() });
+      await db.insert(lightningTransactions).values({ userId: recipientUserId, type: "tip_received", amountSats, memo: txMemo, status: "completed", completedAt: new Date() });
+      await logAction(req, "sats_tip", "lightning", req.user!.id, { recipientUserId, amountSats });
+      res.json({ ok: true, amountSats, memo: txMemo });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 

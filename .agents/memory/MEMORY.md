@@ -1,1 +1,2 @@
-- [NXT Indestructibility Rule](nxt-indestructibility.md) — NXT is never burned; always redirect to GENESIS_EXECUTION_ADDRESS (NXT-NEXS-OS1K-7F3A-OMEGA).
+- [Sats ecosystem architecture](sats-ecosystem.md) — wallet balance is decimal string, never pass to BigInt(); use parseFloat().toFixed(8) arithmetic
+- [Lightning wallet tab expansion](lightning-wallet-tabs.md) — tabs are now 6: receive/transmit/swap/send/stake/log; "transmissions" was renamed to "log"

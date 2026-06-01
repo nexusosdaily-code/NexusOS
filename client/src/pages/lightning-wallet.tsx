@@ -12,10 +12,10 @@ import {
   Zap, ArrowLeft, ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft,
   Clock, CheckCircle2, XCircle, Copy, RefreshCw, AlertTriangle,
   Bitcoin, Radio, Waves, Activity, ArrowDownLeft, ArrowUpRight,
-  Atom, Send,
+  Atom, Send, Users, Lock, Unlock, TrendingUp, Heart,
 } from "lucide-react";
 
-const TABS = ["receive", "transmit", "swap", "transmissions"] as const;
+const TABS = ["receive", "transmit", "swap", "send", "stake", "log"] as const;
 type Tab = typeof TABS[number];
 
 function satsDisplay(sats: number) {
@@ -85,6 +85,16 @@ export default function ChannelDashboard() {
   const [swapSats, setSwapSats] = useState("1000");
   const [swapNxt, setSwapNxt]   = useState("1");
 
+  // Send P2P
+  const [sendRecipient, setSendRecipient] = useState("");
+  const [sendSats, setSendSats]           = useState("1000");
+  const [sendMemo, setSendMemo]           = useState("");
+  const [sendOk, setSendOk]              = useState(false);
+
+  // Stake
+  const [stakeAmount, setStakeAmount] = useState("5000");
+  const [stakeDays, setStakeDays]     = useState<7|14|30>(7);
+
   const { data: status } = useQuery({
     queryKey: ["/api/lightning/status"],
     refetchInterval: 30_000,
@@ -107,8 +117,14 @@ export default function ChannelDashboard() {
 
   const { data: lnHistory } = useQuery({
     queryKey: ["/api/lightning/transactions"],
-    enabled: tab === "transmissions",
+    enabled: tab === "log",
     refetchInterval: 10_000,
+  });
+
+  const { data: stakesData, refetch: refetchStakes } = useQuery({
+    queryKey: ["/api/lightning/stakes"],
+    enabled: tab === "stake",
+    refetchInterval: 30_000,
   });
 
   useEffect(() => {
@@ -180,6 +196,52 @@ export default function ChannelDashboard() {
       toast({ title: "Channel swap complete", description: `${data.nxtAmount} NXT → ${data.amountSats} sats` });
     },
     onError: (e: any) => toast({ title: "Swap failed", description: e.message, variant: "destructive" }),
+  });
+
+  const sendP2P = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/lightning/send", {
+        recipientUsername: sendRecipient.trim(),
+        amountSats: parseInt(sendSats),
+        memo: sendMemo.trim() || undefined,
+      });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      setSendOk(true);
+      setSendRecipient(""); setSendSats("1000"); setSendMemo("");
+      refetchBal();
+      qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] });
+      toast({ title: "⚡ Sent!", description: `${data.amountSats} sats → ${data.to}` });
+    },
+    onError: (e: any) => toast({ title: "Send failed", description: e.message, variant: "destructive" }),
+  });
+
+  const stakeMut = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/lightning/stake", { amountSats: parseInt(stakeAmount), lockDays: stakeDays });
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchBal();
+      refetchStakes();
+      toast({ title: "📈 Staked!", description: `${stakeAmount} sats locked for ${stakeDays} days.` });
+    },
+    onError: (e: any) => toast({ title: "Stake failed", description: e.message, variant: "destructive" }),
+  });
+
+  const unstakeMut = useMutation({
+    mutationFn: async (stakeId: number) => {
+      const res = await apiRequest("POST", `/api/lightning/unstake/${stakeId}`, {});
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      refetchBal();
+      refetchStakes();
+      qc.invalidateQueries({ queryKey: ["/api/wallet"] });
+      toast({ title: "✅ Unstaked!", description: `${data.amountSats} sats returned · ${data.nxtYield} NXT yield credited` });
+    },
+    onError: (e: any) => toast({ title: "Unstake failed", description: e.message, variant: "destructive" }),
   });
 
   const copy = (text: string) => { navigator.clipboard.writeText(text); toast({ title: "Copied to clipboard" }); };
@@ -348,22 +410,24 @@ export default function ChannelDashboard() {
         )}
 
         {/* ── Tabs ── */}
-        <div className="flex gap-1 mb-5 bg-slate-900/50 rounded-lg p-1">
+        <div className="grid grid-cols-3 gap-1 mb-3 bg-slate-900/50 rounded-lg p-1">
           {TABS.map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               data-testid={`tab-${t}`}
-              className={`flex-1 flex items-center justify-center gap-1 py-2 rounded text-xs font-semibold transition-all capitalize ${
+              className={`flex items-center justify-center gap-1 py-2 rounded text-[10px] font-semibold transition-all ${
                 tab === t
                   ? "bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
                   : "text-gray-500 hover:text-gray-300"
               }`}
             >
-              {t === "receive"        && <><ArrowDownToLine className="w-3.5 h-3.5" />Receive</>}
-              {t === "transmit"       && <><Send            className="w-3.5 h-3.5" />Transmit</>}
-              {t === "swap"           && <><ArrowRightLeft  className="w-3.5 h-3.5" />Swap</>}
-              {t === "transmissions"  && <><Activity        className="w-3.5 h-3.5" />Log</>}
+              {t === "receive"  && <><ArrowDownToLine className="w-3 h-3" />Receive</>}
+              {t === "transmit" && <><Send            className="w-3 h-3" />Transmit</>}
+              {t === "swap"     && <><ArrowRightLeft  className="w-3 h-3" />Swap</>}
+              {t === "send"     && <><Users           className="w-3 h-3" />Send P2P</>}
+              {t === "stake"    && <><TrendingUp      className="w-3 h-3" />Stake</>}
+              {t === "log"      && <><Activity        className="w-3 h-3" />Log</>}
             </button>
           ))}
         </div>
@@ -568,8 +632,217 @@ export default function ChannelDashboard() {
           </Card>
         )}
 
+        {/* ── SEND P2P ── */}
+        {tab === "send" && (
+          <Card className="bg-slate-900/60 border-slate-700/50 p-6 space-y-4">
+            <h2 className="text-white font-semibold flex items-center gap-2">
+              <Users className="w-4 h-4 text-cyan-400" />
+              Send sats to a NexusOS user
+            </h2>
+
+            {sendOk && (
+              <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-4 text-center">
+                <CheckCircle2 className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                <div className="text-green-400 font-semibold">⚡ Transmission complete!</div>
+                <div className="text-green-300/60 text-sm">Sats delivered instantly to their channel.</div>
+                <Button className="mt-3 bg-green-600 hover:bg-green-700" onClick={() => setSendOk(false)}>Send again</Button>
+              </div>
+            )}
+
+            {!sendOk && (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-gray-400 text-xs">Recipient username</Label>
+                  <Input
+                    value={sendRecipient}
+                    onChange={(e) => setSendRecipient(e.target.value)}
+                    className="bg-slate-800/50 border-slate-700 font-mono"
+                    placeholder="nexus-username"
+                    data-testid="input-send-recipient"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-gray-400 text-xs">Amount (sats)</Label>
+                  <Input
+                    type="number"
+                    value={sendSats}
+                    onChange={(e) => setSendSats(e.target.value)}
+                    className="bg-slate-800/50 border-slate-700 font-mono"
+                    min="1"
+                    data-testid="input-send-sats"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>≈ {(parseInt(sendSats || "0") / 1000).toFixed(3)} NXT</span>
+                    <button className="text-cyan-400 hover:text-cyan-300" onClick={() => setSendSats(String(sats))}>MAX</button>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-gray-400 text-xs">Memo (optional)</Label>
+                  <Input
+                    value={sendMemo}
+                    onChange={(e) => setSendMemo(e.target.value)}
+                    className="bg-slate-800/50 border-slate-700"
+                    placeholder="What's this for?"
+                    data-testid="input-send-memo"
+                  />
+                </div>
+                <div className="bg-slate-800/30 rounded-lg p-3 text-xs text-gray-400 space-y-1">
+                  <div>Your balance: <span className="text-yellow-300 font-mono">⚡ {satsDisplay(sats)} sats</span></div>
+                  <div className="text-gray-500">No fees. Instant. Wallet-to-wallet inside NexusOS.</div>
+                </div>
+                <Button
+                  onClick={() => sendP2P.mutate()}
+                  disabled={sendP2P.isPending || !sendRecipient.trim() || parseInt(sendSats) < 1 || parseInt(sendSats) > sats}
+                  className="w-full bg-cyan-600 hover:bg-cyan-700"
+                  data-testid="button-send-p2p"
+                >
+                  {sendP2P.isPending ? "Sending…" : `⚡ Send ${satsDisplay(parseInt(sendSats) || 0)} sats`}
+                </Button>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* ── STAKE ── */}
+        {tab === "stake" && (
+          <div className="space-y-4">
+            <Card className="bg-slate-900/60 border-slate-700/50 p-6 space-y-4">
+              <h2 className="text-white font-semibold flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+                Stake sats → earn NXT yield
+              </h2>
+
+              <div className="grid grid-cols-3 gap-2">
+                {([7, 14, 30] as const).map((d) => {
+                  const RATES: Record<number, string> = { 7: "5%", 14: "12%", 30: "28%" };
+                  return (
+                    <button
+                      key={d}
+                      onClick={() => setStakeDays(d)}
+                      data-testid={`stake-period-${d}`}
+                      className={`p-3 rounded-lg border text-center transition-all ${
+                        stakeDays === d
+                          ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+                          : "border-slate-700 bg-slate-800/30 text-gray-400 hover:text-gray-200"
+                      }`}
+                    >
+                      <div className="text-lg font-bold">{d}d</div>
+                      <div className="text-xs font-semibold text-emerald-400">{RATES[d]} NXT</div>
+                      <div className="text-[9px] text-gray-500">yield rate</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-gray-400 text-xs">Amount to stake (sats)</Label>
+                <Input
+                  type="number"
+                  value={stakeAmount}
+                  onChange={(e) => setStakeAmount(e.target.value)}
+                  className="bg-slate-800/50 border-slate-700 font-mono"
+                  min="1000"
+                  data-testid="input-stake-amount"
+                />
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-500">Min: 1,000 sats</span>
+                  <button className="text-emerald-400 hover:text-emerald-300" onClick={() => setStakeAmount(String(sats))}>MAX</button>
+                </div>
+              </div>
+
+              {(() => {
+                const RATE_MAP: Record<number, number> = { 7: 0.05, 14: 0.12, 30: 0.28 };
+                const amt = parseInt(stakeAmount) || 0;
+                const nxtEarned = ((amt / 1000) * RATE_MAP[stakeDays]).toFixed(4);
+                return (
+                  <div className="bg-emerald-900/20 border border-emerald-500/20 rounded-lg p-4 space-y-2">
+                    <div className="text-emerald-400 text-xs font-semibold uppercase tracking-wider">Yield preview</div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400 text-sm">You stake</span>
+                      <span className="font-mono text-yellow-300">⚡ {satsDisplay(amt)} sats</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400 text-sm">Lock period</span>
+                      <span className="font-mono text-white">{stakeDays} days</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400 text-sm">NXT yield</span>
+                      <span className="font-mono text-emerald-400 font-bold">+{nxtEarned} NXT</span>
+                    </div>
+                    <div className="border-t border-emerald-500/20 pt-2 text-[10px] text-gray-500">
+                      Sats returned in full at maturity + NXT yield credited to your spectral wallet
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <Button
+                onClick={() => stakeMut.mutate()}
+                disabled={stakeMut.isPending || parseInt(stakeAmount) < 1000 || parseInt(stakeAmount) > sats}
+                className="w-full bg-emerald-600 hover:bg-emerald-700"
+                data-testid="button-stake"
+              >
+                {stakeMut.isPending ? "Staking…" : `Lock ${satsDisplay(parseInt(stakeAmount) || 0)} sats for ${stakeDays} days`}
+              </Button>
+            </Card>
+
+            {/* Active positions */}
+            {(stakesData as any)?.stakes?.length > 0 && (
+              <Card className="bg-slate-900/60 border-slate-700/50 p-4">
+                <div className="text-xs font-semibold text-emerald-400/70 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5" /> Active Positions
+                </div>
+                <div className="space-y-3">
+                  {(stakesData as any).stakes.map((s: any) => {
+                    const matDate = new Date(s.maturesAt);
+                    const diff = matDate.getTime() - Date.now();
+                    const daysLeft = Math.max(0, Math.ceil(diff / 86_400_000));
+                    return (
+                      <div key={s.id} data-testid={`stake-position-${s.id}`}
+                        className="flex items-center gap-3 p-3 bg-black/20 rounded-lg border border-slate-800/60">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${s.isMatured ? "bg-emerald-500/20" : "bg-amber-500/10"}`}>
+                          {s.isMatured ? <Unlock className="w-4 h-4 text-emerald-400" /> : <Lock className="w-4 h-4 text-amber-400" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-white font-mono">⚡ {satsDisplay(s.amountSats)} sats</div>
+                          <div className="text-[10px] text-gray-500">
+                            {s.status === "claimed" ? "Claimed" : s.isMatured ? "✅ Ready to claim" : `${daysLeft}d left · ${s.lockDays}d lock`}
+                          </div>
+                          <div className="text-[10px] text-emerald-400/70">+{parseFloat(s.nxtYield || "0").toFixed(4)} NXT yield</div>
+                        </div>
+                        {s.isMatured && s.status === "active" && (
+                          <Button
+                            size="sm"
+                            onClick={() => unstakeMut.mutate(s.id)}
+                            disabled={unstakeMut.isPending}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-xs px-3"
+                            data-testid={`button-unstake-${s.id}`}
+                          >
+                            Claim
+                          </Button>
+                        )}
+                        {s.status === "claimed" && (
+                          <Badge className="bg-slate-700/50 text-gray-400 border-slate-600 text-[9px]">Claimed</Badge>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+
+            {(stakesData as any)?.stakes?.length === 0 && (
+              <Card className="bg-slate-900/60 border-slate-700/50 p-6 text-center">
+                <TrendingUp className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+                <div className="text-gray-500 text-sm">No active positions yet.</div>
+                <div className="text-gray-600 text-xs mt-1">Lock sats above to start earning NXT.</div>
+              </Card>
+            )}
+          </div>
+        )}
+
         {/* ── TRANSMISSIONS LOG ── */}
-        {tab === "transmissions" && (
+        {tab === "log" && (
           <div className="space-y-3">
             {/* Lightning transmissions */}
             {lnTxs.length > 0 && (
@@ -585,9 +858,13 @@ export default function ChannelDashboard() {
                       className="flex items-center gap-3 p-3 bg-black/20 rounded-lg border border-slate-800/60"
                     >
                       <div className="shrink-0">
-                        {tx.type === "deposit"      && <ArrowDownToLine className="w-4 h-4 text-green-400" />}
-                        {tx.type === "withdrawal"   && <ArrowUpFromLine className="w-4 h-4 text-red-400" />}
-                        {tx.type?.startsWith("swap") && <ArrowRightLeft className="w-4 h-4 text-purple-400" />}
+                        {tx.type === "deposit"       && <ArrowDownToLine className="w-4 h-4 text-green-400" />}
+                        {tx.type === "withdrawal"    && <ArrowUpFromLine className="w-4 h-4 text-red-400" />}
+                        {tx.type?.startsWith("swap") && <ArrowRightLeft  className="w-4 h-4 text-purple-400" />}
+                        {tx.type === "send_p2p"      && <Users            className="w-4 h-4 text-cyan-400" />}
+                        {tx.type === "receive_p2p"   && <Users            className="w-4 h-4 text-green-400" />}
+                        {tx.type === "tip_sent"      && <Heart            className="w-4 h-4 text-pink-400" />}
+                        {tx.type === "tip_received"  && <Heart            className="w-4 h-4 text-pink-300" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm text-white font-medium">
@@ -595,7 +872,11 @@ export default function ChannelDashboard() {
                           {tx.type === "withdrawal"   && "⚡ Outbound"}
                           {tx.type === "swap_to_nxt"  && "⇄ → NXT"}
                           {tx.type === "swap_to_sats" && "⇄ → Sats"}
-                          {!["deposit","withdrawal","swap_to_nxt","swap_to_sats"].includes(tx.type) && tx.type}
+                          {tx.type === "send_p2p"     && "→ P2P Sent"}
+                          {tx.type === "receive_p2p"  && "← P2P Received"}
+                          {tx.type === "tip_sent"     && "💜 Tip Sent"}
+                          {tx.type === "tip_received" && "💜 Tip Received"}
+                          {!["deposit","withdrawal","swap_to_nxt","swap_to_sats","send_p2p","receive_p2p","tip_sent","tip_received"].includes(tx.type) && tx.type}
                         </div>
                         <div className="text-xs text-gray-500 truncate">{tx.memo || tx.paymentHash?.slice(0, 20) + "…" || "—"}</div>
                         {tx.createdAt && <div className="text-[10px] text-gray-600 mt-0.5">{fmtTime(tx.createdAt)}</div>}

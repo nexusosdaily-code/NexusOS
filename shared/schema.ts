@@ -1237,6 +1237,24 @@ export const btcAddressRegistry = pgTable("btc_address_registry", {
 });
 export type BtcAddressRegistryEntry = typeof btcAddressRegistry.$inferSelect;
 
+// ── Sats Staking Pool ─────────────────────────────────────────────────────────
+export const satsStakes = pgTable("sats_stakes", {
+  id:               serial("id").primaryKey(),
+  userId:           varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  amountSats:       integer("amount_sats").notNull(),
+  lockDays:         integer("lock_days").notNull().default(7),
+  yieldRatePercent: decimal("yield_rate_percent", { precision: 5, scale: 2 }).notNull().default("5.00"),
+  stakedAt:         timestamp("staked_at").notNull().defaultNow(),
+  maturesAt:        timestamp("matures_at").notNull(),
+  claimedAt:        timestamp("claimed_at"),
+  nxtYield:         decimal("nxt_yield", { precision: 20, scale: 8 }),
+  status:           text("status").notNull().default("active"), // active | claimed
+}, (t) => ({
+  userIdx:   index("sats_stakes_user_idx").on(t.userId),
+  statusIdx: index("sats_stakes_status_idx").on(t.status),
+}));
+export type SatsStake = typeof satsStakes.$inferSelect;
+
 // ── BTC Deposits — every detected incoming TX ─────────────────────────────────
 export const btcDeposits = pgTable("btc_deposits", {
   id:            serial("id").primaryKey(),

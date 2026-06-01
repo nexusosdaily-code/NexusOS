@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import VideoStreaming from "@/components/VideoStreaming";
 import {
   Radio, Eye, Plus, ArrowLeft, Users, Clock,
-  Play, Video, Trash2, Zap, Globe, Lock, Signal, Wifi
+  Play, Video, Trash2, Zap, Globe, Lock, Signal, Wifi, Heart,
 } from "lucide-react";
 
 // ── Physics helpers ───────────────────────────────────────────────────
@@ -105,6 +107,31 @@ export default function StreamingPage() {
   const [loading, setLoading]          = useState(true);
   const [activeStream, setActiveStream] = useState<{ id: string; mode: "broadcaster" | "viewer" } | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Tip state
+  const [tipTarget, setTipTarget] = useState<{ username: string; streamId: string } | null>(null);
+  const [tipSats, setTipSats] = useState("100");
+
+  const { data: lnBal } = useQuery<{ satsBalance: number }>({
+    queryKey: ["/api/lightning/balance"],
+    enabled: !!user,
+    refetchInterval: 30_000,
+  });
+  const mySats = lnBal?.satsBalance ?? 0;
+
+  const tipMut = useMutation({
+    mutationFn: async ({ recipientUsername, amountSats }: { recipientUsername: string; amountSats: number }) => {
+      const res = await apiRequest("POST", "/api/lightning/tip", { recipientUsername, amountSats, memo: `⚡ Tip on stream` });
+      if (!res.ok) throw new Error((await res.json()).error);
+      return res.json();
+    },
+    onSuccess: (_data, vars) => {
+      toast({ title: "⚡ Tip sent!", description: `${vars.amountSats} sats → ${vars.recipientUsername}` });
+      setTipTarget(null);
+      setTipSats("100");
+    },
+    onError: (e: any) => toast({ title: "Tip failed", description: e.message }),
+  });
 
   const [title,  setTitle]  = useState("");
   const [desc,   setDesc]   = useState("");
@@ -312,17 +339,21 @@ export default function StreamingPage() {
                 {liveStreams.map(s => {
                   const e = ceEncode(s.title);
                   const c = nmToHex(e.nm);
+                  const isTipping = tipTarget?.streamId === s.id;
+                  const canTip = !!user && !!s.broadcaster?.username && s.broadcaster.username !== user.username;
                   return (
-                    <button
+                    <div
                       key={s.id}
-                      onClick={() => joinViewer(s.id)}
                       className="border border-white/8 rounded-xl overflow-hidden text-left hover:border-white/20 transition-all group"
                       style={{ background: "rgba(255,255,255,0.01)" }}
                       data-testid={`card-stream-${s.id}`}
                     >
-                      {/* Thumbnail area */}
-                      <div className="aspect-video relative flex items-center justify-center border-b border-white/5"
-                        style={{ background: `linear-gradient(135deg,${c}10,black)` }}>
+                      {/* Thumbnail — click to join */}
+                      <div
+                        className="aspect-video relative flex items-center justify-center border-b border-white/5 cursor-pointer"
+                        style={{ background: `linear-gradient(135deg,${c}10,black)` }}
+                        onClick={() => joinViewer(s.id)}
+                      >
                         <div className="w-12 h-12 rounded-full border-2 flex items-center justify-center"
                           style={{ borderColor: c + "60", background: c + "15" }}>
                           <Radio size={20} style={{ color: c }} />
@@ -339,14 +370,51 @@ export default function StreamingPage() {
                       </div>
                       {/* Info */}
                       <div className="p-3 space-y-2">
-                        <div className="text-[11px] font-bold text-white truncate" data-testid={`text-stream-title-${s.id}`}>{s.title}</div>
-                        <PsiChip title={s.title} />
+                        <div className="cursor-pointer" onClick={() => joinViewer(s.id)}>
+                          <div className="text-[11px] font-bold text-white truncate" data-testid={`text-stream-title-${s.id}`}>{s.title}</div>
+                          <div className="mt-1"><PsiChip title={s.title} /></div>
+                        </div>
                         <div className="flex items-center justify-between text-[9px] text-white/30">
                           <span className="font-mono">{s.broadcaster?.username ?? "anon"}</span>
                           <span className="flex items-center gap-1"><Eye size={9} /> {s.viewerCount}</span>
                         </div>
+                        {/* ⚡ Tip row */}
+                        {canTip && (
+                          <div className="pt-1.5 border-t border-white/5">
+                            {isTipping ? (
+                              <div className="flex items-center gap-1" onClick={ev => ev.stopPropagation()}>
+                                <input
+                                  type="number"
+                                  value={tipSats}
+                                  onChange={ev => setTipSats(ev.target.value)}
+                                  className="w-20 bg-black/50 border border-pink-500/30 rounded px-2 py-1 text-[9px] font-mono text-white focus:outline-none"
+                                  min="1"
+                                  placeholder="sats"
+                                  data-testid={`input-tip-sats-${s.id}`}
+                                />
+                                <button
+                                  onClick={() => tipMut.mutate({ recipientUsername: s.broadcaster!.username!, amountSats: parseInt(tipSats) || 0 })}
+                                  disabled={tipMut.isPending || (parseInt(tipSats) || 0) < 1 || (parseInt(tipSats) || 0) > mySats}
+                                  className="px-2 py-1 rounded bg-pink-600/80 hover:bg-pink-600 text-[9px] font-bold text-white disabled:opacity-40 transition-colors"
+                                  data-testid={`button-tip-send-${s.id}`}
+                                >
+                                  {tipMut.isPending ? "…" : "⚡ Send"}
+                                </button>
+                                <button onClick={() => setTipTarget(null)} className="text-white/30 hover:text-white/60 text-[9px] px-1">✕</button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setTipTarget({ username: s.broadcaster!.username!, streamId: s.id })}
+                                className="flex items-center gap-1 text-[9px] text-pink-400/50 hover:text-pink-400 transition-colors"
+                                data-testid={`button-tip-${s.id}`}
+                              >
+                                <Heart size={9} /> Tip with sats
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
