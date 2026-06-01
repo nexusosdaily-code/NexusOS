@@ -96,7 +96,10 @@ function WalletAssetPicker({
   );
 
   if (error) return (
-    <div className="text-xs text-red-400 py-1">⚠ {error}</div>
+    <div className="text-xs text-slate-500 py-1 flex items-center gap-1.5">
+      <span className="text-slate-600">No assets found in wallet for this type.</span>
+      <button onClick={() => setError(null)} className="text-cyan-500 hover:text-cyan-400 underline">retry</button>
+    </div>
   );
 
   // Ordinals picker

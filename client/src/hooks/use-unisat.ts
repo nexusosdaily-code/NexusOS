@@ -229,11 +229,27 @@ export function UniSatProvider({ children }: { children: ReactNode }) {
   }, [address]);
 
   const getBRC20s = useCallback(async (cursor = 0, size = 100) => {
-    const { api, provider: p } = detectProvider();
-    if (!api) throw new Error("No Bitcoin wallet connected");
-    if (p === "unisat") { const res = await api.getBRC20s(cursor, size); return { total: res.total, list: res.list ?? [] }; }
-    return { total: 0, list: [] };
-  }, []);
+    if (!address) throw new Error("No address connected");
+    try {
+      const r = await fetch(
+        `https://open-api.unisat.io/v1/indexer/address/${address}/brc20/summary?cursor=${cursor}&size=${size}`,
+        { headers: { "X-Client": "NexusOS" } },
+      );
+      const d = await r.json();
+      const list: any[] = d.data?.detail ?? [];
+      return {
+        total: d.data?.total ?? list.length,
+        list: list.map((t: any) => ({
+          ticker:           t.ticker,
+          balance:          String(t.overallBalance ?? "0"),
+          availableBalance: String(t.availableBalance ?? "0"),
+          lockedBalance:    String(t.transferableBalance ?? "0"),
+        })),
+      };
+    } catch {
+      return { total: 0, list: [] };
+    }
+  }, [address]);
 
   const getRunes = useCallback(async () => {
     if (!address) throw new Error("No address connected");
