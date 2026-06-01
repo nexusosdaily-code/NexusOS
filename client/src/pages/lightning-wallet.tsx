@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useUnisat } from "@/hooks/use-unisat";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ import {
   Zap, ArrowLeft, ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft,
   Clock, CheckCircle2, XCircle, Copy, RefreshCw, AlertTriangle,
   Bitcoin, Radio, Waves, Activity, ArrowDownLeft, ArrowUpRight,
-  Atom, Send, Users, Lock, Unlock, TrendingUp, Heart,
+  Atom, Send, Users, Lock, Unlock, TrendingUp, Heart, QrCode,
 } from "lucide-react";
 
 const TABS = ["receive", "transmit", "swap", "send", "stake", "log"] as const;
@@ -72,6 +73,7 @@ export default function ChannelDashboard() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("receive");
+  const { connected: btcConnected, address: btcWalletAddr } = useUnisat();
 
   const [depositSats, setDepositSats] = useState("10000");
   const [depositMemo, setDepositMemo] = useState("");
@@ -81,9 +83,12 @@ export default function ChannelDashboard() {
 
   const [bolt11, setBolt11] = useState("");
 
-  const [swapDir, setSwapDir]   = useState<"to_nxt" | "to_sats">("to_nxt");
+  const [swapDir, setSwapDir]   = useState<"to_nxt" | "to_sats" | "sats_to_btc" | "btc_to_sats">("to_nxt");
   const [swapSats, setSwapSats] = useState("1000");
   const [swapNxt, setSwapNxt]   = useState("1");
+  const [withdrawBtcAddr, setWithdrawBtcAddr] = useState("");
+  const [withdrawSats, setWithdrawSats]       = useState("10000");
+  const [withdrawDone, setWithdrawDone]       = useState<any>(null);
 
   // Send P2P
   const [sendRecipient, setSendRecipient] = useState("");
@@ -125,6 +130,13 @@ export default function ChannelDashboard() {
     queryKey: ["/api/lightning/stakes"],
     enabled: tab === "stake",
     refetchInterval: 30_000,
+  });
+
+  const { data: depositInfo } = useQuery<{
+    depositAddress: string; satsPerNxt: number; minDepositSats: number;
+  }>({
+    queryKey: ["/api/btc/deposit/info"],
+    staleTime: 5 * 60_000,
   });
 
   useEffect(() => {
@@ -242,6 +254,23 @@ export default function ChannelDashboard() {
       toast({ title: "✅ Unstaked!", description: `${data.amountSats} sats returned · ${data.nxtYield} NXT yield credited` });
     },
     onError: (e: any) => toast({ title: "Unstake failed", description: e.message, variant: "destructive" }),
+  });
+
+  const withdrawToBtc = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/lightning/withdraw-to-btc", {
+        amountSats: parseInt(withdrawSats),
+        btcAddress: withdrawBtcAddr.trim(),
+      });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      setWithdrawDone(data);
+      refetchBal();
+      qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] });
+      toast({ title: "⚡→🔴 Withdrawal queued", description: `${data.netSats} sats on the way to your BTC address.` });
+    },
+    onError: (e: any) => toast({ title: "Withdrawal failed", description: e.message, variant: "destructive" }),
   });
 
   const copy = (text: string) => { navigator.clipboard.writeText(text); toast({ title: "Copied to clipboard" }); };
@@ -548,37 +577,57 @@ export default function ChannelDashboard() {
           </Card>
         )}
 
-        {/* ── SWAP ── */}
+        {/* ── SWAP / BRIDGE ── */}
         {tab === "swap" && (
           <Card className="bg-slate-900/60 border-slate-700/50 p-6 space-y-4">
             <h2 className="text-white font-semibold flex items-center gap-2">
               <ArrowRightLeft className="w-4 h-4 text-purple-400" />
-              Channel conversion — sats ↔ NXT
+              Hot wallet transfers
             </h2>
 
-            <div className="flex gap-2">
+            {/* Direction selector — 2×2 grid */}
+            <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setSwapDir("to_nxt")}
                 data-testid="button-swap-to-nxt"
-                className={`flex-1 py-2 rounded text-sm font-semibold transition-all ${swapDir === "to_nxt" ? "bg-purple-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
-              >
-                ⚡ Sats → NXT
-              </button>
+                className={`py-2 rounded text-xs font-semibold transition-all ${swapDir === "to_nxt" ? "bg-purple-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
+              >⚡ Sats → 🔬 NXT</button>
               <button
                 onClick={() => setSwapDir("to_sats")}
                 data-testid="button-swap-to-sats"
-                className={`flex-1 py-2 rounded text-sm font-semibold transition-all ${swapDir === "to_sats" ? "bg-purple-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
-              >
-                NXT → ⚡ Sats
-              </button>
+                className={`py-2 rounded text-xs font-semibold transition-all ${swapDir === "to_sats" ? "bg-purple-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
+              >🔬 NXT → ⚡ Sats</button>
+              <button
+                onClick={() => { setSwapDir("sats_to_btc"); if (btcWalletAddr) setWithdrawBtcAddr(btcWalletAddr); }}
+                data-testid="button-swap-sats-to-btc"
+                className={`py-2 rounded text-xs font-semibold transition-all ${swapDir === "sats_to_btc" ? "bg-orange-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
+              >⚡ Sats → 🔴 BTC</button>
+              <button
+                onClick={() => setSwapDir("btc_to_sats")}
+                data-testid="button-swap-btc-to-sats"
+                className={`py-2 rounded text-xs font-semibold transition-all ${swapDir === "btc_to_sats" ? "bg-orange-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
+              >🔴 BTC → ⚡ Sats</button>
             </div>
 
+            {/* Balance summary */}
             <div className="bg-slate-800/30 rounded-lg p-3 text-xs text-gray-400 space-y-1">
-              <div>Conversion rate: <span className="text-purple-300 font-mono">1 NXT = 1,000 sats</span></div>
-              <div>⚡ Channel: <span className="text-yellow-300 font-mono">{satsDisplay(sats)} sats</span>
-                · NXT: <span className="text-amber-300 font-mono">{formatNxt(nxtBalance)} NXT</span></div>
+              {(swapDir === "to_nxt" || swapDir === "to_sats") && (
+                <>
+                  <div>Rate: <span className="text-purple-300 font-mono">1 NXT = 1,000 sats</span></div>
+                  <div>⚡ <span className="text-yellow-300 font-mono">{satsDisplay(sats)} sats</span>
+                    · 🔬 <span className="text-amber-300 font-mono">{formatNxt(nxtBalance)} NXT</span></div>
+                </>
+              )}
+              {(swapDir === "sats_to_btc" || swapDir === "btc_to_sats") && (
+                <>
+                  <div>⚡ <span className="text-yellow-300 font-mono">{satsDisplay(sats)} sats</span>
+                    {btcConnected && <> · 🔴 <span className="text-orange-300 font-mono">BTC wallet connected</span></>}</div>
+                  <div className="text-gray-500">On-chain BTC · 0.5% withdrawal fee · min 1,000 sats</div>
+                </>
+              )}
             </div>
 
+            {/* ── sats → NXT ── */}
             {swapDir === "to_nxt" && (
               <div className="space-y-3">
                 <div className="space-y-1.5">
@@ -604,6 +653,7 @@ export default function ChannelDashboard() {
               </div>
             )}
 
+            {/* ── NXT → sats ── */}
             {swapDir === "to_sats" && (
               <div className="space-y-3">
                 <div className="space-y-1.5">
@@ -627,6 +677,132 @@ export default function ChannelDashboard() {
                 >
                   {swapToSats.isPending ? "Converting…" : `Convert ${swapNxt} NXT → sats`}
                 </Button>
+              </div>
+            )}
+
+            {/* ── sats → BTC on-chain ── */}
+            {swapDir === "sats_to_btc" && (
+              <div className="space-y-3">
+                {withdrawDone ? (
+                  <div className="bg-orange-900/20 border border-orange-500/30 rounded-lg p-4 text-center space-y-2">
+                    <Bitcoin className="w-8 h-8 text-orange-400 mx-auto" />
+                    <div className="text-orange-300 font-semibold">Withdrawal queued ✓</div>
+                    <div className="text-xs text-gray-400 font-mono break-all">{withdrawDone.btcAddress}</div>
+                    <div className="text-xs text-slate-300">
+                      <span className="text-orange-300 font-mono">{withdrawDone.netSats?.toLocaleString()} sats</span>
+                      <span className="text-gray-500"> (after {withdrawDone.feeSats} sat fee)</span>
+                    </div>
+                    <div className="text-[10px] text-gray-500">{withdrawDone.note}</div>
+                    <Button size="sm" className="bg-slate-700 hover:bg-slate-600 mt-2" onClick={() => setWithdrawDone(null)}>New withdrawal</Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-gray-400 text-xs">Destination BTC address</Label>
+                        {btcConnected && btcWalletAddr && (
+                          <button
+                            className="text-[10px] text-orange-400 hover:text-orange-300 font-mono"
+                            onClick={() => setWithdrawBtcAddr(btcWalletAddr)}
+                            data-testid="button-autofill-btc-addr"
+                          >
+                            Use connected wallet ↗
+                          </button>
+                        )}
+                      </div>
+                      <Input
+                        value={withdrawBtcAddr}
+                        onChange={(e) => setWithdrawBtcAddr(e.target.value)}
+                        className="bg-slate-800/50 border-slate-700 font-mono text-xs"
+                        placeholder="bc1p…"
+                        data-testid="input-withdraw-btc-address"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-gray-400 text-xs">Amount (sats)</Label>
+                      <Input
+                        type="number"
+                        value={withdrawSats}
+                        onChange={(e) => setWithdrawSats(e.target.value)}
+                        className="bg-slate-800/50 border-slate-700 font-mono"
+                        min="1000"
+                        data-testid="input-withdraw-sats"
+                      />
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">Fee: {Math.max(500, Math.round((parseInt(withdrawSats) || 0) * 0.005))} sats (0.5%)</span>
+                        <button className="text-orange-400 hover:text-orange-300" onClick={() => setWithdrawSats(String(sats))}>MAX</button>
+                      </div>
+                    </div>
+                    <div className="bg-orange-900/10 border border-orange-500/20 rounded-lg p-3 text-xs space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">You send</span>
+                        <span className="font-mono text-yellow-300">⚡ {parseInt(withdrawSats || "0").toLocaleString()} sats</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Network fee</span>
+                        <span className="font-mono text-orange-400">−{Math.max(500, Math.round((parseInt(withdrawSats) || 0) * 0.005))} sats</span>
+                      </div>
+                      <div className="flex justify-between border-t border-orange-500/20 pt-1">
+                        <span className="text-gray-400">BTC received</span>
+                        <span className="font-mono text-orange-300 font-bold">
+                          {Math.max(0, (parseInt(withdrawSats) || 0) - Math.max(500, Math.round((parseInt(withdrawSats) || 0) * 0.005))).toLocaleString()} sats
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => withdrawToBtc.mutate()}
+                      disabled={withdrawToBtc.isPending || !withdrawBtcAddr.trim() || (parseInt(withdrawSats) || 0) < 1000 || (parseInt(withdrawSats) || 0) > sats}
+                      className="w-full bg-orange-600 hover:bg-orange-700"
+                      data-testid="button-withdraw-to-btc"
+                    >
+                      <Bitcoin className="w-4 h-4 mr-2" />
+                      {withdrawToBtc.isPending ? "Queuing…" : "Withdraw to Bitcoin"}
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ── BTC on-chain → sats ── */}
+            {swapDir === "btc_to_sats" && (
+              <div className="space-y-4">
+                <div className="bg-orange-900/10 border border-orange-500/20 rounded-lg p-4 space-y-3">
+                  <div className="text-xs text-orange-300 font-semibold uppercase tracking-wider flex items-center gap-2">
+                    <QrCode className="w-3.5 h-3.5" />
+                    Send BTC to this address
+                  </div>
+                  <div className="font-mono text-[11px] text-white break-all select-all bg-slate-800 rounded p-2 leading-relaxed">
+                    {depositInfo?.depositAddress ?? "Loading…"}
+                  </div>
+                  {depositInfo?.depositAddress && (
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="flex-1 border-slate-600 text-xs"
+                        onClick={() => copy(depositInfo.depositAddress)}
+                        data-testid="button-copy-deposit-address">
+                        <Copy className="w-3 h-3 mr-1" />Copy address
+                      </Button>
+                      <a
+                        href={`https://mempool.space/address/${depositInfo.depositAddress}`}
+                        target="_blank" rel="noreferrer"
+                        className="flex-1"
+                      >
+                        <Button size="sm" variant="outline" className="w-full border-slate-600 text-xs">
+                          <Activity className="w-3 h-3 mr-1" />mempool.space
+                        </Button>
+                      </a>
+                    </div>
+                  )}
+                  {btcConnected && btcWalletAddr && (
+                    <div className="text-[10px] text-gray-500">
+                      Your connected wallet: <span className="text-orange-300 font-mono">{btcWalletAddr.slice(0, 10)}…{btcWalletAddr.slice(-6)}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="text-xs text-gray-500 space-y-1.5">
+                  <div>• Min deposit: <span className="text-orange-300 font-mono">{(depositInfo?.minDepositSats ?? 5000).toLocaleString()} sats</span></div>
+                  <div>• ⚡ Lightning sats credited within ~30 seconds of broadcast</div>
+                  <div>• Your sender address is auto-detected via the block scanner</div>
+                </div>
               </div>
             )}
           </Card>

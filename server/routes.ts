@@ -8894,6 +8894,47 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // POST /api/lightning/withdraw-to-btc — deduct sats, queue BTC on-chain withdrawal
+  app.post("/api/lightning/withdraw-to-btc", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { amountSats, btcAddress } = req.body;
+      if (!amountSats || typeof amountSats !== "number" || amountSats < 1000)
+        return res.status(400).json({ error: "Minimum withdrawal: 1,000 sats" });
+      if (!btcAddress || typeof btcAddress !== "string")
+        return res.status(400).json({ error: "btcAddress required" });
+      const addr = btcAddress.trim();
+      if (!/^(bc1[a-z0-9]{6,87}|[13][a-zA-HJ-NP-Z0-9]{25,34})$/.test(addr))
+        return res.status(400).json({ error: "Invalid Bitcoin address" });
+
+      const lnWallet = await ensureLnWallet(req.user!.id);
+      if (lnWallet.satsBalance < amountSats)
+        return res.status(400).json({ error: `Insufficient sats (have ${lnWallet.satsBalance})` });
+
+      const FEE_SATS = Math.max(500, Math.round(amountSats * 0.005)); // 0.5% fee, min 500 sats
+      const netSats  = amountSats - FEE_SATS;
+
+      const { db } = await import("./db");
+      const { lightningWallets, lightningTransactions } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      await db.update(lightningWallets)
+        .set({ satsBalance: lnWallet.satsBalance - amountSats, updatedAt: new Date() })
+        .where(eq(lightningWallets.userId, req.user!.id));
+
+      const [tx] = await db.insert(lightningTransactions).values({
+        userId:   req.user!.id,
+        type:     "withdrawal",
+        amountSats,
+        memo:     `Withdraw ${amountSats} sats to ${addr} (net ${netSats} sats after ${FEE_SATS} sat fee)`,
+        status:   "pending",
+      }).returning();
+
+      await logAction(req, "lightning_withdraw_btc", "lightning", req.user!.id, { amountSats, btcAddress: addr, feeSats: FEE_SATS });
+      res.json({ ok: true, txId: tx.id, amountSats, feeSats: FEE_SATS, netSats, btcAddress: addr, status: "pending",
+        note: "Withdrawal queued. On-chain BTC will be sent to your address within 30 minutes." });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // POST /api/lightning/send — P2P sats transfer to another NexusOS user by username
   app.post("/api/lightning/send", authenticate, async (req: Request, res: Response) => {
     try {
