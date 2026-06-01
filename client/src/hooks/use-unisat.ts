@@ -18,6 +18,31 @@ export interface UnisatBalance {
   total: number;        // sats
 }
 
+export interface WalletInscription {
+  inscriptionId: string;
+  inscriptionNumber: number;
+  contentType: string;
+  preview: string;
+  outputValue: number;
+  timestamp: number;
+}
+
+export interface WalletBRC20 {
+  ticker: string;
+  balance: string;
+  availableBalance: string;
+  lockedBalance: string;
+}
+
+export interface WalletRune {
+  spacedRune: string;
+  rune: string;
+  runeId: string;
+  amount: string;
+  symbol: string;
+  divisibility: number;
+}
+
 export interface UseUnisatReturn {
   available: boolean;
   provider: WalletProvider;
@@ -33,6 +58,9 @@ export interface UseUnisatReturn {
   pushTx: (txHex: string) => Promise<string>;
   signMessage: (message: string) => Promise<string>;
   refreshBalance: () => Promise<void>;
+  getInscriptions: (cursor?: number, size?: number) => Promise<{ total: number; list: WalletInscription[] }>;
+  getBRC20s: (cursor?: number, size?: number) => Promise<{ total: number; list: WalletBRC20[] }>;
+  getRunes: () => Promise<{ total: number; list: WalletRune[] }>;
   error: string | null;
 }
 
