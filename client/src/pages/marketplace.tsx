@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -7,6 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { ChannelConnect } from "@/components/channel-connect";
 import { BitcoinWalletConnect } from "@/components/bitcoin-wallet-connect";
 import { useUnisat } from "@/hooks/use-unisat";
+import type { WalletInscription, WalletBRC20, WalletRune } from "@/hooks/use-unisat";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, ShoppingBag, Tag, Zap, Bitcoin, Gem, Plus, X,
-  Clock, CheckCircle2, TrendingUp, Filter, RefreshCw, Atom,
-  CircleDollarSign, ArrowRight, Store, Wallet, Link2,
+  Clock, CheckCircle2, TrendingUp, RefreshCw, Atom,
+  CircleDollarSign, ArrowRight, Store, Wallet, Link2, Loader2,
 } from "lucide-react";
 
 const ASSET_TYPES = [
@@ -45,6 +46,149 @@ function fmtTime(ts: string) {
   if (h > 0) return `${h}h ago`;
   if (m > 0) return `${m}m ago`;
   return "just now";
+}
+
+// ── Wallet Asset Picker ────────────────────────────────────────────────────────
+function WalletAssetPicker({
+  unisat, assetType, onSelect,
+}: {
+  unisat: ReturnType<typeof useUnisat>;
+  assetType: string;
+  onSelect: (fields: { assetId: string; assetName: string; amount: string }) => void;
+}) {
+  const [inscriptions, setInscriptions] = useState<WalletInscription[]>([]);
+  const [brc20s,       setBrc20s]       = useState<WalletBRC20[]>([]);
+  const [runes,        setRunes]        = useState<WalletRune[]>([]);
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!unisat.connected) return;
+    setLoading(true);
+    setError(null);
+    const load = async () => {
+      try {
+        if (assetType === "ordinal") {
+          const res = await unisat.getInscriptions(0, 50);
+          setInscriptions(res.list);
+        } else if (assetType === "wnsp_brc20") {
+          const res = await unisat.getBRC20s(0, 50);
+          setBrc20s(res.list);
+        } else if (assetType === "rune") {
+          const res = await unisat.getRunes();
+          setRunes(res.list);
+        }
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [unisat.connected, assetType]);
+
+  if (!unisat.connected) return null;
+
+  if (loading) return (
+    <div className="flex items-center gap-2 text-xs text-slate-500 py-2">
+      <Loader2 className="w-3.5 h-3.5 animate-spin" />Loading your wallet assets…
+    </div>
+  );
+
+  if (error) return (
+    <div className="text-xs text-red-400 py-1">⚠ {error}</div>
+  );
+
+  // Ordinals picker
+  if (assetType === "ordinal" && inscriptions.length > 0) return (
+    <div className="space-y-1.5">
+      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+        Your Inscriptions ({inscriptions.length})
+      </div>
+      <div className="grid grid-cols-3 gap-1.5 max-h-40 overflow-y-auto pr-1">
+        {inscriptions.map(ins => (
+          <button key={ins.inscriptionId}
+            onClick={() => onSelect({
+              assetId: ins.inscriptionId,
+              assetName: `#${ins.inscriptionNumber}`,
+              amount: "1",
+            })}
+            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-yellow-500/50 rounded p-1.5 text-left transition-all group"
+            data-testid={`pick-inscription-${ins.inscriptionNumber}`}
+          >
+            <div className="text-[10px] font-mono text-yellow-400 group-hover:text-yellow-300">
+              #{ins.inscriptionNumber}
+            </div>
+            <div className="text-[9px] text-slate-600 truncate font-mono">
+              {ins.contentType?.split("/")[1] ?? "unknown"}
+            </div>
+            <div className="text-[9px] text-slate-500">{ins.outputValue} sats</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // BRC-20 picker
+  if (assetType === "wnsp_brc20" && brc20s.length > 0) return (
+    <div className="space-y-1.5">
+      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+        Your BRC-20 Tokens ({brc20s.length})
+      </div>
+      <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
+        {brc20s.map(b => (
+          <button key={b.ticker}
+            onClick={() => onSelect({
+              assetId: b.ticker,
+              assetName: b.ticker,
+              amount: b.availableBalance,
+            })}
+            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-orange-500/50 rounded px-3 py-2 flex items-center justify-between transition-all"
+            data-testid={`pick-brc20-${b.ticker}`}
+          >
+            <span className="text-sm font-bold text-orange-300 font-mono">{b.ticker}</span>
+            <div className="text-right">
+              <div className="text-xs text-slate-300 font-mono">{parseFloat(b.availableBalance).toLocaleString()} avail</div>
+              {parseFloat(b.lockedBalance) > 0 && (
+                <div className="text-[10px] text-slate-600">{parseFloat(b.lockedBalance).toLocaleString()} locked</div>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Runes picker
+  if (assetType === "rune" && runes.length > 0) return (
+    <div className="space-y-1.5">
+      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+        Your Runes ({runes.length})
+      </div>
+      <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
+        {runes.map(r => (
+          <button key={r.runeId}
+            onClick={() => onSelect({
+              assetId: r.runeId,
+              assetName: r.spacedRune || r.rune,
+              amount: r.amount,
+            })}
+            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-purple-500/50 rounded px-3 py-2 flex items-center justify-between transition-all"
+            data-testid={`pick-rune-${r.runeId}`}
+          >
+            <span className="text-sm font-bold text-purple-300 font-mono">{r.spacedRune || r.rune}</span>
+            <span className="text-xs text-slate-300 font-mono">{r.symbol} {parseFloat(r.amount).toLocaleString()}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Nothing found
+  const label = assetType === "ordinal" ? "inscriptions" : assetType === "rune" ? "runes" : "BRC-20 tokens";
+  return (
+    <div className="text-xs text-slate-600 py-1">No {label} found in connected wallet.</div>
+  );
 }
 
 export default function MarketplacePage() {
@@ -391,6 +535,22 @@ export default function MarketplacePage() {
                 </div>
               </div>
 
+              {/* Wallet asset picker — appears when UniSat is connected */}
+              {unisat.connected && form.assetType !== "wnsp_brc20" || (unisat.connected && form.assetType === "wnsp_brc20") ? (
+                <div className="space-y-1.5 bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Wallet className="w-3 h-3 text-orange-400" />
+                    <span className="text-[10px] text-orange-400 font-semibold uppercase tracking-wider">From your wallet</span>
+                    <span className="text-[10px] text-slate-600 font-mono ml-auto">{unisat.address?.slice(0,10)}…</span>
+                  </div>
+                  <WalletAssetPicker
+                    unisat={unisat}
+                    assetType={form.assetType}
+                    onSelect={fields => setForm(f => ({ ...f, ...fields }))}
+                  />
+                </div>
+              ) : null}
+
               <div className="space-y-1.5">
                 <Label className="text-slate-400 text-xs">Asset Name</Label>
                 <Input value={form.assetName} onChange={e => setForm(f => ({ ...f, assetName: e.target.value }))}
@@ -401,6 +561,7 @@ export default function MarketplacePage() {
               <div className="space-y-1.5">
                 <Label className="text-slate-400 text-xs">
                   {form.assetType === "rune" ? "Rune ID (BLOCK:TX)" : "Inscription ID"}
+                  {form.assetId && <span className="text-green-400 ml-2">✓ selected</span>}
                 </Label>
                 <Input value={form.assetId} onChange={e => setForm(f => ({ ...f, assetId: e.target.value }))}
                   className="bg-slate-800 border-slate-700 font-mono text-xs"

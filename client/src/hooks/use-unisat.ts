@@ -250,6 +250,41 @@ export function useUnisat(): UseUnisatReturn {
     throw new Error("Unsupported wallet for message signing");
   }, []);
 
+  const getInscriptions = useCallback(async (cursor = 0, size = 100) => {
+    const { api, provider: p } = detectProvider();
+    if (!api) throw new Error("No Bitcoin wallet connected");
+    if (p === "unisat") {
+      const res = await api.getInscriptions(cursor, size);
+      return { total: res.total, list: res.list ?? [] };
+    }
+    // Xverse/OKX: fallback via UniSat open API using connected address
+    if (!address) throw new Error("No address connected");
+    const r = await fetch(`https://open-api.unisat.io/v1/indexer/address/${address}/inscription-data?cursor=${cursor}&size=${size}`, {
+      headers: { "X-Client": "NexusOS" },
+    });
+    const d = await r.json();
+    return { total: d.data?.total ?? 0, list: d.data?.inscription ?? [] };
+  }, [address]);
+
+  const getBRC20s = useCallback(async (cursor = 0, size = 100) => {
+    const { api, provider: p } = detectProvider();
+    if (!api) throw new Error("No Bitcoin wallet connected");
+    if (p === "unisat") {
+      const res = await api.getBRC20s(cursor, size);
+      return { total: res.total, list: res.list ?? [] };
+    }
+    return { total: 0, list: [] };
+  }, []);
+
+  const getRunes = useCallback(async () => {
+    if (!address) throw new Error("No address connected");
+    const r = await fetch(`https://open-api.unisat.io/v1/indexer/address/${address}/runes/balance-list?cursor=0&size=100`, {
+      headers: { "X-Client": "NexusOS" },
+    });
+    const d = await r.json();
+    return { total: d.data?.total ?? 0, list: d.data?.detail ?? [] };
+  }, [address]);
+
   return {
     available,
     provider,
@@ -264,6 +299,9 @@ export function useUnisat(): UseUnisatReturn {
     pushTx,
     signMessage,
     refreshBalance,
+    getInscriptions,
+    getBRC20s,
+    getRunes,
     error,
   };
 }
