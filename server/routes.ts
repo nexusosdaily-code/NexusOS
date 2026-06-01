@@ -8823,11 +8823,10 @@ export async function registerRoutes(
         .where(eq(lightningWallets.userId, req.user!.id));
 
       // Credit NXT
-      const nxtRaw = Math.round(nxtAmount * 1e8);
+      const nxtRaw = nxtAmount;
       const [userWallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
       if (userWallet) {
-        const currentRaw = BigInt(Math.round(parseFloat(userWallet.balance) * 1e8));
-        const newBal = ((currentRaw + BigInt(nxtRaw)) / BigInt(1e8)).toFixed(8);
+        const newBal = (parseFloat(userWallet.balance) + nxtRaw).toFixed(8);
         await db.update(wallets).set({ balance: newBal }).where(eq(wallets.userId, req.user!.id));
       }
 
@@ -8859,12 +8858,11 @@ export async function registerRoutes(
 
       const [userWallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
       if (!userWallet) return res.status(400).json({ error: "NXT wallet not found" });
-      const nxtRaw = Math.round(nxtAmount * 1e8);
-      const currentRaw = BigInt(Math.round(parseFloat(userWallet.balance) * 1e8));
-      if (currentRaw < BigInt(nxtRaw)) return res.status(400).json({ error: "Insufficient NXT balance" });
+      const currentBal = parseFloat(userWallet.balance);
+      if (currentBal < nxtAmount) return res.status(400).json({ error: "Insufficient NXT balance" });
 
       // Deduct NXT
-      const newBal = ((currentRaw - BigInt(nxtRaw)) / BigInt(1e8)).toFixed(8);
+      const newBal = (currentBal - nxtAmount).toFixed(8);
       await db.update(wallets).set({ balance: newBal }).where(eq(wallets.userId, req.user!.id));
 
       // Credit sats
