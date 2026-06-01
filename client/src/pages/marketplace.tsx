@@ -56,11 +56,13 @@ function WalletAssetPicker({
   assetType: string;
   onSelect: (fields: { assetId: string; assetName: string; amount: string }) => void;
 }) {
-  const [inscriptions, setInscriptions] = useState<WalletInscription[]>([]);
-  const [brc20s,       setBrc20s]       = useState<WalletBRC20[]>([]);
-  const [runes,        setRunes]        = useState<WalletRune[]>([]);
-  const [loading,      setLoading]      = useState(false);
-  const [error,        setError]        = useState<string | null>(null);
+  const [inscriptions,   setInscriptions]   = useState<WalletInscription[]>([]);
+  const [brc20s,         setBrc20s]         = useState<WalletBRC20[]>([]);
+  const [runes,          setRunes]          = useState<WalletRune[]>([]);
+  const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState<string | null>(null);
+  const [selectedRune,   setSelectedRune]   = useState<string | null>(null);
+  const [listAmt,        setListAmt]        = useState("");
 
   useEffect(() => {
     if (!unisat.connected) return;
@@ -162,9 +164,8 @@ function WalletAssetPicker({
     </div>
   );
 
-  // Runes picker — rich card grid
+  // Runes picker — interactive card grid
   if (assetType === "rune" && runes.length > 0) {
-    // Deterministic hue from rune name for avatar gradient
     const runeHue = (name: string) => {
       let h = 0;
       for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
@@ -174,83 +175,183 @@ function WalletAssetPicker({
       const n = parseFloat(amount);
       if (isNaN(n)) return amount;
       const actual = div > 0 ? n / Math.pow(10, div) : n;
-      if (actual >= 1e9)  return (actual / 1e9).toFixed(2)  + "B";
-      if (actual >= 1e6)  return (actual / 1e6).toFixed(2)  + "M";
-      if (actual >= 1e3)  return (actual / 1e3).toFixed(2)  + "K";
+      if (actual >= 1e9) return (actual / 1e9).toFixed(2) + "B";
+      if (actual >= 1e6) return (actual / 1e6).toFixed(2) + "M";
+      if (actual >= 1e3) return (actual / 1e3).toFixed(2) + "K";
       return actual.toLocaleString(undefined, { maximumFractionDigits: div });
     };
     const fmtSpaced = (name: string) =>
       name.split("•").map((part, i, arr) =>
         i < arr.length - 1
-          ? [<span key={i} className="text-inherit">{part}</span>, <span key={`dot-${i}`} className="text-purple-400 mx-0.5">•</span>]
+          ? [<span key={i}>{part}</span>, <span key={`d${i}`} className="text-purple-400 mx-0.5">•</span>]
           : <span key={i}>{part}</span>
       );
+
+    const activeRune = runes.find(r => r.runeId === selectedRune);
 
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Your Runes ({runes.length})</div>
-          <div className="text-[10px] text-slate-600">click a rune to select</div>
+          <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+            Your Runes ({runes.length})
+          </div>
+          {selectedRune && (
+            <button onClick={() => setSelectedRune(null)}
+              className="text-[10px] text-slate-500 hover:text-slate-300 transition-colors">
+              ✕ deselect
+            </button>
+          )}
         </div>
-        <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-0.5">
+
+        {/* Card grid */}
+        <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-0.5">
           {runes.map(r => {
             const hue = runeHue(r.rune || r.spacedRune);
             const sym = r.symbol || "ᚱ";
             const [block, tx] = (r.runeId || "").split(":");
+            const isSelected = selectedRune === r.runeId;
             return (
               <button key={r.runeId}
-                onClick={() => onSelect({
-                  assetId: r.runeId,
-                  assetName: r.spacedRune || r.rune,
-                  amount: r.amount,
-                })}
                 data-testid={`pick-rune-${r.runeId}`}
-                className="group relative flex flex-col text-left rounded-xl border border-slate-700 hover:border-purple-500/60 bg-slate-900 hover:bg-slate-800/80 transition-all overflow-hidden"
-                style={{ boxShadow: "none" }}
+                onClick={() => {
+                  if (isSelected) {
+                    setSelectedRune(null);
+                  } else {
+                    setSelectedRune(r.runeId);
+                    setListAmt(r.amount);
+                  }
+                }}
+                className="group relative flex flex-col text-left rounded-xl overflow-hidden transition-all duration-200"
+                style={{
+                  border: isSelected
+                    ? `1.5px solid hsl(${hue},65%,50%)`
+                    : "1.5px solid rgba(100,116,139,0.3)",
+                  background: isSelected
+                    ? `linear-gradient(160deg, hsl(${hue},30%,14%) 0%, hsl(${(hue+30)%360},25%,10%) 100%)`
+                    : "rgb(15,20,30)",
+                  boxShadow: isSelected
+                    ? `0 0 18px -4px hsl(${hue},60%,40%), inset 0 0 0 1px hsla(${hue},60%,60%,0.15)`
+                    : "none",
+                }}
               >
-                {/* Gradient header strip with symbol */}
-                <div className="w-full h-16 flex items-center justify-center relative overflow-hidden"
-                  style={{ background: `linear-gradient(135deg, hsl(${hue},60%,18%) 0%, hsl(${(hue+40)%360},55%,12%) 100%)` }}>
-                  {/* Subtle radial glow */}
-                  <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity"
-                    style={{ background: `radial-gradient(circle at 50% 120%, hsl(${hue},80%,55%) 0%, transparent 70%)` }} />
-                  {/* Symbol */}
-                  <span className="relative z-10 text-2xl font-bold select-none"
-                    style={{ color: `hsl(${hue},80%,70%)`, textShadow: `0 0 16px hsl(${hue},80%,50%)` }}>
+                {/* Header strip */}
+                <div className="w-full h-14 flex items-center justify-center relative overflow-hidden"
+                  style={{ background: `linear-gradient(135deg, hsl(${hue},55%,${isSelected?22:16}%) 0%, hsl(${(hue+40)%360},50%,${isSelected?16:11}%) 100%)` }}>
+                  <div className="absolute inset-0 transition-opacity duration-200"
+                    style={{
+                      opacity: isSelected ? 0.5 : 0.15,
+                      background: `radial-gradient(circle at 50% 130%, hsl(${hue},80%,55%) 0%, transparent 65%)`,
+                    }} />
+                  {/* Checkmark overlay when selected */}
+                  {isSelected && (
+                    <div className="absolute top-1.5 left-1.5 w-4 h-4 rounded-full flex items-center justify-center"
+                      style={{ background: `hsl(${hue},70%,45%)` }}>
+                      <span className="text-white text-[9px] font-bold leading-none">✓</span>
+                    </div>
+                  )}
+                  <span className="relative z-10 font-bold select-none transition-all duration-200"
+                    style={{
+                      fontSize: isSelected ? "1.75rem" : "1.4rem",
+                      color: `hsl(${hue},80%,${isSelected?78:65}%)`,
+                      textShadow: `0 0 ${isSelected?24:10}px hsl(${hue},80%,${isSelected?55:40}%)`,
+                    }}>
                     {sym}
                   </span>
-                  {/* Block badge */}
                   {block && (
-                    <span className="absolute top-1.5 right-1.5 text-[8px] font-mono px-1.5 py-0.5 rounded"
-                      style={{ background: `hsla(${hue},60%,10%,0.8)`, color: `hsl(${hue},60%,60%)`, border: `1px solid hsl(${hue},40%,25%)` }}>
+                    <span className="absolute top-1.5 right-1.5 text-[8px] font-mono px-1 py-0.5 rounded"
+                      style={{
+                        background: `hsla(${hue},60%,8%,0.85)`,
+                        color: `hsl(${hue},50%,55%)`,
+                        border: `1px solid hsl(${hue},35%,22%)`,
+                      }}>
                       {block}:{tx}
                     </span>
                   )}
                 </div>
 
                 {/* Card body */}
-                <div className="flex flex-col gap-0.5 px-2.5 py-2">
-                  {/* Rune name */}
-                  <div className="text-[11px] font-bold leading-tight font-mono truncate"
-                    style={{ color: `hsl(${hue},70%,72%)` }}>
+                <div className="flex flex-col gap-0.5 px-2.5 pt-1.5 pb-2">
+                  <div className="text-[10px] font-bold font-mono truncate leading-tight"
+                    style={{ color: `hsl(${hue},65%,${isSelected?78:65}%)` }}>
                     {fmtSpaced(r.spacedRune || r.rune)}
                   </div>
-                  {/* Balance */}
                   <div className="flex items-baseline gap-1 mt-0.5">
-                    <span className="text-sm font-bold text-white font-mono">
+                    <span className="text-xs font-bold text-white font-mono">
                       {fmtRuneAmt(r.amount, r.divisibility ?? 0)}
                     </span>
-                    <span className="text-[9px] text-slate-500">available</span>
+                    <span className="text-[9px] text-slate-500">avail</span>
                   </div>
                 </div>
-
-                {/* Selected glow border */}
-                <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"
-                  style={{ boxShadow: `inset 0 0 0 1px hsl(${hue},60%,40%)` }} />
               </button>
             );
           })}
         </div>
+
+        {/* Inline amount panel — slides in when a rune is selected */}
+        {activeRune && (() => {
+          const hue = runeHue(activeRune.rune || activeRune.spacedRune);
+          const max = parseFloat(activeRune.amount);
+          const pct = max > 0 ? Math.min(100, (parseFloat(listAmt) / max) * 100) : 0;
+          return (
+            <div className="rounded-xl overflow-hidden border transition-all"
+              style={{ borderColor: `hsl(${hue},40%,28%)`, background: `linear-gradient(135deg, hsl(${hue},30%,11%) 0%, hsl(${(hue+30)%360},25%,8%) 100%)` }}>
+              <div className="px-3 pt-2.5 pb-1">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-semibold font-mono" style={{ color: `hsl(${hue},65%,65%)` }}>
+                    Amount to list
+                  </span>
+                  <button onClick={() => setListAmt(activeRune.amount)}
+                    className="text-[9px] px-1.5 py-0.5 rounded transition-colors"
+                    style={{ color: `hsl(${hue},60%,60%)`, border: `1px solid hsl(${hue},40%,28%)` }}>
+                    MAX
+                  </button>
+                </div>
+                {/* Amount input */}
+                <input
+                  type="number"
+                  value={listAmt}
+                  min="0"
+                  max={activeRune.amount}
+                  step={activeRune.divisibility > 0 ? Math.pow(10, -activeRune.divisibility) : 1}
+                  onChange={e => setListAmt(e.target.value)}
+                  data-testid="rune-list-amount"
+                  className="w-full text-sm font-mono font-bold bg-transparent border-0 border-b pb-1 focus:outline-none text-white"
+                  style={{ borderColor: `hsl(${hue},40%,30%)` }}
+                />
+                {/* Progress bar */}
+                <div className="w-full h-1 rounded-full mt-2 mb-1 overflow-hidden bg-slate-800">
+                  <div className="h-full rounded-full transition-all duration-150"
+                    style={{ width: `${pct}%`, background: `linear-gradient(90deg, hsl(${hue},60%,40%), hsl(${(hue+20)%360},70%,55%))` }} />
+                </div>
+                <div className="flex justify-between text-[9px] text-slate-600 font-mono mb-2">
+                  <span>0</span>
+                  <span>{pct.toFixed(0)}% of balance</span>
+                  <span>{fmtRuneAmt(activeRune.amount, activeRune.divisibility ?? 0)}</span>
+                </div>
+              </div>
+              {/* Confirm button */}
+              <button
+                data-testid="rune-confirm-select"
+                disabled={!listAmt || parseFloat(listAmt) <= 0}
+                onClick={() => {
+                  onSelect({
+                    assetId: activeRune.runeId,
+                    assetName: activeRune.spacedRune || activeRune.rune,
+                    amount: listAmt,
+                  });
+                  setSelectedRune(null);
+                }}
+                className="w-full py-2 text-xs font-bold font-mono transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{
+                  background: `linear-gradient(90deg, hsl(${hue},55%,28%) 0%, hsl(${(hue+20)%360},50%,22%) 100%)`,
+                  color: `hsl(${hue},80%,75%)`,
+                  borderTop: `1px solid hsl(${hue},40%,22%)`,
+                }}>
+                List {listAmt ? fmtRuneAmt(listAmt, activeRune.divisibility ?? 0) : "…"} {activeRune.symbol || activeRune.rune} →
+              </button>
+            </div>
+          );
+        })()}
       </div>
     );
   }
