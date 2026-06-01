@@ -111,6 +111,7 @@ import WnspStakingPage from "@/pages/wnsp-staking";
 import MarketplacePage from "@/pages/marketplace";
 import RuneEtchingPage from "@/pages/rune-etching";
 import RuneMintPage from "@/pages/rune-mint";
+import EtchRunePage from "@/pages/etch-rune";
 import RuneStakingPage from "@/pages/rune-staking";
 import FractalBtcBridgePage from "@/pages/fractal-btc-bridge";
 import NxtFbSwapPage from "@/pages/nxt-fb-swap";
@@ -267,6 +268,7 @@ function Router() {
       <Route path="/marketplace" component={MarketplacePage} />
       <Route path="/rune-etching" component={RuneEtchingPage} />
       <Route path="/rune-mint" component={RuneMintPage} />
+      <Route path="/etch-rune" component={EtchRunePage} />
       <Route path="/rune-staking" component={RuneStakingPage} />
       <Route path="/fractal-btc" component={FractalBtcBridgePage} />
       <Route path="/fractal-bitcoin" component={FractalBtcBridgePage} />

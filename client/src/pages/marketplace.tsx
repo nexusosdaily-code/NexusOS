@@ -530,6 +530,11 @@ export default function MarketplacePage() {
           </div>
           <div className="flex-1" />
           <BitcoinWalletConnect compact onConnected={() => {}} />
+          <Link href="/etch-rune">
+            <Button variant="outline" className="border-purple-500/40 text-purple-300 hover:bg-purple-500/10 hover:border-purple-400/60 gap-1.5 text-xs">
+              <Gem className="w-3.5 h-3.5" />Etch Rune
+            </Button>
+          </Link>
           {user && (
             <Button
               onClick={() => setShowList(true)}
