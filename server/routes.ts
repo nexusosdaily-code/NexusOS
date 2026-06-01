@@ -9534,7 +9534,8 @@ export async function registerRoutes(
   // POST /api/marketplace/list — create a new listing
   app.post("/api/marketplace/list", authenticate, async (req: Request, res: Response) => {
     try {
-      const { assetType, assetId, assetName, amount, priceNxt, priceSats, description } = req.body;
+      const { assetType, assetId, assetName, amount, priceNxt, priceSats, description,
+              sellerBtcAddress, ownershipSig } = req.body;
       if (!assetType || !assetId || !assetName || !priceNxt)
         return res.status(400).json({ error: "assetType, assetId, assetName, priceNxt required" });
       if (!["wnsp_brc20", "rune", "ordinal"].includes(assetType))
@@ -9547,19 +9548,24 @@ export async function registerRoutes(
       const { marketplaceListings } = await import("../shared/schema");
 
       const [listing] = await db.insert(marketplaceListings).values({
-        sellerId:       req.user!.id,
-        sellerUsername: req.user!.username,
+        sellerId:         req.user!.id,
+        sellerUsername:   req.user!.username,
+        sellerBtcAddress: sellerBtcAddress || null,
+        ownershipSig:     ownershipSig || null,
         assetType,
         assetId,
         assetName,
-        amount:         Math.max(1, parseInt(String(amount ?? 1000))),
-        priceNxt:       priceNum.toFixed(8),
-        priceSats:      priceSats ? parseInt(String(priceSats)) : null,
-        status:         "active",
-        description:    description || null,
+        amount:           Math.max(1, parseInt(String(amount ?? 1000))),
+        priceNxt:         priceNum.toFixed(8),
+        priceSats:        priceSats ? parseInt(String(priceSats)) : null,
+        status:           "active",
+        description:      description || null,
       }).returning();
 
-      await logAction(req, "marketplace_list", "marketplace", req.user!.id, { assetType, assetId, priceNxt: priceNum });
+      await logAction(req, "marketplace_list", "marketplace", req.user!.id, {
+        assetType, assetId, priceNxt: priceNum,
+        btcVerified: !!(sellerBtcAddress && ownershipSig),
+      });
       res.json({ ok: true, listing });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });

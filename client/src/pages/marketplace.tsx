@@ -218,8 +218,28 @@ export default function MarketplacePage() {
   });
   const { data: walletData } = useQuery<any>({ queryKey: ["/api/wallet"] });
 
+  const [listingStep, setListingStep] = useState<"form" | "signing" | null>(null);
+
   const createListing = useMutation({
     mutationFn: async () => {
+      let sellerBtcAddress: string | undefined;
+      let ownershipSig: string | undefined;
+
+      // If UniSat is connected, sign a message to prove they own the asset
+      if (unisat.connected && unisat.address) {
+        setListingStep("signing");
+        try {
+          const msg = `NexusOS Marketplace — I own ${form.assetId} and authorize listing at ${form.priceNxt} NXT`;
+          ownershipSig = await unisat.signMessage(msg);
+          sellerBtcAddress = unisat.address;
+        } catch (e: any) {
+          // User rejected the signature — abort
+          throw new Error("Signature cancelled — listing requires wallet sign-off to prove asset ownership");
+        } finally {
+          setListingStep(null);
+        }
+      }
+
       const res = await apiRequest("POST", "/api/marketplace/list", {
         assetType: form.assetType,
         assetId: form.assetId,
@@ -228,18 +248,24 @@ export default function MarketplacePage() {
         priceNxt: parseFloat(form.priceNxt),
         priceSats: form.priceSats ? parseInt(form.priceSats) : undefined,
         description: form.description || undefined,
+        sellerBtcAddress,
+        ownershipSig,
       });
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Listed!", description: "Your asset is now on the marketplace." });
+      toast({ title: "✅ Listed!", description: "Your asset is live on the marketplace." });
       setShowList(false);
+      setListingStep(null);
       setForm({ assetType: "wnsp_brc20", assetId: "", assetName: "wnsp", amount: "1000", priceNxt: "", priceSats: "", description: "" });
       qc.invalidateQueries({ queryKey: ["/api/marketplace/listings"] });
       qc.invalidateQueries({ queryKey: ["/api/marketplace/my-listings"] });
       qc.invalidateQueries({ queryKey: ["/api/marketplace/stats"] });
     },
-    onError: (e: any) => toast({ title: "List failed", description: e.message, variant: "destructive" }),
+    onError: (e: any) => {
+      setListingStep(null);
+      toast({ title: "List failed", description: e.message, variant: "destructive" });
+    },
   });
 
   const buyListing = useMutation({
@@ -440,6 +466,13 @@ export default function MarketplacePage() {
                         <Link2 className="w-2.5 h-2.5 mr-1" />on-chain
                       </Badge>
                     )}
+                    {/* BTC ownership verified badge */}
+                    {l.ownershipSig && l.sellerBtcAddress && (
+                      <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 text-[10px]"
+                        title={`Signed by ${l.sellerBtcAddress}`}>
+                        <Bitcoin className="w-2.5 h-2.5 mr-1" />BTC verified
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-slate-800">
                     <div className="flex items-center justify-between">
@@ -615,14 +648,36 @@ export default function MarketplacePage() {
                 </div>
               )}
 
+              {/* Signing state overlay */}
+              {listingStep === "signing" && (
+                <div className="flex items-center gap-2 bg-orange-950/60 border border-orange-700/40 rounded-lg p-3 text-sm text-orange-300">
+                  <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
+                  <span>Check your wallet — approve the ownership signature…</span>
+                </div>
+              )}
+
               <Button
                 onClick={() => createListing.mutate()}
-                disabled={createListing.isPending || !form.assetId || !form.priceNxt}
-                className="w-full bg-cyan-600 hover:bg-cyan-700"
+                disabled={createListing.isPending || listingStep === "signing" || !form.assetId || !form.priceNxt}
+                className="w-full bg-cyan-600 hover:bg-cyan-700 gap-2"
                 data-testid="button-submit-listing"
               >
-                {createListing.isPending ? "Creating listing…" : "Create Listing"}
+                {listingStep === "signing" ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />Waiting for signature…</>
+                ) : createListing.isPending ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />Creating listing…</>
+                ) : unisat.connected ? (
+                  <><Wallet className="w-4 h-4" />Sign &amp; List Asset</>
+                ) : (
+                  "Create Listing"
+                )}
               </Button>
+
+              {unisat.connected && (
+                <p className="text-[10px] text-slate-600 text-center">
+                  Your wallet will sign a message proving asset ownership — no BTC is spent
+                </p>
+              )}
             </Card>
           </div>
         )}
