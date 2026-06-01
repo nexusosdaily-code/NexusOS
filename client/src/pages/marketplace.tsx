@@ -162,30 +162,98 @@ function WalletAssetPicker({
     </div>
   );
 
-  // Runes picker
-  if (assetType === "rune" && runes.length > 0) return (
-    <div className="space-y-1.5">
-      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-        Your Runes ({runes.length})
+  // Runes picker — rich card grid
+  if (assetType === "rune" && runes.length > 0) {
+    // Deterministic hue from rune name for avatar gradient
+    const runeHue = (name: string) => {
+      let h = 0;
+      for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+      return h % 360;
+    };
+    const fmtRuneAmt = (amount: string, div: number) => {
+      const n = parseFloat(amount);
+      if (isNaN(n)) return amount;
+      const actual = div > 0 ? n / Math.pow(10, div) : n;
+      if (actual >= 1e9)  return (actual / 1e9).toFixed(2)  + "B";
+      if (actual >= 1e6)  return (actual / 1e6).toFixed(2)  + "M";
+      if (actual >= 1e3)  return (actual / 1e3).toFixed(2)  + "K";
+      return actual.toLocaleString(undefined, { maximumFractionDigits: div });
+    };
+    const fmtSpaced = (name: string) =>
+      name.split("•").map((part, i, arr) =>
+        i < arr.length - 1
+          ? [<span key={i} className="text-inherit">{part}</span>, <span key={`dot-${i}`} className="text-purple-400 mx-0.5">•</span>]
+          : <span key={i}>{part}</span>
+      );
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Your Runes ({runes.length})</div>
+          <div className="text-[10px] text-slate-600">click a rune to select</div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-0.5">
+          {runes.map(r => {
+            const hue = runeHue(r.rune || r.spacedRune);
+            const sym = r.symbol || "ᚱ";
+            const [block, tx] = (r.runeId || "").split(":");
+            return (
+              <button key={r.runeId}
+                onClick={() => onSelect({
+                  assetId: r.runeId,
+                  assetName: r.spacedRune || r.rune,
+                  amount: r.amount,
+                })}
+                data-testid={`pick-rune-${r.runeId}`}
+                className="group relative flex flex-col text-left rounded-xl border border-slate-700 hover:border-purple-500/60 bg-slate-900 hover:bg-slate-800/80 transition-all overflow-hidden"
+                style={{ boxShadow: "none" }}
+              >
+                {/* Gradient header strip with symbol */}
+                <div className="w-full h-16 flex items-center justify-center relative overflow-hidden"
+                  style={{ background: `linear-gradient(135deg, hsl(${hue},60%,18%) 0%, hsl(${(hue+40)%360},55%,12%) 100%)` }}>
+                  {/* Subtle radial glow */}
+                  <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity"
+                    style={{ background: `radial-gradient(circle at 50% 120%, hsl(${hue},80%,55%) 0%, transparent 70%)` }} />
+                  {/* Symbol */}
+                  <span className="relative z-10 text-2xl font-bold select-none"
+                    style={{ color: `hsl(${hue},80%,70%)`, textShadow: `0 0 16px hsl(${hue},80%,50%)` }}>
+                    {sym}
+                  </span>
+                  {/* Block badge */}
+                  {block && (
+                    <span className="absolute top-1.5 right-1.5 text-[8px] font-mono px-1.5 py-0.5 rounded"
+                      style={{ background: `hsla(${hue},60%,10%,0.8)`, color: `hsl(${hue},60%,60%)`, border: `1px solid hsl(${hue},40%,25%)` }}>
+                      {block}:{tx}
+                    </span>
+                  )}
+                </div>
+
+                {/* Card body */}
+                <div className="flex flex-col gap-0.5 px-2.5 py-2">
+                  {/* Rune name */}
+                  <div className="text-[11px] font-bold leading-tight font-mono truncate"
+                    style={{ color: `hsl(${hue},70%,72%)` }}>
+                    {fmtSpaced(r.spacedRune || r.rune)}
+                  </div>
+                  {/* Balance */}
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-sm font-bold text-white font-mono">
+                      {fmtRuneAmt(r.amount, r.divisibility ?? 0)}
+                    </span>
+                    <span className="text-[9px] text-slate-500">available</span>
+                  </div>
+                </div>
+
+                {/* Selected glow border */}
+                <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"
+                  style={{ boxShadow: `inset 0 0 0 1px hsl(${hue},60%,40%)` }} />
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
-        {runes.map(r => (
-          <button key={r.runeId}
-            onClick={() => onSelect({
-              assetId: r.runeId,
-              assetName: r.spacedRune || r.rune,
-              amount: r.amount,
-            })}
-            className="bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-purple-500/50 rounded px-3 py-2 flex items-center justify-between transition-all"
-            data-testid={`pick-rune-${r.runeId}`}
-          >
-            <span className="text-sm font-bold text-purple-300 font-mono">{r.spacedRune || r.rune}</span>
-            <span className="text-xs text-slate-300 font-mono">{r.symbol} {parseFloat(r.amount).toLocaleString()}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+    );
+  }
 
   // Nothing found
   const label = assetType === "ordinal" ? "inscriptions" : assetType === "rune" ? "runes" : "BRC-20 tokens";
