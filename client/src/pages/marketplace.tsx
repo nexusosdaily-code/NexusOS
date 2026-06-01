@@ -592,7 +592,9 @@ export default function MarketplacePage() {
                   {assetBadge(l.assetType)}
                   <span className="text-white font-mono text-sm flex-1">{l.assetName}</span>
                   <span className="text-slate-400 text-xs font-mono">{l.amount.toLocaleString()} units</span>
-                  <span className="text-amber-300 font-mono text-sm">{fmtNxt(l.priceNxt)} NXT</span>
+                  <span className="text-yellow-300 font-mono text-sm">
+                    {(l.priceSats ?? Math.round(parseFloat(l.priceNxt) * 1000)).toLocaleString()} sats
+                  </span>
                   <button onClick={() => cancelListing.mutate(l.id)}
                     className="text-slate-600 hover:text-red-400 transition-colors" title="Cancel listing">
                     <X className="w-4 h-4" />
@@ -654,23 +656,16 @@ export default function MarketplacePage() {
                   <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-slate-800">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-amber-300 font-bold font-mono text-lg">{fmtNxt(l.priceNxt)}</div>
-                        <div className="text-[10px] text-slate-600 font-mono">NXT · +2.5% fee</div>
+                        <div className="text-yellow-300 font-bold font-mono text-lg">
+                          {(l.priceSats ?? Math.round(parseFloat(l.priceNxt) * 1000)).toLocaleString()}
+                          <span className="text-sm font-normal ml-1 text-yellow-400/60">sats</span>
+                        </div>
+                        <div className="text-[10px] text-slate-600 font-mono">⚡ +2.5% fee · via Bitcoin</div>
                       </div>
                       <div className="text-[10px] text-slate-600">by {l.sellerUsername}</div>
                     </div>
                     {!isOwn && user ? (
                       <div className="flex gap-1.5">
-                        {/* NXT buy button */}
-                        <Button size="sm"
-                          onClick={() => buyListing.mutate(l.id)}
-                          disabled={buyListing.isPending || !canAfford}
-                          className={`flex-1 gap-1 text-xs ${canAfford ? "bg-cyan-600 hover:bg-cyan-700" : "bg-slate-700 text-slate-500 cursor-not-allowed"}`}
-                          title={canAfford ? undefined : `Need ${total.toFixed(2)} NXT`}
-                          data-testid={`button-buy-${l.id}`}
-                        >
-                          {canAfford ? <><CircleDollarSign className="w-3 h-3" />NXT</> : "Low NXT"}
-                        </Button>
                         {/* PSBT / Bitcoin buy button */}
                         {(l.priceSats || l.assetId?.includes("i")) && (
                           unisat.connected ? (
@@ -787,18 +782,18 @@ export default function MarketplacePage() {
                     data-testid="input-amount" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-slate-400 text-xs">Price (NXT)</Label>
-                  <Input type="number" value={form.priceNxt} onChange={e => setForm(f => ({ ...f, priceNxt: e.target.value }))}
-                    className="bg-slate-800 border-slate-700 font-mono" placeholder="500"
-                    data-testid="input-price-nxt" />
+                  <Label className="text-slate-400 text-xs">Price (sats) ⚡</Label>
+                  <Input
+                    type="number"
+                    value={form.priceSats}
+                    onChange={e => {
+                      const sats = e.target.value;
+                      const nxt = sats ? (parseInt(sats) / 1000).toFixed(8) : "";
+                      setForm(f => ({ ...f, priceSats: sats, priceNxt: nxt }));
+                    }}
+                    className="bg-slate-800 border-slate-700 font-mono" placeholder="50000"
+                    data-testid="input-price-sats" />
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-slate-400 text-xs">Price in Sats (optional)</Label>
-                <Input type="number" value={form.priceSats} onChange={e => setForm(f => ({ ...f, priceSats: e.target.value }))}
-                  className="bg-slate-800 border-slate-700 font-mono" placeholder="50000"
-                  data-testid="input-price-sats" />
               </div>
 
               <div className="space-y-1.5">
@@ -808,19 +803,19 @@ export default function MarketplacePage() {
                   data-testid="input-description" />
               </div>
 
-              {form.priceNxt && (
+              {form.priceSats && (
                 <div className="bg-slate-800/60 rounded-lg p-3 text-xs text-slate-400 space-y-1">
                   <div className="flex justify-between">
                     <span>Listing price</span>
-                    <span className="text-amber-300 font-mono">{fmtNxt(parseFloat(form.priceNxt) || 0)} NXT</span>
+                    <span className="text-yellow-300 font-mono">{parseInt(form.priceSats || "0").toLocaleString()} sats</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Buyer pays (incl. 2.5% fee)</span>
-                    <span className="text-white font-mono">{fmtNxt((parseFloat(form.priceNxt) || 0) * 1.025)} NXT</span>
+                    <span className="text-white font-mono">{Math.round((parseInt(form.priceSats || "0") || 0) * 1.025).toLocaleString()} sats</span>
                   </div>
                   <div className="flex justify-between">
                     <span>You receive</span>
-                    <span className="text-green-300 font-mono">{fmtNxt(parseFloat(form.priceNxt) || 0)} NXT</span>
+                    <span className="text-green-300 font-mono">{parseInt(form.priceSats || "0").toLocaleString()} sats</span>
                   </div>
                 </div>
               )}

@@ -1,2 +1,3 @@
 - [Sats ecosystem architecture](sats-ecosystem.md) — wallet balance is decimal string, never pass to BigInt(); use parseFloat().toFixed(8) arithmetic
 - [Lightning wallet tab expansion](lightning-wallet-tabs.md) — tabs are now 6: receive/transmit/swap/send/stake/log; "transmissions" was renamed to "log"
+- [Sats-first pricing model](sats-pricing-model.md) — sats = spending currency; NXT = hardware crowdfund token; all service fees charged in sats

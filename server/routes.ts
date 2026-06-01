@@ -1396,7 +1396,9 @@ export async function registerRoutes(
     }
   });
 
-  // Create a new API key — costs 1 NXT (document_create fee via physics)
+  const API_KEY_FEE_SATS = 5000;
+
+  // Create a new API key — costs 5,000 sats (flat rate)
   app.post("/api/keys", authenticate, async (req, res) => {
     try {
       const { name, permissions = ["read"] } = req.body as { name?: string; permissions?: string[] };
@@ -1404,41 +1406,33 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Key name is required (min 2 chars)" });
       }
 
-      // Physics fee: creating a dev key = document_create cost
-      const wdm        = req.user!.spectralWdm ?? 200;
-      const keyFee     = calcFee("document_create", wdm);
-      const keyFeeNum  = parseFloat(keyFee.feeNxt);
-      const userWallet = await storage.getWallet(req.user!.id);
-      if (!userWallet) return res.status(402).json({ error: "Wallet not found" });
-
-      const balance = parseFloat(userWallet.balance);
-      if (balance < keyFeeNum) {
+      const { db } = await import("./db");
+      const { lightningWallets, lightningTransactions } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [lnWallet] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, req.user!.id));
+      if (!lnWallet || lnWallet.satsBalance < API_KEY_FEE_SATS) {
         return res.status(402).json({
-          error: "Insufficient NXT to create API key",
-          required: keyFeeNum,
-          available: balance,
-          physics: { wavelengthNm: keyFee.wavelengthNm, band: keyFee.band },
+          error: `Insufficient sats. Need ${API_KEY_FEE_SATS} sats to create an API key`,
+          required: API_KEY_FEE_SATS,
+          available: lnWallet?.satsBalance ?? 0,
         });
       }
 
-      // Deduct key creation fee
-      await storage.updateWalletBalance(userWallet.id, (balance - keyFeeNum).toFixed(8));
-      await storage.createTransaction({
-        fromWalletId: userWallet.id,
-        toWalletId:   undefined,
-        amount:       keyFeeNum.toFixed(8),
-        fee:          "0",
-        type:         "document_fee",
-        wavelength:   keyFee.wavelengthNm.toString(),
-        frequency:    keyFee.frequencyHz.toString(),
-        energyCost:   keyFee.energyJ.toString(),
-        metadata:     { action: "api_key_create", name: name.trim() },
+      await db.update(lightningWallets)
+        .set({ satsBalance: lnWallet.satsBalance - API_KEY_FEE_SATS, updatedAt: new Date() })
+        .where(eq(lightningWallets.userId, req.user!.id));
+      await db.insert(lightningTransactions).values({
+        userId:     req.user!.id,
+        type:       "service_fee",
+        amountSats: API_KEY_FEE_SATS,
+        memo:       `API key creation: ${name.trim()}`,
+        status:     "settled",
       });
 
       const { key, apiKey } = await storage.createApiKey(req.user!.id, name.trim(), permissions);
 
       res.status(201).json({
-        key,  // only shown once — store securely
+        key,
         apiKey: {
           id:          apiKey.id,
           name:        apiKey.name,
@@ -1446,7 +1440,7 @@ export async function registerRoutes(
           permissions: apiKey.permissions,
           createdAt:   apiKey.createdAt,
         },
-        fee: { nxt: keyFeeNum, band: keyFee.band, nm: keyFee.wavelengthNm },
+        fee: { sats: API_KEY_FEE_SATS },
         warning: "Store this key now — it will not be shown again.",
       });
     } catch (err: any) {
@@ -6448,6 +6442,19 @@ export async function registerRoutes(
       if (!hasAuthority(channel.wdm, "KERNEL")) {
         return res.status(403).json({ error: `KERNEL band or higher required. Your band: ${band}` });
       }
+
+      // 10,000 sats anti-spam fee for governance proposals
+      const PROPOSAL_FEE_SATS = 10000;
+      const { db: govDb } = await import("./db");
+      const { lightningWallets: govLnW, lightningTransactions: govLnTx } = await import("../shared/schema");
+      const { eq: govEq } = await import("drizzle-orm");
+      const [govLnWallet] = await govDb.select().from(govLnW).where(govEq(govLnW.userId, user.id));
+      if (!govLnWallet || govLnWallet.satsBalance < PROPOSAL_FEE_SATS) {
+        return res.status(402).json({ error: `Insufficient sats. Need ${PROPOSAL_FEE_SATS} sats to submit a proposal`, required: PROPOSAL_FEE_SATS, available: govLnWallet?.satsBalance ?? 0 });
+      }
+      await govDb.update(govLnW).set({ satsBalance: govLnWallet.satsBalance - PROPOSAL_FEE_SATS, updatedAt: new Date() }).where(govEq(govLnW.userId, user.id));
+      await govDb.insert(govLnTx).values({ userId: user.id, type: "service_fee", amountSats: PROPOSAL_FEE_SATS, memo: `Governance proposal fee`, status: "settled" });
+
       const { title, rationale, parameterKey, proposedValue } = req.body;
       if (!title || !rationale || !parameterKey || !proposedValue) {
         return res.status(400).json({ error: "title, rationale, parameterKey, proposedValue required" });
@@ -7566,28 +7573,26 @@ export async function registerRoutes(
   // ══════════════════════════════════════════════════════════════════════════════
   // ── COMMUNITY MINT PORTAL ─────────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
-  const COMMUNITY_MINT_NXT_FEE = "50.00000000";
+  const COMMUNITY_MINT_SATS_FEE = 50000;
   const COMMUNITY_MINT_WNSP_AMT = "1000";
 
   app.post("/api/community/mint", authenticate, async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
-      const wallet = await storage.getWallet(user.id);
-      if (!wallet) return res.status(404).json({ error: "Wallet not found" });
-
-      const balance = parseFloat(wallet.balance);
-      const fee = parseFloat(COMMUNITY_MINT_NXT_FEE);
-      if (balance < fee) {
+      const { db: mintDb } = await import("./db");
+      const { lightningWallets: mintLnW, lightningTransactions: mintLnTx } = await import("../shared/schema");
+      const { eq: mintEq } = await import("drizzle-orm");
+      const [mintLnWallet] = await mintDb.select().from(mintLnW).where(mintEq(mintLnW.userId, user.id));
+      if (!mintLnWallet || mintLnWallet.satsBalance < COMMUNITY_MINT_SATS_FEE) {
         return res.status(402).json({
-          error: `Insufficient NXT balance. Need ${COMMUNITY_MINT_NXT_FEE} NXT to mint.`,
-          balance: wallet.balance,
-          required: COMMUNITY_MINT_NXT_FEE,
+          error: `Insufficient sats. Need ${COMMUNITY_MINT_SATS_FEE} sats to mint.`,
+          required: COMMUNITY_MINT_SATS_FEE,
+          available: mintLnWallet?.satsBalance ?? 0,
         });
       }
-
-      // Deduct fee (burned — goes to protocol)
-      const newBalance = (balance - fee).toFixed(8);
-      await storage.updateWalletBalance(wallet.id, newBalance);
+      const newBalance = mintLnWallet.satsBalance - COMMUNITY_MINT_SATS_FEE;
+      await mintDb.update(mintLnW).set({ satsBalance: newBalance, updatedAt: new Date() }).where(mintEq(mintLnW.userId, user.id));
+      await mintDb.insert(mintLnTx).values({ userId: user.id, type: "service_fee", amountSats: COMMUNITY_MINT_SATS_FEE, memo: `Community WNSP mint`, status: "settled" });
 
       // Queue BRC-20 mint inscription
       const content = JSON.stringify({ p: "brc-20", op: "mint", tick: "wnsp", amt: COMMUNITY_MINT_WNSP_AMT });
@@ -7600,12 +7605,12 @@ export async function registerRoutes(
       });
 
       // Record in community_mints table
-      const { db } = await import("./db");
+      const { db: mintRecordDb } = await import("./db");
       const { communityMints } = await import("../shared/schema");
-      const [row] = await db.insert(communityMints).values({
+      const [row] = await mintRecordDb.insert(communityMints).values({
         userId:     user.id,
         username:   user.username,
-        nxtFeePaid: COMMUNITY_MINT_NXT_FEE,
+        nxtFeePaid: (COMMUNITY_MINT_SATS_FEE / 1000).toFixed(8),
         queueId:    queued.id ? parseInt(String(queued.id)) : null,
         status:     "queued",
       }).returning();
@@ -7615,9 +7620,9 @@ export async function registerRoutes(
         mintId: row.id,
         queueId: queued.id,
         wnspAmount: COMMUNITY_MINT_WNSP_AMT,
-        nxtFeeBurned: COMMUNITY_MINT_NXT_FEE,
-        newBalance,
-        message: `Mint queued! ${COMMUNITY_MINT_WNSP_AMT} wnsp will be inscribed to Bitcoin. ${COMMUNITY_MINT_NXT_FEE} NXT burned.`,
+        satsFee: COMMUNITY_MINT_SATS_FEE,
+        remainingSats: newBalance,
+        message: `Mint queued! ${COMMUNITY_MINT_WNSP_AMT} wnsp will be inscribed to Bitcoin. ${COMMUNITY_MINT_SATS_FEE.toLocaleString()} sats paid.`,
       });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });

@@ -484,6 +484,13 @@ export default function GovernancePage() {
         {/* Propose */}
         {tab === "propose" && canPropose && (
           <div className="space-y-4">
+            <div className="p-3 rounded-xl bg-yellow-950/30 border border-yellow-500/30 text-[11px] text-yellow-300 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Zap className="w-3.5 h-3.5 shrink-0 text-yellow-400" />
+                <span>Proposal fee: <strong>10,000 sats</strong> — deducted from your Lightning wallet on submit.</span>
+              </div>
+              <span className="font-mono text-yellow-400/70 text-[10px] whitespace-nowrap">{mySats.toLocaleString()} sats avail</span>
+            </div>
             <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/20 text-[11px] text-amber-300 flex items-center gap-2">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
               Proposals directly alter live protocol parameters. All changes are permanent and publicly auditable.

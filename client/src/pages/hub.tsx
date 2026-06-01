@@ -309,6 +309,17 @@ function IdentityRail({
   const lambdaKg = energyJ / (C_LIGHT * C_LIGHT);
   const balNum   = parseFloat(wallet?.balance ?? "0");
 
+  const { data: lnData } = useQuery<{ satsBalance: number }>({
+    queryKey: ["/api/lightning/balance"],
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+  const satsNum = lnData?.satsBalance ?? 0;
+  const fmtSatsNav = (n: number) =>
+    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M`
+    : n >= 1_000   ? `${(n / 1_000).toFixed(1)}K`
+    : `${n}`;
+
   return (
     <div
       data-testid="identity-rail"
@@ -367,16 +378,31 @@ function IdentityRail({
         </Link>
       )}
 
-      {/* NXT Balance */}
+      {/* ⚡ Lightning sats — primary spending balance */}
+      <Link href="/lightning-wallet">
+        <div className="flex flex-col items-end gap-0 px-3 py-1 rounded cursor-pointer text-xs font-mono"
+          style={{ background: "rgba(250,204,21,0.10)", color: "#facc15", border: "1px solid rgba(250,204,21,0.28)" }}>
+          <div className="flex items-center gap-1">
+            <Zap className="w-3 h-3" />
+            {fmtSatsNav(satsNum)} sats
+          </div>
+          <div className="text-[8px] opacity-50 tracking-wide">LIGHTNING</div>
+        </div>
+      </Link>
+
+      {/* NXT Hardware Fund Balance */}
       <Link href="/wallet">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded cursor-pointer text-xs font-mono"
-          style={{ background: "rgba(251,191,36,0.10)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.25)" }}>
-          <Wallet className="w-3.5 h-3.5" />
-          {balNum >= 1e6
-            ? `${(balNum / 1e6).toFixed(2)}M`
-            : balNum >= 1e3
-            ? `${(balNum / 1e3).toFixed(2)}K`
-            : balNum.toFixed(4)} NXT
+        <div className="flex flex-col items-end gap-0 px-3 py-1 rounded cursor-pointer text-xs font-mono"
+          style={{ background: "rgba(139,0,255,0.10)", color: "#a855f7", border: "1px solid rgba(139,0,255,0.25)" }}>
+          <div className="flex items-center gap-1">
+            <Wallet className="w-3 h-3" />
+            {balNum >= 1e6
+              ? `${(balNum / 1e6).toFixed(2)}M`
+              : balNum >= 1e3
+              ? `${(balNum / 1e3).toFixed(2)}K`
+              : balNum.toFixed(2)} NXT
+          </div>
+          <div className="text-[8px] opacity-50 tracking-wide">HW FUND</div>
         </div>
       </Link>
 

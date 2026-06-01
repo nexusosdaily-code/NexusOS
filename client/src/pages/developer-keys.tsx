@@ -71,6 +71,13 @@ export default function DeveloperKeysPage() {
       fetch("/api/physics/my", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
   });
 
+  const { data: lnBal } = useQuery<{ satsBalance: number }>({
+    queryKey: ["/api/lightning/balance"],
+    enabled: !!token,
+    staleTime: 15_000,
+  });
+  const mySats = lnBal?.satsBalance ?? 0;
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/keys", {
@@ -111,9 +118,10 @@ export default function DeveloperKeysPage() {
 
   const keys: any[] = data?.keys ?? [];
   const activeKeys = keys.filter(k => k.isActive);
-  const fee = physics?.fees?.document_create;
   const nm  = physics?.channel?.nm ?? 550;
   const color = nmToRgb(nm);
+  const API_KEY_FEE_SATS = 5000;
+  const canAffordKey = mySats >= API_KEY_FEE_SATS;
 
   const togglePerm = (p: string) => {
     setNewPerms(prev =>
@@ -138,20 +146,31 @@ export default function DeveloperKeysPage() {
               Developer API Keys
             </h1>
             <p className="text-sm text-slate-400 mt-0.5">
-              Authenticate external services with NXT-backed API keys. Every call costs NXT at your spectral rate.
+              Authenticate external apps with sats-powered API keys. 5,000 sats flat fee — no NXT required.
             </p>
           </div>
         </div>
 
-        <ChannelConnect requiredNxt={fee ? parseFloat(fee.feeNxt) : 3} label="Top up ⚡" />
+        {/* Sats balance notice */}
+        <div className={`mb-6 flex items-center gap-3 px-4 py-3 rounded-xl border text-sm ${
+          canAffordKey
+            ? "border-cyan-500/30 bg-cyan-950/30 text-cyan-300"
+            : "border-yellow-500/30 bg-yellow-950/30 text-yellow-300"
+        }`}>
+          <Zap className="w-4 h-4 flex-shrink-0" />
+          <span>
+            ⚡ Lightning balance: <strong>{mySats.toLocaleString()} sats</strong>
+            {!canAffordKey && <span className="ml-2 text-yellow-400/80">— top up {(API_KEY_FEE_SATS - mySats).toLocaleString()} more to create a key</span>}
+          </span>
+        </div>
 
         {/* Stats row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           {[
-            { label: "Active Keys",   val: activeKeys.length,                 color: "text-green-400" },
-            { label: "Total Keys",    val: keys.length,                       color: "text-white" },
-            { label: "Your Band",     val: physics?.channel?.band ?? "—",     color: "text-violet-300" },
-            { label: "Key Create Fee",val: fee ? `${parseFloat(fee.feeNxt).toFixed(4)} NXT` : "—", color: "text-cyan-400" },
+            { label: "Active Keys",   val: activeKeys.length,        color: "text-green-400" },
+            { label: "Total Keys",    val: keys.length,              color: "text-white" },
+            { label: "Your Band",     val: physics?.channel?.band ?? "—", color: "text-violet-300" },
+            { label: "Key Create Fee",val: "5,000 sats",             color: "text-yellow-400" },
           ].map(s => (
             <div key={s.label} className="bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-3">
               <div className={`text-lg font-bold font-mono ${s.color}`}>{s.val}</div>
@@ -223,24 +242,21 @@ export default function DeveloperKeysPage() {
                   </div>
                 </div>
 
-                {fee && (
-                  <div className="text-[10px] text-slate-500 flex items-center gap-1.5 border-t border-slate-800 pt-3">
-                    <Zap className="w-3 h-3" />
-                    Creates for{" "}
-                    <span style={{ color }} className="font-mono font-semibold">
-                      {parseFloat(fee.feeNxt).toFixed(4)} NXT
-                    </span>
-                    <span className="text-slate-600">· {fee.band} band</span>
-                  </div>
-                )}
+                <div className="text-[10px] text-slate-500 flex items-center gap-1.5 border-t border-slate-800 pt-3">
+                  <Zap className="w-3 h-3 text-yellow-400" />
+                  Creates for{" "}
+                  <span className="font-mono font-semibold text-yellow-400">5,000 sats</span>
+                  <span className="text-slate-600">· flat rate · deducted from ⚡ wallet</span>
+                </div>
 
                 <Button
                   onClick={() => createMutation.mutate()}
-                  disabled={!newKeyName.trim() || newPerms.length === 0 || createMutation.isPending}
-                  className="w-full bg-cyan-600 hover:bg-cyan-500 text-white text-sm h-9"
+                  disabled={!newKeyName.trim() || newPerms.length === 0 || createMutation.isPending || !canAffordKey}
+                  className="w-full bg-cyan-600 hover:bg-cyan-500 text-white text-sm h-9 disabled:opacity-50"
                   data-testid="btn-create-key"
+                  title={!canAffordKey ? `Need ${API_KEY_FEE_SATS.toLocaleString()} sats in Lightning wallet` : undefined}
                 >
-                  {createMutation.isPending ? "Creating…" : "Create Key"}
+                  {createMutation.isPending ? "Creating…" : canAffordKey ? "Create Key" : "Need 5,000 sats"}
                 </Button>
               </div>
 
