@@ -717,7 +717,17 @@ export default function ChannelDashboard() {
             {swapDir === "to_sats" && (
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label className="text-gray-400 text-xs">NXT to convert</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-gray-400 text-xs">NXT to convert</Label>
+                    <button
+                      type="button"
+                      onClick={() => setSwapNxt(nxtBalance.toString())}
+                      className="text-xs text-yellow-400 hover:text-yellow-300 underline"
+                      data-testid="button-swap-nxt-max"
+                    >
+                      MAX ({formatNxt(nxtBalance)} NXT)
+                    </button>
+                  </div>
                   <Input
                     type="number"
                     step="0.001"
@@ -725,14 +735,20 @@ export default function ChannelDashboard() {
                     onChange={(e) => setSwapNxt(e.target.value)}
                     className="bg-slate-800/50 border-slate-700 font-mono"
                     min="0.001"
+                    max={nxtBalance}
                     data-testid="input-swap-nxt"
                   />
-                  <div className="text-xs text-yellow-400">→ ⚡ {Math.floor(parseFloat(swapNxt || "0") * 1000).toLocaleString()} sats</div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-yellow-400">→ ⚡ {Math.floor(parseFloat(swapNxt || "0") * 1000).toLocaleString()} sats</div>
+                    {parseFloat(swapNxt) > nxtBalance && (
+                      <div className="text-xs text-red-400 font-semibold">Exceeds balance</div>
+                    )}
+                  </div>
                 </div>
                 <Button
                   onClick={() => swapToSats.mutate()}
-                  disabled={swapToSats.isPending || parseFloat(swapNxt) < 0.001}
-                  className="w-full bg-purple-600 hover:bg-purple-700"
+                  disabled={swapToSats.isPending || parseFloat(swapNxt) < 0.001 || parseFloat(swapNxt) > nxtBalance}
+                  className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
                   data-testid="button-execute-swap-to-sats"
                 >
                   {swapToSats.isPending ? "Converting…" : `Convert ${swapNxt} NXT → sats`}
