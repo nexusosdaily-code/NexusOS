@@ -320,6 +320,14 @@ function IdentityRail({
     : n >= 1_000   ? `${(n / 1_000).toFixed(1)}K`
     : `${n}`;
 
+  const { data: mktData } = useQuery<{ btcUsd: number; nxtUsd: number; satUsd: number }>({
+    queryKey: ["/api/market/price"],
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
+  const nxtUsd = mktData?.nxtUsd ?? null;
+  const satUsd = mktData?.satUsd ?? null;
+
   return (
     <div
       data-testid="identity-rail"
@@ -390,7 +398,7 @@ function IdentityRail({
         </div>
       </Link>
 
-      {/* NXT Hardware Fund Balance */}
+      {/* NXT Hardware Fund Balance — shows live USD price derived from BTC */}
       <Link href="/wallet">
         <div className="flex flex-col items-end gap-0 px-3 py-1 rounded cursor-pointer text-xs font-mono"
           style={{ background: "rgba(139,0,255,0.10)", color: "#a855f7", border: "1px solid rgba(139,0,255,0.25)" }}>
@@ -402,7 +410,9 @@ function IdentityRail({
               ? `${(balNum / 1e3).toFixed(2)}K`
               : balNum.toFixed(2)} NXT
           </div>
-          <div className="text-[8px] opacity-50 tracking-wide">HW FUND</div>
+          {nxtUsd !== null
+            ? <div className="text-[8px] tracking-wide" style={{ color: "#c084fc" }}>≈ ${nxtUsd.toFixed(4)}/NXT</div>
+            : <div className="text-[8px] opacity-50 tracking-wide">HW FUND</div>}
         </div>
       </Link>
 

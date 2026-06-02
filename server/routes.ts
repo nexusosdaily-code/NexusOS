@@ -9834,6 +9834,59 @@ export async function registerRoutes(
       res.json({ activeListings: Number(active.count), totalSales: Number(sold.count), volumeNxt: sold.vol ?? "0" });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
+  // ── MARKET PRICE FEED ─────────────────────────────────────────────────────────
+  // GET /api/market/price — live BTC/USD → derived NXT/USD and sat/USD prices
+  {
+    const NXT_SUPPLY        = 21_000_000_000;
+    const SATS_PER_NXT      = 1_000;
+    const SATS_PER_BTC      = 100_000_000;
+    let   _priceCache: { btcUsd: number; fetchedAt: number } | null = null;
+    const CACHE_TTL_MS      = 60_000;
+
+    const fetchBtcPrice = async (): Promise<number> => {
+      if (_priceCache && Date.now() - _priceCache.fetchedAt < CACHE_TTL_MS) return _priceCache.btcUsd;
+      // CoinGecko free — no key required
+      const r = await fetch(
+        "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+        { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(5000) }
+      );
+      if (!r.ok) throw new Error(`CoinGecko ${r.status}`);
+      const d = await r.json() as { bitcoin: { usd: number } };
+      const btcUsd = d.bitcoin.usd;
+      _priceCache = { btcUsd, fetchedAt: Date.now() };
+      return btcUsd;
+    };
+
+    app.get("/api/market/price", async (_req: Request, res: Response) => {
+      try {
+        const btcUsd   = await fetchBtcPrice();
+        const satUsd   = btcUsd / SATS_PER_BTC;
+        const nxtUsd   = satUsd * SATS_PER_NXT;           // 1 NXT = 1,000 sats
+        const nxtMcap  = nxtUsd * NXT_SUPPLY;             // implied market cap
+        res.json({
+          ok: true,
+          btcUsd,
+          satUsd,
+          nxtUsd,
+          nxtMcap,
+          satsPerNxt:  SATS_PER_NXT,
+          nxtSupply:   NXT_SUPPLY,
+          fetchedAt:   _priceCache?.fetchedAt ?? Date.now(),
+          formula:     "nxtUsd = btcUsd / 100,000,000 × 1,000 = btcUsd / 100,000",
+        });
+      } catch (err: any) {
+        // Fallback: return last cache if available, else 503
+        if (_priceCache) {
+          const btcUsd  = _priceCache.btcUsd;
+          const satUsd  = btcUsd / SATS_PER_BTC;
+          const nxtUsd  = satUsd * SATS_PER_NXT;
+          const nxtMcap = nxtUsd * NXT_SUPPLY;
+          return res.json({ ok: true, btcUsd, satUsd, nxtUsd, nxtMcap, satsPerNxt: SATS_PER_NXT, nxtSupply: NXT_SUPPLY, fetchedAt: _priceCache.fetchedAt, stale: true });
+        }
+        res.status(503).json({ error: err.message });
+      }
+    });
+  }
   // ─────────────────────────────────────────────────────────────────────────────
 
   return httpServer;

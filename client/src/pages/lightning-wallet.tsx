@@ -139,6 +139,15 @@ export default function ChannelDashboard() {
     staleTime: 5 * 60_000,
   });
 
+  const { data: mktPrice } = useQuery<{
+    btcUsd: number; satUsd: number; nxtUsd: number; nxtMcap: number;
+    nxtSupply: number; stale?: boolean;
+  }>({
+    queryKey: ["/api/market/price"],
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
+
   useEffect(() => {
     if (!invoice || depositPaid) return;
     const check = async () => {
@@ -579,6 +588,57 @@ export default function ChannelDashboard() {
 
         {/* ── SWAP / BRIDGE ── */}
         {tab === "swap" && (
+          <>
+          {/* ── Market price card ── */}
+          {mktPrice && (
+            <Card className="bg-slate-900/60 border-slate-700/50 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                  <Bitcoin className="w-3 h-3 text-orange-400" />
+                  Live NXT market price
+                  {mktPrice.stale && <span className="text-amber-500/60">(cached)</span>}
+                </div>
+                <div className="text-[10px] text-gray-600">via BTC/USD · 1 NXT = 1,000 sats</div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="bg-orange-900/10 border border-orange-500/20 rounded-lg p-3">
+                  <div className="text-[10px] text-orange-400/70 uppercase tracking-wider mb-1">BTC / USD</div>
+                  <div className="text-white font-mono font-bold text-lg">${mktPrice.btcUsd.toLocaleString("en-US", { maximumFractionDigits: 0 })}</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">1 sat = ${mktPrice.satUsd.toFixed(7)}</div>
+                </div>
+                <div className="bg-purple-900/10 border border-purple-500/20 rounded-lg p-3">
+                  <div className="text-[10px] text-purple-400/70 uppercase tracking-wider mb-1">NXT / USD</div>
+                  <div className="text-white font-mono font-bold text-lg">${mktPrice.nxtUsd.toFixed(4)}</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">= BTC ÷ 100,000</div>
+                </div>
+              </div>
+              <div className="bg-slate-800/40 rounded-lg p-3 space-y-1.5">
+                <div className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Implied collateral model</div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-400">Your NXT holding</span>
+                  <span className="font-mono text-purple-300">{formatNxt(nxtBalance)} NXT</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-400">USD value (at swap rate)</span>
+                  <span className="font-mono text-emerald-300">${(nxtBalance * mktPrice.nxtUsd).toLocaleString("en-US", { maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-400">Your ⚡ sats</span>
+                  <span className="font-mono text-yellow-300">{satsDisplay(sats)} sats · ${(sats * mktPrice.satUsd).toFixed(2)}</span>
+                </div>
+                <div className="border-t border-slate-700/50 pt-1.5 flex justify-between text-xs">
+                  <span className="text-gray-400">Total hot wallet USD</span>
+                  <span className="font-mono text-white font-bold">
+                    ${((nxtBalance * mktPrice.nxtUsd) + (sats * mktPrice.satUsd)).toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="text-[10px] text-gray-600 pt-1 border-t border-slate-700/30">
+                  21B NXT supply → implied market cap: <span className="text-purple-400/70">${(mktPrice.nxtMcap / 1e9).toFixed(2)}B</span>
+                </div>
+              </div>
+            </Card>
+          )}
+
           <Card className="bg-slate-900/60 border-slate-700/50 p-6 space-y-4">
             <h2 className="text-white font-semibold flex items-center gap-2">
               <ArrowRightLeft className="w-4 h-4 text-purple-400" />
@@ -806,6 +866,7 @@ export default function ChannelDashboard() {
               </div>
             )}
           </Card>
+          </>
         )}
 
         {/* ── SEND P2P ── */}
