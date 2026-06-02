@@ -1133,9 +1133,9 @@ export type NxtFbSwap = typeof nxtFbSwaps.$inferSelect;
 export const lightningWallets = pgTable("lightning_wallets", {
   id:             serial("id").primaryKey(),
   userId:         varchar("user_id", { length: 36 }).notNull().unique().references(() => users.id, { onDelete: "cascade" }),
-  satsBalance:    integer("sats_balance").notNull().default(0),
-  totalDeposited: integer("total_deposited").notNull().default(0),
-  totalWithdrawn: integer("total_withdrawn").notNull().default(0),
+  satsBalance:    bigint("sats_balance",    { mode: "number" }).notNull().default(0),
+  totalDeposited: bigint("total_deposited", { mode: "number" }).notNull().default(0),
+  totalWithdrawn: bigint("total_withdrawn", { mode: "number" }).notNull().default(0),
   createdAt:      timestamp("created_at").notNull().defaultNow(),
   updatedAt:      timestamp("updated_at").notNull().defaultNow(),
 });

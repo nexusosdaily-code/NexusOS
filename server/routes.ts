@@ -8865,7 +8865,7 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  // POST /api/lightning/swap/to-sats — NXT → sats
+  // POST /api/lightning/swap/to-sats — NXT → sats (atomic transaction)
   app.post("/api/lightning/swap/to-sats", authenticate, async (req: Request, res: Response) => {
     try {
       const { nxtAmount } = req.body;
@@ -8874,31 +8874,40 @@ export async function registerRoutes(
 
       const { db } = await import("./db");
       const { lightningWallets, lightningTransactions, wallets } = await import("../shared/schema");
-      const { eq } = await import("drizzle-orm");
+      const { eq, sql: drizzleSql } = await import("drizzle-orm");
 
+      // Pre-flight checks outside transaction
       const [userWallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
       if (!userWallet) return res.status(400).json({ error: "NXT wallet not found" });
       const currentBal = parseFloat(userWallet.balance);
       if (currentBal < nxtAmount) return res.status(400).json({ error: "Insufficient NXT balance" });
 
-      // Deduct NXT
-      const newBal = (currentBal - nxtAmount).toFixed(8);
-      await db.update(wallets).set({ balance: newBal }).where(eq(wallets.userId, req.user!.id));
-
-      // Credit sats
       const lnWallet = await ensureLnWallet(req.user!.id);
-      await db.update(lightningWallets)
-        .set({ satsBalance: lnWallet.satsBalance + amountSats, updatedAt: new Date() })
-        .where(eq(lightningWallets.userId, req.user!.id));
 
-      await db.insert(lightningTransactions).values({
-        userId: req.user!.id,
-        type: "swap_to_sats",
-        amountSats,
-        nxtAmount: nxtAmount.toFixed(8),
-        memo: `Swap ${nxtAmount.toFixed(8)} NXT → ${amountSats} sats`,
-        status: "completed",
-        completedAt: new Date(),
+      // ── Atomic: deduct NXT and credit sats together ──
+      await db.transaction(async (tx) => {
+        const newBal = (currentBal - nxtAmount).toFixed(8);
+        await tx.update(wallets)
+          .set({ balance: newBal })
+          .where(eq(wallets.userId, req.user!.id));
+
+        await tx.update(lightningWallets)
+          .set({
+            satsBalance: drizzleSql`${lightningWallets.satsBalance} + ${amountSats}`,
+            totalDeposited: drizzleSql`${lightningWallets.totalDeposited} + ${amountSats}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(lightningWallets.userId, req.user!.id));
+
+        await tx.insert(lightningTransactions).values({
+          userId:      req.user!.id,
+          type:        "swap_to_sats",
+          amountSats,
+          nxtAmount:   nxtAmount.toFixed(8),
+          memo:        `Swap ${nxtAmount.toFixed(8)} NXT → ${amountSats.toLocaleString()} sats`,
+          status:      "completed",
+          completedAt: new Date(),
+        });
       });
 
       await logAction(req, "lightning_swap_to_sats", "lightning", req.user!.id, { amountSats, nxtAmount });
