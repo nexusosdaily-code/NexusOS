@@ -106,6 +106,7 @@ import SocialBroadcastPage from "@/pages/social-broadcast";
 import NotFound from "@/pages/not-found";
 import WnspLandingPage from "@/pages/wnsp-landing";
 import WnspOrdinalsPage from "@/pages/wnsp-ordinals";
+import NostrRelayPage from "@/pages/nostr-relay";
 import CommunityMintPage from "@/pages/community-mint";
 import WnspStakingPage from "@/pages/wnsp-staking";
 import MarketplacePage from "@/pages/marketplace";
@@ -265,6 +266,8 @@ function Router() {
       <Route path="/wnsp/ordinals" component={WnspOrdinalsPage} />
       <Route path="/bitcoin-ordinals" component={WnspOrdinalsPage} />
       <Route path="/wnsp-ordinals" component={WnspOrdinalsPage} />
+      <Route path="/nostr" component={NostrRelayPage} />
+      <Route path="/nostr-relay" component={NostrRelayPage} />
       <Route path="/btc-bridge">{() => { window.location.replace("/wnsp/ordinals"); return null; }}</Route>
       <Route path="/community-mint" component={CommunityMintPage} />
       <Route path="/wnsp-staking" component={WnspStakingPage} />

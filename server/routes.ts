@@ -1,4 +1,5 @@
 import path from "path";
+import * as nostrService from "./nostr-service.js";
 import crypto from "crypto";
 import { bech32 as _bech32 } from "bech32";
 import * as tinySecp from "tiny-secp256k1";
@@ -9963,6 +9964,50 @@ export async function registerRoutes(
       }
     });
   }
+  // ── Nostr relay bridge ────────────────────────────────────────────────────────
+  app.get("/api/nostr/status", (_req: Request, res: Response) => {
+    try {
+      res.json({
+        npub:       nostrService.getNpub(),
+        pubkeyHex:  nostrService.getPubkeyHex(),
+        relays:     nostrService.DEFAULT_RELAYS,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/nostr/feed", async (_req: Request, res: Response) => {
+    try {
+      const events = await nostrService.fetchRecentEvents(20);
+      res.json(events);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/nostr/global", async (_req: Request, res: Response) => {
+    try {
+      const events = await nostrService.fetchGlobalWnspEvents(30);
+      res.json(events);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/nostr/publish", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { kind, content, psi, uri, tags } = req.body;
+      if (!content || typeof content !== "string") {
+        return res.status(400).json({ error: "content is required" });
+      }
+      const result = await nostrService.publishToNostr({ kind: kind ?? "note", content, psi, uri, tags });
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   return httpServer;
