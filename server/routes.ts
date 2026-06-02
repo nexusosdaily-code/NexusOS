@@ -9834,6 +9834,58 @@ export async function registerRoutes(
       res.json({ activeListings: Number(active.count), totalSales: Number(sold.count), volumeNxt: sold.vol ?? "0" });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
+  // ── WNUSD STABLECOIN STATS ────────────────────────────────────────────────────
+  // GET /api/stablecoin/stats — NXT treasury reserve → live USD backing → WNUSD model
+  app.get("/api/stablecoin/stats", async (_req: Request, res: Response) => {
+    try {
+      const SATS_PER_NXT   = 1_000;
+      const SATS_PER_BTC   = 100_000_000;
+      const COL_RATIO      = 1.5;           // 150% over-collateralised
+      const MAX_SUPPLY_CAP = 500_000_000;   // $500M hard cap
+
+      // Fetch BTC price (same CoinGecko route used by /api/market/price)
+      let btcUsd = 70_000; // fallback
+      try {
+        const r = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+          { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(4000) });
+        if (r.ok) { const d = await r.json() as any; btcUsd = d.bitcoin.usd; }
+      } catch { /* use fallback */ }
+
+      // Genesis treasury — query NXT wallet for the genesis user
+      const { db }    = await import("./db");
+      const { wallets } = await import("../shared/schema");
+      const { sql: S } = await import("drizzle-orm");
+      const [genesis] = await db.select({ balance: wallets.balance })
+        .from(wallets)
+        .orderBy(S`balance::numeric DESC`)
+        .limit(1);
+
+      const treasuryNxt   = genesis ? parseFloat(genesis.balance) : 499_999_000;
+      const satUsd        = btcUsd / SATS_PER_BTC;
+      const nxtUsd        = satUsd * SATS_PER_NXT;
+      const treasurySats  = Math.floor(treasuryNxt * SATS_PER_NXT);
+      const collateralUsd = treasurySats * satUsd;
+      const maxMintUsd    = Math.min(collateralUsd / COL_RATIO, MAX_SUPPLY_CAP);
+
+      res.json({
+        ok: true,
+        token:          "WNUSD",
+        peg:            1.0,        // $1 USD
+        btcUsd,
+        satUsd,
+        nxtUsd,
+        treasuryNxt,
+        treasurySats,
+        collateralUsd,
+        colRatio:       COL_RATIO,
+        maxMintUsd,
+        circulatingSupply: 0,      // minting not yet live
+        collateralRatioPct: 100 * COL_RATIO,
+        mechanism:      "NXT treasury → 1,000 sats/NXT → floating BTC/USD → over-collateralised WNUSD",
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── MARKET PRICE FEED ─────────────────────────────────────────────────────────
   // GET /api/market/price — live BTC/USD → derived NXT/USD and sat/USD prices
   {

@@ -19,7 +19,7 @@ import {
   MessageSquarePlus, MonitorPlay, FilePlus, Sparkles, Key, Scale, LogOut, Settings, User, Search,
   CheckCircle2, AlertTriangle, ArrowRight, FlaskConical, Heart,
   Copy, ExternalLink, RefreshCw, ChevronDown, ChevronUp, ShoppingBag,
-  Gem, Coins, TrendingUp, Unplug,
+  Gem, Coins, TrendingUp, Unplug, DollarSign,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -172,6 +172,7 @@ const APP_SECTIONS = [
       { title: "🔵 Fractal BTC",      href: "/fractal-btc",      Icon: Globe2 },
       { title: "↔ NXT↔FB Swap",      href: "/nxt-fb-swap",      Icon: ArrowRightLeft },
       { title: "⚡ Lightning Wallet",  href: "/lightning-wallet", Icon: Zap },
+      { title: "🟢 WNUSD Stablecoin", href: "/stablecoin",          Icon: DollarSign },
       { title: "🛡 Wallet Sentinel",   href: "/btc-sentinel",        Icon: Shield },
       { title: "🖼 Assets Sentinel",  href: "/btc-assets-sentinel", Icon: Layers },
     ],

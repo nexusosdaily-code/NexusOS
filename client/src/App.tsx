@@ -118,6 +118,7 @@ import NxtFbSwapPage from "@/pages/nxt-fb-swap";
 import LightningWalletPage from "@/pages/lightning-wallet";
 import BtcSentinelPage from "@/pages/btc-sentinel";
 import BtcAssetsSentinelPage from "@/pages/btc-assets-sentinel";
+import StablecoinPage from "@/pages/stablecoin";
 
 function ProtectedRoutes() {
   return (
@@ -229,6 +230,7 @@ function ProtectedRoutes() {
         <Route path="/social-broadcast" component={SocialBroadcastPage} />
         <Route path="/lightning-wallet" component={LightningWalletPage} />
         <Route path="/lightning" component={LightningWalletPage} />
+        <Route path="/stablecoin" component={StablecoinPage} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
