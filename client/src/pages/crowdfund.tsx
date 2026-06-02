@@ -27,6 +27,7 @@ const TIERS = [
   {
     name: "Photon",
     nxt: "100 NXT",
+    sats: "100,000 sats",
     units: 100,
     shares: "100 Nexus Shares",
     shareClass: "Class C — Community",
@@ -46,6 +47,7 @@ const TIERS = [
   {
     name: "Resonator",
     nxt: "1,000 NXT",
+    sats: "1M sats",
     units: 1000,
     shares: "1,000 Nexus Shares",
     shareClass: "Class C — Community",
@@ -65,6 +67,7 @@ const TIERS = [
   {
     name: "Kernel Agent",
     nxt: "10,000 NXT",
+    sats: "10M sats",
     units: 10000,
     shares: "10,000 Nexus Shares",
     shareClass: "Class B — Developer",
@@ -85,6 +88,7 @@ const TIERS = [
   {
     name: "Hardware Founder",
     nxt: "100,000 NXT",
+    sats: "100M sats",
     units: 100000,
     shares: "100,000 Nexus Shares",
     shareClass: "Class A — Hardware Founder",
@@ -110,6 +114,7 @@ const TIERS = [
   {
     name: "Nexus Partner",
     nxt: "1,000,000 NXT",
+    sats: "1B sats",
     units: 1000000,
     shares: "1,000,000 Nexus Shares",
     shareClass: "Class A+ — Strategic Partner",
@@ -607,7 +612,8 @@ export default function CrowdfundPage() {
                   <Icon className="h-5 w-5" style={{ color: tier.color }} />
                 </div>
                 <h3 className="font-bold text-lg mb-0.5" style={{ color: tier.color }}>{tier.name}</h3>
-                <div className="text-xl font-bold mb-0.5">{tier.nxt}</div>
+                <div className="text-xl font-bold mb-0">{tier.nxt}</div>
+                <div className="text-xs font-mono text-yellow-400/80 mb-1">⚡ {(tier as any).sats}</div>
                 <div className="text-xs font-bold mb-0.5" style={{ color: tier.color }}>{tier.shares}</div>
                 <div className="text-xs text-gray-500 mb-1 italic">{tier.shareClass}</div>
                 {tier.seat && (

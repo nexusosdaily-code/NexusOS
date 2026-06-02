@@ -6315,6 +6315,17 @@ export async function registerRoutes(
                 : "All live protocol parameters are Maxwell-compliant",
               paramChecks,
             },
+            "C-0006": {
+              rule:        "NXT Hard Cap",
+              hardCap:     21_000_000_000,
+              hardCapSats: 21_000_000_000_000,
+              status:      totalCirculating <= 21_000_000_000 ? "COMPLIANT" : "VIOLATED",
+              detail:      totalCirculating <= 21_000_000_000
+                ? `Total circulating supply ${totalCirculating.toLocaleString()} NXT is within the 21B NXT hard cap`
+                : `CRITICAL: circulating supply ${totalCirculating.toLocaleString()} NXT exceeds the 21B NXT constitutional ceiling`,
+              totalCirculating,
+              amendment:   "This ceiling may only be raised by a governance vote achieving a supermajority (>66%) weighted by spectral authority band. No code change, emergency action, or single entity may bypass this requirement.",
+            },
           },
         },
       });

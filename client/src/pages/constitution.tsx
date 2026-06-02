@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Shield, CheckCircle2, AlertTriangle, Zap, Scale, Lock, RefreshCw } from "lucide-react";
+import { Shield, CheckCircle2, AlertTriangle, Zap, Scale, Lock, RefreshCw, Bitcoin } from "lucide-react";
 import { Link } from "wouter";
 
 interface WalletShare {
@@ -47,6 +47,16 @@ interface ArticleC0005 {
   paramChecks: ParamCheck[];
 }
 
+interface ArticleC0006 {
+  rule: string;
+  hardCap: number;
+  hardCapSats: number;
+  status: "COMPLIANT" | "VIOLATED";
+  detail: string;
+  totalCirculating: number;
+  amendment: string;
+}
+
 interface ConstitutionStatus {
   version: string;
   enforcedAt: string;
@@ -54,6 +64,7 @@ interface ConstitutionStatus {
     "C-0001": ArticleC0001;
     "C-0002": ArticleC0002;
     "C-0005": ArticleC0005;
+    "C-0006": ArticleC0006;
   };
 }
 
@@ -155,10 +166,11 @@ export default function Constitution() {
   const c0001 = con?.articles["C-0001"];
   const c0002 = con?.articles["C-0002"];
   const c0005 = con?.articles["C-0005"];
+  const c0006 = con?.articles["C-0006"];
 
   const overallStatus =
     !con ? null :
-    [c0001?.status, c0002?.status, c0005?.status].includes("VIOLATED")
+    [c0001?.status, c0002?.status, c0005?.status, c0006?.status].includes("VIOLATED")
       ? "VIOLATED" : "COMPLIANT";
 
   return (
@@ -173,8 +185,8 @@ export default function Constitution() {
             <span className="text-cyan-400">Enforcement</span>
           </h1>
           <p className="text-white/40 text-sm max-w-xl mx-auto leading-relaxed">
-            Three supreme articles enforced at the substrate level. No governance vote can override them.
-            Every transaction and every protocol parameter change passes through this layer first.
+            Four supreme articles enforced at the substrate level. C-0001 through C-0005 cannot be overridden by any vote.
+            C-0006 sets the 21B NXT hard cap — the only article amendable by governance supermajority.
           </p>
           <div className="flex items-center justify-center gap-3 pt-1">
             <span className="text-[10px] font-mono text-white/20 border border-white/10 rounded px-2 py-0.5">v1.0</span>
@@ -203,7 +215,7 @@ export default function Constitution() {
             <Shield size={20} className={overallStatus === "COMPLIANT" ? "text-green-400" : overallStatus === "VIOLATED" ? "text-red-400" : "text-white/30"} />
             <div>
               <div className="text-sm font-bold text-white">
-                {isLoading ? "Checking constitution…" : overallStatus === "COMPLIANT" ? "All three articles compliant" : "Constitutional violation detected"}
+                {isLoading ? "Checking constitution…" : overallStatus === "COMPLIANT" ? "All four articles compliant" : "Constitutional violation detected"}
               </div>
               <div className="text-xs text-white/40 font-mono">Enforcement is live — violations block transactions at the substrate</div>
             </div>
@@ -373,12 +385,74 @@ export default function Constitution() {
               </div>
             )}
           </ArticleCard>
+
+          {/* C-0006: NXT Hard Cap */}
+          <ArticleCard
+            id="C-0006"
+            icon={Bitcoin}
+            color="bg-yellow-500/20"
+            title="NXT Hard Cap"
+            formal="The total supply of NXT shall never exceed 21,000,000,000 (twenty-one billion) tokens. This is the absolute monetary ceiling of the NexusOS economy. At the protocol swap rate of 1 NXT = 1,000 sats, this equates to 21,000,000,000,000 (twenty-one trillion) satoshis — the collateral ceiling of the WNUSD stablecoin system. This ceiling may only be raised by a governance vote achieving a supermajority (>66%) weighted by spectral authority band."
+            status={c0006?.status ?? "COMPLIANT"}
+            summary={c0006?.detail ?? "Calculating…"}
+          >
+            {c0006 && (
+              <div className="space-y-3">
+                {/* Supply gauge */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[10px] font-mono text-white/30 uppercase tracking-wider">
+                    <span>Circulating supply vs hard cap</span>
+                    <span>{((c0006.totalCirculating / c0006.hardCap) * 100).toFixed(4)}% of cap</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-yellow-500 transition-all"
+                      style={{ width: `${Math.min((c0006.totalCirculating / c0006.hardCap) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] font-mono text-white/20">
+                    <span>{c0006.totalCirculating.toLocaleString()} NXT circulating</span>
+                    <span>21,000,000,000 NXT cap</span>
+                  </div>
+                </div>
+
+                {/* Sat ceiling callout */}
+                <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3 space-y-2">
+                  <div className="text-[10px] font-mono text-yellow-400/60 uppercase tracking-wider">Collateral identity — 21B NXT = 21T sats</div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <div className="text-base font-bold text-purple-300 font-mono">21B</div>
+                      <div className="text-[9px] text-white/30">NXT hard cap</div>
+                    </div>
+                    <div>
+                      <div className="text-base font-bold text-yellow-300 font-mono">21T</div>
+                      <div className="text-[9px] text-white/30">⚡ sats ceiling</div>
+                    </div>
+                    <div>
+                      <div className="text-base font-bold text-green-300 font-mono">WNUSD</div>
+                      <div className="text-[9px] text-white/30">stablecoin pool</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Amendment rule */}
+                <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                  <div className="text-[10px] font-mono text-white/30 uppercase tracking-wider mb-1.5">Amendment clause — how this ceiling may change</div>
+                  <p className="text-[11px] text-white/50 leading-relaxed">{c0006.amendment}</p>
+                </div>
+
+                <div className="pt-1 border-t border-white/5 text-[10px] font-mono text-white/20">
+                  Enforced at: mint endpoint — any issuance that would push total supply above 21B NXT is rejected · amendment requires governance supermajority vote (&gt;66% band-weighted)
+                </div>
+              </div>
+            )}
+          </ArticleCard>
         </div>
 
         {/* Enforcement summary */}
         <div className="rounded-xl border border-white/5 bg-white/[0.02] p-6 space-y-4">
           <div className="text-xs font-bold text-white/50 uppercase tracking-wider">How enforcement works</div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               {
                 gate: "Wallet Transfer",
@@ -387,8 +461,13 @@ export default function Constitution() {
               },
               {
                 gate: "Governance Proposal",
-                checks: ["C-0005: Proposed fee must be > 0 NXT and ≤ 100 NXT", "C-0005: Proposed burn ratio must be in [0, 1]"],
+                checks: ["C-0005: Proposed fee must be > 0 NXT and ≤ 100 NXT", "C-0005: Proposed burn ratio must be in [0, 1]", "C-0006: Supply increase proposal requires >66% supermajority weighted by spectral authority band"],
                 color: "border-cyan-500/20",
+              },
+              {
+                gate: "Mint / Issuance",
+                checks: ["C-0006: Total circulating supply must remain ≤ 21,000,000,000 NXT", "C-0006: Any ceiling amendment executes only after governance supermajority confirmation"],
+                color: "border-yellow-500/20",
               },
               {
                 gate: "Parameter Execution",
