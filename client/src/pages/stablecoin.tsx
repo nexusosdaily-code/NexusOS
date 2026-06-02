@@ -321,46 +321,142 @@ export default function StablecoinPage() {
               </div>
             </Card>
 
-            {/* ── Scenario table ── */}
+            {/* ── Ceiling identity callout ── */}
+            <Card className="p-5 border-orange-500/25 relative overflow-hidden"
+              style={{ background: "linear-gradient(135deg, rgba(251,146,60,0.06) 0%, rgba(239,68,68,0.03) 100%)" }}>
+              <div className="text-[10px] text-orange-400/60 uppercase tracking-widest mb-2 font-mono">The ceiling identity</div>
+              <div className="text-center space-y-1 mb-4">
+                <div className="font-mono text-white/70 text-sm">
+                  <span className="text-purple-300 font-bold">21B NXT</span>
+                  <span className="text-white/30 mx-2">×</span>
+                  <span className="text-yellow-300">1,000 sats/NXT</span>
+                  <span className="text-white/30 mx-2">=</span>
+                  <span className="text-yellow-400 font-bold">21T sats</span>
+                </div>
+                <div className="font-mono text-white/70 text-sm">
+                  <span className="text-yellow-400 font-bold">21T sats</span>
+                  <span className="text-white/30 mx-2">×</span>
+                  <span className="text-orange-300">BTC price per sat</span>
+                  <span className="text-white/30 mx-2">=</span>
+                  <span className="text-green-300 font-bold">WNUSD ceiling</span>
+                </div>
+                <div className="text-[11px] text-gray-500 mt-1 italic">
+                  The ceiling is not fixed — it scales with every sat Bitcoin appreciates
+                </div>
+              </div>
+
+              {/* Big three scenarios */}
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {[
+                  { label: "Today", btc: stats.btcUsd, highlight: true, tag: "live" },
+                  { label: "BTC $1M", btc: 1_000_000, highlight: false, tag: "cycle peak" },
+                  { label: "BTC $100M", btc: 100_000_000, highlight: false, tag: ">$10T zone" },
+                ].map(({ label, btc, highlight, tag }) => {
+                  const sat = btc / 100_000_000;
+                  const col21t = 21_000_000_000_000 * sat;
+                  return (
+                    <div key={label} className={`rounded-lg p-3 text-center ${highlight ? "bg-yellow-500/10 border border-yellow-500/20" : "bg-slate-800/40"}`}>
+                      <div className={`text-[9px] uppercase tracking-wider mb-1 ${highlight ? "text-yellow-400/70" : "text-gray-600"}`}>{label}</div>
+                      <div className={`text-lg font-bold font-mono ${highlight ? "text-yellow-300" : col21t >= 1e12 ? "text-red-300" : "text-emerald-300"}`}>
+                        {col21t >= 1e12 ? `$${(col21t / 1e12).toFixed(1)}T` : col21t >= 1e9 ? `$${(col21t / 1e9).toFixed(1)}B` : `$${(col21t / 1e6).toFixed(0)}M`}
+                      </div>
+                      <div className={`text-[9px] mt-0.5 ${highlight ? "text-yellow-400/50" : "text-gray-600"}`}>{tag}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+
+            {/* ── Full ceiling trajectory ── */}
             <Card className="bg-slate-900/60 border-slate-700/50 p-6">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-1">
                 <TrendingUp className="w-4 h-4 text-emerald-400" />
-                <h2 className="text-white font-semibold">BTC price scenarios — WNUSD capacity</h2>
+                <h2 className="text-white font-semibold">Full ceiling trajectory — 21T sats × BTC price</h2>
+              </div>
+              <div className="text-[10px] text-gray-500 mb-4">
+                21B NXT at full supply = 21T sats. Dollar ceiling = 21T × (BTC ÷ 100,000,000). Uncapped — no governance vote needed to grow.
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="text-gray-500 border-b border-slate-800">
-                      <th className="text-left py-2 font-normal">BTC price</th>
-                      <th className="text-right py-2 font-normal">1 NXT (USD)</th>
-                      <th className="text-right py-2 font-normal">Collateral</th>
-                      <th className="text-right py-2 font-normal">Max WNUSD</th>
+                      <th className="text-left py-2 font-normal">BTC / USD</th>
+                      <th className="text-right py-2 font-normal">1 NXT</th>
+                      <th className="text-right py-2 font-normal">21T sats ceiling</th>
+                      <th className="text-right py-2 font-normal">Max WNUSD (÷1.5)</th>
+                      <th className="text-right py-2 font-normal"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[30_000, 50_000, 70_000, 100_000, 150_000, 200_000].map((price) => {
-                      const sat  = price / 100_000_000;
-                      const nxt  = sat * 1_000;
-                      const col  = stats.treasurySats * sat;
-                      const mint = Math.min(col / 1.5, 500_000_000);
-                      const isCur = Math.abs(price - stats.btcUsd) < 5_000;
+                    {[
+                      { btc: 70_000,       tag: "" },
+                      { btc: 100_000,      tag: "" },
+                      { btc: 250_000,      tag: "" },
+                      { btc: 500_000,      tag: "" },
+                      { btc: 1_000_000,    tag: "BTC $1M" },
+                      { btc: 5_000_000,    tag: "" },
+                      { btc: 10_000_000,   tag: "" },
+                      { btc: 47_619_048,   tag: "→ $10T crossover" },
+                      { btc: 100_000_000,  tag: "BTC $100M" },
+                    ].map(({ btc, tag }) => {
+                      const sat     = btc / 100_000_000;
+                      const nxtUsd  = sat * 1_000;
+                      const col21t  = 21_000_000_000_000 * sat;
+                      const maxMint = col21t / 1.5;
+                      const isCur   = Math.abs(btc - stats.btcUsd) < btc * 0.15;
+                      const is10t   = btc === 47_619_048;
+                      const is100m  = btc === 100_000_000;
+
+                      function fmtBig(n: number) {
+                        if (n >= 1e15) return `$${(n / 1e15).toFixed(2)}Q`;
+                        if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
+                        if (n >= 1e9)  return `$${(n / 1e9).toFixed(2)}B`;
+                        if (n >= 1e6)  return `$${(n / 1e6).toFixed(2)}M`;
+                        return `$${n.toFixed(0)}`;
+                      }
+
                       return (
-                        <tr key={price}
-                          className={`border-b border-slate-800/50 ${isCur ? "bg-yellow-500/5" : ""}`}>
-                          <td className={`py-2 font-mono ${isCur ? "text-yellow-300 font-semibold" : "text-gray-300"}`}>
-                            ${price.toLocaleString()}{isCur && " ◄"}
+                        <tr key={btc}
+                          className={`border-b border-slate-800/50 ${isCur ? "bg-yellow-500/5" : is10t ? "bg-red-500/5" : is100m ? "bg-orange-500/5" : ""}`}>
+                          <td className={`py-2 font-mono font-semibold ${isCur ? "text-yellow-300" : is10t ? "text-red-300" : is100m ? "text-orange-300" : "text-gray-400"}`}>
+                            {btc >= 1_000_000
+                              ? `$${(btc / 1_000_000).toFixed(0)}M`
+                              : `$${btc.toLocaleString()}`}
+                            {isCur && " ◄ NOW"}
                           </td>
-                          <td className="py-2 text-right font-mono text-purple-300">${nxt.toFixed(4)}</td>
-                          <td className="py-2 text-right font-mono text-emerald-300">{fmtUsd(col)}</td>
-                          <td className="py-2 text-right font-mono text-green-400 font-semibold">{fmtUsd(mint)}</td>
+                          <td className="py-2 text-right font-mono text-purple-300">
+                            ${nxtUsd < 1 ? nxtUsd.toFixed(4) : nxtUsd.toFixed(2)}
+                          </td>
+                          <td className={`py-2 text-right font-mono font-bold ${col21t >= 1e13 ? "text-orange-300" : col21t >= 1e12 ? "text-red-300" : col21t >= 1e11 ? "text-amber-300" : "text-emerald-300"}`}>
+                            {fmtBig(col21t)}
+                          </td>
+                          <td className={`py-2 text-right font-mono ${col21t >= 1e12 ? "text-red-300/80" : "text-green-400"}`}>
+                            {fmtBig(maxMint)}
+                          </td>
+                          <td className="py-2 text-right">
+                            {is10t && <span className="text-[9px] text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded font-mono">&gt;$10T</span>}
+                            {is100m && <span className="text-[9px] text-orange-400 bg-orange-500/10 border border-orange-500/20 px-1.5 py-0.5 rounded font-mono">$21T</span>}
+                            {isCur && <span className="text-[9px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-1.5 py-0.5 rounded font-mono">live</span>}
+                          </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
-              <div className="mt-3 text-[10px] text-gray-600">
-                Collateral = {fmtSats(stats.treasurySats)} sats × BTC spot. Max WNUSD = collateral ÷ 1.5, capped at $500M.
+              <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[10px]">
+                <div className="p-2 rounded bg-yellow-500/5 border border-yellow-500/15">
+                  <div className="text-yellow-300 font-bold font-mono">{fmtUsd(stats.fullSupplyUsd)}</div>
+                  <div className="text-gray-600 mt-0.5">ceiling today (BTC ${stats.btcUsd.toLocaleString("en-US", { maximumFractionDigits: 0 })})</div>
+                </div>
+                <div className="p-2 rounded bg-red-500/5 border border-red-500/15">
+                  <div className="text-red-300 font-bold font-mono">$10T</div>
+                  <div className="text-gray-600 mt-0.5">crossover at BTC ~$48M</div>
+                </div>
+                <div className="p-2 rounded bg-orange-500/5 border border-orange-500/15">
+                  <div className="text-orange-300 font-bold font-mono">$21T</div>
+                  <div className="text-gray-600 mt-0.5">ceiling at BTC $100M</div>
+                </div>
               </div>
             </Card>
 
