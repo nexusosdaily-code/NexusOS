@@ -264,6 +264,7 @@ function Router() {
       <Route path="/wnsp" component={WnspLandingPage} />
       <Route path="/wnsp/ordinals" component={WnspOrdinalsPage} />
       <Route path="/bitcoin-ordinals" component={WnspOrdinalsPage} />
+      <Route path="/wnsp-ordinals" component={WnspOrdinalsPage} />
       <Route path="/btc-bridge">{() => { window.location.replace("/wnsp/ordinals"); return null; }}</Route>
       <Route path="/community-mint" component={CommunityMintPage} />
       <Route path="/wnsp-staking" component={WnspStakingPage} />
