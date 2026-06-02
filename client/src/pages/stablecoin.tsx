@@ -20,6 +20,10 @@ type StablecoinStats = {
   maxMintUsd: number;
   circulatingSupply: number;
   collateralRatioPct: number;
+  fullSupplyNxt: number;
+  fullSupplySats: number;
+  fullSupplyUsd: number;
+  fullSupplyMaxMint: number;
   mechanism: string;
 };
 
@@ -96,8 +100,9 @@ export default function StablecoinPage() {
             Bitcoin-Backed Stablecoin
           </h1>
           <p className="text-gray-400 max-w-xl mx-auto text-sm leading-relaxed">
-            Every WNUSD is backed by the NXT treasury reserve — 500M NXT → 500B sats
-            — whose dollar value floats with Bitcoin. The swap rate is the liquidation floor.
+            500M NXT genesis treasury = 500B sats today. When all 21B NXT are consumed,
+            the system holds <span className="text-yellow-300 font-semibold">21 trillion sats</span> — the total collateral ceiling.
+            Dollar value floats with Bitcoin. The 1,000-sat swap rate is the liquidation floor.
           </p>
         </div>
 
@@ -131,6 +136,42 @@ export default function StablecoinPage() {
                 <div className="text-[10px] text-gray-500 mt-1">Target price</div>
               </Card>
             </div>
+
+            {/* ── Full-supply ceiling ── */}
+            <Card className="p-5 border-yellow-500/25"
+              style={{ background: "linear-gradient(135deg, rgba(234,179,8,0.07) 0%, rgba(251,191,36,0.03) 100%)" }}>
+              <div className="flex items-center gap-2 mb-3">
+                <Zap className="w-4 h-4 text-yellow-400" />
+                <h2 className="text-white font-semibold">System ceiling — when all 21B NXT are consumed</h2>
+              </div>
+              <div className="grid grid-cols-3 gap-3 mb-3">
+                <div className="text-center bg-slate-900/50 rounded-lg p-3">
+                  <div className="text-[10px] text-purple-400/80 uppercase tracking-wider mb-1">Total NXT supply</div>
+                  <div className="text-2xl font-bold text-purple-300 font-mono">21B</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">hard cap · protocol-enforced</div>
+                </div>
+                <div className="text-center bg-slate-900/50 rounded-lg p-3">
+                  <div className="text-[10px] text-yellow-400/80 uppercase tracking-wider mb-1">⚡ Total sats</div>
+                  <div className="text-2xl font-bold text-yellow-300 font-mono">21T</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">21,000,000,000,000 sats</div>
+                </div>
+                <div className="text-center bg-slate-900/50 rounded-lg p-3">
+                  <div className="text-[10px] text-emerald-400/80 uppercase tracking-wider mb-1">USD at BTC ${stats.btcUsd.toLocaleString("en-US", { maximumFractionDigits: 0 })}</div>
+                  <div className="text-2xl font-bold text-emerald-300 font-mono">
+                    {fmtUsd(stats.fullSupplyUsd)}
+                  </div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">= NXT market cap</div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between px-4 py-2.5 rounded-lg text-sm"
+                style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.18)" }}>
+                <span className="text-gray-300">Max WNUSD at full supply <span className="text-gray-500 text-xs">(÷ 1.5 collateral ratio)</span></span>
+                <span className="font-bold font-mono text-yellow-300 text-lg">{fmtUsd(stats.fullSupplyMaxMint)}</span>
+              </div>
+              <div className="mt-2 text-[10px] text-gray-600 text-center">
+                21B NXT × 1,000 sats/NXT = 21T sats · same math as Bitcoin's 21M BTC × 1,000 sat/NXT swap rate
+              </div>
+            </Card>
 
             {/* ── Treasury Reserve ── */}
             <Card className="bg-slate-900/60 border-slate-700/50 p-6">

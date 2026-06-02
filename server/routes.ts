@@ -9860,6 +9860,8 @@ export async function registerRoutes(
         .orderBy(S`balance::numeric DESC`)
         .limit(1);
 
+      const NXT_HARD_CAP   = 21_000_000_000;  // 21B NXT total supply
+
       const treasuryNxt   = genesis ? parseFloat(genesis.balance) : 499_999_000;
       const satUsd        = btcUsd / SATS_PER_BTC;
       const nxtUsd        = satUsd * SATS_PER_NXT;
@@ -9867,10 +9869,16 @@ export async function registerRoutes(
       const collateralUsd = treasurySats * satUsd;
       const maxMintUsd    = Math.min(collateralUsd / COL_RATIO, MAX_SUPPLY_CAP);
 
+      // Full-supply ceiling: when all 21B NXT are consumed → 21T sats
+      const fullSupplyNxt     = NXT_HARD_CAP;
+      const fullSupplySats    = NXT_HARD_CAP * SATS_PER_NXT;          // 21,000,000,000,000
+      const fullSupplyUsd     = fullSupplySats * satUsd;               // NXT market cap
+      const fullSupplyMaxMint = fullSupplyUsd / COL_RATIO;             // uncapped — that's the ceiling
+
       res.json({
         ok: true,
         token:          "WNUSD",
-        peg:            1.0,        // $1 USD
+        peg:            1.0,
         btcUsd,
         satUsd,
         nxtUsd,
@@ -9879,9 +9887,14 @@ export async function registerRoutes(
         collateralUsd,
         colRatio:       COL_RATIO,
         maxMintUsd,
-        circulatingSupply: 0,      // minting not yet live
+        circulatingSupply: 0,
         collateralRatioPct: 100 * COL_RATIO,
-        mechanism:      "NXT treasury → 1,000 sats/NXT → floating BTC/USD → over-collateralised WNUSD",
+        // Full-supply ceiling
+        fullSupplyNxt,
+        fullSupplySats,
+        fullSupplyUsd,
+        fullSupplyMaxMint,
+        mechanism: "NXT treasury → 1,000 sats/NXT → floating BTC/USD → over-collateralised WNUSD",
       });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
