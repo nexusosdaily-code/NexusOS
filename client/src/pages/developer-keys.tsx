@@ -100,7 +100,10 @@ export default function DeveloperKeysPage() {
   const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem(DEV_GATE_KEY) === "1");
   const unlock = () => { sessionStorage.setItem(DEV_GATE_KEY, "1"); setUnlocked(true); };
   if (!unlocked) return <DevGate onUnlock={unlock} />;
+  return <DeveloperKeysInner />;
+}
 
+function DeveloperKeysInner() {
   const { token, user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
