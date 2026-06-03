@@ -9368,6 +9368,42 @@ export async function registerRoutes(
   const RUNE_ID          = "840000:8472";
   const RUNE_BLOCK       = 840000;
 
+  // GET /api/btc/mempool/stats — proxy mempool.space fee rates + mempool info + recent blocks
+  app.get("/api/btc/mempool/stats", async (_req: Request, res: Response) => {
+    try {
+      const MSPACE = "https://mempool.space/api";
+      const headers = { Accept: "application/json" };
+      const sig = AbortSignal.timeout(10_000);
+
+      const [feesRes, mempoolRes, blocksRes] = await Promise.allSettled([
+        fetch(`${MSPACE}/v1/fees/recommended`, { headers, signal: sig }),
+        fetch(`${MSPACE}/mempool`,             { headers, signal: sig }),
+        fetch(`${MSPACE}/v1/blocks`,           { headers, signal: sig }),
+      ]);
+
+      const fees    = feesRes.status    === "fulfilled" && feesRes.value.ok    ? await feesRes.value.json()    : null;
+      const mempool = mempoolRes.status === "fulfilled" && mempoolRes.value.ok ? await mempoolRes.value.json() : null;
+      const blocks  = blocksRes.status  === "fulfilled" && blocksRes.value.ok  ? await blocksRes.value.json()  : null;
+
+      // Summarise top 10 recent blocks
+      const recentBlocks = Array.isArray(blocks) ? blocks.slice(0, 10).map((b: any) => ({
+        height:    b.height,
+        timestamp: b.timestamp,
+        size:      b.size,
+        weight:    b.weight,
+        txCount:   b.tx_count,
+        feeRange:  b.extras?.feeRange   ?? null,
+        medianFee: b.extras?.medianFee  ?? null,
+        reward:    b.extras?.reward     ?? null,
+        miner:     b.extras?.pool?.name ?? null,
+      })) : [];
+
+      res.json({ ok: true, fees, mempool, recentBlocks, fetchedAt: new Date().toISOString() });
+    } catch (err: any) {
+      res.status(502).json({ ok: false, error: err.message });
+    }
+  });
+
   // GET /api/rune/info
   app.get("/api/rune/info", async (_req: Request, res: Response) => {
     try {

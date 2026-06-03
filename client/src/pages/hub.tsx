@@ -175,6 +175,7 @@ const APP_SECTIONS = [
       { title: "🟢 WNUSD Stablecoin", href: "/stablecoin",          Icon: DollarSign },
       { title: "🛡 Wallet Sentinel",   href: "/btc-sentinel",        Icon: Shield },
       { title: "🖼 Assets Sentinel",  href: "/btc-assets-sentinel", Icon: Layers },
+      { title: "📡 Mempool Monitor",  href: "/mempool",             Icon: Activity },
     ],
   },
   {

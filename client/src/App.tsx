@@ -120,6 +120,7 @@ import LightningWalletPage from "@/pages/lightning-wallet";
 import BtcSentinelPage from "@/pages/btc-sentinel";
 import BtcAssetsSentinelPage from "@/pages/btc-assets-sentinel";
 import StablecoinPage from "@/pages/stablecoin";
+import MempoolMonitorPage from "@/pages/mempool-monitor";
 
 function ProtectedRoutes() {
   return (
@@ -282,6 +283,7 @@ function Router() {
       <Route path="/swap" component={NxtFbSwapPage} />
       <Route path="/btc-sentinel" component={BtcSentinelPage} />
       <Route path="/btc-assets-sentinel" component={BtcAssetsSentinelPage} />
+      <Route path="/mempool" component={MempoolMonitorPage} />
       <Route path="/snic" component={SnicPage} />
       <Route path="/open" component={OpenPage} />
       <Route path="/charter" component={OpenPage} />
