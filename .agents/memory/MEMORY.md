@@ -1,3 +1,8 @@
-- [Sats ecosystem architecture](sats-ecosystem.md) — wallet balance is decimal string, never pass to BigInt(); use parseFloat().toFixed(8) arithmetic
-- [Lightning wallet tab expansion](lightning-wallet-tabs.md) — tabs are now 6: receive/transmit/swap/send/stake/log; "transmissions" was renamed to "log"
-- [Sats-first pricing model](sats-pricing-model.md) — sats = spending currency; NXT = hardware crowdfund token; all service fees charged in sats
+- [Sats ecosystem architecture](sats-ecosystem.md) — bigint columns, atomicity rules, swap rate, display tiers, pool export
+- [Sats-first pricing model](sats-pricing-model.md) — sats = spending currency; NXT = hardware crowdfund token; all service fees in sats
+- [Lightning wallet tabs](lightning-wallet-tabs.md) — 6 tabs: receive/transmit/swap/send/stake/log; layout and balance display rules
+- [WNUSD auto-collateral system](wnusd-auto-collateral.md) — stake auto-mints WNUSD; unstake auto-redeems; stake_id FK; backfill pattern
+- [Staking system](staking-system.md) — 6 lock periods, yield rates, extend route, early-exit penalty, deposit cap 10B sats
+- [Accounts and auth](accounts-auth.md) — Nexus genesis account, password, registration locked, developer keys gate
+- [NXT indestructibility](nxt-indestructibility.md) — NXT fees NEVER burned; always go to orbital_treasury
+- [Domain setup](domain-setup.md) — wnsp.tech on Cloudflare; GoDaddy nameserver update pending
