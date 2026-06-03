@@ -17,6 +17,9 @@ type StablecoinStats = {
   nxtUsd: number;
   treasuryNxt: number;
   treasurySats: number;
+  stakedSats: number;
+  stakedSatsUsd: number;
+  totalBackingSats: number;
   collateralUsd: number;
   colRatio: number;
   maxMintUsd: number;
@@ -287,44 +290,43 @@ export default function StablecoinPage() {
             <Card className="bg-slate-900/60 border-slate-700/50 p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Lock className="w-4 h-4 text-amber-400" />
-                <h2 className="text-white font-semibold">NXT Treasury Reserve</h2>
-                <span className="ml-auto text-[10px] text-gray-500 bg-slate-800 px-2 py-0.5 rounded">Genesis wallet</span>
+                <h2 className="text-white font-semibold">Total Backing Pool</h2>
+                <span className="ml-auto text-[10px] text-gray-500 bg-slate-800 px-2 py-0.5 rounded">Auto-collateralised</span>
               </div>
 
               <div className="space-y-4">
-                {/* Flow diagram */}
-                <div className="flex items-center justify-between text-xs bg-slate-800/40 rounded-xl p-4">
-                  <div className="text-center">
-                    <div className="text-purple-300 font-mono font-bold text-base">{fmtNxt(stats.treasuryNxt)} NXT</div>
-                    <div className="text-gray-500 mt-0.5">Treasury</div>
+                {/* Two sources */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-800/50 rounded-xl p-3 text-center">
+                    <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Genesis Treasury</div>
+                    <div className="text-purple-300 font-mono font-bold">{fmtNxt(stats.treasuryNxt)} NXT</div>
+                    <div className="text-yellow-300/70 font-mono text-xs mt-0.5">⚡ {fmtSats(stats.treasurySats)}</div>
                   </div>
-                  <div className="flex flex-col items-center text-gray-600">
-                    <ChevronRight className="w-4 h-4" />
-                    <span className="text-[9px]">×1,000</span>
+                  <div className="bg-slate-800/50 rounded-xl p-3 text-center">
+                    <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Staked Sats</div>
+                    <div className="text-orange-300 font-mono font-bold">{fmtSats(stats.stakedSats ?? 0)}</div>
+                    <div className="text-emerald-300/70 font-mono text-xs mt-0.5">{fmtUsd(stats.stakedSatsUsd ?? 0)}</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-yellow-300 font-mono font-bold text-base">{fmtSats(stats.treasurySats)} sats</div>
-                    <div className="text-gray-500 mt-0.5">Sats equivalent</div>
-                  </div>
-                  <div className="flex flex-col items-center text-gray-600">
-                    <ChevronRight className="w-4 h-4" />
-                    <span className="text-[9px]">×${stats.satUsd.toFixed(7)}</span>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-emerald-300 font-mono font-bold text-base">{fmtUsd(stats.collateralUsd)}</div>
-                    <div className="text-gray-500 mt-0.5">USD collateral</div>
+                </div>
+
+                {/* Total line */}
+                <div className="flex items-center justify-between bg-emerald-900/20 border border-emerald-700/30 rounded-xl px-4 py-3">
+                  <span className="text-xs text-gray-400 font-semibold">Total Backing</span>
+                  <div className="text-right">
+                    <div className="text-emerald-300 font-mono font-bold">{fmtUsd(stats.collateralUsd)}</div>
+                    <div className="text-[10px] text-gray-500">{fmtSats(stats.totalBackingSats ?? stats.treasurySats)} sats</div>
                   </div>
                 </div>
 
                 {/* Breakdown rows */}
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between py-2 border-b border-slate-800">
-                    <span className="text-gray-400">Treasury NXT</span>
-                    <span className="font-mono text-purple-300">{fmtNxt(stats.treasuryNxt)} NXT</span>
+                    <span className="text-gray-400">Genesis NXT → sats</span>
+                    <span className="font-mono text-yellow-300">⚡ {fmtSats(stats.treasurySats)}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-slate-800">
-                    <span className="text-gray-400">Sats equivalent (×1,000)</span>
-                    <span className="font-mono text-yellow-300">⚡ {fmtSats(stats.treasurySats)} sats</span>
+                    <span className="text-gray-400">Staked sats (auto-collateral)</span>
+                    <span className="font-mono text-orange-300">⚡ {fmtSats(stats.stakedSats ?? 0)}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-slate-800">
                     <span className="text-gray-400">USD collateral (live)</span>

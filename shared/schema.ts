@@ -1267,6 +1267,7 @@ export const wnusdPositions = pgTable("wnusd_positions", {
   status:         text("status").notNull().default("active"), // active | redeemed | liquidated
   colRatioPct:    decimal("col_ratio_pct", { precision: 10, scale: 2 }).notNull(),
   btcUsdAtMint:   decimal("btc_usd_at_mint", { precision: 20, scale: 2 }).notNull(),
+  stakeId:        integer("stake_id"),
   openedAt:       timestamp("opened_at").notNull().defaultNow(),
   updatedAt:      timestamp("updated_at").notNull().defaultNow(),
 }, (t) => ({ userIdx: index("wnusd_positions_user_idx").on(t.userId) }));

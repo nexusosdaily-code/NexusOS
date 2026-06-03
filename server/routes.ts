@@ -9022,6 +9022,38 @@ export async function registerRoutes(
         }).returning();
       });
 
+      // ── Auto-mint WNUSD backed by the staked sats ──────────────────────────
+      try {
+        const { randomUUID } = await import("crypto");
+        let btcUsd = 66_000;
+        try {
+          const pr = await fetch("https://mempool.space/api/v1/prices", { signal: AbortSignal.timeout(3000) });
+          if (pr.ok) { const pd = await pr.json() as any; btcUsd = pd.USD ?? btcUsd; }
+        } catch { /* use fallback */ }
+        const satUsd   = btcUsd / 100_000_000;
+        const wnusdAmt = parseFloat(((amountSats * satUsd) / 1.5).toFixed(8));
+        const colPct   = 150;
+        const posId    = randomUUID();
+        const { wnusdPositions, wnusdTransactions } = await import("../shared/schema");
+        await db.transaction(async (tx) => {
+          await tx.insert(wnusdPositions).values({
+            id: posId, userId: req.user!.id,
+            collateralSats: BigInt(amountSats),
+            nxtFeeSent: "0", wnusdMinted: String(wnusdAmt),
+            status: "active", colRatioPct: String(colPct),
+            btcUsdAtMint: String(btcUsd), stakeId: stake.id,
+          });
+          await tx.insert(wnusdTransactions).values({
+            id: randomUUID(), userId: req.user!.id, positionId: posId,
+            type: "auto_mint", satsDelta: BigInt(amountSats),
+            wnusdDelta: String(wnusdAmt), nxtFee: "0",
+            colRatioPct: String(colPct), btcUsdAtTime: String(btcUsd),
+          });
+        });
+      } catch (wnusdErr: any) {
+        console.warn("[STAKE] WNUSD auto-mint skipped:", wnusdErr.message);
+      }
+
       await logAction(req, "sats_stake", "lightning", req.user!.id, { amountSats, lockDays, nxtYield });
       res.json({ ok: true, stake });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -9058,6 +9090,35 @@ export async function registerRoutes(
         await db.update(wallets).set({ balance: newBal }).where(eq(wallets.userId, req.user!.id));
       }
       await db.update(satsStakes).set({ status: "claimed", claimedAt: new Date() }).where(eq(satsStakes.id, stakeId));
+
+      // ── Auto-redeem the WNUSD position linked to this stake ────────────────
+      try {
+        const { wnusdPositions, wnusdTransactions } = await import("../shared/schema");
+        const { randomUUID } = await import("crypto");
+        const { sql: S2 } = await import("drizzle-orm");
+        const [pos] = await db.select().from(wnusdPositions)
+          .where(and(eq((wnusdPositions as any).stakeId, stakeId), eq(wnusdPositions.status, "active")));
+        if (pos) {
+          let btcUsd = 66_000;
+          try {
+            const pr = await fetch("https://mempool.space/api/v1/prices", { signal: AbortSignal.timeout(3000) });
+            if (pr.ok) { const pd = await pr.json() as any; btcUsd = pd.USD ?? btcUsd; }
+          } catch { /* fallback */ }
+          await db.transaction(async (tx) => {
+            await tx.update(wnusdPositions).set({ status: "redeemed", updatedAt: new Date() })
+              .where(eq(wnusdPositions.id, pos.id));
+            await tx.insert(wnusdTransactions).values({
+              id: randomUUID(), userId: req.user!.id, positionId: pos.id,
+              type: "auto_redeem", satsDelta: BigInt(-Number(pos.collateralSats)),
+              wnusdDelta: String(-parseFloat(pos.wnusdMinted)), nxtFee: "0",
+              colRatioPct: pos.colRatioPct, btcUsdAtTime: String(btcUsd),
+            });
+          });
+        }
+      } catch (wnusdErr: any) {
+        console.warn("[UNSTAKE] WNUSD auto-redeem skipped:", wnusdErr.message);
+      }
+
       await logAction(req, "sats_unstake", "lightning", req.user!.id, { stakeId, amountSats: stake.amountSats, nxtYield: stake.nxtYield });
       res.json({ ok: true, amountSats: stake.amountSats, nxtYield: stake.nxtYield });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -9948,8 +10009,18 @@ export async function registerRoutes(
       const satUsd        = btcUsd / SATS_PER_BTC;
       const nxtUsd        = satUsd * SATS_PER_NXT;
       const treasurySats  = Math.floor(treasuryNxt * SATS_PER_NXT);
-      const collateralUsd = treasurySats * satUsd;
-      const maxMintUsd    = Math.min(collateralUsd / COL_RATIO, MAX_SUPPLY_CAP);
+
+      // Staked sats pool — auto-collateral from all active sats_stakes
+      const { satsStakes: satsStakesT } = await import("../shared/schema");
+      const { sql: stakesSql } = await import("drizzle-orm");
+      const [stakeRow] = await db.select({
+        totalStaked: stakesSql<number>`coalesce(sum(amount_sats),0)`,
+        stakeCount:  stakesSql<number>`count(*)`,
+      }).from(satsStakesT).where(stakesSql`status = 'active'`);
+      const totalStakedSats  = Number(stakeRow?.totalStaked ?? 0);
+      const totalBackingSats = treasurySats + totalStakedSats;
+      const collateralUsd    = totalBackingSats * satUsd;
+      const maxMintUsd       = Math.min(collateralUsd / COL_RATIO, MAX_SUPPLY_CAP);
 
       // Full-supply ceiling: when all 21B NXT are consumed → 21T sats
       const fullSupplyNxt     = NXT_HARD_CAP;
@@ -9969,6 +10040,11 @@ export async function registerRoutes(
         collateralUsd,
         colRatio:       COL_RATIO,
         maxMintUsd,
+        // Staked sats breakdown
+        stakedSats: totalStakedSats,
+        stakedSatsUsd: totalStakedSats * satUsd,
+        treasurySats,
+        totalBackingSats,
         circulatingSupply: 0,
         collateralRatioPct: 100 * COL_RATIO,
         // Full-supply ceiling

@@ -221,6 +221,12 @@ async function runStartupMigrations() {
       CREATE INDEX IF NOT EXISTS wnusd_tx_user_idx ON wnusd_transactions(user_id);
     `);
 
+    // 6. Add stake_id column to wnusd_positions if missing
+    await pool.query(`
+      ALTER TABLE wnusd_positions ADD COLUMN IF NOT EXISTS stake_id integer;
+      CREATE INDEX IF NOT EXISTS wnusd_positions_stake_idx ON wnusd_positions(stake_id);
+    `);
+
     console.log("[MIGRATION] Startup schema migrations complete.");
   } catch (err: any) {
     console.error("[MIGRATION] Startup migration error:", err.message);
