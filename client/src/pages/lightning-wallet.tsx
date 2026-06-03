@@ -20,9 +20,9 @@ const TABS = ["receive", "transmit", "swap", "send", "stake", "log"] as const;
 type Tab = typeof TABS[number];
 
 function satsDisplay(sats: number) {
-  if (sats >= 1_000_000_000) return `${(sats / 1_000_000_000).toFixed(4)}B`;
-  if (sats >= 1_000_000)     return `${(sats / 1_000_000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}M`;
-  if (sats >= 1_000)         return `${(sats / 1_000).toFixed(3)}K`;
+  if (sats >= 1_000_000_000) return `${(sats / 1_000_000_000).toFixed(2)}B`;
+  if (sats >= 1_000_000)     return `${(sats / 1_000_000).toFixed(2)}M`;
+  if (sats >= 1_000)         return `${(sats / 1_000).toFixed(1)}K`;
   return String(sats);
 }
 
