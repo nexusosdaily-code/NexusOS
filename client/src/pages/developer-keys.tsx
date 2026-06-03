@@ -50,7 +50,57 @@ const PERM_COLORS: Record<string, string> = {
   stream:  "bg-orange-900/40 text-orange-300 border-orange-700",
 };
 
+const DEV_GATE_KEY = "dev_unlocked";
+const DEV_PASSWORD  = "Wnsp_nexusos2026";
+
+function DevGate({ onUnlock }: { onUnlock: () => void }) {
+  const [input, setInput] = useState("");
+  const [error, setError] = useState(false);
+  const attempt = () => {
+    if (input === DEV_PASSWORD) { onUnlock(); }
+    else { setError(true); setTimeout(() => setError(false), 1500); }
+  };
+  return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 rounded-2xl bg-purple-900/40 border border-purple-700/50 flex items-center justify-center mx-auto mb-4">
+            <Shield className="w-7 h-7 text-purple-400" />
+          </div>
+          <h1 className="text-xl font-bold text-white mb-1">Developer Access</h1>
+          <p className="text-sm text-slate-500">Enter the developer password to continue</p>
+        </div>
+        <div className="space-y-3">
+          <input
+            type="password"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && attempt()}
+            placeholder="Developer password"
+            className={`w-full px-4 py-3 rounded-xl bg-slate-900 border text-white text-sm outline-none transition-all
+              ${error ? "border-red-500 shake" : "border-slate-700 focus:border-purple-500"}`}
+            autoFocus
+            data-testid="input-dev-password"
+          />
+          {error && <p className="text-red-400 text-xs text-center">Incorrect password</p>}
+          <button
+            onClick={attempt}
+            className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold transition-all"
+            data-testid="btn-dev-unlock"
+          >
+            Unlock
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DeveloperKeysPage() {
+  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem(DEV_GATE_KEY) === "1");
+  const unlock = () => { sessionStorage.setItem(DEV_GATE_KEY, "1"); setUnlocked(true); };
+  if (!unlocked) return <DevGate onUnlock={unlock} />;
+
   const { token, user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
