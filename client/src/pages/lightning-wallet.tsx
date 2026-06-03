@@ -261,9 +261,26 @@ export default function ChannelDashboard() {
       refetchBal();
       refetchStakes();
       qc.invalidateQueries({ queryKey: ["/api/wallet"] });
-      toast({ title: "✅ Unstaked!", description: `${data.amountSats} sats returned · ${data.nxtYield} NXT yield credited` });
+      toast({ title: "✅ Withdrawn!", description: `${data.amountSats} sats returned · ${data.nxtYield} NXT yield credited` });
     },
-    onError: (e: any) => toast({ title: "Unstake failed", description: e.message, variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Withdraw failed", description: e.message, variant: "destructive" }),
+  });
+
+  const [extendingId, setExtendingId] = useState<number | null>(null);
+  const [extendDays, setExtendDays]   = useState<7|14|30|90|180|365>(90);
+
+  const extendMut = useMutation({
+    mutationFn: async ({ stakeId, lockDays }: { stakeId: number; lockDays: number }) => {
+      const res = await apiRequest("POST", `/api/lightning/extend/${stakeId}`, { lockDays });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      refetchStakes();
+      setExtendingId(null);
+      const label = data.lockDays >= 365 ? "1 year" : data.lockDays >= 180 ? "6 months" : data.lockDays >= 90 ? "3 months" : `${data.lockDays} days`;
+      toast({ title: "🔒 Extended!", description: `Stake re-locked for ${label} · +${parseFloat(data.extraYield).toFixed(4)} NXT added` });
+    },
+    onError: (e: any) => toast({ title: "Extend failed", description: e.message, variant: "destructive" }),
   });
 
   const withdrawToBtc = useMutation({
@@ -1057,32 +1074,96 @@ export default function ChannelDashboard() {
                     const matDate = new Date(s.maturesAt);
                     const diff = matDate.getTime() - Date.now();
                     const daysLeft = Math.max(0, Math.ceil(diff / 86_400_000));
+                    const isExpanding = extendingId === s.id;
+                    const EXTEND_RATES: Record<number, string> = { 7: "5%", 14: "12%", 30: "28%", 90: "90%", 180: "200%", 365: "420%" };
+                    const extraNxt = ((s.amountSats / 1000) * ({ 7: 0.05, 14: 0.12, 30: 0.28, 90: 0.90, 180: 2.00, 365: 4.20 }[extendDays] ?? 0)).toFixed(4);
                     return (
                       <div key={s.id} data-testid={`stake-position-${s.id}`}
-                        className="flex items-center gap-3 p-3 bg-black/20 rounded-lg border border-slate-800/60">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${s.isMatured ? "bg-emerald-500/20" : "bg-amber-500/10"}`}>
-                          {s.isMatured ? <Unlock className="w-4 h-4 text-emerald-400" /> : <Lock className="w-4 h-4 text-amber-400" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm text-white font-mono">⚡ {satsDisplay(s.amountSats)} sats</div>
-                          <div className="text-[10px] text-gray-500">
-                            {s.status === "claimed" ? "Claimed" : s.isMatured ? "✅ Ready to claim" : `${daysLeft}d left · ${s.lockDays}d lock`}
+                        className={`p-3 bg-black/20 rounded-lg border transition-all ${s.isMatured && s.status === "active" ? "border-emerald-600/40" : "border-slate-800/60"}`}>
+                        {/* Main row */}
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${s.isMatured ? "bg-emerald-500/20" : "bg-amber-500/10"}`}>
+                            {s.isMatured ? <Unlock className="w-4 h-4 text-emerald-400" /> : <Lock className="w-4 h-4 text-amber-400" />}
                           </div>
-                          <div className="text-[10px] text-emerald-400/70">+{parseFloat(s.nxtYield || "0").toFixed(4)} NXT yield</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-white font-mono">⚡ {satsDisplay(s.amountSats)} sats</div>
+                            <div className="text-[10px] text-gray-500">
+                              {s.status === "claimed" ? "Withdrawn" : s.isMatured ? "✅ Matured — choose an action" : `${daysLeft}d left · ${s.lockDays}d lock`}
+                            </div>
+                            <div className="text-[10px] text-emerald-400/70">+{parseFloat(s.nxtYield || "0").toFixed(4)} NXT yield</div>
+                          </div>
+                          {s.status === "claimed" && (
+                            <Badge className="bg-slate-700/50 text-gray-400 border-slate-600 text-[9px]">Withdrawn</Badge>
+                          )}
                         </div>
-                        {s.isMatured && s.status === "active" && (
-                          <Button
-                            size="sm"
-                            onClick={() => unstakeMut.mutate(s.id)}
-                            disabled={unstakeMut.isPending}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-xs px-3"
-                            data-testid={`button-unstake-${s.id}`}
-                          >
-                            Claim
-                          </Button>
+
+                        {/* Action buttons — only for matured active stakes */}
+                        {s.isMatured && s.status === "active" && !isExpanding && (
+                          <div className="mt-3 flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => { setExtendingId(s.id); setExtendDays(90); }}
+                              className="flex-1 bg-amber-600/80 hover:bg-amber-600 text-xs"
+                              data-testid={`button-extend-${s.id}`}
+                            >
+                              🔒 Extend
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => unstakeMut.mutate(s.id)}
+                              disabled={unstakeMut.isPending}
+                              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-xs"
+                              data-testid={`button-unstake-${s.id}`}
+                            >
+                              ✅ Withdraw
+                            </Button>
+                          </div>
                         )}
-                        {s.status === "claimed" && (
-                          <Badge className="bg-slate-700/50 text-gray-400 border-slate-600 text-[9px]">Claimed</Badge>
+
+                        {/* Inline extend picker */}
+                        {s.isMatured && s.status === "active" && isExpanding && (
+                          <div className="mt-3 space-y-3 bg-slate-800/40 rounded-lg p-3">
+                            <div className="text-[10px] text-amber-400 font-semibold uppercase tracking-wider">Choose new lock period</div>
+                            <div className="grid grid-cols-3 gap-1.5">
+                              {([7, 14, 30, 90, 180, 365] as const).map((d) => (
+                                <button
+                                  key={d}
+                                  onClick={() => setExtendDays(d)}
+                                  data-testid={`extend-period-${d}`}
+                                  className={`py-2 px-1 rounded-lg border text-center text-[10px] transition-all ${
+                                    extendDays === d
+                                      ? "border-amber-500/60 bg-amber-500/15 text-amber-300"
+                                      : "border-slate-700 bg-slate-800/30 text-gray-400 hover:text-gray-200"
+                                  }`}
+                                >
+                                  <div className="font-bold">{d >= 365 ? "1yr" : d >= 180 ? "6mo" : d >= 90 ? "3mo" : `${d}d`}</div>
+                                  <div className="text-amber-400/80">{EXTEND_RATES[d]}</div>
+                                </button>
+                              ))}
+                            </div>
+                            <div className="text-[10px] text-gray-500">
+                              Adds <span className="text-emerald-400 font-mono">+{extraNxt} NXT</span> on top of existing yield
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => extendMut.mutate({ stakeId: s.id, lockDays: extendDays })}
+                                disabled={extendMut.isPending}
+                                className="flex-1 bg-amber-600 hover:bg-amber-700 text-xs"
+                                data-testid={`button-confirm-extend-${s.id}`}
+                              >
+                                {extendMut.isPending ? "Extending…" : "Confirm Extend"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setExtendingId(null)}
+                                className="flex-1 border-slate-700 text-gray-400 text-xs"
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
                         )}
                       </div>
                     );

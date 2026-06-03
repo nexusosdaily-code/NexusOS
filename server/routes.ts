@@ -9124,6 +9124,38 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // POST /api/lightning/extend/:id — re-lock a stake for a further period
+  app.post("/api/lightning/extend/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const stakeId = parseInt(req.params.id);
+      const { lockDays } = req.body;
+      if (![7, 14, 30, 90, 180, 365].includes(lockDays)) return res.status(400).json({ error: "lockDays must be 7, 14, 30, 90, 180, or 365" });
+      const RATES: Record<number, string> = { 7: "5.00", 14: "12.00", 30: "28.00", 90: "90.00", 180: "200.00", 365: "420.00" };
+      const { db } = await import("./db");
+      const { satsStakes } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const [stake] = await db.select().from(satsStakes).where(and(eq(satsStakes.id, stakeId), eq(satsStakes.userId, req.user!.id)));
+      if (!stake) return res.status(404).json({ error: "Stake not found" });
+      if (stake.status !== "active") return res.status(400).json({ error: `Stake already ${stake.status}` });
+
+      // Additional yield earned on the extended period (stacks on top of existing)
+      const extraYield = ((stake.amountSats / 1000) * (parseFloat(RATES[lockDays]) / 100));
+      const newTotalYield = (parseFloat(stake.nxtYield) + extraYield).toFixed(8);
+      const newMaturesAt = new Date(Date.now() + lockDays * 86_400_000);
+
+      await db.update(satsStakes).set({
+        lockDays,
+        maturesAt: newMaturesAt,
+        nxtYield: newTotalYield,
+        yieldRatePercent: RATES[lockDays],
+      }).where(eq(satsStakes.id, stakeId));
+
+      // Keep WNUSD position active (collateral stays locked — that's the point)
+      await logAction(req, "sats_stake_extend", "lightning", req.user!.id, { stakeId, lockDays, extraYield, newTotalYield });
+      res.json({ ok: true, stakeId, lockDays, newMaturesAt, newTotalYield, extraYield: extraYield.toFixed(8) });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // POST /api/lightning/tip — tip a content creator / streamer with sats
   app.post("/api/lightning/tip", authenticate, async (req: Request, res: Response) => {
     try {
