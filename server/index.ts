@@ -171,6 +171,10 @@ app.use((req, res, next) => {
       import("./btc-bridge-service").then(({ btcBridge }) => {
         btcBridge.startAutoProcessor();
       }).catch((e) => console.error("[BTC Bridge] Boot error:", e));
+      // Start BTC Withdrawal Processor — sends queued sats→BTC withdrawals on-chain
+      import("./btc-withdrawal-processor").then(({ startWithdrawalProcessor }) => {
+        startWithdrawalProcessor(60_000); // check every 60s
+      }).catch((e) => console.error("[BTC Withdrawal] Boot error:", e));
       // Start BTC Block Scanner — verifies wnsp + Rune stakes on-chain every 5 min
       import("./btc-block-scanner").then(({ startStakeScanner }) => {
         startStakeScanner();

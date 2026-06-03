@@ -8943,16 +8943,22 @@ export async function registerRoutes(
         .where(eq(lightningWallets.userId, req.user!.id));
 
       const [tx] = await db.insert(lightningTransactions).values({
-        userId:   req.user!.id,
-        type:     "withdrawal",
-        amountSats,
-        memo:     `Withdraw ${amountSats} sats to ${addr} (net ${netSats} sats after ${FEE_SATS} sat fee)`,
-        status:   "pending",
+        userId:     req.user!.id,
+        type:       "withdrawal",
+        amountSats: netSats,           // net sats that will arrive on-chain
+        btcAddress: addr,
+        memo:       `Withdraw ${amountSats} sats → ${addr} (fee ${FEE_SATS} sats, net ${netSats} sats)`,
+        status:     "pending",
       }).returning();
+
+      // Trigger the processor immediately (non-blocking)
+      import("./btc-withdrawal-processor.js")
+        .then(m => m.processWithdrawalQueue())
+        .catch(console.error);
 
       await logAction(req, "lightning_withdraw_btc", "lightning", req.user!.id, { amountSats, btcAddress: addr, feeSats: FEE_SATS });
       res.json({ ok: true, txId: tx.id, amountSats, feeSats: FEE_SATS, netSats, btcAddress: addr, status: "pending",
-        note: "Withdrawal queued. On-chain BTC will be sent to your address within 30 minutes." });
+        note: "Withdrawal submitted. BTC is being sent on-chain now." });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 

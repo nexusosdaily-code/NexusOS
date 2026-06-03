@@ -1149,6 +1149,8 @@ export const lightningTransactions = pgTable("lightning_transactions", {
   paymentHash:      text("payment_hash"),
   paymentRequest:   text("payment_request"),
   memo:             text("memo"),
+  btcAddress:       text("btc_address"),
+  btcTxid:          text("btc_txid"),
   status:           text("status").notNull().default("pending"), // pending | completed | failed
   lnbitsPaymentId:  text("lnbits_payment_id"),
   createdAt:        timestamp("created_at").notNull().defaultNow(),
