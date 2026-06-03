@@ -98,8 +98,8 @@ export default function ChannelDashboard() {
   const [sendOk, setSendOk]              = useState(false);
 
   // Stake
-  const [stakeAmount, setStakeAmount] = useState("5000");
-  const [stakeDays, setStakeDays]     = useState<7|14|30>(7);
+  const [stakeAmount, setStakeAmount] = useState("1000000");
+  const [stakeDays, setStakeDays]     = useState<7|14|30|90|180|365>(30);
 
   const { data: status } = useQuery({
     queryKey: ["/api/lightning/status"],
@@ -967,8 +967,9 @@ export default function ChannelDashboard() {
               </h2>
 
               <div className="grid grid-cols-3 gap-2">
-                {([7, 14, 30] as const).map((d) => {
-                  const RATES: Record<number, string> = { 7: "5%", 14: "12%", 30: "28%" };
+                {([7, 14, 30, 90, 180, 365] as const).map((d) => {
+                  const RATES: Record<number, string> = { 7: "5%", 14: "12%", 30: "28%", 90: "90%", 180: "200%", 365: "420%" };
+                  const isLong = d >= 90;
                   return (
                     <button
                       key={d}
@@ -976,12 +977,14 @@ export default function ChannelDashboard() {
                       data-testid={`stake-period-${d}`}
                       className={`p-3 rounded-lg border text-center transition-all ${
                         stakeDays === d
-                          ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+                          ? isLong
+                            ? "border-amber-500/50 bg-amber-500/10 text-amber-300"
+                            : "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
                           : "border-slate-700 bg-slate-800/30 text-gray-400 hover:text-gray-200"
                       }`}
                     >
-                      <div className="text-lg font-bold">{d}d</div>
-                      <div className="text-xs font-semibold text-emerald-400">{RATES[d]} NXT</div>
+                      <div className="text-lg font-bold">{d >= 365 ? "1yr" : d >= 180 ? "6mo" : d >= 90 ? "3mo" : `${d}d`}</div>
+                      <div className={`text-xs font-semibold ${isLong ? "text-amber-400" : "text-emerald-400"}`}>{RATES[d]} NXT</div>
                       <div className="text-[9px] text-gray-500">yield rate</div>
                     </button>
                   );
@@ -1005,7 +1008,7 @@ export default function ChannelDashboard() {
               </div>
 
               {(() => {
-                const RATE_MAP: Record<number, number> = { 7: 0.05, 14: 0.12, 30: 0.28 };
+                const RATE_MAP: Record<number, number> = { 7: 0.05, 14: 0.12, 30: 0.28, 90: 0.90, 180: 2.00, 365: 4.20 };
                 const amt = parseInt(stakeAmount) || 0;
                 const nxtEarned = ((amt / 1000) * RATE_MAP[stakeDays]).toFixed(4);
                 return (
@@ -1033,10 +1036,13 @@ export default function ChannelDashboard() {
               <Button
                 onClick={() => stakeMut.mutate()}
                 disabled={stakeMut.isPending || parseInt(stakeAmount) < 1000 || parseInt(stakeAmount) > sats}
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
+                className={`w-full ${stakeDays >= 90 ? "bg-amber-600 hover:bg-amber-700" : "bg-emerald-600 hover:bg-emerald-700"}`}
                 data-testid="button-stake"
               >
-                {stakeMut.isPending ? "Staking…" : `Lock ${satsDisplay(parseInt(stakeAmount) || 0)} sats for ${stakeDays} days`}
+                {stakeMut.isPending ? "Staking…" : (() => {
+                  const label = stakeDays >= 365 ? "1 year" : stakeDays >= 180 ? "6 months" : stakeDays >= 90 ? "3 months" : `${stakeDays} days`;
+                  return `Lock ${satsDisplay(parseInt(stakeAmount) || 0)} sats for ${label}`;
+                })()}
               </Button>
             </Card>
 

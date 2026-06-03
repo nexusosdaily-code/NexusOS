@@ -8668,7 +8668,7 @@ export async function registerRoutes(
     try {
       const { amountSats, memo } = req.body;
       if (!amountSats || amountSats < 1) return res.status(400).json({ error: "amountSats must be >= 1" });
-      if (amountSats > 10_000_000) return res.status(400).json({ error: "Max deposit: 10,000,000 sats" });
+      if (amountSats > 10_000_000_000) return res.status(400).json({ error: "Max deposit: 10,000,000,000 sats" });
 
       const invoice = await lnCreateInvoice(amountSats, memo || `NexusOS deposit — ${req.user!.username}`);
 
@@ -9000,8 +9000,8 @@ export async function registerRoutes(
     try {
       const { amountSats, lockDays } = req.body;
       if (!amountSats || amountSats < 1000) return res.status(400).json({ error: "Minimum stake: 1,000 sats" });
-      if (![7, 14, 30].includes(lockDays)) return res.status(400).json({ error: "lockDays must be 7, 14, or 30" });
-      const RATES: Record<number, string> = { 7: "5.00", 14: "12.00", 30: "28.00" };
+      if (![7, 14, 30, 90, 180, 365].includes(lockDays)) return res.status(400).json({ error: "lockDays must be 7, 14, 30, 90, 180, or 365" });
+      const RATES: Record<number, string> = { 7: "5.00", 14: "12.00", 30: "28.00", 90: "90.00", 180: "200.00", 365: "420.00" };
       const { db } = await import("./db");
       const { lightningWallets, satsStakes } = await import("../shared/schema");
       const { eq, sql: drizzleSql } = await import("drizzle-orm");
