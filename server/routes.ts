@@ -10078,6 +10078,229 @@ export async function registerRoutes(
     }
   });
 
+  // ── WNUSD Liquidity — Mint / Redeem / Positions ──────────────────────────────
+  {
+    const SATS_PER_NXT  = 1_000;
+    const SATS_PER_BTC  = 100_000_000;
+    const COL_RATIO     = 1.5;
+    const MINT_FEE_RATE = 0.005; // 0.5% of NXT-equivalent as orbital treasury fee
+
+    async function fetchBtcForWnusd(): Promise<number> {
+      try {
+        const r = await fetch("https://mempool.space/api/v1/prices",
+          { signal: AbortSignal.timeout(4000) });
+        if (r.ok) { const d = await r.json() as any; return d.USD; }
+      } catch { /* ignore */ }
+      return 66_000;
+    }
+
+    // GET /api/wnusd/positions — user's active positions with live col ratio
+    app.get("/api/wnusd/positions", authenticate, async (req: Request, res: Response) => {
+      try {
+        const userId = (req as any).user.id;
+        const { db } = await import("./db");
+        const { sql: S } = await import("drizzle-orm");
+        const btcUsd  = await fetchBtcForWnusd();
+        const satUsd  = btcUsd / SATS_PER_BTC;
+
+        const positions = await db.execute(S`
+          SELECT p.id, p.collateral_sats, p.nxt_fee_sent, p.wnusd_minted,
+                 p.status, p.col_ratio_pct, p.btc_usd_at_mint, p.opened_at, p.updated_at
+          FROM wnusd_positions p
+          WHERE p.user_id = ${userId}
+          ORDER BY p.opened_at DESC
+        `);
+
+        const rows = (positions.rows as any[]).map((p) => {
+          const colUsd      = Number(p.collateral_sats) * satUsd;
+          const minted      = parseFloat(p.wnusd_minted);
+          const liveRatio   = minted > 0 ? (colUsd / minted) * 100 : 0;
+          const liquidation = minted > 0 ? (minted * COL_RATIO) / satUsd : 0;
+          return { ...p, liveColRatioPct: liveRatio.toFixed(2), satUsd, btcUsd, liquidationSats: Math.ceil(liquidation) };
+        });
+
+        // history
+        const history = await db.execute(S`
+          SELECT t.id, t.position_id, t.type, t.sats_delta, t.wnusd_delta,
+                 t.nxt_fee, t.col_ratio_pct, t.btc_usd_at_time, t.created_at
+          FROM wnusd_transactions t
+          WHERE t.user_id = ${userId}
+          ORDER BY t.created_at DESC LIMIT 50
+        `);
+
+        res.json({ ok: true, positions: rows, history: history.rows, btcUsd, satUsd });
+      } catch (err: any) { res.status(500).json({ error: err.message }); }
+    });
+
+    // POST /api/wnusd/mint — lock sats + pay NXT fee to orbital treasury → mint WNUSD
+    app.post("/api/wnusd/mint", authenticate, async (req: Request, res: Response) => {
+      try {
+        const user   = (req as any).user;
+        const userId = user.id;
+        const satAmount = parseInt(req.body.satAmount, 10);
+        if (!satAmount || satAmount < 10_000) return res.status(400).json({ error: "Minimum 10,000 sats to mint" });
+
+        const { db } = await import("./db");
+        const { lightningWallets, wallets } = await import("../shared/schema");
+        const { eq, sql: S } = await import("drizzle-orm");
+
+        const btcUsd   = await fetchBtcForWnusd();
+        const satUsd   = btcUsd / SATS_PER_BTC;
+        const nxtEquiv = satAmount / SATS_PER_NXT;
+        const nxtFee   = parseFloat((nxtEquiv * MINT_FEE_RATE).toFixed(8));
+        const colUsd   = satAmount * satUsd;
+        const wnusdOut = parseFloat((colUsd / COL_RATIO).toFixed(8));
+        const colRatio = COL_RATIO * 100;
+
+        // Check balances
+        const [lw] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, userId));
+        if (!lw) return res.status(400).json({ error: "No lightning wallet found" });
+        if (lw.satsBalance < satAmount) return res.status(400).json({ error: `Insufficient sats — have ${lw.satsBalance.toLocaleString()}, need ${satAmount.toLocaleString()}` });
+
+        const [nxtWallet] = await db.select().from(wallets).where(eq(wallets.userId, userId));
+        if (!nxtWallet) return res.status(400).json({ error: "No NXT wallet found" });
+        const nxtBalance = parseFloat(nxtWallet.balance);
+        if (nxtBalance < nxtFee) return res.status(400).json({ error: `Insufficient NXT for fee — have ${nxtBalance.toFixed(4)}, need ${nxtFee.toFixed(4)}` });
+
+        const posId = crypto.randomUUID();
+        const txId  = crypto.randomUUID();
+        const otId  = crypto.randomUUID();
+
+        await db.transaction(async (tx) => {
+          // 1. Deduct sats from lightning wallet
+          await tx.update(lightningWallets)
+            .set({ satsBalance: lw.satsBalance - satAmount })
+            .where(eq(lightningWallets.userId, userId));
+
+          // 2. Deduct NXT fee from NXT wallet
+          const newBal = (nxtBalance - nxtFee).toFixed(8);
+          await tx.update(wallets).set({ balance: newBal }).where(eq(wallets.userId, userId));
+
+          // 3. Insert orbital_treasury record (ordinal_nxt_units = NXT fee × 1e8)
+          const ordinalUnits = Math.round(nxtFee * 1e8);
+          await tx.execute(S`
+            INSERT INTO orbital_treasury
+              (id, source_record_id, source_label, source_wavelength_nm, source_frequency_hz,
+               source_psi_channel, source_band, ordinal_nxt_units, operation_type, deposited_by, memo)
+            VALUES
+              (${otId}, ${posId}, ${'WNUSD_MINT fee from ' + user.username},
+               ${580.0}, ${5.17e14}, ${'Ψ(0,0,H)'}, ${'USER'},
+               ${ordinalUnits}, ${'WNUSD_MINT'}, ${user.username},
+               ${'WNUSD mint fee: ' + nxtFee.toFixed(8) + ' NXT from ' + satAmount.toLocaleString() + ' sats collateral'})
+          `);
+
+          // 4. Create position
+          await tx.execute(S`
+            INSERT INTO wnusd_positions
+              (id, user_id, collateral_sats, nxt_fee_sent, wnusd_minted,
+               status, col_ratio_pct, btc_usd_at_mint, opened_at, updated_at)
+            VALUES
+              (${posId}, ${userId}, ${satAmount}, ${nxtFee.toFixed(8)},
+               ${wnusdOut.toFixed(8)}, ${'active'}, ${colRatio.toFixed(2)},
+               ${btcUsd.toFixed(2)}, now(), now())
+          `);
+
+          // 5. Record transaction
+          await tx.execute(S`
+            INSERT INTO wnusd_transactions
+              (id, user_id, position_id, type, sats_delta, wnusd_delta,
+               nxt_fee, col_ratio_pct, btc_usd_at_time, created_at)
+            VALUES
+              (${txId}, ${userId}, ${posId}, ${'mint'}, ${satAmount},
+               ${wnusdOut.toFixed(8)}, ${nxtFee.toFixed(8)},
+               ${colRatio.toFixed(2)}, ${btcUsd.toFixed(2)}, now())
+          `);
+
+          // 6. Log audit
+          await tx.execute(S`
+            INSERT INTO audit_logs (id, user_id, action, resource, resource_id, details, status)
+            VALUES (gen_random_uuid()::varchar, ${userId}, ${'wnusd_mint'}, ${'wnusd'}, ${posId},
+              ${JSON.stringify({ satAmount, nxtFee, wnusdOut, btcUsd, colRatio })}::jsonb, ${'success'})
+          `);
+        });
+
+        res.json({ ok: true, positionId: posId, wnusdMinted: wnusdOut, satAmount, nxtFee, colRatioPct: colRatio, btcUsd });
+      } catch (err: any) { res.status(500).json({ error: err.message }); }
+    });
+
+    // POST /api/wnusd/redeem — burn WNUSD → unlock sats back to lightning wallet
+    app.post("/api/wnusd/redeem", authenticate, async (req: Request, res: Response) => {
+      try {
+        const user      = (req as any).user;
+        const userId    = user.id;
+        const { positionId } = req.body;
+        if (!positionId) return res.status(400).json({ error: "positionId required" });
+
+        const { db } = await import("./db");
+        const { lightningWallets } = await import("../shared/schema");
+        const { eq, sql: S } = await import("drizzle-orm");
+
+        const posRows = await db.execute(S`
+          SELECT * FROM wnusd_positions WHERE id = ${positionId} AND user_id = ${userId}
+        `);
+        const pos = (posRows.rows as any[])[0];
+        if (!pos) return res.status(404).json({ error: "Position not found" });
+        if (pos.status !== "active") return res.status(400).json({ error: "Position is not active" });
+
+        const collateral = Number(pos.collateral_sats);
+        const wnusd      = parseFloat(pos.wnusd_minted);
+        const btcUsd     = await fetchBtcForWnusd();
+        const satUsd     = btcUsd / SATS_PER_BTC;
+        const colUsd     = collateral * satUsd;
+        const liveRatio  = wnusd > 0 ? (colUsd / wnusd) * 100 : 0;
+        const txId       = crypto.randomUUID();
+
+        const [lw] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, userId));
+        if (!lw) return res.status(400).json({ error: "Lightning wallet not found" });
+
+        await db.transaction(async (tx) => {
+          // 1. Mark position redeemed
+          await tx.execute(S`
+            UPDATE wnusd_positions SET status = 'redeemed', updated_at = now()
+            WHERE id = ${positionId}
+          `);
+          // 2. Return collateral sats
+          await tx.update(lightningWallets)
+            .set({ satsBalance: lw.satsBalance + collateral })
+            .where(eq(lightningWallets.userId, userId));
+          // 3. Record redemption
+          await tx.execute(S`
+            INSERT INTO wnusd_transactions
+              (id, user_id, position_id, type, sats_delta, wnusd_delta,
+               nxt_fee, col_ratio_pct, btc_usd_at_time, created_at)
+            VALUES
+              (${txId}, ${userId}, ${positionId}, ${'redeem'}, ${-collateral},
+               ${(-wnusd).toFixed(8)}, ${'0'}, ${liveRatio.toFixed(2)}, ${btcUsd.toFixed(2)}, now())
+          `);
+          // 4. Audit
+          await tx.execute(S`
+            INSERT INTO audit_logs (id, user_id, action, resource, resource_id, details, status)
+            VALUES (gen_random_uuid()::varchar, ${userId}, ${'wnusd_redeem'}, ${'wnusd'}, ${positionId},
+              ${JSON.stringify({ collateral, wnusd, btcUsd })}::jsonb, ${'success'})
+          `);
+        });
+
+        res.json({ ok: true, satsReturned: collateral, wnusdBurned: wnusd, positionId });
+      } catch (err: any) { res.status(500).json({ error: err.message }); }
+    });
+
+    // GET /api/wnusd/stats — global circulating supply for stablecoin/stats
+    app.get("/api/wnusd/supply", async (_req: Request, res: Response) => {
+      try {
+        const { db } = await import("./db");
+        const { sql: S } = await import("drizzle-orm");
+        const r = await db.execute(S`
+          SELECT COALESCE(SUM(wnusd_minted::numeric), 0) AS total_minted,
+                 COALESCE(SUM(collateral_sats), 0) AS total_collateral,
+                 COUNT(*) AS position_count
+          FROM wnusd_positions WHERE status = 'active'
+        `);
+        const row = (r.rows as any[])[0];
+        res.json({ ok: true, totalMinted: parseFloat(row.total_minted), totalCollateralSats: Number(row.total_collateral), positionCount: Number(row.position_count) });
+      } catch (err: any) { res.status(500).json({ error: err.message }); }
+    });
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   return httpServer;

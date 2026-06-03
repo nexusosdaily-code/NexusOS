@@ -187,6 +187,40 @@ async function runStartupMigrations() {
       END $$;
     `);
 
+    // 4. Create WNUSD positions table if not exists
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS wnusd_positions (
+        id             varchar(36) PRIMARY KEY,
+        user_id        text NOT NULL,
+        collateral_sats bigint NOT NULL,
+        nxt_fee_sent   numeric(20,8) NOT NULL,
+        wnusd_minted   numeric(20,8) NOT NULL,
+        status         text NOT NULL DEFAULT 'active',
+        col_ratio_pct  numeric(10,2) NOT NULL,
+        btc_usd_at_mint numeric(20,2) NOT NULL,
+        opened_at      timestamp NOT NULL DEFAULT now(),
+        updated_at     timestamp NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS wnusd_positions_user_idx ON wnusd_positions(user_id);
+    `);
+
+    // 5. Create WNUSD transaction log table if not exists
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS wnusd_transactions (
+        id             varchar(36) PRIMARY KEY,
+        user_id        text NOT NULL,
+        position_id    varchar(36),
+        type           text NOT NULL,
+        sats_delta     bigint NOT NULL,
+        wnusd_delta    numeric(20,8) NOT NULL,
+        nxt_fee        numeric(20,8) NOT NULL DEFAULT 0,
+        col_ratio_pct  numeric(10,2) NOT NULL,
+        btc_usd_at_time numeric(20,2) NOT NULL,
+        created_at     timestamp NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS wnusd_tx_user_idx ON wnusd_transactions(user_id);
+    `);
+
     console.log("[MIGRATION] Startup schema migrations complete.");
   } catch (err: any) {
     console.error("[MIGRATION] Startup migration error:", err.message);

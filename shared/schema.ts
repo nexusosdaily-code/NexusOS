@@ -1257,6 +1257,36 @@ export const satsStakes = pgTable("sats_stakes", {
 }));
 export type SatsStake = typeof satsStakes.$inferSelect;
 
+// ── WNUSD Collateral Positions ────────────────────────────────────────────────
+export const wnusdPositions = pgTable("wnusd_positions", {
+  id:             varchar("id", { length: 36 }).primaryKey(),
+  userId:         text("user_id").notNull(),
+  collateralSats: bigint("collateral_sats", { mode: "number" }).notNull(),
+  nxtFeeSent:     decimal("nxt_fee_sent",  { precision: 20, scale: 8 }).notNull(),
+  wnusdMinted:    decimal("wnusd_minted",  { precision: 20, scale: 8 }).notNull(),
+  status:         text("status").notNull().default("active"), // active | redeemed | liquidated
+  colRatioPct:    decimal("col_ratio_pct", { precision: 10, scale: 2 }).notNull(),
+  btcUsdAtMint:   decimal("btc_usd_at_mint", { precision: 20, scale: 2 }).notNull(),
+  openedAt:       timestamp("opened_at").notNull().defaultNow(),
+  updatedAt:      timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({ userIdx: index("wnusd_positions_user_idx").on(t.userId) }));
+export type WnusdPosition = typeof wnusdPositions.$inferSelect;
+
+// ── WNUSD Transaction Log ─────────────────────────────────────────────────────
+export const wnusdTransactions = pgTable("wnusd_transactions", {
+  id:           varchar("id",  { length: 36 }).primaryKey(),
+  userId:       text("user_id").notNull(),
+  positionId:   varchar("position_id", { length: 36 }),
+  type:         text("type").notNull(), // mint | redeem | add_collateral
+  satsDelta:    bigint("sats_delta",  { mode: "number" }).notNull(),
+  wnusdDelta:   decimal("wnusd_delta", { precision: 20, scale: 8 }).notNull(),
+  nxtFee:       decimal("nxt_fee",    { precision: 20, scale: 8 }).notNull().default("0"),
+  colRatioPct:  decimal("col_ratio_pct", { precision: 10, scale: 2 }).notNull(),
+  btcUsdAtTime: decimal("btc_usd_at_time", { precision: 20, scale: 2 }).notNull(),
+  createdAt:    timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({ userIdx: index("wnusd_tx_user_idx").on(t.userId) }));
+export type WnusdTransaction = typeof wnusdTransactions.$inferSelect;
+
 // ── BTC Deposits — every detected incoming TX ─────────────────────────────────
 export const btcDeposits = pgTable("btc_deposits", {
   id:            serial("id").primaryKey(),

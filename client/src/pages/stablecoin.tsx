@@ -1,9 +1,11 @@
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import {
   ArrowLeft, DollarSign, Bitcoin, Zap, Lock, TrendingUp,
   Shield, RefreshCw, Activity, ChevronRight, Layers,
+  PlusCircle, MinusCircle, History, AlertTriangle, CheckCircle2,
 } from "lucide-react";
 
 type StablecoinStats = {
@@ -25,6 +27,40 @@ type StablecoinStats = {
   fullSupplyUsd: number;
   fullSupplyMaxMint: number;
   mechanism: string;
+};
+
+type WnusdPosition = {
+  id: string;
+  collateral_sats: number;
+  nxt_fee_sent: string;
+  wnusd_minted: string;
+  status: string;
+  col_ratio_pct: string;
+  btc_usd_at_mint: string;
+  opened_at: string;
+  liveColRatioPct: string;
+  liquidationSats: number;
+  satUsd: number;
+  btcUsd: number;
+};
+
+type WnusdTx = {
+  id: string;
+  type: string;
+  sats_delta: number;
+  wnusd_delta: string;
+  nxt_fee: string;
+  col_ratio_pct: string;
+  btc_usd_at_time: string;
+  created_at: string;
+};
+
+type PositionsData = {
+  ok: boolean;
+  positions: WnusdPosition[];
+  history: WnusdTx[];
+  btcUsd: number;
+  satUsd: number;
 };
 
 function fmtUsd(n: number, decimals = 2) {
@@ -63,15 +99,89 @@ function ReserveBar({ filled, label, color }: { filled: number; label: string; c
   );
 }
 
+const SATS_PER_NXT = 1_000;
+const MINT_FEE_RATE = 0.005;
+const COL_RATIO = 1.5;
+
+function preview(satAmount: number, satUsd: number) {
+  if (!satAmount || !satUsd) return null;
+  const nxtEquiv = satAmount / SATS_PER_NXT;
+  const nxtFee   = nxtEquiv * MINT_FEE_RATE;
+  const colUsd   = satAmount * satUsd;
+  const wnusd    = colUsd / COL_RATIO;
+  return { nxtFee, wnusd, colUsd };
+}
+
+function colColor(pct: number) {
+  if (pct >= 200) return "#22c55e";
+  if (pct >= 150) return "#eab308";
+  return "#ef4444";
+}
+
 export default function StablecoinPage() {
+  const qc = useQueryClient();
+  const [tab, setTab]       = useState<"mint" | "positions" | "history">("mint");
+  const [satInput, setSatInput] = useState("");
+  const [mintMsg, setMintMsg]   = useState<{ ok: boolean; text: string } | null>(null);
+  const [redeemMsg, setRedeemMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
   const { data: stats, isLoading, refetch, dataUpdatedAt } = useQuery<StablecoinStats>({
     queryKey: ["/api/stablecoin/stats"],
     refetchInterval: 120_000,
     staleTime: 60_000,
   });
 
+  const { data: posData, refetch: refetchPos } = useQuery<PositionsData>({
+    queryKey: ["/api/wnusd/positions"],
+    refetchInterval: 60_000,
+    retry: false,
+  });
+
+  const mintMut = useMutation({
+    mutationFn: async (satAmount: number) => {
+      const r = await fetch("/api/wnusd/mint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ satAmount }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Mint failed");
+      return d;
+    },
+    onSuccess: (d) => {
+      setMintMsg({ ok: true, text: `Minted ${parseFloat(d.wnusdMinted).toFixed(4)} WNUSD ✓  NXT fee: ${parseFloat(d.nxtFee).toFixed(4)} → Orbital Treasury` });
+      setSatInput("");
+      qc.invalidateQueries({ queryKey: ["/api/wnusd/positions"] });
+      qc.invalidateQueries({ queryKey: ["/api/stablecoin/stats"] });
+    },
+    onError: (e: any) => setMintMsg({ ok: false, text: e.message }),
+  });
+
+  const redeemMut = useMutation({
+    mutationFn: async (positionId: string) => {
+      const r = await fetch("/api/wnusd/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ positionId }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Redeem failed");
+      return d;
+    },
+    onSuccess: (d) => {
+      setRedeemMsg({ ok: true, text: `Redeemed — ${d.satsReturned.toLocaleString()} sats returned to your lightning wallet` });
+      qc.invalidateQueries({ queryKey: ["/api/wnusd/positions"] });
+    },
+    onError: (e: any) => setRedeemMsg({ ok: false, text: e.message }),
+  });
+
+  const satAmt    = parseInt(satInput.replace(/[^0-9]/g, ""), 10) || 0;
+  const pre       = stats ? preview(satAmt, stats.satUsd) : null;
   const utilisation = stats ? stats.circulatingSupply / stats.maxMintUsd : 0;
   const lastUpdate  = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : "—";
+  const activePos   = posData?.positions.filter(p => p.status === "active") ?? [];
+  const allPos      = posData?.positions ?? [];
+  const history     = posData?.history ?? [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-8"
@@ -460,31 +570,228 @@ export default function StablecoinPage() {
               </div>
             </Card>
 
-            {/* ── Mint CTA ── */}
-            <Card className="border-green-500/20 p-6 text-center"
-              style={{ background: "rgba(34,197,94,0.04)" }}>
-              <DollarSign className="w-8 h-8 text-green-400 mx-auto mb-2" />
-              <div className="text-white font-semibold text-lg mb-1">WNUSD minting — coming soon</div>
-              <div className="text-gray-400 text-sm mb-3">
-                Deposit NXT as collateral → receive WNUSD at the live BTC-derived rate.
-                Redeem any time at the 1,000-sat floor.
+            {/* ── WNUSD Liquidity Panel ── */}
+            <Card className="border-green-500/25 overflow-hidden"
+              style={{ background: "linear-gradient(135deg, rgba(34,197,94,0.05) 0%, rgba(15,23,42,1) 60%)" }}>
+
+              {/* Tab bar */}
+              <div className="flex border-b border-slate-800">
+                {([
+                  { id: "mint",      label: "Mint WNUSD",  icon: PlusCircle },
+                  { id: "positions", label: `Positions (${activePos.length})`, icon: Lock },
+                  { id: "history",   label: "History",     icon: History },
+                ] as const).map(({ id, label, icon: Icon }) => (
+                  <button key={id} onClick={() => setTab(id)}
+                    data-testid={`tab-wnusd-${id}`}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-colors
+                      ${tab === id ? "text-green-400 border-b-2 border-green-500 bg-green-500/5" : "text-gray-500 hover:text-gray-300"}`}>
+                    <Icon className="w-3.5 h-3.5" />{label}
+                  </button>
+                ))}
               </div>
-              <div className="flex flex-wrap justify-center gap-3 text-xs">
-                <Link href="/lightning-wallet">
-                  <button className="px-4 py-2 rounded-lg bg-yellow-500/10 text-yellow-300 border border-yellow-500/20 hover:bg-yellow-500/20 transition-all flex items-center gap-1.5">
-                    <Zap className="w-3 h-3" />Lightning wallet
-                  </button>
-                </Link>
-                <Link href="/wallet">
-                  <button className="px-4 py-2 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 transition-all">
-                    NXT wallet
-                  </button>
-                </Link>
-                <Link href="/governance">
-                  <button className="px-4 py-2 rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all">
-                    Governance
-                  </button>
-                </Link>
+
+              <div className="p-5">
+
+                {/* ── MINT TAB ── */}
+                {tab === "mint" && (
+                  <div className="space-y-4">
+                    <div className="text-xs text-gray-400 leading-relaxed">
+                      Lock sats as collateral at <span className="text-white">150% ratio</span> to mint WNUSD.
+                      A <span className="text-yellow-300">0.5% NXT fee</span> is deposited to the{" "}
+                      <Link href="/orbital-treasury"><span className="text-amber-400 hover:underline cursor-pointer">Orbital Treasury</span></Link>.
+                      NXT is never burned — it funds the protocol.
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-gray-500 uppercase tracking-wider">Sats to lock as collateral</label>
+                      <div className="flex gap-2 mt-1">
+                        <input
+                          data-testid="input-wnusd-sats"
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="e.g. 100000"
+                          value={satInput}
+                          onChange={e => { setSatInput(e.target.value); setMintMsg(null); }}
+                          className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-white text-sm font-mono focus:outline-none focus:border-green-500/50"
+                        />
+                        <div className="flex gap-1">
+                          {[100_000, 1_000_000, 10_000_000].map(v => (
+                            <button key={v} onClick={() => setSatInput(String(v))}
+                              className="px-2 py-1 text-[10px] bg-slate-800 border border-slate-700 rounded text-gray-400 hover:text-white hover:border-slate-500 transition-colors">
+                              {v >= 1_000_000 ? `${v / 1_000_000}M` : `${v / 1_000}K`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Live preview */}
+                    {pre && satAmt >= 10_000 && (
+                      <div className="rounded-xl bg-slate-800/60 border border-slate-700/50 p-4 space-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Collateral value</span>
+                          <span className="font-mono text-white">${pre.colUsd.toFixed(4)} USD</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">WNUSD you receive</span>
+                          <span className="font-mono text-green-300 font-bold text-sm">{pre.wnusd.toFixed(6)} WNUSD</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Collateral ratio</span>
+                          <span className="font-mono text-yellow-300">150% (safe)</span>
+                        </div>
+                        <div className="border-t border-slate-700 pt-2 flex justify-between">
+                          <span className="text-amber-400/80">NXT fee → Orbital Treasury</span>
+                          <span className="font-mono text-amber-300">{pre.nxtFee.toFixed(6)} NXT</span>
+                        </div>
+                      </div>
+                    )}
+                    {satAmt > 0 && satAmt < 10_000 && (
+                      <div className="text-xs text-red-400 flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5" />Minimum 10,000 sats
+                      </div>
+                    )}
+
+                    {mintMsg && (
+                      <div className={`flex items-start gap-2 p-3 rounded-lg text-xs ${mintMsg.ok ? "bg-green-500/10 border border-green-500/25 text-green-300" : "bg-red-500/10 border border-red-500/25 text-red-300"}`}>
+                        {mintMsg.ok ? <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />}
+                        {mintMsg.text}
+                      </div>
+                    )}
+
+                    <button
+                      data-testid="button-wnusd-mint"
+                      disabled={!pre || satAmt < 10_000 || mintMut.isPending}
+                      onClick={() => { setMintMsg(null); mintMut.mutate(satAmt); }}
+                      className="w-full py-3 rounded-xl text-sm font-semibold transition-all
+                        disabled:opacity-40 disabled:cursor-not-allowed
+                        bg-green-500/20 text-green-300 border border-green-500/30
+                        hover:bg-green-500/30 hover:border-green-500/50 active:scale-[0.99]">
+                      {mintMut.isPending ? "Minting…" : pre ? `Mint ${pre.wnusd.toFixed(4)} WNUSD` : "Enter sats amount"}
+                    </button>
+
+                    <div className="text-[10px] text-gray-600 text-center">
+                      Need sats? <Link href="/lightning-wallet"><span className="text-yellow-400/70 hover:text-yellow-300 cursor-pointer">Lightning wallet →</span></Link>
+                      {"  ·  "}
+                      Need NXT? <Link href="/wallet"><span className="text-purple-400/70 hover:text-purple-300 cursor-pointer">NXT wallet →</span></Link>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── POSITIONS TAB ── */}
+                {tab === "positions" && (
+                  <div className="space-y-3">
+                    {redeemMsg && (
+                      <div className={`flex items-start gap-2 p-3 rounded-lg text-xs ${redeemMsg.ok ? "bg-green-500/10 border border-green-500/25 text-green-300" : "bg-red-500/10 border border-red-500/25 text-red-300"}`}>
+                        {redeemMsg.ok ? <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />}
+                        {redeemMsg.text}
+                      </div>
+                    )}
+
+                    {allPos.length === 0 && (
+                      <div className="text-center py-8 text-gray-500 text-sm">
+                        <Lock className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                        No positions yet — mint some WNUSD to get started
+                      </div>
+                    )}
+
+                    {allPos.map((pos) => {
+                      const ratio = parseFloat(pos.liveColRatioPct);
+                      const rc = colColor(ratio);
+                      const minted = parseFloat(pos.wnusd_minted);
+                      const isActive = pos.status === "active";
+                      return (
+                        <div key={pos.id} data-testid={`card-position-${pos.id.slice(0,8)}`}
+                          className={`rounded-xl border p-4 space-y-3 ${isActive ? "border-slate-700/60 bg-slate-800/30" : "border-slate-800 bg-slate-900/30 opacity-60"}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${isActive ? "bg-green-500/15 text-green-400" : "bg-gray-600/20 text-gray-500"}`}>
+                                {pos.status.toUpperCase()}
+                              </div>
+                              <span className="text-[10px] text-gray-500">{new Date(pos.opened_at).toLocaleDateString()}</span>
+                            </div>
+                            <span className="font-mono font-bold text-green-300">{minted.toFixed(4)} WNUSD</span>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2 text-xs">
+                            <div>
+                              <div className="text-gray-500 text-[10px]">Collateral</div>
+                              <div className="font-mono text-yellow-300">⚡ {Number(pos.collateral_sats).toLocaleString()}</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-500 text-[10px]">Live ratio</div>
+                              <div className="font-mono font-bold" style={{ color: rc }}>{ratio.toFixed(1)}%</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-500 text-[10px]">NXT fee paid</div>
+                              <div className="font-mono text-amber-300">{parseFloat(pos.nxt_fee_sent).toFixed(4)}</div>
+                            </div>
+                          </div>
+
+                          {/* ratio bar */}
+                          <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all"
+                              style={{ width: `${Math.min(ratio / 3, 100)}%`, background: rc }} />
+                          </div>
+
+                          {isActive && (
+                            <button
+                              data-testid={`button-redeem-${pos.id.slice(0,8)}`}
+                              disabled={redeemMut.isPending}
+                              onClick={() => { setRedeemMsg(null); redeemMut.mutate(pos.id); }}
+                              className="w-full py-2 rounded-lg text-xs font-medium transition-all
+                                bg-slate-700/40 text-gray-300 border border-slate-600/50
+                                hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/30">
+                              <MinusCircle className="w-3 h-3 inline mr-1" />
+                              {redeemMut.isPending ? "Redeeming…" : `Redeem — get back ${Number(pos.collateral_sats).toLocaleString()} sats`}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {allPos.length > 0 && (
+                      <button onClick={() => { refetchPos(); }} className="w-full text-center text-xs text-gray-600 hover:text-gray-400 pt-1">
+                        <RefreshCw className="w-3 h-3 inline mr-1" />Refresh
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* ── HISTORY TAB ── */}
+                {tab === "history" && (
+                  <div>
+                    {history.length === 0 && (
+                      <div className="text-center py-8 text-gray-500 text-sm">
+                        <History className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                        No WNUSD transactions yet
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      {history.map((tx) => {
+                        const isMint    = tx.type === "mint";
+                        const isRedeem  = tx.type === "redeem";
+                        const color     = isMint ? "#22c55e" : isRedeem ? "#f97316" : "#6366f1";
+                        const sats      = Math.abs(tx.sats_delta);
+                        const wnusd     = Math.abs(parseFloat(tx.wnusd_delta));
+                        return (
+                          <div key={tx.id} data-testid={`tx-wnusd-${tx.id.slice(0,8)}`}
+                            className="flex items-center gap-3 py-2.5 border-b border-slate-800/60 text-xs">
+                            <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
+                            <div className="flex-1">
+                              <span className="font-semibold capitalize" style={{ color }}>{tx.type}</span>
+                              <span className="text-gray-500 ml-2">
+                                {sats.toLocaleString()} sats → {wnusd.toFixed(4)} WNUSD
+                                {parseFloat(tx.nxt_fee) > 0 && <span className="text-amber-400/70"> · fee {parseFloat(tx.nxt_fee).toFixed(4)} NXT</span>}
+                              </span>
+                            </div>
+                            <div className="text-gray-600 shrink-0">{new Date(tx.created_at).toLocaleDateString()}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
           </>
