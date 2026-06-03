@@ -252,6 +252,8 @@ export default function ChannelDashboard() {
     onError: (e: any) => toast({ title: "Stake failed", description: e.message, variant: "destructive" }),
   });
 
+  const [earlyWithdrawId, setEarlyWithdrawId] = useState<number | null>(null);
+
   const unstakeMut = useMutation({
     mutationFn: async (stakeId: number) => {
       const res = await apiRequest("POST", `/api/lightning/unstake/${stakeId}`, {});
@@ -260,8 +262,17 @@ export default function ChannelDashboard() {
     onSuccess: (data: any) => {
       refetchBal();
       refetchStakes();
+      setEarlyWithdrawId(null);
       qc.invalidateQueries({ queryKey: ["/api/wallet"] });
-      toast({ title: "✅ Withdrawn!", description: `${data.amountSats} sats returned · ${data.nxtYield} NXT yield credited` });
+      if (data.isEarly) {
+        toast({
+          title: "⚠️ Early withdrawal complete",
+          description: `${data.amountSats} sats returned · ${parseFloat(data.nxtYield).toFixed(4)} NXT credited · ${parseFloat(data.penaltyNxt).toFixed(4)} NXT penalty → treasury`,
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "✅ Withdrawn!", description: `${data.amountSats} sats returned · ${parseFloat(data.nxtYield).toFixed(4)} NXT yield credited` });
+      }
     },
     onError: (e: any) => toast({ title: "Withdraw failed", description: e.message, variant: "destructive" }),
   });
@@ -1074,12 +1085,21 @@ export default function ChannelDashboard() {
                     const matDate = new Date(s.maturesAt);
                     const diff = matDate.getTime() - Date.now();
                     const daysLeft = Math.max(0, Math.ceil(diff / 86_400_000));
-                    const isExpanding = extendingId === s.id;
+                    const isExpanding    = extendingId === s.id;
+                    const isEarlyPanel  = earlyWithdrawId === s.id;
                     const EXTEND_RATES: Record<number, string> = { 7: "5%", 14: "12%", 30: "28%", 90: "90%", 180: "200%", 365: "420%" };
                     const extraNxt = ((s.amountSats / 1000) * ({ 7: 0.05, 14: 0.12, 30: 0.28, 90: 0.90, 180: 2.00, 365: 4.20 }[extendDays] ?? 0)).toFixed(4);
+                    // Early-exit penalty preview
+                    const fullYield     = parseFloat(s.nxtYield || "0");
+                    const penaltyFrac   = !s.isMatured && s.status === "active" ? daysLeft / s.lockDays : 0;
+                    const penaltyNxt    = (fullYield * penaltyFrac).toFixed(4);
+                    const receivedNxt   = Math.max(0, fullYield - parseFloat(penaltyNxt)).toFixed(4);
                     return (
                       <div key={s.id} data-testid={`stake-position-${s.id}`}
-                        className={`p-3 bg-black/20 rounded-lg border transition-all ${s.isMatured && s.status === "active" ? "border-emerald-600/40" : "border-slate-800/60"}`}>
+                        className={`p-3 bg-black/20 rounded-lg border transition-all ${
+                          s.isMatured && s.status === "active" ? "border-emerald-600/40" :
+                          isEarlyPanel ? "border-red-700/50" : "border-slate-800/60"
+                        }`}>
                         {/* Main row */}
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${s.isMatured ? "bg-emerald-500/20" : "bg-amber-500/10"}`}>
@@ -1095,7 +1115,66 @@ export default function ChannelDashboard() {
                           {s.status === "claimed" && (
                             <Badge className="bg-slate-700/50 text-gray-400 border-slate-600 text-[9px]">Withdrawn</Badge>
                           )}
+                          {/* Early-exit toggle for locked stakes */}
+                          {!s.isMatured && s.status === "active" && !isEarlyPanel && (
+                            <button
+                              onClick={() => setEarlyWithdrawId(s.id)}
+                              className="text-[10px] text-red-400/60 hover:text-red-400 transition-colors underline underline-offset-2"
+                              data-testid={`button-early-exit-${s.id}`}
+                            >
+                              early exit
+                            </button>
+                          )}
                         </div>
+
+                        {/* Early-exit penalty confirmation panel */}
+                        {!s.isMatured && s.status === "active" && isEarlyPanel && (
+                          <div className="mt-3 space-y-3 bg-red-950/30 border border-red-700/40 rounded-lg p-3">
+                            <div className="text-[10px] text-red-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                              ⚠️ Early exit penalty
+                            </div>
+                            <div className="space-y-1.5 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Time remaining</span>
+                                <span className="font-mono text-amber-300">{daysLeft} of {s.lockDays} days</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Sats returned</span>
+                                <span className="font-mono text-yellow-300">⚡ {satsDisplay(s.amountSats)} sats</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">NXT you receive</span>
+                                <span className="font-mono text-emerald-400">+{receivedNxt} NXT</span>
+                              </div>
+                              <div className="flex justify-between border-t border-red-700/30 pt-1.5">
+                                <span className="text-red-400">Penalty → treasury</span>
+                                <span className="font-mono text-red-400">−{penaltyNxt} NXT</span>
+                              </div>
+                            </div>
+                            <div className="text-[9px] text-gray-600">
+                              Penalty = {(penaltyFrac * 100).toFixed(0)}% of yield · proportional to time remaining
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => unstakeMut.mutate(s.id)}
+                                disabled={unstakeMut.isPending}
+                                className="flex-1 bg-red-700 hover:bg-red-600 text-xs"
+                                data-testid={`button-confirm-early-${s.id}`}
+                              >
+                                {unstakeMut.isPending ? "Processing…" : "Confirm early exit"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEarlyWithdrawId(null)}
+                                className="flex-1 border-slate-700 text-gray-400 text-xs"
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Action buttons — only for matured active stakes */}
                         {s.isMatured && s.status === "active" && !isExpanding && (

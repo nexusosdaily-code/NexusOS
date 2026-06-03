@@ -9071,7 +9071,7 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  // POST /api/lightning/unstake/:id — claim a matured staking position
+  // POST /api/lightning/unstake/:id — withdraw a staking position (mature = full yield; early = penalty)
   app.post("/api/lightning/unstake/:id", authenticate, async (req: Request, res: Response) => {
     try {
       const stakeId = parseInt(req.params.id);
@@ -9081,14 +9081,41 @@ export async function registerRoutes(
       const [stake] = await db.select().from(satsStakes).where(and(eq(satsStakes.id, stakeId), eq(satsStakes.userId, req.user!.id)));
       if (!stake) return res.status(404).json({ error: "Stake not found" });
       if (stake.status !== "active") return res.status(400).json({ error: `Stake already ${stake.status}` });
-      if (stake.maturesAt > new Date()) return res.status(400).json({ error: `Stake matures at ${stake.maturesAt.toISOString()}` });
+
+      // ── Early-exit penalty calculation ────────────────────────────────────────
+      const now = new Date();
+      const isEarly = stake.maturesAt > now;
+      const totalMs   = stake.lockDays * 86_400_000;
+      const remainMs  = isEarly ? stake.maturesAt.getTime() - now.getTime() : 0;
+      const penaltyFraction = isEarly ? remainMs / totalMs : 0;          // fraction of lock left
+      const fullYield   = parseFloat(stake.nxtYield);
+      const penaltyNxt  = parseFloat((fullYield * penaltyFraction).toFixed(8));
+      const userNxt     = parseFloat((fullYield - penaltyNxt).toFixed(8));
+      const daysRemaining = Math.ceil(remainMs / 86_400_000);
+
       const lnWallet = await ensureLnWallet(req.user!.id);
       await db.update(lightningWallets).set({ satsBalance: lnWallet.satsBalance + stake.amountSats, updatedAt: new Date() }).where(eq(lightningWallets.userId, req.user!.id));
       const [nxtWallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
-      if (nxtWallet && stake.nxtYield) {
-        const newBal = (parseFloat(nxtWallet.balance) + parseFloat(stake.nxtYield)).toFixed(8);
+      if (nxtWallet && userNxt > 0) {
+        const newBal = (parseFloat(nxtWallet.balance) + userNxt).toFixed(8);
         await db.update(wallets).set({ balance: newBal }).where(eq(wallets.userId, req.user!.id));
       }
+
+      // ── Route penalty to orbital treasury ────────────────────────────────────
+      if (isEarly && penaltyNxt > 0) {
+        try {
+          await db.execute(
+            (await import("drizzle-orm")).sql`
+              INSERT INTO orbital_treasury
+                (source_record_id, source_label, operation_type, units, unit_type, deposited_at)
+              VALUES
+                (${String(stakeId)}, ${'early_exit_penalty'}, ${'nxt_penalty'}, ${penaltyNxt}, ${'NXT'}, NOW())
+            `
+          );
+        } catch { /* non-fatal — penalty logged to console */ }
+        console.log(`[UNSTAKE] Early exit — stake ${stakeId}: penalty ${penaltyNxt} NXT → orbital treasury`);
+      }
+
       await db.update(satsStakes).set({ status: "claimed", claimedAt: new Date() }).where(eq(satsStakes.id, stakeId));
 
       // ── Auto-redeem the WNUSD position linked to this stake ────────────────
@@ -9119,8 +9146,8 @@ export async function registerRoutes(
         console.warn("[UNSTAKE] WNUSD auto-redeem skipped:", wnusdErr.message);
       }
 
-      await logAction(req, "sats_unstake", "lightning", req.user!.id, { stakeId, amountSats: stake.amountSats, nxtYield: stake.nxtYield });
-      res.json({ ok: true, amountSats: stake.amountSats, nxtYield: stake.nxtYield });
+      await logAction(req, "sats_unstake", "lightning", req.user!.id, { stakeId, amountSats: stake.amountSats, nxtYield: stake.nxtYield, isEarly, penaltyNxt, daysRemaining });
+      res.json({ ok: true, amountSats: stake.amountSats, nxtYield: String(userNxt), isEarly, penaltyNxt, daysRemaining });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
