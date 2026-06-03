@@ -9059,15 +9059,27 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  // GET /api/lightning/stakes — get user's staking positions
+  // GET /api/lightning/stakes — get user's staking positions (with linked WNUSD amount)
   app.get("/api/lightning/stakes", authenticate, async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
-      const { satsStakes } = await import("../shared/schema");
-      const { eq, desc } = await import("drizzle-orm");
+      const { satsStakes, wnusdPositions } = await import("../shared/schema");
+      const { eq, desc, and } = await import("drizzle-orm");
       const stakes = await db.select().from(satsStakes).where(eq(satsStakes.userId, req.user!.id)).orderBy(desc(satsStakes.stakedAt));
       const now = new Date();
-      res.json({ stakes: stakes.map(s => ({ ...s, isMatured: s.status === "active" && s.maturesAt <= now })) });
+      // Attach linked WNUSD position amount to each stake
+      const enriched = await Promise.all(stakes.map(async (s) => {
+        let wnusdMinted = "0";
+        try {
+          const [pos] = await db.select({ wnusdMinted: wnusdPositions.wnusdMinted })
+            .from(wnusdPositions)
+            .where(and(eq((wnusdPositions as any).stakeId, s.id), eq(wnusdPositions.status, "active")))
+            .limit(1);
+          if (pos) wnusdMinted = pos.wnusdMinted;
+        } catch { /* non-fatal */ }
+        return { ...s, isMatured: s.status === "active" && s.maturesAt <= now, wnusdMinted };
+      }));
+      res.json({ stakes: enriched });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
@@ -9104,15 +9116,20 @@ export async function registerRoutes(
       // ── Route penalty to orbital treasury ────────────────────────────────────
       if (isEarly && penaltyNxt > 0) {
         try {
-          await db.execute(
-            (await import("drizzle-orm")).sql`
-              INSERT INTO orbital_treasury
-                (source_record_id, source_label, operation_type, units, unit_type, deposited_at)
-              VALUES
-                (${String(stakeId)}, ${'early_exit_penalty'}, ${'nxt_penalty'}, ${penaltyNxt}, ${'NXT'}, NOW())
-            `
-          );
-        } catch { /* non-fatal — penalty logged to console */ }
+          const { randomUUID: rU2 } = await import("crypto");
+          const { sql: S3 } = await import("drizzle-orm");
+          const ordinalUnits = Math.round(penaltyNxt * 1e8);
+          await db.execute(S3`
+            INSERT INTO orbital_treasury
+              (id, source_record_id, source_label, source_wavelength_nm, source_frequency_hz,
+               source_psi_channel, source_band, ordinal_nxt_units, operation_type, deposited_by, memo)
+            VALUES
+              (${rU2()}, ${String(stakeId)}, ${'early_exit_penalty'},
+               ${580.0}, ${5.17e14}, ${'Ψ(0,0,H)'}, ${'USER'},
+               ${ordinalUnits}, ${'EARLY_EXIT_PENALTY'}, ${req.user!.username},
+               ${'Early exit penalty: ' + penaltyNxt.toFixed(8) + ' NXT · ' + daysRemaining + ' days remaining on stake #' + stakeId})
+          `);
+        } catch (e: any) { console.warn("[UNSTAKE] Treasury INSERT failed:", e.message); }
         console.log(`[UNSTAKE] Early exit — stake ${stakeId}: penalty ${penaltyNxt} NXT → orbital treasury`);
       }
 

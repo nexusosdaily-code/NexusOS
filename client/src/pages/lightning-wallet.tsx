@@ -1110,7 +1110,12 @@ export default function ChannelDashboard() {
                             <div className="text-[10px] text-gray-500">
                               {s.status === "claimed" ? "Withdrawn" : s.isMatured ? "✅ Matured — choose an action" : `${daysLeft}d left · ${s.lockDays}d lock`}
                             </div>
-                            <div className="text-[10px] text-emerald-400/70">+{parseFloat(s.nxtYield || "0").toFixed(4)} NXT yield</div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-[10px] text-emerald-400/70">+{parseFloat(s.nxtYield || "0").toFixed(4)} NXT yield</div>
+                              {parseFloat(s.wnusdMinted || "0") > 0 && s.status === "active" && (
+                                <div className="text-[10px] text-green-300/70">· ${parseFloat(s.wnusdMinted).toFixed(2)} WNUSD backed</div>
+                              )}
+                            </div>
                           </div>
                           {s.status === "claimed" && (
                             <Badge className="bg-slate-700/50 text-gray-400 border-slate-600 text-[9px]">Withdrawn</Badge>

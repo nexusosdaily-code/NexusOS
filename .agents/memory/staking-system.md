@@ -21,9 +21,19 @@ Backend RATES object: `{ 7: "5.00", 14: "12.00", 30: "28.00", 90: "90.00", 180: 
 - `lockDays` must be one of `[7, 14, 30, 90, 180, 365]`
 - Max deposit per invoice: 10,000,000,000 sats (10B)
 
+## Stakes GET endpoint — /api/lightning/stakes
+Returns each stake enriched with `wnusdMinted` (string) from the linked
+`wnusd_positions` row (status='active', stakeId match). Non-fatal if join fails.
+
+## Stake card display (lightning-wallet.tsx)
+Each card shows:
+- sats amount
+- status line (X days left / Matured / Withdrawn)
+- NXT yield + "· $X.XX WNUSD backed" (green, only if wnusdMinted > 0 and status active)
+
 ## Extend route — POST /api/lightning/extend/:id
 - Works on any active stake (matured or locked)
-- Calculates **additional** yield for the new period on top of existing `nxtYield`
+- Stacks additional yield on top of existing `nxtYield`
 - Updates `maturesAt = now + lockDays × 86400000`, `lockDays`, `nxtYield`, `yieldRatePercent`
 - WNUSD position stays active throughout (collateral remains locked)
 - Returns: `{ ok, stakeId, lockDays, newMaturesAt, newTotalYield, extraYield }`
@@ -37,21 +47,27 @@ Backend RATES object: `{ 7: "5.00", 14: "12.00", 30: "28.00", 90: "90.00", 180: 
 When `maturesAt > now` (early):
 - `penaltyFraction = msRemaining / totalLockMs`
 - `penaltyNxt = nxtYield × penaltyFraction`
-- `userNxt = nxtYield - penaltyNxt`
+- `userNxt = nxtYield − penaltyNxt`
 - Sats always returned in **full**
-- `penaltyNxt` → `orbital_treasury` table (INSERT with `operation_type = 'nxt_penalty'`)
+- `penaltyNxt → orbital_treasury` via INSERT with:
+  - `ordinal_nxt_units = Math.round(penaltyNxt * 1e8)` (bigint)
+  - `operation_type = 'EARLY_EXIT_PENALTY'`
+  - `source_label = 'early_exit_penalty'`
+  - `memo` includes NXT amount, days remaining, stake ID
 - Response: `{ ok, amountSats, nxtYield: userNxt, isEarly: true, penaltyNxt, daysRemaining }`
 
+## orbital_treasury correct columns (confirmed)
+`id, source_record_id, source_label, source_wavelength_nm, source_frequency_hz,`
+`source_psi_channel, source_band, ordinal_nxt_units (bigint), operation_type,`
+`deposited_by, block_proof, memo, deposited_at`
+**Never use `units` or `unit_type` — those columns do not exist.**
+
 ## Early-exit UI (locked stake card)
-- Small "early exit" link (red underlined) appears on non-matured active stakes
-- Click opens red penalty breakdown panel inline on the card:
-  · Time remaining / lock days
-  · Sats returned (full)
-  · NXT you receive (after penalty)
-  · NXT penalty → treasury (red)
-  · Penalty % callout
+- Small "early exit" link (red underlined) on non-matured active stakes
+- Click opens red penalty breakdown panel inline showing sats returned (full),
+  NXT received (after penalty), NXT penalty → treasury, penalty % of yield
 - Card border turns red while panel is open
-- Confirm (red button) or Cancel
+- Confirm (red) or Cancel
 
 ## Stake card states summary
 | State | UI |
@@ -63,8 +79,7 @@ When `maturesAt > now` (early):
 | Extend panel open | Amber period picker + NXT preview + Confirm/Cancel |
 
 ## Long-lock button colour
-- 3mo / 6mo / 1yr buttons use amber theme (not emerald) to signal higher commitment
-- Stake button turns amber for long locks
+- 3mo / 6mo / 1yr buttons use amber theme to signal higher commitment tier
 
 ## Table: sats_stakes
 Key columns: `id, userId, amountSats (bigint), lockDays, yieldRatePercent, maturesAt, nxtYield, status, claimedAt`
