@@ -8995,7 +8995,7 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  // POST /api/lightning/stake — stake sats for NXT yield
+  // POST /api/lightning/stake — stake sats for NXT yield (atomic)
   app.post("/api/lightning/stake", authenticate, async (req: Request, res: Response) => {
     try {
       const { amountSats, lockDays } = req.body;
@@ -9004,13 +9004,24 @@ export async function registerRoutes(
       const RATES: Record<number, string> = { 7: "5.00", 14: "12.00", 30: "28.00" };
       const { db } = await import("./db");
       const { lightningWallets, satsStakes } = await import("../shared/schema");
-      const { eq } = await import("drizzle-orm");
+      const { eq, sql: drizzleSql } = await import("drizzle-orm");
       const wallet = await ensureLnWallet(req.user!.id);
       if (wallet.satsBalance < amountSats) return res.status(400).json({ error: "Insufficient sats" });
-      await db.update(lightningWallets).set({ satsBalance: wallet.satsBalance - amountSats, updatedAt: new Date() }).where(eq(lightningWallets.userId, req.user!.id));
       const nxtYield = ((amountSats / 1000) * (parseFloat(RATES[lockDays]) / 100)).toFixed(8);
       const maturesAt = new Date(Date.now() + lockDays * 86_400_000);
-      const [stake] = await db.insert(satsStakes).values({ userId: req.user!.id, amountSats, lockDays, yieldRatePercent: RATES[lockDays], maturesAt, nxtYield, status: "active" }).returning();
+
+      // ── Atomic: deduct sats and create stake record together ──
+      let stake: any;
+      await db.transaction(async (tx) => {
+        await tx.update(lightningWallets)
+          .set({ satsBalance: drizzleSql`${lightningWallets.satsBalance} - ${amountSats}`, updatedAt: new Date() })
+          .where(eq(lightningWallets.userId, req.user!.id));
+        [stake] = await tx.insert(satsStakes).values({
+          userId: req.user!.id, amountSats, lockDays,
+          yieldRatePercent: RATES[lockDays], maturesAt, nxtYield, status: "active",
+        }).returning();
+      });
+
       await logAction(req, "sats_stake", "lightning", req.user!.id, { amountSats, lockDays, nxtYield });
       res.json({ ok: true, stake });
     } catch (err: any) { res.status(500).json({ error: err.message }); }

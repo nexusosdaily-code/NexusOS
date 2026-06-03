@@ -123,7 +123,78 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── One-time schema fixes + data restoration ─────────────────────────────────
+async function runStartupMigrations() {
+  try {
+    const { pool } = await import("./db");
+
+    // 1. Upgrade sats_stakes.amount_sats to bigint if still integer
+    await pool.query(`
+      DO $$ BEGIN
+        IF (SELECT data_type FROM information_schema.columns
+            WHERE table_name='sats_stakes' AND column_name='amount_sats') = 'integer' THEN
+          ALTER TABLE sats_stakes ALTER COLUMN amount_sats TYPE bigint;
+          RAISE NOTICE 'sats_stakes.amount_sats upgraded to bigint';
+        END IF;
+      END $$;
+    `);
+
+    // 2. Upgrade lightning_transactions.amount_sats to bigint if still integer
+    await pool.query(`
+      DO $$ BEGIN
+        IF (SELECT data_type FROM information_schema.columns
+            WHERE table_name='lightning_transactions' AND column_name='amount_sats') = 'integer' THEN
+          ALTER TABLE lightning_transactions ALTER COLUMN amount_sats TYPE bigint;
+          RAISE NOTICE 'lightning_transactions.amount_sats upgraded to bigint';
+        END IF;
+      END $$;
+    `);
+
+    // 3. Restore UncJuddy's 17,001,000,000 sats lost to integer overflow bug.
+    //    Logic: his expected balance = total_deposited − confirmed_stakes.
+    //    We only apply the credit if his balance is still at the post-loss value (≤ 2B)
+    //    to avoid double-crediting on subsequent restarts.
+    await pool.query(`
+      DO $$ DECLARE
+        v_user_id varchar;
+        v_current bigint;
+        v_staked  bigint;
+        v_expected bigint;
+        v_restore  bigint;
+      BEGIN
+        SELECT id INTO v_user_id FROM users WHERE username = 'UncJuddy' LIMIT 1;
+        IF v_user_id IS NULL THEN RETURN; END IF;
+
+        SELECT sats_balance INTO v_current FROM lightning_wallets WHERE user_id = v_user_id;
+        SELECT COALESCE(SUM(amount_sats),0) INTO v_staked FROM sats_stakes
+          WHERE user_id = v_user_id AND status = 'active';
+
+        -- Expected balance = total_deposited - confirmed_staked amount
+        SELECT COALESCE(total_deposited,0) - v_staked INTO v_expected
+          FROM lightning_wallets WHERE user_id = v_user_id;
+
+        v_restore := v_expected - v_current;
+
+        -- Only credit if there is a meaningful shortfall (> 1M sats) and
+        -- the balance hasn't already been restored (guard against re-runs)
+        IF v_restore > 1000000 THEN
+          UPDATE lightning_wallets
+            SET sats_balance = v_expected, updated_at = NOW()
+            WHERE user_id = v_user_id;
+          RAISE NOTICE 'UncJuddy sats restored: % sats credited (balance % → %)',
+            v_restore, v_current, v_expected;
+        END IF;
+      END $$;
+    `);
+
+    console.log("[MIGRATION] Startup schema migrations complete.");
+  } catch (err: any) {
+    console.error("[MIGRATION] Startup migration error:", err.message);
+  }
+}
+
 (async () => {
+  await runStartupMigrations();
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

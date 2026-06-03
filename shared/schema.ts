@@ -1144,7 +1144,7 @@ export const lightningTransactions = pgTable("lightning_transactions", {
   id:               serial("id").primaryKey(),
   userId:           varchar("user_id", { length: 36 }).notNull().references(() => users.id),
   type:             text("type").notNull(), // "deposit" | "withdrawal" | "swap_to_nxt" | "swap_to_sats"
-  amountSats:       integer("amount_sats").notNull(),
+  amountSats:       bigint("amount_sats", { mode: "number" }).notNull(),
   nxtAmount:        decimal("nxt_amount", { precision: 20, scale: 8 }),
   paymentHash:      text("payment_hash"),
   paymentRequest:   text("payment_request"),
@@ -1243,7 +1243,7 @@ export type BtcAddressRegistryEntry = typeof btcAddressRegistry.$inferSelect;
 export const satsStakes = pgTable("sats_stakes", {
   id:               serial("id").primaryKey(),
   userId:           varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
-  amountSats:       integer("amount_sats").notNull(),
+  amountSats:       bigint("amount_sats", { mode: "number" }).notNull(),
   lockDays:         integer("lock_days").notNull().default(7),
   yieldRatePercent: decimal("yield_rate_percent", { precision: 5, scale: 2 }).notNull().default("5.00"),
   stakedAt:         timestamp("staked_at").notNull().defaultNow(),
