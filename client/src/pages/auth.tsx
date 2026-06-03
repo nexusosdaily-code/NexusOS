@@ -308,109 +308,19 @@ export default function AuthPage() {
             </TabsContent>
 
             <TabsContent value="register">
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="reg-username" className="text-gray-300">Username *</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
-                    <Input
-                      id="reg-username"
-                      type="text"
-                      placeholder="Choose username"
-                      className="pl-10 bg-slate-800/50 border-slate-700"
-                      value={registerData.username}
-                      onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
-                      required
-                      minLength={3}
-                      data-testid="input-register-username"
-                    />
-                  </div>
+              <div className="space-y-4 py-2">
+                <div className="bg-amber-900/20 border border-amber-500/40 rounded-lg p-5 text-center space-y-3">
+                  <div className="text-3xl">🔒</div>
+                  <div className="text-amber-300 font-semibold text-sm">Genesis Phase — Closed Network</div>
+                  <p className="text-gray-400 text-xs leading-relaxed">
+                    NexusOS is currently in closed genesis phase. Only members who have already received
+                    their <span className="text-yellow-400 font-mono">500M NXT</span> allocation may access the network.
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    If you are an existing member, use the <span className="text-white">Login</span> tab.
+                  </p>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="reg-email" className="text-gray-300">Email (optional)</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
-                    <Input
-                      id="reg-email"
-                      type="email"
-                      placeholder="Enter email"
-                      className="pl-10 bg-slate-800/50 border-slate-700"
-                      value={registerData.email}
-                      onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                      data-testid="input-register-email"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="reg-phone" className="text-gray-300">Phone (optional)</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
-                    <Input
-                      id="reg-phone"
-                      type="tel"
-                      placeholder="Enter phone number"
-                      className="pl-10 bg-slate-800/50 border-slate-700"
-                      value={registerData.phoneNumber}
-                      onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
-                      data-testid="input-register-phone"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="reg-password" className="text-gray-300">Password *</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
-                    <Input
-                      id="reg-password"
-                      type="password"
-                      placeholder="Create password (8+ chars)"
-                      className="pl-10 bg-slate-800/50 border-slate-700"
-                      value={registerData.password}
-                      onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                      required
-                      minLength={8}
-                      data-testid="input-register-password"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="reg-confirm" className="text-gray-300">Confirm Password *</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
-                    <Input
-                      id="reg-confirm"
-                      type="password"
-                      placeholder="Confirm password"
-                      className="pl-10 bg-slate-800/50 border-slate-700"
-                      value={registerData.confirmPassword}
-                      onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                      required
-                      data-testid="input-register-confirm"
-                    />
-                  </div>
-                </div>
-
-                <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3 flex items-center gap-3">
-                  <Wallet className="w-5 h-5 text-green-400" />
-                  <div>
-                    <p className="text-green-400 text-sm font-semibold">Welcome Bonus</p>
-                    <p className="text-green-300 text-xs">New accounts receive 5 NXT tokens</p>
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full bg-green-600 hover:bg-green-700"
-                  disabled={isLoading}
-                  data-testid="button-register"
-                >
-                  {isLoading ? "Creating account..." : "Create Account"}
-                </Button>
-              </form>
+              </div>
             </TabsContent>
           </Tabs>
         </Card>
