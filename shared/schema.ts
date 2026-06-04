@@ -32,6 +32,8 @@ export const users = pgTable("users", {
   // ── Admin BTC wallet (UniSat / on-chain) ──
   adminBtcAddress:      text("admin_btc_address"),
   adminBtcAddressSetAt: timestamp("admin_btc_address_set_at"),
+  // ── Lightning Address (e.g. user@walletofsatoshi.com) ──
+  lightningAddress: text("lightning_address"),
 }, (table) => ({
   usernameIdx: index("users_username_idx").on(table.username),
   emailIdx: index("users_email_idx").on(table.email),

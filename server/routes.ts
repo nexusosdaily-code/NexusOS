@@ -9026,6 +9026,120 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // PUT /api/user/lightning-address — save the user's personal Lightning Address
+  app.put("/api/user/lightning-address", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { lightningAddress } = req.body;
+      const addr = (lightningAddress ?? "").trim();
+      if (addr && !/^[a-zA-Z0-9._+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(addr))
+        return res.status(400).json({ error: "Invalid Lightning Address format (e.g. you@walletofsatoshi.com)" });
+      const { db } = await import("./db");
+      const { users: usersT } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(usersT)
+        .set({ lightningAddress: addr || null, updatedAt: new Date() })
+        .where(eq(usersT.id, req.user!.id));
+      res.json({ ok: true, lightningAddress: addr || null });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/user/lightning-address — get the user's saved Lightning Address
+  app.get("/api/user/lightning-address", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { users: usersT } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [user] = await db.select({ lightningAddress: usersT.lightningAddress })
+        .from(usersT).where(eq(usersT.id, req.user!.id));
+      res.json({ lightningAddress: user?.lightningAddress ?? null });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/lightning/send-to-ln-address — resolve Lightning Address → invoice → pay (or return invoice for manual pay)
+  app.post("/api/lightning/send-to-ln-address", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { lightningAddress, amountSats, save = false } = req.body;
+      const addr = (lightningAddress ?? "").trim();
+      if (!addr || !/^[a-zA-Z0-9._+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(addr))
+        return res.status(400).json({ error: "Invalid Lightning Address" });
+      if (!amountSats || typeof amountSats !== "number" || amountSats < 1)
+        return res.status(400).json({ error: "Minimum: 1 sat" });
+
+      const lnWallet = await ensureLnWallet(req.user!.id);
+      if (lnWallet.satsBalance < amountSats)
+        return res.status(400).json({ error: `Insufficient sats — have ${lnWallet.satsBalance.toLocaleString()}, need ${amountSats.toLocaleString()}` });
+
+      // Step 1 — resolve Lightning Address → bolt11 invoice (no provider needed)
+      let invoice: { payment_hash: string; payment_request: string };
+      try {
+        invoice = await lnurlPayCreateInvoice(addr, amountSats, "NexusOS withdrawal");
+      } catch (e: any) {
+        return res.status(400).json({ error: `Cannot resolve Lightning Address: ${e.message}` });
+      }
+
+      const { db } = await import("./db");
+      const { lightningWallets, lightningTransactions, users: usersT } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      // Optionally save the address to user profile
+      if (save) {
+        await db.update(usersT).set({ lightningAddress: addr, updatedAt: new Date() }).where(eq(usersT.id, req.user!.id));
+      }
+
+      const provider = detectLnProvider();
+
+      // Deduct sats first
+      await db.update(lightningWallets)
+        .set({
+          satsBalance: lnWallet.satsBalance - amountSats,
+          totalWithdrawn: lnWallet.totalWithdrawn + amountSats,
+          updatedAt: new Date(),
+        })
+        .where(eq(lightningWallets.userId, req.user!.id));
+
+      const [tx] = await db.insert(lightningTransactions).values({
+        userId:         req.user!.id,
+        type:           "withdrawal",
+        amountSats,
+        paymentRequest: invoice.payment_request,
+        paymentHash:    invoice.payment_hash,
+        memo:           `⚡ Lightning → ${addr}`,
+        status:         provider ? "pending" : "pending_manual",
+      }).returning();
+
+      if (provider) {
+        try {
+          const payHash = await lnPayInvoice(invoice.payment_request);
+          await db.update(lightningTransactions)
+            .set({ status: "completed", lnbitsPaymentId: payHash, completedAt: new Date() })
+            .where(eq(lightningTransactions.id, tx.id));
+          await logAction(req, "lightning_send_to_address", "lightning", req.user!.id, { amountSats, lightningAddress: addr });
+          return res.json({ ok: true, status: "paid", amountSats, lightningAddress: addr, paymentHash: payHash });
+        } catch (payErr: any) {
+          // Refund on failure
+          const fresh = await ensureLnWallet(req.user!.id);
+          await db.update(lightningWallets)
+            .set({ satsBalance: fresh.satsBalance + amountSats, totalWithdrawn: fresh.totalWithdrawn - amountSats, updatedAt: new Date() })
+            .where(eq(lightningWallets.userId, req.user!.id));
+          await db.update(lightningTransactions).set({ status: "failed" }).where(eq(lightningTransactions.id, tx.id));
+          return res.status(500).json({ error: payErr.message });
+        }
+      }
+
+      // No provider — sats reserved, return invoice for manual payment from another wallet
+      await logAction(req, "lightning_send_to_address_manual", "lightning", req.user!.id, { amountSats, lightningAddress: addr });
+      res.json({
+        ok: true,
+        status: "pending_manual",
+        amountSats,
+        lightningAddress: addr,
+        invoice: invoice.payment_request,
+        txId: tx.id,
+        note: "No Lightning provider is configured on this server. Pay the invoice below from your own wallet to complete this withdrawal. Your NexusOS sats have been reserved.",
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // PUT /api/user/admin-btc-wallet — save / update the logged-in user's admin BTC wallet
   app.put("/api/user/admin-btc-wallet", authenticate, async (req: Request, res: Response) => {
     try {

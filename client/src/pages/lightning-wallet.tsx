@@ -537,13 +537,19 @@ export default function ChannelDashboard() {
 
   const [bolt11, setBolt11] = useState("");
 
-  const [swapDir, setSwapDir]   = useState<"to_nxt" | "to_sats" | "sats_to_btc" | "btc_to_sats">("to_nxt");
+  const [swapDir, setSwapDir]   = useState<"to_nxt" | "to_sats" | "sats_to_btc" | "btc_to_sats" | "sats_to_ln">("to_nxt");
   const [swapSats, setSwapSats] = useState("1000");
   const [swapNxt, setSwapNxt]   = useState("1");
   const [withdrawBtcAddr, setWithdrawBtcAddr] = useState("");
   const [withdrawSats, setWithdrawSats]       = useState("10000");
   const [withdrawDone, setWithdrawDone]       = useState<any>(null);
   const [feeTier, setFeeTier]                 = useState<"slow"|"medium"|"fast">("medium");
+
+  // Lightning Address withdrawal state
+  const [lnAddr, setLnAddr]         = useState("");
+  const [lnAddrSats, setLnAddrSats] = useState("10000");
+  const [lnAddrSave, setLnAddrSave] = useState(true);
+  const [lnAddrResult, setLnAddrResult] = useState<any>(null);
 
   // Send P2P
   const [sendRecipient, setSendRecipient] = useState("");
@@ -786,6 +792,43 @@ export default function ChannelDashboard() {
       toast({ title: "⚡→🔴 Withdrawal queued", description: `${data.netSats?.toLocaleString()} sats → BTC at ${data.feeRateSatVbyte} sat/vB · ~${data.confirmEtaMins}min` });
     },
     onError: (e: any) => toast({ title: "Withdrawal failed", description: e.message, variant: "destructive" }),
+  });
+
+  // ── Saved Lightning Address ────────────────────────────────────────────────
+  const { data: savedLnAddrData, refetch: refetchLnAddr } = useQuery({
+    queryKey: ["/api/user/lightning-address"],
+    queryFn: async () => {
+      const r = await apiRequest("GET", "/api/user/lightning-address");
+      return r.json();
+    },
+    onSuccess: (d: any) => { if (d.lightningAddress && !lnAddr) setLnAddr(d.lightningAddress); },
+  } as any);
+
+  const savedLnAddress: string | null = savedLnAddrData?.lightningAddress ?? null;
+
+  const sendToLnAddress = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/lightning/send-to-ln-address", {
+        lightningAddress: lnAddr.trim(),
+        amountSats: parseInt(lnAddrSats),
+        save: lnAddrSave,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      return data;
+    },
+    onSuccess: (data: any) => {
+      setLnAddrResult(data);
+      refetchBal();
+      refetchLnAddr();
+      qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] });
+      if (data.status === "paid") {
+        toast({ title: "⚡ Sent!", description: `${parseInt(lnAddrSats).toLocaleString()} sats → ${lnAddr}` });
+      } else {
+        toast({ title: "⚡ Invoice ready", description: "Pay the invoice from your wallet to complete the withdrawal." });
+      }
+    },
+    onError: (e: any) => toast({ title: "Send failed", description: e.message, variant: "destructive" }),
   });
 
   const copy = (text: string) => { navigator.clipboard.writeText(text); toast({ title: "Copied to clipboard" }); };
@@ -1163,28 +1206,36 @@ export default function ChannelDashboard() {
               })()}
             </h2>
 
-            {/* Direction selector — 2×2 grid */}
-            <div className="grid grid-cols-2 gap-2">
+            {/* Direction selector */}
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setSwapDir("to_nxt")}
+                  data-testid="button-swap-to-nxt"
+                  className={`py-2 rounded text-xs font-semibold transition-all ${swapDir === "to_nxt" ? "bg-purple-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
+                >⚡ Sats → 🔬 NXT</button>
+                <button
+                  onClick={() => setSwapDir("to_sats")}
+                  data-testid="button-swap-to-sats"
+                  className={`py-2 rounded text-xs font-semibold transition-all ${swapDir === "to_sats" ? "bg-purple-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
+                >🔬 NXT → ⚡ Sats</button>
+                <button
+                  onClick={() => { setSwapDir("sats_to_btc"); if (btcWalletAddr && !withdrawBtcAddr) setWithdrawBtcAddr(btcWalletAddr); }}
+                  data-testid="button-swap-sats-to-btc"
+                  className={`py-2 rounded text-xs font-semibold transition-all ${swapDir === "sats_to_btc" ? "bg-orange-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
+                >⚡ Sats → 🔴 BTC</button>
+                <button
+                  onClick={() => setSwapDir("btc_to_sats")}
+                  data-testid="button-swap-btc-to-sats"
+                  className={`py-2 rounded text-xs font-semibold transition-all ${swapDir === "btc_to_sats" ? "bg-orange-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
+                >🔴 BTC → ⚡ Sats</button>
+              </div>
+              {/* Lightning Address withdrawal — full-width, recommended */}
               <button
-                onClick={() => setSwapDir("to_nxt")}
-                data-testid="button-swap-to-nxt"
-                className={`py-2 rounded text-xs font-semibold transition-all ${swapDir === "to_nxt" ? "bg-purple-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
-              >⚡ Sats → 🔬 NXT</button>
-              <button
-                onClick={() => setSwapDir("to_sats")}
-                data-testid="button-swap-to-sats"
-                className={`py-2 rounded text-xs font-semibold transition-all ${swapDir === "to_sats" ? "bg-purple-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
-              >🔬 NXT → ⚡ Sats</button>
-              <button
-                onClick={() => { setSwapDir("sats_to_btc"); if (btcWalletAddr && !withdrawBtcAddr) setWithdrawBtcAddr(btcWalletAddr); }}
-                data-testid="button-swap-sats-to-btc"
-                className={`py-2 rounded text-xs font-semibold transition-all ${swapDir === "sats_to_btc" ? "bg-orange-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
-              >⚡ Sats → 🔴 BTC</button>
-              <button
-                onClick={() => setSwapDir("btc_to_sats")}
-                data-testid="button-swap-btc-to-sats"
-                className={`py-2 rounded text-xs font-semibold transition-all ${swapDir === "btc_to_sats" ? "bg-orange-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
-              >🔴 BTC → ⚡ Sats</button>
+                onClick={() => { setSwapDir("sats_to_ln"); setLnAddrResult(null); if (savedLnAddress && !lnAddr) setLnAddr(savedLnAddress); }}
+                data-testid="button-swap-sats-to-ln"
+                className={`w-full py-2 rounded text-xs font-semibold transition-all border ${swapDir === "sats_to_ln" ? "bg-cyan-600 border-cyan-500 text-white" : "bg-slate-800/50 border-slate-700/50 text-cyan-400 hover:border-cyan-600/50 hover:text-white"}`}
+              >⚡ Sats → ⚡ Lightning Address <span className="opacity-70 font-normal">(instant)</span></button>
             </div>
 
             {/* Balance summary */}
@@ -1203,6 +1254,14 @@ export default function ChannelDashboard() {
                   <div className="text-gray-500">On-chain BTC · min 1,000 sats
                     {mempoolLive?.ok && <> · <span className={`font-mono ${mempoolLive.congestionLevel === "low" ? "text-green-400" : mempoolLive.congestionLevel === "medium" ? "text-amber-400" : "text-orange-400"}`}>{mempoolLive.medium} sat/vB · {mempoolLive.congestionLevel}</span></>}
                   </div>
+                </>
+              )}
+              {swapDir === "sats_to_ln" && (
+                <>
+                  <div>⚡ <span className="text-yellow-300 font-mono">{satsDisplay(sats)} sats</span>
+                    {savedLnAddress && <> · saved: <span className="text-cyan-300 font-mono">{savedLnAddress}</span></>}
+                  </div>
+                  <div className="text-gray-500">Lightning Network · instant · no on-chain fee</div>
                 </>
               )}
             </div>
@@ -1513,6 +1572,153 @@ export default function ChannelDashboard() {
                         </div>
                       ))}
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Sats → Lightning Address ── */}
+            {swapDir === "sats_to_ln" && (
+              <div className="space-y-4">
+                <div className="bg-cyan-900/10 border border-cyan-500/20 rounded-lg p-4 space-y-3">
+                  <div className="text-xs text-cyan-300 font-semibold uppercase tracking-wider flex items-center gap-2">
+                    <Zap className="w-3.5 h-3.5" />
+                    Send to Lightning Address
+                  </div>
+
+                  {/* Address input */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-gray-400 uppercase tracking-wider">Lightning Address</label>
+                    <input
+                      type="text"
+                      value={lnAddr}
+                      onChange={e => setLnAddr(e.target.value)}
+                      placeholder="you@walletofsatoshi.com"
+                      data-testid="input-ln-address"
+                      className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-cyan-500"
+                    />
+                    {savedLnAddress && savedLnAddress !== lnAddr && (
+                      <button
+                        className="text-[10px] text-cyan-400 hover:text-cyan-300 underline"
+                        onClick={() => setLnAddr(savedLnAddress)}
+                      >
+                        Use saved: {savedLnAddress}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Amount input */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-gray-400 uppercase tracking-wider">Amount (sats)</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={lnAddrSats}
+                        onChange={e => setLnAddrSats(e.target.value)}
+                        min="1"
+                        max={sats}
+                        data-testid="input-ln-amount-sats"
+                        className="flex-1 bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-cyan-500"
+                      />
+                      <button
+                        className="text-[10px] text-cyan-400 border border-cyan-700/50 rounded px-2 hover:bg-cyan-900/30"
+                        onClick={() => setLnAddrSats(String(Math.max(1, sats - 10)))}
+                      >Max</button>
+                    </div>
+                    <div className="text-[10px] text-gray-500">
+                      Balance: <span className="text-yellow-300 font-mono">{satsDisplay(sats)} sats</span>
+                    </div>
+                  </div>
+
+                  {/* Save checkbox */}
+                  <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={lnAddrSave}
+                      onChange={e => setLnAddrSave(e.target.checked)}
+                      data-testid="checkbox-ln-save-address"
+                      className="accent-cyan-500"
+                    />
+                    Remember this address
+                  </label>
+
+                  {/* Send button */}
+                  {!lnAddrResult && (
+                    <Button
+                      onClick={() => sendToLnAddress.mutate()}
+                      disabled={sendToLnAddress.isPending || !lnAddr.trim() || parseInt(lnAddrSats) < 1}
+                      data-testid="button-send-to-ln-address"
+                      className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-sm"
+                    >
+                      {sendToLnAddress.isPending ? "Resolving & sending…" : `⚡ Send ${parseInt(lnAddrSats || "0").toLocaleString()} sats`}
+                    </Button>
+                  )}
+
+                  {/* Result — auto-paid */}
+                  {lnAddrResult?.status === "paid" && (
+                    <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3 space-y-2">
+                      <div className="text-green-400 font-semibold text-sm">✓ Sent!</div>
+                      <div className="text-xs text-gray-300">
+                        <span className="text-yellow-300 font-mono">{lnAddrResult.amountSats?.toLocaleString()} sats</span>
+                        {" → "}
+                        <span className="text-cyan-300 font-mono">{lnAddrResult.lightningAddress}</span>
+                      </div>
+                      {lnAddrResult.paymentHash && (
+                        <div className="text-[10px] text-gray-500 font-mono break-all">
+                          hash: {lnAddrResult.paymentHash}
+                        </div>
+                      )}
+                      <Button size="sm" variant="outline" className="border-slate-600 text-xs w-full"
+                        onClick={() => { setLnAddrResult(null); setLnAddrSats("10000"); }}>
+                        Send another
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Result — manual invoice (no provider configured) */}
+                  {lnAddrResult?.status === "pending_manual" && (
+                    <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-3 space-y-3">
+                      <div className="text-amber-400 font-semibold text-sm flex items-center gap-2">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        Pay this invoice to complete withdrawal
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Your <span className="text-yellow-300 font-mono">{lnAddrResult.amountSats?.toLocaleString()} sats</span> are reserved.
+                        Pay the invoice below from any Lightning wallet to send them to{" "}
+                        <span className="text-cyan-300 font-mono">{lnAddrResult.lightningAddress}</span>.
+                      </div>
+                      <div className="font-mono text-[10px] text-white break-all bg-slate-800 rounded p-2 leading-relaxed select-all">
+                        {lnAddrResult.invoice}
+                      </div>
+                      <Button size="sm" variant="outline" className="border-slate-600 text-xs w-full"
+                        onClick={() => copy(lnAddrResult.invoice)}>
+                        <Copy className="w-3 h-3 mr-1" />Copy invoice
+                      </Button>
+                      <div className="text-[10px] text-gray-500">{lnAddrResult.note}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="text-xs text-gray-500 space-y-1.5">
+                  <div>• Works with any Lightning Address: Wallet of Satoshi, Strike, Cash App, Alby…</div>
+                  <div>• <span className="text-cyan-400">Instant</span> — no block confirmations, no on-chain fee</div>
+                  <div>• Min: <span className="text-cyan-300 font-mono">1 sat</span> · No platform fee on Lightning withdrawals</div>
+                </div>
+
+                {/* Reserve top-up guide */}
+                <div className="bg-slate-800/30 border border-slate-700/40 rounded-lg p-3 space-y-2">
+                  <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Reserve top-up guide</div>
+                  <div className="text-[10px] text-gray-500 space-y-1">
+                    <div>To add BTC reserves to NexusOS, send BTC from Wallet of Satoshi or any wallet to the service wallet:</div>
+                    <div
+                      className="font-mono text-[9px] text-orange-300 break-all bg-slate-800 rounded p-1.5 select-all cursor-pointer"
+                      onClick={() => copy("bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m")}
+                      title="Click to copy"
+                    >
+                      bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m
+                    </div>
+                    <div className="text-gray-600">Click address to copy · reserves back NexusOS withdrawals</div>
                   </div>
                 </div>
               </div>

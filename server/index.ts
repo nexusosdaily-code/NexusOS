@@ -228,6 +228,7 @@ async function runStartupMigrations() {
       CREATE INDEX IF NOT EXISTS btc_address_book_user_idx ON btc_address_book(user_id);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_btc_address text;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_btc_address_set_at timestamp;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS lightning_address text;
     `);
 
     console.log("[MIGRATION] Startup schema migrations complete.");
