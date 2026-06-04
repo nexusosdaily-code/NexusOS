@@ -1039,7 +1039,7 @@ export default function ChannelDashboard() {
                 className={`py-2 rounded text-xs font-semibold transition-all ${swapDir === "to_sats" ? "bg-purple-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
               >🔬 NXT → ⚡ Sats</button>
               <button
-                onClick={() => { setSwapDir("sats_to_btc"); if (btcWalletAddr) setWithdrawBtcAddr(btcWalletAddr); }}
+                onClick={() => { setSwapDir("sats_to_btc"); if (btcWalletAddr && !withdrawBtcAddr) setWithdrawBtcAddr(btcWalletAddr); }}
                 data-testid="button-swap-sats-to-btc"
                 className={`py-2 rounded text-xs font-semibold transition-all ${swapDir === "sats_to_btc" ? "bg-orange-600 text-white" : "bg-slate-800/50 text-gray-400 hover:text-white"}`}
               >⚡ Sats → 🔴 BTC</button>
@@ -1716,7 +1716,7 @@ export default function ChannelDashboard() {
             mempoolLive={mempoolLive}
             addressBook={addressBook}
             onRefreshAddressBook={refetchAddressBook}
-            onFillWithdrawAddr={(addr) => { setWithdrawBtcAddr(addr); setTab("swap"); }}
+            onFillWithdrawAddr={(addr) => { setWithdrawBtcAddr(addr); setSwapDir("sats_to_btc"); setTab("swap"); }}
           />
         )}
 
