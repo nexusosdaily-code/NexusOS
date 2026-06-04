@@ -144,12 +144,16 @@ function UniSatReceiveTab({
         method: "PUT", credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ btcAddress, label: "Admin Wallet" }),
-      }).then(r => r.json()),
+      }).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error || "Failed"); return d; }),
     onSuccess: (d: any) => {
-      if (d.error) { toast({ title: "Error", description: d.error, variant: "destructive" }); return; }
-      toast({ title: "✓ Admin wallet linked", description: "This address is now your admin/distribution wallet." });
-      qc.invalidateQueries({ queryKey: ["/api/lightning/address-book"] });
-      onRefreshAddressBook();
+      if (d.type === "lightning") {
+        toast({ title: "⚡ Lightning Address saved", description: `${d.lightningAddress} set as your withdrawal address.` });
+        qc.invalidateQueries({ queryKey: ["/api/user/lightning-address"] });
+      } else {
+        toast({ title: "✓ Admin wallet linked", description: "This address is now your admin/distribution wallet." });
+        qc.invalidateQueries({ queryKey: ["/api/lightning/address-book"] });
+        onRefreshAddressBook();
+      }
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });

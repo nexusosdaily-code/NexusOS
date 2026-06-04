@@ -9164,13 +9164,29 @@ export async function registerRoutes(
   });
 
   // PUT /api/user/admin-btc-wallet — save / update the logged-in user's admin BTC wallet
+  // Also accepts Lightning Addresses (user@domain) — routes them to lightningAddress field
   app.put("/api/user/admin-btc-wallet", authenticate, async (req: Request, res: Response) => {
     try {
       const { btcAddress, label = "Admin Wallet" } = req.body;
       if (!btcAddress) return res.status(400).json({ error: "btcAddress required" });
       const addr = btcAddress.trim();
+
+      // ── Lightning Address path ──────────────────────────────────────────────
+      if (addr.includes("@")) {
+        if (!/^[a-zA-Z0-9._+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(addr))
+          return res.status(400).json({ error: "Invalid Lightning Address format (e.g. you@walletofsatoshi.com)" });
+        const { db } = await import("./db");
+        const { users: usersTable } = await import("../shared/schema");
+        const { eq } = await import("drizzle-orm");
+        await db.update(usersTable)
+          .set({ lightningAddress: addr, updatedAt: new Date() })
+          .where(eq(usersTable.id, req.user!.id));
+        return res.json({ ok: true, lightningAddress: addr, type: "lightning" });
+      }
+
+      // ── On-chain BTC address path ───────────────────────────────────────────
       if (!/^(bc1[a-z0-9]{6,87}|[13][a-zA-HJ-NP-Z0-9]{25,34})$/.test(addr))
-        return res.status(400).json({ error: "Invalid Bitcoin address" });
+        return res.status(400).json({ error: "Invalid Bitcoin address. For Lightning, use format user@domain.com" });
       const { db } = await import("./db");
       const { users: usersTable, btcAddressBook } = await import("../shared/schema");
       const { eq, and, ne } = await import("drizzle-orm");
@@ -9182,7 +9198,7 @@ export async function registerRoutes(
         await db.insert(btcAddressBook).values({ userId: req.user!.id, label, btcAddress: addr, isAdmin: true });
       }
       await db.update(btcAddressBook).set({ isAdmin: false }).where(and(eq(btcAddressBook.userId, req.user!.id), ne(btcAddressBook.btcAddress, addr)));
-      res.json({ ok: true, adminBtcAddress: addr });
+      res.json({ ok: true, adminBtcAddress: addr, type: "btc" });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
