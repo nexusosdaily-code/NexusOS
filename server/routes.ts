@@ -8987,16 +8987,73 @@ export async function registerRoutes(
   });
 
   // POST /api/lightning/withdraw-to-btc — deduct sats, queue BTC on-chain withdrawal
+  // Also accepts Lightning Addresses (user@domain) — routes them through Lightning pay
   app.post("/api/lightning/withdraw-to-btc", authenticate, async (req: Request, res: Response) => {
     try {
       const { amountSats, btcAddress, feeTier = "medium" } = req.body;
-      if (!amountSats || typeof amountSats !== "number" || amountSats < 1000)
-        return res.status(400).json({ error: "Minimum withdrawal: 1,000 sats" });
+      if (!amountSats || typeof amountSats !== "number" || amountSats < 1)
+        return res.status(400).json({ error: "Minimum withdrawal: 1 sat" });
       if (!btcAddress || typeof btcAddress !== "string")
         return res.status(400).json({ error: "btcAddress required" });
       const addr = btcAddress.trim();
+
+      // ── Lightning Address path — delegate to LN pay flow ───────────────────
+      if (addr.includes("@")) {
+        if (!/^[a-zA-Z0-9._+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(addr))
+          return res.status(400).json({ error: "Invalid Lightning Address (e.g. you@walletofsatoshi.com)" });
+
+        const lnWalletLn = await ensureLnWallet(req.user!.id);
+        if (lnWalletLn.satsBalance < amountSats)
+          return res.status(400).json({ error: `Insufficient sats — have ${lnWalletLn.satsBalance.toLocaleString()}, need ${amountSats.toLocaleString()}` });
+
+        let invoice: { payment_hash: string; payment_request: string };
+        try {
+          invoice = await lnurlPayCreateInvoice(addr, amountSats, "NexusOS withdrawal");
+        } catch (e: any) {
+          return res.status(400).json({ error: `Cannot resolve Lightning Address: ${e.message}` });
+        }
+
+        const { db: dbLn } = await import("./db");
+        const { lightningWallets: lwLn, lightningTransactions: ltLn } = await import("../shared/schema");
+        const { eq: eqLn } = await import("drizzle-orm");
+
+        await dbLn.update(lwLn)
+          .set({ satsBalance: lnWalletLn.satsBalance - amountSats, totalWithdrawn: lnWalletLn.totalWithdrawn + amountSats, updatedAt: new Date() })
+          .where(eqLn(lwLn.userId, req.user!.id));
+
+        const [txLn] = await dbLn.insert(ltLn).values({
+          userId: req.user!.id, type: "withdrawal", amountSats,
+          paymentRequest: invoice.payment_request, paymentHash: invoice.payment_hash,
+          memo: `⚡ Lightning → ${addr}`, status: detectLnProvider() ? "pending" : "pending_manual",
+        }).returning();
+
+        const provider = detectLnProvider();
+        if (provider) {
+          try {
+            const payHash = await lnPayInvoice(invoice.payment_request);
+            await dbLn.update(ltLn).set({ status: "completed", lnbitsPaymentId: payHash, completedAt: new Date() }).where(eqLn(ltLn.id, txLn.id));
+            await logAction(req, "lightning_send_to_address", "lightning", req.user!.id, { amountSats, lightningAddress: addr });
+            return res.json({ ok: true, status: "paid", amountSats, lightningAddress: addr, paymentHash: payHash,
+              note: `⚡ Sent ${amountSats.toLocaleString()} sats to ${addr}` });
+          } catch (payErr: any) {
+            const fresh = await ensureLnWallet(req.user!.id);
+            await dbLn.update(lwLn).set({ satsBalance: fresh.satsBalance + amountSats, totalWithdrawn: fresh.totalWithdrawn - amountSats, updatedAt: new Date() }).where(eqLn(lwLn.userId, req.user!.id));
+            await dbLn.update(ltLn).set({ status: "failed" }).where(eqLn(ltLn.id, txLn.id));
+            return res.status(500).json({ error: payErr.message });
+          }
+        }
+
+        await logAction(req, "lightning_send_to_address_manual", "lightning", req.user!.id, { amountSats, lightningAddress: addr });
+        return res.json({ ok: true, status: "pending_manual", amountSats, lightningAddress: addr,
+          invoice: invoice.payment_request, txId: txLn.id,
+          note: `No Lightning provider configured. Pay the invoice below from your own wallet. Your sats are reserved.` });
+      }
+
+      // ── On-chain BTC path ──────────────────────────────────────────────────
+      if (amountSats < 1000)
+        return res.status(400).json({ error: "Minimum on-chain withdrawal: 1,000 sats" });
       if (!/^(bc1[a-z0-9]{6,87}|[13][a-zA-HJ-NP-Z0-9]{25,34})$/.test(addr))
-        return res.status(400).json({ error: "Invalid Bitcoin address" });
+        return res.status(400).json({ error: "Invalid Bitcoin address. For Lightning, use format user@domain.com" });
 
       const lnWallet = await ensureLnWallet(req.user!.id);
       if (lnWallet.satsBalance < amountSats)
