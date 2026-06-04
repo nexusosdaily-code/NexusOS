@@ -8727,9 +8727,131 @@ export async function registerRoutes(
           created_at TIMESTAMP NOT NULL DEFAULT NOW(),
           completed_at TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS lightning_payment_queue (
+          id SERIAL PRIMARY KEY,
+          user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+          tx_id INTEGER NOT NULL REFERENCES lightning_transactions(id) ON DELETE CASCADE,
+          invoice TEXT NOT NULL,
+          amount_sats BIGINT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'queued',
+          attempts INTEGER NOT NULL DEFAULT 0,
+          last_error TEXT,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          paid_at TIMESTAMP
+        );
       `);
     } catch (e: any) { console.error("[Lightning] Table init error:", e.message); }
   })();
+
+  // ── Lightning Payment Queue ────────────────────────────────────────────────
+  // Inserts all batch invoices into the queue and fires processing in background.
+  async function queueBatchPayments(
+    userId: string,
+    txId: number,
+    batchInvoices: Array<{ amountSats: number; payment_request: string }>
+  ): Promise<void> {
+    const { db } = await import("./db");
+    const { sql: s } = await import("drizzle-orm");
+    for (const inv of batchInvoices) {
+      await db.execute(s`
+        INSERT INTO lightning_payment_queue (user_id, tx_id, invoice, amount_sats, status, attempts)
+        VALUES (${userId}, ${txId}, ${inv.payment_request}, ${inv.amountSats}, 'queued', 0)
+      `);
+    }
+    // Fire-and-forget — process immediately in background
+    processBatchQueue(txId).catch(() => { /* silenced — background */ });
+  }
+
+  // Attempts to pay all queued invoices for a given tx (or all queued across all txs if txId is null).
+  async function processBatchQueue(txId?: number): Promise<void> {
+    const { db } = await import("./db");
+    const { sql: s } = await import("drizzle-orm");
+    const MAX_ATTEMPTS = 5;
+    try {
+      // Fetch queued / retryable items
+      const rows = (await db.execute(
+        txId !== undefined
+          ? s`SELECT * FROM lightning_payment_queue WHERE tx_id = ${txId} AND status IN ('queued','failed') AND attempts < ${MAX_ATTEMPTS} ORDER BY id`
+          : s`SELECT * FROM lightning_payment_queue WHERE status IN ('queued','failed') AND attempts < ${MAX_ATTEMPTS} ORDER BY id`
+      )).rows as any[];
+
+      for (const row of rows) {
+        // Mark processing
+        await db.execute(s`UPDATE lightning_payment_queue SET status='processing' WHERE id=${row.id}`);
+        try {
+          await lnPayInvoice(row.invoice as string);
+          await db.execute(s`
+            UPDATE lightning_payment_queue SET status='paid', paid_at=NOW() WHERE id=${row.id}
+          `);
+          console.log(`[LN Queue] Paid invoice #${row.id} — ${row.amount_sats} sats for tx ${row.tx_id}`);
+        } catch (err: any) {
+          const attempts = (row.attempts as number) + 1;
+          const newStatus = attempts >= MAX_ATTEMPTS ? "failed" : "queued";
+          await db.execute(s`
+            UPDATE lightning_payment_queue
+            SET status=${newStatus}, attempts=${attempts}, last_error=${err.message}
+            WHERE id=${row.id}
+          `);
+        }
+
+        // Check if parent tx is now fully paid
+        const remaining = (await db.execute(s`
+          SELECT COUNT(*) AS cnt FROM lightning_payment_queue
+          WHERE tx_id=${row.tx_id} AND status NOT IN ('paid')
+        `)).rows[0] as any;
+        if (Number(remaining.cnt) === 0) {
+          await db.execute(s`
+            UPDATE lightning_transactions SET status='completed', completed_at=NOW()
+            WHERE id=${row.tx_id}
+          `);
+          console.log(`[LN Queue] Tx #${row.tx_id} fully paid — all invoices settled`);
+        }
+      }
+    } catch (err: any) {
+      console.error("[LN Queue] processBatchQueue error:", err.message);
+    }
+  }
+
+  // GET /api/lightning/queue/:txId — queue progress for a transaction
+  app.get("/api/lightning/queue/:txId", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { sql: s } = await import("drizzle-orm");
+      const txId = parseInt(req.params.txId);
+      if (isNaN(txId)) return res.status(400).json({ error: "Invalid txId" });
+      const rows = (await db.execute(s`
+        SELECT id, invoice, amount_sats, status, attempts, last_error, paid_at, created_at
+        FROM lightning_payment_queue WHERE tx_id=${txId} AND user_id=${req.user!.id}
+        ORDER BY id
+      `)).rows as any[];
+      const paid  = rows.filter(r => r.status === "paid").length;
+      const total = rows.length;
+      const paidSats = rows.filter(r => r.status === "paid").reduce((a,r) => a + Number(r.amount_sats), 0);
+      const totalSats = rows.reduce((a,r) => a + Number(r.amount_sats), 0);
+      res.json({ ok: true, txId, paid, total, paidSats, totalSats, items: rows });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/lightning/queue/retry/:txId — manually trigger re-processing
+  app.post("/api/lightning/queue/retry/:txId", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { sql: s } = await import("drizzle-orm");
+      const txId = parseInt(req.params.txId);
+      if (isNaN(txId)) return res.status(400).json({ error: "Invalid txId" });
+      // Verify ownership
+      const txRows = (await db.execute(s`SELECT id FROM lightning_transactions WHERE id=${txId} AND user_id=${req.user!.id}`)).rows;
+      if (!txRows.length) return res.status(404).json({ error: "Transaction not found" });
+      // Reset failed items back to queued so they can be retried
+      await db.execute(s`
+        UPDATE lightning_payment_queue SET status='queued', attempts=0
+        WHERE tx_id=${txId} AND status='failed'
+      `);
+      // Kick off processing (fire-and-forget)
+      processBatchQueue(txId).catch(() => {});
+      res.json({ ok: true, message: "Queue processing started" });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
 
   // GET /api/lightning/status — check provider & reachability
   app.get("/api/lightning/status", authenticate, async (_req: Request, res: Response) => {
@@ -9067,36 +9189,20 @@ export async function registerRoutes(
         const [txLn] = await dbLn.insert(ltLn).values({
           userId: req.user!.id, type: "withdrawal", amountSats,
           paymentRequest: storedPR, paymentHash: firstInvoice.payment_hash,
-          memo: `⚡ Lightning → ${addr}`, status: detectLnProvider() ? "pending" : "pending_manual",
+          memo: `⚡ Lightning → ${addr}`, status: "queued",
         }).returning();
 
-        const provider = detectLnProvider();
-        if (provider) {
-          try {
-            // Attempt to pay all invoices in sequence via provider
-            for (const inv of batchInvoices) await lnPayInvoice(inv.payment_request);
-            await dbLn.update(ltLn).set({ status: "completed", completedAt: new Date() }).where(eqLn(ltLn.id, txLn.id));
-            await logAction(req, "lightning_send_to_address", "lightning", req.user!.id, { amountSats, lightningAddress: addr });
-            return res.json({ ok: true, status: "paid", amountSats, lightningAddress: addr,
-              note: `⚡ Sent ${amountSats.toLocaleString()} sats to ${addr}` });
-          } catch (payErr: any) {
-            await dbLn.update(ltLn).set({ status: "pending_manual" }).where(eqLn(ltLn.id, txLn.id));
-            await logAction(req, "lightning_send_to_address_manual", "lightning", req.user!.id, { amountSats, lightningAddress: addr, reason: payErr.message });
-            return res.json({
-              ok: true, status: "pending_manual", amountSats, lightningAddress: addr,
-              invoices: batchInvoices.map(i => ({ amountSats: i.amountSats, invoice: i.payment_request })),
-              txId: txLn.id, providerError: payErr.message,
-              note: `Automatic payment unavailable. Your ${amountSats.toLocaleString()} sats are reserved. Pay ${batchInvoices.length > 1 ? `all ${batchInvoices.length} invoices below` : "the invoice below"} from any funded Lightning wallet to complete the withdrawal.`,
-            });
-          }
-        }
-
-        await logAction(req, "lightning_send_to_address_manual", "lightning", req.user!.id, { amountSats, lightningAddress: addr });
+        // Queue all invoices — background worker processes & retries automatically
+        await queueBatchPayments(
+          req.user!.id, txLn.id,
+          batchInvoices.map(i => ({ amountSats: i.amountSats, payment_request: i.payment_request }))
+        );
+        await logAction(req, "lightning_send_queued", "lightning", req.user!.id, { amountSats, lightningAddress: addr, invoiceCount: batchInvoices.length });
         return res.json({
-          ok: true, status: "pending_manual", amountSats, lightningAddress: addr,
+          ok: true, status: "queued", amountSats, lightningAddress: addr,
           invoices: batchInvoices.map(i => ({ amountSats: i.amountSats, invoice: i.payment_request })),
-          txId: txLn.id,
-          note: `Pay ${batchInvoices.length > 1 ? `all ${batchInvoices.length} invoices below` : "the invoice below"} from any funded Lightning wallet to withdraw ${amountSats.toLocaleString()} sats. Your NexusOS sats are reserved.`,
+          txId: txLn.id, invoiceCount: batchInvoices.length,
+          note: `⚡ ${batchInvoices.length} invoice${batchInvoices.length > 1 ? "s" : ""} queued. NexusOS is processing them automatically in the background.`,
         });
       }
 
@@ -9236,36 +9342,20 @@ export async function registerRoutes(
         paymentRequest: storedPR,
         paymentHash:    batchInvoices[0].payment_hash,
         memo:           `⚡ Lightning → ${addr}`,
-        status:         provider ? "pending" : "pending_manual",
+        status:         "queued",
       }).returning();
 
-      if (provider) {
-        try {
-          for (const inv of batchInvoices) await lnPayInvoice(inv.payment_request);
-          await db.update(lightningTransactions)
-            .set({ status: "completed", completedAt: new Date() })
-            .where(eq(lightningTransactions.id, tx.id));
-          await logAction(req, "lightning_send_to_address", "lightning", req.user!.id, { amountSats, lightningAddress: addr });
-          return res.json({ ok: true, status: "paid", amountSats, lightningAddress: addr });
-        } catch (payErr: any) {
-          await db.update(lightningTransactions).set({ status: "pending_manual" }).where(eq(lightningTransactions.id, tx.id));
-          await logAction(req, "lightning_send_to_address_manual", "lightning", req.user!.id, { amountSats, lightningAddress: addr, reason: payErr.message });
-          return res.json({
-            ok: true, status: "pending_manual", amountSats, lightningAddress: addr,
-            invoices: batchInvoices.map(i => ({ amountSats: i.amountSats, invoice: i.payment_request })),
-            txId: tx.id, providerError: payErr.message,
-            note: `Automatic payment unavailable. Your ${amountSats.toLocaleString()} sats are reserved. Pay ${batchInvoices.length > 1 ? `all ${batchInvoices.length} invoices below` : "the invoice below"} from any funded Lightning wallet to complete the withdrawal.`,
-          });
-        }
-      }
-
-      // No provider — sats reserved, return invoices for manual payment
-      await logAction(req, "lightning_send_to_address_manual", "lightning", req.user!.id, { amountSats, lightningAddress: addr });
+      // Queue all invoices — background worker processes & retries automatically
+      await queueBatchPayments(
+        req.user!.id, tx.id,
+        batchInvoices.map(i => ({ amountSats: i.amountSats, payment_request: i.payment_request }))
+      );
+      await logAction(req, "lightning_send_queued", "lightning", req.user!.id, { amountSats, lightningAddress: addr, invoiceCount: batchInvoices.length });
       res.json({
-        ok: true, status: "pending_manual", amountSats, lightningAddress: addr,
+        ok: true, status: "queued", amountSats, lightningAddress: addr,
         invoices: batchInvoices.map(i => ({ amountSats: i.amountSats, invoice: i.payment_request })),
-        txId: tx.id,
-        note: `Pay ${batchInvoices.length > 1 ? `all ${batchInvoices.length} invoices below` : "the invoice below"} from any funded Lightning wallet to withdraw ${amountSats.toLocaleString()} sats. Your NexusOS sats are reserved.`,
+        txId: tx.id, invoiceCount: batchInvoices.length,
+        note: `⚡ ${batchInvoices.length} invoice${batchInvoices.length > 1 ? "s" : ""} queued. NexusOS is processing them automatically in the background.`,
       });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
@@ -10997,6 +11087,10 @@ export async function registerRoutes(
       } catch (err: any) { res.status(500).json({ error: err.message }); }
     });
   }
+
+  // ── Lightning Payment Queue auto-processor — runs every 60s, drains queued invoices ──
+  setInterval(() => { processBatchQueue().catch(() => {}); }, 60_000);
+  console.log("[LN Queue] Auto-processor started — retrying queued invoices every 60s");
 
   // ── Mempool fee-alert loop — runs every 5 min, sends Telegram alert when fees drop ──
   setInterval(async () => {

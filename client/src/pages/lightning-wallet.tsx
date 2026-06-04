@@ -47,11 +47,69 @@ function fmtTime(ts: string): string {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === "completed" || status === "confirmed")
+  if (status === "completed" || status === "confirmed" || status === "paid")
     return <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px]"><CheckCircle2 className="w-3 h-3 mr-1" />Transmitted</Badge>;
   if (status === "failed")
     return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]"><XCircle className="w-3 h-3 mr-1" />Failed</Badge>;
+  if (status === "queued" || status === "processing")
+    return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px]"><Clock className="w-3 h-3 mr-1" />Auto-paying</Badge>;
   return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+}
+
+function QueueProgress({ txId }: { txId: number }) {
+  const qc = useQueryClient();
+  const { data, refetch } = useQuery({
+    queryKey: [`/api/lightning/queue/${txId}`],
+    queryFn: async () => {
+      const r = await apiRequest("GET", `/api/lightning/queue/${txId}`);
+      return r.json();
+    },
+    refetchInterval: (d: any) => (d?.paid < d?.total ? 5_000 : false),
+  } as any);
+
+  const retry = useMutation({
+    mutationFn: async () => {
+      const r = await apiRequest("POST", `/api/lightning/queue/retry/${txId}`);
+      return r.json();
+    },
+    onSuccess: () => { refetch(); qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] }); },
+  });
+
+  if (!data) return null;
+  const { paid, total, paidSats, totalSats, items = [] } = data;
+  const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
+  const allDone = paid >= total && total > 0;
+  const hasFailed = items.some((i: any) => i.status === "failed" && i.attempts >= 5);
+
+  return (
+    <div className="bg-blue-900/15 border border-blue-500/25 rounded p-2 space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[10px] text-blue-300 font-semibold">
+          {allDone
+            ? `✓ All ${total} invoice${total > 1 ? "s" : ""} paid`
+            : `Auto-paying: ${paid}/${total} invoices${total > 1 ? ` (${satsDisplay(paidSats)}/${satsDisplay(totalSats)} sats)` : ""}`}
+        </div>
+        {!allDone && (
+          <Button size="sm" variant="outline" className="h-5 px-2 text-[9px] border-blue-500/40 text-blue-300"
+            onClick={() => retry.mutate()} disabled={retry.isPending}>
+            {retry.isPending ? "…" : "Retry now"}
+          </Button>
+        )}
+      </div>
+      {/* Progress bar */}
+      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${allDone ? "bg-green-500" : "bg-blue-500"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {hasFailed && (
+        <div className="text-[9px] text-red-400">
+          Some invoices failed (max retries reached). Connect a Lightning provider (Alby/LNbits) and click Retry.
+        </div>
+      )}
+    </div>
+  );
 }
 
 function nmToRgb(nm: number): string {
@@ -797,6 +855,9 @@ export default function ChannelDashboard() {
       if (data.status === "paid") {
         setLnAddrResult(data);
         toast({ title: "⚡ Sent!", description: `${data.amountSats?.toLocaleString()} sats → ${data.lightningAddress}` });
+      } else if (data.status === "queued") {
+        setLnAddrResult(data);
+        toast({ title: "⚡ Queued!", description: `${data.invoiceCount} invoice${data.invoiceCount > 1 ? "s" : ""} queued — NexusOS will pay them automatically.` });
       } else if (data.status === "pending_manual") {
         setLnAddrResult(data);
         toast({ title: "📋 Invoice ready", description: "Pay the invoice below from any Lightning wallet to complete withdrawal." });
@@ -838,6 +899,8 @@ export default function ChannelDashboard() {
       qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] });
       if (data.status === "paid") {
         toast({ title: "⚡ Sent!", description: `${parseInt(lnAddrSats).toLocaleString()} sats → ${lnAddr}` });
+      } else if (data.status === "queued") {
+        toast({ title: "⚡ Queued!", description: `${data.invoiceCount} invoice${data.invoiceCount > 1 ? "s" : ""} queued — processing automatically.` });
       } else {
         toast({ title: "⚡ Invoice ready", description: "Pay the invoice from your wallet to complete the withdrawal." });
       }
@@ -1689,6 +1752,31 @@ export default function ChannelDashboard() {
                     </div>
                   )}
 
+                  {/* Result — queued for automatic processing */}
+                  {lnAddrResult?.status === "queued" && (
+                    <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 space-y-2">
+                      <div className="text-blue-400 font-semibold text-sm flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 animate-spin" />
+                        Queued — processing automatically
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        <span className="text-yellow-300 font-mono">{lnAddrResult.amountSats?.toLocaleString()} sats</span>
+                        {" → "}
+                        <span className="text-cyan-300 font-mono">{lnAddrResult.lightningAddress}</span>
+                      </div>
+                      <div className="text-xs text-blue-300">
+                        {lnAddrResult.invoiceCount > 1
+                          ? `Split into ${lnAddrResult.invoiceCount} invoices. NexusOS pays each one automatically every 60s.`
+                          : "NexusOS will process this invoice automatically within 60s."}
+                      </div>
+                      <div className="text-[10px] text-gray-500">Check the Log tab for live payment progress. When a provider (Alby, LNbits) is connected all queued invoices drain automatically.</div>
+                      <Button size="sm" variant="outline" className="border-slate-600 text-xs w-full"
+                        onClick={() => { setLnAddrResult(null); setLnAddrSats("10000"); }}>
+                        Send another
+                      </Button>
+                    </div>
+                  )}
+
                   {/* Result — manual invoice(s) (no provider configured, or provider failed) */}
                   {lnAddrResult?.status === "pending_manual" && (() => {
                     // Normalise: server may return `invoices` array or legacy `invoice` string
@@ -2199,6 +2287,11 @@ export default function ChannelDashboard() {
                           <div className="mt-0.5"><StatusBadge status={tx.status} /></div>
                         </div>
                       </div>
+                      {/* Queued — show auto-payment progress */}
+                      {(tx.status === "queued" || tx.status === "processing") && tx.id && (
+                        <QueueProgress txId={tx.id} />
+                      )}
+
                       {/* Pending manual invoice(s) — show bolt11(s) so user can pay from any wallet */}
                       {tx.status === "pending_manual" && tx.paymentRequest && (() => {
                         // paymentRequest may be a JSON array (batch) or a plain bolt11
