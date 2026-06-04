@@ -787,13 +787,23 @@ export default function ChannelDashboard() {
         btcAddress: withdrawBtcAddr.trim(),
         feeTier,
       });
-      return res.json();
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Withdrawal failed");
+      return d;
     },
     onSuccess: (data: any) => {
-      setWithdrawDone(data);
       refetchBal();
       qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] });
-      toast({ title: "⚡→🔴 Withdrawal queued", description: `${data.netSats?.toLocaleString()} sats → BTC at ${data.feeRateSatVbyte} sat/vB · ~${data.confirmEtaMins}min` });
+      if (data.status === "paid") {
+        setLnAddrResult(data);
+        toast({ title: "⚡ Sent!", description: `${data.amountSats?.toLocaleString()} sats → ${data.lightningAddress}` });
+      } else if (data.status === "pending_manual") {
+        setLnAddrResult(data);
+        toast({ title: "📋 Invoice ready", description: "Pay the invoice below from any Lightning wallet to complete withdrawal." });
+      } else {
+        setWithdrawDone(data);
+        toast({ title: "⚡→🔴 Withdrawal queued", description: `${data.netSats?.toLocaleString()} sats → BTC at ${data.feeRateSatVbyte} sat/vB · ~${data.confirmEtaMins}min` });
+      }
     },
     onError: (e: any) => toast({ title: "Withdrawal failed", description: e.message, variant: "destructive" }),
   });

@@ -8560,6 +8560,7 @@ export async function registerRoutes(
   async function lnPayInvoice(bolt11: string): Promise<string> {
     const provider = detectLnProvider();
     if (provider === "coinos") {
+      // coinosReq throws on non-2xx; let it bubble so callers can handle gracefully
       const d = await coinosReq("/payments", "POST", { address: bolt11, type: "lightning" });
       return d.hash ?? d.id ?? "";
     }
@@ -9036,17 +9037,22 @@ export async function registerRoutes(
             return res.json({ ok: true, status: "paid", amountSats, lightningAddress: addr, paymentHash: payHash,
               note: `⚡ Sent ${amountSats.toLocaleString()} sats to ${addr}` });
           } catch (payErr: any) {
-            const fresh = await ensureLnWallet(req.user!.id);
-            await dbLn.update(lwLn).set({ satsBalance: fresh.satsBalance + amountSats, totalWithdrawn: fresh.totalWithdrawn - amountSats, updatedAt: new Date() }).where(eqLn(lwLn.userId, req.user!.id));
-            await dbLn.update(ltLn).set({ status: "failed" }).where(eqLn(ltLn.id, txLn.id));
-            return res.status(500).json({ error: payErr.message });
+            // Provider auth/funds error — keep sats reserved, give user a manual invoice
+            await dbLn.update(ltLn).set({ status: "pending_manual" }).where(eqLn(ltLn.id, txLn.id));
+            await logAction(req, "lightning_send_to_address_manual", "lightning", req.user!.id, { amountSats, lightningAddress: addr, reason: payErr.message });
+            return res.json({
+              ok: true, status: "pending_manual", amountSats, lightningAddress: addr,
+              invoice: invoice.payment_request, txId: txLn.id,
+              providerError: payErr.message,
+              note: `Automatic payment unavailable (${payErr.message}). Your ${amountSats.toLocaleString()} sats are reserved. Scan the invoice below from any funded Lightning wallet (Wallet of Satoshi, Phoenix, Muun, etc.) to complete the withdrawal.`,
+            });
           }
         }
 
         await logAction(req, "lightning_send_to_address_manual", "lightning", req.user!.id, { amountSats, lightningAddress: addr });
         return res.json({ ok: true, status: "pending_manual", amountSats, lightningAddress: addr,
           invoice: invoice.payment_request, txId: txLn.id,
-          note: `No Lightning provider configured. Pay the invoice below from your own wallet. Your sats are reserved.` });
+          note: `Pay the invoice below from any funded Lightning wallet to withdraw ${amountSats.toLocaleString()} sats. Your NexusOS sats are reserved.` });
       }
 
       // ── On-chain BTC path ──────────────────────────────────────────────────
@@ -9196,13 +9202,15 @@ export async function registerRoutes(
           await logAction(req, "lightning_send_to_address", "lightning", req.user!.id, { amountSats, lightningAddress: addr });
           return res.json({ ok: true, status: "paid", amountSats, lightningAddress: addr, paymentHash: payHash });
         } catch (payErr: any) {
-          // Refund on failure
-          const fresh = await ensureLnWallet(req.user!.id);
-          await db.update(lightningWallets)
-            .set({ satsBalance: fresh.satsBalance + amountSats, totalWithdrawn: fresh.totalWithdrawn - amountSats, updatedAt: new Date() })
-            .where(eq(lightningWallets.userId, req.user!.id));
-          await db.update(lightningTransactions).set({ status: "failed" }).where(eq(lightningTransactions.id, tx.id));
-          return res.status(500).json({ error: payErr.message });
+          // Provider auth/funds error — keep sats reserved, return manual invoice
+          await db.update(lightningTransactions).set({ status: "pending_manual" }).where(eq(lightningTransactions.id, tx.id));
+          await logAction(req, "lightning_send_to_address_manual", "lightning", req.user!.id, { amountSats, lightningAddress: addr, reason: payErr.message });
+          return res.json({
+            ok: true, status: "pending_manual", amountSats, lightningAddress: addr,
+            invoice: invoice.payment_request, txId: tx.id,
+            providerError: payErr.message,
+            note: `Automatic payment unavailable. Your ${amountSats.toLocaleString()} sats are reserved. Pay the invoice below from any funded Lightning wallet (Wallet of Satoshi, Phoenix, Muun, etc.) to complete the withdrawal.`,
+          });
         }
       }
 
