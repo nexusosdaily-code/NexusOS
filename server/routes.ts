@@ -3,6 +3,7 @@ import * as nostrService from "./nostr-service.js";
 import crypto from "crypto";
 import { bech32 as _bech32 } from "bech32";
 import * as tinySecp from "tiny-secp256k1";
+import { nip98 as _nip98, nip19 as _nip19, finalizeEvent as _nostrFinalize } from "nostr-tools";
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
@@ -8383,15 +8384,46 @@ export async function registerRoutes(
 
   // ── Coinos helpers ──────────────────────────────────────────────────────────
 
-  // Authenticated Coinos API helper — works with JWT token or nsec-based token
+  // Decode nsec1 bech32 → raw 32-byte Uint8Array private key
+  function _nsecToBytes(nsec: string): Uint8Array {
+    const decoded = _nip19.decode(nsec);
+    if (decoded.type !== "nsec") throw new Error("Not a valid nsec key");
+    return decoded.data as Uint8Array;
+  }
+
+  // Build a NIP-98 Authorization header for a given URL + method using the nsec key
+  async function _coinosNip98Header(url: string, method: string, body?: object): Promise<string> {
+    const nsec = process.env.COINOS_TOKEN ?? "";
+    const privKey = _nsecToBytes(nsec);
+    const authHeader = await _nip98.getToken(
+      url,
+      method,
+      (evt: any) => _nostrFinalize(evt, privKey),
+      true,        // includeAuthorizationScheme — prefixes "Nostr "
+      body ? JSON.stringify(body) : undefined,
+    );
+    return authHeader;
+  }
+
+  // Authenticated Coinos API helper — uses NIP-98 HTTP Auth when COINOS_TOKEN is nsec1,
+  // otherwise falls back to Bearer JWT.
   async function coinosReq(path: string, method = "GET", body?: object): Promise<any> {
     const token = process.env.COINOS_TOKEN ?? "";
+    const url = `https://coinos.io/api${path}`;
+
+    let authHeader: string;
+    if (token.startsWith("nsec1")) {
+      authHeader = await _coinosNip98Header(url, method, body);
+    } else {
+      authHeader = `Bearer ${token}`;
+    }
+
     const opts: RequestInit = {
       method,
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      headers: { Authorization: authHeader, "Content-Type": "application/json" },
     };
     if (body && method !== "GET") opts.body = JSON.stringify(body);
-    const r = await fetch(`https://coinos.io/api${path}`, opts);
+    const r = await fetch(url, opts);
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.message ?? d.error ?? `Coinos API error ${r.status}: ${path}`);
     return d;
