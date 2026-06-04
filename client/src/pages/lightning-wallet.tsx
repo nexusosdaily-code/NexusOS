@@ -16,7 +16,7 @@ import {
   Atom, Send, Users, Lock, Unlock, TrendingUp, Heart, QrCode,
 } from "lucide-react";
 
-const TABS = ["receive", "transmit", "swap", "send", "stake", "log"] as const;
+const TABS = ["receive", "transmit", "swap", "send", "stake", "unisat", "log"] as const;
 type Tab = typeof TABS[number];
 
 function satsDisplay(sats: number) {
@@ -67,6 +67,143 @@ function ChannelPulse({ nm }: { nm: number }) {
   const color = nmToRgb(nm);
   return (
     <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ background: color }} />
+  );
+}
+
+function UniSatReceiveTab({ mempoolLive }: { mempoolLive: any }) {
+  const { toast } = useToast();
+  const { available, connected, connect, address, balance, providerName, error: walletError, disconnect } = useUnisat();
+  const [manualAddr, setManualAddr] = useState("");
+
+  const displayAddr = connected && address ? address : manualAddr.trim() || null;
+  const qrUrl = displayAddr
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`bitcoin:${displayAddr}`)}&bgcolor=0f172a&color=ffffff&qzone=2`
+    : null;
+  const shortAddr = (a: string) => `${a.slice(0, 10)}…${a.slice(-8)}`;
+
+  return (
+    <Card className="bg-slate-900/60 border-slate-700/50 p-6 space-y-5">
+      <h2 className="text-white font-semibold flex items-center gap-2">
+        <Bitcoin className="w-4 h-4 text-orange-400" />
+        Receive via UniSat / BTC address
+      </h2>
+
+      <div className="space-y-3">
+        {!connected ? (
+          <div className="space-y-3">
+            {available ? (
+              <Button onClick={connect} className="w-full bg-orange-600 hover:bg-orange-700" data-testid="button-unisat-connect">
+                <Bitcoin className="w-4 h-4 mr-2" />
+                Connect {providerName} wallet
+              </Button>
+            ) : (
+              <div className="bg-amber-900/20 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-300 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>
+                  No Bitcoin wallet extension detected. Install{" "}
+                  <a href="https://unisat.io" target="_blank" rel="noopener noreferrer" className="underline">UniSat</a>,
+                  Xverse, or OKX — or paste your BTC address below.
+                </span>
+              </div>
+            )}
+            {walletError && <div className="text-red-400 text-xs">{walletError}</div>}
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <div className="flex-1 h-px bg-slate-700" />
+              <span>or enter address manually</span>
+              <div className="flex-1 h-px bg-slate-700" />
+            </div>
+            <Input
+              value={manualAddr}
+              onChange={e => setManualAddr(e.target.value)}
+              placeholder="bc1p… or 1… or 3…"
+              className="bg-slate-800/50 border-slate-700 font-mono text-sm"
+              data-testid="input-unisat-manual-addr"
+            />
+          </div>
+        ) : (
+          <div className="bg-orange-900/20 border border-orange-500/20 rounded-lg p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+              <div>
+                <div className="text-[10px] text-orange-400/70 font-semibold uppercase tracking-wider">{providerName} connected</div>
+                <div className="text-orange-200 font-mono text-xs mt-0.5">{shortAddr(address!)}</div>
+              </div>
+            </div>
+            <button onClick={disconnect} className="text-xs text-gray-500 hover:text-gray-300 underline">Disconnect</button>
+          </div>
+        )}
+
+        {connected && balance && (
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            {[
+              { label: "Confirmed",   value: balance.confirmed.toLocaleString() },
+              { label: "Unconfirmed", value: balance.unconfirmed.toLocaleString() },
+              { label: "Total",       value: balance.total.toLocaleString() },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-slate-800/50 rounded-lg p-2">
+                <div className="text-gray-500 text-[9px] uppercase tracking-wider">{label}</div>
+                <div className="font-mono text-orange-300 font-bold mt-0.5">{value}</div>
+                <div className="text-gray-600 text-[9px]">sats</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {displayAddr ? (
+        <div className="space-y-4">
+          <div className="flex flex-col items-center gap-3">
+            <div className="bg-slate-950 border border-orange-500/20 rounded-xl p-3">
+              <img
+                src={qrUrl!}
+                alt={`BTC receive QR`}
+                className="w-[180px] h-[180px] rounded-lg"
+                data-testid="img-unisat-qr"
+              />
+            </div>
+            <div className="text-[10px] text-orange-400/60 uppercase tracking-wider">Scan with UniSat or any Bitcoin wallet</div>
+          </div>
+
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 flex items-center gap-2">
+            <div className="flex-1 font-mono text-xs text-orange-200 break-all">{displayAddr}</div>
+            <button
+              onClick={() => { navigator.clipboard.writeText(displayAddr); toast({ title: "Address copied" }); }}
+              className="shrink-0 text-gray-400 hover:text-white transition-colors"
+              data-testid="button-unisat-copy-addr"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="text-xs text-gray-500 space-y-1.5">
+            <div>• Sats sent here land directly in your wallet — no NexusOS account needed</div>
+            <div>• Share the QR or copy the address so anyone can pay you</div>
+            {mempoolLive?.ok && (
+              <div className={`flex items-center gap-1 ${mempoolLive.congestionLevel === "low" ? "text-green-400" : mempoolLive.congestionLevel === "medium" ? "text-amber-400" : "text-orange-400"}`}>
+                <span className={`w-1.5 h-1.5 rounded-full inline-block ${mempoolLive.congestionLevel === "low" ? "bg-green-400" : mempoolLive.congestionLevel === "medium" ? "bg-amber-400" : "bg-orange-400"}`} />
+                Network: {mempoolLive.medium} sat/vB · ~{mempoolLive.confirmEta ?? 30}min confirmation
+              </div>
+            )}
+          </div>
+
+          <a
+            href={`https://mempool.space/address/${displayAddr}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 w-full py-2 text-xs text-gray-500 hover:text-orange-300 border border-slate-700/50 rounded-lg transition-colors"
+            data-testid="link-unisat-mempool"
+          >
+            <Activity className="w-3.5 h-3.5" />
+            View on mempool.space
+          </a>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-3 py-8 text-gray-600">
+          <QrCode className="w-12 h-12 opacity-20" />
+          <div className="text-sm text-center">Connect your wallet or paste an address<br />to generate a receive QR code</div>
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -511,6 +648,7 @@ export default function ChannelDashboard() {
               {t === "swap"     && <><ArrowRightLeft  className="w-3 h-3" />Swap</>}
               {t === "send"     && <><Users           className="w-3 h-3" />Send P2P</>}
               {t === "stake"    && <><TrendingUp      className="w-3 h-3" />Stake</>}
+              {t === "unisat"   && <><Bitcoin         className="w-3 h-3" />UniSat</>}
               {t === "log"      && <><Activity        className="w-3 h-3" />Log</>}
             </button>
           ))}
@@ -1362,6 +1500,9 @@ export default function ChannelDashboard() {
             )}
           </div>
         )}
+
+        {/* ── UNISAT RECEIVE ── */}
+        {tab === "unisat" && <UniSatReceiveTab mempoolLive={mempoolLive} />}
 
         {/* ── TRANSMISSIONS LOG ── */}
         {tab === "log" && (
