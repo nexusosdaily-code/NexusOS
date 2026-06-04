@@ -3,7 +3,7 @@ import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { spawn, ChildProcess } from "child_process";
+import { spawn, execSync, ChildProcess } from "child_process";
 import { seedGenesisBlock } from "./genesis";
 import { startBlockchainAuditor } from "./blockchain_auditor";
 import { seedGenesisNode } from "./genesis_node";
@@ -16,55 +16,43 @@ const httpServer = createServer(app);
 
 let flaskProcess: ChildProcess | null = null;
 
+function killPort(port: number) {
+  try { execSync(`fuser -k ${port}/tcp 2>/dev/null || true`); } catch {}
+  try { execSync(`pkill -9 -f "spectral_api" 2>/dev/null || true`); } catch {}
+}
+
 function startFlaskAPI() {
   if (process.env.NODE_ENV === "production") return;
-  
+
+  // Kill anything still holding port 5001 before we try to bind
+  killPort(5001);
+
   console.log("Starting Spectral API server on port 5001...");
-  
+
   flaskProcess = spawn("uv", ["run", "python", "spectral_api.py"], {
     stdio: ["ignore", "pipe", "pipe"],
     detached: false,
   });
 
-  flaskProcess.stdout?.on("data", (data) => {
-    process.stdout.write(data);
-  });
-
-  flaskProcess.stderr?.on("data", (data) => {
-    process.stderr.write(data);
-  });
-
-  flaskProcess.on("error", (err) => {
-    console.error("Failed to start Flask API:", err.message);
-  });
-
+  flaskProcess.stdout?.on("data", (data) => { process.stdout.write(data); });
+  flaskProcess.stderr?.on("data", (data) => { process.stderr.write(data); });
+  flaskProcess.on("error", (err) => { console.error("Failed to start Flask API:", err.message); });
   flaskProcess.on("exit", (code) => {
-    if (code !== 0 && code !== null) {
-      console.error(`Flask API exited with code ${code}`);
-    }
+    if (code !== 0 && code !== null) console.error(`Flask API exited with code ${code}`);
   });
 }
 
 function cleanupFlask() {
   if (flaskProcess && !flaskProcess.killed) {
-    flaskProcess.kill("SIGTERM");
+    try { flaskProcess.kill("SIGKILL"); } catch {}
     flaskProcess = null;
   }
+  try { execSync(`pkill -9 -f "spectral_api" 2>/dev/null || true`); } catch {}
 }
 
-process.on("SIGINT", () => {
-  cleanupFlask();
-  process.exit(0);
-});
-
-process.on("SIGTERM", () => {
-  cleanupFlask();
-  process.exit(0);
-});
-
-process.on("exit", () => {
-  cleanupFlask();
-});
+process.on("SIGINT",  () => { cleanupFlask(); process.exit(0); });
+process.on("SIGTERM", () => { cleanupFlask(); process.exit(0); });
+process.on("exit",    () => { cleanupFlask(); });
 
 startFlaskAPI();
 
@@ -275,13 +263,10 @@ async function runStartupMigrations() {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
+
+  // Retry listen up to 5 times (2s apart) so port conflicts on restart never crash the server
+  function listenWithRetry(attemptsLeft = 5) {
+    httpServer.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
       log(`serving on port ${port}`);
       // Seed genesis block after server is ready (non-blocking)
       seedGenesisBlock().catch(() => {});
@@ -315,6 +300,17 @@ async function runStartupMigrations() {
       }).catch((e) => console.error("[Assets Sentinel] Boot error:", e));
       // Start Telegram advocacy bot
       startTelegramBot();
-    },
-  );
+    });
+    httpServer.once("error", (err: any) => {
+      if (err.code === "EADDRINUSE" && attemptsLeft > 0) {
+        console.warn(`[PORT] Port ${port} busy — retrying in 2s (${attemptsLeft} attempts left)...`);
+        try { execSync(`fuser -k ${port}/tcp 2>/dev/null || true`); } catch {}
+        setTimeout(() => { httpServer.close(() => listenWithRetry(attemptsLeft - 1)); }, 2000);
+      } else {
+        console.error(`[PORT] Fatal: cannot bind port ${port}:`, err.message);
+        process.exit(1);
+      }
+    });
+  }
+  listenWithRetry();
 })();
