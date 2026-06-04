@@ -8383,6 +8383,20 @@ export async function registerRoutes(
 
   // ── Coinos helpers ──────────────────────────────────────────────────────────
 
+  // Authenticated Coinos API helper — works with JWT token or nsec-based token
+  async function coinosReq(path: string, method = "GET", body?: object): Promise<any> {
+    const token = process.env.COINOS_TOKEN ?? "";
+    const opts: RequestInit = {
+      method,
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    };
+    if (body && method !== "GET") opts.body = JSON.stringify(body);
+    const r = await fetch(`https://coinos.io/api${path}`, opts);
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.message ?? d.error ?? `Coinos API error ${r.status}: ${path}`);
+    return d;
+  }
+
   // Derives Lightning Address from an nsec Nostr private key (Coinos Nostr accounts
   // use their hex pubkey as the username: {pubkey}@coinos.io)
   function coinosNsecToAddress(nsec: string): string {
@@ -8466,15 +8480,24 @@ export async function registerRoutes(
     if (!invR.ok || inv.status === "ERROR") throw new Error(inv.reason || "LNURL-pay invoice request failed");
     const payment_request: string = inv.pr;
 
-    // Step 3 — decode bolt11 via Alby to get payment_hash
-    const decR = await fetch("https://api.getalby.com/decode/bolt11", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.ALBY_ACCESS_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ invoice: payment_request }),
-    });
-    const dec = await decR.json();
-    if (!decR.ok) throw new Error(dec.message || "Failed to decode invoice for payment_hash");
-    return { payment_hash: dec.payment_hash, payment_request };
+    // Step 3 — get payment_hash using the available provider (payment_hash is metadata only)
+    let payment_hash = payment_request; // safe fallback: store bolt11 itself
+    const provider = detectLnProvider();
+    try {
+      if (provider === "coinos") {
+        const dec = await coinosReq(`/decode?invoice=${encodeURIComponent(payment_request)}`);
+        if (dec.id || dec.payment_hash) payment_hash = dec.id ?? dec.payment_hash;
+      } else if (provider === "alby" && process.env.ALBY_ACCESS_TOKEN) {
+        const decR = await fetch("https://api.getalby.com/decode/bolt11", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${process.env.ALBY_ACCESS_TOKEN}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ invoice: payment_request }),
+        });
+        const dec = await decR.json();
+        if (decR.ok && dec.payment_hash) payment_hash = dec.payment_hash;
+      }
+    } catch { /* keep fallback */ }
+    return { payment_hash, payment_request };
   }
 
   async function lnCreateInvoice(amountSats: number, memo: string): Promise<{ payment_hash: string; payment_request: string }> {
