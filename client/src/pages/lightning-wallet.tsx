@@ -89,7 +89,38 @@ function UniSatReceiveTab({
   const [newLabel, setNewLabel]       = useState("");
   const [newAddr, setNewAddr]         = useState("");
 
+  // ── wnsp.io liquidity feed status ───────────────────────────────────────
+  const { data: feedStatus, refetch: refetchFeed } = useQuery<any>({
+    queryKey: ["/api/admin/wnsp-io-status"],
+    queryFn: () => fetch("/api/admin/wnsp-io-status", { credentials: "include" }).then(r => r.json()),
+    refetchInterval: 30_000,
+  });
+
+  const activateFeedMut = useMutation({
+    mutationFn: (btcAddress: string) =>
+      fetch("/api/admin/wnsp-io-address", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ btcAddress }),
+      }).then(r => r.json()),
+    onSuccess: (d: any) => {
+      if (d.ok) {
+        toast({ title: "💧 wnsp.io feed live", description: "Every BTC you receive here auto-credits to your NexusOS sats balance." });
+        refetchFeed();
+      } else {
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    },
+    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
   const displayAddr = connected && address ? address : manualAddr.trim() || null;
+
+  const feedActive    = feedStatus?.address;
+  const feedSnap      = feedStatus?.snapshot;
+  const sessionFed    = feedStatus?.sessionSatsFed ?? 0;
+  const isThisAddrFed = !!(feedActive && displayAddr && displayAddr === feedActive);
   const qrUrl = displayAddr
     ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`bitcoin:${displayAddr}`)}&bgcolor=0f172a&color=ffffff&qzone=2`
     : null;
@@ -227,6 +258,55 @@ function UniSatReceiveTab({
                 data-testid="button-save-admin-wallet"
               >
                 {saveAdminWallet.isPending ? "Saving…" : "★ Set as admin / owner wallet"}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* ── wnsp.io BTC → NexusOS sats bridge ──────────────────────── */}
+        {displayAddr && (
+          <div className={`rounded-xl border p-3 space-y-2 ${isThisAddrFed ? "bg-cyan-500/5 border-cyan-500/25" : "bg-slate-800/40 border-slate-700/50"}`}>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-gray-400">BTC → NexusOS sats</span>
+              {isThisAddrFed ? (
+                <span className="ml-auto flex items-center gap-1 text-[10px] font-mono text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-1.5 py-0.5 rounded">
+                  <span className="w-1 h-1 rounded-full bg-cyan-400 animate-pulse" /> LIVE
+                </span>
+              ) : feedActive && !isThisAddrFed ? (
+                <span className="ml-auto text-[10px] font-mono text-amber-400/70">Different address active</span>
+              ) : (
+                <span className="ml-auto text-[10px] font-mono text-gray-600">Not active</span>
+              )}
+            </div>
+
+            {isThisAddrFed && feedSnap ? (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-slate-900/50 rounded-lg p-2 text-center">
+                  <div className="text-[9px] text-gray-500 uppercase tracking-wider">On-chain balance</div>
+                  <div className="text-sm font-bold font-mono text-orange-300">{feedSnap.confirmed?.toLocaleString() ?? "…"}</div>
+                  <div className="text-[9px] text-gray-600">sats confirmed</div>
+                </div>
+                <div className="bg-slate-900/50 rounded-lg p-2 text-center">
+                  <div className="text-[9px] text-gray-500 uppercase tracking-wider">Auto-credited</div>
+                  <div className="text-sm font-bold font-mono text-cyan-300">{sessionFed.toLocaleString()}</div>
+                  <div className="text-[9px] text-gray-600">sats → your balance</div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-[10px] text-gray-500 leading-relaxed">
+                Any BTC received at this address is automatically credited to your NexusOS sats balance — from <em>any</em> Bitcoin wallet.
+              </p>
+            )}
+
+            {!isThisAddrFed && (
+              <Button
+                size="sm"
+                className="w-full bg-cyan-700 hover:bg-cyan-600 text-white text-xs"
+                onClick={() => activateFeedMut.mutate(displayAddr)}
+                disabled={activateFeedMut.isPending}
+                data-testid="button-activate-wnsp-feed"
+              >
+                {activateFeedMut.isPending ? "Activating…" : feedActive ? "Switch feed to this address" : "💧 Activate: receive BTC → sats"}
               </Button>
             )}
           </div>
