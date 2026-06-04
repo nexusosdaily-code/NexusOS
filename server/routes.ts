@@ -9312,14 +9312,16 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  // POST /api/lightning/address-book — add a new saved address
+  // POST /api/lightning/address-book — add a new saved address (BTC on-chain or Lightning Address)
   app.post("/api/lightning/address-book", authenticate, async (req: Request, res: Response) => {
     try {
       const { btcAddress, label = "Wallet" } = req.body;
-      if (!btcAddress) return res.status(400).json({ error: "btcAddress required" });
+      if (!btcAddress) return res.status(400).json({ error: "address required" });
       const addr = btcAddress.trim();
-      if (!/^(bc1[a-z0-9]{6,87}|[13][a-zA-HJ-NP-Z0-9]{25,34})$/.test(addr))
-        return res.status(400).json({ error: "Invalid Bitcoin address" });
+      const isBtc = /^(bc1[a-z0-9]{6,87}|[13][a-zA-HJ-NP-Z0-9]{25,34})$/.test(addr);
+      const isLnAddr = /^[a-zA-Z0-9._+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(addr);
+      if (!isBtc && !isLnAddr)
+        return res.status(400).json({ error: "Enter a valid Bitcoin address (bc1…) or Lightning Address (you@domain.com)" });
       const { db } = await import("./db");
       const { btcAddressBook } = await import("../shared/schema");
       const [entry] = await db.insert(btcAddressBook).values({ userId: req.user!.id, label, btcAddress: addr }).returning();
