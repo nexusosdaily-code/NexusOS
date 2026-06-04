@@ -298,6 +298,10 @@ async function runStartupMigrations() {
       import("./btc-assets-sentinel").then(({ startAssetsSentinel }) => {
         startAssetsSentinel();
       }).catch((e) => console.error("[Assets Sentinel] Boot error:", e));
+      // Start wnsp.io → Service Pool Liquidity Feed
+      import("./wnsp-io-liquidity").then(({ startWnspIoLiquidity }) => {
+        startWnspIoLiquidity();
+      }).catch((e) => console.error("[wnsp.io Liquidity] Boot error:", e));
       // Start Telegram advocacy bot
       startTelegramBot();
     });

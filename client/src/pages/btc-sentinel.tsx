@@ -3,11 +3,13 @@ import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, Shield, Wifi, WifiOff, AlertTriangle, CheckCircle2,
   XCircle, Clock, Copy, ExternalLink, Zap,
   ArrowDownLeft, Bitcoin, Key, ChevronDown, ChevronUp,
-  Download, RefreshCw, Plus, Trash2,
+  Download, RefreshCw, Plus, Trash2, Droplets,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -303,6 +305,9 @@ export default function BtcSentinelPage() {
 
         {/* My BTC Wallet */}
         <MyBtcWalletCard />
+
+        {/* wnsp.io Liquidity Feed */}
+        <WnspIoLiquidityPanel />
 
         {/* Footer */}
         <div className="mt-4 text-center text-xs text-gray-600 font-mono space-y-1">
@@ -750,6 +755,161 @@ function BtcDepositPanel() {
           </p>
         </div>
       )}
+    </Card>
+  );
+}
+
+// ── wnsp.io Liquidity Feed Panel ─────────────────────────────────────────────
+function WnspIoLiquidityPanel() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [addr, setAddr] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+
+  const { data: status, refetch: refetchStatus } = useQuery<any>({
+    queryKey: ["/api/admin/wnsp-io-status"],
+    queryFn: () => fetch("/api/admin/wnsp-io-status", { credentials: "include" }).then(r => r.json()),
+    refetchInterval: 30_000,
+  });
+
+  const { data: histData } = useQuery<any>({
+    queryKey: ["/api/admin/wnsp-io-history"],
+    queryFn: () => fetch("/api/admin/wnsp-io-history", { credentials: "include" }).then(r => r.json()),
+    enabled: showHistory,
+  });
+
+  const setAddrMut = useMutation({
+    mutationFn: async (btcAddress: string) => {
+      const r = await fetch("/api/admin/wnsp-io-address", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ btcAddress }),
+      });
+      return r.json();
+    },
+    onSuccess: (d: any) => {
+      if (d.ok) {
+        toast({ title: "✅ wnsp.io feed activated", description: d.message });
+        setAddr("");
+        refetchStatus();
+        qc.invalidateQueries({ queryKey: ["/api/admin/wnsp-io-history"] });
+      } else {
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    },
+    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  const activeAddr = status?.address;
+  const snap       = status?.snapshot;
+  const sessionFed = status?.sessionSatsFed ?? 0;
+  const feeds      = histData?.feeds ?? [];
+
+  return (
+    <Card className="bg-slate-900/60 border-cyan-500/20 overflow-hidden mt-4">
+      <div className="p-4 border-b border-cyan-500/20">
+        <div className="flex items-center gap-2">
+          <Droplets className="w-4 h-4 text-cyan-400" />
+          <span className="text-white font-semibold text-sm">wnsp.io Liquidity Feed</span>
+          {activeAddr ? (
+            <span className="ml-auto flex items-center gap-1 text-[10px] font-mono text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" /> LIVE
+            </span>
+          ) : (
+            <span className="ml-auto text-[10px] font-mono text-gray-500 bg-slate-800/50 px-2 py-0.5 rounded">
+              Not configured
+            </span>
+          )}
+        </div>
+        <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
+          Watches your wnsp.io UniSat BTC wallet. Every new inbound confirmed TX is
+          automatically credited to the NexusOS service sats pool.
+        </p>
+      </div>
+
+      <div className="p-4 space-y-4">
+        {/* Active address display */}
+        {activeAddr && snap && (
+          <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-lg p-3 space-y-2">
+            <div className="text-[10px] text-gray-500 uppercase tracking-wider font-mono">Watching</div>
+            <div className="font-mono text-[11px] text-cyan-300 break-all">{activeAddr}</div>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="bg-slate-800/40 rounded p-2 text-center">
+                <div className="text-[9px] text-gray-500 uppercase tracking-wider">Confirmed</div>
+                <div className="text-sm font-bold font-mono text-green-400">{snap.confirmed?.toLocaleString() ?? "—"}</div>
+                <div className="text-[9px] text-gray-600">sats</div>
+              </div>
+              <div className="bg-slate-800/40 rounded p-2 text-center">
+                <div className="text-[9px] text-gray-500 uppercase tracking-wider">Session Fed</div>
+                <div className="text-sm font-bold font-mono text-cyan-400">{sessionFed.toLocaleString()}</div>
+                <div className="text-[9px] text-gray-600">sats → pool</div>
+              </div>
+            </div>
+            {snap.checkedAt && (
+              <div className="text-[9px] text-gray-600 font-mono text-right">
+                Last checked {fmtTime(snap.checkedAt)}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Set / update address */}
+        <div className="space-y-2">
+          <div className="text-[10px] text-gray-500 uppercase tracking-wider font-mono">
+            {activeAddr ? "Update wnsp.io address" : "Set wnsp.io UniSat wallet address"}
+          </div>
+          <div className="flex gap-2">
+            <Input
+              value={addr}
+              onChange={e => setAddr(e.target.value)}
+              placeholder="bc1p… wnsp.io UniSat wallet"
+              className="bg-slate-800/50 border-slate-700 font-mono text-xs flex-1"
+              data-testid="input-wnsp-io-address"
+            />
+            <Button
+              size="sm"
+              onClick={() => setAddrMut.mutate(addr.trim())}
+              disabled={!addr.trim() || setAddrMut.isPending}
+              className="bg-cyan-600 hover:bg-cyan-700 shrink-0"
+              data-testid="button-set-wnsp-io-address"
+            >
+              {setAddrMut.isPending ? "…" : activeAddr ? "Update" : "Activate"}
+            </Button>
+          </div>
+          <p className="text-[10px] text-gray-600">
+            Paste the BTC address of your wnsp.io UniSat account. Only confirmed inbound TXs are credited.
+          </p>
+        </div>
+
+        {/* Feed history toggle */}
+        <button
+          onClick={() => setShowHistory(s => !s)}
+          className="w-full flex items-center justify-between text-[11px] font-mono text-gray-500 hover:text-gray-300 py-1 transition-colors"
+          data-testid="button-toggle-wnsp-io-history"
+        >
+          <span>Feed history ({feeds.length})</span>
+          {showHistory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        </button>
+
+        {showHistory && (
+          <div className="space-y-1.5 max-h-48 overflow-y-auto">
+            {feeds.length === 0 ? (
+              <div className="text-[10px] text-gray-600 text-center py-3">No feeds yet — waiting for confirmed inbound TXs</div>
+            ) : feeds.map((f: any, i: number) => (
+              <div key={i} className="flex items-center gap-2 bg-slate-800/40 rounded p-2 text-[10px] font-mono">
+                <Droplets className="w-3 h-3 text-cyan-400 shrink-0" />
+                <span className="text-gray-400 flex-1 truncate">{f.txid?.slice(0, 14)}…</span>
+                <span className="text-cyan-300 shrink-0">+{Number(f.sats_received).toLocaleString()} sats</span>
+                <a href={`https://mempool.space/tx/${f.txid}`} target="_blank" rel="noopener noreferrer"
+                  className="text-gray-600 hover:text-cyan-400 shrink-0">
+                  <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </Card>
   );
 }

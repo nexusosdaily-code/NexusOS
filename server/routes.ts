@@ -9049,6 +9049,51 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // ── wnsp.io Liquidity Feed admin routes ──────────────────────────────────────
+  // PUT /api/admin/wnsp-io-address — set the wnsp.io UniSat BTC address to watch
+  app.put("/api/admin/wnsp-io-address", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { btcAddress } = req.body;
+      if (!btcAddress) return res.status(400).json({ error: "btcAddress required" });
+      const addr = btcAddress.trim();
+      if (!/^(bc1[a-z0-9]{6,87}|[13][a-zA-HJ-NP-Z0-9]{25,34})$/.test(addr))
+        return res.status(400).json({ error: "Invalid Bitcoin address" });
+      const { setWnspIoAddress, startWnspIoLiquidity } = await import("./wnsp-io-liquidity");
+      setWnspIoAddress(addr);
+      // Restart the feed with the new address if it wasn't running
+      startWnspIoLiquidity().catch(() => {});
+      res.json({ ok: true, wnspIoAddress: addr, message: "wnsp.io liquidity feed updated and watching new address" });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/admin/wnsp-io-status — current snapshot + session total fed
+  app.get("/api/admin/wnsp-io-status", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { getWnspIoSnapshot, getWnspIoTotalFed, getWnspIoAddress } = await import("./wnsp-io-liquidity");
+      res.json({
+        ok:           true,
+        address:      getWnspIoAddress(),
+        snapshot:     getWnspIoSnapshot(),
+        sessionSatsFed: getWnspIoTotalFed(),
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/admin/wnsp-io-history — log of sats fed from wnsp.io wallet
+  app.get("/api/admin/wnsp-io-history", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { sql: S } = await import("drizzle-orm");
+      const rows = await db.execute(S`
+        SELECT txid, sats_received, credited_at, note
+        FROM wnsp_io_liquidity_feeds
+        ORDER BY credited_at DESC
+        LIMIT 50
+      `).catch(() => ({ rows: [] }));
+      res.json({ ok: true, feeds: rows.rows });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // GET /api/lightning/address-book — list saved BTC addresses for logged-in user
   app.get("/api/lightning/address-book", authenticate, async (req: Request, res: Response) => {
     try {
