@@ -8905,6 +8905,49 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/lightning/sweep-status — auto-sweep config + recent sweep history
+  app.get("/api/lightning/sweep-status", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db: _swDb } = await import("./db");
+      const { users: _swUsers, lightningTransactions: _swLT, lightningWallets: _swLW } = await import("../shared/schema");
+      const { eq: _swEq, desc: _swDesc, like: _swLike } = await import("drizzle-orm");
+
+      const [_swUser] = await _swDb.select().from(_swUsers).where(_swEq(_swUsers.id, req.user!.id));
+      const destAddr = _swUser?.lightningAddress ?? process.env.WOS_LIGHTNING_ADDRESS ?? null;
+
+      const [lnWallet] = await _swDb.select().from(_swLW).where(_swEq(_swLW.userId, req.user!.id));
+
+      const recentSweeps = await _swDb.select().from(_swLT)
+        .where(_swEq(_swLT.userId, req.user!.id))
+        .orderBy(_swDesc(_swLT.createdAt))
+        .limit(50);
+      const sweepTxs = recentSweeps.filter(tx =>
+        (tx.memo ?? "").includes("Auto-sweep") || (tx.memo ?? "").includes("auto-sweep")
+      );
+
+      const provider = detectLnProvider();
+      const providerReady = !!provider;
+
+      res.json({
+        enabled: !!destAddr,
+        destination: destAddr,
+        provider,
+        providerReady,
+        providerNote: !provider
+          ? "No Lightning provider configured. Fund Alby at getalby.com/node/embrace_albyhub."
+          : provider === "alby"
+            ? "Alby connected — ensure a funding source is set at getalby.com/node/embrace_albyhub"
+            : `${provider} connected`,
+        satsBalance: lnWallet?.satsBalance ?? "0",
+        totalWithdrawn: lnWallet?.totalWithdrawn ?? "0",
+        recentSweeps: sweepTxs.slice(0, 10).map(tx => ({
+          id: tx.id, status: tx.status, amountSats: tx.amountSats,
+          memo: tx.memo, createdAt: tx.createdAt,
+        })),
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // GET /api/lightning/balance — user's NexusOS sats balance
   app.get("/api/lightning/balance", authenticate, async (req: Request, res: Response) => {
     try {
@@ -9175,7 +9218,56 @@ export async function registerRoutes(
       });
 
       await logAction(req, "lightning_swap_to_sats", "lightning", req.user!.id, { amountSats, nxtAmount });
-      res.json({ ok: true, amountSats, nxtAmount: nxtAmount.toFixed(8), rate: LN_SATS_PER_NXT });
+
+      // ── Auto-sweep to WoS ────────────────────────────────────────────────────
+      // Fire-and-forget after response: fetch invoice from saved LN address → queue
+      const sweepUserId = req.user!.id;
+      const sweepSats   = amountSats;
+      setImmediate(async () => {
+        try {
+          const { db: swDb } = await import("./db");
+          const { users: swUsers, lightningWallets: swLW, lightningTransactions: swLT } = await import("../shared/schema");
+          const { eq: swEq, sql: swSql } = await import("drizzle-orm");
+
+          // 1. Get saved Lightning address (WoS)
+          const [swUser] = await swDb.select().from(swUsers).where(swEq(swUsers.id, sweepUserId));
+          const destAddr = swUser?.lightningAddress ?? process.env.WOS_LIGHTNING_ADDRESS ?? "";
+          if (!destAddr) { console.log("[AutoSweep] No destination address — set one in Transmit tab"); return; }
+
+          // 2. Fetch invoice(s) from destination LNURL
+          console.log(`[AutoSweep] ⚡ Fetching invoice(s): ${sweepSats.toLocaleString()} sats → ${destAddr}`);
+          const sweepInvoices = await lnurlPayBatchInvoices(destAddr, sweepSats, "NexusOS auto-sweep");
+
+          // 3. Deduct sats from Lightning wallet (they were credited by the swap above)
+          await swDb.update(swLW)
+            .set({
+              satsBalance:    swSql`${swLW.satsBalance} - ${sweepSats}`,
+              totalWithdrawn: swSql`${swLW.totalWithdrawn} + ${sweepSats}`,
+              updatedAt: new Date(),
+            })
+            .where(swEq(swLW.userId, sweepUserId));
+
+          // 4. Insert withdrawal transaction record
+          const storedPR = sweepInvoices.length === 1
+            ? sweepInvoices[0].payment_request
+            : JSON.stringify(sweepInvoices.map(i => ({ amountSats: i.amountSats, payment_request: i.payment_request })));
+          const [sweepTx] = await swDb.insert(swLT).values({
+            userId: sweepUserId, type: "withdrawal", amountSats: sweepSats,
+            paymentRequest: storedPR, paymentHash: sweepInvoices[0].payment_hash,
+            memo: `⚡ Auto-sweep → ${destAddr}`, status: "queued",
+          }).returning();
+
+          // 5. Queue all invoices — background worker pays via Alby automatically
+          await queueBatchPayments(sweepUserId, sweepTx.id,
+            sweepInvoices.map(i => ({ amountSats: i.amountSats, payment_request: i.payment_request })));
+
+          console.log(`[AutoSweep] ✅ Queued ${sweepInvoices.length} invoice(s) for tx #${sweepTx.id} → ${destAddr}`);
+        } catch (e: any) {
+          console.error("[AutoSweep] ⚠️ Error:", e.message);
+        }
+      });
+
+      res.json({ ok: true, amountSats, nxtAmount: nxtAmount.toFixed(8), rate: LN_SATS_PER_NXT, autoSweep: true });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 

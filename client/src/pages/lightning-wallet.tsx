@@ -14,7 +14,7 @@ import {
   Clock, CheckCircle2, XCircle, Copy, RefreshCw, AlertTriangle,
   Bitcoin, Radio, Waves, Activity, ArrowDownLeft, ArrowUpRight,
   Atom, Send, Users, Lock, Unlock, TrendingUp, Heart, QrCode, BookMarked,
-  ExternalLink,
+  ExternalLink, Smartphone, ArrowRight, CircleDot,
 } from "lucide-react";
 
 const TABS = ["receive", "transmit", "swap", "send", "stake", "unisat", "log"] as const;
@@ -869,6 +869,16 @@ export default function ChannelDashboard() {
     onError: (e: any) => toast({ title: "Withdrawal failed", description: e.message, variant: "destructive" }),
   });
 
+  // ── Auto-sweep status ──────────────────────────────────────────────────────
+  const { data: sweepStatus, refetch: refetchSweep } = useQuery({
+    queryKey: ["/api/lightning/sweep-status"],
+    queryFn: async () => {
+      const r = await apiRequest("GET", "/api/lightning/sweep-status");
+      return r.json();
+    },
+    refetchInterval: 30000,
+  });
+
   // ── Saved Lightning Address ────────────────────────────────────────────────
   const { data: savedLnAddrData, refetch: refetchLnAddr } = useQuery({
     queryKey: ["/api/user/lightning-address"],
@@ -1349,6 +1359,107 @@ export default function ChannelDashboard() {
               </div>
             </Card>
           )}
+
+          {/* ── Auto-sweep status card ── */}
+          <Card className="bg-slate-900/80 border-cyan-500/30 p-4" data-testid="card-autosweep-status">
+            <div className="text-[10px] text-cyan-400/70 uppercase tracking-wider font-semibold mb-3 flex items-center gap-1.5">
+              <Zap className="w-3 h-3" /> Payment Flow — WNSP.io → UniSat → WoS
+            </div>
+
+            {/* Flow diagram */}
+            <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
+              <div className="shrink-0 text-center">
+                <div className="w-10 h-10 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center mx-auto mb-1">
+                  <Atom className="w-4 h-4 text-purple-400" />
+                </div>
+                <div className="text-[9px] text-purple-300 font-semibold">WNSP.io</div>
+                <div className="text-[8px] text-gray-500">NXT</div>
+              </div>
+              <ArrowRight className="w-3 h-3 text-gray-600 shrink-0" />
+              <div className="shrink-0 text-center">
+                <div className="w-10 h-10 rounded-full bg-orange-500/20 border border-orange-500/40 flex items-center justify-center mx-auto mb-1">
+                  <Bitcoin className="w-4 h-4 text-orange-400" />
+                </div>
+                <div className="text-[9px] text-orange-300 font-semibold">UniSat</div>
+                <div className="text-[8px] text-gray-500">Sats</div>
+              </div>
+              <ArrowRight className="w-3 h-3 text-gray-600 shrink-0" />
+              <div className="shrink-0 text-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-1 border ${sweepStatus?.providerReady ? "bg-cyan-500/20 border-cyan-500/40" : "bg-amber-500/20 border-amber-500/40"}`}>
+                  <Zap className={`w-4 h-4 ${sweepStatus?.providerReady ? "text-cyan-400" : "text-amber-400"}`} />
+                </div>
+                <div className={`text-[9px] font-semibold ${sweepStatus?.providerReady ? "text-cyan-300" : "text-amber-300"}`}>
+                  {sweepStatus?.provider ? sweepStatus.provider.charAt(0).toUpperCase() + sweepStatus.provider.slice(1) : "Alby"}
+                </div>
+                <div className="text-[8px] text-gray-500">Lightning</div>
+              </div>
+              <ArrowRight className="w-3 h-3 text-gray-600 shrink-0" />
+              <div className="shrink-0 text-center">
+                <div className="w-10 h-10 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center mx-auto mb-1">
+                  <Smartphone className="w-4 h-4 text-green-400" />
+                </div>
+                <div className="text-[9px] text-green-300 font-semibold">WoS</div>
+                <div className="text-[8px] text-gray-500">Phone</div>
+              </div>
+            </div>
+
+            {/* Destination */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 bg-green-900/10 border border-green-500/20 rounded-lg px-3 py-2">
+                <Smartphone className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[9px] text-green-400/70 uppercase tracking-wider">Auto-sweep destination</div>
+                  <div className="text-xs text-green-300 font-mono truncate">
+                    {sweepStatus?.destination ?? "wispydice094@walletofsatoshi.com"}
+                  </div>
+                </div>
+                {sweepStatus?.enabled
+                  ? <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[9px] shrink-0"><CheckCircle2 className="w-3 h-3 mr-1" />Active</Badge>
+                  : <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30 text-[9px] shrink-0"><Clock className="w-3 h-3 mr-1" />No address</Badge>
+                }
+              </div>
+
+              {/* Provider status */}
+              <div className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${sweepStatus?.providerReady ? "bg-cyan-900/10 border-cyan-500/20" : "bg-amber-900/10 border-amber-500/20"}`}>
+                <CircleDot className={`w-3.5 h-3.5 shrink-0 ${sweepStatus?.providerReady ? "text-cyan-400" : "text-amber-400"}`} />
+                <div className="flex-1 min-w-0">
+                  <div className={`text-[9px] uppercase tracking-wider ${sweepStatus?.providerReady ? "text-cyan-400/70" : "text-amber-400/70"}`}>
+                    Lightning provider
+                  </div>
+                  <div className={`text-xs truncate ${sweepStatus?.providerReady ? "text-cyan-300" : "text-amber-300"}`}>
+                    {sweepStatus?.providerNote ?? "Checking…"}
+                  </div>
+                </div>
+                {!sweepStatus?.providerReady && (
+                  <a href="https://getalby.com/node/embrace_albyhub" target="_blank" rel="noreferrer">
+                    <Button size="sm" variant="outline" className="border-amber-500/40 text-amber-400 hover:text-white text-[9px] h-6 px-2 shrink-0">
+                      <ExternalLink className="w-3 h-3 mr-1" />Fund Alby
+                    </Button>
+                  </a>
+                )}
+              </div>
+
+              {/* Recent sweep activity */}
+              {sweepStatus?.recentSweeps?.length > 0 && (
+                <div className="mt-2">
+                  <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1.5">Recent auto-sweeps</div>
+                  <div className="space-y-1">
+                    {sweepStatus.recentSweeps.slice(0, 3).map((s: any) => (
+                      <div key={s.id} className="flex items-center gap-2 text-[10px]">
+                        <StatusBadge status={s.status} />
+                        <span className="font-mono text-yellow-300">{Number(s.amountSats).toLocaleString()} sats</span>
+                        <span className="text-gray-600 ml-auto">{fmtTime(s.createdAt)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="text-[9px] text-gray-600 pt-1">
+                Every NXT→sats swap triggers an automatic sweep to your WoS phone wallet. Payments execute via the queue worker every 60s.
+              </div>
+            </div>
+          </Card>
 
           <Card className="bg-slate-900/60 border-slate-700/50 p-6 space-y-4">
             <h2 className="text-white font-semibold flex items-center gap-2">
