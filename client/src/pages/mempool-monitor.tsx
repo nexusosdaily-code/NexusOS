@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, Activity, Zap, Layers, Clock, ExternalLink,
   RefreshCw, AlertTriangle, CheckCircle2, Cpu, Box,
-  TrendingUp, Radio,
+  TrendingUp, Radio, ShieldCheck, Timer,
 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -180,6 +180,13 @@ export default function MempoolMonitorPage() {
     refetchInterval: 30_000,
   });
 
+  const { data: minerScore } = useQuery<any>({
+    queryKey: ["/api/mempool/miner-score"],
+    queryFn: () => fetch("/api/mempool/miner-score").then(r => r.json()),
+    staleTime: 120_000,
+    refetchInterval: 120_000,
+  });
+
   useEffect(() => {
     if (data?.ok) setLastFetch(Date.now());
   }, [data]);
@@ -344,6 +351,56 @@ export default function MempoolMonitorPage() {
             </Card>
           );
         })()}
+
+        {/* Network Decentralization + Block Time */}
+        {minerScore?.ok && (
+          <Card className="bg-slate-900/60 border-slate-700/50 p-5 mb-4">
+            <div className="flex items-center gap-2 mb-4">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span className="text-white font-semibold text-sm">Network Health</span>
+              <span className="text-gray-600 font-mono text-[10px] ml-auto">last {minerScore.blockCount} blocks</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              {/* Herfindahl index */}
+              <div className="bg-slate-800/50 rounded-lg p-3">
+                <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Miner Concentration (HHI)</div>
+                <div className={`text-lg font-bold font-mono ${minerScore.decentralization === "healthy" ? "text-emerald-400" : minerScore.decentralization === "moderate" ? "text-amber-400" : "text-red-400"}`}>
+                  {minerScore.hhiPct}%
+                </div>
+                <div className={`text-[10px] font-semibold mt-0.5 ${minerScore.decentralization === "healthy" ? "text-emerald-400/70" : minerScore.decentralization === "moderate" ? "text-amber-400/70" : "text-red-400/70"}`}>
+                  {minerScore.decentralization === "healthy" ? "✅ Healthy" : minerScore.decentralization === "moderate" ? "⚠ Moderate" : "🔴 Concentrated"}
+                </div>
+                <div className="text-[9px] text-gray-600 mt-1">Lower = more decentralised</div>
+              </div>
+              {/* Block time deviation */}
+              <div className="bg-slate-800/50 rounded-lg p-3">
+                <div className="flex items-center gap-1 mb-1">
+                  <Timer className="w-3 h-3 text-cyan-400" />
+                  <div className="text-[9px] text-gray-500 uppercase tracking-wider">Avg Block Time</div>
+                </div>
+                <div className={`text-lg font-bold font-mono ${Math.abs(minerScore.blockTimeDeviationPct) < 10 ? "text-cyan-400" : Math.abs(minerScore.blockTimeDeviationPct) < 25 ? "text-amber-400" : "text-red-400"}`}>
+                  {Math.round(minerScore.avgBlockSecs / 60)}m {minerScore.avgBlockSecs % 60}s
+                </div>
+                <div className={`text-[10px] font-semibold mt-0.5 ${minerScore.blockTimeDeviationPct > 0 ? "text-amber-400/70" : "text-green-400/70"}`}>
+                  {minerScore.blockTimeDeviationPct > 0 ? `+${minerScore.blockTimeDeviationPct}%` : `${minerScore.blockTimeDeviationPct}%`} vs 10min target
+                </div>
+                <div className="text-[9px] text-gray-600 mt-1">Hash rate {minerScore.blockTimeDeviationPct > 10 ? "may be dropping" : minerScore.blockTimeDeviationPct < -10 ? "surging" : "stable"}</div>
+              </div>
+            </div>
+            {/* Miner share bars */}
+            <div className="space-y-1.5">
+              {minerScore.miners.slice(0, 5).map((m: any, i: number) => (
+                <div key={m.name} className="flex items-center gap-2">
+                  <div className="w-20 shrink-0 text-[10px] font-mono text-gray-400 truncate">{m.name}</div>
+                  <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${m.sharePct}%`, background: ["#22d3ee","#a78bfa","#fb923c","#34d399","#f472b6"][i] }} />
+                  </div>
+                  <div className="text-[10px] font-mono text-gray-500 w-8 text-right">{m.sharePct}%</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* Quick links */}
         <Card className="bg-slate-900/40 border-slate-800/50 p-4 mb-4">

@@ -6657,6 +6657,9 @@ export async function registerRoutes(
       const message = update?.message || update?.channel_post;
       if (!message) return res.json({ ok: true });
 
+      // Track chat IDs for fee alert broadcasts
+      if (message.chat?.id) _feeAlertSubs.add(String(message.chat.id));
+
       const video = message.video || message.document;
       if (!video) return res.json({ ok: true });
 
@@ -10573,6 +10576,33 @@ export async function registerRoutes(
       } catch (err: any) { res.status(500).json({ error: err.message }); }
     });
   }
+
+  // ── Mempool fee-alert loop — runs every 5 min, sends Telegram alert when fees drop ──
+  setInterval(async () => {
+    try {
+      const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+      if (!TG_TOKEN || _feeAlertSubs.size === 0) return;
+      const mp = await _fetchLiveMempool();
+      if (!mp) return;
+      const isLow = (mp.medium ?? 999) <= 5;
+      if (isLow && !_prevFeesWereLow && Date.now() - _lastFeeAlertSentAt > 3_600_000) {
+        const msg = `🟢 *Bitcoin fees are low right now!*\n\n⚡ Current rate: *${mp.medium} sat/vB* (Economy: ${mp.slow} sat/vB)\n💡 Good time to withdraw sats to BTC or top up your balance.\n\n→ Open NexusOS Wallet to act now.`;
+        for (const chatId of _feeAlertSubs) {
+          try {
+            await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chat_id: chatId, text: msg, parse_mode: "Markdown" }),
+              signal: AbortSignal.timeout(5_000),
+            });
+          } catch { /* non-fatal per-subscriber */ }
+        }
+        _lastFeeAlertSentAt = Date.now();
+        console.log(`[FEE ALERT] Low-fee alert sent to ${_feeAlertSubs.size} subscriber(s) at ${mp.medium} sat/vB`);
+      }
+      _prevFeesWereLow = isLow;
+    } catch { /* non-fatal */ }
+  }, 5 * 60_000);
 
   // ─────────────────────────────────────────────────────────────────────────────
 

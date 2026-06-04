@@ -122,6 +122,21 @@ export default function ChannelDashboard() {
     refetchInterval: 60_000,
   });
 
+  const { data: mempoolLive } = useQuery<any>({
+    queryKey: ["/api/mempool/live"],
+    queryFn: () => fetch("/api/mempool/live").then(r => r.json()),
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+
+  const { data: arbitrage } = useQuery<any>({
+    queryKey: ["/api/mempool/arbitrage"],
+    queryFn: () => fetch("/api/mempool/arbitrage").then(r => r.json()),
+    enabled: tab === "stake",
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
+
   const { data: lnHistory } = useQuery({
     queryKey: ["/api/lightning/transactions"],
     enabled: tab === "log",
@@ -300,6 +315,7 @@ export default function ChannelDashboard() {
       const res = await apiRequest("POST", "/api/lightning/withdraw-to-btc", {
         amountSats: parseInt(withdrawSats),
         btcAddress: withdrawBtcAddr.trim(),
+        feeTier,
       });
       return res.json();
     },
@@ -307,7 +323,7 @@ export default function ChannelDashboard() {
       setWithdrawDone(data);
       refetchBal();
       qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] });
-      toast({ title: "⚡→🔴 Withdrawal queued", description: `${data.netSats} sats on the way to your BTC address.` });
+      toast({ title: "⚡→🔴 Withdrawal queued", description: `${data.netSats?.toLocaleString()} sats → BTC at ${data.feeRateSatVbyte} sat/vB · ~${data.confirmEtaMins}min` });
     },
     onError: (e: any) => toast({ title: "Withdrawal failed", description: e.message, variant: "destructive" }),
   });
@@ -673,6 +689,17 @@ export default function ChannelDashboard() {
             <h2 className="text-white font-semibold flex items-center gap-2">
               <ArrowRightLeft className="w-4 h-4 text-purple-400" />
               Hot wallet transfers
+              {mempoolLive?.ok && (() => {
+                const lvl = mempoolLive.congestionLevel ?? "medium";
+                const col = lvl === "low" ? "text-green-400 bg-green-500/15" : lvl === "medium" ? "text-amber-400 bg-amber-500/15" : lvl === "high" ? "text-orange-400 bg-orange-500/15" : "text-red-400 bg-red-500/15";
+                const dot = lvl === "low" ? "bg-green-400" : lvl === "medium" ? "bg-amber-400" : lvl === "high" ? "bg-orange-400" : "bg-red-400";
+                return (
+                  <span className={`ml-auto flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full ${col}`} data-testid="badge-mempool-congestion">
+                    <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${dot}`} />
+                    {mempoolLive.medium} sat/vB
+                  </span>
+                );
+              })()}
             </h2>
 
             {/* Direction selector — 2×2 grid */}
@@ -712,7 +739,9 @@ export default function ChannelDashboard() {
                 <>
                   <div>⚡ <span className="text-yellow-300 font-mono">{satsDisplay(sats)} sats</span>
                     {btcConnected && <> · 🔴 <span className="text-orange-300 font-mono">BTC wallet connected</span></>}</div>
-                  <div className="text-gray-500">On-chain BTC · 0.5% withdrawal fee · min 1,000 sats</div>
+                  <div className="text-gray-500">On-chain BTC · min 1,000 sats
+                    {mempoolLive?.ok && <> · <span className={`font-mono ${mempoolLive.congestionLevel === "low" ? "text-green-400" : mempoolLive.congestionLevel === "medium" ? "text-amber-400" : "text-orange-400"}`}>{mempoolLive.medium} sat/vB · {mempoolLive.congestionLevel}</span></>}
+                  </div>
                 </>
               )}
             </div>
@@ -834,27 +863,59 @@ export default function ChannelDashboard() {
                         min="1000"
                         data-testid="input-withdraw-sats"
                       />
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-500">Fee: {Math.max(500, Math.round((parseInt(withdrawSats) || 0) * 0.005))} sats (0.5%)</span>
+                      <div className="flex justify-end text-xs">
                         <button className="text-orange-400 hover:text-orange-300" onClick={() => setWithdrawSats(String(sats))}>MAX</button>
                       </div>
                     </div>
-                    <div className="bg-orange-900/10 border border-orange-500/20 rounded-lg p-3 text-xs space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">You send</span>
-                        <span className="font-mono text-yellow-300">⚡ {parseInt(withdrawSats || "0").toLocaleString()} sats</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Network fee</span>
-                        <span className="font-mono text-orange-400">−{Math.max(500, Math.round((parseInt(withdrawSats) || 0) * 0.005))} sats</span>
-                      </div>
-                      <div className="flex justify-between border-t border-orange-500/20 pt-1">
-                        <span className="text-gray-400">BTC received</span>
-                        <span className="font-mono text-orange-300 font-bold">
-                          {Math.max(0, (parseInt(withdrawSats) || 0) - Math.max(500, Math.round((parseInt(withdrawSats) || 0) * 0.005))).toLocaleString()} sats
-                        </span>
+
+                    {/* Fee tier picker */}
+                    <div className="space-y-1.5">
+                      <div className="text-gray-400 text-xs">Network fee tier</div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {([
+                          { key: "slow"   as const, label: "Economy", rate: mempoolLive?.slow   ?? 8,  eta: 60, cls: "text-green-300 bg-green-500/15 border-green-500/40" },
+                          { key: "medium" as const, label: "Normal",  rate: mempoolLive?.medium ?? 20, eta: 30, cls: "text-amber-300 bg-amber-500/15 border-amber-500/40" },
+                          { key: "fast"   as const, label: "Fast",    rate: mempoolLive?.fast   ?? 50, eta: 10, cls: "text-red-300 bg-red-500/15 border-red-500/40" },
+                        ]).map(t => (
+                          <button key={t.key} onClick={() => setFeeTier(t.key)}
+                            data-testid={`button-fee-tier-${t.key}`}
+                            className={`rounded-lg p-2 text-center border transition-all ${feeTier === t.key ? t.cls : "bg-slate-800/40 border-slate-700/40 text-gray-500 hover:text-gray-300"}`}>
+                            <div className="text-[10px] font-semibold">{t.label}</div>
+                            <div className="text-[11px] font-mono">{t.rate} sat/vB</div>
+                            <div className="text-[9px] opacity-70">~{t.eta}min</div>
+                          </button>
+                        ))}
                       </div>
                     </div>
+
+                    {/* Dynamic fee breakdown */}
+                    {(() => {
+                      const amt = parseInt(withdrawSats) || 0;
+                      const rate = feeTier === "fast" ? (mempoolLive?.fast ?? 50) : feeTier === "slow" ? (mempoolLive?.slow ?? 8) : (mempoolLive?.medium ?? 20);
+                      const netFee = rate * 200;
+                      const platFee = Math.max(300, Math.round(amt * 0.003));
+                      const net = Math.max(0, amt - netFee - platFee);
+                      return (
+                        <div className="bg-orange-900/10 border border-orange-500/20 rounded-lg p-3 text-xs space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">You send</span>
+                            <span className="font-mono text-yellow-300">⚡ {amt.toLocaleString()} sats</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Network ({rate} sat/vB × 200 vB)</span>
+                            <span className="font-mono text-orange-400">−{netFee.toLocaleString()} sats</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Platform (0.3%, min 300)</span>
+                            <span className="font-mono text-orange-400">−{platFee.toLocaleString()} sats</span>
+                          </div>
+                          <div className="flex justify-between border-t border-orange-500/20 pt-1">
+                            <span className="text-gray-400">BTC received</span>
+                            <span className="font-mono text-orange-300 font-bold">{net.toLocaleString()} sats</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <Button
                       onClick={() => withdrawToBtc.mutate()}
                       disabled={withdrawToBtc.isPending || !withdrawBtcAddr.trim() || (parseInt(withdrawSats) || 0) < 1000 || (parseInt(withdrawSats) || 0) > sats}
@@ -908,6 +969,12 @@ export default function ChannelDashboard() {
                   <div>• Min deposit: <span className="text-orange-300 font-mono">{(depositInfo?.minDepositSats ?? 5000).toLocaleString()} sats</span></div>
                   <div>• ⚡ Lightning sats credited within ~30 seconds of broadcast</div>
                   <div>• Your sender address is auto-detected via the block scanner</div>
+                  {mempoolLive?.ok && (
+                    <div className={`flex items-center gap-1 ${mempoolLive.congestionLevel === "low" ? "text-green-400" : mempoolLive.congestionLevel === "medium" ? "text-amber-400" : "text-orange-400"}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full inline-block ${mempoolLive.congestionLevel === "low" ? "bg-green-400" : mempoolLive.congestionLevel === "medium" ? "bg-amber-400" : "bg-orange-400"}`} />
+                      Mempool: {mempoolLive.medium} sat/vB · {mempoolLive.pendingTxs ? `${(mempoolLive.pendingTxs/1000).toFixed(0)}K pending txs` : mempoolLive.congestionLevel}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1019,6 +1086,35 @@ export default function ChannelDashboard() {
                   );
                 })}
               </div>
+
+              {/* Arbitrage signal */}
+              {arbitrage?.ok && (
+                <div className={`rounded-lg p-3 text-xs border ${arbitrage.stakingWins ? "bg-emerald-900/20 border-emerald-500/20" : "bg-slate-800/30 border-slate-700/30"}`} data-testid="card-stake-arbitrage">
+                  <div className={`text-[10px] uppercase tracking-wider font-semibold mb-2 ${arbitrage.stakingWins ? "text-emerald-400" : "text-gray-500"}`}>
+                    {arbitrage.stakingWins ? "⚡ Staking beats moving BTC right now" : "ℹ Move vs. stake comparison"}
+                  </div>
+                  <div className="space-y-1 text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Move {(arbitrage.exampleSats/1_000).toFixed(0)}K sats on-chain (fee)</span>
+                      <span className="font-mono text-orange-400">−{arbitrage.networkFee.toLocaleString()} sats</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Stake same for 7 days → NXT yield</span>
+                      <span className="font-mono text-emerald-400">+{arbitrage.stakeYieldSats.toLocaleString()} sats</span>
+                    </div>
+                    <div className="flex justify-between border-t border-slate-700/30 pt-1">
+                      <span>Net advantage</span>
+                      <span className={`font-mono font-bold ${arbitrage.stakingWins ? "text-emerald-300" : "text-red-400"}`}>
+                        {arbitrage.stakingWins ? "+" : ""}{arbitrage.netAdvantage.toLocaleString()} sats
+                      </span>
+                    </div>
+                    <div className="text-[9px] text-gray-600 pt-0.5 flex items-center gap-2">
+                      <span>{arbitrage.feeRateSatVbyte} sat/vB · {arbitrage.congestionLevel}</span>
+                      {arbitrage.yieldBoost > 1 && <span className="text-amber-400/70">+{((arbitrage.yieldBoost - 1) * 100).toFixed(0)}% congestion yield boost</span>}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <Label className="text-gray-400 text-xs">Amount to stake (sats)</Label>
