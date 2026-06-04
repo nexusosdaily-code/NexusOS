@@ -1389,7 +1389,7 @@ export default function ChannelDashboard() {
                   <Zap className={`w-4 h-4 ${sweepStatus?.providerReady ? "text-cyan-400" : "text-amber-400"}`} />
                 </div>
                 <div className={`text-[9px] font-semibold ${sweepStatus?.providerReady ? "text-cyan-300" : "text-amber-300"}`}>
-                  {sweepStatus?.provider ? sweepStatus.provider.charAt(0).toUpperCase() + sweepStatus.provider.slice(1) : "Alby"}
+                  {sweepStatus?.provider === "coinos" ? "Coinos" : sweepStatus?.provider ? sweepStatus.provider.charAt(0).toUpperCase() + sweepStatus.provider.slice(1) : "Coinos"}
                 </div>
                 <div className="text-[8px] text-gray-500">Lightning</div>
               </div>
@@ -1424,20 +1424,39 @@ export default function ChannelDashboard() {
                 <CircleDot className={`w-3.5 h-3.5 shrink-0 ${sweepStatus?.providerReady ? "text-cyan-400" : "text-amber-400"}`} />
                 <div className="flex-1 min-w-0">
                   <div className={`text-[9px] uppercase tracking-wider ${sweepStatus?.providerReady ? "text-cyan-400/70" : "text-amber-400/70"}`}>
-                    Lightning provider
+                    Lightning bridge
                   </div>
                   <div className={`text-xs truncate ${sweepStatus?.providerReady ? "text-cyan-300" : "text-amber-300"}`}>
                     {sweepStatus?.providerNote ?? "Checking…"}
                   </div>
                 </div>
-                {!sweepStatus?.providerReady && (
-                  <a href="https://getalby.com/node/embrace_albyhub" target="_blank" rel="noreferrer">
-                    <Button size="sm" variant="outline" className="border-amber-500/40 text-amber-400 hover:text-white text-[9px] h-6 px-2 shrink-0">
-                      <ExternalLink className="w-3 h-3 mr-1" />Fund Alby
-                    </Button>
-                  </a>
+                {sweepStatus?.provider === "coinos" && typeof sweepStatus?.coinosBalance === "number" && (
+                  <Badge className={`text-[9px] shrink-0 ${sweepStatus.coinosBalance > 0 ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" : "bg-amber-500/20 text-amber-400 border-amber-500/30"}`}>
+                    {sweepStatus.coinosBalance > 0 ? `${sweepStatus.coinosBalance.toLocaleString()} sats` : "0 sats"}
+                  </Badge>
                 )}
               </div>
+
+              {/* Coinos funding row — shown when balance is 0 */}
+              {sweepStatus?.provider === "coinos" && sweepStatus?.coinosBalance === 0 && (
+                <div className="flex items-start gap-2 rounded-lg px-3 py-2 border bg-blue-900/10 border-blue-500/20">
+                  <Zap className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[9px] text-blue-400/70 uppercase tracking-wider mb-0.5">Fund Coinos to enable sweeps</div>
+                    <div className="text-[10px] text-blue-300 font-mono truncate">
+                      nexusosmain@coinos.io
+                    </div>
+                    <div className="text-[9px] text-gray-500 mt-0.5">
+                      Send any Lightning payment to this address — funds auto-sweep to your WoS wallet
+                    </div>
+                  </div>
+                  <a href="https://coinos.io/nexusosmain" target="_blank" rel="noreferrer">
+                    <Button size="sm" variant="outline" className="border-blue-500/40 text-blue-400 hover:text-white text-[9px] h-6 px-2 shrink-0">
+                      <ExternalLink className="w-3 h-3 mr-1" />Coinos
+                    </Button>
+                  </a>
+                </div>
+              )}
 
               {/* Recent sweep activity */}
               {sweepStatus?.recentSweeps?.length > 0 && (

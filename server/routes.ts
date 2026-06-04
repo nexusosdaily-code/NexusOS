@@ -8376,10 +8376,10 @@ export async function registerRoutes(
   const LN_SATS_PER_NXT = 1000; // 1 NXT = 1000 sats
 
   function detectLnProvider(): "coinos" | "alby" | "lnbits" | null {
-    // Alby takes priority when present — reliable REST API with clear token auth.
-    // Coinos nsec1 keys require a registered account; fall back only if no Alby token.
-    if (process.env.ALBY_ACCESS_TOKEN) return "alby";
+    // Priority: Coinos nsec1 key > Alby (Alby wallet_configured=false until Albyhub is set up)
+    // Swap back to Alby-first once getalby.com/node/embrace_albyhub is configured.
     if (process.env.COINOS_TOKEN) return "coinos";
+    if (process.env.ALBY_ACCESS_TOKEN) return "alby";
     if (process.env.LNBITS_URL && process.env.LNBITS_ADMIN_KEY && process.env.LNBITS_INVOICE_KEY) return "lnbits";
     return null;
   }
@@ -8407,17 +8407,36 @@ export async function registerRoutes(
     return authHeader;
   }
 
-  // Authenticated Coinos API helper — uses NIP-98 HTTP Auth when COINOS_TOKEN is nsec1,
-  // otherwise falls back to Bearer JWT.
-  async function coinosReq(path: string, method = "GET", body?: object): Promise<any> {
+  // Resolve the active Coinos Bearer JWT:
+  //   1. COINOS_JWT secret (pre-issued, preferred)
+  //   2. COINOS_TOKEN if it's already a JWT (starts with "ey")
+  //   3. NIP-98 via COINOS_TOKEN nsec1 key (fallback — Coinos blocks server-originated NIP-98)
+  async function _coinosBearer(): Promise<string> {
+    const jwt = process.env.COINOS_JWT ?? "";
+    if (jwt.startsWith("ey")) return `Bearer ${jwt}`;
     const token = process.env.COINOS_TOKEN ?? "";
-    const url = `https://coinos.io/api${path}`;
-
-    let authHeader: string;
+    if (token.startsWith("ey")) return `Bearer ${token}`;
+    // nsec1 path — build NIP-98 token (may fail if Cloudflare blocks it)
     if (token.startsWith("nsec1")) {
+      const url = "https://coinos.io/api/me";
+      return await _coinosNip98Header(url, "GET");
+    }
+    throw new Error("No valid Coinos credential. Set COINOS_JWT secret.");
+  }
+
+  // Authenticated Coinos API helper — JWT Bearer preferred, NIP-98 fallback.
+  async function coinosReq(path: string, method = "GET", body?: object): Promise<any> {
+    const url = `https://coinos.io/api${path}`;
+    // For POST, rebuild bearer with correct URL for NIP-98 if needed
+    let authHeader: string;
+    const jwt = process.env.COINOS_JWT ?? "";
+    const token = process.env.COINOS_TOKEN ?? "";
+    if (jwt.startsWith("ey") || token.startsWith("ey")) {
+      authHeader = `Bearer ${jwt.startsWith("ey") ? jwt : token}`;
+    } else if (token.startsWith("nsec1")) {
       authHeader = await _coinosNip98Header(url, method, body);
     } else {
-      authHeader = `Bearer ${token}`;
+      throw new Error("No valid Coinos credential. Set COINOS_JWT secret.");
     }
 
     const opts: RequestInit = {
@@ -8431,25 +8450,21 @@ export async function registerRoutes(
     return d;
   }
 
-  // Derives Lightning Address from an nsec Nostr private key (Coinos Nostr accounts
-  // use their hex pubkey as the username: {pubkey}@coinos.io)
-  function coinosNsecToAddress(nsec: string): string {
-    const { words } = _bech32.decode(nsec, 100);
-    const privKey = Buffer.from(_bech32.fromWords(words));
-    const pubKey = Buffer.from(tinySecp.xOnlyPointFromScalar(privKey)!).toString("hex");
-    return `${pubKey}@coinos.io`;
-  }
-
   async function coinosGetLightningAddress(): Promise<string> {
-    const token = process.env.COINOS_TOKEN ?? "";
-    if (token.startsWith("nsec1")) return coinosNsecToAddress(token);
     // JWT path — get username from /me
-    const r = await fetch("https://coinos.io/api/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!r.ok) throw new Error("Coinos /me failed — check COINOS_TOKEN");
-    const d = await r.json();
-    return d.username ? `${d.username}@coinos.io` : "";
+    try {
+      const d = await coinosReq("/me");
+      if (d.username) return `${d.username}@coinos.io`;
+    } catch {}
+    // nsec fallback — derive from pubkey
+    const token = process.env.COINOS_TOKEN ?? "";
+    if (token.startsWith("nsec1")) {
+      const { words } = _bech32.decode(token, 100);
+      const privKey = Buffer.from(_bech32.fromWords(words));
+      const pubKey = Buffer.from(tinySecp.xOnlyPointFromScalar(privKey)!).toString("hex");
+      return `${pubKey}@coinos.io`;
+    }
+    return "";
   }
 
   // Create a Lightning invoice via Coinos LNURL-pay (works with nsec — no JWT required).
@@ -8691,16 +8706,12 @@ export async function registerRoutes(
   async function lnGetBalance(): Promise<{ sats: number; name: string }> {
     const provider = detectLnProvider();
     if (provider === "coinos") {
-      const token = process.env.COINOS_TOKEN ?? "";
-      if (token.startsWith("nsec1")) {
-        // nsec-based: balance not available without JWT, return address info only
-        const addr = coinosNsecToAddress(token);
-        return { sats: 0, name: addr };
+      try {
+        const d = await coinosReq("/me");
+        return { sats: Math.floor(d.balance ?? 0), name: d.username ? `nexusosmain@coinos.io` : "Coinos" };
+      } catch {
+        return { sats: 0, name: "nexusosmain@coinos.io" };
       }
-      const r = await fetch("https://coinos.io/api/me", { headers: { Authorization: `Bearer ${token}` } });
-      if (!r.ok) return { sats: 0, name: "coinos" };
-      const d = await r.json();
-      return { sats: Math.floor(d.balance ?? 0), name: d.username ? `coinos/${d.username}` : "Coinos wallet" };
     }
     if (provider === "alby") {
       const r = await fetch("https://api.getalby.com/balance", {
@@ -8928,16 +8939,35 @@ export async function registerRoutes(
       const provider = detectLnProvider();
       const providerReady = !!provider;
 
+      // Fetch live Coinos balance if provider is coinos
+      let coinosBalance = 0;
+      let coinosUsername = "";
+      if (provider === "coinos") {
+        try {
+          const me = await coinosReq("/me");
+          coinosBalance = Math.floor(me.balance ?? 0);
+          coinosUsername = me.username ?? "";
+        } catch {}
+      }
+
+      const providerNote = !provider
+        ? "No Lightning provider configured."
+        : provider === "coinos"
+          ? coinosBalance > 0
+            ? `nexusosmain@coinos.io — ${coinosBalance.toLocaleString()} sats ready`
+            : "nexusosmain@coinos.io — fund via Lightning or on-chain BTC to enable sweeps"
+          : provider === "alby"
+            ? "Alby connected — ensure a funding source is set at getalby.com/node/embrace_albyhub"
+            : `${provider} connected`;
+
       res.json({
         enabled: !!destAddr,
         destination: destAddr,
         provider,
         providerReady,
-        providerNote: !provider
-          ? "No Lightning provider configured. Fund Alby at getalby.com/node/embrace_albyhub."
-          : provider === "alby"
-            ? "Alby connected — ensure a funding source is set at getalby.com/node/embrace_albyhub"
-            : `${provider} connected`,
+        providerNote,
+        coinosBalance,
+        coinosAddress: coinosUsername ? `${coinosUsername}@coinos.io` : null,
         satsBalance: lnWallet?.satsBalance ?? "0",
         totalWithdrawn: lnWallet?.totalWithdrawn ?? "0",
         recentSweeps: sweepTxs.slice(0, 10).map(tx => ({

@@ -6,3 +6,4 @@
 - [Accounts and auth](accounts-auth.md) — Nexus genesis account, password, registration locked, developer keys gate
 - [NXT indestructibility](nxt-indestructibility.md) — NXT fees NEVER burned; always go to orbital_treasury
 - [Domain setup](domain-setup.md) — wnsp.tech on Cloudflare; GoDaddy nameserver update pending
+- [Coinos JWT auth](coinos-jwt-auth.md) — NIP-98 blocked server-side; use COINOS_JWT Bearer token for all Coinos calls
