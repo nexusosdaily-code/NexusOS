@@ -1,4 +1,5 @@
 import { Switch, Route } from "wouter";
+import { lazy, Suspense, Component, type ReactNode, type ErrorInfo } from "react";
 import GuideBot from "@/components/GuideBot";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -6,121 +7,172 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, ProtectedRoute, AuthLoading } from "@/hooks/use-auth";
 import { UniSatProvider } from "@/hooks/use-unisat";
-import HubPage from "@/pages/hub";
-import LambdaPlaceholder from "@/pages/lambda-placeholder";
-import WNSPv7Page from "@/pages/wnsp-v7";
-import NexusV10Page from "@/pages/nexus-v10";
-import NexusV6Page from "@/pages/nexus-v6";
-import NexusV8Page from "@/pages/nexus-v8";
-import NexusV9Page from "@/pages/nexus-v9";
-import EncodingLab from "@/pages/encoding-lab";
-import AnalyticsPage from "@/pages/analytics";
-import TransmissionPage from "@/pages/transmission";
-import ResearchPage from "@/pages/research";
-import WavefieldPage from "@/pages/wavefield";
-import WalletPage from "@/pages/wallet";
-import AnnouncementsPage from "@/pages/announcements";
-import AnnouncementSubstrateV2Page from "@/pages/announcement-substrate-v2";
-import ResonancePropulsionPage from "@/pages/resonance-propulsion";
+
+// Auth page loaded eagerly — needed on first render
 import AuthPage from "@/pages/auth";
-import FriendsPage from "@/pages/friends";
-import InboxPage from "@/pages/inbox";
-import K1InfrastructurePage from "@/pages/k1-infrastructure";
-import K1OrchestrationPage from "@/pages/k1-orchestration";
-import SecureDocxPage from "@/pages/secure-docx";
-import ResearchPresentationPage from "@/pages/research-presentation";
-import StreamingPage from "@/pages/streaming";
-import DeveloperMatrixPage from "@/pages/developer-matrix";
-import DeveloperKeysPage from "@/pages/developer-keys";
-import GovernancePage from "@/pages/governance";
-import ConstitutionPage from "@/pages/constitution";
-import DocsPage from "@/pages/docs";
-import WNSPCoordinator from "@/pages/wnsp-coordinator";
-import KernelPage from "@/pages/kernel";
-import PhotonicDevPage from "@/pages/photonic-dev";
-import QuantumThresholdPage from "@/pages/quantum-threshold";
-import NexusHardwareOsPage from "@/pages/nexus-hardware-os";
-import ComputingAlternativesPage from "@/pages/computing-alternatives";
-import WavelengthOsManifestoPage from "@/pages/wavelength-os-manifesto";
-import CeCodeWriterPage from "@/pages/ce-code-writer";
-import PricingPage from "@/pages/pricing";
-import SpectralDbPage from "@/pages/spectral-db";
-import BlockchainPage from "@/pages/blockchain";
-import AgentBusPage from "@/pages/agent-bus";
-import NexusCommandPage from "@/pages/nexus-command";
-import KernelGenesisPage from "@/pages/kernel-genesis";
-import SpectralWorkspacePage from "@/pages/spectral-workspace";
-import ChroniclePage from "@/pages/chronicle";
-import SpectralLibraryPage from "@/pages/spectral-library";
-import SpectralAuditPage from "@/pages/spectral-audit";
-import OrbitalTreasuryPage from "@/pages/orbital-treasury";
-import FoundersCharityPage from "@/pages/founders-charity";
-import EcosystemPage from "@/pages/ecosystem";
-import OrdinalRegistryPage from "@/pages/ordinal-registry";
-import CommunicationPage from "@/pages/communication";
-import NetworkPage from "@/pages/network";
-import WavelengthLangPage from "@/pages/wavelength-lang";
-import EvidencePage from "@/pages/evidence";
-import CrowdfundPage from "@/pages/crowdfund";
-import SpectralVideoPage from "@/pages/spectral-video";
-import VisualizerPage from "@/pages/visualizer";
-import IndiegogoPage from "@/pages/indiegogo";
-import SnicPage from "@/pages/snic";
-import SpectralUriPage from "@/pages/spectral-uri";
-import OpenPage from "@/pages/open";
-import WnspBridgePage from "@/pages/wnsp-bridge";
-import ProfilePage from "@/pages/profile";
-import DirectoryPage from "@/pages/directory";
-import LedgerPage from "@/pages/ledger";
-import GitHubBridgePage from "@/pages/github-bridge";
-import SettingsPage from "@/pages/settings";
-import MobileSDKPage from "@/pages/mobile-sdk";
-import WnspVMPage from "@/pages/wnsp-vm";
-import DivergenceTestPage from "@/pages/divergence-test";
-import SpectralRouterPage from "@/pages/spectral-router";
-import SpectralSearchPage from "@/pages/spectral-search";
-import CompressionExplorerPage from "@/pages/compression-explorer";
-import SpectralContractsPage from "@/pages/spectral-contracts";
-import SOPPage from "@/pages/sop";
-import HardwareLabPage from "@/pages/hardware-lab";
-import OscillatingQuantaPage from "@/pages/oscillating-quanta";
-import LearnPage from "@/pages/learn";
-import PipelinePage from "@/pages/pipeline";
-import PlanckAlignmentPage from "@/pages/planck-alignment";
-import SpectralMirrorPage from "@/pages/spectral-mirror";
-import CommunityPage from "@/pages/community";
-import MediaLibraryPage from "@/pages/media-library";
-import QuoraPage from "@/pages/quora";
-import RedditPage from "@/pages/reddit";
-import TelegramHubPage from "@/pages/telegram-hub";
-import WnspPaperPage from "@/pages/wnsp-paper";
-import StartPage from "@/pages/start";
-import ReposedTheoryPage from "@/pages/reposed-theory";
-import ProtocolPage from "@/pages/protocol";
-import PhotonicLedgerPage from "@/pages/photonic-ledger";
-import HardwareSpecPage from "@/pages/hardware-spec";
-import P2PTerminalPage from "@/pages/p2p-terminal";
-import CampaignPage from "@/pages/campaign";
-import VideosPage from "@/pages/videos";
-import SocialBroadcastPage from "@/pages/social-broadcast";
-import NotFound from "@/pages/not-found";
-import WnspLandingPage from "@/pages/wnsp-landing";
-import WnspOrdinalsPage from "@/pages/wnsp-ordinals";
-import NostrRelayPage from "@/pages/nostr-relay";
-import CommunityMintPage from "@/pages/community-mint";
-import WnspStakingPage from "@/pages/wnsp-staking";
-import MarketplacePage from "@/pages/marketplace";
-import RuneEtchingPage from "@/pages/rune-etching";
-import RuneMintPage from "@/pages/rune-mint";
-import EtchRunePage from "@/pages/etch-rune";
-import RuneStakingPage from "@/pages/rune-staking";
-import FractalBtcBridgePage from "@/pages/fractal-btc-bridge";
-import NxtFbSwapPage from "@/pages/nxt-fb-swap";
-import LightningWalletPage from "@/pages/lightning-wallet";
-import BtcSentinelPage from "@/pages/btc-sentinel";
-import BtcAssetsSentinelPage from "@/pages/btc-assets-sentinel";
-import StablecoinPage from "@/pages/stablecoin";
-import MempoolMonitorPage from "@/pages/mempool-monitor";
+
+// All other pages lazy-loaded — browser only downloads the code when you visit that page
+const HubPage = lazy(() => import("@/pages/hub"));
+const LambdaPlaceholder = lazy(() => import("@/pages/lambda-placeholder"));
+const WNSPv7Page = lazy(() => import("@/pages/wnsp-v7"));
+const NexusV10Page = lazy(() => import("@/pages/nexus-v10"));
+const NexusV6Page = lazy(() => import("@/pages/nexus-v6"));
+const NexusV8Page = lazy(() => import("@/pages/nexus-v8"));
+const NexusV9Page = lazy(() => import("@/pages/nexus-v9"));
+const EncodingLab = lazy(() => import("@/pages/encoding-lab"));
+const AnalyticsPage = lazy(() => import("@/pages/analytics"));
+const TransmissionPage = lazy(() => import("@/pages/transmission"));
+const ResearchPage = lazy(() => import("@/pages/research"));
+const WavefieldPage = lazy(() => import("@/pages/wavefield"));
+const WalletPage = lazy(() => import("@/pages/wallet"));
+const AnnouncementsPage = lazy(() => import("@/pages/announcements"));
+const AnnouncementSubstrateV2Page = lazy(() => import("@/pages/announcement-substrate-v2"));
+const ResonancePropulsionPage = lazy(() => import("@/pages/resonance-propulsion"));
+const FriendsPage = lazy(() => import("@/pages/friends"));
+const InboxPage = lazy(() => import("@/pages/inbox"));
+const K1InfrastructurePage = lazy(() => import("@/pages/k1-infrastructure"));
+const K1OrchestrationPage = lazy(() => import("@/pages/k1-orchestration"));
+const SecureDocxPage = lazy(() => import("@/pages/secure-docx"));
+const ResearchPresentationPage = lazy(() => import("@/pages/research-presentation"));
+const StreamingPage = lazy(() => import("@/pages/streaming"));
+const DeveloperMatrixPage = lazy(() => import("@/pages/developer-matrix"));
+const DeveloperKeysPage = lazy(() => import("@/pages/developer-keys"));
+const GovernancePage = lazy(() => import("@/pages/governance"));
+const ConstitutionPage = lazy(() => import("@/pages/constitution"));
+const DocsPage = lazy(() => import("@/pages/docs"));
+const WNSPCoordinator = lazy(() => import("@/pages/wnsp-coordinator"));
+const KernelPage = lazy(() => import("@/pages/kernel"));
+const PhotonicDevPage = lazy(() => import("@/pages/photonic-dev"));
+const QuantumThresholdPage = lazy(() => import("@/pages/quantum-threshold"));
+const NexusHardwareOsPage = lazy(() => import("@/pages/nexus-hardware-os"));
+const ComputingAlternativesPage = lazy(() => import("@/pages/computing-alternatives"));
+const WavelengthOsManifestoPage = lazy(() => import("@/pages/wavelength-os-manifesto"));
+const CeCodeWriterPage = lazy(() => import("@/pages/ce-code-writer"));
+const PricingPage = lazy(() => import("@/pages/pricing"));
+const SpectralDbPage = lazy(() => import("@/pages/spectral-db"));
+const BlockchainPage = lazy(() => import("@/pages/blockchain"));
+const AgentBusPage = lazy(() => import("@/pages/agent-bus"));
+const NexusCommandPage = lazy(() => import("@/pages/nexus-command"));
+const KernelGenesisPage = lazy(() => import("@/pages/kernel-genesis"));
+const SpectralWorkspacePage = lazy(() => import("@/pages/spectral-workspace"));
+const ChroniclePage = lazy(() => import("@/pages/chronicle"));
+const SpectralLibraryPage = lazy(() => import("@/pages/spectral-library"));
+const SpectralAuditPage = lazy(() => import("@/pages/spectral-audit"));
+const OrbitalTreasuryPage = lazy(() => import("@/pages/orbital-treasury"));
+const FoundersCharityPage = lazy(() => import("@/pages/founders-charity"));
+const EcosystemPage = lazy(() => import("@/pages/ecosystem"));
+const OrdinalRegistryPage = lazy(() => import("@/pages/ordinal-registry"));
+const CommunicationPage = lazy(() => import("@/pages/communication"));
+const NetworkPage = lazy(() => import("@/pages/network"));
+const WavelengthLangPage = lazy(() => import("@/pages/wavelength-lang"));
+const EvidencePage = lazy(() => import("@/pages/evidence"));
+const CrowdfundPage = lazy(() => import("@/pages/crowdfund"));
+const SpectralVideoPage = lazy(() => import("@/pages/spectral-video"));
+const VisualizerPage = lazy(() => import("@/pages/visualizer"));
+const IndiegogoPage = lazy(() => import("@/pages/indiegogo"));
+const SnicPage = lazy(() => import("@/pages/snic"));
+const SpectralUriPage = lazy(() => import("@/pages/spectral-uri"));
+const OpenPage = lazy(() => import("@/pages/open"));
+const WnspBridgePage = lazy(() => import("@/pages/wnsp-bridge"));
+const ProfilePage = lazy(() => import("@/pages/profile"));
+const DirectoryPage = lazy(() => import("@/pages/directory"));
+const LedgerPage = lazy(() => import("@/pages/ledger"));
+const GitHubBridgePage = lazy(() => import("@/pages/github-bridge"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+const MobileSDKPage = lazy(() => import("@/pages/mobile-sdk"));
+const WnspVMPage = lazy(() => import("@/pages/wnsp-vm"));
+const DivergenceTestPage = lazy(() => import("@/pages/divergence-test"));
+const SpectralRouterPage = lazy(() => import("@/pages/spectral-router"));
+const SpectralSearchPage = lazy(() => import("@/pages/spectral-search"));
+const CompressionExplorerPage = lazy(() => import("@/pages/compression-explorer"));
+const SpectralContractsPage = lazy(() => import("@/pages/spectral-contracts"));
+const SOPPage = lazy(() => import("@/pages/sop"));
+const HardwareLabPage = lazy(() => import("@/pages/hardware-lab"));
+const OscillatingQuantaPage = lazy(() => import("@/pages/oscillating-quanta"));
+const LearnPage = lazy(() => import("@/pages/learn"));
+const PipelinePage = lazy(() => import("@/pages/pipeline"));
+const PlanckAlignmentPage = lazy(() => import("@/pages/planck-alignment"));
+const SpectralMirrorPage = lazy(() => import("@/pages/spectral-mirror"));
+const CommunityPage = lazy(() => import("@/pages/community"));
+const MediaLibraryPage = lazy(() => import("@/pages/media-library"));
+const QuoraPage = lazy(() => import("@/pages/quora"));
+const RedditPage = lazy(() => import("@/pages/reddit"));
+const TelegramHubPage = lazy(() => import("@/pages/telegram-hub"));
+const WnspPaperPage = lazy(() => import("@/pages/wnsp-paper"));
+const StartPage = lazy(() => import("@/pages/start"));
+const ReposedTheoryPage = lazy(() => import("@/pages/reposed-theory"));
+const ProtocolPage = lazy(() => import("@/pages/protocol"));
+const PhotonicLedgerPage = lazy(() => import("@/pages/photonic-ledger"));
+const HardwareSpecPage = lazy(() => import("@/pages/hardware-spec"));
+const P2PTerminalPage = lazy(() => import("@/pages/p2p-terminal"));
+const CampaignPage = lazy(() => import("@/pages/campaign"));
+const VideosPage = lazy(() => import("@/pages/videos"));
+const SocialBroadcastPage = lazy(() => import("@/pages/social-broadcast"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+const WnspLandingPage = lazy(() => import("@/pages/wnsp-landing"));
+const WnspOrdinalsPage = lazy(() => import("@/pages/wnsp-ordinals"));
+const NostrRelayPage = lazy(() => import("@/pages/nostr-relay"));
+const CommunityMintPage = lazy(() => import("@/pages/community-mint"));
+const WnspStakingPage = lazy(() => import("@/pages/wnsp-staking"));
+const MarketplacePage = lazy(() => import("@/pages/marketplace"));
+const RuneEtchingPage = lazy(() => import("@/pages/rune-etching"));
+const RuneMintPage = lazy(() => import("@/pages/rune-mint"));
+const EtchRunePage = lazy(() => import("@/pages/etch-rune"));
+const RuneStakingPage = lazy(() => import("@/pages/rune-staking"));
+const FractalBtcBridgePage = lazy(() => import("@/pages/fractal-btc-bridge"));
+const NxtFbSwapPage = lazy(() => import("@/pages/nxt-fb-swap"));
+const LightningWalletPage = lazy(() => import("@/pages/lightning-wallet"));
+const BtcSentinelPage = lazy(() => import("@/pages/btc-sentinel"));
+const BtcAssetsSentinelPage = lazy(() => import("@/pages/btc-assets-sentinel"));
+const StablecoinPage = lazy(() => import("@/pages/stablecoin"));
+const MempoolMonitorPage = lazy(() => import("@/pages/mempool-monitor"));
+
+// Loading spinner shown while a lazy page chunk is downloading
+function PageLoader() {
+  return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
+        <span className="text-gray-500 text-sm font-mono">Loading…</span>
+      </div>
+    </div>
+  );
+}
+
+// Error boundary — catches React render crashes and shows a message instead of a black screen
+interface EBState { hasError: boolean; message: string }
+class ErrorBoundary extends Component<{ children: ReactNode }, EBState> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, message: "" };
+  }
+  static getDerivedStateFromError(err: Error): EBState {
+    return { hasError: true, message: err.message || "Unknown error" };
+  }
+  componentDidCatch(err: Error, info: ErrorInfo) {
+    console.error("[NexusOS ErrorBoundary]", err, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+          <div className="max-w-sm w-full bg-slate-900 border border-red-500/30 rounded-xl p-6 text-center space-y-4">
+            <div className="text-red-400 text-2xl">⚠️</div>
+            <div className="text-white font-semibold">Something went wrong</div>
+            <div className="text-gray-400 text-xs font-mono break-all">{this.state.message}</div>
+            <button
+              onClick={() => { this.setState({ hasError: false, message: "" }); window.location.reload(); }}
+              className="w-full bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg py-2 text-sm transition-colors"
+            >
+              Reload page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function ProtectedRoutes() {
   return (
@@ -314,7 +366,6 @@ function TelegramFloat() {
       style={{ position: "fixed", bottom: "24px", right: "24px", zIndex: 9999 }}
       className="group flex items-center gap-2 rounded-full bg-[#229ED9] shadow-lg shadow-[#229ED9]/30 hover:shadow-[#229ED9]/50 hover:scale-105 transition-all duration-200 pr-4 pl-1 py-1"
     >
-      {/* Telegram icon */}
       <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center shrink-0">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
           <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
@@ -327,20 +378,24 @@ function TelegramFloat() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <UniSatProvider>
-          <AuthProvider>
-            <Toaster />
-            <AuthLoading>
-              <Router />
-            </AuthLoading>
-            <TelegramFloat />
-            <GuideBot />
-          </AuthProvider>
-        </UniSatProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <UniSatProvider>
+            <AuthProvider>
+              <Toaster />
+              <AuthLoading>
+                <Suspense fallback={<PageLoader />}>
+                  <Router />
+                </Suspense>
+              </AuthLoading>
+              <TelegramFloat />
+              <GuideBot />
+            </AuthProvider>
+          </UniSatProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
