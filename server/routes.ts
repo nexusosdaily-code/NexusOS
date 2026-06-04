@@ -135,6 +135,43 @@ const videoUpload = multer({
   },
 });
 
+// ── Live mempool cache (shared across all routes) ────────────────────────────
+const _mpCache: { data: any; at: number } = { data: null, at: 0 };
+async function _fetchLiveMempool() {
+  if (Date.now() - _mpCache.at < 60_000 && _mpCache.data) return _mpCache.data;
+  try {
+    const sig = AbortSignal.timeout(7_000);
+    const [fRes, mRes] = await Promise.allSettled([
+      fetch("https://mempool.space/api/v1/fees/recommended", { signal: sig }),
+      fetch("https://mempool.space/api/mempool", { signal: sig }),
+    ]);
+    const fees = fRes.status === "fulfilled" && fRes.value.ok ? await fRes.value.json() : null;
+    const mp   = mRes.status === "fulfilled" && mRes.value.ok ? await mRes.value.json() : null;
+    const fast    = fees?.fastestFee ?? 50;
+    const medium  = fees?.halfHourFee ?? 20;
+    const slow    = fees?.hourFee ?? 8;
+    const economy = fees?.economyFee ?? 3;
+    const lvl = medium >= 100 ? "extreme" : medium >= 30 ? "high" : medium >= 8 ? "medium" : "low";
+    const yieldBoost = medium >= 100 ? 1.25 : medium >= 30 ? 1.15 : medium >= 8 ? 1.05 : 1.0;
+    const d = {
+      fast, medium, slow, economy,
+      congestionLevel: lvl,
+      yieldBoost,
+      pendingTxs: mp?.count ?? null,
+      pendingMb: mp ? +(mp.vsize / 1_000_000).toFixed(2) : null,
+      confirmEta: { fast: 10, medium: 30, slow: 60, economy: 180 },
+      fetchedAt: new Date().toISOString(),
+    };
+    _mpCache.data = d; _mpCache.at = Date.now();
+    return d;
+  } catch { return _mpCache.data; }
+}
+
+// ── Telegram fee-alert subscriber registry (in-memory, keyed by chat_id) ────
+const _feeAlertSubs = new Set<string>();
+let _lastFeeAlertSentAt = 0; // epoch ms — 1-hour cooldown
+let _prevFeesWereLow = false;
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -8926,7 +8963,7 @@ export async function registerRoutes(
   // POST /api/lightning/withdraw-to-btc — deduct sats, queue BTC on-chain withdrawal
   app.post("/api/lightning/withdraw-to-btc", authenticate, async (req: Request, res: Response) => {
     try {
-      const { amountSats, btcAddress } = req.body;
+      const { amountSats, btcAddress, feeTier = "medium" } = req.body;
       if (!amountSats || typeof amountSats !== "number" || amountSats < 1000)
         return res.status(400).json({ error: "Minimum withdrawal: 1,000 sats" });
       if (!btcAddress || typeof btcAddress !== "string")
@@ -8939,8 +8976,23 @@ export async function registerRoutes(
       if (lnWallet.satsBalance < amountSats)
         return res.status(400).json({ error: `Insufficient sats (have ${lnWallet.satsBalance})` });
 
-      const FEE_SATS = Math.max(500, Math.round(amountSats * 0.005)); // 0.5% fee, min 500 sats
+      // ── Dynamic fee from live mempool ─────────────────────────────────────
+      let feeRateSatVbyte = 20; // fallback
+      let confirmEtaMins = 30;
+      try {
+        const mp = await _fetchLiveMempool();
+        if (mp) {
+          feeRateSatVbyte = feeTier === "fast" ? mp.fast : feeTier === "slow" ? mp.slow : mp.medium;
+          confirmEtaMins  = feeTier === "fast" ? 10 : feeTier === "slow" ? 60 : 30;
+        }
+      } catch { /* use fallback */ }
+      const VBYTES_EST      = 200; // typical P2WPKH tx
+      const networkFeeSats  = feeRateSatVbyte * VBYTES_EST;
+      const platformFeeSats = Math.max(300, Math.round(amountSats * 0.003)); // 0.3% platform fee
+      const FEE_SATS = networkFeeSats + platformFeeSats;
       const netSats  = amountSats - FEE_SATS;
+      if (netSats <= 0)
+        return res.status(400).json({ error: `Amount too small for ${feeTier} fee rate (${feeRateSatVbyte} sat/vB). Need at least ${FEE_SATS + 1000} sats.` });
 
       const { db } = await import("./db");
       const { lightningWallets, lightningTransactions } = await import("../shared/schema");
@@ -8964,9 +9016,10 @@ export async function registerRoutes(
         .then(m => m.processWithdrawalQueue())
         .catch(console.error);
 
-      await logAction(req, "lightning_withdraw_btc", "lightning", req.user!.id, { amountSats, btcAddress: addr, feeSats: FEE_SATS });
-      res.json({ ok: true, txId: tx.id, amountSats, feeSats: FEE_SATS, netSats, btcAddress: addr, status: "pending",
-        note: "Withdrawal submitted. BTC is being sent on-chain now." });
+      await logAction(req, "lightning_withdraw_btc", "lightning", req.user!.id, { amountSats, btcAddress: addr, feeSats: FEE_SATS, feeTier, feeRateSatVbyte });
+      res.json({ ok: true, txId: tx.id, amountSats, feeSats: FEE_SATS, networkFeeSats, platformFeeSats, netSats, btcAddress: addr, status: "pending",
+        feeTier, feeRateSatVbyte, confirmEtaMins,
+        note: `Withdrawal submitted at ${feeRateSatVbyte} sat/vB (${feeTier}). BTC is being sent on-chain. ~${confirmEtaMins} min confirmation.` });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
@@ -9539,6 +9592,74 @@ export async function registerRoutes(
     } catch (err: any) {
       res.status(502).json({ ok: false, error: err.message });
     }
+  });
+
+  // GET /api/mempool/live — lightweight cached fee snapshot (60s TTL)
+  app.get("/api/mempool/live", async (_req: Request, res: Response) => {
+    try {
+      const d = await _fetchLiveMempool();
+      if (!d) return res.status(503).json({ ok: false, error: "Mempool data unavailable" });
+      res.json({ ok: true, ...d });
+    } catch (e: any) { res.status(502).json({ ok: false, error: e.message }); }
+  });
+
+  // GET /api/mempool/arbitrage — staking vs. BTC-move cost comparison for the logged-in user
+  app.get("/api/mempool/arbitrage", authenticate, async (req: Request, res: Response) => {
+    try {
+      const mp = await _fetchLiveMempool();
+      const feeRate     = mp?.medium ?? 20;
+      const networkFee  = feeRate * 200;
+      const LN_SATS_PER_NXT = 1000;
+      const STAKE_RATE_7D   = 0.05;
+      const { db } = await import("./db");
+      const { lightningWallets } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [lnWallet] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, req.user!.id));
+      const satsBalance = lnWallet?.satsBalance ?? 0;
+      const exampleSats      = Math.max(100_000, Math.floor(satsBalance * 0.1));
+      const stakeYieldNxt    = (exampleSats / LN_SATS_PER_NXT) * STAKE_RATE_7D;
+      const stakeYieldSats   = stakeYieldNxt * LN_SATS_PER_NXT;
+      const netAdvantage     = stakeYieldSats - networkFee;
+      res.json({
+        ok: true,
+        feeRateSatVbyte: feeRate,
+        networkFee,
+        exampleSats,
+        stakeDays: 7,
+        stakeYieldNxt: +stakeYieldNxt.toFixed(4),
+        stakeYieldSats,
+        netAdvantage,
+        stakingWins: netAdvantage > 0,
+        congestionLevel: mp?.congestionLevel ?? "medium",
+        yieldBoost: mp?.yieldBoost ?? 1.0,
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/mempool/miner-score — Herfindahl index + block time deviation from last 10 blocks
+  app.get("/api/mempool/miner-score", async (_req: Request, res: Response) => {
+    try {
+      const sig = AbortSignal.timeout(8_000);
+      const r = await fetch("https://mempool.space/api/v1/blocks", { signal: sig });
+      if (!r.ok) return res.status(502).json({ error: "Mempool unavailable" });
+      const blocks = (await r.json()).slice(0, 10);
+      const minerCounts: Record<string, number> = {};
+      for (const b of blocks) {
+        const name = b.extras?.pool?.name ?? "Unknown";
+        minerCounts[name] = (minerCounts[name] ?? 0) + 1;
+      }
+      const total = blocks.length;
+      const hhi = Object.values(minerCounts).reduce((acc: number, c: any) => acc + (c / total) ** 2, 0);
+      const miners = Object.entries(minerCounts)
+        .sort((a, b) => (b[1] as number) - (a[1] as number))
+        .map(([name, count]) => ({ name, count, sharePct: +((count as number) / total * 100).toFixed(0) }));
+      const decentralization = hhi < 0.15 ? "healthy" : hhi < 0.25 ? "moderate" : "concentrated";
+      const timestamps: number[] = blocks.map((b: any) => b.timestamp);
+      const intervals = timestamps.slice(0, -1).map((t, i) => t - timestamps[i + 1]);
+      const avgBlockSecs = intervals.length ? Math.round(intervals.reduce((a, b) => a + b, 0) / intervals.length) : 600;
+      const blockTimeDeviationPct = +((avgBlockSecs - 600) / 600 * 100).toFixed(1);
+      res.json({ ok: true, miners, hhiPct: +(hhi * 100).toFixed(1), decentralization, avgBlockSecs, targetBlockSecs: 600, blockTimeDeviationPct, blockCount: total });
+    } catch (e: any) { res.status(502).json({ error: e.message }); }
   });
 
   // GET /api/rune/info

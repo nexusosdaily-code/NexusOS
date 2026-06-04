@@ -90,6 +90,7 @@ export default function ChannelDashboard() {
   const [withdrawBtcAddr, setWithdrawBtcAddr] = useState("");
   const [withdrawSats, setWithdrawSats]       = useState("10000");
   const [withdrawDone, setWithdrawDone]       = useState<any>(null);
+  const [feeTier, setFeeTier]                 = useState<"slow"|"medium"|"fast">("medium");
 
   // Send P2P
   const [sendRecipient, setSendRecipient] = useState("");
