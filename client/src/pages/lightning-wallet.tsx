@@ -48,12 +48,18 @@ function fmtTime(ts: string): string {
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "completed" || status === "confirmed" || status === "paid")
-    return <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px]"><CheckCircle2 className="w-3 h-3 mr-1" />Transmitted</Badge>;
+    return <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px]"><CheckCircle2 className="w-3 h-3 mr-1" />Confirmed</Badge>;
   if (status === "failed")
     return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]"><XCircle className="w-3 h-3 mr-1" />Failed</Badge>;
-  if (status === "queued" || status === "processing")
-    return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px]"><Clock className="w-3 h-3 mr-1" />Auto-paying</Badge>;
-  return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+  if (status === "refunded")
+    return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px]"><ArrowDownToLine className="w-3 h-3 mr-1" />Refunded</Badge>;
+  if (status === "queued")
+    return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px]"><Clock className="w-3 h-3 mr-1" />Queued</Badge>;
+  if (status === "processing")
+    return <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[10px]"><Activity className="w-3 h-3 mr-1" />Processing</Badge>;
+  if (status === "pending")
+    return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+  return <Badge className="bg-slate-500/20 text-slate-400 border-slate-500/30 text-[10px]">{status}</Badge>;
 }
 
 function QueueProgress({ txId }: { txId: number }) {
@@ -79,7 +85,8 @@ function QueueProgress({ txId }: { txId: number }) {
   const { paid, total, paidSats, totalSats, items = [] } = data;
   const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
   const allDone = paid >= total && total > 0;
-  const hasFailed = items.some((i: any) => i.status === "failed" && i.attempts >= 5);
+  const failedItems = items.filter((i: any) => i.status === "failed");
+  const hasFailed = failedItems.length > 0;
 
   return (
     <div className="bg-blue-900/15 border border-blue-500/25 rounded p-2 space-y-1.5">
@@ -87,27 +94,38 @@ function QueueProgress({ txId }: { txId: number }) {
         <div className="text-[10px] text-blue-300 font-semibold">
           {allDone
             ? `✓ All ${total} invoice${total > 1 ? "s" : ""} paid`
-            : `Auto-paying: ${paid}/${total} invoices${total > 1 ? ` (${satsDisplay(paidSats)}/${satsDisplay(totalSats)} sats)` : ""}`}
+            : `Auto-paying: ${paid}/${total} invoice${total > 1 ? "s" : ""}${total > 1 ? ` · ${satsDisplay(paidSats)}/${satsDisplay(totalSats)} sats` : ""}`}
         </div>
         {!allDone && (
           <Button size="sm" variant="outline" className="h-5 px-2 text-[9px] border-blue-500/40 text-blue-300"
             onClick={() => retry.mutate()} disabled={retry.isPending}>
-            {retry.isPending ? "…" : "Retry now"}
+            {retry.isPending ? "…" : "↺ Retry"}
           </Button>
         )}
       </div>
-      {/* Progress bar */}
       <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-500 ${allDone ? "bg-green-500" : "bg-blue-500"}`}
+          className={`h-full rounded-full transition-all duration-500 ${allDone ? "bg-green-500" : hasFailed ? "bg-red-500" : "bg-blue-500"}`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      {hasFailed && (
-        <div className="text-[9px] text-red-400">
-          Some invoices failed (max retries reached). Connect a Lightning provider (Alby/LNbits) and click Retry.
+      {/* Per-item error breakdown */}
+      {hasFailed && failedItems.map((item: any) => (
+        <div key={item.id} className="bg-red-900/20 border border-red-500/25 rounded px-2 py-1.5 space-y-0.5">
+          <div className="flex items-center gap-1.5">
+            <XCircle className="w-3 h-3 text-red-400 shrink-0" />
+            <span className="text-[9px] text-red-300 font-semibold">
+              Invoice failed after {item.attempts} attempt{item.attempts !== 1 ? "s" : ""}
+              {item.amount_sats ? ` · ${satsDisplay(Number(item.amount_sats))} sats` : ""}
+            </span>
+          </div>
+          {item.last_error && (
+            <div className="text-[9px] text-red-400/80 font-mono leading-tight pl-4">
+              {item.last_error}
+            </div>
+          )}
         </div>
-      )}
+      ))}
     </div>
   );
 }
@@ -2458,6 +2476,29 @@ export default function ChannelDashboard() {
         {/* ── TRANSMISSIONS LOG ── */}
         {tab === "log" && (
           <div className="space-y-3">
+            {/* Analytics summary bar */}
+            {lnTxs.length > 0 && (() => {
+              const confirmed = lnTxs.filter((t: any) => ["completed","confirmed","paid"].includes(t.status)).length;
+              const failed    = lnTxs.filter((t: any) => t.status === "failed").length;
+              const pending   = lnTxs.filter((t: any) => ["pending","queued","processing"].includes(t.status)).length;
+              const refunded  = lnTxs.filter((t: any) => t.status === "refunded").length;
+              return (
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { label: "Confirmed", count: confirmed, color: "text-green-400", bg: "bg-green-900/20 border-green-500/20" },
+                    { label: "Pending",   count: pending,   color: "text-amber-400", bg: "bg-amber-900/20 border-amber-500/20" },
+                    { label: "Failed",    count: failed,    color: "text-red-400",   bg: "bg-red-900/20 border-red-500/20" },
+                    { label: "Refunded",  count: refunded,  color: "text-orange-400",bg: "bg-orange-900/20 border-orange-500/20" },
+                  ].map(s => (
+                    <div key={s.label} className={`rounded-lg border ${s.bg} px-3 py-2 text-center`}>
+                      <div className={`text-lg font-bold font-mono ${s.color}`}>{s.count}</div>
+                      <div className="text-[9px] text-gray-500 uppercase tracking-wider">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
             {/* Lightning transmissions */}
             {lnTxs.length > 0 && (
               <Card className="bg-slate-900/60 border-slate-700/50 p-4">
@@ -2465,87 +2506,135 @@ export default function ChannelDashboard() {
                   <Zap className="w-3.5 h-3.5" /> Lightning Channel Transmissions
                 </div>
                 <div className="space-y-2">
-                  {lnTxs.map((tx: any) => (
-                    <div
-                      key={tx.id}
-                      data-testid={`row-ln-tx-${tx.id}`}
-                      className="p-3 bg-black/20 rounded-lg border border-slate-800/60 space-y-2"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="shrink-0">
-                          {tx.type === "deposit"       && <ArrowDownToLine className="w-4 h-4 text-green-400" />}
-                          {tx.type === "withdrawal"    && <ArrowUpFromLine className="w-4 h-4 text-red-400" />}
-                          {tx.type?.startsWith("swap") && <ArrowRightLeft  className="w-4 h-4 text-purple-400" />}
-                          {tx.type === "send_p2p"      && <Users            className="w-4 h-4 text-cyan-400" />}
-                          {tx.type === "receive_p2p"   && <Users            className="w-4 h-4 text-green-400" />}
-                          {tx.type === "tip_sent"      && <Heart            className="w-4 h-4 text-pink-400" />}
-                          {tx.type === "tip_received"  && <Heart            className="w-4 h-4 text-pink-300" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm text-white font-medium">
-                            {tx.type === "deposit"      && "⚡ Inbound"}
-                            {tx.type === "withdrawal"   && "⚡ Outbound"}
-                            {tx.type === "swap_to_nxt"  && "⇄ → NXT"}
-                            {tx.type === "swap_to_sats" && "⇄ → Sats"}
-                            {tx.type === "send_p2p"     && "→ P2P Sent"}
-                            {tx.type === "receive_p2p"  && "← P2P Received"}
-                            {tx.type === "tip_sent"     && "💜 Tip Sent"}
-                            {tx.type === "tip_received" && "💜 Tip Received"}
-                            {!["deposit","withdrawal","swap_to_nxt","swap_to_sats","send_p2p","receive_p2p","tip_sent","tip_received"].includes(tx.type) && tx.type}
-                          </div>
-                          <div className="text-xs text-gray-500 truncate">{tx.memo || tx.paymentHash?.slice(0, 20) + "…" || "—"}</div>
-                          {tx.createdAt && <div className="text-[10px] text-gray-600 mt-0.5">{fmtTime(tx.createdAt)}</div>}
-                        </div>
-                        <div className="text-right shrink-0">
-                          <div className="font-mono text-sm text-yellow-300">⚡ {satsDisplay(tx.amount_sats ?? tx.amountSats ?? 0)}</div>
-                          <div className="mt-0.5"><StatusBadge status={tx.status} /></div>
-                        </div>
-                      </div>
-                      {/* Queued — show auto-payment progress */}
-                      {(tx.status === "queued" || tx.status === "processing") && tx.id && (
-                        <QueueProgress txId={tx.id} />
-                      )}
+                  {lnTxs.map((tx: any) => {
+                    const isFailed   = tx.status === "failed";
+                    const isPending  = tx.status === "pending";
+                    const isRefunded = tx.status === "refunded";
+                    const isQueued   = tx.status === "queued" || tx.status === "processing";
+                    const sats = Number(tx.amount_sats ?? tx.amountSats ?? 0);
 
-                      {/* Pending manual invoice(s) — show bolt11(s) so user can pay from any wallet */}
-                      {tx.status === "pending_manual" && tx.paymentRequest && (() => {
-                        // paymentRequest may be a JSON array (batch) or a plain bolt11
-                        let items: Array<{ amountSats: number; payment_request: string }>;
-                        try {
-                          const parsed = JSON.parse(tx.paymentRequest);
-                          items = Array.isArray(parsed) ? parsed : [{ amountSats: tx.amountSats ?? tx.amount_sats ?? 0, payment_request: tx.paymentRequest }];
-                        } catch {
-                          items = [{ amountSats: tx.amountSats ?? tx.amount_sats ?? 0, payment_request: tx.paymentRequest }];
-                        }
-                        return (
-                          <div className="bg-amber-900/20 border border-amber-500/30 rounded p-2 space-y-1.5">
-                            <div className="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
-                              <AlertCircle className="w-3 h-3" />
-                              {items.length > 1
-                                ? `Awaiting payment — pay all ${items.length} invoices to complete withdrawal`
-                                : "Awaiting payment — pay this invoice to complete withdrawal"}
-                            </div>
-                            {items.map((item, idx) => (
-                              <div key={idx} className="space-y-1">
-                                {items.length > 1 && (
-                                  <div className="text-[9px] text-amber-300 font-semibold">
-                                    Invoice {idx + 1}/{items.length} — ⚡ {item.amountSats.toLocaleString()} sats
-                                  </div>
-                                )}
-                                <div className="font-mono text-[9px] text-white break-all bg-slate-900 rounded p-1.5 select-all leading-relaxed">
-                                  {item.payment_request}
-                                </div>
-                                <Button size="sm" variant="outline" className="border-slate-600 text-[10px] h-6 px-2 w-full"
-                                  onClick={() => copy(item.payment_request)}>
-                                  <Copy className="w-3 h-3 mr-1" />
-                                  {items.length > 1 ? `Copy invoice ${idx + 1}` : "Copy invoice"}
-                                </Button>
-                              </div>
-                            ))}
+                    const TX_LABELS: Record<string, string> = {
+                      deposit: "⚡ Inbound", withdrawal: "⚡ Outbound",
+                      swap_to_nxt: "⇄ → NXT", swap_to_sats: "⇄ → Sats",
+                      send_p2p: "→ P2P Sent", receive_p2p: "← P2P Received",
+                      tip_sent: "💜 Tip Sent", tip_received: "💜 Tip Received",
+                    };
+
+                    return (
+                      <div
+                        key={tx.id}
+                        data-testid={`row-ln-tx-${tx.id}`}
+                        className={`p-3 rounded-lg border space-y-2 ${
+                          isFailed   ? "bg-red-950/20 border-red-800/40" :
+                          isRefunded ? "bg-orange-950/20 border-orange-800/40" :
+                          isPending  ? "bg-amber-950/20 border-amber-800/30" :
+                          isQueued   ? "bg-blue-950/20 border-blue-800/30" :
+                          "bg-black/20 border-slate-800/60"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="shrink-0">
+                            {tx.type === "deposit"       && <ArrowDownToLine className="w-4 h-4 text-green-400" />}
+                            {tx.type === "withdrawal"    && <ArrowUpFromLine className={`w-4 h-4 ${isFailed ? "text-red-400" : "text-orange-400"}`} />}
+                            {tx.type?.startsWith("swap") && <ArrowRightLeft  className="w-4 h-4 text-purple-400" />}
+                            {tx.type === "send_p2p"      && <Users            className="w-4 h-4 text-cyan-400" />}
+                            {tx.type === "receive_p2p"   && <Users            className="w-4 h-4 text-green-400" />}
+                            {tx.type === "tip_sent"      && <Heart            className="w-4 h-4 text-pink-400" />}
+                            {tx.type === "tip_received"  && <Heart            className="w-4 h-4 text-pink-300" />}
                           </div>
-                        );
-                      })()}
-                    </div>
-                  ))}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-white font-medium">
+                              {TX_LABELS[tx.type] ?? tx.type}
+                            </div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {tx.memo?.replace(/\[REFUNDED[^\]]*\]/i, "").trim() || tx.paymentHash?.slice(0, 20) + "…" || "—"}
+                            </div>
+                            {tx.createdAt && <div className="text-[10px] text-gray-600 mt-0.5">{fmtTime(tx.createdAt)}</div>}
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="font-mono text-sm text-yellow-300">⚡ {satsDisplay(sats)}</div>
+                            <div className="mt-0.5"><StatusBadge status={tx.status} /></div>
+                          </div>
+                        </div>
+
+                        {/* ── Failure reason ── */}
+                        {(isFailed || isRefunded) && tx.failureReason && (
+                          <div className={`rounded px-2.5 py-2 space-y-1 ${isFailed ? "bg-red-900/25 border border-red-500/25" : "bg-orange-900/25 border border-orange-500/25"}`}>
+                            <div className={`flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-wider ${isFailed ? "text-red-400" : "text-orange-400"}`}>
+                              {isFailed ? <XCircle className="w-3 h-3 shrink-0" /> : <AlertCircle className="w-3 h-3 shrink-0" />}
+                              Why it {isFailed ? "failed" : "was refunded"}
+                            </div>
+                            <div className={`text-[10px] leading-snug ${isFailed ? "text-red-300/80" : "text-orange-300/80"}`}>
+                              {tx.failureReason}
+                            </div>
+                            {tx.queueAttempts != null && tx.queueAttempts > 0 && (
+                              <div className="text-[9px] text-gray-500">
+                                Attempted {tx.queueAttempts} time{tx.queueAttempts !== 1 ? "s" : ""}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* ── Pending explanation ── */}
+                        {isPending && tx.failureReason && (
+                          <div className="bg-amber-900/20 border border-amber-500/25 rounded px-2.5 py-2 space-y-0.5">
+                            <div className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-wider text-amber-400">
+                              <Clock className="w-3 h-3 shrink-0" /> Why it's pending
+                            </div>
+                            <div className="text-[10px] text-amber-300/80 leading-snug">{tx.failureReason}</div>
+                            {tx.type === "deposit" && tx.paymentRequest && (
+                              <div className="pt-1">
+                                <div className="font-mono text-[8px] text-gray-500 break-all bg-black/30 rounded p-1 select-all">
+                                  {tx.paymentRequest.slice(0, 60)}…
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* ── Queue auto-pay progress ── */}
+                        {isQueued && tx.id && <QueueProgress txId={tx.id} />}
+
+                        {/* ── Pending manual invoice(s) ── */}
+                        {tx.status === "pending_manual" && tx.paymentRequest && (() => {
+                          let items: Array<{ amountSats: number; payment_request: string }>;
+                          try {
+                            const parsed = JSON.parse(tx.paymentRequest);
+                            items = Array.isArray(parsed) ? parsed : [{ amountSats: sats, payment_request: tx.paymentRequest }];
+                          } catch {
+                            items = [{ amountSats: sats, payment_request: tx.paymentRequest }];
+                          }
+                          return (
+                            <div className="bg-amber-900/20 border border-amber-500/30 rounded p-2 space-y-1.5">
+                              <div className="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                {items.length > 1
+                                  ? `Awaiting payment — pay all ${items.length} invoices to complete withdrawal`
+                                  : "Awaiting payment — pay this invoice to complete withdrawal"}
+                              </div>
+                              {items.map((item, idx) => (
+                                <div key={idx} className="space-y-1">
+                                  {items.length > 1 && (
+                                    <div className="text-[9px] text-amber-300 font-semibold">
+                                      Invoice {idx + 1}/{items.length} — ⚡ {item.amountSats.toLocaleString()} sats
+                                    </div>
+                                  )}
+                                  <div className="font-mono text-[9px] text-white break-all bg-slate-900 rounded p-1.5 select-all leading-relaxed">
+                                    {item.payment_request}
+                                  </div>
+                                  <Button size="sm" variant="outline" className="border-slate-600 text-[10px] h-6 px-2 w-full"
+                                    onClick={() => copy(item.payment_request)}>
+                                    <Copy className="w-3 h-3 mr-1" />
+                                    {items.length > 1 ? `Copy invoice ${idx + 1}` : "Copy invoice"}
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    );
+                  })}
                 </div>
               </Card>
             )}

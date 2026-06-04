@@ -9147,17 +9147,68 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  // GET /api/lightning/transactions — history
+  // GET /api/lightning/transactions — history with queue error context
   app.get("/api/lightning/transactions", authenticate, async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { lightningTransactions } = await import("../shared/schema");
-      const { eq, desc } = await import("drizzle-orm");
+      const { eq, desc, sql: _s } = await import("drizzle-orm");
       const txs = await db.select().from(lightningTransactions)
         .where(eq(lightningTransactions.userId, req.user!.id))
         .orderBy(desc(lightningTransactions.createdAt))
         .limit(50);
-      res.json({ transactions: txs });
+
+      // Enrich each tx with queue diagnostic data (last_error, attempts, queueStatus)
+      const enriched = await Promise.all(txs.map(async (tx) => {
+        // Fetch queue row(s) for this tx
+        const qRows = (await db.execute(_s`
+          SELECT status, attempts, last_error, paid_at
+          FROM lightning_payment_queue
+          WHERE tx_id = ${tx.id} AND user_id = ${req.user!.id}
+          ORDER BY id DESC LIMIT 1
+        `)).rows as any[];
+
+        let queueError: string | null = null;
+        let queueAttempts: number | null = null;
+        let queueStatus: string | null = null;
+
+        if (qRows.length > 0) {
+          const q = qRows[0];
+          queueError   = q.last_error ?? null;
+          queueAttempts = q.attempts != null ? Number(q.attempts) : null;
+          queueStatus  = q.status ?? null;
+        }
+
+        // Infer a human-readable failure reason when none is stored
+        let failureReason: string | null = null;
+        if (tx.status === "failed") {
+          if (queueError) {
+            failureReason = queueError;
+          } else if (tx.type === "withdrawal" && !tx.btcAddress) {
+            // Lightning withdrawal — most likely auth/balance failure
+            failureReason = "Lightning payment failed — Coinos bridge had insufficient balance or auth error. The Coinos account (nexusosmain@coinos.io) needs to be funded before sweeps work.";
+          } else if (tx.type === "withdrawal" && tx.btcAddress) {
+            // On-chain withdrawal
+            failureReason = "On-chain withdrawal failed — the BTC withdrawal processor could not broadcast the transaction (insufficient confirmed UTXO balance or address error).";
+          } else {
+            failureReason = "Payment failed — see server logs for details.";
+          }
+        } else if (tx.status === "pending") {
+          if (tx.type === "deposit") {
+            failureReason = "Waiting for payment — this invoice or deposit address has not received funds yet.";
+          } else if (tx.type === "withdrawal") {
+            failureReason = "Queued — waiting for the payment worker to process this withdrawal (runs every 60 s).";
+          }
+        } else if (tx.status === "refunded") {
+          // Extract refund reason from memo if available
+          const memoMatch = tx.memo?.match(/REFUNDED[^—]*—\s*(.+)$/i);
+          failureReason = memoMatch ? memoMatch[1] : "Payment was not settled and sats were returned to your wallet.";
+        }
+
+        return { ...tx, queueError, queueAttempts, queueStatus, failureReason };
+      }));
+
+      res.json({ transactions: enriched });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
