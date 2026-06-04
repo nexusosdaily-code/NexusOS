@@ -1689,28 +1689,49 @@ export default function ChannelDashboard() {
                     </div>
                   )}
 
-                  {/* Result — manual invoice (no provider configured) */}
-                  {lnAddrResult?.status === "pending_manual" && (
-                    <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-3 space-y-3">
-                      <div className="text-amber-400 font-semibold text-sm flex items-center gap-2">
-                        <AlertCircle className="w-3.5 h-3.5" />
-                        Pay this invoice to complete withdrawal
+                  {/* Result — manual invoice(s) (no provider configured, or provider failed) */}
+                  {lnAddrResult?.status === "pending_manual" && (() => {
+                    // Normalise: server may return `invoices` array or legacy `invoice` string
+                    const items: Array<{ amountSats: number; invoice: string }> =
+                      lnAddrResult.invoices
+                        ? lnAddrResult.invoices
+                        : lnAddrResult.invoice
+                          ? [{ amountSats: lnAddrResult.amountSats, invoice: lnAddrResult.invoice }]
+                          : [];
+                    return (
+                      <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-3 space-y-3">
+                        <div className="text-amber-400 font-semibold text-sm flex items-center gap-2">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          {items.length > 1
+                            ? `Pay all ${items.length} invoices to complete withdrawal`
+                            : "Pay this invoice to complete withdrawal"}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          Your <span className="text-yellow-300 font-mono">{lnAddrResult.amountSats?.toLocaleString()} sats</span> are reserved.
+                          Pay {items.length > 1 ? "each invoice" : "the invoice"} below from any Lightning wallet to send them to{" "}
+                          <span className="text-cyan-300 font-mono">{lnAddrResult.lightningAddress}</span>.
+                        </div>
+                        {items.map((item, idx) => (
+                          <div key={idx} className="space-y-1.5">
+                            {items.length > 1 && (
+                              <div className="text-[10px] text-amber-300 font-semibold">
+                                Invoice {idx + 1} / {items.length} — ⚡ {item.amountSats.toLocaleString()} sats
+                              </div>
+                            )}
+                            <div className="font-mono text-[10px] text-white break-all bg-slate-800 rounded p-2 leading-relaxed select-all">
+                              {item.invoice}
+                            </div>
+                            <Button size="sm" variant="outline" className="border-slate-600 text-xs w-full"
+                              onClick={() => copy(item.invoice)}>
+                              <Copy className="w-3 h-3 mr-1" />
+                              {items.length > 1 ? `Copy invoice ${idx + 1}` : "Copy invoice"}
+                            </Button>
+                          </div>
+                        ))}
+                        <div className="text-[10px] text-gray-500">{lnAddrResult.note}</div>
                       </div>
-                      <div className="text-xs text-gray-400">
-                        Your <span className="text-yellow-300 font-mono">{lnAddrResult.amountSats?.toLocaleString()} sats</span> are reserved.
-                        Pay the invoice below from any Lightning wallet to send them to{" "}
-                        <span className="text-cyan-300 font-mono">{lnAddrResult.lightningAddress}</span>.
-                      </div>
-                      <div className="font-mono text-[10px] text-white break-all bg-slate-800 rounded p-2 leading-relaxed select-all">
-                        {lnAddrResult.invoice}
-                      </div>
-                      <Button size="sm" variant="outline" className="border-slate-600 text-xs w-full"
-                        onClick={() => copy(lnAddrResult.invoice)}>
-                        <Copy className="w-3 h-3 mr-1" />Copy invoice
-                      </Button>
-                      <div className="text-[10px] text-gray-500">{lnAddrResult.note}</div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
 
                 {/* Info */}
@@ -2178,21 +2199,44 @@ export default function ChannelDashboard() {
                           <div className="mt-0.5"><StatusBadge status={tx.status} /></div>
                         </div>
                       </div>
-                      {/* Pending manual invoice — show bolt11 so user can pay from any wallet */}
-                      {tx.status === "pending_manual" && tx.paymentRequest && (
-                        <div className="bg-amber-900/20 border border-amber-500/30 rounded p-2 space-y-1.5">
-                          <div className="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" /> Awaiting payment — pay this invoice to complete withdrawal
+                      {/* Pending manual invoice(s) — show bolt11(s) so user can pay from any wallet */}
+                      {tx.status === "pending_manual" && tx.paymentRequest && (() => {
+                        // paymentRequest may be a JSON array (batch) or a plain bolt11
+                        let items: Array<{ amountSats: number; payment_request: string }>;
+                        try {
+                          const parsed = JSON.parse(tx.paymentRequest);
+                          items = Array.isArray(parsed) ? parsed : [{ amountSats: tx.amountSats ?? tx.amount_sats ?? 0, payment_request: tx.paymentRequest }];
+                        } catch {
+                          items = [{ amountSats: tx.amountSats ?? tx.amount_sats ?? 0, payment_request: tx.paymentRequest }];
+                        }
+                        return (
+                          <div className="bg-amber-900/20 border border-amber-500/30 rounded p-2 space-y-1.5">
+                            <div className="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              {items.length > 1
+                                ? `Awaiting payment — pay all ${items.length} invoices to complete withdrawal`
+                                : "Awaiting payment — pay this invoice to complete withdrawal"}
+                            </div>
+                            {items.map((item, idx) => (
+                              <div key={idx} className="space-y-1">
+                                {items.length > 1 && (
+                                  <div className="text-[9px] text-amber-300 font-semibold">
+                                    Invoice {idx + 1}/{items.length} — ⚡ {item.amountSats.toLocaleString()} sats
+                                  </div>
+                                )}
+                                <div className="font-mono text-[9px] text-white break-all bg-slate-900 rounded p-1.5 select-all leading-relaxed">
+                                  {item.payment_request}
+                                </div>
+                                <Button size="sm" variant="outline" className="border-slate-600 text-[10px] h-6 px-2 w-full"
+                                  onClick={() => copy(item.payment_request)}>
+                                  <Copy className="w-3 h-3 mr-1" />
+                                  {items.length > 1 ? `Copy invoice ${idx + 1}` : "Copy invoice"}
+                                </Button>
+                              </div>
+                            ))}
                           </div>
-                          <div className="font-mono text-[9px] text-white break-all bg-slate-900 rounded p-1.5 select-all leading-relaxed">
-                            {tx.paymentRequest}
-                          </div>
-                          <Button size="sm" variant="outline" className="border-slate-600 text-[10px] h-6 px-2 w-full"
-                            onClick={() => copy(tx.paymentRequest)}>
-                            <Copy className="w-3 h-3 mr-1" />Copy invoice
-                          </Button>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>

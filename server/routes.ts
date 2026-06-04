@@ -8480,6 +8480,7 @@ export async function registerRoutes(
     if (!invR.ok || inv.status === "ERROR") throw new Error(inv.reason || "LNURL-pay invoice request failed");
     const payment_request: string = inv.pr;
 
+
     // Step 3 — get payment_hash using the available provider (payment_hash is metadata only)
     let payment_hash = payment_request; // safe fallback: store bolt11 itself
     const provider = detectLnProvider();
@@ -8498,6 +8499,41 @@ export async function registerRoutes(
       }
     } catch { /* keep fallback */ }
     return { payment_hash, payment_request };
+  }
+
+  // Batch LNURL-pay: splits totalSats into ≤ maxSendable chunks and fetches one invoice per chunk.
+  // Returns an array of { amountSats, payment_request, payment_hash }.
+  // If totalSats fits in a single invoice the array will have length 1.
+  async function lnurlPayBatchInvoices(
+    lightningAddress: string, totalSats: number, memo: string
+  ): Promise<Array<{ amountSats: number; payment_request: string; payment_hash: string }>> {
+    const [name, domain] = lightningAddress.split("@");
+    if (!name || !domain) throw new Error(`Invalid Lightning Address: ${lightningAddress}`);
+    const metaR = await fetch(`https://${domain}/.well-known/lnurlp/${name}`);
+    const meta  = await metaR.json();
+    if (!metaR.ok || meta.status === "ERROR") throw new Error(meta.reason || "LNURL-pay metadata fetch failed");
+
+    const maxPerSats = Math.floor((meta.maxSendable ?? Infinity) / 1000);
+    const minPerSats = Math.ceil((meta.minSendable ?? 1) / 1000);
+    if (totalSats < minPerSats) throw new Error(`Minimum is ${minPerSats} sats`);
+
+    // Build chunk list
+    const chunks: number[] = [];
+    let rem = totalSats;
+    while (rem > 0) { const c = Math.min(rem, maxPerSats); chunks.push(c); rem -= c; }
+
+    // Fetch all invoices in parallel
+    return await Promise.all(chunks.map(async (chunkSats) => {
+      const amountMsats = chunkSats * 1000;
+      const cbUrl = new URL(meta.callback);
+      cbUrl.searchParams.set("amount", String(amountMsats));
+      if (memo && meta.commentAllowed && memo.length <= (meta.commentAllowed as number))
+        cbUrl.searchParams.set("comment", memo);
+      const inv = await fetch(cbUrl.toString()).then(r => r.json());
+      if (inv.status === "ERROR") throw new Error(inv.reason || "Invoice callback failed");
+      const ph = inv.verify ? `lnurlv:${inv.verify}` : inv.pr;
+      return { amountSats: chunkSats, payment_request: inv.pr, payment_hash: ph };
+    }));
   }
 
   async function lnCreateInvoice(amountSats: number, memo: string): Promise<{ payment_hash: string; payment_request: string }> {
@@ -9007,9 +9043,9 @@ export async function registerRoutes(
         if (lnWalletLn.satsBalance < amountSats)
           return res.status(400).json({ error: `Insufficient sats — have ${lnWalletLn.satsBalance.toLocaleString()}, need ${amountSats.toLocaleString()}` });
 
-        let invoice: { payment_hash: string; payment_request: string };
+        let batchInvoices: Array<{ amountSats: number; payment_request: string; payment_hash: string }>;
         try {
-          invoice = await lnurlPayCreateInvoice(addr, amountSats, "NexusOS withdrawal");
+          batchInvoices = await lnurlPayBatchInvoices(addr, amountSats, "NexusOS withdrawal");
         } catch (e: any) {
           return res.status(400).json({ error: `Cannot resolve Lightning Address: ${e.message}` });
         }
@@ -9022,37 +9058,46 @@ export async function registerRoutes(
           .set({ satsBalance: lnWalletLn.satsBalance - amountSats, totalWithdrawn: lnWalletLn.totalWithdrawn + amountSats, updatedAt: new Date() })
           .where(eqLn(lwLn.userId, req.user!.id));
 
+        // Store batch as JSON if multiple invoices, else plain bolt11
+        const storedPR = batchInvoices.length === 1
+          ? batchInvoices[0].payment_request
+          : JSON.stringify(batchInvoices.map(i => ({ amountSats: i.amountSats, payment_request: i.payment_request })));
+        const firstInvoice = batchInvoices[0];
+
         const [txLn] = await dbLn.insert(ltLn).values({
           userId: req.user!.id, type: "withdrawal", amountSats,
-          paymentRequest: invoice.payment_request, paymentHash: invoice.payment_hash,
+          paymentRequest: storedPR, paymentHash: firstInvoice.payment_hash,
           memo: `⚡ Lightning → ${addr}`, status: detectLnProvider() ? "pending" : "pending_manual",
         }).returning();
 
         const provider = detectLnProvider();
         if (provider) {
           try {
-            const payHash = await lnPayInvoice(invoice.payment_request);
-            await dbLn.update(ltLn).set({ status: "completed", lnbitsPaymentId: payHash, completedAt: new Date() }).where(eqLn(ltLn.id, txLn.id));
+            // Attempt to pay all invoices in sequence via provider
+            for (const inv of batchInvoices) await lnPayInvoice(inv.payment_request);
+            await dbLn.update(ltLn).set({ status: "completed", completedAt: new Date() }).where(eqLn(ltLn.id, txLn.id));
             await logAction(req, "lightning_send_to_address", "lightning", req.user!.id, { amountSats, lightningAddress: addr });
-            return res.json({ ok: true, status: "paid", amountSats, lightningAddress: addr, paymentHash: payHash,
+            return res.json({ ok: true, status: "paid", amountSats, lightningAddress: addr,
               note: `⚡ Sent ${amountSats.toLocaleString()} sats to ${addr}` });
           } catch (payErr: any) {
-            // Provider auth/funds error — keep sats reserved, give user a manual invoice
             await dbLn.update(ltLn).set({ status: "pending_manual" }).where(eqLn(ltLn.id, txLn.id));
             await logAction(req, "lightning_send_to_address_manual", "lightning", req.user!.id, { amountSats, lightningAddress: addr, reason: payErr.message });
             return res.json({
               ok: true, status: "pending_manual", amountSats, lightningAddress: addr,
-              invoice: invoice.payment_request, txId: txLn.id,
-              providerError: payErr.message,
-              note: `Automatic payment unavailable (${payErr.message}). Your ${amountSats.toLocaleString()} sats are reserved. Scan the invoice below from any funded Lightning wallet (Wallet of Satoshi, Phoenix, Muun, etc.) to complete the withdrawal.`,
+              invoices: batchInvoices.map(i => ({ amountSats: i.amountSats, invoice: i.payment_request })),
+              txId: txLn.id, providerError: payErr.message,
+              note: `Automatic payment unavailable. Your ${amountSats.toLocaleString()} sats are reserved. Pay ${batchInvoices.length > 1 ? `all ${batchInvoices.length} invoices below` : "the invoice below"} from any funded Lightning wallet to complete the withdrawal.`,
             });
           }
         }
 
         await logAction(req, "lightning_send_to_address_manual", "lightning", req.user!.id, { amountSats, lightningAddress: addr });
-        return res.json({ ok: true, status: "pending_manual", amountSats, lightningAddress: addr,
-          invoice: invoice.payment_request, txId: txLn.id,
-          note: `Pay the invoice below from any funded Lightning wallet to withdraw ${amountSats.toLocaleString()} sats. Your NexusOS sats are reserved.` });
+        return res.json({
+          ok: true, status: "pending_manual", amountSats, lightningAddress: addr,
+          invoices: batchInvoices.map(i => ({ amountSats: i.amountSats, invoice: i.payment_request })),
+          txId: txLn.id,
+          note: `Pay ${batchInvoices.length > 1 ? `all ${batchInvoices.length} invoices below` : "the invoice below"} from any funded Lightning wallet to withdraw ${amountSats.toLocaleString()} sats. Your NexusOS sats are reserved.`,
+        });
       }
 
       // ── On-chain BTC path ──────────────────────────────────────────────────
@@ -9155,10 +9200,10 @@ export async function registerRoutes(
       if (lnWallet.satsBalance < amountSats)
         return res.status(400).json({ error: `Insufficient sats — have ${lnWallet.satsBalance.toLocaleString()}, need ${amountSats.toLocaleString()}` });
 
-      // Step 1 — resolve Lightning Address → bolt11 invoice (no provider needed)
-      let invoice: { payment_hash: string; payment_request: string };
+      // Step 1 — resolve Lightning Address → batch of bolt11 invoices (auto-splits if amount > maxSendable)
+      let batchInvoices: Array<{ amountSats: number; payment_request: string; payment_hash: string }>;
       try {
-        invoice = await lnurlPayCreateInvoice(addr, amountSats, "NexusOS withdrawal");
+        batchInvoices = await lnurlPayBatchInvoices(addr, amountSats, "NexusOS withdrawal");
       } catch (e: any) {
         return res.status(400).json({ error: `Cannot resolve Lightning Address: ${e.message}` });
       }
@@ -9176,54 +9221,51 @@ export async function registerRoutes(
 
       // Deduct sats first
       await db.update(lightningWallets)
-        .set({
-          satsBalance: lnWallet.satsBalance - amountSats,
-          totalWithdrawn: lnWallet.totalWithdrawn + amountSats,
-          updatedAt: new Date(),
-        })
+        .set({ satsBalance: lnWallet.satsBalance - amountSats, totalWithdrawn: lnWallet.totalWithdrawn + amountSats, updatedAt: new Date() })
         .where(eq(lightningWallets.userId, req.user!.id));
+
+      // Store batch as JSON when multiple invoices, else plain bolt11
+      const storedPR = batchInvoices.length === 1
+        ? batchInvoices[0].payment_request
+        : JSON.stringify(batchInvoices.map(i => ({ amountSats: i.amountSats, payment_request: i.payment_request })));
 
       const [tx] = await db.insert(lightningTransactions).values({
         userId:         req.user!.id,
         type:           "withdrawal",
         amountSats,
-        paymentRequest: invoice.payment_request,
-        paymentHash:    invoice.payment_hash,
+        paymentRequest: storedPR,
+        paymentHash:    batchInvoices[0].payment_hash,
         memo:           `⚡ Lightning → ${addr}`,
         status:         provider ? "pending" : "pending_manual",
       }).returning();
 
       if (provider) {
         try {
-          const payHash = await lnPayInvoice(invoice.payment_request);
+          for (const inv of batchInvoices) await lnPayInvoice(inv.payment_request);
           await db.update(lightningTransactions)
-            .set({ status: "completed", lnbitsPaymentId: payHash, completedAt: new Date() })
+            .set({ status: "completed", completedAt: new Date() })
             .where(eq(lightningTransactions.id, tx.id));
           await logAction(req, "lightning_send_to_address", "lightning", req.user!.id, { amountSats, lightningAddress: addr });
-          return res.json({ ok: true, status: "paid", amountSats, lightningAddress: addr, paymentHash: payHash });
+          return res.json({ ok: true, status: "paid", amountSats, lightningAddress: addr });
         } catch (payErr: any) {
-          // Provider auth/funds error — keep sats reserved, return manual invoice
           await db.update(lightningTransactions).set({ status: "pending_manual" }).where(eq(lightningTransactions.id, tx.id));
           await logAction(req, "lightning_send_to_address_manual", "lightning", req.user!.id, { amountSats, lightningAddress: addr, reason: payErr.message });
           return res.json({
             ok: true, status: "pending_manual", amountSats, lightningAddress: addr,
-            invoice: invoice.payment_request, txId: tx.id,
-            providerError: payErr.message,
-            note: `Automatic payment unavailable. Your ${amountSats.toLocaleString()} sats are reserved. Pay the invoice below from any funded Lightning wallet (Wallet of Satoshi, Phoenix, Muun, etc.) to complete the withdrawal.`,
+            invoices: batchInvoices.map(i => ({ amountSats: i.amountSats, invoice: i.payment_request })),
+            txId: tx.id, providerError: payErr.message,
+            note: `Automatic payment unavailable. Your ${amountSats.toLocaleString()} sats are reserved. Pay ${batchInvoices.length > 1 ? `all ${batchInvoices.length} invoices below` : "the invoice below"} from any funded Lightning wallet to complete the withdrawal.`,
           });
         }
       }
 
-      // No provider — sats reserved, return invoice for manual payment from another wallet
+      // No provider — sats reserved, return invoices for manual payment
       await logAction(req, "lightning_send_to_address_manual", "lightning", req.user!.id, { amountSats, lightningAddress: addr });
       res.json({
-        ok: true,
-        status: "pending_manual",
-        amountSats,
-        lightningAddress: addr,
-        invoice: invoice.payment_request,
+        ok: true, status: "pending_manual", amountSats, lightningAddress: addr,
+        invoices: batchInvoices.map(i => ({ amountSats: i.amountSats, invoice: i.payment_request })),
         txId: tx.id,
-        note: "No Lightning provider is configured on this server. Pay the invoice below from your own wallet to complete this withdrawal. Your NexusOS sats have been reserved.",
+        note: `Pay ${batchInvoices.length > 1 ? `all ${batchInvoices.length} invoices below` : "the invoice below"} from any funded Lightning wallet to withdraw ${amountSats.toLocaleString()} sats. Your NexusOS sats are reserved.`,
       });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
