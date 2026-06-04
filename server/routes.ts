@@ -9026,6 +9026,66 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // PUT /api/user/admin-btc-wallet — save / update the logged-in user's admin BTC wallet
+  app.put("/api/user/admin-btc-wallet", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { btcAddress, label = "Admin Wallet" } = req.body;
+      if (!btcAddress) return res.status(400).json({ error: "btcAddress required" });
+      const addr = btcAddress.trim();
+      if (!/^(bc1[a-z0-9]{6,87}|[13][a-zA-HJ-NP-Z0-9]{25,34})$/.test(addr))
+        return res.status(400).json({ error: "Invalid Bitcoin address" });
+      const { db } = await import("./db");
+      const { users: usersTable, btcAddressBook } = await import("../shared/schema");
+      const { eq, and, ne } = await import("drizzle-orm");
+      await db.update(usersTable).set({ adminBtcAddress: addr, adminBtcAddressSetAt: new Date() }).where(eq(usersTable.id, req.user!.id));
+      const [existing] = await db.select().from(btcAddressBook).where(and(eq(btcAddressBook.userId, req.user!.id), eq(btcAddressBook.btcAddress, addr)));
+      if (existing) {
+        await db.update(btcAddressBook).set({ isAdmin: true, label }).where(eq(btcAddressBook.id, existing.id));
+      } else {
+        await db.insert(btcAddressBook).values({ userId: req.user!.id, label, btcAddress: addr, isAdmin: true });
+      }
+      await db.update(btcAddressBook).set({ isAdmin: false }).where(and(eq(btcAddressBook.userId, req.user!.id), ne(btcAddressBook.btcAddress, addr)));
+      res.json({ ok: true, adminBtcAddress: addr });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/lightning/address-book — list saved BTC addresses for logged-in user
+  app.get("/api/lightning/address-book", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { btcAddressBook } = await import("../shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      const entries = await db.select().from(btcAddressBook).where(eq(btcAddressBook.userId, req.user!.id)).orderBy(desc(btcAddressBook.isAdmin), desc(btcAddressBook.createdAt));
+      res.json({ ok: true, entries });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/lightning/address-book — add a new saved address
+  app.post("/api/lightning/address-book", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { btcAddress, label = "Wallet" } = req.body;
+      if (!btcAddress) return res.status(400).json({ error: "btcAddress required" });
+      const addr = btcAddress.trim();
+      if (!/^(bc1[a-z0-9]{6,87}|[13][a-zA-HJ-NP-Z0-9]{25,34})$/.test(addr))
+        return res.status(400).json({ error: "Invalid Bitcoin address" });
+      const { db } = await import("./db");
+      const { btcAddressBook } = await import("../shared/schema");
+      const [entry] = await db.insert(btcAddressBook).values({ userId: req.user!.id, label, btcAddress: addr }).returning();
+      res.json({ ok: true, entry });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // DELETE /api/lightning/address-book/:id — remove a saved address
+  app.delete("/api/lightning/address-book/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { btcAddressBook } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      await db.delete(btcAddressBook).where(and(eq(btcAddressBook.id, parseInt(req.params.id)), eq(btcAddressBook.userId, req.user!.id)));
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // POST /api/lightning/send — P2P sats transfer to another NexusOS user by username
   app.post("/api/lightning/send", authenticate, async (req: Request, res: Response) => {
     try {

@@ -29,6 +29,9 @@ export const users = pgTable("users", {
   country:      text("country"),
   stateRegion:  text("state_region"),
   bio:          text("bio"),
+  // ── Admin BTC wallet (UniSat / on-chain) ──
+  adminBtcAddress:      text("admin_btc_address"),
+  adminBtcAddressSetAt: timestamp("admin_btc_address_set_at"),
 }, (table) => ({
   usernameIdx: index("users_username_idx").on(table.username),
   emailIdx: index("users_email_idx").on(table.email),
@@ -1238,6 +1241,19 @@ export const btcAddressRegistry = pgTable("btc_address_registry", {
   registeredAt: timestamp("registered_at").notNull().defaultNow(),
 });
 export type BtcAddressRegistryEntry = typeof btcAddressRegistry.$inferSelect;
+
+// ── BTC Address Book (saved distribution addresses per user) ──────────────────
+export const btcAddressBook = pgTable("btc_address_book", {
+  id:         serial("id").primaryKey(),
+  userId:     varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  label:      text("label").notNull().default("Wallet"),
+  btcAddress: text("btc_address").notNull(),
+  isAdmin:    boolean("is_admin").notNull().default(false),
+  createdAt:  timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  userIdx: index("btc_address_book_user_idx").on(t.userId),
+}));
+export type BtcAddressBookEntry = typeof btcAddressBook.$inferSelect;
 
 // ── Sats Staking Pool ─────────────────────────────────────────────────────────
 export const satsStakes = pgTable("sats_stakes", {

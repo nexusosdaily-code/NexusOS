@@ -13,7 +13,7 @@ import {
   Zap, ArrowLeft, ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft,
   Clock, CheckCircle2, XCircle, Copy, RefreshCw, AlertTriangle,
   Bitcoin, Radio, Waves, Activity, ArrowDownLeft, ArrowUpRight,
-  Atom, Send, Users, Lock, Unlock, TrendingUp, Heart, QrCode,
+  Atom, Send, Users, Lock, Unlock, TrendingUp, Heart, QrCode, BookMarked,
 } from "lucide-react";
 
 const TABS = ["receive", "transmit", "swap", "send", "stake", "unisat", "log"] as const;
@@ -70,140 +70,319 @@ function ChannelPulse({ nm }: { nm: number }) {
   );
 }
 
-function UniSatReceiveTab({ mempoolLive }: { mempoolLive: any }) {
+function UniSatReceiveTab({
+  mempoolLive,
+  addressBook,
+  onRefreshAddressBook,
+  onFillWithdrawAddr,
+}: {
+  mempoolLive: any;
+  addressBook: any[];
+  onRefreshAddressBook: () => void;
+  onFillWithdrawAddr: (addr: string) => void;
+}) {
   const { toast } = useToast();
+  const qc = useQueryClient();
   const { available, connected, connect, address, balance, providerName, error: walletError, disconnect } = useUnisat();
-  const [manualAddr, setManualAddr] = useState("");
+  const [manualAddr, setManualAddr]   = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newLabel, setNewLabel]       = useState("");
+  const [newAddr, setNewAddr]         = useState("");
 
   const displayAddr = connected && address ? address : manualAddr.trim() || null;
   const qrUrl = displayAddr
     ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`bitcoin:${displayAddr}`)}&bgcolor=0f172a&color=ffffff&qzone=2`
     : null;
   const shortAddr = (a: string) => `${a.slice(0, 10)}…${a.slice(-8)}`;
+  const adminEntry = addressBook.find((e: any) => e.isAdmin);
+
+  const saveAdminWallet = useMutation({
+    mutationFn: (btcAddress: string) =>
+      fetch("/api/user/admin-btc-wallet", {
+        method: "PUT", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ btcAddress, label: "Admin Wallet" }),
+      }).then(r => r.json()),
+    onSuccess: (d: any) => {
+      if (d.error) { toast({ title: "Error", description: d.error, variant: "destructive" }); return; }
+      toast({ title: "✓ Admin wallet linked", description: "This address is now your admin/distribution wallet." });
+      qc.invalidateQueries({ queryKey: ["/api/lightning/address-book"] });
+      onRefreshAddressBook();
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const addAddress = useMutation({
+    mutationFn: ({ btcAddress, label }: { btcAddress: string; label: string }) =>
+      fetch("/api/lightning/address-book", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ btcAddress, label }),
+      }).then(r => r.json()),
+    onSuccess: (d: any) => {
+      if (d.error) { toast({ title: "Error", description: d.error, variant: "destructive" }); return; }
+      toast({ title: "Address saved ✓" });
+      setNewAddr(""); setNewLabel(""); setShowAddForm(false);
+      qc.invalidateQueries({ queryKey: ["/api/lightning/address-book"] });
+      onRefreshAddressBook();
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const removeAddress = useMutation({
+    mutationFn: (id: number) =>
+      fetch(`/api/lightning/address-book/${id}`, { method: "DELETE", credentials: "include" }).then(r => r.json()),
+    onSuccess: () => {
+      toast({ title: "Address removed" });
+      qc.invalidateQueries({ queryKey: ["/api/lightning/address-book"] });
+      onRefreshAddressBook();
+    },
+  });
 
   return (
-    <Card className="bg-slate-900/60 border-slate-700/50 p-6 space-y-5">
-      <h2 className="text-white font-semibold flex items-center gap-2">
-        <Bitcoin className="w-4 h-4 text-orange-400" />
-        Receive via UniSat / BTC address
-      </h2>
+    <div className="space-y-4">
+      <Card className="bg-slate-900/60 border-slate-700/50 p-6 space-y-5">
+        <h2 className="text-white font-semibold flex items-center gap-2">
+          <Bitcoin className="w-4 h-4 text-orange-400" />
+          Receive via UniSat / BTC address
+        </h2>
 
-      <div className="space-y-3">
-        {!connected ? (
-          <div className="space-y-3">
-            {available ? (
-              <Button onClick={connect} className="w-full bg-orange-600 hover:bg-orange-700" data-testid="button-unisat-connect">
-                <Bitcoin className="w-4 h-4 mr-2" />
-                Connect {providerName} wallet
-              </Button>
+        <div className="space-y-3">
+          {!connected ? (
+            <div className="space-y-3">
+              {available ? (
+                <Button onClick={connect} className="w-full bg-orange-600 hover:bg-orange-700" data-testid="button-unisat-connect">
+                  <Bitcoin className="w-4 h-4 mr-2" />
+                  Connect {providerName} wallet
+                </Button>
+              ) : (
+                <div className="bg-amber-900/20 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-300 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>
+                    No Bitcoin wallet extension detected. Install{" "}
+                    <a href="https://unisat.io" target="_blank" rel="noopener noreferrer" className="underline">UniSat</a>,
+                    Xverse, or OKX — or paste your BTC address below.
+                  </span>
+                </div>
+              )}
+              {walletError && <div className="text-red-400 text-xs">{walletError}</div>}
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <div className="flex-1 h-px bg-slate-700" />
+                <span>or enter address manually</span>
+                <div className="flex-1 h-px bg-slate-700" />
+              </div>
+              <Input
+                value={manualAddr}
+                onChange={e => setManualAddr(e.target.value)}
+                placeholder="bc1p… or 1… or 3…"
+                className="bg-slate-800/50 border-slate-700 font-mono text-sm"
+                data-testid="input-unisat-manual-addr"
+              />
+            </div>
+          ) : (
+            <div className="bg-orange-900/20 border border-orange-500/20 rounded-lg p-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                <div>
+                  <div className="text-[10px] text-orange-400/70 font-semibold uppercase tracking-wider">{providerName} connected</div>
+                  <div className="text-orange-200 font-mono text-xs mt-0.5">{shortAddr(address!)}</div>
+                </div>
+              </div>
+              <button onClick={disconnect} className="text-xs text-gray-500 hover:text-gray-300 underline">Disconnect</button>
+            </div>
+          )}
+
+          {connected && balance && (
+            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              {[
+                { label: "Confirmed",   value: balance.confirmed.toLocaleString() },
+                { label: "Unconfirmed", value: balance.unconfirmed.toLocaleString() },
+                { label: "Total",       value: balance.total.toLocaleString() },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-slate-800/50 rounded-lg p-2">
+                  <div className="text-gray-500 text-[9px] uppercase tracking-wider">{label}</div>
+                  <div className="font-mono text-orange-300 font-bold mt-0.5">{value}</div>
+                  <div className="text-gray-600 text-[9px]">sats</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Admin wallet banner */}
+        {displayAddr && (
+          <div className="space-y-2">
+            {adminEntry?.btcAddress === displayAddr ? (
+              <div className="bg-orange-900/20 border border-orange-500/40 rounded-lg px-3 py-2 flex items-center gap-2 text-xs">
+                <span className="text-orange-400 font-semibold">★ Admin wallet</span>
+                <span className="text-gray-500 font-mono">{shortAddr(displayAddr)}</span>
+              </div>
             ) : (
-              <div className="bg-amber-900/20 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-300 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>
-                  No Bitcoin wallet extension detected. Install{" "}
-                  <a href="https://unisat.io" target="_blank" rel="noopener noreferrer" className="underline">UniSat</a>,
-                  Xverse, or OKX — or paste your BTC address below.
-                </span>
-              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full border-orange-500/40 text-orange-300 hover:bg-orange-900/20 text-xs"
+                onClick={() => saveAdminWallet.mutate(displayAddr)}
+                disabled={saveAdminWallet.isPending}
+                data-testid="button-save-admin-wallet"
+              >
+                {saveAdminWallet.isPending ? "Saving…" : "★ Set as admin / owner wallet"}
+              </Button>
             )}
-            {walletError && <div className="text-red-400 text-xs">{walletError}</div>}
-            <div className="flex items-center gap-2 text-xs text-gray-600">
-              <div className="flex-1 h-px bg-slate-700" />
-              <span>or enter address manually</span>
-              <div className="flex-1 h-px bg-slate-700" />
-            </div>
-            <Input
-              value={manualAddr}
-              onChange={e => setManualAddr(e.target.value)}
-              placeholder="bc1p… or 1… or 3…"
-              className="bg-slate-800/50 border-slate-700 font-mono text-sm"
-              data-testid="input-unisat-manual-addr"
-            />
-          </div>
-        ) : (
-          <div className="bg-orange-900/20 border border-orange-500/20 rounded-lg p-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
-              <div>
-                <div className="text-[10px] text-orange-400/70 font-semibold uppercase tracking-wider">{providerName} connected</div>
-                <div className="text-orange-200 font-mono text-xs mt-0.5">{shortAddr(address!)}</div>
-              </div>
-            </div>
-            <button onClick={disconnect} className="text-xs text-gray-500 hover:text-gray-300 underline">Disconnect</button>
           </div>
         )}
 
-        {connected && balance && (
-          <div className="grid grid-cols-3 gap-2 text-center text-xs">
-            {[
-              { label: "Confirmed",   value: balance.confirmed.toLocaleString() },
-              { label: "Unconfirmed", value: balance.unconfirmed.toLocaleString() },
-              { label: "Total",       value: balance.total.toLocaleString() },
-            ].map(({ label, value }) => (
-              <div key={label} className="bg-slate-800/50 rounded-lg p-2">
-                <div className="text-gray-500 text-[9px] uppercase tracking-wider">{label}</div>
-                <div className="font-mono text-orange-300 font-bold mt-0.5">{value}</div>
-                <div className="text-gray-600 text-[9px]">sats</div>
+        {displayAddr ? (
+          <div className="space-y-4">
+            <div className="flex flex-col items-center gap-3">
+              <div className="bg-slate-950 border border-orange-500/20 rounded-xl p-3">
+                <img src={qrUrl!} alt="BTC receive QR" className="w-[180px] h-[180px] rounded-lg" data-testid="img-unisat-qr" />
+              </div>
+              <div className="text-[10px] text-orange-400/60 uppercase tracking-wider">Scan with UniSat or any Bitcoin wallet</div>
+            </div>
+
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 flex items-center gap-2">
+              <div className="flex-1 font-mono text-xs text-orange-200 break-all">{displayAddr}</div>
+              <button
+                onClick={() => { navigator.clipboard.writeText(displayAddr); toast({ title: "Address copied" }); }}
+                className="shrink-0 text-gray-400 hover:text-white transition-colors"
+                data-testid="button-unisat-copy-addr"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-gray-500 space-y-1.5">
+              <div>• Sats sent here land directly in your wallet — no NexusOS account needed</div>
+              <div>• Share the QR or copy the address so anyone can pay you</div>
+              {mempoolLive?.ok && (
+                <div className={`flex items-center gap-1 ${mempoolLive.congestionLevel === "low" ? "text-green-400" : mempoolLive.congestionLevel === "medium" ? "text-amber-400" : "text-orange-400"}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full inline-block ${mempoolLive.congestionLevel === "low" ? "bg-green-400" : mempoolLive.congestionLevel === "medium" ? "bg-amber-400" : "bg-orange-400"}`} />
+                  Network: {mempoolLive.medium} sat/vB · ~{mempoolLive.confirmEta ?? 30}min confirmation
+                </div>
+              )}
+            </div>
+
+            <a
+              href={`https://mempool.space/address/${displayAddr}`}
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 w-full py-2 text-xs text-gray-500 hover:text-orange-300 border border-slate-700/50 rounded-lg transition-colors"
+              data-testid="link-unisat-mempool"
+            >
+              <Activity className="w-3.5 h-3.5" />
+              View on mempool.space
+            </a>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-3 py-8 text-gray-600">
+            <QrCode className="w-12 h-12 opacity-20" />
+            <div className="text-sm text-center">Connect your wallet or paste an address<br />to generate a receive QR code</div>
+          </div>
+        )}
+      </Card>
+
+      {/* ── Address Book ─────────────────────────────────────────── */}
+      <Card className="bg-slate-900/60 border-slate-700/50 p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-white font-semibold text-sm flex items-center gap-2">
+            <BookMarked className="w-4 h-4 text-orange-400" />
+            Distribution address book
+          </h2>
+          <button
+            onClick={() => setShowAddForm(v => !v)}
+            className="text-xs text-orange-400 hover:text-orange-300 border border-orange-500/30 rounded px-2 py-1"
+            data-testid="button-toggle-add-address"
+          >
+            {showAddForm ? "Cancel" : "+ Add address"}
+          </button>
+        </div>
+
+        {showAddForm && (
+          <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-3 space-y-2">
+            <Input
+              value={newLabel}
+              onChange={e => setNewLabel(e.target.value)}
+              placeholder="Label (e.g. Cold storage)"
+              className="bg-slate-900/50 border-slate-700 text-sm"
+              data-testid="input-new-addr-label"
+            />
+            <Input
+              value={newAddr}
+              onChange={e => setNewAddr(e.target.value)}
+              placeholder="bc1p… Bitcoin address"
+              className="bg-slate-900/50 border-slate-700 font-mono text-xs"
+              data-testid="input-new-addr-value"
+            />
+            <Button
+              size="sm"
+              className="w-full bg-orange-600 hover:bg-orange-700 text-xs"
+              disabled={!newAddr.trim() || addAddress.isPending}
+              onClick={() => addAddress.mutate({ btcAddress: newAddr.trim(), label: newLabel.trim() || "Wallet" })}
+              data-testid="button-save-new-address"
+            >
+              {addAddress.isPending ? "Saving…" : "Save address"}
+            </Button>
+          </div>
+        )}
+
+        {addressBook.length === 0 ? (
+          <div className="text-xs text-gray-600 text-center py-4">No saved addresses yet. Add one above.</div>
+        ) : (
+          <div className="space-y-2">
+            {addressBook.map((entry: any) => (
+              <div
+                key={entry.id}
+                className={`flex items-center gap-2 rounded-lg p-2.5 border ${entry.isAdmin ? "bg-orange-900/10 border-orange-500/30" : "bg-slate-800/30 border-slate-700/40"}`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-gray-300 truncate">{entry.label}</span>
+                    {entry.isAdmin && <span className="text-[9px] text-orange-400 bg-orange-900/30 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Admin</span>}
+                  </div>
+                  <div className="font-mono text-[10px] text-gray-500 truncate mt-0.5">{entry.btcAddress}</div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(entry.btcAddress); toast({ title: "Address copied" }); }}
+                    className="text-gray-500 hover:text-gray-300 p-1"
+                    title="Copy"
+                    data-testid={`button-copy-addr-${entry.id}`}
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => onFillWithdrawAddr(entry.btcAddress)}
+                    className="text-orange-500 hover:text-orange-300 text-[10px] border border-orange-500/30 rounded px-1.5 py-0.5"
+                    title="Use for withdrawal"
+                    data-testid={`button-use-addr-${entry.id}`}
+                  >
+                    Send →
+                  </button>
+                  {!entry.isAdmin && (
+                    <button
+                      onClick={() => saveAdminWallet.mutate(entry.btcAddress)}
+                      className="text-gray-500 hover:text-orange-400 text-[10px] border border-slate-600/40 rounded px-1.5 py-0.5"
+                      title="Set as admin wallet"
+                      data-testid={`button-set-admin-${entry.id}`}
+                    >
+                      ★
+                    </button>
+                  )}
+                  <button
+                    onClick={() => removeAddress.mutate(entry.id)}
+                    className="text-gray-600 hover:text-red-400 p-1"
+                    title="Remove"
+                    data-testid={`button-remove-addr-${entry.id}`}
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
-      </div>
-
-      {displayAddr ? (
-        <div className="space-y-4">
-          <div className="flex flex-col items-center gap-3">
-            <div className="bg-slate-950 border border-orange-500/20 rounded-xl p-3">
-              <img
-                src={qrUrl!}
-                alt={`BTC receive QR`}
-                className="w-[180px] h-[180px] rounded-lg"
-                data-testid="img-unisat-qr"
-              />
-            </div>
-            <div className="text-[10px] text-orange-400/60 uppercase tracking-wider">Scan with UniSat or any Bitcoin wallet</div>
-          </div>
-
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 flex items-center gap-2">
-            <div className="flex-1 font-mono text-xs text-orange-200 break-all">{displayAddr}</div>
-            <button
-              onClick={() => { navigator.clipboard.writeText(displayAddr); toast({ title: "Address copied" }); }}
-              className="shrink-0 text-gray-400 hover:text-white transition-colors"
-              data-testid="button-unisat-copy-addr"
-            >
-              <Copy className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="text-xs text-gray-500 space-y-1.5">
-            <div>• Sats sent here land directly in your wallet — no NexusOS account needed</div>
-            <div>• Share the QR or copy the address so anyone can pay you</div>
-            {mempoolLive?.ok && (
-              <div className={`flex items-center gap-1 ${mempoolLive.congestionLevel === "low" ? "text-green-400" : mempoolLive.congestionLevel === "medium" ? "text-amber-400" : "text-orange-400"}`}>
-                <span className={`w-1.5 h-1.5 rounded-full inline-block ${mempoolLive.congestionLevel === "low" ? "bg-green-400" : mempoolLive.congestionLevel === "medium" ? "bg-amber-400" : "bg-orange-400"}`} />
-                Network: {mempoolLive.medium} sat/vB · ~{mempoolLive.confirmEta ?? 30}min confirmation
-              </div>
-            )}
-          </div>
-
-          <a
-            href={`https://mempool.space/address/${displayAddr}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1.5 w-full py-2 text-xs text-gray-500 hover:text-orange-300 border border-slate-700/50 rounded-lg transition-colors"
-            data-testid="link-unisat-mempool"
-          >
-            <Activity className="w-3.5 h-3.5" />
-            View on mempool.space
-          </a>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center gap-3 py-8 text-gray-600">
-          <QrCode className="w-12 h-12 opacity-20" />
-          <div className="text-sm text-center">Connect your wallet or paste an address<br />to generate a receive QR code</div>
-        </div>
-      )}
-    </Card>
+      </Card>
+    </div>
   );
 }
 
@@ -285,6 +464,13 @@ export default function ChannelDashboard() {
     enabled: tab === "stake",
     refetchInterval: 30_000,
   });
+
+  const { data: addressBookData, refetch: refetchAddressBook } = useQuery<{ ok: boolean; entries: any[] }>({
+    queryKey: ["/api/lightning/address-book"],
+    queryFn: () => fetch("/api/lightning/address-book", { credentials: "include" }).then(r => r.json()),
+    staleTime: 30_000,
+  });
+  const addressBook = addressBookData?.entries ?? [];
 
   const { data: depositInfo } = useQuery<{
     depositAddress: string; satsPerNxt: number; minDepositSats: number;
@@ -970,6 +1156,28 @@ export default function ChannelDashboard() {
                   </div>
                 ) : (
                   <>
+                    {/* Address book quick-pick */}
+                    {addressBook.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="text-gray-500 text-[10px] uppercase tracking-wider flex items-center gap-1">
+                          <BookMarked className="w-3 h-3" /> Saved addresses
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {addressBook.map((entry: any) => (
+                            <button
+                              key={entry.id}
+                              onClick={() => setWithdrawBtcAddr(entry.btcAddress)}
+                              className={`flex items-center gap-1 text-[10px] rounded px-2 py-1 border transition-all ${withdrawBtcAddr === entry.btcAddress ? "bg-orange-900/30 border-orange-500/60 text-orange-300" : "bg-slate-800/50 border-slate-700/50 text-gray-400 hover:text-orange-300 hover:border-orange-500/30"}`}
+                              data-testid={`button-pick-addr-${entry.id}`}
+                            >
+                              {entry.isAdmin && <span className="text-orange-400">★</span>}
+                              <span className="font-semibold">{entry.label}</span>
+                              <span className="font-mono opacity-60">{entry.btcAddress.slice(0, 8)}…</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <Label className="text-gray-400 text-xs">Destination BTC address</Label>
@@ -999,6 +1207,7 @@ export default function ChannelDashboard() {
                         onChange={(e) => setWithdrawSats(e.target.value)}
                         className="bg-slate-800/50 border-slate-700 font-mono"
                         min="1000"
+                        max="10000000000"
                         data-testid="input-withdraw-sats"
                       />
                       <div className="flex justify-end text-xs">
@@ -1502,7 +1711,14 @@ export default function ChannelDashboard() {
         )}
 
         {/* ── UNISAT RECEIVE ── */}
-        {tab === "unisat" && <UniSatReceiveTab mempoolLive={mempoolLive} />}
+        {tab === "unisat" && (
+          <UniSatReceiveTab
+            mempoolLive={mempoolLive}
+            addressBook={addressBook}
+            onRefreshAddressBook={refetchAddressBook}
+            onFillWithdrawAddr={(addr) => { setWithdrawBtcAddr(addr); setTab("swap"); }}
+          />
+        )}
 
         {/* ── TRANSMISSIONS LOG ── */}
         {tab === "log" && (

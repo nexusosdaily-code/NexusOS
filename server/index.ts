@@ -227,6 +227,21 @@ async function runStartupMigrations() {
       CREATE INDEX IF NOT EXISTS wnusd_positions_stake_idx ON wnusd_positions(stake_id);
     `);
 
+    // 7. BTC address book + admin wallet on users
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS btc_address_book (
+        id          serial PRIMARY KEY,
+        user_id     varchar(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        label       text NOT NULL DEFAULT 'Wallet',
+        btc_address text NOT NULL,
+        is_admin    boolean NOT NULL DEFAULT false,
+        created_at  timestamp NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS btc_address_book_user_idx ON btc_address_book(user_id);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_btc_address text;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_btc_address_set_at timestamp;
+    `);
+
     console.log("[MIGRATION] Startup schema migrations complete.");
   } catch (err: any) {
     console.error("[MIGRATION] Startup migration error:", err.message);
