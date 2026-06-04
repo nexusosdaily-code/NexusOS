@@ -1186,13 +1186,11 @@ export default function ChannelDashboard() {
           <Card className="bg-slate-900/60 border-slate-700/50 p-6 space-y-5">
             <h2 className="text-white font-semibold flex items-center gap-2">
               <Send className="w-4 h-4 text-red-400" />
-              Transmit via Lightning channel
+              Transmit via Lightning
             </h2>
 
-            {/* ── Primary: Send to Lightning Address ── */}
             {!lnAddrResult ? (
               <div className="space-y-4">
-                {/* Amount */}
                 <div className="space-y-1.5">
                   <label className="text-xs text-gray-400 font-medium">Amount (sats)</label>
                   <div className="flex gap-2">
@@ -1201,8 +1199,7 @@ export default function ChannelDashboard() {
                       value={lnAddrSats}
                       onChange={e => setLnAddrSats(e.target.value)}
                       min="1"
-                      max={sats}
-                      placeholder="e.g. 100000000"
+                      placeholder="e.g. 50000"
                       data-testid="input-transmit-amount"
                       className="flex-1 bg-slate-800 border border-slate-600 rounded-md px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-cyan-500"
                     />
@@ -1212,14 +1209,10 @@ export default function ChannelDashboard() {
                       data-testid="button-transmit-max"
                     >Max</button>
                   </div>
-                  <div className="text-[11px] text-gray-500">
-                    Balance: <span className="text-yellow-300 font-mono">⚡ {satsDisplay(sats)} sats</span>
-                  </div>
                 </div>
 
-                {/* Lightning Address */}
                 <div className="space-y-1.5">
-                  <label className="text-xs text-gray-400 font-medium">Lightning Address</label>
+                  <label className="text-xs text-gray-400 font-medium">Destination Lightning Address</label>
                   <input
                     type="text"
                     value={lnAddr}
@@ -1229,101 +1222,75 @@ export default function ChannelDashboard() {
                     className="w-full bg-slate-800 border border-slate-600 rounded-md px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-cyan-500"
                   />
                   {savedLnAddress && savedLnAddress !== lnAddr && (
-                    <button
-                      className="text-[11px] text-cyan-400 hover:text-cyan-300 underline"
-                      onClick={() => setLnAddr(savedLnAddress)}
-                      data-testid="button-use-saved-address"
-                    >
+                    <button className="text-[11px] text-cyan-400 hover:text-cyan-300 underline"
+                      onClick={() => setLnAddr(savedLnAddress)}>
                       Use saved: {savedLnAddress}
                     </button>
                   )}
                 </div>
 
-                {/* Save toggle */}
-                <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={lnAddrSave}
-                    onChange={e => setLnAddrSave(e.target.checked)}
-                    data-testid="checkbox-transmit-save-address"
-                    className="accent-cyan-500"
-                  />
-                  Remember this address
-                </label>
-
                 <Button
-                  onClick={() => sendToLnAddress.mutate()}
-                  disabled={sendToLnAddress.isPending || !lnAddr.trim() || parseInt(lnAddrSats) < 1 || parseInt(lnAddrSats) > sats}
+                  onClick={async () => {
+                    try {
+                      const res = await apiRequest("POST", "/api/lightning/get-invoices", {
+                        lightningAddress: lnAddr.trim(),
+                        amountSats: parseInt(lnAddrSats),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.error || "Failed");
+                      setLnAddrResult({ ...data, status: "ready" });
+                    } catch (e: any) {
+                      toast({ title: "Error", description: e.message, variant: "destructive" });
+                    }
+                  }}
+                  disabled={!lnAddr.trim() || parseInt(lnAddrSats) < 1}
                   className="w-full bg-red-600 hover:bg-red-700 font-semibold"
-                  data-testid="button-send-transmission"
+                  data-testid="button-get-invoice"
                 >
-                  {sendToLnAddress.isPending
-                    ? "Queuing…"
-                    : `⚡ Send ${parseInt(lnAddrSats || "0").toLocaleString()} sats`}
+                  ⚡ Get Invoice
                 </Button>
+              </div>
+            ) : lnAddrResult?.status === "ready" ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-white font-semibold">
+                    {lnAddrResult.invoiceCount > 1
+                      ? `${lnAddrResult.invoiceCount} invoices — pay each from WoS`
+                      : "Pay this invoice from WoS"}
+                  </div>
+                  <div className="text-xs text-gray-400 font-mono">
+                    {parseInt(lnAddrSats).toLocaleString()} sats → {lnAddr}
+                  </div>
+                </div>
 
-                {/* Secondary: pay raw bolt11 */}
-                <details className="group">
-                  <summary className="text-[11px] text-gray-500 cursor-pointer hover:text-gray-300 select-none list-none flex items-center gap-1">
-                    <span className="group-open:rotate-90 inline-block transition-transform">▶</span>
-                    Pay a raw bolt11 invoice instead
-                  </summary>
-                  <div className="mt-3 space-y-3">
-                    <textarea
-                      value={bolt11}
-                      onChange={(e) => setBolt11(e.target.value)}
-                      className="w-full min-h-[80px] bg-slate-800/50 border border-slate-700 rounded-md px-3 py-2 font-mono text-xs text-white placeholder-gray-600 resize-none focus:outline-none focus:border-cyan-500/50"
-                      placeholder="lnbc…"
-                      data-testid="input-bolt11"
-                    />
+                {lnAddrResult.invoices.map((inv: any, i: number) => (
+                  <div key={i} className="bg-slate-800/60 border border-slate-600 rounded-lg p-3 space-y-2">
+                    {lnAddrResult.invoiceCount > 1 && (
+                      <div className="text-[11px] text-gray-400 font-semibold">
+                        Invoice {i + 1} of {lnAddrResult.invoiceCount} — {inv.amountSats.toLocaleString()} sats
+                      </div>
+                    )}
+                    <div className="font-mono text-[11px] text-cyan-300 break-all leading-relaxed bg-slate-900/50 rounded p-2">
+                      {inv.invoice}
+                    </div>
                     <Button
-                      onClick={() => payInvoice.mutate()}
-                      disabled={payInvoice.isPending || !bolt11.trim() || !configured || sats === 0}
-                      className="w-full bg-slate-700 hover:bg-slate-600 text-sm"
-                      data-testid="button-pay-invoice"
+                      size="sm"
+                      className="w-full bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold"
+                      data-testid={`button-copy-invoice-${i}`}
+                      onClick={() => { navigator.clipboard.writeText(inv.invoice); toast({ title: `Invoice ${i + 1} copied!`, description: "Open WoS → paste → pay" }); }}
                     >
-                      {payInvoice.isPending ? "Transmitting…" : "Pay Invoice"}
+                      Copy Invoice {lnAddrResult.invoiceCount > 1 ? `#${i + 1}` : ""} → paste into WoS
                     </Button>
                   </div>
-                </details>
-              </div>
-            ) : lnAddrResult?.status === "paid" ? (
-              <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 space-y-2">
-                <div className="text-green-400 font-semibold">✓ Sent!</div>
-                <div className="text-xs text-gray-300">
-                  <span className="text-yellow-300 font-mono">{lnAddrResult.amountSats?.toLocaleString()} sats</span>
-                  {" → "}
-                  <span className="text-cyan-300 font-mono">{lnAddrResult.lightningAddress}</span>
+                ))}
+
+                <div className="text-[11px] text-gray-500 text-center">
+                  Open Wallet of Satoshi → tap ⚡ Send → paste the invoice → confirm
                 </div>
-                {lnAddrResult.paymentHash && (
-                  <div className="text-[10px] text-gray-500 font-mono break-all">hash: {lnAddrResult.paymentHash}</div>
-                )}
+
                 <Button size="sm" variant="outline" className="border-slate-600 text-xs w-full"
-                  onClick={() => { setLnAddrResult(null); setLnAddrSats("10000"); }}>
-                  Send another
-                </Button>
-              </div>
-            ) : lnAddrResult?.status === "queued" ? (
-              <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 space-y-2">
-                <div className="text-blue-400 font-semibold flex items-center gap-2">
-                  <Clock className="w-3.5 h-3.5 animate-spin" />
-                  Queued — processing automatically
-                </div>
-                <div className="text-xs text-gray-300">
-                  <span className="text-yellow-300 font-mono">{parseInt(lnAddrSats).toLocaleString()} sats</span>
-                  {" → "}
-                  <span className="text-cyan-300 font-mono">{lnAddr}</span>
-                </div>
-                {lnAddrResult.invoiceCount > 1 && (
-                  <div className="text-[11px] text-gray-400">
-                    Auto-split into <span className="text-white font-mono">{lnAddrResult.invoiceCount}</span> invoices
-                    (max {(100_000_000).toLocaleString()} sats each)
-                  </div>
-                )}
-                {lnAddrResult.txId && <QueueProgress txId={lnAddrResult.txId} />}
-                <Button size="sm" variant="outline" className="border-slate-600 text-xs w-full"
-                  onClick={() => { setLnAddrResult(null); setLnAddrSats("10000"); }}>
-                  New transmission
+                  onClick={() => { setLnAddrResult(null); }}>
+                  ← New payment
                 </Button>
               </div>
             ) : null}

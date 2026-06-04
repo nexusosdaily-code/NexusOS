@@ -9326,6 +9326,32 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // POST /api/lightning/get-invoices — resolve a Lightning Address into payable bolt11 invoice(s)
+  // Returns the invoice(s) directly — no balance deduction, no queue. User pays from their own wallet (e.g. WoS).
+  app.post("/api/lightning/get-invoices", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { lightningAddress, amountSats } = req.body;
+      const addr = (lightningAddress ?? "").trim();
+      if (!addr || !/^[a-zA-Z0-9._+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(addr))
+        return res.status(400).json({ error: "Invalid Lightning Address" });
+      if (!amountSats || typeof amountSats !== "number" || amountSats < 1)
+        return res.status(400).json({ error: "Minimum: 1 sat" });
+      let invoices: Array<{ amountSats: number; payment_request: string; payment_hash: string }>;
+      try {
+        invoices = await lnurlPayBatchInvoices(addr, amountSats, "NexusOS payment");
+      } catch (e: any) {
+        return res.status(400).json({ error: `Cannot resolve Lightning Address: ${e.message}` });
+      }
+      res.json({
+        ok: true,
+        lightningAddress: addr,
+        amountSats,
+        invoices: invoices.map(i => ({ amountSats: i.amountSats, invoice: i.payment_request })),
+        invoiceCount: invoices.length,
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // POST /api/lightning/send-to-ln-address — resolve Lightning Address → invoice → pay (or return invoice for manual pay)
   app.post("/api/lightning/send-to-ln-address", authenticate, async (req: Request, res: Response) => {
     try {
