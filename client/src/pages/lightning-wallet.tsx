@@ -2146,36 +2146,53 @@ export default function ChannelDashboard() {
                     <div
                       key={tx.id}
                       data-testid={`row-ln-tx-${tx.id}`}
-                      className="flex items-center gap-3 p-3 bg-black/20 rounded-lg border border-slate-800/60"
+                      className="p-3 bg-black/20 rounded-lg border border-slate-800/60 space-y-2"
                     >
-                      <div className="shrink-0">
-                        {tx.type === "deposit"       && <ArrowDownToLine className="w-4 h-4 text-green-400" />}
-                        {tx.type === "withdrawal"    && <ArrowUpFromLine className="w-4 h-4 text-red-400" />}
-                        {tx.type?.startsWith("swap") && <ArrowRightLeft  className="w-4 h-4 text-purple-400" />}
-                        {tx.type === "send_p2p"      && <Users            className="w-4 h-4 text-cyan-400" />}
-                        {tx.type === "receive_p2p"   && <Users            className="w-4 h-4 text-green-400" />}
-                        {tx.type === "tip_sent"      && <Heart            className="w-4 h-4 text-pink-400" />}
-                        {tx.type === "tip_received"  && <Heart            className="w-4 h-4 text-pink-300" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm text-white font-medium">
-                          {tx.type === "deposit"      && "⚡ Inbound"}
-                          {tx.type === "withdrawal"   && "⚡ Outbound"}
-                          {tx.type === "swap_to_nxt"  && "⇄ → NXT"}
-                          {tx.type === "swap_to_sats" && "⇄ → Sats"}
-                          {tx.type === "send_p2p"     && "→ P2P Sent"}
-                          {tx.type === "receive_p2p"  && "← P2P Received"}
-                          {tx.type === "tip_sent"     && "💜 Tip Sent"}
-                          {tx.type === "tip_received" && "💜 Tip Received"}
-                          {!["deposit","withdrawal","swap_to_nxt","swap_to_sats","send_p2p","receive_p2p","tip_sent","tip_received"].includes(tx.type) && tx.type}
+                      <div className="flex items-center gap-3">
+                        <div className="shrink-0">
+                          {tx.type === "deposit"       && <ArrowDownToLine className="w-4 h-4 text-green-400" />}
+                          {tx.type === "withdrawal"    && <ArrowUpFromLine className="w-4 h-4 text-red-400" />}
+                          {tx.type?.startsWith("swap") && <ArrowRightLeft  className="w-4 h-4 text-purple-400" />}
+                          {tx.type === "send_p2p"      && <Users            className="w-4 h-4 text-cyan-400" />}
+                          {tx.type === "receive_p2p"   && <Users            className="w-4 h-4 text-green-400" />}
+                          {tx.type === "tip_sent"      && <Heart            className="w-4 h-4 text-pink-400" />}
+                          {tx.type === "tip_received"  && <Heart            className="w-4 h-4 text-pink-300" />}
                         </div>
-                        <div className="text-xs text-gray-500 truncate">{tx.memo || tx.paymentHash?.slice(0, 20) + "…" || "—"}</div>
-                        {tx.createdAt && <div className="text-[10px] text-gray-600 mt-0.5">{fmtTime(tx.createdAt)}</div>}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-white font-medium">
+                            {tx.type === "deposit"      && "⚡ Inbound"}
+                            {tx.type === "withdrawal"   && "⚡ Outbound"}
+                            {tx.type === "swap_to_nxt"  && "⇄ → NXT"}
+                            {tx.type === "swap_to_sats" && "⇄ → Sats"}
+                            {tx.type === "send_p2p"     && "→ P2P Sent"}
+                            {tx.type === "receive_p2p"  && "← P2P Received"}
+                            {tx.type === "tip_sent"     && "💜 Tip Sent"}
+                            {tx.type === "tip_received" && "💜 Tip Received"}
+                            {!["deposit","withdrawal","swap_to_nxt","swap_to_sats","send_p2p","receive_p2p","tip_sent","tip_received"].includes(tx.type) && tx.type}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">{tx.memo || tx.paymentHash?.slice(0, 20) + "…" || "—"}</div>
+                          {tx.createdAt && <div className="text-[10px] text-gray-600 mt-0.5">{fmtTime(tx.createdAt)}</div>}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="font-mono text-sm text-yellow-300">⚡ {satsDisplay(tx.amount_sats ?? tx.amountSats ?? 0)}</div>
+                          <div className="mt-0.5"><StatusBadge status={tx.status} /></div>
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <div className="font-mono text-sm text-yellow-300">⚡ {satsDisplay(tx.amount_sats ?? tx.amountSats ?? 0)}</div>
-                        <div className="mt-0.5"><StatusBadge status={tx.status} /></div>
-                      </div>
+                      {/* Pending manual invoice — show bolt11 so user can pay from any wallet */}
+                      {tx.status === "pending_manual" && tx.paymentRequest && (
+                        <div className="bg-amber-900/20 border border-amber-500/30 rounded p-2 space-y-1.5">
+                          <div className="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" /> Awaiting payment — pay this invoice to complete withdrawal
+                          </div>
+                          <div className="font-mono text-[9px] text-white break-all bg-slate-900 rounded p-1.5 select-all leading-relaxed">
+                            {tx.paymentRequest}
+                          </div>
+                          <Button size="sm" variant="outline" className="border-slate-600 text-[10px] h-6 px-2 w-full"
+                            onClick={() => copy(tx.paymentRequest)}>
+                            <Copy className="w-3 h-3 mr-1" />Copy invoice
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
