@@ -1372,6 +1372,41 @@ export default function ChannelDashboard() {
                       </div>
                     </div>
 
+                    {/* Fee efficiency guide */}
+                    <div className="rounded-lg border border-slate-700/50 bg-slate-800/30 p-2.5 space-y-1.5">
+                      <div className="flex items-center justify-between text-[10px] text-gray-400">
+                        <span className="font-semibold text-gray-300">Fee guide</span>
+                        <span className="text-green-400 font-mono">5–72 sat/vB = efficient</span>
+                      </div>
+                      <div className="relative h-2 rounded-full bg-slate-700/60 overflow-hidden">
+                        <div className="absolute inset-y-0 left-0 right-0 rounded-full"
+                          style={{ background: "linear-gradient(to right, #22c55e 0%, #84cc16 20%, #eab308 50%, #f97316 75%, #ef4444 100%)" }} />
+                        <div className="absolute inset-y-0 rounded-full bg-slate-700/80"
+                          style={{ left: `${Math.min(100, ((5-1)/(150-1))*100)}%`, right: `${100 - Math.min(100, ((72-1)/(150-1))*100)}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[9px] text-gray-500 font-mono">
+                        <span>1</span>
+                        <span className="text-green-400">5</span>
+                        <span className="text-green-400">efficient range</span>
+                        <span className="text-green-400">72</span>
+                        <span>150+</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1 text-[9px] text-center">
+                        {[
+                          { range: "1–4",   label: "Slow",      cls: "text-gray-500 bg-slate-700/40" },
+                          { range: "5–20",  label: "✓ Good",    cls: "text-green-400 bg-green-500/10 border border-green-500/30" },
+                          { range: "21–72", label: "✓ Fast",    cls: "text-amber-400 bg-amber-500/10 border border-amber-500/30" },
+                          { range: "73+",   label: "Overpaid",  cls: "text-red-400 bg-red-500/10 border border-red-500/30" },
+                        ].map(b => (
+                          <div key={b.range} className={`rounded px-1 py-0.5 ${b.cls}`}>
+                            <div className="font-mono">{b.range}</div>
+                            <div>{b.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Dynamic fee breakdown */}
                     {(() => {
                       const amt = parseInt(withdrawSats) || 0;
@@ -1459,6 +1494,26 @@ export default function ChannelDashboard() {
                       Mempool: {mempoolLive.medium} sat/vB · {mempoolLive.pendingTxs ? `${(mempoolLive.pendingTxs/1000).toFixed(0)}K pending txs` : mempoolLive.congestionLevel}
                     </div>
                   )}
+                  {/* Fee efficiency guide — deposit context */}
+                  <div className="rounded-lg border border-slate-700/50 bg-slate-800/30 p-2 mt-1 space-y-1">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="text-gray-400 font-semibold">Fee guide</span>
+                      <span className="text-green-400 font-mono">5–72 sat/vB = efficient</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1 text-[9px] text-center">
+                      {[
+                        { range: "1–4",   label: "Slow",     cls: "text-gray-500 bg-slate-700/40" },
+                        { range: "5–20",  label: "✓ Good",   cls: "text-green-400 bg-green-500/10 border border-green-500/30" },
+                        { range: "21–72", label: "✓ Fast",   cls: "text-amber-400 bg-amber-500/10 border border-amber-500/30" },
+                        { range: "73+",   label: "Overpaid", cls: "text-red-400 bg-red-500/10 border border-red-500/30" },
+                      ].map(b => (
+                        <div key={b.range} className={`rounded px-1 py-0.5 ${b.cls}`}>
+                          <div className="font-mono">{b.range}</div>
+                          <div>{b.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
