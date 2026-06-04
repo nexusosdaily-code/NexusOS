@@ -8376,8 +8376,10 @@ export async function registerRoutes(
   const LN_SATS_PER_NXT = 1000; // 1 NXT = 1000 sats
 
   function detectLnProvider(): "coinos" | "alby" | "lnbits" | null {
-    if (process.env.COINOS_TOKEN) return "coinos";
+    // Alby takes priority when present — reliable REST API with clear token auth.
+    // Coinos nsec1 keys require a registered account; fall back only if no Alby token.
     if (process.env.ALBY_ACCESS_TOKEN) return "alby";
+    if (process.env.COINOS_TOKEN) return "coinos";
     if (process.env.LNBITS_URL && process.env.LNBITS_ADMIN_KEY && process.env.LNBITS_INVOICE_KEY) return "lnbits";
     return null;
   }
