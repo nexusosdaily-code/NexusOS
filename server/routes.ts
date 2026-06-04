@@ -9049,47 +9049,101 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  // ── wnsp.io Liquidity Feed admin routes ──────────────────────────────────────
-  // PUT /api/admin/wnsp-io-address — set the wnsp.io UniSat BTC address to watch
+  // ── Multi-wallet BTC Watcher admin routes ────────────────────────────────────
+
+  // GET /api/admin/watched-wallets — list all watched addresses + live snapshots
+  app.get("/api/admin/watched-wallets", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { getWatchedWallets, getTotalFed } = await import("./wnsp-io-liquidity");
+      res.json({ ok: true, wallets: getWatchedWallets(), totalFed: getTotalFed() });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/admin/watched-wallets — add a BTC address to watch
+  app.post("/api/admin/watched-wallets", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { btcAddress, label = "" } = req.body;
+      if (!btcAddress) return res.status(400).json({ error: "btcAddress required" });
+      const addr = btcAddress.trim();
+      if (!/^(bc1[a-zA-Z0-9]{6,87}|[13][a-zA-HJ-NP-Z0-9]{25,34})$/.test(addr))
+        return res.status(400).json({ error: "Invalid Bitcoin address" });
+      const { addWatchedWallet } = await import("./wnsp-io-liquidity");
+      await addWatchedWallet(addr, label.trim());
+      res.json({ ok: true, address: addr, label, message: `Now watching ${addr}` });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // DELETE /api/admin/watched-wallets/:address — stop watching an address
+  app.delete("/api/admin/watched-wallets/:address", authenticate, async (req: Request, res: Response) => {
+    try {
+      const addr = decodeURIComponent(req.params.address);
+      const { removeWatchedWallet } = await import("./wnsp-io-liquidity");
+      await removeWatchedWallet(addr);
+      res.json({ ok: true, removed: addr });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/admin/watched-wallets/history — all credited TXs across all wallets
+  app.get("/api/admin/watched-wallets/history", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { sql: S } = await import("drizzle-orm");
+      const rows = await db.execute(S`
+        SELECT address, txid, sats_received, credited_at, note
+        FROM watched_btc_feeds
+        ORDER BY credited_at DESC LIMIT 100
+      `).catch(() => ({ rows: [] }));
+      res.json({ ok: true, feeds: rows.rows });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Legacy compat: PUT /api/admin/wnsp-io-address
   app.put("/api/admin/wnsp-io-address", authenticate, async (req: Request, res: Response) => {
     try {
       const { btcAddress } = req.body;
       if (!btcAddress) return res.status(400).json({ error: "btcAddress required" });
       const addr = btcAddress.trim();
-      if (!/^(bc1[a-z0-9]{6,87}|[13][a-zA-HJ-NP-Z0-9]{25,34})$/.test(addr))
+      if (!/^(bc1[a-zA-Z0-9]{6,87}|[13][a-zA-HJ-NP-Z0-9]{25,34})$/.test(addr))
         return res.status(400).json({ error: "Invalid Bitcoin address" });
-      const { setWnspIoAddress, startWnspIoLiquidity } = await import("./wnsp-io-liquidity");
-      setWnspIoAddress(addr);
-      // Restart the feed with the new address if it wasn't running
-      startWnspIoLiquidity().catch(() => {});
-      res.json({ ok: true, wnspIoAddress: addr, message: "wnsp.io liquidity feed updated and watching new address" });
+      const { addWatchedWallet } = await import("./wnsp-io-liquidity");
+      await addWatchedWallet(addr, "wnsp.io UniSat");
+      res.json({ ok: true, wnspIoAddress: addr, message: "Address added to watcher" });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  // GET /api/admin/wnsp-io-status — current snapshot + session total fed
+  // Legacy compat: GET /api/admin/wnsp-io-status
   app.get("/api/admin/wnsp-io-status", authenticate, async (req: Request, res: Response) => {
     try {
-      const { getWnspIoSnapshot, getWnspIoTotalFed, getWnspIoAddress } = await import("./wnsp-io-liquidity");
+      const { getWatchedWallets, getTotalFed } = await import("./wnsp-io-liquidity");
+      const wallets = getWatchedWallets();
+      const first   = wallets[0];
       res.json({
-        ok:           true,
-        address:      getWnspIoAddress(),
-        snapshot:     getWnspIoSnapshot(),
-        sessionSatsFed: getWnspIoTotalFed(),
+        ok: true,
+        address: first?.address ?? null,
+        snapshot: first?.snapshot ?? null,
+        sessionSatsFed: getTotalFed(),
+        wallets,
       });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  // GET /api/admin/wnsp-io-history — log of sats fed from wnsp.io wallet
+  // Legacy compat: GET /api/admin/wnsp-io-history
   app.get("/api/admin/wnsp-io-history", authenticate, async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { sql: S } = await import("drizzle-orm");
       const rows = await db.execute(S`
-        SELECT txid, sats_received, credited_at, note
-        FROM wnsp_io_liquidity_feeds
-        ORDER BY credited_at DESC
-        LIMIT 50
-      `).catch(() => ({ rows: [] }));
+        SELECT address, txid, sats_received, credited_at, note
+        FROM watched_btc_feeds
+        ORDER BY credited_at DESC LIMIT 50
+      `).catch(async () => {
+        const r2 = await db.execute(S`
+          SELECT txid, sats_received, credited_at, note
+          FROM wnsp_io_liquidity_feeds
+          ORDER BY credited_at DESC LIMIT 50
+        `).catch(() => ({ rows: [] }));
+        return r2;
+      });
       res.json({ ok: true, feeds: rows.rows });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });

@@ -89,25 +89,28 @@ function UniSatReceiveTab({
   const [newLabel, setNewLabel]       = useState("");
   const [newAddr, setNewAddr]         = useState("");
 
-  // ── wnsp.io liquidity feed status ───────────────────────────────────────
-  const { data: feedStatus, refetch: refetchFeed } = useQuery<any>({
-    queryKey: ["/api/admin/wnsp-io-status"],
-    queryFn: () => fetch("/api/admin/wnsp-io-status", { credentials: "include" }).then(r => r.json()),
+  // ── Multi-wallet BTC watcher ────────────────────────────────────────────
+  const { data: watchedData, refetch: refetchWatched } = useQuery<any>({
+    queryKey: ["/api/admin/watched-wallets"],
+    queryFn: () => fetch("/api/admin/watched-wallets", { credentials: "include" }).then(r => r.json()),
     refetchInterval: 30_000,
   });
 
-  const activateFeedMut = useMutation({
-    mutationFn: (btcAddress: string) =>
-      fetch("/api/admin/wnsp-io-address", {
-        method: "PUT",
+  const [watchLabel, setWatchLabel] = useState("");
+
+  const addWatchMut = useMutation({
+    mutationFn: ({ btcAddress, label }: { btcAddress: string; label: string }) =>
+      fetch("/api/admin/watched-wallets", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ btcAddress }),
+        body: JSON.stringify({ btcAddress, label }),
       }).then(r => r.json()),
     onSuccess: (d: any) => {
       if (d.ok) {
-        toast({ title: "💧 wnsp.io feed live", description: "Every BTC you receive here auto-credits to your NexusOS sats balance." });
-        refetchFeed();
+        toast({ title: "💧 Watching wallet", description: "Every BTC received here auto-credits to your NexusOS balance." });
+        setWatchLabel("");
+        refetchWatched();
       } else {
         toast({ title: "Error", description: d.error, variant: "destructive" });
       }
@@ -115,12 +118,19 @@ function UniSatReceiveTab({
     onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
 
-  const displayAddr = connected && address ? address : manualAddr.trim() || null;
+  const removeWatchMut = useMutation({
+    mutationFn: (addr: string) =>
+      fetch(`/api/admin/watched-wallets/${encodeURIComponent(addr)}`, {
+        method: "DELETE", credentials: "include",
+      }).then(r => r.json()),
+    onSuccess: () => { toast({ title: "Wallet removed" }); refetchWatched(); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
 
-  const feedActive    = feedStatus?.address;
-  const feedSnap      = feedStatus?.snapshot;
-  const sessionFed    = feedStatus?.sessionSatsFed ?? 0;
-  const isThisAddrFed = !!(feedActive && displayAddr && displayAddr === feedActive);
+  const displayAddr   = connected && address ? address : manualAddr.trim() || null;
+  const watchedList: any[] = watchedData?.wallets ?? [];
+  const totalFed      = watchedData?.totalFed ?? 0;
+  const isWatched     = !!(displayAddr && watchedList.find((w: any) => w.address === displayAddr));
   const qrUrl = displayAddr
     ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`bitcoin:${displayAddr}`)}&bgcolor=0f172a&color=ffffff&qzone=2`
     : null;
@@ -263,54 +273,100 @@ function UniSatReceiveTab({
           </div>
         )}
 
-        {/* ── wnsp.io BTC → NexusOS sats bridge ──────────────────────── */}
-        {displayAddr && (
-          <div className={`rounded-xl border p-3 space-y-2 ${isThisAddrFed ? "bg-cyan-500/5 border-cyan-500/25" : "bg-slate-800/40 border-slate-700/50"}`}>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-gray-400">BTC → NexusOS sats</span>
-              {isThisAddrFed ? (
-                <span className="ml-auto flex items-center gap-1 text-[10px] font-mono text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-1.5 py-0.5 rounded">
-                  <span className="w-1 h-1 rounded-full bg-cyan-400 animate-pulse" /> LIVE
-                </span>
-              ) : feedActive && !isThisAddrFed ? (
-                <span className="ml-auto text-[10px] font-mono text-amber-400/70">Different address active</span>
-              ) : (
-                <span className="ml-auto text-[10px] font-mono text-gray-600">Not active</span>
-              )}
-            </div>
-
-            {isThisAddrFed && feedSnap ? (
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-slate-900/50 rounded-lg p-2 text-center">
-                  <div className="text-[9px] text-gray-500 uppercase tracking-wider">On-chain balance</div>
-                  <div className="text-sm font-bold font-mono text-orange-300">{feedSnap.confirmed?.toLocaleString() ?? "…"}</div>
-                  <div className="text-[9px] text-gray-600">sats confirmed</div>
-                </div>
-                <div className="bg-slate-900/50 rounded-lg p-2 text-center">
-                  <div className="text-[9px] text-gray-500 uppercase tracking-wider">Auto-credited</div>
-                  <div className="text-sm font-bold font-mono text-cyan-300">{sessionFed.toLocaleString()}</div>
-                  <div className="text-[9px] text-gray-600">sats → your balance</div>
-                </div>
-              </div>
-            ) : (
-              <p className="text-[10px] text-gray-500 leading-relaxed">
-                Any BTC received at this address is automatically credited to your NexusOS sats balance — from <em>any</em> Bitcoin wallet.
-              </p>
+        {/* ── Multi-wallet BTC → NexusOS sats watcher ─────────────── */}
+        <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-cyan-400">Auto-credit BTC → sats</span>
+            {watchedList.length > 0 && (
+              <span className="ml-auto flex items-center gap-1 text-[10px] font-mono text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-1.5 py-0.5 rounded">
+                <span className="w-1 h-1 rounded-full bg-cyan-400 animate-pulse" />
+                {watchedList.length} wallet{watchedList.length !== 1 ? "s" : ""} LIVE
+              </span>
             )}
+          </div>
 
-            {!isThisAddrFed && (
+          <p className="text-[10px] text-gray-500 leading-relaxed">
+            Add any BTC wallet — UniSat, Ledger, Exodus, any address. Every confirmed inbound TX auto-credits sats to your NexusOS balance.
+          </p>
+
+          {/* Current address quick-add */}
+          {displayAddr && !isWatched && (
+            <div className="space-y-1.5">
+              <Input
+                value={watchLabel}
+                onChange={e => setWatchLabel(e.target.value)}
+                placeholder={`Label (e.g. "UniSat main") — optional`}
+                className="bg-slate-900/60 border-slate-700 text-xs font-mono h-8"
+                data-testid="input-watch-label"
+              />
               <Button
                 size="sm"
                 className="w-full bg-cyan-700 hover:bg-cyan-600 text-white text-xs"
-                onClick={() => activateFeedMut.mutate(displayAddr)}
-                disabled={activateFeedMut.isPending}
-                data-testid="button-activate-wnsp-feed"
+                onClick={() => addWatchMut.mutate({ btcAddress: displayAddr, label: watchLabel.trim() })}
+                disabled={addWatchMut.isPending}
+                data-testid="button-watch-current-addr"
               >
-                {activateFeedMut.isPending ? "Activating…" : feedActive ? "Switch feed to this address" : "💧 Activate: receive BTC → sats"}
+                {addWatchMut.isPending ? "Adding…" : `💧 Watch this address`}
               </Button>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+
+          {displayAddr && isWatched && (
+            <div className="flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 rounded-lg px-2.5 py-1.5 text-[10px] font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+              <span className="text-cyan-300 flex-1">This address is being watched</span>
+              <button
+                onClick={() => removeWatchMut.mutate(displayAddr)}
+                className="text-gray-500 hover:text-red-400 text-[9px]"
+                data-testid="button-remove-current-watch"
+              >✕</button>
+            </div>
+          )}
+
+          {/* Manual add — different address */}
+          {!displayAddr && (
+            <div className="text-[10px] text-gray-600 text-center">Connect or paste a BTC address above to watch it</div>
+          )}
+
+          {/* All watched wallets */}
+          {watchedList.length > 0 && (
+            <div className="space-y-1.5 mt-1">
+              <div className="text-[9px] text-gray-600 uppercase tracking-wider font-mono">Watched wallets ({watchedList.length})</div>
+              {watchedList.map((w: any) => (
+                <div key={w.address} className="flex items-start gap-2 bg-slate-900/60 rounded-lg p-2 text-[10px] font-mono"
+                  data-testid={`row-watched-wallet-${w.address.slice(0, 8)}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-gray-400 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shrink-0" />
+                      <span className="font-semibold text-white truncate">{w.label || "Unlabelled"}</span>
+                    </div>
+                    <div className="text-gray-600 truncate mt-0.5">{w.address.slice(0, 14)}…{w.address.slice(-8)}</div>
+                    {w.snapshot && (
+                      <div className="flex gap-3 mt-1 text-[9px]">
+                        <span className="text-orange-300">{w.snapshot.confirmed?.toLocaleString()} sats on-chain</span>
+                        {w.satsFed > 0 && <span className="text-cyan-400">+{w.satsFed.toLocaleString()} credited</span>}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <a href={`https://mempool.space/address/${w.address}`} target="_blank" rel="noopener noreferrer"
+                      className="text-gray-600 hover:text-orange-400">
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <button onClick={() => removeWatchMut.mutate(w.address)}
+                      className="text-gray-600 hover:text-red-400 text-[9px]"
+                      data-testid={`button-remove-watch-${w.address.slice(0, 8)}`}>✕</button>
+                  </div>
+                </div>
+              ))}
+              {totalFed > 0 && (
+                <div className="text-[9px] text-gray-500 font-mono text-right">
+                  Session total: <span className="text-cyan-300 font-semibold">+{totalFed.toLocaleString()} sats</span> auto-credited
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {displayAddr ? (
           <div className="space-y-4">

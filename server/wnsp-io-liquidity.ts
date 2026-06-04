@@ -1,42 +1,39 @@
 /**
- * wnsp.io Liquidity Feed — NexusOS
+ * Multi-Wallet BTC Liquidity Watcher — NexusOS
  *
- * Watches the wnsp.io UniSat BTC wallet address on-chain every 60 s.
- * Any new inbound sats are automatically credited to the NexusOS service
- * wallet's lightning sats pool (the global sats pool used for P2P transfers,
- * withdrawals, and staking liquidity).
+ * Watches any number of BTC addresses (UniSat, Ledger, any wallet).
+ * Every confirmed inbound TX at any watched address is automatically
+ * credited to the Nexus admin sats balance.
  *
- * The wnsp.io wallet address is stored in the WNSP_IO_BTC_ADDRESS env var,
- * or can be set via PUT /api/admin/wnsp-io-address (admin only).
- * Falls back to a hard-coded default if neither is set.
+ * Addresses are persisted in `watched_btc_wallets` (survives restarts).
+ * Poll interval: 60 s per address.
  */
 
 import { sql } from "drizzle-orm";
 
-const ESPLORA  = "https://blockstream.info/api";
-const MEMPOOL  = "https://mempool.space/api";
-const POLL_MS  = 60_000; // 60-second poll (wnsp.io is a feeder, less urgent)
+const ESPLORA = "https://blockstream.info/api";
+const MEMPOOL = "https://mempool.space/api";
+const POLL_MS = 60_000;
 
-// ── Hard-coded fallback wnsp.io UniSat address ─────────────────────────────
-// Replace this with the real address once confirmed, or set WNSP_IO_BTC_ADDRESS env var
-const WNSP_IO_DEFAULT_ADDR = process.env.WNSP_IO_BTC_ADDRESS ?? "";
+// ── Per-address state ─────────────────────────────────────────────────────
+interface WalletState {
+  address:   string;
+  label:     string;
+  knownTxids: Set<string>;
+  snapshot: {
+    confirmed:   number;
+    unconfirmed: number;
+    checkedAt:   string;
+  } | null;
+  satsFed: number; // credited this session
+}
 
-// ── Module state ──────────────────────────────────────────────────────────
-let _running      = false;
-let _timer:       ReturnType<typeof setTimeout> | null = null;
-let _knownTxids   = new Set<string>();
-let _snapshot: {
-  address:     string;
-  confirmed:   number;
-  unconfirmed: number;
-  checkedAt:   string;
-} | null = null;
-let _totalFed     = 0; // cumulative sats credited this session
+const _wallets = new Map<string, WalletState>();
+let _running  = false;
+let _timer:   ReturnType<typeof setTimeout> | null = null;
+let _totalFed = 0;
 
-export function getWnspIoSnapshot() { return _snapshot; }
-export function getWnspIoTotalFed() { return _totalFed; }
-
-// ── API helpers ───────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────
 async function fetchJson(url: string): Promise<any> {
   const r = await fetch(url, {
     signal: AbortSignal.timeout(15_000),
@@ -51,50 +48,71 @@ async function esplora(path: string): Promise<any> {
   catch { return await fetchJson(`${MEMPOOL}${path}`); }
 }
 
-// ── Telegram alert (non-fatal if telegram not configured) ─────────────────
-async function alert(msg: string) {
+async function tgAlert(msg: string) {
   try {
     const { sendAdminAlert } = await import("./telegram-bot");
     await sendAdminAlert(msg);
   } catch { /* optional */ }
 }
 
-// ── Credit sats to the service sats pool ─────────────────────────────────
-// The "service sats pool" is the global lightning wallet sats balance.
-// We find the admin/owner user (Nexus) and add sats to their lightning wallet.
-// This automatically makes those sats available for user P2P transfers,
-// withdrawals and staking.
-async function creditToServicePool(sats: number, txid: string): Promise<void> {
+// ── DB helpers ────────────────────────────────────────────────────────────
+async function ensureTables() {
   const { db } = await import("./db");
-
-  // Ensure the liquidity log table exists
   await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS wnsp_io_liquidity_feeds (
+    CREATE TABLE IF NOT EXISTS watched_btc_wallets (
+      address     TEXT PRIMARY KEY,
+      label       TEXT NOT NULL DEFAULT '',
+      added_at    TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS watched_btc_feeds (
       id           SERIAL PRIMARY KEY,
+      address      TEXT NOT NULL,
       txid         TEXT NOT NULL UNIQUE,
       sats_received INTEGER NOT NULL,
       credited_at  TIMESTAMP NOT NULL DEFAULT NOW(),
       note         TEXT
     )
   `);
+}
 
-  // Skip if already credited
-  const existing = await db.execute(sql`
-    SELECT id FROM wnsp_io_liquidity_feeds WHERE txid = ${txid}
-  `);
-  if ((existing.rows as any[]).length > 0) return;
+async function loadPersistedAddresses(): Promise<{ address: string; label: string }[]> {
+  try {
+    const { db } = await import("./db");
+    const rows = await db.execute(sql`SELECT address, label FROM watched_btc_wallets ORDER BY added_at ASC`);
+    return (rows.rows as any[]).map(r => ({ address: r.address, label: r.label ?? "" }));
+  } catch { return []; }
+}
 
-  // Credit to the owner lightning wallet (first admin user = Nexus)
-  const ownerRows = await db.execute(sql`
-    SELECT id FROM users ORDER BY created_at ASC LIMIT 1
+async function persistAddress(address: string, label: string) {
+  const { db } = await import("./db");
+  await db.execute(sql`
+    INSERT INTO watched_btc_wallets (address, label)
+    VALUES (${address}, ${label})
+    ON CONFLICT (address) DO UPDATE SET label = ${label}
   `);
-  if ((ownerRows.rows as any[]).length === 0) {
-    console.warn("[wnsp.io Liquidity] No owner user found — cannot credit");
-    return;
-  }
+}
+
+async function unpersistAddress(address: string) {
+  const { db } = await import("./db");
+  await db.execute(sql`DELETE FROM watched_btc_wallets WHERE address = ${address}`);
+}
+
+async function isAlreadyCredited(txid: string): Promise<boolean> {
+  const { db } = await import("./db");
+  const rows = await db.execute(sql`SELECT id FROM watched_btc_feeds WHERE txid = ${txid}`);
+  return (rows.rows as any[]).length > 0;
+}
+
+async function creditToBalance(sats: number, txid: string, address: string, label: string) {
+  const { db } = await import("./db");
+
+  // Find owner (first user = Nexus admin)
+  const ownerRows = await db.execute(sql`SELECT id FROM users ORDER BY created_at ASC LIMIT 1`);
+  if ((ownerRows.rows as any[]).length === 0) return;
   const ownerId = (ownerRows.rows[0] as any).id;
 
-  // Upsert lightning wallet and add sats
   await db.execute(sql`
     INSERT INTO lightning_wallets (user_id, sats_balance, updated_at)
     VALUES (${ownerId}, ${sats}, NOW())
@@ -104,113 +122,177 @@ async function creditToServicePool(sats: number, txid: string): Promise<void> {
       updated_at   = NOW()
   `);
 
-  // Log the feed event
   await db.execute(sql`
-    INSERT INTO wnsp_io_liquidity_feeds (txid, sats_received, note)
-    VALUES (${txid}, ${sats}, 'Auto-credited from wnsp.io UniSat wallet')
+    INSERT INTO watched_btc_feeds (address, txid, sats_received, note)
+    VALUES (${address}, ${txid}, ${sats}, ${`Auto-credited from ${label || address}`})
     ON CONFLICT (txid) DO NOTHING
   `);
 
+  const w = _wallets.get(address);
+  if (w) w.satsFed += sats;
   _totalFed += sats;
-  console.log(`[wnsp.io Liquidity] ✅ Credited ${sats.toLocaleString()} sats to service pool (TX ${txid.slice(0, 16)}…)`);
 
-  await alert(
-    `💧 <b>wnsp.io → Service Pool Liquidity</b>\n\n` +
-    `Sats fed:  <b>+${sats.toLocaleString()} sats</b>\n` +
-    `Session total: <b>${_totalFed.toLocaleString()} sats</b>\n` +
-    `TXID: <code>${txid}</code>\n\n` +
+  console.log(`[BTC Watcher] ✅ +${sats.toLocaleString()} sats from ${label || address} (TX ${txid.slice(0, 14)}…)`);
+
+  await tgAlert(
+    `💰 <b>BTC Received → NexusOS Sats</b>\n\n` +
+    `Wallet: <b>${label || address.slice(0, 20)}…</b>\n` +
+    `Sats:   <b>+${sats.toLocaleString()} sats</b>\n` +
+    `Total session: <b>${_totalFed.toLocaleString()} sats</b>\n` +
+    `TXID: <code>${txid}</code>\n` +
     `<a href="https://mempool.space/tx/${txid}">View TX</a>`
   );
 }
 
-// ── Core poll ─────────────────────────────────────────────────────────────
-async function poll(address: string): Promise<void> {
+// ── Seed & poll ───────────────────────────────────────────────────────────
+async function seedAddress(w: WalletState) {
   try {
-    const [addrData, txs] = await Promise.all([
-      esplora(`/address/${address}`),
-      esplora(`/address/${address}/txs`),
-    ]);
-
-    const confirmed   = addrData.chain_stats.funded_txo_sum   - addrData.chain_stats.spent_txo_sum;
-    const unconfirmed = addrData.mempool_stats.funded_txo_sum  - addrData.mempool_stats.spent_txo_sum;
-
-    _snapshot = { address, confirmed, unconfirmed, checkedAt: new Date().toISOString() };
-
-    // Detect new inbound confirmed TXs and credit them
-    const confirmedTxs = (txs as any[]).filter(t => t.status?.confirmed);
-    for (const tx of confirmedTxs) {
-      if (_knownTxids.has(tx.txid)) continue;
-      _knownTxids.add(tx.txid);
-
-      // Calculate how much this address received in this TX
-      let inboundSats = 0;
-      for (const vout of (tx.vout ?? [])) {
-        if (vout.scriptpubkey_address === address) inboundSats += vout.value;
-      }
-      if (inboundSats > 0) {
-        await creditToServicePool(inboundSats, tx.txid);
-      }
-    }
-
-    // Also track unconfirmed for the snapshot, but don't credit until confirmed
-    for (const tx of (txs as any[]).filter(t => !t.status?.confirmed)) {
-      _knownTxids.add(tx.txid); // mark so we process it when confirmed on next poll
-    }
-
+    const txs: { txid: string }[] = await esplora(`/address/${w.address}/txs`);
+    for (const tx of txs) w.knownTxids.add(tx.txid);
+    console.log(`[BTC Watcher] Seeded ${txs.length} existing TXs for ${w.label || w.address.slice(0, 16)}…`);
   } catch (e: any) {
-    console.warn(`[wnsp.io Liquidity] Poll error:`, e.message);
+    console.warn(`[BTC Watcher] Seed error for ${w.address}: ${e.message}`);
   }
 }
 
-// ── Seed existing TXs (no credit for history — only future TXs) ──────────
-async function seed(address: string): Promise<void> {
+async function pollAddress(w: WalletState) {
   try {
-    const txs: { txid: string }[] = await esplora(`/address/${address}/txs`);
-    for (const tx of txs) _knownTxids.add(tx.txid);
-    console.log(`[wnsp.io Liquidity] Seeded ${txs.length} historical TXs — watching for new inflows`);
+    const [addrData, txs] = await Promise.all([
+      esplora(`/address/${w.address}`),
+      esplora(`/address/${w.address}/txs`),
+    ]);
+
+    const confirmed   = addrData.chain_stats.funded_txo_sum  - addrData.chain_stats.spent_txo_sum;
+    const unconfirmed = addrData.mempool_stats.funded_txo_sum - addrData.mempool_stats.spent_txo_sum;
+    w.snapshot = { confirmed, unconfirmed, checkedAt: new Date().toISOString() };
+
+    // Credit new confirmed inbound TXs
+    for (const tx of (txs as any[]).filter(t => t.status?.confirmed)) {
+      if (w.knownTxids.has(tx.txid)) continue;
+      w.knownTxids.add(tx.txid);
+
+      let inbound = 0;
+      for (const vout of (tx.vout ?? [])) {
+        if (vout.scriptpubkey_address === w.address) inbound += vout.value;
+      }
+
+      if (inbound > 0) {
+        if (!(await isAlreadyCredited(tx.txid))) {
+          await creditToBalance(inbound, tx.txid, w.address, w.label);
+        }
+      }
+    }
+
+    // Track unconfirmed so we detect them when confirmed
+    for (const tx of (txs as any[]).filter(t => !t.status?.confirmed)) {
+      w.knownTxids.add(tx.txid);
+    }
   } catch (e: any) {
-    console.warn(`[wnsp.io Liquidity] Seed error:`, e.message);
+    console.warn(`[BTC Watcher] Poll error for ${w.address}: ${e.message}`);
   }
+}
+
+// ── Main loop ─────────────────────────────────────────────────────────────
+async function loop() {
+  if (!_running) return;
+  await Promise.allSettled([..._wallets.values()].map(pollAddress));
+  _timer = setTimeout(loop, POLL_MS);
 }
 
 // ── Public API ────────────────────────────────────────────────────────────
 
-/** Set the wnsp.io address at runtime (used by admin API route). */
-let _runtimeAddr: string | null = null;
-export function setWnspIoAddress(addr: string) {
-  _runtimeAddr = addr;
-  console.log(`[wnsp.io Liquidity] Address updated → ${addr}`);
+export function getWatchedWallets() {
+  return [..._wallets.values()].map(w => ({
+    address:   w.address,
+    label:     w.label,
+    snapshot:  w.snapshot,
+    satsFed:   w.satsFed,
+  }));
+}
+
+export function getWalletSnapshot(address: string) {
+  return _wallets.get(address)?.snapshot ?? null;
+}
+
+export function getTotalFed() { return _totalFed; }
+
+export async function addWatchedWallet(address: string, label = ""): Promise<void> {
+  if (_wallets.has(address)) {
+    // Update label only
+    _wallets.get(address)!.label = label;
+    await persistAddress(address, label);
+    return;
+  }
+
+  const w: WalletState = { address, label, knownTxids: new Set(), snapshot: null, satsFed: 0 };
+  _wallets.set(address, w);
+  await persistAddress(address, label);
+
+  console.log(`[BTC Watcher] + Watching ${label || address}`);
+
+  // Seed immediately so we don't double-credit history
+  await seedAddress(w);
+  // Initial poll
+  await pollAddress(w);
+
+  // Make sure the loop is running
+  if (!_running) {
+    _running = true;
+    _timer = setTimeout(loop, POLL_MS);
+  }
+}
+
+export async function removeWatchedWallet(address: string): Promise<void> {
+  _wallets.delete(address);
+  await unpersistAddress(address);
+  console.log(`[BTC Watcher] - Removed ${address}`);
+}
+
+// Legacy compat — used by old single-address admin route
+export async function setWnspIoAddress(addr: string) {
+  await addWatchedWallet(addr, "wnsp.io UniSat");
 }
 export function getWnspIoAddress(): string {
-  return _runtimeAddr ?? WNSP_IO_DEFAULT_ADDR;
+  return [..._wallets.keys()][0] ?? "";
 }
+export function getWnspIoSnapshot() {
+  return [..._wallets.values()][0]?.snapshot ?? null;
+}
+export function getWnspIoTotalFed() { return _totalFed; }
 
 export async function startWnspIoLiquidity(): Promise<void> {
-  if (_running) return;
+  await ensureTables();
 
-  const address = getWnspIoAddress();
-  if (!address) {
-    console.log("[wnsp.io Liquidity] No address configured — set WNSP_IO_BTC_ADDRESS env var or use the admin API to set it");
+  // Load persisted addresses
+  const saved = await loadPersistedAddresses();
+
+  // Also check env var fallback
+  const envAddr = process.env.WNSP_IO_BTC_ADDRESS;
+  if (envAddr && !saved.find(s => s.address === envAddr)) {
+    saved.push({ address: envAddr, label: "wnsp.io (env)" });
+  }
+
+  if (saved.length === 0) {
+    console.log("[BTC Watcher] No addresses configured — add via UniSat tab or admin API");
     return;
   }
 
   _running = true;
-  console.log(`[wnsp.io Liquidity] Started — watching ${address} every ${POLL_MS / 1000}s for new inflows`);
 
-  await seed(address);
-  await poll(address);
+  // Seed all, then start polling
+  for (const { address, label } of saved) {
+    const w: WalletState = { address, label, knownTxids: new Set(), snapshot: null, satsFed: 0 };
+    _wallets.set(address, w);
+    await seedAddress(w);
+    await pollAddress(w);
+  }
 
-  const loop = async () => {
-    if (!_running) return;
-    const addr = getWnspIoAddress();
-    if (addr) await poll(addr);
-    _timer = setTimeout(loop, POLL_MS);
-  };
+  console.log(`[BTC Watcher] Started — watching ${saved.length} wallet(s) every ${POLL_MS / 1000}s`);
   _timer = setTimeout(loop, POLL_MS);
 }
 
 export function stopWnspIoLiquidity() {
   _running = false;
   if (_timer) { clearTimeout(_timer); _timer = null; }
-  console.log("[wnsp.io Liquidity] Stopped");
+  console.log("[BTC Watcher] Stopped");
 }
