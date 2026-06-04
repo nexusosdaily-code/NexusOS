@@ -8376,11 +8376,10 @@ export async function registerRoutes(
   const LN_SATS_PER_NXT = 1000; // 1 NXT = 1000 sats
 
   function detectLnProvider(): "coinos" | "alby" | "lnbits" | null {
-    // Priority: Coinos nsec1 key > Alby (Alby wallet_configured=false until Albyhub is set up)
-    // Swap back to Alby-first once getalby.com/node/embrace_albyhub is configured.
+    // Priority: LNbits (full send/receive API) > Coinos > Alby
+    if (process.env.LNBITS_URL && process.env.LNBITS_ADMIN_KEY && process.env.LNBITS_INVOICE_KEY) return "lnbits";
     if (process.env.COINOS_TOKEN) return "coinos";
     if (process.env.ALBY_ACCESS_TOKEN) return "alby";
-    if (process.env.LNBITS_URL && process.env.LNBITS_ADMIN_KEY && process.env.LNBITS_INVOICE_KEY) return "lnbits";
     return null;
   }
 
