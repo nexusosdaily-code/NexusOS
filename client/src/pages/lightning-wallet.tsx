@@ -14,6 +14,7 @@ import {
   Clock, CheckCircle2, XCircle, Copy, RefreshCw, AlertTriangle,
   Bitcoin, Radio, Waves, Activity, ArrowDownLeft, ArrowUpRight,
   Atom, Send, Users, Lock, Unlock, TrendingUp, Heart, QrCode, BookMarked,
+  ExternalLink,
 } from "lucide-react";
 
 const TABS = ["receive", "transmit", "swap", "send", "stake", "unisat", "log"] as const;
