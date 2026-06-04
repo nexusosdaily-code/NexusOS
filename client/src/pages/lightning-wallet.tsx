@@ -258,7 +258,7 @@ function UniSatReceiveTab({
               {mempoolLive?.ok && (
                 <div className={`flex items-center gap-1 ${mempoolLive.congestionLevel === "low" ? "text-green-400" : mempoolLive.congestionLevel === "medium" ? "text-amber-400" : "text-orange-400"}`}>
                   <span className={`w-1.5 h-1.5 rounded-full inline-block ${mempoolLive.congestionLevel === "low" ? "bg-green-400" : mempoolLive.congestionLevel === "medium" ? "bg-amber-400" : "bg-orange-400"}`} />
-                  Network: {mempoolLive.medium} sat/vB · ~{mempoolLive.confirmEta ?? 30}min confirmation
+                  Network: {mempoolLive.medium} sat/vB · ~{mempoolLive.confirmEta?.medium ?? 30}min confirmation
                 </div>
               )}
             </div>
