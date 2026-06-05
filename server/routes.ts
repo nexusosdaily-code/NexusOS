@@ -1105,16 +1105,79 @@ export async function registerRoutes(
       if (!wallet) {
         return res.status(404).json({ error: "Wallet not found" });
       }
-      
-      const transactions = await storage.getTransactions(wallet.id, 20);
-      
+
+      // ── NXT transactions ─────────────────────────────────────────────────────
+      const nxtTxs = await storage.getTransactions(wallet.id, 50);
+
+      // ── Lightning transactions ────────────────────────────────────────────────
+      const { db }                   = await import("./db");
+      const { lightningTransactions } = await import("../shared/schema");
+      const { eq: eqLn, desc: descLn } = await import("drizzle-orm");
+      const lnTxs = await db.select().from(lightningTransactions)
+        .where(eqLn(lightningTransactions.userId, req.user!.id))
+        .orderBy(descLn(lightningTransactions.createdAt))
+        .limit(50);
+
+      // ── Normalize to unified shape ────────────────────────────────────────────
+      const LN_LABEL: Record<string, string> = {
+        deposit:          "⚡ Lightning Deposit",
+        withdrawal:       "⚡ Lightning Withdrawal",
+        swap_to_nxt:      "⇄ Swap sats → NXT",
+        swap_to_sats:     "⇄ Swap NXT → sats",
+        send_p2p:         "→ P2P Send",
+        receive_p2p:      "← P2P Receive",
+        tip_sent:         "♡ Tip Sent",
+        tip_received:     "♡ Tip Received",
+        send_to_ln:       "→ Send to LN Address",
+        btc_withdrawal:   "₿ BTC Withdrawal",
+      };
+
+      const normalised = [
+        ...nxtTxs.map(t => ({
+          id:          `nxt-${t.id}`,
+          source:      "nxt" as const,
+          type:        t.type,
+          label:       t.type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+          amountNxt:   t.amount,
+          amountSats:  null as number | null,
+          status:      t.status,
+          createdAt:   t.createdAt.toISOString(),
+          spectralSig: t.spectralSig ?? null,
+          wavelength:  t.wavelength ?? null,
+          energyCost:  t.energyCost ?? null,
+          memo:        (t.metadata as any)?.memo ?? null,
+          fromWalletId: t.fromWalletId,
+          toWalletId:   t.toWalletId,
+          fee:          t.fee,
+        })),
+        ...lnTxs.map(t => ({
+          id:          `ln-${t.id}`,
+          source:      "lightning" as const,
+          type:        t.type,
+          label:       LN_LABEL[t.type] ?? t.type.replace(/_/g, " "),
+          amountNxt:   null as string | null,
+          amountSats:  t.amountSats,
+          status:      t.status,
+          createdAt:   t.createdAt!.toISOString(),
+          spectralSig: t.spectralSig ?? null,
+          wavelength:  null as string | null,
+          energyCost:  null as string | null,
+          memo:        t.memo ?? null,
+          fromWalletId: null,
+          toWalletId:   null,
+          fee:          "0",
+        })),
+      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+       .slice(0, 60);
+
       res.json({
         wallet: {
+          id: wallet.id,
           address: wallet.address,
           balance: wallet.balance,
           lockedBalance: wallet.lockedBalance,
         },
-        recentTransactions: transactions,
+        recentTransactions: normalised,
       });
     } catch (error: any) {
       console.error("Get wallet error:", error);

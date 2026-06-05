@@ -58,16 +58,27 @@ function fmtTime(ts: string): string {
 }
 
 // ── API types ─────────────────────────────────────────────────────────────────
+interface UnifiedTx {
+  id: string;
+  source: "nxt" | "lightning";
+  type: string;
+  label: string;
+  amountNxt: string | null;
+  amountSats: number | null;
+  status: string;
+  createdAt: string;
+  spectralSig: string | null;
+  wavelength: string | null;
+  energyCost: string | null;
+  memo: string | null;
+  fromWalletId: string | null;
+  toWalletId: string | null;
+  fee: string;
+}
+
 interface WalletData {
-  wallet: { address: string; balance: string; lockedBalance: string };
-  recentTransactions: Array<{
-    id: string; type: string; amount: string; fee: string;
-    wavelength: string | null; frequency: string | null; energyCost: string | null;
-    status: string; createdAt: string;
-    fromWalletId: string | null; toWalletId: string | null;
-    metadata: Record<string, unknown> | null;
-    spectralSig: string | null;
-  }>;
+  wallet: { id: string; address: string; balance: string; lockedBalance: string };
+  recentTransactions: UnifiedTx[];
 }
 
 // ── CopyButton ─────────────────────────────────────────────────────────────────
@@ -161,76 +172,113 @@ function WnspSigChip({ sig }: { sig?: string | null }) {
 }
 
 // ── Transaction row ────────────────────────────────────────────────────────────
-const TX_LABELS: Record<string, string> = {
-  transfer:         "Transfer",
-  message_fee:      "Message Fee",
-  message_earning:  "Message Earned",
-  stream_fee:       "Stream Fee",
-  stream_earning:   "Stream Earned",
-  document_fee:     "Document Fee",
-  document_earning: "Document Earned",
-  upload_fee:       "Upload Fee",
-  protocol_burn:    "Protocol Burn",
-};
+// Direction logic per type
+const INCOMING_TYPES = new Set([
+  "message_earning", "stream_earning", "document_earning",
+  "deposit", "receive_p2p", "tip_received", "swap_to_nxt",
+]);
+const SWAP_TYPES = new Set(["swap_to_nxt", "swap_to_sats"]);
+const BURN_TYPES = new Set(["protocol_burn"]);
 
-const EARNING_TYPES = new Set(["message_earning", "stream_earning", "document_earning"]);
-const BURN_TYPES    = new Set(["protocol_burn"]);
+function txDirection(tx: UnifiedTx, walletId: string): "receive" | "send" | "swap" | "burn" {
+  if (BURN_TYPES.has(tx.type)) return "burn";
+  if (SWAP_TYPES.has(tx.type)) return "swap";
+  if (INCOMING_TYPES.has(tx.type)) return "receive";
+  if (tx.source === "nxt" && tx.toWalletId === walletId) return "receive";
+  return "send";
+}
 
-function TxRow({ tx, walletId }: { tx: WalletData["recentTransactions"][0]; walletId: string }) {
-  const isEarning  = EARNING_TYPES.has(tx.type);
-  const isBurn     = BURN_TYPES.has(tx.type);
-  const isIncoming = isEarning || (tx.toWalletId === walletId && !isBurn);
-  const dir        = isIncoming ? "receive" : "send";
-
-  const nm    = tx.wavelength ? parseFloat(tx.wavelength) : 550;
+function TxRow({ tx, walletId }: { tx: UnifiedTx; walletId: string }) {
+  const dir   = txDirection(tx, walletId);
+  const nm    = tx.wavelength ? parseFloat(tx.wavelength) : 545;
   const color = nmToRgb(nm);
-  const label = TX_LABELS[tx.type] ?? tx.type.replace(/_/g, " ");
-  const meta  = tx.metadata as Record<string, any> | null;
 
-  return (
-    <div className="flex items-center gap-4 rounded-xl border border-slate-800/60 bg-slate-900/40 px-4 py-3 hover:border-slate-700 transition-colors"
-      data-testid={`tx-row-${tx.id}`}>
-      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
-        isBurn  ? "bg-orange-500/15 text-orange-400" :
-        dir === "receive" ? "bg-green-500/15 text-green-400"
-                          : "bg-red-500/15 text-red-400"
-      }`}>
-        {isBurn ? "🔥" : dir === "receive"
-          ? <ArrowDownLeft className="w-4 h-4" />
-          : <ArrowUpRight className="w-4 h-4" />}
-      </div>
+  const iconBg =
+    dir === "burn"    ? "bg-orange-500/15 text-orange-400" :
+    dir === "swap"    ? "bg-cyan-500/15 text-cyan-400" :
+    dir === "receive" ? "bg-green-500/15 text-green-400" :
+                        "bg-red-500/15 text-red-400";
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-white font-medium">{label}</span>
-          <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${tx.status === "confirmed" ? "bg-green-500/15 text-green-400" : "bg-amber-500/15 text-amber-400"}`}>
-            {tx.status}
-          </span>
-          {meta?.band && (
-            <span className="text-[9px] px-1 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">{meta.band}</span>
-          )}
-        </div>
-        {tx.wavelength && (
-          <div className="flex items-center gap-2 text-[10px] mt-0.5">
-            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
-            <span style={{ color }} className="font-mono">{nm.toFixed(1)} nm</span>
-            {tx.energyCost && <span className="text-slate-600">· Λ={parseFloat(tx.energyCost).toExponential(2)} J</span>}
+  const icon =
+    dir === "burn"    ? "🔥" :
+    dir === "swap"    ? <Zap className="w-4 h-4" /> :
+    dir === "receive" ? <ArrowDownLeft className="w-4 h-4" /> :
+                        <ArrowUpRight className="w-4 h-4" />;
+
+  const sourceBadge = tx.source === "lightning"
+    ? <span className="text-[9px] px-1 py-0.5 rounded bg-yellow-500/15 text-yellow-400 font-mono">⚡ LN</span>
+    : <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/15 text-amber-400 font-mono">NXT</span>;
+
+  const statusColor = tx.status === "completed" || tx.status === "confirmed"
+    ? "bg-green-500/15 text-green-400"
+    : tx.status === "failed"
+    ? "bg-red-500/15 text-red-400"
+    : "bg-amber-500/15 text-amber-400";
+
+  // Amount display
+  const amountDisplay = (() => {
+    if (tx.source === "lightning" && tx.amountSats != null) {
+      const sats = tx.amountSats;
+      const nxtEq = sats / 1000;
+      return (
+        <div>
+          <div className={`font-mono font-bold text-sm ${
+            dir === "burn" ? "text-orange-400" :
+            dir === "swap" ? "text-cyan-400" :
+            dir === "receive" ? "text-green-400" : "text-red-400"
+          }`}>
+            {dir === "receive" ? "+" : "−"}{sats.toLocaleString()} sats
           </div>
-        )}
-        {meta?.memo && (
-          <div className="text-[10px] text-slate-600 font-mono truncate mt-0.5">{meta.memo}</div>
-        )}
-        <WnspSigChip sig={tx.spectralSig} />
-      </div>
-
-      <div className="text-right flex-shrink-0">
+          <div className="text-[10px] text-slate-500 font-mono">≈ {formatNxt(nxtEq)} NXT</div>
+        </div>
+      );
+    }
+    if (tx.amountNxt != null) {
+      return (
         <div className={`font-mono font-bold text-sm ${
-          isBurn ? "text-orange-400" :
+          dir === "burn" ? "text-orange-400" :
+          dir === "swap" ? "text-cyan-400" :
           dir === "receive" ? "text-green-400" : "text-red-400"
         }`}>
-          {isBurn ? "🔥 " : dir === "receive" ? "+" : "−"}{formatNxt(tx.amount)} NXT
+          {dir === "burn" ? "🔥 " : dir === "receive" ? "+" : "−"}{formatNxt(tx.amountNxt)} NXT
         </div>
-        <div className="text-[10px] text-slate-600 flex items-center justify-end gap-1 mt-0.5">
+      );
+    }
+    return null;
+  })();
+
+  return (
+    <div className="rounded-xl border border-slate-800/60 bg-slate-900/40 px-4 py-3 hover:border-slate-700 transition-colors"
+      data-testid={`tx-row-${tx.id}`}>
+      <div className="flex items-start gap-3">
+        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${iconBg}`}>
+          {icon}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-sm text-white font-medium">{tx.label}</span>
+            {sourceBadge}
+            <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${statusColor}`}>
+              {tx.status}
+            </span>
+          </div>
+          {tx.wavelength && (
+            <div className="flex items-center gap-2 text-[10px] mt-0.5">
+              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
+              <span style={{ color }} className="font-mono">{nm.toFixed(1)} nm</span>
+              {tx.energyCost && <span className="text-slate-600">· Λ={parseFloat(tx.energyCost).toExponential(2)} J</span>}
+            </div>
+          )}
+          {tx.memo && (
+            <div className="text-[10px] text-slate-600 font-mono truncate mt-0.5">{tx.memo}</div>
+          )}
+          <WnspSigChip sig={tx.spectralSig} />
+        </div>
+
+        <div className="text-right flex-shrink-0">
+          {amountDisplay}
+          <div className="text-[10px] text-slate-600 flex items-center justify-end gap-1 mt-0.5">
           <Clock className="w-3 h-3" /> {fmtTime(tx.createdAt)}
         </div>
       </div>
@@ -239,15 +287,14 @@ function TxRow({ tx, walletId }: { tx: WalletData["recentTransactions"][0]; wall
 }
 
 // ── Stats panel ────────────────────────────────────────────────────────────────
-function StatsPanel({ txs }: { txs: WalletData["recentTransactions"]; }) {
-  const earningSet = new Set(["message_earning", "stream_earning", "document_earning"]);
-  const feeSet     = new Set(["message_fee", "stream_fee", "document_fee", "upload_fee", "protocol_burn"]);
-  const sends      = txs.filter(t => t.type === "transfer" || feeSet.has(t.type));
-  const receives   = txs.filter(t => earningSet.has(t.type) || (t.type === "transfer" && t.toWalletId));
-  const earnings   = txs.filter(t => earningSet.has(t.type));
-  const totalSent  = sends.reduce((s, t) => s + parseFloat(t.amount), 0);
-  const totalRcvd  = receives.reduce((s, t) => s + parseFloat(t.amount), 0);
-  const totalEarned = earnings.reduce((s, t) => s + parseFloat(t.amount), 0);
+function StatsPanel({ txs }: { txs: UnifiedTx[] }) {
+  const lnTxs   = txs.filter(t => t.source === "lightning");
+  const nxtTxs  = txs.filter(t => t.source === "nxt");
+  const deposits = lnTxs.filter(t => t.type === "deposit");
+  const withdrawals = lnTxs.filter(t => t.type === "withdrawal" || t.type === "send_to_ln" || t.type === "btc_withdrawal");
+  const swaps   = lnTxs.filter(t => t.type === "swap_to_nxt" || t.type === "swap_to_sats");
+  const totalDepositedSats = deposits.reduce((s, t) => s + (t.amountSats ?? 0), 0);
+  const totalWithdrawnSats = withdrawals.reduce((s, t) => s + (t.amountSats ?? 0), 0);
   const avgWl = txs.filter(t => t.wavelength).reduce((s, t) => s + parseFloat(t.wavelength!), 0) / (txs.filter(t => t.wavelength).length || 1);
   const totalEnergy = txs.filter(t => t.energyCost).reduce((s, t) => s + parseFloat(t.energyCost!), 0);
 
@@ -259,12 +306,13 @@ function StatsPanel({ txs }: { txs: WalletData["recentTransactions"]; }) {
         </h3>
         <div className="space-y-3 text-sm">
           {[
-            { label: "Transactions shown",    val: txs.length,                         color: "text-white" },
-            { label: "Fees paid",             val: sends.length,                     color: "text-red-400" },
-            { label: "Payments received",     val: receives.length,                  color: "text-green-400" },
-            { label: "Spectral earnings",     val: earnings.length,                  color: "text-cyan-400" },
-            { label: "Volume out",            val: formatNxt(totalSent) + " NXT",    color: "text-red-400" },
-            { label: "Volume earned",         val: formatNxt(totalEarned) + " NXT",  color: "text-green-400" },
+            { label: "Total transactions",      val: txs.length,                                                color: "text-white" },
+            { label: "Lightning txs",           val: lnTxs.length,                                             color: "text-yellow-400" },
+            { label: "NXT txs",                 val: nxtTxs.length,                                            color: "text-amber-400" },
+            { label: "Deposits",                val: deposits.length,                                          color: "text-green-400" },
+            { label: "Sats deposited",          val: totalDepositedSats.toLocaleString() + " sats",            color: "text-green-400" },
+            { label: "Sats withdrawn",          val: totalWithdrawnSats.toLocaleString() + " sats",            color: "text-red-400" },
+            { label: "Swaps",                   val: swaps.length,                                             color: "text-cyan-400" },
           ].map(r => (
             <div key={r.label} className="flex items-center justify-between">
               <span className="text-slate-400">{r.label}</span>
@@ -692,7 +740,7 @@ export default function WalletPage() {
             ) : (
               <div className="space-y-2" data-testid="tx-list">
                 {txs.map(tx => (
-                  <TxRow key={tx.id} tx={tx} walletId={""} />
+                  <TxRow key={tx.id} tx={tx} walletId={wallet.id} />
                 ))}
               </div>
             )}
