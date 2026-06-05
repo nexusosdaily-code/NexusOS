@@ -106,16 +106,18 @@ export async function publishToNostr(
   const signed: NostrEvent = finalizeEvent(template, privKey);
   const p = getPool();
 
-  const results = await Promise.allSettled(
-    DEFAULT_RELAYS.map((relay) =>
-      Promise.race([
-        p.publish([relay], signed).then(() => relay),
-        new Promise<never>((_, rej) =>
-          setTimeout(() => rej(new Error("timeout")), 8_000)
-        ),
-      ])
-    )
+  // nostr-tools v2: pool.publish() returns Promise<string>[] — one per relay
+  const publishPromises = p.publish(DEFAULT_RELAYS, signed) as unknown as Promise<string>[];
+  const withTimeout = DEFAULT_RELAYS.map((relay, i) =>
+    Promise.race([
+      publishPromises[i].then(() => relay),
+      new Promise<never>((_, rej) =>
+        setTimeout(() => rej(new Error("timeout")), 8_000)
+      ),
+    ])
   );
+
+  const results = await Promise.allSettled(withTimeout);
 
   const published = results
     .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")

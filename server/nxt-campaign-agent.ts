@@ -400,7 +400,7 @@ async function sendNostr(slot: Slot): Promise<{ ok: boolean; eventId?: string; e
     const result = await publishToNostr({
       kind:    "note",
       content: slot.nostr,
-      tags:    slot.tags,
+      tags:    slot.tags.map(t => ["t", t]),
     });
     return { ok: true, eventId: result.id };
   } catch (e: any) {
