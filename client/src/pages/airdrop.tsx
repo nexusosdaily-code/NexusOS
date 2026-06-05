@@ -459,8 +459,17 @@ Instead of arbitrary proof-of-work → E = hf (Planck's energy equation governs 
 
 25,600 orthogonal communication channels. Isolated by quantum mechanics, not software policy. No collision is physically possible.
 
+---
+
+We also replace routing itself.
+
+In TCP/IP, the address and the routing decision are separate — a router consults a table, runs BGP, asks OSPF. In WNSP, the address IS the routing decision.
+
+A packet destined for Ψ(72,18,H) routes to whichever active node has the closest wavelength. Score = weight / (Δλ + 1). No lookup table. No BGP. No OSPF. Shannon entropy drives adaptive weight updates so heavily-used routes amplify and contested routes rebalance automatically.
+
+No ICANN. No registrar. No routing authority. No government can deregister a wavelength or poison a routing table.
+
 wnsp://Ψ(128,25,H)/documents/whitepaper
-DNS-free. Censorship-proof. No ICANN. No registrar. No government can deregister a wavelength.
 
 The full physics whitepaper is live on Nostr now.
 
@@ -487,7 +496,9 @@ AGPL-3.0 · First public disclosure: 2026-05-16 · wnsp.tech · Ψ(52,3,V)
                         desc: "Quick share — physics hook + airdrop link",
                         content: `Physics is the new cryptography.
 
-NexusOS replaces SHA-256 with Maxwell's equations. IP addresses with spectral wavelengths. Proof-of-work with E=hf.
+NexusOS replaces SHA-256 with Maxwell's equations. IP addresses with spectral wavelengths. Proof-of-work with E=hf. And BGP/OSPF routing tables with a single formula: score = weight / (Δλ + 1). The address IS the route.
+
+No lookup tables. No routing authority. No government can poison a wavelength.
 
 85M NXT airdrop live. Claim with your Nostr key → wnsp.tech/airdrop
 
