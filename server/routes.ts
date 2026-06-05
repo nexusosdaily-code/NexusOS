@@ -12107,6 +12107,225 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // ── NXT Airdrop ────────────────────────────────────────────────────────────
+
+  // GET /api/airdrop/campaigns — list active/upcoming campaigns (public)
+  app.get("/api/airdrop/campaigns", async (_req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { airdropCampaigns } = await import("../shared/schema");
+      const { inArray } = await import("drizzle-orm");
+      const campaigns = await db.select().from(airdropCampaigns)
+        .where(inArray(airdropCampaigns.status, ["active", "paused"]));
+      res.json(campaigns);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/airdrop/stats — aggregate stats (public)
+  app.get("/api/airdrop/stats", async (_req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { airdropCampaigns, airdropClaims } = await import("../shared/schema");
+      const { sum, count, inArray } = await import("drizzle-orm");
+
+      const [poolRow] = await db.select({
+        totalPool:    sum(airdropCampaigns.totalNxtPool),
+        totalClaimed: sum(airdropCampaigns.claimedNxt),
+        totalClaims:  count(airdropCampaigns.id),
+      }).from(airdropCampaigns).where(inArray(airdropCampaigns.status, ["active", "paused", "exhausted"]));
+
+      const [claimantsRow] = await db.select({ n: count(airdropClaims.id) }).from(airdropClaims);
+
+      const totalPool      = parseFloat(poolRow?.totalPool    ?? "0");
+      const totalDistrib   = parseFloat(poolRow?.totalClaimed ?? "0");
+      const poolRemaining  = Math.max(0, totalPool - totalDistrib);
+
+      res.json({
+        totalDistributed: totalDistrib.toFixed(8),
+        totalClaimants:   claimantsRow?.n ?? 0,
+        poolRemaining:    poolRemaining.toFixed(8),
+        campaignCount:    poolRow?.totalClaims ?? 0,
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/airdrop/my-claims — authenticated user's claim history
+  app.get("/api/airdrop/my-claims", authenticate, async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { airdropClaims, airdropCampaigns } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      const claims = await db.select().from(airdropClaims)
+        .where(eq(airdropClaims.userId, req.user!.id));
+
+      // Enrich with campaign title
+      const campaignIds = [...new Set(claims.map(c => c.campaignId))];
+      const camps = campaignIds.length
+        ? await db.select({ id: airdropCampaigns.id, title: airdropCampaigns.title, emoji: airdropCampaigns.emoji })
+            .from(airdropCampaigns)
+        : [];
+      const campMap = Object.fromEntries(camps.map(c => [c.id, c]));
+
+      res.json(claims.map(c => ({ ...c, campaign: campMap[c.campaignId] ?? null })));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/airdrop/campaigns — create a campaign (any authenticated user; genesis wallet is the funder)
+  app.post("/api/airdrop/campaigns", authenticate, async (req, res) => {
+    try {
+      const { title, description, emoji, perClaimNxt, maxClaims, endsAt, requirements } = req.body;
+      if (!title || !description || !perClaimNxt || !maxClaims)
+        return res.status(400).json({ error: "title, description, perClaimNxt, maxClaims required" });
+
+      const perClaim = parseFloat(perClaimNxt);
+      const max      = parseInt(maxClaims);
+      if (perClaim <= 0 || max <= 0)
+        return res.status(400).json({ error: "perClaimNxt and maxClaims must be positive" });
+      if (perClaim > 100) return res.status(400).json({ error: "perClaimNxt cannot exceed 100 NXT" });
+      if (max > 10_000)   return res.status(400).json({ error: "maxClaims cannot exceed 10,000" });
+
+      const totalPool = perClaim * max;
+
+      // Verify genesis wallet has enough
+      const genesisWallet = await storage.getWalletByAddress(GENESIS_EXECUTION_ADDRESS);
+      if (!genesisWallet) return res.status(503).json({ error: "Genesis wallet unavailable" });
+      if (parseFloat(genesisWallet.balance) < totalPool)
+        return res.status(400).json({ error: `Genesis wallet has insufficient NXT (need ${totalPool.toFixed(2)})` });
+
+      const { db } = await import("./db");
+      const { airdropCampaigns } = await import("../shared/schema");
+
+      const [campaign] = await db.insert(airdropCampaigns).values({
+        title,
+        description,
+        emoji:        emoji ?? "🎁",
+        totalNxtPool: totalPool.toFixed(8),
+        perClaimNxt:  perClaim.toFixed(8),
+        maxClaims:    max,
+        status:       "active",
+        requirements: requirements ?? [],
+        endsAt:       endsAt ? new Date(endsAt) : null,
+      }).returning();
+
+      console.log(`[Airdrop] Campaign #${campaign.id} created — "${title}" · ${perClaim} NXT × ${max} = ${totalPool} NXT`);
+      res.json(campaign);
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+  });
+
+  // POST /api/airdrop/claim/:id — claim NXT from a campaign
+  app.post("/api/airdrop/claim/:id", authenticate, async (req, res) => {
+    try {
+      const campaignId = parseInt(req.params.id);
+      if (!campaignId) return res.status(400).json({ error: "Invalid campaign id" });
+
+      const { db } = await import("./db");
+      const { airdropCampaigns, airdropClaims, wallets } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+
+      // Load campaign
+      const [campaign] = await db.select().from(airdropCampaigns).where(eq(airdropCampaigns.id, campaignId));
+      if (!campaign)                          return res.status(404).json({ error: "Campaign not found" });
+      if (campaign.status !== "active")       return res.status(400).json({ error: `Campaign is ${campaign.status}` });
+      if (campaign.endsAt && new Date() > campaign.endsAt)
+        return res.status(400).json({ error: "Campaign has ended" });
+      if (campaign.claimsCount >= campaign.maxClaims)
+        return res.status(400).json({ error: "Campaign exhausted — all NXT has been distributed" });
+
+      // One claim per user per campaign
+      const [existing] = await db.select().from(airdropClaims)
+        .where(and(eq(airdropClaims.campaignId, campaignId), eq(airdropClaims.userId, req.user!.id)));
+      if (existing) return res.status(409).json({ error: "You have already claimed this airdrop" });
+
+      // Get user wallet
+      const userWallet = await storage.getWallet(req.user!.id);
+      if (!userWallet) return res.status(404).json({ error: "Wallet not found" });
+
+      // Get genesis wallet (funder)
+      const genesisWallet = await storage.getWalletByAddress(GENESIS_EXECUTION_ADDRESS);
+      if (!genesisWallet) return res.status(503).json({ error: "Genesis wallet unavailable" });
+
+      const perClaim  = parseFloat(campaign.perClaimNxt);
+      const genBal    = parseFloat(genesisWallet.balance);
+      if (genBal < perClaim) return res.status(400).json({ error: "Genesis wallet has insufficient NXT" });
+
+      // Derive spectral channel for the claim
+      const wdm         = req.user!.spectralWdm        ?? 200;
+      const oam         = req.user!.spectralOam        ?? 25;
+      const pol         = req.user!.spectralPolarisation ?? "H";
+      const wavelengthNm = parseFloat((380 + (wdm / 256) * 400).toFixed(4));
+      const frequencyHz  = (3e8) / (wavelengthNm * 1e-9);
+      const energyJ      = 6.626e-34 * frequencyHz;
+      const psiChannel   = `Ψ(${wdm},${oam},${pol})`;
+
+      // Transfer NXT: Genesis → User (fee-free by constitutional exemption)
+      await storage.updateWalletBalance(genesisWallet.id, (genBal - perClaim).toFixed(8));
+      await storage.updateWalletBalance(userWallet.id, (parseFloat(userWallet.balance) + perClaim).toFixed(8));
+
+      // Record transaction
+      const tx = await storage.createTransaction({
+        fromWalletId: genesisWallet.id,
+        toWalletId:   userWallet.id,
+        amount:       perClaim.toFixed(8),
+        fee:          "0.00000000",
+        type:         "airdrop_claim",
+        wavelength:   wavelengthNm.toString(),
+        frequency:    frequencyHz.toFixed(2),
+        energyCost:   energyJ.toExponential(8),
+        metadata: {
+          campaignId,
+          campaignTitle: campaign.title,
+          psiChannel,
+          walletAddress: userWallet.address,
+          timestamp: new Date().toISOString(),
+          source: "nexusos_airdrop",
+        },
+      });
+      await storage.updateTransactionStatus(tx.id, "confirmed");
+
+      // Record claim
+      const [claim] = await db.insert(airdropClaims).values({
+        campaignId,
+        userId:        req.user!.id,
+        walletAddress: userWallet.address,
+        amountNxt:     perClaim.toFixed(8),
+        psiChannel,
+        txId:          String(tx.id),
+      }).returning();
+
+      // Update campaign stats + auto-exhaust if maxed
+      const newCount = campaign.claimsCount + 1;
+      const newTotal = (parseFloat(campaign.claimedNxt) + perClaim).toFixed(8);
+      const newStatus = newCount >= campaign.maxClaims ? "exhausted" : "active";
+      await db.update(airdropCampaigns).set({
+        claimsCount: newCount,
+        claimedNxt:  newTotal,
+        status:      newStatus,
+      }).where(eq(airdropCampaigns.id, campaignId));
+
+      console.log(`[Airdrop] Claim — user=${req.user!.username} campaign="${campaign.title}" amount=${perClaim} NXT Ψ=${psiChannel}`);
+
+      // Fire event broadcast on every 10th claim
+      if (newCount % 10 === 0) {
+        campaignAgent.fireEventBroadcast({
+          emoji: campaign.emoji ?? "🎁",
+          title: `${campaign.title} — ${newCount} Claims Reached!`,
+          body: `${newCount} NexusOS users have claimed their airdrop. ${campaign.maxClaims - newCount} spots remaining. Claim yours at wnsp.tech/airdrop`,
+          hashtags: ["NexusOS", "NXTAirdrop", "WNSP", "FreeNXT"],
+        }).catch(() => {/* non-fatal */});
+      }
+
+      res.json({
+        ok:            true,
+        amountNxt:     perClaim.toFixed(8),
+        walletAddress: userWallet.address,
+        psiChannel,
+        txId:          tx.id,
+        claimId:       claim.id,
+      });
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+  });
+
   // ── Event-driven broadcast ─────────────────────────────────────────────────
 
   // POST /api/campaign/broadcast — fire an event broadcast immediately

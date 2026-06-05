@@ -1356,6 +1356,39 @@ export const campaignLog = pgTable("campaign_log", {
 });
 export type CampaignLog = typeof campaignLog.$inferSelect;
 
+// ── NXT Airdrop Campaigns ─────────────────────────────────────────────────────
+export const airdropCampaigns = pgTable("airdrop_campaigns", {
+  id:            serial("id").primaryKey(),
+  title:         text("title").notNull(),
+  description:   text("description").notNull(),
+  emoji:         text("emoji").notNull().default("🎁"),
+  totalNxtPool:  decimal("total_nxt_pool",  { precision: 20, scale: 8 }).notNull(),
+  perClaimNxt:   decimal("per_claim_nxt",   { precision: 20, scale: 8 }).notNull(),
+  claimedNxt:    decimal("claimed_nxt",     { precision: 20, scale: 8 }).notNull().default("0"),
+  claimsCount:   integer("claims_count").notNull().default(0),
+  maxClaims:     integer("max_claims").notNull(),
+  status:        text("status").notNull().default("active"), // active | paused | exhausted | ended
+  requirements:  text("requirements").array().notNull().default(sql`ARRAY[]::text[]`),
+  createdAt:     timestamp("created_at").defaultNow(),
+  endsAt:        timestamp("ends_at"),
+}, (t) => ({ statusIdx: index("airdrop_campaigns_status_idx").on(t.status) }));
+export type AirdropCampaign = typeof airdropCampaigns.$inferSelect;
+
+export const airdropClaims = pgTable("airdrop_claims", {
+  id:            serial("id").primaryKey(),
+  campaignId:    integer("campaign_id").notNull().references(() => airdropCampaigns.id),
+  userId:        text("user_id").notNull(),
+  walletAddress: text("wallet_address").notNull(),
+  amountNxt:     decimal("amount_nxt", { precision: 20, scale: 8 }).notNull(),
+  psiChannel:    text("psi_channel"),
+  txId:          varchar("tx_id", { length: 36 }),
+  claimedAt:     timestamp("claimed_at").defaultNow(),
+}, (t) => ({
+  campaignIdx: index("airdrop_claims_campaign_idx").on(t.campaignId),
+  userIdx:     index("airdrop_claims_user_idx").on(t.userId),
+}));
+export type AirdropClaim = typeof airdropClaims.$inferSelect;
+
 // ── Liquidity Pools (AMM) ─────────────────────────────────────────────────────
 export const liquidityPools = pgTable("liquidity_pools", {
   id:               serial("id").primaryKey(),

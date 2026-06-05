@@ -234,7 +234,40 @@ async function runStartupMigrations() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS lightning_address text;
     `);
 
-    // 8. Liquidity pools + LP positions
+    // 8. NXT Airdrop campaigns + claims
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS airdrop_campaigns (
+        id              serial PRIMARY KEY,
+        title           text NOT NULL,
+        description     text NOT NULL,
+        emoji           text NOT NULL DEFAULT '🎁',
+        total_nxt_pool  numeric(20,8) NOT NULL,
+        per_claim_nxt   numeric(20,8) NOT NULL,
+        claimed_nxt     numeric(20,8) NOT NULL DEFAULT 0,
+        claims_count    integer NOT NULL DEFAULT 0,
+        max_claims      integer NOT NULL,
+        status          text NOT NULL DEFAULT 'active',
+        requirements    text[] NOT NULL DEFAULT '{}',
+        created_at      timestamp DEFAULT now(),
+        ends_at         timestamp
+      );
+      CREATE INDEX IF NOT EXISTS airdrop_campaigns_status_idx ON airdrop_campaigns(status);
+
+      CREATE TABLE IF NOT EXISTS airdrop_claims (
+        id             serial PRIMARY KEY,
+        campaign_id    integer NOT NULL REFERENCES airdrop_campaigns(id),
+        user_id        text NOT NULL,
+        wallet_address text NOT NULL,
+        amount_nxt     numeric(20,8) NOT NULL,
+        psi_channel    text,
+        tx_id          varchar(36),
+        claimed_at     timestamp DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS airdrop_claims_campaign_idx ON airdrop_claims(campaign_id);
+      CREATE INDEX IF NOT EXISTS airdrop_claims_user_idx     ON airdrop_claims(user_id);
+    `);
+
+    // 9. Liquidity pools + LP positions
     await pool.query(`
       CREATE TABLE IF NOT EXISTS liquidity_pools (
         id               serial PRIMARY KEY,

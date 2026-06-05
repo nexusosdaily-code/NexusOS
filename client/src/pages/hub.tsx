@@ -20,7 +20,7 @@ import {
   CheckCircle2, AlertTriangle, ArrowRight, FlaskConical, Heart,
   Copy, ExternalLink, RefreshCw, ChevronDown, ChevronUp, ShoppingBag,
   Gem, Coins, TrendingUp, Unplug, DollarSign, Megaphone,
-  ArrowDownToLine, LayoutDashboard, Droplets,
+  ArrowDownToLine, LayoutDashboard, Droplets, Gift,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -181,6 +181,7 @@ const APP_SECTIONS = [
       { title: "🖼 Assets Sentinel",  href: "/btc-assets-sentinel", Icon: Layers },
       { title: "📡 Mempool Monitor",  href: "/mempool",             Icon: Activity },
       { title: "📣 NXT Campaign",     href: "/nxt-campaign",        Icon: Megaphone },
+      { title: "🎁 NXT Airdrop",      href: "/airdrop",             Icon: Gift },
       { title: "🔮 Nostr Bridge",     href: "/nostr-bridge",        Icon: Radio },
     ],
   },
