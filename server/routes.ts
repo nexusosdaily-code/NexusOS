@@ -8905,6 +8905,16 @@ export async function registerRoutes(
           return;
         }
 
+        // Credit NXT proportionally (1 NXT = 1000 sats) — keeps NXT/sats ratio in sync
+        const nxtCredit = amountSats / LN_SATS_PER_NXT;
+        const { wallets: swWallets } = await import("../shared/schema");
+        const [swNxtWallet] = await swDb.select().from(swWallets).where(swEq(swWallets.userId, userId));
+        if (swNxtWallet) {
+          const newNxt = (parseFloat(swNxtWallet.balance) + nxtCredit).toFixed(8);
+          await swDb.update(swWallets).set({ balance: newNxt }).where(swEq(swWallets.userId, userId));
+          console.log(`[AutoSweep] +${nxtCredit.toFixed(4)} NXT credited → wallet now ${newNxt} NXT`);
+        }
+
         console.log(`[AutoSweep] ⚡ Deposit confirmed — sweeping ${amountSats.toLocaleString()} sats → ${destAddr}`);
         const sweepInvoices = await lnurlPayBatchInvoices(destAddr, amountSats, "NexusOS auto-sweep");
 
