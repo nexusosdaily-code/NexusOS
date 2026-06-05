@@ -8439,21 +8439,35 @@ export async function registerRoutes(
 
   async function blinkBtcWalletId(): Promise<string> {
     if (_blinkWalletId) return _blinkWalletId;
-    // 1. Direct wallet ID env var
+    // 1. Direct override env var
     if (process.env.BLINK_WALLET_ID) { _blinkWalletId = process.env.BLINK_WALLET_ID; return _blinkWalletId; }
-    // 2. Check all common names the user might have used for the BTCPay connection string
+    // 2. Query Blink API — ask for all wallets and pick the BTC one (most reliable)
+    try {
+      const d = await blinkGql(`{ me { defaultAccount { wallets { id walletCurrency } } } }`);
+      const wallets: { id: string; walletCurrency: string }[] =
+        d?.me?.defaultAccount?.wallets ?? [];
+      const btcWallet = wallets.find((w) => w.walletCurrency === "BTC");
+      if (btcWallet?.id) { _blinkWalletId = btcWallet.id; return btcWallet.id; }
+    } catch { /* fall through to connection string parsing */ }
+    // 3. Parse from BTCPay connection string — look for BTC-specific string first
     const connCandidates = [
       process.env.BLINK_BTC_CONNECTION,
       process.env.BLINK_BTC,
-      process.env.BTCUSD,          // user-named secret
       process.env.BLINK_CONNECTION,
     ].filter(Boolean) as string[];
+    // Also try each semicolon-delimited chunk inside BTCUSD (user may have put both strings together)
+    const rawBtcUsd = process.env.BTCUSD ?? "";
+    if (rawBtcUsd) {
+      // Split on "type=blink" boundaries to separate BTC vs USD strings
+      const chunks = rawBtcUsd.split(/(?=type=blink)/i).filter(Boolean);
+      connCandidates.push(...chunks);
+    }
     for (const conn of connCandidates) {
       const parsed = _parseBlinkConnectionString(conn);
       const wid = parsed["wallet-id"] ?? parsed["walletId"] ?? parsed["wallet_id"] ?? parsed["walletid"] ?? "";
       if (wid) { _blinkWalletId = wid; return wid; }
     }
-    throw new Error("Blink wallet ID not found. In Replit Secrets add BLINK_WALLET_ID with the UUID from wallet-id= in your Blink BTCPay BTC connection string.");
+    throw new Error("Blink BTC wallet ID not found. Add BLINK_WALLET_ID to Replit Secrets with the UUID from your Blink BTCPay BTC connection string.");
   }
 
   // ── Coinos helpers ──────────────────────────────────────────────────────────
