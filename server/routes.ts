@@ -564,6 +564,135 @@ export async function registerRoutes(
   // AUTHENTICATION ROUTES
   // ============================================
   
+  // ── Nostr-native login / auto-register ────────────────────────────────────
+  // Flow: frontend calls window.nostr.signEvent (NIP-07), sends the signed
+  // event here. We verify the sig, find or create a user by pubkey, and
+  // return a session cookie — same as a normal login.
+  app.post("/api/auth/nostr", async (req, res) => {
+    try {
+      const { signedEvent } = req.body;
+      if (!signedEvent) return res.status(400).json({ error: "signedEvent required" });
+
+      const { verifyEvent, nip19 } = await import("nostr-tools");
+      const valid = verifyEvent(signedEvent);
+      if (!valid) return res.status(401).json({ error: "Invalid Nostr signature" });
+
+      // Reject stale events (> 120 s)
+      const age = Math.floor(Date.now() / 1000) - signedEvent.created_at;
+      if (age > 120) return res.status(401).json({ error: "Nostr event expired — please try again" });
+
+      const pubkeyHex: string = signedEvent.pubkey;
+      const npub = nip19.npubEncode(pubkeyHex);
+
+      const { db: _db } = await import("./db");
+      const { users: usersT } = await import("../shared/schema");
+      const { or, eq: eqN } = await import("drizzle-orm");
+
+      // Find existing user by nostrPubkey or nostrNpub
+      let [user] = await _db.select().from(usersT)
+        .where(or(eqN(usersT.nostrPubkey, pubkeyHex), eqN(usersT.nostrNpub, npub)))
+        .limit(1);
+
+      if (!user) {
+        // Auto-register — derive username from pubkey prefix
+        const bcrypt = await import("bcrypt");
+        const base   = `nostr_${pubkeyHex.slice(0, 8)}`;
+        let username = base;
+        let suffix   = 0;
+        while (true) {
+          const [taken] = await _db.select({ id: usersT.id }).from(usersT)
+            .where(eqN(usersT.username, username)).limit(1);
+          if (!taken) break;
+          suffix++;
+          username = `${base}_${suffix}`;
+        }
+        const passwordHash = await bcrypt.default.hash(
+          crypto.randomUUID(),
+          10
+        );
+        const [created] = await _db.insert(usersT).values({
+          username,
+          passwordHash,
+          nostrPubkey:  pubkeyHex,
+          nostrNpub:    npub,
+          isVerified:   true,
+          role:         "user",
+        }).returning();
+        user = created;
+
+        // Wallet
+        await storage.createWallet(user.id);
+
+        // Spectral channel from pubkey hash
+        try {
+          const sum  = pubkeyHex.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+          const wdm  = sum % 256 || 1;
+          const oam  = sum % 50  || 1;
+          const pol  = sum % 2 === 0 ? "H" : "V";
+          const nm   = parseFloat((380 + (wdm / 256) * 400).toFixed(4));
+          const band = nm < 450 ? "VIOLET" : nm < 495 ? "BLUE" : nm < 520 ? "CYAN"
+                     : nm < 565 ? "GREEN" : nm < 590 ? "YELLOW" : nm < 625 ? "ORANGE" : "RED";
+          await storage.updateUserSpectral(user.id, { wdm, oam, pol, nm, band });
+        } catch { /* non-blocking */ }
+
+        // WNSP canonical identity
+        try {
+          const { db: _db2 } = await import("./db");
+          const { wnspRegistry: _wr } = await import("../shared/schema");
+          const sum2  = pubkeyHex.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+          const wdm2  = sum2 % 256 || 1;
+          const oam2  = sum2 % 50  || 1;
+          const pol2  = sum2 % 2 === 0 ? "H" : "V";
+          const nm2   = parseFloat((380 + (wdm2 / 256) * 400).toFixed(4));
+          const band2 = nm2 < 450 ? "VIOLET" : nm2 < 495 ? "BLUE" : nm2 < 520 ? "CYAN"
+                      : nm2 < 565 ? "GREEN" : nm2 < 590 ? "YELLOW" : nm2 < 625 ? "ORANGE" : "RED";
+          const psi   = `Ψ(${wdm2},${oam2},${pol2})`;
+          const uri   = `wnsp://${psi}/${username}`;
+          await _db2.insert(_wr).values({
+            wnspUri: uri, psiChannel: psi, wdm: wdm2, oam: oam2,
+            polarisation: pol2, wavelengthNm: String(nm2), band: band2,
+            label: username, ceInput: username, resourceType: "user", resourceId: user.id,
+            httpUrl: `/profile/${username}`, description: `Nostr identity — ${npub.slice(0, 20)}…`,
+            registeredBy: user.id, isPublic: true, isCanonical: true,
+          }).onConflictDoNothing();
+        } catch { /* non-blocking */ }
+
+        console.log(`[NostrAuth] New user created — ${username} · ${npub.slice(0, 20)}…`);
+      } else {
+        // Backfill pubkey if missing
+        if (!user.nostrPubkey) {
+          await _db.update(usersT).set({ nostrPubkey: pubkeyHex }).where(eqN(usersT.id, user.id));
+        }
+        console.log(`[NostrAuth] Existing user — ${user.username} · ${npub.slice(0, 20)}…`);
+      }
+
+      const session = await storage.createSession(user.id, req.ip, req.headers["user-agent"]);
+      await storage.updateUserLastLogin(user.id);
+
+      res.cookie("auth_token", session.token, {
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge:   7 * 24 * 60 * 60 * 1000,
+        path:     "/",
+        secure:   process.env.NODE_ENV === "production",
+      });
+
+      const wallet = await storage.getWallet(user.id);
+      res.json({
+        message: user.createdAt && (Date.now() - new Date(user.createdAt).getTime() < 5000)
+          ? "Welcome to NexusOS! Your spectral wallet has been created."
+          : `Welcome back, ${user.username}!`,
+        user: { id: user.id, username: user.username, role: user.role, nostrNpub: npub },
+        wallet: wallet ? { address: wallet.address, balance: wallet.balance } : null,
+        token:      session.token,
+        expiresAt:  session.expiresAt,
+      });
+    } catch (e: any) {
+      console.error("[NostrAuth] error:", e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.post("/api/auth/register", validateRequest(registerSchema), async (req, res) => {
     try {
       // ── REGISTRATION CLOSED ──────────────────────────────────────────────

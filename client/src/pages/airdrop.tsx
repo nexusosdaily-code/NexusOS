@@ -14,6 +14,28 @@ import {
   Zap, RefreshCw, Plus, TrendingUp, Shield, ChevronDown, ChevronUp,
 } from "lucide-react";
 
+async function triggerNostrLogin(): Promise<boolean> {
+  const w = window as any;
+  if (!w.nostr) return false;
+  try {
+    const pubkey = await w.nostr.getPublicKey();
+    const signedEvent = await w.nostr.signEvent({
+      kind: 27235, created_at: Math.floor(Date.now() / 1000),
+      tags: [["u", "https://wnsp.tech"], ["method", "POST"]],
+      content: "NexusOS Login", pubkey,
+    });
+    const res  = await fetch("/api/auth/nostr", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ signedEvent }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    localStorage.setItem("auth_token", data.token);
+    return true;
+  } catch { return false; }
+}
+
 function fmt(n: number | string, dec = 4) {
   return parseFloat(String(n || 0)).toLocaleString(undefined, { maximumFractionDigits: dec });
 }
@@ -34,8 +56,9 @@ export default function AirdropPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [showCreate, setShowCreate] = useState(false);
-  const [claimedId, setClaimedId] = useState<number | null>(null);
+  const [showCreate, setShowCreate]       = useState(false);
+  const [claimedId, setClaimedId]         = useState<number | null>(null);
+  const [nostrLoading, setNostrLoading]   = useState<number | null>(null); // campaignId being nostr-signed
 
   // Create form state
   const [form, setForm] = useState({
@@ -253,11 +276,38 @@ export default function AirdropPage() {
                       <span className="text-green-400 text-sm">Already claimed</span>
                     </div>
                   ) : !user ? (
-                    <Link href="/auth">
-                      <Button className="w-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30" data-testid="button-login-to-claim">
-                        Log in to claim
+                    <div className="space-y-2">
+                      <Button
+                        className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold"
+                        onClick={async () => {
+                          const w = window as any;
+                          if (!w.nostr) {
+                            toast({ title: "No Nostr extension", description: "Install Alby (getalby.com) to claim with your Nostr key.", variant: "destructive" });
+                            return;
+                          }
+                          setNostrLoading(c.id);
+                          const ok = await triggerNostrLogin();
+                          if (ok) {
+                            toast({ title: "⚡ Signed in!", description: "Claiming your NXT now…" });
+                            window.location.reload();
+                          } else {
+                            toast({ title: "Sign-in failed", description: "Could not verify Nostr signature.", variant: "destructive" });
+                            setNostrLoading(null);
+                          }
+                        }}
+                        disabled={nostrLoading === c.id}
+                        data-testid={`button-nostr-claim-${c.id}`}
+                      >
+                        {nostrLoading === c.id
+                          ? <><RefreshCw className="w-4 h-4 animate-spin mr-2" /> Waiting for signature…</>
+                          : <><Zap className="w-4 h-4 mr-2" /> Sign in with Nostr to claim</>
+                        }
                       </Button>
-                    </Link>
+                      <p className="text-center text-[10px] text-slate-600">
+                        No account needed · wallet auto-created ·{" "}
+                        <a href="https://getalby.com" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Get Alby</a>
+                      </p>
+                    </div>
                   ) : (
                     <Button
                       className="w-full bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 text-black font-bold"

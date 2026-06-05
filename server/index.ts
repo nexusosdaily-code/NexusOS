@@ -234,6 +234,11 @@ async function runStartupMigrations() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS lightning_address text;
     `);
 
+    // 7b. Nostr pubkey on users
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS nostr_pubkey text UNIQUE;
+    `);
+
     // 8. NXT Airdrop campaigns + claims
     await pool.query(`
       CREATE TABLE IF NOT EXISTS airdrop_campaigns (

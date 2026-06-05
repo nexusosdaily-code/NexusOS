@@ -35,7 +35,8 @@ export const users = pgTable("users", {
   // ── Lightning Address (e.g. user@walletofsatoshi.com) ──
   lightningAddress: text("lightning_address"),
   // ── Nostr identity ──
-  nostrNpub: text("nostr_npub"),
+  nostrNpub:    text("nostr_npub"),
+  nostrPubkey:  text("nostr_pubkey").unique(), // hex pubkey — primary Nostr login key
 }, (table) => ({
   usernameIdx: index("users_username_idx").on(table.username),
   emailIdx: index("users_email_idx").on(table.email),
