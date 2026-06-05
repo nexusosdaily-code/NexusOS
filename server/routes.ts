@@ -1,5 +1,6 @@
 import path from "path";
 import * as nostrService from "./nostr-service.js";
+import * as tgNostrBridge from "./telegram-nostr-bridge";
 import crypto from "crypto";
 import { bech32 as _bech32 } from "bech32";
 import * as tinySecp from "tiny-secp256k1";
@@ -11635,6 +11636,32 @@ export async function registerRoutes(
       res.json({ slot });
     });
   }
+
+  // ── Telegram ↔ Nostr Bridge API ───────────────────────────────────────────────
+  app.get("/api/tg-nostr/status", authenticate, (_req: Request, res: Response) => {
+    res.json(tgNostrBridge.getBridgeState());
+  });
+
+  app.get("/api/tg-nostr/log", authenticate, (_req: Request, res: Response) => {
+    res.json(tgNostrBridge.getBridgeLog());
+  });
+
+  app.post("/api/tg-nostr/sync", authenticate, async (_req: Request, res: Response) => {
+    try {
+      const state = await tgNostrBridge.manualSync();
+      res.json({ ok: true, state });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/tg-nostr/start", authenticate, (_req: Request, res: Response) => {
+    tgNostrBridge.startTgNostrBridge();
+    res.json({ ok: true, state: tgNostrBridge.getBridgeState() });
+  });
+
+  app.post("/api/tg-nostr/stop", authenticate, (_req: Request, res: Response) => {
+    tgNostrBridge.stopTgNostrBridge();
+    res.json({ ok: true, state: tgNostrBridge.getBridgeState() });
+  });
 
   // ── WNUSD Liquidity — Mint / Redeem / Positions ──────────────────────────────
   {

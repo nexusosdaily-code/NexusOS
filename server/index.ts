@@ -12,6 +12,7 @@ import { startSocialBroadcastAgent } from "./social_broadcast_agent";
 import { startTelegramBot } from "./telegram-bot";
 import { startNostrDmBot } from "./nostr-dm-bot";
 import { startNxtCampaignAgent } from "./nxt-campaign-agent";
+import { startTgNostrBridge } from "./telegram-nostr-bridge";
 
 const app = express();
 const httpServer = createServer(app);
@@ -311,6 +312,8 @@ async function runStartupMigrations() {
       startNostrDmBot();
       // Start NXT campaign broadcaster
       startNxtCampaignAgent();
+      // Start Telegram ↔ Nostr cross-poster
+      startTgNostrBridge();
     });
     httpServer.once("error", (err: any) => {
       if (err.code === "EADDRINUSE" && attemptsLeft > 0) {

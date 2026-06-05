@@ -286,6 +286,89 @@ Buy the dip. Stake. Fund hardware. Build civilisation.
 nexusos.io #NexusOS #NXT #KardashevTypeI #WNUSD #Photonics`,
     tags: ["NexusOS","NXT","KardashevTypeI","WNUSD","Photonics","Bitcoin"],
   },
+  {
+    id: 6, label: "Ordinals — WNSP inscribed on Bitcoin", emoji: "🪬",
+    telegram: `🪬 <b>NexusOS Physics — Now Permanently Inscribed on Bitcoin</b>
+
+Every Bitcoin block is a permanent ledger. Every Ordinal inscription is immutable data — forever.
+
+NexusOS has inscribed its core specifications onto the Bitcoin base layer via Ordinals:
+
+📜 <b>WNSP Protocol spec</b> — wavelength-based addressing
+🔮 <b>WavelengthScript Compiler α</b> — the language of photonic hardware
+🌈 <b>25,600 Ψ channel map</b> — the Hilbert space routing table
+🔬 <b>Compression State Theory</b> — the physics underpinning it all
+
+<b>Why Ordinals?</b> The physics spec must outlast any server. Inscribed on Bitcoin it cannot be censored, altered, or deleted — guaranteed by proof-of-work.
+
+NXT is the token that funds expansion of this inscribed civilisation OS.
+1,000 sats = 1 NXT. Stack physics.
+
+👉 nexusos.io/hardware-spec
+#Ordinals #Bitcoin #NXT #NexusOS #WNSP #Inscription`,
+    nostr: `🪬 NexusOS physics — permanently inscribed on Bitcoin via Ordinals
+
+Every Ordinal is immutable data, secured by proof-of-work forever.
+
+Inscribed:
+• WNSP Protocol spec — wavelength-based addressing
+• WavelengthScript Compiler α
+• 25,600 Ψ channel map (Hilbert space routing)
+• Compression State Theory
+
+Why inscribe? Physics specs must outlast any server. Bitcoin makes them uncensorable, unalterable, permanent.
+
+NXT funds the expansion of this inscribed civilisation OS.
+1,000 sats = 1 NXT
+
+nexusos.io/hardware-spec #Ordinals #Bitcoin #NXT #NexusOS #WNSP`,
+    tags: ["Ordinals","Bitcoin","NXT","NexusOS","WNSP","Inscription"],
+  },
+  {
+    id: 7, label: "NEXUS•WAVELENGTH Rune — BRC-20 on Bitcoin", emoji: "🌈",
+    telegram: `🌈 <b>NEXUS•WAVELENGTH — The Physics Rune on Bitcoin</b>
+
+A Rune is not just a token. It's a permanent identifier etched into the Bitcoin UTXO set.
+
+<b>NEXUS•WAVELENGTH</b> is the NexusOS Rune — living natively on Bitcoin.
+
+⚡ <b>Why a Rune?</b>
+Runes use Bitcoin's own UTXO model — no side-chain, no bridge, no custodian.
+Every NEXUS•WAVELENGTH unit is secured by Bitcoin's proof-of-work.
+
+🔶 <b>Relationship to NXT:</b>
+NXT (Lightning/off-chain physics token) ↔ NEXUS•WAVELENGTH (on-chain Bitcoin Rune)
+The two tokens are complementary — NXT for speed, the Rune for permanence.
+
+💎 <b>What the Rune funds:</b>
+• SNIC photonic chip production
+• Spectral Relay Mesh v1 hardware
+• WavelengthScript silicon compiler
+
+Mint at nexusos.io/rune-mint · Etch at nexusos.io/rune-etching
+
+1,000 sats = 1 NXT · Stack the Rune. Build the mesh.
+#NexusWavelength #Runes #BRC20 #Bitcoin #NXT #NexusOS`,
+    nostr: `🌈 NEXUS•WAVELENGTH — the physics Rune on Bitcoin
+
+Not a side-chain. Not a bridge. Native Bitcoin UTXO.
+
+Every NEXUS•WAVELENGTH unit is secured by proof-of-work.
+
+NXT (Lightning/off-chain) ↔ NEXUS•WAVELENGTH (on-chain Rune)
+Speed vs permanence — two faces of the same physics stack.
+
+The Rune funds:
+• SNIC photonic chip production
+• Spectral Relay Mesh v1 hardware
+• WavelengthScript silicon compiler
+
+Mint → nexusos.io/rune-mint
+Etch → nexusos.io/rune-etching
+
+#NexusWavelength #Runes #Bitcoin #NXT #NexusOS`,
+    tags: ["NexusWavelength","Runes","BRC20","Bitcoin","NXT","NexusOS"],
+  },
 ];
 
 // ── Telegram channel sender ───────────────────────────────────────────────────

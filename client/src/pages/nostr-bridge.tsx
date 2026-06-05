@@ -10,7 +10,7 @@ import { Link } from "wouter";
 import {
   ArrowLeft, Copy, CheckCircle, Zap, Link2, Link2Off, RefreshCw,
   MessageSquare, Bot, Coins, Lock, TrendingUp, Clock, ExternalLink,
-  Shield, Radio,
+  Shield, Radio, ArrowRightLeft, Send, AlertTriangle, PlayCircle, StopCircle,
 } from "lucide-react";
 
 function fmtTime(ts: string) {
@@ -80,6 +80,18 @@ export default function NostrBridgePage() {
     refetchInterval: 20_000,
   });
 
+  const { data: bridgeState, refetch: refetchBridge } = useQuery<any>({
+    queryKey: ["/api/tg-nostr/status"],
+    queryFn: () => fetch("/api/tg-nostr/status", { credentials: "include", headers: getAuthHeaders() }).then(r => r.json()),
+    refetchInterval: 30_000,
+  });
+
+  const { data: bridgeLog } = useQuery<any[]>({
+    queryKey: ["/api/tg-nostr/log"],
+    queryFn: () => fetch("/api/tg-nostr/log", { credentials: "include", headers: getAuthHeaders() }).then(r => r.json()),
+    refetchInterval: 30_000,
+  });
+
   const linkMutation = useMutation({
     mutationFn: async (npub: string) => {
       const r = await fetch("/api/nostr/link-npub", {
@@ -115,9 +127,40 @@ export default function NostrBridgePage() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const linkedNpub = myNpubData?.npub ?? null;
-  const botNpub    = statusData?.npub ?? "";
-  const relays     = statusData?.relays ?? [];
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const r = await fetch("/api/tg-nostr/sync", {
+        method: "POST", credentials: "include", headers: getAuthHeaders(),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? "Sync failed");
+      return j;
+    },
+    onSuccess: () => {
+      toast({ title: "Bridge sync triggered" });
+      refetchBridge();
+      qc.invalidateQueries({ queryKey: ["/api/tg-nostr/log"] });
+    },
+    onError: (e: any) => toast({ title: "Sync error", description: e.message, variant: "destructive" }),
+  });
+
+  const bridgeStartMutation = useMutation({
+    mutationFn: async (action: "start" | "stop") => {
+      const r = await fetch(`/api/tg-nostr/${action}`, {
+        method: "POST", credentials: "include", headers: getAuthHeaders(),
+      });
+      return r.json();
+    },
+    onSuccess: () => { refetchBridge(); qc.invalidateQueries({ queryKey: ["/api/tg-nostr/log"] }); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const linkedNpub  = myNpubData?.npub ?? null;
+  const botNpub     = statusData?.npub ?? "";
+  const relays      = statusData?.relays ?? [];
+  const bridgeRunning = bridgeState?.running ?? false;
+  const hasTg       = bridgeState?.channels?.tg ?? false;
+  const hasNostr    = bridgeState?.channels?.nostr ?? false;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/20 to-slate-950 p-4 md:p-6">
@@ -130,7 +173,7 @@ export default function NostrBridgePage() {
               <ArrowLeft className="w-4 h-4 mr-2" /> Back to Home
             </Button>
           </Link>
-          <Button variant="ghost" size="sm" onClick={() => refetchLog()} className="text-slate-400 hover:text-white">
+          <Button variant="ghost" size="sm" onClick={() => { refetchLog(); refetchBridge(); }} className="text-slate-400 hover:text-white">
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
@@ -143,9 +186,132 @@ export default function NostrBridgePage() {
             </h1>
           </div>
           <p className="text-purple-300/60 text-sm font-mono">
-            NexusOS ↔ Nostr · DM bot · npub-linked wallets
+            NexusOS ↔ Nostr · DM bot · Telegram cross-poster · npub-linked wallets
           </p>
         </div>
+
+        {/* ── Telegram ↔ Nostr Bridge ── */}
+        <Card className="bg-slate-900/60 border-orange-500/30 p-5 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <ArrowRightLeft className="w-4 h-4 text-orange-400" />
+              <h2 className="text-sm font-bold text-orange-400 uppercase tracking-widest">Telegram ↔ Nostr Bridge</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-slate-700 text-slate-400 hover:text-white text-[11px] h-7 px-2"
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending || !bridgeRunning}
+                data-testid="button-bridge-sync"
+              >
+                <Send className="w-3 h-3 mr-1" />
+                {syncMutation.isPending ? "Syncing…" : "Sync Now"}
+              </Button>
+              {bridgeRunning ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-red-500/40 text-red-400 hover:bg-red-950/30 text-[11px] h-7 px-2"
+                  onClick={() => bridgeStartMutation.mutate("stop")}
+                  disabled={bridgeStartMutation.isPending}
+                  data-testid="button-bridge-stop"
+                >
+                  <StopCircle className="w-3 h-3 mr-1" /> Stop
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-green-500/40 text-green-400 hover:bg-green-950/30 text-[11px] h-7 px-2"
+                  onClick={() => bridgeStartMutation.mutate("start")}
+                  disabled={bridgeStartMutation.isPending}
+                  data-testid="button-bridge-start"
+                >
+                  <PlayCircle className="w-3 h-3 mr-1" /> Start
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Status row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div className="bg-slate-800/40 rounded-xl p-3 text-center">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Status</div>
+              <div className={`text-sm font-bold ${bridgeRunning ? "text-green-400" : "text-red-400"}`}>
+                {bridgeRunning ? "LIVE" : "STOPPED"}
+              </div>
+            </div>
+            <div className="bg-slate-800/40 rounded-xl p-3 text-center">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Telegram</div>
+              <div className={`text-sm font-bold ${hasTg ? "text-green-400" : "text-amber-400"}`}>
+                {hasTg ? "✓ Connected" : "⚠ No token"}
+              </div>
+            </div>
+            <div className="bg-slate-800/40 rounded-xl p-3 text-center">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">TG→Nostr</div>
+              <div className="text-sm font-bold text-purple-400">{bridgeState?.tgToNostr ?? 0}</div>
+            </div>
+            <div className="bg-slate-800/40 rounded-xl p-3 text-center">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Nostr→TG</div>
+              <div className="text-sm font-bold text-indigo-400">{bridgeState?.nostrToTg ?? 0}</div>
+            </div>
+          </div>
+
+          {/* How it works */}
+          <div className="bg-slate-800/30 rounded-xl p-3 border border-slate-700/30 mb-4">
+            <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-2">How It Works</div>
+            <div className="space-y-1.5">
+              {[
+                { icon: "📡", dir: "Telegram → Nostr", desc: "New channel posts are cross-posted as kind:1 notes with #nexusos tag" },
+                { icon: "🔮", dir: "Nostr → Telegram", desc: "New #nexusos notes from other users are forwarded to your Telegram channel" },
+              ].map(row => (
+                <div key={row.dir} className="flex items-start gap-2">
+                  <span className="text-sm shrink-0">{row.icon}</span>
+                  <div>
+                    <span className="text-[11px] font-semibold text-slate-300">{row.dir}: </span>
+                    <span className="text-[11px] text-slate-500">{row.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {!hasTg && (
+              <div className="mt-3 flex items-start gap-2 bg-amber-950/30 border border-amber-500/20 rounded-lg p-2.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                <div className="text-[11px] text-amber-300/80">
+                  Set <code className="font-mono bg-slate-800 px-1 rounded">TELEGRAM_BOT_TOKEN</code> and <code className="font-mono bg-slate-800 px-1 rounded">TELEGRAM_CHANNEL_ID</code> secrets to activate the Telegram side of the bridge.
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Bridge log */}
+          {bridgeLog && bridgeLog.length > 0 ? (
+            <div className="space-y-1.5">
+              <div className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold mb-2">Recent Activity</div>
+              {bridgeLog.slice(0, 6).map((row: any) => (
+                <div key={row.id} className="flex items-start gap-2 bg-slate-800/30 rounded-lg px-3 py-2" data-testid={`bridge-row-${row.id}`}>
+                  <span className="text-[11px] font-mono text-slate-500 shrink-0 mt-0.5">
+                    {row.direction === "tg→nostr" ? "📡→🔮" : "🔮→📡"}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] text-slate-300 truncate">{row.text}</div>
+                    {row.detail && <div className="text-[10px] text-slate-600 font-mono">{row.detail}</div>}
+                  </div>
+                  <Badge className={`text-[9px] px-1.5 py-0 border shrink-0 ${STATUS_COLORS[row.status] ?? STATUS_COLORS.unknown}`}>
+                    {row.status}
+                  </Badge>
+                  <div className="text-[10px] text-slate-600 shrink-0">{fmtTime(row.ts)}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-slate-600 text-[12px]">
+              No bridged messages yet — the bridge polls every 60 seconds.
+            </div>
+          )}
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
 
