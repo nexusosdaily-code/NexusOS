@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -14,7 +14,7 @@ import {
   Clock, CheckCircle2, XCircle, Copy, RefreshCw, AlertTriangle,
   Bitcoin, Radio, Waves, Activity, ArrowDownLeft, ArrowUpRight,
   Atom, Send, Users, Lock, Unlock, TrendingUp, Heart, QrCode, BookMarked,
-  ExternalLink, Smartphone, ArrowRight, CircleDot,
+  ExternalLink, Smartphone, ArrowRight, CircleDot, Camera, X as XIcon,
 } from "lucide-react";
 
 const TABS = ["receive", "transmit", "swap", "send", "stake", "unisat", "log"] as const;
@@ -624,6 +624,8 @@ export default function ChannelDashboard() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [bolt11, setBolt11] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scannedBolt11, setScannedBolt11] = useState<string | null>(null);
 
   const [swapDir, setSwapDir]   = useState<"to_nxt" | "to_sats" | "sats_to_btc" | "btc_to_sats" | "sats_to_ln">("to_nxt");
   const [swapSats, setSwapSats] = useState("1000");
@@ -749,12 +751,13 @@ export default function ChannelDashboard() {
   });
 
   const payInvoice = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/lightning/pay", { bolt11 });
+    mutationFn: async (overrideBolt11?: string) => {
+      const res = await apiRequest("POST", "/api/lightning/pay", { bolt11: overrideBolt11 ?? bolt11 });
       return res.json();
     },
     onSuccess: (data: any) => {
       setBolt11("");
+      setScannedBolt11(null);
       refetchBal();
       qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] });
       toast({ title: "⚡ Transmission sent", description: `${data.amountSats} sats transmitted.` });
@@ -1224,10 +1227,48 @@ export default function ChannelDashboard() {
         {/* ── TRANSMIT ── */}
         {tab === "transmit" && (
           <Card className="bg-slate-900/60 border-slate-700/50 p-6 space-y-5">
-            <h2 className="text-white font-semibold flex items-center gap-2">
-              <Send className="w-4 h-4 text-red-400" />
-              Transmit via Lightning
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-white font-semibold flex items-center gap-2">
+                <Send className="w-4 h-4 text-red-400" />
+                Transmit via Lightning
+              </h2>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-cyan-700/50 text-cyan-400 hover:bg-cyan-900/30 gap-1.5 text-xs"
+                onClick={() => { setScannedBolt11(null); setScanOpen(true); }}
+                data-testid="button-scan-qr"
+              >
+                <Camera className="w-3.5 h-3.5" />Scan QR
+              </Button>
+            </div>
+
+            {/* ── Scanned bolt11 pay confirmation ── */}
+            {scannedBolt11 && (
+              <div className="bg-cyan-900/20 border border-cyan-500/30 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span className="text-cyan-300 text-sm font-semibold">Invoice scanned</span>
+                </div>
+                <div className="font-mono text-[10px] text-gray-400 bg-black/30 rounded p-2 break-all">
+                  {scannedBolt11.slice(0, 60)}…
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1 bg-red-600 hover:bg-red-700 font-semibold text-sm"
+                    onClick={() => payInvoice.mutate(scannedBolt11)}
+                    disabled={payInvoice.isPending}
+                    data-testid="button-pay-scanned"
+                  >
+                    {payInvoice.isPending ? "Transmitting…" : "⚡ Pay Now"}
+                  </Button>
+                  <Button variant="outline" size="sm" className="border-slate-600"
+                    onClick={() => setScannedBolt11(null)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {!lnAddrResult ? (
               <div className="space-y-4">
@@ -2720,6 +2761,123 @@ export default function ChannelDashboard() {
           <span className="ml-auto">{psi}</span>
         </div>
 
+      </div>
+
+      {/* ── QR Scanner Modal ── */}
+      {scanOpen && (
+        <QrScannerModal
+          onClose={() => setScanOpen(false)}
+          onScan={(result) => {
+            setScanOpen(false);
+            // Strip lightning: prefix if present
+            const raw = result.replace(/^lightning:/i, "").trim();
+            // If it looks like a bolt11 invoice (starts with ln)
+            if (/^ln(bc|tb|bcrt|brt)/i.test(raw)) {
+              setScannedBolt11(raw);
+              setBolt11(raw);
+              setTab("transmit");
+            } else if (raw.includes("@")) {
+              // Lightning address
+              setLnAddr(raw);
+              setTab("transmit");
+              toast({ title: "⚡ Address scanned", description: raw });
+            } else {
+              toast({ title: "QR scanned", description: raw });
+            }
+          }}
+        />
+      )}
+
+    </div>
+  );
+}
+
+// ── QR Scanner Modal ────────────────────────────────────────────────────────
+function QrScannerModal({ onClose, onScan }: { onClose: () => void; onScan: (result: string) => void }) {
+  const scannerRef = useRef<any>(null);
+  const divId = "nexusos-qr-reader";
+  const [error, setError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(true);
+  const scannedRef = useRef(false);
+
+  useEffect(() => {
+    let scanner: any;
+    (async () => {
+      try {
+        const { Html5Qrcode } = await import("html5-qrcode");
+        scanner = new Html5Qrcode(divId);
+        scannerRef.current = scanner;
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 240, height: 240 } },
+          (decodedText: string) => {
+            if (scannedRef.current) return;
+            scannedRef.current = true;
+            scanner.stop().catch(() => {});
+            onScan(decodedText);
+          },
+          () => {} // ignore ongoing scan errors
+        );
+        setStarting(false);
+      } catch (e: any) {
+        setError(e.message ?? "Camera access denied. Allow camera in browser settings.");
+        setStarting(false);
+      }
+    })();
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+      }
+    };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90">
+      <div className="w-full max-w-sm mx-4 rounded-2xl overflow-hidden bg-slate-900 border border-cyan-500/30 shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/50">
+          <div className="flex items-center gap-2">
+            <Camera className="w-5 h-5 text-cyan-400" />
+            <span className="text-white font-semibold text-sm">Scan Lightning QR</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-slate-700/50 transition-colors"
+          >
+            <XIcon className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Scanner viewport */}
+        <div className="relative bg-black">
+          <div id={divId} className="w-full" style={{ minHeight: 280 }} />
+          {/* Corner guides overlay */}
+          {!error && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="relative w-52 h-52">
+                {/* corners */}
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-cyan-400 rounded-tl" />
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-cyan-400 rounded-tr" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-cyan-400 rounded-bl" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-cyan-400 rounded-br" />
+                {/* scan line animation */}
+                <div className="absolute inset-x-0 top-0 h-0.5 bg-cyan-400/60 animate-bounce" style={{ animationDuration: "2s" }} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Status */}
+        <div className="px-5 py-4 text-center">
+          {error ? (
+            <div className="text-red-400 text-sm">{error}</div>
+          ) : starting ? (
+            <div className="text-gray-400 text-sm">Starting camera…</div>
+          ) : (
+            <div className="text-cyan-300 text-sm">Point at a Lightning invoice QR code</div>
+          )}
+          <div className="text-[10px] text-gray-600 mt-1">Works with bolt11 invoices and Lightning Addresses</div>
+        </div>
       </div>
     </div>
   );
