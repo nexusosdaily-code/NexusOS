@@ -62,7 +62,7 @@ export default function AirdropPage() {
   const [claimedId, setClaimedId]           = useState<number | null>(null);
   const [nostrLoading, setNostrLoading]     = useState<number | null>(null);
   const [broadcastLoading, setBroadcastLoading] = useState(false);
-  const [broadcastResult, setBroadcastResult]   = useState<{ eventId: string; relays: string[] } | null>(null);
+  const [broadcastResult, setBroadcastResult]   = useState<{ eventId: string; naddr: string; njumpUrl: string; relays: string[] } | null>(null);
   const [copied, setCopied]                 = useState(false);
 
   // Create form state
@@ -403,29 +403,35 @@ export default function AirdropPage() {
                       <CheckCircle className="w-3.5 h-3.5" />
                       Published to Nostr!
                     </div>
-                    <div className="text-[10px] text-slate-400">
-                      <span className="text-slate-500">Event ID: </span>
-                      <span className="font-mono text-slate-300 break-all">{broadcastResult.eventId}</span>
+                    <div className="text-[10px] text-slate-400 space-y-1">
+                      <div>
+                        <span className="text-slate-500">naddr: </span>
+                        <span className="font-mono text-indigo-300 break-all">{broadcastResult.naddr.slice(0, 42)}…</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">event: </span>
+                        <span className="font-mono text-slate-500">{broadcastResult.eventId.slice(0, 24)}…</span>
+                      </div>
                     </div>
                     <div className="text-[10px] text-slate-500">
-                      Relays reached: {broadcastResult.relays.length}/6 — {broadcastResult.relays.map(r => r.replace("wss://", "")).join(", ")}
+                      Relays reached: {broadcastResult.relays.length}/8 — {broadcastResult.relays.map(r => r.replace("wss://", "")).join(", ")}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <Button
                         size="sm"
                         variant="outline"
                         className="text-xs border-slate-700 text-slate-400 hover:text-white"
                         onClick={() => {
-                          navigator.clipboard.writeText(broadcastResult.eventId);
+                          navigator.clipboard.writeText(broadcastResult.naddr);
                           setCopied(true);
                           setTimeout(() => setCopied(false), 2000);
                         }}
                       >
                         {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
-                        {copied ? "Copied!" : "Copy Event ID"}
+                        {copied ? "Copied!" : "Copy naddr"}
                       </Button>
                       <a
-                        href={`https://njump.me/${broadcastResult.eventId}`}
+                        href={broadcastResult.njumpUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -450,7 +456,7 @@ export default function AirdropPage() {
                       });
                       const data = await res.json();
                       if (!res.ok) throw new Error(data.error || "Broadcast failed");
-                      setBroadcastResult({ eventId: data.eventId, relays: data.relays });
+                      setBroadcastResult({ eventId: data.eventId, naddr: data.naddr, njumpUrl: data.njumpUrl, relays: data.relays });
                       toast({ title: "📡 Whitepaper published!", description: `Event ${data.eventId.slice(0, 16)}… · ${data.relays.length} relays` });
                     } catch (e: any) {
                       toast({ title: "Broadcast failed", description: e.message, variant: "destructive" });

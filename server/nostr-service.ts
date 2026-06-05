@@ -15,6 +15,8 @@ export const DEFAULT_RELAYS = [
   "wss://nostr.wine",
   "wss://relay.snort.social",
   "wss://nostr.mom",
+  "wss://purplepag.es",
+  "wss://relay.primal.net",
 ];
 
 let _pool: SimplePool | null = null;
@@ -134,7 +136,7 @@ export async function publishArticleToNostr(opts: {
   content:     string;
   hashtags?:   string[];
   imageUrl?:   string;
-}): Promise<{ id: string; relays: string[] }> {
+}): Promise<{ id: string; naddr: string; njumpUrl: string; relays: string[] }> {
   const privKey = getPrivKeyBytes();
   const now     = Math.floor(Date.now() / 1000);
 
@@ -168,7 +170,7 @@ export async function publishArticleToNostr(opts: {
   const withTimeout = DEFAULT_RELAYS.map((relay, i) =>
     Promise.race([
       publishPromises[i].then(() => relay),
-      new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 8_000)),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 10_000)),
     ])
   );
   const results  = await Promise.allSettled(withTimeout);
@@ -176,7 +178,15 @@ export async function publishArticleToNostr(opts: {
     .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
     .map(r => r.value);
 
-  return { id: signed.id, relays: published };
+  // kind:30023 is addressable — njump.me needs naddr, not the raw event id
+  const naddr = nip19.naddrEncode({
+    kind:       30023,
+    pubkey:     getPublicKey(privKey),
+    identifier: opts.slug,
+    relays:     published.length ? published : DEFAULT_RELAYS,
+  });
+
+  return { id: signed.id, naddr, njumpUrl: `https://njump.me/${naddr}`, relays: published };
 }
 
 // ── Fetch my events ───────────────────────────────────────────────────────────
