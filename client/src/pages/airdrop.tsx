@@ -62,7 +62,12 @@ export default function AirdropPage() {
   const [claimedId, setClaimedId]           = useState<number | null>(null);
   const [nostrLoading, setNostrLoading]     = useState<number | null>(null);
   const [broadcastLoading, setBroadcastLoading] = useState(false);
-  const [broadcastResult, setBroadcastResult]   = useState<{ eventId: string; naddr: string; njumpUrl: string; relays: string[] } | null>(null);
+  const [broadcastResult, setBroadcastResult]   = useState<{
+    eventId: string; naddr: string; njumpUrl: string; hablaUrl: string;
+    relays: string[]; relayLog: { relay: string; ok: boolean; reason?: string }[];
+    signedJson: string;
+  } | null>(null);
+  const [showRawJson, setShowRawJson] = useState(false);
   const [copied, setCopied]                 = useState(false);
 
   // Create form state
@@ -398,49 +403,76 @@ export default function AirdropPage() {
                 </div>
 
                 {broadcastResult && (
-                  <div className="bg-green-950/30 border border-green-500/30 rounded-lg p-3 space-y-2">
-                    <div className="flex items-center gap-2 text-green-400 text-xs font-semibold">
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      Published to Nostr!
-                    </div>
-                    <div className="text-[10px] text-slate-400 space-y-1">
-                      <div>
-                        <span className="text-slate-500">naddr: </span>
-                        <span className="font-mono text-indigo-300 break-all">{broadcastResult.naddr.slice(0, 42)}…</span>
+                  <div className="space-y-2">
+                    {/* Header */}
+                    <div className={`rounded-lg p-3 border ${broadcastResult.relays.length > 0 ? "bg-green-950/30 border-green-500/30" : "bg-amber-950/30 border-amber-500/30"}`}>
+                      <div className={`flex items-center gap-2 text-xs font-semibold mb-2 ${broadcastResult.relays.length > 0 ? "text-green-400" : "text-amber-400"}`}>
+                        {broadcastResult.relays.length > 0
+                          ? <><CheckCircle className="w-3.5 h-3.5" /> Published to {broadcastResult.relays.length} relay{broadcastResult.relays.length > 1 ? "s" : ""}</>
+                          : <><Clock className="w-3.5 h-3.5" /> All relays rejected — use raw JSON below</>
+                        }
                       </div>
-                      <div>
-                        <span className="text-slate-500">event: </span>
-                        <span className="font-mono text-slate-500">{broadcastResult.eventId.slice(0, 24)}…</span>
+
+                      {/* Per-relay log */}
+                      <div className="space-y-0.5 mb-2">
+                        {broadcastResult.relayLog.map(r => (
+                          <div key={r.relay} className="flex items-start gap-1.5 text-[10px]">
+                            <span className={r.ok ? "text-green-400" : "text-red-400"}>{r.ok ? "✓" : "✗"}</span>
+                            <span className="text-slate-500 shrink-0">{r.relay.replace("wss://", "")}</span>
+                            {!r.ok && r.reason && (
+                              <span className="text-red-400/70 truncate">{r.reason}</span>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                    <div className="text-[10px] text-slate-500">
-                      Relays reached: {broadcastResult.relays.length}/8 — {broadcastResult.relays.map(r => r.replace("wss://", "")).join(", ")}
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs border-slate-700 text-slate-400 hover:text-white"
-                        onClick={() => {
-                          navigator.clipboard.writeText(broadcastResult.naddr);
-                          setCopied(true);
-                          setTimeout(() => setCopied(false), 2000);
-                        }}
-                      >
-                        {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
-                        {copied ? "Copied!" : "Copy naddr"}
-                      </Button>
-                      <a
-                        href={broadcastResult.njumpUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Button size="sm" variant="outline" className="text-xs border-indigo-700 text-indigo-400 hover:text-white">
-                          <ExternalLink className="w-3 h-3 mr-1" />
-                          View on njump.me
+
+                      {/* naddr */}
+                      <div className="text-[10px] font-mono text-indigo-300 break-all mb-2">
+                        {broadcastResult.naddr.slice(0, 50)}…
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex gap-2 flex-wrap">
+                        <Button size="sm" variant="outline"
+                          className="text-xs border-slate-700 text-slate-400 hover:text-white"
+                          onClick={() => { navigator.clipboard.writeText(broadcastResult.naddr); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>
+                          {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
+                          {copied ? "Copied!" : "Copy naddr"}
                         </Button>
-                      </a>
+                        {broadcastResult.relays.length > 0 && (
+                          <>
+                            <a href={broadcastResult.njumpUrl} target="_blank" rel="noopener noreferrer">
+                              <Button size="sm" variant="outline" className="text-xs border-indigo-700 text-indigo-400 hover:text-white">
+                                <ExternalLink className="w-3 h-3 mr-1" />njump.me
+                              </Button>
+                            </a>
+                            <a href={broadcastResult.hablaUrl} target="_blank" rel="noopener noreferrer">
+                              <Button size="sm" variant="outline" className="text-xs border-purple-700 text-purple-400 hover:text-white">
+                                <ExternalLink className="w-3 h-3 mr-1" />habla.news
+                              </Button>
+                            </a>
+                          </>
+                        )}
+                        <Button size="sm" variant="outline"
+                          className="text-xs border-slate-700 text-slate-500 hover:text-white"
+                          onClick={() => setShowRawJson(v => !v)}>
+                          {showRawJson ? "Hide" : "Raw JSON"}
+                        </Button>
+                      </div>
                     </div>
+
+                    {/* Raw signed event JSON — paste into any relay manually */}
+                    {showRawJson && (
+                      <div className="bg-slate-950 rounded-lg border border-slate-700/40 p-2">
+                        <div className="text-[10px] text-slate-500 mb-1 flex items-center justify-between">
+                          <span>Signed event JSON — paste to <a href="https://nostrtool.com" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">nostrtool.com</a> or <a href="https://nostr.guru" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">nostr.guru</a></span>
+                          <button onClick={() => { navigator.clipboard.writeText(broadcastResult.signedJson); }} className="text-indigo-400 hover:text-white ml-2">copy</button>
+                        </div>
+                        <pre className="text-[9px] text-slate-400 overflow-x-auto max-h-32 whitespace-pre-wrap break-all">
+                          {broadcastResult.signedJson.slice(0, 400)}…
+                        </pre>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -456,7 +488,7 @@ export default function AirdropPage() {
                       });
                       const data = await res.json();
                       if (!res.ok) throw new Error(data.error || "Broadcast failed");
-                      setBroadcastResult({ eventId: data.eventId, naddr: data.naddr, njumpUrl: data.njumpUrl, relays: data.relays });
+                      setBroadcastResult({ eventId: data.eventId, naddr: data.naddr, njumpUrl: data.njumpUrl, hablaUrl: data.hablaUrl, relays: data.relays, relayLog: data.relayLog, signedJson: data.signedJson });
                       toast({ title: "📡 Whitepaper published!", description: `Event ${data.eventId.slice(0, 16)}… · ${data.relays.length} relays` });
                     } catch (e: any) {
                       toast({ title: "Broadcast failed", description: e.message, variant: "destructive" });

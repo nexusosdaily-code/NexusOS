@@ -10238,8 +10238,18 @@ export async function registerRoutes(
         hashtags: ["whitepaper", "kardashev", "wavelengthscript", "wnspprotocol"],
       });
 
-      console.log(`[Whitepaper] Published — event: ${result.id} · naddr: ${result.naddr.slice(0,30)}… · relays: ${result.relays.join(", ")}`);
-      res.json({ ok: true, eventId: result.id, naddr: result.naddr, njumpUrl: result.njumpUrl, relays: result.relays });
+      console.log(`[Whitepaper] Published — event: ${result.id} · accepted: ${result.relays.length}/${result.relayLog.length}`);
+      result.relayLog.forEach(r => console.log(`  ${r.ok ? "✓" : "✗"} ${r.relay}${r.reason ? " — " + r.reason : ""}`));
+      res.json({
+        ok:         true,
+        eventId:    result.id,
+        naddr:      result.naddr,
+        njumpUrl:   result.njumpUrl,
+        hablaUrl:   result.hablaUrl,
+        relays:     result.relays,
+        relayLog:   result.relayLog,
+        signedJson: result.signedJson,
+      });
     } catch (e: any) {
       console.error("[Whitepaper] Broadcast error:", e.message);
       res.status(500).json({ error: e.message });

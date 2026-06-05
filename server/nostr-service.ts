@@ -4,7 +4,7 @@
  * The nsec never leaves this module — all signing happens server-side.
  */
 
-import { SimplePool, finalizeEvent, getPublicKey, nip19 } from "nostr-tools";
+import { SimplePool, Relay, finalizeEvent, getPublicKey, nip19 } from "nostr-tools";
 import type { Event as NostrEvent } from "nostr-tools";
 
 // ── Relay list ────────────────────────────────────────────────────────────────
@@ -128,7 +128,15 @@ export async function publishToNostr(
   return { id: signed.id, relays: published };
 }
 
+export interface RelayResult {
+  relay:   string;
+  ok:      boolean;
+  reason?: string;
+}
+
 // ── Publish kind-30023 long-form article (NIP-23) ─────────────────────────────
+// Uses individual Relay connections so we capture exact OK/reject reasons
+// rather than swallowing timeouts silently.
 export async function publishArticleToNostr(opts: {
   slug:        string;
   title:       string;
@@ -136,7 +144,15 @@ export async function publishArticleToNostr(opts: {
   content:     string;
   hashtags?:   string[];
   imageUrl?:   string;
-}): Promise<{ id: string; naddr: string; njumpUrl: string; relays: string[] }> {
+}): Promise<{
+  id:         string;
+  naddr:      string;
+  njumpUrl:   string;
+  hablaUrl:   string;
+  relays:     string[];          // accepted
+  relayLog:   RelayResult[];     // full per-relay detail
+  signedJson: string;            // raw event for manual relay if needed
+}> {
   const privKey = getPrivKeyBytes();
   const now     = Math.floor(Date.now() / 1000);
 
@@ -156,37 +172,78 @@ export async function publishArticleToNostr(opts: {
   for (const tag of opts.hashtags ?? []) tags.push(["t", tag]);
   if (opts.imageUrl) tags.push(["image", opts.imageUrl]);
 
-  const template = {
+  const signed: NostrEvent = finalizeEvent({
     kind:       30023 as number,
     created_at: now,
     tags,
     content:    opts.content,
+  }, privKey);
+
+  console.log(`[Article] Signed event ${signed.id} — publishing to ${DEFAULT_RELAYS.length} relays…`);
+
+  // Publish to each relay individually so we get exact OK / rejection reasons
+  const publishOne = async (relayUrl: string): Promise<RelayResult> => {
+    const CONNECT_TIMEOUT = 8_000;
+    const PUBLISH_TIMEOUT = 12_000;
+    try {
+      let relay: InstanceType<typeof Relay>;
+      try {
+        relay = await Promise.race([
+          Relay.connect(relayUrl),
+          new Promise<never>((_, rej) =>
+            setTimeout(() => rej(new Error("connect timeout")), CONNECT_TIMEOUT)
+          ),
+        ]);
+      } catch (e: any) {
+        return { relay: relayUrl, ok: false, reason: `connect: ${e.message}` };
+      }
+
+      try {
+        await Promise.race([
+          relay.publish(signed),
+          new Promise<never>((_, rej) =>
+            setTimeout(() => rej(new Error("publish timeout")), PUBLISH_TIMEOUT)
+          ),
+        ]);
+        relay.close();
+        console.log(`[Article]  ✓ ${relayUrl}`);
+        return { relay: relayUrl, ok: true };
+      } catch (e: any) {
+        try { relay.close(); } catch { /* ignore */ }
+        const reason = e?.message ?? String(e);
+        console.log(`[Article]  ✗ ${relayUrl} — ${reason}`);
+        return { relay: relayUrl, ok: false, reason };
+      }
+    } catch (e: any) {
+      return { relay: relayUrl, ok: false, reason: String(e) };
+    }
   };
 
-  const signed: NostrEvent = finalizeEvent(template, privKey);
-  const p = getPool();
+  const relayLog = await Promise.all(DEFAULT_RELAYS.map(publishOne));
+  const accepted = relayLog.filter(r => r.ok).map(r => r.relay);
 
-  const publishPromises = p.publish(DEFAULT_RELAYS, signed) as unknown as Promise<string>[];
-  const withTimeout = DEFAULT_RELAYS.map((relay, i) =>
-    Promise.race([
-      publishPromises[i].then(() => relay),
-      new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 10_000)),
-    ])
-  );
-  const results  = await Promise.allSettled(withTimeout);
-  const published = results
-    .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
-    .map(r => r.value);
-
-  // kind:30023 is addressable — njump.me needs naddr, not the raw event id
-  const naddr = nip19.naddrEncode({
-    kind:       30023,
-    pubkey:     getPublicKey(privKey),
-    identifier: opts.slug,
-    relays:     published.length ? published : DEFAULT_RELAYS,
+  console.log(`[Article] Published to ${accepted.length}/${DEFAULT_RELAYS.length} relays`);
+  relayLog.forEach(r => {
+    if (!r.ok) console.log(`[Article]   ✗ ${r.relay}: ${r.reason}`);
   });
 
-  return { id: signed.id, naddr, njumpUrl: `https://njump.me/${naddr}`, relays: published };
+  const pubkey = getPublicKey(privKey);
+  const naddr  = nip19.naddrEncode({
+    kind:       30023,
+    pubkey,
+    identifier: opts.slug,
+    relays:     accepted.length ? accepted : DEFAULT_RELAYS,
+  });
+
+  return {
+    id:         signed.id,
+    naddr,
+    njumpUrl:   `https://njump.me/${naddr}`,
+    hablaUrl:   `https://habla.news/a/${naddr}`,
+    relays:     accepted,
+    relayLog,
+    signedJson: JSON.stringify(signed, null, 2),
+  };
 }
 
 // ── Fetch my events ───────────────────────────────────────────────────────────
