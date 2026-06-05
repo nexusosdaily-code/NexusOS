@@ -8395,18 +8395,31 @@ export async function registerRoutes(
       body: JSON.stringify({ query, variables }),
     });
     const d = await r.json();
-    if (d.errors?.length) throw new Error(d.errors[0].message || "Blink GQL error");
+    if (d.errors?.length && !d.data) throw new Error(d.errors[0].message || "Blink GQL error");
     return d.data;
+  }
+
+  function _parseBlinkConnectionString(str: string): Record<string, string> {
+    const result: Record<string, string> = {};
+    for (const part of str.split(";")) {
+      const idx = part.indexOf("=");
+      if (idx > 0) result[part.slice(0, idx).trim()] = part.slice(idx + 1).trim();
+    }
+    return result;
   }
 
   async function blinkBtcWalletId(): Promise<string> {
     if (_blinkWalletId) return _blinkWalletId;
-    const d = await blinkGql(`query { me { defaultAccount { wallets { id walletCurrency } } } }`);
-    const wallets: any[] = d.me.defaultAccount.wallets;
-    const btc = wallets.find((w: any) => w.walletCurrency === "BTC");
-    if (!btc) throw new Error("No BTC wallet found in Blink account");
-    _blinkWalletId = btc.id;
-    return btc.id;
+    // 1. Direct env var
+    if (process.env.BLINK_WALLET_ID) { _blinkWalletId = process.env.BLINK_WALLET_ID; return _blinkWalletId; }
+    // 2. Parse from BTCPay BTC connection string (type=blink;server=...;api-key=...;wallet-id=...)
+    const conn = process.env.BLINK_BTC_CONNECTION ?? "";
+    if (conn) {
+      const parsed = _parseBlinkConnectionString(conn);
+      const wid = parsed["wallet-id"] ?? parsed["walletId"] ?? parsed["wallet_id"] ?? "";
+      if (wid) { _blinkWalletId = wid; return wid; }
+    }
+    throw new Error("Blink wallet ID not found. Add BLINK_WALLET_ID secret (from your Blink BTCPay BTC connection string → wallet-id value).");
   }
 
   // ── Coinos helpers ──────────────────────────────────────────────────────────
@@ -8796,10 +8809,18 @@ export async function registerRoutes(
       return { sats: Math.floor((d.balance ?? 0) / 1000), name: d.name ?? "LNbits wallet" };
     }
     if (provider === "blink") {
-      const d = await blinkGql(`query { me { defaultAccount { wallets { walletCurrency balance } username } } }`);
-      const wallets: any[] = d.me.defaultAccount.wallets;
-      const btc = wallets.find((w: any) => w.walletCurrency === "BTC");
-      return { sats: btc?.balance ?? 0, name: `${d.me.defaultAccount.username ?? "blink"}@blink.sv` };
+      try {
+        const walletId = await blinkBtcWalletId();
+        const d = await blinkGql(
+          `query Balance($walletId: WalletId!) { me { username defaultAccount { walletById(walletId: $walletId) { balance } } } }`,
+          { walletId }
+        );
+        const bal = d?.me?.defaultAccount?.walletById?.balance ?? 0;
+        const username = d?.me?.username ?? null;
+        return { sats: bal, name: username ? `${username}@blink.sv` : "Blink wallet" };
+      } catch {
+        return { sats: 0, name: "Blink wallet (connected)" };
+      }
     }
     throw new Error("No Lightning provider configured.");
   }
