@@ -34,6 +34,8 @@ export const users = pgTable("users", {
   adminBtcAddressSetAt: timestamp("admin_btc_address_set_at"),
   // ── Lightning Address (e.g. user@walletofsatoshi.com) ──
   lightningAddress: text("lightning_address"),
+  // ── Nostr identity ──
+  nostrNpub: text("nostr_npub"),
 }, (table) => ({
   usernameIdx: index("users_username_idx").on(table.username),
   emailIdx: index("users_email_idx").on(table.email),
@@ -1308,6 +1310,23 @@ export const wnusdTransactions = pgTable("wnusd_transactions", {
   createdAt:    timestamp("created_at").notNull().defaultNow(),
 }, (t) => ({ userIdx: index("wnusd_tx_user_idx").on(t.userId) }));
 export type WnusdTransaction = typeof wnusdTransactions.$inferSelect;
+
+// ── Nostr DM Log — bot command/response history ──────────────────────────────
+export const nostrDmLog = pgTable("nostr_dm_log", {
+  id:          serial("id").primaryKey(),
+  fromNpub:    text("from_npub").notNull(),
+  userId:      varchar("user_id", { length: 36 }).references(() => users.id, { onDelete: "set null" }),
+  command:     text("command").notNull(),
+  args:        text("args"),
+  status:      text("status").notNull().default("ok"), // ok | error | unknown
+  response:    text("response"),
+  eventId:     text("event_id"),
+  createdAt:   timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  npubIdx: index("nostr_dm_log_npub_idx").on(t.fromNpub),
+  userIdx: index("nostr_dm_log_user_idx").on(t.userId),
+}));
+export type NostrDmLog = typeof nostrDmLog.$inferSelect;
 
 // ── BTC Deposits — every detected incoming TX ─────────────────────────────────
 export const btcDeposits = pgTable("btc_deposits", {

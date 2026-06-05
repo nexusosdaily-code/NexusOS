@@ -112,6 +112,7 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 const WnspLandingPage = lazy(() => import("@/pages/wnsp-landing"));
 const WnspOrdinalsPage = lazy(() => import("@/pages/wnsp-ordinals"));
 const NostrRelayPage = lazy(() => import("@/pages/nostr-relay"));
+const NostrBridgePage = lazy(() => import("@/pages/nostr-bridge"));
 const CommunityMintPage = lazy(() => import("@/pages/community-mint"));
 const WnspStakingPage = lazy(() => import("@/pages/wnsp-staking"));
 const MarketplacePage = lazy(() => import("@/pages/marketplace"));
@@ -321,6 +322,7 @@ function Router() {
       <Route path="/wnsp-ordinals" component={WnspOrdinalsPage} />
       <Route path="/nostr" component={NostrRelayPage} />
       <Route path="/nostr-relay" component={NostrRelayPage} />
+      <Route path="/nostr-bridge" component={NostrBridgePage} />
       <Route path="/btc-bridge">{() => { window.location.replace("/wnsp/ordinals"); return null; }}</Route>
       <Route path="/community-mint" component={CommunityMintPage} />
       <Route path="/wnsp-staking" component={WnspStakingPage} />

@@ -11507,6 +11507,87 @@ export async function registerRoutes(
     }
   });
 
+  // ── Nostr Bridge — npub linking + DM bot session ──────────────────────────
+  // POST /api/nostr/link-npub — user links their Nostr npub to their account
+  app.post("/api/nostr/link-npub", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { npub } = req.body;
+      if (!npub || typeof npub !== "string") return res.status(400).json({ error: "npub required" });
+      // Validate npub format
+      const { nip19: nip19v } = await import("nostr-tools");
+      try { const d = nip19v.decode(npub); if (d.type !== "npub") throw new Error("not npub"); } catch {
+        return res.status(400).json({ error: "Invalid npub — must start with npub1" });
+      }
+      const { db: db2 } = await import("./db");
+      const { users: usersT } = await import("../shared/schema");
+      const { eq: eqN } = await import("drizzle-orm");
+      // Check not already used by another account
+      const [existing] = await db2.select({ id: usersT.id }).from(usersT)
+        .where(eqN(usersT.nostrNpub, npub)).limit(1);
+      if (existing && existing.id !== req.user!.id) {
+        return res.status(409).json({ error: "This npub is already linked to another account" });
+      }
+      await db2.update(usersT).set({ nostrNpub: npub }).where(eqN(usersT.id, req.user!.id));
+      res.json({ ok: true, npub });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // DELETE /api/nostr/link-npub — unlink
+  app.delete("/api/nostr/link-npub", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db: db2 } = await import("./db");
+      const { users: usersT } = await import("../shared/schema");
+      const { eq: eqN } = await import("drizzle-orm");
+      await db2.update(usersT).set({ nostrNpub: null }).where(eqN(usersT.id, req.user!.id));
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/nostr/my-npub — get current user's linked npub
+  app.get("/api/nostr/my-npub", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db: db2 } = await import("./db");
+      const { users: usersT } = await import("../shared/schema");
+      const { eq: eqN } = await import("drizzle-orm");
+      const [u] = await db2.select({ nostrNpub: usersT.nostrNpub }).from(usersT)
+        .where(eqN(usersT.id, req.user!.id)).limit(1);
+      res.json({ npub: u?.nostrNpub ?? null });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/nostr/dm-log — current user's DM command history
+  app.get("/api/nostr/dm-log", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db: db2 } = await import("./db");
+      const { nostrDmLog } = await import("../shared/schema");
+      const { eq: eqN, desc: descN } = await import("drizzle-orm");
+      const rows = await db2.select().from(nostrDmLog)
+        .where(eqN(nostrDmLog.userId, req.user!.id))
+        .orderBy(descN(nostrDmLog.createdAt))
+        .limit(50);
+      res.json(rows);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/nostr/bot-session — internal use by DM bot to get a short-lived bearer token
+  app.post("/api/nostr/bot-session", async (req: Request, res: Response) => {
+    try {
+      const secret = req.headers["x-bot-secret"];
+      const botSecret = process.env.NOSTR_BOT_SECRET ?? "nexusos-nostr-bot";
+      if (secret !== botSecret) return res.status(403).json({ error: "forbidden" });
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: "userId required" });
+      // Issue a short-lived signed token (reuse session mechanism)
+      const { db: db2 } = await import("./db");
+      const { sessions } = await import("../shared/schema");
+      const { randomUUID } = await import("crypto");
+      const token = randomUUID();
+      const expiresAt = new Date(Date.now() + 60_000); // 60s
+      await db2.insert(sessions).values({ token, userId, expiresAt });
+      res.json({ token });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // ── WNUSD Liquidity — Mint / Redeem / Positions ──────────────────────────────
   {
     const SATS_PER_NXT  = 1_000;

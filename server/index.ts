@@ -10,6 +10,7 @@ import { seedGenesisNode } from "./genesis_node";
 import { startKernelAgents } from "./kernel_agents";
 import { startSocialBroadcastAgent } from "./social_broadcast_agent";
 import { startTelegramBot } from "./telegram-bot";
+import { startNostrDmBot } from "./nostr-dm-bot";
 
 const app = express();
 const httpServer = createServer(app);
@@ -305,6 +306,8 @@ async function runStartupMigrations() {
       }).catch((e) => console.error("[wnsp.io Liquidity] Boot error:", e));
       // Start Telegram advocacy bot
       startTelegramBot();
+      // Start Nostr DM bot
+      startNostrDmBot();
     });
     httpServer.once("error", (err: any) => {
       if (err.code === "EADDRINUSE" && attemptsLeft > 0) {
