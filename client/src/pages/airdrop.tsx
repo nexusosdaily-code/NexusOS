@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
-import { SimplePool } from "nostr-tools";
+import { Relay } from "nostr-tools";
 import type { Event as NostrEvent } from "nostr-tools";
 import {
   Gift, ArrowLeft, CheckCircle, Clock, Users, Coins,
@@ -17,28 +17,48 @@ import {
   Radio, Copy, Check, ExternalLink, AlertCircle,
 } from "lucide-react";
 
-// Browser-side relay broadcaster — no server WebSocket restrictions
+// Browser-side relay broadcaster — individual connections for exact error capture
+async function publishOneRelay(
+  relayUrl: string,
+  event: NostrEvent,
+): Promise<{ relay: string; ok: boolean; reason?: string }> {
+  const CONNECT_MS = 8_000;
+  const PUBLISH_MS = 12_000;
+  let relay: InstanceType<typeof Relay> | null = null;
+  try {
+    relay = await Promise.race([
+      Relay.connect(relayUrl),
+      new Promise<never>((_, rej) =>
+        setTimeout(() => rej(new Error("connect timeout")), CONNECT_MS)
+      ),
+    ]);
+    await Promise.race([
+      relay.publish(event),
+      new Promise<never>((_, rej) =>
+        setTimeout(() => rej(new Error("publish timeout")), PUBLISH_MS)
+      ),
+    ]);
+    relay.close();
+    return { relay: relayUrl, ok: true };
+  } catch (e: any) {
+    try { relay?.close(); } catch { /* ignore */ }
+    return { relay: relayUrl, ok: false, reason: e?.message ?? String(e) };
+  }
+}
+
 async function broadcastEventFromBrowser(
   signedEvent: NostrEvent,
   relays: string[],
   onProgress: (r: { relay: string; ok: boolean; reason?: string }) => void,
-) {
-  const pool = new SimplePool();
-  const TIMEOUT = 15_000;
-
-  const publishPromises = pool.publish(relays, signedEvent) as unknown as Promise<string>[];
-  const settled = await Promise.allSettled(
-    relays.map((relay, i) =>
-      Promise.race([
-        publishPromises[i].then(() => relay),
-        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), TIMEOUT)),
-      ])
-        .then(r  => { onProgress({ relay, ok: true }); return r; })
-        .catch(e => { onProgress({ relay, ok: false, reason: String(e?.message ?? e) }); throw e; })
-    )
+): Promise<{ relay: string; ok: boolean; reason?: string }[]> {
+  const results = await Promise.all(
+    relays.map(async (relayUrl) => {
+      const result = await publishOneRelay(relayUrl, signedEvent);
+      onProgress(result);
+      return result;
+    })
   );
-  pool.close(relays);
-  return settled;
+  return results;
 }
 
 async function triggerNostrLogin(): Promise<boolean> {
@@ -525,48 +545,57 @@ export default function AirdropPage() {
                     setBroadcastLoading(true);
                     setBroadcastResult(null);
                     setRelayProgress([]);
+                    let signData: any = null;
                     try {
-                      // Step 1 — server signs the event (private key stays server-side)
-                      const res  = await fetch("/api/admin/nostr/sign-whitepaper", {
+                      // Step 1 — server signs the event (private key never leaves server)
+                      const res = await fetch("/api/admin/nostr/sign-whitepaper", {
                         method: "POST", credentials: "include",
                         headers: { "Content-Type": "application/json" },
                       });
-                      const data = await res.json();
-                      if (!res.ok) throw new Error(data.error || "Sign failed");
-
-                      // Step 2 — browser publishes the pre-signed event to relays
-                      const log: { relay: string; ok: boolean; reason?: string }[] = [];
-                      await broadcastEventFromBrowser(
-                        data.signedEvent as NostrEvent,
-                        data.relays as string[],
-                        (r) => {
-                          log.push(r);
-                          setRelayProgress(prev => [...prev, r]);
-                        },
-                      );
-
-                      const accepted = log.filter(r => r.ok).map(r => r.relay);
-                      setBroadcastResult({
-                        eventId: data.id, naddr: data.naddr,
-                        njumpUrl: data.njumpUrl, hablaUrl: data.hablaUrl,
-                        relays: accepted, relayLog: log, signedEvent: data.signedEvent,
-                      });
-                      toast({
-                        title: accepted.length > 0 ? "📡 Whitepaper published!" : "⚠️ All relays rejected",
-                        description: accepted.length > 0
-                          ? `${accepted.length}/${data.relays.length} relays accepted`
-                          : "See relay log for details — use raw JSON to post manually",
-                      });
+                      signData = await res.json();
+                      if (!res.ok) throw new Error(signData.error || "Sign failed");
                     } catch (e: any) {
-                      toast({ title: "Broadcast failed", description: e.message, variant: "destructive" });
-                    } finally {
+                      toast({ title: "Signing failed", description: e.message, variant: "destructive" });
                       setBroadcastLoading(false);
+                      return;
                     }
+
+                    // Step 2 — browser publishes the pre-signed event to relays
+                    // Always show result panel even if all relays reject
+                    let log: { relay: string; ok: boolean; reason?: string }[] = [];
+                    try {
+                      log = await broadcastEventFromBrowser(
+                        signData.signedEvent as NostrEvent,
+                        signData.relays as string[],
+                        (r) => setRelayProgress(prev => [...prev, r]),
+                      );
+                    } catch (e: any) {
+                      // broadcastEventFromBrowser never throws — this is a safety net
+                      console.error("Broadcast error:", e);
+                    }
+
+                    const accepted = log.filter(r => r.ok).map(r => r.relay);
+                    setBroadcastResult({
+                      eventId: signData.id,
+                      naddr: signData.naddr,
+                      njumpUrl: signData.njumpUrl,
+                      hablaUrl: signData.hablaUrl,
+                      relays: accepted,
+                      relayLog: log,
+                      signedEvent: signData.signedEvent,
+                    });
+                    setBroadcastLoading(false);
+                    toast({
+                      title: accepted.length > 0 ? "📡 Whitepaper published!" : "⚠️ No relays accepted",
+                      description: accepted.length > 0
+                        ? `${accepted.length}/${signData.relays.length} relays · check panel for links`
+                        : "See relay log for reasons — use Raw JSON to post manually",
+                    });
                   }}
                   data-testid="button-broadcast-whitepaper"
                 >
                   {broadcastLoading
-                    ? <><RefreshCw className="w-4 h-4 animate-spin mr-2" /> Broadcasting…</>
+                    ? <><RefreshCw className="w-4 h-4 animate-spin mr-2" /> {relayProgress.length === 0 ? "Signing…" : `Publishing… (${relayProgress.length}/${8} relays)`}</>
                     : <><Radio className="w-4 h-4 mr-2" /> Publish Whitepaper to Nostr</>
                   }
                 </Button>
