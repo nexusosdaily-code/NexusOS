@@ -1473,19 +1473,40 @@ export default function ChannelDashboard() {
                   data-testid="input-sweep-destination"
                   className="w-full bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-amber-500"
                 />
-                <Button
-                  className="w-full bg-amber-700 hover:bg-amber-600 font-semibold text-sm"
-                  disabled={sendToLnAddress.isPending || !(lnAddr && !lnAddr.toLowerCase().startsWith("ln") ? lnAddr : savedLnAddress)}
-                  data-testid="button-sweep"
-                  onClick={() => {
-                    const dest = (lnAddr && !lnAddr.toLowerCase().startsWith("ln") ? lnAddr : savedLnAddress) ?? "";
-                    setLnAddr(dest);
-                    setLnAddrSats(String(Math.max(1, sats - 10)));
-                    setTimeout(() => sendToLnAddress.mutate(), 50);
-                  }}
-                >
-                  {sendToLnAddress.isPending ? "Sweeping…" : `⟳ Sweep ${satsDisplay(sats)} → ${(lnAddr && !lnAddr.toLowerCase().startsWith("ln") ? lnAddr : savedLnAddress) ?? "address"}`}
-                </Button>
+                {(() => {
+                  const blinkSats: number = (status as any)?.balance ?? 0;
+                  const destAddr = (lnAddr && !lnAddr.toLowerCase().startsWith("ln") ? lnAddr : savedLnAddress) ?? "";
+                  return (
+                    <>
+                      {blinkSats > 0 && (
+                        <div className="text-[10px] text-amber-400/60 font-mono">
+                          Blink balance available to sweep: {blinkSats.toLocaleString()} sats
+                        </div>
+                      )}
+                      {blinkSats === 0 && (
+                        <div className="text-[10px] text-gray-600 font-mono">
+                          Blink balance is 0 — nothing to sweep
+                        </div>
+                      )}
+                      <Button
+                        className="w-full bg-amber-700 hover:bg-amber-600 font-semibold text-sm"
+                        disabled={sendToLnAddress.isPending || !destAddr || blinkSats < 1}
+                        data-testid="button-sweep"
+                        onClick={() => {
+                          setLnAddr(destAddr);
+                          setLnAddrSats(String(Math.max(1, blinkSats - 10)));
+                          setTimeout(() => sendToLnAddress.mutate(), 50);
+                        }}
+                      >
+                        {sendToLnAddress.isPending
+                          ? "Sweeping…"
+                          : blinkSats < 1
+                            ? "Nothing to sweep"
+                            : `⟳ Sweep ${blinkSats.toLocaleString()} sats → ${destAddr || "address"}`}
+                      </Button>
+                    </>
+                  );
+                })()}
               </div>
             </Card>
 
