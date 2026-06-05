@@ -9132,6 +9132,44 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // POST /api/lightning/sync-blink-balance — read actual Blink wallet balance and credit any unaccounted sats
+  app.post("/api/lightning/sync-blink-balance", authenticate, async (req: Request, res: Response) => {
+    try {
+      const provider = detectLnProvider();
+      if (provider !== "blink") return res.status(400).json({ error: "Balance sync only supported for Blink provider" });
+
+      const { sats: blinkSats } = await lnGetBalance();
+      const lnWallet = await ensureLnWallet(req.user!.id);
+      const stored = lnWallet.satsBalance;
+      const gap = blinkSats - stored;
+
+      if (gap <= 0) {
+        return res.json({ synced: false, blinkSats, storedSats: stored, gap: 0, message: "NexusOS balance matches Blink — no adjustment needed" });
+      }
+
+      // Credit the gap as an external deposit
+      const { db } = await import("./db");
+      const { lightningWallets, lightningTransactions } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      await db.update(lightningWallets)
+        .set({ satsBalance: stored + gap, totalDeposited: lnWallet.totalDeposited + gap, updatedAt: new Date() })
+        .where(eq(lightningWallets.userId, req.user!.id));
+
+      await db.insert(lightningTransactions).values({
+        userId: req.user!.id,
+        type: "deposit",
+        amountSats: gap,
+        memo: `Blink balance sync — ${gap} sats recovered (Blink: ${blinkSats}, stored: ${stored})`,
+        status: "completed",
+        completedAt: new Date(),
+      });
+
+      await logAction(req, "blink_balance_sync", "lightning", req.user!.id, { gap, blinkSats, stored });
+      return res.json({ synced: true, blinkSats, storedSats: stored, gap, message: `Credited ${gap} sats from Blink` });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // GET /api/lightning/balance — user's NexusOS sats balance
   app.get("/api/lightning/balance", authenticate, async (req: Request, res: Response) => {
     try {

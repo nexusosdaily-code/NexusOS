@@ -767,6 +767,23 @@ export default function ChannelDashboard() {
     onError: (e: any) => toast({ title: "Recheck failed", description: e.message, variant: "destructive" }),
   });
 
+  const syncBlinkBalance = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/lightning/sync-blink-balance", {});
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      if (data.synced) {
+        refetchBal();
+        qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] });
+        toast({ title: `⚡ ${data.gap.toLocaleString()} sats synced!`, description: `Blink had ${data.blinkSats.toLocaleString()} sats, NexusOS had ${data.storedSats.toLocaleString()} — gap credited.` });
+      } else {
+        toast({ title: "Balance already in sync", description: `Blink: ${data.blinkSats?.toLocaleString() ?? "?"} sats — matches NexusOS.` });
+      }
+    },
+    onError: (e: any) => toast({ title: "Sync failed", description: e.message, variant: "destructive" }),
+  });
+
   const payInvoice = useMutation({
     mutationFn: async (overrideBolt11?: string) => {
       const res = await apiRequest("POST", "/api/lightning/pay", { bolt11: overrideBolt11 ?? bolt11 });
@@ -1217,6 +1234,15 @@ export default function ChannelDashboard() {
                   data-testid="button-recheck-pending"
                 >
                   {recheckPending.isPending ? "Checking…" : "↺ Recheck Pending Payments"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => syncBlinkBalance.mutate()}
+                  disabled={syncBlinkBalance.isPending}
+                  className="w-full border-cyan-800/50 text-cyan-400/70 hover:text-cyan-300 hover:border-cyan-500/50 text-xs"
+                  data-testid="button-sync-blink"
+                >
+                  {syncBlinkBalance.isPending ? "Syncing…" : "⟳ Sync from Blink"}
                 </Button>
               </div>
             )}
@@ -2555,6 +2581,23 @@ export default function ChannelDashboard() {
         {/* ── TRANSMISSIONS LOG ── */}
         {tab === "log" && (
           <div className="space-y-3">
+            {/* Empty state */}
+            {lnTxs.length === 0 && (
+              <Card className="bg-slate-900/60 border-slate-700/50 p-8 text-center">
+                <Activity className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+                <div className="text-slate-400 font-medium mb-1">No transactions yet</div>
+                <div className="text-slate-600 text-sm mb-4">Generate an invoice on the Receive tab to get started.</div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => syncBlinkBalance.mutate()}
+                  disabled={syncBlinkBalance.isPending}
+                  className="border-cyan-800/50 text-cyan-400/70 hover:text-cyan-300 hover:border-cyan-500/50 text-xs"
+                >
+                  {syncBlinkBalance.isPending ? "Syncing…" : "⟳ Sync from Blink"}
+                </Button>
+              </Card>
+            )}
             {/* Analytics summary bar */}
             {lnTxs.length > 0 && (() => {
               const confirmed = lnTxs.filter((t: any) => ["completed","confirmed","paid"].includes(t.status)).length;
