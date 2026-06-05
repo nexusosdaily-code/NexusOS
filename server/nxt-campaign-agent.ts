@@ -409,6 +409,36 @@ async function sendNostr(slot: Slot): Promise<{ ok: boolean; eventId?: string; e
 }
 
 // ── Fire one campaign tick ───────────────────────────────────────────────────
+// ── Event-driven broadcast (fires immediately, not on schedule) ───────────────
+export async function fireEventBroadcast(opts: {
+  emoji:     string;
+  title:     string;
+  body:      string;
+  hashtags:  string[];
+}): Promise<{ tg: any; nostr: any }> {
+  const tags = opts.hashtags.map(t => `#${t}`).join(" ");
+  const tgText =
+    `${opts.emoji} <b>${opts.title}</b>\n\n${opts.body}\n\n${tags}`;
+  const nostrText =
+    `${opts.emoji} ${opts.title}\n\n${opts.body}\n\n${tags}`;
+
+  const slot: Slot = {
+    id: -1, label: opts.title, emoji: opts.emoji,
+    telegram: tgText, nostr: nostrText, tags: opts.hashtags,
+  };
+
+  const [tgRes, nsRes] = await Promise.allSettled([
+    sendTelegram(tgText),
+    sendNostr(slot),
+  ]);
+
+  const tg    = tgRes.status    === "fulfilled" ? tgRes.value    : { ok: false, error: String((tgRes    as any).reason) };
+  const nostr = nsRes.status    === "fulfilled" ? nsRes.value    : { ok: false, error: String((nsRes    as any).reason) };
+
+  console.log(`${TAG} EventBroadcast "${opts.title}" — tg:${tg.ok} nostr:${nostr.ok}`);
+  return { tg, nostr };
+}
+
 export async function fireCampaignSlot(slotIndex?: number): Promise<{ slot: Slot; tg: any; nostr: any }> {
   const idx  = slotIndex ?? (_state.slotIndex % SLOTS.length);
   const slot = SLOTS[idx];

@@ -128,6 +128,9 @@ const BtcSentinelPage = lazy(() => import("@/pages/btc-sentinel"));
 const BtcAssetsSentinelPage = lazy(() => import("@/pages/btc-assets-sentinel"));
 const StablecoinPage = lazy(() => import("@/pages/stablecoin"));
 const MempoolMonitorPage = lazy(() => import("@/pages/mempool-monitor"));
+const ReceivePage = lazy(() => import("@/pages/receive"));
+const PortfolioPage = lazy(() => import("@/pages/portfolio"));
+const LpPoolsPage = lazy(() => import("@/pages/lp-pools"));
 
 // Loading spinner shown while a lazy page chunk is downloading
 function PageLoader() {
@@ -353,6 +356,9 @@ function Router() {
       <Route path="/wnsp/bridge" component={WnspBridgePage} />
       <Route path="/profile/:username" component={ProfilePage} />
       <Route path="/oscillating-quanta" component={OscillatingQuantaPage} />
+      <Route path="/receive" component={ReceivePage} />
+      <Route path="/portfolio" component={PortfolioPage} />
+      <Route path="/lp-pools" component={LpPoolsPage} />
       <Route>
         <ProtectedRoutes />
       </Route>

@@ -1,6 +1,8 @@
 import path from "path";
 import * as nostrService from "./nostr-service.js";
 import * as tgNostrBridge from "./telegram-nostr-bridge";
+import * as lpPools from "./lp-pools";
+import * as campaignAgent from "./nxt-campaign-agent";
 import crypto from "crypto";
 import { bech32 as _bech32 } from "bech32";
 import * as tinySecp from "tiny-secp256k1";
@@ -11916,6 +11918,211 @@ export async function registerRoutes(
       _prevFeesWereLow = isLow;
     } catch { /* non-fatal */ }
   }, 5 * 60_000);
+
+  // ── Liquidity Pools ────────────────────────────────────────────────────────
+
+  // GET /api/lp/pools — list all pools (public)
+  app.get("/api/lp/pools", async (_req, res) => {
+    try { res.json(await lpPools.getPools()); }
+    catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/lp/positions — authenticated user's LP positions
+  app.get("/api/lp/positions", authenticate, async (req, res) => {
+    try { res.json(await lpPools.getUserPositions(req.user!.id)); }
+    catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/lp/quote?poolId=nxt-sats&tokenIn=A&amountIn=1000
+  app.get("/api/lp/quote", async (req, res) => {
+    try {
+      const { poolId, tokenIn, amountIn } = req.query as Record<string, string>;
+      if (!poolId || !tokenIn || !amountIn) return res.status(400).json({ error: "poolId, tokenIn, amountIn required" });
+      if (tokenIn !== "A" && tokenIn !== "B") return res.status(400).json({ error: "tokenIn must be A or B" });
+      const q = await lpPools.quoteSwap(poolId, tokenIn as "A" | "B", parseInt(amountIn));
+      res.json(q);
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+  });
+
+  // POST /api/lp/add — add liquidity
+  app.post("/api/lp/add", authenticate, async (req, res) => {
+    try {
+      const { poolId, amountA, amountB } = req.body;
+      if (!poolId || !amountA || !amountB) return res.status(400).json({ error: "poolId, amountA, amountB required" });
+      const pool = await lpPools.getPool(poolId);
+      if (!pool) return res.status(404).json({ error: "Pool not found" });
+
+      // Deduct from user wallets — NXT-SATS pool uses lightning sats for B, NXT for A
+      // NXT-WNUSD pool uses NXT for A, WNUSD (in sats) for B
+      const { db } = await import("./db");
+      const { wallets, lightningWallets } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      if (pool.tokenA === "NXT") {
+        const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
+        if (!wallet) return res.status(400).json({ error: "NXT wallet not found" });
+        const nxtBal = parseFloat(wallet.balance);
+        const nxtNeeded = amountA / 1e8;
+        if (nxtBal < nxtNeeded) return res.status(400).json({ error: `Insufficient NXT balance (have ${nxtBal.toFixed(4)}, need ${nxtNeeded.toFixed(4)})` });
+        await db.update(wallets).set({
+          balance: (nxtBal - nxtNeeded).toFixed(8),
+          updatedAt: new Date(),
+        }).where(eq(wallets.userId, req.user!.id));
+      }
+
+      if (pool.tokenB === "SATS") {
+        const [lnWallet] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, req.user!.id));
+        if (!lnWallet) return res.status(400).json({ error: "Lightning wallet not found" });
+        if (lnWallet.satsBalance < amountB) return res.status(400).json({ error: `Insufficient sats (have ${lnWallet.satsBalance}, need ${amountB})` });
+        await db.update(lightningWallets).set({
+          satsBalance: lnWallet.satsBalance - amountB,
+          updatedAt: new Date(),
+        }).where(eq(lightningWallets.userId, req.user!.id));
+      }
+
+      const result = await lpPools.addLiquidity(req.user!.id, poolId, amountA, amountB);
+      res.json(result);
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+  });
+
+  // POST /api/lp/remove — remove liquidity
+  app.post("/api/lp/remove", authenticate, async (req, res) => {
+    try {
+      const { poolId, lpTokens } = req.body;
+      if (!poolId || !lpTokens) return res.status(400).json({ error: "poolId and lpTokens required" });
+      const pool = await lpPools.getPool(poolId);
+      if (!pool) return res.status(404).json({ error: "Pool not found" });
+
+      const result = await lpPools.removeLiquidity(req.user!.id, poolId, lpTokens);
+
+      // Credit back to user wallets
+      const { db } = await import("./db");
+      const { wallets, lightningWallets } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      if (pool.tokenA === "NXT" && result.amountA > 0) {
+        const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
+        if (wallet) {
+          const nxtCredit = result.amountA / 1e8;
+          await db.update(wallets).set({
+            balance: (parseFloat(wallet.balance) + nxtCredit).toFixed(8),
+            updatedAt: new Date(),
+          }).where(eq(wallets.userId, req.user!.id));
+        }
+      }
+
+      if (pool.tokenB === "SATS" && result.amountB > 0) {
+        const [lnWallet] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, req.user!.id));
+        if (lnWallet) {
+          await db.update(lightningWallets).set({
+            satsBalance: lnWallet.satsBalance + result.amountB,
+            updatedAt: new Date(),
+          }).where(eq(lightningWallets.userId, req.user!.id));
+        }
+      }
+
+      res.json(result);
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+  });
+
+  // POST /api/lp/swap — execute a swap (no wallet deduction for MVP — pools are self-contained)
+  app.post("/api/lp/swap", authenticate, async (req, res) => {
+    try {
+      const { poolId, tokenIn, amountIn } = req.body;
+      if (!poolId || !tokenIn || !amountIn) return res.status(400).json({ error: "poolId, tokenIn, amountIn required" });
+      if (tokenIn !== "A" && tokenIn !== "B") return res.status(400).json({ error: "tokenIn must be A or B" });
+      const pool = await lpPools.getPool(poolId);
+      if (!pool) return res.status(404).json({ error: "Pool not found" });
+
+      // Deduct tokenIn from user wallet
+      const { db } = await import("./db");
+      const { wallets, lightningWallets } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      const inToken  = tokenIn === "A" ? pool.tokenA : pool.tokenB;
+      const outToken = tokenIn === "A" ? pool.tokenB : pool.tokenA;
+
+      if (inToken === "NXT") {
+        const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
+        if (!wallet) return res.status(400).json({ error: "NXT wallet not found" });
+        const nxtNeeded = amountIn / 1e8;
+        if (parseFloat(wallet.balance) < nxtNeeded) return res.status(400).json({ error: "Insufficient NXT balance" });
+        await db.update(wallets).set({ balance: (parseFloat(wallet.balance) - nxtNeeded).toFixed(8), updatedAt: new Date() }).where(eq(wallets.userId, req.user!.id));
+      } else if (inToken === "SATS") {
+        const [lnWallet] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, req.user!.id));
+        if (!lnWallet || lnWallet.satsBalance < amountIn) return res.status(400).json({ error: "Insufficient sats" });
+        await db.update(lightningWallets).set({ satsBalance: lnWallet.satsBalance - amountIn, updatedAt: new Date() }).where(eq(lightningWallets.userId, req.user!.id));
+      }
+
+      const result = await lpPools.swap(poolId, tokenIn as "A" | "B", amountIn);
+
+      // Credit tokenOut to user wallet
+      if (outToken === "NXT" && result.amountOut > 0) {
+        const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
+        if (wallet) await db.update(wallets).set({ balance: (parseFloat(wallet.balance) + result.amountOut / 1e8).toFixed(8), updatedAt: new Date() }).where(eq(wallets.userId, req.user!.id));
+      } else if (outToken === "SATS" && result.amountOut > 0) {
+        const [lnWallet] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, req.user!.id));
+        if (lnWallet) await db.update(lightningWallets).set({ satsBalance: lnWallet.satsBalance + result.amountOut, updatedAt: new Date() }).where(eq(lightningWallets.userId, req.user!.id));
+      }
+
+      res.json({ ...result, tokenIn: inToken, tokenOut: outToken });
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+  });
+
+  // ── Portfolio summary ──────────────────────────────────────────────────────
+
+  // GET /api/portfolio/summary — aggregate balances for the portfolio page
+  app.get("/api/portfolio/summary", authenticate, async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { wallets, lightningWallets, wnusdPositions } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      const [wallet]   = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
+      const [lnWallet] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, req.user!.id));
+
+      const activeWnusd = await db.select().from(wnusdPositions)
+        .where(eq(wnusdPositions.userId, req.user!.id));
+      const wnusdBalance = activeWnusd
+        .filter(p => p.status === "active")
+        .reduce((a, p) => a + parseFloat(p.wnusdMinted), 0);
+
+      // Fetch BTC/USD price (cached via existing endpoint)
+      let btcUsd = 65_000;
+      try {
+        const priceRes = await fetch("https://mempool.space/api/v1/prices");
+        if (priceRes.ok) {
+          const p = await priceRes.json();
+          btcUsd = p.USD ?? 65_000;
+        }
+      } catch { /* use default */ }
+
+      res.json({
+        nxtBalance:   wallet?.balance ?? "0",
+        nxtAddress:   wallet?.address ?? "",
+        satsBalance:  lnWallet?.satsBalance ?? 0,
+        wnusdBalance: wnusdBalance.toFixed(2),
+        btcUsd,
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── Event-driven broadcast ─────────────────────────────────────────────────
+
+  // POST /api/campaign/broadcast — fire an event broadcast immediately
+  app.post("/api/campaign/broadcast", authenticate, async (req, res) => {
+    try {
+      const { emoji, title, body, hashtags } = req.body;
+      if (!title || !body) return res.status(400).json({ error: "title and body required" });
+      const result = await campaignAgent.fireEventBroadcast({
+        emoji:    emoji ?? "📡",
+        title,
+        body,
+        hashtags: hashtags ?? ["NexusOS", "WNSP"],
+      });
+      res.json({ ok: true, ...result });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
 
   // ─────────────────────────────────────────────────────────────────────────────
 

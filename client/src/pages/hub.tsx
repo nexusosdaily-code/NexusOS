@@ -20,6 +20,7 @@ import {
   CheckCircle2, AlertTriangle, ArrowRight, FlaskConical, Heart,
   Copy, ExternalLink, RefreshCw, ChevronDown, ChevronUp, ShoppingBag,
   Gem, Coins, TrendingUp, Unplug, DollarSign, Megaphone,
+  ArrowDownToLine, LayoutDashboard, Droplets,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
@@ -172,6 +173,9 @@ const APP_SECTIONS = [
       { title: "🔵 Fractal BTC",      href: "/fractal-btc",      Icon: Globe2 },
       { title: "↔ NXT↔FB Swap",      href: "/nxt-fb-swap",      Icon: ArrowRightLeft },
       { title: "⚡ Lightning Wallet",  href: "/lightning-wallet", Icon: Zap },
+      { title: "📥 Receive",           href: "/receive",             Icon: ArrowDownToLine },
+      { title: "📊 Portfolio",         href: "/portfolio",           Icon: LayoutDashboard },
+      { title: "💧 Liquidity Pools",   href: "/lp-pools",            Icon: Droplets },
       { title: "🟢 WNUSD Stablecoin", href: "/stablecoin",          Icon: DollarSign },
       { title: "🛡 Wallet Sentinel",   href: "/btc-sentinel",        Icon: Shield },
       { title: "🖼 Assets Sentinel",  href: "/btc-assets-sentinel", Icon: Layers },

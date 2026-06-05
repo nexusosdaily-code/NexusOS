@@ -1346,12 +1346,43 @@ export type BtcDeposit = typeof btcDeposits.$inferSelect;
 // ── NXT Campaign Broadcast Log ─────────────────────────────────────────────────
 export const campaignLog = pgTable("campaign_log", {
   id:          serial("id").primaryKey(),
-  slot:        integer("slot").notNull(),             // message slot index
-  channel:     text("channel").notNull(),             // "telegram" | "nostr" | "both"
-  status:      text("status").notNull().default("ok"),// ok | error | skipped
+  slot:        integer("slot").notNull(),
+  channel:     text("channel").notNull(),
+  status:      text("status").notNull().default("ok"),
   errorMsg:    text("error_msg"),
   sentAt:      timestamp("sent_at").notNull().defaultNow(),
   nostrEventId: text("nostr_event_id"),
   telegramMsgId: integer("telegram_msg_id"),
 });
 export type CampaignLog = typeof campaignLog.$inferSelect;
+
+// ── Liquidity Pools (AMM) ─────────────────────────────────────────────────────
+export const liquidityPools = pgTable("liquidity_pools", {
+  id:               serial("id").primaryKey(),
+  poolId:           text("pool_id").notNull().unique(),
+  name:             text("name").notNull(),
+  tokenA:           text("token_a").notNull(),
+  tokenB:           text("token_b").notNull(),
+  reserveA:         bigint("reserve_a", { mode: "number" }).notNull().default(0),
+  reserveB:         bigint("reserve_b", { mode: "number" }).notNull().default(0),
+  totalLpTokens:    bigint("total_lp_tokens", { mode: "number" }).notNull().default(0),
+  feeBps:           integer("fee_bps").notNull().default(30),
+  totalFeesA:       bigint("total_fees_a", { mode: "number" }).notNull().default(0),
+  createdAt:        timestamp("created_at").defaultNow(),
+}, (t) => ({ poolIdx: index("lp_pools_pool_idx").on(t.poolId) }));
+export type LiquidityPool = typeof liquidityPools.$inferSelect;
+
+export const lpPositions = pgTable("lp_positions", {
+  id:          serial("id").primaryKey(),
+  userId:      text("user_id").notNull(),
+  poolId:      text("pool_id").notNull(),
+  lpTokens:    bigint("lp_tokens", { mode: "number" }).notNull().default(0),
+  depositedA:  bigint("deposited_a", { mode: "number" }).notNull().default(0),
+  depositedB:  bigint("deposited_b", { mode: "number" }).notNull().default(0),
+  createdAt:   timestamp("created_at").defaultNow(),
+  updatedAt:   timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  userIdx: index("lp_positions_user_idx").on(t.userId),
+  poolIdx: index("lp_positions_pool_idx").on(t.poolId),
+}));
+export type LpPosition = typeof lpPositions.$inferSelect;

@@ -234,6 +234,37 @@ async function runStartupMigrations() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS lightning_address text;
     `);
 
+    // 8. Liquidity pools + LP positions
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS liquidity_pools (
+        id               serial PRIMARY KEY,
+        pool_id          text NOT NULL UNIQUE,
+        name             text NOT NULL,
+        token_a          text NOT NULL,
+        token_b          text NOT NULL,
+        reserve_a        bigint NOT NULL DEFAULT 0,
+        reserve_b        bigint NOT NULL DEFAULT 0,
+        total_lp_tokens  bigint NOT NULL DEFAULT 0,
+        fee_bps          integer NOT NULL DEFAULT 30,
+        total_fees_a     bigint NOT NULL DEFAULT 0,
+        created_at       timestamp DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS lp_pools_pool_idx ON liquidity_pools(pool_id);
+
+      CREATE TABLE IF NOT EXISTS lp_positions (
+        id          serial PRIMARY KEY,
+        user_id     text NOT NULL,
+        pool_id     text NOT NULL,
+        lp_tokens   bigint NOT NULL DEFAULT 0,
+        deposited_a bigint NOT NULL DEFAULT 0,
+        deposited_b bigint NOT NULL DEFAULT 0,
+        created_at  timestamp DEFAULT now(),
+        updated_at  timestamp DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS lp_positions_user_idx ON lp_positions(user_id);
+      CREATE INDEX IF NOT EXISTS lp_positions_pool_idx ON lp_positions(pool_id);
+    `);
+
     console.log("[MIGRATION] Startup schema migrations complete.");
   } catch (err: any) {
     console.error("[MIGRATION] Startup migration error:", err.message);
@@ -242,6 +273,13 @@ async function runStartupMigrations() {
 
 (async () => {
   await runStartupMigrations();
+  // Seed LP pools (idempotent — skips if already present)
+  try {
+    const { seedPools } = await import("./lp-pools");
+    await seedPools();
+  } catch (e: any) {
+    console.error("[LP] Seed error:", e.message);
+  }
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
