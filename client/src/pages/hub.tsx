@@ -176,6 +176,8 @@ const APP_SECTIONS = [
       { title: "🛡 Wallet Sentinel",   href: "/btc-sentinel",        Icon: Shield },
       { title: "🖼 Assets Sentinel",  href: "/btc-assets-sentinel", Icon: Layers },
       { title: "📡 Mempool Monitor",  href: "/mempool",             Icon: Activity },
+      { title: "📣 NXT Campaign",     href: "/nxt-campaign",        Icon: Megaphone },
+      { title: "🔮 Nostr Bridge",     href: "/nostr-bridge",        Icon: Radio },
     ],
   },
   {
@@ -184,8 +186,6 @@ const APP_SECTIONS = [
     items: [
       { title: "Community",    href: "/community",    Icon: Users },
       { title: "Telegram Hub", href: "/telegram-hub", Icon: Radio },
-      { title: "Nostr Bridge",  href: "/nostr-bridge",  Icon: Zap },
-      { title: "NXT Campaign", href: "/nxt-campaign", Icon: Megaphone },
       { title: "Quora Kit",    href: "/quora",        Icon: Globe2 },
       { title: "Reddit Kit",   href: "/reddit",       Icon: Globe2 },
       { title: "Media Library",href: "/media-library",Icon: Database },
