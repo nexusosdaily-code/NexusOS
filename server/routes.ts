@@ -1170,12 +1170,42 @@ export async function registerRoutes(
       ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
        .slice(0, 60);
 
+      // ── Sats balance ─────────────────────────────────────────────────────────
+      const { lightningWallets, satsStakes, wnusdPositions } = await import("../shared/schema");
+      const { sql: sqlRaw } = await import("drizzle-orm");
+      const lnWallet = await db.select().from(lightningWallets)
+        .where(eqLn(lightningWallets.userId, req.user!.id))
+        .limit(1);
+      const satsBalance = lnWallet[0]?.satsBalance ?? 0;
+
+      // ── Staked sats ───────────────────────────────────────────────────────────
+      const [satsStakeRow] = await db
+        .select({ total: sqlRaw<string>`coalesce(sum(amount_sats),0)` })
+        .from(satsStakes)
+        .where(eqLn(satsStakes.userId, req.user!.id));
+      const satsStaked = parseInt(String(satsStakeRow?.total ?? "0"), 10);
+
+      // ── WNUSD positions ───────────────────────────────────────────────────────
+      const [wnusdRow] = await db
+        .select({
+          minted:     sqlRaw<string>`coalesce(sum(wnusd_minted),0)`,
+          collateral: sqlRaw<string>`coalesce(sum(collateral_sats),0)`,
+        })
+        .from(wnusdPositions)
+        .where(eqLn(wnusdPositions.userId, req.user!.id));
+      const wnusdMinted   = parseFloat(String(wnusdRow?.minted   ?? "0"));
+      const wnusdColSats  = parseInt(String(wnusdRow?.collateral ?? "0"), 10);
+
       res.json({
         wallet: {
           id: wallet.id,
           address: wallet.address,
           balance: wallet.balance,
           lockedBalance: wallet.lockedBalance,
+          satsBalance,
+          satsStaked,
+          wnusdMinted,
+          wnusdColSats,
         },
         recentTransactions: normalised,
       });

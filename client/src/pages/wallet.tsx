@@ -77,7 +77,10 @@ interface UnifiedTx {
 }
 
 interface WalletData {
-  wallet: { id: string; address: string; balance: string; lockedBalance: string };
+  wallet: {
+    id: string; address: string; balance: string; lockedBalance: string;
+    satsBalance: number; satsStaked: number; wnusdMinted: number; wnusdColSats: number;
+  };
   recentTransactions: UnifiedTx[];
 }
 
@@ -521,6 +524,10 @@ export default function WalletPage() {
   const balance      = wallet ? parseFloat(wallet.balance) : 0;
   const locked       = wallet ? parseFloat(wallet.lockedBalance) : 0;
   const available    = balance - locked;
+  const satsLiquid   = wallet?.satsBalance  ?? 0;
+  const satsStaked   = wallet?.satsStaked   ?? 0;
+  const wnusdMinted  = wallet?.wnusdMinted  ?? 0;
+  const wnusdColSats = wallet?.wnusdColSats ?? 0;
 
   const setPin = useMutation({
     mutationFn: async (pin: string) => {
@@ -648,7 +655,7 @@ export default function WalletPage() {
             <div className="flex items-start justify-between mb-5">
               <div>
                 <div className="text-amber-400 text-xs flex items-center gap-1.5 mb-1.5">
-                  <Coins className="w-3.5 h-3.5" /> TOTAL BALANCE
+                  <Coins className="w-3.5 h-3.5" /> TOTAL NXT BALANCE
                 </div>
                 <div className="text-4xl md:text-5xl font-bold text-white font-mono" data-testid="text-balance">
                   {formatNxt(balance)} <span className="text-xl text-amber-400">NXT</span>
@@ -660,18 +667,50 @@ export default function WalletPage() {
               </Badge>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-5">
-              <div className="bg-slate-900/60 rounded-xl p-4">
-                <div className="text-slate-500 text-xs mb-1">Available</div>
-                <div className="text-xl font-bold text-green-400 font-mono" data-testid="text-available">
+            {/* NXT liquid / locked */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-slate-900/60 rounded-xl p-3">
+                <div className="text-slate-500 text-xs mb-1">Available NXT</div>
+                <div className="text-lg font-bold text-green-400 font-mono" data-testid="text-available">
                   {formatNxt(available)} NXT
                 </div>
               </div>
-              <div className="bg-slate-900/60 rounded-xl p-4">
+              <div className="bg-slate-900/60 rounded-xl p-3">
                 <div className="text-slate-500 text-xs mb-1">Locked / Staking</div>
-                <div className="text-xl font-bold text-purple-400 font-mono" data-testid="text-locked">
+                <div className="text-lg font-bold text-purple-400 font-mono" data-testid="text-locked">
                   {formatNxt(locked)} NXT
                 </div>
+              </div>
+            </div>
+
+            {/* Sats + WNUSD staked liquidity */}
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="bg-orange-950/30 border border-orange-500/20 rounded-xl p-3">
+                <div className="text-orange-400/70 text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <Zap className="w-3 h-3" /> Sats Liquid
+                </div>
+                <div className="text-base font-bold text-orange-300 font-mono" data-testid="text-sats-liquid">
+                  {satsLiquid.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-slate-600 mt-0.5">sats</div>
+              </div>
+              <div className="bg-yellow-950/30 border border-yellow-500/20 rounded-xl p-3">
+                <div className="text-yellow-400/70 text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <Lock className="w-3 h-3" /> Sats Staked
+                </div>
+                <div className="text-base font-bold text-yellow-300 font-mono" data-testid="text-sats-staked">
+                  {satsStaked.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-slate-600 mt-0.5">sats locked</div>
+              </div>
+              <div className="bg-teal-950/30 border border-teal-500/20 rounded-xl p-3">
+                <div className="text-teal-400/70 text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <Coins className="w-3 h-3" /> WNUSD Minted
+                </div>
+                <div className="text-base font-bold text-teal-300 font-mono" data-testid="text-wnusd-minted">
+                  {wnusdMinted >= 1e6 ? (wnusdMinted / 1e6).toFixed(3) + "M" : wnusdMinted.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </div>
+                <div className="text-[10px] text-slate-600 mt-0.5">{wnusdColSats.toLocaleString()} col. sats</div>
               </div>
             </div>
 
