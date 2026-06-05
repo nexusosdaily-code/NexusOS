@@ -1097,6 +1097,33 @@ export default function ChannelDashboard() {
               {satsDisplay(sats)}
             </div>
             <div className="text-yellow-400/40 text-[10px] font-mono mt-0.5">sats · ≈ {lnBalance?.nxtEquivalent ?? "0"} NXT</div>
+            {/* Live Blink balance comparison */}
+            {(() => {
+              const blinkLive = (status as any)?.balance ?? null;
+              if (blinkLive === null) return null;
+              const gap = blinkLive - sats;
+              if (gap > 0) return (
+                <div className="mt-2 bg-amber-900/30 border border-amber-500/30 rounded px-2 py-1.5 flex items-center gap-2">
+                  <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] text-amber-300 font-semibold">Blink holds {gap.toLocaleString()} more sats</div>
+                    <div className="text-[9px] text-amber-400/60">Blink: {blinkLive.toLocaleString()} · NexusOS: {sats.toLocaleString()}</div>
+                  </div>
+                  <button
+                    onClick={() => syncBlinkBalance.mutate()}
+                    disabled={syncBlinkBalance.isPending}
+                    className="text-[9px] bg-amber-600 hover:bg-amber-500 text-white rounded px-1.5 py-0.5 font-semibold shrink-0"
+                  >
+                    {syncBlinkBalance.isPending ? "…" : "Sync"}
+                  </button>
+                </div>
+              );
+              return (
+                <div className="mt-1 text-[9px] text-green-500/50 font-mono">
+                  ✓ Blink: {blinkLive.toLocaleString()} sats in sync
+                </div>
+              );
+            })()}
             {lightningAddress && (
               <div className="flex items-center gap-1 mt-1">
                 <span className="text-[10px] font-mono text-yellow-400/50 truncate">{lightningAddress}</span>

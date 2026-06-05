@@ -7,3 +7,4 @@
 - [NXT indestructibility](nxt-indestructibility.md) — NXT fees NEVER burned; always go to orbital_treasury
 - [Domain setup](domain-setup.md) — wnsp.tech on Cloudflare; GoDaddy nameserver update pending
 - [Coinos JWT auth](coinos-jwt-auth.md) — NIP-98 blocked server-side; use COINOS_JWT Bearer token for all Coinos calls
+- [Blink Lightning integration](blink-lightning.md) — BTC wallet must be fetched via API (not connection string); invoice check uses lnInvoicePaymentStatus + balance sync for gap recovery
