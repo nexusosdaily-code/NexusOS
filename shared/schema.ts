@@ -1342,3 +1342,16 @@ export const btcDeposits = pgTable("btc_deposits", {
   creditedAt:    timestamp("credited_at"),
 });
 export type BtcDeposit = typeof btcDeposits.$inferSelect;
+
+// ── NXT Campaign Broadcast Log ─────────────────────────────────────────────────
+export const campaignLog = pgTable("campaign_log", {
+  id:          serial("id").primaryKey(),
+  slot:        integer("slot").notNull(),             // message slot index
+  channel:     text("channel").notNull(),             // "telegram" | "nostr" | "both"
+  status:      text("status").notNull().default("ok"),// ok | error | skipped
+  errorMsg:    text("error_msg"),
+  sentAt:      timestamp("sent_at").notNull().defaultNow(),
+  nostrEventId: text("nostr_event_id"),
+  telegramMsgId: integer("telegram_msg_id"),
+});
+export type CampaignLog = typeof campaignLog.$inferSelect;

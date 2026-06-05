@@ -11,6 +11,7 @@ import { startKernelAgents } from "./kernel_agents";
 import { startSocialBroadcastAgent } from "./social_broadcast_agent";
 import { startTelegramBot } from "./telegram-bot";
 import { startNostrDmBot } from "./nostr-dm-bot";
+import { startNxtCampaignAgent } from "./nxt-campaign-agent";
 
 const app = express();
 const httpServer = createServer(app);
@@ -308,6 +309,8 @@ async function runStartupMigrations() {
       startTelegramBot();
       // Start Nostr DM bot
       startNostrDmBot();
+      // Start NXT campaign broadcaster
+      startNxtCampaignAgent();
     });
     httpServer.once("error", (err: any) => {
       if (err.code === "EADDRINUSE" && attemptsLeft > 0) {

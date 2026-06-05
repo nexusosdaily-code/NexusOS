@@ -11588,6 +11588,54 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ── NXT Campaign Broadcaster API ─────────────────────────────────────────────
+  {
+    const {
+      getCampaignState, getCampaignHistory, fireCampaignSlot,
+      startNxtCampaignAgent, stopNxtCampaignAgent, SLOTS,
+    } = await import("./nxt-campaign-agent");
+
+    // GET /api/campaign/state — agent status + next fire time
+    app.get("/api/campaign/state", authenticate, async (_req: Request, res: Response) => {
+      res.json({ state: getCampaignState(), slots: SLOTS.map(s => ({ id: s.id, label: s.label, emoji: s.emoji, tags: s.tags })) });
+    });
+
+    // GET /api/campaign/history — last 50 broadcast log entries
+    app.get("/api/campaign/history", authenticate, async (_req: Request, res: Response) => {
+      res.json(await getCampaignHistory(50));
+    });
+
+    // POST /api/campaign/fire — manually fire one slot (optionally specify slotIndex)
+    app.post("/api/campaign/fire", authenticate, async (req: Request, res: Response) => {
+      try {
+        const slotIndex = req.body.slotIndex !== undefined ? Number(req.body.slotIndex) : undefined;
+        const result = await fireCampaignSlot(slotIndex);
+        res.json({ ok: true, slot: result.slot.label, tg: result.tg, nostr: result.nostr });
+      } catch (e: any) { res.status(500).json({ error: e.message }); }
+    });
+
+    // POST /api/campaign/start — (re)start the scheduler
+    app.post("/api/campaign/start", authenticate, async (req: Request, res: Response) => {
+      const intervalMs = req.body.intervalMs ? Number(req.body.intervalMs) : undefined;
+      startNxtCampaignAgent(intervalMs);
+      res.json({ ok: true, state: getCampaignState() });
+    });
+
+    // POST /api/campaign/stop — stop the scheduler
+    app.post("/api/campaign/stop", authenticate, async (_req: Request, res: Response) => {
+      stopNxtCampaignAgent();
+      res.json({ ok: true, state: getCampaignState() });
+    });
+
+    // GET /api/campaign/preview/:slotId — return raw text for a slot
+    app.get("/api/campaign/preview/:slotId", authenticate, async (req: Request, res: Response) => {
+      const id = parseInt(req.params.slotId);
+      const slot = SLOTS.find(s => s.id === id);
+      if (!slot) return res.status(404).json({ error: "Slot not found" });
+      res.json({ slot });
+    });
+  }
+
   // ── WNUSD Liquidity — Mint / Redeem / Positions ──────────────────────────────
   {
     const SATS_PER_NXT  = 1_000;
