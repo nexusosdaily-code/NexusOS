@@ -370,10 +370,23 @@ export default function AirdropPage() {
                       className="bg-slate-800 border-slate-700 text-white mt-1"
                       data-testid="input-ends-at" />
                   </div>
-                  <div className="bg-amber-950/20 border border-amber-500/20 rounded-xl p-2.5 text-[11px] text-amber-300/70 flex items-start gap-2">
-                    <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                    Total pool: <strong className="text-amber-300">{fmt(parseFloat(form.perClaimNxt || "0") * parseInt(form.maxClaims || "0"), 2)} NXT</strong> will be distributed from the genesis wallet (zero fee — constitutional exemption).
-                  </div>
+                  {(() => {
+                    const total = parseFloat(form.perClaimNxt || "0") * parseInt(form.maxClaims || "0");
+                    const sats  = total * 1_000;
+                    const overCeiling = total > 85_000_000;
+                    return (
+                      <div className={`rounded-xl p-2.5 text-[11px] flex items-start gap-2 ${overCeiling ? "bg-red-950/20 border border-red-500/30 text-red-300/80" : "bg-amber-950/20 border border-amber-500/20 text-amber-300/70"}`}>
+                        <Zap className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${overCeiling ? "text-red-400" : "text-amber-400"}`} />
+                        <span>
+                          Total pool: <strong className={overCeiling ? "text-red-300" : "text-amber-300"}>{fmt(total, 0)} NXT</strong>
+                          {" "}({fmt(sats, 0)} sats) — distributed from genesis wallet, zero fee.
+                          {overCeiling
+                            ? " ⚠️ Exceeds 85M NXT campaign ceiling."
+                            : " Campaign ceiling: 85M NXT = 85B sats."}
+                        </span>
+                      </div>
+                    );
+                  })()}
                   <Button
                     className="w-full bg-purple-600 hover:bg-purple-500 text-white"
                     onClick={() => createMut.mutate()}

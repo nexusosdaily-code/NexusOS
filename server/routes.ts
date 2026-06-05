@@ -12182,8 +12182,10 @@ export async function registerRoutes(
       const max      = parseInt(maxClaims);
       if (perClaim <= 0 || max <= 0)
         return res.status(400).json({ error: "perClaimNxt and maxClaims must be positive" });
-      if (perClaim > 100) return res.status(400).json({ error: "perClaimNxt cannot exceed 100 NXT" });
-      if (max > 10_000)   return res.status(400).json({ error: "maxClaims cannot exceed 10,000" });
+
+      const NXT_CAMPAIGN_CEILING = 85_000_000; // 85M NXT = 85B sats
+      if (perClaim * max > NXT_CAMPAIGN_CEILING)
+        return res.status(400).json({ error: `Total pool (${(perClaim * max).toLocaleString()} NXT) exceeds the 85M NXT campaign ceiling` });
 
       const totalPool = perClaim * max;
 
