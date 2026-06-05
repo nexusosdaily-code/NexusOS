@@ -8375,23 +8375,52 @@ export async function registerRoutes(
   // ── Lightning Network — Alby + LNbits unified adapter ──────────────────────
   const LN_SATS_PER_NXT = 1000; // 1 NXT = 1000 sats
 
+  // ── Blink helpers ──────────────────────────────────────────────────────────
+  const BLINK_GQL = "https://api.blink.sv/graphql";
+  let _blinkWalletId: string | null = null;
+  let _blinkApiKey: string | null = null;
+
+  /** Resolve the Blink API key from any of the possible secret names/formats */
+  function getBlinkApiKey(): string | null {
+    if (_blinkApiKey) return _blinkApiKey;
+    // Direct named secrets the user might have used
+    const direct = [
+      process.env.BLINK_API_KEY,
+      process.env.BLINK_KEY,
+      process.env.BLINK_TOKEN,
+    ].find(Boolean);
+    if (direct) { _blinkApiKey = direct!; return _blinkApiKey; }
+    // Parse api-key from any BTCPay-style connection string
+    const connCandidates = [
+      process.env.BTCUSD,
+      process.env.BLINK_BTC_CONNECTION,
+      process.env.BLINK_USD_CONNECTION,
+      process.env.BLINK_BTC,
+      process.env.BLINK_CONNECTION,
+    ].filter(Boolean) as string[];
+    for (const conn of connCandidates) {
+      const parsed = _parseBlinkConnectionString(conn);
+      const key = parsed["api-key"] ?? parsed["apiKey"] ?? parsed["apikey"] ?? parsed["api_key"] ?? "";
+      if (key) { _blinkApiKey = key; return key; }
+    }
+    return null;
+  }
+
   function detectLnProvider(): "coinos" | "alby" | "lnbits" | "blink" | null {
     // Priority: LNbits > Blink > Coinos > Alby
     if (process.env.LNBITS_URL && process.env.LNBITS_ADMIN_KEY && process.env.LNBITS_INVOICE_KEY) return "lnbits";
-    if (process.env.BLINK_API_KEY) return "blink";
+    if (getBlinkApiKey()) return "blink";
     if (process.env.COINOS_TOKEN) return "coinos";
     if (process.env.ALBY_ACCESS_TOKEN) return "alby";
     return null;
   }
 
-  // ── Blink helpers ──────────────────────────────────────────────────────────
-  const BLINK_GQL = "https://api.blink.sv/graphql";
-  let _blinkWalletId: string | null = null;
-
   async function blinkGql(query: string, variables: Record<string, any> = {}): Promise<any> {
+    const apiKey = getBlinkApiKey();
+    if (!apiKey) throw new Error("Blink API key not found. Add BLINK_API_KEY to Replit Secrets.");
     const r = await fetch(BLINK_GQL, {
       method: "POST",
-      headers: { "X-API-KEY": process.env.BLINK_API_KEY!, "Content-Type": "application/json" },
+      headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({ query, variables }),
     });
     const d = await r.json();
