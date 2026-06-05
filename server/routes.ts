@@ -8887,6 +8887,51 @@ export async function registerRoutes(
     throw new Error("No Lightning provider configured.");
   }
 
+  // ── fireAutoSweep ─────────────────────────────────────────────────────────
+  // Called after every confirmed inbound deposit. Fire-and-forget: fetches
+  // a fresh invoice from the user's saved Lightning address then queues the
+  // payment via Blink so sats leave the provider and land in WOS/etc.
+  async function fireAutoSweep(userId: string, amountSats: number) {
+    setImmediate(async () => {
+      try {
+        const { db: swDb } = await import("./db");
+        const { users: swUsers, lightningWallets: swLW, lightningTransactions: swLT } = await import("../shared/schema");
+        const { eq: swEq, sql: swSql } = await import("drizzle-orm");
+
+        const [swUser] = await swDb.select().from(swUsers).where(swEq(swUsers.id, userId));
+        const destAddr = swUser?.lightningAddress ?? "";
+        if (!destAddr) {
+          console.log("[AutoSweep] No destination address configured — skipping");
+          return;
+        }
+
+        console.log(`[AutoSweep] ⚡ Deposit confirmed — sweeping ${amountSats.toLocaleString()} sats → ${destAddr}`);
+        const sweepInvoices = await lnurlPayBatchInvoices(destAddr, amountSats, "NexusOS auto-sweep");
+
+        await swDb.update(swLW)
+          .set({ satsBalance: swSql`${swLW.satsBalance} - ${amountSats}`, totalWithdrawn: swSql`${swLW.totalWithdrawn} + ${amountSats}`, updatedAt: new Date() })
+          .where(swEq(swLW.userId, userId));
+
+        const storedPR = sweepInvoices.length === 1
+          ? sweepInvoices[0].payment_request
+          : JSON.stringify(sweepInvoices.map(i => ({ amountSats: i.amountSats, payment_request: i.payment_request })));
+
+        const [sweepTx] = await swDb.insert(swLT).values({
+          userId, type: "withdrawal", amountSats,
+          paymentRequest: storedPR, paymentHash: sweepInvoices[0].payment_hash,
+          memo: `⚡ Auto-sweep → ${destAddr}`, status: "queued",
+        }).returning();
+
+        await queueBatchPayments(userId, sweepTx.id,
+          sweepInvoices.map(i => ({ amountSats: i.amountSats, payment_request: i.payment_request })));
+
+        console.log(`[AutoSweep] ✅ Queued tx #${sweepTx.id} — ${sweepInvoices.length} invoice(s) → ${destAddr}`);
+      } catch (e: any) {
+        console.error("[AutoSweep] ⚠️", e.message);
+      }
+    });
+  }
+
   async function ensureLnWallet(userId: string) {
     const { db } = await import("./db");
     const { lightningWallets } = await import("../shared/schema");
@@ -9241,6 +9286,7 @@ export async function registerRoutes(
           .set({ status: "completed", completedAt: new Date() })
           .where(eq(lightningTransactions.id, tx.id));
         await logAction(req, "lightning_deposit", "lightning", req.user!.id, { amountSats: tx.amountSats });
+        fireAutoSweep(req.user!.id, tx.amountSats);
         return res.json({ paid: true, amountSats: tx.amountSats });
       }
       return res.json({ paid: false });
@@ -9271,6 +9317,7 @@ export async function registerRoutes(
               .set({ status: "completed", completedAt: new Date() })
               .where(eq(lightningTransactions.id, tx.id));
             await logAction(req, "lightning_deposit", "lightning", req.user!.id, { amountSats: tx.amountSats, recheckCredit: true });
+            fireAutoSweep(req.user!.id, tx.amountSats);
             credited++;
             totalSats += tx.amountSats;
           }
@@ -9309,6 +9356,7 @@ export async function registerRoutes(
           .set({ status: "completed", completedAt: new Date() })
           .where(eq(lightningTransactions.id, tx.id));
         await logAction(req, "lightning_deposit", "lightning", req.user!.id, { amountSats: tx.amountSats });
+        fireAutoSweep(req.user!.id, tx.amountSats);
         return res.json({ paid: true, amountSats: tx.amountSats });
       }
       res.json({ paid: false, tx });
