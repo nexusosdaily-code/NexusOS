@@ -126,6 +126,59 @@ export async function publishToNostr(
   return { id: signed.id, relays: published };
 }
 
+// ── Publish kind-30023 long-form article (NIP-23) ─────────────────────────────
+export async function publishArticleToNostr(opts: {
+  slug:        string;
+  title:       string;
+  summary:     string;
+  content:     string;
+  hashtags?:   string[];
+  imageUrl?:   string;
+}): Promise<{ id: string; relays: string[] }> {
+  const privKey = getPrivKeyBytes();
+  const now     = Math.floor(Date.now() / 1000);
+
+  const tags: string[][] = [
+    ["d",            opts.slug],
+    ["title",        opts.title],
+    ["summary",      opts.summary],
+    ["published_at", String(now)],
+    ["t",            "nexusos"],
+    ["t",            "wnsp"],
+    ["t",            "nxt"],
+    ["t",            "bitcoin"],
+    ["t",            "nostr"],
+    ["t",            "photonics"],
+    ["t",            "physics"],
+  ];
+  for (const tag of opts.hashtags ?? []) tags.push(["t", tag]);
+  if (opts.imageUrl) tags.push(["image", opts.imageUrl]);
+
+  const template = {
+    kind:       30023 as number,
+    created_at: now,
+    tags,
+    content:    opts.content,
+  };
+
+  const signed: NostrEvent = finalizeEvent(template, privKey);
+  const p = getPool();
+
+  const publishPromises = p.publish(DEFAULT_RELAYS, signed) as unknown as Promise<string>[];
+  const withTimeout = DEFAULT_RELAYS.map((relay, i) =>
+    Promise.race([
+      publishPromises[i].then(() => relay),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 8_000)),
+    ])
+  );
+  const results  = await Promise.allSettled(withTimeout);
+  const published = results
+    .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
+    .map(r => r.value);
+
+  return { id: signed.id, relays: published };
+}
+
 // ── Fetch my events ───────────────────────────────────────────────────────────
 export async function fetchRecentEvents(limit = 20): Promise<NostrEvent[]> {
   const pubkey = getPubkeyHex();

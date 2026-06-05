@@ -10224,6 +10224,44 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // POST /api/admin/nostr/broadcast-whitepaper ── publish kind-30023 article
+  app.post("/api/admin/nostr/broadcast-whitepaper", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { publishArticleToNostr }                                      = await import("./nostr-service");
+      const { WHITEPAPER_SLUG, WHITEPAPER_TITLE, WHITEPAPER_SUMMARY, WHITEPAPER_CONTENT } = await import("./whitepaper-content");
+
+      const result = await publishArticleToNostr({
+        slug:     WHITEPAPER_SLUG,
+        title:    WHITEPAPER_TITLE,
+        summary:  WHITEPAPER_SUMMARY,
+        content:  WHITEPAPER_CONTENT,
+        hashtags: ["whitepaper", "kardashev", "wavelengthscript", "wnspprotocol"],
+      });
+
+      console.log(`[Whitepaper] Published — event: ${result.id} · relays: ${result.relays.join(", ")}`);
+      res.json({ ok: true, eventId: result.id, relays: result.relays });
+    } catch (e: any) {
+      console.error("[Whitepaper] Broadcast error:", e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // GET /api/admin/nostr/whitepaper-preview — metadata without publishing
+  app.get("/api/admin/nostr/whitepaper-preview", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { WHITEPAPER_TITLE, WHITEPAPER_SUMMARY, WHITEPAPER_CONTENT } = await import("./whitepaper-content");
+      res.json({
+        title:     WHITEPAPER_TITLE,
+        summary:   WHITEPAPER_SUMMARY,
+        content:   WHITEPAPER_CONTENT,
+        wordCount: WHITEPAPER_CONTENT.split(/\s+/).length,
+        charCount: WHITEPAPER_CONTENT.length,
+        kind:      30023,
+        note:      "Broadcasts as a NIP-23 long-form article on 6 relays. Readable on Habla, Blogstack, Yakihonne, njump.me.",
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // Legacy compat: PUT /api/admin/wnsp-io-address
   app.put("/api/admin/wnsp-io-address", authenticate, async (req: Request, res: Response) => {
     try {

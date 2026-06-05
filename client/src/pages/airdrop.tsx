@@ -12,6 +12,7 @@ import { Link } from "wouter";
 import {
   Gift, ArrowLeft, CheckCircle, Clock, Users, Coins,
   Zap, RefreshCw, Plus, TrendingUp, Shield, ChevronDown, ChevronUp,
+  Radio, Copy, Check, ExternalLink,
 } from "lucide-react";
 
 async function triggerNostrLogin(): Promise<boolean> {
@@ -56,9 +57,13 @@ export default function AirdropPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [showCreate, setShowCreate]       = useState(false);
-  const [claimedId, setClaimedId]         = useState<number | null>(null);
-  const [nostrLoading, setNostrLoading]   = useState<number | null>(null); // campaignId being nostr-signed
+  const [showCreate, setShowCreate]         = useState(false);
+  const [showBroadcast, setShowBroadcast]   = useState(false);
+  const [claimedId, setClaimedId]           = useState<number | null>(null);
+  const [nostrLoading, setNostrLoading]     = useState<number | null>(null);
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [broadcastResult, setBroadcastResult]   = useState<{ eventId: string; relays: string[] } | null>(null);
+  const [copied, setCopied]                 = useState(false);
 
   // Create form state
   const [form, setForm] = useState({
@@ -357,6 +362,112 @@ export default function AirdropPage() {
               ))}
             </div>
           </Card>
+        )}
+
+        {/* Admin — Broadcast Whitepaper to Nostr */}
+        {user && (
+          <div className="mb-4">
+            <button
+              onClick={() => setShowBroadcast(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-indigo-950/40 hover:bg-indigo-900/40 border border-indigo-500/30 rounded-xl text-indigo-300 text-sm transition-colors"
+              data-testid="button-toggle-broadcast"
+            >
+              <div className="flex items-center gap-2">
+                <Radio className="w-4 h-4 text-indigo-400" />
+                <span>Broadcast Whitepaper to Nostr</span>
+              </div>
+              {showBroadcast ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {showBroadcast && (
+              <Card className="bg-slate-900/70 border-indigo-500/20 p-4 mt-2 space-y-4">
+                <div>
+                  <div className="text-xs font-semibold text-indigo-300 mb-1">NexusOS Physics Whitepaper</div>
+                  <div className="text-[11px] text-slate-500 leading-relaxed">
+                    Publishes a <span className="text-indigo-400 font-mono">kind:30023</span> long-form article to 6 Nostr relays (Damus, nos.lol, nostr.band, nostr.wine, Snort, nostr.mom).
+                    Readable on Habla, Blogstack, Yakihonne, and njump.me. Contains the full WNSP physics spec + airdrop CTA.
+                  </div>
+                </div>
+
+                <div className="bg-slate-950/60 rounded-lg p-3 text-[10px] font-mono text-slate-400 space-y-1 border border-slate-700/40">
+                  <div><span className="text-slate-600">title: </span><span className="text-white">NexusOS: A Physics-Native OS for a Kardashev Type I Civilization</span></div>
+                  <div><span className="text-slate-600">kind:  </span><span className="text-indigo-300">30023</span> (NIP-23 long-form)</div>
+                  <div><span className="text-slate-600">tags:  </span><span className="text-amber-300">#nexusos #wnsp #nxt #nostr #bitcoin #photonics #physics</span></div>
+                  <div><span className="text-slate-600">relays:</span> <span className="text-green-400">6 relays</span></div>
+                  <div><span className="text-slate-600">airdrop CTA:</span> wnsp.tech/airdrop · 85M NXT · Nostr sign-in</div>
+                </div>
+
+                {broadcastResult && (
+                  <div className="bg-green-950/30 border border-green-500/30 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-2 text-green-400 text-xs font-semibold">
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      Published to Nostr!
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      <span className="text-slate-500">Event ID: </span>
+                      <span className="font-mono text-slate-300 break-all">{broadcastResult.eventId}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500">
+                      Relays reached: {broadcastResult.relays.length}/6 — {broadcastResult.relays.map(r => r.replace("wss://", "")).join(", ")}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs border-slate-700 text-slate-400 hover:text-white"
+                        onClick={() => {
+                          navigator.clipboard.writeText(broadcastResult.eventId);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                      >
+                        {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
+                        {copied ? "Copied!" : "Copy Event ID"}
+                      </Button>
+                      <a
+                        href={`https://njump.me/${broadcastResult.eventId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button size="sm" variant="outline" className="text-xs border-indigo-700 text-indigo-400 hover:text-white">
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          View on njump.me
+                        </Button>
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold"
+                  disabled={broadcastLoading}
+                  onClick={async () => {
+                    setBroadcastLoading(true);
+                    try {
+                      const res  = await fetch("/api/admin/nostr/broadcast-whitepaper", {
+                        method: "POST", credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.error || "Broadcast failed");
+                      setBroadcastResult({ eventId: data.eventId, relays: data.relays });
+                      toast({ title: "📡 Whitepaper published!", description: `Event ${data.eventId.slice(0, 16)}… · ${data.relays.length} relays` });
+                    } catch (e: any) {
+                      toast({ title: "Broadcast failed", description: e.message, variant: "destructive" });
+                    } finally {
+                      setBroadcastLoading(false);
+                    }
+                  }}
+                  data-testid="button-broadcast-whitepaper"
+                >
+                  {broadcastLoading
+                    ? <><RefreshCw className="w-4 h-4 animate-spin mr-2" /> Broadcasting…</>
+                    : <><Radio className="w-4 h-4 mr-2" /> Publish Whitepaper to Nostr</>
+                  }
+                </Button>
+              </Card>
+            )}
+          </div>
         )}
 
         {/* Admin — Create campaign (genesis/admin user only) */}
