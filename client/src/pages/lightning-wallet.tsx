@@ -155,6 +155,22 @@ function ChannelPulse({ nm }: { nm: number }) {
   );
 }
 
+function SpectralChip({ nm, band, psi }: { nm: number; band: string; psi: string }) {
+  const color = nmToRgb(nm);
+  return (
+    <div className="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-slate-800/60">
+      <span className="inline-block w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
+      <span className="text-[9px] font-mono" style={{ color: color + "bb" }}>
+        λ {nm.toFixed(1)} nm
+      </span>
+      <span className="text-[9px] text-slate-600">·</span>
+      <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider">{band}</span>
+      <span className="text-[9px] text-slate-600">·</span>
+      <span className="text-[9px] font-mono text-slate-600">{psi}</span>
+    </div>
+  );
+}
+
 function UniSatReceiveTab({
   mempoolLive,
   addressBook,
@@ -671,6 +687,11 @@ export default function ChannelDashboard() {
     refetchInterval: 60_000,
   });
 
+  const { data: physicsData } = useQuery({
+    queryKey: ["/api/physics/my"],
+    refetchInterval: 120_000,
+  });
+
   const { data: mempoolLive } = useQuery<any>({
     queryKey: ["/api/mempool/live"],
     queryFn: () => fetch("/api/mempool/live").then(r => r.json()),
@@ -997,6 +1018,8 @@ export default function ChannelDashboard() {
   const band     = spectral?.spectral?.band ?? "—";
   const freqTHz  = spectral?.spectral?.freqTHz ?? 0;
   const chanColor = nmToRgb(nm);
+  const feeMultiplier: number = (physicsData as any)?.fees?.wallet_transfer?.multiplier ?? 1;
+  const energyJ: string       = (physicsData as any)?.channel?.energyJ ?? "—";
 
   const qrUrl = invoice
     ? `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(invoice.paymentRequest.toUpperCase())}&size=220x220&margin=8&color=ffffff&bgcolor=000000`
@@ -1075,16 +1098,24 @@ export default function ChannelDashboard() {
         {/* ── Unified balance row ── */}
         <div className="grid grid-cols-2 gap-3 mb-5">
           {/* NXT */}
-          <Card className="bg-gradient-to-br from-amber-900/20 to-slate-900/60 border-amber-500/20 p-4">
-            <div className="text-amber-400/60 text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1">
-              <Atom className="w-3 h-3" /> NXT Channel Balance
+          <Card className="bg-gradient-to-br from-amber-900/20 to-slate-900/60 p-4 relative overflow-hidden"
+            style={{ borderColor: chanColor + "44" }}>
+            {/* band color bar along top */}
+            <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t" style={{ background: chanColor }} />
+            <div className="text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1" style={{ color: chanColor + "99" }}>
+              <Atom className="w-3 h-3" /> NXT · {band}
             </div>
             <div className="text-2xl font-bold font-mono text-amber-300" data-testid="text-nxt-balance">
               {formatNxt(nxtBalance)}
             </div>
-            <div className="text-amber-400/40 text-[10px] font-mono mt-0.5">NXT</div>
+            <div className="text-[10px] font-mono mt-0.5" style={{ color: chanColor + "88" }}>NXT · {psi}</div>
             {nxtLocked > 0 && (
-              <div className="text-[10px] font-mono text-gray-500 mt-1">🔒 {formatNxt(nxtLocked)} locked</div>
+              <div className="text-[10px] font-mono text-gray-500 mt-1">🔒 {formatNxt(nxtLocked)} staked</div>
+            )}
+            {feeMultiplier !== 1 && (
+              <div className="text-[9px] font-mono mt-1" style={{ color: chanColor + "99" }}>
+                fee ×{feeMultiplier.toFixed(3)} · E={energyJ}
+              </div>
             )}
           </Card>
 
@@ -1306,6 +1337,20 @@ export default function ChannelDashboard() {
         {/* ── TRANSMIT ── */}
         {tab === "transmit" && (
           <div className="space-y-4">
+
+            {/* ── Spectral context strip ── */}
+            <div className="flex items-center gap-3 px-1 py-2 rounded-lg border border-slate-800/60 bg-black/20">
+              <span className="inline-block w-2 h-2 rounded-full animate-pulse shrink-0" style={{ background: chanColor }} />
+              <span className="text-[10px] font-mono" style={{ color: chanColor + "cc" }}>{psi}</span>
+              <span className="text-[9px] text-slate-600">·</span>
+              <span className="text-[9px] font-mono text-slate-500">λ {nm.toFixed(1)} nm</span>
+              <span className="text-[9px] text-slate-600">·</span>
+              <span className="text-[9px] font-mono text-slate-500 uppercase">{band}</span>
+              <div className="flex-1" />
+              <span className="text-[9px] font-mono text-slate-500">
+                fee ×{feeMultiplier.toFixed(3)}
+              </span>
+            </div>
 
             {/* ── Pay card ── */}
             <Card className="bg-slate-900/60 border-slate-700/50 p-5 space-y-4">
@@ -2796,6 +2841,9 @@ export default function ChannelDashboard() {
                             )}
                           </div>
                         )}
+
+                        {/* ── Spectral metadata ── */}
+                        <SpectralChip nm={nm} band={band} psi={psi} />
 
                         {/* ── Queue auto-pay progress ── */}
                         {isQueued && tx.id && <QueueProgress txId={tx.id} />}
