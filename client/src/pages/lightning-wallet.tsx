@@ -1078,15 +1078,19 @@ export default function ChannelDashboard() {
               <div className="w-full">
                 <div className="text-amber-400 font-semibold mb-2">Connect a Lightning provider to activate your channel</div>
 
-                {/* Option A — Coinos (recommended) */}
-                <div className="bg-green-900/20 border border-green-500/20 rounded-lg p-3 mb-2">
-                  <div className="text-green-300 font-semibold text-sm mb-1">✅ Option A — Coinos (free, works now)</div>
-                  <ol className="text-green-200/70 text-xs space-y-1 list-decimal list-inside mb-2">
-                    <li>Go to <a href="https://coinos.io" target="_blank" rel="noopener noreferrer" className="text-green-400 underline">coinos.io</a> → Register free</li>
-                    <li>Top-right menu → <strong>Settings → API Token</strong> → copy it</li>
+                {/* Option A — Blink (recommended) */}
+                <div className="bg-orange-900/20 border border-orange-500/20 rounded-lg p-3 mb-2">
+                  <div className="text-orange-300 font-semibold text-sm mb-1">⚡ Option A — Blink (recommended)</div>
+                  <ol className="text-orange-200/70 text-xs space-y-1 list-decimal list-inside mb-2">
+                    <li>Go to <a href="https://blink.sv" target="_blank" rel="noopener noreferrer" className="text-orange-400 underline">blink.sv</a> → Sign up free</li>
+                    <li>Dashboard → <strong>API Keys</strong> → create a key → copy it</li>
+                    <li>Dashboard → <strong>BTCPay</strong> → copy the BTC connection string</li>
                     <li>Add to Replit Secrets:</li>
                   </ol>
-                  <div className="font-mono text-xs bg-black/30 rounded p-2 text-green-300">COINOS_TOKEN = &lt;your token&gt;</div>
+                  <div className="font-mono text-xs bg-black/30 rounded p-2 text-orange-300 space-y-1">
+                    <div>BLINK_API_KEY = &lt;your api key&gt;</div>
+                    <div>BLINK_BTC_CONNECTION = &lt;btcpay connection string&gt;</div>
+                  </div>
                 </div>
 
                 {/* Option B — LNbits */}
@@ -1407,7 +1411,7 @@ export default function ChannelDashboard() {
                   <Zap className={`w-4 h-4 ${sweepStatus?.providerReady ? "text-cyan-400" : "text-amber-400"}`} />
                 </div>
                 <div className={`text-[9px] font-semibold ${sweepStatus?.providerReady ? "text-cyan-300" : "text-amber-300"}`}>
-                  {sweepStatus?.provider === "coinos" ? "Coinos" : sweepStatus?.provider ? sweepStatus.provider.charAt(0).toUpperCase() + sweepStatus.provider.slice(1) : "Coinos"}
+                  {sweepStatus?.provider ? sweepStatus.provider.charAt(0).toUpperCase() + sweepStatus.provider.slice(1) : "Blink"}
                 </div>
                 <div className="text-[8px] text-gray-500">Lightning</div>
               </div>
@@ -2001,7 +2005,7 @@ export default function ChannelDashboard() {
                           ? `Split into ${lnAddrResult.invoiceCount} invoices. NexusOS pays each one automatically every 60s.`
                           : "NexusOS will process this invoice automatically within 60s."}
                       </div>
-                      <div className="text-[10px] text-gray-500">Check the Log tab for live payment progress. When a provider (Alby, LNbits) is connected all queued invoices drain automatically.</div>
+                      <div className="text-[10px] text-gray-500">Check the Log tab for live payment progress. When a provider (Blink, LNbits) is connected all queued invoices drain automatically.</div>
                       <Button size="sm" variant="outline" className="border-slate-600 text-xs w-full"
                         onClick={() => { setLnAddrResult(null); setLnAddrSats("10000"); }}>
                         Send another
