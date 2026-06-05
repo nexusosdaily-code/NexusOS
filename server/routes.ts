@@ -10224,6 +10224,21 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // POST /api/admin/nostr/sign-note ── sign a kind-1 note; browser publishes to relays
+  app.post("/api/admin/nostr/sign-note", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { signNoteForNostr } = await import("./nostr-service");
+      const { content, hashtags, uri } = req.body as { content: string; hashtags?: string[]; uri?: string };
+      if (!content?.trim()) return res.status(400).json({ error: "content required" }) as any;
+      const result = await signNoteForNostr({ content: content.trim(), hashtags, uri });
+      console.log(`[Note] Signed kind-1 event ${result.id} — browser will publish`);
+      res.json({ ok: true, ...result });
+    } catch (e: any) {
+      console.error("[Note] Sign error:", e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // POST /api/admin/nostr/sign-whitepaper ── sign & return event; browser publishes to relays
   app.post("/api/admin/nostr/sign-whitepaper", authenticate, async (req: Request, res: Response) => {
     try {

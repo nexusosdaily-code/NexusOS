@@ -115,6 +115,8 @@ export default function AirdropPage() {
   } | null>(null);
   const [relayProgress, setRelayProgress] = useState<{ relay: string; ok: boolean; reason?: string }[]>([]);
   const [showRawJson, setShowRawJson] = useState(false);
+  const [noteLoading, setNoteLoading] = useState<string | null>(null);
+  const [noteResult, setNoteResult] = useState<{ noteKey: string; eventId: string; relayLog: { relay: string; ok: boolean; reason?: string }[]; accepted: number } | null>(null);
   const [copied, setCopied]                 = useState(false);
 
   // Create form state
@@ -433,10 +435,165 @@ export default function AirdropPage() {
 
             {showBroadcast && (
               <Card className="bg-slate-900/70 border-indigo-500/20 p-4 mt-2 space-y-4">
+
+                {/* ── Campaign Notes (kind:1) ── */}
                 <div>
+                  <div className="text-xs font-semibold text-indigo-300 mb-2 flex items-center gap-2">
+                    <Radio className="w-3.5 h-3.5" /> Campaign Posts <span className="text-slate-600 font-normal font-mono">kind:1</span>
+                  </div>
+                  <div className="space-y-2">
+                    {([
+                      {
+                        key: "main",
+                        label: "Main Announcement",
+                        desc: "Full post — what NexusOS is, why it matters, airdrop CTA",
+                        content: `Bitcoin replaced trust in money. NexusOS replaces trust in the internet itself.
+
+SHA-256 was designed for silicon transistors. Photonic computing arrives ~2032. When it does, every blockchain on earth needs a complete rewrite — except one.
+
+NexusOS is built in the language of the destination hardware from day one:
+
+Instead of SHA-256 → Maxwell's equations
+Instead of IP addresses → Ψ(wdm, oam, pol) spectral channels
+Instead of arbitrary proof-of-work → E = hf (Planck's energy equation governs fees)
+
+25,600 orthogonal communication channels. Isolated by quantum mechanics, not software policy. No collision is physically possible.
+
+wnsp://Ψ(128,25,H)/documents/whitepaper
+DNS-free. Censorship-proof. No ICANN. No registrar. No government can deregister a wavelength.
+
+The full physics whitepaper is live on Nostr now.
+
+---
+
+🎁 85,000,000 NXT Nostr Advocacy Airdrop
+1,000 NXT per wallet · 85,000 claims · first-come, first-served
+
+Claim in ~10 seconds:
+1. Go to wnsp.tech/airdrop
+2. Click Sign in with Nostr — one sig with Alby or nos2x
+3. Your spectral wallet + Ψ channel are assigned automatically
+4. 1,000 NXT lands instantly
+
+No email. No form. No KYC. Just your Nostr key.
+
+AGPL-3.0 · First public disclosure: 2026-05-16 · wnsp.tech · Ψ(52,3,V)
+
+#nexusos #wnsp #nxt #nostr #bitcoin #photonics #physics`,
+                      },
+                      {
+                        key: "boost",
+                        label: "Short Boost",
+                        desc: "Quick share — physics hook + airdrop link",
+                        content: `Physics is the new cryptography.
+
+NexusOS replaces SHA-256 with Maxwell's equations. IP addresses with spectral wavelengths. Proof-of-work with E=hf.
+
+85M NXT airdrop live. Claim with your Nostr key → wnsp.tech/airdrop
+
+Full whitepaper on habla.news
+
+#nexusos #wnsp #nostr #bitcoin #nxt`,
+                      },
+                      {
+                        key: "hook",
+                        label: "Thread Hook",
+                        desc: "Opening hook to post before quoting the main announcement",
+                        content: `What happens to every blockchain when photonic computing arrives in 2032?
+
+They all need a complete rewrite.
+
+Except NexusOS. Because it was written in the language of photonic hardware from day one.
+
+🧵
+
+#nexusos #wnsp #bitcoin #nostr`,
+                      },
+                    ] as { key: string; label: string; desc: string; content: string }[]).map(note => (
+                      <div key={note.key} className="bg-slate-950/60 rounded-lg border border-slate-700/40 p-3">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div>
+                            <div className="text-[11px] font-semibold text-white">{note.label}</div>
+                            <div className="text-[10px] text-slate-500">{note.desc}</div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs border-indigo-600/60 text-indigo-400 hover:text-white shrink-0"
+                            disabled={noteLoading === note.key}
+                            onClick={async () => {
+                              setNoteLoading(note.key);
+                              setNoteResult(null);
+                              let signData: any = null;
+                              try {
+                                const res = await fetch("/api/admin/nostr/sign-note", {
+                                  method: "POST", credentials: "include",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ content: note.content }),
+                                });
+                                signData = await res.json();
+                                if (!res.ok) throw new Error(signData.error || "Sign failed");
+                              } catch (e: any) {
+                                toast({ title: "Sign failed", description: e.message, variant: "destructive" });
+                                setNoteLoading(null);
+                                return;
+                              }
+                              const log: { relay: string; ok: boolean; reason?: string }[] = [];
+                              try {
+                                const results = await broadcastEventFromBrowser(
+                                  signData.signedEvent as NostrEvent,
+                                  signData.relays as string[],
+                                  (r) => { log.push(r); },
+                                );
+                                log.splice(0, log.length, ...results);
+                              } catch (e: any) {
+                                console.error("Note broadcast error:", e);
+                              }
+                              const accepted = log.filter(r => r.ok).length;
+                              setNoteResult({ noteKey: note.key, eventId: signData.id, relayLog: log, accepted });
+                              setNoteLoading(null);
+                              toast({
+                                title: accepted > 0 ? `📡 ${note.label} posted!` : "⚠️ No relays accepted",
+                                description: accepted > 0 ? `${accepted}/${log.length} relays accepted` : "Check note result for details",
+                              });
+                            }}
+                          >
+                            {noteLoading === note.key
+                              ? <><RefreshCw className="w-3 h-3 animate-spin mr-1" /> Posting…</>
+                              : <><Radio className="w-3 h-3 mr-1" /> Post</>
+                            }
+                          </Button>
+                        </div>
+                        <pre className="text-[9px] text-slate-500 whitespace-pre-wrap line-clamp-3 leading-relaxed">
+                          {note.content.slice(0, 160)}…
+                        </pre>
+                        {/* Result for this specific note */}
+                        {noteResult?.noteKey === note.key && (
+                          <div className={`mt-2 rounded p-2 text-[10px] border ${noteResult.accepted > 0 ? "bg-green-950/30 border-green-500/20" : "bg-amber-950/30 border-amber-500/20"}`}>
+                            <div className={noteResult.accepted > 0 ? "text-green-400 font-semibold mb-1" : "text-amber-400 font-semibold mb-1"}>
+                              {noteResult.accepted > 0 ? `✓ ${noteResult.accepted}/${noteResult.relayLog.length} relays accepted` : "✗ All relays rejected"}
+                            </div>
+                            <div className="space-y-0.5">
+                              {noteResult.relayLog.map(r => (
+                                <div key={r.relay} className="flex items-center gap-1.5">
+                                  <span className={r.ok ? "text-green-400" : "text-red-400"}>{r.ok ? "✓" : "✗"}</span>
+                                  <span className="text-slate-500">{r.relay.replace("wss://", "")}</span>
+                                  {!r.ok && r.reason && <span className="text-red-400/60 truncate">{r.reason}</span>}
+                                </div>
+                              ))}
+                            </div>
+                            <div className="text-slate-600 mt-1 font-mono">event: {noteResult.eventId.slice(0, 20)}…</div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-700/40 pt-3">
                   <div className="text-xs font-semibold text-indigo-300 mb-1">NexusOS Physics Whitepaper</div>
                   <div className="text-[11px] text-slate-500 leading-relaxed">
-                    Publishes a <span className="text-indigo-400 font-mono">kind:30023</span> long-form article to 6 Nostr relays (Damus, nos.lol, nostr.band, nostr.wine, Snort, nostr.mom).
+                    Publishes a <span className="text-indigo-400 font-mono">kind:30023</span> long-form article to 8 Nostr relays.
                     Readable on Habla, Blogstack, Yakihonne, and njump.me. Contains the full WNSP physics spec + airdrop CTA.
                   </div>
                 </div>

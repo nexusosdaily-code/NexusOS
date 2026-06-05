@@ -134,6 +134,34 @@ export interface RelayResult {
   reason?: string;
 }
 
+// ── Sign a kind-1 note and return it for browser publishing ───────────────────
+export async function signNoteForNostr(opts: {
+  content:  string;
+  hashtags?: string[];
+  uri?:      string;
+}): Promise<{
+  id:          string;
+  signedEvent: object;
+  relays:      string[];
+}> {
+  const privKey = getPrivKeyBytes();
+  const tags: string[][] = [
+    ["t", "nexusos"], ["t", "wnsp"], ["t", "nxt"],
+    ["t", "bitcoin"], ["t", "nostr"], ["t", "photonics"], ["t", "physics"],
+  ];
+  for (const tag of opts.hashtags ?? []) tags.push(["t", tag]);
+  if (opts.uri) tags.push(["r", opts.uri]);
+
+  const signed: NostrEvent = finalizeEvent({
+    kind:       1 as number,
+    created_at: Math.floor(Date.now() / 1000),
+    tags,
+    content:    opts.content,
+  }, privKey);
+
+  return { id: signed.id, signedEvent: signed as unknown as object, relays: DEFAULT_RELAYS };
+}
+
 // ── Sign a kind-30023 article and return the signed event; let the browser publish ─
 export async function signArticleForNostr(opts: {
   slug:        string;
