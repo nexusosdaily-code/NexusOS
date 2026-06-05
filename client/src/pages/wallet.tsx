@@ -279,7 +279,8 @@ function TxRow({ tx, walletId }: { tx: UnifiedTx; walletId: string }) {
         <div className="text-right flex-shrink-0">
           {amountDisplay}
           <div className="text-[10px] text-slate-600 flex items-center justify-end gap-1 mt-0.5">
-          <Clock className="w-3 h-3" /> {fmtTime(tx.createdAt)}
+            <Clock className="w-3 h-3" /> {fmtTime(tx.createdAt)}
+          </div>
         </div>
       </div>
     </div>
