@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Zap, ArrowLeft, ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft,
-  Clock, CheckCircle2, XCircle, Copy, RefreshCw, AlertTriangle,
+  Clock, CheckCircle2, XCircle, Copy, RefreshCw, AlertTriangle, AlertCircle,
   Bitcoin, Radio, Waves, Activity, ArrowDownLeft, ArrowUpRight,
   Atom, Send, Users, Lock, Unlock, TrendingUp, Heart, QrCode, BookMarked,
   ExternalLink, Smartphone, ArrowRight, CircleDot, Camera, X as XIcon,
