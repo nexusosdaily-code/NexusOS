@@ -1305,156 +1305,191 @@ export default function ChannelDashboard() {
 
         {/* ── TRANSMIT ── */}
         {tab === "transmit" && (
-          <Card className="bg-slate-900/60 border-slate-700/50 p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-white font-semibold flex items-center gap-2">
-                <Send className="w-4 h-4 text-red-400" />
-                Transmit via Lightning
-              </h2>
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-cyan-700/50 text-cyan-400 hover:bg-cyan-900/30 gap-1.5 text-xs"
-                onClick={() => { setScannedBolt11(null); setScanOpen(true); }}
-                data-testid="button-scan-qr"
-              >
-                <Camera className="w-3.5 h-3.5" />Scan QR
-              </Button>
-            </div>
+          <div className="space-y-4">
 
-            {/* ── Scanned bolt11 pay confirmation ── */}
-            {scannedBolt11 && (
-              <div className="bg-cyan-900/20 border border-cyan-500/30 rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
-                  <span className="text-cyan-300 text-sm font-semibold">Invoice scanned</span>
-                </div>
-                <div className="font-mono text-[10px] text-gray-400 bg-black/30 rounded p-2 break-all">
-                  {scannedBolt11.slice(0, 60)}…
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    className="flex-1 bg-red-600 hover:bg-red-700 font-semibold text-sm"
-                    onClick={() => payInvoice.mutate(scannedBolt11)}
-                    disabled={payInvoice.isPending}
-                    data-testid="button-pay-scanned"
-                  >
-                    {payInvoice.isPending ? "Transmitting…" : "⚡ Pay Now"}
-                  </Button>
-                  <Button variant="outline" size="sm" className="border-slate-600"
-                    onClick={() => setScannedBolt11(null)}>
-                    Cancel
-                  </Button>
-                </div>
+            {/* ── Pay card ── */}
+            <Card className="bg-slate-900/60 border-slate-700/50 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-white font-semibold flex items-center gap-2">
+                  <Send className="w-4 h-4 text-red-400" />
+                  Send sats
+                </h2>
+                <Button size="sm" variant="outline"
+                  className="border-cyan-700/50 text-cyan-400 hover:bg-cyan-900/30 gap-1.5 text-xs"
+                  onClick={() => { setScannedBolt11(null); setScanOpen(true); }}
+                  data-testid="button-scan-qr"
+                >
+                  <Camera className="w-3.5 h-3.5" /> Scan QR
+                </Button>
               </div>
-            )}
 
-            {!lnAddrResult ? (
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs text-gray-400 font-medium">Amount (sats)</label>
+              {/* Scanned invoice confirm */}
+              {scannedBolt11 && (
+                <div className="bg-cyan-900/20 border border-cyan-500/30 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span className="text-cyan-300 text-sm font-semibold">Invoice scanned — ready to pay</span>
+                  </div>
+                  <div className="font-mono text-[10px] text-gray-400 bg-black/30 rounded p-2 break-all">
+                    {scannedBolt11.slice(0, 80)}…
+                  </div>
                   <div className="flex gap-2">
-                    <input
-                      type="number"
-                      value={lnAddrSats}
-                      onChange={e => setLnAddrSats(e.target.value)}
-                      min="1"
-                      placeholder="e.g. 50000"
-                      data-testid="input-transmit-amount"
-                      className="flex-1 bg-slate-800 border border-slate-600 rounded-md px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-cyan-500"
-                    />
-                    <button
-                      className="text-xs text-cyan-400 border border-cyan-700/50 rounded-md px-3 hover:bg-cyan-900/30 whitespace-nowrap"
-                      onClick={() => setLnAddrSats(String(Math.max(1, sats - 10)))}
-                      data-testid="button-transmit-max"
-                    >Max</button>
+                    <Button className="flex-1 bg-red-600 hover:bg-red-700 font-semibold"
+                      onClick={() => payInvoice.mutate(scannedBolt11)}
+                      disabled={payInvoice.isPending}
+                      data-testid="button-pay-scanned"
+                    >
+                      {payInvoice.isPending ? "Sending…" : "⚡ Pay via Blink"}
+                    </Button>
+                    <Button variant="outline" size="sm" className="border-slate-600"
+                      onClick={() => setScannedBolt11(null)}>Cancel</Button>
                   </div>
                 </div>
+              )}
 
-                <div className="space-y-1.5">
-                  <label className="text-xs text-gray-400 font-medium">Destination Lightning Address</label>
-                  <input
-                    type="text"
-                    value={lnAddr}
-                    onChange={e => setLnAddr(e.target.value)}
-                    placeholder="you@walletofsatoshi.com"
-                    data-testid="input-transmit-ln-address"
-                    className="w-full bg-slate-800 border border-slate-600 rounded-md px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-cyan-500"
-                  />
-                  {savedLnAddress && savedLnAddress !== lnAddr && (
-                    <button className="text-[11px] text-cyan-400 hover:text-cyan-300 underline"
-                      onClick={() => setLnAddr(savedLnAddress)}>
-                      Use saved: {savedLnAddress}
-                    </button>
+              {/* Destination field — bolt11 OR lightning address */}
+              {!lnAddrResult && !scannedBolt11 && (
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-gray-400 font-medium">
+                      Paste bolt11 invoice <span className="text-gray-600">or</span> Lightning address
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={lnAddr.startsWith("ln") ? lnAddr : lnAddr}
+                      onChange={e => {
+                        const v = e.target.value.trim();
+                        setLnAddr(v);
+                        // auto-fill bolt11 into bolt11 state too
+                        if (v.toLowerCase().startsWith("ln")) setBolt11(v);
+                        else setBolt11("");
+                      }}
+                      placeholder={"lnbc… (bolt11 invoice)\nor you@walletofsatoshi.com"}
+                      data-testid="input-transmit-destination"
+                      className="w-full bg-slate-800 border border-slate-600 rounded-md px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-cyan-500 resize-none leading-relaxed"
+                    />
+                    {savedLnAddress && savedLnAddress !== lnAddr && (
+                      <button className="text-[11px] text-cyan-400 hover:text-cyan-300 underline"
+                        onClick={() => { setLnAddr(savedLnAddress); setBolt11(""); }}>
+                        Use saved: {savedLnAddress}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Amount — only needed for Lightning addresses (bolt11 has amount baked in) */}
+                  {lnAddr && !lnAddr.toLowerCase().startsWith("ln") && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-gray-400 font-medium">Amount (sats)</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          value={lnAddrSats}
+                          onChange={e => setLnAddrSats(e.target.value)}
+                          min="1"
+                          placeholder="e.g. 5000"
+                          data-testid="input-transmit-amount"
+                          className="flex-1 bg-slate-800 border border-slate-600 rounded-md px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-cyan-500"
+                        />
+                        <button
+                          className="text-xs text-cyan-400 border border-cyan-700/50 rounded-md px-3 hover:bg-cyan-900/30 whitespace-nowrap"
+                          onClick={() => setLnAddrSats(String(Math.max(1, sats - 10)))}
+                          data-testid="button-transmit-max"
+                        >Max</button>
+                      </div>
+                      <div className="text-[10px] text-gray-600 font-mono">
+                        ≈ ${((parseInt(lnAddrSats) || 0) * 0.00000001 * ((status as any)?.btcUsd ?? 62000)).toFixed(2)} USD at current rate
+                      </div>
+                    </div>
+                  )}
+
+                  {lnAddr && (
+                    <Button
+                      className="w-full bg-red-600 hover:bg-red-700 font-semibold"
+                      disabled={
+                        !lnAddr.trim() ||
+                        (lnAddr.toLowerCase().startsWith("ln")
+                          ? payInvoice.isPending
+                          : sendToLnAddress.isPending || parseInt(lnAddrSats) < 1)
+                      }
+                      data-testid="button-transmit-pay"
+                      onClick={() => {
+                        if (lnAddr.toLowerCase().startsWith("ln")) {
+                          payInvoice.mutate(lnAddr.trim());
+                        } else {
+                          sendToLnAddress.mutate();
+                        }
+                      }}
+                    >
+                      {(payInvoice.isPending || sendToLnAddress.isPending)
+                        ? "Sending via Blink…"
+                        : lnAddr.toLowerCase().startsWith("ln")
+                          ? "⚡ Pay Invoice via Blink"
+                          : `⚡ Send ${parseInt(lnAddrSats || "0").toLocaleString()} sats via Blink`}
+                    </Button>
+                  )}
+
+                  {!lnAddr && (
+                    <div className="text-center text-gray-600 text-xs py-2">
+                      Paste an invoice or address above — NexusOS will pay it directly via Blink
+                    </div>
                   )}
                 </div>
+              )}
 
+              {/* Result after send-to-ln-address queued */}
+              {lnAddrResult?.status === "queued" && (
+                <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+                    <span className="text-green-300 text-sm font-semibold">Payment queued!</span>
+                  </div>
+                  <div className="text-[11px] text-gray-400">
+                    {lnAddrResult.amountSats?.toLocaleString()} sats → {lnAddrResult.lightningAddress ?? lnAddr}
+                  </div>
+                  <div className="text-[10px] text-gray-600">Blink is processing the payment. Check the Log tab for confirmation.</div>
+                  <Button size="sm" variant="outline" className="border-slate-600 text-xs w-full mt-1"
+                    onClick={() => { setLnAddrResult(null); setLnAddr(""); setBolt11(""); }}>
+                    ← New payment
+                  </Button>
+                </div>
+              )}
+            </Card>
+
+            {/* ── Sweep card ── */}
+            <Card className="bg-slate-900/60 border-slate-700/50 p-5 space-y-3">
+              <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                <ArrowUpFromLine className="w-4 h-4 text-amber-400" />
+                Sweep all sats out
+              </h3>
+              <p className="text-[11px] text-gray-500 leading-relaxed">
+                Send your entire Blink balance to any Lightning address in one tap.
+              </p>
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={lnAddr && !lnAddr.toLowerCase().startsWith("ln") ? lnAddr : savedLnAddress ?? ""}
+                  onChange={e => setLnAddr(e.target.value)}
+                  placeholder="you@walletofsatoshi.com"
+                  data-testid="input-sweep-destination"
+                  className="w-full bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-amber-500"
+                />
                 <Button
-                  onClick={async () => {
-                    try {
-                      const res = await apiRequest("POST", "/api/lightning/get-invoices", {
-                        lightningAddress: lnAddr.trim(),
-                        amountSats: parseInt(lnAddrSats),
-                      });
-                      const data = await res.json();
-                      if (!res.ok) throw new Error(data.error || "Failed");
-                      setLnAddrResult({ ...data, status: "ready" });
-                    } catch (e: any) {
-                      toast({ title: "Error", description: e.message, variant: "destructive" });
-                    }
+                  className="w-full bg-amber-700 hover:bg-amber-600 font-semibold text-sm"
+                  disabled={sendToLnAddress.isPending || !(lnAddr && !lnAddr.toLowerCase().startsWith("ln") ? lnAddr : savedLnAddress)}
+                  data-testid="button-sweep"
+                  onClick={() => {
+                    const dest = (lnAddr && !lnAddr.toLowerCase().startsWith("ln") ? lnAddr : savedLnAddress) ?? "";
+                    setLnAddr(dest);
+                    setLnAddrSats(String(Math.max(1, sats - 10)));
+                    setTimeout(() => sendToLnAddress.mutate(), 50);
                   }}
-                  disabled={!lnAddr.trim() || parseInt(lnAddrSats) < 1}
-                  className="w-full bg-red-600 hover:bg-red-700 font-semibold"
-                  data-testid="button-get-invoice"
                 >
-                  ⚡ Get Invoice
+                  {sendToLnAddress.isPending ? "Sweeping…" : `⟳ Sweep ${satsDisplay(sats)} → ${(lnAddr && !lnAddr.toLowerCase().startsWith("ln") ? lnAddr : savedLnAddress) ?? "address"}`}
                 </Button>
               </div>
-            ) : lnAddrResult?.status === "ready" ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-white font-semibold">
-                    {lnAddrResult.invoiceCount > 1
-                      ? `${lnAddrResult.invoiceCount} invoices — pay each from WoS`
-                      : "Pay this invoice from WoS"}
-                  </div>
-                  <div className="text-xs text-gray-400 font-mono">
-                    {parseInt(lnAddrSats).toLocaleString()} sats → {lnAddr}
-                  </div>
-                </div>
+            </Card>
 
-                {lnAddrResult.invoices.map((inv: any, i: number) => (
-                  <div key={i} className="bg-slate-800/60 border border-slate-600 rounded-lg p-3 space-y-2">
-                    {lnAddrResult.invoiceCount > 1 && (
-                      <div className="text-[11px] text-gray-400 font-semibold">
-                        Invoice {i + 1} of {lnAddrResult.invoiceCount} — {inv.amountSats.toLocaleString()} sats
-                      </div>
-                    )}
-                    <div className="font-mono text-[11px] text-cyan-300 break-all leading-relaxed bg-slate-900/50 rounded p-2">
-                      {inv.invoice}
-                    </div>
-                    <Button
-                      size="sm"
-                      className="w-full bg-cyan-700 hover:bg-cyan-600 text-xs font-semibold"
-                      data-testid={`button-copy-invoice-${i}`}
-                      onClick={() => { navigator.clipboard.writeText(inv.invoice); toast({ title: `Invoice ${i + 1} copied!`, description: "Open WoS → paste → pay" }); }}
-                    >
-                      Copy Invoice {lnAddrResult.invoiceCount > 1 ? `#${i + 1}` : ""} → paste into WoS
-                    </Button>
-                  </div>
-                ))}
-
-                <div className="text-[11px] text-gray-500 text-center">
-                  Open Wallet of Satoshi → tap ⚡ Send → paste the invoice → confirm
-                </div>
-
-                <Button size="sm" variant="outline" className="border-slate-600 text-xs w-full"
-                  onClick={() => { setLnAddrResult(null); }}>
-                  ← New payment
-                </Button>
-              </div>
-            ) : null}
-          </Card>
+          </div>
         )}
 
         {/* ── SWAP / BRIDGE ── */}
