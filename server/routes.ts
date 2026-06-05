@@ -8375,12 +8375,38 @@ export async function registerRoutes(
   // ── Lightning Network — Alby + LNbits unified adapter ──────────────────────
   const LN_SATS_PER_NXT = 1000; // 1 NXT = 1000 sats
 
-  function detectLnProvider(): "coinos" | "alby" | "lnbits" | null {
-    // Priority: LNbits (full send/receive API) > Coinos > Alby
+  function detectLnProvider(): "coinos" | "alby" | "lnbits" | "blink" | null {
+    // Priority: LNbits > Blink > Coinos > Alby
     if (process.env.LNBITS_URL && process.env.LNBITS_ADMIN_KEY && process.env.LNBITS_INVOICE_KEY) return "lnbits";
+    if (process.env.BLINK_API_KEY) return "blink";
     if (process.env.COINOS_TOKEN) return "coinos";
     if (process.env.ALBY_ACCESS_TOKEN) return "alby";
     return null;
+  }
+
+  // ── Blink helpers ──────────────────────────────────────────────────────────
+  const BLINK_GQL = "https://api.blink.sv/graphql";
+  let _blinkWalletId: string | null = null;
+
+  async function blinkGql(query: string, variables: Record<string, any> = {}): Promise<any> {
+    const r = await fetch(BLINK_GQL, {
+      method: "POST",
+      headers: { "X-API-KEY": process.env.BLINK_API_KEY!, "Content-Type": "application/json" },
+      body: JSON.stringify({ query, variables }),
+    });
+    const d = await r.json();
+    if (d.errors?.length) throw new Error(d.errors[0].message || "Blink GQL error");
+    return d.data;
+  }
+
+  async function blinkBtcWalletId(): Promise<string> {
+    if (_blinkWalletId) return _blinkWalletId;
+    const d = await blinkGql(`query { me { defaultAccount { wallets { id walletCurrency } } } }`);
+    const wallets: any[] = d.me.defaultAccount.wallets;
+    const btc = wallets.find((w: any) => w.walletCurrency === "BTC");
+    if (!btc) throw new Error("No BTC wallet found in Blink account");
+    _blinkWalletId = btc.id;
+    return btc.id;
   }
 
   // ── Coinos helpers ──────────────────────────────────────────────────────────
@@ -8605,7 +8631,17 @@ export async function registerRoutes(
       if (!r.ok) throw new Error(d.detail || d.message || `LNbits error ${r.status}`);
       return { payment_hash: d.payment_hash, payment_request: d.payment_request };
     }
-    throw new Error("No Lightning provider configured. Add ALBY_ACCESS_TOKEN (free) or LNBITS_URL + LNBITS_ADMIN_KEY + LNBITS_INVOICE_KEY to Secrets.");
+    if (provider === "blink") {
+      const walletId = await blinkBtcWalletId();
+      const d = await blinkGql(
+        `mutation Create($input: LnInvoiceCreateInput!) { lnInvoiceCreate(input: $input) { invoice { paymentRequest paymentHash } errors { message } } }`,
+        { input: { walletId, amount: amountSats, memo } }
+      );
+      const inv = d.lnInvoiceCreate;
+      if (inv.errors?.length) throw new Error(inv.errors[0].message);
+      return { payment_hash: inv.invoice.paymentHash, payment_request: inv.invoice.paymentRequest };
+    }
+    throw new Error("No Lightning provider configured. Add BLINK_API_KEY, LNBITS_URL + keys, or ALBY_ACCESS_TOKEN to Secrets.");
   }
 
   async function lnCheckInvoice(hash: string): Promise<boolean> {
@@ -8638,6 +8674,16 @@ export async function registerRoutes(
       const d = await r.json();
       return d.paid === true;
     }
+    if (provider === "blink") {
+      try {
+        const d = await blinkGql(
+          `query Check($hash: PaymentHash!) { me { defaultAccount { walletById(walletId: "${await blinkBtcWalletId()}") { ... on BTCWallet { transactionsByPaymentHash(paymentHash: $hash) { status direction } } } } } }`,
+          { hash }
+        );
+        const txs: any[] = d.me?.defaultAccount?.walletById?.transactionsByPaymentHash ?? [];
+        return txs.some((t: any) => t.status === "SUCCESS" && t.direction === "RECEIVE");
+      } catch { return false; }
+    }
     throw new Error("No Lightning provider configured.");
   }
 
@@ -8669,6 +8715,17 @@ export async function registerRoutes(
       if (!r.ok) throw new Error(d.detail || d.message || `LNbits pay error ${r.status}`);
       return d.payment_hash ?? "";
     }
+    if (provider === "blink") {
+      const walletId = await blinkBtcWalletId();
+      const d = await blinkGql(
+        `mutation Pay($input: LnInvoicePaymentSendInput!) { lnInvoicePaymentSend(input: $input) { status errors { message } } }`,
+        { input: { walletId, paymentRequest: bolt11 } }
+      );
+      const res = d.lnInvoicePaymentSend;
+      if (res.errors?.length) throw new Error(res.errors[0].message);
+      if (res.status === "FAILURE") throw new Error("Blink payment failed");
+      return bolt11.slice(0, 64);
+    }
     throw new Error("No Lightning provider configured.");
   }
 
@@ -8699,6 +8756,15 @@ export async function registerRoutes(
       if (!r.ok) throw new Error(d.detail || "LNbits decode error");
       return Math.ceil((d.amount_msat ?? 0) / 1000);
     }
+    if (provider === "blink") {
+      const d = await blinkGql(
+        `query Decode($invoice: String!) { lnInvoiceFeeProbe(input: { walletId: "skip", paymentRequest: $invoice }) { amount errors { message } } }`,
+        { invoice: bolt11 }
+      ).catch(() => null);
+      if (d?.lnInvoiceFeeProbe?.amount != null) return d.lnInvoiceFeeProbe.amount;
+      const match = bolt11.match(/(\d+)[munp]?(?=bcrt|bc)/i);
+      return match ? parseInt(match[1]) : 0;
+    }
     throw new Error("No Lightning provider configured.");
   }
 
@@ -8728,6 +8794,12 @@ export async function registerRoutes(
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail || "LNbits balance error");
       return { sats: Math.floor((d.balance ?? 0) / 1000), name: d.name ?? "LNbits wallet" };
+    }
+    if (provider === "blink") {
+      const d = await blinkGql(`query { me { defaultAccount { wallets { walletCurrency balance } username } } }`);
+      const wallets: any[] = d.me.defaultAccount.wallets;
+      const btc = wallets.find((w: any) => w.walletCurrency === "BTC");
+      return { sats: btc?.balance ?? 0, name: `${d.me.defaultAccount.username ?? "blink"}@blink.sv` };
     }
     throw new Error("No Lightning provider configured.");
   }
