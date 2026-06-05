@@ -10224,13 +10224,13 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  // POST /api/admin/nostr/broadcast-whitepaper ── publish kind-30023 article
-  app.post("/api/admin/nostr/broadcast-whitepaper", authenticate, async (req: Request, res: Response) => {
+  // POST /api/admin/nostr/sign-whitepaper ── sign & return event; browser publishes to relays
+  app.post("/api/admin/nostr/sign-whitepaper", authenticate, async (req: Request, res: Response) => {
     try {
-      const { publishArticleToNostr }                                      = await import("./nostr-service");
+      const { signArticleForNostr } = await import("./nostr-service");
       const { WHITEPAPER_SLUG, WHITEPAPER_TITLE, WHITEPAPER_SUMMARY, WHITEPAPER_CONTENT } = await import("./whitepaper-content");
 
-      const result = await publishArticleToNostr({
+      const result = await signArticleForNostr({
         slug:     WHITEPAPER_SLUG,
         title:    WHITEPAPER_TITLE,
         summary:  WHITEPAPER_SUMMARY,
@@ -10238,20 +10238,28 @@ export async function registerRoutes(
         hashtags: ["whitepaper", "kardashev", "wavelengthscript", "wnspprotocol"],
       });
 
-      console.log(`[Whitepaper] Published — event: ${result.id} · accepted: ${result.relays.length}/${result.relayLog.length}`);
-      result.relayLog.forEach(r => console.log(`  ${r.ok ? "✓" : "✗"} ${r.relay}${r.reason ? " — " + r.reason : ""}`));
-      res.json({
-        ok:         true,
-        eventId:    result.id,
-        naddr:      result.naddr,
-        njumpUrl:   result.njumpUrl,
-        hablaUrl:   result.hablaUrl,
-        relays:     result.relays,
-        relayLog:   result.relayLog,
-        signedJson: result.signedJson,
-      });
+      console.log(`[Whitepaper] Signed event ${result.id} — browser will publish`);
+      res.json({ ok: true, ...result });
     } catch (e: any) {
-      console.error("[Whitepaper] Broadcast error:", e.message);
+      console.error("[Whitepaper] Sign error:", e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // POST /api/admin/nostr/broadcast-whitepaper ── legacy: sign + server-side publish
+  app.post("/api/admin/nostr/broadcast-whitepaper", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { signArticleForNostr } = await import("./nostr-service");
+      const { WHITEPAPER_SLUG, WHITEPAPER_TITLE, WHITEPAPER_SUMMARY, WHITEPAPER_CONTENT } = await import("./whitepaper-content");
+      const result = await signArticleForNostr({
+        slug:     WHITEPAPER_SLUG,
+        title:    WHITEPAPER_TITLE,
+        summary:  WHITEPAPER_SUMMARY,
+        content:  WHITEPAPER_CONTENT,
+        hashtags: ["whitepaper", "kardashev", "wavelengthscript", "wnspprotocol"],
+      });
+      res.json({ ok: true, ...result });
+    } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
   });

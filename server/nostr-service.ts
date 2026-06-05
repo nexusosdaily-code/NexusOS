@@ -134,6 +134,66 @@ export interface RelayResult {
   reason?: string;
 }
 
+// ── Sign a kind-30023 article and return the signed event; let the browser publish ─
+export async function signArticleForNostr(opts: {
+  slug:        string;
+  title:       string;
+  summary:     string;
+  content:     string;
+  hashtags?:   string[];
+  imageUrl?:   string;
+}): Promise<{
+  id:         string;
+  naddr:      string;
+  njumpUrl:   string;
+  hablaUrl:   string;
+  signedEvent: object;   // full signed NostrEvent for browser publishing
+  relays:     string[];  // suggested relays for browser to use
+}> {
+  const privKey = getPrivKeyBytes();
+  const now     = Math.floor(Date.now() / 1000);
+
+  const tags: string[][] = [
+    ["d",            opts.slug],
+    ["title",        opts.title],
+    ["summary",      opts.summary],
+    ["published_at", String(now)],
+    ["t",            "nexusos"],
+    ["t",            "wnsp"],
+    ["t",            "nxt"],
+    ["t",            "bitcoin"],
+    ["t",            "nostr"],
+    ["t",            "photonics"],
+    ["t",            "physics"],
+  ];
+  for (const tag of opts.hashtags ?? []) tags.push(["t", tag]);
+  if (opts.imageUrl) tags.push(["image", opts.imageUrl]);
+
+  const signed: NostrEvent = finalizeEvent({
+    kind:       30023 as number,
+    created_at: now,
+    tags,
+    content:    opts.content,
+  }, privKey);
+
+  const pubkey = getPublicKey(privKey);
+  const naddr  = nip19.naddrEncode({
+    kind:       30023,
+    pubkey,
+    identifier: opts.slug,
+    relays:     DEFAULT_RELAYS,
+  });
+
+  return {
+    id:          signed.id,
+    naddr,
+    njumpUrl:    `https://njump.me/${naddr}`,
+    hablaUrl:    `https://habla.news/a/${naddr}`,
+    signedEvent: signed as unknown as object,
+    relays:      DEFAULT_RELAYS,
+  };
+}
+
 // ── Publish kind-30023 long-form article (NIP-23) ─────────────────────────────
 // Uses individual Relay connections so we capture exact OK/reject reasons
 // rather than swallowing timeouts silently.

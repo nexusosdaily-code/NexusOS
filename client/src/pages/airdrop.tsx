@@ -9,11 +9,37 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import { SimplePool } from "nostr-tools";
+import type { Event as NostrEvent } from "nostr-tools";
 import {
   Gift, ArrowLeft, CheckCircle, Clock, Users, Coins,
   Zap, RefreshCw, Plus, TrendingUp, Shield, ChevronDown, ChevronUp,
-  Radio, Copy, Check, ExternalLink,
+  Radio, Copy, Check, ExternalLink, AlertCircle,
 } from "lucide-react";
+
+// Browser-side relay broadcaster — no server WebSocket restrictions
+async function broadcastEventFromBrowser(
+  signedEvent: NostrEvent,
+  relays: string[],
+  onProgress: (r: { relay: string; ok: boolean; reason?: string }) => void,
+) {
+  const pool = new SimplePool();
+  const TIMEOUT = 15_000;
+
+  const publishPromises = pool.publish(relays, signedEvent) as unknown as Promise<string>[];
+  const settled = await Promise.allSettled(
+    relays.map((relay, i) =>
+      Promise.race([
+        publishPromises[i].then(() => relay),
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), TIMEOUT)),
+      ])
+        .then(r  => { onProgress({ relay, ok: true }); return r; })
+        .catch(e => { onProgress({ relay, ok: false, reason: String(e?.message ?? e) }); throw e; })
+    )
+  );
+  pool.close(relays);
+  return settled;
+}
 
 async function triggerNostrLogin(): Promise<boolean> {
   const w = window as any;
@@ -65,8 +91,9 @@ export default function AirdropPage() {
   const [broadcastResult, setBroadcastResult]   = useState<{
     eventId: string; naddr: string; njumpUrl: string; hablaUrl: string;
     relays: string[]; relayLog: { relay: string; ok: boolean; reason?: string }[];
-    signedJson: string;
+    signedEvent: object;
   } | null>(null);
+  const [relayProgress, setRelayProgress] = useState<{ relay: string; ok: boolean; reason?: string }[]>([]);
   const [showRawJson, setShowRawJson] = useState(false);
   const [copied, setCopied]                 = useState(false);
 
@@ -402,33 +429,45 @@ export default function AirdropPage() {
                   <div><span className="text-slate-600">airdrop CTA:</span> wnsp.tech/airdrop · 85M NXT · Nostr sign-in</div>
                 </div>
 
+                {/* Live relay progress during broadcast */}
+                {broadcastLoading && relayProgress.length > 0 && (
+                  <div className="bg-slate-900/60 rounded-lg border border-slate-700/40 p-2 space-y-0.5">
+                    <div className="text-[10px] text-slate-500 mb-1">Publishing from browser…</div>
+                    {relayProgress.map(r => (
+                      <div key={r.relay} className="flex items-center gap-1.5 text-[10px]">
+                        <span className={r.ok ? "text-green-400" : "text-red-400"}>{r.ok ? "✓" : "✗"}</span>
+                        <span className="text-slate-500">{r.relay.replace("wss://", "")}</span>
+                        {!r.ok && r.reason && <span className="text-red-400/60 truncate">{r.reason}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {broadcastResult && (
                   <div className="space-y-2">
-                    {/* Header */}
+                    {/* Summary header */}
                     <div className={`rounded-lg p-3 border ${broadcastResult.relays.length > 0 ? "bg-green-950/30 border-green-500/30" : "bg-amber-950/30 border-amber-500/30"}`}>
                       <div className={`flex items-center gap-2 text-xs font-semibold mb-2 ${broadcastResult.relays.length > 0 ? "text-green-400" : "text-amber-400"}`}>
                         {broadcastResult.relays.length > 0
-                          ? <><CheckCircle className="w-3.5 h-3.5" /> Published to {broadcastResult.relays.length} relay{broadcastResult.relays.length > 1 ? "s" : ""}</>
-                          : <><Clock className="w-3.5 h-3.5" /> All relays rejected — use raw JSON below</>
+                          ? <><CheckCircle className="w-3.5 h-3.5" /> Published to {broadcastResult.relays.length}/{broadcastResult.relayLog.length} relays</>
+                          : <><AlertCircle className="w-3.5 h-3.5" /> All relays rejected — see raw JSON below</>
                         }
                       </div>
 
-                      {/* Per-relay log */}
+                      {/* Per-relay result rows */}
                       <div className="space-y-0.5 mb-2">
                         {broadcastResult.relayLog.map(r => (
                           <div key={r.relay} className="flex items-start gap-1.5 text-[10px]">
                             <span className={r.ok ? "text-green-400" : "text-red-400"}>{r.ok ? "✓" : "✗"}</span>
                             <span className="text-slate-500 shrink-0">{r.relay.replace("wss://", "")}</span>
-                            {!r.ok && r.reason && (
-                              <span className="text-red-400/70 truncate">{r.reason}</span>
-                            )}
+                            {!r.ok && r.reason && <span className="text-red-400/70 truncate max-w-[200px]">{r.reason}</span>}
                           </div>
                         ))}
                       </div>
 
                       {/* naddr */}
                       <div className="text-[10px] font-mono text-indigo-300 break-all mb-2">
-                        {broadcastResult.naddr.slice(0, 50)}…
+                        {broadcastResult.naddr.slice(0, 52)}…
                       </div>
 
                       {/* Action buttons */}
@@ -456,20 +495,23 @@ export default function AirdropPage() {
                         <Button size="sm" variant="outline"
                           className="text-xs border-slate-700 text-slate-500 hover:text-white"
                           onClick={() => setShowRawJson(v => !v)}>
-                          {showRawJson ? "Hide" : "Raw JSON"}
+                          {showRawJson ? "Hide JSON" : "Raw JSON"}
                         </Button>
                       </div>
                     </div>
 
-                    {/* Raw signed event JSON — paste into any relay manually */}
+                    {/* Raw signed event — copy full JSON to use with any relay tool */}
                     {showRawJson && (
                       <div className="bg-slate-950 rounded-lg border border-slate-700/40 p-2">
                         <div className="text-[10px] text-slate-500 mb-1 flex items-center justify-between">
-                          <span>Signed event JSON — paste to <a href="https://nostrtool.com" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">nostrtool.com</a> or <a href="https://nostr.guru" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">nostr.guru</a></span>
-                          <button onClick={() => { navigator.clipboard.writeText(broadcastResult.signedJson); }} className="text-indigo-400 hover:text-white ml-2">copy</button>
+                          <span>Signed event — paste full JSON into <a href="https://nostr.guru/#broadcast" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">nostr.guru/broadcast</a></span>
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(JSON.stringify(broadcastResult.signedEvent, null, 2)); }}
+                            className="text-indigo-400 hover:text-white ml-2 text-[10px]"
+                          >copy all</button>
                         </div>
                         <pre className="text-[9px] text-slate-400 overflow-x-auto max-h-32 whitespace-pre-wrap break-all">
-                          {broadcastResult.signedJson.slice(0, 400)}…
+                          {JSON.stringify(broadcastResult.signedEvent, null, 2).slice(0, 500)}…
                         </pre>
                       </div>
                     )}
@@ -481,15 +523,40 @@ export default function AirdropPage() {
                   disabled={broadcastLoading}
                   onClick={async () => {
                     setBroadcastLoading(true);
+                    setBroadcastResult(null);
+                    setRelayProgress([]);
                     try {
-                      const res  = await fetch("/api/admin/nostr/broadcast-whitepaper", {
+                      // Step 1 — server signs the event (private key stays server-side)
+                      const res  = await fetch("/api/admin/nostr/sign-whitepaper", {
                         method: "POST", credentials: "include",
                         headers: { "Content-Type": "application/json" },
                       });
                       const data = await res.json();
-                      if (!res.ok) throw new Error(data.error || "Broadcast failed");
-                      setBroadcastResult({ eventId: data.eventId, naddr: data.naddr, njumpUrl: data.njumpUrl, hablaUrl: data.hablaUrl, relays: data.relays, relayLog: data.relayLog, signedJson: data.signedJson });
-                      toast({ title: "📡 Whitepaper published!", description: `Event ${data.eventId.slice(0, 16)}… · ${data.relays.length} relays` });
+                      if (!res.ok) throw new Error(data.error || "Sign failed");
+
+                      // Step 2 — browser publishes the pre-signed event to relays
+                      const log: { relay: string; ok: boolean; reason?: string }[] = [];
+                      await broadcastEventFromBrowser(
+                        data.signedEvent as NostrEvent,
+                        data.relays as string[],
+                        (r) => {
+                          log.push(r);
+                          setRelayProgress(prev => [...prev, r]);
+                        },
+                      );
+
+                      const accepted = log.filter(r => r.ok).map(r => r.relay);
+                      setBroadcastResult({
+                        eventId: data.id, naddr: data.naddr,
+                        njumpUrl: data.njumpUrl, hablaUrl: data.hablaUrl,
+                        relays: accepted, relayLog: log, signedEvent: data.signedEvent,
+                      });
+                      toast({
+                        title: accepted.length > 0 ? "📡 Whitepaper published!" : "⚠️ All relays rejected",
+                        description: accepted.length > 0
+                          ? `${accepted.length}/${data.relays.length} relays accepted`
+                          : "See relay log for details — use raw JSON to post manually",
+                      });
                     } catch (e: any) {
                       toast({ title: "Broadcast failed", description: e.message, variant: "destructive" });
                     } finally {
