@@ -750,6 +750,23 @@ export default function ChannelDashboard() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const recheckPending = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/lightning/invoice/recheck-pending", {});
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      if (data.credited > 0) {
+        refetchBal();
+        qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] });
+        toast({ title: `⚡ ${data.credited} payment${data.credited > 1 ? "s" : ""} credited!`, description: `${data.totalSats.toLocaleString()} sats recovered from pending invoices.` });
+      } else {
+        toast({ title: "No pending payments found", description: `Checked ${data.checked} invoice${data.checked !== 1 ? "s" : ""} — none paid yet.` });
+      }
+    },
+    onError: (e: any) => toast({ title: "Recheck failed", description: e.message, variant: "destructive" }),
+  });
+
   const payInvoice = useMutation({
     mutationFn: async (overrideBolt11?: string) => {
       const res = await apiRequest("POST", "/api/lightning/pay", { bolt11: overrideBolt11 ?? bolt11 });
@@ -1191,6 +1208,15 @@ export default function ChannelDashboard() {
                   data-testid="button-create-invoice"
                 >
                   {createInvoice.isPending ? "Opening channel…" : "Generate Lightning Invoice"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => recheckPending.mutate()}
+                  disabled={recheckPending.isPending}
+                  className="w-full border-slate-600 text-slate-400 hover:text-white hover:border-slate-400 text-xs"
+                  data-testid="button-recheck-pending"
+                >
+                  {recheckPending.isPending ? "Checking…" : "↺ Recheck Pending Payments"}
                 </Button>
               </div>
             )}

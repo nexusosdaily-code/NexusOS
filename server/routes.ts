@@ -8705,7 +8705,7 @@ export async function registerRoutes(
     throw new Error("No Lightning provider configured. Add BLINK_API_KEY, LNBITS_URL + keys, or ALBY_ACCESS_TOKEN to Secrets.");
   }
 
-  async function lnCheckInvoice(hash: string): Promise<boolean> {
+  async function lnCheckInvoice(hash: string, bolt11?: string): Promise<boolean> {
     const provider = detectLnProvider();
     if (provider === "coinos") {
       try {
@@ -8736,12 +8736,26 @@ export async function registerRoutes(
       return d.paid === true;
     }
     if (provider === "blink") {
+      // Primary: lnInvoicePaymentStatus using the bolt11 paymentRequest (most reliable)
+      if (bolt11) {
+        try {
+          const d = await blinkGql(
+            `query Status($input: LnInvoicePaymentStatusInput!) { lnInvoicePaymentStatus(input: $input) { status errors { message } } }`,
+            { input: { paymentRequest: bolt11 } }
+          );
+          const status = d?.lnInvoicePaymentStatus?.status;
+          if (status === "PAID") return true;
+          if (status === "PENDING" || status === "EXPIRED") return false;
+        } catch { /* fall through to hash check */ }
+      }
+      // Fallback: transactionsByPaymentHash
       try {
+        const walletId = await blinkBtcWalletId();
         const d = await blinkGql(
-          `query Check($hash: PaymentHash!) { me { defaultAccount { walletById(walletId: "${await blinkBtcWalletId()}") { ... on BTCWallet { transactionsByPaymentHash(paymentHash: $hash) { status direction } } } } } }`,
-          { hash }
+          `query Check($walletId: WalletId!, $hash: PaymentHash!) { me { defaultAccount { walletById(walletId: $walletId) { ... on BTCWallet { transactionsByPaymentHash(paymentHash: $hash) { status direction } } } } } }`,
+          { walletId, hash }
         );
-        const txs: any[] = d.me?.defaultAccount?.walletById?.transactionsByPaymentHash ?? [];
+        const txs: any[] = d?.me?.defaultAccount?.walletById?.transactionsByPaymentHash ?? [];
         return txs.some((t: any) => t.status === "SUCCESS" && t.direction === "RECEIVE");
       } catch { return false; }
     }
@@ -9179,7 +9193,7 @@ export async function registerRoutes(
 
       if (tx.status === "completed") return res.json({ paid: true, amountSats: tx.amountSats });
 
-      const paid = await lnCheckInvoice(tx.paymentHash);
+      const paid = await lnCheckInvoice(tx.paymentHash, tx.paymentRequest ?? undefined);
       if (paid) {
         const lnWallet = await ensureLnWallet(req.user!.id);
         await db.update(lightningWallets)
@@ -9192,6 +9206,39 @@ export async function registerRoutes(
         return res.json({ paid: true, amountSats: tx.amountSats });
       }
       return res.json({ paid: false });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/lightning/invoice/recheck-pending — retroactively credit any paid-but-missed deposit invoices
+  app.post("/api/lightning/invoice/recheck-pending", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { lightningTransactions, lightningWallets } = await import("../shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+
+      const pending = await db.select().from(lightningTransactions)
+        .where(and(eq(lightningTransactions.userId, req.user!.id), eq(lightningTransactions.type, "deposit"), eq(lightningTransactions.status, "pending")));
+
+      let credited = 0;
+      let totalSats = 0;
+      for (const tx of pending) {
+        try {
+          const paid = await lnCheckInvoice(tx.paymentHash, tx.paymentRequest ?? undefined);
+          if (paid) {
+            const lnWallet = await ensureLnWallet(req.user!.id);
+            await db.update(lightningWallets)
+              .set({ satsBalance: lnWallet.satsBalance + tx.amountSats, totalDeposited: lnWallet.totalDeposited + tx.amountSats, updatedAt: new Date() })
+              .where(eq(lightningWallets.userId, req.user!.id));
+            await db.update(lightningTransactions)
+              .set({ status: "completed", completedAt: new Date() })
+              .where(eq(lightningTransactions.id, tx.id));
+            await logAction(req, "lightning_deposit", "lightning", req.user!.id, { amountSats: tx.amountSats, recheckCredit: true });
+            credited++;
+            totalSats += tx.amountSats;
+          }
+        } catch { /* skip failed checks */ }
+      }
+      res.json({ checked: pending.length, credited, totalSats });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
