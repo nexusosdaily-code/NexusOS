@@ -171,6 +171,35 @@ function SpectralChip({ nm, band, psi }: { nm: number; band: string; psi: string
   );
 }
 
+function WnspSigChip({ sig }: { sig?: string | null }) {
+  const { toast } = useToast();
+  const [expanded, setExpanded] = useState(false);
+  if (!sig) return null;
+  const short = sig.length > 48 ? sig.slice(0, 48) + "…" : sig;
+  return (
+    <div className="mt-1 rounded border border-violet-900/40 bg-violet-950/20 px-2 py-1">
+      <div className="flex items-center gap-1.5">
+        <span className="text-[9px] font-bold text-violet-400 uppercase tracking-widest shrink-0">WNSP-SIG</span>
+        <span className="text-[9px] font-mono text-violet-300/70 truncate flex-1 cursor-pointer select-all"
+          onClick={() => setExpanded(v => !v)}>
+          {expanded ? sig : short}
+        </span>
+        <button
+          className="text-violet-500 hover:text-violet-300 shrink-0"
+          onClick={() => { navigator.clipboard.writeText(sig); toast({ title: "Spectral signature copied" }); }}
+          title="Copy WNSP-SIG">
+          <Copy className="w-2.5 h-2.5" />
+        </button>
+      </div>
+      {expanded && (
+        <div className="mt-0.5 text-[8px] text-violet-400/50 font-mono">
+          SHA-256(tx) ⊕ hex(λ) · verifiable via CE encoder
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UniSatReceiveTab({
   mempoolLive,
   addressBook,
@@ -2844,6 +2873,7 @@ export default function ChannelDashboard() {
 
                         {/* ── Spectral metadata ── */}
                         <SpectralChip nm={nm} band={band} psi={psi} />
+                        <WnspSigChip sig={(tx as any).spectralSig} />
 
                         {/* ── Queue auto-pay progress ── */}
                         {isQueued && tx.id && <QueueProgress txId={tx.id} />}

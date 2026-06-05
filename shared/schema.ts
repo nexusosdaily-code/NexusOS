@@ -1158,6 +1158,7 @@ export const lightningTransactions = pgTable("lightning_transactions", {
   btcTxid:          text("btc_txid"),
   status:           text("status").notNull().default("pending"), // pending | completed | failed
   lnbitsPaymentId:  text("lnbits_payment_id"),
+  spectralSig:      text("spectral_sig"),
   createdAt:        timestamp("created_at").notNull().defaultNow(),
   completedAt:      timestamp("completed_at"),
 }, (t) => ({
