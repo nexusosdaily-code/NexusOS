@@ -1591,7 +1591,7 @@ export default function ChannelDashboard() {
         {tab === "swap" && (
           <>
           {/* ── Market price card ── */}
-          {mktPrice && (
+          {mktPrice?.btcUsd && (
             <Card className="bg-slate-900/60 border-slate-700/50 p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold flex items-center gap-1.5">
