@@ -35,6 +35,14 @@ function formatNxt(n: number | string): string {
   return v.toFixed(8);
 }
 
+/** Convert a sats amount (string|number) to a clean NXT string. 1 NXT = 1000 sats. */
+function satsToNxt(sats: string | number): string {
+  const s = typeof sats === "string" ? parseInt(sats || "0") : sats;
+  const nxt = s / 1000;
+  // Remove trailing zeros: 10.000→"10", 10.500→"10.5", 10.123→"10.123"
+  return parseFloat(nxt.toFixed(3)).toLocaleString(undefined, { maximumFractionDigits: 3 });
+}
+
 function fmtTime(ts: string): string {
   const diff = Date.now() - new Date(ts).getTime();
   const m = Math.floor(diff / 60000);
@@ -1161,7 +1169,7 @@ export default function ChannelDashboard() {
                     min="1"
                     data-testid="input-deposit-sats"
                   />
-                  <div className="text-xs text-gray-500">≈ {(parseInt(depositSats || "0") / 1000).toFixed(3)} NXT equivalent</div>
+                  <div className="text-xs text-gray-500">≈ {satsToNxt(depositSats || "0")} NXT equivalent</div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-gray-400 text-xs">Memo (optional)</Label>
@@ -1592,7 +1600,7 @@ export default function ChannelDashboard() {
                     min="100"
                     data-testid="input-swap-sats"
                   />
-                  <div className="text-xs text-purple-400">→ {(parseInt(swapSats || "0") / 1000).toFixed(3)} NXT</div>
+                  <div className="text-xs text-purple-400">→ {satsToNxt(swapSats || "0")} NXT</div>
                 </div>
                 <Button
                   onClick={() => swapToNxt.mutate()}
@@ -2126,7 +2134,7 @@ export default function ChannelDashboard() {
                     data-testid="input-send-sats"
                   />
                   <div className="flex justify-between text-xs text-gray-500">
-                    <span>≈ {(parseInt(sendSats || "0") / 1000).toFixed(3)} NXT</span>
+                    <span>≈ {satsToNxt(sendSats || "0")} NXT</span>
                     <button className="text-cyan-400 hover:text-cyan-300" onClick={() => setSendSats(String(sats))}>MAX</button>
                   </div>
                 </div>
