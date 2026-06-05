@@ -155,6 +155,7 @@ export const transactions = pgTable("transactions", {
   frequency: decimal("frequency", { precision: 30, scale: 2 }),
   energyCost: decimal("energy_cost", { precision: 20, scale: 8 }),
   metadata: jsonb("metadata"),
+  spectralSig: text("spectral_sig"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   confirmedAt: timestamp("confirmed_at"),
 }, (table) => ({
@@ -174,6 +175,7 @@ export const insertTransactionSchema = createInsertSchema(transactions).pick({
   frequency: true,
   energyCost: true,
   metadata: true,
+  spectralSig: true,
 });
 
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;

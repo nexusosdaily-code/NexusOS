@@ -1327,6 +1327,7 @@ export async function registerRoutes(
         frequency: frequency.toString(),
         energyCost,
         metadata: { memo },
+        spectralSig: wnspSignTx(req.user!, `nxt_transfer::${amount}::${toAddress}::${Date.now()}`),
       });
 
       const newFromBalance = senderNewBalance.toFixed(8);
