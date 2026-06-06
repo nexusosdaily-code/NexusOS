@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getAuthHeaders } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import {
   ArrowLeft, DollarSign, Bitcoin, Zap, Lock, TrendingUp,
@@ -128,21 +129,34 @@ export default function StablecoinPage() {
   const [mintMsg, setMintMsg]   = useState<{ ok: boolean; text: string } | null>(null);
   const [redeemMsg, setRedeemMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
+  const authFetch = (url: string, opts: RequestInit = {}) =>
+    fetch(url, { credentials: "include", headers: { ...getAuthHeaders(), ...(opts.headers ?? {}) }, ...opts });
+
   const { data: stats, isLoading, refetch, dataUpdatedAt } = useQuery<StablecoinStats>({
     queryKey: ["/api/stablecoin/stats"],
+    queryFn: () => authFetch("/api/stablecoin/stats").then(r => r.json()),
     refetchInterval: 120_000,
     staleTime: 60_000,
   });
 
   const { data: posData, refetch: refetchPos } = useQuery<PositionsData>({
     queryKey: ["/api/wnusd/positions"],
+    queryFn: () => authFetch("/api/wnusd/positions").then(r => r.json()),
     refetchInterval: 60_000,
     retry: false,
   });
 
+  const { data: wallet } = useQuery<any>({
+    queryKey: ["/api/portfolio/summary"],
+    queryFn: () => authFetch("/api/portfolio/summary").then(r => r.json()),
+  });
+
+  const liquidSats = Number(wallet?.satsBalance ?? 0);
+  const wnusdHeld  = parseFloat(wallet?.wnusdBalance ?? "0");
+
   const mintMut = useMutation({
     mutationFn: async (satAmount: number) => {
-      const r = await fetch("/api/wnusd/mint", {
+      const r = await authFetch("/api/wnusd/mint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ satAmount }),
@@ -156,13 +170,14 @@ export default function StablecoinPage() {
       setSatInput("");
       qc.invalidateQueries({ queryKey: ["/api/wnusd/positions"] });
       qc.invalidateQueries({ queryKey: ["/api/stablecoin/stats"] });
+      qc.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
     },
     onError: (e: any) => setMintMsg({ ok: false, text: e.message }),
   });
 
   const redeemMut = useMutation({
     mutationFn: async (positionId: string) => {
-      const r = await fetch("/api/wnusd/redeem", {
+      const r = await authFetch("/api/wnusd/redeem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ positionId }),
@@ -174,6 +189,7 @@ export default function StablecoinPage() {
     onSuccess: (d) => {
       setRedeemMsg({ ok: true, text: `Redeemed — ${d.satsReturned.toLocaleString()} sats returned to your lightning wallet` });
       qc.invalidateQueries({ queryKey: ["/api/wnusd/positions"] });
+      qc.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
     },
     onError: (e: any) => setRedeemMsg({ ok: false, text: e.message }),
   });
@@ -597,6 +613,22 @@ export default function StablecoinPage() {
                 {/* ── MINT TAB ── */}
                 {tab === "mint" && (
                   <div className="space-y-4">
+                    {/* Wallet snapshot */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-slate-800/50 rounded-xl p-2.5 text-center">
+                        <div className="text-[10px] text-slate-500 uppercase tracking-wider">Liquid Sats</div>
+                        <div className="text-sm font-bold text-yellow-400 font-mono">
+                          {liquidSats >= 1e9 ? `${(liquidSats/1e9).toFixed(2)}B` : liquidSats >= 1e6 ? `${(liquidSats/1e6).toFixed(2)}M` : liquidSats.toLocaleString()}
+                        </div>
+                        <div className="text-[10px] text-slate-600">available to lock</div>
+                      </div>
+                      <div className="bg-slate-800/50 rounded-xl p-2.5 text-center">
+                        <div className="text-[10px] text-slate-500 uppercase tracking-wider">WNUSD held</div>
+                        <div className="text-sm font-bold text-green-400 font-mono">${wnusdHeld.toFixed(4)}</div>
+                        <div className="text-[10px] text-slate-600">across all positions</div>
+                      </div>
+                    </div>
+
                     <div className="text-xs text-gray-400 leading-relaxed">
                       Lock sats as collateral at <span className="text-white">150% ratio</span> to mint WNUSD.
                       A <span className="text-yellow-300">0.5% NXT fee</span> is deposited to the{" "}
@@ -616,14 +648,32 @@ export default function StablecoinPage() {
                           onChange={e => { setSatInput(e.target.value); setMintMsg(null); }}
                           className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-white text-sm font-mono focus:outline-none focus:border-green-500/50"
                         />
-                        <div className="flex gap-1">
-                          {[100_000, 1_000_000, 10_000_000].map(v => (
-                            <button key={v} onClick={() => setSatInput(String(v))}
-                              className="px-2 py-1 text-[10px] bg-slate-800 border border-slate-700 rounded text-gray-400 hover:text-white hover:border-slate-500 transition-colors">
-                              {v >= 1_000_000 ? `${v / 1_000_000}M` : `${v / 1_000}K`}
-                            </button>
-                          ))}
-                        </div>
+                      </div>
+                      {/* Quick-fill from wallet */}
+                      <div className="flex gap-1.5 mt-2">
+                        <span className="text-[10px] text-slate-600 self-center mr-1">Quick:</span>
+                        {liquidSats > 0
+                          ? [0.1, 0.25, 0.5, 1].map(pct => {
+                              const v = Math.floor(liquidSats * pct);
+                              const label = pct === 1 ? "Max" : `${pct * 100}%`;
+                              return (
+                                <button key={pct} onClick={() => { setSatInput(String(v)); setMintMsg(null); }}
+                                  data-testid={`quick-fill-${pct}`}
+                                  className={`px-2.5 py-1 text-[10px] rounded-lg border transition-all font-mono
+                                    ${satInput === String(v)
+                                      ? "border-green-500/50 bg-green-500/15 text-green-300"
+                                      : "border-slate-700 bg-slate-800 text-slate-400 hover:text-white hover:border-slate-500"}`}>
+                                  {label}
+                                </button>
+                              );
+                            })
+                          : [100_000, 1_000_000, 10_000_000].map(v => (
+                              <button key={v} onClick={() => setSatInput(String(v))}
+                                className="px-2 py-1 text-[10px] bg-slate-800 border border-slate-700 rounded text-gray-400 hover:text-white hover:border-slate-500 transition-colors">
+                                {v >= 1_000_000 ? `${v / 1_000_000}M` : `${v / 1_000}K`}
+                              </button>
+                            ))
+                        }
                       </div>
                     </div>
 
