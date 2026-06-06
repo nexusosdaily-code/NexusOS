@@ -1,12 +1,20 @@
 /**
- * Rune Transfer Processor — NexusOS
+ * Rune Transfer & Mint Processor — NexusOS
  *
- * Polls rune_swaps for pending/queued orders every 60s.
- * When the service wallet has confirmed BTC for fees, automatically
- * builds a Runestone transfer transaction, signs it with the existing
- * BTC_INSCRIPTION_WALLET_WIF key, broadcasts it, and marks the order complete.
+ * NEXUS•WAVELENGTH Rune ID: 952596:379  (etched block 952596, tx 379)
+ * Divisibility: 0  (raw units = display units)
+ * Amount per mint: 21,000,000,000 raw  |  Cap: 1,000 mints
  *
- * NEXUS•WAVELENGTH Rune ID: 840000:8472
+ * Runes Protocol Tag Reference (ord source):
+ *   Tag  0 = Body     — separates header tag-value pairs from edict data
+ *   Tag 20 = Mint     — Rune ID to mint (block then tx, each as [20, value])
+ *   Tag 22 = Pointer  — default output index for unallocated Runes (change)
+ *
+ * Transfer Runestone integer sequence:
+ *   [22, changeOut, 0, block_delta, tx_delta, amount, recipientOut]
+ *
+ * Mint Runestone integer sequence:
+ *   [20, 952596, 20, 379, 22, receiverOut]
  */
 
 import * as bitcoin from "bitcoinjs-lib";
@@ -20,14 +28,12 @@ const NETWORK = bitcoin.networks.bitcoin;
 const MEMPOOL = "https://mempool.space/api";
 const DUST    = 546n;
 
-// NEXUS•WAVELENGTH on-chain parameters — actual etching block 952596:379
-const RUNE_BLOCK  = 952_596n;
-const RUNE_TX     = 379n;
-// Divisibility: fetch once, cache
-let RUNE_DIVISOR  = 0n; // 10^decimals — resolved on first use
-let RUNE_DIV_FETCHED = false;
+// NEXUS•WAVELENGTH on-chain parameters
+const RUNE_BLOCK         = 952_596n;
+const RUNE_TX            = 379n;
+const RUNE_AMOUNT_PER_MINT = 21_000_000_000n; // raw units per mint
 
-// ── LEB128 varint encoder (Runes protocol uses 128-bit LEB128) ────────────────
+// ── LEB128 varint encoder ─────────────────────────────────────────────────────
 function encodeVarint(n: bigint): Buffer {
   if (n < 0n) throw new Error("Varint must be non-negative");
   const bytes: number[] = [];
@@ -40,116 +46,121 @@ function encodeVarint(n: bigint): Buffer {
   return Buffer.from(bytes);
 }
 
-// ── Runestone builder (transfer edict) ───────────────────────────────────────
-// Spec: OP_RETURN OP_13 <push[tag=20, block, tx, amount, output]>
-// Tag 20 = edict body; values are [block_delta, tx_delta, amount, output_idx]
-function buildRunestone(rawAmount: bigint, recipientOutputIndex: number): Buffer {
-  const tag20 = encodeVarint(20n);
-  const block  = encodeVarint(RUNE_BLOCK);
-  const tx     = encodeVarint(RUNE_TX);
-  const amount = encodeVarint(rawAmount);
-  const outIdx = encodeVarint(BigInt(recipientOutputIndex));
-
-  const payload = Buffer.concat([tag20, block, tx, amount, outIdx]);
-
-  // Script: OP_RETURN (0x6a) + OP_13 (0x5d) + minimal push of payload
-  const pushLen = payload.length;
-  let pushPrefix: Buffer;
-  if (pushLen <= 75) {
-    pushPrefix = Buffer.from([pushLen]);
-  } else if (pushLen <= 255) {
-    pushPrefix = Buffer.from([0x4c, pushLen]); // OP_PUSHDATA1
-  } else {
-    pushPrefix = Buffer.from([0x4d, pushLen & 0xff, (pushLen >> 8) & 0xff]); // OP_PUSHDATA2
-  }
-
-  return Buffer.concat([Buffer.from([0x6a, 0x5d]), pushPrefix, payload]);
+// ── Wrap payload integers into the Runestone OP_RETURN script ─────────────────
+// Script: OP_RETURN (0x6a) + OP_13 (0x5d) + <push payload>
+function wrapRunestone(integers: bigint[]): Buffer {
+  const payload = Buffer.concat(integers.map(encodeVarint));
+  const len     = payload.length;
+  let prefix: Buffer;
+  if (len <= 75)        prefix = Buffer.from([len]);
+  else if (len <= 255)  prefix = Buffer.from([0x4c, len]);           // OP_PUSHDATA1
+  else                  prefix = Buffer.from([0x4d, len & 0xff, (len >> 8) & 0xff]); // OP_PUSHDATA2
+  return Buffer.concat([Buffer.from([0x6a, 0x5d]), prefix, payload]);
 }
 
-// ── Fetch Rune decimals once ──────────────────────────────────────────────────
-async function fetchRuneDivisor(): Promise<bigint> {
-  if (RUNE_DIV_FETCHED) return RUNE_DIVISOR;
-  try {
-    const r = await fetch(`${MEMPOOL}/runes/952596:379`, {
-      signal: AbortSignal.timeout(10_000),
-      headers: { Accept: "application/json" },
-    });
-    if (r.ok) {
-      const d = await r.json();
-      const decimals = d?.entry?.divisibility ?? d?.divisibility ?? 0;
-      RUNE_DIVISOR = 10n ** BigInt(decimals);
-      console.log(`[Rune Processor] NXWV divisibility=${decimals} → divisor=${RUNE_DIVISOR}`);
-    }
-  } catch {
-    // Fall back to 0 decimals (raw = display)
-    RUNE_DIVISOR = 1n;
-    console.warn("[Rune Processor] Could not fetch Rune divisibility — assuming 0 decimals");
-  }
-  RUNE_DIV_FETCHED = true;
-  return RUNE_DIVISOR;
+// ── Transfer Runestone ────────────────────────────────────────────────────────
+// Sends exactly `rawAmount` NXWV to output at `recipientIdx`.
+// All remaining (unallocated) Runes go to output at `changeIdx` via the Pointer.
+//
+// Integer sequence: [22, changeIdx, 0, block, tx, amount, recipientIdx]
+//   Tag 22 = Pointer (unallocated Runes → changeIdx)
+//   Tag  0 = Body    (start of edict section)
+//   Edict  = [block_delta, tx_delta, amount, recipientIdx]
+function buildTransferRunestone(rawAmount: bigint, recipientIdx: number, changeIdx: number): Buffer {
+  return wrapRunestone([
+    22n, BigInt(changeIdx),          // Pointer → Rune change output
+    0n,                              // Body tag (edict section begins)
+    RUNE_BLOCK, RUNE_TX,             // edict: Rune ID (first edict, deltas from 0)
+    rawAmount,                       // edict: exact amount to send
+    BigInt(recipientIdx),            // edict: output index for recipient
+  ]);
 }
 
-// ── Broadcast ─────────────────────────────────────────────────────────────────
+// ── Mint Runestone ────────────────────────────────────────────────────────────
+// Mints one batch of NEXUS•WAVELENGTH and sends minted Runes to `receiverIdx`.
+// Integer sequence: [20, block, 20, tx, 22, receiverIdx]
+//   Tag 20 (×2) = Mint field: block then tx of the Rune to mint
+//   Tag 22      = Pointer: minted Runes → receiverIdx
+function buildMintRunestone(receiverIdx: number): Buffer {
+  return wrapRunestone([
+    20n, RUNE_BLOCK,                 // Mint.block
+    20n, RUNE_TX,                    // Mint.tx
+    22n, BigInt(receiverIdx),        // Pointer → minted Runes go here
+  ]);
+}
+
+// ── chain_stats balance (authoritative — /utxo status lags) ──────────────────
+async function getConfirmedBalance(address: string): Promise<number> {
+  const d = await fetch(`${MEMPOOL}/address/${address}`, {
+    signal: AbortSignal.timeout(10_000),
+  }).then(r => r.json());
+  return d.chain_stats.funded_txo_sum - d.chain_stats.spent_txo_sum;
+}
+
+// ── Taproot key tweak ─────────────────────────────────────────────────────────
+function getTweakedKeypair(wallet: NonNullable<ReturnType<typeof getServiceWallet>>) {
+  const internalPubkey = Buffer.from(wallet.keyPair.publicKey).slice(1, 33);
+  const tweak          = bitcoin.crypto.taggedHash("TapTweak", internalPubkey);
+  const tweakedPriv    = Buffer.from(tinysecp.privateAdd(wallet.keyPair.privateKey!, tweak)!);
+  return {
+    tweakedKP:      ECPair.fromPrivateKey(tweakedPriv, { network: NETWORK }),
+    internalPubkey,
+  };
+}
+
+// ── Sign & broadcast ──────────────────────────────────────────────────────────
+function signAndFinalize(psbt: bitcoin.Psbt, count: number, tweakedKP: ReturnType<typeof ECPair.fromPrivateKey>): string {
+  for (let i = 0; i < count; i++) psbt.signInput(i, tweakedKP);
+  psbt.finalizeAllInputs();
+  return psbt.extractTransaction().toHex();
+}
+
 async function broadcastTx(txHex: string): Promise<string> {
   for (const url of [`${MEMPOOL}/tx`, "https://blockstream.info/api/tx"]) {
     try {
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
-        body: txHex,
-        signal: AbortSignal.timeout(15_000),
+        body:    txHex,
+        signal:  AbortSignal.timeout(15_000),
       });
       if (res.ok) return (await res.text()).trim();
     } catch { /* try next */ }
   }
-  throw new Error("Failed to broadcast via mempool.space and blockstream.info");
+  throw new Error("Broadcast failed on mempool.space and blockstream.info");
 }
 
-// ── Core: send Runes ──────────────────────────────────────────────────────────
+// ── Core: send Runes to an external address ───────────────────────────────────
 export async function sendRuneTransfer(
   recipientAddress: string,
-  displayAmount: number,   // e.g. 1000 NXWV
+  rawAmount: bigint,
 ): Promise<string> {
   const wallet = getServiceWallet();
   if (!wallet) throw new Error("BTC_INSCRIPTION_WALLET_WIF not set");
 
-  const divisor    = await fetchRuneDivisor();
-  const rawAmount  = BigInt(displayAmount) * divisor || BigInt(displayAmount);
-  const feeRate    = await getFeeRate("low");
+  const feeRate       = await getFeeRate("low");
+  const confirmedSats = await getConfirmedBalance(wallet.address);
+  const utxos         = await getUTXOs(wallet.address);
+  if (utxos.length === 0) throw new Error("Service wallet has no UTXOs");
 
-  // Use chain_stats (same method as wallet sentinel) for accurate confirmed balance —
-  // the /utxo endpoint lags on confirmation status but /address chain_stats is authoritative.
-  const addrData = await fetch(`${MEMPOOL}/address/${wallet.address}`, {
-    signal: AbortSignal.timeout(10_000),
-  }).then(r => r.json());
-  const totalConfirmed = (addrData.chain_stats.funded_txo_sum - addrData.chain_stats.spent_txo_sum) as number;
-  console.log(`[Rune Processor] chain_stats confirmed: ${totalConfirmed} sats`);
+  // Tx layout:
+  //   in:  all UTXOs (P2TR, 58 vB each)
+  //   out0: OP_RETURN Runestone (~15 vB)
+  //   out1: recipient 546 sats  (P2TR 43 vB / P2PKH 34 vB — use 43 vB safe estimate)
+  //   out2: service wallet 546 sats Rune change (P2TR 43 vB)
+  //   out3: service wallet BTC change (P2TR 43 vB)
+  //   overhead: 10 vB
+  const estVbytes = 10 + utxos.length * 58 + 15 + 43 + 43 + 43;
+  const fee       = BigInt(estVbytes * feeRate);
+  const totalNeed = DUST + DUST + fee; // out1 + out2 + fee
 
-  const utxos = await getUTXOs(wallet.address);
-  // Use all UTXOs — chain_stats already confirmed the balance; /utxo status flag lags
-  const spendable = utxos.length > 0 ? utxos : [];
-  if (spendable.length === 0)
-    throw new Error(`Service wallet has no UTXOs`);
+  if (BigInt(confirmedSats) < totalNeed)
+    throw new Error(`Need ${totalNeed} sats confirmed, have ${confirmedSats}`);
 
-  // Estimate: 1 OP_RETURN output (~45 vB) + 1 recipient P2PKH/P2TR (~43 vB) +
-  //           N inputs P2TR (~58 vB each) + overhead 10 vB
-  const estVbytes  = 10 + spendable.length * 58 + 43 + 45;
-  const fee        = estVbytes * feeRate;
-  const totalNeed  = Number(DUST) + fee; // 546 sats recipient output + fee
-
-  if (totalConfirmed < totalNeed)
-    throw new Error(`Need ${totalNeed} sats confirmed, have ${totalConfirmed}`);
-
-  // BIP341 Taproot key tweak
-  const internalPubkey = Buffer.from(wallet.keyPair.publicKey).slice(1, 33);
-  const tweak     = bitcoin.crypto.taggedHash("TapTweak", internalPubkey);
-  const tweakedPriv = Buffer.from(tinysecp.privateAdd(wallet.keyPair.privateKey!, tweak)!);
-  const tweakedKP = ECPair.fromPrivateKey(tweakedPriv, { network: NETWORK });
-
+  const { tweakedKP, internalPubkey } = getTweakedKeypair(wallet);
   const psbt = new bitcoin.Psbt({ network: NETWORK });
 
-  // Inputs — all spendable UTXOs
-  for (const u of spendable) {
+  for (const u of utxos) {
     psbt.addInput({
       hash:           u.txid,
       index:          u.vout,
@@ -158,34 +169,106 @@ export async function sendRuneTransfer(
     });
   }
 
-  // Output 0: Runestone OP_RETURN (carries the Rune transfer instruction)
-  // recipient is output index 1
-  const runestoneScript = buildRunestone(rawAmount, 1);
-  psbt.addOutput({ script: runestoneScript, value: 0n });
+  const runestone = buildTransferRunestone(rawAmount, 1, 2);
+  psbt.addOutput({ script: runestone, value: 0n });            // out0: Runestone
+  psbt.addOutput({ address: recipientAddress, value: DUST });  // out1: recipient gets Runes
+  psbt.addOutput({ address: wallet.address, value: DUST });    // out2: Rune change back to us
 
-  // Output 1: recipient (gets the Rune — Runes travel with the UTXO dust)
-  psbt.addOutput({ address: recipientAddress, value: DUST });
+  const totalIn = BigInt(utxos.reduce((s, u) => s + u.value, 0));
+  const change  = totalIn - DUST - DUST - fee;
+  if (change > DUST)
+    psbt.addOutput({ address: wallet.address, value: change }); // out3: BTC change
 
-  // Output 2: change back to service wallet
-  const totalIn = spendable.reduce((s, u) => s + u.value, 0);
-  const change  = BigInt(totalIn) - DUST - BigInt(fee);
-  if (change > DUST) {
-    psbt.addOutput({ address: wallet.address, value: change });
-  }
-
-  // Sign all inputs
-  for (let i = 0; i < spendable.length; i++) {
-    psbt.signInput(i, tweakedKP);
-  }
-  psbt.finalizeAllInputs();
-
-  const txHex = psbt.extractTransaction().toHex();
+  const txHex = signAndFinalize(psbt, utxos.length, tweakedKP);
   const txid  = await broadcastTx(txHex);
-  console.log(`[Rune Processor] ✓ Sent ${displayAmount} NXWV (${rawAmount} raw) → ${recipientAddress} | txid: ${txid}`);
+  console.log(`[Rune Processor] ✓ Transfer ${rawAmount} raw NXWV → ${recipientAddress} | txid: ${txid}`);
   return txid;
 }
 
-// ── Queue processor ───────────────────────────────────────────────────────────
+// ── Mint one batch of NEXUS•WAVELENGTH ───────────────────────────────────────
+export async function mintOneNXWV(): Promise<string> {
+  const wallet = getServiceWallet();
+  if (!wallet) throw new Error("BTC_INSCRIPTION_WALLET_WIF not set");
+
+  const feeRate       = await getFeeRate("low");
+  const confirmedSats = await getConfirmedBalance(wallet.address);
+  const utxos         = await getUTXOs(wallet.address);
+  if (utxos.length === 0) throw new Error("Service wallet has no UTXOs");
+
+  // Tx layout:
+  //   in:  all UTXOs
+  //   out0: OP_RETURN Mint Runestone (~13 vB)
+  //   out1: service wallet 546 sats — receives minted Runes
+  //   out2: service wallet BTC change
+  const estVbytes = 10 + utxos.length * 58 + 13 + 43 + 43;
+  const fee       = BigInt(estVbytes * feeRate);
+  const totalNeed = DUST + fee;
+
+  if (BigInt(confirmedSats) < totalNeed)
+    throw new Error(`Need ${totalNeed} sats confirmed for mint, have ${confirmedSats}`);
+
+  const { tweakedKP, internalPubkey } = getTweakedKeypair(wallet);
+  const psbt = new bitcoin.Psbt({ network: NETWORK });
+
+  for (const u of utxos) {
+    psbt.addInput({
+      hash:           u.txid,
+      index:          u.vout,
+      witnessUtxo:    { script: wallet.p2tr.output!, value: BigInt(u.value) },
+      tapInternalKey: internalPubkey,
+    });
+  }
+
+  const runestone = buildMintRunestone(1);
+  psbt.addOutput({ script: runestone, value: 0n });           // out0: Mint Runestone
+  psbt.addOutput({ address: wallet.address, value: DUST });   // out1: receives minted Runes
+
+  const totalIn = BigInt(utxos.reduce((s, u) => s + u.value, 0));
+  const change  = totalIn - DUST - fee;
+  if (change > DUST)
+    psbt.addOutput({ address: wallet.address, value: change }); // out2: BTC change
+
+  const txHex = signAndFinalize(psbt, utxos.length, tweakedKP);
+  const txid  = await broadcastTx(txHex);
+  console.log(`[Rune Processor] ✓ Minted ${RUNE_AMOUNT_PER_MINT.toLocaleString()} raw NXWV → ${wallet.address} | txid: ${txid}`);
+  return txid;
+}
+
+// ── Claim remaining mints ─────────────────────────────────────────────────────
+export async function claimRemainingMints(): Promise<string[]> {
+  const info = await fetch(`https://ordinals.com/rune/NEXUS%E2%80%A2WAVELENGTH`, {
+    headers: { Accept: "application/json" },
+    signal:  AbortSignal.timeout(10_000),
+  }).then(r => r.json()).catch(() => null);
+
+  const minted   = Number(info?.entry?.mints ?? 996);
+  const cap      = Number(info?.entry?.terms?.cap ?? 1000);
+  const remaining = cap - minted;
+
+  if (remaining <= 0) {
+    console.log("[Rune Processor] All mints already claimed — supply is locked.");
+    return [];
+  }
+
+  console.log(`[Rune Processor] Claiming ${remaining} remaining mint(s) (${minted}/${cap} done)…`);
+  const txids: string[] = [];
+
+  for (let i = 0; i < remaining; i++) {
+    try {
+      const txid = await mintOneNXWV();
+      txids.push(txid);
+      console.log(`[Rune Processor] Mint ${i + 1}/${remaining} done: ${txid}`);
+      // Short pause between mints — let each propagate to mempool
+      if (i < remaining - 1) await new Promise(r => setTimeout(r, 5_000));
+    } catch (e: any) {
+      console.error(`[Rune Processor] Mint ${i + 1} failed: ${e.message}`);
+      break;
+    }
+  }
+  return txids;
+}
+
+// ── Order queue processor ─────────────────────────────────────────────────────
 export async function processRuneOrders(): Promise<void> {
   const { db }        = await import("./db.js");
   const { runeSwaps } = await import("../shared/schema.js");
@@ -194,16 +277,17 @@ export async function processRuneOrders(): Promise<void> {
   const pending = await db.select().from(runeSwaps).where(
     or(eq(runeSwaps.status, "pending"), eq(runeSwaps.status, "queued"))
   );
-
   if (pending.length === 0) return;
+
   console.log(`[Rune Processor] ${pending.length} pending order(s) — attempting auto-fulfil…`);
 
   for (const order of pending) {
     if (!order.btcAddress || !order.runeAmount) continue;
-    if (order.direction !== "nxt_to_rune") continue; // only NXT→NXWV delivery
+    if (order.direction !== "nxt_to_rune") continue;
 
     try {
-      const txid = await sendRuneTransfer(order.btcAddress, order.runeAmount);
+      const rawAmount = BigInt(order.runeAmount); // divisibility=0, raw=display
+      const txid = await sendRuneTransfer(order.btcAddress, rawAmount);
 
       await db.update(runeSwaps).set({
         status:      "completed",
@@ -212,20 +296,17 @@ export async function processRuneOrders(): Promise<void> {
         note:        `${order.note ?? ""} | Auto-fulfilled by Rune Processor`,
       }).where(eq(runeSwaps.id, order.id));
 
-      // Telegram alert
       try {
         const { sendAdminAlert } = await import("./telegram-bot.js");
         await sendAdminAlert(
           `💜 <b>NXWV Auto-Delivered!</b>\n\n` +
           `Order #${order.id} · <b>${order.runeAmount.toLocaleString()} NXWV</b>\n` +
-          `User: ${order.username}\n` +
           `To: <code>${order.btcAddress}</code>\n` +
           `Txid: <code>${txid}</code>\n\n` +
-          `<a href="https://mempool.space/tx/${txid}">View on mempool.space</a>`
+          `<a href="https://mempool.space/tx/${txid}">mempool.space</a>`
         );
       } catch { /* non-fatal */ }
 
-      // Nostr broadcast
       try {
         const { publishToNostr } = await import("./nostr-service.js");
         await publishToNostr({
@@ -233,9 +314,9 @@ export async function processRuneOrders(): Promise<void> {
             `💜 NEXUS•WAVELENGTH Rune delivered on Bitcoin!`,
             ``,
             `${order.runeAmount.toLocaleString()} NXWV sent automatically via the NexusOS pipeline.`,
-            `NXT → sats → NXWV on Bitcoin in under 60 seconds.`,
+            `NXT → sats → NXWV in under 60 seconds.`,
             ``,
-            `Start your pipeline: wnsp.tech/rune-pipeline`,
+            `wnsp.tech/rune-pipeline`,
             ``,
             `#Bitcoin #Runes #NEXUSWAVELENGTH #WNSP #NexusOS`,
           ].join("\n"),
@@ -249,7 +330,7 @@ export async function processRuneOrders(): Promise<void> {
   }
 }
 
-// ── Start loop ────────────────────────────────────────────────────────────────
+// ── Start polling loop ────────────────────────────────────────────────────────
 export function startRuneProcessor(intervalMs = 60_000): NodeJS.Timeout {
   console.log(`[Rune Processor] Started — checking every ${intervalMs / 1000}s`);
   processRuneOrders().catch(console.error);
