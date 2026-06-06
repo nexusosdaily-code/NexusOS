@@ -132,6 +132,7 @@ const ReceivePage = lazy(() => import("@/pages/receive"));
 const PortfolioPage = lazy(() => import("@/pages/portfolio"));
 const LpPoolsPage = lazy(() => import("@/pages/lp-pools"));
 const AirdropPage = lazy(() => import("@/pages/airdrop"));
+const CoinsnierPage = lazy(() => import("@/pages/coinsniper"));
 
 // Loading spinner shown while a lazy page chunk is downloading
 function PageLoader() {
@@ -361,6 +362,7 @@ function Router() {
       <Route path="/portfolio" component={PortfolioPage} />
       <Route path="/lp-pools" component={LpPoolsPage} />
       <Route path="/airdrop" component={AirdropPage} />
+      <Route path="/coinsniper" component={CoinsnierPage} />
       <Route>
         <ProtectedRoutes />
       </Route>

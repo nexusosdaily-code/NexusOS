@@ -183,6 +183,7 @@ const APP_SECTIONS = [
       { title: "📣 NXT Campaign",     href: "/nxt-campaign",        Icon: Megaphone },
       { title: "🎁 NXT Airdrop",      href: "/airdrop",             Icon: Gift },
       { title: "🔮 Nostr Bridge",     href: "/nostr-bridge",        Icon: Radio },
+      { title: "🎯 Coinsniper",       href: "/coinsniper",          Icon: Rocket },
     ],
   },
   {
