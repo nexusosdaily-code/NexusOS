@@ -61,9 +61,9 @@ COINOS_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImE0Y2YwOGU3LWFhMTItN
 COINOS_USERNAME = "nexusosmain"
 
 [deployment]
-run = ["sh", "-c", "NODE_ENV=production node dist/index.cjs"]
-build = ["sh", "-c", "npm run build"]
-deploymentTarget = "autoscale"
+run = ["node", "dist/index.cjs"]
+build = ["tsx", "script/build.ts"]
+deploymentTarget = "vm"
 
 [postMerge]
 path = "scripts/post-merge.sh"
