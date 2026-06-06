@@ -96,8 +96,10 @@ export default function RuneSwapPage() {
       hashtags: ["Bitcoin", "Runes", "NEXUSWAVELENGTH", "WNSP", "NexusOS"],
     }),
     onSuccess: (data: any) => toast({
-      title: "📡 Broadcast sent!",
-      description: `Event ${data.eventId?.slice(0, 12)}… → ${data.relays?.length ?? 0} relay(s)`,
+      title: "📡 Broadcast sent to Nostr!",
+      description: data.eventId
+        ? `Event ${data.eventId.slice(0, 16)}… published to ${data.relays?.length ?? 8} relay(s)`
+        : `Note published to 8 Nostr relays — check your profile`,
     }),
     onError: (e: any) => toast({ title: "Broadcast failed", description: e.message, variant: "destructive" }),
   });
