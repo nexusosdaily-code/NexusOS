@@ -11079,6 +11079,32 @@ export async function registerRoutes(
 
   // ── End NXWV ↔ NXT Rune Swap ──────────────────────────────────────────────
 
+  // POST /api/nostr/broadcast — fire a Nostr note immediately (KERNEL band only)
+  app.post("/api/nostr/broadcast", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      if (user.spectralBand !== "KERNEL" && user.role !== "admin")
+        return res.status(403).json({ error: "KERNEL band required" });
+
+      const { content, hashtags } = req.body;
+      if (!content || String(content).trim().length < 10)
+        return res.status(400).json({ error: "Content too short" });
+
+      const { publishToNostr } = await import("./nostr-service");
+      const result = await publishToNostr({
+        content: String(content).trim(),
+        hashtags: Array.isArray(hashtags) ? hashtags : [],
+      });
+
+      res.json({
+        ok:     true,
+        eventId: result.id,
+        relays:  result.relays,
+        message: `Broadcast sent to ${result.relays.length} relay(s)`,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   app.get("/api/swap/stats", async (_req: Request, res: Response) => {
     try {
       const { db } = await import("./db");

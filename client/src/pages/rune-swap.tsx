@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
   ArrowUpDown, Copy, CheckCircle2, ExternalLink,
-  Bitcoin, Zap, Clock, ArrowRight, Info, Layers,
+  Bitcoin, Zap, Clock, ArrowRight, Info, Layers, Radio, ChevronDown, ChevronUp,
 } from "lucide-react";
 
 const SERVICE_WALLET = "bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m";
@@ -49,6 +50,24 @@ const TABS: { id: Dir; label: string; icon: React.ReactNode; color: string }[] =
   { id: "nxt_to_rune",  label: "NXT → NXWV",  icon: <Layers className="w-3.5 h-3.5" />,   color: "orange" },
 ];
 
+const LAUNCH_NOTE = `💜⚡ NEXUS•WAVELENGTH Rune is LIVE on Bitcoin!
+
+Rune ID: 840000:8472 | Supply: 21,000,000,000 | 1,000 per mint
+
+You can now:
+🔴 Mint NXWV on Bitcoin (Unisat)
+🟣 Bridge NXWV → NXT (physics parity 1:1)
+⚡ Wrap NXWV UTXO → Sats (100 sats/NXWV launch rate)
+
+Mint on Unisat 👇
+https://unisat.io/runes/detail/NEXUS%E2%80%A2WAVELENGTH
+
+Bridge & wrap at wnsp.tech/rune-swap
+
+Built on the Theory of Compression States — the first physics-native token protocol on Bitcoin.
+
+#Bitcoin #Runes #NEXUSWAVELENGTH #WNSP #NexusOS #BTC #Ordinals`;
+
 export default function RuneSwapPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -56,6 +75,8 @@ export default function RuneSwapPage() {
   const [runeAmt, setRuneAmt] = useState("1000");
   const [btcAddr, setBtcAddr] = useState("");
   const [btcTxid, setBtcTxid] = useState("");
+  const [showBroadcast, setShowBroadcast] = useState(false);
+  const [broadcastText, setBroadcastText] = useState(LAUNCH_NOTE);
 
   const { data: rate } = useQuery<any>({ queryKey: ["/api/rune-swap/rate"] });
   const { data: wallet } = useQuery<any>({ queryKey: ["/api/wallet"], refetchInterval: 15000 });
@@ -68,6 +89,18 @@ export default function RuneSwapPage() {
   const nxtVal  = runes * (rate?.rate ?? 1);
   const satsVal = runes * RUNE_TO_SATS_RATE;
   const nxtBal  = parseFloat(wallet?.wallet?.balance ?? "0");
+
+  const broadcastMut = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/nostr/broadcast", {
+      content:  broadcastText,
+      hashtags: ["Bitcoin", "Runes", "NEXUSWAVELENGTH", "WNSP", "NexusOS"],
+    }),
+    onSuccess: (data: any) => toast({
+      title: "📡 Broadcast sent!",
+      description: `Event ${data.eventId?.slice(0, 12)}… → ${data.relays?.length ?? 0} relay(s)`,
+    }),
+    onError: (e: any) => toast({ title: "Broadcast failed", description: e.message, variant: "destructive" }),
+  });
 
   const swapMut = useMutation({
     mutationFn: async () => {
@@ -370,6 +403,59 @@ export default function RuneSwapPage() {
           <p className="text-[11px] text-white/20">
             NXT is never destroyed — always redirected to Orbital Treasury · Wrap rate: 100 sats/NXWV (launch)
           </p>
+        </div>
+
+        {/* 📡 Nostr Broadcast Panel */}
+        <div className="rounded-2xl border border-purple-500/30 bg-purple-950/20 overflow-hidden">
+          <button
+            onClick={() => setShowBroadcast(v => !v)}
+            data-testid="toggle-broadcast"
+            className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold text-purple-300">
+              <Radio className="w-4 h-4" /> Broadcast to Nostr
+            </span>
+            {showBroadcast ? <ChevronUp className="w-4 h-4 text-white/30" /> : <ChevronDown className="w-4 h-4 text-white/30" />}
+          </button>
+
+          {showBroadcast && (
+            <div className="px-5 pb-5 space-y-3 border-t border-purple-500/20">
+              <p className="text-xs text-white/40 pt-3">
+                Publishes a signed Nostr note to 8 relays instantly. Edit the content below or send as-is.
+              </p>
+              <Textarea
+                value={broadcastText}
+                onChange={e => setBroadcastText(e.target.value)}
+                rows={10}
+                data-testid="input-broadcast-content"
+                className="bg-black/40 border-purple-500/20 text-white font-mono text-xs resize-none leading-relaxed"
+              />
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  onClick={() => setBroadcastText(LAUNCH_NOTE)}
+                  className="text-xs text-white/30 hover:text-white/60 transition-colors"
+                >
+                  Reset to launch note
+                </button>
+                <Button
+                  onClick={() => broadcastMut.mutate()}
+                  disabled={broadcastMut.isPending || broadcastText.length < 10}
+                  data-testid="button-broadcast-send"
+                  className="bg-purple-600 hover:bg-purple-700 gap-2 font-semibold"
+                >
+                  {broadcastMut.isPending
+                    ? <span className="flex items-center gap-2"><Radio className="w-4 h-4 animate-pulse" /> Sending…</span>
+                    : <span className="flex items-center gap-2"><Radio className="w-4 h-4" /> Send to Nostr</span>
+                  }
+                </Button>
+              </div>
+              {broadcastMut.isSuccess && (
+                <p className="text-xs text-green-400 text-center">
+                  ✓ Broadcast confirmed — check your Nostr profile for the new note
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* History */}
