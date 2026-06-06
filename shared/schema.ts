@@ -1423,3 +1423,27 @@ export const lpPositions = pgTable("lp_positions", {
   poolIdx: index("lp_positions_pool_idx").on(t.poolId),
 }));
 export type LpPosition = typeof lpPositions.$inferSelect;
+
+// ── NXWV ↔ NXT Rune Swap ────────────────────────────────────────────────────
+export const runeSwaps = pgTable("rune_swaps", {
+  id:          serial("id").primaryKey(),
+  userId:      text("user_id").notNull(),
+  username:    text("username").notNull(),
+  direction:   text("direction").notNull(),   // "nxt_to_rune" | "rune_to_nxt"
+  nxtAmount:   decimal("nxt_amount", { precision: 20, scale: 8 }).notNull(),
+  runeAmount:  integer("rune_amount").notNull(),   // NEXUS•WAVELENGTH units (integer, no decimals)
+  btcAddress:  text("btc_address"),               // user's BTC address for rune_to_nxt detection / nxt_to_rune delivery
+  btcTxid:     text("btc_txid"),                  // incoming Rune TXID (rune_to_nxt)
+  status:      text("status").notNull().default("pending"),
+  // pending | detected | credited | queued | delivered | failed
+  rate:        decimal("rate", { precision: 10, scale: 4 }).notNull().default("1.0000"), // 1 NXWV = 1 NXT
+  note:        text("note"),
+  createdAt:   timestamp("created_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (t) => ({
+  userIdx:   index("rune_swaps_user_idx").on(t.userId),
+  statusIdx: index("rune_swaps_status_idx").on(t.status),
+  dirIdx:    index("rune_swaps_dir_idx").on(t.direction),
+}));
+export const insertRuneSwapSchema = createInsertSchema(runeSwaps).omit({ id: true, createdAt: true });
+export type RuneSwap = typeof runeSwaps.$inferSelect;

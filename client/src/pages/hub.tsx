@@ -184,6 +184,7 @@ const APP_SECTIONS = [
       { title: "🎁 NXT Airdrop",      href: "/airdrop",             Icon: Gift },
       { title: "🔮 Nostr Bridge",     href: "/nostr-bridge",        Icon: Radio },
       { title: "🎯 Coinsniper",       href: "/coinsniper",          Icon: Rocket },
+      { title: "💜 Rune ↔ NXT Swap", href: "/rune-swap",           Icon: ArrowRightLeft },
     ],
   },
   {
@@ -291,6 +292,12 @@ function BtcWalletPill() {
               <button className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-2"
                 onClick={() => setOpen(false)}>
                 <Rocket className="w-3 h-3 text-purple-400" />Coinsniper
+              </button>
+            </Link>
+            <Link href="/rune-swap">
+              <button className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-2"
+                onClick={() => setOpen(false)}>
+                <ArrowRightLeft className="w-3 h-3 text-orange-400" />Rune ↔ NXT
               </button>
             </Link>
           </div>

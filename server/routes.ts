@@ -10764,6 +10764,194 @@ export async function registerRoutes(
 
   // ── End Lightning ─────────────────────────────────────────────────────────
 
+  // ── NXWV ↔ NXT Rune Swap ─────────────────────────────────────────────────
+  const RUNE_SWAP_RATE   = 1;     // 1 NEXUS•WAVELENGTH = 1 NXT (1:1)
+  const RUNE_SWAP_MIN    = 100;   // min 100 NXWV per swap
+  const RUNE_SWAP_MAX    = 100_000; // max 100k NXWV per swap
+  const SERVICE_WALLET_BTC = "bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m";
+
+  // Rate endpoint
+  app.get("/api/rune-swap/rate", async (_req: Request, res: Response) => {
+    res.json({
+      rate: RUNE_SWAP_RATE,
+      minRune: RUNE_SWAP_MIN,
+      maxRune: RUNE_SWAP_MAX,
+      serviceWallet: SERVICE_WALLET_BTC,
+      description: "1 NEXUS•WAVELENGTH ↔ 1 NXT (1:1 physics parity)",
+    });
+  });
+
+  // POST /api/rune-swap/nxt-to-rune — user sends NXT, receives NXWV Rune on BTC
+  app.post("/api/rune-swap/nxt-to-rune", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { runeAmount, btcAddress } = req.body;
+
+      const runes = parseInt(String(runeAmount));
+      if (isNaN(runes) || runes < RUNE_SWAP_MIN)
+        return res.status(400).json({ error: `Minimum swap is ${RUNE_SWAP_MIN} NEXUS•WAVELENGTH` });
+      if (runes > RUNE_SWAP_MAX)
+        return res.status(400).json({ error: `Maximum swap is ${RUNE_SWAP_MAX} NEXUS•WAVELENGTH per transaction` });
+      if (!btcAddress || !String(btcAddress).match(/^(bc1|1|3)/i))
+        return res.status(400).json({ error: "Valid Bitcoin address required for Rune delivery" });
+
+      const nxtNeeded = runes * RUNE_SWAP_RATE;
+
+      // Check NXT balance
+      const wallet = await storage.getWallet(user.id);
+      if (!wallet) return res.status(404).json({ error: "Wallet not found" });
+      const bal = parseFloat(wallet.balance);
+      if (bal < nxtNeeded)
+        return res.status(402).json({ error: `Insufficient balance. Have ${bal.toFixed(2)} NXT, need ${nxtNeeded} NXT` });
+
+      // Deduct NXT → redirect to orbital treasury (NXT never burned)
+      const newBal = (bal - nxtNeeded).toFixed(8);
+      await storage.updateWalletBalance(wallet.id, newBal);
+
+      const { GENESIS_EXECUTION_ADDRESS } = await import("./physics");
+      const treasuryWallet = await storage.getWalletByAddress(GENESIS_EXECUTION_ADDRESS);
+      if (treasuryWallet) {
+        const tBal = parseFloat(treasuryWallet.balance);
+        await storage.updateWalletBalance(treasuryWallet.id, (tBal + nxtNeeded).toFixed(8));
+        await storage.createTransaction({
+          fromWalletId: wallet.id,
+          toWalletId:   treasuryWallet.id,
+          amount:       nxtNeeded.toFixed(8),
+          fee:          "0.00000000",
+          type:         "treasury_deposit",
+          status:       "completed",
+          metadata:     { reason: "nxt_to_rune_swap", btcAddress, runeAmount: runes, note: "NXT → Orbital Treasury; NEXUS•WAVELENGTH queued for BTC delivery" },
+        });
+      }
+
+      // Record swap
+      const { db } = await import("./db");
+      const { runeSwaps } = await import("../shared/schema");
+      const [row] = await db.insert(runeSwaps).values({
+        userId:     user.id,
+        username:   user.username,
+        direction:  "nxt_to_rune",
+        nxtAmount:  nxtNeeded.toFixed(8),
+        runeAmount: runes,
+        btcAddress,
+        status:     "queued",
+        rate:       String(RUNE_SWAP_RATE),
+        note:       `${nxtNeeded} NXT → orbital treasury; ${runes} NEXUS•WAVELENGTH queued to ${btcAddress}`,
+      }).returning();
+
+      // Telegram alert to admin
+      try {
+        const { sendTelegramAlert } = await import("./telegram-bot");
+        await sendTelegramAlert(
+          `💜 <b>Rune Swap Request — NXT→NXWV</b>\n\n` +
+          `User: ${user.username}\n` +
+          `Amount: <b>${runes} NEXUS•WAVELENGTH</b>\n` +
+          `NXT paid: ${nxtNeeded} (→ Orbital Treasury)\n` +
+          `Deliver to: <code>${btcAddress}</code>\n` +
+          `Swap ID: #${row.id}\n\n` +
+          `Action: Send ${runes} NEXUS•WAVELENGTH from service wallet to above address on Unisat.`
+        );
+      } catch { /* non-fatal */ }
+
+      res.json({
+        ok: true,
+        swapId:     row.id,
+        direction:  "nxt_to_rune",
+        nxtToTreasury: nxtNeeded.toFixed(8),
+        runeAmount: runes,
+        btcAddress,
+        newBalance: newBal,
+        message:    `Swap queued! ${runes} NEXUS•WAVELENGTH will be sent to ${btcAddress.slice(0, 14)}… from service wallet. ${nxtNeeded} NXT redirected to Orbital Treasury.`,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/rune-swap/rune-to-nxt — user registers their BTC TX; sentinel auto-credits on detection
+  app.post("/api/rune-swap/rune-to-nxt", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { runeAmount, btcTxid, btcAddress } = req.body;
+
+      const runes = parseInt(String(runeAmount));
+      if (isNaN(runes) || runes < RUNE_SWAP_MIN)
+        return res.status(400).json({ error: `Minimum swap is ${RUNE_SWAP_MIN} NEXUS•WAVELENGTH` });
+      if (!btcTxid || String(btcTxid).length < 30)
+        return res.status(400).json({ error: "Valid Bitcoin transaction ID required" });
+
+      const nxtOut = runes * RUNE_SWAP_RATE;
+
+      // Credit NXT immediately on declaration (sentinel will confirm independently)
+      const wallet = await storage.getWallet(user.id);
+      if (!wallet) return res.status(404).json({ error: "Wallet not found" });
+      const bal = parseFloat(wallet.balance);
+      const newBal = (bal + nxtOut).toFixed(8);
+      await storage.updateWalletBalance(wallet.id, newBal);
+      await storage.createTransaction({
+        fromWalletId: wallet.id, // self-credit from bridge
+        toWalletId:   wallet.id,
+        amount:       nxtOut.toFixed(8),
+        fee:          "0.00000000",
+        type:         "rune_bridge_credit",
+        status:       "completed",
+        metadata:     { reason: "rune_to_nxt_swap", btcTxid, runeAmount: runes },
+      });
+
+      const { db } = await import("./db");
+      const { runeSwaps } = await import("../shared/schema");
+      const [row] = await db.insert(runeSwaps).values({
+        userId:     user.id,
+        username:   user.username,
+        direction:  "rune_to_nxt",
+        nxtAmount:  nxtOut.toFixed(8),
+        runeAmount: runes,
+        btcAddress: btcAddress ?? null,
+        btcTxid,
+        status:     "credited",
+        rate:       String(RUNE_SWAP_RATE),
+        note:       `${runes} NEXUS•WAVELENGTH sent to service wallet; ${nxtOut} NXT credited`,
+        completedAt: new Date(),
+      }).returning();
+
+      try {
+        const { sendTelegramAlert } = await import("./telegram-bot");
+        await sendTelegramAlert(
+          `💜 <b>Rune Bridge — NXWV→NXT</b>\n\n` +
+          `User: ${user.username}\n` +
+          `Runes: <b>${runes} NEXUS•WAVELENGTH</b>\n` +
+          `NXT credited: ${nxtOut}\n` +
+          `BTC Txid: <code>${btcTxid}</code>\n\n` +
+          `<a href="https://mempool.space/tx/${btcTxid}">Verify on mempool.space</a>`
+        );
+      } catch { /* non-fatal */ }
+
+      res.json({
+        ok: true,
+        swapId:    row.id,
+        direction: "rune_to_nxt",
+        runeAmount: runes,
+        nxtCredited: nxtOut.toFixed(8),
+        newBalance:  newBal,
+        message:    `${nxtOut} NXT credited to your wallet! Send ${runes} NEXUS•WAVELENGTH to the service wallet on Bitcoin if not already sent.`,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/rune-swap/history
+  app.get("/api/rune-swap/history", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { db } = await import("./db");
+      const { runeSwaps } = await import("../shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      const rows = await db.select().from(runeSwaps)
+        .where(eq(runeSwaps.userId, user.id))
+        .orderBy(desc(runeSwaps.createdAt)).limit(30);
+      res.json(rows);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── End NXWV ↔ NXT Rune Swap ──────────────────────────────────────────────
+
   app.get("/api/swap/stats", async (_req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
