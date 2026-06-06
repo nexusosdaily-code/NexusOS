@@ -28,8 +28,10 @@ export default function AuthPage() {
   const [isLoading, setIsLoading]       = useState(false);
   const [nostrLoading, setNostrLoading] = useState(false);
   const inFlight = useRef(false);
-  const [loginData, setLoginData] = useState({ username: "", password: "" });
-  const [showRecovery, setShowRecovery] = useState(false);
+  const [loginData, setLoginData]         = useState({ username: "", password: "" });
+  const [registerData, setRegisterData]   = useState({ username: "", password: "", email: "" });
+  const [registerLoading, setRegisterLoading] = useState(false);
+  const [showRecovery, setShowRecovery]   = useState(false);
   const [recoveryData, setRecoveryData] = useState({ username: "Nexus", newPassword: "", confirmPassword: "", recoveryKey: "" });
   const [recoveryLoading, setRecoveryLoading] = useState(false);
 
@@ -91,6 +93,35 @@ export default function AuthPage() {
     } finally {
       inFlight.current = false;
       setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (registerLoading) return;
+    if (registerData.password.length < 8) {
+      toast({ title: "Password too short", description: "Must be at least 8 characters.", variant: "destructive" }); return;
+    }
+    setRegisterLoading(true);
+    try {
+      const res  = await fetch("/api/auth/register", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          username: registerData.username,
+          password: registerData.password,
+          ...(registerData.email ? { email: registerData.email } : {}),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.details?.[0]?.message || "Registration failed");
+      localStorage.setItem("auth_token", data.token);
+      toast({ title: "Welcome to NexusOS!", description: `Account created for ${data.user.username}. Your spectral wallet is ready.` });
+      window.location.replace("/");
+    } catch (err: any) {
+      toast({ title: "Registration failed", description: err.message, variant: "destructive" });
+    } finally {
+      setRegisterLoading(false);
     }
   };
 
@@ -259,20 +290,59 @@ export default function AuthPage() {
             </TabsContent>
 
             <TabsContent value="register">
-              <div className="space-y-4 py-2">
-                <div className="bg-purple-950/20 border border-purple-500/30 rounded-lg p-5 text-center space-y-3">
-                  <div className="text-3xl">⚡</div>
-                  <div className="text-purple-300 font-semibold text-sm">Have a Nostr account?</div>
-                  <p className="text-gray-400 text-xs leading-relaxed">
-                    Sign in with your Nostr key above — your NexusOS wallet is created automatically. No separate registration needed.
-                  </p>
-                  <div className="h-px bg-slate-700 my-2" />
-                  <div className="text-amber-400 text-xs font-semibold">No Nostr account?</div>
-                  <p className="text-gray-500 text-xs">
-                    NexusOS is in closed genesis phase. Nostr sign-in is currently the only way to join the network.
-                  </p>
+              <form onSubmit={handleRegister} className="space-y-4 py-2">
+                <div className="space-y-1">
+                  <Label className="text-gray-400 text-xs">Username</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <Input
+                      required minLength={3} maxLength={50}
+                      value={registerData.username}
+                      onChange={e => setRegisterData(d => ({ ...d, username: e.target.value }))}
+                      className="bg-slate-800/50 border-slate-700 pl-10 text-sm"
+                      placeholder="Choose a username"
+                      autoComplete="username"
+                      data-testid="input-register-username"
+                    />
+                  </div>
                 </div>
-              </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-400 text-xs">Email <span className="text-slate-600">(optional)</span></Label>
+                  <Input
+                    type="email"
+                    value={registerData.email}
+                    onChange={e => setRegisterData(d => ({ ...d, email: e.target.value }))}
+                    className="bg-slate-800/50 border-slate-700 text-sm"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    data-testid="input-register-email"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-400 text-xs">Password</Label>
+                  <Input
+                    type="password" required minLength={8}
+                    value={registerData.password}
+                    onChange={e => setRegisterData(d => ({ ...d, password: e.target.value }))}
+                    className="bg-slate-800/50 border-slate-700 text-sm"
+                    placeholder="Min 8 characters"
+                    autoComplete="new-password"
+                    data-testid="input-register-password"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={registerLoading || !registerData.username || !registerData.password}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold"
+                  data-testid="button-register-submit"
+                >
+                  {registerLoading ? "Creating account…" : "Create Account"}
+                </Button>
+                <p className="text-center text-[10px] text-slate-600 leading-relaxed">
+                  A spectral wallet (NXT) is created automatically.
+                  Nostr users can skip registration — sign in above.
+                </p>
+              </form>
             </TabsContent>
           </Tabs>
         </Card>

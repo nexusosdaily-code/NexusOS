@@ -695,14 +695,6 @@ export async function registerRoutes(
 
   app.post("/api/auth/register", validateRequest(registerSchema), async (req, res) => {
     try {
-      // ── REGISTRATION CLOSED ──────────────────────────────────────────────
-      // NexusOS is in closed genesis phase. Only existing 500M NXT holders
-      // may access the network. New registrations are not accepted.
-      return res.status(403).json({
-        error: "Registration is currently closed. NexusOS is in closed genesis phase — only existing members may log in.",
-      });
-      // ────────────────────────────────────────────────────────────────────
-
       if (!await checkRateLimit(req, res, "/api/auth/register", AUTH_RATE_LIMIT_MAX)) return;
       
       const { username, password, email, phoneNumber } = req.body;
