@@ -350,52 +350,60 @@ async function runStartupMigrations() {
   function listenWithRetry(attemptsLeft = 5) {
     httpServer.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
       log(`serving on port ${port}`);
-      // Seed genesis block after server is ready (non-blocking)
-      seedGenesisBlock().catch(() => {});
-      // Start autonomous blockchain audit agent
-      startBlockchainAuditor().catch((e) => console.error("[AUDITOR] Boot error:", e));
-      // Start 4 autonomous kernel agent loops (Stage 3)
-      startKernelAgents();
-      // Start Social Broadcast Agent — Telegram → Instagram / YouTube
-      startSocialBroadcastAgent();
-      // Seed genesis network node + start beacon loop
-      seedGenesisNode().catch((e) => console.error("[GENESIS NODE] Error:", e));
-      // Start BTC Bridge auto-inscription processor
-      import("./btc-bridge-service").then(({ btcBridge }) => {
-        btcBridge.startAutoProcessor();
-      }).catch((e) => console.error("[BTC Bridge] Boot error:", e));
-      // Start BTC Withdrawal Processor — sends queued sats→BTC withdrawals on-chain
-      import("./btc-withdrawal-processor").then(({ startWithdrawalProcessor }) => {
-        startWithdrawalProcessor(60_000); // check every 60s
-      }).catch((e) => console.error("[BTC Withdrawal] Boot error:", e));
-      // Start Rune Transfer Processor — auto-fulfils pending NXWV pipeline orders
-      import("./rune-transfer-processor").then(({ startRuneProcessor }) => {
-        startRuneProcessor(60_000); // check every 60s
-      }).catch((e) => console.error("[Rune Processor] Boot error:", e));
-      // Start BTC Block Scanner — verifies wnsp + Rune stakes on-chain every 5 min
-      import("./btc-block-scanner").then(({ startStakeScanner }) => {
-        startStakeScanner();
-      }).catch((e) => console.error("[BTC Scanner] Boot error:", e));
-      // Start BTC Wallet Sentinel — monitors service wallet mempool every 30s
-      import("./btc-wallet-sentinel").then(({ startWalletSentinel }) => {
-        startWalletSentinel();
-      }).catch((e) => console.error("[Sentinel] Boot error:", e));
-      // Start BTC Assets Sentinel — monitors Ordinals / Runes / BRC-20 every 2 min
-      import("./btc-assets-sentinel").then(({ startAssetsSentinel }) => {
-        startAssetsSentinel();
-      }).catch((e) => console.error("[Assets Sentinel] Boot error:", e));
-      // Start wnsp.io → Service Pool Liquidity Feed
-      import("./wnsp-io-liquidity").then(({ startWnspIoLiquidity }) => {
-        startWnspIoLiquidity();
-      }).catch((e) => console.error("[wnsp.io Liquidity] Boot error:", e));
-      // Start Telegram advocacy bot
-      startTelegramBot();
-      // Start Nostr DM bot
-      startNostrDmBot();
-      // Start NXT campaign broadcaster
-      startNxtCampaignAgent();
-      // Start Telegram ↔ Nostr cross-poster
-      startTgNostrBridge();
+
+      const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+      // Stagger all background agents to avoid DB connection storm on boot.
+      // Each wave waits before starting so the pool isn't overwhelmed.
+      (async () => {
+        // Wave 1 — 2s: core chain/genesis (low concurrency)
+        await delay(2_000);
+        seedGenesisBlock().catch(() => {});
+        seedGenesisNode().catch((e) => console.error("[GENESIS NODE] Error:", e));
+
+        // Wave 2 — 6s: blockchain auditor + kernel agents
+        await delay(4_000);
+        startBlockchainAuditor().catch((e) => console.error("[AUDITOR] Boot error:", e));
+        startKernelAgents();
+
+        // Wave 3 — 12s: BTC on-chain workers
+        await delay(6_000);
+        import("./btc-bridge-service").then(({ btcBridge }) => {
+          btcBridge.startAutoProcessor();
+        }).catch((e) => console.error("[BTC Bridge] Boot error:", e));
+        import("./btc-withdrawal-processor").then(({ startWithdrawalProcessor }) => {
+          startWithdrawalProcessor(60_000);
+        }).catch((e) => console.error("[BTC Withdrawal] Boot error:", e));
+
+        // Wave 4 — 18s: Rune processor + block scanner
+        await delay(6_000);
+        import("./rune-transfer-processor").then(({ startRuneProcessor }) => {
+          startRuneProcessor(60_000);
+        }).catch((e) => console.error("[Rune Processor] Boot error:", e));
+        import("./btc-block-scanner").then(({ startStakeScanner }) => {
+          startStakeScanner();
+        }).catch((e) => console.error("[BTC Scanner] Boot error:", e));
+
+        // Wave 5 — 24s: sentinels + liquidity feed
+        await delay(6_000);
+        import("./btc-wallet-sentinel").then(({ startWalletSentinel }) => {
+          startWalletSentinel();
+        }).catch((e) => console.error("[Sentinel] Boot error:", e));
+        import("./btc-assets-sentinel").then(({ startAssetsSentinel }) => {
+          startAssetsSentinel();
+        }).catch((e) => console.error("[Assets Sentinel] Boot error:", e));
+        import("./wnsp-io-liquidity").then(({ startWnspIoLiquidity }) => {
+          startWnspIoLiquidity();
+        }).catch((e) => console.error("[wnsp.io Liquidity] Boot error:", e));
+
+        // Wave 6 — 30s: social bots (last — highest retry tolerance)
+        await delay(6_000);
+        startSocialBroadcastAgent();
+        startTelegramBot();
+        startNostrDmBot();
+        startNxtCampaignAgent();
+        startTgNostrBridge();
+      })();
     });
     httpServer.once("error", (err: any) => {
       if (err.code === "EADDRINUSE" && attemptsLeft > 0) {
