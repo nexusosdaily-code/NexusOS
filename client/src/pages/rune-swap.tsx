@@ -63,8 +63,8 @@ You can now:
 Mint on Unisat 👇
 https://unisat.io/runes/detail/NEXUS%E2%80%A2WAVELENGTH
 
-Verify etch on mempool.space 👇
-https://mempool.space/tx/03e96173f181e3323be796736cfa193b6f11bac374cc1ef7f8f8ecdf0150df3b
+View inscription on Ordinals 👇
+https://ordinals.com/inscription/03e96173f181e3323be796736cfa193b6f11bac374cc1ef7f8f8ecdf0150df3bi0
 
 Bridge & wrap at wnsp.tech/rune-swap
 
