@@ -72,6 +72,12 @@ uri = "file://attached_assets/rune-art-lambda.png"
 type = "image"
 title = "nexus wavelength rune lambda minimal"
 
+[[generated]]
+id = "dn6yp3Ql5_RilrVx_-CEB"
+uri = "file://attached_assets/nexus-wavelength-logo.png"
+type = "image"
+title = "nexus wavelength logo coin inscription"
+
 [[outputs]]
 id = "H5DxipQLmLvHtAwbjOE_f"
 uri = "file://attached_assets/phase0_campaign.png"
@@ -299,3 +305,9 @@ id = "hhBhPEZq3a0w-SUFTRvqJ"
 uri = "file://attached_assets/rune-art-lambda.png"
 type = "image"
 title = "Option 3 — Lambda Minimal"
+
+[[outputs]]
+id = "472mjamcfxRrR9wfeBvkD"
+uri = "file://attached_assets/nexus-wavelength-logo.png"
+type = "image"
+title = "NEXUS•WAVELENGTH Logo"
