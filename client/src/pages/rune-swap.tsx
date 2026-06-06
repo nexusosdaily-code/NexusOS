@@ -13,8 +13,9 @@ import {
 const SERVICE_WALLET = "bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m";
 const RUNE_NAME = "NEXUS•WAVELENGTH";
 const RUNE_TO_SATS_RATE = 100; // sats per NXWV
+const SATS_PER_NXT = 1000;     // 1 NXT = 1,000 sats
 
-type Dir = "rune_to_nxt" | "nxt_to_rune" | "rune_to_sats";
+type Dir = "rune_to_nxt" | "nxt_to_rune" | "rune_to_sats" | "sats_to_rune";
 
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, string> = {
@@ -45,37 +46,40 @@ function CopyBtn({ value }: { value: string }) {
 }
 
 const TABS: { id: Dir; label: string; icon: React.ReactNode; color: string }[] = [
-  { id: "rune_to_nxt",  label: "NXWV → NXT",  icon: <Bitcoin className="w-3.5 h-3.5" />,  color: "purple" },
-  { id: "rune_to_sats", label: "NXWV → Sats", icon: <Zap className="w-3.5 h-3.5" />,      color: "yellow" },
-  { id: "nxt_to_rune",  label: "NXT → NXWV",  icon: <Layers className="w-3.5 h-3.5" />,   color: "orange" },
+  { id: "sats_to_rune", label: "Sats → NXWV",  icon: <Zap className="w-3.5 h-3.5" />,      color: "green"  },
+  { id: "nxt_to_rune",  label: "NXT → NXWV",   icon: <Layers className="w-3.5 h-3.5" />,   color: "orange" },
+  { id: "rune_to_nxt",  label: "NXWV → NXT",   icon: <Bitcoin className="w-3.5 h-3.5" />,  color: "purple" },
+  { id: "rune_to_sats", label: "NXWV → Sats",  icon: <ArrowUpDown className="w-3.5 h-3.5" />, color: "yellow" },
 ];
 
-const LAUNCH_NOTE = `💜⚡ NEXUS•WAVELENGTH is officially etched on Bitcoin!
+const LAUNCH_NOTE = `💜⚡ Get Bitcoin Runes with NXT — The NexusOS Pipeline
 
-Rune ID: 840000:8472 | Supply: 21,000,000 | 1,000 per mint | 21,000 max mints
-Etch TX: 03e96173f181e3323be796736cfa193b6f11bac374cc1ef7f8f8ecdf0150df3b
+No BTC wallet needed to start. Just buy NXT.
 
-You can now:
-🔴 Mint NXWV on Bitcoin (Unisat)
-🟣 Bridge NXWV → NXT (physics parity 1:1)
-⚡ Wrap NXWV UTXO → Sats (100 sats/NXWV launch rate)
+The Pipeline:
+1️⃣ Buy NXT on NexusOS
+2️⃣ Convert NXT → Sats (1 NXT = 1,000 sats)
+3️⃣ Swap Sats → NEXUS•WAVELENGTH Runes (100 sats = 1 NXWV)
 
-Mint on Unisat 👇
+The maths: 1 NXT = 10 NXWV on Bitcoin mainnet
+
+NEXUS•WAVELENGTH Rune
+Rune ID: 840000:8472 | Supply: 21,000,000 | 1,000 per mint
+
+Start the pipeline 👇
+https://wnsp.tech/rune-swap
+
+View on Unisat 👇
 https://unisat.io/runes/detail/NEXUS%E2%80%A2WAVELENGTH
 
-View inscription on Ordinals 👇
-https://ordinals.com/inscription/03e96173f181e3323be796736cfa193b6f11bac374cc1ef7f8f8ecdf0150df3bi0
+Built on the Theory of Compression States — the first physics-native token on Bitcoin.
 
-Bridge & wrap at wnsp.tech/rune-swap
-
-Built on the Theory of Compression States — the first physics-native token protocol on Bitcoin.
-
-#Bitcoin #Runes #NEXUSWAVELENGTH #WNSP #NexusOS #BTC #Ordinals`;
+#Bitcoin #Runes #NEXUSWAVELENGTH #NXT #WNSP #NexusOS #BTC`;
 
 export default function RuneSwapPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [dir, setDir] = useState<Dir>("rune_to_nxt");
+  const [dir, setDir] = useState<Dir>("sats_to_rune");
   const [runeAmt, setRuneAmt] = useState("1000");
   const [btcAddr, setBtcAddr] = useState("");
   const [btcTxid, setBtcTxid] = useState("");
@@ -84,15 +88,18 @@ export default function RuneSwapPage() {
 
   const { data: rate } = useQuery<any>({ queryKey: ["/api/rune-swap/rate"] });
   const { data: wallet } = useQuery<any>({ queryKey: ["/api/wallet"], refetchInterval: 15000 });
+  const { data: lightning } = useQuery<any>({ queryKey: ["/api/lightning/balance"], refetchInterval: 15000 });
   const { data: history = [], isLoading: histLoading } = useQuery<any[]>({
     queryKey: ["/api/rune-swap/history"],
     refetchInterval: 30000,
   });
 
-  const runes   = parseInt(runeAmt) || 0;
-  const nxtVal  = runes * (rate?.rate ?? 1);
-  const satsVal = runes * RUNE_TO_SATS_RATE;
-  const nxtBal  = parseFloat(wallet?.wallet?.balance ?? "0");
+  const runes    = parseInt(runeAmt) || 0;
+  const nxtVal   = runes * (rate?.rate ?? 1);
+  const satsVal  = runes * RUNE_TO_SATS_RATE;   // NXWV → Sats output
+  const satsCost = runes * RUNE_TO_SATS_RATE;   // Sats → NXWV input cost
+  const nxtBal   = parseFloat(wallet?.wallet?.balance ?? "0");
+  const satsBal  = Number(lightning?.satsBalance ?? 0);
 
   const broadcastMut = useMutation({
     mutationFn: () => apiRequest("POST", "/api/nostr/broadcast", {
@@ -110,7 +117,9 @@ export default function RuneSwapPage() {
 
   const swapMut = useMutation({
     mutationFn: async () => {
-      if (dir === "nxt_to_rune") {
+      if (dir === "sats_to_rune") {
+        return apiRequest("POST", "/api/rune-swap/sats-to-rune", { runeAmount: runes, btcAddress: btcAddr });
+      } else if (dir === "nxt_to_rune") {
         return apiRequest("POST", "/api/rune-swap/nxt-to-rune", { runeAmount: runes, btcAddress: btcAddr });
       } else if (dir === "rune_to_sats") {
         return apiRequest("POST", "/api/rune-swap/rune-to-sats", { runeAmount: runes, btcTxid, btcAddress: btcAddr });
@@ -119,22 +128,27 @@ export default function RuneSwapPage() {
       }
     },
     onSuccess: (data: any) => {
-      toast({ title: "Swap submitted!", description: data.message });
+      toast({ title: "✅ Swap submitted!", description: data.message });
       qc.invalidateQueries({ queryKey: ["/api/rune-swap/history"] });
       qc.invalidateQueries({ queryKey: ["/api/wallet"] });
-      qc.invalidateQueries({ queryKey: ["/api/lightning/wallet"] });
+      qc.invalidateQueries({ queryKey: ["/api/lightning/balance"] });
       setBtcTxid("");
     },
     onError: (e: any) => toast({ title: "Swap failed", description: e.message, variant: "destructive" }),
   });
 
   const canSwap =
+    dir === "sats_to_rune" ? runes >= 100 && btcAddr.length > 10 && satsBal >= satsCost :
     dir === "nxt_to_rune"  ? runes >= 100 && btcAddr.length > 10 && nxtBal >= nxtVal :
     dir === "rune_to_sats" ? runes >= 100 && btcTxid.length >= 30 :
                              runes >= 100 && btcTxid.length >= 30;
 
-  const activeColor = dir === "rune_to_sats" ? "yellow" : dir === "nxt_to_rune" ? "orange" : "purple";
+  const activeColor =
+    dir === "sats_to_rune" ? "green"  :
+    dir === "rune_to_sats" ? "yellow" :
+    dir === "nxt_to_rune"  ? "orange" : "purple";
   const btnClass =
+    activeColor === "green"  ? "bg-green-600 hover:bg-green-700"   :
     activeColor === "yellow" ? "bg-yellow-600 hover:bg-yellow-700" :
     activeColor === "orange" ? "bg-orange-600 hover:bg-orange-700" :
                                "bg-purple-600 hover:bg-purple-700";
@@ -154,6 +168,69 @@ export default function RuneSwapPage() {
               <p className="text-white/40 text-xs">NEXUS•WAVELENGTH Rune ↔ NXT · Sats · Bitcoin</p>
             </div>
           </div>
+        </div>
+
+        {/* ⚡ Pipeline Hero */}
+        <div className="rounded-2xl border border-green-500/30 bg-gradient-to-br from-green-950/40 to-purple-950/40 p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-green-400" />
+            <span className="text-sm font-bold text-green-300">The NexusOS Pipeline</span>
+            <span className="ml-auto text-[11px] text-white/30 font-mono">No BTC wallet needed to start</span>
+          </div>
+
+          {/* Steps */}
+          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+            {/* Step 1 */}
+            <div className="rounded-xl border border-orange-500/30 bg-orange-950/30 px-4 py-3 text-center min-w-[110px] shrink-0">
+              <p className="text-[10px] text-orange-300/60 uppercase tracking-widest mb-1">Step 1</p>
+              <p className="text-sm font-bold text-orange-300">Buy NXT</p>
+              <p className="text-[10px] text-white/30 mt-0.5">Entry token</p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-white/20 shrink-0" />
+            {/* Step 2 */}
+            <div className="rounded-xl border border-yellow-500/30 bg-yellow-950/30 px-4 py-3 text-center min-w-[130px] shrink-0">
+              <p className="text-[10px] text-yellow-300/60 uppercase tracking-widest mb-1">Step 2</p>
+              <p className="text-sm font-bold text-yellow-300">NXT → Sats</p>
+              <p className="text-[10px] text-white/30 mt-0.5 font-mono">1 NXT = 1,000 sats</p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-white/20 shrink-0" />
+            {/* Step 3 */}
+            <div className="rounded-xl border border-green-500/30 bg-green-950/30 px-4 py-3 text-center min-w-[140px] shrink-0">
+              <p className="text-[10px] text-green-300/60 uppercase tracking-widest mb-1">Step 3</p>
+              <p className="text-sm font-bold text-green-300">Sats → NXWV</p>
+              <p className="text-[10px] text-white/30 mt-0.5 font-mono">100 sats = 1 NXWV</p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-white/20 shrink-0" />
+            {/* Result */}
+            <div className="rounded-xl border border-purple-500/40 bg-purple-950/40 px-4 py-3 text-center min-w-[110px] shrink-0">
+              <p className="text-[10px] text-purple-300/60 uppercase tracking-widest mb-1">You get</p>
+              <p className="text-sm font-bold text-purple-300">NXWV</p>
+              <p className="text-[10px] text-white/30 mt-0.5">Bitcoin Rune</p>
+            </div>
+          </div>
+
+          {/* The math */}
+          <div className="rounded-xl bg-black/30 border border-white/8 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+            <div className="text-xs text-white/50">
+              Pipeline rate at launch prices:
+            </div>
+            <div className="font-mono text-sm font-bold">
+              <span className="text-orange-300">1 NXT</span>
+              <span className="text-white/30 mx-2">=</span>
+              <span className="text-yellow-300">1,000 sats</span>
+              <span className="text-white/30 mx-2">=</span>
+              <span className="text-green-300">10 NXWV</span>
+              <span className="text-white/20 ml-2 text-xs">on Bitcoin</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setDir("sats_to_rune")}
+            data-testid="button-start-pipeline"
+            className="w-full rounded-xl bg-green-600 hover:bg-green-700 transition-colors py-2.5 text-sm font-bold text-white flex items-center justify-center gap-2"
+          >
+            <Zap className="w-4 h-4" /> Start Pipeline — Swap Sats → NXWV
+          </button>
         </div>
 
         {/* 📡 Nostr Broadcast Panel — TOP */}
@@ -224,7 +301,7 @@ export default function RuneSwapPage() {
         </div>
 
         {/* Direction tabs */}
-        <div className="grid grid-cols-3 gap-1.5 rounded-xl border border-white/10 bg-white/5 p-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 rounded-xl border border-white/10 bg-white/5 p-1">
           {TABS.map(t => (
             <button
               key={t.id}
@@ -232,7 +309,8 @@ export default function RuneSwapPage() {
               data-testid={`dir-${t.id}`}
               className={`py-2.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
                 dir === t.id
-                  ? t.color === "yellow" ? "bg-yellow-600 text-white shadow"
+                  ? t.color === "green"  ? "bg-green-600 text-white shadow"
+                  : t.color === "yellow" ? "bg-yellow-600 text-white shadow"
                   : t.color === "orange" ? "bg-orange-600 text-white shadow"
                   : "bg-purple-600 text-white shadow"
                   : "text-white/40 hover:text-white/70"
@@ -249,7 +327,7 @@ export default function RuneSwapPage() {
           {/* Amount */}
           <div>
             <label className="text-xs text-white/50 uppercase tracking-widest mb-1.5 block">
-              {dir === "nxt_to_rune" ? "NEXUS•WAVELENGTH to receive" : "NEXUS•WAVELENGTH to send"}
+              {dir === "nxt_to_rune" || dir === "sats_to_rune" ? "NEXUS•WAVELENGTH to receive" : "NEXUS•WAVELENGTH to send"}
             </label>
             <div className="relative">
               <Input
@@ -266,9 +344,53 @@ export default function RuneSwapPage() {
             <p className="text-xs text-white/30 mt-1">
               {dir === "rune_to_sats"
                 ? `= ${satsVal.toLocaleString()} sats (${RUNE_TO_SATS_RATE} sats/NXWV launch rate)`
+                : dir === "sats_to_rune"
+                ? `= ${satsCost.toLocaleString()} sats cost from your Lightning wallet`
                 : `= ${nxtVal.toLocaleString()} NXT`}
             </p>
           </div>
+
+          {/* Sats → NXWV: pipeline step 3 */}
+          {dir === "sats_to_rune" && (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-green-500/20 bg-green-950/20 p-4 space-y-2">
+                <p className="text-xs font-semibold text-green-300 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5" /> Pipeline Step 3 — Sats → NEXUS•WAVELENGTH
+                </p>
+                <p className="text-xs text-white/50">
+                  Sats are deducted from your Lightning wallet instantly. NXWV is sent to your Bitcoin address.
+                </p>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-white/40">Your sats balance</span>
+                  <span className={satsBal < satsCost ? "text-red-400 font-mono" : "text-green-400 font-mono"}>
+                    {satsBal.toLocaleString()} sats
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-white/50 uppercase tracking-widest mb-1.5 block">
+                  Your Bitcoin address (NXWV delivery)
+                </label>
+                <Input
+                  value={btcAddr}
+                  onChange={e => setBtcAddr(e.target.value)}
+                  data-testid="input-btc-address"
+                  className="bg-black/30 border-white/10 text-white font-mono text-xs"
+                  placeholder="bc1p… or bc1q…"
+                />
+                <p className="text-xs text-white/30 mt-1">
+                  We'll send {runes.toLocaleString()} NXWV to this address from the service wallet
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-green-500/20 bg-green-950/20 p-3 text-xs text-green-300">
+                <p className="font-semibold mb-1">🟣 You will receive</p>
+                <p className="font-mono text-lg">{runes.toLocaleString()} NXWV</p>
+                <p className="text-green-300/50 mt-0.5">Delivered to your Bitcoin address · {satsCost.toLocaleString()} sats deducted</p>
+              </div>
+            </div>
+          )}
 
           {/* NXWV → Sats: send UTXO, paste txid, get sats */}
           {dir === "rune_to_sats" && (
@@ -410,18 +532,24 @@ export default function RuneSwapPage() {
           >
             {swapMut.isPending ? (
               <span className="flex items-center gap-2"><Clock className="w-4 h-4 animate-spin" /> Processing…</span>
+            ) : dir === "sats_to_rune" ? (
+              <span className="flex items-center gap-2"><Zap className="w-4 h-4" />Spend {satsCost.toLocaleString()} sats → {runes.toLocaleString()} NXWV</span>
             ) : dir === "rune_to_sats" ? (
-              <span className="flex items-center gap-2"><Zap className="w-4 h-4" />Wrap {runes.toLocaleString()} NXWV → {satsVal.toLocaleString()} sats</span>
+              <span className="flex items-center gap-2"><ArrowUpDown className="w-4 h-4" />Wrap {runes.toLocaleString()} NXWV → {satsVal.toLocaleString()} sats</span>
             ) : dir === "rune_to_nxt" ? (
               <span className="flex items-center gap-2"><ArrowUpDown className="w-4 h-4" />Credit {nxtVal.toLocaleString()} NXT</span>
             ) : (
-              <span className="flex items-center gap-2"><ArrowUpDown className="w-4 h-4" />Swap {runes.toLocaleString()} NXWV → NXT</span>
+              <span className="flex items-center gap-2"><ArrowUpDown className="w-4 h-4" />Swap {runes.toLocaleString()} NXT → NXWV</span>
             )}
           </Button>
 
           {!canSwap && runes > 0 && (
             <p className="text-xs text-red-400 text-center">
-              {dir === "nxt_to_rune" && nxtBal < nxtVal
+              {dir === "sats_to_rune" && satsBal < satsCost
+                ? `Need ${satsCost.toLocaleString()} sats — you have ${satsBal.toLocaleString()}`
+                : dir === "sats_to_rune" && !btcAddr
+                ? "Enter your Bitcoin address for NXWV delivery"
+                : dir === "nxt_to_rune" && nxtBal < nxtVal
                 ? `Need ${nxtVal} NXT — you have ${nxtBal.toFixed(2)}`
                 : dir === "nxt_to_rune" && !btcAddr
                 ? "Enter a Bitcoin address for delivery"
@@ -439,28 +567,34 @@ export default function RuneSwapPage() {
           <h3 className="text-sm font-semibold text-white/60 flex items-center gap-2">
             <Info className="w-4 h-4" /> How it works
           </h3>
-          <div className="grid sm:grid-cols-3 gap-4 text-xs text-white/50 leading-relaxed">
+          <div className="grid sm:grid-cols-2 gap-4 text-xs text-white/50 leading-relaxed">
             <div>
-              <p className="text-purple-300 font-semibold mb-1">NXWV → NXT</p>
+              <p className="text-green-300 font-semibold mb-1">⚡ Sats → NXWV (Pipeline)</p>
+              <p>1. Enter NXWV amount + your BTC address</p>
+              <p>2. Sats deducted from Lightning wallet</p>
+              <p>3. NXWV sent to your Bitcoin address</p>
+            </div>
+            <div>
+              <p className="text-orange-300 font-semibold mb-1">🟠 NXT → NXWV</p>
+              <p>1. Enter Rune amount + your BTC address</p>
+              <p>2. NXT → Orbital Treasury</p>
+              <p>3. NXWV sent to your BTC address</p>
+            </div>
+            <div>
+              <p className="text-purple-300 font-semibold mb-1">🟣 NXWV → NXT</p>
               <p>1. Send NXWV to service wallet on Unisat</p>
               <p>2. Paste BTC txid</p>
               <p>3. NXT credited to your NexusOS wallet instantly</p>
             </div>
             <div>
-              <p className="text-yellow-300 font-semibold mb-1">NXWV → Sats ⚡</p>
+              <p className="text-yellow-300 font-semibold mb-1">⚡ NXWV → Sats</p>
               <p>1. Send NXWV UTXO to service wallet</p>
               <p>2. Paste BTC txid</p>
-              <p>3. Sats credited to your Lightning wallet (100 sats/NXWV)</p>
-            </div>
-            <div>
-              <p className="text-orange-300 font-semibold mb-1">NXT → NXWV</p>
-              <p>1. Enter Rune amount + your BTC address</p>
-              <p>2. NXT → Orbital Treasury</p>
-              <p>3. NXWV sent to your BTC address</p>
+              <p>3. Sats credited to Lightning wallet (100 sats/NXWV)</p>
             </div>
           </div>
           <p className="text-[11px] text-white/20">
-            NXT is never destroyed — always redirected to Orbital Treasury · Wrap rate: 100 sats/NXWV (launch)
+            NXT is never destroyed — always redirected to Orbital Treasury · Pipeline: 1 NXT = 10 NXWV · Rate: 100 sats/NXWV (launch)
           </p>
         </div>
 
@@ -532,21 +666,26 @@ export default function RuneSwapPage() {
           ) : (
             <div className="space-y-2">
               {(history as any[]).map((s: any) => {
-                const isSats = s.direction === "rune_to_sats";
-                const isToRune = s.direction === "nxt_to_rune";
-                const emoji = isSats ? "⚡" : isToRune ? "🟠" : "💜";
-                const label = isSats
-                  ? `${parseInt(s.runeAmount).toLocaleString()} NXWV → ${(parseInt(s.runeAmount) * 100).toLocaleString()} sats`
+                const isSatsToRune = s.direction === "sats_to_rune";
+                const isRuneToSats = s.direction === "rune_to_sats";
+                const isToRune    = s.direction === "nxt_to_rune";
+                const emoji = isSatsToRune ? "🟢" : isRuneToSats ? "⚡" : isToRune ? "🟠" : "💜";
+                const amt   = parseInt(s.runeAmount);
+                const rate  = parseInt(s.rate ?? "100") || 100;
+                const label = isSatsToRune
+                  ? `${(amt * rate).toLocaleString()} sats → ${amt.toLocaleString()} NXWV`
+                  : isRuneToSats
+                  ? `${amt.toLocaleString()} NXWV → ${(amt * rate).toLocaleString()} sats`
                   : isToRune
-                  ? `${parseFloat(s.nxtAmount).toLocaleString()} NXT → ${parseInt(s.runeAmount).toLocaleString()} NXWV`
-                  : `${parseInt(s.runeAmount).toLocaleString()} NXWV → ${parseFloat(s.nxtAmount).toLocaleString()} NXT`;
+                  ? `${parseFloat(s.nxtAmount).toLocaleString()} NXT → ${amt.toLocaleString()} NXWV`
+                  : `${amt.toLocaleString()} NXWV → ${parseFloat(s.nxtAmount).toLocaleString()} NXT`;
                 return (
                   <div key={s.id} data-testid={`swap-row-${s.id}`}
                     className="rounded-xl border border-white/8 bg-white/3 p-4 flex items-center justify-between gap-3 flex-wrap"
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${
-                        isSats ? "bg-yellow-500/20" : isToRune ? "bg-orange-500/20" : "bg-purple-500/20"
+                        isSatsToRune ? "bg-green-500/20" : isRuneToSats ? "bg-yellow-500/20" : isToRune ? "bg-orange-500/20" : "bg-purple-500/20"
                       }`}>{emoji}</div>
                       <div>
                         <p className="text-sm font-mono text-white">{label}</p>

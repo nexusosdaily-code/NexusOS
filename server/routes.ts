@@ -11063,6 +11063,114 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // POST /api/rune-swap/sats-to-rune — spend sats balance, queue NXWV delivery
+  app.post("/api/rune-swap/sats-to-rune", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { runeAmount, btcAddress } = req.body;
+
+      const SATS_PER_NXWV = 100; // 100 sats per 1 NEXUS•WAVELENGTH
+
+      const runes = parseInt(String(runeAmount));
+      if (isNaN(runes) || runes < 100)
+        return res.status(400).json({ error: "Minimum 100 NEXUS•WAVELENGTH" });
+      if (runes > 100_000)
+        return res.status(400).json({ error: "Maximum 100,000 NEXUS•WAVELENGTH per swap" });
+      if (!btcAddress || String(btcAddress).length < 10)
+        return res.status(400).json({ error: "Bitcoin address required for NXWV delivery" });
+
+      const satsCost = BigInt(runes) * BigInt(SATS_PER_NXWV);
+
+      const { sql: sqlTag } = await import("drizzle-orm");
+      const { db } = await import("./db");
+
+      // Ensure lightning_wallet exists
+      await db.execute(sqlTag`
+        INSERT INTO lightning_wallets (user_id, sats_balance, updated_at)
+        VALUES (${user.id}, 0, NOW())
+        ON CONFLICT (user_id) DO NOTHING
+      `);
+
+      // Check balance & deduct atomically
+      const [lw] = await db.execute(sqlTag`
+        UPDATE lightning_wallets
+        SET sats_balance = sats_balance - ${satsCost.toString()},
+            updated_at = NOW()
+        WHERE user_id = ${user.id}
+          AND sats_balance >= ${satsCost.toString()}
+        RETURNING sats_balance
+      `);
+
+      if (!lw) {
+        return res.status(400).json({
+          error: `Insufficient sats balance. Need ${satsCost.toLocaleString()} sats for ${runes.toLocaleString()} NXWV.`
+        });
+      }
+      const newSatsBal = (lw as any)?.sats_balance ?? 0;
+
+      // Record in rune_swaps table — status "queued" (manual delivery from service wallet)
+      const { runeSwaps } = await import("../shared/schema");
+      const [row] = await db.insert(runeSwaps).values({
+        userId:      user.id,
+        username:    user.username,
+        direction:   "sats_to_rune",
+        nxtAmount:   "0",
+        runeAmount:  runes,
+        btcAddress:  btcAddress,
+        btcTxid:     null,
+        status:      "queued",
+        rate:        String(SATS_PER_NXWV),
+        note:        `${satsCost.toString()} sats spent → ${runes} NEXUS•WAVELENGTH queued for delivery to ${btcAddress}`,
+        completedAt: null,
+      }).returning();
+
+      // Telegram alert
+      try {
+        const { sendTelegramAlert } = await import("./telegram-bot");
+        await sendTelegramAlert(
+          `🟣 <b>Pipeline Swap — Sats→NXWV</b>\n\n` +
+          `User: ${user.username}\n` +
+          `Sats spent: <b>${satsCost.toLocaleString()} sats</b>\n` +
+          `NXWV queued: <b>${runes.toLocaleString()} NEXUS•WAVELENGTH</b>\n` +
+          `Rate: ${SATS_PER_NXWV} sats/NXWV\n` +
+          `Deliver to: <code>${btcAddress}</code>\n` +
+          `Swap ID: #${row.id}`
+        );
+      } catch { /* non-fatal */ }
+
+      // Nostr broadcast
+      try {
+        const { publishToNostr } = await import("./nostr-service");
+        await publishToNostr({
+          content: [
+            `🟣⚡ NexusOS Pipeline in action!`,
+            ``,
+            `${satsCost.toLocaleString()} sats → ${runes.toLocaleString()} NEXUS•WAVELENGTH Runes queued for Bitcoin delivery`,
+            ``,
+            `The Pipeline: Buy NXT → Convert to Sats → Wrap NXWV on Bitcoin`,
+            `1 NXT = 1,000 sats = 10 NXWV`,
+            ``,
+            `Start your pipeline at wnsp.tech/rune-swap`,
+            ``,
+            `#Bitcoin #Runes #NEXUSWAVELENGTH #WNSP #NexusOS`,
+          ].join("\n"),
+          hashtags: ["Bitcoin", "Runes", "NEXUSWAVELENGTH", "WNSP", "NexusOS"],
+        });
+      } catch { /* non-fatal */ }
+
+      res.json({
+        ok: true,
+        swapId:      row.id,
+        direction:   "sats_to_rune",
+        runeAmount:  runes,
+        satsCost:    satsCost.toString(),
+        newSatsBal:  newSatsBal.toString(),
+        rate:        SATS_PER_NXWV,
+        message: `${runes.toLocaleString()} NXWV queued for delivery to ${btcAddress}! (${satsCost.toLocaleString()} sats deducted)`,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // GET /api/rune-swap/history
   app.get("/api/rune-swap/history", authenticate, async (req: Request, res: Response) => {
     try {
