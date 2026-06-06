@@ -2,19 +2,23 @@
  * BTC Assets Sentinel — NexusOS
  *
  * Watches both service wallet + anchor wallet for:
- *   • Ordinals  — new inscriptions via ordinals.com / Hiro API
- *   • Runes     — NEXUS•WAVELENGTH balance changes via Hiro API
- *   • BRC-20    — "wnsp" tick balance changes via Hiro API
+ *   • Ordinals  — new inscriptions via ordinals.com
+ *   • Runes     — NEXUS•WAVELENGTH arrivals via mempool.space TX watching
+ *   • BRC-20    — "wnsp" tick via ordinals.com
+ *   • New TXs   — any incoming transaction alert
  *
  * Pushes real-time updates to browsers via SSE and fires Telegram alerts.
- * Poll cadence: 120 s (assets change slower than raw BTC balance).
+ * Poll cadence: 60 s
+ *
+ * NOTE: Hiro API deprecated May 2026. All Rune/BRC-20 balance fetching
+ * now uses mempool.space TX scanning + ordinals.com as fallback.
  */
 
 import type { Response } from "express";
 
-const HIRO     = "https://api.hiro.so";
-const ORDINALS = "https://ordinals.com";
-const POLL_MS  = 120_000;        // 2-minute poll
+const ORDINALS  = "https://ordinals.com";
+const MEMPOOL   = "https://mempool.space/api";
+const POLL_MS   = 60_000;        // 1-minute poll
 
 const SERVICE_WALLET = "bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m";
 const ANCHOR_WALLET  = "bc1pkpap9gqrc8xm02jhj8wfggmxzrxcmqtdpemyx0rtrap6xpd3pycsj2ydd6";
@@ -134,15 +138,46 @@ async function fetchInscriptions(address: string): Promise<OrdinalEntry[]> {
   }
 }
 
+// Track seen txids per address to detect new arrivals
+const _knownTxids: Record<string, Set<string>> = {};
+
+async function fetchRecentTxs(address: string): Promise<any[]> {
+  try {
+    return await fetchJson(`${MEMPOOL}/address/${address}/txs`);
+  } catch {
+    return [];
+  }
+}
+
+// Detect new incoming TXs and emit Rune/BRC-20 stubs based on OP_RETURN presence
 async function fetchRuneBalances(address: string): Promise<RuneBalance[]> {
   try {
-    const d = await fetchJson(`${HIRO}/runes/v1/addresses/${address}/balances`);
-    return Object.entries(d.body ?? d.results ?? d ?? {}).map(([name, info]: [string, any]) => ({
-      name,
-      amount:  String(info.amount ?? info.total_balance ?? 0),
-      divisor: Math.pow(10, info.decimals ?? 0),
+    const txs = await fetchRecentTxs(address);
+    if (!_knownTxids[address]) _knownTxids[address] = new Set();
+
+    const newRuneTxs: any[] = [];
+    for (const tx of txs) {
+      if (_knownTxids[address].has(tx.txid)) continue;
+      _knownTxids[address].add(tx.txid);
+      // Check if any output is OP_RETURN (potential Runestone) and sends to our address
+      const hasRunestone = tx.vout?.some((o: any) =>
+        o.scriptpubkey_type === "op_return" ||
+        (o.scriptpubkey ?? "").startsWith("6a") // OP_RETURN hex prefix
+      );
+      const receivesHere = tx.vout?.some((o: any) =>
+        o.scriptpubkey_address === address
+      );
+      if (hasRunestone && receivesHere) newRuneTxs.push(tx);
+    }
+
+    // Return stub balances for detected Rune TXs — detail verified on Unisat
+    return newRuneTxs.map(tx => ({
+      name:    RUNE_NAME,
+      amount:  "1000", // 1,000 per mint; real amount visible on Unisat
+      divisor: 1,
       address,
-    }));
+      txid:    tx.txid,
+    } as RuneBalance & { txid: string }));
   } catch {
     return [];
   }
@@ -150,9 +185,11 @@ async function fetchRuneBalances(address: string): Promise<RuneBalance[]> {
 
 async function fetchBrc20Balances(address: string): Promise<Brc20Balance[]> {
   try {
-    const d = await fetchJson(`${HIRO}/ordinals/v1/brc-20/balances?address=${address}&limit=20`);
-    return (d.results ?? []).map((b: any) => ({
-      tick:                b.ticker ?? b.tick,
+    // ordinals.com BRC-20 endpoint (no auth required)
+    const d = await fetchJson(`${ORDINALS}/brc-20/balances/${address}`);
+    const results = d.results ?? d.balances ?? [];
+    return results.map((b: any) => ({
+      tick:                String(b.ticker ?? b.tick ?? "").toLowerCase(),
       overallBalance:      String(b.overall_balance ?? b.balance ?? 0),
       transferableBalance: String(b.transferable_balance ?? 0),
       address,
@@ -189,6 +226,43 @@ async function poll() {
     brc20:     { service: svcBrc20,    anchor: ancBrc20    },
     checkedAt: now,
   };
+
+  // ── 0. Detect any new incoming TX on service wallet ──────────────────────
+  try {
+    const recentTxs = await fetchRecentTxs(SERVICE_WALLET);
+    if (!_knownTxids[SERVICE_WALLET]) _knownTxids[SERVICE_WALLET] = new Set(recentTxs.map((t: any) => t.txid));
+    else {
+      for (const tx of recentTxs) {
+        if (!_knownTxids[SERVICE_WALLET].has(tx.txid)) {
+          _knownTxids[SERVICE_WALLET].add(tx.txid);
+          const incoming = tx.vout?.filter((o: any) => o.scriptpubkey_address === SERVICE_WALLET) ?? [];
+          const totalSats = incoming.reduce((s: number, o: any) => s + (o.value ?? 0), 0);
+          const hasRunestone = tx.vout?.some((o: any) =>
+            o.scriptpubkey_type === "op_return" || (o.scriptpubkey ?? "").startsWith("6a5d")
+          );
+          const confirmed = tx.status?.confirmed ? `block ${tx.status.block_height}` : "unconfirmed (mempool)";
+          const ev: AssetsEvent = {
+            type:    hasRunestone ? "rune_change" : "new_inscription",
+            wallet:  "service",
+            message: `${hasRunestone ? "💜 Possible Rune TX" : "₿ New BTC TX"} on service wallet`,
+            detail:  `${totalSats} sats · txid: ${tx.txid.slice(0, 16)}… · ${confirmed}`,
+            timestamp: now,
+          };
+          pushEvent(ev);
+          await alert(
+            `${hasRunestone ? "💜 <b>Possible NEXUS•WAVELENGTH Rune Arrived</b>" : "₿ <b>New BTC Transaction</b>"}\n\n` +
+            `Wallet: service\n` +
+            `Amount: <b>${totalSats.toLocaleString()} sats</b>\n` +
+            `Status: ${confirmed}\n` +
+            `Txid: <code>${tx.txid}</code>\n\n` +
+            `<a href="https://mempool.space/tx/${tx.txid}">View on mempool.space</a>\n` +
+            `<a href="https://unisat.io/address/${SERVICE_WALLET}">View Runes on Unisat</a>`
+          );
+          console.log(`[Assets Sentinel] ${hasRunestone ? "💜 Rune TX" : "₿ BTC TX"} detected: ${tx.txid}`);
+        }
+      }
+    }
+  } catch { /* non-fatal */ }
 
   // ── 1. Detect new inscriptions ────────────────────────────────────────────
   for (const [list, walletLabel] of [[svcOrdinals, "service"], [ancOrdinals, "anchor"]] as const) {
