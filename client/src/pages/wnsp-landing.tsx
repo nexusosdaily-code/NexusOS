@@ -271,7 +271,7 @@ export default function WnspLandingPage() {
             <div className="flex-1 text-center sm:text-left">
               <div className="text-[10px] font-mono uppercase tracking-wider text-purple-400/60 mb-0.5">Live on Coinsniper · Bitcoin Rune</div>
               <h3 className="text-sm font-bold text-white">NEXUS•WAVELENGTH is listed on Coinsniper.</h3>
-              <p className="text-[11px] text-white/40 mt-0.5">Rune ID 840000:8472 · 21M supply · 1,000 per mint · 21,000 max mints · etched at block 840,000</p>
+              <p className="text-[11px] text-white/40 mt-0.5">Rune ID 952596:379 · 21 trillion supply · 21B per mint · 1,000 mints (all claimed) · supply sealed June 2026</p>
             </div>
             <div className="flex gap-2 shrink-0">
               <a

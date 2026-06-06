@@ -99,7 +99,8 @@ const QuoraPage = lazy(() => import("@/pages/quora"));
 const RedditPage = lazy(() => import("@/pages/reddit"));
 const TelegramHubPage = lazy(() => import("@/pages/telegram-hub"));
 const WnspPaperPage = lazy(() => import("@/pages/wnsp-paper"));
-const StartPage = lazy(() => import("@/pages/start"));
+const StartPage  = lazy(() => import("@/pages/start"));
+const MarketPage = lazy(() => import("@/pages/market"));
 const ReposedTheoryPage = lazy(() => import("@/pages/reposed-theory"));
 const ProtocolPage = lazy(() => import("@/pages/protocol"));
 const PhotonicLedgerPage = lazy(() => import("@/pages/photonic-ledger"));
@@ -287,7 +288,7 @@ function ProtectedRoutes() {
         <Route path="/reddit" component={RedditPage} />
         <Route path="/telegram-hub" component={TelegramHubPage} />
         <Route path="/wnsp-paper" component={WnspPaperPage} />
-        <Route path="/start" component={StartPage} />
+        <Route path="/start"  component={StartPage} />
         <Route path="/reposed-theory" component={ReposedTheoryPage} />
         <Route path="/ce-code-writer" component={CeCodeWriterPage} />
         <Route path="/campaign" component={CampaignPage} />
@@ -337,6 +338,7 @@ function Router() {
       <Route path="/community-mint" component={CommunityMintPage} />
       <Route path="/wnsp-staking" component={WnspStakingPage} />
       <Route path="/marketplace" component={MarketplacePage} />
+      <Route path="/market"     component={MarketPage} />
       <Route path="/rune-etching" component={RuneEtchingPage} />
       <Route path="/rune-mint" component={RuneMintPage} />
       <Route path="/etch-rune" component={EtchRunePage} />
