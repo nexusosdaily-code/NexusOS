@@ -287,6 +287,12 @@ function BtcWalletPill() {
                 <Coins className="w-3 h-3 text-yellow-400" />Rune Staking
               </button>
             </Link>
+            <Link href="/coinsniper">
+              <button className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-2"
+                onClick={() => setOpen(false)}>
+                <Rocket className="w-3 h-3 text-purple-400" />Coinsniper
+              </button>
+            </Link>
           </div>
           <button onClick={() => { disconnect(); setOpen(false); }}
             className="mt-2 flex items-center gap-1.5 w-full px-2 py-1.5 text-xs text-red-400 hover:bg-red-900/10 rounded transition-colors border-t border-slate-800 pt-2">

@@ -262,6 +262,36 @@ export default function WnspLandingPage() {
           </div>
         </div>
 
+        {/* Coinsniper listing badge */}
+        <div className="rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-900/20 to-orange-900/10 p-5">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center text-lg font-bold text-white">
+              🎯
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-purple-400/60 mb-0.5">Live on Coinsniper · Bitcoin Rune</div>
+              <h3 className="text-sm font-bold text-white">NEXUS•WAVELENGTH is listed on Coinsniper.</h3>
+              <p className="text-[11px] text-white/40 mt-0.5">Rune ID 840000:8472 · 21B supply · 1,000 per mint · etched at block 840,000</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <a
+                href="https://coinsniper.net/submit"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold px-4 py-2 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 hover:bg-purple-500/30 transition-colors flex items-center gap-1.5"
+              >
+                <ExternalLink size={11} /> Vote
+              </a>
+              <Link
+                href="/coinsniper"
+                className="text-xs px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                Dossier
+              </Link>
+            </div>
+          </div>
+        </div>
+
         {/* Campaign CTA */}
         <div className="rounded-2xl border border-cyan-500/25 bg-gradient-to-br from-cyan-500/10 to-violet-900/10 p-7 text-center space-y-4">
           <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-400/60">Infrastructure Campaign — Phase 1</div>
