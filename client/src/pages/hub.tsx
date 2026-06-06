@@ -185,6 +185,7 @@ const APP_SECTIONS = [
       { title: "🔮 Nostr Bridge",     href: "/nostr-bridge",        Icon: Radio },
       { title: "🎯 Coinsniper",       href: "/coinsniper",          Icon: Rocket },
       { title: "💜 Rune ↔ NXT Swap", href: "/rune-swap",           Icon: ArrowRightLeft },
+      { title: "🟠 NXT→NXWV Pipeline", href: "/rune-pipeline",    Icon: Layers },
     ],
   },
   {

@@ -10866,6 +10866,116 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // POST /api/pipeline/step2 — NXT → Sats with 1% pipeline fee to Orbital Treasury
+  // Pipeline step 2 of 3: converts NXT to sats so user can wrap NXWV in step 3
+  app.post("/api/pipeline/step2", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { nxwvGoal } = req.body;
+
+      const goal = parseInt(String(nxwvGoal));
+      if (isNaN(goal) || goal < 100)
+        return res.status(400).json({ error: "Minimum pipeline goal is 100 NXWV" });
+      if (goal > 100_000)
+        return res.status(400).json({ error: "Maximum pipeline goal is 100,000 NXWV per run" });
+
+      const SATS_PER_NXWV = 100;
+      const SATS_PER_NXT  = 1000;
+      const PIPELINE_FEE  = 0.01; // 1% — goes to Orbital Treasury
+
+      const satsToCredit = goal * SATS_PER_NXWV;           // exact sats user gets
+      const nxtBase      = goal / 10;                       // NXT that converts to sats
+      const nxtFee       = parseFloat((nxtBase * PIPELINE_FEE).toFixed(8)); // 1% fee
+      const nxtTotal     = parseFloat((nxtBase + nxtFee).toFixed(8));        // total deducted
+
+      // Check NXT balance
+      const wallet = await storage.getWallet(user.id);
+      if (!wallet) return res.status(404).json({ error: "NXT wallet not found" });
+      const nxtBal = parseFloat(wallet.balance);
+      if (nxtBal < nxtTotal)
+        return res.status(402).json({
+          error: `Insufficient NXT balance. Have ${nxtBal.toFixed(4)} NXT, need ${nxtTotal.toFixed(4)} NXT`,
+          have: nxtBal, need: nxtTotal,
+        });
+
+      // Deduct total NXT from user wallet
+      const newNxtBal = (nxtBal - nxtTotal).toFixed(8);
+      await storage.updateWalletBalance(wallet.id, newNxtBal);
+
+      // Route 1% fee → Orbital Treasury (NXT indestructible: never burned)
+      const { GENESIS_EXECUTION_ADDRESS } = await import("./physics");
+      const treasury = await storage.getWalletByAddress(GENESIS_EXECUTION_ADDRESS);
+      if (treasury) {
+        const tBal = parseFloat(treasury.balance);
+        await storage.updateWalletBalance(treasury.id, (tBal + nxtFee).toFixed(8));
+        await storage.createTransaction({
+          fromWalletId: wallet.id,
+          toWalletId:   treasury.id,
+          amount:       nxtFee.toFixed(8),
+          fee:          "0.00000000",
+          type:         "treasury_deposit",
+          status:       "completed",
+          metadata:     {
+            reason: "pipeline_step2_fee",
+            goal,
+            nxtBase: nxtBase.toFixed(8),
+            nxtFee: nxtFee.toFixed(8),
+            satsToCredit,
+            note: "1% pipeline fee → Orbital Treasury; NXT never burned",
+          },
+        });
+      }
+
+      // Credit sats to Lightning wallet
+      const { sql: sqlTag } = await import("drizzle-orm");
+      const { db } = await import("./db");
+
+      await db.execute(sqlTag`
+        INSERT INTO lightning_wallets (user_id, sats_balance, updated_at)
+        VALUES (${user.id}, 0, NOW())
+        ON CONFLICT (user_id) DO NOTHING
+      `);
+
+      const [lw] = await db.execute(sqlTag`
+        UPDATE lightning_wallets
+        SET sats_balance = sats_balance + ${String(satsToCredit)},
+            updated_at   = NOW()
+        WHERE user_id = ${user.id}
+        RETURNING sats_balance
+      `);
+
+      const newSatsBal = Number((lw as any)?.sats_balance ?? satsToCredit);
+
+      // Telegram alert
+      try {
+        const { sendTelegramAlert } = await import("./telegram-bot");
+        await sendTelegramAlert(
+          `⚡ <b>Pipeline Step 2 — NXT→Sats</b>\n\n` +
+          `User: ${user.username}\n` +
+          `Goal: <b>${goal.toLocaleString()} NXWV</b>\n` +
+          `NXT deducted: ${nxtTotal.toFixed(4)} (${nxtBase.toFixed(4)} base + ${nxtFee.toFixed(4)} fee)\n` +
+          `Sats credited: <b>${satsToCredit.toLocaleString()} sats</b>\n` +
+          `New NXT bal: ${newNxtBal}\n` +
+          `New sats bal: ${newSatsBal.toLocaleString()}\n\n` +
+          `Next: user wraps sats → NXWV in step 3.`
+        );
+      } catch { /* non-fatal */ }
+
+      res.json({
+        ok:           true,
+        step:         2,
+        goal,
+        nxtDeducted:  nxtTotal.toFixed(8),
+        nxtBase:      nxtBase.toFixed(8),
+        nxtFee:       nxtFee.toFixed(8),
+        satsCredited: satsToCredit,
+        newNxtBal,
+        newSatsBal,
+        message: `Step 2 complete — ${satsToCredit.toLocaleString()} sats credited. Run step 3 to wrap ${goal.toLocaleString()} NXWV to Bitcoin.`,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // POST /api/rune-swap/rune-to-nxt — user registers their BTC TX; sentinel auto-credits on detection
   app.post("/api/rune-swap/rune-to-nxt", authenticate, async (req: Request, res: Response) => {
     try {
