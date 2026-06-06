@@ -309,6 +309,68 @@ function MyIdentityCard({ username }: { username: string }) {
           <code className="text-slate-400">{window.location.origin}/profile/{username.toLowerCase()}</code>
         </div>
 
+        {/* ── Bitcoin Name System handles ── */}
+        <div className="rounded-xl border border-orange-500/20 bg-orange-950/10 p-3 space-y-2">
+          <div className="flex items-center gap-1.5 text-[10px] text-orange-400/70 uppercase tracking-wider font-mono">
+            <Bitcoin className="w-3 h-3" />
+            Bitcoin Name System · on-chain handles
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              {
+                handle: "wnsp.btc",
+                label: ".btc",
+                desc: "Bitcoin Name System",
+                color: "#f97316",
+                bg: "rgba(249,115,22,0.08)",
+                border: "rgba(249,115,22,0.25)",
+                href: "https://app.btcname.space/names/wnsp",
+              },
+              {
+                handle: "wnsp.sat",
+                label: ".sat",
+                desc: "Satoshi Names · ordinals",
+                color: "#fbbf24",
+                bg: "rgba(251,191,36,0.08)",
+                border: "rgba(251,191,36,0.25)",
+                href: "https://unisat.io/bns/wnsp.sat",
+              },
+              {
+                handle: "wnsp.sats",
+                label: ".sats",
+                desc: "Sats Names",
+                color: "#34d399",
+                bg: "rgba(52,211,153,0.08)",
+                border: "rgba(52,211,153,0.25)",
+                href: "https://satsnames.io/name/wnsp",
+              },
+              {
+                handle: "wnsp.unisat",
+                label: ".unisat",
+                desc: "Unisat Names",
+                color: "#60a5fa",
+                bg: "rgba(96,165,250,0.08)",
+                border: "rgba(96,165,250,0.25)",
+                href: "https://unisat.io/bns/wnsp.unisat",
+              },
+            ].map(({ handle, label, desc, color, bg, border, href }) => (
+              <a key={handle} href={href} target="_blank" rel="noopener noreferrer"
+                data-testid={`link-bns-${handle.replace(".", "-")}`}
+                className="flex items-center justify-between rounded-lg px-3 py-2 transition-all hover:opacity-90 group"
+                style={{ background: bg, border: `1px solid ${border}` }}>
+                <div>
+                  <div className="font-mono font-bold text-sm" style={{ color }}>{handle}</div>
+                  <div className="text-[10px] text-slate-500 font-mono">{desc}</div>
+                </div>
+                <ExternalLink className="w-3 h-3 opacity-50 group-hover:opacity-100 transition-opacity" style={{ color }} />
+              </a>
+            ))}
+          </div>
+          <div className="text-[10px] text-slate-600 font-mono text-center pt-0.5">
+            4 BNS registries · all resolve to the same WNSP Ψ channel
+          </div>
+        </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" onClick={() => autoRegMut.mutate()}
             disabled={autoRegMut.isPending}
