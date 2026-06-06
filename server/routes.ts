@@ -11370,9 +11370,9 @@ export async function registerRoutes(
   const RUNE_NAME        = "NEXUS•WAVELENGTH";
   const RUNE_SYMBOL      = "Ψ";
   const RUNE_DECIMALS    = 8;
-  const RUNE_SUPPLY      = 21_000_000_000; // 21 billion — mirrors NXT supply exactly
-  const RUNE_MINT_AMOUNT = 1_000;          // 1,000 per mint per person — mirrors 1 NXT = 1,000 sats
-  const RUNE_MAX_MINTS   = 21_000_000;     // 21 million possible minters
+  const RUNE_SUPPLY      = 21_000_000;     // 21 million total — 21,000 mints × 1,000 per mint
+  const RUNE_MINT_AMOUNT = 1_000;          // 1,000 per mint
+  const RUNE_MAX_MINTS   = 21_000;         // 21,000 max mints
   const RUNE_NXT_COST    = 100;
   const RUNE_STAKE_NXT_PER_EPOCH = 150; // NXT per epoch per 1,000 runes staked
   // Placeholder etched Rune ID (real etching tx to be submitted on mainnet)

@@ -268,7 +268,7 @@ async function poll() {
                 ``,
                 `Someone just minted NEXUS•WAVELENGTH (Rune ID: 840000:8472) — the physics-native token of the WNSP protocol.`,
                 ``,
-                `⚡ Supply: 21,000,000,000 · Per mint: 1,000 · Etched at block 840,000`,
+                `⚡ Supply: 21,000,000 · Per mint: 1,000 · Max mints: 21,000 · Etched at block 840,000`,
                 `🔗 Txid: ${tx.txid}`,
                 `📊 Status: ${confirmed}`,
                 ``,

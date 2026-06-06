@@ -52,7 +52,7 @@ const TABS: { id: Dir; label: string; icon: React.ReactNode; color: string }[] =
 
 const LAUNCH_NOTE = `💜⚡ NEXUS•WAVELENGTH Rune is LIVE on Bitcoin!
 
-Rune ID: 840000:8472 | Supply: 21,000,000,000 | 1,000 per mint
+Rune ID: 840000:8472 | Supply: 21,000,000 | 1,000 per mint | 21,000 max mints
 
 You can now:
 🔴 Mint NXWV on Bitcoin (Unisat)

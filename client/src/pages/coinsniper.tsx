@@ -10,25 +10,25 @@ import {
 const RUNE_ID        = "840000:8472";
 const RUNE_NAME      = "NEXUS•WAVELENGTH";
 const TICKER         = "NXWV";
-const TOTAL_SUPPLY   = "21,000,000,000";
+const TOTAL_SUPPLY   = "21,000,000";
 const PER_MINT       = "1,000";
-const MAX_MINTS      = "21,000,000";
+const MAX_MINTS      = "21,000";
 const ETCH_BLOCK     = "840,000";
 const WEBSITE        = "https://wnsp.tech";
 const TELEGRAM       = "https://t.me/NexusOSWNSP";
 const NOSTR_NPUB     = "npub1pmwaavd9qvyjzgvetm3uy48clhyf6x76jqvu4gzd6pzu8gv9gmyq96gg9u";
 const SERVICE_WALLET = "bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m";
 
-const DESCRIPTION = `NEXUS•WAVELENGTH is a Bitcoin Rune etched at block 840,000 — the Bitcoin halving block — representing the WNSP (Wavelength Network Spectral Protocol) physics engine.\n\nSupply: 21,000,000,000 (mirrors BTC's halving math). Mint: 1,000 per person, 21M total mints. Built on the Theory of Compression States — every transaction is a photon, every address is a spectral channel (Ψ). NexusOS is the physics-native operating system for a Kardashev Type I civilization. This is NOT an EVM token — it is a native Bitcoin Rune on the UTXO chain. Rune ID: 840000:8472.`;
+const DESCRIPTION = `NEXUS•WAVELENGTH is a Bitcoin Rune etched at block 840,000 — the Bitcoin halving block — representing the WNSP (Wavelength Network Spectral Protocol) physics engine.\n\nSupply: 21,000,000 (21M total · 21,000 max mints · 1,000 per mint). Built on the Theory of Compression States — every transaction is a photon, every address is a spectral channel (Ψ). NexusOS is the physics-native operating system for a Kardashev Type I civilization. This is NOT an EVM token — it is a native Bitcoin Rune on the UTXO chain. Rune ID: 840000:8472.`;
 
 const FIELDS = [
   { label: "Token Name",      value: RUNE_NAME,      tip: "Full Rune name with bullet separator" },
   { label: "Ticker / Symbol", value: TICKER,         tip: "Short symbol for the listing" },
   { label: "Chain",           value: "Bitcoin",      tip: "Select Bitcoin or Other — clarify it's a Rune in description" },
   { label: "Contract / ID",   value: RUNE_ID,        tip: "Use the Rune ID as the 'contract address' field" },
-  { label: "Total Supply",    value: TOTAL_SUPPLY,   tip: "21 billion — mirrors BTC's halving math" },
+  { label: "Total Supply",    value: TOTAL_SUPPLY,   tip: "21 million — 21,000 mints × 1,000 per mint" },
   { label: "Per Mint",        value: PER_MINT,       tip: "1,000 NEXUS•WAVELENGTH per mint" },
-  { label: "Max Mints",       value: MAX_MINTS,      tip: "21,000,000 total mint transactions" },
+  { label: "Max Mints",       value: MAX_MINTS,      tip: "21,000 total mint transactions possible" },
   { label: "Etch Block",      value: ETCH_BLOCK,     tip: "Bitcoin block where the Rune was etched" },
   { label: "Website",         value: WEBSITE,        tip: "Official NexusOS / WNSP website" },
   { label: "Telegram",        value: TELEGRAM,       tip: "Community Telegram channel" },
@@ -83,7 +83,7 @@ export default function CoinsnierPage() {
 
   const shareText = encodeURIComponent(
     `💜 NEXUS•WAVELENGTH — Bitcoin Rune etched at block 840,000\n\n` +
-    `Supply: 21B · 1,000 per mint · Rune ID: 840000:8472\n\n` +
+    `Supply: 21M · 21,000 mints · 1,000 per mint · Rune ID: 840000:8472\n\n` +
     `The physics-native OS for a Kardashev Type I civilization.\n\n` +
     `Vote on Coinsniper → https://coinsniper.net/submit\n${WEBSITE}`
   );
@@ -150,7 +150,7 @@ export default function CoinsnierPage() {
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: "Total Supply",  value: "21B",          color: "text-purple-300" },
+            { label: "Total Supply",  value: "21M",          color: "text-purple-300" },
             { label: "Per Mint",      value: "1,000",        color: "text-orange-300" },
             { label: "Votes Needed",  value: "500",          color: "text-green-300"  },
           ].map(s => (
