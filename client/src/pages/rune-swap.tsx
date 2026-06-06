@@ -75,7 +75,7 @@ export default function RuneSwapPage() {
   const [runeAmt, setRuneAmt] = useState("1000");
   const [btcAddr, setBtcAddr] = useState("");
   const [btcTxid, setBtcTxid] = useState("");
-  const [showBroadcast, setShowBroadcast] = useState(false);
+  const [showBroadcast, setShowBroadcast] = useState(true);
   const [broadcastText, setBroadcastText] = useState(LAUNCH_NOTE);
 
   const { data: rate } = useQuery<any>({ queryKey: ["/api/rune-swap/rate"] });
@@ -148,6 +148,59 @@ export default function RuneSwapPage() {
               <p className="text-white/40 text-xs">NEXUS•WAVELENGTH Rune ↔ NXT · Sats · Bitcoin</p>
             </div>
           </div>
+        </div>
+
+        {/* 📡 Nostr Broadcast Panel — TOP */}
+        <div className="rounded-2xl border border-purple-500/40 bg-purple-950/30 overflow-hidden">
+          <button
+            onClick={() => setShowBroadcast(v => !v)}
+            data-testid="toggle-broadcast"
+            className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors"
+          >
+            <span className="flex items-center gap-2 text-sm font-bold text-purple-300">
+              <Radio className="w-4 h-4 text-purple-400" /> 📡 Broadcast to Nostr
+            </span>
+            {showBroadcast ? <ChevronUp className="w-4 h-4 text-white/40" /> : <ChevronDown className="w-4 h-4 text-white/40" />}
+          </button>
+
+          {showBroadcast && (
+            <div className="px-5 pb-5 space-y-3 border-t border-purple-500/20">
+              <p className="text-xs text-white/40 pt-3">
+                Signs & publishes to 8 Nostr relays instantly. Edit below or send as-is.
+              </p>
+              <Textarea
+                value={broadcastText}
+                onChange={e => setBroadcastText(e.target.value)}
+                rows={10}
+                data-testid="input-broadcast-content"
+                className="bg-black/40 border-purple-500/20 text-white font-mono text-xs resize-none leading-relaxed"
+              />
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  onClick={() => setBroadcastText(LAUNCH_NOTE)}
+                  className="text-xs text-white/30 hover:text-white/60 transition-colors"
+                >
+                  Reset to launch note
+                </button>
+                <Button
+                  onClick={() => broadcastMut.mutate()}
+                  disabled={broadcastMut.isPending || broadcastText.length < 10}
+                  data-testid="button-broadcast-send"
+                  className="bg-purple-600 hover:bg-purple-700 gap-2 font-bold text-sm px-6"
+                >
+                  {broadcastMut.isPending
+                    ? <span className="flex items-center gap-2"><Radio className="w-4 h-4 animate-pulse" /> Sending…</span>
+                    : <span className="flex items-center gap-2"><Radio className="w-4 h-4" /> Send to Nostr</span>
+                  }
+                </Button>
+              </div>
+              {broadcastMut.isSuccess && (
+                <p className="text-xs text-green-400 text-center font-semibold">
+                  ✓ Broadcast confirmed — check your Nostr profile
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Rate cards */}
