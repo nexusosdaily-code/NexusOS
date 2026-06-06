@@ -11314,10 +11314,18 @@ export async function registerRoutes(
         hashtags: Array.isArray(hashtags) ? hashtags : [],
       });
 
+      // Convert hex event ID → note1 bech32 for direct viewer links
+      const { bech32 } = await import("bech32");
+      const hexBytes = Buffer.from(result.id, "hex");
+      const note1    = bech32.encode("note", bech32.toWords(hexBytes));
+
       res.json({
-        ok:     true,
+        ok:      true,
         eventId: result.id,
+        note1,
         relays:  result.relays,
+        primal:  `https://primal.net/e/${note1}`,
+        njump:   `https://njump.me/${note1}`,
         message: `Broadcast sent to ${result.relays.length} relay(s)`,
       });
     } catch (err: any) { res.status(500).json({ error: err.message }); }

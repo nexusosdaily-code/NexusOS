@@ -175,13 +175,18 @@ export default function RunePipelinePage() {
   });
 
   // ── Nostr broadcast ──────────────────────────────────────────────────────────
+  const [broadcastLinks, setBroadcastLinks] = useState<{ primal: string; njump: string } | null>(null);
+
   const broadcast = useMutation({
     mutationFn: () => apiRequest("POST", "/api/nostr/broadcast", {
       content: broadcastTxt,
       hashtags: ["Bitcoin", "Runes", "NEXUSWAVELENGTH", "NXT", "WNSP", "NexusOS"],
     }),
-    onSuccess: () => toast({ title: "📡 Broadcast sent!", description: "Note published to 8 Nostr relays" }),
-    onError:   (e: any) => toast({ title: "Broadcast failed", description: e.message, variant: "destructive" }),
+    onSuccess: (data: any) => {
+      if (data.primal) setBroadcastLinks({ primal: data.primal, njump: data.njump });
+      toast({ title: "📡 Broadcast sent!", description: `Published to ${data.relays?.length ?? 8} Nostr relays` });
+    },
+    onError: (e: any) => toast({ title: "Broadcast failed", description: e.message, variant: "destructive" }),
   });
 
   const canStep2 = goal >= 100 && nxtBal >= nxtTotal && btcAddress.length >= 10;
@@ -512,7 +517,21 @@ export default function RunePipelinePage() {
                   : <><Radio className="w-4 h-4" /> Publish to 8 Nostr Relays</>}
               </Button>
               {broadcast.isSuccess && (
-                <p className="text-xs text-green-400 text-center">✓ Published to Nostr</p>
+                <div className="space-y-2">
+                  <p className="text-xs text-green-400 text-center font-semibold">✓ Published to {broadcast.data?.relays?.length ?? 8} Nostr relays</p>
+                  {broadcastLinks && (
+                    <div className="flex gap-2">
+                      <a href={broadcastLinks.primal} target="_blank" rel="noopener noreferrer"
+                        className="flex-1 text-center text-xs bg-purple-900/40 hover:bg-purple-900/60 border border-purple-500/30 rounded-lg py-2 text-purple-300 hover:text-purple-200 transition-colors flex items-center justify-center gap-1.5">
+                        <ExternalLink className="w-3 h-3" /> View on Primal
+                      </a>
+                      <a href={broadcastLinks.njump} target="_blank" rel="noopener noreferrer"
+                        className="flex-1 text-center text-xs bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg py-2 text-white/50 hover:text-white/70 transition-colors flex items-center justify-center gap-1.5">
+                        <ExternalLink className="w-3 h-3" /> njump.me
+                      </a>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 

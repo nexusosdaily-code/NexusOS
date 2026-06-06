@@ -108,17 +108,20 @@ export default function RuneSwapPage() {
   const nxtBal   = parseFloat(wallet?.wallet?.balance ?? "0");
   const satsBal  = Number(lightning?.satsBalance ?? 0);
 
+  const [broadcastLinks, setBroadcastLinks] = useState<{ primal: string; njump: string } | null>(null);
+
   const broadcastMut = useMutation({
     mutationFn: () => apiRequest("POST", "/api/nostr/broadcast", {
       content:  broadcastText,
       hashtags: ["Bitcoin", "Runes", "NEXUSWAVELENGTH", "WNSP", "NexusOS"],
     }),
-    onSuccess: (data: any) => toast({
-      title: "📡 Broadcast sent to Nostr!",
-      description: data.eventId
-        ? `Event ${data.eventId.slice(0, 16)}… published to ${data.relays?.length ?? 8} relay(s)`
-        : `Note published to 8 Nostr relays — check your profile`,
-    }),
+    onSuccess: (data: any) => {
+      if (data.primal) setBroadcastLinks({ primal: data.primal, njump: data.njump });
+      toast({
+        title: "📡 Broadcast sent to Nostr!",
+        description: `Published to ${data.relays?.length ?? 8} relay(s)`,
+      });
+    },
     onError: (e: any) => toast({ title: "Broadcast failed", description: e.message, variant: "destructive" }),
   });
 
@@ -318,9 +321,23 @@ export default function RuneSwapPage() {
                 </Button>
               </div>
               {broadcastMut.isSuccess && (
-                <p className="text-xs text-green-400 text-center font-semibold">
-                  ✓ Broadcast confirmed — check your Nostr profile
-                </p>
+                <div className="space-y-2">
+                  <p className="text-xs text-green-400 text-center font-semibold">
+                    ✓ Published to {broadcastMut.data?.relays?.length ?? 8} Nostr relays
+                  </p>
+                  {broadcastLinks && (
+                    <div className="flex gap-2">
+                      <a href={broadcastLinks.primal} target="_blank" rel="noopener noreferrer"
+                        className="flex-1 text-center text-xs bg-purple-900/40 hover:bg-purple-900/60 border border-purple-500/30 rounded-lg py-2 text-purple-300 hover:text-purple-200 transition-colors flex items-center justify-center gap-1.5">
+                        <ExternalLink className="w-3 h-3" /> View on Primal
+                      </a>
+                      <a href={broadcastLinks.njump} target="_blank" rel="noopener noreferrer"
+                        className="flex-1 text-center text-xs bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg py-2 text-white/50 hover:text-white/70 transition-colors flex items-center justify-center gap-1.5">
+                        <ExternalLink className="w-3 h-3" /> njump.me
+                      </a>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
