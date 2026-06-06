@@ -92,6 +92,39 @@ function buildTags(evt: WnspNostrPayload): string[][] {
   return [...base, ...(evt.tags ?? [])];
 }
 
+// ── Publish kind-0 profile metadata ──────────────────────────────────────────
+export async function publishProfile(meta: {
+  name:    string;
+  about:   string;
+  website: string;
+  picture: string;
+  banner:  string;
+  lud16:   string;
+  nip05:   string;
+}): Promise<{ id: string; relays: string[] }> {
+  const privKey = getPrivKeyBytes();
+  const template = {
+    kind:       0 as number,
+    created_at: Math.floor(Date.now() / 1000),
+    tags:       [] as string[][],
+    content:    JSON.stringify(meta),
+  };
+  const signed: NostrEvent = finalizeEvent(template, privKey);
+  const p = getPool();
+  const publishPromises = p.publish(DEFAULT_RELAYS, signed) as unknown as Promise<string>[];
+  const withTimeout = DEFAULT_RELAYS.map((relay, i) =>
+    Promise.race([
+      publishPromises[i].then(() => relay),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 8_000)),
+    ])
+  );
+  const results  = await Promise.allSettled(withTimeout);
+  const published = results
+    .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
+    .map((r) => r.value);
+  return { id: signed.id, relays: published };
+}
+
 // ── Publish ───────────────────────────────────────────────────────────────────
 export async function publishToNostr(
   evt: WnspNostrPayload

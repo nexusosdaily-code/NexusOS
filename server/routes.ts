@@ -11785,6 +11785,28 @@ export async function registerRoutes(
     });
   }
   // ── Nostr relay bridge ────────────────────────────────────────────────────────
+  // GET /.well-known/nostr.json — NIP-05 verification for wnsp@wnsp.tech
+  app.get("/.well-known/nostr.json", (_req: Request, res: Response) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.json({
+      names: {
+        wnsp:    "0edddeb1a503092121995ee3c254f8fdc89d1bda9019caa04dd045c3a18546c8",
+        nexusos: "0edddeb1a503092121995ee3c254f8fdc89d1bda9019caa04dd045c3a18546c8",
+        _:       "0edddeb1a503092121995ee3c254f8fdc89d1bda9019caa04dd045c3a18546c8",
+      },
+      relays: {
+        "0edddeb1a503092121995ee3c254f8fdc89d1bda9019caa04dd045c3a18546c8": [
+          "wss://relay.damus.io",
+          "wss://nos.lol",
+          "wss://relay.nostr.band",
+          "wss://nostr.wine",
+          "wss://relay.snort.social",
+          "wss://relay.primal.net",
+        ],
+      },
+    });
+  });
+
   app.get("/api/nostr/status", (_req: Request, res: Response) => {
     try {
       res.json({
