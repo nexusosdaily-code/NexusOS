@@ -50,9 +50,10 @@ const TABS: { id: Dir; label: string; icon: React.ReactNode; color: string }[] =
   { id: "nxt_to_rune",  label: "NXT → NXWV",  icon: <Layers className="w-3.5 h-3.5" />,   color: "orange" },
 ];
 
-const LAUNCH_NOTE = `💜⚡ NEXUS•WAVELENGTH Rune is LIVE on Bitcoin!
+const LAUNCH_NOTE = `💜⚡ NEXUS•WAVELENGTH is officially etched on Bitcoin!
 
 Rune ID: 840000:8472 | Supply: 21,000,000 | 1,000 per mint | 21,000 max mints
+Etch TX: 03e96173f181e3323be796736cfa193b6f11bac374cc1ef7f8f8ecdf0150df3b
 
 You can now:
 🔴 Mint NXWV on Bitcoin (Unisat)
@@ -61,6 +62,9 @@ You can now:
 
 Mint on Unisat 👇
 https://unisat.io/runes/detail/NEXUS%E2%80%A2WAVELENGTH
+
+Verify etch on mempool.space 👇
+https://mempool.space/tx/03e96173f181e3323be796736cfa193b6f11bac374cc1ef7f8f8ecdf0150df3b
 
 Bridge & wrap at wnsp.tech/rune-swap
 
