@@ -52,29 +52,36 @@ const TABS: { id: Dir; label: string; icon: React.ReactNode; color: string }[] =
   { id: "rune_to_sats", label: "NXWV → Sats",  icon: <ArrowUpDown className="w-3.5 h-3.5" />, color: "yellow" },
 ];
 
-const LAUNCH_NOTE = `💜⚡ Get Bitcoin Runes with NXT — The NexusOS Pipeline
+const LAUNCH_NOTE = `💜⚡ NEXUS•WAVELENGTH — The Bitcoin UTXO that rises with BTC
 
-No BTC wallet needed to start. Just buy NXT.
+NXWV is a Rune on Bitcoin. A real UTXO. Not a promise.
 
-The Pipeline:
-1️⃣ Buy NXT on NexusOS
+As BTC rises, so does the USD value of every sat you hold.
+Your NXWV floor price in sats never changes — but in dollars it compounds with every BTC cycle.
+
+The Triple Value Stack:
+🟠 Layer 1 — BTC appreciation (sats worth more USD as BTC rises)
+🟣 Layer 2 — Rune scarcity (21M fixed supply, 21,000 max mints)
+⚡ Layer 3 — NXT utility (bridge back to the NexusOS ecosystem)
+
+The NexusOS Pipeline — No BTC wallet needed to start:
+1️⃣ Buy NXT
 2️⃣ Convert NXT → Sats (1 NXT = 1,000 sats)
-3️⃣ Swap Sats → NEXUS•WAVELENGTH Runes (100 sats = 1 NXWV)
+3️⃣ Wrap Sats → NXWV Runes on Bitcoin (100 sats = 1 NXWV)
 
-The maths: 1 NXT = 10 NXWV on Bitcoin mainnet
+1 NXT = 10 NXWV on Bitcoin mainnet at launch rates
 
-NEXUS•WAVELENGTH Rune
-Rune ID: 840000:8472 | Supply: 21,000,000 | 1,000 per mint
+Floor today: 100 sats ≈ $0.06/NXWV
+Floor @ $100k BTC: 100 sats ≈ $0.10/NXWV
+Floor @ $200k BTC: 100 sats ≈ $0.20/NXWV
++ Rune market premium on top
 
 Start the pipeline 👇
 https://wnsp.tech/rune-swap
 
-View on Unisat 👇
-https://unisat.io/runes/detail/NEXUS%E2%80%A2WAVELENGTH
+NEXUS•WAVELENGTH | Rune ID: 840000:8472 | Supply: 21,000,000
 
-Built on the Theory of Compression States — the first physics-native token on Bitcoin.
-
-#Bitcoin #Runes #NEXUSWAVELENGTH #NXT #WNSP #NexusOS #BTC`;
+#Bitcoin #Runes #NEXUSWAVELENGTH #NXT #WNSP #NexusOS #BTC #Ordinals`;
 
 export default function RuneSwapPage() {
   const { toast } = useToast();
@@ -222,6 +229,39 @@ export default function RuneSwapPage() {
               <span className="text-green-300">10 NXWV</span>
               <span className="text-white/20 ml-2 text-xs">on Bitcoin</span>
             </div>
+          </div>
+
+          {/* BTC Appreciation Stack */}
+          <div className="rounded-xl border border-orange-500/20 bg-orange-950/20 p-4 space-y-3">
+            <p className="text-xs font-bold text-orange-300 flex items-center gap-1.5">
+              <Bitcoin className="w-3.5 h-3.5" /> NXWV is a Bitcoin UTXO — it rises with BTC
+            </p>
+            <p className="text-xs text-white/40 leading-relaxed">
+              NEXUS•WAVELENGTH Runes live on Bitcoin as UTXOs. As BTC price rises, the USD value of your sats and your Rune position both increase — automatically, with zero action required.
+            </p>
+            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              <div className="rounded-lg bg-black/30 p-2">
+                <p className="text-white/30 mb-1">BTC @ $60k</p>
+                <p className="font-mono text-white font-semibold">100 sats</p>
+                <p className="text-green-400 font-mono">≈ $0.06</p>
+                <p className="text-white/20 text-[10px] mt-0.5">per NXWV</p>
+              </div>
+              <div className="rounded-lg bg-black/30 p-2 border border-yellow-500/20">
+                <p className="text-white/30 mb-1">BTC @ $100k</p>
+                <p className="font-mono text-white font-semibold">100 sats</p>
+                <p className="text-yellow-400 font-mono">≈ $0.10</p>
+                <p className="text-white/20 text-[10px] mt-0.5">per NXWV</p>
+              </div>
+              <div className="rounded-lg bg-black/30 p-2 border border-orange-500/20">
+                <p className="text-white/30 mb-1">BTC @ $200k</p>
+                <p className="font-mono text-white font-semibold">100 sats</p>
+                <p className="text-orange-400 font-mono">≈ $0.20</p>
+                <p className="text-white/20 text-[10px] mt-0.5">per NXWV</p>
+              </div>
+            </div>
+            <p className="text-[11px] text-white/25 text-center">
+              Floor price in sats stays 100 · USD value rises with every BTC cycle · Rune scarcity compounds on top
+            </p>
           </div>
 
           <button
