@@ -10928,7 +10928,7 @@ export async function registerRoutes(
         ON CONFLICT (user_id) DO NOTHING
       `);
 
-      const [lw] = await db.execute(sqlTag`
+      const lwResult = await db.execute(sqlTag`
         UPDATE lightning_wallets
         SET sats_balance = sats_balance + ${String(satsToCredit)},
             updated_at   = NOW()
@@ -10936,7 +10936,8 @@ export async function registerRoutes(
         RETURNING sats_balance
       `);
 
-      const newSatsBal = Number((lw as any)?.sats_balance ?? satsToCredit);
+      const lw = (lwResult as any).rows?.[0] ?? (lwResult as any)?.[0];
+      const newSatsBal = Number(lw?.sats_balance ?? satsToCredit);
 
       // Telegram alert
       try {
@@ -11091,14 +11092,15 @@ export async function registerRoutes(
         ON CONFLICT (user_id) DO NOTHING
       `);
 
-      const [lw] = await db.execute(sqlTag`
+      const lwResult2 = await db.execute(sqlTag`
         UPDATE lightning_wallets
         SET sats_balance = sats_balance + ${satsToCredit.toString()},
             updated_at = NOW()
         WHERE user_id = ${user.id}
         RETURNING sats_balance
       `);
-      const newSatsBal = (lw as any)?.sats_balance ?? 0;
+      const lw2 = (lwResult2 as any).rows?.[0] ?? (lwResult2 as any)?.[0];
+      const newSatsBal = lw2?.sats_balance ?? 0;
 
       // Record in rune_swaps table
       const { runeSwaps } = await import("../shared/schema");
@@ -11194,7 +11196,7 @@ export async function registerRoutes(
       `);
 
       // Check balance & deduct atomically
-      const [lw] = await db.execute(sqlTag`
+      const lwResult3 = await db.execute(sqlTag`
         UPDATE lightning_wallets
         SET sats_balance = sats_balance - ${satsCost.toString()},
             updated_at = NOW()
@@ -11202,13 +11204,14 @@ export async function registerRoutes(
           AND sats_balance >= ${satsCost.toString()}
         RETURNING sats_balance
       `);
+      const lw3 = (lwResult3 as any).rows?.[0] ?? (lwResult3 as any)?.[0];
 
-      if (!lw) {
+      if (!lw3) {
         return res.status(400).json({
           error: `Insufficient sats balance. Need ${satsCost.toLocaleString()} sats for ${runes.toLocaleString()} NXWV.`
         });
       }
-      const newSatsBal = (lw as any)?.sats_balance ?? 0;
+      const newSatsBal = lw3?.sats_balance ?? 0;
 
       // Record in rune_swaps table — status "queued" (manual delivery from service wallet)
       const { runeSwaps } = await import("../shared/schema");
