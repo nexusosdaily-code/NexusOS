@@ -12275,8 +12275,8 @@ export async function registerRoutes(
   app.get("/api/portfolio/summary", authenticate, async (req, res) => {
     try {
       const { db } = await import("./db");
-      const { wallets, lightningWallets, wnusdPositions } = await import("../shared/schema");
-      const { eq } = await import("drizzle-orm");
+      const { wallets, lightningWallets, wnusdPositions, satsStakes } = await import("../shared/schema");
+      const { eq, sql: sqlRaw } = await import("drizzle-orm");
 
       const [wallet]   = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
       const [lnWallet] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, req.user!.id));
@@ -12287,7 +12287,17 @@ export async function registerRoutes(
         .filter(p => p.status === "active")
         .reduce((a, p) => a + parseFloat(p.wnusdMinted), 0);
 
-      // Fetch BTC/USD price (cached via existing endpoint)
+      // Staked sats + pending NXT yield
+      const [stakeRow] = await db.select({
+        totalSats:  sqlRaw<string>`coalesce(sum(amount_sats), 0)`,
+        totalYield: sqlRaw<string>`coalesce(sum(nxt_yield), 0)`,
+        count:      sqlRaw<string>`count(*)`,
+      }).from(satsStakes).where(eq(satsStakes.userId, req.user!.id));
+      const satsStaked      = Number(stakeRow?.totalSats  ?? 0);
+      const nxtYieldPending = stakeRow?.totalYield ?? "0";
+      const stakeCount      = Number(stakeRow?.count ?? 0);
+
+      // Fetch BTC/USD price
       let btcUsd = 65_000;
       try {
         const priceRes = await fetch("https://mempool.space/api/v1/prices");
@@ -12298,10 +12308,13 @@ export async function registerRoutes(
       } catch { /* use default */ }
 
       res.json({
-        nxtBalance:   wallet?.balance ?? "0",
-        nxtAddress:   wallet?.address ?? "",
-        satsBalance:  lnWallet?.satsBalance ?? 0,
-        wnusdBalance: wnusdBalance.toFixed(2),
+        nxtBalance:     wallet?.balance ?? "0",
+        nxtAddress:     wallet?.address ?? "",
+        satsBalance:    lnWallet?.satsBalance ?? 0,
+        satsStaked,
+        nxtYieldPending,
+        stakeCount,
+        wnusdBalance:   wnusdBalance.toFixed(2),
         btcUsd,
       });
     } catch (e: any) { res.status(500).json({ error: e.message }); }

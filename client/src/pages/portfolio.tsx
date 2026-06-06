@@ -7,6 +7,7 @@ import { Link } from "wouter";
 import {
   ArrowLeft, Zap, Bitcoin, Coins, DollarSign, Lock, Droplets,
   TrendingUp, RefreshCw, ExternalLink, LayoutDashboard, ArrowDownToLine,
+  CalendarClock, Flame,
 } from "lucide-react";
 
 function fmt(n: number | string, dec = 2): string {
@@ -32,9 +33,10 @@ export default function PortfolioPage() {
     queryFn: () => fetch("/api/lp/positions", { credentials: "include", headers: getAuthHeaders() }).then(r => r.json()),
   });
 
-  const { data: staking } = useQuery<any[]>({
-    queryKey: ["/api/staking/positions"],
-    queryFn: () => fetch("/api/staking/positions", { credentials: "include", headers: getAuthHeaders() }).then(r => r.json()),
+  // Sats staking — the real staking positions (sats_stakes table)
+  const { data: lightningStakes } = useQuery<any>({
+    queryKey: ["/api/lightning/stakes"],
+    queryFn: () => fetch("/api/lightning/stakes", { credentials: "include", headers: getAuthHeaders() }).then(r => r.json()),
   });
 
   const { data: wnusd } = useQuery<any[]>({
@@ -42,23 +44,27 @@ export default function PortfolioPage() {
     queryFn: () => fetch("/api/wnusd/positions", { credentials: "include", headers: getAuthHeaders() }).then(r => r.json()),
   });
 
-  const sats       = Number(summary?.satsBalance ?? 0);
-  const nxt        = parseFloat(summary?.nxtBalance ?? "0");
-  const wnusdBal   = parseFloat(summary?.wnusdBalance ?? "0");
-  const btcUsd     = Number(summary?.btcUsd ?? 65_000);
-  const satsPerNxt = 1_000;
+  const sats        = Number(summary?.satsBalance ?? 0);
+  const satsStaked  = Number(summary?.satsStaked ?? 0);
+  const nxtYield    = parseFloat(summary?.nxtYieldPending ?? "0");
+  const stakeCount  = Number(summary?.stakeCount ?? 0);
+  const nxt         = parseFloat(summary?.nxtBalance ?? "0");
+  const wnusdBal    = parseFloat(summary?.wnusdBalance ?? "0");
+  const btcUsd      = Number(summary?.btcUsd ?? 65_000);
+  const satsPerNxt  = 1_000;
 
-  const satsUsd    = sats / 100_000_000 * btcUsd;
-  const nxtUsd     = nxt * satsPerNxt / 100_000_000 * btcUsd;
-  const totalUsd   = satsUsd + nxtUsd + wnusdBal;
+  const satsUsd     = sats / 100_000_000 * btcUsd;
+  const stakedUsd   = satsStaked / 100_000_000 * btcUsd;
+  const nxtUsd      = nxt * satsPerNxt / 100_000_000 * btcUsd;
+  const totalUsd    = satsUsd + stakedUsd + nxtUsd + wnusdBal;
 
-  const stakingArr    = Array.isArray(staking) ? staking : [];
-  const wnusdArr      = Array.isArray(wnusd)   ? wnusd   : [];
-  const lpPosArr      = Array.isArray(lpPos)   ? lpPos   : [];
+  const stakesArr   = Array.isArray(lightningStakes?.stakes) ? lightningStakes.stakes : [];
+  const wnusdArr    = Array.isArray(wnusd)  ? wnusd  : [];
+  const lpPosArr    = Array.isArray(lpPos)  ? lpPos  : [];
 
-  const activeStakes  = stakingArr.filter((s: any) => s.status === "active");
-  const stakedNxt     = activeStakes.reduce((a: number, s: any) => a + parseFloat(s.amountNxt ?? "0"), 0);
-  const pendingYield  = activeStakes.reduce((a: number, s: any) => a + parseFloat(s.pendingReward ?? "0"), 0);
+  const activeStakes    = stakesArr.filter((s: any) => s.status === "active");
+  const stakedSatsTotal = activeStakes.reduce((a: number, s: any) => a + Number(s.amountSats ?? 0), 0);
+  const pendingYield    = activeStakes.reduce((a: number, s: any) => a + parseFloat(s.nxtYield ?? "0"), 0);
   const activeWnusd   = wnusdArr.filter((p: any) => p.status === "active");
   const totalWnusdMinted = activeWnusd.reduce((a: number, p: any) => a + parseFloat(p.wnusdMinted ?? "0"), 0);
   const lpCount       = lpPosArr.filter((p: any) => p.lpTokens > 0).length;
@@ -102,15 +108,28 @@ export default function PortfolioPage() {
         </div>
 
         {/* Asset breakdown */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-2 gap-3 mb-3">
           {[
-            { icon: Zap,        label: "Sats",  value: satsFmt(sats),        sub: `$${fmt(satsUsd)}`,   color: "yellow" },
-            { icon: Coins,      label: "NXT",   value: fmt(nxt, 4),          sub: `$${fmt(nxtUsd)}`,    color: "purple" },
-            { icon: DollarSign, label: "WNUSD", value: fmt(wnusdBal, 2),     sub: "≈ USD",              color: "green"  },
+            { icon: Zap,        label: "Liquid Sats",  value: satsFmt(sats),        sub: `$${fmt(satsUsd)}`,    color: "yellow" },
+            { icon: Lock,       label: "Staked Sats",  value: satsFmt(satsStaked),  sub: `$${fmt(stakedUsd)}`,  color: "orange" },
           ].map(item => (
             <Card key={item.label} className="bg-slate-900/60 border-slate-700/40 p-3 text-center">
               <item.icon className={`w-5 h-5 mx-auto mb-1.5 ${
-                item.color === "yellow" ? "text-yellow-400" :
+                item.color === "yellow" ? "text-yellow-400" : "text-orange-400"
+              }`} />
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider">{item.label}</div>
+              <div className="font-bold text-sm text-white mt-0.5">{item.value}</div>
+              <div className="text-[10px] text-slate-500 font-mono">{item.sub}</div>
+            </Card>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          {[
+            { icon: Coins,      label: "NXT",   value: fmt(nxt, 4),      sub: `$${fmt(nxtUsd)}`,  color: "purple" },
+            { icon: DollarSign, label: "WNUSD", value: fmt(wnusdBal, 2), sub: "≈ USD",            color: "green"  },
+          ].map(item => (
+            <Card key={item.label} className="bg-slate-900/60 border-slate-700/40 p-3 text-center">
+              <item.icon className={`w-5 h-5 mx-auto mb-1.5 ${
                 item.color === "purple" ? "text-purple-400" : "text-green-400"
               }`} />
               <div className="text-[10px] text-slate-500 uppercase tracking-wider">{item.label}</div>
@@ -137,48 +156,59 @@ export default function PortfolioPage() {
         </div>
 
         {/* Staking positions */}
-        <Card className="bg-slate-900/60 border-purple-500/20 p-4 mb-4">
+        <Card className="bg-slate-900/60 border-orange-500/20 p-4 mb-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-bold text-purple-400 uppercase tracking-widest">Staking</span>
+              <Lock className="w-4 h-4 text-orange-400" />
+              <span className="text-sm font-bold text-orange-400 uppercase tracking-widest">Staking</span>
             </div>
-            <Badge className="text-[9px] bg-purple-950/40 text-purple-300 border border-purple-500/20 px-2">
-              {activeStakes.length} active
-            </Badge>
+            <Link href="/lightning-wallet">
+              <Badge className="text-[9px] bg-orange-950/40 text-orange-300 border border-orange-500/20 px-2 cursor-pointer hover:bg-orange-900/40">
+                {activeStakes.length} active
+              </Badge>
+            </Link>
           </div>
 
           {activeStakes.length === 0 ? (
-            <div className="text-slate-600 text-[12px] text-center py-3">No active stakes — <Link href="/lightning-wallet" className="text-purple-400 hover:underline">stake now</Link></div>
+            <div className="text-slate-600 text-[12px] text-center py-3">No active stakes — <Link href="/lightning-wallet" className="text-orange-400 hover:underline">stake now</Link></div>
           ) : (
             <div className="space-y-2">
               {/* Summary row */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 mb-1">
                 <div className="bg-slate-800/40 rounded-xl p-2.5 text-center">
-                  <div className="text-[10px] text-slate-500 uppercase tracking-wider">Staked NXT</div>
-                  <div className="text-sm font-bold text-white mt-0.5">{fmt(stakedNxt, 4)}</div>
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider">Total Staked</div>
+                  <div className="text-sm font-bold text-white mt-0.5">{satsFmt(stakedSatsTotal)} sats</div>
                 </div>
                 <div className="bg-slate-800/40 rounded-xl p-2.5 text-center">
-                  <div className="text-[10px] text-slate-500 uppercase tracking-wider">Pending Yield</div>
-                  <div className="text-sm font-bold text-green-400 mt-0.5">+{fmt(pendingYield, 4)} NXT</div>
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider">NXT Yield</div>
+                  <div className="text-sm font-bold text-green-400 mt-0.5">+{satsFmt(pendingYield)} NXT</div>
                 </div>
               </div>
               {/* Individual stakes */}
-              {activeStakes.slice(0, 3).map((s: any, i: number) => (
-                <div key={i} className="flex items-center justify-between bg-slate-800/30 rounded-lg px-3 py-2" data-testid={`stake-row-${i}`}>
-                  <div>
-                    <div className="text-[11px] text-white font-semibold">{fmt(parseFloat(s.amountNxt ?? "0"), 4)} NXT</div>
-                    <div className="text-[10px] text-slate-500">{s.lockDays}d lock · {s.yieldRate ?? s.yieldRatePercent}% APY</div>
+              {activeStakes.slice(0, 4).map((s: any, i: number) => {
+                const matures = s.maturesAt ? new Date(s.maturesAt) : null;
+                const daysLeft = matures ? Math.max(0, Math.ceil((matures.getTime() - Date.now()) / 86_400_000)) : null;
+                return (
+                  <div key={s.id ?? i} className="flex items-center justify-between bg-slate-800/30 rounded-lg px-3 py-2" data-testid={`stake-row-${i}`}>
+                    <div>
+                      <div className="text-[11px] text-white font-semibold">{satsFmt(Number(s.amountSats))} sats</div>
+                      <div className="text-[10px] text-slate-500 flex items-center gap-1">
+                        <CalendarClock className="w-2.5 h-2.5" />
+                        {daysLeft !== null ? `${daysLeft}d left` : `${s.lockDays}d lock`} · {s.yieldRatePercent}% APY
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] text-green-400 font-mono flex items-center gap-0.5 justify-end">
+                        <Flame className="w-2.5 h-2.5" />+{satsFmt(parseFloat(s.nxtYield ?? "0"))}
+                      </div>
+                      <div className="text-[10px] text-slate-600">NXT yield</div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-[10px] text-green-400 font-mono">+{fmt(parseFloat(s.pendingReward ?? "0"), 6)}</div>
-                    <div className="text-[10px] text-slate-600">pending</div>
-                  </div>
-                </div>
-              ))}
-              {activeStakes.length > 3 && (
-                <div className="text-[10px] text-slate-600 text-center">+{activeStakes.length - 3} more —{" "}
-                  <Link href="/lightning-wallet" className="text-purple-400 hover:underline">view all</Link>
+                );
+              })}
+              {activeStakes.length > 4 && (
+                <div className="text-[10px] text-slate-600 text-center">+{activeStakes.length - 4} more positions —{" "}
+                  <Link href="/lightning-wallet" className="text-orange-400 hover:underline">view all</Link>
                 </div>
               )}
             </div>
