@@ -9152,8 +9152,11 @@ export async function registerRoutes(
         const { eq: swEq, sql: swSql } = await import("drizzle-orm");
 
         const [swUser] = await swDb.select().from(swUsers).where(swEq(swUsers.id, userId));
-        const destAddr = swUser?.lightningAddress ?? "";
-        if (!destAddr) {
+        const destAddr     = swUser?.lightningAddress ?? "";
+        const sweepBtcAddr = swUser?.sweepBtcAddress ?? "";
+        const threshold    = Number(swUser?.sweepThresholdSats ?? 500000);
+
+        if (!destAddr && !sweepBtcAddr) {
           console.log("[AutoSweep] No destination address configured — skipping");
           return;
         }
@@ -9168,28 +9171,74 @@ export async function registerRoutes(
           console.log(`[AutoSweep] +${nxtCredit.toFixed(4)} NXT credited → wallet now ${newNxt} NXT`);
         }
 
-        console.log(`[AutoSweep] ⚡ Deposit confirmed — sweeping ${amountSats.toLocaleString()} sats → ${destAddr}`);
-        const sweepInvoices = await lnurlPayBatchInvoices(destAddr, amountSats, "NexusOS auto-sweep");
+        // ── Route decision: on-chain for large amounts, lightning for small ──
+        const useOnChain = sweepBtcAddr && amountSats >= threshold;
 
-        await swDb.update(swLW)
-          .set({ satsBalance: swSql`${swLW.satsBalance} - ${amountSats}`, totalWithdrawn: swSql`${swLW.totalWithdrawn} + ${amountSats}`, updatedAt: new Date() })
-          .where(swEq(swLW.userId, userId));
+        if (useOnChain) {
+          // ── On-chain BTC sweep ────────────────────────────────────────────
+          console.log(`[AutoSweep] ₿ Large sweep (${amountSats.toLocaleString()} sats ≥ ${threshold.toLocaleString()} threshold) → on-chain → ${sweepBtcAddr}`);
 
-        const storedPR = sweepInvoices.length === 1
-          ? sweepInvoices[0].payment_request
-          : JSON.stringify(sweepInvoices.map(i => ({ amountSats: i.amountSats, payment_request: i.payment_request })));
+          let feeRateSatVbyte = 20;
+          try {
+            const mp = await _fetchLiveMempool();
+            if (mp) feeRateSatVbyte = mp.medium;
+          } catch {}
+          const networkFeeSats  = feeRateSatVbyte * 200;
+          const platformFeeSats = Math.max(300, Math.round(amountSats * 0.003));
+          const feeSats = networkFeeSats + platformFeeSats;
+          const netSats = amountSats - feeSats;
 
-        const [sweepTx] = await swDb.insert(swLT).values({
-          userId, type: "withdrawal", amountSats,
-          paymentRequest: storedPR, paymentHash: sweepInvoices[0].payment_hash,
-          memo: `⚡ Auto-sweep → ${destAddr}`, status: "queued",
-          spectralSig: wnspSignTx(swUser, `auto_sweep::${amountSats}::${destAddr}::${Date.now()}`),
-        }).returning();
+          if (netSats <= 0) {
+            console.log(`[AutoSweep] ⚠️ Amount too small to cover on-chain fees (${feeSats} sats) — skipping`);
+            return;
+          }
 
-        await queueBatchPayments(userId, sweepTx.id,
-          sweepInvoices.map(i => ({ amountSats: i.amountSats, payment_request: i.payment_request })));
+          await swDb.update(swLW)
+            .set({ satsBalance: swSql`${swLW.satsBalance} - ${amountSats}`, totalWithdrawn: swSql`${swLW.totalWithdrawn} + ${amountSats}`, updatedAt: new Date() })
+            .where(swEq(swLW.userId, userId));
 
-        console.log(`[AutoSweep] ✅ Queued tx #${sweepTx.id} — ${sweepInvoices.length} invoice(s) → ${destAddr}`);
+          await swDb.insert(swLT).values({
+            userId, type: "withdrawal", amountSats: netSats,
+            btcAddress: sweepBtcAddr,
+            memo: `₿ Auto-sweep → ${sweepBtcAddr} (fee ${feeSats} sats, net ${netSats})`,
+            status: "pending",
+            spectralSig: wnspSignTx(swUser, `auto_sweep_btc::${amountSats}::${sweepBtcAddr}::${Date.now()}`),
+          });
+
+          import("./btc-withdrawal-processor.js")
+            .then(m => m.processWithdrawalQueue())
+            .catch(console.error);
+
+          console.log(`[AutoSweep] ✅ On-chain withdrawal queued — ${netSats.toLocaleString()} sats net → ${sweepBtcAddr}`);
+        } else {
+          // ── Lightning sweep ───────────────────────────────────────────────
+          if (!destAddr) {
+            console.log("[AutoSweep] No lightning address — set one or add a BTC sweep address");
+            return;
+          }
+          console.log(`[AutoSweep] ⚡ Sweep ${amountSats.toLocaleString()} sats via lightning → ${destAddr}`);
+          const sweepInvoices = await lnurlPayBatchInvoices(destAddr, amountSats, "NexusOS auto-sweep");
+
+          await swDb.update(swLW)
+            .set({ satsBalance: swSql`${swLW.satsBalance} - ${amountSats}`, totalWithdrawn: swSql`${swLW.totalWithdrawn} + ${amountSats}`, updatedAt: new Date() })
+            .where(swEq(swLW.userId, userId));
+
+          const storedPR = sweepInvoices.length === 1
+            ? sweepInvoices[0].payment_request
+            : JSON.stringify(sweepInvoices.map(i => ({ amountSats: i.amountSats, payment_request: i.payment_request })));
+
+          const [sweepTx] = await swDb.insert(swLT).values({
+            userId, type: "withdrawal", amountSats,
+            paymentRequest: storedPR, paymentHash: sweepInvoices[0].payment_hash,
+            memo: `⚡ Auto-sweep → ${destAddr}`, status: "queued",
+            spectralSig: wnspSignTx(swUser, `auto_sweep::${amountSats}::${destAddr}::${Date.now()}`),
+          }).returning();
+
+          await queueBatchPayments(userId, sweepTx.id,
+            sweepInvoices.map(i => ({ amountSats: i.amountSats, payment_request: i.payment_request })));
+
+          console.log(`[AutoSweep] ✅ Queued tx #${sweepTx.id} — ${sweepInvoices.length} invoice(s) → ${destAddr}`);
+        }
       } catch (e: any) {
         console.error("[AutoSweep] ⚠️", e.message);
       }
@@ -9435,7 +9484,9 @@ export async function registerRoutes(
       const { eq: _swEq, desc: _swDesc, like: _swLike } = await import("drizzle-orm");
 
       const [_swUser] = await _swDb.select().from(_swUsers).where(_swEq(_swUsers.id, req.user!.id));
-      const destAddr = _swUser?.lightningAddress ?? process.env.WOS_LIGHTNING_ADDRESS ?? null;
+      const destAddr        = _swUser?.lightningAddress ?? process.env.WOS_LIGHTNING_ADDRESS ?? null;
+      const sweepBtcAddress = _swUser?.sweepBtcAddress  ?? null;
+      const sweepThreshold  = Number(_swUser?.sweepThresholdSats ?? 500000);
 
       const [lnWallet] = await _swDb.select().from(_swLW).where(_swEq(_swLW.userId, req.user!.id));
 
@@ -9472,8 +9523,10 @@ export async function registerRoutes(
             : `${provider} connected`;
 
       res.json({
-        enabled: !!destAddr,
+        enabled: !!destAddr || !!sweepBtcAddress,
         destination: destAddr,
+        sweepBtcAddress,
+        sweepThresholdSats: sweepThreshold,
         provider,
         providerReady,
         providerNote,
@@ -10061,32 +10114,49 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  // PUT /api/user/lightning-address — save the user's personal Lightning Address
+  // PUT /api/user/lightning-address — save lightning address + on-chain sweep settings
   app.put("/api/user/lightning-address", authenticate, async (req: Request, res: Response) => {
     try {
-      const { lightningAddress } = req.body;
-      const addr = (lightningAddress ?? "").trim();
+      const { lightningAddress, sweepBtcAddress, sweepThresholdSats } = req.body;
+      const addr    = (lightningAddress  ?? "").trim();
+      const btcAddr = (sweepBtcAddress   ?? "").trim();
+      const thresh  = typeof sweepThresholdSats === "number" ? sweepThresholdSats : null;
+
       if (addr && !/^[a-zA-Z0-9._+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(addr))
         return res.status(400).json({ error: "Invalid Lightning Address format (e.g. you@walletofsatoshi.com)" });
+      if (btcAddr && !/^(bc1[a-z0-9]{6,87}|[13][a-zA-HJ-NP-Z0-9]{25,34})$/.test(btcAddr))
+        return res.status(400).json({ error: "Invalid Bitcoin address" });
+      if (thresh !== null && (thresh < 1000 || thresh > 1_000_000_000))
+        return res.status(400).json({ error: "Threshold must be between 1,000 and 1,000,000,000 sats" });
+
       const { db } = await import("./db");
       const { users: usersT } = await import("../shared/schema");
       const { eq } = await import("drizzle-orm");
-      await db.update(usersT)
-        .set({ lightningAddress: addr || null, updatedAt: new Date() })
-        .where(eq(usersT.id, req.user!.id));
-      res.json({ ok: true, lightningAddress: addr || null });
+      const updates: any = { updatedAt: new Date() };
+      if (lightningAddress !== undefined) updates.lightningAddress = addr || null;
+      if (sweepBtcAddress  !== undefined) updates.sweepBtcAddress  = btcAddr || null;
+      if (thresh !== null)                updates.sweepThresholdSats = thresh;
+      await db.update(usersT).set(updates).where(eq(usersT.id, req.user!.id));
+      res.json({ ok: true, lightningAddress: addr || null, sweepBtcAddress: btcAddr || null, sweepThresholdSats: thresh });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  // GET /api/user/lightning-address — get the user's saved Lightning Address
+  // GET /api/user/lightning-address — get saved Lightning Address + sweep settings
   app.get("/api/user/lightning-address", authenticate, async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { users: usersT } = await import("../shared/schema");
       const { eq } = await import("drizzle-orm");
-      const [user] = await db.select({ lightningAddress: usersT.lightningAddress })
-        .from(usersT).where(eq(usersT.id, req.user!.id));
-      res.json({ lightningAddress: user?.lightningAddress ?? null });
+      const [user] = await db.select({
+        lightningAddress:  usersT.lightningAddress,
+        sweepBtcAddress:   usersT.sweepBtcAddress,
+        sweepThresholdSats: usersT.sweepThresholdSats,
+      }).from(usersT).where(eq(usersT.id, req.user!.id));
+      res.json({
+        lightningAddress:   user?.lightningAddress  ?? null,
+        sweepBtcAddress:    user?.sweepBtcAddress   ?? null,
+        sweepThresholdSats: user?.sweepThresholdSats ?? 500000,
+      });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 

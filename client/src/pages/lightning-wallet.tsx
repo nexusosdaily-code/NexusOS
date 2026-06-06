@@ -686,6 +686,10 @@ export default function ChannelDashboard() {
   const [lnAddrSave, setLnAddrSave] = useState(true);
   const [lnAddrResult, setLnAddrResult] = useState<any>(null);
 
+  // On-chain sweep settings
+  const [sweepBtcAddr, setSweepBtcAddr]   = useState("");
+  const [sweepThreshold, setSweepThreshold] = useState("500000");
+
   // Send P2P
   const [sendRecipient, setSendRecipient] = useState("");
   const [sendSats, setSendSats]           = useState("1000");
@@ -999,10 +1003,32 @@ export default function ChannelDashboard() {
       const r = await apiRequest("GET", "/api/user/lightning-address");
       return r.json();
     },
-    onSuccess: (d: any) => { if (d.lightningAddress && !lnAddr) setLnAddr(d.lightningAddress); },
+    onSuccess: (d: any) => {
+      if (d.lightningAddress && !lnAddr) setLnAddr(d.lightningAddress);
+      if (d.sweepBtcAddress)   setSweepBtcAddr(d.sweepBtcAddress);
+      if (d.sweepThresholdSats) setSweepThreshold(String(d.sweepThresholdSats));
+    },
   } as any);
 
   const savedLnAddress: string | null = savedLnAddrData?.lightningAddress ?? null;
+
+  const saveSweepSettings = useMutation({
+    mutationFn: async ({ btcAddr, threshold }: { btcAddr: string; threshold: number }) => {
+      const res = await apiRequest("PUT", "/api/user/lightning-address", {
+        sweepBtcAddress: btcAddr,
+        sweepThresholdSats: threshold,
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Failed to save");
+      return d;
+    },
+    onSuccess: () => {
+      toast({ title: "₿ On-chain sweep saved", description: `Large sweeps (≥ ${parseInt(sweepThreshold).toLocaleString()} sats) will go on-chain.` });
+      refetchLnAddr();
+      qc.invalidateQueries({ queryKey: ["/api/lightning/sweep-status"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
 
   const sendToLnAddress = useMutation({
     mutationFn: async () => {
@@ -1737,6 +1763,69 @@ export default function ChannelDashboard() {
                   </a>
                 </div>
               )}
+
+              {/* ── On-chain sweep settings ── */}
+              <div className="rounded-lg border border-orange-500/20 bg-orange-900/10 p-3 space-y-2">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Bitcoin className="w-3.5 h-3.5 text-orange-400" />
+                  <span className="text-[9px] text-orange-400/80 uppercase tracking-wider font-semibold">On-chain sweep (large amounts)</span>
+                  {sweepStatus?.sweepBtcAddress && (
+                    <Badge className="ml-auto bg-orange-500/20 text-orange-300 border-orange-500/30 text-[9px]">Active</Badge>
+                  )}
+                </div>
+                <div className="text-[9px] text-gray-500 leading-relaxed">
+                  Deposits ≥ threshold route to your UniSat / BTC address instead of Lightning — bypasses all per-invoice and daily caps.
+                </div>
+                <div className="space-y-1.5">
+                  <input
+                    data-testid="input-sweep-btc-address"
+                    type="text"
+                    value={sweepBtcAddr}
+                    onChange={e => setSweepBtcAddr(e.target.value)}
+                    placeholder="bc1p… UniSat or any Bitcoin address"
+                    className="w-full bg-slate-800/60 border border-slate-600/50 rounded px-2.5 py-1.5 text-[10px] font-mono text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <div className="text-[9px] text-gray-500 mb-0.5">Threshold (sats)</div>
+                      <input
+                        data-testid="input-sweep-threshold"
+                        type="number"
+                        value={sweepThreshold}
+                        onChange={e => setSweepThreshold(e.target.value)}
+                        min={1000}
+                        step={100000}
+                        className="w-full bg-slate-800/60 border border-slate-600/50 rounded px-2.5 py-1.5 text-[10px] font-mono text-white focus:outline-none focus:border-orange-500/50"
+                      />
+                    </div>
+                    <div className="flex gap-1 mt-4">
+                      {["100K","500K","1M"].map(label => {
+                        const val = label === "100K" ? 100000 : label === "500K" ? 500000 : 1000000;
+                        return (
+                          <button key={label} onClick={() => setSweepThreshold(String(val))}
+                            className={`text-[9px] px-1.5 py-1 rounded border transition-colors ${parseInt(sweepThreshold) === val ? "bg-orange-500/30 border-orange-500/50 text-orange-300" : "border-slate-600/50 text-gray-500 hover:text-gray-300"}`}>
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <Button
+                    data-testid="button-save-sweep-settings"
+                    size="sm"
+                    disabled={saveSweepSettings.isPending || !sweepBtcAddr.trim()}
+                    onClick={() => saveSweepSettings.mutate({ btcAddr: sweepBtcAddr.trim(), threshold: parseInt(sweepThreshold) || 500000 })}
+                    className="w-full bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/30 text-[10px] h-7"
+                  >
+                    {saveSweepSettings.isPending ? "Saving…" : "Save on-chain sweep address"}
+                  </Button>
+                  {sweepStatus?.sweepBtcAddress && (
+                    <div className="text-[9px] text-orange-400/70 font-mono truncate">
+                      ✓ Active: {sweepStatus.sweepBtcAddress} · ≥ {Number(sweepStatus.sweepThresholdSats).toLocaleString()} sats
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Recent sweep activity */}
               {sweepStatus?.recentSweeps?.length > 0 && (

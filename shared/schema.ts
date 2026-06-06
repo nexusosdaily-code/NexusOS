@@ -34,6 +34,9 @@ export const users = pgTable("users", {
   adminBtcAddressSetAt: timestamp("admin_btc_address_set_at"),
   // ── Lightning Address (e.g. user@walletofsatoshi.com) ──
   lightningAddress: text("lightning_address"),
+  // ── On-chain sweep settings ── route large amounts to BTC address instead of Lightning
+  sweepBtcAddress:    text("sweep_btc_address"),
+  sweepThresholdSats: bigint("sweep_threshold_sats", { mode: "number" }).default(500000),
   // ── Nostr identity ──
   nostrNpub:    text("nostr_npub"),
   nostrPubkey:  text("nostr_pubkey").unique(), // hex pubkey — primary Nostr login key

@@ -232,6 +232,8 @@ async function runStartupMigrations() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_btc_address text;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_btc_address_set_at timestamp;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS lightning_address text;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS sweep_btc_address text;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS sweep_threshold_sats bigint DEFAULT 500000;
     `);
 
     // 7b. Nostr pubkey on users
