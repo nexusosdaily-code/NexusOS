@@ -69,11 +69,12 @@ export type NostrEventKind =
   | "note";
 
 export interface WnspNostrPayload {
-  kind:     NostrEventKind;
-  content:  string;
-  tags?:    string[][];
-  psi?:     string;
-  uri?:     string;
+  kind?:      NostrEventKind;   // optional — defaults to "note"
+  content:    string;
+  tags?:      string[][];
+  hashtags?:  string[];         // convenience: each becomes ["t", tag]
+  psi?:       string;
+  uri?:       string;
 }
 
 function buildTags(evt: WnspNostrPayload): string[][] {
@@ -88,7 +89,13 @@ function buildTags(evt: WnspNostrPayload): string[][] {
     base.push(["l", evt.psi, "wnsp/channel"]);
   }
   if (evt.uri) base.push(["r", evt.uri]);
-  if (evt.kind !== "note") base.push(["t", evt.kind]);
+  const k = evt.kind ?? "note";
+  if (k !== "note") base.push(["t", k]);
+  // hashtags convenience field
+  for (const h of evt.hashtags ?? []) {
+    const tag = h.replace(/^#/, "").toLowerCase();
+    if (tag) base.push(["t", tag]);
+  }
   return [...base, ...(evt.tags ?? [])];
 }
 
