@@ -368,6 +368,10 @@ async function runStartupMigrations() {
       import("./btc-withdrawal-processor").then(({ startWithdrawalProcessor }) => {
         startWithdrawalProcessor(60_000); // check every 60s
       }).catch((e) => console.error("[BTC Withdrawal] Boot error:", e));
+      // Start Rune Transfer Processor — auto-fulfils pending NXWV pipeline orders
+      import("./rune-transfer-processor").then(({ startRuneProcessor }) => {
+        startRuneProcessor(60_000); // check every 60s
+      }).catch((e) => console.error("[Rune Processor] Boot error:", e));
       // Start BTC Block Scanner — verifies wnsp + Rune stakes on-chain every 5 min
       import("./btc-block-scanner").then(({ startStakeScanner }) => {
         startStakeScanner();
