@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import {
   ArrowLeft, Droplets, Plus, Minus, ArrowRightLeft,
-  TrendingUp, RefreshCw, Info, Zap, Coins,
+  TrendingUp, RefreshCw, Info, Zap, Coins, Flame, Lock,
 } from "lucide-react";
 
 function fmt(n: number | string, dec = 4): string {
@@ -29,6 +29,8 @@ const TOKEN_ICONS: Record<string, JSX.Element> = {
   WNUSD: <span className="text-green-400 text-sm font-bold">$</span>,
 };
 
+const NXT_BASE = 1e8; // 1 NXT = 1e8 base units (sent to API)
+
 export default function LpPoolsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -39,6 +41,9 @@ export default function LpPoolsPage() {
   const [swapAmt, setSwapAmt] = useState("");
   const [swapDir, setSwapDir] = useState<"A" | "B">("A");
   const [removeLp, setRemoveLp] = useState("");
+  // Seed panel state
+  const [seedPrice, setSeedPrice] = useState("1000"); // sats per 1 NXT
+  const [seedPct, setSeedPct] = useState(50);         // % of liquid sats to deploy
 
   const { data: pools, refetch } = useQuery<any[]>({
     queryKey: ["/api/lp/pools"],
@@ -50,6 +55,11 @@ export default function LpPoolsPage() {
     queryKey: ["/api/lp/positions"],
     queryFn: () => fetch("/api/lp/positions", { credentials: "include", headers: getAuthHeaders() }).then(r => r.json()),
     refetchInterval: 15_000,
+  });
+
+  const { data: wallet } = useQuery<any>({
+    queryKey: ["/api/portfolio/summary"],
+    queryFn: () => fetch("/api/portfolio/summary", { credentials: "include", headers: getAuthHeaders() }).then(r => r.json()),
   });
 
   const { data: quote } = useQuery<any>({
@@ -122,11 +132,42 @@ export default function LpPoolsPage() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const seedMut = useMutation({
+    mutationFn: async ({ poolId, amountA, amountB }: { poolId: string; amountA: number; amountB: number }) => {
+      const r = await fetch("/api/lp/add", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ poolId, amountA, amountB }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? "Failed");
+      return j;
+    },
+    onSuccess: (d) => {
+      toast({ title: "Pool seeded!", description: `${satsFmt(d.lpTokens)} LP tokens minted — you own 100% of this pool` });
+      qc.invalidateQueries({ queryKey: ["/api/lp/pools"] });
+      qc.invalidateQueries({ queryKey: ["/api/lp/positions"] });
+      qc.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
+    },
+    onError: (e: any) => toast({ title: "Seed failed", description: e.message, variant: "destructive" }),
+  });
+
   const poolsArr = Array.isArray(pools) ? pools : [];
   const posArr   = Array.isArray(positions) ? positions : [];
 
   const selectedPool = poolsArr.find(p => p.poolId === activePool);
   const myPos        = posArr.find(p => p.poolId === activePool);
+
+  // Seed calculations
+  const liquidSats  = Number(wallet?.satsBalance ?? 0);
+  const nxtBalance  = parseFloat(wallet?.nxtBalance ?? "0");
+  const price       = Math.max(1, parseFloat(seedPrice) || 1000);
+  const satsToSeed  = Math.floor(liquidSats * seedPct / 100);
+  const nxtToSeed   = satsToSeed / price;             // whole NXT
+  const nxtBase     = Math.floor(nxtToSeed * NXT_BASE); // base units for API
+  const lpPreview   = Math.floor(Math.sqrt(nxtBase * satsToSeed));
+  const nxtOk       = nxtToSeed <= nxtBalance;
+  const satsOk      = satsToSeed <= liquidSats;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950/10 to-slate-950 p-4 md:p-6">
@@ -210,6 +251,107 @@ export default function LpPoolsPage() {
             );
           })}
         </div>
+
+        {/* ── Seed Panel — shown when an empty pool is selected ── */}
+        {activePool && selectedPool && selectedPool.reserveA === 0 && selectedPool.tokenB === "SATS" && (
+          <Card className="bg-gradient-to-br from-blue-950/40 to-purple-950/30 border-blue-400/30 p-5 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Flame className="w-5 h-5 text-orange-400" />
+              <span className="text-sm font-bold text-white">Seed This Pool</span>
+              <span className="text-[10px] text-slate-500 ml-auto">You'd be the founding LP — 100% of fees</span>
+            </div>
+
+            {/* Wallet snapshot */}
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <div className="bg-slate-800/50 rounded-xl p-2.5 text-center">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider">Liquid Sats</div>
+                <div className="text-sm font-bold text-yellow-400">{satsFmt(liquidSats)}</div>
+              </div>
+              <div className="bg-slate-800/50 rounded-xl p-2.5 text-center">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider">NXT Balance</div>
+                <div className="text-sm font-bold text-purple-400">{satsFmt(nxtBalance)}</div>
+              </div>
+            </div>
+
+            {/* Price setter */}
+            <div className="mb-4">
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider">Opening price — sats per 1 NXT</label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  value={seedPrice}
+                  onChange={e => setSeedPrice(e.target.value)}
+                  className="bg-slate-800 border-slate-700 text-white font-mono flex-1"
+                  data-testid="input-seed-price"
+                />
+                {["500","1000","2000"].map(p => (
+                  <button key={p} onClick={() => setSeedPrice(p)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-mono border transition-all ${seedPrice === p ? "border-blue-400/50 bg-blue-500/20 text-blue-300" : "border-slate-700 text-slate-500 hover:border-slate-500"}`}>
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* % of liquid sats */}
+            <div className="mb-4">
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider">Deploy — % of liquid sats</label>
+              <div className="flex gap-2 mt-1">
+                {[10, 25, 50, 100].map(p => (
+                  <button key={p} onClick={() => setSeedPct(p)}
+                    className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-all ${seedPct === p ? "border-blue-400/50 bg-blue-500/20 text-blue-300" : "border-slate-700 text-slate-500 hover:border-slate-500"}`}
+                    data-testid={`seed-pct-${p}`}>
+                    {p}%
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Preview */}
+            <div className="bg-slate-800/60 rounded-xl p-3 mb-4 space-y-2">
+              <div className="flex justify-between text-[11px]">
+                <span className="text-slate-500">You deposit</span>
+                <span className="text-white font-mono">{satsFmt(Math.floor(nxtToSeed))} NXT + {satsFmt(satsToSeed)} sats</span>
+              </div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-slate-500">LP tokens minted</span>
+                <span className="text-blue-300 font-mono">{satsFmt(lpPreview)}</span>
+              </div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-slate-500">Your pool share</span>
+                <span className="text-green-400 font-bold">100%</span>
+              </div>
+              <div className="flex justify-between text-[11px]">
+                <span className="text-slate-500">Fee rate</span>
+                <span className="text-slate-400">{selectedPool.feeBps / 100}% per swap — goes to you</span>
+              </div>
+              {!nxtOk && (
+                <div className="text-[10px] text-red-400 flex items-center gap-1">
+                  <Info className="w-3 h-3" /> Not enough NXT (need {satsFmt(Math.floor(nxtToSeed))}, have {satsFmt(nxtBalance)})
+                </div>
+              )}
+              {!satsOk && (
+                <div className="text-[10px] text-red-400 flex items-center gap-1">
+                  <Info className="w-3 h-3" /> Not enough liquid sats
+                </div>
+              )}
+              {liquidSats === 0 && (
+                <div className="text-[10px] text-amber-400 flex items-center gap-1">
+                  <Lock className="w-3 h-3" /> Your sats are staked until July — unstake first to seed
+                </div>
+              )}
+            </div>
+
+            <Button
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold"
+              onClick={() => seedMut.mutate({ poolId: activePool, amountA: nxtBase, amountB: satsToSeed })}
+              disabled={seedMut.isPending || !nxtOk || !satsOk || satsToSeed <= 0 || nxtBase <= 0}
+              data-testid="button-seed-pool"
+            >
+              {seedMut.isPending ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Flame className="w-4 h-4 mr-2" />}
+              Seed Pool — {satsFmt(Math.floor(nxtToSeed))} NXT + {satsFmt(satsToSeed)} sats
+            </Button>
+          </Card>
+        )}
 
         {/* My positions summary */}
         {posArr.filter((p: any) => p.lpTokens > 0).length > 0 && (
