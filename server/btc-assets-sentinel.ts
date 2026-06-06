@@ -258,6 +258,39 @@ async function poll() {
             `<a href="https://mempool.space/tx/${tx.txid}">View on mempool.space</a>\n` +
             `<a href="https://unisat.io/address/${SERVICE_WALLET}">View Runes on Unisat</a>`
           );
+
+          // ── Nostr broadcast for Rune mints ───────────────────────────────
+          if (hasRunestone) {
+            try {
+              const { publishToNostr } = await import("./nostr-service");
+              const mintNote = [
+                `💜 NEXUS•WAVELENGTH Rune mint detected on Bitcoin!`,
+                ``,
+                `Someone just minted NEXUS•WAVELENGTH (Rune ID: 840000:8472) — the physics-native token of the WNSP protocol.`,
+                ``,
+                `⚡ Supply: 21,000,000,000 · Per mint: 1,000 · Etched at block 840,000`,
+                `🔗 Txid: ${tx.txid}`,
+                `📊 Status: ${confirmed}`,
+                ``,
+                `Mint yours on Unisat 👇`,
+                `https://unisat.io/runes/detail/NEXUS%E2%80%A2WAVELENGTH`,
+                ``,
+                `Bridge NXWV ↔ NXT at wnsp.tech/rune-swap`,
+                ``,
+                `#Bitcoin #Runes #NEXUSWAVELENGH #WNSP #NexusOS #BTC`,
+              ].join("\n");
+
+              const result = await publishToNostr({
+                content:  mintNote,
+                hashtags: ["Bitcoin", "Runes", "NEXUSWAVELENGTH", "WNSP", "NexusOS"],
+              });
+              console.log(`[Assets Sentinel] 📡 Nostr mint broadcast sent — event ${result.id} to ${result.relays.length} relay(s)`);
+            } catch (nostrErr: any) {
+              console.warn(`[Assets Sentinel] Nostr broadcast failed: ${nostrErr.message}`);
+            }
+          }
+          // ─────────────────────────────────────────────────────────────────
+
           console.log(`[Assets Sentinel] ${hasRunestone ? "💜 Rune TX" : "₿ BTC TX"} detected: ${tx.txid}`);
         }
       }

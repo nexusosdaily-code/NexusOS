@@ -10924,6 +10924,31 @@ export async function registerRoutes(
         );
       } catch { /* non-fatal */ }
 
+      // ── Nostr broadcast for bridge activity ──────────────────────────────
+      try {
+        const { publishToNostr } = await import("./nostr-service");
+        const bridgeNote = [
+          `💜 NEXUS•WAVELENGTH → NXT bridge active!`,
+          ``,
+          `Someone just bridged ${runes.toLocaleString()} NEXUS•WAVELENGTH Runes from Bitcoin into ${nxtOut.toLocaleString()} NXT on NexusOS.`,
+          ``,
+          `🔗 BTC Txid: ${btcTxid}`,
+          `⚡ Rate: 1 NXWV = 1 NXT · Physics parity`,
+          ``,
+          `Mint NEXUS•WAVELENGTH on Bitcoin 👇`,
+          `https://unisat.io/runes/detail/NEXUS%E2%80%A2WAVELENGTH`,
+          ``,
+          `Bridge yours at wnsp.tech/rune-swap`,
+          ``,
+          `#Bitcoin #Runes #NEXUSWAVELENGTH #WNSP #NexusOS`,
+        ].join("\n");
+        await publishToNostr({
+          content:  bridgeNote,
+          hashtags: ["Bitcoin", "Runes", "NEXUSWAVELENGTH", "WNSP", "NexusOS"],
+        });
+      } catch { /* non-fatal */ }
+      // ─────────────────────────────────────────────────────────────────────
+
       res.json({
         ok: true,
         swapId:    row.id,
