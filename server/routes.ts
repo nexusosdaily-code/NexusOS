@@ -11297,6 +11297,51 @@ export async function registerRoutes(
 
   // ── End NXWV ↔ NXT Rune Swap ──────────────────────────────────────────────
 
+  // ── Admin: NXWV Pipeline Orders ───────────────────────────────────────────
+
+  // GET /api/admin/orders — KERNEL/admin only
+  app.get("/api/admin/orders", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      if (user.spectralBand !== "KERNEL" && user.role !== "admin")
+        return res.status(403).json({ error: "KERNEL band required" });
+      const { db } = await import("./db");
+      const { runeSwaps } = await import("../shared/schema");
+      const { desc } = await import("drizzle-orm");
+      const rows = await db.select().from(runeSwaps)
+        .orderBy(desc(runeSwaps.createdAt)).limit(200);
+      res.json(rows);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // PATCH /api/admin/orders/:id — mark complete or failed, record txid
+  app.patch("/api/admin/orders/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      if (user.spectralBand !== "KERNEL" && user.role !== "admin")
+        return res.status(403).json({ error: "KERNEL band required" });
+      const orderId = parseInt(req.params.id, 10);
+      if (isNaN(orderId)) return res.status(400).json({ error: "Invalid order id" });
+      const { status, btcTxid } = req.body as { status: string; btcTxid?: string };
+      if (!["completed", "failed"].includes(status))
+        return res.status(400).json({ error: "status must be completed or failed" });
+      const { db } = await import("./db");
+      const { runeSwaps } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const update: Record<string, any> = {
+        status,
+        completedAt: new Date(),
+      };
+      if (btcTxid && btcTxid.trim()) update.btcTxid = btcTxid.trim();
+      const [updated] = await db.update(runeSwaps).set(update)
+        .where(eq(runeSwaps.id, orderId)).returning();
+      if (!updated) return res.status(404).json({ error: "Order not found" });
+      res.json({ ok: true, order: updated });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // ── End Admin Orders ───────────────────────────────────────────────────────
+
   // POST /api/nostr/broadcast — fire a Nostr note immediately (KERNEL band only)
   app.post("/api/nostr/broadcast", authenticate, async (req: Request, res: Response) => {
     try {
