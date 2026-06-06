@@ -54,6 +54,24 @@ uri = "file://attached_assets/nexus_operations_tokenomics.png"
 type = "image"
 title = "nexus operations hardware tokenomics tiers"
 
+[[generated]]
+id = "eEAO-U1PNrsXKjCdPcEY1"
+uri = "file://attached_assets/rune-art-wave.png"
+type = "image"
+title = "nexus wavelength rune spectral wave"
+
+[[generated]]
+id = "PcgwWIBZtZWSOoRiAzhvU"
+uri = "file://attached_assets/rune-art-circle.png"
+type = "image"
+title = "nexus wavelength rune circle glow"
+
+[[generated]]
+id = "uSlgDLOgXUzUTLTcfrzJ4"
+uri = "file://attached_assets/rune-art-lambda.png"
+type = "image"
+title = "nexus wavelength rune lambda minimal"
+
 [[outputs]]
 id = "H5DxipQLmLvHtAwbjOE_f"
 uri = "file://attached_assets/phase0_campaign.png"
@@ -263,3 +281,21 @@ id = "b212vEJVmh48F7sijcBUO"
 uri = "file://attached_assets/generated_videos/campaign_launch_two_ownership_tiers_v2.mp4"
 type = "video"
 title = "Campaign Launch — Two Ownership Tiers (v2, no text)"
+
+[[outputs]]
+id = "QArxNCXW5X46CcZgA5tkp"
+uri = "file://attached_assets/rune-art-wave.png"
+type = "image"
+title = "Option 1 — Spectral Wave"
+
+[[outputs]]
+id = "VYqCypBK8xxxR0zc6I_Nb"
+uri = "file://attached_assets/rune-art-circle.png"
+type = "image"
+title = "Option 2 — Circle Burst"
+
+[[outputs]]
+id = "hhBhPEZq3a0w-SUFTRvqJ"
+uri = "file://attached_assets/rune-art-lambda.png"
+type = "image"
+title = "Option 3 — Lambda Minimal"
