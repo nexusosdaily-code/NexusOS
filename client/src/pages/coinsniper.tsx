@@ -1,39 +1,47 @@
+/**
+ * /coinsniper — NXWV Coinsniper submission dossier
+ * All submission fields are copy-ready. Logo downloadable below.
+ */
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Copy, ExternalLink, CheckCircle2, Rocket, Users,
-  TrendingUp, Share2, Twitter, Send, Globe, Zap, Bitcoin
+  Copy, CheckCircle2, ExternalLink, Bitcoin, Lock,
+  Layers, TrendingUp, Zap, ArrowLeft,
 } from "lucide-react";
 
-const RUNE_ID        = "840000:8472";
-const RUNE_NAME      = "NEXUS•WAVELENGTH";
-const TICKER         = "NXWV";
-const TOTAL_SUPPLY   = "21,000,000";
-const PER_MINT       = "1,000";
-const MAX_MINTS      = "21,000";
-const ETCH_BLOCK     = "840,000";
-const WEBSITE        = "https://wnsp.tech";
-const TELEGRAM       = "https://t.me/NexusOSWNSP";
-const NOSTR_NPUB     = "npub1pmwaavd9qvyjzgvetm3uy48clhyf6x76jqvu4gzd6pzu8gv9gmyq96gg9u";
-const SERVICE_WALLET = "bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m";
+const RUNE_ID      = "952596:379";
+const RUNE_NAME    = "NEXUS•WAVELENGTH";
+const TICKER       = "NXWV";
+const TOTAL_SUPPLY = "21,000,000,000,000";
+const PER_MINT     = "21,000,000,000";
+const MAX_MINTS    = "1,000";
+const MINTS_DONE   = "1,000 / 1,000 — permanently sealed June 2026";
+const WEBSITE      = "https://wnsp.tech";
+const BUY_URL      = "https://wnsp.tech/rune-pipeline";
+const TELEGRAM     = "https://t.me/NexusOSWNSP";
 
-const DESCRIPTION = `NEXUS•WAVELENGTH is a Bitcoin Rune etched at block 840,000 — the Bitcoin halving block — representing the WNSP (Wavelength Network Spectral Protocol) physics engine.\n\nSupply: 21,000,000 (21M total · 21,000 max mints · 1,000 per mint). Built on the Theory of Compression States — every transaction is a photon, every address is a spectral channel (Ψ). NexusOS is the physics-native operating system for a Kardashev Type I civilization. This is NOT an EVM token — it is a native Bitcoin Rune on the UTXO chain. Rune ID: 840000:8472.`;
+const DESCRIPTION =
+  "NEXUS•WAVELENGTH (NXWV) is the native Rune of NexusOS — a physics-based " +
+  "civilization OS built on electromagnetic wave equations. 21 trillion supply. " +
+  "All 1,000 mints permanently sealed June 2026. No more NXWV will ever be " +
+  "created. Acquire via the NexusOS pipeline at wnsp.tech. " +
+  "Rune ID: 952596:379 on Bitcoin mainnet.";
 
 const FIELDS = [
-  { label: "Token Name",      value: RUNE_NAME,      tip: "Full Rune name with bullet separator" },
-  { label: "Ticker / Symbol", value: TICKER,         tip: "Short symbol for the listing" },
-  { label: "Chain",           value: "Bitcoin",      tip: "Select Bitcoin or Other — clarify it's a Rune in description" },
-  { label: "Contract / ID",   value: RUNE_ID,        tip: "Use the Rune ID as the 'contract address' field" },
-  { label: "Total Supply",    value: TOTAL_SUPPLY,   tip: "21 million — 21,000 mints × 1,000 per mint" },
-  { label: "Per Mint",        value: PER_MINT,       tip: "1,000 NEXUS•WAVELENGTH per mint" },
-  { label: "Max Mints",       value: MAX_MINTS,      tip: "21,000 total mint transactions possible" },
-  { label: "Etch Block",      value: ETCH_BLOCK,     tip: "Bitcoin block where the Rune was etched" },
-  { label: "Website",         value: WEBSITE,        tip: "Official NexusOS / WNSP website" },
-  { label: "Telegram",        value: TELEGRAM,       tip: "Community Telegram channel" },
-  { label: "Nostr (npub)",    value: NOSTR_NPUB,     tip: "Official Nostr profile" },
-  { label: "Wallet (verify)", value: SERVICE_WALLET, tip: "Service wallet holding Rune supply" },
+  { label: "Project Name",          value: RUNE_NAME,    tip: "Full Rune name with bullet separator" },
+  { label: "Ticker / Symbol",       value: TICKER,       tip: "Use NXWV as the short symbol" },
+  { label: "Chain",                 value: "Bitcoin",    tip: "Select Bitcoin — clarify Rune type in description" },
+  { label: "Rune ID (Contract)",    value: RUNE_ID,      tip: "Paste as the contract / token address field" },
+  { label: "Total Supply",          value: TOTAL_SUPPLY, tip: "21 trillion — all minted, sealed" },
+  { label: "Per Mint",              value: PER_MINT,     tip: "21 billion NXWV per mint transaction" },
+  { label: "Max Mints",             value: MAX_MINTS,    tip: "1,000 mints total — all 1,000 claimed" },
+  { label: "Mints Status",          value: MINTS_DONE,   tip: "Supply permanently locked" },
+  { label: "Launch Date",           value: "June 2026",  tip: "All mints sealed June 2026" },
+  { label: "Website",               value: WEBSITE,      tip: "Main site" },
+  { label: "Buy / Acquire URL",     value: BUY_URL,      tip: "Direct pipeline link — use as the Buy button URL" },
+  { label: "Telegram",              value: TELEGRAM,     tip: "Community channel" },
+  { label: "Description (≤500 ch)", value: DESCRIPTION,  tip: "Copy directly into the description field" },
 ];
 
 function CopyField({ label, value, tip }: { label: string; value: string; tip: string }) {
@@ -57,285 +65,171 @@ function CopyField({ label, value, tip }: { label: string; value: string; tip: s
         </div>
         <button
           onClick={copy}
-          data-testid={`copy-${label.toLowerCase().replace(/\s/g, "-")}`}
+          data-testid={`copy-${label.toLowerCase().replace(/\s+/g, "-")}`}
           className="shrink-0 p-2 rounded-lg hover:bg-purple-500/20 transition-colors"
         >
           {copied
             ? <CheckCircle2 className="w-4 h-4 text-green-400" />
-            : <Copy className="w-4 h-4 text-white/50" />
-          }
+            : <Copy className="w-4 h-4 text-white/50" />}
         </button>
       </div>
     </div>
   );
 }
 
-export default function CoinsnierPage() {
-  const [descCopied, setDescCopied] = useState(false);
-  const { toast } = useToast();
-
-  const copyDesc = () => {
-    navigator.clipboard.writeText(DESCRIPTION);
-    setDescCopied(true);
-    toast({ title: "Description copied" });
-    setTimeout(() => setDescCopied(false), 2000);
-  };
-
-  const shareText = encodeURIComponent(
-    `💜 NEXUS•WAVELENGTH — Bitcoin Rune etched at block 840,000\n\n` +
-    `Supply: 21M · 21,000 mints · 1,000 per mint · Rune ID: 840000:8472\n\n` +
-    `The physics-native OS for a Kardashev Type I civilization.\n\n` +
-    `Vote on Coinsniper → https://coinsniper.net/submit\n${WEBSITE}`
-  );
-
+function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="min-h-screen bg-[#0a0a14] text-white px-4 py-10">
-      <div className="max-w-3xl mx-auto space-y-8">
-
-        {/* Header */}
-        <div className="text-center space-y-3">
-          <div className="flex items-center justify-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center">
-              <Bitcoin className="w-6 h-6 text-white" />
-            </div>
-            <div className="text-left">
-              <h1 className="text-2xl font-bold tracking-tight">Coinsniper Listing</h1>
-              <p className="text-white/50 text-sm">NEXUS•WAVELENGTH · Bitcoin Rune</p>
-            </div>
-          </div>
-          <p className="text-white/60 text-sm max-w-xl mx-auto">
-            Free listing on <span className="text-purple-300 font-semibold">coinsniper.net</span> — instant visibility, ranked by community votes.
-            Fill the form at the link below using the pre-built dossier.
-          </p>
-        </div>
-
-        {/* CTA */}
-        <div className="rounded-2xl border border-purple-500/40 bg-gradient-to-br from-purple-900/30 to-orange-900/20 p-6 text-center space-y-4">
-          <div className="flex justify-center gap-3 flex-wrap">
-            <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/40">Bitcoin Rune</Badge>
-            <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/40">Block 840,000</Badge>
-            <Badge className="bg-green-500/20 text-green-300 border-green-500/40">Free Listing</Badge>
-            <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/40">500 votes to go live</Badge>
-          </div>
-          <p className="text-white/70 text-sm">
-            Copy all fields below → paste into the Coinsniper submit form → share the vote link with the community.
-          </p>
-          <div className="flex gap-3 justify-center flex-wrap">
-            <a
-              href="https://coinsniper.net/submit"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="link-coinsniper-submit"
-            >
-              <Button className="bg-purple-600 hover:bg-purple-700 gap-2">
-                <Rocket className="w-4 h-4" />
-                Open Submit Form
-                <ExternalLink className="w-3 h-3" />
-              </Button>
-            </a>
-            <a
-              href="https://coinsniper.net/new"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="link-coinsniper-new"
-            >
-              <Button variant="outline" className="border-white/20 text-white/70 hover:bg-white/10 gap-2">
-                <TrendingUp className="w-4 h-4" />
-                New Listings
-              </Button>
-            </a>
-          </div>
-        </div>
-
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Total Supply",  value: "21M",          color: "text-purple-300" },
-            { label: "Per Mint",      value: "1,000",        color: "text-orange-300" },
-            { label: "Votes Needed",  value: "500",          color: "text-green-300"  },
-          ].map(s => (
-            <div key={s.label} className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
-              <p className={`text-xl font-bold font-mono ${s.color}`}>{s.value}</p>
-              <p className="text-xs text-white/40 mt-1">{s.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Submission dossier */}
-        <div>
-          <h2 className="text-sm font-semibold text-white/50 uppercase tracking-widest mb-4 flex items-center gap-2">
-            <Copy className="w-4 h-4" />
-            Submission Dossier — copy each field into the form
-          </h2>
-          <div className="grid gap-3">
-            {FIELDS.map(f => (
-              <CopyField key={f.label} label={f.label} value={f.value} tip={f.tip} />
-            ))}
-          </div>
-        </div>
-
-        {/* Description block */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
-              <Globe className="w-4 h-4" />
-              Project Description (paste as-is)
-            </h2>
-            <button
-              onClick={copyDesc}
-              data-testid="copy-description"
-              className="flex items-center gap-1.5 text-xs text-purple-300 hover:text-purple-200 transition-colors"
-            >
-              {descCopied
-                ? <><CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> Copied!</>
-                : <><Copy className="w-3.5 h-3.5" /> Copy all</>
-              }
-            </button>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-            <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed font-mono">{DESCRIPTION}</p>
-          </div>
-        </div>
-
-        {/* Vote sharing */}
-        <div>
-          <h2 className="text-sm font-semibold text-white/50 uppercase tracking-widest mb-4 flex items-center gap-2">
-            <Share2 className="w-4 h-4" />
-            Share to Drive Votes — need 500 to go live
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <a
-              href={`https://twitter.com/intent/tweet?text=${shareText}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="share-twitter"
-            >
-              <Button variant="outline" className="w-full border-sky-500/30 text-sky-300 hover:bg-sky-500/10 gap-2">
-                <Twitter className="w-4 h-4" />
-                Post on X / Twitter
-              </Button>
-            </a>
-            <a
-              href={`https://t.me/share/url?url=${encodeURIComponent("https://coinsniper.net")}&text=${shareText}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="share-telegram"
-            >
-              <Button variant="outline" className="w-full border-blue-500/30 text-blue-300 hover:bg-blue-500/10 gap-2">
-                <Send className="w-4 h-4" />
-                Share on Telegram
-              </Button>
-            </a>
-            <a
-              href={`https://nostr.com/?intent=post&text=${shareText}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="share-nostr"
-            >
-              <Button variant="outline" className="w-full border-purple-500/30 text-purple-300 hover:bg-purple-500/10 gap-2">
-                <Zap className="w-4 h-4" />
-                Post on Nostr
-              </Button>
-            </a>
-          </div>
-        </div>
-
-        {/* After listing — live vote widget placeholder */}
-        <div className="rounded-2xl border border-dashed border-white/20 p-6 text-center space-y-3">
-          <Users className="w-8 h-8 text-white/30 mx-auto" />
-          <p className="text-white/50 text-sm font-medium">Live Vote Counter</p>
-          <p className="text-white/30 text-xs max-w-sm mx-auto">
-            Once your Coinsniper listing is approved and you have the coin ID (e.g.{" "}
-            <code className="text-purple-300">coinsniper.net/coin/XXXXX</code>), paste it below
-            to enable the live vote counter.
-          </p>
-          <CoinsnierVoteWidget />
-        </div>
-
-        {/* Useful links */}
-        <div>
-          <h2 className="text-sm font-semibold text-white/50 uppercase tracking-widest mb-4">Useful Links</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {[
-              { label: "Submit Form",     href: "https://coinsniper.net/submit" },
-              { label: "New Listings",    href: "https://coinsniper.net/new" },
-              { label: "Rune on Unisat",  href: `https://unisat.io/runes/detail/${encodeURIComponent(RUNE_NAME)}` },
-              { label: "Rune on ME",      href: `https://magiceden.io/runes/${RUNE_NAME}` },
-              { label: "Rune Explorer",   href: `https://ordinals.com/rune/${RUNE_NAME}` },
-              { label: "Service Wallet",  href: `https://mempool.space/address/${SERVICE_WALLET}` },
-            ].map(l => (
-              <a
-                key={l.label}
-                href={l.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid={`link-${l.label.toLowerCase().replace(/\s/g, "-")}`}
-                className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
-              >
-                {l.label}
-                <ExternalLink className="w-3 h-3 shrink-0 opacity-50" />
-              </a>
-            ))}
-          </div>
-        </div>
-
-        {/* Boost tips */}
-        <div className="rounded-2xl border border-orange-500/20 bg-orange-950/20 p-5 space-y-3">
-          <h3 className="font-semibold text-orange-300 flex items-center gap-2">
-            <Rocket className="w-4 h-4" />
-            After Submission — How to Rank Higher
-          </h3>
-          <ul className="text-sm text-white/60 space-y-2">
-            <li>• <span className="text-white/80">500 votes</span> required to officially appear on All Time rankings</li>
-            <li>• Votes reset every 24h for the "Today" page — share the link daily</li>
-            <li>• Paid <span className="text-orange-300">Boosts</span> push to the promoted section instantly</li>
-            <li>• <span className="text-white/80">Quests</span> grow your community by rewarding task completions</li>
-            <li>• Optional <span className="text-white/80">KYC</span> badge increases buyer trust significantly</li>
-            <li>• Post to Telegram + Nostr + X every day until 500 votes hit</li>
-          </ul>
-        </div>
-
+    <div className="rounded-xl border border-white/8 bg-black/30 p-4 flex items-center gap-3">
+      <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center text-purple-400 shrink-0">
+        {icon}
+      </div>
+      <div>
+        <div className="text-[10px] font-mono uppercase tracking-wider text-white/30">{label}</div>
+        <div className="text-sm font-semibold text-white leading-snug mt-0.5">{value}</div>
       </div>
     </div>
   );
 }
 
-function CoinsnierVoteWidget() {
-  const [coinId, setCoinId] = useState("");
-  const [saved, setSaved] = useState("");
+const STEPS = [
+  { n: 1, title: "Open Coinsniper submit form", desc: "coinsniper.net/submit" },
+  { n: 2, title: "Select Bitcoin › Rune",       desc: "Chain = Bitcoin, type = Rune" },
+  { n: 3, title: "Paste the fields below",       desc: "Every field on this page is copy-ready" },
+  { n: 4, title: "Upload the logo",              desc: "Download PNG from this page and attach" },
+  { n: 5, title: "Submit for review",            desc: "Goes live for community voting once approved" },
+];
+
+export default function CoinsnierPage() {
+  const [activeStep, setActiveStep] = useState(0);
 
   return (
-    <div className="flex gap-2 justify-center mt-2">
-      <input
-        type="text"
-        placeholder="Coinsniper coin ID (e.g. 12345)"
-        value={coinId}
-        onChange={e => setCoinId(e.target.value)}
-        data-testid="input-coinsniper-id"
-        className="w-56 rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-purple-500"
-      />
-      <Button
-        size="sm"
-        onClick={() => { setSaved(coinId); }}
-        disabled={!coinId}
-        data-testid="button-save-coin-id"
-        className="bg-purple-600 hover:bg-purple-700"
-      >
-        Set
-      </Button>
-      {saved && (
-        <a
-          href={`https://coinsniper.net/coin/${saved}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          data-testid="link-coinsniper-listing"
+    <div className="min-h-screen bg-[#080808] text-white">
+      <div className="max-w-2xl mx-auto px-4 pt-6 pb-2">
+        <Link
+          href="/market"
+          className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors"
         >
-          <Button size="sm" variant="outline" className="border-purple-500/40 text-purple-300 gap-1">
-            <ExternalLink className="w-3 h-3" />
-            View Listing
-          </Button>
-        </a>
-      )}
+          <ArrowLeft size={12} /> Back to Market
+        </Link>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 pb-20 space-y-6">
+
+        {/* hero */}
+        <div className="rounded-2xl border border-purple-500/25 bg-gradient-to-br from-purple-900/20 to-black p-7 text-center space-y-4">
+          <img
+            src="/nexus-wavelength-logo.png"
+            alt="NEXUS•WAVELENGTH"
+            className="w-16 h-16 rounded-2xl mx-auto object-cover border border-white/10"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-widest text-purple-400/60 mb-1">
+              Coinsniper Listing Dossier
+            </div>
+            <h1 className="text-2xl font-bold text-white">NEXUS•WAVELENGTH</h1>
+            <p className="text-sm text-white/40 mt-1">
+              Rune ID 952596:379 · Bitcoin Mainnet · 21 Trillion Supply · Sealed Forever
+            </p>
+          </div>
+          <a
+            href="https://coinsniper.net/submit"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold transition-colors"
+          >
+            <ExternalLink size={13} /> Open Coinsniper Submit Form
+          </a>
+        </div>
+
+        {/* stats */}
+        <div className="grid grid-cols-2 gap-3">
+          <Stat icon={<Bitcoin size={16} />} label="Chain"        value="Bitcoin (Runes)" />
+          <Stat icon={<Lock size={16} />}    label="Supply sealed" value="June 2026" />
+          <Stat icon={<Layers size={16} />}  label="Total Supply"  value="21 Trillion NXWV" />
+          <Stat icon={<TrendingUp size={16} />} label="Mints"     value="1,000 / 1,000 ✓" />
+        </div>
+
+        {/* steps */}
+        <div className="rounded-xl border border-white/8 bg-black/30 p-5 space-y-2">
+          <h2 className="text-sm font-semibold text-white mb-3">How to Submit</h2>
+          {STEPS.map((s) => (
+            <button
+              key={s.n}
+              onClick={() => setActiveStep(s.n === activeStep ? 0 : s.n)}
+              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors text-left"
+            >
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
+                activeStep === s.n ? "bg-purple-500 text-white" : "bg-white/10 text-white/40"
+              }`}>
+                {s.n}
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-white">{s.title}</div>
+                <div className="text-[11px] text-white/40">{s.desc}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* copy-ready fields */}
+        <div className="space-y-3">
+          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest font-mono">
+            Submission Fields — All Copy-Ready
+          </h2>
+          {FIELDS.map((f) => (
+            <CopyField key={f.label} label={f.label} value={f.value} tip={f.tip} />
+          ))}
+        </div>
+
+        {/* logo download */}
+        <div className="rounded-xl border border-white/8 bg-black/30 p-5 flex items-center gap-4">
+          <img
+            src="/nexus-wavelength-logo.png"
+            alt="NXWV logo"
+            className="w-14 h-14 rounded-xl object-cover border border-white/10 shrink-0"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+          <div className="flex-1">
+            <div className="text-xs font-semibold text-white">Project Logo</div>
+            <div className="text-[11px] text-white/40 mt-0.5">PNG · Upload directly into the Coinsniper form</div>
+          </div>
+          <a
+            href="/nexus-wavelength-logo.png"
+            download="nexus-wavelength-logo.png"
+            className="text-xs font-semibold px-4 py-2 rounded-full bg-white/8 border border-white/10 text-white/60 hover:text-white hover:bg-white/15 transition-colors"
+          >
+            Download
+          </a>
+        </div>
+
+        {/* ordiscan verify */}
+        <div className="rounded-xl border border-orange-500/15 bg-orange-900/8 p-4 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold text-white">Verify on Ordiscan</div>
+            <div className="text-[11px] text-white/40 mt-0.5">On-chain proof for Coinsniper reviewers</div>
+          </div>
+          <a
+            href="https://ordiscan.com/rune/NEXUS%E2%80%A2WAVELENGTH"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-semibold px-4 py-2 rounded-full bg-orange-500/20 border border-orange-500/30 text-orange-300 hover:bg-orange-500/30 transition-colors flex items-center gap-1.5 shrink-0"
+          >
+            <ExternalLink size={11} /> Ordiscan
+          </a>
+        </div>
+
+        {/* pipeline tip */}
+        <div className="rounded-xl border border-cyan-500/20 bg-cyan-900/10 p-4 flex items-start gap-3">
+          <Zap size={15} className="text-cyan-400 mt-0.5 shrink-0" />
+          <div className="text-[11px] text-white/50 leading-relaxed">
+            <span className="text-white font-semibold text-xs">Buy URL tip: </span>
+            set <span className="font-mono text-cyan-300">wnsp.tech/rune-pipeline</span> as the "Buy" link
+            on the Coinsniper listing — sends traders directly into the NexusOS acquisition flow.
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }
