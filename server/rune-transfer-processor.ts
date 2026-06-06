@@ -115,7 +115,7 @@ export async function sendRuneTransfer(
 
   const divisor    = await fetchRuneDivisor();
   const rawAmount  = BigInt(displayAmount) * divisor || BigInt(displayAmount);
-  const feeRate    = await getFeeRate("medium");
+  const feeRate    = await getFeeRate("low");
   const utxos      = await getUTXOs(wallet.address);
 
   // Only spend confirmed UTXOs for fees
