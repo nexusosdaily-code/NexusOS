@@ -10961,6 +10961,108 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // POST /api/rune-swap/rune-to-sats — wrap NXWV UTXO, credit sats balance
+  app.post("/api/rune-swap/rune-to-sats", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      const { runeAmount, btcTxid, btcAddress } = req.body;
+
+      const RUNE_TO_SATS_RATE = 100; // 100 sats per 1 NEXUS•WAVELENGTH (launch rate)
+
+      const runes = parseInt(String(runeAmount));
+      if (isNaN(runes) || runes < 100)
+        return res.status(400).json({ error: "Minimum 100 NEXUS•WAVELENGTH" });
+      if (runes > 100_000)
+        return res.status(400).json({ error: "Maximum 100,000 NEXUS•WAVELENGTH per swap" });
+      if (!btcTxid || String(btcTxid).length < 30)
+        return res.status(400).json({ error: "Valid Bitcoin transaction ID required" });
+
+      const satsToCredit = BigInt(runes) * BigInt(RUNE_TO_SATS_RATE);
+
+      // Ensure lightning_wallet exists, then credit sats
+      const { sql: sqlTag } = await import("drizzle-orm");
+      const { db } = await import("./db");
+
+      await db.execute(sqlTag`
+        INSERT INTO lightning_wallets (user_id, sats_balance, updated_at)
+        VALUES (${user.id}, 0, NOW())
+        ON CONFLICT (user_id) DO NOTHING
+      `);
+
+      const [lw] = await db.execute(sqlTag`
+        UPDATE lightning_wallets
+        SET sats_balance = sats_balance + ${satsToCredit.toString()},
+            updated_at = NOW()
+        WHERE user_id = ${user.id}
+        RETURNING sats_balance
+      `);
+      const newSatsBal = (lw as any)?.sats_balance ?? 0;
+
+      // Record in rune_swaps table
+      const { runeSwaps } = await import("../shared/schema");
+      const [row] = await db.insert(runeSwaps).values({
+        userId:      user.id,
+        username:    user.username,
+        direction:   "rune_to_sats",
+        nxtAmount:   "0",
+        runeAmount:  runes,
+        btcAddress:  btcAddress ?? null,
+        btcTxid,
+        status:      "credited",
+        rate:        String(RUNE_TO_SATS_RATE),
+        note:        `${runes} NEXUS•WAVELENGTH wrapped → ${satsToCredit.toString()} sats credited`,
+        completedAt: new Date(),
+      }).returning();
+
+      // Telegram alert
+      try {
+        const { sendTelegramAlert } = await import("./telegram-bot");
+        await sendTelegramAlert(
+          `⚡ <b>Rune Wrap — NXWV→Sats</b>\n\n` +
+          `User: ${user.username}\n` +
+          `Runes wrapped: <b>${runes.toLocaleString()} NEXUS•WAVELENGTH</b>\n` +
+          `Sats credited: <b>${satsToCredit.toLocaleString()} sats</b>\n` +
+          `Rate: ${RUNE_TO_SATS_RATE} sats/NXWV\n` +
+          `BTC Txid: <code>${btcTxid}</code>\n\n` +
+          `<a href="https://mempool.space/tx/${btcTxid}">Verify on mempool.space</a>`
+        );
+      } catch { /* non-fatal */ }
+
+      // Nostr broadcast
+      try {
+        const { publishToNostr } = await import("./nostr-service");
+        await publishToNostr({
+          content: [
+            `⚡ NEXUS•WAVELENGTH Rune UTXO wrapped into sats on NexusOS!`,
+            ``,
+            `${runes.toLocaleString()} NXWV → ${satsToCredit.toLocaleString()} sats (${RUNE_TO_SATS_RATE} sats/NXWV launch rate)`,
+            ``,
+            `🔗 BTC Txid: ${btcTxid}`,
+            ``,
+            `Mint NEXUS•WAVELENGTH on Bitcoin 👇`,
+            `https://unisat.io/runes/detail/NEXUS%E2%80%A2WAVELENGTH`,
+            ``,
+            `Wrap your Rune UTXOs at wnsp.tech/rune-swap`,
+            ``,
+            `#Bitcoin #Runes #NEXUSWAVELENGTH #WNSP #NexusOS`,
+          ].join("\n"),
+          hashtags: ["Bitcoin", "Runes", "NEXUSWAVELENGTH", "WNSP", "NexusOS"],
+        });
+      } catch { /* non-fatal */ }
+
+      res.json({
+        ok: true,
+        swapId:       row.id,
+        direction:    "rune_to_sats",
+        runeAmount:   runes,
+        satsCredited: satsToCredit.toString(),
+        newSatsBal:   newSatsBal.toString(),
+        rate:         RUNE_TO_SATS_RATE,
+        message: `${satsToCredit.toLocaleString()} sats credited to your Lightning wallet! (${runes.toLocaleString()} NXWV × ${RUNE_TO_SATS_RATE} sats/NXWV)`,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // GET /api/rune-swap/history
   app.get("/api/rune-swap/history", authenticate, async (req: Request, res: Response) => {
     try {

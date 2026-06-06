@@ -6,13 +6,14 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
   ArrowUpDown, Copy, CheckCircle2, ExternalLink,
-  Bitcoin, Zap, Clock, ArrowRight, Info,
+  Bitcoin, Zap, Clock, ArrowRight, Info, Layers,
 } from "lucide-react";
 
 const SERVICE_WALLET = "bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m";
 const RUNE_NAME = "NEXUS•WAVELENGTH";
+const RUNE_TO_SATS_RATE = 100; // sats per NXWV
 
-type Dir = "nxt_to_rune" | "rune_to_nxt";
+type Dir = "rune_to_nxt" | "nxt_to_rune" | "rune_to_sats";
 
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, string> = {
@@ -42,6 +43,12 @@ function CopyBtn({ value }: { value: string }) {
   );
 }
 
+const TABS: { id: Dir; label: string; icon: React.ReactNode; color: string }[] = [
+  { id: "rune_to_nxt",  label: "NXWV → NXT",  icon: <Bitcoin className="w-3.5 h-3.5" />,  color: "purple" },
+  { id: "rune_to_sats", label: "NXWV → Sats", icon: <Zap className="w-3.5 h-3.5" />,      color: "yellow" },
+  { id: "nxt_to_rune",  label: "NXT → NXWV",  icon: <Layers className="w-3.5 h-3.5" />,   color: "orange" },
+];
+
 export default function RuneSwapPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -57,32 +64,41 @@ export default function RuneSwapPage() {
     refetchInterval: 30000,
   });
 
-  const runes = parseInt(runeAmt) || 0;
-  const nxtVal = runes * (rate?.rate ?? 1);
-  const nxtBal = parseFloat(wallet?.wallet?.balance ?? "0");
+  const runes   = parseInt(runeAmt) || 0;
+  const nxtVal  = runes * (rate?.rate ?? 1);
+  const satsVal = runes * RUNE_TO_SATS_RATE;
+  const nxtBal  = parseFloat(wallet?.wallet?.balance ?? "0");
 
   const swapMut = useMutation({
     mutationFn: async () => {
-      const endpoint = dir === "nxt_to_rune"
-        ? "/api/rune-swap/nxt-to-rune"
-        : "/api/rune-swap/rune-to-nxt";
-      const body = dir === "nxt_to_rune"
-        ? { runeAmount: runes, btcAddress: btcAddr }
-        : { runeAmount: runes, btcTxid, btcAddress: btcAddr };
-      return apiRequest("POST", endpoint, body);
+      if (dir === "nxt_to_rune") {
+        return apiRequest("POST", "/api/rune-swap/nxt-to-rune", { runeAmount: runes, btcAddress: btcAddr });
+      } else if (dir === "rune_to_sats") {
+        return apiRequest("POST", "/api/rune-swap/rune-to-sats", { runeAmount: runes, btcTxid, btcAddress: btcAddr });
+      } else {
+        return apiRequest("POST", "/api/rune-swap/rune-to-nxt", { runeAmount: runes, btcTxid, btcAddress: btcAddr });
+      }
     },
     onSuccess: (data: any) => {
       toast({ title: "Swap submitted!", description: data.message });
       qc.invalidateQueries({ queryKey: ["/api/rune-swap/history"] });
       qc.invalidateQueries({ queryKey: ["/api/wallet"] });
+      qc.invalidateQueries({ queryKey: ["/api/lightning/wallet"] });
       setBtcTxid("");
     },
     onError: (e: any) => toast({ title: "Swap failed", description: e.message, variant: "destructive" }),
   });
 
-  const canSwap = dir === "nxt_to_rune"
-    ? runes >= 100 && btcAddr.length > 10 && nxtBal >= nxtVal
-    : runes >= 100 && btcTxid.length >= 30;
+  const canSwap =
+    dir === "nxt_to_rune"  ? runes >= 100 && btcAddr.length > 10 && nxtBal >= nxtVal :
+    dir === "rune_to_sats" ? runes >= 100 && btcTxid.length >= 30 :
+                             runes >= 100 && btcTxid.length >= 30;
+
+  const activeColor = dir === "rune_to_sats" ? "yellow" : dir === "nxt_to_rune" ? "orange" : "purple";
+  const btnClass =
+    activeColor === "yellow" ? "bg-yellow-600 hover:bg-yellow-700" :
+    activeColor === "orange" ? "bg-orange-600 hover:bg-orange-700" :
+                               "bg-purple-600 hover:bg-purple-700";
 
   return (
     <div className="min-h-screen bg-[#0a0a14] text-white px-4 py-10">
@@ -91,47 +107,46 @@ export default function RuneSwapPage() {
         {/* Header */}
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-yellow-500 flex items-center justify-center">
               <Bitcoin className="w-5 h-5 text-white" />
             </div>
             <div className="text-left">
-              <h1 className="text-xl font-bold">NXWV ↔ NXT Bridge</h1>
-              <p className="text-white/40 text-xs">NEXUS•WAVELENGTH Rune ↔ NXT Token</p>
+              <h1 className="text-xl font-bold">NXWV Bridge & Wrap</h1>
+              <p className="text-white/40 text-xs">NEXUS•WAVELENGTH Rune ↔ NXT · Sats · Bitcoin</p>
             </div>
           </div>
         </div>
 
-        {/* Rate card */}
-        <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 flex items-center justify-between gap-4 flex-wrap">
-          <div className="font-mono text-sm flex items-center gap-3">
-            <span className="text-purple-300 font-bold">1 NXWV</span>
-            <span className="text-white/30">=</span>
-            <span className="text-orange-300 font-bold">1 NXT</span>
-            <span className="text-white/20 text-xs">· Physics parity</span>
+        {/* Rate cards */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-3 text-center">
+            <p className="text-[11px] text-white/30 mb-1">Bridge rate</p>
+            <p className="font-mono text-sm"><span className="text-purple-300 font-bold">1 NXWV</span> <span className="text-white/30">=</span> <span className="text-orange-300 font-bold">1 NXT</span></p>
+            <p className="text-[10px] text-white/20 mt-0.5">Physics parity</p>
           </div>
-          <div className="flex gap-3 text-xs text-white/40">
-            <span>Min: 100</span>
-            <span>Max: 100,000</span>
+          <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-3 text-center">
+            <p className="text-[11px] text-white/30 mb-1">Wrap rate (launch)</p>
+            <p className="font-mono text-sm"><span className="text-yellow-300 font-bold">1 NXWV</span> <span className="text-white/30">=</span> <span className="text-green-300 font-bold">100 sats</span></p>
+            <p className="text-[10px] text-white/20 mt-0.5">≈ $0.10 @ $100k BTC</p>
           </div>
         </div>
 
-        {/* Direction toggle */}
-        <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-white/5 p-1">
-          {(["rune_to_nxt", "nxt_to_rune"] as Dir[]).map(d => (
+        {/* Direction tabs */}
+        <div className="grid grid-cols-3 gap-1.5 rounded-xl border border-white/10 bg-white/5 p-1">
+          {TABS.map(t => (
             <button
-              key={d}
-              onClick={() => setDir(d)}
-              data-testid={`dir-${d}`}
-              className={`py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                dir === d
-                  ? "bg-purple-600 text-white shadow"
+              key={t.id}
+              onClick={() => setDir(t.id)}
+              data-testid={`dir-${t.id}`}
+              className={`py-2.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                dir === t.id
+                  ? t.color === "yellow" ? "bg-yellow-600 text-white shadow"
+                  : t.color === "orange" ? "bg-orange-600 text-white shadow"
+                  : "bg-purple-600 text-white shadow"
                   : "text-white/40 hover:text-white/70"
               }`}
             >
-              {d === "rune_to_nxt"
-                ? <span className="flex items-center justify-center gap-2"><Bitcoin className="w-3.5 h-3.5" />NXWV → NXT</span>
-                : <span className="flex items-center justify-center gap-2"><Zap className="w-3.5 h-3.5" />NXT → NXWV</span>
-              }
+              {t.icon}{t.label}
             </button>
           ))}
         </div>
@@ -142,62 +157,43 @@ export default function RuneSwapPage() {
           {/* Amount */}
           <div>
             <label className="text-xs text-white/50 uppercase tracking-widest mb-1.5 block">
-              {dir === "rune_to_nxt" ? "NEXUS•WAVELENGTH to send" : "NEXUS•WAVELENGTH to receive"}
+              {dir === "nxt_to_rune" ? "NEXUS•WAVELENGTH to receive" : "NEXUS•WAVELENGTH to send"}
             </label>
             <div className="relative">
               <Input
                 type="number"
                 value={runeAmt}
                 onChange={e => setRuneAmt(e.target.value)}
-                min={100}
-                step={100}
+                min={100} step={100}
                 data-testid="input-rune-amount"
                 className="bg-black/30 border-white/10 text-white font-mono pr-20"
                 placeholder="1000"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-purple-300 font-mono">NXWV</span>
             </div>
-            <p className="text-xs text-white/30 mt-1">= {nxtVal.toLocaleString()} NXT</p>
+            <p className="text-xs text-white/30 mt-1">
+              {dir === "rune_to_sats"
+                ? `= ${satsVal.toLocaleString()} sats (${RUNE_TO_SATS_RATE} sats/NXWV launch rate)`
+                : `= ${nxtVal.toLocaleString()} NXT`}
+            </p>
           </div>
 
-          {/* NXT → RUNE: need BTC address for delivery */}
-          {dir === "nxt_to_rune" && (
-            <div>
-              <label className="text-xs text-white/50 uppercase tracking-widest mb-1.5 block">
-                Your Bitcoin address (Rune delivery)
-              </label>
-              <Input
-                value={btcAddr}
-                onChange={e => setBtcAddr(e.target.value)}
-                data-testid="input-btc-address"
-                className="bg-black/30 border-white/10 text-white font-mono text-xs"
-                placeholder="bc1p… or bc1q…"
-              />
-              <p className="text-xs text-white/30 mt-1">
-                NXT goes to Orbital Treasury · {RUNE_NAME} sent to your BTC address from service wallet
-              </p>
-            </div>
-          )}
-
-          {/* RUNE → NXT: send to service wallet, paste txid */}
-          {dir === "rune_to_nxt" && (
+          {/* NXWV → Sats: send UTXO, paste txid, get sats */}
+          {dir === "rune_to_sats" && (
             <div className="space-y-3">
-              <div className="rounded-xl border border-orange-500/20 bg-orange-950/20 p-4 space-y-2">
-                <p className="text-xs font-semibold text-orange-300 flex items-center gap-1.5">
-                  <Info className="w-3.5 h-3.5" /> Step 1 — Send your Rune on Bitcoin
+              <div className="rounded-xl border border-yellow-500/20 bg-yellow-950/20 p-4 space-y-2">
+                <p className="text-xs font-semibold text-yellow-300 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5" /> Step 1 — Send your NXWV UTXO on Bitcoin
                 </p>
                 <p className="text-xs text-white/50">
-                  Send <span className="text-white font-mono">{runes || "?"} {RUNE_NAME}</span> to the service wallet on Unisat or Magic Eden:
+                  Send <span className="text-white font-mono">{runes || "?"} {RUNE_NAME}</span> to the service wallet on Unisat:
                 </p>
                 <div className="flex items-center gap-2 bg-black/30 rounded-lg p-2.5">
-                  <code className="text-xs text-purple-300 font-mono break-all flex-1">{SERVICE_WALLET}</code>
+                  <code className="text-xs text-yellow-300 font-mono break-all flex-1">{SERVICE_WALLET}</code>
                   <CopyBtn value={SERVICE_WALLET} />
                 </div>
-                <a
-                  href={`https://unisat.io/address/${SERVICE_WALLET}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors"
-                >
+                <a href={`https://unisat.io/address/${SERVICE_WALLET}`} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-yellow-400 hover:text-yellow-300 flex items-center gap-1 transition-colors">
                   <ExternalLink className="w-3 h-3" /> Verify on Unisat
                 </a>
               </div>
@@ -214,11 +210,8 @@ export default function RuneSwapPage() {
                   placeholder="txid (64 hex chars)"
                 />
                 {btcTxid.length > 20 && (
-                  <a
-                    href={`https://mempool.space/tx/${btcTxid}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 mt-1 transition-colors"
-                  >
+                  <a href={`https://mempool.space/tx/${btcTxid}`} target="_blank" rel="noopener noreferrer"
+                    className="text-xs text-yellow-400 hover:text-yellow-300 flex items-center gap-1 mt-1 transition-colors">
                     <ExternalLink className="w-3 h-3" /> Verify on mempool.space
                   </a>
                 )}
@@ -228,18 +221,85 @@ export default function RuneSwapPage() {
                 <label className="text-xs text-white/50 uppercase tracking-widest mb-1.5 block">
                   Your Bitcoin address (optional — for records)
                 </label>
-                <Input
-                  value={btcAddr}
-                  onChange={e => setBtcAddr(e.target.value)}
+                <Input value={btcAddr} onChange={e => setBtcAddr(e.target.value)}
                   data-testid="input-btc-address-optional"
                   className="bg-black/30 border-white/10 text-white font-mono text-xs"
-                  placeholder="bc1p… (optional)"
-                />
+                  placeholder="bc1p… (optional)" />
+              </div>
+
+              <div className="rounded-lg border border-green-500/20 bg-green-950/20 p-3 text-xs text-green-300">
+                <p className="font-semibold mb-1">⚡ You will receive</p>
+                <p className="font-mono text-lg">{satsVal.toLocaleString()} sats</p>
+                <p className="text-green-300/50 mt-0.5">Credited to your NexusOS Lightning wallet instantly</p>
               </div>
             </div>
           )}
 
-          {/* Balance */}
+          {/* NXWV → NXT: send to service wallet, paste txid */}
+          {dir === "rune_to_nxt" && (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-orange-500/20 bg-orange-950/20 p-4 space-y-2">
+                <p className="text-xs font-semibold text-orange-300 flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5" /> Step 1 — Send your Rune on Bitcoin
+                </p>
+                <p className="text-xs text-white/50">
+                  Send <span className="text-white font-mono">{runes || "?"} {RUNE_NAME}</span> to the service wallet on Unisat or Magic Eden:
+                </p>
+                <div className="flex items-center gap-2 bg-black/30 rounded-lg p-2.5">
+                  <code className="text-xs text-purple-300 font-mono break-all flex-1">{SERVICE_WALLET}</code>
+                  <CopyBtn value={SERVICE_WALLET} />
+                </div>
+                <a href={`https://unisat.io/address/${SERVICE_WALLET}`} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors">
+                  <ExternalLink className="w-3 h-3" /> Verify on Unisat
+                </a>
+              </div>
+
+              <div>
+                <label className="text-xs text-white/50 uppercase tracking-widest mb-1.5 block">
+                  Step 2 — Paste your Bitcoin Transaction ID
+                </label>
+                <Input value={btcTxid} onChange={e => setBtcTxid(e.target.value)}
+                  data-testid="input-btc-txid"
+                  className="bg-black/30 border-white/10 text-white font-mono text-xs"
+                  placeholder="txid (64 hex chars)" />
+                {btcTxid.length > 20 && (
+                  <a href={`https://mempool.space/tx/${btcTxid}`} target="_blank" rel="noopener noreferrer"
+                    className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1 mt-1 transition-colors">
+                    <ExternalLink className="w-3 h-3" /> Verify on mempool.space
+                  </a>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs text-white/50 uppercase tracking-widest mb-1.5 block">
+                  Your Bitcoin address (optional)
+                </label>
+                <Input value={btcAddr} onChange={e => setBtcAddr(e.target.value)}
+                  data-testid="input-btc-address-optional"
+                  className="bg-black/30 border-white/10 text-white font-mono text-xs"
+                  placeholder="bc1p… (optional)" />
+              </div>
+            </div>
+          )}
+
+          {/* NXT → NXWV: need BTC address */}
+          {dir === "nxt_to_rune" && (
+            <div>
+              <label className="text-xs text-white/50 uppercase tracking-widest mb-1.5 block">
+                Your Bitcoin address (Rune delivery)
+              </label>
+              <Input value={btcAddr} onChange={e => setBtcAddr(e.target.value)}
+                data-testid="input-btc-address"
+                className="bg-black/30 border-white/10 text-white font-mono text-xs"
+                placeholder="bc1p… or bc1q…" />
+              <p className="text-xs text-white/30 mt-1">
+                NXT goes to Orbital Treasury · {RUNE_NAME} sent to your BTC address from service wallet
+              </p>
+            </div>
+          )}
+
+          {/* NXT balance row */}
           {dir === "nxt_to_rune" && (
             <div className="flex items-center justify-between text-xs text-white/40">
               <span>Your NXT balance</span>
@@ -254,18 +314,16 @@ export default function RuneSwapPage() {
             onClick={() => swapMut.mutate()}
             disabled={!canSwap || swapMut.isPending}
             data-testid="button-swap-submit"
-            className="w-full bg-purple-600 hover:bg-purple-700 gap-2 font-semibold"
+            className={`w-full gap-2 font-semibold ${btnClass}`}
           >
             {swapMut.isPending ? (
               <span className="flex items-center gap-2"><Clock className="w-4 h-4 animate-spin" /> Processing…</span>
+            ) : dir === "rune_to_sats" ? (
+              <span className="flex items-center gap-2"><Zap className="w-4 h-4" />Wrap {runes.toLocaleString()} NXWV → {satsVal.toLocaleString()} sats</span>
+            ) : dir === "rune_to_nxt" ? (
+              <span className="flex items-center gap-2"><ArrowUpDown className="w-4 h-4" />Credit {nxtVal.toLocaleString()} NXT</span>
             ) : (
-              <span className="flex items-center gap-2">
-                <ArrowUpDown className="w-4 h-4" />
-                {dir === "rune_to_nxt"
-                  ? `Credit ${nxtVal.toLocaleString()} NXT`
-                  : `Swap ${runes.toLocaleString()} NXWV → NXT`
-                }
-              </span>
+              <span className="flex items-center gap-2"><ArrowUpDown className="w-4 h-4" />Swap {runes.toLocaleString()} NXWV → NXT</span>
             )}
           </Button>
 
@@ -275,8 +333,8 @@ export default function RuneSwapPage() {
                 ? `Need ${nxtVal} NXT — you have ${nxtBal.toFixed(2)}`
                 : dir === "nxt_to_rune" && !btcAddr
                 ? "Enter a Bitcoin address for delivery"
-                : dir === "rune_to_nxt" && btcTxid.length < 30
-                ? "Paste the Bitcoin transaction ID from your Unisat send"
+                : btcTxid.length < 30
+                ? "Paste the Bitcoin transaction ID"
                 : runes < 100
                 ? "Minimum 100 NEXUS•WAVELENGTH"
                 : ""}
@@ -287,24 +345,30 @@ export default function RuneSwapPage() {
         {/* How it works */}
         <div className="rounded-xl border border-white/8 bg-white/3 p-5 space-y-3">
           <h3 className="text-sm font-semibold text-white/60 flex items-center gap-2">
-            <Info className="w-4 h-4" /> How the bridge works
+            <Info className="w-4 h-4" /> How it works
           </h3>
-          <div className="grid sm:grid-cols-2 gap-4 text-xs text-white/50 leading-relaxed">
+          <div className="grid sm:grid-cols-3 gap-4 text-xs text-white/50 leading-relaxed">
             <div>
               <p className="text-purple-300 font-semibold mb-1">NXWV → NXT</p>
-              <p>1. Send NEXUS•WAVELENGTH to the service wallet on Unisat</p>
-              <p>2. Paste the Bitcoin TXID above</p>
-              <p>3. NXT is credited to your NexusOS wallet immediately</p>
+              <p>1. Send NXWV to service wallet on Unisat</p>
+              <p>2. Paste BTC txid</p>
+              <p>3. NXT credited to your NexusOS wallet instantly</p>
+            </div>
+            <div>
+              <p className="text-yellow-300 font-semibold mb-1">NXWV → Sats ⚡</p>
+              <p>1. Send NXWV UTXO to service wallet</p>
+              <p>2. Paste BTC txid</p>
+              <p>3. Sats credited to your Lightning wallet (100 sats/NXWV)</p>
             </div>
             <div>
               <p className="text-orange-300 font-semibold mb-1">NXT → NXWV</p>
-              <p>1. Enter how many Runes you want + your BTC address</p>
-              <p>2. NXT moves to Orbital Treasury (never burned)</p>
-              <p>3. NEXUS•WAVELENGTH sent to your BTC address from service wallet</p>
+              <p>1. Enter Rune amount + your BTC address</p>
+              <p>2. NXT → Orbital Treasury</p>
+              <p>3. NXWV sent to your BTC address</p>
             </div>
           </div>
           <p className="text-[11px] text-white/20">
-            Rate: 1 NXWV = 1 NXT · Physics parity · NXT is never destroyed — always redirected to Orbital Treasury
+            NXT is never destroyed — always redirected to Orbital Treasury · Wrap rate: 100 sats/NXWV (launch)
           </p>
         </div>
 
@@ -322,32 +386,35 @@ export default function RuneSwapPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {(history as any[]).map((s: any) => (
-                <div key={s.id} data-testid={`swap-row-${s.id}`}
-                  className="rounded-xl border border-white/8 bg-white/3 p-4 flex items-center justify-between gap-3 flex-wrap"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${
-                      s.direction === "rune_to_nxt" ? "bg-purple-500/20" : "bg-orange-500/20"
-                    }`}>
-                      {s.direction === "rune_to_nxt" ? "💜" : "🟠"}
+              {(history as any[]).map((s: any) => {
+                const isSats = s.direction === "rune_to_sats";
+                const isToRune = s.direction === "nxt_to_rune";
+                const emoji = isSats ? "⚡" : isToRune ? "🟠" : "💜";
+                const label = isSats
+                  ? `${parseInt(s.runeAmount).toLocaleString()} NXWV → ${(parseInt(s.runeAmount) * 100).toLocaleString()} sats`
+                  : isToRune
+                  ? `${parseFloat(s.nxtAmount).toLocaleString()} NXT → ${parseInt(s.runeAmount).toLocaleString()} NXWV`
+                  : `${parseInt(s.runeAmount).toLocaleString()} NXWV → ${parseFloat(s.nxtAmount).toLocaleString()} NXT`;
+                return (
+                  <div key={s.id} data-testid={`swap-row-${s.id}`}
+                    className="rounded-xl border border-white/8 bg-white/3 p-4 flex items-center justify-between gap-3 flex-wrap"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${
+                        isSats ? "bg-yellow-500/20" : isToRune ? "bg-orange-500/20" : "bg-purple-500/20"
+                      }`}>{emoji}</div>
+                      <div>
+                        <p className="text-sm font-mono text-white">{label}</p>
+                        <p className="text-[11px] text-white/30 font-mono">
+                          #{s.id} · {new Date(s.createdAt).toLocaleDateString()}
+                          {s.btcTxid && <> · <a href={`https://mempool.space/tx/${s.btcTxid}`} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">{s.btcTxid.slice(0, 10)}…</a></>}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-mono text-white">
-                        {s.direction === "rune_to_nxt"
-                          ? `${parseInt(s.runeAmount).toLocaleString()} NXWV → ${parseFloat(s.nxtAmount).toLocaleString()} NXT`
-                          : `${parseFloat(s.nxtAmount).toLocaleString()} NXT → ${parseInt(s.runeAmount).toLocaleString()} NXWV`
-                        }
-                      </p>
-                      <p className="text-[11px] text-white/30 font-mono">
-                        #{s.id} · {new Date(s.createdAt).toLocaleDateString()}
-                        {s.btcTxid && <> · <a href={`https://mempool.space/tx/${s.btcTxid}`} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">{s.btcTxid.slice(0, 10)}…</a></>}
-                      </p>
-                    </div>
+                    <StatusPill status={s.status} />
                   </div>
-                  <StatusPill status={s.status} />
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
