@@ -116,18 +116,24 @@ export async function sendRuneTransfer(
   const divisor    = await fetchRuneDivisor();
   const rawAmount  = BigInt(displayAmount) * divisor || BigInt(displayAmount);
   const feeRate    = await getFeeRate("low");
-  const utxos      = await getUTXOs(wallet.address);
 
-  // Only spend confirmed UTXOs for fees
-  const confirmed  = utxos.filter(u => u.status?.confirmed);
-  if (confirmed.length === 0)
-    throw new Error(`Service wallet has no confirmed UTXOs — waiting for BTC confirmation`);
+  // Use chain_stats (same method as wallet sentinel) for accurate confirmed balance —
+  // the /utxo endpoint lags on confirmation status but /address chain_stats is authoritative.
+  const addrData = await fetch(`${MEMPOOL}/address/${wallet.address}`, {
+    signal: AbortSignal.timeout(10_000),
+  }).then(r => r.json());
+  const totalConfirmed = (addrData.chain_stats.funded_txo_sum - addrData.chain_stats.spent_txo_sum) as number;
+  console.log(`[Rune Processor] chain_stats confirmed: ${totalConfirmed} sats`);
 
-  const totalConfirmed = confirmed.reduce((s, u) => s + u.value, 0);
+  const utxos = await getUTXOs(wallet.address);
+  // Use all UTXOs — chain_stats already confirmed the balance; /utxo status flag lags
+  const spendable = utxos.length > 0 ? utxos : [];
+  if (spendable.length === 0)
+    throw new Error(`Service wallet has no UTXOs`);
 
   // Estimate: 1 OP_RETURN output (~45 vB) + 1 recipient P2PKH/P2TR (~43 vB) +
   //           N inputs P2TR (~58 vB each) + overhead 10 vB
-  const estVbytes  = 10 + confirmed.length * 58 + 43 + 45;
+  const estVbytes  = 10 + spendable.length * 58 + 43 + 45;
   const fee        = estVbytes * feeRate;
   const totalNeed  = Number(DUST) + fee; // 546 sats recipient output + fee
 
@@ -142,8 +148,8 @@ export async function sendRuneTransfer(
 
   const psbt = new bitcoin.Psbt({ network: NETWORK });
 
-  // Inputs (confirmed UTXOs for fee payment)
-  for (const u of confirmed) {
+  // Inputs — all spendable UTXOs
+  for (const u of spendable) {
     psbt.addInput({
       hash:           u.txid,
       index:          u.vout,
@@ -161,14 +167,14 @@ export async function sendRuneTransfer(
   psbt.addOutput({ address: recipientAddress, value: DUST });
 
   // Output 2: change back to service wallet
-  const totalIn = confirmed.reduce((s, u) => s + u.value, 0);
+  const totalIn = spendable.reduce((s, u) => s + u.value, 0);
   const change  = BigInt(totalIn) - DUST - BigInt(fee);
   if (change > DUST) {
     psbt.addOutput({ address: wallet.address, value: change });
   }
 
   // Sign all inputs
-  for (let i = 0; i < confirmed.length; i++) {
+  for (let i = 0; i < spendable.length; i++) {
     psbt.signInput(i, tweakedKP);
   }
   psbt.finalizeAllInputs();
