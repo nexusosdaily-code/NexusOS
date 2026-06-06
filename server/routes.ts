@@ -9019,7 +9019,7 @@ export async function registerRoutes(
     if (provider === "blink") {
       const walletId = await blinkBtcWalletId();
       const d = await blinkGql(
-        `mutation Pay($input: LnInvoicePaymentSendInput!) { lnInvoicePaymentSend(input: $input) { status errors { message } } }`,
+        `mutation Pay($input: LnInvoicePaymentInput!) { lnInvoicePaymentSend(input: $input) { status errors { message } } }`,
         { input: { walletId, paymentRequest: bolt11 } }
       );
       const res = d.lnInvoicePaymentSend;
@@ -9294,12 +9294,60 @@ export async function registerRoutes(
           console.log(`[LN Queue] Paid invoice #${row.id} — ${row.amount_sats} sats for tx ${row.tx_id}`);
         } catch (err: any) {
           const attempts = (row.attempts as number) + 1;
-          const newStatus = attempts >= MAX_ATTEMPTS ? "failed" : "queued";
+          const hitMax = attempts >= MAX_ATTEMPTS;
+          const newStatus = hitMax ? "failed" : "queued";
           await db.execute(s`
             UPDATE lightning_payment_queue
             SET status=${newStatus}, attempts=${attempts}, last_error=${err.message}
             WHERE id=${row.id}
           `);
+
+          // Auto-refund when all queue entries for this tx have exhausted attempts
+          if (hitMax) {
+            const stillActive = (await db.execute(s`
+              SELECT COUNT(*) AS cnt FROM lightning_payment_queue
+              WHERE tx_id=${row.tx_id} AND status NOT IN ('failed','paid') AND attempts < ${MAX_ATTEMPTS}
+            `)).rows[0] as any;
+            const allExhausted = (await db.execute(s`
+              SELECT COUNT(*) AS cnt FROM lightning_payment_queue
+              WHERE tx_id=${row.tx_id} AND status='failed' AND attempts >= ${MAX_ATTEMPTS}
+            `)).rows[0] as any;
+            const totalEntries = (await db.execute(s`
+              SELECT COUNT(*) AS cnt FROM lightning_payment_queue WHERE tx_id=${row.tx_id}
+            `)).rows[0] as any;
+
+            if (Number(stillActive.cnt) === 0 && Number(allExhausted.cnt) === Number(totalEntries.cnt)) {
+              // All entries failed — refund the parent tx
+              const parentTx = (await db.execute(s`
+                SELECT user_id, amount_sats FROM lightning_transactions WHERE id=${row.tx_id}
+              `)).rows[0] as any;
+              if (parentTx) {
+                const lw = (await db.execute(s`
+                  SELECT sats_balance, total_withdrawn FROM lightning_wallets WHERE user_id=${parentTx.user_id}
+                `)).rows[0] as any;
+                if (lw) {
+                  const newBal = BigInt(lw.sats_balance) + BigInt(parentTx.amount_sats);
+                  const newWith = BigInt(lw.total_withdrawn) - BigInt(parentTx.amount_sats);
+                  await db.execute(s`
+                    UPDATE lightning_wallets
+                    SET sats_balance=${newBal.toString()}, total_withdrawn=${newWith.toString()}, updated_at=NOW()
+                    WHERE user_id=${parentTx.user_id}
+                  `);
+                }
+                await db.execute(s`
+                  UPDATE lightning_transactions
+                  SET status='refunded', memo=CONCAT(memo, ' [REFUNDED — payment never settled]')
+                  WHERE id=${row.tx_id}
+                `);
+                await db.execute(s`
+                  UPDATE lightning_payment_queue
+                  SET last_error='Refunded to wallet — payment never settled after 5 attempts'
+                  WHERE tx_id=${row.tx_id} AND status='failed'
+                `);
+                console.log(`[LN Queue] Tx #${row.tx_id} exhausted ${MAX_ATTEMPTS} attempts — refunded ${parentTx.amount_sats} sats to wallet`);
+              }
+            }
+          }
         }
 
         // Check if parent tx is now fully paid
