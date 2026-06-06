@@ -20,9 +20,9 @@ const NETWORK = bitcoin.networks.bitcoin;
 const MEMPOOL = "https://mempool.space/api";
 const DUST    = 546n;
 
-// NEXUS•WAVELENGTH on-chain parameters
-const RUNE_BLOCK  = 840_000n;
-const RUNE_TX     = 8_472n;
+// NEXUS•WAVELENGTH on-chain parameters — actual etching block 952596:379
+const RUNE_BLOCK  = 952_596n;
+const RUNE_TX     = 379n;
 // Divisibility: fetch once, cache
 let RUNE_DIVISOR  = 0n; // 10^decimals — resolved on first use
 let RUNE_DIV_FETCHED = false;
@@ -70,7 +70,7 @@ function buildRunestone(rawAmount: bigint, recipientOutputIndex: number): Buffer
 async function fetchRuneDivisor(): Promise<bigint> {
   if (RUNE_DIV_FETCHED) return RUNE_DIVISOR;
   try {
-    const r = await fetch(`${MEMPOOL}/runes/840000:8472`, {
+    const r = await fetch(`${MEMPOOL}/runes/952596:379`, {
       signal: AbortSignal.timeout(10_000),
       headers: { Accept: "application/json" },
     });
