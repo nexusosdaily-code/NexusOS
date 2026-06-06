@@ -138,29 +138,43 @@ export async function sendRuneTransfer(
   const wallet = getServiceWallet();
   if (!wallet) throw new Error("BTC_INSCRIPTION_WALLET_WIF not set");
 
-  const feeRate       = await getFeeRate("low");
-  const confirmedSats = await getConfirmedBalance(wallet.address);
-  const utxos         = await getUTXOs(wallet.address);
+  const feeRate = await getFeeRate("low");
+  const utxos   = await getUTXOs(wallet.address);
   if (utxos.length === 0) throw new Error("Service wallet has no UTXOs");
+
+  // Separate Rune-carrier dust from BTC-funding UTXOs.
+  // Rune carriers: 546-sat outputs from mints — must be included as inputs so
+  //   Runes enter the tx; the Pointer then routes change back to out2.
+  // BTC funding: larger outputs that cover fees and change.
+  const runeCarriers = utxos.filter(u => u.value === 546);
+  const btcFunding   = utxos.filter(u => u.value > 546);
+
+  // Use total spendable (confirmed + unconfirmed mempool change) so recent
+  // unconfirmed mint-change UTXOs don't block order fulfillment.
+  const spendable    = utxos.reduce((s, u) => s + u.value, 0);
 
   // Tx layout:
   //   in:  all UTXOs (P2TR, 58 vB each)
   //   out0: OP_RETURN Runestone (~15 vB)
-  //   out1: recipient 546 sats  (P2TR 43 vB / P2PKH 34 vB — use 43 vB safe estimate)
-  //   out2: service wallet 546 sats Rune change (P2TR 43 vB)
+  //   out1: recipient 546 sats  (P2TR 43 vB)
+  //   out2: service wallet 546 sats Rune change (P2TR 43 vB, via Pointer)
   //   out3: service wallet BTC change (P2TR 43 vB)
   //   overhead: 10 vB
   const estVbytes = 10 + utxos.length * 58 + 15 + 43 + 43 + 43;
   const fee       = BigInt(estVbytes * feeRate);
   const totalNeed = DUST + DUST + fee; // out1 + out2 + fee
 
-  if (BigInt(confirmedSats) < totalNeed)
-    throw new Error(`Need ${totalNeed} sats confirmed, have ${confirmedSats}`);
+  if (BigInt(spendable) < totalNeed)
+    throw new Error(`Need ${totalNeed} sats, have ${spendable} (confirmed+unconfirmed)`);
+  if (runeCarriers.length === 0)
+    throw new Error("No Rune-carrier UTXOs found in service wallet — run a mint first");
+
+  const allInputs = [...runeCarriers, ...btcFunding]; // Rune carriers first → index stable
 
   const { tweakedKP, internalPubkey } = getTweakedKeypair(wallet);
   const psbt = new bitcoin.Psbt({ network: NETWORK });
 
-  for (const u of utxos) {
+  for (const u of allInputs) {
     psbt.addInput({
       hash:           u.txid,
       index:          u.vout,
@@ -174,12 +188,12 @@ export async function sendRuneTransfer(
   psbt.addOutput({ address: recipientAddress, value: DUST });  // out1: recipient gets Runes
   psbt.addOutput({ address: wallet.address, value: DUST });    // out2: Rune change back to us
 
-  const totalIn = BigInt(utxos.reduce((s, u) => s + u.value, 0));
+  const totalIn = BigInt(allInputs.reduce((s, u) => s + u.value, 0));
   const change  = totalIn - DUST - DUST - fee;
   if (change > DUST)
     psbt.addOutput({ address: wallet.address, value: change }); // out3: BTC change
 
-  const txHex = signAndFinalize(psbt, utxos.length, tweakedKP);
+  const txHex = signAndFinalize(psbt, allInputs.length, tweakedKP);
   const txid  = await broadcastTx(txHex);
   console.log(`[Rune Processor] ✓ Transfer ${rawAmount} raw NXWV → ${recipientAddress} | txid: ${txid}`);
   return txid;

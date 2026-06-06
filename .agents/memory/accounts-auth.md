@@ -11,13 +11,14 @@ description: Genesis account, password, registration lock, and developer keys ga
 - Sats staked: 194B+ across 13 positions (backfilled with WNUSD positions)
 - Authority band: KERNEL/SYSTEM
 
-## Production users (registration locked)
+## Production users
 Known usernames: Nexus, Shusha, Over3496, jefffay95, Leps, UncJuddy
-Registration returns **403** to all new sign-up attempts — network is closed.
+Registration is now **open** — the 403 gate was removed June 2026.
 
-## Registration lock
-`POST /api/auth/register` returns `403 { error: "Registration is currently closed" }` (or similar)
-The registration UI shows "Closed network" status message.
+## Registration
+`POST /api/auth/register` — open to all. Accepts `{ username, password, email? }`.
+Auto-creates NXT wallet + WNSP canonical address on success.
+Auth page Register tab is fully functional.
 
 ## Developer keys password gate
 - Route: `/developer/keys`

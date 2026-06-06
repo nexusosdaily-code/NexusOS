@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import WelcomeModal from "@/components/WelcomeModal";
 import { useUnisat } from "@/hooks/use-unisat";
 import TelegramVideoGallery from "@/components/TelegramVideoGallery";
 import { Badge } from "@/components/ui/badge";
@@ -1190,6 +1191,7 @@ export default function HubPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "hsl(222 47% 5%)", color: "white" }}>
+      <WelcomeModal username={user.username ?? ""} />
       {/* Identity Rail */}
       <IdentityRail
         user={user as any}
