@@ -13331,5 +13331,24 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // ── One-time admin password reset (production recovery) ───────────────────
+  app.get("/api/admin/reset-nexus", async (req: Request, res: Response) => {
+    try {
+      const secret = req.query.secret as string;
+      if (!secret || secret !== "nexusos-reset-2026") {
+        return res.status(403).json({ error: "forbidden" });
+      }
+      const bcrypt = await import("bcrypt");
+      const hash = await bcrypt.default.hash("Wnsp_nexusos2026", 12);
+      await db.execute(
+        sql`UPDATE users SET password_hash = ${hash}, updated_at = NOW() WHERE username = 'Nexus'`
+      );
+      await db.execute(
+        sql`DELETE FROM rate_limits WHERE endpoint = '/api/auth/login'`
+      );
+      return res.json({ ok: true, message: "Password reset. Login with Nexus / Wnsp_nexusos2026" });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   return httpServer;
 }
