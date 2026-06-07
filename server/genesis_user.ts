@@ -16,25 +16,36 @@ export async function seedGenesisUser() {
 
     const [{ value }] = await db.select({ value: count() }).from(users);
 
-    if (Number(value) > 0) {
-      // Users exist — but ensure Nexus password hash is current
-      const [nexus] = await db.select().from(users).where(eq(users.username, GENESIS_USERNAME));
-      if (nexus) {
-        const ok = await bcrypt.default.compare(GENESIS_PASSWORD, nexus.passwordHash ?? "");
-        if (!ok) {
-          const newHash = await bcrypt.default.hash(GENESIS_PASSWORD, 12);
-          await db.update(users).set({ passwordHash: newHash }).where(eq(users.username, GENESIS_USERNAME));
-          console.log("[GENESIS USER] ✓ Nexus password hash refreshed");
-        } else {
-          console.log("[GENESIS USER] Users already exist — skipping seed");
-        }
+    // Always ensure Nexus exists regardless of other users
+    const [nexus] = await db.select().from(users).where(eq(users.username, GENESIS_USERNAME));
+
+    if (nexus) {
+      // Nexus exists — make sure password hash is current
+      const ok = await bcrypt.default.compare(GENESIS_PASSWORD, nexus.passwordHash ?? "");
+      if (!ok) {
+        const newHash = await bcrypt.default.hash(GENESIS_PASSWORD, 12);
+        await db.update(users).set({ passwordHash: newHash }).where(eq(users.username, GENESIS_USERNAME));
+        console.log("[GENESIS USER] ✓ Nexus password hash refreshed");
+      } else {
+        console.log("[GENESIS USER] Nexus account OK — skipping");
       }
-      return;
+      // Ensure wallet exists
+      const existing = await db.select().from(wallets).where(eq(wallets.userId, nexus.id)).limit(1);
+      if (!existing.length) {
+        await db.insert(wallets).values({
+          userId:  nexus.id,
+          address: "NXT-NEXS-OS1K-7F3A-OMEGA",
+          balance: "339698690.00000000",
+        });
+        console.log("[GENESIS USER] ✓ Nexus wallet created");
+      }
+      return nexus;
     }
 
-    console.log("[GENESIS USER] No users found — seeding Nexus genesis account…");
+    // Nexus doesn't exist yet — create it
+    console.log("[GENESIS USER] Nexus account missing — creating…");
 
-    const passwordHash = await bcrypt.default.hash("Wnsp_nexusos2026", 12);
+    const passwordHash = await bcrypt.default.hash(GENESIS_PASSWORD, 12);
 
     const [user] = await db.insert(users).values({
       username:    "Nexus",
@@ -50,7 +61,7 @@ export async function seedGenesisUser() {
       spectralBand:"KERNEL",
     }).returning();
 
-    // Check if wallet already exists (shouldn't, but be safe)
+    // Create wallet
     const existing = await db.select().from(wallets).where(eq(wallets.userId, user.id)).limit(1);
     if (!existing.length) {
       await db.insert(wallets).values({
