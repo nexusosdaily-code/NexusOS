@@ -92,7 +92,7 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
 }
 
 const STEPS = [
-  { n: 1, title: "Open Coinsniper submit form", desc: "coinsniper.net/submit" },
+  { n: 1, title: "View live listing on Coinsniper", desc: "coinsniper.net/coin/91963" },
   { n: 2, title: "Select Bitcoin › Rune",       desc: "Chain = Bitcoin, type = Rune" },
   { n: 3, title: "Paste the fields below",       desc: "Every field on this page is copy-ready" },
   { n: 4, title: "Upload the logo",              desc: "Download PNG from this page and attach" },
@@ -133,12 +133,12 @@ export default function CoinsnierPage() {
             </p>
           </div>
           <a
-            href="https://coinsniper.net/submit"
+            href="https://coinsniper.net/coin/91963"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold transition-colors"
           >
-            <ExternalLink size={13} /> Open Coinsniper Submit Form
+            <ExternalLink size={13} /> View Live Listing on Coinsniper
           </a>
         </div>
 

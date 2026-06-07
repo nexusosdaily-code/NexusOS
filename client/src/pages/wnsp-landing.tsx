@@ -269,13 +269,13 @@ export default function WnspLandingPage() {
               🎯
             </div>
             <div className="flex-1 text-center sm:text-left">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-purple-400/60 mb-0.5">Coinsniper Listing · Bitcoin Rune</div>
-              <h3 className="text-sm font-bold text-white">NEXUS•WAVELENGTH — submit your vote on Coinsniper.</h3>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-purple-400/60 mb-0.5">🟢 Live on Coinsniper · Bitcoin Rune</div>
+              <h3 className="text-sm font-bold text-white">NEXUS•WAVELENGTH is live — vote for us on Coinsniper.</h3>
               <p className="text-[11px] text-white/40 mt-0.5">Rune ID 952596:379 · 21 trillion supply · 21B per mint · 1,000 mints (all claimed) · supply sealed June 2026</p>
             </div>
             <div className="flex gap-2 shrink-0">
               <a
-                href="https://coinsniper.net/submit"
+                href="https://coinsniper.net/coin/91963"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs font-semibold px-4 py-2 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 hover:bg-purple-500/30 transition-colors flex items-center gap-1.5"
