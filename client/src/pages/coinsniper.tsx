@@ -17,15 +17,15 @@ const TOTAL_SUPPLY = "21,000,000,000,000";
 const PER_MINT     = "21,000,000,000";
 const MAX_MINTS    = "1,000";
 const MINTS_DONE   = "1,000 / 1,000 — permanently sealed June 2026";
-const WEBSITE      = "https://wnsp.tech";
-const BUY_URL      = "https://wnsp.tech/rune-pipeline";
+const WEBSITE      = "https://wnsp.io";
+const BUY_URL      = "https://wnsp.io/rune-pipeline";
 const TELEGRAM     = "https://t.me/NexusOSWNSP";
 
 const DESCRIPTION =
   "NEXUS•WAVELENGTH (NXWV) is the native Rune of NexusOS — a physics-based " +
   "civilization OS built on electromagnetic wave equations. 21 trillion supply. " +
   "All 1,000 mints permanently sealed June 2026. No more NXWV will ever be " +
-  "created. Acquire via the NexusOS pipeline at wnsp.tech. " +
+  "created. Acquire via the NexusOS pipeline at wnsp.io. " +
   "Rune ID: 952596:379 on Bitcoin mainnet.";
 
 const FIELDS = [
@@ -224,7 +224,7 @@ export default function CoinsnierPage() {
           <Zap size={15} className="text-cyan-400 mt-0.5 shrink-0" />
           <div className="text-[11px] text-white/50 leading-relaxed">
             <span className="text-white font-semibold text-xs">Buy URL tip: </span>
-            set <span className="font-mono text-cyan-300">wnsp.tech/rune-pipeline</span> as the "Buy" link
+            set <span className="font-mono text-cyan-300">wnsp.io/rune-pipeline</span> as the "Buy" link
             on the Coinsniper listing — sends traders directly into the NexusOS acquisition flow.
           </div>
         </div>
