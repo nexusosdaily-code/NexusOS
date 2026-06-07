@@ -328,16 +328,16 @@ Platform: https://wnsp.io/stake-earn`;
 
 Love the energy! We're always looking for passionate people to help build the movement.
 
-Open roles:
-🛡 Moderators — keep channels clean
-📣 Hype crew — spread the word
-🔁 Raiders — coordinate raids and campaigns
-💬 Engagers — answer questions, onboard newcomers
-🎨 Creators — memes, threads, explainer content
+Paid community roles — earn NXT for every contribution:
+🛡 Moderator  — 500 NXT / month (fixed)
+📣 Hype Crew  — 50 NXT / post or campaign
+🔁 Raider     — 100 NXT / organised raid
+💬 Engager    — 200 NXT / week active presence
+🎨 Creator    — 500 NXT / piece of content
 
-Apply here: https://wnsp.io/join-community
+NXT paid directly to your wnsp.io wallet. No volunteers — everyone gets compensated.
 
-Fill in the form and we'll get back to you. We read every application.`;
+Apply: https://wnsp.io/join-community`;
   } else {
     reply =
 `👁 NexusOS

@@ -1286,17 +1286,19 @@ Stake sats → earn NXT yield → auto-mint WNUSD stablecoin → add to liquidit
 
 Love the energy! We're always looking for passionate people to help build the NexusOS movement.
 
-*Open community roles:*
-🛡 Moderators — keep channels clean and welcoming
-📣 Hype crew — spread the word on X, Telegram, Discord
-🔁 Raiders — coordinate community raids and campaigns
-💬 Engagers — answer questions, onboard new members
-🎨 Creators — memes, threads, explainer content
+*Paid community roles — earn NXT for every contribution:*
+🛡 Moderator — 500 NXT / month (fixed)
+📣 Hype Crew — 50 NXT / post or campaign (performance)
+🔁 Raider — 100 NXT / organised raid (performance)
+💬 Engager — 200 NXT / week (active presence)
+🎨 Creator — 500 NXT / piece of content (bounty)
+
+NXT is paid directly to your wnsp.io wallet. No volunteers — everyone gets compensated.
 
 *Apply here:*
 🌐 https://wnsp.io/join-community
 
-Fill in the form — name, role you want, and why you're the right person. We read every application.
+Fill in the form and we'll reach out to confirm your role + wallet details.
 
 @NexusOSWNSP`,
         { parse_mode: "Markdown" }

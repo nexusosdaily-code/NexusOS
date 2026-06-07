@@ -8,14 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Users, Shield, Megaphone, RotateCcw, MessageCircle, Palette, CheckCircle2, ExternalLink } from "lucide-react";
+import { Users, Shield, Megaphone, RotateCcw, MessageCircle, Palette, CheckCircle2, ExternalLink, Coins } from "lucide-react";
 
 const ROLES = [
-  { id: "moderator", label: "Moderator", icon: Shield, color: "text-blue-400", bg: "border-blue-500/30 bg-blue-950/20", desc: "Keep channels clean, welcoming, and on-topic" },
-  { id: "hype_crew", label: "Hype Crew", icon: Megaphone, color: "text-yellow-400", bg: "border-yellow-500/30 bg-yellow-950/20", desc: "Spread NexusOS on X, Telegram, Discord, Reddit" },
-  { id: "raider",    label: "Raider",    icon: RotateCcw, color: "text-orange-400", bg: "border-orange-500/30 bg-orange-950/20", desc: "Coordinate community raids and Twitter spaces" },
-  { id: "engager",   label: "Engager",   icon: MessageCircle, color: "text-green-400", bg: "border-green-500/30 bg-green-950/20", desc: "Answer questions, onboard new members, run AMAs" },
-  { id: "creator",   label: "Creator",   icon: Palette, color: "text-violet-400", bg: "border-violet-500/30 bg-violet-950/20", desc: "Memes, threads, explainer content, short videos" },
+  { id: "moderator", label: "Moderator", icon: Shield,        color: "text-blue-400",   bg: "border-blue-500/30 bg-blue-950/20",     desc: "Keep channels clean, welcoming, and on-topic",          pay: "500 NXT / month",    payNote: "Fixed monthly" },
+  { id: "hype_crew", label: "Hype Crew", icon: Megaphone,     color: "text-yellow-400", bg: "border-yellow-500/30 bg-yellow-950/20", desc: "Spread NexusOS on X, Telegram, Discord, Reddit",        pay: "50 NXT / post",      payNote: "Per verified campaign" },
+  { id: "raider",    label: "Raider",    icon: RotateCcw,     color: "text-orange-400", bg: "border-orange-500/30 bg-orange-950/20", desc: "Coordinate community raids and Twitter spaces",          pay: "100 NXT / raid",     payNote: "Per organised raid" },
+  { id: "engager",   label: "Engager",   icon: MessageCircle, color: "text-green-400",  bg: "border-green-500/30 bg-green-950/20",   desc: "Answer questions, onboard new members, run AMAs",       pay: "200 NXT / week",     payNote: "Active presence" },
+  { id: "creator",   label: "Creator",   icon: Palette,       color: "text-violet-400", bg: "border-violet-500/30 bg-violet-950/20", desc: "Memes, threads, explainer content, short videos",       pay: "500 NXT / piece",    payNote: "Content bounty" },
 ];
 
 interface FormData {
@@ -62,7 +62,7 @@ export default function JoinCommunityPage() {
             <CheckCircle2 className="w-8 h-8 text-violet-400" />
           </div>
           <h1 className="text-2xl font-bold text-white">Application received</h1>
-          <p className="text-zinc-400">Thanks for wanting to build with us. We read every application and will reach out via Telegram or X.</p>
+          <p className="text-zinc-400">We'll reach out via Telegram or X to confirm your role and NXT wallet details for payment.</p>
           <div className="flex gap-3 justify-center pt-2">
             <a href="https://t.me/NexusOSWNSP" target="_blank" rel="noreferrer"
               className="inline-flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300 transition-colors">
@@ -87,8 +87,11 @@ export default function JoinCommunityPage() {
           <div className="w-14 h-14 rounded-xl bg-violet-900/40 border border-violet-500/30 flex items-center justify-center mx-auto mb-4">
             <Users className="w-7 h-7 text-violet-400" />
           </div>
-          <h1 className="text-3xl font-bold text-white">Join the NexusOS Team</h1>
-          <p className="text-zinc-400 max-w-sm mx-auto">We're building the OS for the photonic computing era. Come build with us.</p>
+          <h1 className="text-3xl font-bold text-white">Work with NexusOS</h1>
+          <p className="text-zinc-400 max-w-sm mx-auto">Paid community roles — earn NXT for every contribution. No volunteers, everyone gets compensated.</p>
+          <div className="inline-flex items-center gap-1.5 mt-1 px-3 py-1 rounded-full bg-yellow-900/30 border border-yellow-500/30 text-yellow-400 text-xs font-medium">
+            <Coins className="w-3.5 h-3.5" /> Paid in NXT · sent to your wnsp.io wallet
+          </div>
         </div>
 
         {/* Role selector */}
@@ -106,11 +109,17 @@ export default function JoinCommunityPage() {
               >
                 <r.icon className={`w-5 h-5 flex-shrink-0 ${form.role === r.id ? r.color : "text-zinc-500"}`} />
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={`font-medium text-sm ${form.role === r.id ? "text-white" : "text-zinc-300"}`}>{r.label}</span>
-                    {form.role === r.id && <Badge className="bg-violet-700 text-white text-xs py-0">Selected</Badge>}
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <span className={`font-medium text-sm ${form.role === r.id ? "text-white" : "text-zinc-300"}`}>{r.label}</span>
+                      {form.role === r.id && <Badge className="bg-violet-700 text-white text-xs py-0">Selected</Badge>}
+                    </div>
+                    <span className={`text-xs font-mono font-semibold ${form.role === r.id ? "text-yellow-300" : "text-zinc-500"}`}>{r.pay}</span>
                   </div>
-                  <p className="text-xs text-zinc-500 mt-0.5">{r.desc}</p>
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="text-xs text-zinc-500 mt-0.5">{r.desc}</p>
+                    <p className="text-xs text-zinc-600 mt-0.5 flex-shrink-0">{r.payNote}</p>
+                  </div>
                 </div>
               </button>
             ))}
