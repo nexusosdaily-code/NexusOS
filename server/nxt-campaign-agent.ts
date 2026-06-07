@@ -63,14 +63,15 @@ When Bitcoin dips, most people panic. Smart builders do the opposite — they <b
 
 Why?
 
-🔶 NXT is the <b>native token of NexusOS</b> — a physics-based civilization OS built on wavelength physics, not cryptographic hashing.
+🔶 NXT is the <b>native token of NexusOS</b> — a physics-based OS built on wavelength physics, not cryptographic hashing.
 ⚡ 1,000 sats = 1 NXT. Buy dips. Stack physics.
 🔒 Stake NXT and earn up to <b>420% APY</b>.
 💎 Staking auto-mints <b>WNUSD</b> — a sats-backed stablecoin that funds hardware production.
+🪙 Two live Bitcoin Runes: NEXUS•WAVELENGTH (952596:379) + WNSP•BTC (952733:1958)
 
 This isn't speculation. Every NXT funds the Kardashev Type I hardware roadmap.
 
-👉 nexusos.io — buy NXT, stake, earn WNUSD.
+👉 wnsp.tech — buy NXT, stake, earn WNUSD.
 #NXT #NexusOS #Bitcoin #WNUSD #Stake`,
     nostr: `⚡ BTC is down. That's your signal.
 
@@ -80,10 +81,11 @@ When Bitcoin dips, smart builders buy NXT — the native token of NexusOS, a phy
 Stake NXT → earn up to 420% APY
 Staking auto-mints WNUSD (sats-backed stablecoin)
 WNUSD funds real hardware production
+Two live Bitcoin Runes on mainnet
 
 Every NXT = a piece of the Kardashev Type I roadmap.
 
-nexusos.io #NXT #NexusOS #Bitcoin #WNUSD`,
+wnsp.tech #NXT #NexusOS #Bitcoin #WNUSD`,
     tags: ["NXT","NexusOS","Bitcoin","WNUSD","Stake"],
   },
   {
@@ -109,7 +111,7 @@ Six lock periods. Six yield tiers. All backed by the WNSP physics engine.
 
 Stake via Nostr DM: just send <code>!stake 10000 30</code> to the NexusOS bot.
 
-👉 nexusos.io/lightning-wallet
+👉 wnsp.tech/lightning-wallet
 #NXT #Staking #WNUSD #NexusOS #DeFi`,
     nostr: `🔒 NXT Staking — Real Yield, Physics-Backed
 
@@ -128,7 +130,7 @@ Yield formula: E=hf (real electromagnetic physics)
 
 DM bot: !stake 10000 30
 
-nexusos.io #NXT #Staking #WNUSD #NexusOS`,
+wnsp.tech #NXT #Staking #WNUSD #NexusOS`,
     tags: ["NXT","Staking","WNUSD","NexusOS","DeFi"],
   },
   {
@@ -151,7 +153,7 @@ Most stablecoins sit idle. <b>WNUSD is different.</b>
 This is a <b>crowdfunded photonic computing stack</b> that runs the WavelengthScript language natively in hardware by ~2032. No rewrite needed — NexusOS is already written in the language of the destination hardware.
 
 👉 Stake NXT. Mint WNUSD. Build the future.
-nexusos.io
+wnsp.tech
 #WNUSD #NXT #PhotonicComputing #NexusOS #Hardware`,
     nostr: `💎 WNUSD — The Stablecoin That Builds Hardware
 
@@ -169,7 +171,7 @@ Photonic computing stack by ~2032. NexusOS already speaks the language of the de
 
 Stake NXT → Mint WNUSD → Build the future.
 
-nexusos.io #WNUSD #NXT #PhotonicComputing #NexusOS`,
+wnsp.tech #WNUSD #NXT #PhotonicComputing #NexusOS`,
     tags: ["WNUSD","NXT","PhotonicComputing","NexusOS","Hardware"],
   },
   {
@@ -188,8 +190,9 @@ NexusOS uses <b>Maxwell's equations.</b>
 This isn't a gimmick. When photonic ASICs arrive (~2032), NexusOS nodes run on actual light — not transistors.
 
 <b>NXT is the token of this network.</b> 1,000 sats = 1 NXT.
+Two live Bitcoin Runes on mainnet: NEXUS•WAVELENGTH + WNSP•BTC
 
-👉 Read the spec: nexusos.io/hardware-spec
+👉 Read the spec: wnsp.tech/hardware-spec
 #NexusOS #NXT #WNSP #Physics #Bitcoin`,
     nostr: `📐 Why NexusOS replaces cryptographic hashing with physics
 
@@ -205,8 +208,9 @@ When photonic ASICs arrive (~2032), NexusOS nodes run on actual light.
 
 NXT is the token of this network.
 1,000 sats = 1 NXT
+Two live Bitcoin Runes: NEXUS•WAVELENGTH + WNSP•BTC
 
-nexusos.io/hardware-spec #NexusOS #NXT #WNSP #Physics`,
+wnsp.tech/hardware-spec #NexusOS #NXT #WNSP #Physics`,
     tags: ["NexusOS","NXT","WNSP","Physics","Bitcoin"],
   },
   {
@@ -215,34 +219,34 @@ nexusos.io/hardware-spec #NexusOS #NXT #WNSP #Physics`,
 
 No app needed. No browser. Just Nostr.
 
-Link your npub at nexusos.io/nostr-bridge, then DM the NexusOS bot:
+Link your npub at wnsp.tech/nostr-bridge, then DM the NexusOS bot:
 
-<code>!balance</code>   — sats + NXT balance
-<code>!invoice 50000</code> — Lightning deposit invoice
-<code>!buynxt 10000</code>  — swap sats → NXT
+<code>!balance</code>    — sats + NXT balance
+<code>!invoice 50000</code>  — Lightning deposit invoice
+<code>!buynxt 10000</code>   — swap sats → NXT
 <code>!stake 10000 30</code> — stake for 28% APY + WNUSD
 
 Works on Damus, Amethyst, Snort — any NIP-04 compatible client.
 
 ⚡ Physics-based wallet. Censorship-proof addressing. Real yield.
 
-👉 nexusos.io/nostr-bridge
+👉 wnsp.tech/nostr-bridge
 #NXT #Nostr #Lightning #Bitcoin #NexusOS`,
     nostr: `🤖 Control your NexusOS wallet from Nostr DMs
 
-Link your npub → nexusos.io/nostr-bridge
+Link your npub → wnsp.tech/nostr-bridge
 Then DM the bot:
 
-!balance      → sats + NXT
-!invoice 50000 → Lightning invoice
-!buynxt 10000  → sats → NXT
+!balance        → sats + NXT
+!invoice 50000  → Lightning invoice
+!buynxt 10000   → sats → NXT
 !stake 10000 30 → 28% APY + WNUSD
 
 Works on Damus, Amethyst, Snort.
 
 Physics-based wallet. Censorship-proof. Real yield.
 
-nexusos.io/nostr-bridge #NXT #Nostr #Lightning #NexusOS`,
+wnsp.tech/nostr-bridge #NXT #Nostr #Lightning #NexusOS`,
     tags: ["NXT","Nostr","Lightning","Bitcoin","NexusOS"],
   },
   {
@@ -257,6 +261,7 @@ NexusOS is the operating system for that transition.
 🔆 25,600 photonic channels — ready for optical hardware
 💰 NXT token — physics-priced, sats-settled
 💎 WNUSD — stablecoin funding the hardware stack
+🪙 Two live Bitcoin Runes: NEXUS•WAVELENGTH (952596:379) + WNSP•BTC (952733:1958)
 🤖 AI Kernel — 6-phase boot, spectral authority bands
 📡 Photonic computing roadmap — ~2032 hardware target
 
@@ -264,7 +269,7 @@ NexusOS is the operating system for that transition.
 
 Buy NXT when BTC dips. Stake for yield. Fund hardware. Build civilisation.
 
-👉 nexusos.io
+👉 wnsp.tech
 #NexusOS #NXT #KardashevTypeI #WNUSD #Photonics #Bitcoin`,
     nostr: `🚀 NexusOS — Blueprint for a Kardashev Type I Civilisation
 
@@ -276,6 +281,7 @@ NexusOS is the OS for that transition:
 • 25,600 photonic channels
 • NXT — physics-priced, sats-settled
 • WNUSD — stablecoin → hardware funding
+• Bitcoin Runes: NEXUS•WAVELENGTH + WNSP•BTC (mainnet)
 • AI Kernel — spectral authority bands
 • Photonic hardware target ~2032
 
@@ -283,12 +289,12 @@ Every NXT = a stake in this mission.
 
 Buy the dip. Stake. Fund hardware. Build civilisation.
 
-nexusos.io #NexusOS #NXT #KardashevTypeI #WNUSD #Photonics`,
+wnsp.tech #NexusOS #NXT #KardashevTypeI #WNUSD #Photonics`,
     tags: ["NexusOS","NXT","KardashevTypeI","WNUSD","Photonics","Bitcoin"],
   },
   {
     id: 6, label: "Ordinals — WNSP inscribed on Bitcoin", emoji: "🪬",
-    telegram: `🪬 <b>NexusOS Physics — Now Permanently Inscribed on Bitcoin</b>
+    telegram: `🪬 <b>NexusOS Physics — Permanently Inscribed on Bitcoin</b>
 
 Every Bitcoin block is a permanent ledger. Every Ordinal inscription is immutable data — forever.
 
@@ -304,7 +310,7 @@ NexusOS has inscribed its core specifications onto the Bitcoin base layer via Or
 NXT is the token that funds expansion of this inscribed civilisation OS.
 1,000 sats = 1 NXT. Stack physics.
 
-👉 nexusos.io/hardware-spec
+👉 wnsp.tech/hardware-spec
 #Ordinals #Bitcoin #NXT #NexusOS #WNSP #Inscription`,
     nostr: `🪬 NexusOS physics — permanently inscribed on Bitcoin via Ordinals
 
@@ -321,53 +327,95 @@ Why inscribe? Physics specs must outlast any server. Bitcoin makes them uncensor
 NXT funds the expansion of this inscribed civilisation OS.
 1,000 sats = 1 NXT
 
-nexusos.io/hardware-spec #Ordinals #Bitcoin #NXT #NexusOS #WNSP`,
+wnsp.tech/hardware-spec #Ordinals #Bitcoin #NXT #NexusOS #WNSP`,
     tags: ["Ordinals","Bitcoin","NXT","NexusOS","WNSP","Inscription"],
   },
   {
-    id: 7, label: "NEXUS•WAVELENGTH Rune — BRC-20 on Bitcoin", emoji: "🌈",
-    telegram: `🌈 <b>NEXUS•WAVELENGTH — The Physics Rune on Bitcoin</b>
+    id: 7, label: "Two live Bitcoin Runes", emoji: "🌈",
+    telegram: `🌈 <b>NexusOS Has Two Live Bitcoin Runes on Mainnet</b>
 
-A Rune is not just a token. It's a permanent identifier etched into the Bitcoin UTXO set.
+Not one. Two. Both etched. Both permanent.
 
-<b>NEXUS•WAVELENGTH</b> is the NexusOS Rune — living natively on Bitcoin.
+🔶 <b>NEXUS•WAVELENGTH</b> — Rune ID 952596:379
+Open mint · 21 trillion total supply · 1,000 Ψ per mint · 100 NXT mint cost
+The spectral wavelength token of the NexusOS ecosystem.
 
-⚡ <b>Why a Rune?</b>
-Runes use Bitcoin's own UTXO model — no side-chain, no bridge, no custodian.
-Every NEXUS•WAVELENGTH unit is secured by Bitcoin's proof-of-work.
+⚡ <b>WNSP•BTC</b> — Rune ID 952733:1958
+100% premined · 21 billion supply · mirrors NXT exactly
+The on-chain Bitcoin counterpart to the NXT physics token.
 
-🔶 <b>Relationship to NXT:</b>
-NXT (Lightning/off-chain physics token) ↔ NEXUS•WAVELENGTH (on-chain Bitcoin Rune)
-The two tokens are complementary — NXT for speed, the Rune for permanence.
+<b>Why Runes and not BRC-20?</b>
+Runes live in Bitcoin's UTXO set — no inscription indexer, no ord node, no side-chain.
+Every token is secured directly by Bitcoin proof-of-work. PSBT-compatible. Atomic-swap ready.
 
-💎 <b>What the Rune funds:</b>
-• SNIC photonic chip production
-• Spectral Relay Mesh v1 hardware
-• WavelengthScript silicon compiler
+Both are AGPL-3.0. Both are live on Bitcoin mainnet.
 
-Mint at nexusos.io/rune-mint · Etch at nexusos.io/rune-etching
+Mint NEXUS•WAVELENGTH → wnsp.tech/rune-mint
+Full spec → wnsp.tech/rune-etching
 
-1,000 sats = 1 NXT · Stack the Rune. Build the mesh.
-#NexusWavelength #Runes #BRC20 #Bitcoin #NXT #NexusOS`,
-    nostr: `🌈 NEXUS•WAVELENGTH — the physics Rune on Bitcoin
+1,000 sats = 1 NXT · Stack physics.
+#NexusWavelength #WnspBTC #Runes #Bitcoin #NXT #NexusOS`,
+    nostr: `🌈 NexusOS has two live Bitcoin Runes on mainnet
 
-Not a side-chain. Not a bridge. Native Bitcoin UTXO.
+NEXUS•WAVELENGTH — Rune ID 952596:379
+Open mint · 21T supply · 1,000 Ψ per mint · 100 NXT cost
 
-Every NEXUS•WAVELENGTH unit is secured by proof-of-work.
+WNSP•BTC — Rune ID 952733:1958
+100% premined · 21B supply · mirrors NXT exactly
 
-NXT (Lightning/off-chain) ↔ NEXUS•WAVELENGTH (on-chain Rune)
-Speed vs permanence — two faces of the same physics stack.
+Why Runes (not BRC-20)?
+Runes live in Bitcoin's UTXO set — no side-chain, no indexer.
+Every token secured by proof-of-work. PSBT + atomic-swap ready.
 
-The Rune funds:
-• SNIC photonic chip production
-• Spectral Relay Mesh v1 hardware
-• WavelengthScript silicon compiler
+Both AGPL-3.0. Both live on mainnet.
 
-Mint → nexusos.io/rune-mint
-Etch → nexusos.io/rune-etching
+Mint → wnsp.tech/rune-mint
 
-#NexusWavelength #Runes #Bitcoin #NXT #NexusOS`,
-    tags: ["NexusWavelength","Runes","BRC20","Bitcoin","NXT","NexusOS"],
+#NexusWavelength #WnspBTC #Runes #Bitcoin #NXT #NexusOS`,
+    tags: ["NexusWavelength","WnspBTC","Runes","Bitcoin","NXT","NexusOS"],
+  },
+  {
+    id: 8, label: "Developer API — build on the physics web", emoji: "🛠️",
+    telegram: `🛠️ <b>Build on the Physics Web — NexusOS Developer API</b>
+
+NexusOS now has a public developer API. Every call has a real wavelength, energy cost, and spectral address.
+
+<b>What you can build:</b>
+📡 CE-encode any text to a spectral fingerprint (λ, Ψ, energy)
+🌈 Resolve spectral channels for any user — Ψ(wdm, oam, pol)
+💰 Query physics-priced fee schedules — E=hf governs every action
+📨 Send WNSP messages between spectral addresses
+🪙 Query live rune metadata — NEXUS•WAVELENGTH + WNSP•BTC
+
+<b>Install the SDK:</b>
+<code>npm install nexusos-ce-encoder</code>
+<code>pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py</code>
+
+Both packages published. Bit-identical output. AGPL-3.0.
+
+API key: 5,000 sats flat fee · no monthly subscription · pay per action with physics fees.
+
+👉 wnsp.tech/developer
+#NexusOS #NXT #WNSP #API #Developer #Bitcoin`,
+    nostr: `🛠️ Build on the Physics Web — NexusOS Developer API is live
+
+Every API call has a real wavelength, energy cost, and spectral address.
+
+Endpoints:
+• GET /api/dev/ce-encode?text=… — spectral fingerprint for any text
+• GET /api/dev/physics/:user — Ψ channel + fee schedule
+• GET /api/dev/wallet — balance + transactions
+• GET /api/dev/rune — live rune metadata
+• POST /api/dev/message — send between spectral addresses
+
+Install:
+npm install nexusos-ce-encoder
+pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py
+
+API key: 5,000 sats flat fee. No subscription.
+
+wnsp.tech/developer #NexusOS #NXT #WNSP #API #Developer`,
+    tags: ["NexusOS","NXT","WNSP","API","Developer","Bitcoin"],
   },
 ];
 

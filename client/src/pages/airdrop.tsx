@@ -446,7 +446,7 @@ export default function AirdropPage() {
                       {
                         key: "main",
                         label: "Main Announcement",
-                        desc: "Full post — what NexusOS is, why it matters, airdrop CTA",
+                        desc: "Full post — what NexusOS is, why it matters, airdrop + both runes CTA",
                         content: `Bitcoin replaced trust in money. NexusOS replaces trust in the internet itself.
 
 SHA-256 was designed for silicon transistors. Photonic computing arrives ~2032. When it does, every blockchain on earth needs a complete rewrite — except one.
@@ -469,9 +469,13 @@ A packet destined for Ψ(72,18,H) routes to whichever active node has the closes
 
 No ICANN. No registrar. No routing authority. No government can deregister a wavelength or poison a routing table.
 
-wnsp://Ψ(128,25,H)/documents/whitepaper
+---
 
-The full physics whitepaper is live on Nostr now.
+Two live Bitcoin Runes on mainnet:
+• NEXUS•WAVELENGTH — Rune ID 952596:379 (open mint, 21T supply)
+• WNSP•BTC — Rune ID 952733:1958 (100% premined, 21B supply)
+
+Both AGPL-3.0. Both permanent on Bitcoin.
 
 ---
 
@@ -493,18 +497,43 @@ AGPL-3.0 · First public disclosure: 2026-05-16 · wnsp.tech · Ψ(52,3,V)
                       {
                         key: "boost",
                         label: "Short Boost",
-                        desc: "Quick share — physics hook + airdrop link",
+                        desc: "Quick share — physics hook + both runes + airdrop link",
                         content: `Physics is the new cryptography.
 
 NexusOS replaces SHA-256 with Maxwell's equations. IP addresses with spectral wavelengths. Proof-of-work with E=hf. And BGP/OSPF routing tables with a single formula: score = weight / (Δλ + 1). The address IS the route.
 
 No lookup tables. No routing authority. No government can poison a wavelength.
 
+Two live Bitcoin Runes on mainnet:
+NEXUS•WAVELENGTH (952596:379) + WNSP•BTC (952733:1958)
+
 85M NXT airdrop live. Claim with your Nostr key → wnsp.tech/airdrop
 
 Full whitepaper on habla.news
 
 #nexusos #wnsp #nostr #bitcoin #nxt`,
+                      },
+                      {
+                        key: "runes",
+                        label: "Both Runes Drop",
+                        desc: "Focus post on NEXUS•WAVELENGTH + WNSP•BTC — IDs, how to mint",
+                        content: `NexusOS has two live Bitcoin Runes on mainnet. Both etched. Both permanent.
+
+NEXUS•WAVELENGTH — Rune ID 952596:379
+Open mint · 21 trillion total supply · 1,000 Ψ per mint · 100 NXT mint cost
+
+WNSP•BTC — Rune ID 952733:1958
+100% premined · 21 billion supply · mirrors NXT 1:1
+
+Why Runes and not BRC-20?
+Runes live in Bitcoin's UTXO set — no inscription indexer, no ord node, no side-chain required. Every token is secured directly by Bitcoin proof-of-work. PSBT-compatible. Atomic-swap ready.
+
+Mint NEXUS•WAVELENGTH → wnsp.tech/rune-mint
+Full spec → wnsp.tech/rune-etching
+
+1,000 sats = 1 NXT. Stack physics.
+
+#NexusWavelength #WnspBTC #Runes #Bitcoin #NXT #NexusOS`,
                       },
                       {
                         key: "hook",
@@ -516,9 +545,37 @@ They all need a complete rewrite.
 
 Except NexusOS. Because it was written in the language of photonic hardware from day one.
 
+Two live Bitcoin Runes on mainnet. 85M NXT airdrop. Developer API live.
+
 🧵
 
 #nexusos #wnsp #bitcoin #nostr`,
+                      },
+                      {
+                        key: "devapi",
+                        label: "Developer API",
+                        desc: "For developer/builder audiences — CE encoder, API endpoints, npm package",
+                        content: `NexusOS has a public developer API. Every call has a real wavelength, energy cost, and spectral address.
+
+Build with physics-native primitives:
+
+• CE-encode any text → spectral fingerprint (λ, Ψ channel, energy)
+• Resolve Ψ channels for any user — 25,600 orthogonal addresses
+• Query physics-priced fees — E=hf governs every action
+• Send WNSP messages between spectral addresses
+• Query live rune metadata — NEXUS•WAVELENGTH + WNSP•BTC
+
+Install the SDK:
+npm install nexusos-ce-encoder
+pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py
+
+Published on npm. Bit-identical JS + Python. AGPL-3.0.
+
+API key: 5,000 sats flat fee. No subscription. Pay per action.
+
+wnsp.tech/developer
+
+#NexusOS #NXT #WNSP #API #Bitcoin #Developer`,
                       },
                     ] as { key: string; label: string; desc: string; content: string }[]).map(note => (
                       <div key={note.key} className="bg-slate-950/60 rounded-lg border border-slate-700/40 p-3">
