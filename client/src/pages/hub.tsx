@@ -187,6 +187,7 @@ const APP_SECTIONS = [
       { title: "🎯 Coinsniper",       href: "/coinsniper",          Icon: Rocket },
       { title: "💜 Rune ↔ NXT Swap", href: "/rune-swap",           Icon: ArrowRightLeft },
       { title: "🟠 NXT→NXWV Pipeline", href: "/rune-pipeline",    Icon: Layers },
+      { title: "⚡ Stake & Earn",      href: "/stake-earn",       Icon: TrendingUp },
     ],
   },
   {

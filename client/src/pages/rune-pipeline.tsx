@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { Link } from "wouter";
 import {
   Zap, Bitcoin, CheckCircle2, Loader2, Layers,
   Radio, TrendingUp, AlertCircle, Copy, ExternalLink, ArrowRight,
@@ -534,6 +535,20 @@ export default function RunePipelinePage() {
                 </div>
               )}
             </div>
+
+            {/* Next step — Stake & Earn */}
+            <Link href="/stake-earn">
+              <div className="rounded-xl border border-purple-500/30 bg-purple-900/15 p-4 flex items-center gap-4 hover:bg-purple-900/25 transition-colors cursor-pointer group">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0">
+                  <TrendingUp className="w-5 h-5 text-purple-300" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-bold text-white">Put your sats to work →</div>
+                  <div className="text-xs text-white/40 mt-0.5">Stake sats · earn NXT yield · auto-mint WNUSD stablecoin</div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-purple-400 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
 
             <button
               onClick={() => { setStage("configure"); setStep2Data(null); setStep3Data(null); setBroadcastTxt(""); }}

@@ -122,6 +122,7 @@ const RuneEtchingPage = lazy(() => import("@/pages/rune-etching"));
 const RuneMintPage = lazy(() => import("@/pages/rune-mint"));
 const EtchRunePage = lazy(() => import("@/pages/etch-rune"));
 const RuneStakingPage = lazy(() => import("@/pages/rune-staking"));
+const StakeEarnPage   = lazy(() => import("@/pages/stake-earn"));
 const FractalBtcBridgePage = lazy(() => import("@/pages/fractal-btc-bridge"));
 const NxtFbSwapPage = lazy(() => import("@/pages/nxt-fb-swap"));
 const LightningWalletPage = lazy(() => import("@/pages/lightning-wallet"));
@@ -343,6 +344,7 @@ function Router() {
       <Route path="/rune-mint" component={RuneMintPage} />
       <Route path="/etch-rune" component={EtchRunePage} />
       <Route path="/rune-staking" component={RuneStakingPage} />
+      <Route path="/stake-earn"  component={StakeEarnPage} />
       <Route path="/fractal-btc" component={FractalBtcBridgePage} />
       <Route path="/fractal-bitcoin" component={FractalBtcBridgePage} />
       <Route path="/nxt-fb-swap" component={NxtFbSwapPage} />
