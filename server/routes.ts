@@ -13042,8 +13042,8 @@ export async function registerRoutes(
   app.get("/api/portfolio/summary", authenticate, async (req, res) => {
     try {
       const { db } = await import("./db");
-      const { wallets, lightningWallets, wnusdPositions, satsStakes } = await import("../shared/schema");
-      const { eq, sql: sqlRaw } = await import("drizzle-orm");
+      const { wallets, lightningWallets, wnusdPositions, satsStakes, runeMints, runeSwaps, runeStakes } = await import("../shared/schema");
+      const { eq, sql: sqlRaw, or } = await import("drizzle-orm");
 
       const [wallet]   = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
       const [lnWallet] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, req.user!.id));
@@ -13064,6 +13064,45 @@ export async function registerRoutes(
       const nxtYieldPending = stakeRow?.totalYield ?? "0";
       const stakeCount      = Number(stakeRow?.count ?? 0);
 
+      // ── NXWV holdings aggregation ──────────────────────────────────────────
+      // Source 1: rune_mints (NXT paid → NXWV delivered)
+      const mints = await db.select().from(runeMints)
+        .where(eq(runeMints.userId, req.user!.id));
+      const SATS_PER_NXT = 1_000;
+      const SATS_PER_NXWV_MINT = 100; // current mint rate: 100 sats = 1 NXWV
+
+      // Aggregate fulfilled mint orders
+      const mintHoldings = mints
+        .filter(m => ["delivered", "credited", "completed"].includes(m.status))
+        .reduce((a, m) => ({
+          nxwv:      a.nxwv + m.runeAmount,
+          satsCost:  a.satsCost + parseFloat(m.nxtPaid) * SATS_PER_NXT,
+          firstAt:   a.firstAt ? (new Date(m.createdAt) < a.firstAt ? new Date(m.createdAt) : a.firstAt) : new Date(m.createdAt),
+        }), { nxwv: 0, satsCost: 0, firstAt: null as Date | null });
+
+      // Source 2: rune_swaps direction=nxt_to_rune (pipeline or direct swap)
+      const swaps = await db.select().from(runeSwaps)
+        .where(eq(runeSwaps.userId, req.user!.id));
+      const swapHoldings = swaps
+        .filter(s => s.direction === "nxt_to_rune" && ["queued", "delivered", "completed"].includes(s.status))
+        .reduce((a, s) => ({
+          nxwv:     a.nxwv + s.runeAmount,
+          satsCost: a.satsCost + s.runeAmount * SATS_PER_NXWV_MINT,
+          firstAt:  a.firstAt ? (new Date(s.createdAt) < a.firstAt ? new Date(s.createdAt) : a.firstAt) : new Date(s.createdAt),
+        }), { nxwv: 0, satsCost: 0, firstAt: null as Date | null });
+
+      // Source 3: rune_stakes (NXWV staked → NXT yield)
+      const stakes = await db.select().from(runeStakes)
+        .where(eq(runeStakes.userId, req.user!.id));
+      const activeRuneStakes = stakes.filter(s => s.status === "active");
+      const stakedNxwv    = activeRuneStakes.reduce((a, s) => a + s.runeAmount, 0);
+      const nxwvYieldEarned = stakes.reduce((a, s) => a + parseFloat(s.nxtEarned), 0);
+      const nxwvYieldClaimed = stakes.reduce((a, s) => a + parseFloat(s.nxtClaimed), 0);
+
+      const totalNxwv     = mintHoldings.nxwv + swapHoldings.nxwv;
+      const totalSatsCost = mintHoldings.satsCost + swapHoldings.satsCost;
+      const firstAcquired = mintHoldings.firstAt || swapHoldings.firstAt;
+
       // Fetch BTC/USD price
       let btcUsd = 65_000;
       try {
@@ -13074,6 +13113,15 @@ export async function registerRoutes(
         }
       } catch { /* use default */ }
 
+      // NXWV current market value at 100 sats/NXWV
+      const nxwvCurrentSats = totalNxwv * SATS_PER_NXWV_MINT;
+      const nxwvCostUsd     = totalSatsCost / 100_000_000 * btcUsd;
+      const nxwvCurrentUsd  = nxwvCurrentSats / 100_000_000 * btcUsd;
+      const nxwvGainSats    = nxwvCurrentSats - totalSatsCost;
+      const nxwvGainPct     = totalSatsCost > 0
+        ? ((nxwvCurrentSats - totalSatsCost) / totalSatsCost) * 100
+        : 0;
+
       res.json({
         nxtBalance:     wallet?.balance ?? "0",
         nxtAddress:     wallet?.address ?? "",
@@ -13083,6 +13131,24 @@ export async function registerRoutes(
         stakeCount,
         wnusdBalance:   wnusdBalance.toFixed(2),
         btcUsd,
+        // ── NXWV disclosure ──
+        nxwv: {
+          total:          totalNxwv,
+          staked:         stakedNxwv,
+          liquid:         Math.max(0, totalNxwv - stakedNxwv),
+          satsCostBasis:  totalSatsCost,
+          currentSats:    nxwvCurrentSats,
+          costUsd:        nxwvCostUsd,
+          currentUsd:     nxwvCurrentUsd,
+          gainSats:       nxwvGainSats,
+          gainPct:        nxwvGainPct,
+          yieldEarned:    nxwvYieldEarned,
+          yieldClaimed:   nxwvYieldClaimed,
+          yieldPending:   nxwvYieldEarned - nxwvYieldClaimed,
+          satsPerNxwv:    SATS_PER_NXWV_MINT,
+          firstAcquired:  firstAcquired?.toISOString() ?? null,
+          stakeCount:     activeRuneStakes.length,
+        },
       });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });

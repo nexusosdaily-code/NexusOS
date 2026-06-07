@@ -7,7 +7,7 @@ import { Link } from "wouter";
 import {
   ArrowLeft, Zap, Bitcoin, Coins, DollarSign, Lock, Droplets,
   TrendingUp, RefreshCw, ExternalLink, LayoutDashboard, ArrowDownToLine,
-  CalendarClock, Flame,
+  CalendarClock, Flame, Waves, TrendingDown, Info,
 } from "lucide-react";
 
 function fmt(n: number | string, dec = 2): string {
@@ -56,7 +56,11 @@ export default function PortfolioPage() {
   const satsUsd     = sats / 100_000_000 * btcUsd;
   const stakedUsd   = satsStaked / 100_000_000 * btcUsd;
   const nxtUsd      = nxt * satsPerNxt / 100_000_000 * btcUsd;
-  const totalUsd    = satsUsd + stakedUsd + nxtUsd + wnusdBal;
+
+  // NXWV holdings
+  const nxwv        = summary?.nxwv ?? null;
+  const nxwvUsd     = nxwv?.currentUsd ?? 0;
+  const totalUsd    = satsUsd + stakedUsd + nxtUsd + wnusdBal + nxwvUsd;
 
   const stakesArr   = Array.isArray(lightningStakes?.stakes) ? lightningStakes.stakes : [];
   const wnusdArr    = Array.isArray(wnusd)  ? wnusd  : [];
@@ -237,6 +241,99 @@ export default function PortfolioPage() {
                 <div className="text-sm font-bold text-green-400 mt-0.5">
                   {satsFmt(activeWnusd.reduce((a: number, p: any) => a + Number(p.collateralSats), 0))} sats
                 </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* NXWV Holdings Disclosure */}
+        {nxwv && nxwv.total > 0 && (
+          <Card className="bg-slate-900/60 border-purple-500/20 p-4 mb-4" data-testid="card-nxwv-disclosure">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Waves className="w-4 h-4 text-purple-400" />
+                <span className="text-sm font-bold text-purple-400 uppercase tracking-widest">NEXUS•WAVELENGTH</span>
+              </div>
+              <Link href="/rune-staking">
+                <Badge className="text-[9px] bg-purple-950/40 text-purple-300 border border-purple-500/20 px-2 cursor-pointer hover:bg-purple-900/40">
+                  {nxwv.total.toLocaleString()} NXWV
+                </Badge>
+              </Link>
+            </div>
+
+            {/* Current value + cost basis */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="bg-slate-800/40 rounded-xl p-2.5 text-center">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider">Current Value</div>
+                <div className="text-sm font-bold text-white mt-0.5">${fmt(nxwv.currentUsd)}</div>
+                <div className="text-[10px] text-slate-500 font-mono">{satsFmt(nxwv.currentSats)} sats</div>
+              </div>
+              <div className="bg-slate-800/40 rounded-xl p-2.5 text-center">
+                <div className="text-[10px] text-slate-500 uppercase tracking-wider">Cost Basis</div>
+                <div className="text-sm font-bold text-slate-300 mt-0.5">${fmt(nxwv.costUsd)}</div>
+                <div className="text-[10px] text-slate-500 font-mono">{satsFmt(nxwv.satsCostBasis)} sats</div>
+              </div>
+            </div>
+
+            {/* Gain/loss */}
+            <div className={`flex items-center justify-between rounded-xl px-3 py-2 mb-3 ${
+              nxwv.gainSats >= 0 ? "bg-green-950/30 border border-green-500/20" : "bg-red-950/30 border border-red-500/20"
+            }`} data-testid="nxwv-gain-row">
+              <div className="flex items-center gap-1.5">
+                {nxwv.gainSats >= 0
+                  ? <TrendingUp className="w-3.5 h-3.5 text-green-400" />
+                  : <TrendingDown className="w-3.5 h-3.5 text-red-400" />}
+                <span className="text-[11px] text-slate-400">Unrealised {nxwv.gainSats >= 0 ? "Gain" : "Loss"}</span>
+              </div>
+              <div className="text-right">
+                <span className={`text-[12px] font-bold font-mono ${nxwv.gainSats >= 0 ? "text-green-400" : "text-red-400"}`}>
+                  {nxwv.gainSats >= 0 ? "+" : ""}{satsFmt(nxwv.gainSats)} sats
+                </span>
+                <span className={`text-[10px] ml-1.5 ${nxwv.gainSats >= 0 ? "text-green-500" : "text-red-500"}`}>
+                  ({nxwv.gainPct >= 0 ? "+" : ""}{fmt(nxwv.gainPct, 1)}%)
+                </span>
+              </div>
+            </div>
+
+            {/* Liquid vs staked */}
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="bg-slate-800/30 rounded-lg p-2 text-center">
+                <div className="text-[10px] text-slate-500">Liquid</div>
+                <div className="text-[11px] font-bold text-white">{nxwv.liquid.toLocaleString()}</div>
+              </div>
+              <div className="bg-slate-800/30 rounded-lg p-2 text-center">
+                <div className="text-[10px] text-slate-500">Staked</div>
+                <div className="text-[11px] font-bold text-purple-300">{nxwv.staked.toLocaleString()}</div>
+              </div>
+              <div className="bg-slate-800/30 rounded-lg p-2 text-center">
+                <div className="text-[10px] text-slate-500">Rate</div>
+                <div className="text-[11px] font-bold text-slate-300">{nxwv.satsPerNxwv} s/Ψ</div>
+              </div>
+            </div>
+
+            {/* NXT yield from staking */}
+            {nxwv.yieldEarned > 0 && (
+              <div className="flex items-center justify-between bg-orange-950/20 border border-orange-500/20 rounded-xl px-3 py-2 mb-3">
+                <div className="flex items-center gap-1.5">
+                  <Flame className="w-3.5 h-3.5 text-orange-400" />
+                  <span className="text-[11px] text-slate-400">NXT Yield from Staking</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-[12px] font-bold text-orange-400 font-mono">+{fmt(nxwv.yieldEarned, 4)} NXT</div>
+                  <div className="text-[10px] text-slate-600">{fmt(nxwv.yieldClaimed, 4)} claimed</div>
+                </div>
+              </div>
+            )}
+
+            {/* Disclosure footer */}
+            <div className="flex items-start gap-2 bg-slate-800/20 rounded-lg px-3 py-2">
+              <Info className="w-3 h-3 text-slate-600 mt-0.5 shrink-0" />
+              <div className="text-[10px] text-slate-600 leading-relaxed">
+                Value based on current mint rate ({nxwv.satsPerNxwv} sats/NXWV) × BTC/USD ${btcUsd.toLocaleString()}.
+                {nxwv.firstAcquired && (
+                  <> First acquired {new Date(nxwv.firstAcquired).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}.</>
+                )}
+                {" "}Market price may differ on open exchanges.
               </div>
             </div>
           </Card>
