@@ -1126,12 +1126,160 @@ Trial 4 is the hook on every platform — same data, different orbital angle.`
     ctx.reply(`📡 ${r.platform}\n\n${r.content}\n\n─────────────────────\nCopy and post directly. No editing needed.`);
   });
 
+  // ── DM forwarder — sends every private message to admin ──────────────────
+  async function forwardToAdmin(ctx: any, label: string) {
+    const adminId = process.env.TELEGRAM_ADMIN_ID || process.env.TELEGRAM_CHANNEL_ID;
+    if (!adminId) return;
+    const from = ctx.from;
+    const name = [from.first_name, from.last_name].filter(Boolean).join(" ") || "Unknown";
+    const handle = from.username ? `@${from.username}` : `ID:${from.id}`;
+    try {
+      await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: adminId,
+          parse_mode: "HTML",
+          text: `📩 <b>New DM [${label}]</b>\n👤 ${name} (${handle})\n\n${ctx.message.text}`,
+        }),
+      });
+    } catch { /* silent */ }
+  }
+
   // ── Catch-all text ────────────────────────────────────────────────────────
-  bot.on("text", ctx => {
+  bot.on("text", async ctx => {
     if (ctx.message.text.startsWith("/")) return;
     const t = ctx.message.text.toLowerCase();
+
+    // ── OFFER / PARTNERSHIP / INVESTMENT ──────────────────────────────────
+    const isOffer = t.match(/offer|partner|invest|deal|collaborat|list|exchang|integrat|sponsor|fund|acqui|buy.*project|purchase|proposal|business|opportunit|interest.*project|joint/i);
+    if (isOffer) {
+      await forwardToAdmin(ctx, "OFFER");
+      return ctx.reply(
+`👁 *NexusOS — Partnership & Offer Enquiries*
+
+Thank you for reaching out. Your message has been received and will be reviewed shortly.
+
+*About NexusOS:*
+NexusOS is not a blockchain — it's a physics engine. We're building the OS for the hardware that doesn't exist yet: photonic computing.
+
+• *WavelengthScript* — the native language of photonic processors
+• *WNSP Protocol* — 25,600 orthogonal channels from Maxwell's equations
+• *NXWV Rune* — live on Bitcoin (ID: 952596:379 · 21T supply · 1,000/1,000 mints sealed)
+• *Physics engine* — every fee, address, and transaction derived from E=hf
+
+🌐 Platform: https://wnsp.io
+📊 Coinsniper: https://coinsniper.net/coin/91963
+💻 GitHub: https://github.com/nexusosdaily-code/NexusOS
+
+The team will follow up directly. For urgent matters, reply with more details and we'll prioritise.`,
+        { parse_mode: "Markdown" }
+      );
+    }
+
+    // ── PRICE / TOKEN / RUNE ──────────────────────────────────────────────
+    const isPrice = t.match(/price|how much|market cap|nxwv|rune|token|buy.*nxwv|value|chart|pump|dip|moon/i);
+    if (isPrice) {
+      await forwardToAdmin(ctx, "PRICE");
+      return ctx.reply(
+`🟠 *NEXUS•WAVELENGTH (NXWV)*
+
+Bitcoin Rune — the economic layer of NexusOS.
+
+• *Rune ID:* 952596:379
+• *Supply:* 21,000,000,000,000 (21 trillion)
+• *Mints:* 1,000 / 1,000 — fully sealed June 2026
+• *Chain:* Bitcoin (Ordinals protocol)
+
+📊 *Live listing:* https://coinsniper.net/coin/91963
+🗳️ Vote to boost visibility on Coinsniper
+
+🌐 Full platform + staking: https://wnsp.io
+
+NexusOS uses NXWV as governance + yield token. Stakers auto-mint WNUSD stablecoin against their position.`,
+        { parse_mode: "Markdown" }
+      );
+    }
+
+    // ── WHAT IS / HOW DOES / EXPLAIN ─────────────────────────────────────
+    const isQuestion = t.match(/what is|what are|how does|explain|tell me|what.*nexus|about.*nexus|nexusos\?|wnsp\?/i);
+    if (isQuestion) {
+      await forwardToAdmin(ctx, "QUESTION");
+      return ctx.reply(
+`👁 *What is NexusOS?*
+
+NexusOS is a physics-based OS and protocol stack — the answer to Moore's Law.
+
+Silicon transistors hit their physics limit at ~2nm (quantum tunnelling). The next era is photonic computing (~2032), where light replaces electrons.
+
+*NexusOS is already written in the language of that hardware:*
+
+🔬 Characters map to wavelengths — 'A' → 480.6nm (E=hf, not arbitrary)
+📡 25,600 orthogonal channels (WDM × OAM × polarisation)
+⚡ Transaction fees from Λ=hf/c² — photon compression mass
+🧑‍💻 WavelengthScript — runs today in software, runs natively on photonic ASICs in 2032
+
+No rewrite needed when the hardware arrives. The architecture already speaks in frequencies.
+
+*Try the physics engine live:*
+/encode NEXUSOS
+/lesson 0
+
+🌐 https://wnsp.io`,
+        { parse_mode: "Markdown" }
+      );
+    }
+
+    // ── GREETING ──────────────────────────────────────────────────────────
+    const isGreeting = t.match(/^(hi|hello|hey|gm|good morning|good day|sup|yo|hola|greetings|howdy)[\s!.?]*$/i);
+    if (isGreeting) {
+      await forwardToAdmin(ctx, "GREETING");
+      return ctx.reply(
+`👋 *Welcome to NexusOS*
+
+The physics-based OS for the photonic computing era.
+
+━━ Quick start ━━
+/encode YOURNAME  — see your name as light
+/lesson 0         — what is a wave?
+/wls hello        — write your first WavelengthScript
+/traction         — live metrics
+
+━━ The project ━━
+🌐 https://wnsp.io
+🟠 NXWV Rune on Coinsniper: https://coinsniper.net/coin/91963
+
+For partnership enquiries, just describe what you're looking for and we'll get back to you.`,
+        { parse_mode: "Markdown" }
+      );
+    }
+
+    // ── STAKING / EARN / YIELD ────────────────────────────────────────────
+    if (t.includes("stake")||t.includes("staking")||t.includes("yield")||t.includes("earn")||t.includes("apy")||t.includes("apr")) {
+      await forwardToAdmin(ctx, "STAKING");
+      return ctx.reply(
+`⚡ *NexusOS Staking*
+
+Stake sats → earn NXT yield → auto-mint WNUSD stablecoin → add to liquidity pools.
+
+*Lock periods & NXT yield:*
+• 7 days   → 5%
+• 14 days  → 12%
+• 30 days  → 28%
+• 90 days  → 90%
+• 180 days → 200%
+• 365 days → 420%
+
+*WNUSD* is auto-minted at 150% collateral ratio when you stake.
+
+🌐 Stake now: https://wnsp.io/stake-earn`,
+        { parse_mode: "Markdown" }
+      );
+    }
+
+    // ── ENCODING / PHYSICS / TECHNICAL ───────────────────────────────────
     if (t.includes("encode")||t.includes("wavelength")||t.includes("nm"))
-      return ctx.reply(`Encoding? Try:\n/encode YOURWORD\n/compare A\n/frame YOURTEXT\n/fingerprint Long text here`);
+      return ctx.reply(`Encoding? Try:\n/encode YOURWORD\n/compare A\n/frame YOURTEXT`);
     if (t.includes("code")||t.includes("program")||t.includes("wls")||t.includes("wavelengthscript"))
       return ctx.reply(`Ready to code? Try:\n/wls hello\n/wls agent\n/codegen encoder`);
     if (t.includes("fee")||t.includes("transfer")||t.includes("nxt")||t.includes("wallet"))
@@ -1142,7 +1290,23 @@ Trial 4 is the hook on every platform — same data, different orbital angle.`
       return ctx.reply(`Traction:\n/traction — GitHub clone stats\n/npm — npm download stats\n/ecosystem — all metrics`);
     if (t.includes("governance")||t.includes("proposal")||t.includes("vote"))
       return ctx.reply(`Governance:\n/governance — active proposals\n/params — live protocol parameters`);
-    ctx.reply(`Ten modules:\n\n🌈 /ce · /encode · /frame\n🧑‍💻 /wls · /codegen\n🪞 /mirror\n🔭 /oracle · /law\n🔬 /lesson · /trial\n📈 /traction · /npm\n🛠️ /fee · /query · /snippet\n📋 /log · /experiments\n🏛️ /governance · /params\n📡 /refract\n\nOr /start for the full menu.`);
+
+    // ── Default — forward + reply ─────────────────────────────────────────
+    await forwardToAdmin(ctx, "DM");
+    ctx.reply(
+`👁 *NexusOS*
+
+Thanks for your message — the team will follow up.
+
+*While you're here:*
+🌐 https://wnsp.io
+📊 NXWV on Coinsniper: https://coinsniper.net/coin/91963
+
+/start — full bot menu
+/encode NEXUSOS — see the physics
+/lesson 0 — the vision from first principles`,
+      { parse_mode: "Markdown" }
+    );
   });
 
   console.log("[TelegramBot] Launching NexusOS full-spectrum bot…");

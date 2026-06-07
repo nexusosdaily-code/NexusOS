@@ -210,6 +210,135 @@ async function handleCommand(fromNpub: string, fromPubhex: string, raw: string, 
   await reply(`❓ Unknown command "${cmd}". Send !help for options.`, "unknown");
 }
 
+// ── Auto-reply templates for plain-text DMs ──────────────────────────────────
+async function autoReply(fromPubhex: string, fromNpub: string, text: string, eventId: string) {
+  const t = text.toLowerCase();
+
+  // Forward to Telegram admin so nothing is missed
+  const adminId = process.env.TELEGRAM_ADMIN_ID || process.env.TELEGRAM_CHANNEL_ID;
+  const tgToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (adminId && tgToken) {
+    try {
+      await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: adminId,
+          parse_mode: "HTML",
+          text: `📩 <b>Nostr DM</b>\n👤 ${fromNpub.slice(0, 20)}…\n\n${text.slice(0, 500)}`,
+        }),
+      });
+    } catch { /* silent */ }
+  }
+
+  let reply = "";
+
+  const isOffer = t.match(/offer|partner|invest|deal|collaborat|list|exchang|integrat|sponsor|fund|acqui|buy.*project|purchase|proposal|business|opportunit|interest.*project|joint/i);
+  const isPrice = t.match(/price|how much|market cap|nxwv|rune|token|value|chart|pump|moon/i);
+  const isQuestion = t.match(/what is|what are|how does|explain|tell me|about nexus|nexusos\?|wnsp\?/i);
+  const isGreeting = t.match(/^(hi|hello|hey|gm|good morning|sup|yo|hola|greetings)[\s!.?]*$/i);
+  const isStaking = t.match(/stake|staking|yield|earn|apy|apr/i);
+
+  if (isOffer) {
+    reply =
+`👁 NexusOS — Partnership & Offer Enquiries
+
+Thank you for reaching out. Your message has been received.
+
+NexusOS is not a blockchain — it's a physics engine. We're writing the OS for photonic computing hardware (~2032).
+
+• WavelengthScript — native language of photonic processors
+• WNSP Protocol — 25,600 orthogonal channels from Maxwell's equations
+• NXWV Rune — live on Bitcoin (952596:379 · 21T supply · fully sealed)
+• Physics fees from E=hf and Λ=hf/c²
+
+Platform: https://wnsp.io
+Coinsniper: https://coinsniper.net/coin/91963
+GitHub: https://github.com/nexusosdaily-code/NexusOS
+
+The team will follow up. For urgency, reply with more detail.`;
+  } else if (isPrice) {
+    reply =
+`🟠 NEXUS•WAVELENGTH (NXWV)
+
+Bitcoin Rune — economic layer of NexusOS.
+
+• Rune ID: 952596:379
+• Supply: 21,000,000,000,000 (21T)
+• Mints: 1,000/1,000 — fully sealed June 2026
+• Chain: Bitcoin (Ordinals)
+
+Live listing: https://coinsniper.net/coin/91963
+Platform + staking: https://wnsp.io
+
+Stakers auto-mint WNUSD stablecoin. Use !stake <sats> [days] to start.`;
+  } else if (isQuestion) {
+    reply =
+`👁 What is NexusOS?
+
+A physics-based OS — the answer to Moore's Law hitting silicon's wall.
+
+At 2nm, electrons tunnel through transistor gates. TSMC is at 3nm. The math closes ~2026–28. Photonic computing is next.
+
+NexusOS is already written in the language of that hardware:
+• 'A' → 480.6nm (E=hf) instead of 65 (arbitrary 1963 ASCII)
+• 25,600 orthogonal channels (WDM × OAM × polarisation)
+• Transaction fees from Λ=hf/c² — photon compression mass
+• WavelengthScript runs in software today, natively on photonic ASICs in 2032
+
+No rewrite needed when the hardware arrives.
+
+Try: !help for commands
+Platform: https://wnsp.io`;
+  } else if (isGreeting) {
+    reply =
+`👋 Welcome to NexusOS
+
+The physics-based OS for the photonic computing era.
+
+Commands: !help
+Staking:  !stake <sats> [days]
+Balance:  !balance
+
+Platform: https://wnsp.io
+NXWV on Coinsniper: https://coinsniper.net/coin/91963
+
+For partnership enquiries, just describe what you're looking for.`;
+  } else if (isStaking) {
+    reply =
+`⚡ NexusOS Staking
+
+Lock sats → earn NXT yield → auto-mint WNUSD stablecoin.
+
+Lock periods:
+  7 days   → 5%
+  14 days  → 12%
+  30 days  → 28%
+  90 days  → 90%
+  180 days → 200%
+  365 days → 420%
+
+To stake via Nostr DM: !stake 10000 30
+(requires linked NexusOS account)
+
+Platform: https://wnsp.io/stake-earn`;
+  } else {
+    reply =
+`👁 NexusOS
+
+Message received — the team will follow up.
+
+Commands: !help
+Platform: https://wnsp.io
+NXWV: https://coinsniper.net/coin/91963`;
+  }
+
+  try { await sendDM(fromPubhex, reply); } catch (e: any) {
+    console.warn(`${BOT_TAG} auto-reply failed:`, e.message);
+  }
+  await logDm({ fromNpub, userId: null, command: "auto_reply", args: text.slice(0, 100), status: "ok", response: reply, eventId });
+}
+
 // ── Polling loop ─────────────────────────────────────────────────────────────
 let _lastSeen   = Math.floor(Date.now() / 1000) - 300;
 let _seenIds    = new Set<string>();
@@ -228,11 +357,14 @@ async function poll() {
       _seenIds.add(evt.id);
       let decrypted = "";
       try { decrypted = await nip04.decrypt(getPrivKey(), evt.pubkey, evt.content); } catch { continue; }
-      if (!decrypted.trim().startsWith("!")) continue;
       let fromNpub = "";
       try { fromNpub = nip19.npubEncode(evt.pubkey); } catch { fromNpub = evt.pubkey; }
       console.log(`${BOT_TAG} DM from ${fromNpub.slice(0, 20)}… → "${decrypted.slice(0, 60)}"`);
-      await handleCommand(fromNpub, evt.pubkey, decrypted, evt.id);
+      if (decrypted.trim().startsWith("!")) {
+        await handleCommand(fromNpub, evt.pubkey, decrypted, evt.id);
+      } else {
+        await autoReply(evt.pubkey, fromNpub, decrypted, evt.id);
+      }
     }
     if (evts.length > 0) _lastSeen = Math.max(...evts.map(e => e.created_at));
     if (_seenIds.size > 2000) { const arr = [..._seenIds]; _seenIds = new Set(arr.slice(-1000)); }
