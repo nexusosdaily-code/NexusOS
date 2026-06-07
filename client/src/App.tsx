@@ -37,6 +37,7 @@ const ResearchPresentationPage = lazy(() => import("@/pages/research-presentatio
 const StreamingPage = lazy(() => import("@/pages/streaming"));
 const DeveloperMatrixPage = lazy(() => import("@/pages/developer-matrix"));
 const DeveloperKeysPage = lazy(() => import("@/pages/developer-keys"));
+const DeveloperPage = lazy(() => import("@/pages/developer"));
 const GovernancePage = lazy(() => import("@/pages/governance"));
 const ConstitutionPage = lazy(() => import("@/pages/constitution"));
 const DocsPage = lazy(() => import("@/pages/docs"));
@@ -223,6 +224,7 @@ function ProtectedRoutes() {
         <Route path="/research-presentation/developer-matrix" component={DeveloperMatrixPage} />
         <Route path="/streaming" component={StreamingPage} />
         <Route path="/streaming/:streamId" component={StreamingPage} />
+        <Route path="/developer" component={DeveloperPage} />
         <Route path="/developer-matrix" component={DeveloperMatrixPage} />
         <Route path="/developer-matrix/docs" component={DocsPage} />
         <Route path="/developer/keys" component={DeveloperKeysPage} />
@@ -316,6 +318,7 @@ function Router() {
       <Route path="/fund" component={CrowdfundPage} />
       <Route path="/videos" component={VideosPage} />
       <Route path="/indiegogo" component={IndiegogoPage} />
+      <Route path="/developer" component={DeveloperPage} />
       <Route path="/developer-matrix" component={DeveloperMatrixPage} />
       <Route path="/developer-matrix/docs" component={DocsPage} />
       <Route path="/docs" component={DocsPage} />

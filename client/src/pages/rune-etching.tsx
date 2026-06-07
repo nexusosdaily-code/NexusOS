@@ -319,6 +319,33 @@ export default function RuneEtchingPage() {
                 </a>
               </div>
             </div>
+
+            {/* WNSP•BTC rune — etched block 952,733 */}
+            <div className="bg-orange-900/20 border border-orange-500/20 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-orange-300 text-xs font-semibold">WNSP•BTC Rune Etch TX</span>
+                <span className="text-green-400 text-[10px] font-mono">✓ Runes · block 952,733</span>
+              </div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] text-slate-500">Rune ID:</span>
+                <span className="font-mono text-[11px] text-orange-300 font-bold">952733:1958</span>
+              </div>
+              <div className="font-mono text-[11px] text-slate-300 break-all mb-2">
+                32c29e6e718229496bb69e2e82b94d284624662d7ac8e5f35308f27ef9ffa5a6
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <a href="https://mempool.space/tx/32c29e6e718229496bb69e2e82b94d284624662d7ac8e5f35308f27ef9ffa5a6"
+                  target="_blank" rel="noreferrer"
+                  className="flex items-center gap-1 text-[11px] text-orange-400 hover:text-orange-300 bg-orange-500/10 rounded px-2 py-1">
+                  mempool.space <ExternalLink className="w-3 h-3" />
+                </a>
+                <a href="https://ordiscan.com/rune/WNSP%E2%80%A2BTC"
+                  target="_blank" rel="noreferrer"
+                  className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 bg-amber-500/10 rounded px-2 py-1">
+                  ordiscan.com <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
           </div>
         </Card>
 

@@ -20,6 +20,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT, GENESIS_EXECUTION_ADDRESS } from "./physics";
+import { getEtchStatus } from "./wnsp-btc-rune-etcher";
 
 // WebSocket clients mapped by userId
 const connectedClients = new Map<string, WebSocket>();
@@ -1866,10 +1867,98 @@ export async function registerRoutes(
         "GET  /api/dev/status",
         "GET  /api/dev/wallet",
         "GET  /api/dev/physics/:username",
+        "GET  /api/dev/ce-encode?text=…",
+        "GET  /api/dev/rune",
         "POST /api/dev/message",
       ],
       economics: "Every action costs NXT — E=hf · WNSP spectral fees apply",
     });
+  });
+
+  // GET /api/dev/ce-encode?text=… — CE spectral encode via API key
+  app.get("/api/dev/ce-encode", authenticateApiKey, async (req, res) => {
+    try {
+      const text = String(req.query.text ?? "").slice(0, 2000);
+      if (!text) return res.status(400).json({ error: "Missing ?text= parameter" });
+      const CE_TABLE: number[] = [];
+      for (let i = 0; i < 128; i++) CE_TABLE.push(380 + (i * (780 - 380)) / 128);
+      const chars = [...text].map(ch => {
+        const code  = ch.codePointAt(0)! % 128;
+        const wl    = CE_TABLE[code];
+        const bandNm = wl < 450 ? "VIOLET" : wl < 495 ? "BLUE" : wl < 570 ? "GREEN" :
+                       wl < 590 ? "YELLOW" : wl < 620 ? "ORANGE" : "RED";
+        const wdm   = Math.floor((wl - 380) / 3.125) + 1;
+        const oam   = (code % 50) + 1;
+        const pol   = code % 2 === 0 ? "H" : "V";
+        const freqTHz = 299792.458 / wl;
+        const energy  = 6.626e-34 * freqTHz * 1e12;
+        return { char: ch, code, wavelength: +wl.toFixed(3), band: bandNm, psiChannel: `Ψ(${wdm},${oam},${pol})`, energy: +energy.toFixed(4) };
+      });
+      const avgWl = chars.reduce((s, c) => s + c.wavelength, 0) / chars.length;
+      res.json({
+        ok: true,
+        text,
+        chars,
+        summary: {
+          avgWavelength: +avgWl.toFixed(3),
+          uniqueBands:   [...new Set(chars.map(c => c.band))],
+          charCount:     chars.length,
+          caller:        { username: req.user!.username, band: req.user!.spectralBand },
+        },
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/dev/rune — live rune metadata (no NXT fee)
+  app.get("/api/dev/rune", authenticateApiKey, async (req, res) => {
+    try {
+      const etch = await getEtchStatus();
+      res.json({
+        ok: true,
+        runes: {
+          "WNSP•BTC": {
+            runeId:       etch.rune_id ?? "952733:1958",
+            name:         "WNSP•BTC",
+            symbol:       "Ψ",
+            supply:       "21000000000",
+            divisibility: 8,
+            status:       etch.status,
+            etchTxid:     etch.etch_txid,
+            mempoolUrl:   etch.etch_txid ? `https://mempool.space/tx/${etch.etch_txid}` : null,
+            description:  "100% premined NexusOS protocol token. Mirrors NXT supply exactly.",
+          },
+          "NEXUS•WAVELENGTH": {
+            runeId:       "952596:379",
+            name:         "NEXUS•WAVELENGTH",
+            symbol:       "Ψ",
+            supply:       "21000000000000",
+            divisibility: 0,
+            status:       "etched",
+            description:  "Open-mint spectral wavelength token. 21T total supply, 1K per mint, cap 1000.",
+          },
+        },
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/platform/status — public health endpoint (no auth)
+  app.get("/api/platform/status", async (_req: Request, res: Response) => {
+    try {
+      const etch = await getEtchStatus();
+      res.json({
+        status:    "operational",
+        version:   "NexusOS v1.0",
+        protocol:  "WNSP v1.0 — Physics-based spectral communication",
+        runes: {
+          "WNSP•BTC":           { runeId: etch.rune_id ?? "952733:1958", status: etch.status },
+          "NEXUS•WAVELENGTH":   { runeId: "952596:379",  status: "etched" },
+        },
+        channels:  25600,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      res.status(500).json({ status: "degraded", error: err.message });
+    }
   });
 
   // ── End of Stage 4 Developer API ─────────────────────────────────────────
