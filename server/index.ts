@@ -9,11 +9,8 @@ import { seedGenesisUser } from "./genesis_user";
 import { startBlockchainAuditor } from "./blockchain_auditor";
 import { seedGenesisNode } from "./genesis_node";
 import { startKernelAgents } from "./kernel_agents";
-import { startSocialBroadcastAgent } from "./social_broadcast_agent";
-import { startTelegramBot } from "./telegram-bot";
-import { startNostrDmBot } from "./nostr-dm-bot";
-import { startNxtCampaignAgent } from "./nxt-campaign-agent";
-import { startTgNostrBridge } from "./telegram-nostr-bridge";
+// Bots disabled — human operators handle DMs and are paid in NXT for their time.
+// Files preserved: telegram-bot.ts, nostr-dm-bot.ts, nxt-campaign-agent.ts, telegram-nostr-bridge.ts, social_broadcast_agent.ts
 
 const app = express();
 const httpServer = createServer(app);
@@ -417,13 +414,7 @@ async function runStartupMigrations() {
           startWnspIoLiquidity();
         }).catch((e) => console.error("[wnsp.io Liquidity] Boot error:", e));
 
-        // Wave 6 — 30s: social bots (last — highest retry tolerance)
-        await delay(6_000);
-        startSocialBroadcastAgent();
-        startTelegramBot();
-        startNostrDmBot();
-        startNxtCampaignAgent();
-        startTgNostrBridge();
+        // Wave 6 — bots disabled. Human operators monitor channels and are paid in NXT.
       })();
     });
     httpServer.once("error", (err: any) => {
