@@ -51,7 +51,6 @@ export async function seedGenesisUser() {
     }).returning();
 
     // Check if wallet already exists (shouldn't, but be safe)
-    const { eq } = await import("drizzle-orm");
     const existing = await db.select().from(wallets).where(eq(wallets.userId, user.id)).limit(1);
     if (!existing.length) {
       await db.insert(wallets).values({
