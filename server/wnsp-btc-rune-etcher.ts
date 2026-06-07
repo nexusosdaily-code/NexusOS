@@ -26,7 +26,7 @@ const ESPLORA = "https://blockstream.info/api";
 const MEMPOOL = "https://mempool.space/api";
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const ETCH_THRESHOLD_SATS = 50_000;   // confirmed sats needed before etching
+const ETCH_THRESHOLD_SATS = 8_000;    // confirmed sats needed before etching (~6k for fee + dust + buffer)
 const CHECK_INTERVAL_MS   = 60_000;   // re-check every 60 s after server boot
 
 // ── WNSP•BTC Rune spec ────────────────────────────────────────────────────────
@@ -326,16 +326,25 @@ export async function startWnspBtcEtcher() {
         return;
       }
 
-      // Check live confirmed balance from the sentinel snapshot
-      const { getSnapshot } = await import("./btc-wallet-sentinel");
-      const snap = getSnapshot();
-      const confirmed = snap?.confirmed ?? 0;
-
-      if (confirmed < ETCH_THRESHOLD_SATS) {
-        console.log(`[WNSP•BTC Etcher] ${confirmed.toLocaleString()} / ${ETCH_THRESHOLD_SATS.toLocaleString()} confirmed sats — waiting…`);
+      // Check ACTUAL spendable UTXOs (confirmed and not consumed by mempool txs).
+      // We do NOT rely on sentinel.confirmed (chain_stats math) — that can show
+      // sats as "confirmed" when they are already being spent in the mempool.
+      const wallet = getServiceWallet();
+      if (!wallet) {
         setTimeout(check, CHECK_INTERVAL_MS);
         return;
       }
+      const utxos = await getUTXOs(wallet.address);
+      const spendableUtxos = utxos.filter(u => u.status.confirmed);
+      const spendableSats = spendableUtxos.reduce((s, u) => s + u.value, 0);
+      const unconfirmedSats = utxos.filter(u => !u.status.confirmed).reduce((s, u) => s + u.value, 0);
+
+      if (spendableSats < ETCH_THRESHOLD_SATS) {
+        console.log(`[WNSP•BTC Etcher] ${spendableSats.toLocaleString()} spendable / ${ETCH_THRESHOLD_SATS.toLocaleString()} needed (${unconfirmedSats.toLocaleString()} unconfirmed incoming) — waiting…`);
+        setTimeout(check, CHECK_INTERVAL_MS);
+        return;
+      }
+      const confirmed = spendableSats;
 
       // Threshold crossed — fire the etch
       console.log(`[WNSP•BTC Etcher] 🚀 Threshold reached! ${confirmed.toLocaleString()} sats confirmed — etching WNSP•BTC now…`);
@@ -372,8 +381,49 @@ export async function startWnspBtcEtcher() {
 export async function getEtchStatus() {
   try {
     await ensureTable();
-    return await getState();
+    const state = await getState();
+    // Report ACTUAL spendable UTXO balance — not sentinel chain_stats math
+    // which can claim sats are "confirmed" while they're being spent in mempool.
+    let confirmed = 0, unconfirmed = 0, address = "";
+    try {
+      const wallet = getServiceWallet();
+      if (wallet) {
+        address = wallet.address;
+        const utxos = await getUTXOs(wallet.address);
+        confirmed   = utxos.filter(u =>  u.status.confirmed).reduce((s, u) => s + u.value, 0);
+        unconfirmed = utxos.filter(u => !u.status.confirmed).reduce((s, u) => s + u.value, 0);
+      }
+    } catch { /* wallet not ready */ }
+    return { ...state, confirmed, unconfirmed, address, etchThreshold: ETCH_THRESHOLD_SATS };
   } catch {
-    return { status: "unknown", etch_txid: null };
+    return { status: "unknown", etch_txid: null, confirmed: 0, unconfirmed: 0 };
+  }
+}
+
+export async function forceEtch(): Promise<{ ok: boolean; txid?: string; error?: string }> {
+  try {
+    await ensureTable();
+    const state = await getState();
+    if (state.status === "etched") {
+      return { ok: false, error: `Already etched — TXID: ${state.etch_txid}` };
+    }
+    if (state.status === "in_progress") {
+      return { ok: false, error: "Etch already in progress" };
+    }
+    const { getSnapshot } = await import("./btc-wallet-sentinel");
+    const snap = getSnapshot();
+    const confirmed = snap?.confirmed ?? 0;
+    await setState("in_progress");
+    await tgAlert(
+      `🔧 <b>WNSP•BTC Force-Etch Triggered</b>\n\n` +
+      `Admin manually triggered the etch.\n` +
+      `Service wallet confirmed: <b>${confirmed.toLocaleString()} sats</b>`
+    );
+    await etchWnspBtc(confirmed);
+    const newState = await getState();
+    return { ok: true, txid: newState.etch_txid ?? undefined };
+  } catch (e: any) {
+    await setState("pending", { error_msg: e.message.slice(0, 200) });
+    return { ok: false, error: e.message };
   }
 }

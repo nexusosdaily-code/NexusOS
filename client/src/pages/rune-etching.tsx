@@ -1,13 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ChannelConnect } from "@/components/channel-connect";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Gem, Bitcoin, Zap, Shield, Cpu, Globe2,
   TrendingUp, Lock, Flame, Coins, ArrowRight, CheckCircle2,
-  ExternalLink, Hash, Layers, Activity,
+  ExternalLink, Hash, Layers, Activity, RefreshCw, Rocket,
 } from "lucide-react";
 
 function Stat({ label, val, sub, color = "text-cyan-300" }: { label: string; val: string | number; sub?: string; color?: string }) {
@@ -30,9 +31,40 @@ function Row({ label, val, mono = false }: { label: string; val: React.ReactNode
 }
 
 export default function RuneEtchingPage() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
   const { data } = useQuery<any>({ queryKey: ["/api/rune/info"], refetchInterval: 30_000 });
+  const { data: etchStatus, refetch: refetchEtch } = useQuery<any>({
+    queryKey: ["/api/btc/wnsp-btc/etch-status"],
+    refetchInterval: 15_000,
+  });
+  const { data: me } = useQuery<any>({ queryKey: ["/api/user"] });
+
+  const forceEtchMut = useMutation({
+    mutationFn: () => fetch("/api/btc/wnsp-btc/force-etch", { method: "POST" }).then(r => r.json()),
+    onSuccess: (d) => {
+      if (d.ok) {
+        toast({ title: "Etch triggered!", description: `TXID: ${d.txid}` });
+      } else {
+        toast({ title: "Etch failed", description: d.error, variant: "destructive" });
+      }
+      refetchEtch();
+    },
+    onError: () => toast({ title: "Error", description: "Could not trigger etch", variant: "destructive" }),
+  });
 
   const pct = data ? ((data.mintCount / data.maxMints) * 100).toFixed(1) : "0.0";
+  const isKernel = me?.authorityBand === "KERNEL";
+
+  const etchStatusColor =
+    etchStatus?.status === "etched"    ? "text-green-400" :
+    etchStatus?.status === "in_progress" ? "text-yellow-400" :
+    etchStatus?.status === "error"     ? "text-red-400" :
+    "text-slate-400";
+
+  const confirmedSats   = etchStatus?.confirmed   ?? 0;
+  const unconfirmedSats = etchStatus?.unconfirmed ?? 0;
+  const ETCH_THRESHOLD  = etchStatus?.etchThreshold ?? 8_000;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
@@ -57,6 +89,74 @@ export default function RuneEtchingPage() {
         </div>
 
         <ChannelConnect label="Top up ⚡" />
+
+        {/* WNSP•BTC Etch Status — live panel */}
+        {etchStatus?.status !== "etched" && (
+          <Card className="bg-slate-900/80 border-orange-500/30 p-4 mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Rocket className="w-4 h-4 text-orange-400" />
+              <span className="font-semibold text-sm text-white">WNSP•BTC Etch Status</span>
+              <Badge className={`ml-auto text-[10px] border-0 ${
+                etchStatus?.status === "in_progress" ? "bg-yellow-500/20 text-yellow-300" :
+                etchStatus?.status === "error"       ? "bg-red-500/20 text-red-300" :
+                "bg-slate-700 text-slate-400"
+              }`}>{etchStatus?.status ?? "loading…"}</Badge>
+              <button onClick={() => refetchEtch()} className="text-slate-500 hover:text-slate-300">
+                <RefreshCw className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Sats progress */}
+            <div className="mb-3">
+              <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+                <span>Service wallet confirmed sats</span>
+                <span className="font-mono">{confirmedSats.toLocaleString()} / {ETCH_THRESHOLD.toLocaleString()} needed</span>
+              </div>
+              <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${confirmedSats >= ETCH_THRESHOLD ? "bg-green-500" : "bg-orange-500"}`}
+                  style={{ width: `${Math.min(100, (confirmedSats / ETCH_THRESHOLD) * 100).toFixed(1)}%` }}
+                />
+              </div>
+              {unconfirmedSats > 0 && (
+                <div className="text-[10px] text-yellow-400 mt-1">
+                  ⏳ {unconfirmedSats.toLocaleString()} sats unconfirmed — waiting for Bitcoin confirmations (~10–60 min)
+                </div>
+              )}
+            </div>
+
+            {etchStatus?.error_msg && (
+              <div className="text-[10px] text-red-400 bg-red-500/10 rounded p-2 mb-3 font-mono">
+                {etchStatus.error_msg}
+              </div>
+            )}
+
+            {isKernel && (
+              <Button
+                size="sm"
+                className="bg-orange-600 hover:bg-orange-500 text-white text-xs w-full"
+                onClick={() => forceEtchMut.mutate()}
+                disabled={forceEtchMut.isPending || etchStatus?.status === "in_progress"}
+              >
+                <Rocket className="w-3 h-3 mr-1" />
+                {forceEtchMut.isPending ? "Etching…" : "Force Etch WNSP•BTC Now (KERNEL only)"}
+              </Button>
+            )}
+          </Card>
+        )}
+
+        {etchStatus?.status === "etched" && etchStatus?.etch_txid && (
+          <Card className="bg-green-900/20 border-green-500/30 p-3 mb-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-green-400" />
+              <span className="text-green-300 text-sm font-semibold">WNSP•BTC etched on-chain</span>
+              <a href={`https://mempool.space/tx/${etchStatus.etch_txid}`} target="_blank" rel="noreferrer"
+                className="ml-auto flex items-center gap-1 text-[11px] text-green-400 hover:text-green-300">
+                view TX <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </Card>
+        )}
 
         {/* Hero banner */}
         <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-900/20 via-slate-900 to-cyan-900/10 p-8 mb-6">

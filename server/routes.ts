@@ -11568,6 +11568,28 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // POST /api/btc/wnsp-btc/force-etch — admin-only manual trigger
+  app.post("/api/btc/wnsp-btc/force-etch", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      if (!user || user.authorityBand !== "KERNEL") {
+        return res.status(403).json({ error: "KERNEL authority required" });
+      }
+      const { forceEtch } = await import("./wnsp-btc-rune-etcher");
+      const result = await forceEtch();
+      res.json(result);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // GET /api/btc/wnsp-btc/etch-status — current etch state (public)
+  app.get("/api/btc/wnsp-btc/etch-status", async (_req: Request, res: Response) => {
+    try {
+      const { getEtchStatus } = await import("./wnsp-btc-rune-etcher");
+      const state = await getEtchStatus();
+      res.json({ ok: true, ...state });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   app.get("/api/btc/sentinel", authenticate, async (_req: Request, res: Response) => {
     try {
       const { getSnapshot, getEvents } = await import("./btc-wallet-sentinel");

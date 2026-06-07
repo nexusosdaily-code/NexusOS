@@ -50,6 +50,17 @@ Transaction output layout:
 - Cap: 1,000 mints → 21,000,000,000,000 raw total supply (21 trillion NXWV)
 - Supply sealed: all 1000 mints claimed (4 final mints via CPFP chain, June 2026)
 
+## WNSP•BTC Rune Etch
+
+- Etch TXID: `32c29e6e718229496bb69e2e82b94d284624662d7ac8e5f35308f27ef9ffa5a6`
+- Status: In mempool as of 2026-06-07 (awaiting first confirmation)
+- Rune ID: TBD after confirmation (will be `{block}:{tx_index}`)
+- Name: WNSP•BTC | Symbol: Ψ | Supply: 21,000,000,000 | Divisibility: 8
+- 100% premined to service wallet (bc1pwp8a08…qce6p6m)
+- TX structure: 4 inputs → vout0 546 sats P2TR (premine) + vout1 OP_RETURN Runestone + vout2 1862 sats change; fee 864 sats
+- DB table: `wnsp_btc_etch_state` — status="etched" guarded by this table; never reset without verifying mempool
+- Sentinel "confirmed" is chain_stats math and can overcount when UTXOs are spent in mempool; use actual UTXO sum for etch threshold check
+
 ## CPFP Chaining for Sequential Mints
 
 When minting multiple times in one session without waiting for confirms:
