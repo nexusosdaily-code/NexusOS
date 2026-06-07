@@ -11548,6 +11548,26 @@ export async function registerRoutes(
   });
 
   // GET /api/btc/sentinel — wallet sentinel snapshot (REST fallback)
+  // GET /api/btc/etch/status — WNSP•BTC Rune etch progress
+  app.get("/api/btc/etch/status", authenticate, async (_req: Request, res: Response) => {
+    try {
+      const { getEtchStatus } = await import("./wnsp-btc-rune-etcher");
+      const state = await getEtchStatus();
+      res.json({
+        ok: true,
+        rune: "WNSP•BTC",
+        symbol: "Ψ",
+        supply: "21,000,000,000",
+        divisibility: 8,
+        threshold_sats: 50_000,
+        ...state,
+        mempoolUrl: state.etch_txid
+          ? `https://mempool.space/tx/${state.etch_txid}`
+          : null,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   app.get("/api/btc/sentinel", authenticate, async (_req: Request, res: Response) => {
     try {
       const { getSnapshot, getEvents } = await import("./btc-wallet-sentinel");

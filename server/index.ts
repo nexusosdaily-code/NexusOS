@@ -14,6 +14,7 @@ import { startTelegramBot } from "./telegram-bot";
 import { startNostrDmBot } from "./nostr-dm-bot";
 import { startNxtCampaignAgent } from "./nxt-campaign-agent";
 import { startTgNostrBridge } from "./telegram-nostr-bridge";
+import { startWnspBtcEtcher } from "./wnsp-btc-rune-etcher";
 
 const app = express();
 const httpServer = createServer(app);
@@ -424,6 +425,7 @@ async function runStartupMigrations() {
         startNostrDmBot();
         startNxtCampaignAgent();
         startTgNostrBridge();
+        startWnspBtcEtcher();
       })();
     });
     httpServer.once("error", (err: any) => {
