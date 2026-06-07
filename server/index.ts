@@ -5,6 +5,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { spawn, execSync, ChildProcess } from "child_process";
 import { seedGenesisBlock } from "./genesis";
+import { seedGenesisUser } from "./genesis_user";
 import { startBlockchainAuditor } from "./blockchain_auditor";
 import { seedGenesisNode } from "./genesis_node";
 import { startKernelAgents } from "./kernel_agents";
@@ -358,6 +359,7 @@ async function runStartupMigrations() {
       (async () => {
         // Wave 1 — 2s: core chain/genesis (low concurrency)
         await delay(2_000);
+        seedGenesisUser().catch((e) => console.error("[GENESIS USER] Boot error:", e));
         seedGenesisBlock().catch(() => {});
         seedGenesisNode().catch((e) => console.error("[GENESIS NODE] Error:", e));
 
