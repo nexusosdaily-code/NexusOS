@@ -10,7 +10,7 @@ import {
   Layers, TrendingUp, Zap, ArrowLeft,
 } from "lucide-react";
 
-const RUNE_ID      = "952596:379";
+const RUNE_ID      = "952590:379";
 const RUNE_NAME    = "NEXUS•WAVELENGTH";
 const TICKER       = "NXWV";
 const TOTAL_SUPPLY = "21,000,000,000,000";
@@ -26,7 +26,7 @@ const DESCRIPTION =
   "civilization OS built on electromagnetic wave equations. 21 trillion supply. " +
   "All 1,000 mints permanently sealed June 2026. No more NXWV will ever be " +
   "created. Acquire via the NexusOS pipeline at wnsp.io. " +
-  "Rune ID: 952596:379 on Bitcoin mainnet.";
+  "Rune ID: 952590:379 on Bitcoin mainnet.";
 
 const FIELDS = [
   { label: "Project Name",          value: RUNE_NAME,    tip: "Full Rune name with bullet separator" },
@@ -129,7 +129,7 @@ export default function CoinsnierPage() {
             </div>
             <h1 className="text-2xl font-bold text-white">NEXUS•WAVELENGTH</h1>
             <p className="text-sm text-white/40 mt-1">
-              Rune ID 952596:379 · Bitcoin Mainnet · 21 Trillion Supply · Sealed Forever
+              Rune ID 952590:379 · Bitcoin Mainnet · 21 Trillion Supply · Sealed Forever
             </p>
           </div>
           <a

@@ -79,7 +79,7 @@ const TASKS: Task[] = [
     title: "Share NXWV on X",
     description: 'Post about NEXUS•WAVELENGTH on X with the hashtag #NexusOS and tag @NexusOSWNSP.',
     action: "share",
-    actionUrl: "https://x.com/intent/tweet?text=Just%20discovered%20%40NexusOSWNSP%20%E2%80%94%20a%20physics-based%20OS%20for%20photonic%20computing.%20Not%20a%20blockchain%2C%20an%20actual%20physics%20engine.%0A%0ANXWV%20Rune%20%F0%9F%9F%A0%20952596%3A379%20%7C%2021T%20supply%20%7C%20fully%20sealed%20June%202026%0A%0Ahttps%3A%2F%2Fwnsp.io%20%23NexusOS%20%23Bitcoin%20%23Runes",
+    actionUrl: "https://x.com/intent/tweet?text=Just%20discovered%20%40NexusOSWNSP%20%E2%80%94%20a%20physics-based%20OS%20for%20photonic%20computing.%20Not%20a%20blockchain%2C%20an%20actual%20physics%20engine.%0A%0ANXWV%20Rune%20%F0%9F%9F%A0%20952590%3A379%20%7C%2021T%20supply%20%7C%20fully%20sealed%20June%202026%0A%0Ahttps%3A%2F%2Fwnsp.io%20%23NexusOS%20%23Bitcoin%20%23Runes",
     actionLabel: "Post on X",
     points: 150,
   },
@@ -163,7 +163,7 @@ export default function QuestHubPage() {
   }
 
   function copyShareText() {
-    const text = `🟠 NEXUS•WAVELENGTH (NXWV) Genesis Quest\n\nComplete 6 tasks → enter the draw for 10M NXWV\n\nRune ID: 952596:379 | 21T supply | sealed June 2026\nPlatform: https://wnsp.io/quest\nCoinsniper: https://coinsniper.net/coin/91963\n\n#NexusOS #Bitcoin #Runes`;
+    const text = `🟠 NEXUS•WAVELENGTH (NXWV) Genesis Quest\n\nComplete 6 tasks → enter the draw for 10M NXWV\n\nRune ID: 952590:379 | 21T supply | sealed June 2026\nPlatform: https://wnsp.io/quest\nCoinsniper: https://coinsniper.net/coin/91963\n\n#NexusOS #Bitcoin #Runes`;
     navigator.clipboard.writeText(text).then(() =>
       toast({ title: "Copied!", description: "Paste it anywhere to spread the word." })
     );
@@ -343,7 +343,7 @@ export default function QuestHubPage() {
         {/* Info strip */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
           {[
-            { label: "Rune ID", value: "952596:379" },
+            { label: "Rune ID", value: "952590:379" },
             { label: "Supply", value: "21T NXWV" },
             { label: "Mints", value: "1,000/1,000 sealed" },
           ].map(({ label, value }) => (

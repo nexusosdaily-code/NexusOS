@@ -11662,8 +11662,8 @@ export async function registerRoutes(
   const RUNE_NXT_COST    = 100;
   const RUNE_STAKE_NXT_PER_EPOCH = 150; // NXT per epoch per 1,000 runes staked
   // Placeholder etched Rune ID (real etching tx to be submitted on mainnet)
-  const RUNE_ID          = "952596:379";
-  const RUNE_BLOCK       = 952596;
+  const RUNE_ID          = "952590:379";
+  const RUNE_BLOCK       = 952590;
 
   // GET /api/btc/mempool/stats — proxy mempool.space fee rates + mempool info + recent blocks
   app.get("/api/btc/mempool/stats", async (_req: Request, res: Response) => {

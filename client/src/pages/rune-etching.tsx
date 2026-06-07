@@ -71,7 +71,7 @@ export default function RuneEtchingPage() {
               <div className="w-16 h-16 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-3xl">Ψ</div>
               <div className="flex-1">
                 <div className="text-3xl font-bold text-white mb-1">NEXUS•WAVELENGTH</div>
-                <div className="text-slate-400 text-sm mb-3">The canonical Bitcoin Rune of the NexusOS ecosystem. Etched on Bitcoin mainnet at block 952,596 — permanently sealed on-chain. Each token represents a spectral wavelength unit in the WNSP communication layer.</div>
+                <div className="text-slate-400 text-sm mb-3">The canonical Bitcoin Rune of the NexusOS ecosystem. Etched on Bitcoin mainnet at block 952,590 — permanently sealed on-chain. Each token represents a spectral wavelength unit in the WNSP communication layer.</div>
                 <div className="flex flex-wrap gap-2">
                   {["Bitcoin Native", "UTXO-based", "No Ordinals required", "AGPL-3.0", "Physics-signed"].map(t => (
                     <Badge key={t} className="bg-slate-800/80 text-slate-300 border-slate-700 text-[10px]">{t}</Badge>
@@ -115,7 +115,7 @@ export default function RuneEtchingPage() {
               <span className="font-semibold text-sm text-white">Rune Specification</span>
             </div>
             <Row label="Rune Name"    val="NEXUS•WAVELENGTH" mono />
-            <Row label="Rune ID"      val={data?.runeId ?? "952596:379"} mono />
+            <Row label="Rune ID"      val={data?.runeId ?? "952590:379"} mono />
             <Row label="Symbol"       val="Ψ (Psi)" mono />
             <Row label="Decimals"     val="8" mono />
             <Row label="Total Supply" val="21,000,000 Ψ" mono />
@@ -123,9 +123,9 @@ export default function RuneEtchingPage() {
               className="text-purple-400 hover:text-purple-300 flex items-center gap-1 font-mono text-[11px]">
               8e1614…3ae11c <ExternalLink className="w-3 h-3" />
             </a>} />
-            <Row label="Etched Block" val={<a href="https://mempool.space/block/952596" target="_blank" rel="noreferrer"
+            <Row label="Etched Block" val={<a href="https://mempool.space/block/952590" target="_blank" rel="noreferrer"
               className="text-purple-400 hover:text-purple-300 flex items-center gap-1">
-              952,596 <ExternalLink className="w-3 h-3" />
+              952,590 <ExternalLink className="w-3 h-3" />
             </a>} />
             <Row label="Protocol"     val={<Badge className="bg-purple-500/15 text-purple-300 border-purple-500/20 text-[10px]">Runes (OP_RETURN)</Badge>} />
             <Row label="View on Ordiscan" val={<a href="https://ordiscan.com/rune/NEXUS%E2%80%A2WAVELENGTH" target="_blank" rel="noreferrer"
@@ -201,7 +201,7 @@ export default function RuneEtchingPage() {
             <div className="bg-slate-800/50 rounded-lg p-3">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-slate-400 text-xs">NEXUS•WAVELENGTH Rune Etch TX</span>
-                <span className="text-green-400 text-[10px] font-mono">Runes · block 952,596</span>
+                <span className="text-green-400 text-[10px] font-mono">Runes · block 952,590</span>
               </div>
               <div className="font-mono text-[11px] text-slate-300 break-all mb-2">
                 8e1614818d96e494bbde4d90b57ef7ce596aebee50b15b48c132ed8ece3ae11c

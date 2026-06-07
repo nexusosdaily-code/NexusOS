@@ -248,7 +248,7 @@ export default function MarketPage() {
                 "21 trillion total · 1,000 mints, all claimed",
                 "Delivered on Bitcoin mainnet via automated pipeline",
                 "Pay with Lightning — receive on-chain Rune in one step",
-                "Rune ID 952596:379 · verifiable on any block explorer",
+                "Rune ID 952590:379 · verifiable on any block explorer",
               ]}
               cta="Buy NXWV via Pipeline"
               ctaHref="/rune-pipeline"
