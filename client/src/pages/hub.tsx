@@ -21,7 +21,7 @@ import {
   CheckCircle2, AlertTriangle, ArrowRight, FlaskConical, Heart,
   Copy, ExternalLink, RefreshCw, ChevronDown, ChevronUp, ShoppingBag,
   Gem, Coins, TrendingUp, Unplug, DollarSign, Megaphone,
-  ArrowDownToLine, LayoutDashboard, Droplets, Gift,
+  ArrowDownToLine, LayoutDashboard, Droplets, Gift, Trophy,
 } from "lucide-react";
 
 // ── Physics constants ──────────────────────────────────────────────────
