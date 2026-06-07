@@ -164,6 +164,25 @@ export async function sendAdminAlert(message: string): Promise<void> {
   } catch { /* silent */ }
 }
 
+// ── Public channel post (TELEGRAM_CHANNEL_ID — e.g. @nexusos_official) ────────
+export async function sendChannelPost(message: string): Promise<void> {
+  const token     = process.env.TELEGRAM_BOT_TOKEN;
+  const channelId = process.env.TELEGRAM_CHANNEL_ID;
+  if (!token || !channelId) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id:    channelId,
+        text:       message,
+        parse_mode: "HTML",
+        disable_web_page_preview: false,
+      }),
+    });
+  } catch { /* silent */ }
+}
+
 // ── Bot factory ───────────────────────────────────────────────────────────────
 export function startTelegramBot() {
   const token = process.env.TELEGRAM_BOT_TOKEN;

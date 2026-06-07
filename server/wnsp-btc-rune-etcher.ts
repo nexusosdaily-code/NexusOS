@@ -218,6 +218,7 @@ async function etchWnspBtc(confirmedSats: number): Promise<void> {
   console.log(`[WNSP•BTC Etcher] ✅ Etch TX broadcast! TXID: ${txid}`);
   console.log(`[WNSP•BTC Etcher] Rune ID will be: ${txid}:0 (block:tx determined at confirmation)`);
 
+  // ── Admin DM alert ────────────────────────────────────────────────────────
   await tgAlert(
     `🔥 <b>WNSP•BTC Rune Etched!</b>\n\n` +
     `Name:    <b>WNSP•BTC</b>\n` +
@@ -227,12 +228,64 @@ async function etchWnspBtc(confirmedSats: number): Promise<void> {
     `Premine: 100% to service wallet\n\n` +
     `TXID: <code>${txid}</code>\n` +
     `Fee:  ${feeSats.toLocaleString()} sats @ ${feeRate} sat/vB\n\n` +
-    `<a href="https://mempool.space/tx/${txid}">Watch on mempool.space</a>\n` +
-    `<a href="https://unisat.io/runes">Track on UniSat Runes</a>\n\n` +
+    `<a href="https://mempool.space/tx/${txid}">Watch on mempool.space</a>\n\n` +
+    `⚡ Next step: list on UniSat Fractal\n` +
+    `https://fractal.unisat.io/runes\n\n` +
     `Once confirmed, the Rune ID will appear on:\n` +
     `• <a href="https://magiceden.us/ordinals/runes">Magic Eden</a>\n` +
     `• <a href="https://ord.io">ord.io</a>`
   );
+
+  // ── Public channel launch announcement ────────────────────────────────────
+  const launchMsg =
+    `⚡ <b>WNSP•BTC IS LIVE ON BITCOIN</b> ⚡\n\n` +
+    `The <b>NEXUS•WAVELENGTH BTC Rune</b> has just been etched on Bitcoin mainnet.\n\n` +
+    `🔷 Ticker:   <b>WNSP•BTC</b>\n` +
+    `🔷 Symbol:   <b>Ψ</b> (Psi — the spectral channel operator)\n` +
+    `🔷 Supply:   <b>21,000,000,000</b> (21 billion, 8 decimals)\n` +
+    `🔷 Premine:  100% — no open minting, no rug\n` +
+    `🔷 Protocol: NexusOS Physics Stack (WNSP)\n\n` +
+    `<b>What is WNSP•BTC?</b>\n` +
+    `WNSP•BTC is the on-chain representation of the NEXUS•WAVELENGTH spectral token — a physics-native digital asset built on the Theory of Compression States. ` +
+    `Every unit maps to an orthogonal Hilbert-space channel (Ψ), bridging photonic computing with Bitcoin's settlement layer.\n\n` +
+    `📈 <b>Trade &amp; track:</b>\n` +
+    `• UniSat Fractal → https://fractal.unisat.io/runes\n` +
+    `• Magic Eden → https://magiceden.us/ordinals/runes\n` +
+    `• ord.io → https://ord.io\n\n` +
+    `🌐 <b>NexusOS:</b> https://wnsp.io\n` +
+    `🔗 Etch TX: <code>${txid}</code>\n` +
+    `🔗 <a href="https://mempool.space/tx/${txid}">View on mempool.space</a>\n\n` +
+    `#WNSPBTC #Bitcoin #Runes #NexusOS #PhotonicComputing`;
+
+  try {
+    const { sendChannelPost } = await import("./telegram-bot");
+    await sendChannelPost(launchMsg);
+    console.log("[WNSP•BTC Etcher] 📢 Launch announcement posted to Telegram channel.");
+  } catch { /* channel optional */ }
+
+  // ── Nostr note launch announcement ────────────────────────────────────────
+  const nostrMsg =
+    `⚡ WNSP•BTC IS LIVE ON BITCOIN ⚡\n\n` +
+    `The NEXUS•WAVELENGTH BTC Rune has been etched on Bitcoin mainnet.\n\n` +
+    `Ticker:  WNSP•BTC\n` +
+    `Symbol:  Ψ (Psi — spectral channel operator)\n` +
+    `Supply:  21,000,000,000 (21 billion, 8 decimals)\n` +
+    `Premine: 100% — no open minting\n\n` +
+    `WNSP•BTC maps to orthogonal Hilbert-space channels on the NexusOS physics stack — bridging photonic computing with Bitcoin's settlement layer.\n\n` +
+    `Trade: https://fractal.unisat.io/runes\n` +
+    `App:   https://wnsp.io\n` +
+    `TX:    ${txid}\n\n` +
+    `#WNSPBTC #Bitcoin #Runes #NexusOS #Nostr`;
+
+  try {
+    const { publishToNostr } = await import("./nostr-service");
+    await publishToNostr({ content: nostrMsg, tags: [
+      ["t", "WNSPBTC"], ["t", "Bitcoin"], ["t", "Runes"], ["t", "NexusOS"],
+      ["r", `https://mempool.space/tx/${txid}`],
+      ["r", "https://wnsp.io"],
+    ]});
+    console.log("[WNSP•BTC Etcher] 🔮 Launch note published to Nostr.");
+  } catch { /* nostr optional */ }
 }
 
 // ── Watcher loop ──────────────────────────────────────────────────────────────
