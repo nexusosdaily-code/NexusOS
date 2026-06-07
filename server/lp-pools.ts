@@ -35,6 +35,13 @@ const SEED_POOLS = [
     tokenB:  "WNUSD",
     feeBps:  10,
   },
+  {
+    poolId:  "wsats-nxwv",
+    name:    "wSATS / NXWV",
+    tokenA:  "wSATS",
+    tokenB:  "NXWV",
+    feeBps:  20,   // 0.20% — tighter spread for native-sats pair
+  },
 ];
 
 // ── Seed pools on startup ─────────────────────────────────────────────────────

@@ -12886,6 +12886,142 @@ export async function registerRoutes(
     } catch { /* non-fatal */ }
   }, 5 * 60_000);
 
+  // ── wSATS — Wrapped Sats ───────────────────────────────────────────────────
+  // Mint: lock sats 1:1 → receive wSATS. Tiny NXT fee to orbital_treasury.
+  // Redeem: burn wSATS → sats returned to lightning wallet.
+  // wSATS pairs with NXWV on the wsats-nxwv LP pool.
+
+  const WSATS_MINT_FEE_RATE = 0.001;  // 0.1% of NXT equivalent
+  const WSATS_MIN_SATS      = 1_000;  // minimum 1,000 sats to wrap
+  const WSATS_SATS_PER_NXT  = 1_000;
+
+  // GET /api/wsats/positions
+  app.get("/api/wsats/positions", authenticate, async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { wSatsPositions } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const rows = await db.select().from(wSatsPositions)
+        .where(eq(wSatsPositions.userId, req.user!.id));
+      const totalMinted = rows.filter(r => r.status === "active")
+        .reduce((a, r) => a + r.wsatsMinted, 0);
+      res.json({ positions: rows, totalMinted });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/wsats/mint
+  app.post("/api/wsats/mint", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user   = (req as any).user;
+      const userId = user.id;
+      const satAmount = parseInt(req.body.satAmount, 10);
+      if (!satAmount || satAmount < WSATS_MIN_SATS)
+        return res.status(400).json({ error: `Minimum ${WSATS_MIN_SATS.toLocaleString()} sats to wrap` });
+
+      const { db } = await import("./db");
+      const { lightningWallets, wallets, wSatsPositions, wSatsTransactions } = await import("../shared/schema");
+      const { eq, sql: S } = await import("drizzle-orm");
+
+      const [lw] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, userId));
+      if (!lw || lw.satsBalance < satAmount)
+        return res.status(400).json({ error: `Insufficient sats — have ${(lw?.satsBalance ?? 0).toLocaleString()}, need ${satAmount.toLocaleString()}` });
+
+      const nxtEquiv = satAmount / WSATS_SATS_PER_NXT;
+      const nxtFee   = parseFloat((nxtEquiv * WSATS_MINT_FEE_RATE).toFixed(8));
+
+      const [nxtWallet] = await db.select().from(wallets).where(eq(wallets.userId, userId));
+      if (!nxtWallet || parseFloat(nxtWallet.balance) < nxtFee)
+        return res.status(400).json({ error: `Insufficient NXT for fee — need ${nxtFee.toFixed(4)} NXT` });
+
+      const posId = crypto.randomUUID();
+      const txId  = crypto.randomUUID();
+      const otId  = crypto.randomUUID();
+
+      await db.transaction(async (tx) => {
+        // 1. Deduct sats from lightning wallet
+        await tx.update(lightningWallets)
+          .set({ satsBalance: lw.satsBalance - satAmount })
+          .where(eq(lightningWallets.userId, userId));
+
+        // 2. Deduct NXT fee
+        const newNxt = (parseFloat(nxtWallet.balance) - nxtFee).toFixed(8);
+        await tx.update(wallets).set({ balance: newNxt }).where(eq(wallets.userId, userId));
+
+        // 3. Orbital treasury entry (NXT fee — never burned)
+        const ordinalUnits = Math.round(nxtFee * 1e8);
+        await tx.execute(S`
+          INSERT INTO orbital_treasury
+            (id, source_record_id, source_label, source_wavelength_nm, source_frequency_hz,
+             source_psi_channel, source_band, ordinal_nxt_units, operation_type, deposited_by, memo)
+          VALUES
+            (${otId}, ${posId}, ${'wSATS_MINT fee from ' + user.username},
+             ${580.0}, ${5.17e14}, ${'Ψ(0,0,H)'}, ${'USER'},
+             ${ordinalUnits}, ${'WSATS_MINT'}, ${user.username},
+             ${'wSATS mint fee: ' + nxtFee.toFixed(8) + ' NXT from ' + satAmount.toLocaleString() + ' sats'})
+        `);
+
+        // 4. Create wSATS position
+        await tx.execute(S`
+          INSERT INTO wsats_positions (id, user_id, sats_locked, wsats_minted, nxt_fee_sent, status, opened_at, updated_at)
+          VALUES (${posId}, ${userId}, ${satAmount}, ${satAmount}, ${nxtFee.toFixed(8)}, ${'active'}, now(), now())
+        `);
+
+        // 5. Record transaction
+        await tx.execute(S`
+          INSERT INTO wsats_transactions (id, user_id, position_id, type, sats_delta, wsats_delta, nxt_fee, created_at)
+          VALUES (${txId}, ${userId}, ${posId}, ${'mint'}, ${satAmount}, ${satAmount}, ${nxtFee.toFixed(8)}, now())
+        `);
+      });
+
+      res.json({ ok: true, positionId: posId, wsatsMinted: satAmount, satAmount, nxtFee });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/wsats/redeem
+  app.post("/api/wsats/redeem", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user   = (req as any).user;
+      const userId = user.id;
+      const { positionId } = req.body;
+      if (!positionId) return res.status(400).json({ error: "positionId required" });
+
+      const { db } = await import("./db");
+      const { lightningWallets, wSatsPositions, wSatsTransactions } = await import("../shared/schema");
+      const { eq, sql: S } = await import("drizzle-orm");
+
+      const [pos] = await db.select().from(wSatsPositions)
+        .where(eq(wSatsPositions.id, positionId));
+      if (!pos || pos.userId !== userId) return res.status(404).json({ error: "Position not found" });
+      if (pos.status !== "active")       return res.status(400).json({ error: "Position already redeemed" });
+
+      const satsBack = pos.satsLocked;
+      const txId     = crypto.randomUUID();
+
+      const [lw] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, userId));
+      if (!lw) return res.status(400).json({ error: "Lightning wallet not found" });
+
+      await db.transaction(async (tx) => {
+        // Return sats
+        await tx.update(lightningWallets)
+          .set({ satsBalance: lw.satsBalance + satsBack })
+          .where(eq(lightningWallets.userId, userId));
+
+        // Close position
+        await tx.update(wSatsPositions)
+          .set({ status: "redeemed", updatedAt: new Date() })
+          .where(eq(wSatsPositions.id, positionId));
+
+        // Log
+        await tx.execute(S`
+          INSERT INTO wsats_transactions (id, user_id, position_id, type, sats_delta, wsats_delta, nxt_fee, created_at)
+          VALUES (${txId}, ${userId}, ${positionId}, ${'redeem'}, ${-satsBack}, ${-pos.wsatsMinted}, ${'0'}, now())
+        `);
+      });
+
+      res.json({ ok: true, satsReturned: satsBack, wsatsBurned: pos.wsatsMinted });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // ── Liquidity Pools ────────────────────────────────────────────────────────
 
   // GET /api/lp/pools — list all pools (public)

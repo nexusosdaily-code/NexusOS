@@ -1470,3 +1470,29 @@ export const spectralBundles = pgTable("spectral_bundles", {
 }));
 export const insertSpectralBundleSchema = createInsertSchema(spectralBundles).omit({ id: true, createdAt: true, updatedAt: true });
 export type SpectralBundle = typeof spectralBundles.$inferSelect;
+
+// ── wSATS — Wrapped Sats (1:1 sats-backed token, mintable via pipeline) ───────
+export const wSatsPositions = pgTable("wsats_positions", {
+  id:          varchar("id",  { length: 36 }).primaryKey(),
+  userId:      text("user_id").notNull(),
+  satsLocked:  bigint("sats_locked",  { mode: "number" }).notNull(),
+  wsatsMinted: bigint("wsats_minted", { mode: "number" }).notNull(),
+  nxtFeeSent:  decimal("nxt_fee_sent", { precision: 20, scale: 8 }).notNull(),
+  status:      text("status").notNull().default("active"), // active | redeemed
+  openedAt:    timestamp("opened_at").notNull().defaultNow(),
+  updatedAt:   timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({ userIdx: index("wsats_positions_user_idx").on(t.userId) }));
+export const insertWSatsPositionSchema = createInsertSchema(wSatsPositions).omit({ id: true, openedAt: true, updatedAt: true });
+export type WSatsPosition = typeof wSatsPositions.$inferSelect;
+
+export const wSatsTransactions = pgTable("wsats_transactions", {
+  id:          varchar("id",  { length: 36 }).primaryKey(),
+  userId:      text("user_id").notNull(),
+  positionId:  varchar("position_id", { length: 36 }),
+  type:        text("type").notNull(),   // mint | redeem
+  satsDelta:   bigint("sats_delta",  { mode: "number" }).notNull(),
+  wsatsDelta:  bigint("wsats_delta", { mode: "number" }).notNull(),
+  nxtFee:      decimal("nxt_fee",    { precision: 20, scale: 8 }).notNull().default("0"),
+  createdAt:   timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({ userIdx: index("wsats_tx_user_idx").on(t.userId) }));
+export type WSatsTransaction = typeof wSatsTransactions.$inferSelect;
