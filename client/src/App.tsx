@@ -135,6 +135,7 @@ const PortfolioPage = lazy(() => import("@/pages/portfolio"));
 const LpPoolsPage = lazy(() => import("@/pages/lp-pools"));
 const AirdropPage = lazy(() => import("@/pages/airdrop"));
 const CoinsnierPage = lazy(() => import("@/pages/coinsniper"));
+const QuestHubPage = lazy(() => import("@/pages/quest-hub"));
 const RuneSwapPage     = lazy(() => import("@/pages/rune-swap"));
 const RunePipelinePage = lazy(() => import("@/pages/rune-pipeline"));
 const AdminOrdersPage  = lazy(() => import("@/pages/admin-orders"));
@@ -370,6 +371,7 @@ function Router() {
       <Route path="/lp-pools" component={LpPoolsPage} />
       <Route path="/airdrop" component={AirdropPage} />
       <Route path="/coinsniper" component={CoinsnierPage} />
+      <Route path="/quest"          component={QuestHubPage} />
       <Route path="/rune-swap"      component={RuneSwapPage} />
       <Route path="/rune-pipeline"  component={RunePipelinePage} />
       <Route path="/admin/orders"   component={AdminOrdersPage} />

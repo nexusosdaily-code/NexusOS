@@ -13307,5 +13307,29 @@ export async function registerRoutes(
 
   // ─────────────────────────────────────────────────────────────────────────────
 
+  // ── Quest Hub — entry submission ───────────────────────────────────────────
+  app.post("/api/quest/submit", async (req: Request, res: Response) => {
+    try {
+      const { xHandle, completedTasks, points } = req.body;
+      if (!xHandle) return res.status(400).json({ error: "xHandle required" });
+      // Log to DB (best-effort) and forward alert to Telegram
+      const tgToken  = process.env.TELEGRAM_BOT_TOKEN;
+      const adminId  = process.env.TELEGRAM_ADMIN_ID || process.env.TELEGRAM_CHANNEL_ID;
+      if (tgToken && adminId) {
+        const tasks = Array.isArray(completedTasks) ? completedTasks.join(", ") : "?";
+        await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: adminId,
+            parse_mode: "HTML",
+            text: `🏆 <b>Quest Entry</b>\n👤 ${xHandle}\n✅ Tasks: ${tasks}\n⭐ Points: ${points ?? "?"}`,
+          }),
+        }).catch(() => {});
+      }
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   return httpServer;
 }
