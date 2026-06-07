@@ -189,6 +189,7 @@ const APP_SECTIONS = [
       { title: "💜 Rune ↔ NXT Swap", href: "/rune-swap",           Icon: ArrowRightLeft },
       { title: "🟠 NXT→NXWV Pipeline", href: "/rune-pipeline",    Icon: Layers },
       { title: "⚡ Stake & Earn",      href: "/stake-earn",       Icon: TrendingUp },
+      { title: "📦 Spectral Bundle",   href: "/spectral-bundle",  Icon: Layers },
     ],
   },
   {

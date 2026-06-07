@@ -13307,6 +13307,176 @@ export async function registerRoutes(
 
   // ─────────────────────────────────────────────────────────────────────────────
 
+  // ── Spectral Bundles — NXT + NXWV Runes + sats → WNUSD ──────────────────────
+  app.get("/api/spectral-bundles", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { spectralBundles } = await import("@shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      const bundles = await db.select().from(spectralBundles)
+        .where(eq(spectralBundles.userId, req.user!.id))
+        .orderBy(desc(spectralBundles.createdAt));
+      res.json(bundles);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/spectral-bundles/create", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { spectralBundles, wallets, wnusdPositions, wnusdTransactions } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const { randomUUID } = await import("crypto");
+
+      const nxtAmount   = parseFloat(req.body.nxtAmount   ?? "0");
+      const runesAmount = parseInt(String(req.body.runesAmount ?? "0"), 10);
+      const satsAmount  = parseInt(String(req.body.satsAmount  ?? "0"), 10);
+
+      if (nxtAmount < 0 || runesAmount < 0 || satsAmount < 0)
+        return res.status(400).json({ error: "Amounts must be non-negative" });
+      if (nxtAmount === 0 && runesAmount === 0 && satsAmount === 0)
+        return res.status(400).json({ error: "Bundle must contain at least one asset" });
+
+      // Fetch BTC price
+      let btcUsd = 66_000;
+      try {
+        const pr = await fetch("https://api.coindesk.com/v1/bpi/currentprice/USD.json");
+        if (pr.ok) { const pd = await pr.json() as any; btcUsd = pd.bpi?.USD?.rate_float ?? btcUsd; }
+      } catch {}
+
+      // Deduct NXT from user wallet
+      const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
+      if (!wallet) return res.status(400).json({ error: "NXT wallet not found" });
+      const walletBal = parseFloat(wallet.balance);
+      if (nxtAmount > 0 && walletBal < nxtAmount)
+        return res.status(400).json({ error: `Insufficient NXT balance (have ${walletBal.toFixed(2)}, need ${nxtAmount})` });
+
+      // 1 NXT = 1,000 sats; 1 NXWV = 1 NXT = 1,000 sats
+      const NXT_PER_SAT = 1_000;
+      const totalSatsEq = Math.round(nxtAmount * NXT_PER_SAT + runesAmount * NXT_PER_SAT + satsAmount);
+      const totalUsd    = totalSatsEq * (btcUsd / 100_000_000);
+      const colRatio    = 1.5;
+      const wnusdMinted = totalUsd / colRatio;
+
+      if (wnusdMinted < 0.000001) return res.status(400).json({ error: "Bundle value too small to mint WNUSD" });
+
+      // Derive Ψ channel from user spectral data
+      const user = req.user!;
+      const psiChannel = `Ψ(${(user as any).spectralWdm ?? 0},${(user as any).spectralOam ?? 0},${(user as any).spectralPol ?? "H"})`;
+
+      await db.transaction(async (tx) => {
+        // Deduct NXT
+        if (nxtAmount > 0) {
+          await tx.update(wallets)
+            .set({ balance: String((walletBal - nxtAmount).toFixed(8)), updatedAt: new Date() })
+            .where(eq(wallets.id, wallet.id));
+        }
+
+        const bundleId = randomUUID();
+        const posId    = randomUUID();
+
+        // Insert bundle
+        const [bundle] = await tx.insert(spectralBundles).values({
+          id: bundleId,
+          userId:        req.user!.id,
+          nxtLocked:     String(nxtAmount.toFixed(8)),
+          runesLocked:   runesAmount,
+          satsLocked:    satsAmount,
+          totalSatsEq,
+          totalUsdValue: String(totalUsd.toFixed(2)),
+          wnusdMinted:   String(wnusdMinted.toFixed(8)),
+          colRatioPct:   String((colRatio * 100).toFixed(2)),
+          btcUsdAtMint:  String(btcUsd.toFixed(2)),
+          psiChannel,
+          status:        "active",
+        }).returning();
+
+        // Create WNUSD position
+        await tx.insert(wnusdPositions).values({
+          id:             posId,
+          userId:         req.user!.id,
+          collateralSats: totalSatsEq,
+          nxtFeeSent:     "0",
+          wnusdMinted:    String(wnusdMinted.toFixed(8)),
+          colRatioPct:    String((colRatio * 100).toFixed(2)),
+          btcUsdAtMint:   String(btcUsd.toFixed(2)),
+          status:         "active",
+        });
+
+        // Log WNUSD transaction
+        await tx.insert(wnusdTransactions).values({
+          id:           randomUUID(),
+          userId:       req.user!.id,
+          positionId:   posId,
+          type:         "mint",
+          satsDelta:    totalSatsEq,
+          wnusdDelta:   String(wnusdMinted.toFixed(8)),
+          nxtFee:       "0",
+          colRatioPct:  String((colRatio * 100).toFixed(2)),
+          btcUsdAtTime: String(btcUsd.toFixed(2)),
+        });
+
+        res.json({ ok: true, bundle, wnusdMinted: wnusdMinted.toFixed(6), psiChannel });
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/spectral-bundles/:id/unwrap", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { spectralBundles, wallets, wnusdPositions, wnusdTransactions } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const { randomUUID } = await import("crypto");
+
+      const [bundle] = await db.select().from(spectralBundles)
+        .where(and(eq(spectralBundles.id, req.params.id), eq(spectralBundles.userId, req.user!.id)));
+      if (!bundle) return res.status(404).json({ error: "Bundle not found" });
+      if (bundle.status !== "active") return res.status(400).json({ error: "Bundle already unwrapped" });
+
+      let btcUsd = 66_000;
+      try {
+        const pr = await fetch("https://api.coindesk.com/v1/bpi/currentprice/USD.json");
+        if (pr.ok) { const pd = await pr.json() as any; btcUsd = pd.bpi?.USD?.rate_float ?? btcUsd; }
+      } catch {}
+
+      await db.transaction(async (tx) => {
+        // Return NXT
+        const nxtBack = parseFloat(bundle.nxtLocked);
+        if (nxtBack > 0) {
+          const [wallet] = await tx.select().from(wallets).where(eq(wallets.userId, req.user!.id));
+          if (wallet) {
+            await tx.update(wallets)
+              .set({ balance: String((parseFloat(wallet.balance) + nxtBack).toFixed(8)), updatedAt: new Date() })
+              .where(eq(wallets.id, wallet.id));
+          }
+        }
+
+        // Mark bundle unwrapped
+        await tx.update(spectralBundles)
+          .set({ status: "unwrapped", updatedAt: new Date() })
+          .where(eq(spectralBundles.id, bundle.id));
+
+        // Redeem WNUSD position
+        await tx.update(wnusdPositions)
+          .set({ status: "redeemed", updatedAt: new Date() })
+          .where(and(eq(wnusdPositions.userId, req.user!.id), eq(wnusdPositions.collateralSats, bundle.totalSatsEq), eq(wnusdPositions.status, "active")));
+
+        // Log WNUSD redeem
+        await tx.insert(wnusdTransactions).values({
+          id:           randomUUID(),
+          userId:       req.user!.id,
+          type:         "redeem",
+          satsDelta:    -bundle.totalSatsEq,
+          wnusdDelta:   String(-parseFloat(bundle.wnusdMinted)),
+          nxtFee:       "0",
+          colRatioPct:  bundle.colRatioPct,
+          btcUsdAtTime: String(btcUsd.toFixed(2)),
+        });
+
+        res.json({ ok: true, nxtReturned: bundle.nxtLocked, runesReturned: bundle.runesLocked, satsReturned: bundle.satsLocked });
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // ── Quest Hub — entry submission ───────────────────────────────────────────
   app.post("/api/quest/submit", async (req: Request, res: Response) => {
     try {

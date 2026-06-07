@@ -304,6 +304,25 @@ async function runStartupMigrations() {
       );
       CREATE INDEX IF NOT EXISTS lp_positions_user_idx ON lp_positions(user_id);
       CREATE INDEX IF NOT EXISTS lp_positions_pool_idx ON lp_positions(pool_id);
+
+      CREATE TABLE IF NOT EXISTS spectral_bundles (
+        id              varchar(36) PRIMARY KEY,
+        user_id         text NOT NULL,
+        nxt_locked      decimal(20,8) NOT NULL DEFAULT '0',
+        runes_locked    integer NOT NULL DEFAULT 0,
+        sats_locked     bigint NOT NULL DEFAULT 0,
+        total_sats_eq   bigint NOT NULL,
+        total_usd_value decimal(20,2) NOT NULL,
+        wnusd_minted    decimal(20,8) NOT NULL,
+        col_ratio_pct   decimal(10,2) NOT NULL,
+        btc_usd_at_mint decimal(20,2) NOT NULL,
+        psi_channel     text NOT NULL,
+        status          text NOT NULL DEFAULT 'active',
+        created_at      timestamp NOT NULL DEFAULT now(),
+        updated_at      timestamp NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS spectral_bundles_user_idx   ON spectral_bundles(user_id);
+      CREATE INDEX IF NOT EXISTS spectral_bundles_status_idx ON spectral_bundles(status);
     `);
 
     console.log("[MIGRATION] Startup schema migrations complete.");

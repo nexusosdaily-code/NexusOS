@@ -1447,3 +1447,26 @@ export const runeSwaps = pgTable("rune_swaps", {
 }));
 export const insertRuneSwapSchema = createInsertSchema(runeSwaps).omit({ id: true, createdAt: true });
 export type RuneSwap = typeof runeSwaps.$inferSelect;
+
+// ── Spectral Bundles — composable NXT + NXWV Runes + sats → WNUSD ────────────
+export const spectralBundles = pgTable("spectral_bundles", {
+  id:            varchar("id", { length: 36 }).primaryKey(),
+  userId:        text("user_id").notNull(),
+  nxtLocked:     decimal("nxt_locked",  { precision: 20, scale: 8 }).notNull().default("0"),
+  runesLocked:   integer("runes_locked").notNull().default(0),   // NXWV rune units
+  satsLocked:    bigint("sats_locked",  { mode: "number" }).notNull().default(0),
+  totalSatsEq:   bigint("total_sats_eq", { mode: "number" }).notNull(),
+  totalUsdValue: decimal("total_usd_value", { precision: 20, scale: 2 }).notNull(),
+  wnusdMinted:   decimal("wnusd_minted", { precision: 20, scale: 8 }).notNull(),
+  colRatioPct:   decimal("col_ratio_pct", { precision: 10, scale: 2 }).notNull(),
+  btcUsdAtMint:  decimal("btc_usd_at_mint", { precision: 20, scale: 2 }).notNull(),
+  psiChannel:    text("psi_channel").notNull(),
+  status:        text("status").notNull().default("active"),  // active | unwrapped
+  createdAt:     timestamp("created_at").notNull().defaultNow(),
+  updatedAt:     timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  userIdx:   index("spectral_bundles_user_idx").on(t.userId),
+  statusIdx: index("spectral_bundles_status_idx").on(t.status),
+}));
+export const insertSpectralBundleSchema = createInsertSchema(spectralBundles).omit({ id: true, createdAt: true, updatedAt: true });
+export type SpectralBundle = typeof spectralBundles.$inferSelect;

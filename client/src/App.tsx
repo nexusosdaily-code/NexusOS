@@ -138,7 +138,8 @@ const CoinsnierPage = lazy(() => import("@/pages/coinsniper"));
 const QuestHubPage = lazy(() => import("@/pages/quest-hub"));
 const RuneSwapPage     = lazy(() => import("@/pages/rune-swap"));
 const RunePipelinePage = lazy(() => import("@/pages/rune-pipeline"));
-const AdminOrdersPage  = lazy(() => import("@/pages/admin-orders"));
+const AdminOrdersPage      = lazy(() => import("@/pages/admin-orders"));
+const SpectralBundlePage   = lazy(() => import("@/pages/spectral-bundle"));
 
 // Loading spinner shown while a lazy page chunk is downloading
 function PageLoader() {
@@ -374,7 +375,8 @@ function Router() {
       <Route path="/quest"          component={QuestHubPage} />
       <Route path="/rune-swap"      component={RuneSwapPage} />
       <Route path="/rune-pipeline"  component={RunePipelinePage} />
-      <Route path="/admin/orders"   component={AdminOrdersPage} />
+      <Route path="/admin/orders"        component={AdminOrdersPage} />
+      <Route path="/spectral-bundle"     component={SpectralBundlePage} />
       <Route>
         <ProtectedRoutes />
       </Route>
