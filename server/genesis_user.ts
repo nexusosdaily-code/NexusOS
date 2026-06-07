@@ -4,16 +4,31 @@
  * Idempotent: safe to call on every boot.
  */
 
+const GENESIS_PASSWORD = "Wnsp_nexusos2026";
+const GENESIS_USERNAME = "Nexus";
+
 export async function seedGenesisUser() {
   try {
     const { db } = await import("./db");
     const { users, wallets } = await import("@shared/schema");
-    const { count } = await import("drizzle-orm");
+    const { count, eq } = await import("drizzle-orm");
     const bcrypt = await import("bcrypt");
 
     const [{ value }] = await db.select({ value: count() }).from(users);
+
     if (Number(value) > 0) {
-      console.log("[GENESIS USER] Users already exist — skipping seed");
+      // Users exist — but ensure Nexus password hash is current
+      const [nexus] = await db.select().from(users).where(eq(users.username, GENESIS_USERNAME));
+      if (nexus) {
+        const ok = await bcrypt.default.compare(GENESIS_PASSWORD, nexus.passwordHash ?? "");
+        if (!ok) {
+          const newHash = await bcrypt.default.hash(GENESIS_PASSWORD, 12);
+          await db.update(users).set({ passwordHash: newHash }).where(eq(users.username, GENESIS_USERNAME));
+          console.log("[GENESIS USER] ✓ Nexus password hash refreshed");
+        } else {
+          console.log("[GENESIS USER] Users already exist — skipping seed");
+        }
+      }
       return;
     }
 
