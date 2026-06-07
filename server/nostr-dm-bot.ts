@@ -322,6 +322,22 @@ To stake via Nostr DM: !stake 10000 30
 (requires linked NexusOS account)
 
 Platform: https://wnsp.io/stake-earn`;
+  } else if (t.match(/moderator|mod\b|community|hype.?man|raider|raid|chatter|engag|role|position|apply|application|join.*team|team.*member|contribute|volunteer|work.*with|support.*team|mass.?dm/i)) {
+    reply =
+`💜 NexusOS — Community Team
+
+Love the energy! We're always looking for passionate people to help build the movement.
+
+Open roles:
+🛡 Moderators — keep channels clean
+📣 Hype crew — spread the word
+🔁 Raiders — coordinate raids and campaigns
+💬 Engagers — answer questions, onboard newcomers
+🎨 Creators — memes, threads, explainer content
+
+Apply here: https://wnsp.io/join-community
+
+Fill in the form and we'll get back to you. We read every application.`;
   } else {
     reply =
 `👁 NexusOS

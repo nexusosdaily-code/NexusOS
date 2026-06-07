@@ -1277,6 +1277,32 @@ Stake sats → earn NXT yield → auto-mint WNUSD stablecoin → add to liquidit
       );
     }
 
+    // ── COMMUNITY ROLE / MODERATOR / JOB APPLICATION ─────────────────────
+    const isCommunity = t.match(/moderator|mod\b|community|hype.?man|raider|raid|chatter|engag|role|position|apply|application|help.*project|join.*team|team.*member|contribute|volunteer|work.*with|support.*team|mass.?dm/i);
+    if (isCommunity) {
+      await forwardToAdmin(ctx, "COMMUNITY_APP");
+      return ctx.reply(
+`💜 *NexusOS — Community Team*
+
+Love the energy! We're always looking for passionate people to help build the NexusOS movement.
+
+*Open community roles:*
+🛡 Moderators — keep channels clean and welcoming
+📣 Hype crew — spread the word on X, Telegram, Discord
+🔁 Raiders — coordinate community raids and campaigns
+💬 Engagers — answer questions, onboard new members
+🎨 Creators — memes, threads, explainer content
+
+*Apply here:*
+🌐 https://wnsp.io/join-community
+
+Fill in the form — name, role you want, and why you're the right person. We read every application.
+
+@NexusOSWNSP`,
+        { parse_mode: "Markdown" }
+      );
+    }
+
     // ── ENCODING / PHYSICS / TECHNICAL ───────────────────────────────────
     if (t.includes("encode")||t.includes("wavelength")||t.includes("nm"))
       return ctx.reply(`Encoding? Try:\n/encode YOURWORD\n/compare A\n/frame YOURTEXT`);

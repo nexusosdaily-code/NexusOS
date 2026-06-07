@@ -13307,6 +13307,45 @@ export async function registerRoutes(
 
   // ─────────────────────────────────────────────────────────────────────────────
 
+  // ── Community Applications ────────────────────────────────────────────────────
+  app.post("/api/community/apply", async (req: Request, res: Response) => {
+    try {
+      const { name, telegram, twitter, role, why, experience } = req.body;
+      if (!name || !role || !why || why.length < 20)
+        return res.status(400).json({ error: "name, role, and why (20+ chars) are required" });
+      if (!telegram && !twitter)
+        return res.status(400).json({ error: "At least one contact method (Telegram or Twitter) is required" });
+
+      const tgToken = process.env.TELEGRAM_BOT_TOKEN;
+      const adminId = process.env.TELEGRAM_ADMIN_ID || process.env.TELEGRAM_CHANNEL_ID;
+      if (tgToken && adminId) {
+        const roleEmoji: Record<string, string> = {
+          moderator: "🛡", hype_crew: "📣", raider: "🔁", engager: "💬", creator: "🎨",
+        };
+        const emoji = roleEmoji[role] ?? "👤";
+        await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: adminId,
+            parse_mode: "HTML",
+            text: [
+              `${emoji} <b>Community Application — ${role.replace("_", " ").toUpperCase()}</b>`,
+              ``,
+              `👤 <b>Name:</b> ${name}`,
+              telegram ? `📱 <b>Telegram:</b> ${telegram}` : null,
+              twitter  ? `🐦 <b>Twitter:</b> ${twitter}`  : null,
+              ``,
+              `💬 <b>Why:</b>\n${why}`,
+              experience ? `\n📋 <b>Experience:</b>\n${experience}` : null,
+            ].filter(Boolean).join("\n"),
+          }),
+        }).catch(() => {});
+      }
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // ── Spectral Bundles — NXT + NXWV Runes + sats → WNUSD ──────────────────────
   app.get("/api/spectral-bundles", authenticate, async (req: Request, res: Response) => {
     try {
