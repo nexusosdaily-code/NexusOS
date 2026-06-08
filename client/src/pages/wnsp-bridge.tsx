@@ -324,7 +324,7 @@ function MyIdentityCard({ username }: { username: string }) {
                 color: "#f97316",
                 bg: "rgba(249,115,22,0.08)",
                 border: "rgba(249,115,22,0.25)",
-                href: "https://app.btcname.space/names/wnsp",
+                href: "https://btc.us/names/wnsp",
               },
               {
                 handle: "wnsp.sat",
