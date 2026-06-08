@@ -111,6 +111,15 @@ async function _seedLightningWallet(db: any, lightningWallets: any, userId: stri
     });
     console.log(`[GENESIS USER] ✓ Nexus lightning wallet seeded — ${NEXUS_SATS_BALANCE.toLocaleString()} sats`);
   } else {
-    console.log(`[GENESIS USER] Nexus lightning wallet OK — ${existing[0].satsBalance?.toLocaleString?.()} sats`);
+    const currentBalance = BigInt(existing[0].satsBalance ?? 0);
+    if (currentBalance < NEXUS_SATS_BALANCE) {
+      // Upgrade balance to match genesis target — runs on every redeploy until balance reaches target
+      await db.update(lightningWallets)
+        .set({ satsBalance: NEXUS_SATS_BALANCE, totalDeposited: NEXUS_SATS_BALANCE })
+        .where(eq(lightningWallets.userId, userId));
+      console.log(`[GENESIS USER] ✓ Nexus lightning wallet upgraded: ${currentBalance.toLocaleString()} → ${NEXUS_SATS_BALANCE.toLocaleString()} sats`);
+    } else {
+      console.log(`[GENESIS USER] Nexus lightning wallet OK — ${currentBalance.toLocaleString()} sats`);
+    }
   }
 }
