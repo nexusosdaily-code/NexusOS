@@ -97,7 +97,15 @@ function SpectralIdentityPanel({
 }: {
   spectral: SpectralData; isSelf: boolean;
 }) {
-  const band = BAND_META[spectral.band] ?? BAND_META.GUEST;
+  // Map colour bands (YELLOW/GREEN/etc.) → authority bands as a safety fallback
+  const COLOUR_TO_AUTHORITY: Record<string, string> = {
+    VIOLET: "SYSTEM", BLUE: "KERNEL", CYAN: "KERNEL",
+    GREEN: "USER",    YELLOW: "USER",  ORANGE: "GUEST", RED: "GUEST",
+  };
+  const resolvedBand = BAND_META[spectral.band]
+    ? spectral.band
+    : (COLOUR_TO_AUTHORITY[spectral.band] ?? "GUEST");
+  const band = BAND_META[resolvedBand] ?? BAND_META.GUEST;
   const freqHz  = C_LIGHT / (spectral.nm * 1e-9);
   const energyJ = H_PLANCK * freqHz;
   const lambdaKg = energyJ / (C_LIGHT * C_LIGHT);

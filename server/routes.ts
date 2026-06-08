@@ -6192,6 +6192,7 @@ export async function registerRoutes(
         role: usersTable.role, createdAt: usersTable.createdAt,
         bio: usersTable.bio, avatarUrl: usersTable.avatarUrl,
         country: usersTable.country, stateRegion: usersTable.stateRegion,
+        spectralBand: usersTable.spectralBand, spectralWdm: usersTable.spectralWdm,
       }).from(usersTable).where(eq(usersTable.username, username));
 
       if (!user) return res.status(404).json({ error: "User not found" });
@@ -6226,6 +6227,14 @@ export async function registerRoutes(
         .where(eq(wnspRegistry.registeredBy, user.id))
         .orderBy(desc(wnspRegistry.createdAt)).limit(20);
 
+      // Resolve authority band — prefer stored DB value (SYSTEM/KERNEL/USER/GUEST),
+      // fall back to WDM-derived band so colour names ("YELLOW") never reach the UI.
+      const AUTH_BANDS = new Set(["SYSTEM", "KERNEL", "USER", "GUEST"]);
+      const storedWdm  = user.spectralWdm ?? enc.wdm;
+      const authorityBand: string = AUTH_BANDS.has(user.spectralBand ?? "")
+        ? (user.spectralBand as string)
+        : getBand(storedWdm);
+
       const profileDensity = channelDensity(enc.wdm);
       res.json({
         user: { id: user.id, username: user.username, role: user.role, createdAt: user.createdAt,
@@ -6233,7 +6242,9 @@ export async function registerRoutes(
           country: user.country ?? null, stateRegion: user.stateRegion ?? null },
         wallet: wallet ? { address: wallet.address } : null,
         spectral: {
-          ...enc, registered: !!wnspEntry, entry: wnspEntry ?? null,
+          ...enc,
+          band: authorityBand,
+          registered: !!wnspEntry, entry: wnspEntry ?? null,
           httpUrl: `/profile/${username}`,
         },
         channel_density: profileDensity,
