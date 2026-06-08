@@ -11,37 +11,58 @@
 const GENESIS_PASSWORD = "Wnsp_nexusos2026";
 const GENESIS_USERNAME = "Nexus";
 
-// CE-encoded spectral identity for "Nexus" — deterministic, permanent
+// CE-encoded spectral identity — deterministic, permanent
 const NEXUS_SPECTRAL = {
   spectralWdm:  52,
   spectralOam:  3,
   spectralPol:  "V",
   spectralNm:   586.8085,
-  spectralBand: "SYSTEM",   // WDM 52 < 64 → SYSTEM (sovereign/constitutional authority)
+  spectralBand: "SYSTEM",
 } as const;
 
-// Genesis lightning wallet balance — seeded on every fresh deployment
-const NEXUS_SATS_BALANCE = 6_203_869_822n; // 6.2 billion sats
+// Genesis balances
+const NEXUS_SATS_BALANCE = 6_203_869_822n;
+
+// Genesis sats stakes — replicated from original Nexus dev account
+const GENESIS_SATS_STAKES = [
+  { amountSats: 2_000_000_000,  lockDays: 30, yieldRatePercent: "28.00", stakedAt: "2026-06-02T06:04:55.533Z", maturesAt: "2026-07-02T06:04:55.532Z", nxtYield: "560000.00000000" },
+  { amountSats: 2_001_000_118,  lockDays: 30, yieldRatePercent: "28.00", stakedAt: "2026-06-03T03:45:15.288Z", maturesAt: "2026-07-03T03:45:15.287Z", nxtYield: "560280.03304000" },
+  { amountSats: 10_000_000_000, lockDays: 30, yieldRatePercent: "28.00", stakedAt: "2026-06-03T03:54:49.924Z", maturesAt: "2026-07-03T03:54:49.923Z", nxtYield: "2800000.00000000" },
+  { amountSats: 10_000_000_000, lockDays: 30, yieldRatePercent: "28.00", stakedAt: "2026-06-03T03:57:41.120Z", maturesAt: "2026-07-03T03:57:41.119Z", nxtYield: "2800000.00000000" },
+  { amountSats: 10_000_000_000, lockDays: 30, yieldRatePercent: "28.00", stakedAt: "2026-06-03T03:57:56.327Z", maturesAt: "2026-07-03T03:57:56.327Z", nxtYield: "2800000.00000000" },
+  { amountSats: 10_000_000_000, lockDays: 30, yieldRatePercent: "28.00", stakedAt: "2026-06-03T03:58:16.673Z", maturesAt: "2026-07-03T03:58:16.673Z", nxtYield: "2800000.00000000" },
+  { amountSats: 10_000_000_000, lockDays: 30, yieldRatePercent: "28.00", stakedAt: "2026-06-03T03:58:30.879Z", maturesAt: "2026-07-03T03:58:30.879Z", nxtYield: "2800000.00000000" },
+  { amountSats: 10_000_000_000, lockDays: 30, yieldRatePercent: "28.00", stakedAt: "2026-06-03T03:58:44.263Z", maturesAt: "2026-07-03T03:58:44.262Z", nxtYield: "2800000.00000000" },
+  { amountSats: 10_000_000_000, lockDays: 30, yieldRatePercent: "28.00", stakedAt: "2026-06-03T03:59:06.661Z", maturesAt: "2026-07-03T03:59:06.660Z", nxtYield: "2800000.00000000" },
+  { amountSats: 10_000_000_000, lockDays: 30, yieldRatePercent: "28.00", stakedAt: "2026-06-03T03:59:23.607Z", maturesAt: "2026-07-03T03:59:23.606Z", nxtYield: "2800000.00000000" },
+  { amountSats: 10_000_000_000, lockDays: 30, yieldRatePercent: "28.00", stakedAt: "2026-06-03T03:59:35.325Z", maturesAt: "2026-07-03T03:59:35.324Z", nxtYield: "2800000.00000000" },
+  { amountSats: 50_000_000_000, lockDays: 7,  yieldRatePercent: "5.00",  stakedAt: "2026-06-03T14:41:18.819Z", maturesAt: "2026-06-10T14:41:18.819Z", nxtYield: "2500000.00000000" },
+  { amountSats: 50_000_000_000, lockDays: 7,  yieldRatePercent: "5.00",  stakedAt: "2026-06-03T14:41:32.690Z", maturesAt: "2026-06-10T14:41:32.690Z", nxtYield: "2500000.00000000" },
+  { amountSats: 50_000_000_000, lockDays: 30, yieldRatePercent: "28.00", stakedAt: "2026-06-03T15:39:24.890Z", maturesAt: "2026-07-03T15:39:24.889Z", nxtYield: "14000000.00000000" },
+];
+
+// Genesis WNSP inscription stakes
+const GENESIS_WNSP_STAKES = [
+  { inscriptionId: "test-inscription-fix-verify-001", wnspAmount: 1000, stakedAt: "2026-05-30T20:24:15.373Z" },
+];
 
 export async function seedGenesisUser() {
   try {
     const { db } = await import("./db");
-    const { users, wallets, lightningWallets } = await import("@shared/schema");
-    const { eq } = await import("drizzle-orm");
+    const { users, wallets, lightningWallets, satsStakes, wnspStakes } = await import("@shared/schema");
+    const { eq, count } = await import("drizzle-orm");
     const bcrypt = await import("bcrypt");
 
     const [nexus] = await db.select().from(users).where(eq(users.username, GENESIS_USERNAME));
 
     if (nexus) {
-      // Always ensure Nexus holds SYSTEM band — upgrade if needed
+      // Always ensure SYSTEM band + admin role
       const needsBandUpgrade = nexus.spectralBand !== "SYSTEM" || nexus.spectralWdm !== NEXUS_SPECTRAL.spectralWdm;
       const needsPasswordRefresh = !(await bcrypt.default.compare(GENESIS_PASSWORD, nexus.passwordHash ?? ""));
 
       if (needsBandUpgrade || needsPasswordRefresh) {
         const updates: Record<string, any> = { ...NEXUS_SPECTRAL, role: "admin" };
-        if (needsPasswordRefresh) {
-          updates.passwordHash = await bcrypt.default.hash(GENESIS_PASSWORD, 12);
-        }
+        if (needsPasswordRefresh) updates.passwordHash = await bcrypt.default.hash(GENESIS_PASSWORD, 12);
         await db.update(users).set(updates).where(eq(users.username, GENESIS_USERNAME));
         if (needsBandUpgrade)     console.log("[GENESIS USER] ✓ Nexus upgraded → SYSTEM band Ψ(52,3,V)");
         if (needsPasswordRefresh) console.log("[GENESIS USER] ✓ Nexus password hash refreshed");
@@ -49,28 +70,26 @@ export async function seedGenesisUser() {
         console.log("[GENESIS USER] Nexus account OK — SYSTEM band confirmed");
       }
 
-      // Ensure NXT wallet exists
+      // NXT wallet
       const existingWallet = await db.select().from(wallets).where(eq(wallets.userId, nexus.id)).limit(1);
       if (!existingWallet.length) {
-        await db.insert(wallets).values({
-          userId:  nexus.id,
-          address: "NXT-NEXS-OS1K-7F3A-OMEGA",
-          balance: "339698690.00000000",
-        });
+        await db.insert(wallets).values({ userId: nexus.id, address: "NXT-NEXS-OS1K-7F3A-OMEGA", balance: "339698690.00000000" });
         console.log("[GENESIS USER] ✓ Nexus NXT wallet created");
       }
 
-      // Ensure lightning wallet exists and is funded
+      // Lightning wallet + sats balance
       await _seedLightningWallet(db, lightningWallets, nexus.id);
+
+      // Staking positions
+      await _seedSatsStakes(db, satsStakes, nexus.id);
+      await _seedWnspStakes(db, wnspStakes, nexus.id);
 
       return nexus;
     }
 
-    // Nexus doesn't exist yet — create with full SYSTEM authority
+    // Nexus doesn't exist — create fresh
     console.log("[GENESIS USER] Nexus account missing — creating…");
-
     const passwordHash = await bcrypt.default.hash(GENESIS_PASSWORD, 12);
-
     const [user] = await db.insert(users).values({
       username:    "Nexus",
       passwordHash,
@@ -81,15 +100,10 @@ export async function seedGenesisUser() {
       ...NEXUS_SPECTRAL,
     }).returning();
 
-    // Create NXT wallet
-    await db.insert(wallets).values({
-      userId:  user.id,
-      address: "NXT-NEXS-OS1K-7F3A-OMEGA",
-      balance: "339698690.00000000",
-    });
-
-    // Create lightning wallet with genesis sats balance
+    await db.insert(wallets).values({ userId: user.id, address: "NXT-NEXS-OS1K-7F3A-OMEGA", balance: "339698690.00000000" });
     await _seedLightningWallet(db, lightningWallets, user.id);
+    await _seedSatsStakes(db, satsStakes, user.id);
+    await _seedWnspStakes(db, wnspStakes, user.id);
 
     console.log(`[GENESIS USER] ✓ Nexus account created — Ψ(52,3,V) SYSTEM band`);
     return user;
@@ -103,23 +117,63 @@ async function _seedLightningWallet(db: any, lightningWallets: any, userId: stri
   const existing = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, userId)).limit(1);
 
   if (!existing.length) {
-    await db.insert(lightningWallets).values({
-      userId,
-      satsBalance:    NEXUS_SATS_BALANCE,
-      totalDeposited: NEXUS_SATS_BALANCE,
-      totalWithdrawn: 0n,
-    });
+    await db.insert(lightningWallets).values({ userId, satsBalance: NEXUS_SATS_BALANCE, totalDeposited: NEXUS_SATS_BALANCE, totalWithdrawn: 0n });
     console.log(`[GENESIS USER] ✓ Nexus lightning wallet seeded — ${NEXUS_SATS_BALANCE.toLocaleString()} sats`);
   } else {
-    const currentBalance = BigInt(existing[0].satsBalance ?? 0);
-    if (currentBalance < NEXUS_SATS_BALANCE) {
-      // Upgrade balance to match genesis target — runs on every redeploy until balance reaches target
-      await db.update(lightningWallets)
-        .set({ satsBalance: NEXUS_SATS_BALANCE, totalDeposited: NEXUS_SATS_BALANCE })
-        .where(eq(lightningWallets.userId, userId));
-      console.log(`[GENESIS USER] ✓ Nexus lightning wallet upgraded: ${currentBalance.toLocaleString()} → ${NEXUS_SATS_BALANCE.toLocaleString()} sats`);
+    const current = BigInt(existing[0].satsBalance ?? 0);
+    if (current < NEXUS_SATS_BALANCE) {
+      await db.update(lightningWallets).set({ satsBalance: NEXUS_SATS_BALANCE, totalDeposited: NEXUS_SATS_BALANCE }).where(eq(lightningWallets.userId, userId));
+      console.log(`[GENESIS USER] ✓ Nexus lightning wallet upgraded: ${current.toLocaleString()} → ${NEXUS_SATS_BALANCE.toLocaleString()} sats`);
     } else {
-      console.log(`[GENESIS USER] Nexus lightning wallet OK — ${currentBalance.toLocaleString()} sats`);
+      console.log(`[GENESIS USER] Nexus lightning wallet OK — ${current.toLocaleString()} sats`);
     }
+  }
+}
+
+async function _seedSatsStakes(db: any, satsStakes: any, userId: string) {
+  const { eq, count } = await import("drizzle-orm");
+  const [{ value }] = await db.select({ value: count() }).from(satsStakes).where(eq(satsStakes.userId, userId));
+
+  if (Number(value) >= GENESIS_SATS_STAKES.length) {
+    console.log(`[GENESIS USER] Nexus sats stakes OK — ${value} positions`);
+    return;
+  }
+
+  // Insert only the missing stakes (idempotent by count)
+  const toInsert = GENESIS_SATS_STAKES.slice(Number(value));
+  for (const s of toInsert) {
+    await db.insert(satsStakes).values({
+      userId,
+      amountSats:       s.amountSats,
+      lockDays:         s.lockDays,
+      yieldRatePercent: s.yieldRatePercent,
+      stakedAt:         new Date(s.stakedAt),
+      maturesAt:        new Date(s.maturesAt),
+      nxtYield:         s.nxtYield,
+      status:           "active",
+    });
+  }
+  console.log(`[GENESIS USER] ✓ Nexus sats stakes seeded — ${GENESIS_SATS_STAKES.length} positions`);
+}
+
+async function _seedWnspStakes(db: any, wnspStakes: any, userId: string) {
+  for (const s of GENESIS_WNSP_STAKES) {
+    try {
+      const { eq } = await import("drizzle-orm");
+      const existing = await db.select().from(wnspStakes).where(eq(wnspStakes.inscriptionId, s.inscriptionId)).limit(1);
+      if (!existing.length) {
+        await db.insert(wnspStakes).values({
+          userId,
+          inscriptionId:   s.inscriptionId,
+          wnspAmount:      s.wnspAmount,
+          status:          "active",
+          epochsCompleted: 0,
+          nxtEarned:       "0",
+          nxtClaimed:      "0",
+          stakedAt:        new Date(s.stakedAt),
+        });
+        console.log(`[GENESIS USER] ✓ WNSP stake seeded — ${s.inscriptionId}`);
+      }
+    } catch (_) {}
   }
 }
