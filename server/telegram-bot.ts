@@ -164,6 +164,29 @@ export async function sendAdminAlert(message: string): Promise<void> {
   } catch { /* silent */ }
 }
 
+// ── Public channel photo post ─────────────────────────────────────────────────
+export async function sendChannelPhoto(imagePath: string, caption: string): Promise<void> {
+  const token     = process.env.TELEGRAM_BOT_TOKEN;
+  const channelId = process.env.TELEGRAM_CHANNEL_ID;
+  if (!token || !channelId) return;
+  try {
+    const fs   = await import("fs");
+    const path = await import("path");
+    const { FormData, File } = await import("formdata-node") as any;
+    const buf  = fs.default.readFileSync(imagePath);
+    const form = new FormData();
+    form.set("chat_id",    channelId);
+    form.set("caption",    caption);
+    form.set("parse_mode", "HTML");
+    form.set("photo",      new File([buf], path.default.basename(imagePath), { type: "image/jpeg" }));
+    await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, { method: "POST", body: form });
+  } catch (e: any) {
+    // fallback to text-only if photo fails
+    console.error("[TG sendChannelPhoto] fallback to text:", e.message);
+    await sendChannelPost(caption);
+  }
+}
+
 // ── Public channel post (TELEGRAM_CHANNEL_ID — e.g. @nexusos_official) ────────
 export async function sendChannelPost(message: string): Promise<void> {
   const token     = process.env.TELEGRAM_BOT_TOKEN;
