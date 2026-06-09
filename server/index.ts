@@ -68,6 +68,68 @@ declare module "http" {
 }
 
 app.use(cookieParser());
+
+// ── Dev environment gate ───────────────────────────────────────────────────
+if (process.env.NODE_ENV !== "production") {
+  const DEV_KEY = process.env.DEV_ACCESS_KEY || "";
+  const COOKIE  = "nexus_dev_key";
+
+  const lockScreen = (hint: string) => `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NexusOS — Restricted</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#000;color:#fff;font-family:monospace;display:flex;align-items:center;justify-content:center;min-height:100vh}
+  .box{background:#0a0a0a;border:1px solid #1a1a2e;border-radius:12px;padding:40px;width:340px;text-align:center}
+  .logo{font-size:22px;font-weight:700;letter-spacing:2px;color:#60a5fa;margin-bottom:8px}
+  .sub{color:#6b7280;font-size:12px;margin-bottom:32px}
+  input{width:100%;padding:12px 16px;background:#111;border:1px solid #374151;border-radius:8px;color:#fff;font-size:14px;font-family:monospace;margin-bottom:16px;outline:none}
+  input:focus{border-color:#60a5fa}
+  button{width:100%;padding:12px;background:#1d4ed8;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+  button:hover{background:#2563eb}
+  .err{color:#f87171;font-size:12px;margin-top:12px;display:${hint ? "block" : "none"}}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">◈ NEXUSOS</div>
+  <div class="sub">Development environment — restricted access</div>
+  <form method="POST" action="/dev-auth">
+    <input type="password" name="key" placeholder="Access key" autofocus autocomplete="off">
+    <button type="submit">Unlock</button>
+  </form>
+  <div class="err">${hint}</div>
+</div>
+</body>
+</html>`;
+
+  // Unlock endpoint
+  app.post("/dev-auth", express.urlencoded({ extended: false }), (req: Request, res: Response) => {
+    const provided = (req.body?.key || "").trim();
+    if (!DEV_KEY || provided === DEV_KEY) {
+      res.cookie(COOKIE, DEV_KEY, { httpOnly: true, sameSite: "strict" });
+      res.redirect(302, req.query.next?.toString() || "/");
+    } else {
+      res.status(401).send(lockScreen("Invalid access key."));
+    }
+  });
+
+  // Gate middleware — runs before all other routes
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path === "/dev-auth") return next();
+    if (!DEV_KEY) return next(); // no key configured = open
+    if (req.cookies?.[COOKIE] === DEV_KEY) return next();
+    // Allow health/API checks from localhost
+    const ip = req.ip || req.socket?.remoteAddress || "";
+    if (ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1") return next();
+    res.status(401).send(lockScreen(""));
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.use(
   express.json({
     limit: "150mb",
