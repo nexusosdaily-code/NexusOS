@@ -424,9 +424,8 @@ async function sendTelegram(text: string): Promise<{ ok: boolean; messageId?: nu
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return { ok: false, error: "TELEGRAM_BOT_TOKEN not set" };
 
-  // Prefer a dedicated channel ID; fall back to admin chat
-  const chatId = process.env.TELEGRAM_CHANNEL_ID || process.env.TELEGRAM_ADMIN_ID;
-  if (!chatId) return { ok: false, error: "No TELEGRAM_CHANNEL_ID or TELEGRAM_ADMIN_ID set" };
+  // @troglodytememe (wnsp.tech channel) — confirmed numeric ID
+  const chatId = "-1002572762871";
 
   try {
     const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -538,10 +537,9 @@ export function startNxtCampaignAgent(intervalMs?: number) {
   const ms = intervalMs ?? (parsedMs > 0 ? parsedMs : DEFAULT_INTERVAL_MS);
   _state.intervalMs = ms;
 
-  const tgCh  = (process.env.TELEGRAM_CHANNEL_ID || process.env.TELEGRAM_ADMIN_ID) ?? "(none)";
   const nostrOk = !!process.env.NOSTR_NSEC;
   _state.channels = [
-    process.env.TELEGRAM_BOT_TOKEN ? `Telegram → ${tgCh}` : null,
+    process.env.TELEGRAM_BOT_TOKEN ? `Telegram → @troglodytememe (wnsp.tech)` : null,
     nostrOk ? "Nostr" : null,
   ].filter(Boolean) as string[];
 

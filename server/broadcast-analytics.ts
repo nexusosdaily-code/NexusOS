@@ -50,8 +50,9 @@ wnsp.tech
 
 async function sendTelegramPhoto() {
   const token     = process.env.TELEGRAM_BOT_TOKEN;
-  const channelId = process.env.TELEGRAM_CHANNEL_ID;
-  if (!token || !channelId) { console.error("[TG] Missing credentials"); return; }
+  // @troglodytememe (wnsp.tech channel) — confirmed numeric ID
+  const channelId = "-1002572762871";
+  if (!token) { console.error("[TG] Missing TELEGRAM_BOT_TOKEN"); return; }
 
   const buf  = fs.readFileSync(IMAGE_PATH);
   const blob = new Blob([buf], { type: "image/jpeg" });
