@@ -187,7 +187,8 @@ export async function registerRoutes(
   // ============================================
   
   const wss = new WebSocketServer({ server: httpServer, path: "/ws/signaling" });
-  
+  wss.on("error", (err) => console.error("[WSS signaling] error:", err.message));
+
   wss.on("connection", async (ws, req) => {
     const url = new URL(req.url || "", `http://${req.headers.host}`);
     const token = url.searchParams.get("token");
@@ -344,7 +345,8 @@ export async function registerRoutes(
   };
   
   const streamingWss = new WebSocketServer({ server: httpServer, path: "/ws/streaming" });
-  
+  streamingWss.on("error", (err) => console.error("[WSS streaming] error:", err.message));
+
   streamingWss.on("connection", async (ws, req) => {
     const url = new URL(req.url || "", `http://${req.headers.host}`);
     const token = url.searchParams.get("token");
