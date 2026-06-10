@@ -23,6 +23,10 @@ const PREMINE      = "0 (zero premine)";
 const WEBSITE      = "https://wnsp.tech";
 const GITHUB       = "https://github.com/nexusosdaily-code/NexusOS";
 const TELEGRAM     = "https://t.me/troglodytememe";
+const TWITTER      = "https://x.com/NexusOSWNSP";
+const WHITEPAPER   = "https://wnsp.tech/wnsp-paper";
+const TOKENOMICS   = "https://wnsp.tech/campaign";
+const AUDIT_URL    = "https://wnsp.tech/coinsniper";
 const ETCHED_DATE  = "2026-06-06";
 const LICENSE      = "AGPL-3.0";
 
@@ -50,6 +54,10 @@ const FIELDS = [
   { label: "Website",               value: WEBSITE,      tip: "Main site — wnsp.tech" },
   { label: "GitHub",                value: GITHUB,       tip: "Full open source repository" },
   { label: "Telegram",              value: TELEGRAM,     tip: "Community channel" },
+  { label: "Twitter / X",           value: TWITTER,      tip: "Official project Twitter — @NexusOSWNSP" },
+  { label: "Whitepaper",            value: WHITEPAPER,   tip: "Full WNSP technical paper — paste as whitepaper URL" },
+  { label: "Tokenomics",            value: TOKENOMICS,   tip: "NXT + NXWV token distribution breakdown" },
+  { label: "Audit URL",             value: AUDIT_URL,    tip: "Paste this as the audit link — on-chain verified" },
   { label: "Description (≤500 ch)", value: DESCRIPTION,  tip: "Copy directly into the description field" },
 ];
 
@@ -215,6 +223,36 @@ export default function CoinsnierPage() {
           <Stat icon={<Lock size={16} />}         label="Premine"       value="0 — Zero" />
           <Stat icon={<Layers size={16} />}       label="Total Supply"  value="21 Trillion NXWV" />
           <Stat icon={<TrendingUp size={16} />}   label="Mints"         value="1,000 / 1,000 ✓" />
+        </div>
+
+        {/* submission checklist */}
+        <div className="rounded-xl border border-white/8 bg-black/30 p-5 space-y-2">
+          <h2 className="text-xs font-semibold text-white/50 uppercase tracking-widest mb-3">Submission Checklist</h2>
+          {[
+            { done: true,  label: "Rune etched on Bitcoin mainnet",          note: "Block 952596 · ID 952596:379" },
+            { done: true,  label: "Website live",                            note: "wnsp.tech" },
+            { done: true,  label: "Telegram channel active",                 note: "t.me/troglodytememe" },
+            { done: true,  label: "Twitter / X account",                     note: "@NexusOSWNSP" },
+            { done: true,  label: "GitHub open source (AGPL-3.0)",          note: "github.com/nexusosdaily-code/NexusOS" },
+            { done: true,  label: "Whitepaper published",                    note: "wnsp.tech/wnsp-paper" },
+            { done: true,  label: "Tokenomics page live",                   note: "wnsp.tech/campaign" },
+            { done: true,  label: "Audit page ready",                        note: "wnsp.tech/coinsniper" },
+            { done: true,  label: "All submission fields prepared",          note: "See Submission Fields tab" },
+            { done: false, label: "Logo — 512×512 PNG",                     note: "Download opengraph.jpg → crop to square → upload" },
+            { done: false, label: "KYC — founder identity verification",    note: "Submit your ID via Coinsniper link or DM @duncancoinsniper" },
+          ].map(({ done, label, note }) => (
+            <div key={label} className="flex items-start gap-3 py-1.5">
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold ${
+                done ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"
+              }`}>
+                {done ? "✓" : "!"}
+              </div>
+              <div>
+                <div className={`text-xs font-semibold ${done ? "text-white" : "text-yellow-300"}`}>{label}</div>
+                <div className="text-[11px] text-white/35 mt-0.5">{note}</div>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* tabs */}
