@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Trophy, CheckCircle2, Circle, ExternalLink, Twitter, MessageCircle,
+  Trophy, CheckCircle2, Circle, ExternalLink, MessageCircle,
   Zap, Share2, Eye, Gift, Star, Clock, ChevronRight, Copy, ArrowRight,
 } from "lucide-react";
 
@@ -34,22 +34,12 @@ interface Task {
 
 const TASKS: Task[] = [
   {
-    id: "twitter_follow",
-    icon: <Twitter className="w-5 h-5 text-sky-400" />,
-    title: "Follow NexusOS on X",
-    description: "Follow @NexusOSWNSP on X (Twitter) to stay updated on physics OS development.",
-    action: "follow",
-    actionUrl: "https://x.com/NexusOSWNSP",
-    actionLabel: "Follow on X",
-    points: 100,
-  },
-  {
     id: "telegram_join",
     icon: <MessageCircle className="w-5 h-5 text-blue-400" />,
     title: "Join the Telegram",
     description: "Join the NexusOS Telegram channel — official announcements, rune updates, physics discussions.",
     action: "join",
-    actionUrl: "https://t.me/NexusOSWNSP",
+    actionUrl: "https://t.me/troglodytememe",
     actionLabel: "Join Telegram",
     points: 100,
   },
@@ -74,13 +64,13 @@ const TASKS: Task[] = [
     points: 200,
   },
   {
-    id: "share_x",
+    id: "share_nostr",
     icon: <Share2 className="w-5 h-5 text-green-400" />,
-    title: "Share NXWV on X",
-    description: 'Post about NEXUS•WAVELENGTH on X with the hashtag #NexusOS and tag @NexusOSWNSP.',
+    title: "Share NXWV on Nostr",
+    description: "Post about NEXUS•WAVELENGTH on Nostr with the hashtag #NexusOS. Zap goals welcome.",
     action: "share",
-    actionUrl: "https://x.com/intent/tweet?text=Just%20discovered%20%40NexusOSWNSP%20%E2%80%94%20a%20physics-based%20OS%20for%20photonic%20computing.%20Not%20a%20blockchain%2C%20an%20actual%20physics%20engine.%0A%0ANXWV%20Rune%20%F0%9F%9F%A0%20952590%3A379%20%7C%2021T%20supply%20%7C%20fully%20sealed%20June%202026%0A%0Ahttps%3A%2F%2Fwnsp.io%20%23NexusOS%20%23Bitcoin%20%23Runes",
-    actionLabel: "Post on X",
+    actionUrl: "https://primal.net/new-note?content=Just%20discovered%20NexusOS%20%E2%80%94%20a%20physics-based%20OS%20for%20photonic%20computing.%20NXWV%20Rune%20%F0%9F%9F%A0%20952596%3A379%20%7C%2021T%20supply%20%7C%20fully%20sealed.%20https%3A%2F%2Fwnsp.io%20%23NexusOS%20%23Bitcoin%20%23Runes",
+    actionLabel: "Post on Nostr",
     points: 150,
   },
   {
@@ -300,7 +290,7 @@ export default function QuestHubPage() {
           ) : (
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Your X (Twitter) handle</label>
+                <label className="text-xs text-gray-400 mb-1 block">Your Nostr npub</label>
                 <input
                   type="text"
                   placeholder="@yourhandle"

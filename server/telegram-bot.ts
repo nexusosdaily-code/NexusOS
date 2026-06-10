@@ -765,7 +765,7 @@ NPM — nexusos-ce-encoder
   Monthly:       ${npm?.monthly ?? "—"}
 
 COMMUNITY
-  Telegram:      t.me/NexusOSWNSP
+  Telegram:      t.me/troglodytememe
   Bot:           @Nexuswnspbot
   Reddit:        u/NEXUSOS-WNSP-CE-SE
 
@@ -1342,7 +1342,7 @@ NXT is paid directly to your wnsp.io wallet. No volunteers — everyone gets com
 
 Fill in the form and we'll reach out to confirm your role + wallet details.
 
-@NexusOSWNSP`,
+NexusOS`,
         { parse_mode: "Markdown" }
       );
     }

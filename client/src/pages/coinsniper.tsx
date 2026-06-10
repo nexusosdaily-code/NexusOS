@@ -23,7 +23,7 @@ const PREMINE      = "0 (zero premine)";
 const WEBSITE      = "https://wnsp.io";
 const GITHUB       = "https://github.com/nexusosdaily-code/NexusOS";
 const TELEGRAM     = "https://t.me/troglodytememe";
-const TWITTER      = "https://x.com/NexusOSWNSP";
+const NOSTR        = "https://primal.net/p/NexusOS";
 const WHITEPAPER   = "https://wnsp.io/wnsp-paper";
 const TOKENOMICS   = "https://wnsp.io/campaign";
 const AUDIT_URL    = "https://wnsp.io/coinsniper";
@@ -54,7 +54,7 @@ const FIELDS = [
   { label: "Website",               value: WEBSITE,      tip: "Main site — wnsp.io" },
   { label: "GitHub",                value: GITHUB,       tip: "Full open source repository" },
   { label: "Telegram",              value: TELEGRAM,     tip: "Community channel" },
-  { label: "Twitter / X",           value: TWITTER,      tip: "Official project Twitter — @NexusOSWNSP" },
+  { label: "Nostr",                  value: NOSTR,        tip: "NexusOS on Nostr — Zap Goals + announcements" },
   { label: "Whitepaper",            value: WHITEPAPER,   tip: "Full WNSP technical paper — paste as whitepaper URL" },
   { label: "Tokenomics",            value: TOKENOMICS,   tip: "NXT + NXWV token distribution breakdown" },
   { label: "Audit URL",             value: AUDIT_URL,    tip: "Paste this as the audit link — on-chain verified" },
@@ -232,7 +232,7 @@ export default function CoinsnierPage() {
             { done: true,  label: "Rune etched on Bitcoin mainnet",          note: "Block 952596 · ID 952596:379" },
             { done: true,  label: "Website live",                            note: "wnsp.io" },
             { done: true,  label: "Telegram channel active",                 note: "t.me/troglodytememe" },
-            { done: true,  label: "Twitter / X account",                     note: "@NexusOSWNSP" },
+            { done: true,  label: "Nostr presence",                          note: "Zap Goals live" },
             { done: true,  label: "GitHub open source (AGPL-3.0)",          note: "github.com/nexusosdaily-code/NexusOS" },
             { done: true,  label: "Whitepaper published",                    note: "wnsp.io/wnsp-paper" },
             { done: true,  label: "Tokenomics page live",                   note: "wnsp.io/campaign" },

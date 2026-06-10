@@ -13,7 +13,7 @@ import {
   ArrowRight, Check, ExternalLink, Layers, Activity,
   Waves, Lock, Star, Users, ChevronDown, ChevronUp,
   TrendingUp, Briefcase, Award, Scale, Copy, Send,
-  FileText, Github, MessageCircle, Twitter, Rss,
+  FileText, Github, MessageCircle, Rss,
 } from "lucide-react";
 
 function wlToRgb(nm: number): string {
@@ -342,11 +342,10 @@ export default function CrowdfundPage() {
         {/* Platform connectivity map */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
           {[
-            { icon: "⚡", name: "Nostr",      status: "live",    desc: "Zap Goals + auto-promo", url: "https://primal.net/p/" + encodeURIComponent("NexusOSWNSP") },
+            { icon: "⚡", name: "Nostr",      status: "live",    desc: "Zap Goals + auto-promo", url: "https://primal.net" },
             { icon: "🌊", name: "Geyser",     status: "setup",   desc: "Bitcoin Lightning crowdfund", url: "https://geyser.fund/create" },
             { icon: "✈️", name: "Telegram",   status: "live",    desc: "Auto-broadcast channel", url: "https://t.me/troglodytememe" },
             { icon: "🚀", name: "Indiegogo",  status: "pending", desc: "Fiat donations bridge", url: "https://indiegogo.com" },
-            { icon: "🐦", name: "Twitter/X",  status: "live",    desc: "@NexusOSWNSP", url: "https://x.com/NexusOSWNSP" },
             { icon: "💻", name: "GitHub",     status: "live",    desc: "AGPL-3.0 open source", url: "https://github.com/nexusosdaily-code/NexusOS" },
           ].map(p => (
             <a key={p.name} href={p.url} target="_blank" rel="noreferrer"

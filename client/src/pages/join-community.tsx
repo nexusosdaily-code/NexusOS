@@ -13,7 +13,7 @@ import { Users, Shield, Megaphone, RotateCcw, MessageCircle, Palette, CheckCircl
 const ROLES = [
   { id: "moderator", label: "Moderator", icon: Shield,        color: "text-blue-400",   bg: "border-blue-500/30 bg-blue-950/20",     desc: "Keep channels clean, welcoming, and on-topic",          pay: "500 NXT / month",    payNote: "Fixed monthly" },
   { id: "hype_crew", label: "Hype Crew", icon: Megaphone,     color: "text-yellow-400", bg: "border-yellow-500/30 bg-yellow-950/20", desc: "Spread NexusOS on X, Telegram, Discord, Reddit",        pay: "50 NXT / post",      payNote: "Per verified campaign" },
-  { id: "raider",    label: "Raider",    icon: RotateCcw,     color: "text-orange-400", bg: "border-orange-500/30 bg-orange-950/20", desc: "Coordinate community raids and Twitter spaces",          pay: "100 NXT / raid",     payNote: "Per organised raid" },
+  { id: "raider",    label: "Raider",    icon: RotateCcw,     color: "text-orange-400", bg: "border-orange-500/30 bg-orange-950/20", desc: "Coordinate community raids and Nostr/Telegram spaces",   pay: "100 NXT / raid",     payNote: "Per organised raid" },
   { id: "engager",   label: "Engager",   icon: MessageCircle, color: "text-green-400",  bg: "border-green-500/30 bg-green-950/20",   desc: "Answer questions, onboard new members, run AMAs",       pay: "200 NXT / week",     payNote: "Active presence" },
   { id: "creator",   label: "Creator",   icon: Palette,       color: "text-violet-400", bg: "border-violet-500/30 bg-violet-950/20", desc: "Memes, threads, explainer content, short videos",       pay: "500 NXT / piece",    payNote: "Content bounty" },
 ];
@@ -21,7 +21,7 @@ const ROLES = [
 interface FormData {
   name: string;
   telegram: string;
-  twitter: string;
+  nostr: string;
   role: string;
   why: string;
   experience: string;
@@ -31,7 +31,7 @@ export default function JoinCommunityPage() {
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState<FormData>({
-    name: "", telegram: "", twitter: "", role: "", why: "", experience: "",
+    name: "", telegram: "", nostr: "", role: "", why: "", experience: "",
   });
 
   const set = (k: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -40,7 +40,7 @@ export default function JoinCommunityPage() {
   const selectRole = (id: string) => setForm(f => ({ ...f, role: id }));
 
   const isValid = form.name.trim() && form.role && form.why.trim().length >= 20 &&
-    (form.telegram.trim() || form.twitter.trim());
+    (form.telegram.trim() || form.nostr.trim());
 
   const submitMut = useMutation({
     mutationFn: () => apiRequest("POST", "/api/community/apply", form),
@@ -64,7 +64,7 @@ export default function JoinCommunityPage() {
           <h1 className="text-2xl font-bold text-white">Application received</h1>
           <p className="text-zinc-400">We'll reach out via Telegram or X to confirm your role and NXT wallet details for payment.</p>
           <div className="flex gap-3 justify-center pt-2">
-            <a href="https://t.me/NexusOSWNSP" target="_blank" rel="noreferrer"
+            <a href="https://t.me/troglodytememe" target="_blank" rel="noreferrer"
               className="inline-flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300 transition-colors">
               <ExternalLink className="w-3.5 h-3.5" /> Telegram community
             </a>
@@ -153,12 +153,12 @@ export default function JoinCommunityPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">X / Twitter</Label>
+                <Label className="text-xs text-zinc-400">Nostr npub</Label>
                 <Input
                   placeholder="@yourhandle"
-                  value={form.twitter} onChange={set("twitter")}
+                  value={form.nostr} onChange={set("nostr")}
                   className="bg-zinc-800 border-zinc-600 text-white"
-                  data-testid="input-twitter"
+                  data-testid="input-nostr"
                 />
               </div>
             </div>
@@ -203,7 +203,7 @@ export default function JoinCommunityPage() {
         <div className="text-center text-xs text-zinc-600 space-y-1">
           <p>Already part of the community?</p>
           <div className="flex justify-center gap-4">
-            <a href="https://t.me/NexusOSWNSP" target="_blank" rel="noreferrer" className="text-violet-400 hover:underline">Telegram</a>
+            <a href="https://t.me/troglodytememe" target="_blank" rel="noreferrer" className="text-violet-400 hover:underline">Telegram</a>
             <a href="https://coinsniper.net/coin/91963" target="_blank" rel="noreferrer" className="text-orange-400 hover:underline">Coinsniper</a>
             <a href="https://wnsp.io" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">Platform</a>
           </div>

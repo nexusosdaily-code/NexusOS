@@ -258,7 +258,7 @@ export default function StartPage() {
             </Link>
 
             {/* Telegram */}
-            <a href="https://t.me/NexusOSWNSP" target="_blank" rel="noopener noreferrer">
+            <a href="https://t.me/troglodytememe" target="_blank" rel="noopener noreferrer">
               <div className="rounded-2xl border border-[#229ED9]/20 bg-[#229ED9]/5 p-5 flex items-center gap-4 hover:border-[#229ED9]/40 transition-colors cursor-pointer group">
                 <div className="flex-1 space-y-1">
                   <p className="text-sm font-bold text-white">Join the channel</p>

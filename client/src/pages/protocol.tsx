@@ -171,7 +171,7 @@ result = ce_encode('A')
           <h1 className="text-base font-bold text-white font-mono">WNSP·CE-SE Encoding Protocol</h1>
           <p className="text-[11px] text-slate-500 font-mono">v1.0.0 · AGPL-3.0 · genesis Ψ(228,45,H) · λ≈737.6 nm</p>
         </div>
-        <a href="https://t.me/NexusOSWNSP" target="_blank" rel="noopener noreferrer"
+        <a href="https://t.me/troglodytememe" target="_blank" rel="noopener noreferrer"
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
           style={{ background: "#229ED920", color: "#229ED9", border: "1px solid #229ED940" }}>
           <TelegramIcon size={13} /> Join channel
@@ -377,7 +377,7 @@ result = ce_encode('A')
         {/* ── Links ── */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
-            { icon: TelegramIcon, color: "#229ED9", label: "Join the channel",    sub: "t.me/NexusOSWNSP",         href: "https://t.me/NexusOSWNSP" },
+            { icon: TelegramIcon, color: "#229ED9", label: "Join the channel",    sub: "t.me/troglodytememe",      href: "https://t.me/troglodytememe" },
             { icon: null,         color: "#e2e8f0", label: "Source code",          sub: "github.com/nexusosdaily-code", href: "https://github.com/nexusosdaily-code/NexusOS" },
             { icon: null,         color: "#f97316", label: "npm package",          sub: "nexusos-ce-encoder",       href: "https://www.npmjs.com/package/nexusos-ce-encoder" },
           ].map((l, i) => (

@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 
 const BOT_USERNAME    = "Nexuswnspbot";
-const CHANNEL_USERNAME = "NexusOSWNSP";
+const CHANNEL_USERNAME = "troglodytememe";
 
 interface Message { from: "user" | "bot"; text: string; ts: number; }
 

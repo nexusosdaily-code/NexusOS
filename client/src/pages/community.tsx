@@ -46,7 +46,7 @@ const LINKS = [
     border: "#229ED940",
     label: "Join the WNSP·CE-SE Community",
     sublabel: "Telegram channel — hardware builds, physics discussion, 2032 roadmap",
-    href: "https://t.me/NexusOSWNSP",
+    href: "https://t.me/troglodytememe",
     cta: "Open Telegram",
     external: true,
   },
@@ -283,7 +283,7 @@ export default function CommunityPage() {
           <p className="text-xs text-slate-500">Open physics · Open code · 2032 photonic roadmap</p>
         </div>
         <div className="ml-auto">
-          <a href="https://t.me/NexusOSWNSP" target="_blank" rel="noopener noreferrer"
+          <a href="https://t.me/troglodytememe" target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-colors"
             style={{ background: "#229ED920", color: "#229ED9", border: "1px solid #229ED940" }}>
             <TelegramIcon size={14} /> Join on Telegram
@@ -428,7 +428,7 @@ export default function CommunityPage() {
             Hardware builds · Physics discussion · Code drops · 2032 roadmap updates.
             Average people building extraordinary infrastructure, together.
           </p>
-          <a href="https://t.me/NexusOSWNSP" target="_blank" rel="noopener noreferrer"
+          <a href="https://t.me/troglodytememe" target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-sm transition-colors"
             style={{ background: "#229ED9", color: "#fff" }}>
             <TelegramIcon size={16} /> Open Telegram Channel

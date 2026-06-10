@@ -13770,7 +13770,7 @@ This is not an investment. Donations fund open-source hardware development for a
 Thank you for believing in the mission.
 
 — NexusOS Team
-wnsp.io | @NexusOSWNSP | t.me/troglodytememe`,
+wnsp.io | t.me/troglodytememe`,
     });
   });
 
@@ -13793,11 +13793,11 @@ wnsp.io | @NexusOSWNSP | t.me/troglodytememe`,
   // ── Community Applications ────────────────────────────────────────────────────
   app.post("/api/community/apply", async (req: Request, res: Response) => {
     try {
-      const { name, telegram, twitter, role, why, experience } = req.body;
+      const { name, telegram, nostr, role, why, experience } = req.body;
       if (!name || !role || !why || why.length < 20)
         return res.status(400).json({ error: "name, role, and why (20+ chars) are required" });
-      if (!telegram && !twitter)
-        return res.status(400).json({ error: "At least one contact method (Telegram or Twitter) is required" });
+      if (!telegram && !nostr)
+        return res.status(400).json({ error: "At least one contact method (Telegram or Nostr) is required" });
 
       const tgToken = process.env.TELEGRAM_BOT_TOKEN;
       const adminId = process.env.TELEGRAM_ADMIN_ID || process.env.TELEGRAM_CHANNEL_ID;
@@ -13817,7 +13817,7 @@ wnsp.io | @NexusOSWNSP | t.me/troglodytememe`,
               ``,
               `👤 <b>Name:</b> ${name}`,
               telegram ? `📱 <b>Telegram:</b> ${telegram}` : null,
-              twitter  ? `🐦 <b>Twitter:</b> ${twitter}`  : null,
+              nostr    ? `⚡ <b>Nostr:</b> ${nostr}`      : null,
               ``,
               `💬 <b>Why:</b>\n${why}`,
               experience ? `\n📋 <b>Experience:</b>\n${experience}` : null,

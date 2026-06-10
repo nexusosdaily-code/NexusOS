@@ -394,7 +394,7 @@ function Router() {
 function TelegramFloat() {
   return (
     <a
-      href="https://t.me/NexusOSWNSP"
+      href="https://t.me/troglodytememe"
       target="_blank"
       rel="noopener noreferrer"
       title="Join our Telegram"
