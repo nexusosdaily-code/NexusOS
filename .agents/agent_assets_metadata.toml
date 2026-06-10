@@ -84,6 +84,24 @@ uri = "file://client/public/nexusos-icon.png"
 type = "image"
 title = "nexusos alphabet spectrum icon"
 
+[[generated]]
+id = "xKeUSH6fNpStkFcOdnqJM"
+uri = "file://client/public/nexusos-icon-v2.png"
+type = "image"
+title = "nexusos hexagon convergence icon"
+
+[[generated]]
+id = "-qSf5uTs8-2c5SdP3-b97"
+uri = "file://client/public/nexusos-icon-v3.png"
+type = "image"
+title = "nexusos standing wave channel icon"
+
+[[generated]]
+id = "JCERzQmF-kA8LN5cL0MbX"
+uri = "file://client/public/nexusos-icon-v4.png"
+type = "image"
+title = "nexusos psi channel icon"
+
 [[outputs]]
 id = "H5DxipQLmLvHtAwbjOE_f"
 uri = "file://attached_assets/phase0_campaign.png"
