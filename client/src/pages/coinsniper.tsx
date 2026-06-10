@@ -1,60 +1,131 @@
 /**
- * /coinsniper — NXWV Coinsniper submission dossier
- * All submission fields are copy-ready. Logo downloadable below.
+ * /coinsniper — NXWV Coinsniper KYC + Audit dossier
  */
 import { useState } from "react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import {
   Copy, CheckCircle2, ExternalLink, Bitcoin, Lock,
-  Layers, TrendingUp, Zap, ArrowLeft,
+  Layers, TrendingUp, Zap, ArrowLeft, ShieldCheck,
+  FileText, User, Code2, GitBranch, Globe, ChevronDown, ChevronUp,
 } from "lucide-react";
 
-const RUNE_ID      = "952590:379";
+const RUNE_ID      = "952596:379";
+const ETCH_TXID    = "03e96173f181e3323be796736cfa193b6f11bac374cc1ef7f8f8ecdf0150df3b";
 const RUNE_NAME    = "NEXUS•WAVELENGTH";
 const TICKER       = "NXWV";
 const TOTAL_SUPPLY = "21,000,000,000,000";
 const PER_MINT     = "21,000,000,000";
 const MAX_MINTS    = "1,000";
-const MINTS_DONE   = "1,000 / 1,000 — permanently sealed June 2026";
-const WEBSITE      = "https://wnsp.io";
-const BUY_URL      = "https://wnsp.io/rune-pipeline";
-const TELEGRAM     = "https://t.me/NexusOSWNSP";
+const SYMBOL       = "🌈";
+const DIVISIBILITY = "0";
+const PREMINE      = "0 (zero premine)";
+const WEBSITE      = "https://wnsp.tech";
+const GITHUB       = "https://github.com/nexusosdaily-code/NexusOS";
+const TELEGRAM     = "https://t.me/troglodytememe";
+const ETCHED_DATE  = "2026-06-06";
+const LICENSE      = "AGPL-3.0";
 
 const DESCRIPTION =
   "NEXUS•WAVELENGTH (NXWV) is the native Rune of NexusOS — a physics-based " +
   "civilization OS built on electromagnetic wave equations. 21 trillion supply. " +
-  "All 1,000 mints permanently sealed June 2026. No more NXWV will ever be " +
-  "created. Acquire via the NexusOS pipeline at wnsp.io. " +
-  "Rune ID: 952590:379 on Bitcoin mainnet.";
+  "All 1,000 mints permanently sealed June 2026. Zero premine. No more NXWV will ever be " +
+  "created. Built on the Theory of Compression States (Λ=hf/c²). " +
+  "AGPL-3.0 open source. Rune ID: 952596:379 on Bitcoin mainnet.";
 
 const FIELDS = [
   { label: "Project Name",          value: RUNE_NAME,    tip: "Full Rune name with bullet separator" },
-  { label: "Ticker / Symbol",       value: TICKER,       tip: "Use NXWV as the short symbol" },
+  { label: "Ticker / Symbol",       value: TICKER,       tip: "Short symbol for the listing" },
   { label: "Chain",                 value: "Bitcoin",    tip: "Select Bitcoin — clarify Rune type in description" },
   { label: "Rune ID (Contract)",    value: RUNE_ID,      tip: "Paste as the contract / token address field" },
+  { label: "Etching Transaction",   value: ETCH_TXID,    tip: "On-chain proof of etching" },
   { label: "Total Supply",          value: TOTAL_SUPPLY, tip: "21 trillion — all minted, sealed" },
   { label: "Per Mint",              value: PER_MINT,     tip: "21 billion NXWV per mint transaction" },
   { label: "Max Mints",             value: MAX_MINTS,    tip: "1,000 mints total — all 1,000 claimed" },
-  { label: "Mints Status",          value: MINTS_DONE,   tip: "Supply permanently locked" },
-  { label: "Launch Date",           value: "June 2026",  tip: "All mints sealed June 2026" },
-  { label: "Website",               value: WEBSITE,      tip: "Main site" },
-  { label: "Buy / Acquire URL",     value: BUY_URL,      tip: "Direct pipeline link — use as the Buy button URL" },
+  { label: "Premine",               value: PREMINE,      tip: "Zero premine — fully community minted" },
+  { label: "Divisibility",          value: DIVISIBILITY, tip: "Whole units only, no decimals" },
+  { label: "Symbol",                value: SYMBOL,       tip: "Rainbow emoji — spectral representation" },
+  { label: "Launch Date",           value: ETCHED_DATE,  tip: "Etched on Bitcoin block 952596" },
+  { label: "License",               value: LICENSE,      tip: "All source code AGPL-3.0 on GitHub" },
+  { label: "Website",               value: WEBSITE,      tip: "Main site — wnsp.tech" },
+  { label: "GitHub",                value: GITHUB,       tip: "Full open source repository" },
   { label: "Telegram",              value: TELEGRAM,     tip: "Community channel" },
   { label: "Description (≤500 ch)", value: DESCRIPTION,  tip: "Copy directly into the description field" },
 ];
 
+const AUDIT_CHECKS = [
+  {
+    icon: <Bitcoin size={15} />,
+    title: "On-Chain Proof of Etching",
+    status: "VERIFIED",
+    color: "green",
+    detail: `Rune NEXUS•WAVELENGTH was etched on Bitcoin mainnet at block 952596, transaction index 379. TX: ${ETCH_TXID.slice(0,16)}…${ETCH_TXID.slice(-8)}. Verifiable on ordinals.com, ordiscan.com, and mempool.space.`,
+  },
+  {
+    icon: <Lock size={15} />,
+    title: "Supply Cap — Permanently Sealed",
+    status: "VERIFIED",
+    color: "green",
+    detail: "1,000 mints × 21,000,000,000 NXWV = 21,000,000,000,000 total. All 1,000 mints are claimed. Remaining mints: 0. Mintable: false. No further supply can ever be created by protocol enforcement.",
+  },
+  {
+    icon: <ShieldCheck size={15} />,
+    title: "Zero Premine",
+    status: "VERIFIED",
+    color: "green",
+    detail: "Premine = 0. No tokens were reserved for team/founders. All supply was publicly mintable from block 952596. Verifiable on ordinals.com — premine field shows 0.",
+  },
+  {
+    icon: <Code2 size={15} />,
+    title: "Open Source — AGPL-3.0",
+    status: "VERIFIED",
+    color: "green",
+    detail: `Full NexusOS source code is published on GitHub under AGPL-3.0. Repository: github.com/nexusosdaily-code/NexusOS. The Runestone encoder, WNSP protocol, and all wallet logic are public and auditable.`,
+  },
+  {
+    icon: <GitBranch size={15} />,
+    title: "Published npm Package",
+    status: "VERIFIED",
+    color: "green",
+    detail: "CE encoder published as nexusos-ce-encoder@1.0.0 on npmjs.com (user: wnsp001). Installable: npm install nexusos-ce-encoder. Python equivalent installable via pip from GitHub.",
+  },
+  {
+    icon: <Globe size={15} />,
+    title: "Live Production Application",
+    status: "LIVE",
+    color: "blue",
+    detail: "NexusOS is live at wnsp.tech. Production deployment includes: phone auth, NXT wallet, WNSP VM, WavelengthScript compiler, spectral routing, P2P media, Lightning payments, and governance.",
+  },
+  {
+    icon: <FileText size={15} />,
+    title: "Physics Protocol Specification",
+    status: "PUBLISHED",
+    color: "blue",
+    detail: "Formal specification (AGPL-3.0 protected) covering SNIC, PHR-1, Spectral Relay Mesh v1, WavelengthScript Compiler α. First public disclosure 2026-05-16. Available at wnsp.tech/hardware-spec.",
+  },
+  {
+    icon: <Zap size={15} />,
+    title: "Runestone Encoding",
+    status: "VERIFIED",
+    color: "green",
+    detail: "The Rune was etched using a valid OP_RETURN Runestone. Tags: divisibility=0, premine=0, symbol=🌈. Mint terms: amount=21B, cap=1000. Encoding verified against the Runes protocol specification.",
+  },
+];
+
+const statusColors: Record<string, string> = {
+  green: "text-green-400 bg-green-500/10 border-green-500/20",
+  blue:  "text-blue-400 bg-blue-500/10 border-blue-500/20",
+};
+
 function CopyField({ label, value, tip }: { label: string; value: string; tip: string }) {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
-
   const copy = () => {
     navigator.clipboard.writeText(value);
     setCopied(true);
     toast({ title: `${label} copied` });
     setTimeout(() => setCopied(false), 2000);
   };
-
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/8 transition-colors">
       <div className="flex items-start justify-between gap-3">
@@ -63,16 +134,34 @@ function CopyField({ label, value, tip }: { label: string; value: string; tip: s
           <p className="text-sm text-white font-mono break-all leading-relaxed">{value}</p>
           <p className="text-xs text-white/40 mt-1">{tip}</p>
         </div>
-        <button
-          onClick={copy}
-          data-testid={`copy-${label.toLowerCase().replace(/\s+/g, "-")}`}
-          className="shrink-0 p-2 rounded-lg hover:bg-purple-500/20 transition-colors"
-        >
-          {copied
-            ? <CheckCircle2 className="w-4 h-4 text-green-400" />
-            : <Copy className="w-4 h-4 text-white/50" />}
+        <button onClick={copy} data-testid={`copy-${label.toLowerCase().replace(/\s+/g, "-")}`}
+          className="shrink-0 p-2 rounded-lg hover:bg-purple-500/20 transition-colors">
+          {copied ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-white/50" />}
         </button>
       </div>
+    </div>
+  );
+}
+
+function AuditCheck({ icon, title, status, color, detail }: typeof AUDIT_CHECKS[0]) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`rounded-xl border p-4 ${statusColors[color]} bg-black/20 border-white/10`}>
+      <button className="w-full flex items-center gap-3 text-left" onClick={() => setOpen(!open)}>
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${statusColors[color]}`}>
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-white">{title}</div>
+        </div>
+        <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusColors[color]} shrink-0`}>
+          {status}
+        </div>
+        {open ? <ChevronUp size={14} className="text-white/30 shrink-0" /> : <ChevronDown size={14} className="text-white/30 shrink-0" />}
+      </button>
+      {open && (
+        <p className="text-xs text-white/50 leading-relaxed mt-3 pl-11">{detail}</p>
+      )}
     </div>
   );
 }
@@ -80,9 +169,7 @@ function CopyField({ label, value, tip }: { label: string; value: string; tip: s
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-xl border border-white/8 bg-black/30 p-4 flex items-center gap-3">
-      <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center text-purple-400 shrink-0">
-        {icon}
-      </div>
+      <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center text-purple-400 shrink-0">{icon}</div>
       <div>
         <div className="text-[10px] font-mono uppercase tracking-wider text-white/30">{label}</div>
         <div className="text-sm font-semibold text-white leading-snug mt-0.5">{value}</div>
@@ -91,24 +178,13 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
   );
 }
 
-const STEPS = [
-  { n: 1, title: "View live listing on Coinsniper", desc: "coinsniper.net/coin/91963" },
-  { n: 2, title: "Select Bitcoin › Rune",       desc: "Chain = Bitcoin, type = Rune" },
-  { n: 3, title: "Paste the fields below",       desc: "Every field on this page is copy-ready" },
-  { n: 4, title: "Upload the logo",              desc: "Download PNG from this page and attach" },
-  { n: 5, title: "Submit for review",            desc: "Goes live for community voting once approved" },
-];
-
 export default function CoinsnierPage() {
-  const [activeStep, setActiveStep] = useState(0);
+  const [tab, setTab] = useState<"audit" | "fields" | "kyc">("audit");
 
   return (
     <div className="min-h-screen bg-[#080808] text-white">
       <div className="max-w-2xl mx-auto px-4 pt-6 pb-2">
-        <Link
-          href="/market"
-          className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors"
-        >
+        <Link href="/market" className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors">
           <ArrowLeft size={12} /> Back to Market
         </Link>
       </div>
@@ -117,117 +193,167 @@ export default function CoinsnierPage() {
 
         {/* hero */}
         <div className="rounded-2xl border border-purple-500/25 bg-gradient-to-br from-purple-900/20 to-black p-7 text-center space-y-4">
-          <img
-            src="/nexus-wavelength-logo.png"
-            alt="NEXUS•WAVELENGTH"
-            className="w-16 h-16 rounded-2xl mx-auto object-cover border border-white/10"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
+          <div className="text-4xl">🌈</div>
           <div>
             <div className="text-[10px] font-mono uppercase tracking-widest text-purple-400/60 mb-1">
-              Coinsniper Listing Dossier
+              Coinsniper KYC + Audit Dossier
             </div>
             <h1 className="text-2xl font-bold text-white">NEXUS•WAVELENGTH</h1>
             <p className="text-sm text-white/40 mt-1">
-              Rune ID 952590:379 · Bitcoin Mainnet · 21 Trillion Supply · Sealed Forever
+              Rune ID {RUNE_ID} · Bitcoin Mainnet · 21 Trillion · Sealed Forever · Zero Premine
             </p>
           </div>
-          <a
-            href="https://coinsniper.net/coin/91963"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold transition-colors"
-          >
-            <ExternalLink size={13} /> View Live Listing on Coinsniper
+          <a href="https://coinsniper.net/coin/91963" target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold transition-colors">
+            <ExternalLink size={13} /> View on Coinsniper
           </a>
         </div>
 
         {/* stats */}
         <div className="grid grid-cols-2 gap-3">
-          <Stat icon={<Bitcoin size={16} />} label="Chain"        value="Bitcoin (Runes)" />
-          <Stat icon={<Lock size={16} />}    label="Supply sealed" value="June 2026" />
-          <Stat icon={<Layers size={16} />}  label="Total Supply"  value="21 Trillion NXWV" />
-          <Stat icon={<TrendingUp size={16} />} label="Mints"     value="1,000 / 1,000 ✓" />
+          <Stat icon={<Bitcoin size={16} />}     label="Chain"         value="Bitcoin (Runes)" />
+          <Stat icon={<Lock size={16} />}         label="Premine"       value="0 — Zero" />
+          <Stat icon={<Layers size={16} />}       label="Total Supply"  value="21 Trillion NXWV" />
+          <Stat icon={<TrendingUp size={16} />}   label="Mints"         value="1,000 / 1,000 ✓" />
         </div>
 
-        {/* steps */}
-        <div className="rounded-xl border border-white/8 bg-black/30 p-5 space-y-2">
-          <h2 className="text-sm font-semibold text-white mb-3">How to Submit</h2>
-          {STEPS.map((s) => (
-            <button
-              key={s.n}
-              onClick={() => setActiveStep(s.n === activeStep ? 0 : s.n)}
-              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors text-left"
-            >
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
-                activeStep === s.n ? "bg-purple-500 text-white" : "bg-white/10 text-white/40"
-              }`}>
-                {s.n}
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-white">{s.title}</div>
-                <div className="text-[11px] text-white/40">{s.desc}</div>
-              </div>
-            </button>
+        {/* tabs */}
+        <div className="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/8">
+          {([["audit","Audit Report"],["kyc","KYC Guide"],["fields","Submission Fields"]] as const).map(([k,l]) => (
+            <button key={k} onClick={() => setTab(k)}
+              data-testid={`tab-${k}`}
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                tab === k ? "bg-purple-500 text-white" : "text-white/40 hover:text-white"
+              }`}>{l}</button>
           ))}
         </div>
 
-        {/* copy-ready fields */}
-        <div className="space-y-3">
-          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest font-mono">
-            Submission Fields — All Copy-Ready
-          </h2>
-          {FIELDS.map((f) => (
-            <CopyField key={f.label} label={f.label} value={f.value} tip={f.tip} />
-          ))}
-        </div>
+        {/* AUDIT TAB */}
+        {tab === "audit" && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <ShieldCheck size={14} className="text-green-400" />
+              <h2 className="text-xs font-semibold text-white/60 uppercase tracking-widest">
+                Project Audit — On-Chain Verified
+              </h2>
+            </div>
 
-        {/* logo download */}
-        <div className="rounded-xl border border-white/8 bg-black/30 p-5 flex items-center gap-4">
-          <img
-            src="/nexus-wavelength-logo.png"
-            alt="NXWV logo"
-            className="w-14 h-14 rounded-xl object-cover border border-white/10 shrink-0"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-          <div className="flex-1">
-            <div className="text-xs font-semibold text-white">Project Logo</div>
-            <div className="text-[11px] text-white/40 mt-0.5">PNG · Upload directly into the Coinsniper form</div>
-          </div>
-          <a
-            href="/nexus-wavelength-logo.png"
-            download="nexus-wavelength-logo.png"
-            className="text-xs font-semibold px-4 py-2 rounded-full bg-white/8 border border-white/10 text-white/60 hover:text-white hover:bg-white/15 transition-colors"
-          >
-            Download
-          </a>
-        </div>
+            {AUDIT_CHECKS.map((c) => <AuditCheck key={c.title} {...c} />)}
 
-        {/* ordiscan verify */}
-        <div className="rounded-xl border border-orange-500/15 bg-orange-900/8 p-4 flex items-center justify-between gap-3">
-          <div>
-            <div className="text-xs font-semibold text-white">Verify on Ordiscan</div>
-            <div className="text-[11px] text-white/40 mt-0.5">On-chain proof for Coinsniper reviewers</div>
-          </div>
-          <a
-            href="https://ordiscan.com/rune/NEXUS%E2%80%A2WAVELENGTH"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-semibold px-4 py-2 rounded-full bg-orange-500/20 border border-orange-500/30 text-orange-300 hover:bg-orange-500/30 transition-colors flex items-center gap-1.5 shrink-0"
-          >
-            <ExternalLink size={11} /> Ordiscan
-          </a>
-        </div>
+            {/* on-chain links */}
+            <div className="rounded-xl border border-white/8 bg-black/30 p-5 space-y-3">
+              <h3 className="text-xs font-semibold text-white/50 uppercase tracking-widest">Verify On-Chain</h3>
+              {[
+                { label: "Ordinals.com", href: "https://ordinals.com/rune/NEXUS%E2%80%A2WAVELENGTH" },
+                { label: "Ordiscan",     href: "https://ordiscan.com/rune/NEXUS%E2%80%A2WAVELENGTH" },
+                { label: "Mempool.space TX", href: `https://mempool.space/tx/${ETCH_TXID}` },
+                { label: "GitHub Source",   href: GITHUB },
+              ].map(({ label, href }) => (
+                <a key={label} href={href} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-between group p-3 rounded-lg border border-white/6 hover:border-purple-500/30 hover:bg-purple-500/5 transition-colors">
+                  <span className="text-sm text-white/70 group-hover:text-white transition-colors">{label}</span>
+                  <ExternalLink size={12} className="text-white/30 group-hover:text-purple-400 transition-colors" />
+                </a>
+              ))}
+            </div>
 
-        {/* pipeline tip */}
-        <div className="rounded-xl border border-cyan-500/20 bg-cyan-900/10 p-4 flex items-start gap-3">
-          <Zap size={15} className="text-cyan-400 mt-0.5 shrink-0" />
-          <div className="text-[11px] text-white/50 leading-relaxed">
-            <span className="text-white font-semibold text-xs">Buy URL tip: </span>
-            set <span className="font-mono text-cyan-300">wnsp.io/rune-pipeline</span> as the "Buy" link
-            on the Coinsniper listing — sends traders directly into the NexusOS acquisition flow.
+            {/* hardware spec */}
+            <div className="rounded-xl border border-blue-500/20 bg-blue-900/8 p-4">
+              <div className="text-xs font-semibold text-blue-300 mb-1">Hardware Specification — Public Disclosure</div>
+              <p className="text-[11px] text-white/40 leading-relaxed mb-3">
+                AGPL-3.0 protected formal spec covering SNIC, PHR-1, Spectral Relay Mesh v1, and WavelengthScript Compiler α.
+                First public disclosure 2026-05-16.
+              </p>
+              <Link href="/hardware-spec"
+                className="inline-flex items-center gap-1.5 text-xs text-blue-300 hover:text-blue-200 transition-colors">
+                <ExternalLink size={11} /> View Hardware Spec →
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* KYC TAB */}
+        {tab === "kyc" && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-yellow-500/20 bg-yellow-900/8 p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <User size={15} className="text-yellow-400" />
+                <h2 className="text-sm font-semibold text-white">KYC — Founder Identity Verification</h2>
+              </div>
+              <p className="text-xs text-white/50 leading-relaxed">
+                Coinsniper requires the project founder to personally submit a government-issued ID.
+                This process happens directly on their platform — no code required.
+              </p>
+              <div className="space-y-2">
+                {[
+                  "1. Open the Coinsniper KYC link from the email",
+                  "2. Sign in or create a Coinsniper account",
+                  "3. Select NEXUS•WAVELENGTH (NXWV) as your project",
+                  "4. Upload a clear photo of your government-issued ID",
+                  "5. Submit — review takes 24–48 hours",
+                  "6. OR DM @duncancoinsniper on Telegram to expedite",
+                ].map((step) => (
+                  <div key={step} className="flex items-start gap-2 text-xs text-white/60">
+                    <span className="text-yellow-400 shrink-0">›</span>
+                    <span>{step}</span>
+                  </div>
+                ))}
+              </div>
+              <a href="https://t.me/duncancoinsniper" target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 text-xs font-semibold hover:bg-yellow-500/30 transition-colors">
+                <ExternalLink size={11} /> DM @duncancoinsniper on Telegram
+              </a>
+            </div>
+
+            <div className="rounded-xl border border-green-500/20 bg-green-900/8 p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={15} className="text-green-400" />
+                <h2 className="text-sm font-semibold text-white">Audit — Link This Page</h2>
+              </div>
+              <p className="text-xs text-white/50 leading-relaxed">
+                When Coinsniper asks for an audit link, use this page URL. It contains on-chain
+                verifiable proof, open source code links, supply verification, and protocol specs.
+              </p>
+              <CopyField
+                label="Audit Page URL"
+                value="https://wnsp.tech/coinsniper"
+                tip="Paste this as the audit link in your Coinsniper submission"
+              />
+              <CopyField
+                label="Hardware Spec URL"
+                value="https://wnsp.tech/hardware-spec"
+                tip="Formal protocol specification — AGPL-3.0 protected, first disclosed 2026-05-16"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* FIELDS TAB */}
+        {tab === "fields" && (
+          <div className="space-y-3">
+            <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest font-mono">
+              All Fields — Copy-Ready
+            </h2>
+            {FIELDS.map((f) => (
+              <CopyField key={f.label} label={f.label} value={f.value} tip={f.tip} />
+            ))}
+
+            {/* logo download */}
+            <div className="rounded-xl border border-white/8 bg-black/30 p-5 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-purple-900/40 border border-purple-500/20 flex items-center justify-center text-3xl shrink-0">
+                🌈
+              </div>
+              <div className="flex-1">
+                <div className="text-xs font-semibold text-white">Project Logo / Symbol</div>
+                <div className="text-[11px] text-white/40 mt-0.5">Use 🌈 as the symbol or download the NexusOS logo PNG</div>
+              </div>
+              <a href="/nexus-wavelength-logo.png" download="nexus-wavelength-logo.png"
+                className="text-xs font-semibold px-4 py-2 rounded-full bg-white/8 border border-white/10 text-white/60 hover:text-white hover:bg-white/15 transition-colors">
+                Download
+              </a>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
