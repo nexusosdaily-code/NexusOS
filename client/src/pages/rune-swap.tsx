@@ -77,7 +77,7 @@ Floor @ $200k BTC: 100 sats ≈ $0.20/NXWV
 + Rune market premium on top
 
 Start the pipeline 👇
-https://wnsp.tech/rune-swap
+https://wnsp.io/rune-swap
 
 NEXUS•WAVELENGTH | Rune ID: 840000:8472 | Supply: 21,000,000
 

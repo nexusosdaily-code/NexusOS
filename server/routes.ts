@@ -11143,7 +11143,7 @@ export async function registerRoutes(
           `Mint NEXUS•WAVELENGTH on Bitcoin 👇`,
           `https://unisat.io/runes/detail/NEXUS%E2%80%A2WAVELENGTH`,
           ``,
-          `Bridge yours at wnsp.tech/rune-swap`,
+          `Bridge yours at wnsp.io/rune-swap`,
           ``,
           `#Bitcoin #Runes #NEXUSWAVELENGTH #WNSP #NexusOS`,
         ].join("\n");
@@ -11248,7 +11248,7 @@ export async function registerRoutes(
             `Mint NEXUS•WAVELENGTH on Bitcoin 👇`,
             `https://unisat.io/runes/detail/NEXUS%E2%80%A2WAVELENGTH`,
             ``,
-            `Wrap your Rune UTXOs at wnsp.tech/rune-swap`,
+            `Wrap your Rune UTXOs at wnsp.io/rune-swap`,
             ``,
             `#Bitcoin #Runes #NEXUSWAVELENGTH #WNSP #NexusOS`,
           ].join("\n"),
@@ -11357,7 +11357,7 @@ export async function registerRoutes(
             `The Pipeline: Buy NXT → Convert to Sats → Wrap NXWV on Bitcoin`,
             `1 NXT = 1,000 sats = 10 NXWV`,
             ``,
-            `Start your pipeline at wnsp.tech/rune-swap`,
+            `Start your pipeline at wnsp.io/rune-swap`,
             ``,
             `#Bitcoin #Runes #NEXUSWAVELENGTH #WNSP #NexusOS`,
           ].join("\n"),
@@ -12536,7 +12536,7 @@ export async function registerRoutes(
     });
   }
   // ── Nostr relay bridge ────────────────────────────────────────────────────────
-  // GET /.well-known/nostr.json — NIP-05 verification for wnsp@wnsp.tech
+  // GET /.well-known/nostr.json — NIP-05 verification for wnsp@wnsp.io
   app.get("/.well-known/nostr.json", (_req: Request, res: Response) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.json({
@@ -13618,7 +13618,7 @@ export async function registerRoutes(
         campaignAgent.fireEventBroadcast({
           emoji: campaign.emoji ?? "🎁",
           title: `${campaign.title} — ${newCount} Claims Reached!`,
-          body: `${newCount} NexusOS users have claimed their airdrop. ${campaign.maxClaims - newCount} spots remaining. Claim yours at wnsp.tech/airdrop`,
+          body: `${newCount} NexusOS users have claimed their airdrop. ${campaign.maxClaims - newCount} spots remaining. Claim yours at wnsp.io/airdrop`,
           hashtags: ["NexusOS", "NXTAirdrop", "WNSP", "FreeNXT"],
         }).catch(() => {/* non-fatal */});
       }

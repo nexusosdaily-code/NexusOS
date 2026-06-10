@@ -66,7 +66,7 @@ export function buildInscriptionContent(event: BridgeEvent, anchorPsi = "Ψ(27,5
   const lines = [
     "WASCII-v2.0 NEXUSOS EVENT INSCRIPTION",
     "Wavelength Network Spectral Protocol (WNSP) — Bitcoin Audit Layer",
-    `Platform : wnsp.tech  |  Organization: wnsp.io`,
+    `Platform : wnsp.io  |  Organization: wnsp.io`,
     `Anchor   : wnsp.sats · wnsp.sat  |  ${anchorPsi}  |  KERNEL band`,
     `Names    : wnsp.btc (BNS) · wnsp.unisat (UniSat) · wnsp.sats · wnsp.sat  |  AGPL-3.0  |  ${ts.split("T")[0]}`,
     SEP, `EVENT   : ${event.type}`, `REF     : ${event.ref}`,
@@ -87,10 +87,10 @@ export function buildInscriptionContent(event: BridgeEvent, anchorPsi = "Ψ(27,5
     "Protocol: WNSP-CE v1.0 / WNSP-SE v1.0 / WASCII-v2.0",
     "Network : Bitcoin (Taproot · Ordinals)", SEP,
     "This inscription is a permanent audit record of a NexusOS",
-    "blockchain event. Developed at wnsp.tech, governed by wnsp.io.",
+    "blockchain event. Developed at wnsp.io, governed by wnsp.io.",
     "The physics cannot be altered. The record cannot be burned.",
     SEP,
-    "PLATFORM: https://wnsp.tech",
+    "PLATFORM: https://wnsp.io",
     "ORG     : https://wnsp.io",
     "LICENSE : AGPL-3.0");
   return lines.join("\n");
@@ -441,7 +441,7 @@ export class BtcBridgeService {
         destination:   "Orbital Treasury (wnsp.io)",
         settlement:    "NXT held in orbital treasury — not destroyed",
         treasury_org:  "wnsp.io",
-        platform:      "wnsp.tech",
+        platform:      "wnsp.io",
       },
     });
   }
@@ -511,7 +511,7 @@ export class BtcBridgeService {
         campaign_name: campaign.name,
         milestone:     campaign.milestone ?? null,
         wallet:        campaign.walletAddress ?? null,
-        platform:      "wnsp.tech",
+        platform:      "wnsp.io",
         org:           "wnsp.io",
       },
     });

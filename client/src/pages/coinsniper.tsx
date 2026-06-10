@@ -20,13 +20,13 @@ const MAX_MINTS    = "1,000";
 const SYMBOL       = "🌈";
 const DIVISIBILITY = "0";
 const PREMINE      = "0 (zero premine)";
-const WEBSITE      = "https://wnsp.tech";
+const WEBSITE      = "https://wnsp.io";
 const GITHUB       = "https://github.com/nexusosdaily-code/NexusOS";
 const TELEGRAM     = "https://t.me/troglodytememe";
 const TWITTER      = "https://x.com/NexusOSWNSP";
-const WHITEPAPER   = "https://wnsp.tech/wnsp-paper";
-const TOKENOMICS   = "https://wnsp.tech/campaign";
-const AUDIT_URL    = "https://wnsp.tech/coinsniper";
+const WHITEPAPER   = "https://wnsp.io/wnsp-paper";
+const TOKENOMICS   = "https://wnsp.io/campaign";
+const AUDIT_URL    = "https://wnsp.io/coinsniper";
 const ETCHED_DATE  = "2026-06-06";
 const LICENSE      = "AGPL-3.0";
 
@@ -51,7 +51,7 @@ const FIELDS = [
   { label: "Symbol",                value: SYMBOL,       tip: "Rainbow emoji — spectral representation" },
   { label: "Launch Date",           value: ETCHED_DATE,  tip: "Etched on Bitcoin block 952596" },
   { label: "License",               value: LICENSE,      tip: "All source code AGPL-3.0 on GitHub" },
-  { label: "Website",               value: WEBSITE,      tip: "Main site — wnsp.tech" },
+  { label: "Website",               value: WEBSITE,      tip: "Main site — wnsp.io" },
   { label: "GitHub",                value: GITHUB,       tip: "Full open source repository" },
   { label: "Telegram",              value: TELEGRAM,     tip: "Community channel" },
   { label: "Twitter / X",           value: TWITTER,      tip: "Official project Twitter — @NexusOSWNSP" },
@@ -102,14 +102,14 @@ const AUDIT_CHECKS = [
     title: "Live Production Application",
     status: "LIVE",
     color: "blue",
-    detail: "NexusOS is live at wnsp.tech. Production deployment includes: phone auth, NXT wallet, WNSP VM, WavelengthScript compiler, spectral routing, P2P media, Lightning payments, and governance.",
+    detail: "NexusOS is live at wnsp.io. Production deployment includes: phone auth, NXT wallet, WNSP VM, WavelengthScript compiler, spectral routing, P2P media, Lightning payments, and governance.",
   },
   {
     icon: <FileText size={15} />,
     title: "Physics Protocol Specification",
     status: "PUBLISHED",
     color: "blue",
-    detail: "Formal specification (AGPL-3.0 protected) covering SNIC, PHR-1, Spectral Relay Mesh v1, WavelengthScript Compiler α. First public disclosure 2026-05-16. Available at wnsp.tech/hardware-spec.",
+    detail: "Formal specification (AGPL-3.0 protected) covering SNIC, PHR-1, Spectral Relay Mesh v1, WavelengthScript Compiler α. First public disclosure 2026-05-16. Available at wnsp.io/hardware-spec.",
   },
   {
     icon: <Zap size={15} />,
@@ -230,13 +230,13 @@ export default function CoinsnierPage() {
           <h2 className="text-xs font-semibold text-white/50 uppercase tracking-widest mb-3">Submission Checklist</h2>
           {[
             { done: true,  label: "Rune etched on Bitcoin mainnet",          note: "Block 952596 · ID 952596:379" },
-            { done: true,  label: "Website live",                            note: "wnsp.tech" },
+            { done: true,  label: "Website live",                            note: "wnsp.io" },
             { done: true,  label: "Telegram channel active",                 note: "t.me/troglodytememe" },
             { done: true,  label: "Twitter / X account",                     note: "@NexusOSWNSP" },
             { done: true,  label: "GitHub open source (AGPL-3.0)",          note: "github.com/nexusosdaily-code/NexusOS" },
-            { done: true,  label: "Whitepaper published",                    note: "wnsp.tech/wnsp-paper" },
-            { done: true,  label: "Tokenomics page live",                   note: "wnsp.tech/campaign" },
-            { done: true,  label: "Audit page ready",                        note: "wnsp.tech/coinsniper" },
+            { done: true,  label: "Whitepaper published",                    note: "wnsp.io/wnsp-paper" },
+            { done: true,  label: "Tokenomics page live",                   note: "wnsp.io/campaign" },
+            { done: true,  label: "Audit page ready",                        note: "wnsp.io/coinsniper" },
             { done: true,  label: "All submission fields prepared",          note: "See Submission Fields tab" },
             { done: false, label: "Logo — 512×512 PNG",                     note: "Download opengraph.jpg → crop to square → upload" },
             { done: false, label: "KYC — founder identity verification",    note: "Submit your ID via Coinsniper link or DM @duncancoinsniper" },
@@ -354,12 +354,12 @@ export default function CoinsnierPage() {
               </p>
               <CopyField
                 label="Audit Page URL"
-                value="https://wnsp.tech/coinsniper"
+                value="https://wnsp.io/coinsniper"
                 tip="Paste this as the audit link in your Coinsniper submission"
               />
               <CopyField
                 label="Hardware Spec URL"
-                value="https://wnsp.tech/hardware-spec"
+                value="https://wnsp.io/hardware-spec"
                 tip="Formal protocol specification — AGPL-3.0 protected, first disclosed 2026-05-16"
               />
             </div>

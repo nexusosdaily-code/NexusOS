@@ -7,7 +7,7 @@ export const WHITEPAPER_SUMMARY =
   "NexusOS replaces cryptographic hashing with electromagnetic wave physics. " +
   "E=hf governs fees. Ψ channels replace IP addresses. " +
   "WavelengthScript runs on silicon today, photonics in 2032. " +
-  "85M NXT Nostr Advocacy Airdrop live now at wnsp.tech/airdrop";
+  "85M NXT Nostr Advocacy Airdrop live now at wnsp.io/airdrop";
 
 const FENCE = "```";
 
@@ -167,7 +167,7 @@ export const WHITEPAPER_CONTENT = [
   "**1,000 NXT per wallet · 85,000 claims · first-come, first-served**",
   "",
   "**To claim in ~10 seconds:**",
-  "1. Go to **wnsp.tech/airdrop**",
+  "1. Go to **wnsp.io/airdrop**",
   "2. Click *Sign in with Nostr* — one signature with Alby or nos2x",
   "3. Your spectral wallet and Ψ channel are assigned automatically",
   "4. 1,000 NXT appears in your wallet instantly",
@@ -178,7 +178,7 @@ export const WHITEPAPER_CONTENT = [
   "",
   "*Built on the Theory of Compression States.*",
   "*First public disclosure: 2026-05-16.*",
-  "*AGPL-3.0 · wnsp.tech · Ψ(52,3,V)*",
+  "*AGPL-3.0 · wnsp.io · Ψ(52,3,V)*",
   "",
   "**#nexusos #wnsp #nxt #nostr #bitcoin #photonics #physics #blockchain**",
 ].join("\n");

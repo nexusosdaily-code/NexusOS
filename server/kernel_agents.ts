@@ -157,7 +157,7 @@ async function osKernelTick() {
     import("./btc-bridge-service").then(({ btcBridge }) => {
       btcBridge.triggerFromKernel({
         type: "HEALTH_SNAPSHOT", ref: `os-kernel-cycle-${osCycle}`,
-        data: { ...snap, cycle: osCycle, layer: "NexusOS OS Kernel", platform: "wnsp.tech", org: "wnsp.io" },
+        data: { ...snap, cycle: osCycle, layer: "NexusOS OS Kernel", platform: "wnsp.io", org: "wnsp.io" },
       }).catch(() => {});
     }).catch(() => {});
   }
@@ -289,7 +289,7 @@ async function authGatewayTick() {
         agentId: "auth_gateway", agentName: "Auth Gateway",
         action:  `Assigned spectral channels to ${assigned} user(s)`,
         psiChannel: "Ψ(110,15,H)",
-        data: { channels_assigned: assigned, layer: "NexusOS Auth Gateway", platform: "wnsp.tech" },
+        data: { channels_assigned: assigned, layer: "NexusOS Auth Gateway", platform: "wnsp.io" },
       }).catch(() => {});
     }).catch(() => {});
   }

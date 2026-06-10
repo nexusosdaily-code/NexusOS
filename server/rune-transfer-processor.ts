@@ -330,7 +330,7 @@ export async function processRuneOrders(): Promise<void> {
             `${order.runeAmount.toLocaleString()} NXWV sent automatically via the NexusOS pipeline.`,
             `NXT → sats → NXWV in under 60 seconds.`,
             ``,
-            `wnsp.tech/rune-pipeline`,
+            `wnsp.io/rune-pipeline`,
             ``,
             `#Bitcoin #Runes #NEXUSWAVELENGTH #WNSP #NexusOS`,
           ].join("\n"),

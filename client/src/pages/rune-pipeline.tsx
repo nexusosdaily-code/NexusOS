@@ -165,7 +165,7 @@ export default function RunePipelinePage() {
         `🟣 Rune scarcity (21M fixed supply)`,
         `⚡ NXT utility (bridge back to NexusOS)`,
         ``,
-        `Try the pipeline → wnsp.tech/rune-pipeline`,
+        `Try the pipeline → wnsp.io/rune-pipeline`,
         ``,
         `#Bitcoin #Runes #NEXUSWAVELENGTH #NXT #WNSP #NexusOS`,
       ].join("\n");

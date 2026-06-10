@@ -71,7 +71,7 @@ Why?
 
 This isn't speculation. Every NXT funds the Kardashev Type I hardware roadmap.
 
-👉 wnsp.tech — buy NXT, stake, earn WNUSD.
+👉 wnsp.io — buy NXT, stake, earn WNUSD.
 #NXT #NexusOS #Bitcoin #WNUSD #Stake`,
     nostr: `⚡ BTC is down. That's your signal.
 
@@ -85,7 +85,7 @@ Two live Bitcoin Runes on mainnet
 
 Every NXT = a piece of the Kardashev Type I roadmap.
 
-wnsp.tech #NXT #NexusOS #Bitcoin #WNUSD`,
+wnsp.io #NXT #NexusOS #Bitcoin #WNUSD`,
     tags: ["NXT","NexusOS","Bitcoin","WNUSD","Stake"],
   },
   {
@@ -111,7 +111,7 @@ Six lock periods. Six yield tiers. All backed by the WNSP physics engine.
 
 Stake via Nostr DM: just send <code>!stake 10000 30</code> to the NexusOS bot.
 
-👉 wnsp.tech/lightning-wallet
+👉 wnsp.io/lightning-wallet
 #NXT #Staking #WNUSD #NexusOS #DeFi`,
     nostr: `🔒 NXT Staking — Real Yield, Physics-Backed
 
@@ -130,7 +130,7 @@ Yield formula: E=hf (real electromagnetic physics)
 
 DM bot: !stake 10000 30
 
-wnsp.tech #NXT #Staking #WNUSD #NexusOS`,
+wnsp.io #NXT #Staking #WNUSD #NexusOS`,
     tags: ["NXT","Staking","WNUSD","NexusOS","DeFi"],
   },
   {
@@ -153,7 +153,7 @@ Most stablecoins sit idle. <b>WNUSD is different.</b>
 This is a <b>crowdfunded photonic computing stack</b> that runs the WavelengthScript language natively in hardware by ~2032. No rewrite needed — NexusOS is already written in the language of the destination hardware.
 
 👉 Stake NXT. Mint WNUSD. Build the future.
-wnsp.tech
+wnsp.io
 #WNUSD #NXT #PhotonicComputing #NexusOS #Hardware`,
     nostr: `💎 WNUSD — The Stablecoin That Builds Hardware
 
@@ -171,7 +171,7 @@ Photonic computing stack by ~2032. NexusOS already speaks the language of the de
 
 Stake NXT → Mint WNUSD → Build the future.
 
-wnsp.tech #WNUSD #NXT #PhotonicComputing #NexusOS`,
+wnsp.io #WNUSD #NXT #PhotonicComputing #NexusOS`,
     tags: ["WNUSD","NXT","PhotonicComputing","NexusOS","Hardware"],
   },
   {
@@ -192,7 +192,7 @@ This isn't a gimmick. When photonic ASICs arrive (~2032), NexusOS nodes run on a
 <b>NXT is the token of this network.</b> 1,000 sats = 1 NXT.
 Two live Bitcoin Runes on mainnet: NEXUS•WAVELENGTH + WNSP•BTC
 
-👉 Read the spec: wnsp.tech/hardware-spec
+👉 Read the spec: wnsp.io/hardware-spec
 #NexusOS #NXT #WNSP #Physics #Bitcoin`,
     nostr: `📐 Why NexusOS replaces cryptographic hashing with physics
 
@@ -210,7 +210,7 @@ NXT is the token of this network.
 1,000 sats = 1 NXT
 Two live Bitcoin Runes: NEXUS•WAVELENGTH + WNSP•BTC
 
-wnsp.tech/hardware-spec #NexusOS #NXT #WNSP #Physics`,
+wnsp.io/hardware-spec #NexusOS #NXT #WNSP #Physics`,
     tags: ["NexusOS","NXT","WNSP","Physics","Bitcoin"],
   },
   {
@@ -219,7 +219,7 @@ wnsp.tech/hardware-spec #NexusOS #NXT #WNSP #Physics`,
 
 No app needed. No browser. Just Nostr.
 
-Link your npub at wnsp.tech/nostr-bridge, then DM the NexusOS bot:
+Link your npub at wnsp.io/nostr-bridge, then DM the NexusOS bot:
 
 <code>!balance</code>    — sats + NXT balance
 <code>!invoice 50000</code>  — Lightning deposit invoice
@@ -230,11 +230,11 @@ Works on Damus, Amethyst, Snort — any NIP-04 compatible client.
 
 ⚡ Physics-based wallet. Censorship-proof addressing. Real yield.
 
-👉 wnsp.tech/nostr-bridge
+👉 wnsp.io/nostr-bridge
 #NXT #Nostr #Lightning #Bitcoin #NexusOS`,
     nostr: `🤖 Control your NexusOS wallet from Nostr DMs
 
-Link your npub → wnsp.tech/nostr-bridge
+Link your npub → wnsp.io/nostr-bridge
 Then DM the bot:
 
 !balance        → sats + NXT
@@ -246,7 +246,7 @@ Works on Damus, Amethyst, Snort.
 
 Physics-based wallet. Censorship-proof. Real yield.
 
-wnsp.tech/nostr-bridge #NXT #Nostr #Lightning #NexusOS`,
+wnsp.io/nostr-bridge #NXT #Nostr #Lightning #NexusOS`,
     tags: ["NXT","Nostr","Lightning","Bitcoin","NexusOS"],
   },
   {
@@ -269,7 +269,7 @@ NexusOS is the operating system for that transition.
 
 Buy NXT when BTC dips. Stake for yield. Fund hardware. Build civilisation.
 
-👉 wnsp.tech
+👉 wnsp.io
 #NexusOS #NXT #KardashevTypeI #WNUSD #Photonics #Bitcoin`,
     nostr: `🚀 NexusOS — Blueprint for a Kardashev Type I Civilisation
 
@@ -289,7 +289,7 @@ Every NXT = a stake in this mission.
 
 Buy the dip. Stake. Fund hardware. Build civilisation.
 
-wnsp.tech #NexusOS #NXT #KardashevTypeI #WNUSD #Photonics`,
+wnsp.io #NexusOS #NXT #KardashevTypeI #WNUSD #Photonics`,
     tags: ["NexusOS","NXT","KardashevTypeI","WNUSD","Photonics","Bitcoin"],
   },
   {
@@ -310,7 +310,7 @@ NexusOS has inscribed its core specifications onto the Bitcoin base layer via Or
 NXT is the token that funds expansion of this inscribed civilisation OS.
 1,000 sats = 1 NXT. Stack physics.
 
-👉 wnsp.tech/hardware-spec
+👉 wnsp.io/hardware-spec
 #Ordinals #Bitcoin #NXT #NexusOS #WNSP #Inscription`,
     nostr: `🪬 NexusOS physics — permanently inscribed on Bitcoin via Ordinals
 
@@ -327,7 +327,7 @@ Why inscribe? Physics specs must outlast any server. Bitcoin makes them uncensor
 NXT funds the expansion of this inscribed civilisation OS.
 1,000 sats = 1 NXT
 
-wnsp.tech/hardware-spec #Ordinals #Bitcoin #NXT #NexusOS #WNSP`,
+wnsp.io/hardware-spec #Ordinals #Bitcoin #NXT #NexusOS #WNSP`,
     tags: ["Ordinals","Bitcoin","NXT","NexusOS","WNSP","Inscription"],
   },
   {
@@ -350,8 +350,8 @@ Every token is secured directly by Bitcoin proof-of-work. PSBT-compatible. Atomi
 
 Both are AGPL-3.0. Both are live on Bitcoin mainnet.
 
-Mint NEXUS•WAVELENGTH → wnsp.tech/rune-mint
-Full spec → wnsp.tech/rune-etching
+Mint NEXUS•WAVELENGTH → wnsp.io/rune-mint
+Full spec → wnsp.io/rune-etching
 
 1,000 sats = 1 NXT · Stack physics.
 #NexusWavelength #WnspBTC #Runes #Bitcoin #NXT #NexusOS`,
@@ -369,7 +369,7 @@ Every token secured by proof-of-work. PSBT + atomic-swap ready.
 
 Both AGPL-3.0. Both live on mainnet.
 
-Mint → wnsp.tech/rune-mint
+Mint → wnsp.io/rune-mint
 
 #NexusWavelength #WnspBTC #Runes #Bitcoin #NXT #NexusOS`,
     tags: ["NexusWavelength","WnspBTC","Runes","Bitcoin","NXT","NexusOS"],
@@ -395,7 +395,7 @@ Both packages published. Bit-identical output. AGPL-3.0.
 
 API key: 5,000 sats flat fee · no monthly subscription · pay per action with physics fees.
 
-👉 wnsp.tech/developer
+👉 wnsp.io/developer
 #NexusOS #NXT #WNSP #API #Developer #Bitcoin`,
     nostr: `🛠️ Build on the Physics Web — NexusOS Developer API is live
 
@@ -414,7 +414,7 @@ pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packag
 
 API key: 5,000 sats flat fee. No subscription.
 
-wnsp.tech/developer #NexusOS #NXT #WNSP #API #Developer`,
+wnsp.io/developer #NexusOS #NXT #WNSP #API #Developer`,
     tags: ["NexusOS","NXT","WNSP","API","Developer","Bitcoin"],
   },
 ];
@@ -424,7 +424,7 @@ async function sendTelegram(text: string): Promise<{ ok: boolean; messageId?: nu
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return { ok: false, error: "TELEGRAM_BOT_TOKEN not set" };
 
-  // @troglodytememe (wnsp.tech channel) — confirmed numeric ID
+  // @troglodytememe (wnsp.io channel) — confirmed numeric ID
   const chatId = "-1002572762871";
 
   try {
@@ -539,7 +539,7 @@ export function startNxtCampaignAgent(intervalMs?: number) {
 
   const nostrOk = !!process.env.NOSTR_NSEC;
   _state.channels = [
-    process.env.TELEGRAM_BOT_TOKEN ? `Telegram → @troglodytememe (wnsp.tech)` : null,
+    process.env.TELEGRAM_BOT_TOKEN ? `Telegram → @troglodytememe (wnsp.io)` : null,
     nostrOk ? "Nostr" : null,
   ].filter(Boolean) as string[];
 

@@ -397,7 +397,7 @@ function AutoBridgeTab() {
       if (triggerAmount)   data.amount_nxt  = triggerAmount;
       if (triggerLabel)    data.label       = triggerLabel;
       if (triggerPsi)      data.psi_channel = triggerPsi;
-      data.platform = "wnsp.tech"; data.org = "wnsp.io";
+      data.platform = "wnsp.io"; data.org = "wnsp.io";
       const res = await apiFetch("/api/btc-bridge/queue/trigger", {
         method: "POST", body: JSON.stringify({ eventType: triggerType, data }),
       });
@@ -638,7 +638,7 @@ function AutoBridgeTab() {
               {/* Inscribe preview label */}
               <div className="rounded-lg bg-black/30 border border-white/5 px-3 py-2 text-[10px] font-mono text-white/30 flex items-center gap-2">
                 <span style={{ color: activeCat.color }}>⬡</span>
-                <span>Will inscribe: <span className="text-white/50">{triggerType}</span> · WASCII-v2.0 · wnsp.sats anchor · wnsp.tech / wnsp.io</span>
+                <span>Will inscribe: <span className="text-white/50">{triggerType}</span> · WASCII-v2.0 · wnsp.sats anchor · wnsp.io / wnsp.io</span>
               </div>
 
               <button onClick={triggerQueue} disabled={triggerBusy}
@@ -700,7 +700,7 @@ function AutoBridgeTab() {
 // ══════════════════════════════════════════════════════════════════════════════
 const NAME_TYPES = [
   { key: "sats", icon: Hash, color: "#f59e0b", badge: "wnsp.sats", title: ".sats Names", protocol: "Sats Names Protocol · Bitcoin", owned: true, desc: "wnsp.sats is confirmed — permanently inscribed on Bitcoin via the Sats Names protocol. This is the primary anchor for all NexusOS auto-inscriptions.", steps: ["wnsp.sats registered ✓", "Configured as inscription anchor", "All auto-queue events child of wnsp.sats", "Resolves to bc1pkpap9g... Taproot address"], registryUrl: "https://unisat.io/market/name" },
-  { key: "btc", icon: Globe, color: "#22d3ee", badge: "wnsp.btc", title: ".btc Domains", protocol: "Bitcoin Name System · BNS", owned: true, desc: "wnsp.btc is confirmed — registered on the Bitcoin Name System (BNS), a Stacks L2 protocol. Resolves to a Bitcoin address and serves wnsp.tech via IPFS.", steps: ["wnsp.btc registered ✓", "Resolves to bc1p Taproot address", "Links to wnsp.tech platform", "Permanent — no renewal fee"], registryUrl: "https://btc.us" },
+  { key: "btc", icon: Globe, color: "#22d3ee", badge: "wnsp.btc", title: ".btc Domains", protocol: "Bitcoin Name System · BNS", owned: true, desc: "wnsp.btc is confirmed — registered on the Bitcoin Name System (BNS), a Stacks L2 protocol. Resolves to a Bitcoin address and serves wnsp.io via IPFS.", steps: ["wnsp.btc registered ✓", "Resolves to bc1p Taproot address", "Links to wnsp.io platform", "Permanent — no renewal fee"], registryUrl: "https://btc.us" },
   { key: "unisat", icon: Bitcoin, color: "#a78bfa", badge: "wnsp.unisat", title: "UniSat Name", protocol: "UniSat Name Service · Bitcoin", owned: true, desc: "wnsp.unisat is confirmed — registered on UniSat's naming layer. Resolves on the UniSat explorer and links to the wnsp.io organisation wallet and inscription history.", steps: ["wnsp.unisat registered ✓", "Visible on unisat.io profile", "Links to wnsp.io org", "Full inscription history indexed"], registryUrl: "https://unisat.io" },
   { key: "sat", icon: Hash, color: "#34d399", badge: "wnsp.sat", title: ".sat Names", protocol: "UniSat .sat Protocol · Bitcoin", owned: true, desc: "wnsp.sat is confirmed — registered on UniSat's .sat naming protocol. Complementary to wnsp.sats, providing dual-name coverage across both Sats naming standards.", steps: ["wnsp.sat registered ✓", "UniSat .sat TLD", "Resolves alongside wnsp.sats", "Cross-resolver compatible"], registryUrl: "https://unisat.io/market/name" },
 ];

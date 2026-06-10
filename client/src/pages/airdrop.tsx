@@ -68,7 +68,7 @@ async function triggerNostrLogin(): Promise<boolean> {
     const pubkey = await w.nostr.getPublicKey();
     const signedEvent = await w.nostr.signEvent({
       kind: 27235, created_at: Math.floor(Date.now() / 1000),
-      tags: [["u", "https://wnsp.tech"], ["method", "POST"]],
+      tags: [["u", "https://wnsp.io"], ["method", "POST"]],
       content: "NexusOS Login", pubkey,
     });
     const res  = await fetch("/api/auth/nostr", {
@@ -530,14 +530,14 @@ Both AGPL-3.0. Both permanent on Bitcoin.
 1,000 NXT per wallet · 85,000 claims · first-come, first-served
 
 Claim in ~10 seconds:
-1. Go to wnsp.tech/airdrop
+1. Go to wnsp.io/airdrop
 2. Click Sign in with Nostr — one sig with Alby or nos2x
 3. Your spectral wallet + Ψ channel are assigned automatically
 4. 1,000 NXT lands instantly
 
 No email. No form. No KYC. Just your Nostr key.
 
-AGPL-3.0 · First public disclosure: 2026-05-16 · wnsp.tech · Ψ(52,3,V)
+AGPL-3.0 · First public disclosure: 2026-05-16 · wnsp.io · Ψ(52,3,V)
 
 #nexusos #wnsp #nxt #nostr #bitcoin #photonics #physics`,
                       },
@@ -554,7 +554,7 @@ No lookup tables. No routing authority. No government can poison a wavelength.
 Two live Bitcoin Runes on mainnet:
 NEXUS•WAVELENGTH (952596:379) + WNSP•BTC (952733:1958)
 
-85M NXT airdrop live. Claim with your Nostr key → wnsp.tech/airdrop
+85M NXT airdrop live. Claim with your Nostr key → wnsp.io/airdrop
 
 Full whitepaper on habla.news
 
@@ -575,8 +575,8 @@ WNSP•BTC — Rune ID 952733:1958
 Why Runes and not BRC-20?
 Runes live in Bitcoin's UTXO set — no inscription indexer, no ord node, no side-chain required. Every token is secured directly by Bitcoin proof-of-work. PSBT-compatible. Atomic-swap ready.
 
-Mint NEXUS•WAVELENGTH → wnsp.tech/rune-mint
-Full spec → wnsp.tech/rune-etching
+Mint NEXUS•WAVELENGTH → wnsp.io/rune-mint
+Full spec → wnsp.io/rune-etching
 
 1,000 sats = 1 NXT. Stack physics.
 
@@ -620,7 +620,7 @@ Published on npm. Bit-identical JS + Python. AGPL-3.0.
 
 API key: 5,000 sats flat fee. No subscription. Pay per action.
 
-wnsp.tech/developer
+wnsp.io/developer
 
 #NexusOS #NXT #WNSP #API #Bitcoin #Developer`,
                       },
@@ -718,7 +718,7 @@ wnsp.tech/developer
                   <div><span className="text-slate-600">kind:  </span><span className="text-indigo-300">30023</span> (NIP-23 long-form)</div>
                   <div><span className="text-slate-600">tags:  </span><span className="text-amber-300">#nexusos #wnsp #nxt #nostr #bitcoin #photonics #physics</span></div>
                   <div><span className="text-slate-600">relays:</span> <span className="text-green-400">6 relays</span></div>
-                  <div><span className="text-slate-600">airdrop CTA:</span> wnsp.tech/airdrop · 85M NXT · Nostr sign-in</div>
+                  <div><span className="text-slate-600">airdrop CTA:</span> wnsp.io/airdrop · 85M NXT · Nostr sign-in</div>
                 </div>
 
                 {/* Live relay progress during broadcast */}

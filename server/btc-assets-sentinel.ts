@@ -275,7 +275,7 @@ async function poll() {
                 `Mint yours on Unisat 👇`,
                 `https://unisat.io/runes/detail/NEXUS%E2%80%A2WAVELENGTH`,
                 ``,
-                `Bridge NXWV ↔ NXT at wnsp.tech/rune-swap`,
+                `Bridge NXWV ↔ NXT at wnsp.io/rune-swap`,
                 ``,
                 `#Bitcoin #Runes #NEXUSWAVELENGH #WNSP #NexusOS #BTC`,
               ].join("\n");

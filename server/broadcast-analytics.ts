@@ -25,7 +25,7 @@ External systems are hitting NexusOS using the WNSP protocol as their user agent
 
 The tech is out of the bag.
 
-🔗 <a href="https://wnsp.tech">wnsp.tech</a>
+🔗 <a href="https://wnsp.io">wnsp.io</a>
 #WNSP #NexusOS #NXT #Bitcoin #Physics`;
 
 const NOSTR_NOTE =
@@ -44,13 +44,13 @@ External systems are hitting NexusOS using the WNSP protocol as their user agent
 
 The tech is out of the bag.
 
-wnsp.tech
+wnsp.io
 
 #WNSP #NexusOS #NXT #Bitcoin #Physics #Nostr`;
 
 async function sendTelegramPhoto() {
   const token     = process.env.TELEGRAM_BOT_TOKEN;
-  // @troglodytememe (wnsp.tech channel) — confirmed numeric ID
+  // @troglodytememe (wnsp.io channel) — confirmed numeric ID
   const channelId = "-1002572762871";
   if (!token) { console.error("[TG] Missing TELEGRAM_BOT_TOKEN"); return; }
 
