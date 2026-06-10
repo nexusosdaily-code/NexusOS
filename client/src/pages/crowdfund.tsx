@@ -342,11 +342,12 @@ export default function CrowdfundPage() {
         {/* Platform connectivity map */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
           {[
-            { icon: "⚡", name: "Nostr",      status: "live",    desc: "Zap Goals + auto-promo", url: "https://primal.net" },
-            { icon: "🌊", name: "Geyser",     status: "setup",   desc: "Bitcoin Lightning crowdfund", url: "https://geyser.fund/create" },
-            { icon: "✈️", name: "Telegram",   status: "live",    desc: "Auto-broadcast channel", url: "https://t.me/troglodytememe" },
-            { icon: "🚀", name: "Indiegogo",  status: "pending", desc: "Fiat donations bridge", url: "https://indiegogo.com" },
-            { icon: "💻", name: "GitHub",     status: "live",    desc: "AGPL-3.0 open source", url: "https://github.com/nexusosdaily-code/NexusOS" },
+            { icon: "⚡", name: "Nostr",      status: "live",    desc: "Zap Goals + auto-promo",     url: "https://primal.net" },
+            { icon: "🌊", name: "Geyser",     status: "setup",   desc: "Bitcoin Lightning crowdfund",  url: "https://geyser.fund/create" },
+            { icon: "✈️", name: "Telegram",   status: "live",    desc: "Auto-broadcast channel",       url: "https://t.me/troglodytememe" },
+            { icon: "🎮", name: "Discord",    status: "live",    desc: "#the-czc-sink-lab",            url: "https://discord.gg" },
+            { icon: "🚀", name: "Indiegogo",  status: "pending", desc: "Fiat donations bridge",        url: "https://indiegogo.com" },
+            { icon: "💻", name: "GitHub",     status: "live",    desc: "AGPL-3.0 open source",         url: "https://github.com/nexusosdaily-code/NexusOS" },
           ].map(p => (
             <a key={p.name} href={p.url} target="_blank" rel="noreferrer"
               className="rounded-xl border border-white/8 bg-black/30 hover:border-white/20 p-3 transition-all group">

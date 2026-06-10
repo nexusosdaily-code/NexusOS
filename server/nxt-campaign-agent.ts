@@ -441,6 +441,27 @@ async function sendTelegram(text: string): Promise<{ ok: boolean; messageId?: nu
   }
 }
 
+// ── Discord webhook sender ────────────────────────────────────────────────────
+async function sendDiscord(text: string): Promise<{ ok: boolean; error?: string }> {
+  const url = process.env.DISCORD_WEBHOOK_URL;
+  if (!url) return { ok: false, error: "DISCORD_WEBHOOK_URL not set" };
+  try {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: "NexusOS",
+        avatar_url: "https://wnsp.io/nexusos-icon.png",
+        content: text.replace(/<b>(.*?)<\/b>/g, "**$1**").replace(/<[^>]+>/g, ""),
+      }),
+    });
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
+    return { ok: true };
+  } catch (e: any) {
+    return { ok: false, error: e.message };
+  }
+}
+
 // ── Nostr sender ─────────────────────────────────────────────────────────────
 async function sendNostr(slot: Slot): Promise<{ ok: boolean; eventId?: string; error?: string }> {
   try {
@@ -462,28 +483,29 @@ export async function fireEventBroadcast(opts: {
   title:     string;
   body:      string;
   hashtags:  string[];
-}): Promise<{ tg: any; nostr: any }> {
+}): Promise<{ tg: any; nostr: any; discord: any }> {
   const tags = opts.hashtags.map(t => `#${t}`).join(" ");
-  const tgText =
-    `${opts.emoji} <b>${opts.title}</b>\n\n${opts.body}\n\n${tags}`;
-  const nostrText =
-    `${opts.emoji} ${opts.title}\n\n${opts.body}\n\n${tags}`;
+  const tgText      = `${opts.emoji} <b>${opts.title}</b>\n\n${opts.body}\n\n${tags}`;
+  const nostrText   = `${opts.emoji} ${opts.title}\n\n${opts.body}\n\n${tags}`;
+  const discordText = `${opts.emoji} **${opts.title}**\n\n${opts.body}\n\n${tags}`;
 
   const slot: Slot = {
     id: -1, label: opts.title, emoji: opts.emoji,
     telegram: tgText, nostr: nostrText, tags: opts.hashtags,
   };
 
-  const [tgRes, nsRes] = await Promise.allSettled([
+  const [tgRes, nsRes, dcRes] = await Promise.allSettled([
     sendTelegram(tgText),
     sendNostr(slot),
+    sendDiscord(discordText),
   ]);
 
-  const tg    = tgRes.status    === "fulfilled" ? tgRes.value    : { ok: false, error: String((tgRes    as any).reason) };
-  const nostr = nsRes.status    === "fulfilled" ? nsRes.value    : { ok: false, error: String((nsRes    as any).reason) };
+  const tg      = tgRes.status === "fulfilled" ? tgRes.value : { ok: false, error: String((tgRes as any).reason) };
+  const nostr   = nsRes.status === "fulfilled" ? nsRes.value : { ok: false, error: String((nsRes as any).reason) };
+  const discord = dcRes.status === "fulfilled" ? dcRes.value : { ok: false, error: String((dcRes as any).reason) };
 
-  console.log(`${TAG} EventBroadcast "${opts.title}" — tg:${tg.ok} nostr:${nostr.ok}`);
-  return { tg, nostr };
+  console.log(`${TAG} EventBroadcast "${opts.title}" — tg:${tg.ok} nostr:${nostr.ok} discord:${discord.ok}`);
+  return { tg, nostr, discord };
 }
 
 export async function fireCampaignSlot(slotIndex?: number): Promise<{ slot: Slot; tg: any; nostr: any }> {
@@ -492,14 +514,18 @@ export async function fireCampaignSlot(slotIndex?: number): Promise<{ slot: Slot
 
   console.log(`${TAG} Firing slot ${idx} — "${slot.label}"`);
 
-  const [tg, ns] = await Promise.allSettled([
+  const discordText = `${slot.emoji} **${slot.label}**\n\n${slot.telegram.replace(/<b>(.*?)<\/b>/g, "**$1**").replace(/<[^>]+>/g, "")}`;
+
+  const [tg, ns, dc] = await Promise.allSettled([
     sendTelegram(slot.telegram),
     sendNostr(slot),
+    sendDiscord(discordText),
   ]);
 
   const tgRes    = tg.status === "fulfilled" ? tg.value : { ok: false, error: String(tg.reason) };
   const nsRes    = ns.status === "fulfilled" ? ns.value : { ok: false, error: String(ns.reason) };
-  const anyOk    = tgRes.ok || nsRes.ok;
+  const dcRes    = dc.status === "fulfilled" ? dc.value : { ok: false, error: String(dc.reason) };
+  const anyOk    = tgRes.ok || nsRes.ok || dcRes.ok;
   const channel  = tgRes.ok && nsRes.ok ? "both" : tgRes.ok ? "telegram" : nsRes.ok ? "nostr" : "none";
   const errMsg   = [!tgRes.ok && `TG: ${tgRes.error}`, !nsRes.ok && `Nostr: ${nsRes.error}`].filter(Boolean).join(" | ") || undefined;
 
