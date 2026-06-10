@@ -13653,6 +13653,143 @@ export async function registerRoutes(
 
   // ─────────────────────────────────────────────────────────────────────────────
 
+  // ── Crowdfund Hub Routes ──────────────────────────────────────────────────────
+
+  // GET /api/crowdfund/geyser-content — copy-ready Geyser campaign text
+  app.get("/api/crowdfund/geyser-content", async (_req: Request, res: Response) => {
+    res.json({
+      title:       "NexusOS — Physics-Based Civilization OS & Photonic Hardware",
+      tagline:     "Replacing cryptographic hashing with electromagnetic wave physics. 21T NXWV Rune sealed on Bitcoin. PHR-1 hardware prototype funding now.",
+      description: `NexusOS is the foundational blueprint for a Kardashev Type I civilization built on the Theory of Compression States (Λ=hf/c²).
+
+WHAT WE BUILT (live now):
+• WNSP physics engine — replaces cryptographic hashing with Maxwell equation validation
+• 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations)
+• WavelengthScript compiler + WNSP Virtual Machine (browser-native)
+• NXT token wallet, P2P media, Lightning payments, governance
+• NEXUS•WAVELENGTH (NXWV) — Bitcoin Rune 952596:379, 21 trillion supply, 1,000/1,000 mints sealed, zero premine
+
+WHAT WE'RE FUNDING (Phase 1):
+• PHR-1 resonator prototype — 144-turn bifilar coil
+• Syncbox Controller firmware
+• ZERO-G state demonstration (gravitational de-correlation)
+• CZC catch basin hardware implementation
+• First 25 Hardware Founder units manufactured
+
+WHY THIS MATTERS:
+Every CE lookup that today runs as a table scan in RAM will execute as a physical wavelength selection in a photonic waveguide (~2032). NexusOS is written in the language of the destination hardware. When photonic ASICs arrive, no rewrite is needed.
+
+FULL DISCLOSURE:
+• Whitepaper: wnsp.io/wnsp-paper
+• Hardware spec (AGPL-3.0): wnsp.io/hardware-spec
+• Tokenomics: wnsp.io/campaign
+• Live demo: wnsp.io
+• GitHub: github.com/nexusosdaily-code/NexusOS
+• Audit: wnsp.io/coinsniper
+
+OPEN SOURCE: AGPL-3.0. All code public. No hidden logic. No admin keys. No team premines.`,
+      tags:        ["bitcoin", "photonics", "physics", "openSource", "hardware", "lightning", "nostr"],
+      website:     "https://wnsp.io",
+      github:      "https://github.com/nexusosdaily-code/NexusOS",
+      geyserUrl:   "https://geyser.fund/create",
+    });
+  });
+
+  // POST /api/crowdfund/zap-goal — publish NIP-75 Zap Goal to Nostr
+  app.post("/api/crowdfund/zap-goal", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { title, description, goalSats, phase } = req.body;
+      if (!goalSats || goalSats < 1000) return res.status(400).json({ error: "goalSats must be >= 1000" });
+
+      // Get Lightning address from Alby
+      let lightningAddr = "nexusos@getalby.com";
+      try {
+        const albyRes = await fetch("https://api.getalby.com/user/me", {
+          headers: { Authorization: `Bearer ${process.env.ALBY_ACCESS_TOKEN}` },
+        });
+        const albyData = await albyRes.json();
+        if (albyData.lightning_address) lightningAddr = albyData.lightning_address;
+      } catch { /* use default */ }
+
+      const phaseLabel = phase ?? "Phase 1 — PHR-1 Hardware Prototype";
+      const goalTitle  = title ?? `NexusOS ${phaseLabel} Crowdfund`;
+      const goalDesc   = description ?? `Fund the ${phaseLabel} of NexusOS — the physics-based civilization OS. AGPL-3.0 open source. Bitcoin-native. No investors — donations only. Full disclosure: wnsp.io/wnsp-paper | wnsp.io/hardware-spec`;
+
+      const { publishZapGoal } = await import("./nostr-service.js");
+      const result = await publishZapGoal({
+        title:         goalTitle,
+        description:   goalDesc,
+        goalMsats:     goalSats * 1000,
+        lightningAddr,
+        imageUrl:      "https://wnsp.io/opengraph.jpg",
+      });
+
+      // Also fire a promo note
+      const { publishToNostr } = await import("./nostr-service.js");
+      await publishToNostr({
+        content:  `⚡ Crowdfund LIVE on Nostr — NexusOS ${phaseLabel}\n\nGoal: ${goalSats.toLocaleString()} sats\nZap to support building the photonic hardware layer.\n\n🔬 Physics-based OS · AGPL-3.0 · Zero premine\n📄 wnsp.io/wnsp-paper\n🔧 wnsp.io/hardware-spec\n\n#NexusOS #Bitcoin #Lightning #Crowdfund #Photonics`,
+        hashtags: ["NexusOS", "Bitcoin", "Lightning", "Crowdfund", "Photonics"],
+        uri:      "https://wnsp.io/crowdfund",
+      });
+
+      res.json({ ok: true, ...result, lightningAddr, goalSats });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/crowdfund/indiegogo-update — generate Indiegogo update draft
+  app.get("/api/crowdfund/indiegogo-update", async (_req: Request, res: Response) => {
+    const { data: eco } = await import("./nostr-service.js").then(() => ({ data: null })).catch(() => ({ data: null }));
+    const now = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    res.json({
+      subject:  `NexusOS Update — ${now} | Physics Engine Live | NXWV Rune Sealed`,
+      body: `Hello NexusOS supporters,
+
+Here's your latest update from the NexusOS team.
+
+WHAT'S LIVE RIGHT NOW:
+✅ WNSP physics engine — Maxwell equation validation running on-chain
+✅ NEXUS•WAVELENGTH (NXWV) Bitcoin Rune — 952596:379 — 21 trillion supply, fully sealed
+✅ NXT wallet, Lightning payments, WNSP Virtual Machine
+✅ WavelengthScript compiler with browser-native bytecode execution
+✅ AGPL-3.0 — all code public at github.com/nexusosdaily-code/NexusOS
+
+WHAT YOUR DONATION FUNDS:
+• PHR-1 resonator prototype (144-turn bifilar coil)
+• Syncbox Controller firmware
+• ZERO-G state demonstration
+• First 25 hardware units for Hardware Founders
+
+FULL TRANSPARENCY:
+• Technical whitepaper: wnsp.io/wnsp-paper
+• Hardware specification: wnsp.io/hardware-spec
+• Live system: wnsp.io
+• Audit: wnsp.io/coinsniper
+
+This is not an investment. Donations fund open-source hardware development for a physics-based communication layer. All code released under AGPL-3.0.
+
+Thank you for believing in the mission.
+
+— NexusOS Team
+wnsp.io | @NexusOSWNSP | t.me/troglodytememe`,
+    });
+  });
+
+  // POST /api/crowdfund/fire-promo — fire promo to Nostr + Telegram
+  app.post("/api/crowdfund/fire-promo", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { platform } = req.body; // "both" | "nostr" | "telegram"
+      const result = await campaignAgent.fireEventBroadcast({
+        emoji:    "⚡",
+        title:    "NexusOS Crowdfund — Physics Hardware",
+        body:     `Fund the PHR-1 resonator prototype — the first physical implementation of ZERO-G state.\n\n🔬 Physics-based OS built on Λ=hf/c²\n🌈 NXWV Rune 952596:379 — sealed on Bitcoin\n📄 Full disclosure: wnsp.io/wnsp-paper\n🎁 Airdrop: wnsp.io/airdrop\n\nDonate: wnsp.io/crowdfund`,
+        hashtags: ["NexusOS", "Bitcoin", "Crowdfund", "PHR1", "Photonics", "Lightning"],
+      });
+      res.json({ ok: true, platform: platform ?? "both", ...result });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
   // ── Community Applications ────────────────────────────────────────────────────
   app.post("/api/community/apply", async (req: Request, res: Response) => {
     try {

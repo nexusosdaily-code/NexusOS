@@ -374,6 +374,64 @@ export async function publishArticleToNostr(opts: {
   };
 }
 
+// ── NIP-75 Zap Goal (kind 9041) ───────────────────────────────────────────────
+export async function publishZapGoal(opts: {
+  title:       string;
+  description: string;
+  goalMsats:   number;        // target in millisats
+  lightningAddr: string;      // LNURL or lightning address for zap receipts
+  relays?:     string[];
+  imageUrl?:   string;
+  closedAt?:   number;        // unix timestamp
+}): Promise<{ id: string; relays: string[]; nostrLink: string }> {
+  const privKey = getPrivKeyBytes();
+  const pubkey  = getPublicKey(privKey);
+
+  const tags: string[][] = [
+    ["relays",  ...(opts.relays ?? DEFAULT_RELAYS)],
+    ["amount",  String(opts.goalMsats)],
+    ["lnurl",   opts.lightningAddr],
+    ["t",       "crowdfund"],
+    ["t",       "nexusos"],
+    ["t",       "bitcoin"],
+    ["t",       "lightning"],
+    ["t",       "wnsp"],
+  ];
+  if (opts.imageUrl) tags.push(["image", opts.imageUrl]);
+  if (opts.closedAt) tags.push(["closed_at", String(opts.closedAt)]);
+
+  const content = `${opts.title}\n\n${opts.description}`;
+
+  const signed: NostrEvent = finalizeEvent({
+    kind:       9041 as number,
+    created_at: Math.floor(Date.now() / 1000),
+    tags,
+    content,
+  }, privKey);
+
+  const p = getPool();
+  const publishPromises = p.publish(DEFAULT_RELAYS, signed) as unknown as Promise<string>[];
+  const withTimeout = DEFAULT_RELAYS.map((relay, i) =>
+    Promise.race([
+      publishPromises[i].then(() => relay),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 8_000)),
+    ])
+  );
+  const results  = await Promise.allSettled(withTimeout);
+  const accepted = results
+    .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
+    .map(r => r.value);
+
+  const neventId = nip19.neventEncode({ id: signed.id, author: pubkey, relays: accepted });
+
+  console.log(`[ZapGoal] Published kind-9041 to ${accepted.length}/${DEFAULT_RELAYS.length} relays`);
+  return {
+    id:        signed.id,
+    relays:    accepted,
+    nostrLink: `https://primal.net/e/${neventId}`,
+  };
+}
+
 // ── Fetch my events ───────────────────────────────────────────────────────────
 export async function fetchRecentEvents(limit = 20): Promise<NostrEvent[]> {
   const pubkey = getPubkeyHex();

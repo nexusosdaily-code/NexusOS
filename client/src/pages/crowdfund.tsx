@@ -1,15 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "wouter";
+import { getAuthHeaders } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import TelegramVideoGallery from "@/components/TelegramVideoGallery";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Radio, Zap, Cpu, Globe, Shield, Code2, BookOpen,
   ArrowRight, Check, ExternalLink, Layers, Activity,
   Waves, Lock, Star, Users, ChevronDown, ChevronUp,
-  TrendingUp, Briefcase, Award, Scale
+  TrendingUp, Briefcase, Award, Scale, Copy, Send,
+  FileText, Github, MessageCircle, Twitter, Rss,
 } from "lucide-react";
 
 function wlToRgb(nm: number): string {
@@ -205,10 +209,58 @@ function SpectrumBar() {
   );
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+      className="flex items-center gap-1 text-[10px] text-white/40 hover:text-white/70 transition-colors shrink-0">
+      {copied ? <Check size={11} className="text-green-400" /> : <Copy size={11} />}
+      {copied ? "Copied" : "Copy"}
+    </button>
+  );
+}
+
 export default function CrowdfundPage() {
   const { data: eco } = useQuery<any>({ queryKey: ["/api/ecosystem/status"], retry: false });
   const { data: chain } = useQuery<any>({ queryKey: ["/api/blockchain/chain"], retry: false });
+  const { data: geyser } = useQuery<any>({ queryKey: ["/api/crowdfund/geyser-content"], retry: false });
+  const { data: indiegogo } = useQuery<any>({ queryKey: ["/api/crowdfund/indiegogo-update"], retry: false });
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [zapGoalSats, setZapGoalSats] = useState("10000000");
+  const [zapResult, setZapResult] = useState<any>(null);
+  const [showGeyser, setShowGeyser] = useState(false);
+  const [showIndiegogo, setShowIndiegogo] = useState(false);
+  const { toast } = useToast();
+
+  const zapMut = useMutation({
+    mutationFn: async () => {
+      const r = await fetch("/api/crowdfund/zap-goal", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ goalSats: parseInt(zapGoalSats), phase: "Phase 1 — PHR-1 Hardware Prototype" }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? "Failed");
+      return j;
+    },
+    onSuccess: (d) => { setZapResult(d); toast({ title: "⚡ Zap Goal published!", description: `Live on ${d.relays?.length ?? 0} Nostr relays` }); },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const promoMut = useMutation({
+    mutationFn: async () => {
+      const r = await fetch("/api/crowdfund/fire-promo", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ platform: "both" }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? "Failed");
+      return j;
+    },
+    onSuccess: () => toast({ title: "📡 Promo fired!", description: "Posted to Nostr + Telegram" }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
 
   const blocks = chain?.blocks ?? [];
   const spectralTotal = eco?.systems?.spectralDb?.total ?? 479;
@@ -276,6 +328,194 @@ export default function CrowdfundPage() {
           </Link>
         </div>
       </nav>
+
+      {/* ── PLATFORM HUB ── */}
+      <section className="pt-24 pb-6 px-4 max-w-3xl mx-auto" id="platform-hub">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/5 text-amber-400 text-[10px] font-bold uppercase tracking-widest mb-3">
+            <Rss size={10} /> Crowdfund Hub — All Platforms
+          </div>
+          <h2 className="text-2xl font-bold text-white">Promote. Disclose. Receive.</h2>
+          <p className="text-sm text-white/40 mt-1">All donation outlets connected. Full transparency on every channel.</p>
+        </div>
+
+        {/* Platform connectivity map */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+          {[
+            { icon: "⚡", name: "Nostr",      status: "live",    desc: "Zap Goals + auto-promo", url: "https://primal.net/p/" + encodeURIComponent("NexusOSWNSP") },
+            { icon: "🌊", name: "Geyser",     status: "setup",   desc: "Bitcoin Lightning crowdfund", url: "https://geyser.fund/create" },
+            { icon: "✈️", name: "Telegram",   status: "live",    desc: "Auto-broadcast channel", url: "https://t.me/troglodytememe" },
+            { icon: "🚀", name: "Indiegogo",  status: "pending", desc: "Fiat donations bridge", url: "https://indiegogo.com" },
+            { icon: "🐦", name: "Twitter/X",  status: "live",    desc: "@NexusOSWNSP", url: "https://x.com/NexusOSWNSP" },
+            { icon: "💻", name: "GitHub",     status: "live",    desc: "AGPL-3.0 open source", url: "https://github.com/nexusosdaily-code/NexusOS" },
+          ].map(p => (
+            <a key={p.name} href={p.url} target="_blank" rel="noreferrer"
+              className="rounded-xl border border-white/8 bg-black/30 hover:border-white/20 p-3 transition-all group">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{p.icon}</span>
+                  <span className="text-xs font-bold text-white">{p.name}</span>
+                </div>
+                <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
+                  p.status === "live"    ? "bg-green-500/15 text-green-400" :
+                  p.status === "setup"   ? "bg-amber-500/15 text-amber-400" :
+                                          "bg-slate-500/15 text-slate-400"
+                }`}>{p.status}</span>
+              </div>
+              <div className="text-[10px] text-white/35">{p.desc}</div>
+            </a>
+          ))}
+        </div>
+
+        {/* ─ Nostr Zap Goal Publisher ─ */}
+        <div className="rounded-xl border border-purple-500/20 bg-purple-950/10 p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Zap size={14} className="text-purple-400" />
+              <span className="text-xs font-bold text-purple-300">Nostr Zap Goal (NIP-75)</span>
+            </div>
+            <span className="text-[9px] bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-full px-2 py-0.5">Primal · Amethyst · Snort</span>
+          </div>
+          <p className="text-[11px] text-white/40 mb-3">Publishes a live fundraising goal to Nostr. People zap sats directly to your Lightning address. Progress visible in Primal, Amethyst, Snort.</p>
+          <div className="flex gap-2 mb-3">
+            <div className="flex-1">
+              <label className="text-[10px] text-white/40 mb-1 block">Goal amount (sats)</label>
+              <Input value={zapGoalSats} onChange={e => setZapGoalSats(e.target.value)}
+                className="bg-black/40 border-white/10 text-white text-xs h-8" placeholder="10000000" />
+            </div>
+            <div className="flex items-end">
+              <span className="text-[10px] text-white/25 pb-2">{parseInt(zapGoalSats || "0").toLocaleString()} sats</span>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => zapMut.mutate()} disabled={zapMut.isPending}
+              className="flex-1 bg-purple-600 hover:bg-purple-500 text-white text-xs h-8"
+              data-testid="button-publish-zap-goal">
+              <Zap size={12} className="mr-1" /> {zapMut.isPending ? "Publishing…" : "Publish Zap Goal to Nostr"}
+            </Button>
+            <Button size="sm" onClick={() => promoMut.mutate()} disabled={promoMut.isPending}
+              className="bg-slate-700 hover:bg-slate-600 text-white text-xs h-8"
+              data-testid="button-fire-promo">
+              <Send size={12} className="mr-1" /> {promoMut.isPending ? "Firing…" : "Fire Promo"}
+            </Button>
+          </div>
+          {zapResult && (
+            <div className="mt-3 p-3 rounded-lg bg-green-950/20 border border-green-500/20">
+              <div className="text-[10px] text-green-400 font-semibold mb-1">⚡ Live on {zapResult.relays?.length} relays</div>
+              <div className="flex items-center justify-between">
+                <a href={zapResult.nostrLink} target="_blank" rel="noreferrer"
+                  className="text-[10px] text-purple-400 hover:underline truncate mr-2">{zapResult.nostrLink}</a>
+                <CopyButton text={zapResult.nostrLink ?? ""} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ─ Geyser Campaign Content ─ */}
+        <div className="rounded-xl border border-amber-500/20 bg-amber-950/10 p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">🌊</span>
+              <span className="text-xs font-bold text-amber-300">Geyser.fund Campaign</span>
+            </div>
+            <button onClick={() => setShowGeyser(g => !g)}
+              className="text-[10px] text-amber-400 hover:text-amber-300 flex items-center gap-1">
+              {showGeyser ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              {showGeyser ? "Hide" : "Show content"}
+            </button>
+          </div>
+          <p className="text-[11px] text-white/40 mb-3">Bitcoin Lightning crowdfund — no platform fees beyond Lightning routing. Create your project at <a href="https://geyser.fund/create" target="_blank" rel="noreferrer" className="text-amber-400 hover:underline">geyser.fund/create</a> and paste the content below.</p>
+          <a href="https://geyser.fund/create" target="_blank" rel="noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs mb-3"
+            data-testid="link-geyser-create">
+            <ExternalLink size={12} /> Create Geyser Campaign
+          </a>
+          {showGeyser && geyser && (
+            <div className="space-y-3">
+              {[
+                { label: "Title",       val: geyser.title },
+                { label: "Tagline",     val: geyser.tagline },
+                { label: "Description", val: geyser.description },
+                { label: "Tags",        val: geyser.tags?.join(", ") },
+                { label: "Website",     val: geyser.website },
+              ].map(f => (
+                <div key={f.label} className="bg-black/40 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-white/40 font-semibold uppercase">{f.label}</span>
+                    <CopyButton text={f.val ?? ""} />
+                  </div>
+                  <pre className="text-[10px] text-white/70 whitespace-pre-wrap font-mono leading-relaxed">{f.val}</pre>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ─ Full Disclosure Links ─ */}
+        <div className="rounded-xl border border-green-500/15 bg-green-950/5 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Shield size={14} className="text-green-400" />
+            <span className="text-xs font-bold text-green-300">Full Disclosure — All transparency documents</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: "Technical Whitepaper",      url: "/wnsp-paper",      icon: "📄" },
+              { label: "Hardware Specification",    url: "/hardware-spec",   icon: "🔧" },
+              { label: "Tokenomics Breakdown",      url: "/campaign",        icon: "📊" },
+              { label: "Audit Report",              url: "/coinsniper",      icon: "✅" },
+              { label: "Live Physics Demo",         url: "/ce-se-pipeline",  icon: "⚡" },
+              { label: "GitHub (AGPL-3.0)",         url: "https://github.com/nexusosdaily-code/NexusOS", icon: "💻", ext: true },
+            ].map(d => (
+              <a key={d.label} href={d.url} target={d.ext ? "_blank" : "_self"} rel="noreferrer"
+                className="flex items-center gap-2 p-2.5 rounded-lg bg-black/30 border border-white/5 hover:border-green-500/30 transition-all group">
+                <span className="text-sm">{d.icon}</span>
+                <span className="text-[11px] text-white/60 group-hover:text-white transition-colors">{d.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+
+        {/* ─ Indiegogo Update Generator ─ */}
+        <div className="rounded-xl border border-blue-500/20 bg-blue-950/10 p-4 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">🚀</span>
+              <span className="text-xs font-bold text-blue-300">Indiegogo Update Generator</span>
+            </div>
+            <button onClick={() => setShowIndiegogo(i => !i)}
+              className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1">
+              {showIndiegogo ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              {showIndiegogo ? "Hide" : "Show draft"}
+            </button>
+          </div>
+          <p className="text-[11px] text-white/40 mb-3">Indiegogo has no API — copy this ready-made update into your campaign dashboard manually. Generated fresh each time.</p>
+          {showIndiegogo && indiegogo && (
+            <div className="space-y-3">
+              <div className="bg-black/40 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-white/40 font-semibold uppercase">Subject line</span>
+                  <CopyButton text={indiegogo.subject ?? ""} />
+                </div>
+                <p className="text-[11px] text-white/70">{indiegogo.subject}</p>
+              </div>
+              <div className="bg-black/40 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-white/40 font-semibold uppercase">Full update body</span>
+                  <CopyButton text={indiegogo.body ?? ""} />
+                </div>
+                <pre className="text-[10px] text-white/70 whitespace-pre-wrap font-mono leading-relaxed max-h-64 overflow-y-auto">{indiegogo.body}</pre>
+              </div>
+              <a href="https://www.indiegogo.com/dashboard" target="_blank" rel="noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs">
+                <ExternalLink size={12} /> Open Indiegogo Dashboard
+              </a>
+            </div>
+          )}
+          {showIndiegogo && !indiegogo && (
+            <div className="text-[11px] text-white/40 text-center py-4">Loading draft…</div>
+          )}
+        </div>
+      </section>
 
       {/* ── HERO ── */}
       <section className="relative flex flex-col items-center justify-center min-h-screen px-6 pt-20 text-center overflow-hidden">
