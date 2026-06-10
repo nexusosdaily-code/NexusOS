@@ -78,6 +78,12 @@ uri = "file://attached_assets/nexus-wavelength-logo.png"
 type = "image"
 title = "nexus wavelength logo coin inscription"
 
+[[generated]]
+id = "slup3axbpWsoEe9jJUtlB"
+uri = "file://client/public/nexusos-icon.png"
+type = "image"
+title = "nexusos app icon"
+
 [[outputs]]
 id = "H5DxipQLmLvHtAwbjOE_f"
 uri = "file://attached_assets/phase0_campaign.png"
@@ -311,3 +317,9 @@ id = "472mjamcfxRrR9wfeBvkD"
 uri = "file://attached_assets/nexus-wavelength-logo.png"
 type = "image"
 title = "NEXUS•WAVELENGTH Logo — 261KB"
+
+[[outputs]]
+id = "aGra6m628WijVHeD46RzX"
+uri = "file://client/public/nexusos-icon.png"
+type = "image"
+title = "NexusOS App Icon (362KB PNG)"
