@@ -241,6 +241,53 @@ export default function AirdropPage() {
           ))}
         </div>
 
+        {/* Vote & Earn — Coinsniper feature */}
+        <div className="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-950/20 to-slate-900/60 p-5 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xl">🎯</span>
+            <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">Vote &amp; Earn</span>
+            <span className="ml-auto text-[10px] bg-green-500/10 text-green-400 border border-green-500/20 rounded-full px-2 py-0.5 font-semibold">LIVE</span>
+          </div>
+          <h2 className="text-base font-bold text-white mb-1">Upvote NXWV on Coinsniper — earn NXT</h2>
+          <p className="text-xs text-slate-400 mb-4">1 billion NXT reserved. First 10 voters earn 50M each. Next 50 earn 10M each. First come, first served.</p>
+
+          {/* Tier cards */}
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            {[
+              { tier: "Tier 1", spots: "10 spots", reward: "50M NXT", color: "amber", filled: false },
+              { tier: "Tier 2", spots: "50 spots", reward: "10M NXT", color: "slate", filled: false },
+            ].map(t => (
+              <div key={t.tier} className={`rounded-xl border p-3 text-center ${t.color === "amber" ? "border-amber-500/30 bg-amber-500/5" : "border-slate-600/30 bg-slate-800/30"}`}>
+                <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${t.color === "amber" ? "text-amber-400" : "text-slate-400"}`}>{t.tier}</div>
+                <div className={`text-lg font-bold ${t.color === "amber" ? "text-amber-300" : "text-white"}`}>{t.reward}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">{t.spots}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Steps */}
+          <div className="space-y-2 mb-4">
+            {[
+              { n: "1", text: "Go to Coinsniper and upvote NEXUS•WAVELENGTH", link: "https://coinsniper.net/coin/91963", linkText: "coinsniper.net/coin/91963" },
+              { n: "2", text: "Sign in below with Nostr or phone", link: null, linkText: null },
+              { n: "3", text: "Claim Tier 1 or Tier 2 campaign from the list", link: null, linkText: null },
+            ].map(s => (
+              <div key={s.n} className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 text-[10px] font-bold text-amber-400">{s.n}</div>
+                <div className="text-xs text-slate-300 pt-0.5">
+                  {s.text}{s.link && <> — <a href={s.link} target="_blank" rel="noreferrer" className="text-amber-400 hover:underline">{s.linkText}</a></>}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <a href="https://coinsniper.net/coin/91963" target="_blank" rel="noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm transition-colors"
+            data-testid="button-coinsniper-vote">
+            <ExternalLink className="w-4 h-4" /> Upvote on Coinsniper
+          </a>
+        </div>
+
         {/* Campaign cards */}
         {isLoading ? (
           <div className="text-center py-12 text-slate-500">
