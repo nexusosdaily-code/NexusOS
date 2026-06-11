@@ -238,7 +238,7 @@ export default function CoinsnierPage() {
             { done: true,  label: "Tokenomics page live",                   note: "wnsp.io/campaign" },
             { done: true,  label: "Audit page ready",                        note: "wnsp.io/coinsniper" },
             { done: true,  label: "All submission fields prepared",          note: "See Submission Fields tab" },
-            { done: false, label: "Logo — 512×512 PNG",                     note: "Download opengraph.jpg → crop to square → upload" },
+            { done: true,  label: "Logo — 1024×1024 PNG ready",              note: "nexusos-icon.png — Ψ symbol, exceeds 512×512 minimum" },
             { done: false, label: "KYC — founder identity verification",    note: "Submit your ID via Coinsniper link or DM @duncancoinsniper" },
           ].map(({ done, label, note }) => (
             <div key={label} className="flex items-start gap-3 py-1.5">
