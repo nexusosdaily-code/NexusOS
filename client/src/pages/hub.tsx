@@ -135,9 +135,11 @@ const APP_SECTIONS = [
     ],
   },
   {
-    label: "Learn",
+    label: "Build",
     accent: "#22d3ee",
     items: [
+      { title: "🗺️ Roadmap",                             href: "/roadmap",            Icon: Waves },
+      { title: "🔌 How to Plug In",                     href: "/how-to-plug-in",     Icon: Zap },
       { title: "Oscillating Quanta — First Principles", href: "/oscillating-quanta", Icon: Waves },
       { title: "CE-SE Pipeline",                         href: "/ce-se-pipeline",     Icon: Zap },
       { title: "Planck Alignment",                      href: "/planck-alignment",   Icon: Zap },
