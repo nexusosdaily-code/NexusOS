@@ -11439,12 +11439,11 @@ export async function registerRoutes(
 
   // ── End Admin Orders ───────────────────────────────────────────────────────
 
-  // POST /api/nostr/broadcast — fire a Nostr note immediately (KERNEL band only)
+  // POST /api/nostr/broadcast — fire a Nostr note immediately (any authenticated user)
   app.post("/api/nostr/broadcast", authenticate, async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
-      if (user.spectralBand !== "KERNEL" && user.role !== "admin")
-        return res.status(403).json({ error: "KERNEL band required" });
+      if (!user) return res.status(401).json({ error: "Login required" });
 
       const { content, hashtags } = req.body;
       if (!content || String(content).trim().length < 10)
