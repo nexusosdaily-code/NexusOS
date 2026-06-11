@@ -239,7 +239,7 @@ export default function CoinsnierPage() {
             { done: true,  label: "Audit page ready",                        note: "wnsp.io/coinsniper" },
             { done: true,  label: "All submission fields prepared",          note: "See Submission Fields tab" },
             { done: true,  label: "Logo — 1024×1024 PNG ready",              note: "nexusos-icon.png — Ψ symbol, exceeds 512×512 minimum" },
-            { done: false, label: "KYC — founder identity verification",    note: "Submit your ID via Coinsniper link or DM @duncancoinsniper" },
+            { done: false, label: "KYC — awaiting Duncan's reply",           note: "Submitted — waiting on @duncancoinsniper response" },
           ].map(({ done, label, note }) => (
             <div key={label} className="flex items-start gap-3 py-1.5">
               <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold ${
