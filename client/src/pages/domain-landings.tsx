@@ -139,12 +139,13 @@ function WnspDevTry({ accent }: { accent: string }) {
 
 // ── Ecosystem tab data ────────────────────────────────────────────────────────
 const ECOSYSTEM_TABS = [
-  { domain: "wnsp.tech",    accent: "#00e5cc", label: "wnsp.tech",    founder: "Maxwell", icon: "〜" },
-  { domain: "snic.io",      accent: "#60a5fa", label: "snic.io",      founder: "Tesla",   icon: "⊛" },
-  { domain: "phr1.io",      accent: "#f87171", label: "phr1.io",      founder: "Tesla",   icon: "⌁" },
-  { domain: "zerogstate.io",accent: "#818cf8", label: "zerogstate.io",founder: "Tesla",   icon: "∅" },
-  { domain: "wascii.io",    accent: "#fde047", label: "wascii.io",    founder: "Planck",  icon: "≈" },
-  { domain: "555thz.io",    accent: "#4ade80", label: "555thz.io",    founder: "Planck",  icon: "ƒ" },
+  { domain: "wnsp.tech",           accent: "#00e5cc", label: "wnsp.tech",           founder: "Maxwell", icon: "〜" },
+  { domain: "snic.io",             accent: "#60a5fa", label: "snic.io",             founder: "Tesla",   icon: "⊛" },
+  { domain: "phr1.io",             accent: "#f87171", label: "phr1.io",             founder: "Tesla",   icon: "⌁" },
+  { domain: "zerogstate.io",       accent: "#818cf8", label: "zerogstate.io",       founder: "Tesla",   icon: "∅" },
+  { domain: "wascii.io",           accent: "#fde047", label: "wascii.io",           founder: "Planck",  icon: "≈" },
+  { domain: "555thz.io",           accent: "#4ade80", label: "555thz.io",           founder: "Planck",  icon: "ƒ" },
+  { domain: "wavelengthscript.dev",accent: "#34d399", label: "wavelengthscript.dev",founder: "Planck",  icon: "ψ" },
 ] as const;
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
