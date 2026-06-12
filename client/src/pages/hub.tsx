@@ -824,6 +824,47 @@ const CAMPAIGN_VIDEOS = [
   },
 ];
 
+// ── Nexus Ecosystem domain strip ───────────────────────────────────────
+const NEXUS_DOMAINS = [
+  { domain: "wnsp.dev",             accent: "#00e5cc", founder: "Maxwell",  icon: "〜", desc: "Developer SDK" },
+  { domain: "wnsp.blog",            accent: "#f59e0b", founder: "All",      icon: "✦", desc: "The story" },
+  { domain: "snic.io",              accent: "#60a5fa", founder: "Tesla",    icon: "⊛", desc: "SNIC hardware" },
+  { domain: "phr1.io",              accent: "#f87171", founder: "Tesla",    icon: "⌁", desc: "PHR-1 resonator" },
+  { domain: "lambdagate.io",        accent: "#a78bfa", founder: "Einstein", icon: "λ", desc: "Λ=hf/c² gate" },
+  { domain: "wavelengthscript.dev", accent: "#34d399", founder: "Planck",   icon: "ψ", desc: "WLS language" },
+  { domain: "zerogstate.io",        accent: "#818cf8", founder: "Tesla",    icon: "∅", desc: "ZERO-G state" },
+  { domain: "wascii.io",            accent: "#fde047", founder: "Planck",   icon: "≈", desc: "Wave encoding" },
+  { domain: "orbitaltreasury.io",   accent: "#10b981", founder: "Shannon",  icon: "◎", desc: "Treasury" },
+  { domain: "555thz.io",            accent: "#4ade80", founder: "Planck",   icon: "ƒ", desc: "First oscillation" },
+];
+
+function EcosystemDomains() {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs uppercase tracking-widest text-white/30">Nexus Ecosystem</p>
+        <span className="text-[10px] text-white/20 font-mono">Maxwell · Planck · Einstein · Tesla · Shannon</span>
+      </div>
+      <div className="overflow-x-auto scrollbar-none -mx-1">
+        <div className="flex gap-2 px-1 min-w-max pb-1">
+          {NEXUS_DOMAINS.map(d => (
+            <a key={d.domain} href={`https://${d.domain}`} target="_blank" rel="noreferrer"
+              className="flex flex-col gap-1 px-3 py-2.5 rounded-xl border transition-all hover:scale-105 shrink-0"
+              style={{ borderColor: d.accent + "30", background: d.accent + "08" }}>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm" style={{ color: d.accent }}>{d.icon}</span>
+                <span className="text-[11px] font-bold text-white">{d.domain}</span>
+              </div>
+              <div className="text-[9px] text-white/35">{d.desc}</div>
+              <div className="text-[9px] font-semibold" style={{ color: d.accent + "99" }}>{d.founder}</div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CampaignVideos() {
   return (
     <div className="rounded-2xl overflow-hidden"
@@ -1220,6 +1261,9 @@ export default function HubPage() {
 
         {/* Constitution live card */}
         <ConstitutionCard />
+
+        {/* Nexus Ecosystem domain strip */}
+        <EcosystemDomains />
 
         {/* Campaign promo videos */}
         <CampaignVideos />
