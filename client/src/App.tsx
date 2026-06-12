@@ -198,6 +198,7 @@ function ProtectedRoutes() {
     <ProtectedRoute>
       <Switch>
         <Route path="/" component={HubPage} />
+        <Route path="/hub" component={HubPage} />
         <Route path="/apps" component={LambdaPlaceholder} />
         <Route path="/v10" component={NexusV10Page} />
         <Route path="/v9" component={NexusV9Page} />
