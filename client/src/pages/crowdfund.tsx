@@ -13,7 +13,7 @@ import {
   ArrowRight, Check, ExternalLink, Layers, Activity,
   Waves, Lock, Star, Users, ChevronDown, ChevronUp,
   TrendingUp, Briefcase, Award, Scale, Copy, Send,
-  FileText, Github, MessageCircle, Rss,
+  FileText, Github, MessageCircle, Rss, Bitcoin,
 } from "lucide-react";
 
 function wlToRgb(nm: number): string {
@@ -449,6 +449,81 @@ export default function CrowdfundPage() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* ─ How to Trade NXWV Rune ─ */}
+        <div className="rounded-xl border border-orange-500/20 bg-orange-950/10 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Bitcoin size={14} className="text-orange-400" />
+            <span className="text-xs font-bold text-orange-300">How to Sell / Swap NEXUS•WAVELENGTH (NXWV)</span>
+            <span className="ml-auto text-[9px] font-mono bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded px-2 py-0.5">Rune 952596:379</span>
+          </div>
+          <p className="text-[11px] text-white/40 mb-4">NXWV is a Bitcoin Rune — it lives on-chain and trades on Rune marketplaces. UniSat wallet is all you need.</p>
+
+          {/* Steps */}
+          <div className="space-y-2 mb-4">
+            {[
+              {
+                step: "1",
+                title: "Get UniSat Wallet",
+                desc: "Install UniSat browser extension or mobile app. It natively supports Bitcoin Runes — no extra setup.",
+                url: "https://unisat.io/download",
+                cta: "Download UniSat",
+                color: "#f97316",
+              },
+              {
+                step: "2",
+                title: "Receive or Import your NXWV",
+                desc: "Send your NXWV to your UniSat Bitcoin address. UniSat will automatically detect the Rune balance.",
+                url: null,
+                cta: null,
+                color: "#fbbf24",
+              },
+              {
+                step: "3",
+                title: "List on UniSat Marketplace",
+                desc: "Go to UniSat Runes market → search NEXUS•WAVELENGTH → set your price in sats. Buyers pay directly via Bitcoin.",
+                url: "https://unisat.io/market/runes?tick=NEXUS%E2%80%A2WAVELENGTH",
+                cta: "Open NXWV Market",
+                color: "#34d399",
+              },
+            ].map(s => (
+              <div key={s.step} className="flex gap-3 p-3 rounded-lg bg-black/30 border border-white/5">
+                <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: s.color + "20", color: s.color, border: `1px solid ${s.color}40` }}>{s.step}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold text-white/80 mb-0.5">{s.title}</div>
+                  <div className="text-[10px] text-white/40 leading-relaxed">{s.desc}</div>
+                </div>
+                {s.url && (
+                  <a href={s.url} target="_blank" rel="noreferrer"
+                    className="flex-shrink-0 self-center flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1.5 rounded-lg transition-all"
+                    style={{ background: s.color + "15", color: s.color, border: `1px solid ${s.color}30` }}>
+                    <ExternalLink size={10} /> {s.cta}
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Marketplace grid */}
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { name: "UniSat Market",  icon: "🟠", desc: "Primary — search NEXUS•WAVELENGTH", url: "https://unisat.io/market/runes?tick=NEXUS%E2%80%A2WAVELENGTH", status: "Recommended" },
+              { name: "Magic Eden",     icon: "🪄", desc: "Runes → search NEXUS•WAVELENGTH",   url: "https://magiceden.io/runes/NEXUS%E2%80%A2WAVELENGTH",         status: "Alternative" },
+            ].map(m => (
+              <a key={m.name} href={m.url} target="_blank" rel="noreferrer"
+                className="flex flex-col gap-1 p-3 rounded-lg bg-black/30 border border-white/5 hover:border-orange-500/30 transition-all">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm">{m.icon}</span>
+                    <span className="text-[11px] font-bold text-white/80">{m.name}</span>
+                  </div>
+                  <span className="text-[9px] text-orange-400/70">{m.status}</span>
+                </div>
+                <div className="text-[10px] text-white/35">{m.desc}</div>
+              </a>
+            ))}
+          </div>
         </div>
 
         {/* ─ Full Disclosure Links ─ */}
