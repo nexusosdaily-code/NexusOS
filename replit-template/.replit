@@ -1,0 +1,8 @@
+run = "node index.js"
+entrypoint = "index.js"
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+run = ["sh", "-c", "node index.js"]

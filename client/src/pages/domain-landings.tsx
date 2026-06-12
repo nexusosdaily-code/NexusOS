@@ -1,5 +1,141 @@
-import { ExternalLink, Terminal, Cpu, Radio, Zap, Globe, Code2, ArrowRight, Copy, Check, BookOpen, Shield, Waves, Star } from "lucide-react";
-import { useState } from "react";
+import { ExternalLink, Terminal, Cpu, Radio, Zap, Globe, Code2, ArrowRight, Copy, Check, BookOpen, Shield, Waves, Star, Share2 } from "lucide-react";
+import { useState, useRef } from "react";
+
+// ── CE physics — client-side, instant, no API needed ─────────────────────────
+const CE_MIN = 380, CE_MAX = 780, CE_BANDS = 128, CE_BW = (CE_MAX - CE_MIN) / CE_BANDS;
+const H = 6.626e-34, C_LIGHT = 2.998e8;
+function wlToHexLocal(nm: number) {
+  let r = 0, g = 0, b = 0;
+  if (nm >= 380 && nm < 440) { r = -(nm - 440) / 60; b = 1; }
+  else if (nm < 490) { g = (nm - 440) / 50; b = 1; }
+  else if (nm < 510) { g = 1; b = -(nm - 510) / 20; }
+  else if (nm < 580) { r = (nm - 510) / 70; g = 1; }
+  else if (nm < 645) { r = 1; g = -(nm - 645) / 65; }
+  else if (nm <= 780) { r = 1; }
+  return `#${[r,g,b].map(v => Math.round(v*255).toString(16).padStart(2,"0")).join("")}`;
+}
+function ceEncodeLocal(text: string) {
+  const toks = Array.from(text.slice(0,300)).map(ch => {
+    const band = ch.charCodeAt(0) % CE_BANDS;
+    const nm   = CE_MIN + (band + 0.5) * CE_BW;
+    return { ch, band, nm: Math.round(nm*100)/100, hex: wlToHexLocal(nm) };
+  });
+  const mid = toks.length ? toks.reduce((s,t) => s+t.nm, 0) / toks.length : 550;
+  const freq = C_LIGHT / (mid * 1e-9);
+  return { toks, mid: Math.round(mid*100)/100, freq, energy: H * freq, band: Math.round((mid-CE_MIN)/CE_BW) };
+}
+
+// ── /try page for wnsp.dev ────────────────────────────────────────────────────
+function WnspDevTry({ accent }: { accent: string }) {
+  const [input, setInput]   = useState("def add(a, b):\n    return a + b");
+  const [result, setResult] = useState(() => ceEncodeLocal("def add(a, b):\n    return a + b"));
+  const [copied, setCopied] = useState(false);
+  const debounce = useRef<ReturnType<typeof setTimeout>>();
+
+  function onInput(v: string) {
+    setInput(v);
+    clearTimeout(debounce.current);
+    debounce.current = setTimeout(() => setResult(ceEncodeLocal(v)), 80);
+  }
+
+  const shareUrl = `https://wnsp.io/encode?text=${encodeURIComponent(input.trim().slice(0,500))}`;
+  const midHex   = result.mid ? wlToHexLocal(result.mid) : accent;
+
+  return (
+    <div className="min-h-screen bg-black text-white font-mono">
+      <Nav domain="wnsp.dev/try" accent={accent} />
+      <div className="pt-24 pb-16 px-4 max-w-2xl mx-auto">
+        <div className="flex items-center gap-2 mb-4">
+          <Zap size={14} style={{ color: accent }} />
+          <span className="text-[11px] uppercase tracking-widest" style={{ color: accent }}>Live CE Encoder — no login · instant · any language</span>
+        </div>
+        <h1 className="text-2xl font-bold text-white mb-2">
+          Paste code. <span style={{ color: midHex }}>Get its wavelength.</span>
+        </h1>
+        <p className="text-[12px] text-white/35 mb-6">Every character maps to a position in the visible light spectrum. Physics, not hashing.</p>
+
+        {/* Spectrum bar + pointer */}
+        <div className="mb-5">
+          <div className="w-full h-2.5 rounded-full overflow-hidden" style={{
+            background: "linear-gradient(to right,#7f00ff,#4400ff,#0000ff,#00aaff,#00ffcc,#00ff00,#aaff00,#ffff00,#ffaa00,#ff5500,#ff0000)"
+          }} />
+          <div className="relative mt-1" style={{ paddingLeft: `${(result.band / 128) * 100}%` }}>
+            <div className="w-2 h-2 rounded-full transition-all" style={{ background: midHex }} />
+          </div>
+        </div>
+
+        {/* Input */}
+        <div className="rounded-xl border border-white/10 bg-white/2 overflow-hidden mb-4">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-white/6">
+            <span className="text-[10px] text-white/30 uppercase tracking-widest">Input — any language</span>
+            <span className="text-[10px] text-white/20">{input.length}/300</span>
+          </div>
+          <textarea value={input} onChange={e => onInput(e.target.value)}
+            placeholder="Paste any code — Python, JS, Rust, SQL, anything…"
+            className="w-full h-32 bg-transparent text-[12px] text-white/75 p-4 resize-none outline-none leading-relaxed" />
+        </div>
+
+        {/* Char chips */}
+        {result.toks.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-4">
+            {result.toks.slice(0,60).map((t,i) => (
+              <div key={i} title={`${t.nm}nm`}
+                className="w-6 h-6 rounded text-[9px] font-bold text-black flex items-center justify-center"
+                style={{ background: t.hex }}>
+                {t.ch === " " ? "·" : t.ch === "\n" ? "↵" : t.ch}
+              </div>
+            ))}
+            {result.toks.length > 60 && <div className="w-6 h-6 rounded border border-white/10 text-[8px] text-white/30 flex items-center justify-center">+{result.toks.length-60}</div>}
+          </div>
+        )}
+
+        {/* Result card */}
+        <div className="rounded-xl border p-4 mb-4 transition-all" style={{ borderColor: midHex+"30", background: midHex+"08" }}>
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { l: "Wavelength",  v: `${result.mid} nm` },
+              { l: "Band",        v: `${result.band} / 128` },
+              { l: "Energy",      v: result.energy.toExponential(2)+" J" },
+            ].map(({ l, v }) => (
+              <div key={l}>
+                <div className="text-[9px] text-white/30 mb-0.5 uppercase tracking-widest">{l}</div>
+                <div className="text-[13px] font-bold transition-colors" style={{ color: midHex }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Share */}
+        <div className="rounded-xl border border-white/8 bg-white/2 p-3 mb-6">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-1.5 text-[10px] text-white/30">
+              <Share2 size={10} /> Share this fingerprint — anyone can open it, no login
+            </div>
+            <button onClick={() => { navigator.clipboard.writeText(shareUrl); setCopied(true); setTimeout(()=>setCopied(false),2000); }}
+              className="flex items-center gap-1 text-[10px] transition-colors" style={{ color: copied?"#4ade80":"rgba(255,255,255,0.3)" }}>
+              {copied ? <Check size={10}/> : <Copy size={10}/>} {copied?"Copied!":"Copy link"}
+            </button>
+          </div>
+          <div className="text-[10px] text-white/35 truncate">{shareUrl}</div>
+        </div>
+
+        <div className="flex gap-3">
+          <a href="https://wnsp.io/ce-se-pipeline" target="_blank" rel="noreferrer"
+            className="flex-1 text-center py-2.5 rounded-xl font-bold text-sm"
+            style={{ background: accent, color: "#000" }}>
+            Full CE→SE Pipeline →
+          </a>
+          <a href="https://wnsp.io/replit-template" target="_blank" rel="noreferrer"
+            className="flex-1 text-center py-2.5 rounded-xl font-bold text-sm border"
+            style={{ borderColor: accent+"40", color: accent }}>
+            Replit Template
+          </a>
+        </div>
+      </div>
+      <Footer accent={accent} />
+    </div>
+  );
+}
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 function wlToRgb(nm: number) {
@@ -62,9 +198,14 @@ function Footer({ accent }: { accent: string }) {
   );
 }
 
-// ── 1. wnsp.dev ─ Developer Portal ───────────────────────────────────────────
+// ── 1. wnsp.dev ─ Developer Portal + /try live encoder ───────────────────────
 export function WnspDevLanding() {
+  const path   = window.location.pathname;
   const accent = "#00e5cc";
+
+  // /try — inline live encoder, no login, client-side physics
+  if (path === "/try") return <WnspDevTry accent={accent} />;
+
   const commands = [
     { label: "npm",    cmd: "npm install nexusos-ce-encoder" },
     { label: "pip",    cmd: "pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py" },

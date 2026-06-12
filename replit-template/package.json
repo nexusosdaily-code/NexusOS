@@ -1,0 +1,15 @@
+{
+  "name": "nexusos-starter",
+  "version": "1.0.0",
+  "description": "NexusOS CE encoder starter — paste any code, get its spectral address",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "nexusos-ce-encoder": "^1.0.0"
+  },
+  "keywords": ["nexusos", "wnsp", "wavelength", "spectral", "physics"],
+  "license": "AGPL-3.0"
+}

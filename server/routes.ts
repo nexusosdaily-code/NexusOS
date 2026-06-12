@@ -4955,6 +4955,24 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/encode?text=… — public shareable encode endpoint, no auth required
+  app.get("/api/encode", async (req: Request, res: Response) => {
+    try {
+      const text = String(req.query.text ?? "").trim().slice(0, 1000);
+      if (!text) return res.status(400).json({ error: "text is required" });
+      const encRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction: text, label: "public" }),
+      });
+      if (!encRes.ok) return res.status(502).json({ error: "Spectral encode failed" });
+      const enc = await encRes.json() as any;
+      res.json({ ok: true, text, ...enc });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/api/spectral-db/scan", async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
