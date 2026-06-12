@@ -12979,6 +12979,68 @@ export async function registerRoutes(
       } catch (err: any) { res.status(500).json({ error: err.message }); }
     });
 
+    // POST /api/wnusd/backfill — create missing WNUSD positions for existing stakes (no NXT charge)
+    app.post("/api/wnusd/backfill", authenticate, async (req: Request, res: Response) => {
+      try {
+        const userId  = (req as any).user.id;
+        const { db }  = await import("./db");
+        const { sql: S } = await import("drizzle-orm");
+        const btcUsd  = await fetchBtcForWnusd();
+        const satUsd  = btcUsd / 100_000_000;
+        const COL     = 1.5;
+
+        // All active stakes for this user
+        const stakes = await db.execute(S`
+          SELECT id, amount_sats FROM sats_stakes
+          WHERE user_id = ${userId} AND status = 'active'
+          ORDER BY id ASC
+        `);
+
+        // Stakes already linked to a position
+        const linked = await db.execute(S`
+          SELECT stake_id FROM wnusd_positions
+          WHERE user_id = ${userId} AND stake_id IS NOT NULL
+        `);
+        const linkedIds = new Set((linked.rows as any[]).map(r => r.stake_id));
+
+        const missing = (stakes.rows as any[]).filter(s => !linkedIds.has(s.id));
+
+        let created = 0;
+        for (const stake of missing) {
+          const sats    = Number(stake.amount_sats);
+          const colUsd  = sats * satUsd;
+          const wnusd   = parseFloat((colUsd / COL).toFixed(8));
+          const posId   = crypto.randomUUID();
+          const txId    = crypto.randomUUID();
+
+          await db.execute(S`
+            INSERT INTO wnusd_positions
+              (id, user_id, collateral_sats, nxt_fee_sent, wnusd_minted,
+               status, col_ratio_pct, btc_usd_at_mint, opened_at, updated_at, stake_id)
+            VALUES
+              (${posId}, ${userId}, ${sats}, ${"0.00000000"},
+               ${wnusd.toFixed(8)}, ${"active"}, ${"150.00"},
+               ${btcUsd.toFixed(2)}, now(), now(), ${stake.id})
+          `);
+
+          await db.execute(S`
+            INSERT INTO wnusd_transactions
+              (id, user_id, position_id, type, sats_delta, wnusd_delta,
+               nxt_fee, col_ratio_pct, btc_usd_at_time, created_at)
+            VALUES
+              (${txId}, ${userId}, ${posId}, ${"backfill"}, ${sats},
+               ${wnusd.toFixed(8)}, ${"0.00000000"}, ${"150.00"},
+               ${btcUsd.toFixed(2)}, now())
+          `);
+
+          created++;
+        }
+
+        res.json({ ok: true, created, skipped: linkedIds.size, btcUsd,
+          message: `${created} position(s) backfilled from existing stakes` });
+      } catch (err: any) { res.status(500).json({ error: err.message }); }
+    });
+
     // GET /api/wnusd/stats — global circulating supply for stablecoin/stats
     app.get("/api/wnusd/supply", async (_req: Request, res: Response) => {
       try {
