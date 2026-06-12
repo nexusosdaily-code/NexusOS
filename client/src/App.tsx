@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, ProtectedRoute, AuthLoading } from "@/hooks/use-auth";
 import { UniSatProvider } from "@/hooks/use-unisat";
+import { DOMAIN_LANDINGS } from "@/pages/domain-landings";
 
 // Auth page loaded eagerly — needed on first render
 import AuthPage from "@/pages/auth";
@@ -417,6 +418,9 @@ function TelegramFloat() {
 }
 
 function App() {
+  const DomainLanding = DOMAIN_LANDINGS[window.location.hostname];
+  if (DomainLanding) return <DomainLanding />;
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
