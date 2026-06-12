@@ -886,6 +886,57 @@ export function FiveFiveFiveLanding() {
   );
 }
 
+// ── quanta.io → proof page (inline, no router dependency) ────────────────────
+export function QuantaLanding() {
+  const accent = "#a78bfa";
+  return (
+    <div className="min-h-screen bg-black text-white font-mono">
+      <Nav domain="quanta.io" accent={accent} />
+      <div className="pt-28 pb-16 px-4 max-w-2xl mx-auto text-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border mb-5 text-[10px] font-bold uppercase tracking-widest"
+          style={{ borderColor: accent+"40", color: accent, background: accent+"10" }}>
+          Mathematical Proof — NexusOS Physics
+        </div>
+        <h1 className="text-4xl font-bold text-white mb-3">
+          The math is public.<br /><span style={{ color: accent }}>Check it yourself.</span>
+        </h1>
+        <p className="text-sm text-white/40 mb-10 max-w-lg mx-auto leading-relaxed">
+          Every equation in NexusOS is grounded in established quantum physics.
+          CODATA 2018 constants. Step-by-step derivations. Live calculators.
+          Seven independent proofs — all verifiable in Python.
+        </p>
+        <div className="grid grid-cols-2 gap-3 mb-8 text-left">
+          {[
+            { eq: "E = hf",             desc: "Planck's equation — energy of a photon at frequency f" },
+            { eq: "Λ = hf/c²",          desc: "Compression mass — derived from E=mc² + E=hf" },
+            { eq: "band = code % 128",   desc: "CE_TABLE determinism — ASCII injective, 128 bands" },
+            { eq: "256 × 50 × 2 = 25,600", desc: "WDM × OAM × Pol — orthogonal Ψ channels" },
+            { eq: "⟨Ψᵢ|Ψⱼ⟩ = δᵢⱼ",    desc: "Hilbert space orthogonality — quantum mechanics" },
+            { eq: "fee = E_sender/E_ref", desc: "Physics-based fee multiplier — no arbitrary values" },
+            { eq: "f₀ = 555 THz",        desc: "First oscillation — peak human photopic sensitivity" },
+          ].map(({ eq, desc }) => (
+            <div key={eq} className="rounded-xl border border-white/6 bg-white/2 p-4">
+              <div className="text-[13px] font-bold mb-1" style={{ color: accent }}>{eq}</div>
+              <div className="text-[10px] text-white/35 leading-relaxed">{desc}</div>
+            </div>
+          ))}
+        </div>
+        <a href="https://wnsp.io/proof" target="_blank" rel="noreferrer"
+          className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-bold text-sm mb-3"
+          style={{ background: accent, color: "#000" }}>
+          Open Full Mathematical Proof →
+        </a>
+        <a href="https://wnsp.io/compression-explorer" target="_blank" rel="noreferrer"
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm border transition-colors"
+          style={{ borderColor: accent+"40", color: accent }}>
+          Live Λ = hf/c² Curve
+        </a>
+      </div>
+      <Footer accent={accent} />
+    </div>
+  );
+}
+
 // ── Domain map ────────────────────────────────────────────────────────────────
 export const DOMAIN_LANDINGS: Record<string, () => JSX.Element> = {
   "wnsp.dev":              WnspDevLanding,

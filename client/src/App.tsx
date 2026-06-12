@@ -148,6 +148,7 @@ const RoadmapPage           = lazy(() => import("@/pages/roadmap"));
 const HowToPlugInPage       = lazy(() => import("@/pages/how-to-plug-in"));
 const EncodePage            = lazy(() => import("@/pages/encode"));
 const ReplitTemplatePage    = lazy(() => import("@/pages/replit-template"));
+const ProofPage             = lazy(() => import("@/pages/proof"));
 
 // Loading spinner shown while a lazy page chunk is downloading
 function PageLoader() {
@@ -394,6 +395,7 @@ function Router() {
       <Route path="/how-to-plug-in"      component={HowToPlugInPage} />
       <Route path="/encode"              component={EncodePage} />
       <Route path="/replit-template"     component={ReplitTemplatePage} />
+      <Route path="/proof"               component={ProofPage} />
       <Route>
         <ProtectedRoutes />
       </Route>
