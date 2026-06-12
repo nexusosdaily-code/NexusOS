@@ -826,16 +826,12 @@ const CAMPAIGN_VIDEOS = [
 
 // ── Nexus Ecosystem domain strip ───────────────────────────────────────
 const NEXUS_DOMAINS = [
-  { domain: "wnsp.dev",             accent: "#00e5cc", founder: "Maxwell",  icon: "〜", desc: "Developer SDK" },
-  { domain: "wnsp.blog",            accent: "#f59e0b", founder: "All",      icon: "✦", desc: "The story" },
-  { domain: "snic.io",              accent: "#60a5fa", founder: "Tesla",    icon: "⊛", desc: "SNIC hardware" },
-  { domain: "phr1.io",              accent: "#f87171", founder: "Tesla",    icon: "⌁", desc: "PHR-1 resonator" },
-  { domain: "lambdagate.io",        accent: "#a78bfa", founder: "Einstein", icon: "λ", desc: "Λ=hf/c² gate" },
-  { domain: "wavelengthscript.dev", accent: "#34d399", founder: "Planck",   icon: "ψ", desc: "WLS language" },
-  { domain: "zerogstate.io",        accent: "#818cf8", founder: "Tesla",    icon: "∅", desc: "ZERO-G state" },
-  { domain: "wascii.io",            accent: "#fde047", founder: "Planck",   icon: "≈", desc: "Wave encoding" },
-  { domain: "orbitaltreasury.io",   accent: "#10b981", founder: "Shannon",  icon: "◎", desc: "Treasury" },
-  { domain: "555thz.io",            accent: "#4ade80", founder: "Planck",   icon: "ƒ", desc: "First oscillation" },
+  { domain: "wnsp.tech",    accent: "#00e5cc", founder: "Maxwell", icon: "〜", desc: "Main portal" },
+  { domain: "snic.io",      accent: "#60a5fa", founder: "Tesla",   icon: "⊛", desc: "SNIC hardware" },
+  { domain: "phr1.io",      accent: "#f87171", founder: "Tesla",   icon: "⌁", desc: "PHR-1 resonator" },
+  { domain: "zerogstate.io",accent: "#818cf8", founder: "Tesla",   icon: "∅", desc: "ZERO-G state" },
+  { domain: "wascii.io",    accent: "#fde047", founder: "Planck",  icon: "≈", desc: "Wave encoding" },
+  { domain: "555thz.io",    accent: "#4ade80", founder: "Planck",  icon: "ƒ", desc: "First oscillation" },
 ];
 
 function EcosystemDomains() {
