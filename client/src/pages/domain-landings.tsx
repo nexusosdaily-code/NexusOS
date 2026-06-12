@@ -44,7 +44,7 @@ function WnspDevTry({ accent }: { accent: string }) {
   return (
     <div className="min-h-screen bg-black text-white font-mono">
       <Nav domain="wnsp.dev/try" accent={accent} />
-      <div className="pt-24 pb-16 px-4 max-w-2xl mx-auto">
+      <div className="pt-36 pb-16 px-4 max-w-2xl mx-auto">
         <div className="flex items-center gap-2 mb-4">
           <Zap size={14} style={{ color: accent }} />
           <span className="text-[11px] uppercase tracking-widest" style={{ color: accent }}>Live CE Encoder — no login · instant · any language</span>
@@ -137,6 +137,20 @@ function WnspDevTry({ accent }: { accent: string }) {
   );
 }
 
+// ── Ecosystem tab data ────────────────────────────────────────────────────────
+const ECOSYSTEM_TABS = [
+  { domain: "wnsp.dev",              accent: "#00e5cc", label: "wnsp.dev",              founder: "Maxwell",  icon: "〜" },
+  { domain: "wnsp.blog",             accent: "#f59e0b", label: "wnsp.blog",             founder: "All",      icon: "✦" },
+  { domain: "snic.io",               accent: "#60a5fa", label: "snic.io",               founder: "Tesla",    icon: "⊛" },
+  { domain: "phr1.io",               accent: "#f87171", label: "phr1.io",               founder: "Tesla",    icon: "⌁" },
+  { domain: "lambdagate.io",         accent: "#a78bfa", label: "lambdagate.io",         founder: "Einstein", icon: "λ" },
+  { domain: "wavelengthscript.dev",  accent: "#34d399", label: "wavelengthscript.dev",  founder: "Planck",   icon: "ψ" },
+  { domain: "zerogstate.io",         accent: "#818cf8", label: "zerogstate.io",         founder: "Tesla",    icon: "∅" },
+  { domain: "wascii.io",             accent: "#fde047", label: "wascii.io",             founder: "Planck",   icon: "≈" },
+  { domain: "orbitaltreasury.io",    accent: "#10b981", label: "orbitaltreasury.io",    founder: "Shannon",  icon: "◎" },
+  { domain: "555thz.io",             accent: "#4ade80", label: "555thz.io",             founder: "Planck",   icon: "ƒ" },
+] as const;
+
 // ── Shared helpers ────────────────────────────────────────────────────────────
 function wlToRgb(nm: number) {
   let r = 0, g = 0, b = 0;
@@ -160,19 +174,63 @@ function CopyBtn({ text }: { text: string }) {
 }
 
 function Nav({ domain, accent }: { domain: string; accent: string }) {
+  // Match current domain to ecosystem tab (strip www. and /try etc.)
+  const hostname = domain.replace(/^www\./, "").split("/")[0];
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 border-b border-white/8 bg-black/80 backdrop-blur">
-      <span className="font-bold tracking-widest text-sm" style={{ color: accent }}>{domain}</span>
-      <div className="flex items-center gap-4">
-        <a href="https://wnsp.io" target="_blank" rel="noreferrer"
-          className="text-[11px] text-white/40 hover:text-white transition-colors flex items-center gap-1">
-          wnsp.io <ExternalLink size={10} />
-        </a>
-        <a href="https://wnsp.io/crowdfund" target="_blank" rel="noreferrer"
-          className="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors"
-          style={{ background: accent + "20", color: accent, border: `1px solid ${accent}40` }}>
-          Fund ↗
-        </a>
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur border-b border-white/8">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-5 py-3">
+        <div className="flex items-center gap-2">
+          <span className="font-bold tracking-widest text-sm" style={{ color: accent }}>{domain}</span>
+          {(() => {
+            const tab = ECOSYSTEM_TABS.find(t => t.domain === hostname);
+            return tab ? (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full border font-semibold"
+                style={{ color: tab.accent, borderColor: tab.accent + "40", background: tab.accent + "10" }}>
+                {tab.icon} {tab.founder}
+              </span>
+            ) : null;
+          })()}
+        </div>
+        <div className="flex items-center gap-3">
+          <a href="https://wnsp.io" target="_blank" rel="noreferrer"
+            className="text-[11px] text-white/35 hover:text-white transition-colors flex items-center gap-1">
+            wnsp.io <ExternalLink size={9} />
+          </a>
+          <a href="https://wnsp.io/crowdfund" target="_blank" rel="noreferrer"
+            className="text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors"
+            style={{ background: accent + "20", color: accent, border: `1px solid ${accent}40` }}>
+            Fund ↗
+          </a>
+        </div>
+      </div>
+      {/* Ecosystem tab strip */}
+      <div className="border-t border-white/5 overflow-x-auto scrollbar-none">
+        <div className="flex items-stretch min-w-max px-3 pb-0">
+          {ECOSYSTEM_TABS.map(tab => {
+            const isActive = tab.domain === hostname;
+            return (
+              <a key={tab.domain}
+                href={`https://${tab.domain}`}
+                target={isActive ? "_self" : "_blank"}
+                rel="noreferrer"
+                className="flex flex-col items-center px-3 py-1.5 text-center transition-all border-b-2 shrink-0"
+                style={{
+                  borderBottomColor: isActive ? tab.accent : "transparent",
+                  background: isActive ? tab.accent + "08" : "transparent",
+                }}>
+                <span className="text-[11px] font-semibold leading-none mb-0.5"
+                  style={{ color: isActive ? tab.accent : "rgba(255,255,255,0.3)" }}>
+                  {tab.label}
+                </span>
+                <span className="text-[9px] leading-none"
+                  style={{ color: isActive ? tab.accent + "bb" : "rgba(255,255,255,0.15)" }}>
+                  {tab.icon} {tab.founder}
+                </span>
+              </a>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );
@@ -214,7 +272,7 @@ export function WnspDevLanding() {
   return (
     <div className="min-h-screen bg-black text-white font-mono">
       <Nav domain="wnsp.dev" accent={accent} />
-      <div className="pt-28 pb-16 px-4 max-w-3xl mx-auto">
+      <div className="pt-36 pb-16 px-4 max-w-3xl mx-auto">
         <div className="flex items-center gap-2 mb-4">
           <Terminal size={16} style={{ color: accent }} />
           <span className="text-[11px] uppercase tracking-widest" style={{ color: accent }}>WNSP Developer Portal</span>
@@ -299,7 +357,7 @@ export function WnspBlogLanding() {
   return (
     <div className="min-h-screen bg-black text-white font-mono">
       <Nav domain="wnsp.blog" accent={accent} />
-      <div className="pt-28 pb-16 px-4 max-w-2xl mx-auto">
+      <div className="pt-36 pb-16 px-4 max-w-2xl mx-auto">
         <div className="flex items-center gap-2 mb-4">
           <BookOpen size={16} style={{ color: accent }} />
           <span className="text-[11px] uppercase tracking-widest" style={{ color: accent }}>NexusOS Build Log</span>
@@ -339,7 +397,7 @@ export function SnicLanding() {
   return (
     <div className="min-h-screen bg-black text-white font-mono">
       <Nav domain="snic.io" accent={accent} />
-      <div className="pt-28 pb-16 px-4 max-w-3xl mx-auto">
+      <div className="pt-36 pb-16 px-4 max-w-3xl mx-auto">
         <div className="flex items-center gap-2 mb-4">
           <Cpu size={16} style={{ color: accent }} />
           <span className="text-[11px] uppercase tracking-widest" style={{ color: accent }}>Spectral Network Interface Card</span>
@@ -413,7 +471,7 @@ export function Phr1Landing() {
   return (
     <div className="min-h-screen bg-black text-white font-mono">
       <Nav domain="phr1.io" accent={accent} />
-      <div className="pt-28 pb-16 px-4 max-w-3xl mx-auto">
+      <div className="pt-36 pb-16 px-4 max-w-3xl mx-auto">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border mb-5 text-[10px] font-bold uppercase tracking-widest"
           style={{ borderColor: accent + "40", color: accent, background: accent + "10" }}>
           <Radio size={10} /> Funding Now — 25 Hardware Founder Slots
@@ -479,7 +537,7 @@ export function LambdaGateLanding() {
   return (
     <div className="min-h-screen bg-black text-white font-mono">
       <Nav domain="lambdagate.io" accent={accent} />
-      <div className="pt-28 pb-16 px-4 max-w-3xl mx-auto">
+      <div className="pt-36 pb-16 px-4 max-w-3xl mx-auto">
         <div className="flex items-center gap-2 mb-4">
           <Star size={16} style={{ color: accent }} />
           <span className="text-[11px] uppercase tracking-widest" style={{ color: accent }}>Lambda Gate Substrate</span>
@@ -554,7 +612,7 @@ agent PhysicsCalc at Ψ(211,35,H) {
   return (
     <div className="min-h-screen bg-black text-white font-mono">
       <Nav domain="wavelengthscript.dev" accent={accent} />
-      <div className="pt-28 pb-16 px-4 max-w-3xl mx-auto">
+      <div className="pt-36 pb-16 px-4 max-w-3xl mx-auto">
         <div className="flex items-center gap-2 mb-4">
           <Code2 size={16} style={{ color: accent }} />
           <span className="text-[11px] uppercase tracking-widest" style={{ color: accent }}>WavelengthScript v1.0</span>
@@ -614,7 +672,7 @@ export function ZeroGStateLanding() {
   return (
     <div className="min-h-screen bg-black text-white font-mono">
       <Nav domain="zerogstate.io" accent={accent} />
-      <div className="pt-28 pb-16 px-4 max-w-3xl mx-auto">
+      <div className="pt-36 pb-16 px-4 max-w-3xl mx-auto">
         <div className="flex items-center gap-2 mb-4">
           <Waves size={16} style={{ color: accent }} />
           <span className="text-[11px] uppercase tracking-widest" style={{ color: accent }}>ZERO-G State · PHR-1</span>
@@ -684,7 +742,7 @@ ceEncode("Hello")
   return (
     <div className="min-h-screen bg-black text-white font-mono">
       <Nav domain="wascii.io" accent={accent} />
-      <div className="pt-28 pb-16 px-4 max-w-3xl mx-auto">
+      <div className="pt-36 pb-16 px-4 max-w-3xl mx-auto">
         <div className="flex items-center gap-2 mb-4">
           <Zap size={16} style={{ color: accent }} />
           <span className="text-[11px] uppercase tracking-widest" style={{ color: accent }}>WASCII v2.0 · Wave Density Spectral Vector</span>
@@ -760,7 +818,7 @@ export function OrbitalTreasuryLanding() {
   return (
     <div className="min-h-screen bg-black text-white font-mono">
       <Nav domain="orbitaltreasury.io" accent={accent} />
-      <div className="pt-28 pb-16 px-4 max-w-3xl mx-auto">
+      <div className="pt-36 pb-16 px-4 max-w-3xl mx-auto">
         <div className="flex items-center gap-2 mb-4">
           <Shield size={16} style={{ color: accent }} />
           <span className="text-[11px] uppercase tracking-widest" style={{ color: accent }}>Orbital Treasury · Full Disclosure</span>
@@ -824,7 +882,7 @@ export function FiveFiveFiveLanding() {
   return (
     <div className="min-h-screen bg-black text-white font-mono">
       <Nav domain="555thz.io" accent={accent} />
-      <div className="pt-28 pb-16 px-4 max-w-3xl mx-auto text-center">
+      <div className="pt-36 pb-16 px-4 max-w-3xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 mb-6">
           <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: accent }} />
           <span className="text-[11px] uppercase tracking-widest" style={{ color: accent }}>555 THz · λ ≈ 540nm · Green</span>
