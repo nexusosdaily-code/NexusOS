@@ -187,7 +187,7 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
 }
 
 export default function CoinsnierPage() {
-  const [tab, setTab] = useState<"audit" | "fields" | "kyc">("audit");
+  const [tab, setTab] = useState<"audit" | "fields" | "kyc" | "listings">("audit");
 
   return (
     <div className="min-h-screen bg-[#080808] text-white">
@@ -239,7 +239,7 @@ export default function CoinsnierPage() {
             { done: true,  label: "Audit page ready",                        note: "wnsp.io/coinsniper" },
             { done: true,  label: "All submission fields prepared",          note: "See Submission Fields tab" },
             { done: true,  label: "Logo — 1024×1024 PNG ready",              note: "nexusos-icon.png — Ψ symbol, exceeds 512×512 minimum" },
-            { done: false, label: "KYC — awaiting Duncan's reply",           note: "Submitted — waiting on @duncancoinsniper response" },
+            { done: false, label: "KYC — Duncan not responding, paid KYC option available", note: "Go to coinsniper.net dashboard → KYC Verification, or email support@coinsniper.net" },
           ].map(({ done, label, note }) => (
             <div key={label} className="flex items-start gap-3 py-1.5">
               <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold ${
@@ -256,11 +256,11 @@ export default function CoinsnierPage() {
         </div>
 
         {/* tabs */}
-        <div className="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/8">
-          {([["audit","Audit Report"],["kyc","KYC Guide"],["fields","Submission Fields"]] as const).map(([k,l]) => (
+        <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-white/5 border border-white/8">
+          {([["audit","Audit"],["kyc","KYC"],["fields","Fields"],["listings","Listings"]] as const).map(([k,l]) => (
             <button key={k} onClick={() => setTab(k)}
               data-testid={`tab-${k}`}
-              className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${
+              className={`py-2 rounded-lg text-xs font-semibold transition-colors ${
                 tab === k ? "bg-purple-500 text-white" : "text-white/40 hover:text-white"
               }`}>{l}</button>
           ))}
@@ -390,6 +390,105 @@ export default function CoinsnierPage() {
                 Download
               </a>
             </div>
+          </div>
+        )}
+
+        {/* LISTINGS TAB */}
+        {tab === "listings" && (
+          <div className="space-y-4">
+
+            {/* CoinGecko */}
+            <div className="rounded-xl border border-green-500/20 bg-green-950/8 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🦎</span>
+                  <h2 className="text-sm font-bold text-white">CoinGecko</h2>
+                </div>
+                <span className="text-[10px] bg-green-500/10 text-green-400 border border-green-500/20 rounded-full px-2 py-0.5">Free · account needed</span>
+              </div>
+              <p className="text-[11px] text-white/40 leading-relaxed">CoinGecko lists Bitcoin Runes. Free account — just email signup. Review takes 1–4 weeks.</p>
+
+              <div className="space-y-2">
+                {[
+                  { n: "1", title: "Create free account", url: "https://www.coingecko.com/en/account/sign_up", cta: "Sign up →", note: "Email + password only. No phone, no KYC." },
+                  { n: "2", title: "Submit your token",    url: "https://www.coingecko.com/en/coins/add",      cta: "Add coin →", note: "Select Bitcoin chain · choose Rune type · paste fields below." },
+                ].map(s => (
+                  <div key={s.n} className="flex gap-3 p-3 rounded-lg bg-black/40 border border-white/5">
+                    <div className="w-5 h-5 rounded-full bg-green-500/15 text-green-400 border border-green-500/30 flex items-center justify-center text-[10px] font-bold shrink-0">{s.n}</div>
+                    <div className="flex-1">
+                      <div className="text-xs font-semibold text-white/80">{s.title}</div>
+                      <div className="text-[10px] text-white/35 mt-0.5">{s.note}</div>
+                    </div>
+                    <a href={s.url} target="_blank" rel="noreferrer"
+                      className="self-center text-[10px] font-semibold text-green-400 hover:underline shrink-0 flex items-center gap-1">
+                      <ExternalLink size={9} />{s.cta}
+                    </a>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Step 3 — paste these into the form</div>
+                {[
+                  { label: "Token Name",    value: "NEXUS•WAVELENGTH" },
+                  { label: "Symbol",        value: "NXWV" },
+                  { label: "Contract / ID", value: "952596:379" },
+                  { label: "Chain",         value: "Bitcoin (Rune)" },
+                  { label: "Website",       value: "https://wnsp.io" },
+                  { label: "Whitepaper",    value: "https://wnsp.io/wnsp-paper" },
+                  { label: "GitHub",        value: "https://github.com/nexusosdaily-code/NexusOS" },
+                  { label: "Telegram",      value: "https://t.me/troglodytememe" },
+                  { label: "Description",   value: "NEXUS•WAVELENGTH (NXWV) is the native Rune of NexusOS — a physics-based civilization OS replacing cryptographic hashing with electromagnetic wave equations. 21 trillion supply. All 1,000 mints permanently sealed June 2026. Zero premine. Rune ID: 952596:379. AGPL-3.0 open source." },
+                ].map(f => <CopyField key={f.label} label={f.label} value={f.value} tip="" />)}
+              </div>
+            </div>
+
+            {/* Rune-native trackers */}
+            <div className="rounded-xl border border-orange-500/20 bg-orange-950/8 p-5 space-y-3">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <Bitcoin size={14} className="text-orange-400" />
+                  <h2 className="text-sm font-bold text-white">Rune-Native Trackers</h2>
+                </div>
+                <span className="text-[10px] bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-full px-2 py-0.5">No account needed</span>
+              </div>
+              <p className="text-[11px] text-white/40">These auto-index your Rune from the Bitcoin blockchain — just check they're showing correct info:</p>
+              {[
+                { name: "RuneAlpha",     icon: "🔺", url: "https://runealpha.xyz",                                                         desc: "Rune explorer + holder stats. Search NEXUS•WAVELENGTH to verify.",          status: "Auto" },
+                { name: "GeniiData",     icon: "📊", url: "https://www.genii.data/runes",                                                  desc: "Rune analytics + mint tracking. Holder distribution and volume.",           status: "Auto" },
+                { name: "OKX Runes",     icon: "⭕", url: "https://web3.okx.com/explorer/btc/runes/NEXUS%E2%80%A2WAVELENGTH",             desc: "Large audience. Auto-lists all etched Runes from Bitcoin.",                 status: "Auto" },
+                { name: "Ordiscan",      icon: "🔍", url: "https://ordiscan.com/rune/NEXUS%E2%80%A2WAVELENGTH",                           desc: "Full Rune detail — etching TX, mint progress, holders.",                    status: "Auto" },
+                { name: "UniSat Market", icon: "🟠", url: "https://unisat.io/market/runes?tick=NEXUS%E2%80%A2WAVELENGTH",                 desc: "Primary trading marketplace — list NXWV here to set the floor price.",      status: "List" },
+                { name: "Magic Eden",    icon: "🪄", url: "https://magiceden.io/runes/NEXUS%E2%80%A2WAVELENGTH",                         desc: "Secondary marketplace. Connect UniSat wallet to list.",                     status: "List" },
+              ].map(t => (
+                <a key={t.name} href={t.url} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-lg bg-black/30 border border-white/5 hover:border-orange-500/25 transition-all group">
+                  <span className="text-base shrink-0">{t.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[11px] font-bold text-white/80">{t.name}</span>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                        t.status === "List"
+                          ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                          : "bg-green-500/10 text-green-400 border border-green-500/20"
+                      }`}>{t.status}</span>
+                    </div>
+                    <div className="text-[10px] text-white/35 leading-relaxed">{t.desc}</div>
+                  </div>
+                  <ExternalLink size={11} className="text-white/20 group-hover:text-orange-400 shrink-0 transition-colors" />
+                </a>
+              ))}
+            </div>
+
+            {/* DEXTools note */}
+            <div className="rounded-xl border border-white/8 bg-black/20 p-4">
+              <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-2">Note on DEXTools</div>
+              <p className="text-[11px] text-white/35 leading-relaxed">
+                DEXTools is built for EVM chains (Ethereum, BSC) and tracks DEX trading pairs — it doesn't support Bitcoin Runes.
+                The trackers above (RuneAlpha, OKX, Ordiscan) are the Rune-native equivalent.
+              </p>
+            </div>
+
           </div>
         )}
 
