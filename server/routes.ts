@@ -10440,6 +10440,26 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // POST /api/admin/fix-ln-balance — correct a corrupted sats_balance (Nexus / SYSTEM only)
+  app.post("/api/admin/fix-ln-balance", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user!;
+      if (user.username.toLowerCase() !== "nexus") return res.status(403).json({ error: "SYSTEM only" });
+      const { targetUserId, correctSats } = req.body;
+      if (!targetUserId || correctSats === undefined) return res.status(400).json({ error: "targetUserId and correctSats required" });
+      const { db } = await import("./db");
+      const { lightningWallets } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [before] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, targetUserId));
+      if (!before) return res.status(404).json({ error: "Lightning wallet not found" });
+      const [updated] = await db.update(lightningWallets)
+        .set({ satsBalance: Number(correctSats), updatedAt: new Date() })
+        .where(eq(lightningWallets.userId, targetUserId))
+        .returning();
+      return res.json({ ok: true, before: before.satsBalance, after: updated.satsBalance });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // GET /api/admin/watched-wallets/history — all credited TXs across all wallets
   app.get("/api/admin/watched-wallets/history", authenticate, async (req: Request, res: Response) => {
     try {
