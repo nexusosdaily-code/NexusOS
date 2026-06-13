@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { useState } from "react";
 import { Link } from "wouter";
 import { getAuthHeaders } from "@/lib/queryClient";
@@ -221,6 +222,15 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function CrowdfundPage() {
+  usePageMeta({
+    title: "Crowdfund NexusOS — Hardware Founder & NXT Supporter Tiers",
+    description: "Fund the PHR-1 resonator, SNIC photonic NIC, and WavelengthScript compiler. Hardware Founder slots (25 units), NXT Supporter packs, and Spectral Bundles. Physics-based computing starts here.",
+    canonical: "https://nexusos.replit.app/crowdfund",
+    ogTitle: "Crowdfund NexusOS Hardware — PHR-1 & SNIC",
+    ogDescription: "25 Hardware Founder slots. PHR-1 resonator, SNIC photonic NIC. Fund the world's first physics-based computing hardware. 100M sats / 100,000 NXT per slot.",
+    twitterTitle: "Crowdfund NexusOS — Hardware Founder Slots Open",
+    twitterDescription: "PHR-1 resonator. SNIC photonic NIC. 25 Hardware Founder slots. Fund physics-based computing.",
+  });
   const { data: eco } = useQuery<any>({ queryKey: ["/api/ecosystem/status"], retry: false });
   const { data: chain } = useQuery<any>({ queryKey: ["/api/blockchain/chain"], retry: false });
   const { data: geyser } = useQuery<any>({ queryKey: ["/api/crowdfund/geyser-content"], retry: false });

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { Link } from "wouter";
 import { ArrowLeft, Code2, Zap, Globe, Cpu, Radio, Database, Play, Copy, ChevronRight, Atom, BookOpen, Layers } from "lucide-react";
 
@@ -492,6 +493,15 @@ class SpectralNode:
 `;
 
 export default function WavelengthLangPage() {
+  usePageMeta({
+    title: "WavelengthScript — Physics-Native Programming Language",
+    description: "WavelengthScript is a programming language where agents live at spectral Ψ addresses, messages are photon packets, and computation costs are derived from E=hf. Compiles to WNSP bytecode. Step-debug in the WNSP VM.",
+    canonical: "https://nexusos.replit.app/wavelength-lang",
+    ogTitle: "WavelengthScript — The Language the Universe Runs On",
+    ogDescription: "Physics-native language: spectral addresses, photon packets, E=hf fees. Compiles to WNSP bytecode. Browser-native WNSP VM. CE→SE pipeline. AGPL-3.0.",
+    twitterTitle: "WavelengthScript v1.0",
+    twitterDescription: "The language the universe runs on. Agents at spectral addresses. Photon packets. E=hf computation costs. WNSP bytecode.",
+  });
   const [srcLang, setSrcLang]   = useState<"python" | "javascript" | "rust">("python");
   const [source, setSource]     = useState(SAMPLE_PYTHON);
   const [output, setOutput]     = useState("");

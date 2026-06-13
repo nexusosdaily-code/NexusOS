@@ -1,6 +1,7 @@
 import express, { type Express, type Request } from "express";
 import fs from "fs";
 import path from "path";
+import { injectMeta } from "./seo-meta";
 
 // ---------------------------------------------------------------------------
 // Public SPA route registry
@@ -99,12 +100,27 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
+  const indexPath = path.resolve(distPath, "index.html");
+  let cachedHtml: string | null = null;
+
+  function getHtml(): string {
+    if (!cachedHtml) {
+      cachedHtml = fs.readFileSync(indexPath, "utf-8");
+    }
+    return cachedHtml;
+  }
+
   // SPA fallback — serve index.html for all non-file requests.
   // HTTP 200 for known public paths; HTTP 404 for everything else so
   // search-engine crawlers receive the correct indexation signal.
+  // Injects host/route-aware metadata before serving.
   app.use("*", (req, res) => {
-    const pathname = requestPathname(req);
-    const status = isPublicSpaPath(pathname) ? 200 : 404;
-    res.status(status).sendFile(path.resolve(distPath, "index.html"));
+    const spaPathname = requestPathname(req);
+    const status = isPublicSpaPath(spaPathname) ? 200 : 404;
+    const host     = req.hostname || (req.headers.host as string) || "";
+    const pathname = req.originalUrl.split("?")[0] || "/";
+    const html     = injectMeta(getHtml(), host, pathname);
+    res.status(status).setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(html);
   });
 }

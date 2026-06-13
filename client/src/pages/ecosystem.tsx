@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
@@ -84,6 +85,15 @@ const LAYER_STACK = [
 ];
 
 export default function Ecosystem() {
+  usePageMeta({
+    title: "NexusOS Ecosystem — Protocol, Hardware, and Token Network",
+    description: "The NexusOS ecosystem: WNSP protocol domains (wnsp.dev, wnsp.blog), hardware projects (snic.io, phr1.io), encoding standards (wascii.io), and the NXT token circular economy via the Orbital Treasury.",
+    canonical: "https://nexusos.replit.app/ecosystem",
+    ogTitle: "NexusOS Ecosystem Overview",
+    ogDescription: "10 ecosystem domains. WNSP protocol. SNIC photonic NIC. PHR-1 resonator. WASCII encoding. WavelengthScript. Orbital Treasury. NXT token. All connected by Λ=hf/c².",
+    twitterTitle: "NexusOS Ecosystem",
+    twitterDescription: "Protocol, hardware, encoding, and token — all unified by Λ=hf/c². 10 ecosystem domains.",
+  });
   const [refreshKey, setRefreshKey] = useState(0);
   const [hoveredLetter, setHoveredLetter] = useState<string | null>(null);
 

@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import {
   ArrowLeft, Shield, Cpu, Zap, Radio, Code2, Lock,
   GitBranch, Network, Layers, ExternalLink
@@ -76,6 +77,15 @@ function PriorArt({ text }: { text: string }) {
 }
 
 export default function HardwareSpecPage() {
+  usePageMeta({
+    title: "NexusOS Hardware Specification — SNIC, PHR-1, Spectral Relay Mesh (AGPL-3.0)",
+    description: "Formal specification of the Spectral Network Interface Card (SNIC), PHR-1 bifilar resonator, Spectral Relay Mesh v1, and WavelengthScript Compiler α. First public disclosure 2026-05-16. AGPL-3.0 protected.",
+    canonical: "https://nexusos.replit.app/hardware-spec",
+    ogTitle: "NexusOS Hardware Specification — AGPL-3.0",
+    ogDescription: "SNIC, PHR-1, Spectral Relay Mesh v1, WavelengthScript Compiler α. First public disclosure 2026-05-16. AGPL-3.0. Open forever — improvements must be contributed back.",
+    twitterTitle: "NexusOS Hardware Specification",
+    twitterDescription: "SNIC photonic NIC, PHR-1 resonator, Spectral Relay Mesh. First disclosed 2026-05-16. AGPL-3.0.",
+  });
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       {/* Spectral stripe */}

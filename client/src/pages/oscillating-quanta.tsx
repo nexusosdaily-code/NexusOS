@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { Link } from "wouter";
 import { ArrowLeft, Waves, Play, Pause, RotateCcw, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -325,6 +326,15 @@ function CompressionTable() {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function OscillatingQuantaPage() {
+  usePageMeta({
+    title: "Theory of Compression States — First Principles of NexusOS",
+    description: "The universe evolves from the first unobserved oscillation. Each subsequent state is a compression of the previous one, encoded in the electromagnetic spectrum. 25,600 orthogonal Ψ channels represent the full addressable state space.",
+    canonical: "https://nexusos.replit.app/oscillating-quanta",
+    ogTitle: "Theory of Compression States — First Principles",
+    ogDescription: "The first unobserved oscillation at 555 THz. Λ=hf/c² compression law. 25,600 orthogonal Ψ channels. The physics foundation of NexusOS.",
+    twitterTitle: "Theory of Compression States",
+    twitterDescription: "Λ=hf/c². The universe evolves from the first unobserved oscillation. 25,600 orthogonal Ψ channels.",
+  });
   // Single-channel explorer state (from original)
   const [wdm,     setWdm]     = useState(128);
   const [tMs,     setTMs]     = useState(0);

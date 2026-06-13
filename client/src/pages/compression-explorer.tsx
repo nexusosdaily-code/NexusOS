@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { Link } from "wouter";
 import { ArrowLeft, Zap, Activity, Layers } from "lucide-react";
 
@@ -89,6 +90,15 @@ function massToY(mass: number, massMin: number, massMax: number) {
 }
 
 export default function CompressionExplorerPage() {
+  usePageMeta({
+    title: "Compression Explorer — Interactive Λ=hf/c² Curve Visualisation",
+    description: "Interactive SVG visualisation of the Λ=hf/c² compression curve. Authority band overlays, photon energy, compression mass, fee multiplier, normalized Λ, and Boltzmann entropy across the full visible spectrum.",
+    canonical: "https://nexusos.replit.app/compression-explorer",
+    ogTitle: "Compression Explorer — Λ=hf/c² Visualisation",
+    ogDescription: "Interactive compression curve: authority bands, photon energy, Boltzmann entropy, fee multipliers. The physics of NexusOS, rendered across 380–780nm.",
+    twitterTitle: "Compression Explorer — Λ=hf/c² Live",
+    twitterDescription: "Interactive Λ=hf/c² compression curve. Authority bands, photon energies, fee multipliers. NexusOS physics, live.",
+  });
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverNm, setHoverNm] = useState<number | null>(null);
   const [selectedNm, setSelectedNm] = useState<number>(520);

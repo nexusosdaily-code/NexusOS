@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -957,6 +958,15 @@ This is why it is the correct foundation for infrastructure at Kardashev Type I 
 };
 
 export default function DocsPage() {
+  usePageMeta({
+    title: "NexusOS Documentation — WNSP Protocol, WavelengthScript & CE-SE API",
+    description: "Complete developer documentation for NexusOS: WNSP spectral protocol, WavelengthScript language reference, CE-SE encoding pipeline, REST API, NXT token wallet, WNSP VM bytecode, and governance.",
+    canonical: "https://nexusos.replit.app/docs",
+    ogTitle: "NexusOS Documentation",
+    ogDescription: "WNSP protocol spec, WavelengthScript reference, CE-SE pipeline, REST API reference, NXT token, WNSP VM. Everything you need to build on the wavelength of light.",
+    twitterTitle: "NexusOS Documentation",
+    twitterDescription: "Complete reference for WNSP protocol, WavelengthScript, CE-SE encoding, and the NexusOS API.",
+  });
   const [activeSection, setActiveSection] = useState("substrate");
 
   const sections = Object.entries(DOCS_SECTIONS);

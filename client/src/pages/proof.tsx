@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { Link } from "wouter";
 import { Check, Copy, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 
@@ -218,6 +219,15 @@ function ChannelCalc() {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function ProofPage() {
+  usePageMeta({
+    title: "NexusOS Physics Proof — Verified Compression State Calculations",
+    description: "Verified physics proofs for the NexusOS compression state model: Λ=hf/c² derivation, CE encoding determinism, WNSP channel orthogonality proof, and Maxwell equation validation.",
+    canonical: "https://nexusos.replit.app/proof",
+    ogTitle: "NexusOS Physics Proof",
+    ogDescription: "Λ=hf/c² derivation. CE encoding determinism. ⟨Ψᵢ|Ψⱼ⟩=0 orthogonality. Maxwell equation validation. The physics of NexusOS, verified.",
+    twitterTitle: "NexusOS Physics Proof",
+    twitterDescription: "Λ=hf/c² verified. CE encoding deterministic. 25,600 channels orthogonal by quantum mechanics.",
+  });
   return (
     <div className="min-h-screen bg-black text-white font-mono">
 

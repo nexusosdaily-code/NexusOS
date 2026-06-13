@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { Link } from "wouter";
 import {
   ArrowLeft, Play, Zap, Radio, Cpu, CheckCircle2,
@@ -636,6 +637,15 @@ const BANDS = [
 
 // ── Main ───────────────────────────────────────────────────────────────────────
 export default function LearnPage() {
+  usePageMeta({
+    title: "CE→SE Pipeline — Any Language to Spectral Bytecode",
+    description: "The unified 4-stage CE→SE pipeline: paste any language → transpile to WavelengthScript → compile to WNSP bytecode → execute in the WNSP VM. The central demonstration of the NexusOS physics stack.",
+    canonical: "https://nexusos.replit.app/ce-se-pipeline",
+    ogTitle: "CE→SE Pipeline — Any Language to Spectral Bytecode",
+    ogDescription: "4-stage pipeline: any language → WavelengthScript transpile → WNSP bytecode compile → WNSP VM execution. Physics-native computing, live in your browser.",
+    twitterTitle: "CE→SE Pipeline — 4-Stage Spectral Compiler",
+    twitterDescription: "Paste any language → WavelengthScript → WNSP bytecode → execute in WNSP VM. The NexusOS physics stack, live.",
+  });
   const [lang, setLang] = useState("python");
   const [code, setCode] = useState(STARTERS.python);
   const [wlsLines, setWlsLines] = useState<string[]>([]);

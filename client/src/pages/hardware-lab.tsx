@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -1022,6 +1023,15 @@ function AdoptionPanel() {
 
 // ── Page root ──────────────────────────────────────────────────────────────
 export default function HardwareLabPage() {
+  usePageMeta({
+    title: "NexusOS Hardware Lab — Physics Calibration & Live Spectrometer",
+    description: "Interactive physics calibration verifier and live spectrometer for NexusOS hardware. Test CE encoding, verify wavelength calculations, and calibrate SNIC channel mappings.",
+    canonical: "https://nexusos.replit.app/hardware-lab",
+    ogTitle: "NexusOS Hardware Lab — Live Spectrometer",
+    ogDescription: "Physics calibration verifier and live spectrometer. Test CE encoding accuracy, verify wavelength→Ψ channel mappings, and validate SNIC hardware integration.",
+    twitterTitle: "NexusOS Hardware Lab",
+    twitterDescription: "Live physics calibration. CE encoding verifier. SNIC channel mapping tester. Spectrometer interface.",
+  });
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
