@@ -825,10 +825,10 @@ const CAMPAIGN_VIDEOS = [
 ];
 
 // ── Nexus Ecosystem domain strip ───────────────────────────────────────
-const NEXUS_DOMAINS = [
+const NEXUS_DOMAINS: { domain: string; accent: string; founder: string; icon: string; desc: string; href?: string; soon?: boolean }[] = [
   { domain: "wnsp.io",              accent: "#00e5cc", founder: "Maxwell", icon: "〜", desc: "Main portal" },
-  { domain: "wnsp.dev",             accent: "#22d3ee", founder: "Shannon", icon: "⌘", desc: "Developer portal" },
-  { domain: "wnsp.blog",            accent: "#a78bfa", founder: "Shannon", icon: "✍", desc: "Research blog" },
+  { domain: "wnsp.dev",             accent: "#22d3ee", founder: "Shannon", icon: "⌘", desc: "Developer portal", href: "https://wnsp.io/hardware-spec", soon: true },
+  { domain: "wnsp.blog",            accent: "#a78bfa", founder: "Shannon", icon: "✍", desc: "Research blog",    href: "https://wnsp.io/videos",       soon: true },
   { domain: "snic.io",              accent: "#60a5fa", founder: "Tesla",   icon: "⊛", desc: "SNIC hardware" },
   { domain: "phr1.io",              accent: "#f87171", founder: "Tesla",   icon: "⌁", desc: "PHR-1 resonator" },
   { domain: "lambdagate.io",        accent: "#fb923c", founder: "Einstein",icon: "Λ", desc: "Lambda Gate" },
@@ -849,12 +849,16 @@ function EcosystemDomains() {
       <div className="overflow-x-auto scrollbar-none -mx-1">
         <div className="flex gap-2 px-1 min-w-max pb-1">
           {NEXUS_DOMAINS.map(d => (
-            <a key={d.domain} href={`https://${d.domain}`} target="_blank" rel="noreferrer"
+            <a key={d.domain} href={d.href ?? `https://${d.domain}`} target="_blank" rel="noreferrer"
               className="flex flex-col gap-1 px-3 py-2.5 rounded-xl border transition-all hover:scale-105 shrink-0"
               style={{ borderColor: d.accent + "30", background: d.accent + "08" }}>
               <div className="flex items-center gap-1.5">
                 <span className="text-sm" style={{ color: d.accent }}>{d.icon}</span>
                 <span className="text-[11px] font-bold text-white">{d.domain}</span>
+                {d.soon && (
+                  <span className="text-[8px] px-1 py-0.5 rounded font-bold uppercase tracking-wide"
+                    style={{ background: d.accent + "20", color: d.accent }}>soon</span>
+                )}
               </div>
               <div className="text-[9px] text-white/35">{d.desc}</div>
               <div className="text-[9px] font-semibold" style={{ color: d.accent + "99" }}>{d.founder}</div>
