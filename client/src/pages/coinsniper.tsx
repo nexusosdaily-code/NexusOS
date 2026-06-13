@@ -410,8 +410,8 @@ export default function CoinsnierPage() {
 
               <div className="space-y-2">
                 {[
-                  { n: "1", title: "Create free account", url: "https://www.coingecko.com/en/account/sign_up", cta: "Sign up →", note: "Email + password only. No phone, no KYC." },
-                  { n: "2", title: "Submit your token",    url: "https://www.coingecko.com/en/coins/add",      cta: "Add coin →", note: "Select Bitcoin chain · choose Rune type · paste fields below." },
+                  { n: "1", title: "Create free account", url: "https://www.coingecko.com/en/account/sign_up", cta: "Sign up →",       note: "Email + password only. No phone, no KYC." },
+                  { n: "2", title: "Submit via Request Form", url: "https://www.coingecko.com/request/coin",  cta: "Request form →", note: "Select Bitcoin chain · choose Rune type · paste fields below." },
                 ].map(s => (
                   <div key={s.n} className="flex gap-3 p-3 rounded-lg bg-black/40 border border-white/5">
                     <div className="w-5 h-5 rounded-full bg-green-500/15 text-green-400 border border-green-500/30 flex items-center justify-center text-[10px] font-bold shrink-0">{s.n}</div>
