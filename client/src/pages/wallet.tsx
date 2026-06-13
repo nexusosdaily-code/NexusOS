@@ -708,9 +708,9 @@ export default function WalletPage() {
                   <Coins className="w-3 h-3" /> WNUSD Minted
                 </div>
                 <div className="text-base font-bold text-teal-300 font-mono" data-testid="text-wnusd-minted">
-                  {wnusdMinted >= 1e6 ? (wnusdMinted / 1e6).toFixed(3) + "M" : wnusdMinted.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  ${wnusdMinted >= 1e6 ? (wnusdMinted / 1e6).toFixed(3) + "M" : wnusdMinted.toFixed(2)}
                 </div>
-                <div className="text-[10px] text-slate-600 mt-0.5">{wnusdColSats.toLocaleString()} col. sats</div>
+                <div className="text-[10px] text-slate-400 mt-0.5">{wnusdColSats.toLocaleString()} col. sats</div>
               </div>
             </div>
 
