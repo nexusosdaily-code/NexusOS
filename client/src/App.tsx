@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { lazy, Suspense, Component, type ReactNode, type ErrorInfo } from "react";
 import GuideBot from "@/components/GuideBot";
 import { queryClient } from "./lib/queryClient";
@@ -195,6 +195,83 @@ class ErrorBoundary extends Component<{ children: ReactNode }, EBState> {
     }
     return this.props.children;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Protected route registry (client-side)
+//
+// Used by ProtectedOrNotFound to decide whether to delegate to ProtectedRoutes
+// (known app path → auth check) or render a public NotFound (unknown path).
+//
+// EXACT_PROTECTED_PATHS — must match exactly.
+// DYNAMIC_PROTECTED_PREFIXES — paths with dynamic segments where ANY child is valid.
+// ---------------------------------------------------------------------------
+const EXACT_PROTECTED_PATHS = new Set<string>([
+  "/", "/hub", "/apps",
+  "/v10", "/v9", "/v8", "/v7", "/v6",
+  "/encoding-lab",
+  "/workspace/encoding", "/workspace/analytics", "/workspace/transmission",
+  "/workspace/research", "/workspace/wavefield", "/workspace/k1",
+  "/workspace/orchestration", "/workspace/coordinator", "/workspace/matrix",
+  "/wallet",
+  "/announcements", "/announcements/substrate-v2",
+  "/resonance-propulsion",
+  "/friends", "/inbox", "/messages",
+  "/k1", "/k1/orchestration",
+  "/secure-docs",
+  "/streaming",
+  "/developer", "/developer-matrix", "/developer-matrix/docs", "/developer/keys",
+  "/governance",
+  "/wnsp/coordinator", "/wnsp/kernel",
+  "/kernel", "/kernel-genesis",
+  "/photonic-dev", "/nexus/dev",
+  "/quantum-threshold", "/nexus-hardware-os", "/computing-alternatives",
+  "/wavelength-os", "/ce-writer", "/pricing",
+  "/spectral-db", "/blockchain", "/agent-bus", "/nexus-command",
+  "/spectral-workspace", "/chronicle",
+  "/spectral-library", "/spectral-audit", "/orbital-treasury",
+  "/founders-charity", "/ecosystem", "/ordinal-registry",
+  "/communication", "/comms", "/network", "/wavelength-lang",
+  "/evidence", "/transmission", "/wnsp-bridge", "/wnsp/bridge",
+  "/directory", "/ledger", "/github", "/settings",
+  "/sop", "/protocol", "/photonic-ledger", "/p2p-terminal",
+  "/learn", "/pipeline", "/spectral-mirror", "/community",
+  "/media-library", "/quora", "/reddit", "/telegram-hub",
+  "/wnsp-paper", "/start", "/social-broadcast",
+  "/lightning-wallet", "/lightning", "/stablecoin",
+  "/research-presentation", "/research-presentation/developer-matrix",
+  "/oscillating-quanta",
+  // pages also made public — still handled by ProtectedRoutes for auth'd users
+  "/planck-alignment", "/reposed-theory", "/compression-explorer",
+  "/ce-se-pipeline", "/ce-code-writer", "/wnsp-vm",
+  "/spectral-router", "/spectral-search", "/spectral-contracts",
+  "/divergence-test", "/hardware-spec", "/hardware-lab",
+  "/campaign", "/constitution", "/mobile-sdk",
+]);
+
+// Only paths where ANY child segment is a valid protected route (dynamic).
+const DYNAMIC_PROTECTED_PREFIXES: string[] = [
+  "/docs/",        // /docs/:section
+  "/streaming/",   // /streaming/:streamId
+];
+
+function isKnownProtectedPath(location: string): boolean {
+  if (EXACT_PROTECTED_PATHS.has(location)) return true;
+  return DYNAMIC_PROTECTED_PREFIXES.some((p) => location.startsWith(p));
+}
+
+// Renders ProtectedRoutes for known authenticated paths, otherwise shows a
+// public 404 page so unauthenticated crawlers get a real "not found" signal.
+function ProtectedOrNotFound() {
+  const [location] = useLocation();
+  if (!isKnownProtectedPath(location)) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <NotFound />
+      </Suspense>
+    );
+  }
+  return <ProtectedRoutes />;
 }
 
 function ProtectedRoutes() {
@@ -396,9 +473,24 @@ function Router() {
       <Route path="/encode"              component={EncodePage} />
       <Route path="/replit-template"     component={ReplitTemplatePage} />
       <Route path="/proof"               component={ProofPage} />
-      <Route>
-        <ProtectedRoutes />
-      </Route>
+      {/* ── Science & Protocol pages — publicly crawlable ── */}
+      <Route path="/planck-alignment" component={PlanckAlignmentPage} />
+      <Route path="/reposed-theory" component={ReposedTheoryPage} />
+      <Route path="/compression-explorer" component={CompressionExplorerPage} />
+      <Route path="/ce-se-pipeline" component={LearnPage} />
+      <Route path="/ce-code-writer" component={CeCodeWriterPage} />
+      <Route path="/wnsp-vm" component={WnspVMPage} />
+      <Route path="/spectral-router" component={SpectralRouterPage} />
+      <Route path="/spectral-search" component={SpectralSearchPage} />
+      <Route path="/spectral-contracts" component={SpectralContractsPage} />
+      <Route path="/divergence-test" component={DivergenceTestPage} />
+      <Route path="/hardware-spec" component={HardwareSpecPage} />
+      <Route path="/hardware-lab" component={HardwareLabPage} />
+      <Route path="/campaign" component={CampaignPage} />
+      <Route path="/constitution" component={ConstitutionPage} />
+      <Route path="/mobile-sdk" component={MobileSDKPage} />
+      {/* Catch-all: shows 404 for unknown paths, auth guard for known protected ones */}
+      <Route component={ProtectedOrNotFound} />
     </Switch>
   );
 }
