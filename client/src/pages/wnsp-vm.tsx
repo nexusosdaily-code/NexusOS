@@ -279,7 +279,7 @@ export default function WnspVMPage() {
   usePageMeta({
     title: "WNSP Virtual Machine — Browser-Native Bytecode Interpreter",
     description: "The WNSP VM is a browser-native bytecode interpreter for WavelengthScript. Execute instructions step-by-step with each Ψ channel acting as a spectral register. No installation required.",
-    canonical: "https://nexusos.replit.app/wnsp-vm",
+    canonical: "https://wnsp.io/wnsp-vm",
     ogTitle: "WNSP VM — Browser-Native Bytecode Interpreter",
     ogDescription: "Step-through WavelengthScript bytecode in your browser. Ψ channel registers. Physics-enforced execution. Run CE→SE pipeline output directly.",
     twitterTitle: "WNSP Virtual Machine",

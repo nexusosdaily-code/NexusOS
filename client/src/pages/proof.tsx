@@ -222,7 +222,7 @@ export default function ProofPage() {
   usePageMeta({
     title: "NexusOS Physics Proof — Verified Compression State Calculations",
     description: "Verified physics proofs for the NexusOS compression state model: Λ=hf/c² derivation, CE encoding determinism, WNSP channel orthogonality proof, and Maxwell equation validation.",
-    canonical: "https://nexusos.replit.app/proof",
+    canonical: "https://wnsp.io/proof",
     ogTitle: "NexusOS Physics Proof",
     ogDescription: "Λ=hf/c² derivation. CE encoding determinism. ⟨Ψᵢ|Ψⱼ⟩=0 orthogonality. Maxwell equation validation. The physics of NexusOS, verified.",
     twitterTitle: "NexusOS Physics Proof",

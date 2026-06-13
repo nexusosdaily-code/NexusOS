@@ -961,7 +961,7 @@ export default function DocsPage() {
   usePageMeta({
     title: "NexusOS Documentation — WNSP Protocol, WavelengthScript & CE-SE API",
     description: "Complete developer documentation for NexusOS: WNSP spectral protocol, WavelengthScript language reference, CE-SE encoding pipeline, REST API, NXT token wallet, WNSP VM bytecode, and governance.",
-    canonical: "https://nexusos.replit.app/docs",
+    canonical: "https://wnsp.io/docs",
     ogTitle: "NexusOS Documentation",
     ogDescription: "WNSP protocol spec, WavelengthScript reference, CE-SE pipeline, REST API reference, NXT token, WNSP VM. Everything you need to build on the wavelength of light.",
     twitterTitle: "NexusOS Documentation",

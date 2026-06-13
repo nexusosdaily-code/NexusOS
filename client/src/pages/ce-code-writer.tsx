@@ -1665,7 +1665,7 @@ export default function CeCodeWriterPage() {
   usePageMeta({
     title: "CE Code Writer — Human First Contact Spectral Encoder",
     description: "Live CE encoder with character chip visualisation, Code Builder, Integration Kit (Node.js/Python/Browser JS), and Spectral Linter. Map any text to its electromagnetic spectral fingerprint.",
-    canonical: "https://nexusos.replit.app/ce-code-writer",
+    canonical: "https://wnsp.io/ce-code-writer",
     ogTitle: "CE Code Writer — Spectral Encoder & Integration Kit",
     ogDescription: "Live CE encoding with character wavelength chips. Code Builder for app scaffolds. Integration snippets for Node.js, Python, and Browser JS. Spectral Linter coherence scoring.",
     twitterTitle: "CE Code Writer — Spectral Encoder",

@@ -225,7 +225,7 @@ export default function CrowdfundPage() {
   usePageMeta({
     title: "Crowdfund NexusOS — Hardware Founder & NXT Supporter Tiers",
     description: "Fund the PHR-1 resonator, SNIC photonic NIC, and WavelengthScript compiler. Hardware Founder slots (25 units), NXT Supporter packs, and Spectral Bundles. Physics-based computing starts here.",
-    canonical: "https://nexusos.replit.app/crowdfund",
+    canonical: "https://wnsp.io/crowdfund",
     ogTitle: "Crowdfund NexusOS Hardware — PHR-1 & SNIC",
     ogDescription: "25 Hardware Founder slots. PHR-1 resonator, SNIC photonic NIC. Fund the world's first physics-based computing hardware. 100M sats / 100,000 NXT per slot.",
     twitterTitle: "Crowdfund NexusOS — Hardware Founder Slots Open",

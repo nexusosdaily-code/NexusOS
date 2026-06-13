@@ -134,7 +134,7 @@ export default function WnspLandingPage() {
   usePageMeta({
     title: "WNSP — Wavelength-Native Spectral Protocol",
     description: "WNSP replaces cryptographic hashing with electromagnetic wave physics. Maxwell equation validation, wavelength-based addressing, physics-derived fees (E=hf), and 25,600 orthogonal communication channels.",
-    canonical: "https://nexusos.replit.app/wnsp",
+    canonical: "https://wnsp.io/wnsp",
     ogTitle: "WNSP — Wavelength-Native Spectral Protocol",
     ogDescription: "Physics-native communication: wavelength addressing, Maxwell validation, E=hf fees, 25,600 Ψ channels. WNSP-CE v1.0, WNSP-SE v1.0, WNSP-URI v1.0.",
     twitterTitle: "WNSP — Wavelength-Native Spectral Protocol",

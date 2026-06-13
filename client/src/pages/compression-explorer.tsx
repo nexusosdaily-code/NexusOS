@@ -93,7 +93,7 @@ export default function CompressionExplorerPage() {
   usePageMeta({
     title: "Compression Explorer — Interactive Λ=hf/c² Curve Visualisation",
     description: "Interactive SVG visualisation of the Λ=hf/c² compression curve. Authority band overlays, photon energy, compression mass, fee multiplier, normalized Λ, and Boltzmann entropy across the full visible spectrum.",
-    canonical: "https://nexusos.replit.app/compression-explorer",
+    canonical: "https://wnsp.io/compression-explorer",
     ogTitle: "Compression Explorer — Λ=hf/c² Visualisation",
     ogDescription: "Interactive compression curve: authority bands, photon energy, Boltzmann entropy, fee multipliers. The physics of NexusOS, rendered across 380–780nm.",
     twitterTitle: "Compression Explorer — Λ=hf/c² Live",

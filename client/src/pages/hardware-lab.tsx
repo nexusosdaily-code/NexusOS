@@ -1026,7 +1026,7 @@ export default function HardwareLabPage() {
   usePageMeta({
     title: "NexusOS Hardware Lab — Physics Calibration & Live Spectrometer",
     description: "Interactive physics calibration verifier and live spectrometer for NexusOS hardware. Test CE encoding, verify wavelength calculations, and calibrate SNIC channel mappings.",
-    canonical: "https://nexusos.replit.app/hardware-lab",
+    canonical: "https://wnsp.io/hardware-lab",
     ogTitle: "NexusOS Hardware Lab — Live Spectrometer",
     ogDescription: "Physics calibration verifier and live spectrometer. Test CE encoding accuracy, verify wavelength→Ψ channel mappings, and validate SNIC hardware integration.",
     twitterTitle: "NexusOS Hardware Lab",

@@ -92,7 +92,7 @@ export default function RoadmapPage() {
   usePageMeta({
     title: "NexusOS Roadmap — From Digital Substrate to Photonic Gate Array",
     description: "NexusOS development roadmap: current digital substrate (25,600 Ψ channels live), PHR-1 hardware layer (2026–2028), and the photonic gate array (~2032). Step-by-step to Kardashev Type I.",
-    canonical: "https://nexusos.replit.app/roadmap",
+    canonical: "https://wnsp.io/roadmap",
     ogTitle: "NexusOS Roadmap",
     ogDescription: "Now: digital substrate live. 2026–2028: PHR-1 physical hardware. ~2032: photonic gate array. The path from WNSP protocol to Type I civilization OS.",
     twitterTitle: "NexusOS Roadmap",

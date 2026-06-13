@@ -496,7 +496,7 @@ export default function WavelengthLangPage() {
   usePageMeta({
     title: "WavelengthScript — Physics-Native Programming Language",
     description: "WavelengthScript is a programming language where agents live at spectral Ψ addresses, messages are photon packets, and computation costs are derived from E=hf. Compiles to WNSP bytecode. Step-debug in the WNSP VM.",
-    canonical: "https://nexusos.replit.app/wavelength-lang",
+    canonical: "https://wnsp.io/wavelength-lang",
     ogTitle: "WavelengthScript — The Language the Universe Runs On",
     ogDescription: "Physics-native language: spectral addresses, photon packets, E=hf fees. Compiles to WNSP bytecode. Browser-native WNSP VM. CE→SE pipeline. AGPL-3.0.",
     twitterTitle: "WavelengthScript v1.0",

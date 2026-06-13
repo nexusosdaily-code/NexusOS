@@ -88,7 +88,7 @@ export default function Ecosystem() {
   usePageMeta({
     title: "NexusOS Ecosystem — Protocol, Hardware, and Token Network",
     description: "The NexusOS ecosystem: WNSP protocol domains (wnsp.dev, wnsp.blog), hardware projects (snic.io, phr1.io), encoding standards (wascii.io), and the NXT token circular economy via the Orbital Treasury.",
-    canonical: "https://nexusos.replit.app/ecosystem",
+    canonical: "https://wnsp.io/ecosystem",
     ogTitle: "NexusOS Ecosystem Overview",
     ogDescription: "10 ecosystem domains. WNSP protocol. SNIC photonic NIC. PHR-1 resonator. WASCII encoding. WavelengthScript. Orbital Treasury. NXT token. All connected by Λ=hf/c².",
     twitterTitle: "NexusOS Ecosystem",

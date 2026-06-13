@@ -329,7 +329,7 @@ export default function OscillatingQuantaPage() {
   usePageMeta({
     title: "Theory of Compression States — First Principles of NexusOS",
     description: "The universe evolves from the first unobserved oscillation. Each subsequent state is a compression of the previous one, encoded in the electromagnetic spectrum. 25,600 orthogonal Ψ channels represent the full addressable state space.",
-    canonical: "https://nexusos.replit.app/oscillating-quanta",
+    canonical: "https://wnsp.io/oscillating-quanta",
     ogTitle: "Theory of Compression States — First Principles",
     ogDescription: "The first unobserved oscillation at 555 THz. Λ=hf/c² compression law. 25,600 orthogonal Ψ channels. The physics foundation of NexusOS.",
     twitterTitle: "Theory of Compression States",
@@ -384,15 +384,15 @@ export default function OscillatingQuantaPage() {
   const focusedCh = CHANNELS.find(c => c.id === focused)!;
   const fs = computeOscillation(focusedCh.wdm, tMs);
 
-  const curlSingle = `curl -X POST https://nexusos.replit.app/api/wnsp/quanta/oscillate \\
+  const curlSingle = `curl -X POST https://wnsp.io/api/wnsp/quanta/oscillate \\
   -H "Content-Type: application/json" \\
   -d '{"wdm": ${wdm}}'`;
 
-  const curlWdm = `curl -X POST https://nexusos.replit.app/api/wnsp/quanta/oscillate \\
+  const curlWdm = `curl -X POST https://wnsp.io/api/wnsp/quanta/oscillate \\
   -H "Content-Type: application/json" \\
   -d '{"wdm": ${focusedCh.wdm}}'`;
 
-  const curlNm = `curl -X POST https://nexusos.replit.app/api/wnsp/quanta/oscillate \\
+  const curlNm = `curl -X POST https://wnsp.io/api/wnsp/quanta/oscillate \\
   -H "Content-Type: application/json" \\
   -d '{"wavelength_nm": ${fs.nm.toFixed(3)}}'`;
 
