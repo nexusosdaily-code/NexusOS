@@ -404,31 +404,57 @@ export default function CoinsnierPage() {
                   <span className="text-lg">🦎</span>
                   <h2 className="text-sm font-bold text-white">CoinGecko</h2>
                 </div>
-                <span className="text-[10px] bg-green-500/10 text-green-400 border border-green-500/20 rounded-full px-2 py-0.5">Free · account needed</span>
+                <span className="text-[10px] bg-green-500/10 text-green-400 border border-green-500/20 rounded-full px-2 py-0.5">Free · up to 5 days review</span>
               </div>
-              <p className="text-[11px] text-white/40 leading-relaxed">CoinGecko lists Bitcoin Runes. Free account — just email signup. Review takes 1–4 weeks.</p>
 
+              {/* Hard requirement warning */}
+              <div className="flex gap-2 p-3 rounded-lg bg-yellow-500/6 border border-yellow-500/20">
+                <span className="text-yellow-400 shrink-0 mt-0.5">⚠</span>
+                <div className="space-y-0.5">
+                  <div className="text-[11px] font-semibold text-yellow-300">Active trading required first</div>
+                  <div className="text-[10px] text-white/40 leading-relaxed">NXWV must be actively trading on an exchange CoinGecko already tracks before they'll list it. List on UniSat Market or Magic Eden below first — once there's trading volume, come back here.</div>
+                </div>
+              </div>
+
+              {/* Steps */}
               <div className="space-y-2">
                 {[
-                  { n: "1", title: "Create free account", url: "https://www.coingecko.com/en/account/sign_up", cta: "Sign up →",       note: "Email + password only. No phone, no KYC." },
-                  { n: "2", title: "Submit via Request Form", url: "https://www.coingecko.com/request/coin",  cta: "Request form →", note: "Select Bitcoin chain · choose Rune type · paste fields below." },
+                  { n: "1", title: "Account already created ✓",         url: null,                                                                 cta: null,            note: "You're signed in. Done." },
+                  { n: "2", title: "List NXWV on UniSat / Magic Eden",  url: "https://unisat.io/market/runes?tick=NEXUS%E2%80%A2WAVELENGTH",      cta: "UniSat →",      note: "Get active trading volume first. This unlocks CoinGecko eligibility." },
+                  { n: "3", title: "Post public verification",           url: null,                                                                 cta: null,            note: "Post from an official project account on Facebook or Instagram. CoinGecko requires a public post link during submission." },
+                  { n: "4", title: "Submit via homepage footer",         url: "https://www.coingecko.com",                                          cta: "coingecko.com →", note: "Go to coingecko.com → scroll to footer → click 'Request Form'. No direct URL exists — both /coins/add and /request/coin 404." },
                 ].map(s => (
                   <div key={s.n} className="flex gap-3 p-3 rounded-lg bg-black/40 border border-white/5">
-                    <div className="w-5 h-5 rounded-full bg-green-500/15 text-green-400 border border-green-500/30 flex items-center justify-center text-[10px] font-bold shrink-0">{s.n}</div>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                      s.n === "1" ? "bg-green-500/15 text-green-400 border border-green-500/30" : "bg-white/5 text-white/40 border border-white/10"
+                    }`}>{s.n === "1" ? "✓" : s.n}</div>
                     <div className="flex-1">
                       <div className="text-xs font-semibold text-white/80">{s.title}</div>
-                      <div className="text-[10px] text-white/35 mt-0.5">{s.note}</div>
+                      <div className="text-[10px] text-white/35 mt-0.5 leading-relaxed">{s.note}</div>
                     </div>
-                    <a href={s.url} target="_blank" rel="noreferrer"
-                      className="self-center text-[10px] font-semibold text-green-400 hover:underline shrink-0 flex items-center gap-1">
-                      <ExternalLink size={9} />{s.cta}
-                    </a>
+                    {s.url && s.cta && (
+                      <a href={s.url} target="_blank" rel="noreferrer"
+                        className="self-center text-[10px] font-semibold text-green-400 hover:underline shrink-0 flex items-center gap-1">
+                        <ExternalLink size={9} />{s.cta}
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>
 
+              {/* Fast Pass note */}
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-black/30 border border-white/5">
+                <span className="text-[10px]">⚡</span>
+                <div className="text-[10px] text-white/35">CoinGecko offers a paid <span className="text-white/55 font-semibold">Fast Pass</span> (24hr review) vs free Regular review (up to 5 days). Option appears during submission.</div>
+                <a href="https://support.coingecko.com/hc/en-us/articles/7291312302617" target="_blank" rel="noreferrer"
+                  className="ml-auto text-[10px] text-green-400 hover:underline shrink-0 flex items-center gap-1">
+                  <ExternalLink size={9} />Guide
+                </a>
+              </div>
+
+              {/* Copy fields — ready when trading is live */}
               <div className="space-y-2">
-                <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Step 3 — paste these into the form</div>
+                <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Form fields — copy-ready for when you submit</div>
                 {[
                   { label: "Token Name",    value: "NEXUS•WAVELENGTH" },
                   { label: "Symbol",        value: "NXWV" },
