@@ -826,13 +826,17 @@ const CAMPAIGN_VIDEOS = [
 
 // ── Nexus Ecosystem domain strip ───────────────────────────────────────
 const NEXUS_DOMAINS = [
-  { domain: "wnsp.tech",           accent: "#00e5cc", founder: "Maxwell", icon: "〜", desc: "Main portal" },
-  { domain: "snic.io",             accent: "#60a5fa", founder: "Tesla",   icon: "⊛", desc: "SNIC hardware" },
-  { domain: "phr1.io",             accent: "#f87171", founder: "Tesla",   icon: "⌁", desc: "PHR-1 resonator" },
-  { domain: "zerogstate.io",       accent: "#818cf8", founder: "Tesla",   icon: "∅", desc: "ZERO-G state" },
-  { domain: "wascii.io",           accent: "#fde047", founder: "Planck",  icon: "≈", desc: "Wave encoding" },
-  { domain: "555thz.io",           accent: "#4ade80", founder: "Planck",  icon: "ƒ", desc: "First oscillation" },
-  { domain: "wavelengthscript.dev",accent: "#34d399", founder: "Planck",  icon: "ψ", desc: "WLS language" },
+  { domain: "wnsp.io",              accent: "#00e5cc", founder: "Maxwell", icon: "〜", desc: "Main portal" },
+  { domain: "wnsp.dev",             accent: "#22d3ee", founder: "Shannon", icon: "⌘", desc: "Developer portal" },
+  { domain: "wnsp.blog",            accent: "#a78bfa", founder: "Shannon", icon: "✍", desc: "Research blog" },
+  { domain: "snic.io",              accent: "#60a5fa", founder: "Tesla",   icon: "⊛", desc: "SNIC hardware" },
+  { domain: "phr1.io",              accent: "#f87171", founder: "Tesla",   icon: "⌁", desc: "PHR-1 resonator" },
+  { domain: "lambdagate.io",        accent: "#fb923c", founder: "Einstein",icon: "Λ", desc: "Lambda Gate" },
+  { domain: "zerogstate.io",        accent: "#818cf8", founder: "Tesla",   icon: "∅", desc: "ZERO-G state" },
+  { domain: "wascii.io",            accent: "#fde047", founder: "Planck",  icon: "≈", desc: "Wave encoding" },
+  { domain: "555thz.io",            accent: "#4ade80", founder: "Planck",  icon: "ƒ", desc: "First oscillation" },
+  { domain: "wavelengthscript.dev", accent: "#34d399", founder: "Planck",  icon: "ψ", desc: "WLS language" },
+  { domain: "orbitaltreasury.io",   accent: "#fbbf24", founder: "Shannon", icon: "◎", desc: "Orbital Treasury" },
 ];
 
 function EcosystemDomains() {
