@@ -97,6 +97,10 @@ export default function OrbitalTreasury() {
               <div className="flex items-center gap-2">
                 <Globe size={14} className="text-amber-400" />
                 <span className="text-sm font-bold tracking-wider text-amber-400">ORBITAL TREASURY</span>
+                <a href="https://orbitaltreasury.io" target="_blank" rel="noreferrer"
+                  className="text-[9px] px-2 py-0.5 rounded-full border border-amber-400/25 text-amber-400/60 hover:text-amber-400 hover:border-amber-400/50 transition-colors">
+                  orbitaltreasury.io ↗
+                </a>
               </div>
               <div className="text-white/30 text-[10px] mt-0.5">Constitutional Economy · E=hf · AGPL-3.0 · 100-year fund</div>
             </div>

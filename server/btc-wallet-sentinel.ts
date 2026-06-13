@@ -247,7 +247,7 @@ async function poll(address: string) {
         `Unconfirmed: ${unconfirmed.toLocaleString()} sats\n\n` +
         `Inscriptions PAUSED — need ${LOW_CRIT.toLocaleString()}+ confirmed sats to resume.\n\n` +
         `Top up:\n<code>bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m</code>\n\n` +
-        `<a href="https://mempool.space/address/bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m">Live wallet on mempool.space</a>`
+        `<a href="https://mempool.space/address/bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m">Live wallet on mempool.space</a> · <a href="https://orbitaltreasury.io">orbitaltreasury.io</a>`
       );
     }
   } else if (confirmed < LOW_WARN) {
@@ -266,7 +266,7 @@ async function poll(address: string) {
         `Confirmed: <b>${confirmed.toLocaleString()} sats</b>\n` +
         `Unconfirmed: ${unconfirmed.toLocaleString()} sats\n\n` +
         `Consider topping up:\n<code>bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m</code>\n\n` +
-        `<a href="https://mempool.space/address/bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m">Live wallet on mempool.space</a>`
+        `<a href="https://mempool.space/address/bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m">Live wallet on mempool.space</a> · <a href="https://orbitaltreasury.io">orbitaltreasury.io</a>`
       );
     }
   } else if (_wasLow && nowMs - _lastRecovAlert > ALERT_COOLDOWN) {
