@@ -66,7 +66,7 @@ DEV_ACCESS_KEY = "NX-eZY8unnD#sgcnbc4Bvd@"
 [deployment]
 run = ["node", "dist/index.cjs"]
 build = ["tsx", "script/build.ts"]
-deploymentTarget = "vm"
+deploymentTarget = "cloudrun"
 
 [postMerge]
 path = "scripts/post-merge.sh"
