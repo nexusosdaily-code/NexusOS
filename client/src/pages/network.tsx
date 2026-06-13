@@ -158,7 +158,7 @@ export default function NetworkPage() {
           </Link>
           <div className="flex items-center gap-2">
             <Globe size={13} className="text-emerald-400" />
-            <span className="text-sm font-bold tracking-wider text-emerald-400">SPECTRAL NETWORK</span>
+            <h1 className="text-sm font-bold tracking-wider text-emerald-400 m-0 p-0 leading-none">SPECTRAL NETWORK</h1>
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           </div>
           <span className="text-white/20 text-[10px]">Node visibility via CE→SE emission · Λ=hf/c²</span>

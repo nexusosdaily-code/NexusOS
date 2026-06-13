@@ -107,7 +107,7 @@ export default function Ecosystem() {
           <div>
             <div className="flex items-center gap-2">
               <Activity size={13} className="text-emerald-400" />
-              <span className="text-sm font-bold tracking-wider text-emerald-400">ECOSYSTEM INTERCONNECT</span>
+              <h1 className="text-sm font-bold tracking-wider text-emerald-400 m-0 p-0 leading-none">ECOSYSTEM INTERCONNECT</h1>
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             </div>
             <div className="text-white/30 text-[10px] mt-0.5">Built on the Alphabet Substrate · Λ=hf/c² · AGPL-3.0</div>

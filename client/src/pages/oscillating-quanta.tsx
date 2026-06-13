@@ -406,7 +406,7 @@ export default function OscillatingQuantaPage() {
             </Link>
             <span className="text-slate-700">/</span>
             <Waves className="w-4 h-4 text-cyan-400" />
-            <span className="font-semibold text-white text-sm">Oscillating Quanta — First Principles</span>
+            <h1 className="font-semibold text-white text-sm m-0 p-0 leading-none">Oscillating Quanta — First Principles</h1>
           </div>
           {/* View mode toggle controls all 4 dual-layer sections */}
           <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-0.5" data-testid="view-mode-toggle">
