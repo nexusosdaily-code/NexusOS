@@ -372,7 +372,7 @@ export default function CrowdfundPage() {
             { icon: "⚡", name: "Nostr",      status: "live",    desc: "Zap Goals + auto-promo",        url: "https://primal.net/p/npub1pk8wh66aqhxkzl3n0p7q78hzz4f9r5j4snqj7skck2p7dkxmwj2s9pnnkd" },
             { icon: "🌊", name: "Geyser",     status: "setup",   desc: "Bitcoin Lightning crowdfund",   url: "https://geyser.fund/create" },
             { icon: "✈️", name: "Telegram",   status: "live",    desc: "Auto-broadcast channel",        url: "https://t.me/troglodytememe" },
-            { icon: "𝕏",  name: "Twitter/X",  status: "live",    desc: "Share + community threads",     url: "https://x.com/intent/tweet?text=Fund+NexusOS+hardware+%E2%80%94+physics-based+computing+built+on+%CE%9B%3Dhf%2Fc%C2%B2+%E2%80%A2+wnsp.io%2Fcrowdfund+%23NexusOS+%23Bitcoin+%23Photonics" },
+            { icon: "𝕏",  name: "Twitter/X",  status: "live",    desc: "Share + community threads",     url: "https://x.com/wnsptech" },
             { icon: "🚀", name: "Indiegogo",  status: "pending", desc: "Fiat donations bridge",         url: "https://indiegogo.com" },
             { icon: "🎮", name: "Discord",    status: "live",    desc: "#the-czc-sink-lab",             url: "https://discord.gg/nexusos" },
             { icon: "💻", name: "GitHub",     status: "live",    desc: "AGPL-3.0 open source",          url: "https://github.com/nexusosdaily-code/NexusOS" },
@@ -551,11 +551,11 @@ export default function CrowdfundPage() {
         {/* ─ Twitter / X Share Panel ─ */}
         {(() => {
           const TWEETS = [
-            { label: "Hardware CTA",       text: "Fund the PHR-1 resonator — the first physical implementation of ZERO-G state.\n\n🔬 Physics-based OS · Λ=hf/c²\n🌈 NXWV Rune 952596:379 sealed on Bitcoin\n📄 Full disclosure: wnsp.io/wnsp-paper\n\nDonate: wnsp.io/crowdfund\n\n#NexusOS #Bitcoin #Lightning #Photonics" },
-            { label: "Science angle",      text: "NexusOS replaces cryptographic hashing with Maxwell equation validation.\n\n25,600 orthogonal Ψ channels · 21B NXWV Rune · AGPL-3.0\n\nBuilding the OS of a Kardashev Type I civilisation.\n\nwnsp.io/crowdfund\n\n#Physics #Bitcoin #OpenSource #Photonics" },
-            { label: "Founder tier",       text: "25 Hardware Founder slots open.\n\n100,000 sats → PHR-1 resonator unit + 100,000 Nexus Shares (Class A).\n\nFirst production batch. Hardware advisory seat.\n\nwnsp.io/crowdfund\n\n#NexusOS #Bitcoin #Hardware #Lightning" },
-            { label: "Viral hook",         text: "What if communication ran on physics, not software policy?\n\n25,600 orthogonal light channels. No DNS. No IP. Just wavelengths.\n\nNexusOS. wnsp.io\n\n#Photonics #Bitcoin #NexusOS" },
-            { label: "P2P transmission",   text: "Send data across a P2P network using wavelength addresses — no cloud, no DNS.\n\nEncode → Ψ channel → Spectral Receipt → Permanent on-chain ordinal.\n\nTry it: wnsp.io/transmission\n\n#NexusOS #P2P #WNSP #Photonics #Bitcoin" },
+            { label: "Hardware CTA",       text: "Fund the PHR-1 resonator — the first physical implementation of ZERO-G state.\n\n🔬 Physics-based OS · Λ=hf/c²\n🌈 NXWV Rune 952596:379 sealed on Bitcoin\n📄 Full disclosure: wnsp.io/wnsp-paper\n\nDonate: wnsp.io/crowdfund\n\n@wnsptech #NexusOS #Bitcoin #Lightning #Photonics" },
+            { label: "Science angle",      text: "NexusOS replaces cryptographic hashing with Maxwell equation validation.\n\n25,600 orthogonal Ψ channels · 21B NXWV Rune · AGPL-3.0\n\nBuilding the OS of a Kardashev Type I civilisation.\n\nwnsp.io/crowdfund\n\n@wnsptech #Physics #Bitcoin #OpenSource #Photonics" },
+            { label: "Founder tier",       text: "25 Hardware Founder slots open.\n\n100,000 sats → PHR-1 resonator unit + 100,000 Nexus Shares (Class A).\n\nFirst production batch. Hardware advisory seat.\n\nwnsp.io/crowdfund\n\n@wnsptech #NexusOS #Bitcoin #Hardware #Lightning" },
+            { label: "Viral hook",         text: "What if communication ran on physics, not software policy?\n\n25,600 orthogonal light channels. No DNS. No IP. Just wavelengths.\n\n@wnsptech — NexusOS. wnsp.io\n\n#Photonics #Bitcoin #NexusOS" },
+            { label: "P2P transmission",   text: "Send data across a P2P network using wavelength addresses — no cloud, no DNS.\n\nEncode → Ψ channel → Spectral Receipt → Permanent on-chain ordinal.\n\nTry it: wnsp.io/transmission\n\n@wnsptech #NexusOS #P2P #WNSP #Photonics #Bitcoin" },
           ];
           const tweet = TWEETS[tweetIdx] ?? TWEETS[0];
           const intentUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(tweet.text)}`;
@@ -574,7 +574,7 @@ export default function CrowdfundPage() {
                 </button>
               </div>
               <p className="text-[11px] text-white/40 mb-3">
-                Four pre-written tweet angles. Click <strong className="text-white/60">Share on X</strong> to open the compose window pre-loaded. No API key required.
+                Five pre-written tweet angles — each tags <strong className="text-sky-400">@wnsptech</strong> automatically. Click <strong className="text-white/60">Share on X</strong> to open the compose window pre-loaded. No API key required.
               </p>
               <div className="flex gap-1.5 mb-3 flex-wrap">
                 {TWEETS.map((t, i) => (
@@ -603,9 +603,9 @@ export default function CrowdfundPage() {
                   className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs transition-colors">
                   <Twitter size={12} /> Share on X
                 </a>
-                <a href="https://x.com/search?q=%23NexusOS&src=typed_query&f=live" target="_blank" rel="noreferrer"
+                <a href="https://x.com/wnsptech" target="_blank" rel="noreferrer"
                   className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-sky-500/30 text-sky-400 hover:bg-sky-950/40 text-xs transition-colors">
-                  <ExternalLink size={11} /> #NexusOS feed
+                  <ExternalLink size={11} /> @wnsptech
                 </a>
               </div>
             </div>
