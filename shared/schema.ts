@@ -277,6 +277,8 @@ export const friendships = pgTable("friendships", {
   status: text("status").notNull().default("pending"),
   spectralBond: decimal("spectral_bond", { precision: 20, scale: 12 }),
   wavelength: decimal("wavelength", { precision: 10, scale: 4 }),
+  psiChannel: text("psi_channel"),
+  wnspAddress: text("wnsp_address"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   acceptedAt: timestamp("accepted_at"),
 }, (table) => ({

@@ -2074,17 +2074,63 @@ export async function registerRoutes(
       }
 
       const updated = await storage.acceptFriendRequest(friendshipId);
+
+      // Derive deterministic bond channel from both users' spectral addresses
+      let psiChannel: string | null = null;
+      let wnspAddress: string | null = null;
+      let bondWavelength: string | null = null;
+      try {
+        const requester = await storage.getUser(friendship.requesterId);
+        if (requester) {
+          const C_LIGHT_B = 299_792_458;
+          const H_PLANCK_B = 6.626e-34;
+          const NM_MIN_B = 380, NM_MAX_B = 780;
+          const chA = deriveChannel(requester.username);
+          const chB = deriveChannel(req.user!.username);
+          const nmBond = Math.sqrt(chA.nm * chB.nm);
+          const wdmBond = Math.min(255, Math.max(0, Math.round((nmBond - NM_MIN_B) * 255 / (NM_MAX_B - NM_MIN_B))));
+          const oamBond = (chA.oam ^ chB.oam) % 50;
+          const polBond = chA.pol === chB.pol ? chA.pol : "H";
+          const freqBond = C_LIGHT_B / (nmBond * 1e-9);
+          const energyBond = H_PLANCK_B * freqBond;
+          psiChannel = `Ψ(${wdmBond},${oamBond},${polBond})`;
+          wnspAddress = `wnsp://${psiChannel}/${requester.username}↔${req.user!.username}`;
+          bondWavelength = nmBond.toFixed(4);
+          await storage.updateFriendshipSpectral(updated.id, {
+            wavelength: bondWavelength,
+            spectralBond: energyBond.toExponential(6),
+            psiChannel,
+            wnspAddress,
+          });
+        }
+      } catch (e) {
+        console.error("[phonebook] bond derivation failed:", e);
+      }
       
       await logAction(req, "friend_request_accepted", "friends", friendshipId, {
         requesterId: friendship.requesterId,
       });
 
+      // Notify the requester via WebSocket that their request was accepted
+      const requesterWs = connectedClients.get(friendship.requesterId);
+      if (requesterWs && requesterWs.readyState === WebSocket.OPEN) {
+        requesterWs.send(JSON.stringify({
+          type: "friend_accepted",
+          friendshipId: updated.id,
+          by: { username: req.user!.username, id: req.user!.id },
+          psiChannel,
+          wnspAddress,
+        }));
+      }
+
       res.json({
         message: "Friend request accepted",
         friendship: {
           id: updated.id,
-          wavelength: updated.wavelength,
+          wavelength: bondWavelength ?? updated.wavelength,
           spectralBond: updated.spectralBond,
+          psiChannel,
+          wnspAddress,
           status: updated.status,
           acceptedAt: updated.acceptedAt,
         },
@@ -2116,6 +2162,77 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Reject friend request error:", error);
       res.status(500).json({ error: "Failed to reject friend request" });
+    }
+  });
+
+  // ── Spectral Phone Book ────────────────────────────────────────────────────
+  app.get("/api/phonebook", authenticate, async (req, res) => {
+    try {
+      const friends = await storage.getFriends(req.user!.id);
+      const myChannel = deriveChannel(req.user!.username);
+      const NM_MIN_PB = 380, NM_MAX_PB = 780;
+
+      const entries = friends.map(({ friendship, friend }) => {
+        const friendChannel = deriveChannel(friend.username);
+
+        let psiChannel = friendship.psiChannel;
+        let wnspAddress = friendship.wnspAddress;
+        let wavelength = friendship.wavelength;
+
+        // Compute on-the-fly for old friendships lacking stored bond data
+        if (!psiChannel) {
+          const nmBond = Math.sqrt(myChannel.nm * friendChannel.nm);
+          const wdmBond = Math.min(255, Math.max(0, Math.round((nmBond - NM_MIN_PB) * 255 / (NM_MAX_PB - NM_MIN_PB))));
+          const oamBond = (myChannel.oam ^ friendChannel.oam) % 50;
+          const polBond = myChannel.pol === friendChannel.pol ? myChannel.pol : "H";
+          psiChannel = `Ψ(${wdmBond},${oamBond},${polBond})`;
+          const [nameA, nameB] = friendship.requesterId === req.user!.id
+            ? [req.user!.username, friend.username]
+            : [friend.username, req.user!.username];
+          wnspAddress = `wnsp://${psiChannel}/${nameA}↔${nameB}`;
+          wavelength = nmBond.toFixed(4);
+        }
+
+        const wdmBond = parseInt(psiChannel.match(/Ψ\((\d+)/)?.[1] ?? "200");
+        const bondBand = getBand(wdmBond);
+
+        return {
+          friendshipId: friendship.id,
+          friend: {
+            id: friend.id,
+            username: friend.username,
+            wdm: friend.spectralWdm ?? friendChannel.wdm,
+            oam: friend.spectralOam ?? friendChannel.oam,
+            pol: friend.spectralPol ?? friendChannel.pol,
+            nm: friendChannel.nm.toFixed(2),
+            psi: friendChannel.psi,
+            band: friendChannel.band,
+          },
+          bond: {
+            psiChannel,
+            wnspAddress,
+            wavelength,
+            band: bondBand,
+          },
+          acceptedAt: friendship.acceptedAt,
+        };
+      });
+
+      res.json({
+        myChannel: {
+          wdm: req.user!.spectralWdm ?? myChannel.wdm,
+          oam: req.user!.spectralOam ?? myChannel.oam,
+          pol: req.user!.spectralPol ?? myChannel.pol,
+          nm: myChannel.nm.toFixed(2),
+          psi: myChannel.psi,
+          band: myChannel.band,
+        },
+        entries,
+        total: entries.length,
+      });
+    } catch (error: any) {
+      console.error("Phonebook error:", error);
+      res.status(500).json({ error: "Failed to load phonebook" });
     }
   });
 

@@ -14,7 +14,7 @@ import {
   ArrowRight, Check, ExternalLink, Layers, Activity,
   Waves, Lock, Star, Users, ChevronDown, ChevronUp,
   TrendingUp, Briefcase, Award, Scale, Copy, Send,
-  FileText, Github, MessageCircle, Rss, Bitcoin,
+  FileText, Github, MessageCircle, Rss, Bitcoin, Twitter,
 } from "lucide-react";
 
 function wlToRgb(nm: number): string {
@@ -240,6 +240,8 @@ export default function CrowdfundPage() {
   const [zapResult, setZapResult] = useState<any>(null);
   const [showGeyser, setShowGeyser] = useState(false);
   const [showIndiegogo, setShowIndiegogo] = useState(false);
+  const [showXShare, setShowXShare] = useState(false);
+  const [tweetIdx, setTweetIdx] = useState(0);
   const { toast } = useToast();
 
   const zapMut = useMutation({
@@ -350,14 +352,16 @@ export default function CrowdfundPage() {
         </div>
 
         {/* Platform connectivity map */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
-            { icon: "⚡", name: "Nostr",      status: "live",    desc: "Zap Goals + auto-promo",     url: "https://primal.net" },
-            { icon: "🌊", name: "Geyser",     status: "setup",   desc: "Bitcoin Lightning crowdfund",  url: "https://geyser.fund/create" },
-            { icon: "✈️", name: "Telegram",   status: "live",    desc: "Auto-broadcast channel",       url: "https://t.me/troglodytememe" },
-            { icon: "🎮", name: "Discord",    status: "live",    desc: "#the-czc-sink-lab",            url: "https://discord.gg" },
-            { icon: "🚀", name: "Indiegogo",  status: "pending", desc: "Fiat donations bridge",        url: "https://indiegogo.com" },
-            { icon: "💻", name: "GitHub",     status: "live",    desc: "AGPL-3.0 open source",         url: "https://github.com/nexusosdaily-code/NexusOS" },
+            { icon: "⚡", name: "Nostr",      status: "live",    desc: "Zap Goals + auto-promo",        url: "https://primal.net/p/npub1pk8wh66aqhxkzl3n0p7q78hzz4f9r5j4snqj7skck2p7dkxmwj2s9pnnkd" },
+            { icon: "🌊", name: "Geyser",     status: "setup",   desc: "Bitcoin Lightning crowdfund",   url: "https://geyser.fund/create" },
+            { icon: "✈️", name: "Telegram",   status: "live",    desc: "Auto-broadcast channel",        url: "https://t.me/troglodytememe" },
+            { icon: "𝕏",  name: "Twitter/X",  status: "live",    desc: "Share + community threads",     url: "https://x.com/intent/tweet?text=Fund+NexusOS+hardware+%E2%80%94+physics-based+computing+built+on+%CE%9B%3Dhf%2Fc%C2%B2+%E2%80%A2+wnsp.io%2Fcrowdfund+%23NexusOS+%23Bitcoin+%23Photonics" },
+            { icon: "🚀", name: "Indiegogo",  status: "pending", desc: "Fiat donations bridge",         url: "https://indiegogo.com" },
+            { icon: "🎮", name: "Discord",    status: "live",    desc: "#the-czc-sink-lab",             url: "https://discord.gg/nexusos" },
+            { icon: "💻", name: "GitHub",     status: "live",    desc: "AGPL-3.0 open source",          url: "https://github.com/nexusosdaily-code/NexusOS" },
+            { icon: "🟠", name: "UniSat",     status: "live",    desc: "NXWV Rune marketplace",         url: "https://unisat.io/market/runes?tick=NEXUS%E2%80%A2WAVELENGTH" },
           ].map(p => (
             <a key={p.name} href={p.url} target="_blank" rel="noreferrer"
               className="rounded-xl border border-white/8 bg-black/30 hover:border-white/20 p-3 transition-all group">
@@ -460,6 +464,69 @@ export default function CrowdfundPage() {
             </div>
           )}
         </div>
+
+        {/* ─ Twitter / X Share Panel ─ */}
+        {(() => {
+          const TWEETS = [
+            { label: "Hardware CTA",       text: "Fund the PHR-1 resonator — the first physical implementation of ZERO-G state.\n\n🔬 Physics-based OS · Λ=hf/c²\n🌈 NXWV Rune 952596:379 sealed on Bitcoin\n📄 Full disclosure: wnsp.io/wnsp-paper\n\nDonate: wnsp.io/crowdfund\n\n#NexusOS #Bitcoin #Lightning #Photonics" },
+            { label: "Science angle",      text: "NexusOS replaces cryptographic hashing with Maxwell equation validation.\n\n25,600 orthogonal Ψ channels · 21B NXWV Rune · AGPL-3.0\n\nBuilding the OS of a Kardashev Type I civilisation.\n\nwnsp.io/crowdfund\n\n#Physics #Bitcoin #OpenSource #Photonics" },
+            { label: "Founder tier",       text: "25 Hardware Founder slots open.\n\n100,000 sats → PHR-1 resonator unit + 100,000 Nexus Shares (Class A).\n\nFirst production batch. Hardware advisory seat.\n\nwnsp.io/crowdfund\n\n#NexusOS #Bitcoin #Hardware #Lightning" },
+            { label: "Viral hook",         text: "What if communication ran on physics, not software policy?\n\n25,600 orthogonal light channels. No DNS. No IP. Just wavelengths.\n\nNexusOS. wnsp.io\n\n#Photonics #Bitcoin #NexusOS" },
+          ];
+          const tweet = TWEETS[tweetIdx] ?? TWEETS[0];
+          const intentUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(tweet.text)}`;
+          return (
+            <div className="rounded-xl border border-sky-500/20 bg-sky-950/10 p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Twitter size={14} className="text-sky-400" />
+                  <span className="text-xs font-bold text-sky-300">Twitter / X Share</span>
+                  <span className="text-[9px] bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-full px-2 py-0.5">web intent — no login needed</span>
+                </div>
+                <button onClick={() => setShowXShare(x => !x)}
+                  className="text-[10px] text-sky-400 hover:text-sky-300 flex items-center gap-1">
+                  {showXShare ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  {showXShare ? "Hide" : "Show tweets"}
+                </button>
+              </div>
+              <p className="text-[11px] text-white/40 mb-3">
+                Four pre-written tweet angles. Click <strong className="text-white/60">Share on X</strong> to open the compose window pre-loaded. No API key required.
+              </p>
+              <div className="flex gap-1.5 mb-3 flex-wrap">
+                {TWEETS.map((t, i) => (
+                  <button key={i} onClick={() => setTweetIdx(i)}
+                    data-testid={`btn-tweet-angle-${i}`}
+                    className={`text-[10px] px-2.5 py-1 rounded-full border transition-all ${
+                      i === tweetIdx
+                        ? "bg-sky-500/20 border-sky-500/40 text-sky-300 font-semibold"
+                        : "border-white/10 text-white/30 hover:text-white/60 hover:border-white/20"
+                    }`}>{t.label}</button>
+                ))}
+              </div>
+              {showXShare && (
+                <div className="bg-black/40 rounded-lg p-3 mb-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] text-white/40 font-semibold uppercase">Tweet copy</span>
+                    <CopyButton text={tweet.text} />
+                  </div>
+                  <pre className="text-[11px] text-white/70 whitespace-pre-wrap font-mono leading-relaxed">{tweet.text}</pre>
+                  <div className="text-[10px] text-white/20 text-right mt-1">{tweet.text.length} / 280 chars</div>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <a href={intentUrl} target="_blank" rel="noreferrer"
+                  data-testid="link-share-on-x"
+                  className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs transition-colors">
+                  <Twitter size={12} /> Share on X
+                </a>
+                <a href="https://x.com/search?q=%23NexusOS&src=typed_query&f=live" target="_blank" rel="noreferrer"
+                  className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-sky-500/30 text-sky-400 hover:bg-sky-950/40 text-xs transition-colors">
+                  <ExternalLink size={11} /> #NexusOS feed
+                </a>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ─ How to Trade NXWV Rune ─ */}
         <div className="rounded-xl border border-orange-500/20 bg-orange-950/10 p-4 mb-4">

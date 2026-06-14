@@ -79,6 +79,7 @@ const OpenPage = lazy(() => import("@/pages/open"));
 const WnspBridgePage = lazy(() => import("@/pages/wnsp-bridge"));
 const ProfilePage = lazy(() => import("@/pages/profile"));
 const DirectoryPage = lazy(() => import("@/pages/directory"));
+const PhonebookPage = lazy(() => import("@/pages/phonebook"));
 const LedgerPage = lazy(() => import("@/pages/ledger"));
 const GitHubBridgePage = lazy(() => import("@/pages/github-bridge"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
@@ -217,7 +218,7 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/wallet",
   "/announcements", "/announcements/substrate-v2",
   "/resonance-propulsion",
-  "/friends", "/inbox", "/messages",
+  "/friends", "/inbox", "/messages", "/phonebook",
   "/k1", "/k1/orchestration",
   "/secure-docs",
   "/streaming",
@@ -352,6 +353,7 @@ function ProtectedRoutes() {
         <Route path="/wnsp-bridge" component={WnspBridgePage} />
         <Route path="/wnsp/bridge" component={WnspBridgePage} />
         <Route path="/directory" component={DirectoryPage} />
+        <Route path="/phonebook" component={PhonebookPage} />
         <Route path="/ledger" component={LedgerPage} />
         <Route path="/github" component={GitHubBridgePage} />
         <Route path="/settings" component={SettingsPage} />

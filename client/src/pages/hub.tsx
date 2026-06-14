@@ -74,6 +74,7 @@ const APP_SECTIONS = [
     accent: "#22d3ee",
     items: [
       { title: "Inbox",        href: "/inbox",          Icon: Mail },
+      { title: "Wave Channels",href: "/phonebook",      Icon: Radio },
       { title: "Live Streams", href: "/streaming",      Icon: Radio },
       { title: "Transmission", href: "/workspace/transmission", Icon: Waves },
       { title: "Encoding Lab", href: "/encoding-lab",   Icon: Atom },

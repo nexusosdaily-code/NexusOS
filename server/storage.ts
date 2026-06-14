@@ -86,6 +86,7 @@ export interface IStorage {
   getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
   sendFriendRequest(requesterId: string, addresseeId: string): Promise<Friendship>;
   acceptFriendRequest(friendshipId: string): Promise<Friendship>;
+  updateFriendshipSpectral(friendshipId: string, data: { wavelength: string; spectralBond: string; psiChannel: string; wnspAddress: string }): Promise<Friendship>;
   rejectFriendRequest(friendshipId: string): Promise<void>;
   removeFriend(friendshipId: string): Promise<void>;
   getFriendship(id: string): Promise<Friendship | undefined>;
@@ -567,6 +568,14 @@ export class DatabaseStorage implements IStorage {
   async acceptFriendRequest(friendshipId: string): Promise<Friendship> {
     const result = await db.update(friendships)
       .set({ status: "accepted", acceptedAt: new Date() })
+      .where(eq(friendships.id, friendshipId))
+      .returning();
+    return result[0];
+  }
+
+  async updateFriendshipSpectral(friendshipId: string, data: { wavelength: string; spectralBond: string; psiChannel: string; wnspAddress: string }): Promise<Friendship> {
+    const result = await db.update(friendships)
+      .set({ wavelength: data.wavelength, spectralBond: data.spectralBond, psiChannel: data.psiChannel, wnspAddress: data.wnspAddress })
       .where(eq(friendships.id, friendshipId))
       .returning();
     return result[0];
