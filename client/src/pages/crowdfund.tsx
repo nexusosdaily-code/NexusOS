@@ -304,6 +304,9 @@ export default function CrowdfundPage() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const OWNER_TWEET = "Looking for blockchain developers who want to be owners — not employees.\n\nNexusOS is a physics-based OS built on Λ=hf/c². The blockchain is live. The hardware spec is published.\n\nMy focus is manufacturing the hardware. I need builders who want protocol revenue, not a salary.\n\nDM @wnsptech or: wnsp.io/hardware-spec\n\n#NexusOS #Bitcoin #Blockchain #OpenSource #Photonics";
+  const OWNER_TWEET_URL = `https://x.com/intent/tweet?text=${encodeURIComponent(OWNER_TWEET)}`;
+
   const blocks = chain?.blocks ?? [];
   const spectralTotal = eco?.systems?.spectralDb?.total ?? 479;
   const txCount = eco?.systems?.spectralDb?.confirmed ?? 478;
@@ -519,17 +522,18 @@ export default function CrowdfundPage() {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <a href={OWNER_TWEET_URL} target="_blank" rel="noreferrer"
+              data-testid="link-owner-post-x"
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-black font-bold text-xs transition-colors">
+              <Twitter size={12} /> Post on X
+            </a>
             <Button size="sm" onClick={() => ownerPromoMut.mutate()} disabled={ownerPromoMut.isPending}
               className="flex-1 bg-amber-700 hover:bg-amber-600 text-white text-xs h-8"
               data-testid="button-broadcast-owner-call">
               <Send size={12} className="mr-1" />
-              {ownerPromoMut.isPending ? "Broadcasting…" : "Broadcast Owner Call → Nostr + Telegram + Discord"}
+              {ownerPromoMut.isPending ? "Broadcasting…" : "Broadcast → Nostr + Telegram + Discord"}
             </Button>
-            <a href="https://x.com/wnsptech" target="_blank" rel="noreferrer"
-              className="flex items-center gap-1.5 px-3 rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-950/40 text-xs transition-colors">
-              <ExternalLink size={11} /> DM @wnsptech
-            </a>
           </div>
         </div>
 
@@ -632,7 +636,7 @@ export default function CrowdfundPage() {
             { label: "Founder tier",       text: "25 Hardware Founder slots open.\n\n100,000 sats → PHR-1 resonator unit + 100,000 Nexus Shares (Class A).\n\nFirst production batch. Hardware advisory seat.\n\nwnsp.io/crowdfund\n\n@wnsptech #NexusOS #Bitcoin #Hardware #Lightning" },
             { label: "Viral hook",         text: "What if communication ran on physics, not software policy?\n\n25,600 orthogonal light channels. No DNS. No IP. Just wavelengths.\n\n@wnsptech — NexusOS. wnsp.io\n\n#Photonics #Bitcoin #NexusOS" },
             { label: "P2P transmission",   text: "Send data across a P2P network using wavelength addresses — no cloud, no DNS.\n\nEncode → Ψ channel → Spectral Receipt → Permanent on-chain ordinal.\n\nTry it: wnsp.io/transmission\n\n@wnsptech #NexusOS #P2P #WNSP #Photonics #Bitcoin" },
-            { label: "Blockchain owner",   text: "Looking for blockchain developers who want to be owners — not employees.\n\nNexusOS is a physics-based OS built on Λ=hf/c². The blockchain is live. The hardware spec is published.\n\nMy focus is manufacturing the hardware. I need builders who want protocol revenue, not a salary.\n\nDM @wnsptech or: wnsp.io/hardware-spec\n\n#NexusOS #Bitcoin #Blockchain #OpenSource #Photonics" },
+            { label: "Blockchain owner",   text: OWNER_TWEET },
           ];
           const tweet = TWEETS[tweetIdx] ?? TWEETS[0];
           const intentUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(tweet.text)}`;
