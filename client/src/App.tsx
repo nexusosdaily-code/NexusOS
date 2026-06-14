@@ -1,13 +1,14 @@
 import { Switch, Route, useLocation } from "wouter";
-import { lazy, Suspense, Component, type ReactNode, type ErrorInfo } from "react";
+import { lazy, Suspense, Component, type ReactNode, type ErrorInfo, useEffect } from "react";
 import GuideBot from "@/components/GuideBot";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, ProtectedRoute, AuthLoading } from "@/hooks/use-auth";
 import { UniSatProvider } from "@/hooks/use-unisat";
 import { DOMAIN_LANDINGS } from "@/pages/domain-landings";
+import { useToast } from "@/hooks/use-toast";
 
 // Auth page loaded eagerly — needed on first render
 import AuthPage from "@/pages/auth";
@@ -495,6 +496,33 @@ function Router() {
   );
 }
 
+// ── Global friend-request alert — fires on any page ────────────────────────
+function FriendRequestNotifier() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (!token) return;
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    const ws = new WebSocket(`${proto}//${location.host}/ws/signaling?token=${token}`);
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === "friend_request") {
+          qc.invalidateQueries({ queryKey: ["/api/friends"] });
+          toast({
+            title: "📡 Friend request received",
+            description: `${msg.from?.username ?? "Someone"} wants to connect`,
+            duration: 10000,
+          });
+        }
+      } catch {}
+    };
+    return () => ws.close();
+  }, [toast, qc]);
+  return null;
+}
+
 function TelegramFloat() {
   return (
     <a
@@ -526,6 +554,7 @@ function App() {
           <UniSatProvider>
             <AuthProvider>
               <Toaster />
+              <FriendRequestNotifier />
               <AuthLoading>
                 <Suspense fallback={<PageLoader />}>
                   <Router />

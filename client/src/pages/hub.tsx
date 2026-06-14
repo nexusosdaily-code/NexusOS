@@ -359,6 +359,12 @@ function IdentityRail({
   const nxtUsd = mktData?.nxtUsd ?? null;
   const satUsd = mktData?.satUsd ?? null;
 
+  const { data: friendsData } = useQuery<{ friends: unknown[]; pendingRequests: { id: string }[] }>({
+    queryKey: ["/api/friends"],
+    refetchInterval: 30_000,
+  });
+  const pendingFriends = friendsData?.pendingRequests?.length ?? 0;
+
   return (
     <div
       data-testid="identity-rail"
@@ -405,6 +411,17 @@ function IdentityRail({
       </div>
 
       <div className="flex-1" />
+
+      {/* Pending friend requests badge */}
+      {pendingFriends > 0 && (
+        <Link href="/inbox">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded cursor-pointer text-xs animate-pulse"
+            style={{ background: "rgba(168,85,247,0.18)", color: "#c084fc", border: "1px solid rgba(168,85,247,0.35)" }}>
+            <Users className="w-3.5 h-3.5" />
+            {pendingFriends} friend {pendingFriends === 1 ? "request" : "requests"}
+          </div>
+        </Link>
+      )}
 
       {/* Unread badge */}
       {unread > 0 && (

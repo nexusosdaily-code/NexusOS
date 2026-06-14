@@ -2027,6 +2027,19 @@ export async function registerRoutes(
         addresseeId: addressee.id,
       });
 
+      // Push live alert to the recipient via WebSocket
+      const recipientWs = connectedClients.get(addressee.id);
+      if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
+        recipientWs.send(JSON.stringify({
+          type: "friend_request",
+          friendshipId: friendship.id,
+          from: {
+            username: req.user!.username,
+            id: req.user!.id,
+          },
+        }));
+      }
+
       res.status(201).json({
         message: "Friend request sent",
         friendship: {

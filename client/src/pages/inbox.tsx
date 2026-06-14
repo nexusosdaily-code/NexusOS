@@ -464,22 +464,30 @@ export default function InboxPage() {
     refetchInterval: 15000,
   });
 
-  // WebSocket: listen for new_message events → invalidate thread
+  // WebSocket: live alerts for new messages + friend requests
+  const { toast } = useToast();
   useEffect(() => {
     if (!token) return;
     const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${wsProto}//${location.host}/ws?token=${token}`);
+    const ws = new WebSocket(`${wsProto}//${location.host}/ws/signaling?token=${token}`);
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data);
         if (msg.type === "new_message") {
           qc.invalidateQueries({ queryKey: ["/api/messages/thread"] });
           qc.invalidateQueries({ queryKey: ["/api/friends"] });
+        } else if (msg.type === "friend_request") {
+          qc.invalidateQueries({ queryKey: ["/api/friends"] });
+          toast({
+            title: "Friend request received",
+            description: `${msg.from?.username ?? "Someone"} wants to connect`,
+            duration: 8000,
+          });
         }
       } catch {}
     };
     return () => ws.close();
-  }, [token, qc]);
+  }, [token, qc, toast]);
 
   if (!token) {
     return (
