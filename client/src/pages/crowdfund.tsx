@@ -264,13 +264,28 @@ export default function CrowdfundPage() {
       const r = await fetch("/api/crowdfund/fire-promo", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ platform: "both" }),
+        body: JSON.stringify({ platform: "both", topic: "crowdfund" }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Failed");
       return j;
     },
     onSuccess: () => toast({ title: "📡 Promo fired!", description: "Posted to Nostr + Telegram" }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const p2pPromoMut = useMutation({
+    mutationFn: async () => {
+      const r = await fetch("/api/crowdfund/fire-promo", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ platform: "both", topic: "transmission" }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? "Failed");
+      return j;
+    },
+    onSuccess: () => toast({ title: "📡 P2P tutorial broadcast!", description: "How-to posted to Nostr + Telegram + Discord" }),
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -401,7 +416,7 @@ export default function CrowdfundPage() {
               <span className="text-[10px] text-white/25 pb-2">{parseInt(zapGoalSats || "0").toLocaleString()} sats</span>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button size="sm" onClick={() => zapMut.mutate()} disabled={zapMut.isPending}
               className="flex-1 bg-purple-600 hover:bg-purple-500 text-white text-xs h-8"
               data-testid="button-publish-zap-goal">
@@ -410,7 +425,12 @@ export default function CrowdfundPage() {
             <Button size="sm" onClick={() => promoMut.mutate()} disabled={promoMut.isPending}
               className="bg-slate-700 hover:bg-slate-600 text-white text-xs h-8"
               data-testid="button-fire-promo">
-              <Send size={12} className="mr-1" /> {promoMut.isPending ? "Firing…" : "Fire Promo"}
+              <Send size={12} className="mr-1" /> {promoMut.isPending ? "Firing…" : "Fire Crowdfund Promo"}
+            </Button>
+            <Button size="sm" onClick={() => p2pPromoMut.mutate()} disabled={p2pPromoMut.isPending}
+              className="bg-cyan-800 hover:bg-cyan-700 text-white text-xs h-8"
+              data-testid="button-fire-p2p-promo">
+              <Radio size={12} className="mr-1" /> {p2pPromoMut.isPending ? "Broadcasting…" : "Broadcast P2P Tutorial"}
             </Button>
           </div>
           {zapResult && (
@@ -423,6 +443,57 @@ export default function CrowdfundPage() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* ─ P2P Transmission Tutorial ─ */}
+        <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/10 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Radio size={14} className="text-cyan-400" />
+            <span className="text-xs font-bold text-cyan-300">P2P Spectral Transmission — How It Works</span>
+            <a href="/transmission" target="_blank"
+              className="ml-auto text-[9px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-full px-2 py-0.5 hover:bg-cyan-500/20 transition-colors">
+              Open Transmission Console ↗
+            </a>
+          </div>
+          <p className="text-[11px] text-white/40 mb-4">
+            A working P2P data layer — no cloud, no DNS, no middlemen. Data is CE-encoded to a unique wavelength λ and Ψ channel, stored on-chain, retrievable by anyone with the address.
+          </p>
+          <div className="space-y-2 mb-4">
+            {[
+              { step: "1", color: "#22d3ee", title: "Go to wnsp.io/transmission",         desc: "The broadcasting console. Works without an account for reading." },
+              { step: "2", color: "#34d399", title: "Compose your payload",               desc: "Type text or upload a file (video, image, binary). NexusOS CE-encodes it to a unique λ and Ψ(wdm,oam,pol) channel derived from the content itself." },
+              { step: "3", color: "#fbbf24", title: "Inspect the spectral analysis",      desc: "See the wavelength distribution across your data, total energy in Joules (E=hf per character), and the estimated NXT transmission fee." },
+              { step: "4", color: "#f87171", title: "Transmit",                           desc: "Click Transmit. Watch your data propagate as photons. On completion: a Spectral Receipt — permanent on-chain ordinal with your λ, Ψ, and content hash." },
+              { step: "5", color: "#a78bfa", title: "Retrieve at spectral-workspace",     desc: "Go to wnsp.io/spectral-workspace, tune to your wavelength, retrieve it. Anyone with the λ address can find your transmission — no account required." },
+            ].map(s => (
+              <div key={s.step} className="flex gap-3 p-2.5 rounded-lg bg-black/30 border border-white/5">
+                <div className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold mt-0.5"
+                  style={{ background: s.color + "20", color: s.color, border: `1px solid ${s.color}40` }}>{s.step}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-semibold text-white/80 mb-0.5 font-mono">{s.title}</div>
+                  <div className="text-[10px] text-white/40 leading-relaxed">{s.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-black/20 border border-cyan-500/10 mb-4">
+            <Waves size={12} className="text-cyan-500 flex-shrink-0" />
+            <p className="text-[10px] text-white/35 leading-relaxed">
+              <strong className="text-cyan-400/80">25,600 orthogonal channels.</strong> This architecture runs on silicon today — migrates to photonic hardware ~2032. Zero rewrite needed because NexusOS is already written in the language of the destination hardware.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => p2pPromoMut.mutate()} disabled={p2pPromoMut.isPending}
+              className="flex-1 bg-cyan-700 hover:bg-cyan-600 text-white text-xs h-8"
+              data-testid="button-broadcast-p2p-tutorial">
+              <Send size={12} className="mr-1" />
+              {p2pPromoMut.isPending ? "Broadcasting…" : "Broadcast Tutorial → Nostr + Telegram + Discord"}
+            </Button>
+            <a href="/transmission"
+              className="flex items-center gap-1.5 px-3 rounded-lg border border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/40 text-xs transition-colors">
+              <ExternalLink size={11} /> Try It
+            </a>
+          </div>
         </div>
 
         {/* ─ Geyser Campaign Content ─ */}
@@ -472,6 +543,7 @@ export default function CrowdfundPage() {
             { label: "Science angle",      text: "NexusOS replaces cryptographic hashing with Maxwell equation validation.\n\n25,600 orthogonal Ψ channels · 21B NXWV Rune · AGPL-3.0\n\nBuilding the OS of a Kardashev Type I civilisation.\n\nwnsp.io/crowdfund\n\n#Physics #Bitcoin #OpenSource #Photonics" },
             { label: "Founder tier",       text: "25 Hardware Founder slots open.\n\n100,000 sats → PHR-1 resonator unit + 100,000 Nexus Shares (Class A).\n\nFirst production batch. Hardware advisory seat.\n\nwnsp.io/crowdfund\n\n#NexusOS #Bitcoin #Hardware #Lightning" },
             { label: "Viral hook",         text: "What if communication ran on physics, not software policy?\n\n25,600 orthogonal light channels. No DNS. No IP. Just wavelengths.\n\nNexusOS. wnsp.io\n\n#Photonics #Bitcoin #NexusOS" },
+            { label: "P2P transmission",   text: "Send data across a P2P network using wavelength addresses — no cloud, no DNS.\n\nEncode → Ψ channel → Spectral Receipt → Permanent on-chain ordinal.\n\nTry it: wnsp.io/transmission\n\n#NexusOS #P2P #WNSP #Photonics #Bitcoin" },
           ];
           const tweet = TWEETS[tweetIdx] ?? TWEETS[0];
           const intentUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(tweet.text)}`;

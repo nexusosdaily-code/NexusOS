@@ -14006,14 +14006,36 @@ wnsp.io | t.me/troglodytememe`,
   // POST /api/crowdfund/fire-promo — fire promo to Nostr + Telegram
   app.post("/api/crowdfund/fire-promo", authenticate, async (req: Request, res: Response) => {
     try {
-      const { platform } = req.body; // "both" | "nostr" | "telegram"
-      const result = await campaignAgent.fireEventBroadcast({
-        emoji:    "⚡",
-        title:    "NexusOS Crowdfund — Physics Hardware",
-        body:     `Fund the PHR-1 resonator prototype — the first physical implementation of ZERO-G state.\n\n🔬 Physics-based OS built on Λ=hf/c²\n🌈 NXWV Rune 952596:379 — sealed on Bitcoin\n📄 Full disclosure: wnsp.io/wnsp-paper\n🎁 Airdrop: wnsp.io/airdrop\n\nDonate: wnsp.io/crowdfund`,
-        hashtags: ["NexusOS", "Bitcoin", "Crowdfund", "PHR1", "Photonics", "Lightning"],
-      });
-      res.json({ ok: true, platform: platform ?? "both", ...result });
+      const { platform, topic } = req.body; // topic: "crowdfund" | "transmission"
+
+      let broadcastOpts: Parameters<typeof campaignAgent.fireEventBroadcast>[0];
+
+      if (topic === "transmission") {
+        broadcastOpts = {
+          emoji:    "📡",
+          title:    "Transmit Data Over the WNSP Spectral Network — How To",
+          body:     `NexusOS has a working P2P data layer. No cloud. No DNS. No middlemen. Just physics.\n\n` +
+                    `Step 1 → wnsp.io/transmission\n` +
+                    `Step 2 → Type text or upload a file — CE-encoded to a unique λ and Ψ(wdm,oam,pol) channel\n` +
+                    `Step 3 → Inspect spectral analysis: wavelength distribution, energy E=hf, NXT fee\n` +
+                    `Step 4 → Transmit → Spectral Receipt (permanent on-chain ordinal: λ, Ψ, content hash)\n` +
+                    `Step 5 → Retrieve at wnsp.io/spectral-workspace — tune to your wavelength\n\n` +
+                    `25,600 orthogonal channels. Physics addressing. No account required to read.\n` +
+                    `Runs on silicon today. Migrates to photonic hardware ~2032. Zero rewrite.\n\n` +
+                    `👉 wnsp.io/transmission`,
+          hashtags: ["NexusOS", "P2P", "WNSP", "Photonics", "Transmission", "Bitcoin"],
+        };
+      } else {
+        broadcastOpts = {
+          emoji:    "⚡",
+          title:    "NexusOS Crowdfund — Physics Hardware",
+          body:     `Fund the PHR-1 resonator prototype — the first physical implementation of ZERO-G state.\n\n🔬 Physics-based OS built on Λ=hf/c²\n🌈 NXWV Rune 952596:379 — sealed on Bitcoin\n📄 Full disclosure: wnsp.io/wnsp-paper\n🎁 Airdrop: wnsp.io/airdrop\n\nDonate: wnsp.io/crowdfund`,
+          hashtags: ["NexusOS", "Bitcoin", "Crowdfund", "PHR1", "Photonics", "Lightning"],
+        };
+      }
+
+      const result = await campaignAgent.fireEventBroadcast(broadcastOpts);
+      res.json({ ok: true, platform: platform ?? "both", topic: topic ?? "crowdfund", ...result });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 

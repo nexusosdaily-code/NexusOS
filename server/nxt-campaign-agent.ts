@@ -417,6 +417,53 @@ API key: 5,000 sats flat fee. No subscription.
 wnsp.io/developer #NexusOS #NXT #WNSP #API #Developer`,
     tags: ["NexusOS","NXT","WNSP","API","Developer","Bitcoin"],
   },
+  {
+    id: 10, label: "P2P transmission how-to", emoji: "📡",
+    telegram: `📡 <b>How to Transmit Data Over the WNSP Spectral Network</b>
+
+NexusOS has a working P2P data layer — no cloud, no DNS, no middlemen. Just physics.
+
+<b>Step 1 — Go to the Transmission Console</b>
+👉 wnsp.io/transmission
+
+<b>Step 2 — Compose your payload</b>
+Type any text or upload a file (video, image, binary).
+NexusOS automatically CE-encodes your content to a unique wavelength λ and Ψ channel based on the actual data.
+
+<b>Step 3 — Inspect the spectral analysis</b>
+📊 Wavelength distribution (which λ bands your content occupies)
+⚡ Total energy in Joules (E=hf per character)
+💰 Estimated NXT cost (fee = base × E_sender / E_ref)
+
+<b>Step 4 — Transmit</b>
+Click <b>Transmit</b>. Watch your data propagate as photons through the simulated fibre channel.
+On completion you receive a <b>Spectral Receipt</b> — a permanent on-chain ordinal recording your Ψ address, λ, timestamp, and content hash.
+
+<b>Step 5 — Find your data</b>
+Go to wnsp.io/spectral-workspace, tune to your wavelength, and retrieve it.
+Anyone with the λ address can find your transmission. No account required to read.
+
+This is not a simulation of what's coming — it's the architecture running today on silicon, ready to migrate to photonic hardware in ~2032. No rewrite needed.
+
+👉 wnsp.io/transmission
+#NexusOS #P2P #WNSP #Photonics #Transmission #Bitcoin`,
+    nostr: `📡 How to transmit data over the WNSP spectral network — step by step
+
+NexusOS has a working P2P data layer. No cloud. No DNS. No middlemen.
+
+Step 1 → wnsp.io/transmission
+Step 2 → Type text or upload a file. NexusOS CE-encodes it to a unique wavelength λ and Ψ(wdm,oam,pol) channel.
+Step 3 → Inspect the spectral analysis: wavelength distribution, total energy E=hf, estimated NXT fee.
+Step 4 → Click Transmit. Your data propagates as photons. On completion: Spectral Receipt — permanent on-chain ordinal with your λ, Ψ, and content hash.
+Step 5 → Retrieve at wnsp.io/spectral-workspace — tune to your wavelength.
+
+25,600 orthogonal channels. Physics addressing. No account required to read.
+
+This architecture runs on silicon today. Migrates to photonic hardware ~2032. Zero rewrite.
+
+wnsp.io/transmission #NexusOS #P2P #WNSP #Photonics`,
+    tags: ["NexusOS","P2P","WNSP","Photonics","Transmission","Bitcoin"],
+  },
 ];
 
 // ── Telegram channel sender ───────────────────────────────────────────────────
