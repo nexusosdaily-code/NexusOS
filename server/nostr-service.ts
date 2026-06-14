@@ -423,12 +423,14 @@ export async function publishZapGoal(opts: {
     .map(r => r.value);
 
   const neventId = nip19.neventEncode({ id: signed.id, author: pubkey, relays: accepted });
+  const npub = nip19.npubEncode(pubkey);
 
   console.log(`[ZapGoal] Published kind-9041 to ${accepted.length}/${DEFAULT_RELAYS.length} relays`);
   return {
-    id:        signed.id,
-    relays:    accepted,
-    nostrLink: `https://primal.net/e/${neventId}`,
+    id:          signed.id,
+    relays:      accepted,
+    nostrLink:   `https://njump.me/${neventId}`,
+    primalLink:  `https://primal.net/p/${npub}`,
   };
 }
 

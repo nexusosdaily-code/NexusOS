@@ -434,13 +434,25 @@ export default function CrowdfundPage() {
             </Button>
           </div>
           {zapResult && (
-            <div className="mt-3 p-3 rounded-lg bg-green-950/20 border border-green-500/20">
-              <div className="text-[10px] text-green-400 font-semibold mb-1">⚡ Live on {zapResult.relays?.length} relays</div>
-              <div className="flex items-center justify-between">
+            <div className="mt-3 p-3 rounded-lg bg-green-950/20 border border-green-500/20 space-y-2">
+              <div className="text-[10px] text-green-400 font-semibold">⚡ Live on {zapResult.relays?.length} relays</div>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] text-white/30 w-16 shrink-0">Event:</span>
                 <a href={zapResult.nostrLink} target="_blank" rel="noreferrer"
-                  className="text-[10px] text-purple-400 hover:underline truncate mr-2">{zapResult.nostrLink}</a>
+                  className="text-[10px] text-purple-400 hover:underline truncate flex-1">njump.me ↗</a>
                 <CopyButton text={zapResult.nostrLink ?? ""} />
               </div>
+              {zapResult.primalLink && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] text-white/30 w-16 shrink-0">Profile:</span>
+                  <a href={zapResult.primalLink} target="_blank" rel="noreferrer"
+                    className="text-[10px] text-blue-400 hover:underline truncate flex-1">View on Primal ↗</a>
+                  <CopyButton text={zapResult.primalLink ?? ""} />
+                </div>
+              )}
+              <p className="text-[9px] text-white/25 leading-relaxed pt-1">
+                Kind 9041 Zap Goals display on your Primal profile page, not at a direct event URL.
+              </p>
             </div>
           )}
         </div>
