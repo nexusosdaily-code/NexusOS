@@ -289,6 +289,21 @@ export default function CrowdfundPage() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const ownerPromoMut = useMutation({
+    mutationFn: async () => {
+      const r = await fetch("/api/crowdfund/fire-promo", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ platform: "both", topic: "owner" }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? "Failed");
+      return j;
+    },
+    onSuccess: () => toast({ title: "🏗️ Owner call broadcast!", description: "Posted to Nostr + Telegram + Discord" }),
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const blocks = chain?.blocks ?? [];
   const spectralTotal = eco?.systems?.spectralDb?.total ?? 479;
   const txCount = eco?.systems?.spectralDb?.confirmed ?? 478;
@@ -432,6 +447,11 @@ export default function CrowdfundPage() {
               data-testid="button-fire-p2p-promo">
               <Radio size={12} className="mr-1" /> {p2pPromoMut.isPending ? "Broadcasting…" : "Broadcast P2P Tutorial"}
             </Button>
+            <Button size="sm" onClick={() => ownerPromoMut.mutate()} disabled={ownerPromoMut.isPending}
+              className="bg-amber-800 hover:bg-amber-700 text-white text-xs h-8"
+              data-testid="button-fire-owner-promo">
+              <Users size={12} className="mr-1" /> {ownerPromoMut.isPending ? "Broadcasting…" : "Broadcast Owner Call"}
+            </Button>
           </div>
           {zapResult && (
             <div className="mt-3 p-3 rounded-lg bg-green-950/20 border border-green-500/20 space-y-2">
@@ -455,6 +475,62 @@ export default function CrowdfundPage() {
               </p>
             </div>
           )}
+        </div>
+
+        {/* ─ Blockchain Owner Program ─ */}
+        <div className="rounded-xl border border-amber-500/20 bg-amber-950/10 p-4 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Users size={14} className="text-amber-400" />
+            <span className="text-xs font-bold text-amber-300">Blockchain Developer-Owners Wanted</span>
+            <a href="/hardware-spec" target="_blank"
+              className="ml-auto text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full px-2 py-0.5 hover:bg-amber-500/20 transition-colors">
+              Hardware Spec ↗
+            </a>
+          </div>
+
+          <p className="text-[11px] text-white/50 mb-4 leading-relaxed">
+            My focus is hardware manufacturing — the PHR-1 resonator. I'm looking for blockchain developers who want to <strong className="text-amber-300">own the protocol</strong>, not earn from it as a contractor. The blockchain funds the hardware. The hardware validates the chain.
+          </p>
+
+          <div className="grid grid-cols-1 gap-2 mb-4 sm:grid-cols-2">
+            {[
+              { icon: "⛓️", heading: "What you'd own",        items: ["WNSP physics-based consensus layer", "NXT token economics (21B supply, physics fees)", "Wallet + governance infrastructure (11 live params)", "P2P mesh networking layer"] },
+              { icon: "💎", heading: "What ownership means",  items: ["Protocol revenue share — not a salary", "Token allocation from orbital treasury", "Full architectural authority over the chain", "Your name on a spec running on photonic hardware ~2032"] },
+            ].map(col => (
+              <div key={col.heading} className="p-3 rounded-lg bg-black/30 border border-white/5">
+                <div className="text-[10px] font-bold text-amber-300/80 mb-2">{col.icon} {col.heading}</div>
+                <ul className="space-y-1">
+                  {col.items.map(item => (
+                    <li key={item} className="text-[10px] text-white/40 flex gap-2">
+                      <span className="text-amber-500/60 mt-0.5 shrink-0">→</span>{item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-3 rounded-lg bg-black/30 border border-amber-500/10 mb-4">
+            <div className="text-[10px] font-bold text-amber-300/70 mb-2">🔄 The funding loop</div>
+            <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+              {["Blockchain liquidity", "→", "Platform revenue", "→", "Hardware manufacturing", "→", "Photonic validation", "→", "Network value"].map((s, i) => (
+                <span key={i} className={s === "→" ? "text-amber-500/40" : "text-white/50 bg-white/5 px-2 py-0.5 rounded-full border border-white/10"}>{s}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => ownerPromoMut.mutate()} disabled={ownerPromoMut.isPending}
+              className="flex-1 bg-amber-700 hover:bg-amber-600 text-white text-xs h-8"
+              data-testid="button-broadcast-owner-call">
+              <Send size={12} className="mr-1" />
+              {ownerPromoMut.isPending ? "Broadcasting…" : "Broadcast Owner Call → Nostr + Telegram + Discord"}
+            </Button>
+            <a href="https://x.com/wnsptech" target="_blank" rel="noreferrer"
+              className="flex items-center gap-1.5 px-3 rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-950/40 text-xs transition-colors">
+              <ExternalLink size={11} /> DM @wnsptech
+            </a>
+          </div>
         </div>
 
         {/* ─ P2P Transmission Tutorial ─ */}
@@ -556,6 +632,7 @@ export default function CrowdfundPage() {
             { label: "Founder tier",       text: "25 Hardware Founder slots open.\n\n100,000 sats → PHR-1 resonator unit + 100,000 Nexus Shares (Class A).\n\nFirst production batch. Hardware advisory seat.\n\nwnsp.io/crowdfund\n\n@wnsptech #NexusOS #Bitcoin #Hardware #Lightning" },
             { label: "Viral hook",         text: "What if communication ran on physics, not software policy?\n\n25,600 orthogonal light channels. No DNS. No IP. Just wavelengths.\n\n@wnsptech — NexusOS. wnsp.io\n\n#Photonics #Bitcoin #NexusOS" },
             { label: "P2P transmission",   text: "Send data across a P2P network using wavelength addresses — no cloud, no DNS.\n\nEncode → Ψ channel → Spectral Receipt → Permanent on-chain ordinal.\n\nTry it: wnsp.io/transmission\n\n@wnsptech #NexusOS #P2P #WNSP #Photonics #Bitcoin" },
+            { label: "Blockchain owner",   text: "Looking for blockchain developers who want to be owners — not employees.\n\nNexusOS is a physics-based OS built on Λ=hf/c². The blockchain is live. The hardware spec is published.\n\nMy focus is manufacturing the hardware. I need builders who want protocol revenue, not a salary.\n\nDM @wnsptech or: wnsp.io/hardware-spec\n\n#NexusOS #Bitcoin #Blockchain #OpenSource #Photonics" },
           ];
           const tweet = TWEETS[tweetIdx] ?? TWEETS[0];
           const intentUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(tweet.text)}`;
