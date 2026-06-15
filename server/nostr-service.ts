@@ -429,8 +429,10 @@ export async function publishZapGoal(opts: {
   return {
     id:          signed.id,
     relays:      accepted,
-    nostrLink:   `https://njump.me/${neventId}`,
+    snortLink:   `https://snort.social/e/${neventId}`,
+    njumpLink:   `https://njump.me/${neventId}`,
     primalLink:  `https://primal.net/p/${npub}`,
+    nostrLink:   `https://snort.social/e/${neventId}`,  // kept for backwards compat
   };
 }
 

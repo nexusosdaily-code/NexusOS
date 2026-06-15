@@ -459,22 +459,28 @@ export default function CrowdfundPage() {
           {zapResult && (
             <div className="mt-3 p-3 rounded-lg bg-green-950/20 border border-green-500/20 space-y-2">
               <div className="text-[10px] text-green-400 font-semibold">⚡ Live on {zapResult.relays?.length} relays</div>
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] text-white/30 w-16 shrink-0">Event:</span>
-                <a href={zapResult.nostrLink} target="_blank" rel="noreferrer"
-                  className="text-[10px] text-purple-400 hover:underline truncate flex-1">njump.me ↗</a>
-                <CopyButton text={zapResult.nostrLink ?? ""} />
-              </div>
+              <div className="text-[9px] text-white/25 mb-1">View event — try any link if one is down:</div>
+              {[
+                { label: "Snort Social", url: zapResult.snortLink, color: "text-purple-400" },
+                { label: "njump.me",     url: zapResult.njumpLink, color: "text-indigo-400" },
+              ].map(v => v.url && (
+                <div key={v.label} className="flex items-center gap-2">
+                  <span className="text-[9px] text-white/25 w-20 shrink-0">{v.label}:</span>
+                  <a href={v.url} target="_blank" rel="noreferrer"
+                    className={`text-[10px] ${v.color} hover:underline truncate flex-1`}>{v.label} ↗</a>
+                  <CopyButton text={v.url} />
+                </div>
+              ))}
               {zapResult.primalLink && (
                 <div className="flex items-center gap-2">
-                  <span className="text-[9px] text-white/30 w-16 shrink-0">Profile:</span>
+                  <span className="text-[9px] text-white/25 w-20 shrink-0">Profile:</span>
                   <a href={zapResult.primalLink} target="_blank" rel="noreferrer"
-                    className="text-[10px] text-blue-400 hover:underline truncate flex-1">View on Primal ↗</a>
-                  <CopyButton text={zapResult.primalLink ?? ""} />
+                    className="text-[10px] text-blue-400 hover:underline truncate flex-1">Primal profile ↗</a>
+                  <CopyButton text={zapResult.primalLink} />
                 </div>
               )}
-              <p className="text-[9px] text-white/25 leading-relaxed pt-1">
-                Kind 9041 Zap Goals display on your Primal profile page, not at a direct event URL.
+              <p className="text-[9px] text-white/20 leading-relaxed pt-1">
+                Kind 9041 Zap Goals appear on your Primal profile page, not at a direct event URL. Snort Social and njump.me both render them inline.
               </p>
             </div>
           )}
