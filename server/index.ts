@@ -13,6 +13,7 @@ import { startSocialBroadcastAgent } from "./social_broadcast_agent";
 import { startTelegramBot } from "./telegram-bot";
 import { startNostrDmBot } from "./nostr-dm-bot";
 import { startNxtCampaignAgent } from "./nxt-campaign-agent";
+import { startPostScheduler } from "./post-scheduler";
 import { startTgNostrBridge } from "./telegram-nostr-bridge";
 import { startWnspBtcEtcher } from "./wnsp-btc-rune-etcher";
 
@@ -489,6 +490,7 @@ async function runStartupMigrations() {
         startTelegramBot();
         startNostrDmBot();
         startNxtCampaignAgent();
+        startPostScheduler();
         startTgNostrBridge();
         startWnspBtcEtcher();
       })();

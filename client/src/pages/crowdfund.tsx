@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { useState } from "react";
 import { Link } from "wouter";
@@ -9,12 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Radio, Zap, Cpu, Globe, Shield, Code2, BookOpen,
   ArrowRight, Check, ExternalLink, Layers, Activity,
   Waves, Lock, Star, Users, ChevronDown, ChevronUp,
   TrendingUp, Briefcase, Award, Scale, Copy, Send,
   FileText, Github, MessageCircle, Rss, Bitcoin, Twitter,
+  Clock, Calendar, Trash2, Play, CheckCircle2, XCircle, AlertCircle,
 } from "lucide-react";
 
 function wlToRgb(nm: number): string {
@@ -199,6 +201,325 @@ function StatPill({ label, value, color }: { label: string; value: string; color
       <span className="text-2xl font-bold" style={{ color }}>{value}</span>
       <span className="text-xs text-gray-400 uppercase tracking-widest">{label}</span>
     </div>
+  );
+}
+
+// ── Post Scheduler Types ──────────────────────────────────────────────────────
+interface ScheduledPost {
+  id: string;
+  title: string;
+  body: string;
+  emoji: string;
+  hashtags: string[];
+  platforms: string[];
+  scheduledAt: string;
+  status: "pending" | "sent" | "failed" | "cancelled";
+  sentAt: string | null;
+  result: any;
+  createdAt: string;
+}
+
+const EMOJI_OPTIONS = ["📡", "⚡", "🔬", "🏗️", "🌐", "🔶", "🪙", "💎", "🚀", "🛰️", "🌊", "🔭"];
+const DEFAULT_HASHTAGS = ["NexusOS", "Bitcoin", "WNSP", "Photonics"];
+
+function PostSchedulerPanel() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+
+  // Form state
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [emoji, setEmoji] = useState("📡");
+  const [hashtagInput, setHashtagInput] = useState(DEFAULT_HASHTAGS.join(", "));
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [platforms, setPlatforms] = useState<string[]>(["nostr", "telegram", "discord"]);
+
+  const { data: posts = [], isLoading } = useQuery<ScheduledPost[]>({
+    queryKey: ["/api/scheduled-posts"],
+    queryFn: async () => {
+      const r = await fetch("/api/scheduled-posts", { headers: getAuthHeaders() });
+      if (!r.ok) return [];
+      return r.json();
+    },
+    refetchInterval: 30_000,
+  });
+
+  const createMut = useMutation({
+    mutationFn: async (payload: object) => {
+      const r = await fetch("/api/scheduled-posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/scheduled-posts"] });
+      toast({ title: "Post scheduled", description: "Will fire automatically at the selected time." });
+      setTitle(""); setBody(""); setScheduledAt("");
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const cancelMut = useMutation({
+    mutationFn: async (id: string) => {
+      const r = await fetch(`/api/scheduled-posts/${id}`, { method: "DELETE", headers: getAuthHeaders() });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/scheduled-posts"] });
+      toast({ title: "Post cancelled" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const fireNowMut = useMutation({
+    mutationFn: async (id: string) => {
+      const r = await fetch(`/api/scheduled-posts/${id}/fire-now`, { method: "POST", headers: getAuthHeaders() });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/scheduled-posts"] });
+      toast({ title: "Post fired!", description: "Broadcast sent to all platforms." });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  function togglePlatform(p: string) {
+    setPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+  }
+
+  function handleSchedule() {
+    if (!title.trim() || !body.trim() || !scheduledAt) {
+      toast({ title: "Missing fields", description: "Title, body, and time are required.", variant: "destructive" });
+      return;
+    }
+    const tags = hashtagInput.split(",").map(t => t.trim()).filter(Boolean);
+    createMut.mutate({ title, body, emoji, hashtags: tags, platforms, scheduledAt });
+  }
+
+  // Local min datetime (next minute)
+  const minDateTime = new Date(Date.now() + 60_000).toISOString().slice(0, 16);
+
+  const pending = posts.filter(p => p.status === "pending");
+  const history = posts.filter(p => p.status !== "pending");
+
+  function statusIcon(s: string) {
+    if (s === "sent") return <CheckCircle2 size={12} className="text-green-400" />;
+    if (s === "failed") return <XCircle size={12} className="text-red-400" />;
+    if (s === "cancelled") return <AlertCircle size={12} className="text-gray-500" />;
+    return <Clock size={12} className="text-amber-400" />;
+  }
+
+  function statusColor(s: string) {
+    if (s === "sent") return "text-green-400";
+    if (s === "failed") return "text-red-400";
+    if (s === "cancelled") return "text-gray-500";
+    return "text-amber-400";
+  }
+
+  function fmtTime(iso: string) {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-AU", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+
+  return (
+    <section className="px-6 py-12 border-t border-white/10 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Calendar size={18} className="text-sky-400" />
+          <div>
+            <h2 className="text-lg font-bold">Post Scheduler</h2>
+            <p className="text-xs text-gray-500">Queue posts to fire on Nostr · Telegram · Discord at a specific time</p>
+          </div>
+        </div>
+        <Button size="sm" variant="outline"
+          className="text-xs border-sky-500/30 text-sky-400 hover:bg-sky-500/10"
+          onClick={() => setOpen(o => !o)}
+          data-testid="button-toggle-scheduler"
+        >
+          {open ? "Hide Composer" : "New Post"}
+        </Button>
+      </div>
+
+      {/* Compose form */}
+      {open && (
+        <div className="rounded-xl border border-sky-500/20 bg-sky-950/10 p-5 mb-6 space-y-4">
+          <div className="grid grid-cols-[56px_1fr] gap-3">
+            {/* Emoji picker */}
+            <div>
+              <label className="text-[10px] text-white/40 mb-1 block">Emoji</label>
+              <div className="relative">
+                <select
+                  value={emoji}
+                  onChange={e => setEmoji(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-md text-sm h-8 px-1 text-white appearance-none cursor-pointer"
+                  data-testid="select-post-emoji"
+                >
+                  {EMOJI_OPTIONS.map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] text-white/40 mb-1 block">Title / subject line</label>
+              <Input value={title} onChange={e => setTitle(e.target.value)}
+                placeholder="e.g. NexusOS — PHR-1 hardware update"
+                className="bg-black/40 border-white/10 text-white text-xs h-8"
+                data-testid="input-post-title"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] text-white/40 mb-1 block">Body (plain text, supports line breaks)</label>
+            <Textarea value={body} onChange={e => setBody(e.target.value)}
+              placeholder="Write your post here..."
+              rows={5}
+              className="bg-black/40 border-white/10 text-white text-xs resize-none"
+              data-testid="textarea-post-body"
+            />
+            <p className="text-[10px] text-white/30 mt-1">{body.length} chars</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] text-white/40 mb-1 block">Hashtags (comma-separated)</label>
+              <Input value={hashtagInput} onChange={e => setHashtagInput(e.target.value)}
+                placeholder="NexusOS, Bitcoin, WNSP"
+                className="bg-black/40 border-white/10 text-white text-xs h-8"
+                data-testid="input-post-hashtags"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-white/40 mb-1 block">Schedule time (local)</label>
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                min={minDateTime}
+                onChange={e => setScheduledAt(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 rounded-md text-xs h-8 px-2 text-white"
+                data-testid="input-post-schedule-time"
+              />
+            </div>
+          </div>
+
+          {/* Platform toggles */}
+          <div>
+            <label className="text-[10px] text-white/40 mb-2 block">Platforms</label>
+            <div className="flex gap-2">
+              {["nostr", "telegram", "discord"].map(p => (
+                <button key={p} onClick={() => togglePlatform(p)}
+                  data-testid={`toggle-platform-${p}`}
+                  className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                    platforms.includes(p)
+                      ? "bg-sky-500/20 border-sky-500/40 text-sky-300"
+                      : "bg-white/5 border-white/10 text-gray-500"
+                  }`}
+                >
+                  {p === "nostr" ? "⚡ Nostr" : p === "telegram" ? "✈️ Telegram" : "🎮 Discord"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Button
+            className="w-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold h-9"
+            onClick={handleSchedule}
+            disabled={createMut.isPending}
+            data-testid="button-schedule-post"
+          >
+            <Calendar size={13} className="mr-2" />
+            {createMut.isPending ? "Scheduling..." : "Schedule Post"}
+          </Button>
+        </div>
+      )}
+
+      {/* Pending queue */}
+      {pending.length > 0 && (
+        <div className="mb-6">
+          <p className="text-[10px] text-amber-400 uppercase tracking-widest mb-3 font-bold">
+            ⏳ Queued ({pending.length})
+          </p>
+          <div className="space-y-2">
+            {pending.map(post => (
+              <div key={post.id}
+                className="rounded-lg border border-amber-500/20 bg-amber-950/10 p-3 flex items-start gap-3"
+                data-testid={`card-scheduled-post-${post.id}`}
+              >
+                <span className="text-lg leading-none">{post.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{post.title}</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-2">{post.body}</p>
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className="text-[10px] text-amber-400 flex items-center gap-1">
+                      <Clock size={10} /> {fmtTime(post.scheduledAt)}
+                    </span>
+                    <span className="text-[10px] text-gray-600">{post.platforms.join(" · ")}</span>
+                  </div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={() => fireNowMut.mutate(post.id)}
+                    disabled={fireNowMut.isPending}
+                    data-testid={`button-fire-now-${post.id}`}
+                    className="text-[10px] px-2 py-1 rounded border border-green-500/30 text-green-400 hover:bg-green-500/10 transition-colors flex items-center gap-1"
+                    title="Fire now"
+                  >
+                    <Play size={10} /> Now
+                  </button>
+                  <button
+                    onClick={() => cancelMut.mutate(post.id)}
+                    disabled={cancelMut.isPending}
+                    data-testid={`button-cancel-post-${post.id}`}
+                    className="text-[10px] px-2 py-1 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
+                    title="Cancel"
+                  >
+                    <Trash2 size={10} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* History */}
+      {history.length > 0 && (
+        <div>
+          <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-3 font-bold">
+            History ({history.length})
+          </p>
+          <div className="space-y-1.5">
+            {history.slice(0, 10).map(post => (
+              <div key={post.id}
+                className="rounded-lg border border-white/5 bg-white/2 p-2.5 flex items-center gap-3"
+                data-testid={`card-post-history-${post.id}`}
+              >
+                <span className="text-base leading-none">{post.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-white/70 truncate">{post.title}</p>
+                  <p className="text-[10px] text-gray-600">{fmtTime(post.scheduledAt)}</p>
+                </div>
+                <div className={`flex items-center gap-1 text-[10px] ${statusColor(post.status)}`}>
+                  {statusIcon(post.status)}
+                  {post.status}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!isLoading && posts.length === 0 && !open && (
+        <div className="text-center py-8 text-gray-600 text-sm">
+          No posts scheduled yet. Click <span className="text-sky-400">New Post</span> to queue one.
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -1478,6 +1799,9 @@ export default function CrowdfundPage() {
           </a>
         </p>
       </section>
+
+      {/* ── POST SCHEDULER ── */}
+      <PostSchedulerPanel />
 
       {/* ── TELEGRAM VIDEO FEED ── */}
       <section className="px-6 py-16 border-t border-white/10 max-w-5xl mx-auto">

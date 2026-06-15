@@ -14057,6 +14057,77 @@ wnsp.io | t.me/troglodytememe`,
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // ── Post Scheduler ────────────────────────────────────────────────────────────
+
+  // GET /api/scheduled-posts — list all scheduled posts
+  app.get("/api/scheduled-posts", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { scheduledPosts } = await import("@shared/schema");
+      const { desc } = await import("drizzle-orm");
+      const posts = await db.select().from(scheduledPosts).orderBy(desc(scheduledPosts.scheduledAt));
+      res.json(posts);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/scheduled-posts — create a new scheduled post
+  app.post("/api/scheduled-posts", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { scheduledPosts } = await import("@shared/schema");
+      const { title, body, emoji, hashtags, platforms, scheduledAt } = req.body;
+      if (!title || !body || !scheduledAt) return res.status(400).json({ error: "title, body, and scheduledAt are required" });
+      const fireAt = new Date(scheduledAt);
+      if (isNaN(fireAt.getTime())) return res.status(400).json({ error: "Invalid scheduledAt date" });
+      if (fireAt <= new Date()) return res.status(400).json({ error: "scheduledAt must be in the future" });
+      const [post] = await db.insert(scheduledPosts).values({
+        title,
+        body,
+        emoji: emoji || "📡",
+        hashtags: Array.isArray(hashtags) ? hashtags : [],
+        platforms: Array.isArray(platforms) ? platforms : ["nostr", "telegram", "discord"],
+        scheduledAt: fireAt,
+        status: "pending",
+      }).returning();
+      res.json({ ok: true, post });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // DELETE /api/scheduled-posts/:id — cancel a pending post
+  app.delete("/api/scheduled-posts/:id", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { scheduledPosts } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const [updated] = await db
+        .update(scheduledPosts)
+        .set({ status: "cancelled" })
+        .where(and(eq(scheduledPosts.id, req.params.id), eq(scheduledPosts.status, "pending")))
+        .returning();
+      if (!updated) return res.status(404).json({ error: "Post not found or already sent/cancelled" });
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/scheduled-posts/:id/fire-now — fire a pending post immediately
+  app.post("/api/scheduled-posts/:id/fire-now", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { scheduledPosts } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [post] = await db.select().from(scheduledPosts).where(eq(scheduledPosts.id, req.params.id));
+      if (!post) return res.status(404).json({ error: "Post not found" });
+      if (post.status !== "pending") return res.status(400).json({ error: "Only pending posts can be fired" });
+      await db.update(scheduledPosts).set({ status: "sent", sentAt: new Date() }).where(eq(scheduledPosts.id, req.params.id));
+      const result = await campaignAgent.fireEventBroadcast({
+        emoji: post.emoji, title: post.title, body: post.body, hashtags: post.hashtags,
+      });
+      const anyOk = result.tg?.ok || result.nostr?.ok || result.discord?.ok;
+      await db.update(scheduledPosts).set({ status: anyOk ? "sent" : "failed", result }).where(eq(scheduledPosts.id, req.params.id));
+      res.json({ ok: true, result });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   // ── Community Applications ────────────────────────────────────────────────────

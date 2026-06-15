@@ -1497,4 +1497,26 @@ export const wSatsTransactions = pgTable("wsats_transactions", {
   nxtFee:      decimal("nxt_fee",    { precision: 20, scale: 8 }).notNull().default("0"),
   createdAt:   timestamp("created_at").notNull().defaultNow(),
 }, (t) => ({ userIdx: index("wsats_tx_user_idx").on(t.userId) }));
+
+// ── Scheduled Posts — draft posts queued for future broadcast ─────────────────
+export const scheduledPosts = pgTable("scheduled_posts", {
+  id:          varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  title:       text("title").notNull(),
+  body:        text("body").notNull(),
+  hashtags:    text("hashtags").array().notNull().default(sql`'{}'::text[]`),
+  emoji:       text("emoji").notNull().default("📡"),
+  platforms:   text("platforms").array().notNull().default(sql`ARRAY['nostr','telegram','discord']`),
+  scheduledAt: timestamp("scheduled_at").notNull(),
+  status:      text("status").notNull().default("pending"), // pending | sent | failed | cancelled
+  sentAt:      timestamp("sent_at"),
+  result:      jsonb("result"),
+  createdAt:   timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  statusIdx:      index("scheduled_posts_status_idx").on(t.status),
+  scheduledAtIdx: index("scheduled_posts_scheduled_at_idx").on(t.scheduledAt),
+}));
+
+export const insertScheduledPostSchema = createInsertSchema(scheduledPosts).omit({ id: true, sentAt: true, result: true, createdAt: true });
+export type InsertScheduledPost = z.infer<typeof insertScheduledPostSchema>;
+export type ScheduledPost = typeof scheduledPosts.$inferSelect;
 export type WSatsTransaction = typeof wSatsTransactions.$inferSelect;
