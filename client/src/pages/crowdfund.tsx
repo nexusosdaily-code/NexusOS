@@ -555,7 +555,7 @@ export default function CrowdfundPage() {
   const { data: eco } = useQuery<any>({ queryKey: ["/api/ecosystem/status"], retry: false });
   const { data: chain } = useQuery<any>({ queryKey: ["/api/blockchain/chain"], retry: false });
   const { data: geyser } = useQuery<any>({ queryKey: ["/api/crowdfund/geyser-content"], retry: false });
-  const { data: indiegogo } = useQuery<any>({ queryKey: ["/api/crowdfund/indiegogo-update"], retry: false });
+  const { data: indiegogo } = useQuery<any>({ queryKey: ["/api/crowdfund/indiegogo-content"], retry: false });
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [zapGoalSats, setZapGoalSats] = useState("10000000");
   const [zapResult, setZapResult] = useState<any>(null);
@@ -1142,44 +1142,118 @@ export default function CrowdfundPage() {
           </div>
         </div>
 
-        {/* ─ Indiegogo Update Generator ─ */}
-        <div className="rounded-xl border border-blue-500/20 bg-blue-950/10 p-4 mb-4">
+        {/* ─ Indiegogo Campaign Copy Builder ─ */}
+        <div className="rounded-xl border border-pink-500/20 bg-pink-950/10 p-4 mb-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-sm">🚀</span>
-              <span className="text-xs font-bold text-blue-300">Indiegogo Update Generator</span>
+              <span className="text-xs font-bold text-pink-300">Indiegogo Campaign Copy</span>
+              <span className="text-[9px] bg-pink-500/10 text-pink-400 border border-pink-500/20 rounded-full px-2 py-0.5">All sections ready to paste</span>
             </div>
             <button onClick={() => setShowIndiegogo(i => !i)}
-              className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-1">
+              className="text-[10px] text-pink-400 hover:text-pink-300 flex items-center gap-1">
               {showIndiegogo ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-              {showIndiegogo ? "Hide" : "Show draft"}
+              {showIndiegogo ? "Hide" : "Show all sections"}
             </button>
           </div>
-          <p className="text-[11px] text-white/40 mb-3">Indiegogo has no API — copy this ready-made update into your campaign dashboard manually. Generated fresh each time.</p>
+          <p className="text-[11px] text-white/40 mb-3">
+            Complete campaign copy — every field Indiegogo needs. Copy each section directly into your campaign editor.
+          </p>
           {showIndiegogo && indiegogo && (
             <div className="space-y-3">
+
+              {/* Campaign title */}
               <div className="bg-black/40 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-white/40 font-semibold uppercase">Subject line</span>
-                  <CopyButton text={indiegogo.subject ?? ""} />
+                  <span className="text-[10px] text-pink-400 font-bold uppercase tracking-widest">Campaign Title</span>
+                  <CopyButton text={indiegogo.title ?? ""} />
                 </div>
-                <p className="text-[11px] text-white/70">{indiegogo.subject}</p>
+                <p className="text-xs text-white/80 font-semibold">{indiegogo.title}</p>
               </div>
+
+              {/* Tagline */}
+              <div className="bg-black/40 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-pink-400 font-bold uppercase tracking-widest">Tagline (short description)</span>
+                  <CopyButton text={indiegogo.tagline ?? ""} />
+                </div>
+                <p className="text-[11px] text-white/70">{indiegogo.tagline}</p>
+              </div>
+
+              {/* Short summary */}
+              <div className="bg-black/40 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-pink-400 font-bold uppercase tracking-widest">Short Summary (Indiegogo "about" field)</span>
+                  <CopyButton text={indiegogo.shortSummary ?? ""} />
+                </div>
+                <p className="text-[11px] text-white/70">{indiegogo.shortSummary}</p>
+              </div>
+
+              {/* Campaign settings */}
+              {indiegogo.sections && (
+                <div className="bg-black/40 rounded-lg p-3">
+                  <span className="text-[10px] text-pink-400 font-bold uppercase tracking-widest block mb-2">Campaign Settings</span>
+                  <div className="grid grid-cols-2 gap-2 text-[10px]">
+                    <div><span className="text-white/40">Category:</span> <span className="text-white/70">{indiegogo.sections.category}</span></div>
+                    <div><span className="text-white/40">Type:</span> <span className="text-white/70">{indiegogo.sections.campaignType}</span></div>
+                    <div><span className="text-white/40">Duration:</span> <span className="text-white/70">{indiegogo.sections.duration}</span></div>
+                    <div><span className="text-white/40">Tags:</span> <span className="text-white/70">{indiegogo.sections.tags?.join(", ")}</span></div>
+                  </div>
+                  <div className="mt-2 p-2 bg-white/5 rounded text-[10px] text-amber-300">
+                    📸 {indiegogo.sections.heroImage}
+                  </div>
+                  <div className="mt-1 p-2 bg-white/5 rounded text-[10px] text-sky-300">
+                    🎬 {indiegogo.sections.videoIdea}
+                  </div>
+                </div>
+              )}
+
+              {/* Full story */}
               <div className="bg-black/40 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] text-white/40 font-semibold uppercase">Full update body</span>
-                  <CopyButton text={indiegogo.body ?? ""} />
+                  <span className="text-[10px] text-pink-400 font-bold uppercase tracking-widest">Full Campaign Story (paste into editor)</span>
+                  <CopyButton text={indiegogo.story ?? ""} />
                 </div>
-                <pre className="text-[10px] text-white/70 whitespace-pre-wrap font-mono leading-relaxed max-h-64 overflow-y-auto">{indiegogo.body}</pre>
+                <pre className="text-[10px] text-white/70 whitespace-pre-wrap font-mono leading-relaxed max-h-96 overflow-y-auto">{indiegogo.story}</pre>
               </div>
-              <a href="https://www.indiegogo.com/dashboard" target="_blank" rel="noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs">
-                <ExternalLink size={12} /> Open Indiegogo Dashboard
-              </a>
+
+              {/* Backer update */}
+              {indiegogo.backerUpdate && (
+                <div className="bg-black/40 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] text-pink-400 font-bold uppercase tracking-widest">Backer Update (post once live)</span>
+                    <CopyButton text={`SUBJECT: ${indiegogo.backerUpdate.subject}\n\n${indiegogo.backerUpdate.body}`} />
+                  </div>
+                  <div className="mb-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[9px] text-white/30 uppercase">Subject</span>
+                      <CopyButton text={indiegogo.backerUpdate.subject ?? ""} />
+                    </div>
+                    <p className="text-[10px] text-white/60 italic">{indiegogo.backerUpdate.subject}</p>
+                  </div>
+                  <pre className="text-[10px] text-white/60 whitespace-pre-wrap font-mono leading-relaxed max-h-48 overflow-y-auto">{indiegogo.backerUpdate.body}</pre>
+                </div>
+              )}
+
+              {/* Quick links */}
+              <div className="grid grid-cols-2 gap-2">
+                <a href="https://www.indiegogo.com/projects/admin" target="_blank" rel="noreferrer"
+                  className="flex items-center justify-center gap-2 py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs transition-colors">
+                  <ExternalLink size={12} /> Open Campaign Editor
+                </a>
+                <a href="https://wnsp.io/crowdfund" target="_blank" rel="noreferrer"
+                  className="flex items-center justify-center gap-2 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white/70 font-bold text-xs transition-colors">
+                  <ExternalLink size={12} /> wnsp.io/crowdfund (reference)
+                </a>
+              </div>
+
+              <p className="text-[9px] text-white/20 text-center">
+                Not an investment offer. Nexus Shares are open-source contribution records. AGPL-3.0.
+              </p>
             </div>
           )}
           {showIndiegogo && !indiegogo && (
-            <div className="text-[11px] text-white/40 text-center py-4">Loading draft…</div>
+            <div className="text-[11px] text-white/40 text-center py-4">Loading campaign copy…</div>
           )}
         </div>
       </section>

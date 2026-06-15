@@ -13965,9 +13965,228 @@ OPEN SOURCE: AGPL-3.0. All code public. No hidden logic. No admin keys. No team 
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  // GET /api/crowdfund/indiegogo-update — generate Indiegogo update draft
+  // GET /api/crowdfund/indiegogo-content — full Indiegogo campaign copy (all sections)
+  app.get("/api/crowdfund/indiegogo-content", async (_req: Request, res: Response) => {
+    res.json({
+      title: "NexusOS — Own a Piece of the First Physics-Based Civilization OS",
+      tagline: "Fund the PHR-1 hardware prototype. Get Nexus Shares, on-chain ownership, and a seat at the table. AGPL-3.0. Full blockchain disclosure.",
+      shortSummary: "NexusOS replaces cryptographic hashing with electromagnetic wave physics (Λ=hf/c²). The software is live. The blockchain is live. Now we build the hardware. Donors receive Nexus Shares — real ownership, recorded on-chain at their personal wavelength.",
+      story: `WHAT IS NEXUSOS?
+
+NexusOS is the foundational software blueprint for a Kardashev Type I civilization — a civilisation powered by physics, not policy.
+
+Instead of cryptographic hashing, we use Maxwell's equations. Instead of arbitrary token economics, fees are derived from E=hf. Instead of DNS, packets are routed by wavelength address. Instead of venture capital, we crowdfund — and donors become owners.
+
+The Theory of Compression States (Λ=hf/c²) defines how the universe stores and transmits information. NexusOS is written in the language of that theory. When photonic hardware arrives (~2032), no rewrite is needed — the architecture already speaks in wavelengths.
+
+
+WHAT IS LIVE RIGHT NOW?
+
+Every line of code is public. You can verify everything listed below yourself at wnsp.io or on GitHub.
+
+✅ WNSP Physics Engine — Maxwell equation validation on every transaction
+✅ 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations)
+✅ NXT Token Wallet — 8-decimal precision, 21 billion supply, fee = E=hf
+✅ WavelengthScript compiler + WNSP Virtual Machine (runs in your browser)
+✅ CE→SE Character Encoding — every character mapped to a unique wavelength
+✅ P2P Media Layer — chunk-based mesh networking over spectral addresses
+✅ Lightning payments via Alby — real Bitcoin, real sats
+✅ NEXUS•WAVELENGTH (NXWV) Bitcoin Rune — 952596:379 — 21 trillion supply, sealed
+✅ WNSP•BTC Rune — 952733:1958 — sealed on Bitcoin blockchain
+✅ Governance System — on-chain protocol parameter voting
+✅ WNSP AI OS Kernel — 6-phase boot, persistent state, authority bands
+✅ 479 spectral records permanently on-chain
+✅ 6 kernel agents running live
+✅ All code AGPL-3.0 — no hidden logic, no admin keys, no team premine
+
+Live system: wnsp.io
+GitHub: github.com/nexusosdaily-code/NexusOS
+
+
+WHAT THIS CAMPAIGN FUNDS
+
+Phase 1 — Hardware Prototype (THIS CAMPAIGN):
+
+The PHR-1 is the first physical implementation of ZERO-G state — gravitational de-correlation using a 144-turn bifilar coil resonator, driven by a Syncbox Controller.
+
+Every donation goes directly to:
+• PHR-1 resonator board manufacturing (144-turn bifilar coil)
+• Syncbox Controller firmware development
+• ZERO-G state demonstration — public, verifiable, filmed
+• CZC catch basin hardware implementation
+• First 25 Hardware Founder units — shipped to top-tier donors
+• Open developer SDK (Python, JS, Rust) for Phase 2
+
+This is not a concept. The physics equation is validated. The software is running. We are building the hardware.
+
+
+WHAT DONORS RECEIVE — OWNERSHIP, NOT JUST A PERK
+
+Every donor receives Nexus Shares — issued on-chain at their personal Ψ channel. This is not a loyalty point or a discount code. It is a verifiable record on the NexusOS blockchain that permanently links your identity to the infrastructure you funded.
+
+TIER 1 — PHOTON (≈$60 / 100,000 sats)
+• 100 Nexus Shares (Class C — Community)
+• Your name CE→SE encoded at your personal wavelength — permanent
+• Founder badge permanently on-chain
+• AGPL-3.0 contributor credit in every future release
+• Share register entry — publicly verifiable on blockchain
+Slots: Unlimited
+
+TIER 2 — RESONATOR (≈$600 / 1,000,000 sats)
+• 1,000 Nexus Shares (Class C — Community)
+• Everything in Tier 1
+• Your name inscribed into a permanent NexusOS blockchain block
+• Block hash timestamped at your contribution wavelength
+• Early access to WavelengthScript SDK (pre-release)
+Slots: Unlimited
+
+TIER 3 — KERNEL AGENT (≈$6,000 / 10,000,000 sats)
+• 10,000 Nexus Shares (Class B — Developer)
+• Everything in Tier 2
+• Dedicated named Ψ channel reserved in the Kernel — permanent
+• Named agent entry in the live Agent Bus
+• Access to private R&D development channel
+• Quarterly shareholder update reports
+Slots: 100 only
+
+TIER 4 — HARDWARE FOUNDER (≈$60,000 / 100,000,000 sats)
+• 100,000 Nexus Shares (Class A — Hardware Founder)
+• Everything in Tier 3
+• PHR-1 resonator prototype (first production batch) — physical unit shipped to you
+• 144-turn bifilar coil kit
+• ZERO-G state demonstration access (live call with the team)
+• Seat at the hardware development table
+• Vote on hardware roadmap priorities
+• Quarterly hardware calls with the founding team
+• Revenue share from hardware sales (via Orbital Treasury on-chain)
+Slots: 25 only
+
+TIER 5 — NEXUS PARTNER (≈$600,000 / 1,000,000,000 sats)
+• 1,000,000 Nexus Shares (Class A+ — Strategic Partner)
+• Everything in Tier 4
+• Full strategic board seat — vote on all major decisions
+• Named co-developer in AGPL-3.0 source headers — permanent
+• Revenue share from Nexus Charitable Trust (10% bucket)
+• Custom Ψ channel range reserved for your organisation
+• Priority access to any future public listing allocation
+• Direct line to the founding team
+Slots: 5 only
+
+
+THE ROADMAP
+
+PHASE 0 — PROOF OF PHYSICS ✅ COMPLETE
+Λ=hf/c² validated on-chain. CE→SE encoding standard published. 479 spectral records. 6 kernel agents. WNSP/7.1 physics engine deployed.
+
+PHASE 1 — HARDWARE PROTOTYPE ⚡ FUNDING NOW
+PHR-1 resonator (144-turn bifilar coil). ZERO-G state demonstration. First 25 Hardware Founder units. CZC catch basin hardware.
+
+PHASE 2 — COMMUNICATION NETWORK (NEXT)
+Spectral Relay Mesh (10 physical nodes). OAM Channel Allocator hardware. P2P communication over wavelength addresses — no DNS. WavelengthScript v1.0 compiler release. Open developer SDK.
+
+PHASE 3 — PLANETARY & PUBLIC LISTING (ROADMAP)
+Orbital Solar Array photonic feed. Schumann resonance (7.83 Hz) planetary sync. 555 THz first oscillation energy extraction. K1 Energy Market live trading. NexusOS public company listing.
+
+
+FULL BLOCKCHAIN DISCLOSURE
+
+We disclose everything. This is not a promise — it is a verifiable, live system.
+
+Technical whitepaper: wnsp.io/wnsp-paper
+Hardware specification (AGPL-3.0): wnsp.io/hardware-spec
+Tokenomics: wnsp.io/campaign
+Live system: wnsp.io
+Physics demo: wnsp.io/ce-se-pipeline
+Blockchain explorer: wnsp.io/blockchain
+GitHub (all code): github.com/nexusosdaily-code/NexusOS
+Bitcoin Rune (NXWV): https://ordiscan.com/rune/NEXUS•WAVELENGTH
+npm package: npm install nexusos-ce-encoder
+Telegram: t.me/troglodytememe
+Nostr: @wnsptech
+
+
+LEGAL & TRANSPARENCY
+
+This campaign is for open-source hardware R&D. Donations fund development, not equity in a company. Nexus Shares are issued on the NexusOS blockchain — they are a record of participation in an open-source project, not securities. All code is AGPL-3.0. There is no premine, no admin keys, no hidden allocation. The blockchain is public and auditable by anyone.
+
+AGPL-3.0 licence: all software is permanently open-source.
+First public hardware disclosure: 2026-05-16.
+Founders lineage: Maxwell → Planck → Einstein → Tesla → Shannon.
+
+
+FREQUENTLY ASKED QUESTIONS
+
+Q: Is this an investment?
+A: No. Donations fund open-source hardware development. Nexus Shares are a permanent record of your contribution on the NexusOS blockchain, not financial securities.
+
+Q: Where does the money go?
+A: 100% to hardware manufacturing (PHR-1 boards, coil kits, Syncbox Controller), firmware development, and shipping to Hardware Founders. All expenditure disclosed publicly.
+
+Q: Is the software real?
+A: Yes — wnsp.io is live. The blockchain is live. You can run the physics encoder yourself: npm install nexusos-ce-encoder. All 479 spectral records are verifiable on-chain.
+
+Q: What is a Nexus Share?
+A: A Nexus Share is a permanent on-chain record at your personal Ψ channel that links your identity to the NexusOS infrastructure. It is issued when your donation is confirmed.
+
+Q: What is a Ψ channel?
+A: Every user gets a deterministic spectral address — Ψ(wdm, oam, pol) — derived from their identity using the WNSP physics protocol. Your channel is permanent and unique.
+
+Q: What is AGPL-3.0?
+A: The GNU Affero General Public License v3. It means all code — now and forever — must remain public. No one can take NexusOS private. Not even us.
+
+Q: When does hardware ship?
+A: Hardware Founders (Tier 4, 25 slots) receive the first PHR-1 units from the first production batch. Timeline depends on funding — full Phase 1 target is 100M sats (~$60,000).
+
+Q: Can I donate in Bitcoin / Lightning?
+A: Yes — donate directly at wnsp.io/crowdfund using Bitcoin Lightning. Indiegogo is for fiat donors.
+
+Q: How do I verify my Nexus Shares?
+A: Once issued, your shares appear in the NexusOS blockchain at wnsp.io/blockchain under your Ψ channel address.`,
+
+      // Individual sections for targeted copy-paste
+      sections: {
+        title:       "NexusOS — Own a Piece of the First Physics-Based Civilization OS",
+        tagline:     "Fund the PHR-1 hardware prototype. Get Nexus Shares, on-chain ownership, and a seat at the table. AGPL-3.0. Full blockchain disclosure.",
+        heroImage:   "Suggested: screenshot of wnsp.io live dashboard or compression curve visualiser at wnsp.io/compression-explorer",
+        videoIdea:   "Suggested: screen recording of wnsp.io/ce-se-pipeline — paste any text, watch it encode to wavelengths in real time",
+        tags:        ["physics", "bitcoin", "hardware", "blockchain", "openSource", "photonics", "lightning"],
+        category:    "Tech & Innovation",
+        campaignType:"Fixed funding (all-or-nothing recommended) OR Flexible funding",
+        duration:    "60 days",
+      },
+
+      // Quick update for backers (post-launch)
+      backerUpdate: {
+        subject: `NexusOS Update — ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} | Physics Engine Live | Blockchain Disclosure`,
+        body: `Hello NexusOS supporters,
+
+Thank you for backing the first physics-based civilization OS.
+
+WHAT'S LIVE RIGHT NOW (verify yourself):
+✅ WNSP physics engine — Maxwell equations on-chain: wnsp.io
+✅ NEXUS•WAVELENGTH Bitcoin Rune 952596:379 — 21 trillion supply, sealed
+✅ 479 spectral records permanently on-chain
+✅ npm install nexusos-ce-encoder — try the physics encoder yourself
+✅ All code AGPL-3.0: github.com/nexusosdaily-code/NexusOS
+
+YOUR NEXUS SHARES:
+Your shares will be issued on-chain at your personal Ψ channel once your contribution is confirmed. You can verify them at wnsp.io/blockchain.
+
+NEXT MILESTONE:
+Phase 1 hardware manufacturing begins when we hit the 100M sats target. PHR-1 units ship to Hardware Founders first.
+
+Full disclosure: wnsp.io/hardware-spec
+Live system: wnsp.io
+Telegram updates: t.me/troglodytememe
+
+Thank you for believing in the mission.
+— NexusOS Team`,
+      },
+    });
+  });
+
+  // GET /api/crowdfund/indiegogo-update — generate Indiegogo update draft (legacy, kept for compat)
   app.get("/api/crowdfund/indiegogo-update", async (_req: Request, res: Response) => {
-    const { data: eco } = await import("./nostr-service.js").then(() => ({ data: null })).catch(() => ({ data: null }));
     const now = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
     res.json({
       subject:  `NexusOS Update — ${now} | Physics Engine Live | NXWV Rune Sealed`,
