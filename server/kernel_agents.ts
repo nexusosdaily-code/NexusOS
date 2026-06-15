@@ -14,7 +14,7 @@
  */
 
 import { db } from "./db";
-import { eq, and, lt, isNull, sql, desc } from "drizzle-orm";
+import { eq, and, lt, isNull, sql, desc, inArray } from "drizzle-orm";
 import { users, wallets, transactions, streams } from "../shared/schema";
 import { deriveChannel } from "./physics";
 
@@ -182,7 +182,7 @@ async function schedulerTick() {
     await db
       .update(transactions)
       .set({ status: "confirmed" })
-      .where(sql`id = ANY(${pending.map(p => p.id)})`);
+      .where(inArray(transactions.id, pending.map(p => p.id)));
   }
 
   const s = _agents.get("scheduler_daemon")!;
