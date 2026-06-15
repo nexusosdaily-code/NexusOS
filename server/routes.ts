@@ -14029,18 +14029,17 @@ wnsp.io | t.me/troglodytememe`,
         broadcastOpts = {
           emoji:    "🏗️",
           title:    "Blockchain Developer-Owners Wanted — NexusOS",
-          body:     `Looking for blockchain developers who want to be owners — not employees.\n\n` +
+          body:     `Blockchain developers wanted — owners, not employees.\n\n` +
                     `NexusOS is a physics-based OS built on Λ=hf/c². The blockchain is live. The hardware spec is published (AGPL-3.0).\n\n` +
-                    `My focus is hardware manufacturing — the PHR-1 resonator (first physical photonic computing unit).\n` +
-                    `I need builders who want protocol revenue, not a salary.\n\n` +
+                    `Try the encoder first:\nnpm install nexusos-ce-encoder\n\n` +
+                    `Language spec: wavelengthscript.dev\n` +
+                    `Hardware spec: wnsp.io/hardware-spec\n\n` +
                     `What you'd own:\n` +
                     `→ WNSP physics-based consensus layer\n` +
                     `→ NXT token economics (21B supply, physics-fee model)\n` +
                     `→ Wallet + governance infrastructure\n` +
                     `→ P2P mesh networking layer\n\n` +
                     `Ownership = protocol revenue share + token allocation + full architectural authority\n\n` +
-                    `The model: blockchain liquidity → platform revenue → hardware manufacturing.\n\n` +
-                    `Hardware spec: wnsp.io/hardware-spec\n` +
                     `DM: @wnsptech on X`,
           hashtags: ["NexusOS", "Blockchain", "Bitcoin", "OpenSource", "Photonics", "Hiring"],
         };

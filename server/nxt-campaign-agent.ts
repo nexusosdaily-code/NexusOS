@@ -466,14 +466,21 @@ wnsp.io/transmission #NexusOS #P2P #WNSP #Photonics`,
   },
   {
     id: 11, label: "Blockchain owner recruitment", emoji: "🏗️",
-    telegram: `🏗️ <b>Looking for Blockchain Developers — Owners, Not Employees</b>
+    telegram: `🏗️ <b>Blockchain Developer-Owners Wanted — NexusOS</b>
 
-NexusOS is a physics-based operating system built on Λ=hf/c². The blockchain is live. The hardware specification is published (AGPL-3.0).
+Owners, not employees. The blockchain is live. The hardware spec is published (AGPL-3.0).
 
-My focus is hardware manufacturing — building the PHR-1 resonator, the first physical photonic computing unit. I need builders who want to <b>own the blockchain, not earn from it as a contractor</b>.
+<b>Try the encoder first — see that the physics is real:</b>
+<code>npm install nexusos-ce-encoder</code>
 
-<b>What you'd be building:</b>
-• The WNSP physics-based consensus layer (wavelength-validated blocks, not hash-based)
+Then tweet it. Every install helps Google index the project.
+
+🌐 Language spec: wavelengthscript.dev
+📄 Hardware spec: wnsp.io/hardware-spec
+🔗 Live system: wnsp.io
+
+<b>What you'd own:</b>
+• WNSP physics-based consensus layer (wavelength-validated blocks, not hash-based)
 • NXT token economics (21 billion supply, 8 decimals, physics-fee model)
 • Wallet + governance infrastructure (11 live protocol parameters, spectral authority bands)
 • P2P mesh networking layer
@@ -482,23 +489,26 @@ My focus is hardware manufacturing — building the PHR-1 resonator, the first p
 • Protocol revenue share — not a salary
 • Token allocation from orbital treasury
 • Full architectural authority over the chain
-• Your name on a specification that will run on photonic hardware ~2032
+• Your name on a spec running on photonic hardware ~2032
 
-<b>The hardware funding model:</b>
-Blockchain liquidity → platform revenue → hardware manufacturing. The chain funds the hardware. The hardware validates the chain in silicon photonics. Circular.
+<b>The loop:</b> blockchain liquidity → platform revenue → hardware manufacturing → photonic validation → network value. Circular.
 
-📄 Full hardware spec: wnsp.io/hardware-spec
-🔗 Live system: wnsp.io
-💬 Reach out: @wnsptech on X
+💬 DM: @wnsptech on X
 
-If you want to build something that will outlast every software system alive today — this is it.
+If you want to build something that outlasts every software system alive today — this is it.
 
 #NexusOS #Blockchain #Bitcoin #OpenSource #Photonics #Hiring`,
-    nostr: `🏗️ Looking for blockchain developers who want to be owners — not employees.
+    nostr: `🏗️ Blockchain developer-owners wanted — NexusOS.
 
-NexusOS is a physics-based OS built on Λ=hf/c². The blockchain is live. The hardware spec is published (AGPL-3.0).
+Owners, not employees. The blockchain is live. The physics is real.
 
-My focus is hardware manufacturing — the PHR-1 resonator (first physical photonic computing unit). I need builders who want protocol revenue, not a salary.
+Try the encoder first:
+npm install nexusos-ce-encoder
+
+Then tweet it. Every install helps Google index the project.
+
+Language spec → wavelengthscript.dev
+Hardware spec → wnsp.io/hardware-spec
 
 What you'd own:
 → WNSP physics-based consensus layer (wavelength-validated blocks, not hash)
@@ -512,10 +522,8 @@ What ownership means:
 → Full architectural authority over the chain
 → Your name on a spec running on photonic hardware ~2032
 
-The model: blockchain liquidity → platform revenue → hardware manufacturing. The chain funds the hardware. The hardware validates the chain in silicon photonics.
+The loop: blockchain liquidity → platform revenue → hardware manufacturing → photonic validation → network value.
 
-Hardware spec: wnsp.io/hardware-spec
-Live system: wnsp.io
 DM: @wnsptech on X
 
 #NexusOS #Blockchain #Bitcoin #OpenSource #Photonics`,

@@ -304,7 +304,7 @@ export default function CrowdfundPage() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const OWNER_TWEET = "Looking for blockchain developers who want to be owners — not employees.\n\nNexusOS is a physics-based OS built on Λ=hf/c². The blockchain is live. The hardware spec is published.\n\nMy focus is manufacturing the hardware. I need builders who want protocol revenue, not a salary.\n\nDM @wnsptech or: wnsp.io/hardware-spec\n\n#NexusOS #Bitcoin #Blockchain #OpenSource #Photonics";
+  const OWNER_TWEET = "Blockchain developers wanted — owners, not employees.\n\nTry the physics encoder first:\nnpm install nexusos-ce-encoder\n\nLanguage spec: wavelengthscript.dev\nHardware spec: wnsp.io/hardware-spec\n\nProtocol revenue share, not a salary. Token allocation. Full architectural authority.\n\nDM @wnsptech\n#NexusOS #Blockchain #Bitcoin #Photonics";
   const OWNER_TWEET_URL = `https://x.com/intent/tweet?text=${encodeURIComponent(OWNER_TWEET)}`;
 
   const blocks = chain?.blocks ?? [];
@@ -497,9 +497,32 @@ export default function CrowdfundPage() {
             </a>
           </div>
 
-          <p className="text-[11px] text-white/50 mb-4 leading-relaxed">
+          <p className="text-[11px] text-white/50 mb-3 leading-relaxed">
             My focus is hardware manufacturing — the PHR-1 resonator. I'm looking for blockchain developers who want to <strong className="text-amber-300">own the protocol</strong>, not earn from it as a contractor. The blockchain funds the hardware. The hardware validates the chain.
           </p>
+
+          <div className="mb-4 p-3 rounded-lg bg-black/50 border border-amber-500/20">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[9px] text-amber-400/70 font-semibold uppercase tracking-wide">Try the encoder — then reach out</span>
+              <div className="flex gap-2">
+                <a href="https://wavelengthscript.dev" target="_blank" rel="noreferrer"
+                  className="text-[9px] bg-amber-500/10 text-amber-300 border border-amber-500/20 rounded-full px-2 py-0.5 hover:bg-amber-500/20 transition-colors">
+                  wavelengthscript.dev ↗
+                </a>
+                <a href="https://www.npmjs.com/package/nexusos-ce-encoder" target="_blank" rel="noreferrer"
+                  className="text-[9px] bg-red-500/10 text-red-300 border border-red-500/20 rounded-full px-2 py-0.5 hover:bg-red-500/20 transition-colors">
+                  npmjs ↗
+                </a>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 bg-black/60 rounded px-3 py-2 font-mono">
+              <span className="text-green-400 text-[11px] select-all flex-1">npm install nexusos-ce-encoder</span>
+              <CopyButton text="npm install nexusos-ce-encoder" />
+            </div>
+            <p className="text-[9px] text-white/25 mt-2 leading-relaxed">
+              Tweeting this command helps Google crawl the npm page and signals the tech is real before you commit to building.
+            </p>
+          </div>
 
           <div className="grid grid-cols-1 gap-2 mb-4 sm:grid-cols-2">
             {[
