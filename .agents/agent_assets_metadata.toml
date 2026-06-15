@@ -341,3 +341,15 @@ id = "aGra6m628WijVHeD46RzX"
 uri = "file://client/public/nexusos-icon.png"
 type = "image"
 title = "NexusOS Official Icon — Ψ (444KB PNG)"
+
+[[outputs]]
+id = "JPIite7fHttnv-Q5kb33Z"
+uri = "file://screenshots/nexusos-thumbnail-700x700.jpg"
+type = "image"
+title = "Project Thumbnail (700×700)"
+
+[[outputs]]
+id = "sYh7E9lKgiDfICVE4NODS"
+uri = "file://screenshots/nexusos-cover-1743x498.jpg"
+type = "image"
+title = "Campaign Cover (1743×498)"
