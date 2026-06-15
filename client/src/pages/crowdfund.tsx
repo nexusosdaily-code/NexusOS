@@ -1237,9 +1237,9 @@ export default function CrowdfundPage() {
 
               {/* Quick links */}
               <div className="grid grid-cols-2 gap-2">
-                <a href="https://www.indiegogo.com/projects/admin" target="_blank" rel="noreferrer"
+                <a href="https://www.indiegogo.com/start-a-campaign" target="_blank" rel="noreferrer"
                   className="flex items-center justify-center gap-2 py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs transition-colors">
-                  <ExternalLink size={12} /> Open Campaign Editor
+                  <ExternalLink size={12} /> Start / Manage Campaign
                 </a>
                 <a href="https://wnsp.io/crowdfund" target="_blank" rel="noreferrer"
                   className="flex items-center justify-center gap-2 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-white/70 font-bold text-xs transition-colors">
