@@ -487,7 +487,7 @@ async function runStartupMigrations() {
         // Wave 6 — 30s: social bots (last — highest retry tolerance)
         await delay(6_000);
         startSocialBroadcastAgent();
-        startTelegramBot();
+        if (process.env.NODE_ENV === "production") startTelegramBot();
         startNostrDmBot();
         startNxtCampaignAgent();
         startPostScheduler();
