@@ -353,3 +353,9 @@ id = "sYh7E9lKgiDfICVE4NODS"
 uri = "file://screenshots/nexusos-cover-1743x498.jpg"
 type = "image"
 title = "Campaign Cover (1743×498)"
+
+[[outputs]]
+id = "y9eG4kzTWzq0YaCl_QRCP"
+uri = "file://screenshots/wavelengthscript-intro.docx"
+type = "word_document"
+title = "WavelengthScript — 5-Minute Introduction"

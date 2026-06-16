@@ -64,6 +64,7 @@
     "connect-pg-simple": "^10.0.0",
     "cookie-parser": "^1.4.7",
     "date-fns": "^3.6.0",
+    "docx": "^9.7.1",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.7.0",
     "ecpair": "^3.0.1",
