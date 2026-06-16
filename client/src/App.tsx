@@ -145,6 +145,7 @@ const RunePipelinePage = lazy(() => import("@/pages/rune-pipeline"));
 const AdminOrdersPage      = lazy(() => import("@/pages/admin-orders"));
 const SpectralBundlePage    = lazy(() => import("@/pages/spectral-bundle"));
 const JoinCommunityPage     = lazy(() => import("@/pages/join-community"));
+const BuildWithUsPage       = lazy(() => import("@/pages/build"));
 const WSatsPage             = lazy(() => import("@/pages/wsats"));
 const RoadmapPage           = lazy(() => import("@/pages/roadmap"));
 const HowToPlugInPage       = lazy(() => import("@/pages/how-to-plug-in"));
@@ -470,6 +471,7 @@ function Router() {
       <Route path="/admin/orders"        component={AdminOrdersPage} />
       <Route path="/spectral-bundle"     component={SpectralBundlePage} />
       <Route path="/join-community"      component={JoinCommunityPage} />
+      <Route path="/build"              component={BuildWithUsPage} />
       <Route path="/wsats"               component={WSatsPage} />
       <Route path="/roadmap"             component={RoadmapPage} />
       <Route path="/how-to-plug-in"      component={HowToPlugInPage} />

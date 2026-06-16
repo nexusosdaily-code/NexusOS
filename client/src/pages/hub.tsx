@@ -139,6 +139,7 @@ const APP_SECTIONS = [
     label: "Build",
     accent: "#22d3ee",
     items: [
+      { title: "👷 Build With Us",                       href: "/build",              Icon: Users },
       { title: "🗺️ Roadmap",                             href: "/roadmap",            Icon: Waves },
       { title: "🔌 How to Plug In",                     href: "/how-to-plug-in",     Icon: Zap },
       { title: "Oscillating Quanta — First Principles", href: "/oscillating-quanta", Icon: Waves },
