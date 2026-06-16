@@ -70,6 +70,18 @@ declare module "http" {
 
 app.use(cookieParser());
 
+// ── Health / startup guard ───────────────────────────────────────────────────
+// The deployment platform probes / immediately on boot. The server binds to
+// the port (reusePort) before routes/static are fully registered, causing 500s
+// that the uptime monitor records as outages on every deploy.
+// Fix: answer / with 200 during the startup window, then hand off to static.
+let serverReady = false;
+app.get("/health", (_req, res) => res.json({ status: "ok", ready: serverReady, ts: Date.now() }));
+app.get("/", (req, res, next) => {
+  if (!serverReady) return res.status(200).send("ok");
+  next();
+});
+
 // ── Dev environment gate ───────────────────────────────────────────────────
 if (process.env.NODE_ENV !== "production") {
   const DEV_KEY = process.env.DEV_ACCESS_KEY || "";
@@ -436,6 +448,7 @@ async function runStartupMigrations() {
   // Retry listen up to 5 times (2s apart) so port conflicts on restart never crash the server
   function listenWithRetry(attemptsLeft = 5) {
     httpServer.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
+      serverReady = true;
       log(`serving on port ${port}`);
 
       const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
