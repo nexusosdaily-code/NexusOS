@@ -10,8 +10,7 @@ import { UniSatProvider } from "@/hooks/use-unisat";
 import { DOMAIN_LANDINGS } from "@/pages/domain-landings";
 import { useToast } from "@/hooks/use-toast";
 
-// Auth page loaded eagerly — needed on first render
-import AuthPage from "@/pages/auth";
+const AuthPage = lazy(() => import("@/pages/auth"));
 
 // All other pages lazy-loaded — browser only downloads the code when you visit that page
 const HubPage = lazy(() => import("@/pages/hub"));

@@ -98,7 +98,16 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Hashed asset files get a 1-year immutable cache; everything else (index.html) gets no-cache.
+  app.use(express.static(distPath, {
+    setHeaders(res, filePath) {
+      if (/\/assets\//.test(filePath)) {
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      } else {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      }
+    },
+  }));
 
   const indexPath = path.resolve(distPath, "index.html");
   let cachedHtml: string | null = null;

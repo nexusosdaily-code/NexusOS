@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import compression from "compression";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -68,6 +69,8 @@ declare module "http" {
   }
 }
 
+// Gzip all responses — halves JS/HTML transfer sizes on mobile
+app.use(compression());
 app.use(cookieParser());
 
 // ── Health / startup guard ───────────────────────────────────────────────────
