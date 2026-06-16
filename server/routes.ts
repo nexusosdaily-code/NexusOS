@@ -2710,7 +2710,7 @@ export async function registerRoutes(
           ${GENESIS.wnspUri}, ${GENESIS.psiChannel}, ${GENESIS.wdm}, ${GENESIS.oam},
           ${GENESIS.pol}, ${GENESIS.wavelengthNm}, ${GENESIS.band},
           'NexusOS Genesis Node', 'nexusos', 'system', 'genesis',
-          'https://nexusos.replit.app',
+          'https://wnsp.io',
           ${'Bitcoin inscription ' + GENESIS.inscriptionId + ' — first public disclosure of wnsp://Ψ(52,3,V) on 2026-05-31'},
           true, true
         )

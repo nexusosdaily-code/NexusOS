@@ -22,7 +22,7 @@ interface PageMeta {
   bodyHtml?: string;
 }
 
-const BASE = "https://nexusos.replit.app";
+const BASE = "https://wnsp.io";
 
 function softwareApp(overrides: Partial<{ url: string; name: string; description: string }> = {}): object {
   return {
@@ -223,7 +223,7 @@ for (const [host, meta] of Object.entries(DOMAIN_META)) {
   DOMAIN_META[`www.${host}`] = { ...meta };
 }
 
-// ── Per-route metadata (for nexusos.replit.app and custom domains with paths) ─
+// ── Per-route metadata (for wnsp.io and custom domains with paths) ─
 export const ROUTE_META: Record<string, PageMeta> = {
   "/": {
     title: "NexusOS — Physics-Based Civilization OS",
@@ -495,7 +495,7 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-const BASE_OG_IMAGE = "https://nexusos.replit.app/opengraph.jpg";
+const BASE_OG_IMAGE = "https://wnsp.io/opengraph.jpg";
 
 function buildMetaBlock(m: PageMeta): string {
   const title       = esc(m.title);

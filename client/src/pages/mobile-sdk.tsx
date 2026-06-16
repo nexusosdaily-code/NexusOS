@@ -69,7 +69,7 @@ public final class NexusOSSDK {
     private let apiKey: String?
 
     // MARK: - Init
-    public init(baseURL: String = "https://nexusos.replit.app",
+    public init(baseURL: String = "https://wnsp.io",
                 apiKey: String? = nil) {
         self.baseURL = URL(string: baseURL)!
         self.apiKey = apiKey
@@ -239,7 +239,7 @@ data class WASCIIResult(
 
 // ── SDK class ─────────────────────────────────────────────────────────
 class NexusOSSDK(
-    private val baseUrl: String = "https://nexusos.replit.app",
+    private val baseUrl: String = "https://wnsp.io",
     private val apiKey: String? = null
 ) {
     // CE Encode — any word → its Ψ channel (the name IS the address)
@@ -1083,7 +1083,7 @@ export default function MobileSDKPage() {
               <Globe size={16} className="text-amber-400/40 flex-shrink-0" />
               <div>
                 <div className="text-amber-400/60 text-[10px] font-bold mb-0.5">SDK Base URL</div>
-                <code className="text-[10px] text-white/50 font-mono">https://nexusos.replit.app</code>
+                <code className="text-[10px] text-white/50 font-mono">https://wnsp.io</code>
                 <div className="text-[9px] text-white/20 mt-1">All endpoints work without authentication. Auth endpoints require <code className="text-violet-300/60">Authorization: Bearer &lt;token&gt;</code>.</div>
               </div>
             </div>

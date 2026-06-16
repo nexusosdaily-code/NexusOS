@@ -65,7 +65,7 @@ function QuoraIcon({ size = 16 }: { size?: number }) {
 }
 
 // ── All five answers ──────────────────────────────────────────────────────────
-const DEPLOYED_URL = "https://nexusos.replit.app"; // update when deployed
+const DEPLOYED_URL = "https://wnsp.io";
 
 const ANSWERS = [
   {

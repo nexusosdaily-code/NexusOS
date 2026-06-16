@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://nexusos.replit.app/sitemap.xml
+Sitemap: https://wnsp.io/sitemap.xml

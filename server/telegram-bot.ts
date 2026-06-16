@@ -1134,7 +1134,7 @@ Empirical verification (Trial 4, 30 April 2026): CE encoding of "REPOSE" execute
 The architecture requires no modification for photonic computing hardware (~2032), where every protocol primitive maps directly to a physical operation.
 
 Full paper (11 sections, print/PDF):
-nexusos.replit.app/wnsp-paper
+wnsp.io/wnsp-paper
 
 Implementation: github.com/nexusosdaily-code/NexusOS (AGPL-3.0)
 Package: nexusos-ce-encoder@1.0.0 (npmjs.com)`,

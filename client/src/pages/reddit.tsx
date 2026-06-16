@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { Copy, Check, ChevronDown, ChevronUp, ExternalLink, MessageSquare, FileText } from "lucide-react";
 
-const DEPLOYED_URL = "https://nexusos.replit.app";
+const DEPLOYED_URL = "https://wnsp.io";
 const REDDIT_PROFILE = "https://www.reddit.com/u/NEXUSOS-WNSP-CE-SE/";
 
 // ── Reddit icon ───────────────────────────────────────────────────────────────

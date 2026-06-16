@@ -52,7 +52,7 @@ function EndpointRow({ method, path, desc, fee, free }: { method: string; path: 
   );
 }
 
-const BASE = typeof window !== "undefined" ? window.location.origin : "https://nexusos.replit.app";
+const BASE = typeof window !== "undefined" ? window.location.origin : "https://wnsp.io";
 
 export default function DeveloperPage() {
   const { data: status } = useQuery<any>({

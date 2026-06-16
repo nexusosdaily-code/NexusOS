@@ -14,18 +14,18 @@ The system is deployed and running. Everything below is accessible today:
 
 | Page | What it does |
 |---|---|
-| [Campaign](https://nexusos.replit.app/campaign) | Lab funding tiers — support the hardware build |
-| [Crowdfund](https://nexusos.replit.app/crowdfund) | Nexus Shares — equity in the physics stack |
-| [Videos](https://nexusos.replit.app/videos) | Auto-published Telegram video feed |
-| [WNSP Paper](https://nexusos.replit.app/wnsp-paper) | Formal WNSP protocol specification (AGPL-3.0) |
-| [Hardware Spec](https://nexusos.replit.app/hardware-spec) | SNIC, PHR-1, Spectral Relay Mesh v1 — first public disclosure 2026-05-16 |
-| [CE-SE Pipeline](https://nexusos.replit.app/ce-se-pipeline) | Paste any language → transpile → compile → execute in WNSP VM |
-| [WNSP VM](https://nexusos.replit.app/wnsp-vm) | Browser-native bytecode interpreter, step/run execution |
-| [Compression Explorer](https://nexusos.replit.app/compression-explorer) | Interactive Λ=hf/c² compression curve visualisation |
+| [Campaign](https://wnsp.io/campaign) | Lab funding tiers — support the hardware build |
+| [Crowdfund](https://wnsp.io/crowdfund) | Nexus Shares — equity in the physics stack |
+| [Videos](https://wnsp.io/videos) | Auto-published Telegram video feed |
+| [WNSP Paper](https://wnsp.io/wnsp-paper) | Formal WNSP protocol specification (AGPL-3.0) |
+| [Hardware Spec](https://wnsp.io/hardware-spec) | SNIC, PHR-1, Spectral Relay Mesh v1 — first public disclosure 2026-05-16 |
+| [CE-SE Pipeline](https://wnsp.io/ce-se-pipeline) | Paste any language → transpile → compile → execute in WNSP VM |
+| [WNSP VM](https://wnsp.io/wnsp-vm) | Browser-native bytecode interpreter, step/run execution |
+| [Compression Explorer](https://wnsp.io/compression-explorer) | Interactive Λ=hf/c² compression curve visualisation |
 
 ### Telegram video feed
 
-Every video sent to the NexusOS Telegram bot is automatically published to the [/videos](https://nexusos.replit.app/videos) page with no manual step. The bot webhook proxies video bytes through the server — the bot token is never exposed to the browser. The video gallery also appears on the Hub, Campaign, and Crowdfund pages.
+Every video sent to the NexusOS Telegram bot is automatically published to the [/videos](https://wnsp.io/videos) page with no manual step. The bot webhook proxies video bytes through the server — the bot token is never exposed to the browser. The video gallery also appears on the Hub, Campaign, and Crowdfund pages.
 
 **Telegram channel:** [t.me/nexusosdaily](https://t.me/nexusosdaily)
 
@@ -446,8 +446,8 @@ Hardware rights   →  Commercial Lambda Gate firmware for photonic ASICs
 The open-core dual-license model: the same pattern as Red Hat ($34B), MongoDB ($20B+), HashiCorp ($6.4B). The protocol is the commons. The infrastructure and hardware rights are the business.
 
 **Support the build:**
-- [Campaign — lab funding tiers](https://nexusos.replit.app/campaign)
-- [Crowdfund — Nexus Shares equity](https://nexusos.replit.app/crowdfund)
+- [Campaign — lab funding tiers](https://wnsp.io/campaign)
+- [Crowdfund — Nexus Shares equity](https://wnsp.io/crowdfund)
 - [Referral — earn NXT tokens via Replit](https://replit.com/refer/nexusosdaily)
 
 ---

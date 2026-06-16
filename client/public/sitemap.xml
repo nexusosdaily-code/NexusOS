@@ -3,178 +3,178 @@
 
   <!-- ── Public landing ────────────────────────────────────────────── -->
   <url>
-    <loc>https://nexusos.replit.app/wnsp</loc>
+    <loc>https://wnsp.io/wnsp</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 
   <!-- ── Theory & Science ──────────────────────────────────────────── -->
   <url>
-    <loc>https://nexusos.replit.app/oscillating-quanta</loc>
+    <loc>https://wnsp.io/oscillating-quanta</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/planck-alignment</loc>
+    <loc>https://wnsp.io/planck-alignment</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/reposed-theory</loc>
+    <loc>https://wnsp.io/reposed-theory</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/compression-explorer</loc>
+    <loc>https://wnsp.io/compression-explorer</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <!-- ── Protocol & Language ───────────────────────────────────────── -->
   <url>
-    <loc>https://nexusos.replit.app/wavelength-lang</loc>
+    <loc>https://wnsp.io/wavelength-lang</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/ce-se-pipeline</loc>
+    <loc>https://wnsp.io/ce-se-pipeline</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/ce-code-writer</loc>
+    <loc>https://wnsp.io/ce-code-writer</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/wnsp-vm</loc>
+    <loc>https://wnsp.io/wnsp-vm</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/wnsp-bridge</loc>
+    <loc>https://wnsp.io/wnsp-bridge</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/spectral-router</loc>
+    <loc>https://wnsp.io/spectral-router</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/spectral-search</loc>
+    <loc>https://wnsp.io/spectral-search</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/spectral-contracts</loc>
+    <loc>https://wnsp.io/spectral-contracts</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/divergence-test</loc>
+    <loc>https://wnsp.io/divergence-test</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <!-- ── Hardware & Spec ───────────────────────────────────────────── -->
   <url>
-    <loc>https://nexusos.replit.app/hardware-spec</loc>
+    <loc>https://wnsp.io/hardware-spec</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/hardware-lab</loc>
+    <loc>https://wnsp.io/hardware-lab</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/snic</loc>
+    <loc>https://wnsp.io/snic</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <!-- ── Campaign & Funding ────────────────────────────────────────── -->
   <url>
-    <loc>https://nexusos.replit.app/campaign</loc>
+    <loc>https://wnsp.io/campaign</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/indiegogo</loc>
+    <loc>https://wnsp.io/indiegogo</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/crowdfund</loc>
+    <loc>https://wnsp.io/crowdfund</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/evidence</loc>
+    <loc>https://wnsp.io/evidence</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <!-- ── Ecosystem & Network ───────────────────────────────────────── -->
   <url>
-    <loc>https://nexusos.replit.app/ecosystem</loc>
+    <loc>https://wnsp.io/ecosystem</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/network</loc>
+    <loc>https://wnsp.io/network</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/blockchain</loc>
+    <loc>https://wnsp.io/blockchain</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/spectral-db</loc>
+    <loc>https://wnsp.io/spectral-db</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <!-- ── Governance & Constitution ─────────────────────────────────── -->
   <url>
-    <loc>https://nexusos.replit.app/constitution</loc>
+    <loc>https://wnsp.io/constitution</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/open</loc>
+    <loc>https://wnsp.io/open</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <!-- ── Developer ─────────────────────────────────────────────────── -->
   <url>
-    <loc>https://nexusos.replit.app/developer-matrix</loc>
+    <loc>https://wnsp.io/developer-matrix</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/docs</loc>
+    <loc>https://wnsp.io/docs</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/nexus-command</loc>
+    <loc>https://wnsp.io/nexus-command</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://nexusos.replit.app/mobile-sdk</loc>
+    <loc>https://wnsp.io/mobile-sdk</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <!-- ── Research ──────────────────────────────────────────────────── -->
   <url>
-    <loc>https://nexusos.replit.app/research-presentation</loc>
+    <loc>https://wnsp.io/research-presentation</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
