@@ -12015,6 +12015,29 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ── WNSP•WAVELENGTHSCRIPT Rune etcher routes ──────────────────────────────
+  // GET /api/btc/wnsp-wavelengthscript/etch-status
+  app.get("/api/btc/wnsp-wavelengthscript/etch-status", async (_req: Request, res: Response) => {
+    try {
+      const { getWlsEtchStatus } = await import("./wnsp-wavelengthscript-rune-etcher");
+      const state = await getWlsEtchStatus();
+      res.json({ ok: true, ...state });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/btc/wnsp-wavelengthscript/force-etch — KERNEL only
+  app.post("/api/btc/wnsp-wavelengthscript/force-etch", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      if (!user || user.authorityBand !== "KERNEL") {
+        return res.status(403).json({ error: "KERNEL authority required" });
+      }
+      const { forceWlsEtch } = await import("./wnsp-wavelengthscript-rune-etcher");
+      const result = await forceWlsEtch();
+      res.json(result);
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   app.get("/api/btc/sentinel", authenticate, async (_req: Request, res: Response) => {
     try {
       const { getSnapshot, getEvents } = await import("./btc-wallet-sentinel");

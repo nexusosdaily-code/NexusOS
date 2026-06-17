@@ -9,6 +9,7 @@ import {
   ArrowLeft, Gem, Bitcoin, Zap, Shield, Cpu, Globe2,
   TrendingUp, Lock, Flame, Coins, ArrowRight, CheckCircle2,
   ExternalLink, Hash, Layers, Activity, RefreshCw, Rocket,
+  AlertTriangle,
 } from "lucide-react";
 
 function Stat({ label, val, sub, color = "text-cyan-300" }: { label: string; val: string | number; sub?: string; color?: string }) {
@@ -34,53 +35,64 @@ export default function RuneEtchingPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const { data } = useQuery<any>({ queryKey: ["/api/rune/info"], refetchInterval: 30_000 });
-  const { data: etchStatus, refetch: refetchEtch } = useQuery<any>({
+  const { data: me } = useQuery<any>({ queryKey: ["/api/user"] });
+
+  // WNSP•WAVELENGTHSCRIPT etch status
+  const { data: wlsStatus, refetch: refetchWls } = useQuery<any>({
+    queryKey: ["/api/btc/wnsp-wavelengthscript/etch-status"],
+    refetchInterval: 15_000,
+  });
+
+  // WNSP•BTC etch status
+  const { data: btcStatus, refetch: refetchBtc } = useQuery<any>({
     queryKey: ["/api/btc/wnsp-btc/etch-status"],
     refetchInterval: 15_000,
   });
-  const { data: me } = useQuery<any>({ queryKey: ["/api/user"] });
 
-  const forceEtchMut = useMutation({
-    mutationFn: () => fetch("/api/btc/wnsp-btc/force-etch", { method: "POST" }).then(r => r.json()),
+  const isKernel = me?.authorityBand === "KERNEL";
+
+  // WLS mutations
+  const forceWlsMut = useMutation({
+    mutationFn: () => fetch("/api/btc/wnsp-wavelengthscript/force-etch", { method: "POST" }).then(r => r.json()),
     onSuccess: (d) => {
-      if (d.ok) {
-        toast({ title: "Triggered!", description: d.txid ? `TXID: ${d.txid}` : "Step started" });
-      } else {
-        toast({ title: "Failed", description: d.error, variant: "destructive" });
-      }
-      refetchEtch();
+      if (d.ok) toast({ title: "Etch triggered!", description: d.txid ? `TXID: ${d.txid}` : "Working…" });
+      else      toast({ title: "Failed", description: d.error, variant: "destructive" });
+      refetchWls();
     },
     onError: () => toast({ title: "Error", description: "Could not trigger etch", variant: "destructive" }),
   });
 
-  const resetEtchMut = useMutation({
+  // BTC mutations
+  const forceBtcMut = useMutation({
+    mutationFn: () => fetch("/api/btc/wnsp-btc/force-etch", { method: "POST" }).then(r => r.json()),
+    onSuccess: (d) => {
+      if (d.ok) toast({ title: "Triggered!", description: d.txid ? `TXID: ${d.txid}` : "Step started" });
+      else      toast({ title: "Failed", description: d.error, variant: "destructive" });
+      refetchBtc();
+    },
+    onError: () => toast({ title: "Error", description: "Could not trigger etch", variant: "destructive" }),
+  });
+
+  const resetBtcMut = useMutation({
     mutationFn: () => fetch("/api/btc/wnsp-btc/reset-etch", { method: "POST" }).then(r => r.json()),
     onSuccess: (d) => {
-      if (d.ok) toast({ title: "Reset", description: "Etch state reset to pending" });
-      else toast({ title: "Reset failed", description: d.error, variant: "destructive" });
-      refetchEtch();
+      if (d.ok) toast({ title: "Reset", description: "BTC etch state reset to pending" });
+      else      toast({ title: "Failed", description: d.error, variant: "destructive" });
+      refetchBtc();
     },
     onError: () => toast({ title: "Error", description: "Could not reset", variant: "destructive" }),
   });
 
-  const pct = data ? ((data.mintCount / data.maxMints) * 100).toFixed(1) : "0.0";
-  const isKernel = me?.authorityBand === "KERNEL";
+  // Derived values
+  const wlsEtched   = wlsStatus?.status === "etched";
+  const confirmedSats = wlsStatus?.confirmed ?? 0;
+  const unconfirmedSats = wlsStatus?.unconfirmed ?? 0;
+  const WLS_THRESHOLD = wlsStatus?.etchThreshold ?? 8_000;
 
-  const etchStatusColor =
-    etchStatus?.status === "etched"      ? "text-green-400"  :
-    etchStatus?.status === "committed"   ? "text-blue-400"   :
-    etchStatus?.status === "in_progress" ? "text-yellow-400" :
-    etchStatus?.status === "error"       ? "text-red-400"    :
-    "text-slate-400";
-
-  const commitConfs    = etchStatus?.commitConfirmations ?? 0;
-  const commitRequired = etchStatus?.commitRequired ?? 6;
-  const isCommitted    = etchStatus?.status === "committed";
-  const commitTxid     = etchStatus?.commit_txid as string | undefined;
-
-  const confirmedSats   = etchStatus?.confirmed   ?? 0;
-  const unconfirmedSats = etchStatus?.unconfirmed ?? 0;
-  const ETCH_THRESHOLD  = etchStatus?.etchThreshold ?? 8_000;
+  const btcCommitted = btcStatus?.status === "committed";
+  const btcCommitConfs = btcStatus?.commitConfirmations ?? 0;
+  const btcCommitRequired = btcStatus?.commitRequired ?? 6;
+  const btcCommitTxid = btcStatus?.commit_txid as string | undefined;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
@@ -96,7 +108,7 @@ export default function RuneEtchingPage() {
           <div className="flex items-center gap-2">
             <Gem className="w-6 h-6 text-purple-400" />
             <div>
-              <h1 className="text-xl font-bold text-white">NEXUS•WAVELENGTH</h1>
+              <h1 className="text-xl font-bold text-white">WNSP•WAVELENGTHSCRIPT</h1>
               <p className="text-xs text-slate-400">Bitcoin Rune · NexusOS Canonical Token</p>
             </div>
           </div>
@@ -106,137 +118,127 @@ export default function RuneEtchingPage() {
 
         <ChannelConnect label="Top up ⚡" />
 
-        {/* WNSP•BTC Etch Status — live panel */}
-        {etchStatus?.status !== "etched" && (
-          <Card className={`bg-slate-900/80 border-${isCommitted ? "blue" : "orange"}-500/30 p-4 mb-4`}>
+        {/* ── WNSP•WAVELENGTHSCRIPT etch status panel ── */}
+        {!wlsEtched && (
+          <Card className="bg-slate-900/80 border-purple-500/30 p-4 mb-4">
             <div className="flex items-center gap-2 mb-3">
-              <Rocket className={`w-4 h-4 ${isCommitted ? "text-blue-400" : "text-orange-400"}`} />
-              <span className="font-semibold text-sm text-white">WNSP•BTC Commit / Reveal Etch</span>
+              <Rocket className="w-4 h-4 text-purple-400" />
+              <span className="font-semibold text-sm text-white">WNSP•WAVELENGTHSCRIPT Etch Status</span>
               <Badge className={`ml-auto text-[10px] border-0 ${
-                etchStatus?.status === "committed"   ? "bg-blue-500/20 text-blue-300"     :
-                etchStatus?.status === "in_progress" ? "bg-yellow-500/20 text-yellow-300" :
-                etchStatus?.status === "error"       ? "bg-red-500/20 text-red-300"       :
+                wlsStatus?.status === "etched"      ? "bg-green-500/20 text-green-300"    :
+                wlsStatus?.status === "in_progress" ? "bg-yellow-500/20 text-yellow-300"  :
+                wlsStatus?.status === "error"       ? "bg-red-500/20 text-red-300"        :
                 "bg-slate-700 text-slate-400"
-              }`}>{etchStatus?.status ?? "loading…"}</Badge>
-              <button onClick={() => refetchEtch()} className="text-slate-500 hover:text-slate-300 ml-1">
+              }`}>{wlsStatus?.status ?? "loading…"}</Badge>
+              <button onClick={() => refetchWls()} className="text-slate-500 hover:text-slate-300 ml-1">
                 <RefreshCw className="w-3 h-3" />
               </button>
             </div>
 
-            {/* 2-step pipeline indicator */}
-            <div className="flex items-center gap-2 mb-3">
-              <div className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full border ${
-                isCommitted || etchStatus?.status === "etched"
-                  ? "bg-green-500/10 border-green-500/40 text-green-300"
-                  : "bg-slate-800 border-slate-700 text-slate-400"
-              }`}>
-                <span className="font-mono">①</span> Commit TX
+            <div className="mb-3">
+              <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+                <span>Service wallet confirmed sats</span>
+                <span className="font-mono">{confirmedSats.toLocaleString()} / {WLS_THRESHOLD.toLocaleString()} needed</span>
               </div>
-              <ArrowRight className="w-3 h-3 text-slate-600 flex-shrink-0" />
-              <div className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full border ${
-                isCommitted
-                  ? "bg-blue-500/10 border-blue-500/40 text-blue-300 animate-pulse"
-                  : "bg-slate-800 border-slate-700 text-slate-400"
-              }`}>
-                <span className="font-mono">②</span> Wait 6 blocks
+              <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${confirmedSats >= WLS_THRESHOLD ? "bg-green-500" : "bg-purple-500"}`}
+                  style={{ width: `${Math.min(100, (confirmedSats / WLS_THRESHOLD) * 100).toFixed(1)}%` }}
+                />
               </div>
-              <ArrowRight className="w-3 h-3 text-slate-600 flex-shrink-0" />
-              <div className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full border bg-slate-800 border-slate-700 text-slate-400">
-                <span className="font-mono">③</span> Reveal + Etch
-              </div>
+              {unconfirmedSats > 0 && (
+                <div className="text-[10px] text-yellow-400 mt-1">
+                  ⏳ {unconfirmedSats.toLocaleString()} sats unconfirmed
+                </div>
+              )}
             </div>
 
-            {/* Commit TX confirmation progress */}
-            {isCommitted && commitTxid && (
-              <div className="mb-3 bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
-                <div className="flex justify-between text-[11px] text-slate-400 mb-1">
-                  <span className="text-blue-300 font-medium">Commit TX confirming…</span>
-                  <span className="font-mono text-blue-300">{commitConfs} / {commitRequired} blocks</span>
-                </div>
-                <div className="h-2 bg-slate-800 rounded-full overflow-hidden mb-2">
-                  <div
-                    className="h-full bg-blue-500 rounded-full transition-all"
-                    style={{ width: `${Math.min(100, (commitConfs / commitRequired) * 100)}%` }}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-slate-500 font-mono">{commitTxid.slice(0, 20)}…</span>
-                  <a href={`https://mempool.space/tx/${commitTxid}`} target="_blank" rel="noreferrer"
-                    className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5">
-                    mempool.space <ExternalLink className="w-2.5 h-2.5" />
-                  </a>
-                </div>
-                {commitConfs < commitRequired && (
-                  <div className="text-[10px] text-blue-400/70 mt-1.5">
-                    ⏳ {commitRequired - commitConfs} more block(s) needed — reveal etch fires automatically
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="text-[10px] text-slate-500 mb-3">
+              20-char name — no commitment required · single-TX etch · fires automatically at threshold
+            </div>
 
-            {/* Sats balance (only show when pending) */}
-            {!isCommitted && (
-              <div className="mb-3">
-                <div className="flex justify-between text-[11px] text-slate-400 mb-1">
-                  <span>Service wallet confirmed sats</span>
-                  <span className="font-mono">{confirmedSats.toLocaleString()} / {ETCH_THRESHOLD.toLocaleString()} needed</span>
-                </div>
-                <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${confirmedSats >= ETCH_THRESHOLD ? "bg-green-500" : "bg-orange-500"}`}
-                    style={{ width: `${Math.min(100, (confirmedSats / ETCH_THRESHOLD) * 100).toFixed(1)}%` }}
-                  />
-                </div>
-                {unconfirmedSats > 0 && (
-                  <div className="text-[10px] text-yellow-400 mt-1">
-                    ⏳ {unconfirmedSats.toLocaleString()} sats unconfirmed — waiting for Bitcoin confirmations
-                  </div>
-                )}
-              </div>
-            )}
-
-            {etchStatus?.error_msg && (
-              <div className="text-[10px] text-red-400 bg-red-500/10 rounded p-2 mb-3 font-mono">
-                {etchStatus.error_msg}
-              </div>
+            {wlsStatus?.error_msg && (
+              <div className="text-[10px] text-red-400 bg-red-500/10 rounded p-2 mb-3 font-mono">{wlsStatus.error_msg}</div>
             )}
 
             {isKernel && (
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  className="bg-orange-600 hover:bg-orange-500 text-white text-xs flex-1"
-                  onClick={() => forceEtchMut.mutate()}
-                  disabled={forceEtchMut.isPending || etchStatus?.status === "in_progress" ||
-                    (isCommitted && commitConfs < commitRequired)}
-                >
-                  <Rocket className="w-3 h-3 mr-1" />
-                  {forceEtchMut.isPending ? "Working…" :
-                   isCommitted ? `Force Reveal (${commitConfs}/${commitRequired} confs)` :
-                   "Force Commit TX (KERNEL)"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-slate-700 text-slate-400 hover:text-red-300 hover:border-red-500/50 text-xs"
-                  onClick={() => resetEtchMut.mutate()}
-                  disabled={resetEtchMut.isPending}
-                  title="Reset etch state to pending"
-                >
-                  Reset
-                </Button>
-              </div>
+              <Button
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-500 text-white text-xs w-full"
+                onClick={() => forceWlsMut.mutate()}
+                disabled={forceWlsMut.isPending || wlsStatus?.status === "in_progress"}
+              >
+                <Rocket className="w-3 h-3 mr-1" />
+                {forceWlsMut.isPending ? "Etching…" : "Force Etch WNSP•WAVELENGTHSCRIPT (KERNEL)"}
+              </Button>
             )}
           </Card>
         )}
 
-        {etchStatus?.status === "etched" && etchStatus?.etch_txid && (
+        {wlsEtched && wlsStatus?.etch_txid && (
           <Card className="bg-green-900/20 border-green-500/30 p-3 mb-4">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-green-400" />
-              <span className="text-green-300 text-sm font-semibold">WNSP•BTC etched on-chain</span>
-              <a href={`https://mempool.space/tx/${etchStatus.etch_txid}`} target="_blank" rel="noreferrer"
+              <span className="text-green-300 text-sm font-semibold">WNSP•WAVELENGTHSCRIPT etched on-chain</span>
+              <a href={`https://mempool.space/tx/${wlsStatus.etch_txid}`} target="_blank" rel="noreferrer"
                 className="ml-auto flex items-center gap-1 text-[11px] text-green-400 hover:text-green-300">
+                view TX <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </Card>
+        )}
+
+        {/* ── WNSP•BTC etch status (compact) ── */}
+        {btcStatus?.status !== "etched" && (
+          <Card className={`bg-slate-900/60 border-${btcCommitted ? "blue" : "orange"}-500/20 p-3 mb-4`}>
+            <div className="flex items-center gap-2">
+              <Bitcoin className={`w-3.5 h-3.5 ${btcCommitted ? "text-blue-400" : "text-orange-400"}`} />
+              <span className="text-sm text-slate-300">WNSP•BTC</span>
+              <Badge className={`text-[10px] border-0 ${
+                btcCommitted          ? "bg-blue-500/20 text-blue-300"     :
+                btcStatus?.status === "in_progress" ? "bg-yellow-500/20 text-yellow-300" :
+                "bg-slate-700 text-slate-400"
+              }`}>{btcStatus?.status ?? "…"}</Badge>
+              {btcCommitted && btcCommitTxid && (
+                <span className="text-[10px] text-blue-300 ml-1">
+                  {btcCommitConfs}/{btcCommitRequired} blocks
+                </span>
+              )}
+              <button onClick={() => refetchBtc()} className="text-slate-600 hover:text-slate-400 ml-auto">
+                <RefreshCw className="w-3 h-3" />
+              </button>
+              {isKernel && !btcCommitted && (
+                <Button size="sm" variant="ghost"
+                  className="text-[10px] text-orange-400 hover:text-orange-300 h-6 px-2"
+                  onClick={() => forceBtcMut.mutate()} disabled={forceBtcMut.isPending}>
+                  {forceBtcMut.isPending ? "…" : "Force"}
+                </Button>
+              )}
+              {isKernel && (
+                <Button size="sm" variant="ghost"
+                  className="text-[10px] text-slate-500 hover:text-red-400 h-6 px-2"
+                  onClick={() => resetBtcMut.mutate()} disabled={resetBtcMut.isPending}>
+                  Reset
+                </Button>
+              )}
+            </div>
+            {btcCommitted && btcCommitTxid && (
+              <div className="mt-2">
+                <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-500 rounded-full transition-all"
+                    style={{ width: `${Math.min(100, (btcCommitConfs / btcCommitRequired) * 100)}%` }} />
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
+        {btcStatus?.status === "etched" && btcStatus?.etch_txid && (
+          <Card className="bg-orange-900/10 border-orange-500/20 p-3 mb-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-3.5 h-3.5 text-orange-400" />
+              <span className="text-orange-300 text-sm">WNSP•BTC etched</span>
+              <a href={`https://mempool.space/tx/${btcStatus.etch_txid}`} target="_blank" rel="noreferrer"
+                className="ml-auto flex items-center gap-1 text-[11px] text-orange-400 hover:text-orange-300">
                 view TX <ExternalLink className="w-3 h-3" />
               </a>
             </div>
@@ -255,10 +257,10 @@ export default function RuneEtchingPage() {
             <div className="flex items-start gap-6">
               <div className="w-16 h-16 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-3xl">Ψ</div>
               <div className="flex-1">
-                <div className="text-3xl font-bold text-white mb-1">NEXUS•WAVELENGTH</div>
-                <div className="text-slate-400 text-sm mb-3">The canonical Bitcoin Rune of the NexusOS ecosystem. Etched on Bitcoin mainnet at block 952,590 — permanently sealed on-chain. Each token represents a spectral wavelength unit in the WNSP communication layer.</div>
+                <div className="text-3xl font-bold text-white mb-1">WNSP•WAVELENGTHSCRIPT</div>
+                <div className="text-slate-400 text-sm mb-3">The canonical Bitcoin Rune of the NexusOS ecosystem — and the on-chain identity of WavelengthScript, the spectral programming language. 100% premined to the NexusOS service wallet. Each token represents a compute unit in the WNSP physics stack.</div>
                 <div className="flex flex-wrap gap-2">
-                  {["Bitcoin Native", "UTXO-based", "No Ordinals required", "AGPL-3.0", "Physics-signed"].map(t => (
+                  {["Bitcoin Native", "UTXO-based", "100% Premine", "AGPL-3.0", "Physics-signed", "No open minting"].map(t => (
                     <Badge key={t} className="bg-slate-800/80 text-slate-300 border-slate-700 text-[10px]">{t}</Badge>
                   ))}
                 </div>
@@ -267,29 +269,12 @@ export default function RuneEtchingPage() {
           </div>
         </div>
 
-        {/* Live mint progress */}
-        <Card className="bg-slate-900/60 border-slate-700/50 p-5 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-sm font-semibold text-slate-300 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-purple-400" />Mint Progress
-            </div>
-            <div className="text-xs font-mono text-slate-500">{data?.mintCount ?? 0} / {data?.maxMints ?? 21000} minted</div>
-          </div>
-          <div className="h-3 bg-slate-800 rounded-full overflow-hidden mb-2">
-            <div className="h-full bg-gradient-to-r from-purple-600 to-cyan-500 rounded-full transition-all duration-700"
-              style={{ width: `${pct}%` }} />
-          </div>
-          <div className="flex justify-between text-[10px] text-slate-600 font-mono">
-            <span>0</span><span>{pct}% minted</span><span>21,000 max</span>
-          </div>
-        </Card>
-
         {/* Stats grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          <Stat label="Total Supply" val="21M" sub="21,000,000 Ψ" color="text-purple-300" />
-          <Stat label="Per Mint" val="1,000" sub="NEXUS•WAVELENGTH" color="text-cyan-300" />
-          <Stat label="Mint Cost" val="100 NXT" sub="≈ spectral energy" color="text-amber-300" />
-          <Stat label="Stake Yield" val="150 NXT" sub="per epoch / 1K Ψ" color="text-green-300" />
+          <Stat label="Total Supply" val="21B" sub="21,000,000,000 Ψ" color="text-purple-300" />
+          <Stat label="Decimals" val="8" sub="div = 8" color="text-cyan-300" />
+          <Stat label="Symbol" val="Ψ" sub="Psi — spectral channel" color="text-amber-300" />
+          <Stat label="Mint Type" val="Premine" sub="100% to service wallet" color="text-green-300" />
         </div>
 
         {/* Two-column spec */}
@@ -299,38 +284,35 @@ export default function RuneEtchingPage() {
               <Hash className="w-4 h-4 text-purple-400" />
               <span className="font-semibold text-sm text-white">Rune Specification</span>
             </div>
-            <Row label="Rune Name"    val="NEXUS•WAVELENGTH" mono />
-            <Row label="Rune ID"      val={data?.runeId ?? "952590:379"} mono />
+            <Row label="Rune Name"    val="WNSP•WAVELENGTHSCRIPT" mono />
+            <Row label="Rune ID"      val={wlsEtched ? (wlsStatus?.rune_id ?? "pending") : <span className="text-yellow-400 text-xs">pending etch</span>} mono={wlsEtched} />
             <Row label="Symbol"       val="Ψ (Psi)" mono />
             <Row label="Decimals"     val="8" mono />
-            <Row label="Total Supply" val="21,000,000 Ψ" mono />
-            <Row label="Etch TX" val={<a href="https://mempool.space/tx/8e1614818d96e494bbde4d90b57ef7ce596aebee50b15b48c132ed8ece3ae11c" target="_blank" rel="noreferrer"
-              className="text-purple-400 hover:text-purple-300 flex items-center gap-1 font-mono text-[11px]">
-              8e1614…3ae11c <ExternalLink className="w-3 h-3" />
-            </a>} />
-            <Row label="Etched Block" val={<a href="https://mempool.space/block/952590" target="_blank" rel="noreferrer"
-              className="text-purple-400 hover:text-purple-300 flex items-center gap-1">
-              952,590 <ExternalLink className="w-3 h-3" />
-            </a>} />
+            <Row label="Total Supply" val="21,000,000,000 Ψ" mono />
+            <Row label="Premine"      val="100% to service wallet" mono />
+            <Row label="Open Mint"    val="None" mono />
             <Row label="Protocol"     val={<Badge className="bg-purple-500/15 text-purple-300 border-purple-500/20 text-[10px]">Runes (OP_RETURN)</Badge>} />
-            <Row label="View on Ordiscan" val={<a href="https://ordiscan.com/rune/NEXUS%E2%80%A2WAVELENGTH" target="_blank" rel="noreferrer"
-              className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
-              ordiscan.com <ExternalLink className="w-3 h-3" />
-            </a>} />
+            {wlsEtched && wlsStatus?.etch_txid && (
+              <Row label="Etch TX" val={<a href={`https://mempool.space/tx/${wlsStatus.etch_txid}`} target="_blank" rel="noreferrer"
+                className="text-purple-400 hover:text-purple-300 flex items-center gap-1 font-mono text-[11px]">
+                {wlsStatus.etch_txid.slice(0, 12)}… <ExternalLink className="w-3 h-3" />
+              </a>} />
+            )}
           </Card>
 
           <Card className="bg-slate-900/60 border-slate-700/50 p-5">
             <div className="flex items-center gap-2 mb-3">
               <Layers className="w-4 h-4 text-cyan-400" />
-              <span className="font-semibold text-sm text-white">Token Economics</span>
+              <span className="font-semibold text-sm text-white">WavelengthScript Identity</span>
             </div>
-            <Row label="Mint Allocation" val="21,000 × 1,000 Ψ" mono />
-            <Row label="Mint Cost"        val="100 NXT / mint" mono />
-            <Row label="Staking Yield"    val="150 NXT / epoch" mono />
-            <Row label="Epoch Length"     val="24 hours" mono />
-            <Row label="Marketplace fee"  val="2.5% in NXT" mono />
-            <Row label="Burn rate"        val="1.25% per sale" mono />
-            <Row label="Treasury"         val="1.25% per sale" mono />
+            <Row label="Language"       val="WavelengthScript" />
+            <Row label="Purpose"        val="Spectral compute unit" />
+            <Row label="VM"             val="WNSP Virtual Machine" />
+            <Row label="Channel ops"    val="25,600 Ψ channels" mono />
+            <Row label="Encoding"       val="CE-SE v1.0" mono />
+            <Row label="Physics basis"  val="E = hf, Λ = hf/c²" mono />
+            <Row label="Photonic target" val="~2032 ASIC" />
+            <Row label="License"        val="AGPL-3.0" />
           </Card>
         </div>
 
@@ -358,10 +340,11 @@ export default function RuneEtchingPage() {
         <Card className="bg-slate-900/60 border-slate-700/50 p-5 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <CheckCircle2 className="w-4 h-4 text-green-400" />
-            <span className="font-semibold text-sm text-white">On-Chain Proof</span>
-            <Badge className="ml-auto bg-green-500/15 text-green-300 border-green-500/20 text-[10px]">✓ Live on Bitcoin</Badge>
+            <span className="font-semibold text-sm text-white">On-Chain Records</span>
           </div>
           <div className="space-y-3">
+
+            {/* WNSP.btc inscription */}
             <div className="bg-slate-800/50 rounded-lg p-3">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-slate-400 text-xs">WNSP.btc Inscription</span>
@@ -383,87 +366,110 @@ export default function RuneEtchingPage() {
                 </a>
               </div>
             </div>
-            <div className="bg-slate-800/50 rounded-lg p-3">
+
+            {/* WNSP•WAVELENGTHSCRIPT etch status */}
+            <div className={`rounded-lg p-3 border ${wlsEtched ? "bg-green-900/20 border-green-500/20" : "bg-purple-900/10 border-purple-500/20"}`}>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-slate-400 text-xs">NEXUS•WAVELENGTH Rune Etch TX</span>
-                <span className="text-green-400 text-[10px] font-mono">Runes · block 952,590</span>
+                <span className={`text-xs font-semibold ${wlsEtched ? "text-green-300" : "text-purple-300"}`}>WNSP•WAVELENGTHSCRIPT Rune</span>
+                <span className={`text-[10px] font-mono ${wlsEtched ? "text-green-400" : "text-yellow-400"}`}>
+                  {wlsEtched ? "✓ Live on Bitcoin" : "⏳ Pending etch"}
+                </span>
               </div>
-              <div className="font-mono text-[11px] text-slate-300 break-all mb-2">
+              {wlsEtched && wlsStatus?.etch_txid ? (
+                <>
+                  <div className="font-mono text-[11px] text-slate-300 break-all mb-2">{wlsStatus.etch_txid}</div>
+                  <div className="flex flex-wrap gap-2">
+                    <a href={`https://mempool.space/tx/${wlsStatus.etch_txid}`} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 rounded px-2 py-1">
+                      mempool.space <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <a href={`https://ordiscan.com/rune/WNSP%E2%80%A2WAVELENGTHSCRIPT`} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 bg-amber-500/10 rounded px-2 py-1">
+                      ordiscan.com <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <div className="text-[10px] text-slate-400">
+                  Etch fires automatically when service wallet reaches {WLS_THRESHOLD.toLocaleString()} confirmed sats.
+                  {confirmedSats > 0 && ` Currently: ${confirmedSats.toLocaleString()} sats.`}
+                </div>
+              )}
+            </div>
+
+            {/* WNSP•BTC */}
+            <div className="bg-orange-900/10 border border-orange-500/20 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-orange-300 text-xs font-semibold">WNSP•BTC Rune</span>
+                <span className={`text-[10px] font-mono ${btcStatus?.status === "etched" ? "text-green-400" : "text-yellow-400"}`}>
+                  {btcStatus?.status === "etched" ? "✓ Live on Bitcoin" : "⏳ Commit / Reveal pending"}
+                </span>
+              </div>
+              {btcStatus?.status === "etched" && btcStatus?.etch_txid ? (
+                <>
+                  <div className="font-mono text-[11px] text-slate-300 break-all mb-2">{btcStatus.etch_txid}</div>
+                  <a href={`https://mempool.space/tx/${btcStatus.etch_txid}`} target="_blank" rel="noreferrer"
+                    className="flex items-center gap-1 text-[11px] text-orange-400 hover:text-orange-300 bg-orange-500/10 rounded px-2 py-1 w-fit">
+                    mempool.space <ExternalLink className="w-3 h-3" />
+                  </a>
+                </>
+              ) : (
+                <div className="text-[10px] text-slate-400">
+                  {btcCommitted
+                    ? `Commit TX confirmed — waiting for ${btcCommitRequired - btcCommitConfs} more block(s) before reveal.`
+                    : "2-step commit/reveal etch — fires automatically at threshold."}
+                </div>
+              )}
+            </div>
+
+            {/* NEXUS•WAVELENGTH — inaccessible notice */}
+            <div className="bg-red-900/10 border border-red-500/20 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                <span className="text-red-300 text-xs font-semibold">NEXUS•WAVELENGTH (Inaccessible)</span>
+                <span className="text-[10px] font-mono text-slate-500 ml-auto">block 952,596</span>
+              </div>
+              <div className="font-mono text-[11px] text-slate-500 break-all mb-1">
                 8e1614818d96e494bbde4d90b57ef7ce596aebee50b15b48c132ed8ece3ae11c
               </div>
-              <div className="flex flex-wrap gap-2">
-                <a href="https://mempool.space/tx/8e1614818d96e494bbde4d90b57ef7ce596aebee50b15b48c132ed8ece3ae11c"
-                  target="_blank" rel="noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 rounded px-2 py-1">
-                  mempool.space <ExternalLink className="w-3 h-3" />
-                </a>
-                <a href="https://ordiscan.com/rune/NEXUS%E2%80%A2WAVELENGTH"
-                  target="_blank" rel="noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 bg-amber-500/10 rounded px-2 py-1">
-                  ordiscan.com <ExternalLink className="w-3 h-3" />
-                </a>
+              <div className="text-[10px] text-red-400/70">
+                84B tokens etched to an inaccessible wallet (bc1qrhqzqy6…) — 20.9T burned. Replaced by WNSP•WAVELENGTHSCRIPT.
               </div>
             </div>
 
-            {/* WNSP•BTC rune — etched block 952,733 */}
-            <div className="bg-orange-900/20 border border-orange-500/20 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-orange-300 text-xs font-semibold">WNSP•BTC Rune Etch TX</span>
-                <span className="text-green-400 text-[10px] font-mono">✓ Runes · block 952,733</span>
-              </div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] text-slate-500">Rune ID:</span>
-                <span className="font-mono text-[11px] text-orange-300 font-bold">952733:1958</span>
-              </div>
-              <div className="font-mono text-[11px] text-slate-300 break-all mb-2">
-                32c29e6e718229496bb69e2e82b94d284624662d7ac8e5f35308f27ef9ffa5a6
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <a href="https://mempool.space/tx/32c29e6e718229496bb69e2e82b94d284624662d7ac8e5f35308f27ef9ffa5a6"
-                  target="_blank" rel="noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-orange-400 hover:text-orange-300 bg-orange-500/10 rounded px-2 py-1">
-                  mempool.space <ExternalLink className="w-3 h-3" />
-                </a>
-                <a href="https://ordiscan.com/rune/WNSP%E2%80%A2BTC"
-                  target="_blank" rel="noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 bg-amber-500/10 rounded px-2 py-1">
-                  ordiscan.com <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-            </div>
           </div>
         </Card>
 
         {/* CTAs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Link href="/rune-mint">
+          <Link href="/wavelength-lang">
             <Card className="bg-purple-900/20 border-purple-500/30 p-4 hover:border-purple-400/50 transition-colors cursor-pointer">
               <div className="flex items-center gap-2 mb-1">
-                <Coins className="w-4 h-4 text-purple-400" />
-                <span className="text-white font-semibold text-sm">Mint Runes</span>
+                <Cpu className="w-4 h-4 text-purple-400" />
+                <span className="text-white font-semibold text-sm">WavelengthScript</span>
                 <ArrowRight className="w-3 h-3 text-slate-500 ml-auto" />
               </div>
-              <div className="text-slate-400 text-xs">Pay 100 NXT → receive 1,000 NEXUS•WAVELENGTH to your Bitcoin address</div>
+              <div className="text-slate-400 text-xs">The spectral programming language backed by WNSP•WAVELENGTHSCRIPT on Bitcoin</div>
             </Card>
           </Link>
-          <Link href="/rune-staking">
+          <Link href="/wnsp-vm">
             <Card className="bg-cyan-900/10 border-cyan-500/20 p-4 hover:border-cyan-400/40 transition-colors cursor-pointer">
               <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="w-4 h-4 text-cyan-400" />
-                <span className="text-white font-semibold text-sm">Stake Runes</span>
+                <Zap className="w-4 h-4 text-cyan-400" />
+                <span className="text-white font-semibold text-sm">WNSP VM</span>
                 <ArrowRight className="w-3 h-3 text-slate-500 ml-auto" />
               </div>
-              <div className="text-slate-400 text-xs">Stake your Rune UTXO → earn 150 NXT per 1,000 Ψ per epoch</div>
+              <div className="text-slate-400 text-xs">Execute WavelengthScript bytecode — each Ψ register is a spectral channel</div>
             </Card>
           </Link>
-          <Link href="/marketplace">
+          <Link href="/hardware-spec">
             <Card className="bg-amber-900/10 border-amber-500/20 p-4 hover:border-amber-400/40 transition-colors cursor-pointer">
               <div className="flex items-center gap-2 mb-1">
-                <Flame className="w-4 h-4 text-amber-400" />
-                <span className="text-white font-semibold text-sm">Trade on Market</span>
+                <Globe2 className="w-4 h-4 text-amber-400" />
+                <span className="text-white font-semibold text-sm">Hardware Spec</span>
                 <ArrowRight className="w-3 h-3 text-slate-500 ml-auto" />
               </div>
-              <div className="text-slate-400 text-xs">Buy & sell NEXUS•WAVELENGTH on the NexusOS Marketplace</div>
+              <div className="text-slate-400 text-xs">AGPL-3.0 formal spec — SNIC, PHR-1, Spectral Relay Mesh v1</div>
             </Card>
           </Link>
         </div>

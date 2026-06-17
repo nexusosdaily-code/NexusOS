@@ -529,6 +529,8 @@ async function runStartupMigrations() {
         startPostScheduler();
         startTgNostrBridge();
         startWnspBtcEtcher();
+        const { startWnspWavelengthscriptEtcher } = await import("./wnsp-wavelengthscript-rune-etcher");
+        startWnspWavelengthscriptEtcher();
       })();
     });
     httpServer.once("error", (err: any) => {
