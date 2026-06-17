@@ -575,14 +575,17 @@ async function sendDiscord(text: string): Promise<{ ok: boolean; error?: string 
 }
 
 // ── Nostr sender ─────────────────────────────────────────────────────────────
-async function sendNostr(slot: Slot): Promise<{ ok: boolean; eventId?: string; error?: string }> {
+async function sendNostr(slot: Slot): Promise<{ ok: boolean; eventId?: string; relays?: string[]; error?: string }> {
   try {
     const result = await publishToNostr({
       kind:    "note",
       content: slot.nostr,
       tags:    slot.tags.map(t => ["t", t]),
     });
-    return { ok: true, eventId: result.id };
+    if (result.relays.length === 0) {
+      return { ok: false, eventId: result.id, relays: [], error: "0 relays accepted — event not propagated" };
+    }
+    return { ok: true, eventId: result.id, relays: result.relays };
   } catch (e: any) {
     return { ok: false, error: e.message };
   }

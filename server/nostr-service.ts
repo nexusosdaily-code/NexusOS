@@ -146,24 +146,59 @@ export async function publishToNostr(
   };
 
   const signed: NostrEvent = finalizeEvent(template, privKey);
-  const p = getPool();
 
-  // nostr-tools v2: pool.publish() returns Promise<string>[] — one per relay
-  const publishPromises = p.publish(DEFAULT_RELAYS, signed) as unknown as Promise<string>[];
-  const withTimeout = DEFAULT_RELAYS.map((relay, i) =>
-    Promise.race([
-      publishPromises[i].then(() => relay),
-      new Promise<never>((_, rej) =>
-        setTimeout(() => rej(new Error("timeout")), 8_000)
-      ),
-    ])
-  );
+  // Try WebSocket first (individual Relay connections with explicit lifecycle).
+  const tryWs = async (url: string): Promise<string> => {
+    const relay = new Relay(url);
+    try {
+      await Promise.race([
+        relay.connect(),
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("connect timeout")), 8_000)),
+      ]);
+      await Promise.race([
+        relay.publish(signed),
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("publish timeout")), 8_000)),
+      ]);
+      return url;
+    } finally {
+      try { relay.close(); } catch { /* ignore */ }
+    }
+  };
 
-  const results = await Promise.allSettled(withTimeout);
-
-  const published = results
+  const wsResults = await Promise.allSettled(DEFAULT_RELAYS.map(tryWs));
+  let published = wsResults
     .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
     .map((r) => r.value);
+
+  // HTTP fallback — some relays accept POST application/nostr+json.
+  // Used automatically when WebSocket is blocked (e.g. sandboxed environments).
+  if (published.length === 0) {
+    const HTTP_RELAYS: { ws: string; http: string }[] = [
+      { ws: "wss://nos.lol",          http: "https://nos.lol" },
+      { ws: "wss://relay.nostr.band", http: "https://relay.nostr.band" },
+      { ws: "wss://nostr.wine",       http: "https://nostr.wine" },
+    ];
+    const tryHttp = async (entry: { ws: string; http: string }): Promise<string> => {
+      const r = await fetch(entry.http, {
+        method:  "POST",
+        headers: { "Content-Type": "application/nostr+json", "Accept": "application/nostr+json" },
+        body:    JSON.stringify(signed),
+        signal:  AbortSignal.timeout(8_000),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return entry.ws; // return the canonical wss:// URL on success
+    };
+    const httpResults = await Promise.allSettled(HTTP_RELAYS.map(tryHttp));
+    const httpPublished = httpResults
+      .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
+      .map((r) => r.value);
+    published = httpPublished;
+    if (published.length > 0) {
+      console.log(`[NostrService] WS blocked — HTTP fallback succeeded for: ${published.join(", ")}`);
+    }
+  }
+
+  console.log(`[NostrService] published ${signed.id} → ${published.length} relays: ${published.join(", ") || "none"}`);
 
   return { id: signed.id, relays: published };
 }
