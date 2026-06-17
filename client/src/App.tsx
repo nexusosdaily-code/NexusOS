@@ -151,6 +151,7 @@ const HowToPlugInPage       = lazy(() => import("@/pages/how-to-plug-in"));
 const EncodePage            = lazy(() => import("@/pages/encode"));
 const ReplitTemplatePage    = lazy(() => import("@/pages/replit-template"));
 const ProofPage             = lazy(() => import("@/pages/proof"));
+const ShareholdersPage      = lazy(() => import("@/pages/shareholders"));
 
 // Loading spinner shown while a lazy page chunk is downloading
 function PageLoader() {
@@ -248,7 +249,7 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/ce-se-pipeline", "/ce-code-writer", "/wnsp-vm",
   "/spectral-router", "/spectral-search", "/spectral-contracts",
   "/divergence-test", "/hardware-spec", "/hardware-lab",
-  "/campaign", "/constitution", "/mobile-sdk",
+  "/campaign", "/constitution", "/mobile-sdk", "/shareholders",
 ]);
 
 // Only paths where ANY child segment is a valid protected route (dynamic).
@@ -493,6 +494,7 @@ function Router() {
       <Route path="/campaign" component={CampaignPage} />
       <Route path="/constitution" component={ConstitutionPage} />
       <Route path="/mobile-sdk" component={MobileSDKPage} />
+      <Route path="/shareholders" component={ShareholdersPage} />
       {/* Catch-all: shows 404 for unknown paths, auth guard for known protected ones */}
       <Route component={ProtectedOrNotFound} />
     </Switch>

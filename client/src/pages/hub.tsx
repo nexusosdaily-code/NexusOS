@@ -187,6 +187,7 @@ const APP_SECTIONS = [
       { title: "📡 Mempool Monitor",  href: "/mempool",             Icon: Activity },
       { title: "📣 NXT Campaign",     href: "/nxt-campaign",        Icon: Megaphone },
       { title: "🎁 NXT Airdrop",      href: "/airdrop",             Icon: Gift },
+      { title: "📜 Shareholders",     href: "/shareholders",        Icon: Shield },
       { title: "🔮 Nostr Bridge",     href: "/nostr-bridge",        Icon: Radio },
       { title: "🎯 Coinsniper",       href: "/coinsniper",          Icon: Rocket },
       { title: "🏆 Genesis Quest",    href: "/quest",               Icon: Trophy },
