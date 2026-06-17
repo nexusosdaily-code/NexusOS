@@ -17,7 +17,7 @@
 import * as bitcoin from "bitcoinjs-lib";
 import * as tinysecp from "tiny-secp256k1";
 import { ECPairFactory } from "ecpair";
-import { getServiceWallet, getUTXOs, getFeeRate } from "./btc-inscription-engine.js";
+import { getServiceWallet, getUTXOs, getSafeUTXOs, getFeeRate } from "./btc-inscription-engine.js";
 
 bitcoin.initEccLib(tinysecp);
 const ECPair  = ECPairFactory(tinysecp);
@@ -158,8 +158,12 @@ async function etchWnspBtc(confirmedSats: number): Promise<void> {
   //   Output 1: OP_RETURN Runestone (etch instruction)
   //   Output 2: change back to service wallet (if > dust)
 
-  const utxos = (await getUTXOs(wallet.address)).filter(u => u.status.confirmed);
-  if (utxos.length === 0) throw new Error("No confirmed UTXOs");
+  const { utxos: safeUtxos, blockedCount } = await getSafeUTXOs(wallet.address);
+  if (blockedCount > 0) {
+    console.warn(`[WNSP•BTC Etcher] 🛡️ Rune Guard blocked ${blockedCount} UTXO(s) from etch inputs`);
+  }
+  const utxos = safeUtxos.filter(u => u.status.confirmed);
+  if (utxos.length === 0) throw new Error("No confirmed UTXOs (Rune-bearing UTXOs are protected)");
 
   // Estimate fee: ~200 vbytes for P2TR single-input + OP_RETURN
   const estimatedVbytes = 200 + utxos.length * 58;

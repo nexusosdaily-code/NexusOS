@@ -20,7 +20,7 @@
 import * as bitcoin from "bitcoinjs-lib";
 import * as tinysecp from "tiny-secp256k1";
 import { ECPairFactory } from "ecpair";
-import { getServiceWallet, getUTXOs, getFeeRate } from "./btc-inscription-engine.js";
+import { getServiceWallet, getUTXOs, getSafeUTXOs, getFeeRate } from "./btc-inscription-engine.js";
 
 bitcoin.initEccLib(tinysecp);
 const ECPair  = ECPairFactory(tinysecp);
@@ -206,11 +206,21 @@ export async function mintOneNXWV(): Promise<string> {
 
   const feeRate       = await getFeeRate("low");
   const confirmedSats = await getConfirmedBalance(wallet.address);
-  const utxos         = await getUTXOs(wallet.address);
-  if (utxos.length === 0) throw new Error("Service wallet has no UTXOs");
+
+  // ── Rune Guard: ONLY use non-Rune-bearing UTXOs as mint inputs ────────────
+  // A Mint Runestone creates a NEW Rune output but does NOT include transfer
+  // instructions for any existing Rune balances in the inputs. If Rune-bearing
+  // UTXOs are included as inputs, those Rune balances are burned by the protocol.
+  // This was the root cause of the NEXUS•WAVELENGTH burn incident.
+  const { utxos: safeUtxos, blockedCount } = await getSafeUTXOs(wallet.address);
+  if (blockedCount > 0) {
+    console.warn(`[Rune Mint] 🛡️ Rune Guard blocked ${blockedCount} Rune-bearing UTXO(s) from mint inputs`);
+  }
+  const utxos = safeUtxos;
+  if (utxos.length === 0) throw new Error("Service wallet has no safe UTXOs for minting (Rune-bearing UTXOs are protected)");
 
   // Tx layout:
-  //   in:  all UTXOs
+  //   in:  safe (non-Rune-bearing) UTXOs only
   //   out0: OP_RETURN Mint Runestone (~13 vB)
   //   out1: service wallet 546 sats — receives minted Runes
   //   out2: service wallet BTC change

@@ -6,7 +6,7 @@
 
 import * as bitcoin from "bitcoinjs-lib";
 import * as tinysecp from "tiny-secp256k1";
-import { getServiceWallet, getUTXOs, getFeeRate } from "./btc-inscription-engine.js";
+import { getServiceWallet, getUTXOs, getSafeUTXOs, getFeeRate } from "./btc-inscription-engine.js";
 import { ECPairFactory } from "ecpair";
 
 bitcoin.initEccLib(tinysecp);
@@ -36,13 +36,16 @@ export async function sendBtcOnChain(destAddress: string, amountSats: number): P
   if (!wallet) throw new Error("BTC service wallet not configured (BTC_INSCRIPTION_WALLET_WIF missing)");
 
   const feeRate = await getFeeRate("medium");
-  const utxos   = await getUTXOs(wallet.address);
-  const spendable = utxos.filter(u => u.status.confirmed).length > 0
-    ? utxos.filter(u => u.status.confirmed)
-    : utxos;
+  const { utxos: safeUtxos, blockedCount } = await getSafeUTXOs(wallet.address);
+  if (blockedCount > 0) {
+    console.warn(`[BTC Withdrawal] 🛡️ Rune Guard blocked ${blockedCount} UTXO(s) — they will NOT be used as inputs`);
+  }
+  const spendable = safeUtxos.filter(u => u.status.confirmed).length > 0
+    ? safeUtxos.filter(u => u.status.confirmed)
+    : safeUtxos;
 
   if (spendable.length === 0)
-    throw new Error(`Service wallet ${wallet.address} has no UTXOs — fund the wallet first`);
+    throw new Error(`Service wallet ${wallet.address} has no spendable UTXOs — fund the wallet first. (Rune-bearing UTXOs are protected and cannot be used.)`);
 
   // Estimate vbytes: 1 P2TR input (57.5 vbytes) + 2 outputs (P2TR + any format ~31-43 vbytes each) + overhead 10
   const estVbytes = 10 + spendable.length * 58 + 2 * 43;

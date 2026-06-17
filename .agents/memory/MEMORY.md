@@ -10,5 +10,6 @@
 - [Goal hierarchy](goal-hierarchy.md) — NexusOS/NXT is the vehicle (medium-term); photonic hardware ~2032 is the destination (long-term)
 - [Blink Lightning integration](blink-lightning.md) — BTC wallet must be fetched via API (not connection string); invoice check uses lnInvoicePaymentStatus + balance sync for gap recovery
 - [Runes protocol Runestone encoding](runes-runestone-encoding.md) — correct tag numbers, transfer/mint integer sequences, CPFP mint chaining
+- [Rune Guard — safe UTXO selection](rune-guard.md) — getSafeUTXOs() must be used in all tx builders; Mint Runestone burns unprotected Rune inputs
 - [Founders lineage](founders-lineage.md) — Maxwell → Planck → Einstein → Tesla → QM → Shannon; every NexusOS equation traces to one of these
 - [Founder](founder.md) — Te Rata Pou, NZ Māori descent; name means "the healing post / the doctor"

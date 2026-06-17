@@ -144,6 +144,95 @@ export async function getUTXOs(address: string): Promise<UTXO[]> {
   }
 }
 
+// ── Rune Guard ────────────────────────────────────────────────────────────────
+// Queries ordinals.com to identify Rune-bearing UTXOs so they are NEVER spent
+// without an explicit Runestone transfer instruction. This prevents the NEXUS•WAVELENGTH
+// burn incident (where CPFP sweeps consumed Rune-bearing dust without a Runestone,
+// causing the protocol to permanently burn those tokens).
+
+export async function getRuneBearingUtxoIds(address: string): Promise<Set<string>> {
+  const runeIds = new Set<string>();
+  try {
+    const res = await fetch(`https://ordinals.com/address/${address}`, {
+      signal: AbortSignal.timeout(10_000),
+      headers: { Accept: "text/html" },
+    });
+    if (!res.ok) return runeIds;
+    const html = await res.text();
+
+    // Isolate the rune balances section (appears before "outputs" heading)
+    const runeSection = html.match(/rune.{0,10}balance[\s\S]*?(?=<h\d|outputs\s*\n|$)/i)?.[0] ?? "";
+    // Extract txid:vout patterns (64 hex chars + colon + 1-3 digits)
+    const matches = runeSection.matchAll(/([a-f0-9]{64}):(\d{1,3})/g);
+    for (const m of matches) runeIds.add(`${m[1]}:${m[2]}`);
+
+    if (runeIds.size > 0) {
+      console.warn(`[Rune Guard] 🛡️ ${runeIds.size} Rune-bearing UTXO(s) detected at ${address.slice(0, 22)}…`);
+      for (const id of runeIds) console.warn(`  ↳ ${id} [PROTECTED — DO NOT SPEND WITHOUT RUNESTONE]`);
+    }
+  } catch (err) {
+    // Log but do not throw — we apply the dust fallback below
+    console.warn(`[Rune Guard] ordinals.com check failed for ${address.slice(0, 22)}…: ${(err as Error).message}`);
+  }
+  return runeIds;
+}
+
+export interface SafeUtxoResult {
+  utxos:        UTXO[];
+  blockedCount: number;
+  blockedSats:  number;
+  blockedIds:   string[];
+}
+
+/**
+ * Returns only UTXOs safe to spend — Rune-bearing outputs are excluded.
+ * Two-layer protection:
+ *   1. ordinals.com Rune index check (primary)
+ *   2. Exact-546-sat dust filter (fallback when ordinals.com is unreachable)
+ *      — 546 sats is the canonical Rune dust limit; never spend it without verification.
+ */
+export async function getSafeUTXOs(address: string): Promise<SafeUtxoResult> {
+  const [all, runeIds] = await Promise.all([
+    getUTXOs(address),
+    getRuneBearingUtxoIds(address),
+  ]);
+
+  const blocked: UTXO[] = [];
+  const safe:    UTXO[] = [];
+
+  for (const u of all) {
+    const id = `${u.txid}:${u.vout}`;
+    // Primary: ordinals.com confirmed Rune UTXO
+    if (runeIds.has(id)) {
+      blocked.push(u);
+      continue;
+    }
+    // Fallback: if ordinals.com returned nothing but we have a 546-sat UTXO,
+    // treat it as potentially Rune-bearing and skip it to be safe.
+    if (runeIds.size === 0 && u.value === 546) {
+      console.warn(`[Rune Guard] ⚠️  Skipping 546-sat UTXO ${id} — may carry Rune balance (ordinals.com unreachable)`);
+      blocked.push(u);
+      continue;
+    }
+    safe.push(u);
+  }
+
+  if (blocked.length > 0) {
+    const totalSats = blocked.reduce((s, u) => s + u.value, 0);
+    console.warn(
+      `[Rune Guard] 🛡️ PROTECTED ${blocked.length} UTXO(s) — ` +
+      `${totalSats} sats withheld from spending (Rune-bearing)`
+    );
+  }
+
+  return {
+    utxos:        safe,
+    blockedCount: blocked.length,
+    blockedSats:  blocked.reduce((s, u) => s + u.value, 0),
+    blockedIds:   blocked.map(u => `${u.txid}:${u.vout}`),
+  };
+}
+
 export async function getWalletBalance(address: string): Promise<{ confirmed: number; unconfirmed: number; total: number }> {
   const utxos = await getUTXOs(address);
   const confirmed   = utxos.filter(u => u.status.confirmed).reduce((s, u) => s + u.value, 0);
@@ -264,13 +353,16 @@ export async function inscribeText(
   const postageValue = 546; // dust limit — the sat that carries the inscription
   const commitAmount = postageValue + revealFee; // commit sends enough for reveal + postage
 
-  // ── Get UTXOs from service wallet ───────────────────────────────────────
-  const utxos = await getUTXOs(wallet.address);
-  const confirmed = utxos.filter(u => u.status.confirmed);
+  // ── Get UTXOs from service wallet (Rune Guard applied) ──────────────────
+  const { utxos: safeUtxos, blockedCount } = await getSafeUTXOs(wallet.address);
+  if (blockedCount > 0) {
+    console.warn(`[BTC Inscription] 🛡️ Rune Guard blocked ${blockedCount} UTXO(s) — they will NOT be used as inputs`);
+  }
+  const confirmed = safeUtxos.filter(u => u.status.confirmed);
   // Allow unconfirmed UTXOs if no confirmed ones yet (CPFP — both TXs confirm together)
-  const spendable = confirmed.length > 0 ? confirmed : utxos;
-  if (spendable.length === 0) throw new Error(`No UTXOs on service wallet ${wallet.address}. Send BTC to this address first.`);
-  if (confirmed.length === 0) console.log(`[BTC Inscription] Using ${utxos.length} unconfirmed UTXO(s) — CPFP chain`);
+  const spendable = confirmed.length > 0 ? confirmed : safeUtxos;
+  if (spendable.length === 0) throw new Error(`No spendable UTXOs on service wallet ${wallet.address}. Send BTC to this address first. (Rune-bearing UTXOs are protected and cannot be used.)`);
+  if (confirmed.length === 0) console.log(`[BTC Inscription] Using ${safeUtxos.length} unconfirmed UTXO(s) — CPFP chain`);
 
   // Select UTXOs to cover commitAmount + commitFee
   const needed = commitAmount + commitFee;
