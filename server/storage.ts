@@ -29,7 +29,7 @@ import {
 
 const SALT_ROUNDS = 12;
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-const INITIAL_NXT_BALANCE = "500000000"; // 5 NXT (8 decimals)
+const INITIAL_NXT_BALANCE = "0"; // Founding era closed — no free NXT for new accounts
 
 export interface IStorage {
   // User operations
