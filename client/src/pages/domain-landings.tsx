@@ -645,6 +645,44 @@ agent PhysicsCalc at Ψ(211,35,H) {
           ))}
         </div>
 
+        {/* ── Developer API ── */}
+        <div className="rounded-xl border border-white/10 bg-white/3 p-5 mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-[10px] uppercase tracking-widest" style={{ color: accent }}>Developer API</span>
+            <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold"
+              style={{ background: accent + "22", color: accent }}>5,000 sats / key</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            {[
+              { endpoint: "GET /api/dev/physics/:user", desc: "Spectral channel + fee schedule" },
+              { endpoint: "GET /api/dev/wallet",        desc: "Balance + recent transactions" },
+              { endpoint: "POST /api/dev/message",      desc: "Send via Ψ channel (free)" },
+              { endpoint: "POST /api/spectral/ce",      desc: "CE-encode any string → λ" },
+            ].map(({ endpoint, desc }) => (
+              <div key={endpoint} className="rounded-lg bg-white/4 border border-white/6 p-3">
+                <div className="text-[10px] font-bold mb-0.5" style={{ color: accent }}>{endpoint}</div>
+                <div className="text-[10px] text-white/35">{desc}</div>
+              </div>
+            ))}
+          </div>
+
+          <pre className="text-[10px] text-white/60 bg-black/40 rounded-lg p-3 mb-4 leading-relaxed overflow-x-auto">{`# CE-encode a string → wavelength
+curl https://wnsp.io/api/spectral/char-to-wavelength \\
+  -H "Authorization: Bearer <api-key>" \\
+  -H "Content-Type: application/json" \\
+  -d '{"text":"hello"}'
+
+# → { "wavelength": 587.6, "band": "INTERFACE",
+#     "psiChannel": "Ψ(52,3,V)", "energy": 3.38e-19 }`}</pre>
+
+          <a href="https://wnsp.io/developer" target="_blank" rel="noreferrer"
+            className="block text-center py-2.5 rounded-lg text-sm font-bold transition-opacity hover:opacity-80"
+            style={{ background: accent + "20", color: accent, border: `1px solid ${accent}30` }}>
+            Get API Key at wnsp.io/developer →
+          </a>
+        </div>
+
         <div className="flex gap-3">
           <a href="https://wnsp.io/wavelength-lang" target="_blank" rel="noreferrer"
             className="flex-1 text-center py-3 rounded-xl font-bold text-sm"
