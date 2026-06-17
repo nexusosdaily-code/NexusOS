@@ -9975,6 +9975,9 @@ export async function registerRoutes(
   // POST /api/lightning/pay — pay a Lightning invoice (withdraw sats)
   app.post("/api/lightning/pay", authenticate, async (req: Request, res: Response) => {
     try {
+      if ((req.user as any)?.withdrawalsBlocked) {
+        return res.status(403).json({ error: "Withdrawals are temporarily suspended on your account. Please contact support." });
+      }
       const { bolt11 } = req.body;
       if (!bolt11) return res.status(400).json({ error: "bolt11 invoice required" });
 
@@ -10241,6 +10244,9 @@ export async function registerRoutes(
   // Also accepts Lightning Addresses (user@domain) — routes them through Lightning pay
   app.post("/api/lightning/withdraw-to-btc", authenticate, async (req: Request, res: Response) => {
     try {
+      if ((req.user as any)?.withdrawalsBlocked) {
+        return res.status(403).json({ error: "Withdrawals are temporarily suspended on your account. Please contact support." });
+      }
       const { amountSats, btcAddress, feeTier = "medium" } = req.body;
       if (!amountSats || typeof amountSats !== "number" || amountSats < 1)
         return res.status(400).json({ error: "Minimum withdrawal: 1 sat" });
@@ -10567,6 +10573,29 @@ export async function registerRoutes(
       const { removeWatchedWallet } = await import("./wnsp-io-liquidity");
       await removeWatchedWallet(addr);
       res.json({ ok: true, removed: addr });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/admin/block-withdrawals — toggle withdrawals_blocked for a user (Nexus / Leps only)
+  app.post("/api/admin/block-withdrawals", authenticate, async (req: Request, res: Response) => {
+    try {
+      const admin = (req as any).user!;
+      const allowed = ["nexus", "leps"];
+      if (!allowed.includes(admin.username.toLowerCase()))
+        return res.status(403).json({ error: "Admin only" });
+      const { targetUserId, blocked } = req.body;
+      if (!targetUserId || typeof blocked !== "boolean")
+        return res.status(400).json({ error: "targetUserId and blocked (boolean) required" });
+      const { db } = await import("./db");
+      const { users: usersTable } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [updated] = await db.update(usersTable)
+        .set({ withdrawalsBlocked: blocked, updatedAt: new Date() })
+        .where(eq(usersTable.id, targetUserId))
+        .returning({ id: usersTable.id, username: usersTable.username, withdrawalsBlocked: usersTable.withdrawalsBlocked });
+      if (!updated) return res.status(404).json({ error: "User not found" });
+      await logAction(req, blocked ? "withdrawals_blocked" : "withdrawals_unblocked", "admin", targetUserId, { by: admin.username });
+      return res.json({ ok: true, user: updated.username, withdrawalsBlocked: updated.withdrawalsBlocked });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 

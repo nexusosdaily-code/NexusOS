@@ -321,6 +321,24 @@ async function runStartupMigrations() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS nostr_pubkey text UNIQUE;
     `);
 
+    // 7c. Withdrawal security flag + fix corrupted balances
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS withdrawals_blocked BOOLEAN NOT NULL DEFAULT false;
+    `);
+    // Restore Dsmart's sats balance that was incorrectly zeroed by a failed withdrawal
+    await pool.query(`
+      UPDATE lightning_wallets
+      SET sats_balance = total_deposited - total_withdrawn
+      WHERE user_id = 'da62b876-4f10-4fbb-a979-f23b3032cc80'
+        AND sats_balance < (total_deposited - total_withdrawn);
+    `);
+    // Block Dsmart's withdrawals pending investigation
+    await pool.query(`
+      UPDATE users SET withdrawals_blocked = true
+      WHERE id = 'da62b876-4f10-4fbb-a979-f23b3032cc80'
+        AND withdrawals_blocked = false;
+    `);
+
     // 8. NXT Airdrop campaigns + claims
     await pool.query(`
       CREATE TABLE IF NOT EXISTS airdrop_campaigns (

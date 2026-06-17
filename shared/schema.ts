@@ -40,6 +40,8 @@ export const users = pgTable("users", {
   // ── Nostr identity ──
   nostrNpub:    text("nostr_npub"),
   nostrPubkey:  text("nostr_pubkey").unique(), // hex pubkey — primary Nostr login key
+  // ── Security flags ──
+  withdrawalsBlocked: boolean("withdrawals_blocked").notNull().default(false),
 }, (table) => ({
   usernameIdx: index("users_username_idx").on(table.username),
   emailIdx: index("users_email_idx").on(table.email),
