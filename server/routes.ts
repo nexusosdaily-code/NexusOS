@@ -25,6 +25,34 @@ import { getEtchStatus } from "./wnsp-btc-rune-etcher";
 // WebSocket clients mapped by userId
 const connectedClients = new Map<string, WebSocket>();
 
+// ── Withdrawal limits ─────────────────────────────────────────────────────────
+const WITHDRAWAL_EXEMPT_USERS = new Set(["nexus", "leps"]);
+const WITHDRAWAL_MAX_PER_TX   = 250_000;  // 250k sats per single withdrawal (~$150)
+const WITHDRAWAL_MAX_DAILY    = 500_000;  // 500k sats per 24-hour rolling window (~$300)
+
+async function checkWithdrawalLimits(userId: string, username: string, amountSats: number): Promise<string | null> {
+  if (WITHDRAWAL_EXEMPT_USERS.has(username.toLowerCase())) return null;
+  if (amountSats > WITHDRAWAL_MAX_PER_TX)
+    return `Single withdrawal limit is ${WITHDRAWAL_MAX_PER_TX.toLocaleString()} sats (≈ $${Math.round(WITHDRAWAL_MAX_PER_TX * 0.0006)}). Please withdraw in smaller amounts.`;
+  const { db } = await import("./db");
+  const { lightningTransactions } = await import("../shared/schema");
+  const { sql: _S, and: _and, eq: _eq, gte: _gte, inArray: _in } = await import("drizzle-orm");
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const rows = await db.select({ total: _S<string>`COALESCE(SUM(amount_sats), 0)` })
+    .from(lightningTransactions)
+    .where(_and(
+      _eq(lightningTransactions.userId, userId),
+      _eq(lightningTransactions.type, "withdrawal"),
+      _gte(lightningTransactions.createdAt, since),
+      _in(lightningTransactions.status, ["completed", "pending", "queued"])
+    ));
+  const dailyUsed = Number(rows[0]?.total ?? 0);
+  const remaining = Math.max(0, WITHDRAWAL_MAX_DAILY - dailyUsed);
+  if (dailyUsed + amountSats > WITHDRAWAL_MAX_DAILY)
+    return `Daily withdrawal limit is ${WITHDRAWAL_MAX_DAILY.toLocaleString()} sats. Used today: ${dailyUsed.toLocaleString()} sats. Remaining: ${remaining.toLocaleString()} sats.`;
+  return null;
+}
+
 // Call signaling message types
 interface SignalingMessage {
   type: "offer" | "answer" | "ice-candidate" | "call-initiate" | "call-accept" | "call-reject" | "call-end" | "call-busy";
@@ -9984,6 +10012,9 @@ export async function registerRoutes(
       const amountSats = await lnDecodeInvoice(bolt11);
       if (amountSats < 1) return res.status(400).json({ error: "Cannot decode invoice amount" });
 
+      const limitErrPay = await checkWithdrawalLimits(req.user!.id, req.user!.username, amountSats);
+      if (limitErrPay) return res.status(400).json({ error: limitErrPay });
+
       const lnWallet = await ensureLnWallet(req.user!.id);
       if (lnWallet.satsBalance < amountSats) {
         return res.status(400).json({ error: `Insufficient sats. Have ${lnWallet.satsBalance}, need ${amountSats}` });
@@ -10253,6 +10284,9 @@ export async function registerRoutes(
       if (!btcAddress || typeof btcAddress !== "string")
         return res.status(400).json({ error: "btcAddress required" });
       const addr = btcAddress.trim();
+
+      const limitErrBtc = await checkWithdrawalLimits(req.user!.id, req.user!.username, amountSats);
+      if (limitErrBtc) return res.status(400).json({ error: limitErrBtc });
 
       // ── Lightning Address path — delegate to LN pay flow ───────────────────
       if (addr.includes("@")) {

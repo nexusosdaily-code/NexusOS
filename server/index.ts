@@ -332,11 +332,9 @@ async function runStartupMigrations() {
       WHERE user_id = 'da62b876-4f10-4fbb-a979-f23b3032cc80'
         AND sats_balance < (total_deposited - total_withdrawn);
     `);
-    // Block Dsmart's withdrawals pending investigation
+    // Ensure all users are unblocked (withdrawals_blocked defaults false)
     await pool.query(`
-      UPDATE users SET withdrawals_blocked = true
-      WHERE id = 'da62b876-4f10-4fbb-a979-f23b3032cc80'
-        AND withdrawals_blocked = false;
+      UPDATE users SET withdrawals_blocked = false WHERE withdrawals_blocked = true;
     `);
 
     // 8. NXT Airdrop campaigns + claims
