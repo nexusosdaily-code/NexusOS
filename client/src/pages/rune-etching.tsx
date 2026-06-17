@@ -44,23 +44,39 @@ export default function RuneEtchingPage() {
     mutationFn: () => fetch("/api/btc/wnsp-btc/force-etch", { method: "POST" }).then(r => r.json()),
     onSuccess: (d) => {
       if (d.ok) {
-        toast({ title: "Etch triggered!", description: `TXID: ${d.txid}` });
+        toast({ title: "Triggered!", description: d.txid ? `TXID: ${d.txid}` : "Step started" });
       } else {
-        toast({ title: "Etch failed", description: d.error, variant: "destructive" });
+        toast({ title: "Failed", description: d.error, variant: "destructive" });
       }
       refetchEtch();
     },
     onError: () => toast({ title: "Error", description: "Could not trigger etch", variant: "destructive" }),
   });
 
+  const resetEtchMut = useMutation({
+    mutationFn: () => fetch("/api/btc/wnsp-btc/reset-etch", { method: "POST" }).then(r => r.json()),
+    onSuccess: (d) => {
+      if (d.ok) toast({ title: "Reset", description: "Etch state reset to pending" });
+      else toast({ title: "Reset failed", description: d.error, variant: "destructive" });
+      refetchEtch();
+    },
+    onError: () => toast({ title: "Error", description: "Could not reset", variant: "destructive" }),
+  });
+
   const pct = data ? ((data.mintCount / data.maxMints) * 100).toFixed(1) : "0.0";
   const isKernel = me?.authorityBand === "KERNEL";
 
   const etchStatusColor =
-    etchStatus?.status === "etched"    ? "text-green-400" :
+    etchStatus?.status === "etched"      ? "text-green-400"  :
+    etchStatus?.status === "committed"   ? "text-blue-400"   :
     etchStatus?.status === "in_progress" ? "text-yellow-400" :
-    etchStatus?.status === "error"     ? "text-red-400" :
+    etchStatus?.status === "error"       ? "text-red-400"    :
     "text-slate-400";
+
+  const commitConfs    = etchStatus?.commitConfirmations ?? 0;
+  const commitRequired = etchStatus?.commitRequired ?? 6;
+  const isCommitted    = etchStatus?.status === "committed";
+  const commitTxid     = etchStatus?.commit_txid as string | undefined;
 
   const confirmedSats   = etchStatus?.confirmed   ?? 0;
   const unconfirmedSats = etchStatus?.unconfirmed ?? 0;
@@ -92,38 +108,92 @@ export default function RuneEtchingPage() {
 
         {/* WNSP•BTC Etch Status — live panel */}
         {etchStatus?.status !== "etched" && (
-          <Card className="bg-slate-900/80 border-orange-500/30 p-4 mb-4">
+          <Card className={`bg-slate-900/80 border-${isCommitted ? "blue" : "orange"}-500/30 p-4 mb-4`}>
             <div className="flex items-center gap-2 mb-3">
-              <Rocket className="w-4 h-4 text-orange-400" />
-              <span className="font-semibold text-sm text-white">WNSP•BTC Etch Status</span>
+              <Rocket className={`w-4 h-4 ${isCommitted ? "text-blue-400" : "text-orange-400"}`} />
+              <span className="font-semibold text-sm text-white">WNSP•BTC Commit / Reveal Etch</span>
               <Badge className={`ml-auto text-[10px] border-0 ${
+                etchStatus?.status === "committed"   ? "bg-blue-500/20 text-blue-300"     :
                 etchStatus?.status === "in_progress" ? "bg-yellow-500/20 text-yellow-300" :
-                etchStatus?.status === "error"       ? "bg-red-500/20 text-red-300" :
+                etchStatus?.status === "error"       ? "bg-red-500/20 text-red-300"       :
                 "bg-slate-700 text-slate-400"
               }`}>{etchStatus?.status ?? "loading…"}</Badge>
-              <button onClick={() => refetchEtch()} className="text-slate-500 hover:text-slate-300">
+              <button onClick={() => refetchEtch()} className="text-slate-500 hover:text-slate-300 ml-1">
                 <RefreshCw className="w-3 h-3" />
               </button>
             </div>
 
-            {/* Sats progress */}
-            <div className="mb-3">
-              <div className="flex justify-between text-[11px] text-slate-400 mb-1">
-                <span>Service wallet confirmed sats</span>
-                <span className="font-mono">{confirmedSats.toLocaleString()} / {ETCH_THRESHOLD.toLocaleString()} needed</span>
+            {/* 2-step pipeline indicator */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full border ${
+                isCommitted || etchStatus?.status === "etched"
+                  ? "bg-green-500/10 border-green-500/40 text-green-300"
+                  : "bg-slate-800 border-slate-700 text-slate-400"
+              }`}>
+                <span className="font-mono">①</span> Commit TX
               </div>
-              <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${confirmedSats >= ETCH_THRESHOLD ? "bg-green-500" : "bg-orange-500"}`}
-                  style={{ width: `${Math.min(100, (confirmedSats / ETCH_THRESHOLD) * 100).toFixed(1)}%` }}
-                />
+              <ArrowRight className="w-3 h-3 text-slate-600 flex-shrink-0" />
+              <div className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full border ${
+                isCommitted
+                  ? "bg-blue-500/10 border-blue-500/40 text-blue-300 animate-pulse"
+                  : "bg-slate-800 border-slate-700 text-slate-400"
+              }`}>
+                <span className="font-mono">②</span> Wait 6 blocks
               </div>
-              {unconfirmedSats > 0 && (
-                <div className="text-[10px] text-yellow-400 mt-1">
-                  ⏳ {unconfirmedSats.toLocaleString()} sats unconfirmed — waiting for Bitcoin confirmations (~10–60 min)
-                </div>
-              )}
+              <ArrowRight className="w-3 h-3 text-slate-600 flex-shrink-0" />
+              <div className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full border bg-slate-800 border-slate-700 text-slate-400">
+                <span className="font-mono">③</span> Reveal + Etch
+              </div>
             </div>
+
+            {/* Commit TX confirmation progress */}
+            {isCommitted && commitTxid && (
+              <div className="mb-3 bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
+                <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+                  <span className="text-blue-300 font-medium">Commit TX confirming…</span>
+                  <span className="font-mono text-blue-300">{commitConfs} / {commitRequired} blocks</span>
+                </div>
+                <div className="h-2 bg-slate-800 rounded-full overflow-hidden mb-2">
+                  <div
+                    className="h-full bg-blue-500 rounded-full transition-all"
+                    style={{ width: `${Math.min(100, (commitConfs / commitRequired) * 100)}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-slate-500 font-mono">{commitTxid.slice(0, 20)}…</span>
+                  <a href={`https://mempool.space/tx/${commitTxid}`} target="_blank" rel="noreferrer"
+                    className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5">
+                    mempool.space <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                </div>
+                {commitConfs < commitRequired && (
+                  <div className="text-[10px] text-blue-400/70 mt-1.5">
+                    ⏳ {commitRequired - commitConfs} more block(s) needed — reveal etch fires automatically
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Sats balance (only show when pending) */}
+            {!isCommitted && (
+              <div className="mb-3">
+                <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+                  <span>Service wallet confirmed sats</span>
+                  <span className="font-mono">{confirmedSats.toLocaleString()} / {ETCH_THRESHOLD.toLocaleString()} needed</span>
+                </div>
+                <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${confirmedSats >= ETCH_THRESHOLD ? "bg-green-500" : "bg-orange-500"}`}
+                    style={{ width: `${Math.min(100, (confirmedSats / ETCH_THRESHOLD) * 100).toFixed(1)}%` }}
+                  />
+                </div>
+                {unconfirmedSats > 0 && (
+                  <div className="text-[10px] text-yellow-400 mt-1">
+                    ⏳ {unconfirmedSats.toLocaleString()} sats unconfirmed — waiting for Bitcoin confirmations
+                  </div>
+                )}
+              </div>
+            )}
 
             {etchStatus?.error_msg && (
               <div className="text-[10px] text-red-400 bg-red-500/10 rounded p-2 mb-3 font-mono">
@@ -132,15 +202,30 @@ export default function RuneEtchingPage() {
             )}
 
             {isKernel && (
-              <Button
-                size="sm"
-                className="bg-orange-600 hover:bg-orange-500 text-white text-xs w-full"
-                onClick={() => forceEtchMut.mutate()}
-                disabled={forceEtchMut.isPending || etchStatus?.status === "in_progress"}
-              >
-                <Rocket className="w-3 h-3 mr-1" />
-                {forceEtchMut.isPending ? "Etching…" : "Force Etch WNSP•BTC Now (KERNEL only)"}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="bg-orange-600 hover:bg-orange-500 text-white text-xs flex-1"
+                  onClick={() => forceEtchMut.mutate()}
+                  disabled={forceEtchMut.isPending || etchStatus?.status === "in_progress" ||
+                    (isCommitted && commitConfs < commitRequired)}
+                >
+                  <Rocket className="w-3 h-3 mr-1" />
+                  {forceEtchMut.isPending ? "Working…" :
+                   isCommitted ? `Force Reveal (${commitConfs}/${commitRequired} confs)` :
+                   "Force Commit TX (KERNEL)"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-slate-700 text-slate-400 hover:text-red-300 hover:border-red-500/50 text-xs"
+                  onClick={() => resetEtchMut.mutate()}
+                  disabled={resetEtchMut.isPending}
+                  title="Reset etch state to pending"
+                >
+                  Reset
+                </Button>
+              </div>
             )}
           </Card>
         )}

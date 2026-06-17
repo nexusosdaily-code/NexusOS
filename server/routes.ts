@@ -11993,6 +11993,19 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // POST /api/btc/wnsp-btc/reset-etch — admin-only: reset stale "etched" state to "pending"
+  app.post("/api/btc/wnsp-btc/reset-etch", authenticate, async (req: Request, res: Response) => {
+    try {
+      const user = (req as any).user;
+      if (!user || user.authorityBand !== "KERNEL") {
+        return res.status(403).json({ error: "KERNEL authority required" });
+      }
+      const { resetEtchState } = await import("./wnsp-btc-rune-etcher");
+      await resetEtchState();
+      res.json({ ok: true, message: "Etch state reset to pending" });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // GET /api/btc/wnsp-btc/etch-status — current etch state (public)
   app.get("/api/btc/wnsp-btc/etch-status", async (_req: Request, res: Response) => {
     try {
