@@ -13,7 +13,7 @@ const note =
   `   Mint at: https://wnsp.io/wsats\n\n` +
   `🔷 wSATS / NXWV Liquidity Pool\n` +
   `   New AMM pair: wSATS ↔ NEXUS•WAVELENGTH\n` +
-  `   1 NXWV = 100 sats · 0.20% trading fee → NXT yield for LPs\n` +
+  `   1 sat = 1,000,000 NXWV · 0.20% trading fee → NXT yield for LPs\n` +
   `   Bootstrap liquidity: https://wnsp.io/lp-pools\n\n` +
   `🔷 Portfolio holdings disclosure\n` +
   `   NXWV holdings card — current value, cost basis, gain/loss, staking yield\n` +

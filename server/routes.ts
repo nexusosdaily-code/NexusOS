@@ -11276,17 +11276,18 @@ export async function registerRoutes(
       const { nxwvGoal } = req.body;
 
       const goal = parseInt(String(nxwvGoal));
-      if (isNaN(goal) || goal < 100)
-        return res.status(400).json({ error: "Minimum pipeline goal is 100 NXWV" });
-      if (goal > 100_000)
-        return res.status(400).json({ error: "Maximum pipeline goal is 100,000 NXWV per run" });
+      if (isNaN(goal) || goal < 1_000_000)
+        return res.status(400).json({ error: "Minimum pipeline goal is 1,000,000 NXWV (= 1 sat)" });
+      if (goal > 21_000_000_000_000)
+        return res.status(400).json({ error: "Maximum pipeline goal is 21,000,000,000,000 NXWV per run" });
 
-      const SATS_PER_NXWV = 100;
+      // 1 sat = 1,000,000 NXWV → total 21T supply = 21M sats market cap
+      const NXWV_PER_SAT  = 1_000_000;
       const SATS_PER_NXT  = 1000;
       const PIPELINE_FEE  = 0.01; // 1% — goes to Orbital Treasury
 
-      const satsToCredit = goal * SATS_PER_NXWV;           // exact sats user gets
-      const nxtBase      = goal / 10;                       // NXT that converts to sats
+      const satsToCredit = Math.ceil(goal / NXWV_PER_SAT);      // sats user gets
+      const nxtBase      = satsToCredit / SATS_PER_NXT;          // NXT that converts to sats
       const nxtFee       = parseFloat((nxtBase * PIPELINE_FEE).toFixed(8)); // 1% fee
       const nxtTotal     = parseFloat((nxtBase + nxtFee).toFixed(8));        // total deducted
 
@@ -11480,17 +11481,18 @@ export async function registerRoutes(
       const user = (req as any).user;
       const { runeAmount, btcTxid, btcAddress } = req.body;
 
-      const RUNE_TO_SATS_RATE = 100; // 100 sats per 1 NEXUS•WAVELENGTH (launch rate)
+      // 1 sat = 1,000,000 NXWV → total 21T supply = 21M sats market cap
+      const NXWV_PER_SAT = 1_000_000;
 
       const runes = parseInt(String(runeAmount));
-      if (isNaN(runes) || runes < 100)
-        return res.status(400).json({ error: "Minimum 100 NEXUS•WAVELENGTH" });
-      if (runes > 100_000)
-        return res.status(400).json({ error: "Maximum 100,000 NEXUS•WAVELENGTH per swap" });
+      if (isNaN(runes) || runes < 1_000_000)
+        return res.status(400).json({ error: "Minimum 1,000,000 NEXUS•WAVELENGTH (= 1 sat)" });
+      if (runes > 21_000_000_000_000)
+        return res.status(400).json({ error: "Maximum 21,000,000,000,000 NEXUS•WAVELENGTH per swap" });
       if (!btcTxid || String(btcTxid).length < 30)
         return res.status(400).json({ error: "Valid Bitcoin transaction ID required" });
 
-      const satsToCredit = BigInt(runes) * BigInt(RUNE_TO_SATS_RATE);
+      const satsToCredit = BigInt(Math.floor(runes / NXWV_PER_SAT));
 
       // Ensure lightning_wallet exists, then credit sats
       const { sql: sqlTag } = await import("drizzle-orm");
@@ -11536,7 +11538,7 @@ export async function registerRoutes(
           `User: ${user.username}\n` +
           `Runes wrapped: <b>${runes.toLocaleString()} NEXUS•WAVELENGTH</b>\n` +
           `Sats credited: <b>${satsToCredit.toLocaleString()} sats</b>\n` +
-          `Rate: ${RUNE_TO_SATS_RATE} sats/NXWV\n` +
+          `Rate: 1 sat = ${NXWV_PER_SAT.toLocaleString()} NXWV\n` +
           `BTC Txid: <code>${btcTxid}</code>\n\n` +
           `<a href="https://mempool.space/tx/${btcTxid}">Verify on mempool.space</a>`
         );
@@ -11549,7 +11551,7 @@ export async function registerRoutes(
           content: [
             `⚡ NEXUS•WAVELENGTH Rune UTXO wrapped into sats on NexusOS!`,
             ``,
-            `${runes.toLocaleString()} NXWV → ${satsToCredit.toLocaleString()} sats (${RUNE_TO_SATS_RATE} sats/NXWV launch rate)`,
+            `${runes.toLocaleString()} NXWV → ${satsToCredit.toLocaleString()} sats (1 sat = 1,000,000 NXWV)`,
             ``,
             `🔗 BTC Txid: ${btcTxid}`,
             ``,
@@ -11571,8 +11573,8 @@ export async function registerRoutes(
         runeAmount:   runes,
         satsCredited: satsToCredit.toString(),
         newSatsBal:   newSatsBal.toString(),
-        rate:         RUNE_TO_SATS_RATE,
-        message: `${satsToCredit.toLocaleString()} sats credited to your Lightning wallet! (${runes.toLocaleString()} NXWV × ${RUNE_TO_SATS_RATE} sats/NXWV)`,
+        rate:         NXWV_PER_SAT,
+        message: `${satsToCredit.toLocaleString()} sats credited to your Lightning wallet! (${runes.toLocaleString()} NXWV ÷ 1,000,000)`,
       });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -11583,17 +11585,18 @@ export async function registerRoutes(
       const user = (req as any).user;
       const { runeAmount, btcAddress } = req.body;
 
-      const SATS_PER_NXWV = 100; // 100 sats per 1 NEXUS•WAVELENGTH
+      // 1 sat = 1,000,000 NXWV → total 21T supply = 21M sats market cap
+      const NXWV_PER_SAT = 1_000_000;
 
       const runes = parseInt(String(runeAmount));
-      if (isNaN(runes) || runes < 100)
-        return res.status(400).json({ error: "Minimum 100 NEXUS•WAVELENGTH" });
-      if (runes > 100_000)
-        return res.status(400).json({ error: "Maximum 100,000 NEXUS•WAVELENGTH per swap" });
+      if (isNaN(runes) || runes < 1_000_000)
+        return res.status(400).json({ error: "Minimum 1,000,000 NEXUS•WAVELENGTH (= 1 sat)" });
+      if (runes > 21_000_000_000_000)
+        return res.status(400).json({ error: "Maximum 21,000,000,000,000 NEXUS•WAVELENGTH per swap" });
       if (!btcAddress || String(btcAddress).length < 10)
         return res.status(400).json({ error: "Bitcoin address required for NXWV delivery" });
 
-      const satsCost = BigInt(runes) * BigInt(SATS_PER_NXWV);
+      const satsCost = BigInt(Math.ceil(runes / NXWV_PER_SAT));
 
       const { sql: sqlTag } = await import("drizzle-orm");
       const { db } = await import("./db");
@@ -11634,7 +11637,7 @@ export async function registerRoutes(
         btcAddress:  btcAddress,
         btcTxid:     null,
         status:      "queued",
-        rate:        String(SATS_PER_NXWV),
+        rate:        String(NXWV_PER_SAT),
         note:        `${satsCost.toString()} sats spent → ${runes} NEXUS•WAVELENGTH queued for delivery to ${btcAddress}`,
         completedAt: null,
       }).returning();
@@ -11647,7 +11650,7 @@ export async function registerRoutes(
           `User: ${user.username}\n` +
           `Sats spent: <b>${satsCost.toLocaleString()} sats</b>\n` +
           `NXWV queued: <b>${runes.toLocaleString()} NEXUS•WAVELENGTH</b>\n` +
-          `Rate: ${SATS_PER_NXWV} sats/NXWV\n` +
+          `Rate: 1 sat = 1,000,000 NXWV\n` +
           `Deliver to: <code>${btcAddress}</code>\n` +
           `Swap ID: #${row.id}`
         );
@@ -11663,7 +11666,7 @@ export async function registerRoutes(
             `${satsCost.toLocaleString()} sats → ${runes.toLocaleString()} NEXUS•WAVELENGTH Runes queued for Bitcoin delivery`,
             ``,
             `The Pipeline: Buy NXT → Convert to Sats → Wrap NXWV on Bitcoin`,
-            `1 NXT = 1,000 sats = 10 NXWV`,
+            `1 NXT = 1,000 sats = 1,000,000,000 NXWV`,
             ``,
             `Start your pipeline at wnsp.io/rune-swap`,
             ``,
@@ -11680,7 +11683,7 @@ export async function registerRoutes(
         runeAmount:  runes,
         satsCost:    satsCost.toString(),
         newSatsBal:  newSatsBal.toString(),
-        rate:        SATS_PER_NXWV,
+        rate:        NXWV_PER_SAT,
         message: `${runes.toLocaleString()} NXWV queued for delivery to ${btcAddress}! (${satsCost.toLocaleString()} sats deducted)`,
       });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -13698,7 +13701,7 @@ export async function registerRoutes(
       const mints = await db.select().from(runeMints)
         .where(eq(runeMints.userId, req.user!.id));
       const SATS_PER_NXT = 1_000;
-      const SATS_PER_NXWV_MINT = 100; // current mint rate: 100 sats = 1 NXWV
+      const NXWV_PER_SAT_MINT = 1_000_000; // 1 sat = 1,000,000 NXWV — 21T supply = 21M sats
 
       // Aggregate fulfilled mint orders
       const mintHoldings = mints
@@ -13716,7 +13719,7 @@ export async function registerRoutes(
         .filter(s => s.direction === "nxt_to_rune" && ["queued", "delivered", "completed"].includes(s.status))
         .reduce((a, s) => ({
           nxwv:     a.nxwv + s.runeAmount,
-          satsCost: a.satsCost + s.runeAmount * SATS_PER_NXWV_MINT,
+          satsCost: a.satsCost + Math.ceil(s.runeAmount / NXWV_PER_SAT_MINT),
           firstAt:  a.firstAt ? (new Date(s.createdAt) < a.firstAt ? new Date(s.createdAt) : a.firstAt) : new Date(s.createdAt),
         }), { nxwv: 0, satsCost: 0, firstAt: null as Date | null });
 
@@ -13742,8 +13745,8 @@ export async function registerRoutes(
         }
       } catch { /* use default */ }
 
-      // NXWV current market value at 100 sats/NXWV
-      const nxwvCurrentSats = totalNxwv * SATS_PER_NXWV_MINT;
+      // NXWV current market value at 1 sat = 1,000,000 NXWV
+      const nxwvCurrentSats = Math.floor(totalNxwv / NXWV_PER_SAT_MINT);
       const nxwvCostUsd     = totalSatsCost / 100_000_000 * btcUsd;
       const nxwvCurrentUsd  = nxwvCurrentSats / 100_000_000 * btcUsd;
       const nxwvGainSats    = nxwvCurrentSats - totalSatsCost;
@@ -13774,7 +13777,7 @@ export async function registerRoutes(
           yieldEarned:    nxwvYieldEarned,
           yieldClaimed:   nxwvYieldClaimed,
           yieldPending:   nxwvYieldEarned - nxwvYieldClaimed,
-          satsPerNxwv:    SATS_PER_NXWV_MINT,
+          nxwvPerSat:     NXWV_PER_SAT_MINT,
           firstAcquired:  firstAcquired?.toISOString() ?? null,
           stakeCount:     activeRuneStakes.length,
         },

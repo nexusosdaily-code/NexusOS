@@ -12,7 +12,7 @@ import {
 
 const SERVICE_WALLET = "bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u3qce6p6m";
 const RUNE_NAME = "NEXUS•WAVELENGTH";
-const RUNE_TO_SATS_RATE = 100; // sats per NXWV
+const NXWV_PER_SAT = 1_000_000; // 1 sat = 1,000,000 NXWV → 21T supply = 21M sats
 const SATS_PER_NXT = 1000;     // 1 NXT = 1,000 sats
 
 type Dir = "rune_to_nxt" | "nxt_to_rune" | "rune_to_sats" | "sats_to_rune";
@@ -67,13 +67,12 @@ The Triple Value Stack:
 The NexusOS Pipeline — No BTC wallet needed to start:
 1️⃣ Buy NXT
 2️⃣ Convert NXT → Sats (1 NXT = 1,000 sats)
-3️⃣ Wrap Sats → NXWV Runes on Bitcoin (100 sats = 1 NXWV)
+3️⃣ Wrap Sats → NXWV Runes on Bitcoin (1 sat = 1,000,000 NXWV)
 
-1 NXT = 10 NXWV on Bitcoin mainnet at launch rates
+1 NXT = 1,000,000,000 NXWV on Bitcoin mainnet
 
-Floor today: 100 sats ≈ $0.06/NXWV
-Floor @ $100k BTC: 100 sats ≈ $0.10/NXWV
-Floor @ $200k BTC: 100 sats ≈ $0.20/NXWV
+Total supply 21T NXWV = 21M sats market cap ceiling
+Floor today: 1 sat = 1,000,000 NXWV ≈ $0.00010/M NXWV @ $100k BTC
 + Rune market premium on top
 
 Start the pipeline 👇
@@ -103,8 +102,8 @@ export default function RuneSwapPage() {
 
   const runes    = parseInt(runeAmt) || 0;
   const nxtVal   = runes * (rate?.rate ?? 1);
-  const satsVal  = runes * RUNE_TO_SATS_RATE;   // NXWV → Sats output
-  const satsCost = runes * RUNE_TO_SATS_RATE;   // Sats → NXWV input cost
+  const satsVal  = Math.floor(runes / NXWV_PER_SAT);   // NXWV → Sats output
+  const satsCost = Math.ceil(runes / NXWV_PER_SAT);    // Sats → NXWV input cost
   const nxtBal   = parseFloat(wallet?.wallet?.balance ?? "0");
   const satsBal  = Number(lightning?.satsBalance ?? 0);
 
@@ -208,7 +207,7 @@ export default function RuneSwapPage() {
             <div className="rounded-xl border border-green-500/30 bg-green-950/30 px-4 py-3 text-center min-w-[140px] shrink-0">
               <p className="text-[10px] text-green-300/60 uppercase tracking-widest mb-1">Step 3</p>
               <p className="text-sm font-bold text-green-300">Sats → NXWV</p>
-              <p className="text-[10px] text-white/30 mt-0.5 font-mono">100 sats = 1 NXWV</p>
+              <p className="text-[10px] text-white/30 mt-0.5 font-mono">1 sat = 1,000,000 NXWV</p>
             </div>
             <ArrowRight className="w-4 h-4 text-white/20 shrink-0" />
             {/* Result */}
@@ -229,7 +228,7 @@ export default function RuneSwapPage() {
               <span className="text-white/30 mx-2">=</span>
               <span className="text-yellow-300">1,000 sats</span>
               <span className="text-white/30 mx-2">=</span>
-              <span className="text-green-300">10 NXWV</span>
+              <span className="text-green-300">1,000,000,000 NXWV</span>
               <span className="text-white/20 ml-2 text-xs">on Bitcoin</span>
             </div>
           </div>
@@ -245,25 +244,25 @@ export default function RuneSwapPage() {
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="rounded-lg bg-black/30 p-2">
                 <p className="text-white/30 mb-1">BTC @ $60k</p>
-                <p className="font-mono text-white font-semibold">100 sats</p>
-                <p className="text-green-400 font-mono">≈ $0.06</p>
-                <p className="text-white/20 text-[10px] mt-0.5">per NXWV</p>
+                <p className="font-mono text-white font-semibold">1 sat</p>
+                <p className="text-green-400 font-mono">= 1M NXWV</p>
+                <p className="text-white/20 text-[10px] mt-0.5">≈ $0.00006/M</p>
               </div>
               <div className="rounded-lg bg-black/30 p-2 border border-yellow-500/20">
                 <p className="text-white/30 mb-1">BTC @ $100k</p>
-                <p className="font-mono text-white font-semibold">100 sats</p>
-                <p className="text-yellow-400 font-mono">≈ $0.10</p>
-                <p className="text-white/20 text-[10px] mt-0.5">per NXWV</p>
+                <p className="font-mono text-white font-semibold">1 sat</p>
+                <p className="text-yellow-400 font-mono">= 1M NXWV</p>
+                <p className="text-white/20 text-[10px] mt-0.5">≈ $0.00010/M</p>
               </div>
               <div className="rounded-lg bg-black/30 p-2 border border-orange-500/20">
                 <p className="text-white/30 mb-1">BTC @ $200k</p>
-                <p className="font-mono text-white font-semibold">100 sats</p>
-                <p className="text-orange-400 font-mono">≈ $0.20</p>
-                <p className="text-white/20 text-[10px] mt-0.5">per NXWV</p>
+                <p className="font-mono text-white font-semibold">1 sat</p>
+                <p className="text-orange-400 font-mono">= 1M NXWV</p>
+                <p className="text-white/20 text-[10px] mt-0.5">≈ $0.00020/M</p>
               </div>
             </div>
             <p className="text-[11px] text-white/25 text-center">
-              Floor price in sats stays 100 · USD value rises with every BTC cycle · Rune scarcity compounds on top
+              1 sat = 1,000,000 NXWV always · USD value rises with every BTC cycle · Rune scarcity compounds on top
             </p>
           </div>
 
@@ -351,9 +350,9 @@ export default function RuneSwapPage() {
             <p className="text-[10px] text-white/20 mt-0.5">Physics parity</p>
           </div>
           <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-3 text-center">
-            <p className="text-[11px] text-white/30 mb-1">Wrap rate (launch)</p>
-            <p className="font-mono text-sm"><span className="text-yellow-300 font-bold">1 NXWV</span> <span className="text-white/30">=</span> <span className="text-green-300 font-bold">100 sats</span></p>
-            <p className="text-[10px] text-white/20 mt-0.5">≈ $0.10 @ $100k BTC</p>
+            <p className="text-[11px] text-white/30 mb-1">Wrap rate</p>
+            <p className="font-mono text-sm"><span className="text-green-300 font-bold">1 sat</span> <span className="text-white/30">=</span> <span className="text-yellow-300 font-bold">1,000,000 NXWV</span></p>
+            <p className="text-[10px] text-white/20 mt-0.5">21T supply = 21M sats cap</p>
           </div>
         </div>
 
@@ -391,16 +390,16 @@ export default function RuneSwapPage() {
                 type="number"
                 value={runeAmt}
                 onChange={e => setRuneAmt(e.target.value)}
-                min={100} step={100}
+                min={1_000_000} step={1_000_000}
                 data-testid="input-rune-amount"
                 className="bg-black/30 border-white/10 text-white font-mono pr-20"
-                placeholder="1000"
+                placeholder="1000000"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-purple-300 font-mono">NXWV</span>
             </div>
             <p className="text-xs text-white/30 mt-1">
               {dir === "rune_to_sats"
-                ? `= ${satsVal.toLocaleString()} sats (${RUNE_TO_SATS_RATE} sats/NXWV launch rate)`
+                ? `= ${satsVal.toLocaleString()} sats (1 sat = 1,000,000 NXWV)`
                 : dir === "sats_to_rune"
                 ? `= ${satsCost.toLocaleString()} sats cost from your Lightning wallet`
                 : `= ${nxtVal.toLocaleString()} NXT`}
@@ -647,11 +646,11 @@ export default function RuneSwapPage() {
               <p className="text-yellow-300 font-semibold mb-1">⚡ NXWV → Sats</p>
               <p>1. Send NXWV UTXO to service wallet</p>
               <p>2. Paste BTC txid</p>
-              <p>3. Sats credited to Lightning wallet (100 sats/NXWV)</p>
+              <p>3. Sats credited to Lightning wallet (1 sat = 1,000,000 NXWV)</p>
             </div>
           </div>
           <p className="text-[11px] text-white/20">
-            NXT is never destroyed — always redirected to Orbital Treasury · Pipeline: 1 NXT = 10 NXWV · Rate: 100 sats/NXWV (launch)
+            NXT is never destroyed — always redirected to Orbital Treasury · Pipeline: 1 NXT = 1,000,000,000 NXWV · Rate: 1 sat = 1,000,000 NXWV
           </p>
         </div>
 
