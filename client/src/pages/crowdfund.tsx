@@ -695,8 +695,28 @@ export default function CrowdfundPage() {
         </div>
       </nav>
 
+      {/* ── GEYSER LIVE BANNER ── */}
+      <section className="pt-24 pb-0 px-4 max-w-3xl mx-auto">
+        <a href="https://geyser.fund/project/nexusos" target="_blank" rel="noreferrer"
+          data-testid="banner-geyser-live"
+          className="flex items-center gap-4 rounded-2xl border border-amber-500/40 bg-amber-500/6 p-5 mb-4 hover:border-amber-500/70 transition-all group">
+          <span className="text-3xl">🌊</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[9px] font-bold uppercase tracking-widest bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">Live on Geyser</span>
+              <span className="text-[9px] text-white/20">Bitcoin Lightning · 5% platform fee · 0.2% Lightning routing</span>
+            </div>
+            <div className="text-sm font-bold text-white">NexusOS — The First OS Written in the Language of Light</div>
+            <div className="text-[11px] text-white/40 mt-0.5">Fund the bridge from silicon to photonics. Sats accepted. No account needed to contribute.</div>
+          </div>
+          <div className="flex items-center gap-1 text-amber-400 text-xs font-bold shrink-0 group-hover:translate-x-1 transition-transform">
+            Fund → <ExternalLink size={11} />
+          </div>
+        </a>
+      </section>
+
       {/* ── PLATFORM HUB ── */}
-      <section className="pt-24 pb-6 px-4 max-w-3xl mx-auto" id="platform-hub">
+      <section className="pt-4 pb-6 px-4 max-w-3xl mx-auto" id="platform-hub">
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/5 text-amber-400 text-[10px] font-bold uppercase tracking-widest mb-3">
             <Rss size={10} /> Crowdfund Hub — All Platforms
@@ -709,7 +729,7 @@ export default function CrowdfundPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
             { icon: "⚡", name: "Nostr",      status: "live",    desc: "Zap Goals + auto-promo",        url: "https://primal.net/p/npub1pk8wh66aqhxkzl3n0p7q78hzz4f9r5j4snqj7skck2p7dkxmwj2s9pnnkd" },
-            { icon: "🌊", name: "Geyser",     status: "setup",   desc: "Bitcoin Lightning crowdfund",   url: "https://geyser.fund/create" },
+            { icon: "🌊", name: "Geyser",     status: "live",    desc: "Bitcoin Lightning crowdfund",   url: "https://geyser.fund/project/nexusos" },
             { icon: "✈️", name: "Telegram",   status: "live",    desc: "Auto-broadcast channel",        url: "https://t.me/troglodytememe" },
             { icon: "𝕏",  name: "Twitter/X",  status: "live",    desc: "Share + community threads",     url: "https://x.com/wnsptech" },
             { icon: "🚀", name: "Indiegogo",  status: "setup",   desc: "Fiat donations bridge",         url: "https://www.indiegogo.com/admin/creator/wnsptech/projects/create" },
@@ -951,11 +971,11 @@ export default function CrowdfundPage() {
               {showGeyser ? "Hide" : "Show content"}
             </button>
           </div>
-          <p className="text-[11px] text-white/40 mb-3">Bitcoin Lightning crowdfund — no platform fees beyond Lightning routing. Create your project at <a href="https://geyser.fund/create" target="_blank" rel="noreferrer" className="text-amber-400 hover:underline">geyser.fund/create</a> and paste the content below.</p>
-          <a href="https://geyser.fund/create" target="_blank" rel="noreferrer"
+          <p className="text-[11px] text-white/40 mb-3">Bitcoin Lightning crowdfund — 5% platform fee + 0.2% Lightning routing. No fiat processing fees when paying with sats.</p>
+          <a href="https://geyser.fund/project/nexusos" target="_blank" rel="noreferrer"
             className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs mb-3"
-            data-testid="link-geyser-create">
-            <ExternalLink size={12} /> Create Geyser Campaign
+            data-testid="link-geyser-campaign">
+            <ExternalLink size={12} /> Back NexusOS on Geyser →
           </a>
           {showGeyser && geyser && (
             <div className="space-y-3">

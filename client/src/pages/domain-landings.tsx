@@ -752,6 +752,20 @@ curl https://wnsp.io/api/spectral/char-to-wavelength \\
           </a>
         </div>
 
+        {/* ── Geyser Campaign CTA ── */}
+        <a href="https://geyser.fund/project/nexusos" target="_blank" rel="noreferrer"
+          data-testid="link-geyser-campaign-wls"
+          className="flex items-center gap-3 rounded-xl border p-4 mb-4 hover:opacity-90 transition-opacity"
+          style={{ borderColor: "#f59e0b44", background: "#f59e0b08" }}>
+          <span className="text-2xl">🌊</span>
+          <div className="flex-1">
+            <div className="text-[9px] font-bold uppercase tracking-widest mb-0.5" style={{ color: "#f59e0b" }}>Fund the hardware</div>
+            <div className="text-xs font-bold text-white">Back NexusOS on Geyser — Bitcoin Lightning</div>
+            <div className="text-[10px] text-white/30 mt-0.5">The software speaks light. Fund the chip that runs it.</div>
+          </div>
+          <span className="text-xs font-bold" style={{ color: "#f59e0b" }}>Fund →</span>
+        </a>
+
         <div className="flex gap-3">
           <a href="https://wnsp.io/wavelength-lang" target="_blank" rel="noreferrer"
             className="flex-1 text-center py-3 rounded-xl font-bold text-sm"
