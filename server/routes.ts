@@ -9812,7 +9812,10 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  // POST /api/lightning/sync-blink-balance — read actual Blink wallet balance and credit any unaccounted sats
+  // POST /api/lightning/sync-blink-balance — credit any NEW BTC that arrived in Blink since last sync
+  // BUG FIX: compare blinkSats against totalDeposited (not satsBalance).
+  // satsBalance drops when user swaps sats→NXT, which used to create a false gap and
+  // re-credit the same Blink balance every time. totalDeposited only rises on real deposits.
   app.post("/api/lightning/sync-blink-balance", authenticate, async (req: Request, res: Response) => {
     try {
       const provider = detectLnProvider();
@@ -9820,34 +9823,48 @@ export async function registerRoutes(
 
       const { sats: blinkSats } = await lnGetBalance();
       const lnWallet = await ensureLnWallet(req.user!.id);
-      const stored = lnWallet.satsBalance;
-      const gap = blinkSats - stored;
 
-      if (gap <= 0) {
-        return res.json({ synced: false, blinkSats, storedSats: stored, gap: 0, message: "NexusOS balance matches Blink — no adjustment needed" });
+      // Only credit if Blink wallet has received MORE BTC than we have ever deposited.
+      // This prevents phantom re-credits when the user swaps sats→NXT (which lowers
+      // satsBalance but does NOT mean new BTC arrived).
+      const alreadyDeposited = lnWallet.totalDeposited;
+      const newBtc = blinkSats - alreadyDeposited;
+
+      if (newBtc <= 0) {
+        return res.json({
+          synced: false,
+          blinkSats,
+          totalDeposited: alreadyDeposited,
+          newBtc: 0,
+          message: "No new BTC detected in Blink — no adjustment needed",
+        });
       }
 
-      // Credit the gap as an external deposit
+      // Credit only the genuinely new BTC
       const { db } = await import("./db");
       const { lightningWallets, lightningTransactions } = await import("../shared/schema");
       const { eq } = await import("drizzle-orm");
 
       await db.update(lightningWallets)
-        .set({ satsBalance: stored + gap, totalDeposited: lnWallet.totalDeposited + gap, updatedAt: new Date() })
+        .set({
+          satsBalance:    lnWallet.satsBalance + newBtc,
+          totalDeposited: alreadyDeposited + newBtc,
+          updatedAt:      new Date(),
+        })
         .where(eq(lightningWallets.userId, req.user!.id));
 
       await db.insert(lightningTransactions).values({
-        userId: req.user!.id,
-        type: "deposit",
-        amountSats: gap,
-        memo: `Blink balance sync — ${gap} sats recovered (Blink: ${blinkSats}, stored: ${stored})`,
-        status: "completed",
+        userId:      req.user!.id,
+        type:        "deposit",
+        amountSats:  newBtc,
+        memo:        `Blink deposit — ${newBtc} new sats (Blink total: ${blinkSats}, previously recorded: ${alreadyDeposited})`,
+        status:      "completed",
         completedAt: new Date(),
-        spectralSig: wnspSignTx(req.user!, `sync::${gap}::${blinkSats}::${Date.now()}`),
+        spectralSig: wnspSignTx(req.user!, `sync::${newBtc}::${blinkSats}::${Date.now()}`),
       });
 
-      await logAction(req, "blink_balance_sync", "lightning", req.user!.id, { gap, blinkSats, stored });
-      return res.json({ synced: true, blinkSats, storedSats: stored, gap, message: `Credited ${gap} sats from Blink` });
+      await logAction(req, "blink_balance_sync", "lightning", req.user!.id, { newBtc, blinkSats, alreadyDeposited });
+      return res.json({ synced: true, blinkSats, totalDeposited: alreadyDeposited + newBtc, newBtc, message: `Credited ${newBtc} new sats from Blink` });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 

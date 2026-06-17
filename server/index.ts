@@ -325,12 +325,16 @@ async function runStartupMigrations() {
     await pool.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS withdrawals_blocked BOOLEAN NOT NULL DEFAULT false;
     `);
-    // Restore Dsmart's sats balance that was incorrectly zeroed by a failed withdrawal
+    // Fix Dsmart's balance: phantom NXT→sats swap + repeated Blink sync bug inflated
+    // total_deposited to 500B sats. Real Blink wallet only ever held 49,961 sats.
+    // Residual real balance after legitimate small swaps = 961 sats.
     await pool.query(`
       UPDATE lightning_wallets
-      SET sats_balance = total_deposited - total_withdrawn
-      WHERE user_id = 'da62b876-4f10-4fbb-a979-f23b3032cc80'
-        AND sats_balance < (total_deposited - total_withdrawn);
+      SET sats_balance   = 961,
+          total_deposited = 49961,
+          total_withdrawn = 0,
+          updated_at      = now()
+      WHERE user_id = 'da62b876-4f10-4fbb-a979-f23b3032cc80';
     `);
     // Ensure all users are unblocked (withdrawals_blocked defaults false)
     await pool.query(`
