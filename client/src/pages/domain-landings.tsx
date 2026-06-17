@@ -592,6 +592,72 @@ export function LambdaGateLanding() {
   );
 }
 
+// ── Try-it widget (used by wavelengthscript.dev) ──────────────────────────────
+function wlsBand(nm: number) {
+  return nm < 450 ? "SYSTEM" : nm < 495 ? "AUTH" : nm < 520 ? "STREAM" :
+         nm < 565 ? "LOGIC"  : nm < 590 ? "INTERFACE" : nm < 625 ? "EVENT" : "STORAGE";
+}
+
+function TryItWidget({ accent }: { accent: string }) {
+  const [text, setText] = useState("WavelengthScript");
+  const enc = ceEncodeLocal(text || "WavelengthScript");
+  const nm  = enc.mid;
+  const wdm = Math.floor((nm - CE_MIN) / CE_BW) + 1;
+  const oam = (Array.from(text || "W").reduce((s, c) => s + c.charCodeAt(0), 0) % 50) + 1;
+  const pol = enc.toks.length % 2 === 0 ? "H" : "V";
+  const psi = `Ψ(${wdm},${oam},${pol})`;
+  const band = wlsBand(nm);
+  const color = wlToHexLocal(nm);
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/3 p-5 mb-8">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-[10px] uppercase tracking-widest" style={{ color: accent }}>Try it — no account needed</span>
+      </div>
+
+      <input
+        value={text}
+        onChange={e => setText(e.target.value.slice(0, 80))}
+        placeholder="Type any text…"
+        className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 outline-none mb-4"
+        style={{ fontFamily: "monospace" }}
+        data-testid="input-try-it"
+      />
+
+      {enc.toks.length > 0 && (
+        <>
+          <div className="grid grid-cols-4 gap-2 mb-4">
+            {[
+              { label: "wavelength", value: `${nm} nm` },
+              { label: "band",       value: band },
+              { label: "Ψ channel",  value: psi },
+              { label: "energy",     value: `${enc.energy.toExponential(2)} J` },
+            ].map(({ label, value }) => (
+              <div key={label} className="rounded-lg bg-black/40 border border-white/6 p-3 text-center">
+                <div className="text-[10px] text-white/30 mb-1">{label}</div>
+                <div className="text-[11px] font-bold" style={{ color: label === "band" ? color : accent }}>{value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-1 mb-3 flex-wrap">
+            {enc.toks.slice(0, 40).map((t, i) => (
+              <span key={i} title={`${t.nm}nm`}
+                className="w-5 h-5 rounded text-[9px] flex items-center justify-center font-bold"
+                style={{ background: t.hex + "33", color: t.hex, border: `1px solid ${t.hex}55` }}>
+                {t.ch === " " ? "·" : t.ch}
+              </span>
+            ))}
+            {enc.toks.length > 40 && <span className="text-[9px] text-white/20 self-center">+{enc.toks.length - 40}</span>}
+          </div>
+
+          <pre className="text-[10px] text-white/40 bg-black/40 rounded-lg p-3 overflow-x-auto">{`curl "https://wnsp.io/api/dev/public/ce-encode?text=${encodeURIComponent((text || "WavelengthScript").slice(0,40))}"`}</pre>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── 6. wavelengthscript.dev ─ Language ────────────────────────────────────────
 export function WavelengthScriptLanding() {
   const accent = "#34d399";
@@ -644,6 +710,9 @@ agent PhysicsCalc at Ψ(211,35,H) {
             </div>
           ))}
         </div>
+
+        {/* ── Try it widget ── */}
+        <TryItWidget accent={accent} />
 
         {/* ── Developer API ── */}
         <div className="rounded-xl border border-white/10 bg-white/3 p-5 mb-8">

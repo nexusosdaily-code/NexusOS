@@ -1757,6 +1757,66 @@ export async function registerRoutes(
     }
   });
 
+  // ── Public developer "try it" endpoint — no auth, IP rate-limited ───────────
+  // 20 requests per IP per hour. Returns CE spectral fingerprint for any text.
+  const _publicCeHits = new Map<string, { count: number; resetAt: number }>();
+  const PUBLIC_CE_LIMIT = 20;
+  const PUBLIC_CE_WINDOW = 60 * 60 * 1000; // 1 hour
+
+  app.get("/api/dev/public/ce-encode", (req: Request, res: Response) => {
+    const ip  = (req.headers["x-forwarded-for"] as string ?? req.ip ?? "unknown").split(",")[0].trim();
+    const now = Date.now();
+    const hit = _publicCeHits.get(ip);
+    if (hit && now < hit.resetAt) {
+      if (hit.count >= PUBLIC_CE_LIMIT) {
+        return res.status(429).json({
+          error: "Rate limit: 20 requests / hour for public endpoint",
+          resetAt: hit.resetAt,
+          hint: "Get an API key at wnsp.io/developer for unlimited access",
+        });
+      }
+      hit.count++;
+    } else {
+      _publicCeHits.set(ip, { count: 1, resetAt: now + PUBLIC_CE_WINDOW });
+    }
+
+    const text = String(req.query.text ?? "").trim().slice(0, 500);
+    if (!text) return res.status(400).json({ error: "Missing ?text= parameter (max 500 chars)" });
+
+    const CE_MIN = 380, CE_MAX = 780, CE_BANDS = 128, CE_BW = (CE_MAX - CE_MIN) / CE_BANDS;
+    const H = 6.626e-34, C = 2.998e8;
+    const bandName = (nm: number) =>
+      nm < 450 ? "SYSTEM" : nm < 495 ? "AUTH" : nm < 520 ? "STREAM" :
+      nm < 565 ? "LOGIC"  : nm < 590 ? "INTERFACE" : nm < 625 ? "EVENT" : "STORAGE";
+
+    const chars = Array.from(text).map(ch => {
+      const idx  = ch.charCodeAt(0) % CE_BANDS;
+      const nm   = +(CE_MIN + (idx + 0.5) * CE_BW).toFixed(3);
+      const wdm  = Math.floor((nm - CE_MIN) / 3.125) + 1;
+      const oam  = (idx % 50) + 1;
+      const pol  = idx % 2 === 0 ? "H" : "V";
+      const freq = C / (nm * 1e-9);
+      return { char: ch, wavelength: nm, band: bandName(nm), psiChannel: `Ψ(${wdm},${oam},${pol})`, energy: +(H * freq).toExponential(3) };
+    });
+
+    const avgNm   = chars.reduce((s, c) => s + c.wavelength, 0) / chars.length;
+    const avgFreq = C / (avgNm * 1e-9);
+
+    res.json({
+      ok: true,
+      text,
+      chars,
+      summary: {
+        avgWavelength: +avgNm.toFixed(3),
+        avgBand:       bandName(avgNm),
+        avgPsiChannel: `Ψ(${Math.floor((avgNm - CE_MIN) / 3.125) + 1},${Math.round(avgNm) % 50 + 1},${chars.length % 2 === 0 ? "H" : "V"})`,
+        totalEnergy:   +(H * avgFreq * chars.length).toExponential(3),
+        charCount:     chars.length,
+      },
+      meta: { limit: `${PUBLIC_CE_LIMIT} req/hour per IP`, upgrade: "wnsp.io/developer" },
+    });
+  });
+
   // ── External developer endpoints — API key authenticated ─────────────────
 
   // GET /api/dev/physics/:username — spectral channel + fee schedule

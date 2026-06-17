@@ -529,6 +529,219 @@ DM: @wnsptech on X
 #NexusOS #Blockchain #Bitcoin #OpenSource #Photonics`,
     tags: ["NexusOS","Blockchain","Bitcoin","OpenSource","Photonics","Hiring"],
   },
+  {
+    id: 12, label: "WavelengthScript live — compile in your browser", emoji: "⚙️",
+    telegram: `⚙️ <b>WavelengthScript — Compile and Run in Your Browser Right Now</b>
+
+No install. No setup. Just open the page and run physics-native code.
+
+<code>// Every function lives at a wavelength
+@emit(547.3nm, Ψ(53,12,H))
+fn greet(name: @495nm String) {
+  let f = C / (547.3 * 1e-9);  // Hz
+  let e = H * f;                // J = hf
+  transmit(e, to: name.channel);
+}</code>
+
+What happens when you compile this?
+⚡ Each function gets a spectral address — derived from E=hf, not assigned arbitrarily
+📡 Each variable lives at a wavelength band (AUTH=437nm, LOGIC=540nm, EVENT=612nm)
+🌈 The bytecode is a sequence of photon-energy instructions — PUSH, EMIT, RECV, HALT
+🖥️ The WNSP VM executes it step-by-step with Ψ registers as spectral memory
+
+<b>Try it:</b> wnsp.io/ce-se-pipeline
+<b>Run bytecode:</b> wnsp.io/wnsp-vm
+<b>Language spec:</b> wavelengthscript.dev
+
+Zero account needed. Open source. AGPL-3.0.
+
+#WavelengthScript #NexusOS #WNSP #Physics #Developer #OpenSource`,
+    nostr: `⚙️ WavelengthScript — compile and run in your browser right now
+
+No install. No setup.
+
+@emit(547.3nm, Ψ(53,12,H))
+fn greet(name: @495nm String) {
+  let f = C / (547.3 * 1e-9);
+  let e = H * f;
+  transmit(e, to: name.channel);
+}
+
+What happens when you compile this:
+→ Functions get spectral addresses from E=hf (not assigned arbitrarily)
+→ Variables live at wavelength bands: AUTH=437nm, LOGIC=540nm, EVENT=612nm
+→ Bytecode = photon-energy instructions: PUSH, EMIT, RECV, HALT
+→ WNSP VM executes step-by-step with Ψ registers as spectral memory
+
+Try: wnsp.io/ce-se-pipeline
+VM:  wnsp.io/wnsp-vm
+Spec: wavelengthscript.dev
+
+No account. Open source. AGPL-3.0.
+
+#WavelengthScript #NexusOS #WNSP #Physics #Developer`,
+    tags: ["WavelengthScript","NexusOS","WNSP","Physics","Developer","OpenSource"],
+  },
+  {
+    id: 13, label: "One curl — no account, no key", emoji: "🔌",
+    telegram: `🔌 <b>CE-Encode Anything — No Account, No API Key, One curl</b>
+
+NexusOS has a public endpoint. No registration required.
+
+<code>curl "https://wnsp.io/api/dev/public/ce-encode?text=hello"</code>
+
+Returns:
+<code>{
+  "summary": {
+    "avgWavelength": 534.7,
+    "avgBand": "LOGIC",
+    "avgPsiChannel": "Ψ(49,18,V)",
+    "totalEnergy": 1.86e-18,
+    "charCount": 5
+  },
+  "chars": [
+    { "char": "h", "wavelength": 508.9, "band": "STREAM", "psiChannel": "Ψ(41,5,H)" },
+    ...
+  ]
+}</code>
+
+20 requests/hour free. Need more? API key = 5,000 sats flat, no subscription.
+
+<b>What this is useful for:</b>
+🔍 Spectral fingerprinting for any text, file name, or identifier
+📡 Generating deterministic Ψ channel addresses from content
+⚡ Physics-priced routing — know the energy cost before you send
+🧪 Testing your WavelengthScript programs without a full account
+
+Install the SDK locally: <code>npm install nexusos-ce-encoder</code>
+
+👉 wnsp.io/developer
+#NexusOS #WNSP #API #Developer #Bitcoin #Physics`,
+    nostr: `🔌 CE-encode anything — no account, no key, one curl
+
+curl "https://wnsp.io/api/dev/public/ce-encode?text=hello"
+
+→ avgWavelength: 534.7 nm
+→ avgBand: LOGIC
+→ avgPsiChannel: Ψ(49,18,V)
+→ totalEnergy: 1.86e-18 J
+
+20 requests/hour free.
+API key = 5,000 sats flat for unlimited access.
+
+Useful for:
+• Spectral fingerprinting any text or identifier
+• Generating deterministic Ψ channel addresses from content
+• Knowing the physics energy cost before you transmit
+• Testing WavelengthScript programs
+
+SDK: npm install nexusos-ce-encoder
+
+wnsp.io/developer #NexusOS #WNSP #API #Developer #Physics`,
+    tags: ["NexusOS","WNSP","API","Developer","Bitcoin","Physics"],
+  },
+  {
+    id: 14, label: "What is Ψ(52,3,V)?", emoji: "🌈",
+    telegram: `🌈 <b>What Is Ψ(52,3,V)?</b>
+
+Every NexusOS address looks like this: <code>Ψ(wdm, oam, pol)</code>
+
+This isn't random. It's a coordinate in a 25,600-channel Hilbert space.
+
+🔵 <b>WDM (wavelength-division multiplexing)</b> — which colour of light: 1–128 bands, 380–780nm
+🔁 <b>OAM (orbital angular momentum)</b> — which spin mode: 1–100 twists
+↕️ <b>Pol (polarisation)</b> — which orientation: H (horizontal) or V (vertical)
+
+<b>Total channels: 128 × 100 × 2 = 25,600</b>
+
+Why does this matter?
+⟨Ψᵢ|Ψⱼ⟩ = 0 — every channel is <b>orthogonal by quantum mechanics</b>. Not by software. Two transmissions on different channels cannot interfere — guaranteed by physics, not policy.
+
+<b>How your Ψ channel is derived:</b>
+<code>wdm = hash(username) → nm band
+oam = hash(username) → spin mode  
+pol = hash(username) % 2 → H or V</code>
+
+Your Ψ channel is your physics identity. It determines your fee multiplier, your authority band, and your address on the network.
+
+Find yours: wnsp.io (login → profile)
+
+#NexusOS #WNSP #Physics #Photonics #Quantum #Bitcoin`,
+    nostr: `🌈 What is Ψ(52,3,V)?
+
+Every NexusOS address = Ψ(wdm, oam, pol)
+
+WDM  = wavelength-division: which colour of light (1–128, 380–780nm)
+OAM  = orbital angular momentum: which spin mode (1–100)
+Pol  = polarisation: H (horizontal) or V (vertical)
+
+Total channels: 128 × 100 × 2 = 25,600
+
+⟨Ψᵢ|Ψⱼ⟩ = 0
+Every channel is orthogonal by quantum mechanics — not software.
+Two transmissions on different channels cannot interfere.
+Guaranteed by physics, not policy.
+
+Your Ψ channel is derived from your username via CE hash:
+→ wdm = nm band from CE(username)
+→ oam = spin from char sum % 100
+→ pol = char count even/odd
+
+It's your physics identity. Determines fee, authority, address.
+
+wnsp.io → profile to see yours
+
+#NexusOS #WNSP #Physics #Photonics #Quantum`,
+    tags: ["NexusOS","WNSP","Physics","Photonics","Quantum","Bitcoin"],
+  },
+  {
+    id: 15, label: "CE→SE→Bytecode→Execute — the full pipeline", emoji: "🔬",
+    telegram: `🔬 <b>The Full Pipeline: Any Language → WavelengthScript → Bytecode → Execute</b>
+
+NexusOS has a 4-stage pipeline that runs in your browser:
+
+<b>Stage 1 — Paste any code</b>
+Python, JavaScript, Rust — doesn't matter. Paste it in.
+
+<b>Stage 2 — CE Transpile → WavelengthScript</b>
+Each function, variable, and class gets its physics address computed.
+<code>def compute(x):  →  @emit(547.3nm, Ψ(53,12,H)) fn compute(@534nm x)</code>
+
+<b>Stage 3 — Compile → Bytecode</b>
+WavelengthScript compiles to WNSP bytecode: energy-stamped instructions.
+<code>PUSH_WAVELENGTH 547.3
+CALL_CHANNEL Ψ(53,12,H)
+EMIT_PHOTON 3.63e-19</code>
+
+<b>Stage 4 — Execute in WNSP VM</b>
+The browser-native VM steps through each instruction. Ψ registers hold state. Every operation has a measurable energy cost in Joules.
+
+This is not a simulation of some future system. This is the architecture that will migrate directly to photonic ASICs ~2032. No rewrite needed — it already speaks the language of light.
+
+👉 wnsp.io/ce-se-pipeline — try it now, no account needed
+
+#NexusOS #WNSP #WavelengthScript #Physics #Developer #Photonics`,
+    nostr: `🔬 The full pipeline: any language → WavelengthScript → bytecode → execute
+
+4 stages, runs in your browser:
+
+Stage 1: paste Python / JS / Rust
+Stage 2: CE transpile → WavelengthScript
+  def compute(x) → @emit(547.3nm, Ψ(53,12,H)) fn compute(@534nm x)
+Stage 3: compile → WNSP bytecode
+  PUSH_WAVELENGTH 547.3
+  CALL_CHANNEL Ψ(53,12,H)
+  EMIT_PHOTON 3.63e-19
+Stage 4: execute in WNSP VM
+  Ψ registers hold state. Every op has a Joule cost.
+
+Not a simulation. This architecture migrates to photonic ASICs ~2032 with zero rewrite. It already speaks in light.
+
+Try now: wnsp.io/ce-se-pipeline
+
+#NexusOS #WNSP #WavelengthScript #Physics #Developer #Photonics`,
+    tags: ["NexusOS","WNSP","WavelengthScript","Physics","Developer","Photonics"],
+  },
 ];
 
 // ── Telegram channel sender ───────────────────────────────────────────────────
