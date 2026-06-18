@@ -37,6 +37,54 @@ export default function AuthPage() {
   const [showLoginPwd, setShowLoginPwd]     = useState(false);
   const [showNewPwd, setShowNewPwd]         = useState(false);
   const [showWif, setShowWif]               = useState(false);
+  const [wifKey, setWifKey]                 = useState("");
+  const [showWifLogin, setShowWifLogin]     = useState(false);
+  const [wifLoginLoading, setWifLoginLoading] = useState(false);
+  const [showWifInput, setShowWifInput]     = useState(false);
+  const [nsecKey, setNsecKey]               = useState("");
+  const [showNsecLogin, setShowNsecLogin]   = useState(false);
+  const [nsecLoginLoading, setNsecLoginLoading] = useState(false);
+  const [showNsecInput, setShowNsecInput]   = useState(false);
+
+  const handleWifLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!wifKey.trim()) return;
+    setWifLoginLoading(true);
+    try {
+      const res = await fetch("/api/auth/wif-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wifKey: wifKey.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Login failed");
+      if (data.token) localStorage.setItem("auth_token", data.token);
+      toast({ title: "Signed in as Nexus", description: "Welcome back." });
+      window.location.href = "/hub";
+    } catch (err: any) {
+      toast({ title: "Login failed", description: err.message, variant: "destructive" });
+    } finally { setWifLoginLoading(false); }
+  };
+
+  const handleNsecLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nsecKey.trim()) return;
+    setNsecLoginLoading(true);
+    try {
+      const res = await fetch("/api/auth/nsec-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nsecKey: nsecKey.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Login failed");
+      if (data.token) localStorage.setItem("auth_token", data.token);
+      toast({ title: "Signed in as Nexus", description: "Welcome back." });
+      window.location.href = "/hub";
+    } catch (err: any) {
+      toast({ title: "Login failed", description: err.message, variant: "destructive" });
+    } finally { setNsecLoginLoading(false); }
+  };
 
   const handleNostrLogin = async () => {
     if (nostrLoading) return;
@@ -246,6 +294,68 @@ export default function AuthPage() {
                   {showRecovery ? "▲ Hide recovery" : "Forgot password? Recover with wallet key"}
                 </button>
               </form>
+
+              <div className="mt-4 pt-4 border-t border-orange-500/20 space-y-3">
+                {/* WIF key login */}
+                <button type="button" onClick={() => setShowWifLogin(v => !v)}
+                  className="w-full text-xs text-orange-500/70 hover:text-orange-400 transition-colors flex items-center justify-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5" />
+                  {showWifLogin ? "▲ Hide wallet login" : "Sign in with Wallet Key (BTC WIF)"}
+                </button>
+                {showWifLogin && (
+                  <form onSubmit={handleWifLogin} className="space-y-2">
+                    <div className="relative">
+                      <Input
+                        type={showWifInput ? "text" : "password"}
+                        value={wifKey}
+                        onChange={e => setWifKey(e.target.value)}
+                        placeholder="Paste your BTC WIF key"
+                        className="bg-slate-800/50 border-orange-500/30 text-sm font-mono pr-10"
+                        autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                      />
+                      <button type="button" tabIndex={-1}
+                        onClick={() => setShowWifInput(v => !v)}
+                        className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
+                        {showWifInput ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <Button type="submit" disabled={wifLoginLoading || !wifKey.trim()}
+                      className="w-full bg-orange-600 hover:bg-orange-500 text-white font-semibold">
+                      {wifLoginLoading ? "Signing in…" : "Sign in as Nexus (BTC)"}
+                    </Button>
+                  </form>
+                )}
+
+                {/* Nostr nsec login */}
+                <button type="button" onClick={() => setShowNsecLogin(v => !v)}
+                  className="w-full text-xs text-purple-500/70 hover:text-purple-400 transition-colors flex items-center justify-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {showNsecLogin ? "▲ Hide Nostr login" : "Sign in with Nostr Key (nsec)"}
+                </button>
+                {showNsecLogin && (
+                  <form onSubmit={handleNsecLogin} className="space-y-2">
+                    <div className="relative">
+                      <Input
+                        type={showNsecInput ? "text" : "password"}
+                        value={nsecKey}
+                        onChange={e => setNsecKey(e.target.value)}
+                        placeholder="Paste your nsec key"
+                        className="bg-slate-800/50 border-purple-500/30 text-sm font-mono pr-10"
+                        autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                      />
+                      <button type="button" tabIndex={-1}
+                        onClick={() => setShowNsecInput(v => !v)}
+                        className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
+                        {showNsecInput ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <Button type="submit" disabled={nsecLoginLoading || !nsecKey.trim()}
+                      className="w-full bg-purple-700 hover:bg-purple-600 text-white font-semibold">
+                      {nsecLoginLoading ? "Signing in…" : "Sign in as Nexus (Nostr)"}
+                    </Button>
+                  </form>
+                )}
+              </div>
 
               {showRecovery && (
                 <form onSubmit={handleRecover} className="mt-4 pt-4 border-t border-amber-500/20 space-y-3">

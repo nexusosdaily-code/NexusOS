@@ -1,45 +1,36 @@
 ---
 name: Accounts and auth
-description: Genesis account, password, registration lock, and developer keys gate
+description: Genesis account, all login methods, password, registration lock, and developer keys gate
 ---
 
-## Genesis / dev account — "Nexus"
+## Genesis / Nexus admin account
 - Username: `Nexus`
 - User ID: `7eeff763-dabb-4f11-a219-163fc7b796c9`
-- Password: `Wnsp_nexusos2026` (stored as bcrypt hash in `users` table)
-- NXT wallet balance: **500,000,000 NXT** (500M — fixed from 400M in session)
-- Sats staked: 194B+ across 13 positions (backfilled with WNUSD positions)
-- Authority band: KERNEL/SYSTEM
+- Password: `NexusOS2026` (force-reset on EVERY boot in `genesis_user.ts`)
+- Authority band: SYSTEM
+
+## Login methods — all log in directly as Nexus
+1. **Password** — `POST /api/auth/login` with `{ username: "Nexus", password: "NexusOS2026" }`
+2. **BTC WIF key** — `POST /api/auth/wif-login` with `{ wifKey }` — validates against `BTC_INSCRIPTION_WALLET_WIF` secret
+3. **Nostr nsec key** — `POST /api/auth/nsec-login` with `{ nsecKey }` — validates against `NOSTR_NSEC` secret
+4. **Nostr NIP-07 extension** — requires Alby or nos2x browser extension; uses `POST /api/auth/nostr`
+5. **Recovery** — `POST /api/auth/recover` with `{ username, newPassword, recoveryKey }` where recoveryKey = `BTC_INSCRIPTION_WALLET_WIF`
+
+Frontend: WIF + nsec buttons are collapsed links at the bottom of the Login tab (orange / purple).
+
+## Force-reset on every boot
+`genesis_user.ts` unconditionally re-hashes + updates Nexus password to `NexusOS2026` on boot.
+**Why:** Old password `Wnsp_nexusos2026` had underscore that Android keyboards silently drop.
+Conditional bcrypt compare was also unreliable across environments.
+
+## Rate limit
+Login is rate-limited to 10 attempts per window. After lockout wait ~5 min.
+WIF and nsec endpoints are NOT rate-limited (they require full key match).
 
 ## Production users
 Known usernames: Nexus, Shusha, Over3496, jefffay95, Leps, UncJuddy
-Registration is now **open** — the 403 gate was removed June 2026.
-
-## Registration
-`POST /api/auth/register` — open to all. Accepts `{ username, password, email? }`.
-Auto-creates NXT wallet + WNSP canonical address on success.
-Auth page Register tab is fully functional.
+Registration is open — 403 gate removed June 2026.
 
 ## Developer keys password gate
-- Route: `/developer/keys`
-- File: `client/src/pages/developer-keys.tsx`
-- Pattern: outer component checks sessionStorage; if not unlocked, renders password form.
-  Inner component `DeveloperKeysInner` contains all hooks + actual content.
-- **Why inner component:** React rules — hooks cannot be called after early return. Putting them in the outer component (which returns the gate before hooks ran) caused runtime errors. Solution: gate in outer, hooks+content in inner.
-- Password stored **client-side in sessionStorage** — cleared on tab close
-- Hardcoded password: `"Wnsp_nexusos2026"`
-- Session key: `"dev_keys_unlocked"` (or similar sessionStorage key)
-
-## Rate limits
-- Rate limit windows are stored in memory/DB — can be cleared via DB if a user gets locked out
-- Nexus account rate limits were cleared manually in session after password reset locked the account out
-
-## Password reset pattern (DB)
-```sql
-UPDATE users SET password_hash = '<bcrypt_hash>' WHERE username = 'Nexus';
-```
-Use `bcrypt.hash("Wnsp_nexusos2026", 10)` to generate the hash — do NOT store plaintext.
-
-## NXT fee rule
-NXT fees are NEVER burned — always route to `orbital_treasury` table.
-**Why:** burning would deflate supply and harm stakers; treasury preserves value in protocol.
+- Route: `/developer/keys`  — client-side sessionStorage gate
+- Hardcoded password: `"NexusOS2026"` (updated from old `Wnsp_nexusos2026`)

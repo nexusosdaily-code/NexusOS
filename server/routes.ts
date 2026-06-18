@@ -873,6 +873,58 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/auth/wif-login", async (req: Request, res: Response) => {
+    try {
+      const { wifKey } = req.body;
+      if (!wifKey) return res.status(400).json({ error: "wifKey required" });
+
+      const wif = process.env.BTC_INSCRIPTION_WALLET_WIF ?? "";
+      if (!wif || wifKey.trim() !== wif.trim())
+        return res.status(401).json({ error: "Invalid wallet key" });
+
+      const user = await storage.getUserByUsername("Nexus");
+      if (!user) return res.status(404).json({ error: "Admin account not found" });
+
+      const session = await storage.createSession(user.id, req.ip, req.headers["user-agent"]);
+      await logAction(req, "wif_login", "auth", user.id, {}, "success", "Login via WIF key");
+
+      const wallet = await storage.getWallet(user.id);
+      res.json({
+        message: "Login successful",
+        user: { id: user.id, username: user.username, email: user.email, role: user.role },
+        wallet: wallet ? { address: wallet.address, balance: wallet.balance } : null,
+        token: session.id,
+        expires: session.expiresAt,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  app.post("/api/auth/nsec-login", async (req: Request, res: Response) => {
+    try {
+      const { nsecKey } = req.body;
+      if (!nsecKey) return res.status(400).json({ error: "nsecKey required" });
+
+      const stored = process.env.NOSTR_NSEC ?? "";
+      if (!stored || nsecKey.trim() !== stored.trim())
+        return res.status(401).json({ error: "Invalid Nostr key" });
+
+      const user = await storage.getUserByUsername("Nexus");
+      if (!user) return res.status(404).json({ error: "Admin account not found" });
+
+      const session = await storage.createSession(user.id, req.ip, req.headers["user-agent"]);
+      await logAction(req, "nsec_login", "auth", user.id, {}, "success", "Login via Nostr nsec key");
+
+      const wallet = await storage.getWallet(user.id);
+      res.json({
+        message: "Login successful",
+        user: { id: user.id, username: user.username, email: user.email, role: user.role },
+        wallet: wallet ? { address: wallet.address, balance: wallet.balance } : null,
+        token: session.id,
+        expires: session.expiresAt,
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   app.post("/api/auth/recover", async (req: Request, res: Response) => {
     try {
       const { username, newPassword, recoveryKey } = req.body;
