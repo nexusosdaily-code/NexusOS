@@ -128,6 +128,7 @@ const APP_SECTIONS = [
       { title: "Photonic Ledger",  href: "/photonic-ledger",     Icon: Layers },
       { title: "Hardware Spec",    href: "/hardware-spec",       Icon: Shield },
       { title: "P2P Sync Terminal",href: "/p2p-terminal",        Icon: Radio },
+      { title: "Spectral IDE",     href: "/spectral-ide",        Icon: Code2 },
       { title: "WNSP VM",          href: "/wnsp-vm",             Icon: Cpu },
       { title: "Spectral Router",  href: "/spectral-router",     Icon: Radio },
       { title: "Spectral Search",  href: "/spectral-search",     Icon: Search },

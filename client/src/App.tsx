@@ -122,6 +122,8 @@ const CommunityMintPage = lazy(() => import("@/pages/community-mint"));
 const WnspStakingPage = lazy(() => import("@/pages/wnsp-staking"));
 const MarketplacePage = lazy(() => import("@/pages/marketplace"));
 const RuneEtchingPage = lazy(() => import("@/pages/rune-etching"));
+const SpectralIDEPage = lazy(() => import("@/pages/spectral-ide"));
+const ContractAppPage = lazy(() => import("@/pages/contract-app"));
 const RuneMintPage = lazy(() => import("@/pages/rune-mint"));
 const EtchRunePage = lazy(() => import("@/pages/etch-rune"));
 const RuneStakingPage = lazy(() => import("@/pages/rune-staking"));
@@ -488,6 +490,8 @@ function Router() {
       <Route path="/spectral-router" component={SpectralRouterPage} />
       <Route path="/spectral-search" component={SpectralSearchPage} />
       <Route path="/spectral-contracts" component={SpectralContractsPage} />
+      <Route path="/spectral-ide" component={SpectralIDEPage} />
+      <Route path="/app/:slug" component={ContractAppPage} />
       <Route path="/divergence-test" component={DivergenceTestPage} />
       <Route path="/hardware-spec" component={HardwareSpecPage} />
       <Route path="/hardware-lab" component={HardwareLabPage} />

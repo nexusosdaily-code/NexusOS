@@ -14761,5 +14761,90 @@ wnsp.io | t.me/troglodytememe`,
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // ── Spectral IDE — Contract CRUD ──────────────────────────────────────────
+  app.get("/api/contracts", authenticate, async (req: any, res) => {
+    try {
+      const pool = (await import("./db")).pool;
+      const { rows } = await pool.query(
+        `SELECT id, name, description, source_code, bytecode, assembly, manifest, instr_count, status, app_slug, is_public, deployed_at, created_at, updated_at
+         FROM spectral_contracts WHERE user_id = $1 ORDER BY updated_at DESC`,
+        [req.user.id]
+      );
+      res.json(rows);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/contracts", authenticate, async (req: any, res) => {
+    try {
+      const pool = (await import("./db")).pool;
+      const { name, description = "", source_code, bytecode = "", assembly = "", manifest = [], instr_count = 0 } = req.body;
+      if (!name || !source_code) return res.status(400).json({ error: "name and source_code required" });
+      const { rows } = await pool.query(
+        `INSERT INTO spectral_contracts (user_id, name, description, source_code, bytecode, assembly, manifest, instr_count, status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft') RETURNING *`,
+        [req.user.id, name, description, source_code, bytecode, assembly, JSON.stringify(manifest), instr_count]
+      );
+      res.json(rows[0]);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.patch("/api/contracts/:id", authenticate, async (req: any, res) => {
+    try {
+      const pool = (await import("./db")).pool;
+      const { name, description, source_code, bytecode, assembly, manifest, instr_count } = req.body;
+      const { rows } = await pool.query(
+        `UPDATE spectral_contracts
+         SET name=COALESCE($1,name), description=COALESCE($2,description), source_code=COALESCE($3,source_code),
+             bytecode=COALESCE($4,bytecode), assembly=COALESCE($5,assembly),
+             manifest=COALESCE($6,manifest), instr_count=COALESCE($7,instr_count), updated_at=NOW()
+         WHERE id=$8 AND user_id=$9 RETURNING *`,
+        [name, description, source_code, bytecode, assembly, manifest ? JSON.stringify(manifest) : null, instr_count, req.params.id, req.user.id]
+      );
+      if (!rows[0]) return res.status(404).json({ error: "Not found" });
+      res.json(rows[0]);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.delete("/api/contracts/:id", authenticate, async (req: any, res) => {
+    try {
+      const pool = (await import("./db")).pool;
+      await pool.query(`DELETE FROM spectral_contracts WHERE id=$1 AND user_id=$2`, [req.params.id, req.user.id]);
+      res.json({ ok: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/contracts/:id/deploy", authenticate, async (req: any, res) => {
+    try {
+      const pool = (await import("./db")).pool;
+      // Check contract belongs to user
+      const { rows: check } = await pool.query(`SELECT id, name FROM spectral_contracts WHERE id=$1 AND user_id=$2`, [req.params.id, req.user.id]);
+      if (!check[0]) return res.status(404).json({ error: "Not found" });
+      // Generate slug from name + short id
+      const slug = check[0].name
+        .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+        .slice(0, 40) + "-" + req.params.id.slice(0, 6);
+      const { rows } = await pool.query(
+        `UPDATE spectral_contracts SET status='deployed', app_slug=$1, is_public=true, deployed_at=NOW(), updated_at=NOW()
+         WHERE id=$2 AND user_id=$3 RETURNING *`,
+        [slug, req.params.id, req.user.id]
+      );
+      res.json(rows[0]);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Public app view — no auth required
+  app.get("/api/app/:slug", async (req, res) => {
+    try {
+      const pool = (await import("./db")).pool;
+      const { rows } = await pool.query(
+        `SELECT id, name, description, source_code, assembly, manifest, instr_count, deployed_at, app_slug
+         FROM spectral_contracts WHERE app_slug=$1 AND is_public=true AND status='deployed'`,
+        [req.params.slug]
+      );
+      if (!rows[0]) return res.status(404).json({ error: "Not found" });
+      res.json(rows[0]);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   return httpServer;
 }
