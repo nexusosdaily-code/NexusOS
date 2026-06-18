@@ -7814,7 +7814,7 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  app.post("/api/btc-bridge/queue/trigger", async (req: Request, res: Response) => {
+  app.post("/api/btc-bridge/queue/trigger", authenticate, async (req: Request, res: Response) => {
     try {
       const { eventType, data } = req.body;
       if (!eventType) return res.status(400).json({ error: "eventType required" });
@@ -8234,7 +8234,7 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  app.post("/api/btc-bridge/anchor", async (req: Request, res: Response) => {
+  app.post("/api/btc-bridge/anchor", authenticate, async (req: Request, res: Response) => {
     try {
       const { address, parentInscriptionId } = req.body;
       const { btcBridge } = await import("./btc-bridge-service");
