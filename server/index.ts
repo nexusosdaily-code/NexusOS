@@ -73,13 +73,28 @@ declare module "http" {
 app.use(compression());
 app.use(cookieParser());
 
-// ── ide-vm.io hostname redirect ───────────────────────────────────────────────
-// When the custom domain ide-vm.io points here, land visitors straight on the IDE.
+// ── Custom domain hostname redirects ─────────────────────────────────────────
+// Each branded domain lands visitors on its product page.
+const DOMAIN_ROUTES: Record<string, string> = {
+  "ide-vm.io":             "/spectral-ide",
+  "www.ide-vm.io":         "/spectral-ide",
+  "psivm.io":              "/wnsp-vm",
+  "www.psivm.io":          "/wnsp-vm",
+  "k1os.io":               "/k1",
+  "www.k1os.io":           "/k1",
+  "spectralrouter.io":     "/spectral-router",
+  "www.spectralrouter.io": "/spectral-router",
+  "spectralcontracts.io":  "/spectral-contracts",
+  "www.spectralcontracts.io": "/spectral-contracts",
+  "wnspnostr.io":          "/nostr-relay",
+  "www.wnspnostr.io":      "/nostr-relay",
+  "nexussdk.io":           "/mobile-sdk",
+  "www.nexussdk.io":       "/mobile-sdk",
+};
 app.use((req, res, next) => {
   const host = req.hostname ?? "";
-  if ((host === "ide-vm.io" || host === "www.ide-vm.io") && req.path === "/") {
-    return res.redirect(301, "/spectral-ide");
-  }
+  const target = DOMAIN_ROUTES[host];
+  if (target && req.path === "/") return res.redirect(301, target);
   next();
 });
 
