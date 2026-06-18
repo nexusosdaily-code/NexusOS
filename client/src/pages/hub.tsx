@@ -859,6 +859,13 @@ const NEXUS_DOMAINS: { domain: string; accent: string; founder: string; icon: st
   { domain: "555thz.io",            accent: "#4ade80", founder: "Planck",  icon: "ƒ", desc: "First oscillation" },
   { domain: "wavelengthscript.dev", accent: "#34d399", founder: "Planck",  icon: "ψ", desc: "WLS language" },
   { domain: "orbitaltreasury.io",   accent: "#fbbf24", founder: "Shannon", icon: "◎", desc: "Orbital Treasury" },
+  { domain: "ide-vm.io",            accent: "#7c3aed", founder: "Shannon", icon: "⌨", desc: "Spectral IDE",      href: "https://ide-vm.io" },
+  { domain: "psivm.io",             accent: "#a855f7", founder: "Maxwell", icon: "Ψ", desc: "WNSP VM",           href: "https://psivm.io" },
+  { domain: "k1os.io",              accent: "#06b6d4", founder: "Einstein",icon: "⚛", desc: "K1 AI Kernel",      href: "https://k1os.io" },
+  { domain: "spectralrouter.io",    accent: "#10b981", founder: "Maxwell", icon: "⇌", desc: "Spectral Router",   href: "https://spectralrouter.io" },
+  { domain: "spectralcontracts.io", accent: "#f59e0b", founder: "Shannon", icon: "§", desc: "Smart Contracts",   href: "https://spectralcontracts.io" },
+  { domain: "wnspnostr.io",         accent: "#8b5cf6", founder: "Tesla",   icon: "⚡", desc: "Nostr Relay",       href: "https://wnspnostr.io" },
+  { domain: "nexussdk.io",          accent: "#3b82f6", founder: "Planck",  icon: "◈", desc: "Mobile SDK",        href: "https://nexussdk.io" },
 ];
 
 function EcosystemDomains() {
