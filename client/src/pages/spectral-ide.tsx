@@ -7,7 +7,21 @@ import {
   ArrowLeft, Play, StepForward, RotateCcw, Save, Rocket,
   Code2, Cpu, Radio, Plus,
   Copy, Check, Zap, Activity, Share2, Trash2,
+  Globe2, FileCode2, ChevronDown, ChevronUp, ArrowDownToLine,
 } from "lucide-react";
+
+const IMPORT_LANGS = [
+  { value: "python",     label: "Python" },
+  { value: "javascript", label: "JavaScript" },
+  { value: "typescript", label: "TypeScript" },
+  { value: "rust",       label: "Rust" },
+  { value: "go",         label: "Go" },
+  { value: "solidity",   label: "Solidity" },
+  { value: "java",       label: "Java" },
+  { value: "cpp",        label: "C++" },
+  { value: "swift",      label: "Swift" },
+  { value: "kotlin",     label: "Kotlin" },
+] as const;
 
 // ── Physics helpers ──────────────────────────────────────────────────────────
 function nmToBand(nm: number): string {
@@ -399,6 +413,15 @@ export default function SpectralIDEPage() {
   const [running, setRunning] = useState(false);
   const [copied, setCopied] = useState(false);
   const [selectedContract, setSelectedContract] = useState<string | null>(null);
+
+  // ── Import Code panel state ──────────────────────────────────────────────
+  const [showImport, setShowImport]       = useState(false);
+  const [importLang, setImportLang]       = useState<string>("python");
+  const [importSrc,  setImportSrc]        = useState("");
+  const [importName, setImportName]       = useState("");
+  const [importResult, setImportResult]   = useState<{ wls: string; opcode_count: number; spectral_address: string } | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
   const runRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -561,6 +584,44 @@ export default function SpectralIDEPage() {
     setCopied(true); setTimeout(() => setCopied(false), 1500);
   };
 
+  const handleImportTranspile = async () => {
+    if (!importSrc.trim()) return;
+    setImportLoading(true);
+    setImportResult(null);
+    try {
+      const token = localStorage.getItem("auth_token");
+      const r = await fetch("/api/ide/transpile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ source_code: importSrc, source_language: importLang, contract_name: importName || undefined }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ error: r.statusText }));
+        toast({ title: "Transpile failed", description: err.error ?? "Unknown error", variant: "destructive" });
+        return;
+      }
+      const data = await r.json();
+      setImportResult({ wls: data.wavelength_script, opcode_count: data.opcode_count, spectral_address: data.spectral_address });
+    } catch (e: any) {
+      toast({ title: "Network error", description: e.message, variant: "destructive" });
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleLoadImport = () => {
+    if (!importResult) return;
+    if (runRef.current) { clearInterval(runRef.current); runRef.current = null; setRunning(false); }
+    setCode(importResult.wls);
+    if (importName) setContractName(importName);
+    setCompiled(null);
+    setVmState(freshVM());
+    setSelectedContract(null);
+    setShowImport(false);
+    setImportResult(null);
+    toast({ title: "Code loaded", description: "WavelengthScript ready — hit Compile to continue" });
+  };
+
   const lines = code.split("\n");
   // BUG-3 FIX: we have no source-line→instruction mapping, so don't fake it;
   // highlight the instruction index row (approximate but not misleading)
@@ -698,7 +759,98 @@ export default function SpectralIDEPage() {
               className="w-24 h-1 accent-cyan-500" data-testid="slider-channel-load" />
             <span className="text-xs text-cyan-500 font-mono">{channelLoad}%</span>
             {compiled && <span className="text-xs text-slate-600 ml-2">PC:{vmState.pc} · cycles:{vmState.cycleCount} · {vmState.halted ? "HALTED" : "READY"}</span>}
+            <button
+              onClick={() => { setShowImport(v => !v); setImportResult(null); }}
+              className="ml-auto flex items-center gap-1 px-2 py-0.5 text-xs rounded border transition-colors border-violet-700/40 bg-violet-900/20 hover:bg-violet-800/40 text-violet-300"
+              data-testid="btn-toggle-import">
+              <Globe2 size={10} />
+              <span>Import</span>
+              {showImport ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+            </button>
           </div>
+
+          {/* ── Import Code panel ───────────────────────────────────────────────── */}
+          {showImport && (
+            <div className="border-b border-violet-800/30 bg-violet-950/20 px-3 py-3 flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <FileCode2 size={12} className="text-violet-400" />
+                <span className="text-xs font-semibold text-violet-300">Translate any language → WavelengthScript</span>
+              </div>
+
+              {/* Row 1: language + contract name */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  value={importLang}
+                  onChange={e => { setImportLang(e.target.value); setImportResult(null); }}
+                  className="text-xs bg-slate-800 border border-slate-700 text-slate-200 rounded px-2 py-1 outline-none focus:border-violet-500"
+                  data-testid="select-import-lang">
+                  {IMPORT_LANGS.map(l => (
+                    <option key={l.value} value={l.value}>{l.label}</option>
+                  ))}
+                </select>
+                <input
+                  value={importName}
+                  onChange={e => setImportName(e.target.value)}
+                  placeholder="Contract name (optional)"
+                  className="flex-1 text-xs bg-slate-800 border border-slate-700 text-slate-200 rounded px-2 py-1 outline-none focus:border-violet-500 min-w-[130px]"
+                  data-testid="input-import-name"
+                />
+              </div>
+
+              {/* Row 2: source code textarea */}
+              <textarea
+                value={importSrc}
+                onChange={e => { setImportSrc(e.target.value); setImportResult(null); }}
+                placeholder={`Paste ${IMPORT_LANGS.find(l => l.value === importLang)?.label ?? "source"} code here…`}
+                rows={6}
+                spellCheck={false}
+                className="w-full text-xs font-mono bg-slate-900 border border-slate-700 text-slate-300 rounded px-2 py-1.5 outline-none focus:border-violet-500 resize-none"
+                data-testid="textarea-import-src"
+              />
+
+              {/* Row 3: action buttons + result badge */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={handleImportTranspile}
+                  disabled={!importSrc.trim() || importLoading}
+                  className="flex items-center gap-1.5 px-3 py-1 text-xs bg-violet-600/30 hover:bg-violet-600/50 text-violet-200 rounded border border-violet-600/40 transition-colors disabled:opacity-40 font-semibold"
+                  data-testid="btn-import-transpile">
+                  <Zap size={10} />
+                  {importLoading ? "Transpiling…" : "Transpile → WLS"}
+                </button>
+
+                {importResult && (
+                  <>
+                    <span className="text-xs text-slate-500">
+                      {importResult.opcode_count} opcodes · {importResult.spectral_address}
+                    </span>
+                    <button
+                      onClick={handleLoadImport}
+                      className="ml-auto flex items-center gap-1.5 px-3 py-1 text-xs bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-200 rounded border border-cyan-600/40 transition-colors font-semibold"
+                      data-testid="btn-import-load">
+                      <ArrowDownToLine size={10} />
+                      Load into Editor
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Row 4: WLS preview (truncated) */}
+              {importResult && (
+                <pre className="text-[10px] font-mono text-violet-300/70 bg-slate-900/60 border border-slate-800 rounded px-2 py-1.5 max-h-28 overflow-y-auto whitespace-pre-wrap">
+                  {importResult.wls.slice(0, 600)}{importResult.wls.length > 600 ? "\n…" : ""}
+                </pre>
+              )}
+
+              {/* API hint */}
+              <div className="text-[10px] text-slate-600 border-t border-slate-800 pt-1.5 mt-0.5">
+                Also available via Developer API:
+                <code className="ml-1 text-slate-500">POST /api/dev/transpile</code>
+                {" — requires API key from "}
+                <Link href="/developer-keys" className="text-violet-500 hover:text-violet-400">/developer-keys</Link>
+              </div>
+            </div>
+          )}
 
           {/* Code editor */}
           <div className="flex-1 overflow-auto bg-slate-950 flex">

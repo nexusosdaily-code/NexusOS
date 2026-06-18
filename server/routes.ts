@@ -21,6 +21,7 @@ import {
 import { z } from "zod";
 import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT, GENESIS_EXECUTION_ADDRESS } from "./physics";
 import { getEtchStatus } from "./wnsp-btc-rune-etcher";
+import { transpileToWLS, SUPPORTED_LANGS, type SupportedLang } from "./lang-transpiler";
 
 // WebSocket clients mapped by userId
 const connectedClients = new Map<string, WebSocket>();
@@ -1960,6 +1961,7 @@ export async function registerRoutes(
         "GET  /api/dev/ce-encode?text=…",
         "GET  /api/dev/rune",
         "POST /api/dev/message",
+        "POST /api/dev/transpile",
       ],
       economics: "Every action costs NXT — E=hf · WNSP spectral fees apply",
     });
@@ -2027,6 +2029,67 @@ export async function registerRoutes(
             description:  "Open-mint spectral wavelength token. 21T total supply, 1K per mint, cap 1000.",
           },
         },
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/dev/transpile — translate any language to WavelengthScript (API key auth)
+  app.post("/api/dev/transpile", authenticateApiKey, async (req, res) => {
+    try {
+      const schema = z.object({
+        source_code:    z.string().min(1).max(20000),
+        source_language: z.enum(SUPPORTED_LANGS as [SupportedLang, ...SupportedLang[]]),
+        contract_name:  z.string().max(80).optional(),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
+
+      const { source_code, source_language, contract_name } = parsed.data;
+      const result = transpileToWLS(source_code, source_language, contract_name);
+
+      const channel  = deriveChannel(req.user!.username);
+
+      res.json({
+        ok: true,
+        wavelength_script: result.wls,
+        manifest:          result.manifest,
+        opcode_count:      result.opcodeCount,
+        spectral_address:  result.spectralAddress,
+        source_language,
+        contract_name:     contract_name ?? null,
+        vm_instructions: {
+          compile:  "POST /api/contracts  { name, source_code: <wavelength_script> }",
+          deploy:   "PATCH /api/contracts/:id  { deployed: true }",
+          execute:  "POST /api/contracts/:id/run",
+          explorer: "/nexus-explorer",
+        },
+        caller: { username: req.user!.username, band: req.user!.spectralBand, nm: channel.wdm },
+        meta: { supported_languages: SUPPORTED_LANGS, version: "WavelengthScript v1.0 · NexusOS AGPL-3.0" },
+      });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // POST /api/ide/transpile — same as dev/transpile but uses session auth (for the IDE UI)
+  app.post("/api/ide/transpile", authenticate, async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        source_code:     z.string().min(1).max(20000),
+        source_language: z.enum(SUPPORTED_LANGS as [SupportedLang, ...SupportedLang[]]),
+        contract_name:   z.string().max(80).optional(),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
+
+      const { source_code, source_language, contract_name } = parsed.data;
+      const result = transpileToWLS(source_code, source_language, contract_name);
+
+      res.json({
+        ok: true,
+        wavelength_script: result.wls,
+        manifest:          result.manifest,
+        opcode_count:      result.opcodeCount,
+        spectral_address:  result.spectralAddress,
+        source_language,
       });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
