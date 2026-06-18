@@ -1,8 +1,11 @@
 // ── server/lang-transpiler.ts ─────────────────────────────────────────────────
 // Physics-based source-code → WavelengthScript transpiler
-// Mirrors the client-side logic in learn.tsx, extended for smart contracts
+// Spec: docs/WNSP-TRANSPILER-SPEC-v1.md
 // Supported: python · javascript · typescript · rust · go · java · cpp · solidity · swift · kotlin
 // AGPL-3.0 — NexusOS
+
+// F-001 FIX: import ceEncode from canonical source — single source of truth
+import { ceEncode } from "./wnsp_vm";
 
 export type SupportedLang =
   | "python" | "javascript" | "typescript" | "rust" | "go"
@@ -12,22 +15,6 @@ export const SUPPORTED_LANGS: SupportedLang[] = [
   "python", "javascript", "typescript", "rust", "go",
   "java", "cpp", "solidity", "swift", "kotlin",
 ];
-
-// ── CE encoder (mirrors wnsp_vm.ts ceEncode) ─────────────────────────────────
-function ceEncode(name: string): { nm: number; psi: string; band: string } {
-  const codes = name.toUpperCase().split("").map(c => c.charCodeAt(0)).filter(c => c >= 32 && c <= 126);
-  if (!codes.length) codes.push(77);
-  const avg = codes.reduce((a: number, b: number) => a + b, 0) / codes.length;
-  const nm = parseFloat((380 + ((avg - 32) / 94) * 400).toFixed(2));
-  const wdm = Math.floor((nm - 380) / 4) + 1;
-  const oam = codes.reduce((a: number, b: number) => a + b, 0) % 50;
-  const pol = codes.length % 2 === 0 ? "H" : "V";
-  const band =
-    nm < 450 ? "SYSTEM" : nm < 495 ? "AUTH" :
-    nm < 520 ? "STREAM" : nm < 565 ? "LOGIC" :
-    nm < 590 ? "INTERFACE" : nm < 625 ? "EVENT" : "STORAGE";
-  return { nm, psi: `Ψ(${wdm},${oam},${pol})`, band };
-}
 
 // ── Pattern helpers ───────────────────────────────────────────────────────────
 const FN_RE    = /^(?:def|function|fn|func|fun|void|int|string|bool|float|double|uint\d*|int\d*|address|bytes\d*)\s+(\w+)\s*\(([^)]*)\)/;
@@ -55,39 +42,42 @@ function stripComment(line: string, lang: SupportedLang): string | null {
   return null;
 }
 
-// ── Detect transfer-like calls and emit XFER opcode ──────────────────────────
+// ── Detect transfer-like calls → XFER_NXT opcode ─────────────────────────────
 function detectTransfer(line: string): string | null {
   const tm = line.match(TRANSFER_PAT);
   if (!tm) return null;
-  const args = tm[1].split(",").map((s: string) => s.trim());
-  const dest = args[0] ?? "recipient";
-  const amt  = args[1] ?? "1.00000000";
-  const enc  = ceEncode(dest.replace(/[^a-zA-Z]/g, "") || "addr");
-  const psi  = enc.psi;
+  const args  = tm[1].split(",").map((s: string) => s.trim());
+  const dest  = args[0] ?? "recipient";
+  const amt   = args[1] ?? "1.00000000";
+  const enc   = ceEncode(dest.replace(/[^a-zA-Z]/g, "") || "addr");
   const clean = amt.replace(/[^0-9._]/g, "") || "1.00000000";
-  return `transfer_nxt("${psi}", "${clean}")  // ${line.slice(0, 60)}`;
+  return `transfer_nxt("${enc.psi}", "${clean}")  // ${line.slice(0, 60)}`;
 }
 
-// ── Detect balance/state reads ────────────────────────────────────────────────
+// ── Detect balance/state reads → LOAD opcode ─────────────────────────────────
 function detectStateRead(line: string): string | null {
   if (!BALANCE_RE.test(line)) return null;
   const key = (line.match(/\b(\w+)\s*[\[.]/) ?? [])[1] ?? "balance";
   return `@load ${key}  // ← contract_state`;
 }
 
-// ── Solidity-specific handling ────────────────────────────────────────────────
+// ── Solidity-specific line handling ───────────────────────────────────────────
 function transpileSolidityLine(line: string): string | null {
-  if (line.startsWith("pragma ")) return `// PRAGMA: ${line}  [compile-time metadata]`;
+  if (line.startsWith("pragma "))
+    return `// PRAGMA: ${line}  [compile-time metadata]`;
+  // Solidity event emit → spectral EMIT opcode
   if (EVENT_RE.test(line)) {
     const em = line.match(EVENT_RE)!;
     const enc = ceEncode(em[1]);
     return `@emit(${enc.nm}nm, ${enc.psi})  // Solidity event → spectral emit`;
   }
+  // F-003 FIX: modifier → EMIT + LABEL (not @channel)
   if (MODIFIER_RE.test(line)) {
     const mm = line.match(MODIFIER_RE)!;
     const enc = ceEncode(mm[1]);
     return `@emit(${enc.nm}nm, ${enc.psi}) fn ${mm[1]}() {  // modifier → WLS gate`;
   }
+  // mapping → STORE opcode
   if (MAPPING_RE.test(line)) {
     const key = (line.match(/(\w+)\s*;?$/) ?? [])[1] ?? "state";
     return `@store ${key} := {}  // mapping → spectral K/V store`;
@@ -96,12 +86,10 @@ function transpileSolidityLine(line: string): string | null {
     const enc = ceEncode("payable");
     return `// @${enc.nm}nm PAYABLE — receives sats/NXT`;
   }
-  if (line.match(/^require\s*\((.+)\)/)) {
+  if (line.match(/^require\s*\((.+)\)/))
     return `?λ ${line.replace(/^require\s*/, "")}:  // require → photon gate`;
-  }
-  if (line.match(/^revert\b/)) {
+  if (line.match(/^revert\b/))
     return `emit("REVERT")  // → revert wavefunction`;
-  }
   if (line.startsWith("constructor")) {
     const enc = ceEncode("constructor");
     return `@emit(${enc.nm}nm, ${enc.psi}) fn constructor() {`;
@@ -116,16 +104,17 @@ export function transpileToWLS(src: string, lang: SupportedLang, contractName?: 
   opcodeCount: number;
   spectralAddress: string;
 } {
-  if (!src.trim()) return { wls: "", manifest: [], opcodeCount: 0, spectralAddress: "Ψ(0,0,H)" };
+  // F-007 FIX: use Ψ(1,1,H) — the first valid Hilbert channel (1-based)
+  if (!src.trim()) return { wls: "", manifest: [], opcodeCount: 0, spectralAddress: "Ψ(1,1,H)" };
 
-  const timestamp = new Date().toISOString().slice(0, 19) + "Z";
-  const name      = contractName ?? "Contract";
-  const rootEnc   = ceEncode(name);
+  const name    = contractName ?? "Contract";
+  const rootEnc = ceEncode(name);
 
+  // F-004 FIX: no timestamp in WLS body — deterministic output
   const out: string[] = [
     `// WavelengthScript v1.0 · NexusOS · AGPL-3.0`,
-    `// ${lang.toUpperCase()} → WLS · ${timestamp}`,
-    `// Contract: ${name}  ${rootEnc.psi}  λ=${rootEnc.nm}nm  [${rootEnc.band}]`,
+    `// ${lang.toUpperCase()} → WLS  Contract: ${name}`,
+    `// λ=${rootEnc.nm}nm  ${rootEnc.psi}  [${rootEnc.band}]`,
     ``,
     `@emit(${rootEnc.nm}nm, ${rootEnc.psi})`,
     `fn ${name.replace(/\s+/g, "_")}() {`,
@@ -142,7 +131,7 @@ export function transpileToWLS(src: string, lang: SupportedLang, contractName?: 
     const cmt = stripComment(line, lang);
     if (cmt !== null) { out.push(`  // ${cmt}`); continue; }
 
-    // Language-specific: Solidity
+    // Solidity-specific patterns (checked before generic ones)
     if (lang === "solidity") {
       const sl = transpileSolidityLine(line);
       if (sl) { out.push(`  ${sl}`); continue; }
@@ -156,7 +145,7 @@ export function transpileToWLS(src: string, lang: SupportedLang, contractName?: 
     const stRead = detectStateRead(line);
     if (stRead) { out.push(`  ${stRead}`); continue; }
 
-    // Function definitions
+    // Function definitions → EMIT + LABEL
     const fnMatch = line.match(FN_RE);
     if (fnMatch) {
       const [, fnName, params] = fnMatch;
@@ -172,16 +161,15 @@ export function transpileToWLS(src: string, lang: SupportedLang, contractName?: 
       continue;
     }
 
-    // Class / struct / contract
+    // F-003 FIX: class / struct / contract / trait → AGENT opcode (not @channel)
     const classMatch = line.match(CLASS_RE);
     if (classMatch) {
       const enc = ceEncode(classMatch[1]);
-      out.push(`  @channel(${enc.psi}) // ${enc.nm}nm · ${enc.band}`);
-      out.push(`  type ${classMatch[1]} : SpectralNode {`);
+      out.push(`  agent ${classMatch[1]}  // @${enc.nm}nm ${enc.psi} [${enc.band}]`);
       continue;
     }
 
-    // Import / use / require
+    // Import / use / require → TUNE opcode
     if (IMPORT_RE.test(line)) {
       const modMatch = line.match(/["']([^"']+)["']/) ?? line.match(/\s+(\w+)\s*$/) ?? null;
       const modName  = modMatch ? modMatch[1] : "module";
@@ -190,43 +178,42 @@ export function transpileToWLS(src: string, lang: SupportedLang, contractName?: 
       continue;
     }
 
-    // Print / log / broadcast
+    // Print / log → BROAD opcode
     if (PRINT_RE.test(line)) {
       const inner = line.replace(/^[^(]+/, "");
       out.push(`  broadcast(${inner})  // STREAM`);
       continue;
     }
 
-    // Return
+    // Return → EMIT opcode
     if (RETURN_RE.test(line)) {
       const val = line.slice(6).trim();
       out.push(`  emit ${val}  // → spectral output`);
       continue;
     }
 
-    // Loops
+    // Loops → OCS opcode
     if (LOOP_RE.test(line)) {
       const body = line.replace(/^(?:for|while|loop)\s+/, "");
       out.push(`  oscillate(${body}) {`);
       continue;
     }
 
-    // Conditionals
+    // Conditionals → JMPZ opcode
     if (line.startsWith("if ") || line === "else" || line.startsWith("else if") || line.startsWith("else {")) {
       out.push(`  ?λ ${line.replace(/^else\s*/, "// else ")}:`);
       continue;
     }
 
-    // Closing braces / end keywords
+    // Closing braces → RET opcode
     if (line === "}" || line.match(/^end(\s|$)/)) { out.push("}"); continue; }
 
-    // Variable assignment / declaration (smart-contract: auto STORE for state vars)
+    // Variable assignment — persistent (Solidity or init-to-zero) → STORE; transient → PUSH
     const varMatch = line.match(VAR_RE);
     if (varMatch && !KEYWORD_SKIP.test(varMatch[1])) {
       const [, vname, val] = varMatch;
       const enc = ceEncode(vname);
-      // If it looks like a state/persistent variable: emit STORE opcode
-      const isPersist = lang === "solidity" || val.trim().match(/^(?:0|false|""|HashMap|BTreeMap|vec!|Vec|new\s)/);
+      const isPersist = lang === "solidity" || /^(?:0|false|""|HashMap|BTreeMap|vec!|Vec|new\s)/.test(val.trim());
       if (isPersist) {
         out.push(`  @store ${vname} := ${val.replace(/;$/, "")}  // ${enc.psi}`);
       } else {
@@ -235,7 +222,7 @@ export function transpileToWLS(src: string, lang: SupportedLang, contractName?: 
       continue;
     }
 
-    // Fallback: annotate with CE wavelength
+    // Fallback → EXEC (0x0B) with CE annotation
     const word = line.split(/\s/)[0].replace(/[^a-zA-Z]/g, "") || "op";
     const enc  = ceEncode(word);
     out.push(`  /* @${enc.nm}nm */ ${line}`);
@@ -257,8 +244,12 @@ export function transpileToWLS(src: string, lang: SupportedLang, contractName?: 
     return { identifier: id, ...enc };
   });
 
-  const wls        = out.join("\n");
-  const opcodeCount = (wls.match(/^  (?:@emit|fn |@store|@load|transfer_nxt|transfer_sats|tune|broadcast|oscillate|emit |call\(|\?λ)/gm) ?? []).length;
+  const wls = out.join("\n");
+
+  // F-006 FIX: count all VM-generating opcodes per spec REQ-007
+  const opcodeCount = (wls.match(
+    /^  (?:@emit|fn |agent |@store|@load|transfer_nxt|transfer_sats|tune|broadcast|oscillate|emit |call\(|\?λ|GATE\()|^}/gm
+  ) ?? []).length;
 
   return { wls, manifest, opcodeCount, spectralAddress: rootEnc.psi };
 }

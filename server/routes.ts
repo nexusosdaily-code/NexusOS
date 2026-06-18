@@ -2034,29 +2034,33 @@ export async function registerRoutes(
   });
 
   // POST /api/dev/transpile — translate any language to WavelengthScript (API key auth)
+  // Spec: docs/WNSP-TRANSPILER-SPEC-v1.md  REQ-008: 30 req/min per API key
   app.post("/api/dev/transpile", authenticateApiKey, async (req, res) => {
     try {
+      if (!await checkRateLimit(req, res, "/api/dev/transpile", 30)) return;
+
       const schema = z.object({
-        source_code:    z.string().min(1).max(20000),
+        source_code:     z.string().min(1).max(20000),
         source_language: z.enum(SUPPORTED_LANGS as [SupportedLang, ...SupportedLang[]]),
-        contract_name:  z.string().max(80).optional(),
+        contract_name:   z.string().max(80).optional(),
       });
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
 
       const { source_code, source_language, contract_name } = parsed.data;
-      const result = transpileToWLS(source_code, source_language, contract_name);
-
-      const channel  = deriveChannel(req.user!.username);
+      const result    = transpileToWLS(source_code, source_language, contract_name);
+      const channel   = deriveChannel(req.user!.username);
+      const generated = new Date().toISOString(); // F-004: timestamp in envelope only, not in WLS body
 
       res.json({
-        ok: true,
+        ok:               true,
         wavelength_script: result.wls,
         manifest:          result.manifest,
         opcode_count:      result.opcodeCount,
         spectral_address:  result.spectralAddress,
         source_language,
         contract_name:     contract_name ?? null,
+        generated_at:      generated,
         vm_instructions: {
           compile:  "POST /api/contracts  { name, source_code: <wavelength_script> }",
           deploy:   "PATCH /api/contracts/:id  { deployed: true }",
@@ -2064,14 +2068,17 @@ export async function registerRoutes(
           explorer: "/nexus-explorer",
         },
         caller: { username: req.user!.username, band: req.user!.spectralBand, nm: channel.wdm },
-        meta: { supported_languages: SUPPORTED_LANGS, version: "WavelengthScript v1.0 · NexusOS AGPL-3.0" },
+        meta:   { supported_languages: SUPPORTED_LANGS, version: "WavelengthScript v1.0 · NexusOS AGPL-3.0" },
       });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  // POST /api/ide/transpile — same as dev/transpile but uses session auth (for the IDE UI)
+  // POST /api/ide/transpile — session-auth version for the Spectral IDE UI
+  // Spec: docs/WNSP-TRANSPILER-SPEC-v1.md  REQ-008: 20 req/min per session user
   app.post("/api/ide/transpile", authenticate, async (req: Request, res: Response) => {
     try {
+      if (!await checkRateLimit(req, res, "/api/ide/transpile", 20)) return; // F-005 FIX
+
       const schema = z.object({
         source_code:     z.string().min(1).max(20000),
         source_language: z.enum(SUPPORTED_LANGS as [SupportedLang, ...SupportedLang[]]),
@@ -2084,12 +2091,13 @@ export async function registerRoutes(
       const result = transpileToWLS(source_code, source_language, contract_name);
 
       res.json({
-        ok: true,
+        ok:               true,
         wavelength_script: result.wls,
         manifest:          result.manifest,
         opcode_count:      result.opcodeCount,
         spectral_address:  result.spectralAddress,
         source_language,
+        generated_at:     new Date().toISOString(),
       });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
