@@ -195,6 +195,7 @@ opcode (i.e., not 0x00 comment/no-op). The regex used MUST include: `@emit`, `fn
 | Date | Auditor | Version | Outcome |
 |---|---|---|---|
 | 2026-06-18 | NexusOS Agent (internal audit) | v1.0 initial | 7 findings; F-001–F-007 fixed in same session |
+| 2026-06-18 | NexusOS Agent (IDE compliance audit) | v1.0 IDE pass | 4 findings; G-001–G-004 fixed in same session |
 
 ### Finding Log
 
@@ -207,3 +208,7 @@ opcode (i.e., not 0x00 comment/no-op). The regex used MUST include: `@emit`, `fn
 | F-005 | MEDIUM | `/api/ide/transpile` had no rate limit | Fixed: 20 req/min via `checkRateLimit` |
 | F-006 | MEDIUM | `opcodeCount` regex missed `}`, `agent`, `GATE(` | Fixed: extended regex |
 | F-007 | LOW | Fallback `Ψ(0,0,H)` is invalid (0-indexed) | Fixed: use `Ψ(1,1,H)` |
+| G-001 | HIGH | `vm_instructions.execute` in API response said `POST /api/contracts/:id/run` — route does not exist; real route is `POST /api/app/:slug/run` | Fixed: corrected route string in both transpile endpoints |
+| G-002 | MEDIUM | IDE had no "Execute on Chain" button — only a tiny purple text link; on-chain execution is a primary IDE function | Fixed: prominent `Execute on Chain` button with `Zap` icon appears below VM Output when contract is deployed |
+| G-003 | MEDIUM | `handleSave` accepted saves without prior compilation — stored empty `bytecode`/`assembly`/`manifest` | Fixed: toast error + early return if `!compiled`; bytecode now guaranteed non-empty on save |
+| G-004 | LOW | Import panel showed generic server "Unauthorized" for unauthenticated users | Fixed: client-side token check first; shows "Login required" toast before hitting server |

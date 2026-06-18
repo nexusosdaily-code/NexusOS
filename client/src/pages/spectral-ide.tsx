@@ -562,7 +562,12 @@ export default function SpectralIDEPage() {
   useEffect(() => { return () => { if (runRef.current) clearInterval(runRef.current); }; }, []);
 
   const handleSave = () => {
-    saveMutation.mutate({ name: contractName, source_code: code, bytecode: compiled?.hex ?? "", assembly: compiled?.asm ?? "", manifest: compiled?.manifest ?? [], instr_count: compiled?.instructions.filter(i => i.op !== 0).length ?? 0 });
+    // G-003 FIX: require compilation before save — prevents empty-bytecode state
+    if (!compiled) {
+      toast({ title: "Compile first", description: "Hit Compile before saving so bytecode is included", variant: "destructive" });
+      return;
+    }
+    saveMutation.mutate({ name: contractName, source_code: code, bytecode: compiled.hex, assembly: compiled.asm, manifest: compiled.manifest, instr_count: compiled.instructions.filter(i => i.op !== 0).length });
   };
 
   const handleDeploy = () => {
@@ -590,9 +595,14 @@ export default function SpectralIDEPage() {
     setImportResult(null);
     try {
       const token = localStorage.getItem("auth_token");
+      // G-004 FIX: give a clear login hint before hitting the server
+      if (!token) {
+        toast({ title: "Login required", description: "Sign in to use the Import panel", variant: "destructive" });
+        return;
+      }
       const r = await fetch("/api/ide/transpile", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ source_code: importSrc, source_language: importLang, contract_name: importName || undefined }),
       });
       if (!r.ok) {
@@ -953,15 +963,22 @@ export default function SpectralIDEPage() {
             ))}
           </div>
 
-          {/* BUG-8 FIX: compute once, not twice */}
+          {/* G-002 FIX: prominent Execute on Chain button when contract is deployed */}
           {(() => {
             const deployed = contracts.find((c: any) => c.id === selectedContract && c.app_slug);
             return deployed ? (
-              <div className="px-3 py-2 border-t border-slate-800 flex items-center gap-2">
-                <Share2 size={11} className="text-purple-400" />
+              <div className="px-3 py-2 border-t border-slate-800 flex items-center gap-2 bg-purple-950/20">
+                <a
+                  href={`/app/${deployed.app_slug}`}
+                  className="flex-1 flex items-center gap-1.5 px-3 py-1.5 text-xs bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 rounded border border-purple-600/40 transition-colors font-semibold justify-center"
+                  data-testid="btn-execute-on-chain">
+                  <Zap size={11} className="text-purple-300" />
+                  Execute on Chain
+                </a>
                 <a href={`/app/${deployed.app_slug}`}
-                  className="text-xs text-purple-400 hover:text-purple-300 truncate">
-                  /app/{deployed.app_slug}
+                  className="text-[10px] text-slate-600 hover:text-slate-500 truncate max-w-[100px]"
+                  title={`/app/${deployed.app_slug}`}>
+                  <Share2 size={10} className="inline mr-0.5" />/app/{deployed.app_slug}
                 </a>
               </div>
             ) : null;

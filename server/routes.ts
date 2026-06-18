@@ -2063,8 +2063,8 @@ export async function registerRoutes(
         generated_at:      generated,
         vm_instructions: {
           compile:  "POST /api/contracts  { name, source_code: <wavelength_script> }",
-          deploy:   "PATCH /api/contracts/:id  { deployed: true }",
-          execute:  "POST /api/contracts/:id/run",
+          deploy:   "POST /api/contracts/:id/deploy",
+          execute:  "POST /api/app/:slug/run  { channel_load: 0–100 }",
           explorer: "/nexus-explorer",
         },
         caller: { username: req.user!.username, band: req.user!.spectralBand, nm: channel.wdm },
