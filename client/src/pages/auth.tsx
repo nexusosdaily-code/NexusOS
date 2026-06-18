@@ -305,18 +305,22 @@ export default function AuthPage() {
                 {showWifLogin && (
                   <form onSubmit={handleWifLogin} className="space-y-2">
                     <div className="relative">
-                      <Input
-                        type={showWifInput ? "text" : "password"}
+                      <textarea
                         value={wifKey}
                         onChange={e => setWifKey(e.target.value)}
                         placeholder="Paste your BTC WIF key"
-                        className="bg-slate-800/50 border-orange-500/30 text-sm font-mono pr-10"
-                        autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                        rows={2}
+                        className={`w-full rounded-md bg-slate-800/50 border border-orange-500/30 text-sm font-mono p-2 pr-10 resize-none text-white placeholder-gray-600 focus:outline-none focus:border-orange-400 ${showWifInput ? "blur-sm select-none" : ""}`}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        inputMode="url"
                       />
                       <button type="button" tabIndex={-1}
                         onClick={() => setShowWifInput(v => !v)}
-                        className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
-                        {showWifInput ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        className="absolute right-2 top-2 text-gray-500 hover:text-gray-300">
+                        {showWifInput ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                       </button>
                     </div>
                     <Button type="submit" disabled={wifLoginLoading || !wifKey.trim()}
@@ -335,18 +339,22 @@ export default function AuthPage() {
                 {showNsecLogin && (
                   <form onSubmit={handleNsecLogin} className="space-y-2">
                     <div className="relative">
-                      <Input
-                        type={showNsecInput ? "text" : "password"}
+                      <textarea
                         value={nsecKey}
                         onChange={e => setNsecKey(e.target.value)}
                         placeholder="Paste your nsec key"
-                        className="bg-slate-800/50 border-purple-500/30 text-sm font-mono pr-10"
-                        autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                        rows={2}
+                        className={`w-full rounded-md bg-slate-800/50 border border-purple-500/30 text-sm font-mono p-2 pr-10 resize-none text-white placeholder-gray-600 focus:outline-none focus:border-purple-400 ${showNsecInput ? "blur-sm select-none" : ""}`}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        inputMode="url"
                       />
                       <button type="button" tabIndex={-1}
                         onClick={() => setShowNsecInput(v => !v)}
-                        className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
-                        {showNsecInput ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        className="absolute right-2 top-2 text-gray-500 hover:text-gray-300">
+                        {showNsecInput ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                       </button>
                     </div>
                     <Button type="submit" disabled={nsecLoginLoading || !nsecKey.trim()}
