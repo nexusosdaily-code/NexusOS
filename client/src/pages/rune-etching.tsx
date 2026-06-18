@@ -9,7 +9,6 @@ import {
   ArrowLeft, Gem, Bitcoin, Zap, Shield, Cpu, Globe2,
   TrendingUp, Lock, Flame, Coins, ArrowRight, CheckCircle2,
   ExternalLink, Hash, Layers, Activity, RefreshCw, Rocket,
-  AlertTriangle,
 } from "lucide-react";
 
 function Stat({ label, val, sub, color = "text-cyan-300" }: { label: string; val: string | number; sub?: string; color?: string }) {
@@ -344,29 +343,6 @@ export default function RuneEtchingPage() {
           </div>
           <div className="space-y-3">
 
-            {/* WNSP.btc inscription */}
-            <div className="bg-slate-800/50 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-slate-400 text-xs">WNSP.btc Inscription</span>
-                <span className="text-green-400 text-[10px] font-mono">Ordinals · mainnet</span>
-              </div>
-              <div className="font-mono text-[11px] text-slate-300 break-all mb-2">
-                ee8f6461ea2e39577b83350cb33c7bed0ae51ab1161a131369b054bb12939542i0
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <a href="https://ord.io/ee8f6461ea2e39577b83350cb33c7bed0ae51ab1161a131369b054bb12939542i0"
-                  target="_blank" rel="noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-purple-400 hover:text-purple-300 bg-purple-500/10 rounded px-2 py-1">
-                  ord.io <ExternalLink className="w-3 h-3" />
-                </a>
-                <a href="https://ordinals.com/inscription/ee8f6461ea2e39577b83350cb33c7bed0ae51ab1161a131369b054bb12939542i0"
-                  target="_blank" rel="noreferrer"
-                  className="flex items-center gap-1 text-[11px] text-orange-400 hover:text-orange-300 bg-orange-500/10 rounded px-2 py-1">
-                  ordinals.com <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-            </div>
-
             {/* WNSP•WAVELENGTHSCRIPT etch status */}
             <div className={`rounded-lg p-3 border ${wlsEtched ? "bg-green-900/20 border-green-500/20" : "bg-purple-900/10 border-purple-500/20"}`}>
               <div className="flex items-center justify-between mb-1">
@@ -422,20 +398,6 @@ export default function RuneEtchingPage() {
               )}
             </div>
 
-            {/* NEXUS•WAVELENGTH — inaccessible notice */}
-            <div className="bg-red-900/10 border border-red-500/20 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
-                <span className="text-red-300 text-xs font-semibold">NEXUS•WAVELENGTH (Inaccessible)</span>
-                <span className="text-[10px] font-mono text-slate-500 ml-auto">block 952,596</span>
-              </div>
-              <div className="font-mono text-[11px] text-slate-500 break-all mb-1">
-                8e1614818d96e494bbde4d90b57ef7ce596aebee50b15b48c132ed8ece3ae11c
-              </div>
-              <div className="text-[10px] text-red-400/70">
-                84B tokens etched to an inaccessible wallet (bc1qrhqzqy6…) — 20.9T burned. Replaced by WNSP•WAVELENGTHSCRIPT.
-              </div>
-            </div>
 
           </div>
         </Card>
