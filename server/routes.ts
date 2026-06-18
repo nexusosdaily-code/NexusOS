@@ -14893,31 +14893,110 @@ wnsp.io | t.me/troglodytememe`,
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  // ── Public contract run — no auth required ────────────────────────────────
-  // Executes the contract server-side, stores result, logs to blockchain mempool.
+  // ── Public contract run — full v1.1 execution ────────────────────────────────
   app.post("/api/app/:slug/run", async (req, res) => {
     try {
       const pool = (await import("./db")).pool;
       const rawLoad = parseInt(req.body?.channel_load ?? "42");
       const channelLoad = Math.max(0, Math.min(100, isNaN(rawLoad) ? 42 : rawLoad));
 
-      // Load deployed contract
+      // 1. Load deployed contract (with contract wallet balance)
       const { rows: cRows } = await pool.query(
-        `SELECT id, name, source_code, user_id FROM spectral_contracts
+        `SELECT id, name, source_code, user_id, contract_nxt_balance
+         FROM spectral_contracts
          WHERE app_slug=$1 AND is_public=true AND status='deployed'`,
         [req.params.slug]
       );
       if (!cRows[0]) return res.status(404).json({ error: "Contract not found" });
       const contract = cRows[0];
 
-      // Run the VM server-side
-      const { runToHalt, fireEffects, ceEncode } = await import("./wnsp_vm");
-      const result = runToHalt(contract.source_code, channelLoad);
+      // 2. Load persistent state for this contract
+      const { rows: stateRows } = await pool.query(
+        `SELECT key, value FROM contract_state WHERE contract_id=$1`,
+        [contract.id]
+      );
+      const initialState: Record<string, any> = {};
+      for (const r of stateRows) initialState[r.key] = r.value;
 
-      // Derive psi channel for blockchain record
+      // 3. Run VM server-side with persistent state
+      const { runToHalt, fireEffects, ceEncode } = await import("./wnsp_vm");
+      const result = runToHalt(contract.source_code, channelLoad, initialState);
       const { psi: contractPsi, nm: contractNm } = ceEncode(contract.name);
 
-      // Persist execution record
+      // 4. Persist state delta (STORE instructions)
+      const stateDeltaKeys = Object.keys(result.stateDelta);
+      for (const key of stateDeltaKeys) {
+        await pool.query(
+          `INSERT INTO contract_state (contract_id, key, value, updated_at)
+           VALUES ($1, $2, $3::jsonb, now())
+           ON CONFLICT (contract_id, key) DO UPDATE SET value=$3::jsonb, updated_at=now()`,
+          [contract.id, key, JSON.stringify(result.stateDelta[key])]
+        );
+      }
+
+      // 5. Execute XFER_NXT effects from contract wallet
+      const transferResults: any[] = [];
+      const xferNxtEffects = result.effects.filter(fx => fx.type === "XFER_NXT");
+      let contractBalance = parseFloat(contract.contract_nxt_balance ?? "0");
+      for (const fx of xferNxtEffects) {
+        const amt = parseFloat(fx.amount ?? "0");
+        if (amt <= 0) {
+          transferResults.push({ type: "XFER_NXT", to: fx.to, amount: "0", status: "skipped_zero" });
+          continue;
+        }
+        if (contractBalance < amt) {
+          transferResults.push({ type: "XFER_NXT", to: fx.to, amount: amt.toFixed(8), status: "insufficient_balance", balance: contractBalance.toFixed(8) });
+          continue;
+        }
+        contractBalance -= amt;
+        try {
+          const { rows: txR } = await pool.query(
+            `INSERT INTO blockchain_tx_pool
+               (from_address, to_address, amount_nxt, memo, wavelength_nm, psi_channel, fee_paid, status)
+             VALUES ($1, $2, $3, $4, $5, $6, '0.00000000', 'pending')
+             RETURNING id`,
+            [contractPsi, fx.to ?? "unknown", amt.toFixed(8), `CONTRACT_XFER:${contract.id}`, contractNm.toFixed(4), contractPsi]
+          );
+          transferResults.push({ type: "XFER_NXT", to: fx.to, amount: amt.toFixed(8), tx_id: txR[0].id, status: "executed" });
+        } catch (xferErr: any) {
+          transferResults.push({ type: "XFER_NXT", to: fx.to, amount: amt.toFixed(8), status: "tx_failed", error: xferErr.message });
+          contractBalance += amt; // roll back deduction
+        }
+      }
+      // Persist updated contract balance
+      if (contractBalance !== parseFloat(contract.contract_nxt_balance ?? "0")) {
+        await pool.query(
+          `UPDATE spectral_contracts SET contract_nxt_balance=$1 WHERE id=$2`,
+          [contractBalance.toFixed(8), contract.id]
+        );
+      }
+
+      // 6. Execute SUBCALL effects — sub-contract invocation (depth-1 only)
+      const subcallResults: any[] = [];
+      const callEffects = result.effects.filter(fx => fx.type === "SUBCALL" && fx.slug);
+      for (const fx of callEffects) {
+        try {
+          const { rows: subRows } = await pool.query(
+            `SELECT id, name, source_code FROM spectral_contracts
+             WHERE app_slug=$1 AND status='deployed' AND is_public=true`,
+            [fx.slug]
+          );
+          if (!subRows[0]) { subcallResults.push({ slug: fx.slug, status: "not_found" }); continue; }
+          const subResult = runToHalt(subRows[0].source_code, channelLoad); // no state, no financial ops
+          subcallResults.push({
+            slug:        fx.slug,
+            name:        subRows[0].name,
+            output:      subResult.output.map((o: any) => ({ ...o, text: `[${fx.slug}] ${o.text}` })),
+            cycle_count: subResult.cycleCount,
+            halted:      subResult.halted,
+            status:      "executed",
+          });
+        } catch (callErr: any) {
+          subcallResults.push({ slug: fx.slug, status: "error", error: callErr.message });
+        }
+      }
+
+      // 7. Persist execution record
       const { rows: execRows } = await pool.query(
         `INSERT INTO contract_executions
            (contract_id, caller_user_id, caller_address, channel_load, output, final_registers,
@@ -14925,65 +15004,124 @@ wnsp.io | t.me/troglodytememe`,
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING id`,
         [
-          contract.id,
-          null, // public run — no authenticated user
-          "PUBLIC",
-          channelLoad,
-          JSON.stringify(result.output),
-          JSON.stringify(result.registers),
-          JSON.stringify(result.agents),
-          result.cycleCount,
-          result.halted,
-          result.truncated,
+          contract.id, null, "PUBLIC", channelLoad,
+          JSON.stringify(result.output), JSON.stringify(result.registers),
+          JSON.stringify(result.agents), result.cycleCount, result.halted, result.truncated,
         ]
       );
       const executionId = execRows[0].id;
 
-      // Log to blockchain mempool — zero-value record tx
+      // 8. Blockchain audit record
       let chainTxId: string | null = null;
       try {
         const { rows: txRows } = await pool.query(
           `INSERT INTO blockchain_tx_pool
              (from_address, to_address, amount_nxt, memo, wavelength_nm, psi_channel, fee_paid, status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+           VALUES ($1, $2, '0.00000000', $3, $4, $5, '0.00000000', 'pending')
            RETURNING id`,
-          [
-            "CONTRACT_EXECUTOR",
-            contractPsi,
-            "0.00000000",
-            `CONTRACT_EXEC:${executionId}`,
-            contractNm.toFixed(4),
-            contractPsi,
-            "0.00000000",
-          ]
+          ["CONTRACT_EXECUTOR", contractPsi, `CONTRACT_EXEC:${executionId}`, contractNm.toFixed(4), contractPsi]
         );
         chainTxId = txRows[0].id;
-        // Stamp the chain_tx_id back onto the execution record
-        await pool.query(
-          `UPDATE contract_executions SET chain_tx_id=$1 WHERE id=$2`,
-          [chainTxId, executionId]
-        );
+        await pool.query(`UPDATE contract_executions SET chain_tx_id=$1 WHERE id=$2`, [chainTxId, executionId]);
       } catch (txErr: any) {
         console.warn("[ContractRun] Blockchain tx insert failed:", txErr.message);
       }
 
-      // Fire kernel side-effects (agent registration, kernel events) — non-blocking
-      fireEffects(result.effects, pool, contract.name, executionId, contract.id).catch(
-        (e: Error) => console.warn("[ContractRun] Side-effect error:", e.message)
+      // 9. Fire kernel side-effects (non-blocking)
+      fireEffects(result.effects, pool, contract.name, executionId, contract.id)
+        .catch((e: Error) => console.warn("[ContractRun] Side-effect error:", e.message));
+
+      res.json({
+        id:               executionId,
+        contract_id:      contract.id,
+        channel_load:     channelLoad,
+        output:           result.output,
+        final_registers:  result.registers,
+        final_agents:     result.agents,
+        cycle_count:      result.cycleCount,
+        halted:           result.halted,
+        truncated:        result.truncated,
+        chain_tx_id:      chainTxId,
+        state_delta:      result.stateDelta,
+        transfer_results: transferResults,
+        subcall_results:  subcallResults,
+        contract_balance: contractBalance.toFixed(8),
+        executed_at:      new Date().toISOString(),
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── Contract state — public read ──────────────────────────────────────────
+  app.get("/api/app/:slug/state", async (req, res) => {
+    try {
+      const pool = (await import("./db")).pool;
+      const { rows: cRows } = await pool.query(
+        `SELECT id, contract_nxt_balance FROM spectral_contracts
+         WHERE app_slug=$1 AND is_public=true AND status='deployed'`,
+        [req.params.slug]
+      );
+      if (!cRows[0]) return res.status(404).json({ error: "Contract not found" });
+      const { rows } = await pool.query(
+        `SELECT key, value, updated_at FROM contract_state WHERE contract_id=$1 ORDER BY updated_at DESC`,
+        [cRows[0].id]
+      );
+      res.json({ state: rows, contract_nxt_balance: cRows[0].contract_nxt_balance });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── Fund contract wallet — authenticated, deployer only ───────────────────
+  app.post("/api/contracts/:id/fund", authenticate, async (req: any, res) => {
+    if (!isValidUUID(req.params.id)) return res.status(400).json({ error: "Invalid contract id" });
+    try {
+      const pool = (await import("./db")).pool;
+      const amountNxt = parseFloat(req.body?.amount_nxt ?? "0");
+      if (isNaN(amountNxt) || amountNxt <= 0) return res.status(400).json({ error: "amount_nxt must be > 0" });
+      if (amountNxt > 1_000_000) return res.status(400).json({ error: "Max single fund: 1,000,000 NXT" });
+
+      // Verify ownership
+      const { rows: cRows } = await pool.query(
+        `SELECT id, name, contract_nxt_balance FROM spectral_contracts WHERE id=$1 AND user_id=$2`,
+        [req.params.id, req.user.id]
+      );
+      if (!cRows[0]) return res.status(404).json({ error: "Contract not found or not yours" });
+
+      // Deduct from deployer's NXT wallet (Drizzle)
+      const { db } = await import("./db");
+      const { wallets } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user.id));
+      if (!wallet) return res.status(400).json({ error: "No NXT wallet found" });
+      const bal = parseFloat(wallet.balance);
+      if (bal < amountNxt) return res.status(400).json({ error: `Insufficient NXT (have ${bal.toFixed(2)}, need ${amountNxt})` });
+
+      // Atomic: deduct from wallet, credit to contract balance
+      await db.update(wallets)
+        .set({ balance: (bal - amountNxt).toFixed(8), updatedAt: new Date() })
+        .where(eq(wallets.userId, req.user.id));
+
+      const newContractBal = parseFloat(cRows[0].contract_nxt_balance) + amountNxt;
+      await pool.query(
+        `UPDATE spectral_contracts SET contract_nxt_balance=$1 WHERE id=$2`,
+        [newContractBal.toFixed(8), cRows[0].id]
+      );
+
+      // Blockchain record
+      const { ceEncode } = await import("./wnsp_vm");
+      const { psi } = ceEncode(cRows[0].name);
+      const { nm } = ceEncode(req.user.username || "funder");
+      await pool.query(
+        `INSERT INTO blockchain_tx_pool
+           (from_address, to_address, amount_nxt, memo, wavelength_nm, psi_channel, fee_paid, status)
+         VALUES ($1, $2, $3, $4, $5, $6, '0.00000000', 'pending')`,
+        [nm.toFixed(4), psi, amountNxt.toFixed(8), `CONTRACT_FUND:${cRows[0].id}`, nm.toFixed(4), psi]
       );
 
       res.json({
-        id:              executionId,
-        contract_id:     contract.id,
-        channel_load:    channelLoad,
-        output:          result.output,
-        final_registers: result.registers,
-        final_agents:    result.agents,
-        cycle_count:     result.cycleCount,
-        halted:          result.halted,
-        truncated:       result.truncated,
-        chain_tx_id:     chainTxId,
-        executed_at:     new Date().toISOString(),
+        contract_id:          cRows[0].id,
+        contract_name:        cRows[0].name,
+        funded_nxt:           amountNxt.toFixed(8),
+        contract_nxt_balance: newContractBal.toFixed(8),
+        wallet_balance_after: (bal - amountNxt).toFixed(8),
       });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });

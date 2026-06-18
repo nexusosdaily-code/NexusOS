@@ -44,20 +44,24 @@ interface Ins {
   off: number; op: number; mnem: string; args: string;
   nm?: number; ch?: string; cmt: string;
   gateThreshold?: number; gateHigh?: number; gateLow?: number;
+  storeKey?: string; storeVal?: string;
+  xferAmount?: string;
 }
 interface VMState {
   pc: number;
   registers: { nm: number; name: string; value: string; band: string }[];
   agents: { name: string; nm: number; psi: string; status: "ACTIVE" | "IDLE" }[];
-  output: { text: string; type: "sys" | "emit" | "broad" | "agent" | "gate" | "err" }[];
+  output: { text: string; type: "sys" | "emit" | "broad" | "agent" | "gate" | "err" | "store" | "xfer" | "call" }[];
   tuned: number;
   halted: boolean;
   cycleCount: number;
   gateResult?: { routed: number; band: string; load: number; threshold: number };
+  kvStore: Record<string, any>;
+  kvDirty: Record<string, any>;
 }
 
 function freshVM(): VMState {
-  return { pc: 0, registers: [], agents: [], output: [], tuned: 520, halted: false, cycleCount: 0 };
+  return { pc: 0, registers: [], agents: [], output: [], tuned: 520, halted: false, cycleCount: 0, kvStore: {}, kvDirty: {} };
 }
 
 function compileWLS(src: string): Ins[] {
@@ -97,6 +101,19 @@ function compileWLS(src: string): Ins[] {
     if (m9) { const e = ceEncode(m9[1].replace(/[^a-zA-Z]/g, "") || "out"); add(0x03, "EMIT", m9[1].trim(), `output at λ=${e.nm}nm`, e.nm); continue; }
     if (line.startsWith("?λ ")) { add(0x08, "JMPZ", line.slice(3).trim(), "photon path branch"); continue; }
     if (line === "}" || line.match(/^end\b/)) { add(0xFE, "RET", "", "scope end — wave collapses"); continue; }
+    // v1.1 opcodes
+    const mStoreAssign = line.match(/^@store\s+(\w+)\s*:=\s*(.+)/);
+    if (mStoreAssign) { const v = mStoreAssign[2].trim().replace(/^["']|["']$/g, ""); add(0x10, "STORE", `${mStoreAssign[1]} := ${v}`, `persist ${mStoreAssign[1]} → state`, undefined, undefined, { storeKey: mStoreAssign[1], storeVal: v }); continue; }
+    const mStoreRef = line.match(/^@store\s+(\w+)\s*$/);
+    if (mStoreRef) { add(0x10, "STORE", mStoreRef[1], `persist register → state`, undefined, undefined, { storeKey: mStoreRef[1] }); continue; }
+    const mLoad = line.match(/^@load\s+(\w+)/);
+    if (mLoad) { add(0x11, "LOAD", mLoad[1], `restore ${mLoad[1]} ← state`); continue; }
+    const mXferNxt = line.match(/^transfer_nxt\("([^"]+)",\s*"([^"]+)"\)/);
+    if (mXferNxt) { add(0x12, "XFER_NXT", `"${mXferNxt[1]}"  ${mXferNxt[2]}`, `transfer ${mXferNxt[2]} NXT`, undefined, mXferNxt[1], { xferAmount: mXferNxt[2] }); continue; }
+    const mXferSats = line.match(/^transfer_sats\("([^"]+)",\s*"([^"]+)"\)/);
+    if (mXferSats) { add(0x13, "XFER_SATS", `"${mXferSats[1]}"  ${mXferSats[2]}`, `transfer ${mXferSats[2]} sats`, undefined, mXferSats[1], { xferAmount: mXferSats[2] }); continue; }
+    const mCall = line.match(/^call\("([^"]+)"\)/);
+    if (mCall) { add(0x14, "CALL", `"${mCall[1]}"`, `call sub-contract "${mCall[1]}"`); continue; }
     const word = line.split(/\s/)[0].replace(/[^a-zA-Z]/g, "") || "op";
     const e = ceEncode(word);
     add(0x0B, "EXEC", `@${e.nm}nm`, line.slice(0, 60), e.nm);
@@ -129,6 +146,33 @@ function stepVM(state: VMState, ins: Ins[], channelLoad: number): VMState {
     case 0x0B: { s.output.push({ text: `EXEC  ${i.cmt.slice(0, 60)}`, type: "sys" }); break; }
     case 0xFE: { s.output.push({ text: `RET   — wave collapses, scope exits`, type: "sys" }); break; }
     case 0xFF: { s.halted = true; s.output.push({ text: `HALT  — wavefunction terminated  (${s.cycleCount} cycles)`, type: "sys" }); break; }
+    // v1.1 opcodes
+    case 0x10: {
+      const key = i.storeKey ?? i.args.split(" ")[0];
+      const val = i.storeVal ?? `@${s.tuned}nm`;
+      s.kvDirty = { ...s.kvDirty, [key]: val };
+      s.output.push({ text: `STORE  ${key} := "${val}"  → contract_state`, type: "store" });
+      break;
+    }
+    case 0x11: {
+      const key = i.args;
+      const val = s.kvStore[key] ?? s.kvDirty[key] ?? null;
+      s.output.push({ text: `LOAD  ${key} ← ${val !== null ? `"${JSON.stringify(val)}"` : "(not set)"}  from contract_state`, type: "store" });
+      break;
+    }
+    case 0x12: {
+      s.output.push({ text: `XFER_NXT  ${i.xferAmount ?? "0"} NXT → ${i.ch ?? "?"} [browser sim — no chain effect]`, type: "xfer" });
+      break;
+    }
+    case 0x13: {
+      s.output.push({ text: `XFER_SATS  ${i.xferAmount ?? "0"} sats → ${i.ch ?? "?"} [browser sim — no chain effect]`, type: "xfer" });
+      break;
+    }
+    case 0x14: {
+      const slug = i.args.replace(/"/g, "");
+      s.output.push({ text: `CALL  "${slug}" [use Execute on Chain to invoke sub-contract]`, type: "call" });
+      break;
+    }
     default: break;
   }
   return s;
@@ -245,12 +289,64 @@ fn withdraw(amount, destination) {
 }
 `,
   },
+  {
+    name: "Persistent State",
+    description: "STORE/LOAD persistent K/V across executions",
+    code: `// Persistent State — WavelengthScript v1.1
+// Values written with @store persist in contract_state
+// across ALL future executions of this contract.
+
+tune(650nm)  // STORAGE band — persistent state lives here
+
+fn increment() {
+  @load counter
+  // counter is now loaded from contract_state
+  @store counter := 1
+  // In a real contract, read the loaded value and add 1
+  broadcast(counter)
+  emit counter
+}
+
+fn setOwner() {
+  @store owner := "Ψ(52,3,V)"
+  @store created_at := "2026-06-18"
+  broadcast(owner)
+  emit owner
+}
+`,
+  },
+  {
+    name: "Token Transfer",
+    description: "Send NXT from contract wallet on execution",
+    code: `// Token Transfer — WavelengthScript v1.1
+// Contract must be funded via POST /api/contracts/:id/fund
+// XFER_NXT deducts from contract wallet, not caller wallet.
+
+tune(580nm)  // INTERFACE band
+
+@store last_recipient := "Ψ(41,13,V)"
+
+fn sendReward(recipient) {
+  // Transfer 1 NXT from this contract's wallet to recipient
+  transfer_nxt("Ψ(41,13,V)", "1.00000000")
+  @store last_recipient := "Ψ(41,13,V)"
+  broadcast(recipient)
+  emit result
+}
+
+fn invokeHelper() {
+  // Call another deployed contract by its slug
+  call("hello-photon")
+  emit result
+}
+`,
+  },
 ];
 
 // ── Syntax highlighter — token-based to avoid regex collision ─────────────────
 function highlight(code: string): string {
-  const KWS = new Set(["fn","let","agent","node","tune","emit","broadcast","oscillate","GATE","type","record"]);
-  const OPS = new Set(["HALT","RET","PUSH","EMIT","TUNE","BROAD","OCS","JMPZ","EXEC","AGENT","LABEL"]);
+  const KWS = new Set(["fn","let","agent","node","tune","emit","broadcast","oscillate","GATE","type","record","transfer_nxt","transfer_sats","call"]);
+  const OPS = new Set(["HALT","RET","PUSH","EMIT","TUNE","BROAD","OCS","JMPZ","EXEC","AGENT","LABEL","GATE","STORE","LOAD","XFER_NXT","XFER_SATS","CALL"]);
 
   return code.split("\n").map(line => {
     // Comments: everything from // to end of line
@@ -472,12 +568,15 @@ export default function SpectralIDEPage() {
 
   const outputColor = (type: string) => {
     switch (type) {
-      case "emit": return "text-cyan-400";
+      case "emit":  return "text-cyan-400";
       case "broad": return "text-purple-400";
       case "agent": return "text-green-400";
-      case "gate": return "text-yellow-400";
-      case "err": return "text-red-400";
-      default: return "text-slate-400";
+      case "gate":  return "text-yellow-400";
+      case "err":   return "text-red-400";
+      case "store": return "text-blue-400";
+      case "xfer":  return "text-orange-400";
+      case "call":  return "text-violet-400";
+      default:      return "text-slate-400";
     }
   };
 

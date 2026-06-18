@@ -468,6 +468,20 @@ async function runStartupMigrations() {
       CREATE INDEX IF NOT EXISTS idx_sc_slug ON spectral_contracts(app_slug) WHERE app_slug IS NOT NULL;
     `);
 
+    // 12. Contract persistent state K/V store + contract NXT wallet balance
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contract_state (
+        contract_id UUID NOT NULL,
+        key         TEXT NOT NULL,
+        value       JSONB NOT NULL DEFAULT 'null',
+        updated_at  TIMESTAMPTZ DEFAULT now(),
+        PRIMARY KEY (contract_id, key)
+      );
+      CREATE INDEX IF NOT EXISTS idx_cs_contract ON contract_state(contract_id);
+
+      ALTER TABLE spectral_contracts ADD COLUMN IF NOT EXISTS contract_nxt_balance NUMERIC(20,8) NOT NULL DEFAULT 0;
+    `);
+
     console.log("[MIGRATION] Startup schema migrations complete.");
   } catch (err: any) {
     console.error("[MIGRATION] Startup migration error:", err.message);
