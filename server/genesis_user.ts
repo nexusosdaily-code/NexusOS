@@ -56,19 +56,18 @@ export async function seedGenesisUser() {
     const [nexus] = await db.select().from(users).where(eq(users.username, GENESIS_USERNAME));
 
     if (nexus) {
-      // Always ensure SYSTEM band + admin role
-      const needsBandUpgrade = nexus.spectralBand !== "SYSTEM" || nexus.spectralWdm !== NEXUS_SPECTRAL.spectralWdm;
-      const needsPasswordRefresh = !(await bcrypt.default.compare(GENESIS_PASSWORD, nexus.passwordHash ?? ""));
-
-      if (needsBandUpgrade || needsPasswordRefresh) {
-        const updates: Record<string, any> = { ...NEXUS_SPECTRAL, role: "admin" };
-        if (needsPasswordRefresh) updates.passwordHash = await bcrypt.default.hash(GENESIS_PASSWORD, 12);
-        await db.update(users).set(updates).where(eq(users.username, GENESIS_USERNAME));
-        if (needsBandUpgrade)     console.log("[GENESIS USER] ✓ Nexus upgraded → SYSTEM band Ψ(52,3,V)");
-        if (needsPasswordRefresh) console.log("[GENESIS USER] ✓ Nexus password hash refreshed");
-      } else {
-        console.log("[GENESIS USER] Nexus account OK — SYSTEM band confirmed");
-      }
+      // Always force-reset password + ensure SYSTEM band + admin role on every boot.
+      // This guarantees the Nexus account is always accessible after a deploy,
+      // regardless of any password changes that may have happened in the DB.
+      const passwordHash = await bcrypt.default.hash(GENESIS_PASSWORD, 12);
+      await db.update(users).set({
+        ...NEXUS_SPECTRAL,
+        role: "admin",
+        passwordHash,
+        isActive:   true,
+        isVerified: true,
+      }).where(eq(users.username, GENESIS_USERNAME));
+      console.log("[GENESIS USER] ✓ Nexus password force-reset + SYSTEM band confirmed Ψ(52,3,V)");
 
       // NXT wallet
       const existingWallet = await db.select().from(wallets).where(eq(wallets.userId, nexus.id)).limit(1);
