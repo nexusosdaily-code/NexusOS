@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { Sparkles, Lock, User, ArrowLeft, Zap, RefreshCw } from "lucide-react";
+import { Sparkles, Lock, User, ArrowLeft, Zap, RefreshCw, Eye, EyeOff } from "lucide-react";
 
 async function nostrSignIn(): Promise<{ signedEvent: any } | null> {
   const w = window as any;
@@ -32,8 +32,11 @@ export default function AuthPage() {
   const [registerData, setRegisterData]   = useState({ username: "", password: "", email: "" });
   const [registerLoading, setRegisterLoading] = useState(false);
   const [showRecovery, setShowRecovery]   = useState(false);
-  const [recoveryData, setRecoveryData] = useState({ username: "Nexus", newPassword: "", confirmPassword: "", recoveryKey: "" });
+  const [recoveryData, setRecoveryData] = useState({ username: "Nexus", newPassword: "", recoveryKey: "" });
   const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [showLoginPwd, setShowLoginPwd]     = useState(false);
+  const [showNewPwd, setShowNewPwd]         = useState(false);
+  const [showWif, setShowWif]               = useState(false);
 
   const handleNostrLogin = async () => {
     if (nostrLoading) return;
@@ -127,9 +130,6 @@ export default function AuthPage() {
 
   const handleRecover = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (recoveryData.newPassword !== recoveryData.confirmPassword) {
-      toast({ title: "Passwords don't match", variant: "destructive" }); return;
-    }
     if (recoveryData.newPassword.length < 8) {
       toast({ title: "Password must be 8+ characters", variant: "destructive" }); return;
     }
@@ -145,7 +145,7 @@ export default function AuthPage() {
       toast({ title: "Password updated", description: "You can now log in with your new password." });
       setShowRecovery(false);
       setLoginData({ username: recoveryData.username, password: "" });
-      setRecoveryData({ username: "Nexus", newPassword: "", confirmPassword: "", recoveryKey: "" });
+      setRecoveryData({ username: "Nexus", newPassword: "", recoveryKey: "" });
     } catch (err: any) {
       toast({ title: "Recovery failed", description: err.message, variant: "destructive" });
     } finally { setRecoveryLoading(false); }
@@ -221,13 +221,18 @@ export default function AuthPage() {
                   <Label htmlFor="login-password" className="text-gray-300">Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
-                    <Input id="login-password" type="password" placeholder="Enter password"
-                      className="pl-10 bg-slate-800/50 border-slate-700"
+                    <Input id="login-password" type={showLoginPwd ? "text" : "password"} placeholder="Enter password"
+                      className="pl-10 pr-10 bg-slate-800/50 border-slate-700"
                       value={loginData.password}
                       onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                       required autoComplete="current-password" autoCorrect="off"
                       autoCapitalize="none" spellCheck={false}
                       data-testid="input-login-password" />
+                    <button type="button" tabIndex={-1}
+                      onClick={() => setShowLoginPwd(v => !v)}
+                      className="absolute right-3 top-3 text-gray-500 hover:text-gray-300">
+                      {showLoginPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -259,25 +264,32 @@ export default function AuthPage() {
                   </div>
                   <div className="space-y-1">
                     <Label className="text-gray-400 text-xs">New Password</Label>
-                    <Input type="password" value={recoveryData.newPassword}
-                      onChange={e => setRecoveryData(d => ({ ...d, newPassword: e.target.value }))}
-                      className="bg-slate-800/50 border-slate-700 text-sm" placeholder="8+ characters"
-                      autoComplete="new-password" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-gray-400 text-xs">Confirm Password</Label>
-                    <Input type="password" value={recoveryData.confirmPassword}
-                      onChange={e => setRecoveryData(d => ({ ...d, confirmPassword: e.target.value }))}
-                      className="bg-slate-800/50 border-slate-700 text-sm" placeholder="Repeat password"
-                      autoComplete="new-password" />
+                    <div className="relative">
+                      <Input type={showNewPwd ? "text" : "password"} value={recoveryData.newPassword}
+                        onChange={e => setRecoveryData(d => ({ ...d, newPassword: e.target.value }))}
+                        className="bg-slate-800/50 border-slate-700 text-sm pr-10" placeholder="8+ characters"
+                        autoComplete="new-password" autoCorrect="off" autoCapitalize="none" spellCheck={false} />
+                      <button type="button" tabIndex={-1}
+                        onClick={() => setShowNewPwd(v => !v)}
+                        className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
+                        {showNewPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-gray-400 text-xs">Wallet Recovery Key (WIF)</Label>
-                    <Input type="password" value={recoveryData.recoveryKey}
-                      onChange={e => setRecoveryData(d => ({ ...d, recoveryKey: e.target.value }))}
-                      className="bg-slate-800/50 border-amber-500/30 text-sm font-mono"
-                      placeholder="Your Bitcoin wallet WIF key"
-                      autoComplete="off" autoCorrect="off" spellCheck={false} />
+                    <div className="relative">
+                      <Input type={showWif ? "text" : "password"} value={recoveryData.recoveryKey}
+                        onChange={e => setRecoveryData(d => ({ ...d, recoveryKey: e.target.value }))}
+                        className="bg-slate-800/50 border-amber-500/30 text-sm font-mono pr-10"
+                        placeholder="Your Bitcoin wallet WIF key"
+                        autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false} />
+                      <button type="button" tabIndex={-1}
+                        onClick={() => setShowWif(v => !v)}
+                        className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
+                        {showWif ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                     <p className="text-[10px] text-gray-600">Your BTC_INSCRIPTION_WALLET_WIF from Replit Secrets — only the wallet owner can reset the password.</p>
                   </div>
                   <Button type="submit"
