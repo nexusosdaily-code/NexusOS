@@ -6398,7 +6398,7 @@ export async function registerRoutes(
   });
 
   // ── Public ledger — all NXT transactions ─────────────────────────────
-  app.get("/api/ledger", async (req: Request, res: Response) => {
+  app.get("/api/ledger", authenticate, async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { sql: drizzleSql } = await import("drizzle-orm");
@@ -6458,7 +6458,7 @@ export async function registerRoutes(
   });
 
   // ── User directory (public) ───────────────────────────────────────────
-  app.get("/api/directory", async (req: Request, res: Response) => {
+  app.get("/api/directory", authenticate, async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
       const { users: usersTable, wallets } = await import("@shared/schema");
@@ -7725,7 +7725,7 @@ export async function registerRoutes(
   });
 
   // ── BTC Full-Auto Inscription Bridge ─────────────────────────────────────
-  app.get("/api/btc-bridge/status", async (_req: Request, res: Response) => {
+  app.get("/api/btc-bridge/status", authenticate, async (_req: Request, res: Response) => {
     try {
       const { btcBridge } = await import("./btc-bridge-service");
       res.json(btcBridge.getStatus());
@@ -7741,7 +7741,7 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  app.get("/api/btc-bridge/wallet", async (_req: Request, res: Response) => {
+  app.get("/api/btc-bridge/wallet", authenticate, async (_req: Request, res: Response) => {
     try {
       const { getServiceWalletInfo, getWalletBalance } = await import("./btc-inscription-engine");
       const info = getServiceWalletInfo();
@@ -7753,7 +7753,7 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  app.get("/api/btc-bridge/queue", async (req: Request, res: Response) => {
+  app.get("/api/btc-bridge/queue", authenticate, async (req: Request, res: Response) => {
     try {
       const { btcBridge } = await import("./btc-bridge-service");
       const status = req.query.status as string | undefined;
@@ -7895,7 +7895,7 @@ export async function registerRoutes(
     { band: "WNSP",    nm: [380,780], color: "#fb923c", runeName: "NEXUSOS•WNSP•PROTOCOL",symbol: "Ψ", supply: "25600",       desc: "25,600 orthogonal Ψ channels — Hilbert space density" },
   ];
 
-  app.get("/api/btc-bridge/runes", async (req: Request, res: Response) => {
+  app.get("/api/btc-bridge/runes", authenticate, async (req: Request, res: Response) => {
     try {
       const { getServiceWallet } = await import("./btc-inscription-engine");
       const wallet = getServiceWallet();
