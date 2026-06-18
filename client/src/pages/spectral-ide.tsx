@@ -1,11 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import {
   ArrowLeft, Play, StepForward, RotateCcw, Save, Rocket,
-  Code2, Cpu, Radio, Database, FileCode2, Plus, ChevronRight,
+  Code2, Cpu, Radio, Plus,
   Copy, Check, Zap, Activity, Share2, Trash2,
 } from "lucide-react";
 
@@ -293,7 +293,6 @@ export default function SpectralIDEPage() {
   usePageMeta({ title: "Spectral IDE — NexusOS", description: "Write, compile and execute WavelengthScript smart contracts inside the WNSP VM." });
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [, navigate] = useLocation();
 
   const [code, setCode] = useState(TEMPLATES[0].code);
   const [contractName, setContractName] = useState("Hello Photon");
@@ -307,6 +306,9 @@ export default function SpectralIDEPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
   const runRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // BUG-1 FIX: ref keeps channelLoad current inside the stale interval closure
+  const channelLoadRef = useRef(channelLoad);
+  useEffect(() => { channelLoadRef.current = channelLoad; }, [channelLoad]);
 
   const { data: contracts = [] } = useQuery<any[]>({
     queryKey: ["/api/contracts"],
@@ -421,15 +423,16 @@ export default function SpectralIDEPage() {
     if (!compiled) return;
     if (running) { if (runRef.current) clearInterval(runRef.current); setRunning(false); return; }
     setRunning(true);
+    // BUG-1 FIX: read channelLoadRef.current inside the interval — always current
     runRef.current = setInterval(() => {
       setVmState(s => {
         if (s.halted) { setRunning(false); if (runRef.current) clearInterval(runRef.current!); return s; }
-        const next = stepVM(s, compiled.instructions, channelLoad);
+        const next = stepVM(s, compiled.instructions, channelLoadRef.current);
         setTimeout(() => { if (outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight; }, 0);
         return next;
       });
     }, 120);
-  }, [compiled, running, channelLoad]);
+  }, [compiled, running]);
 
   const handleReset = useCallback(() => {
     setVmState(freshVM());
@@ -463,7 +466,9 @@ export default function SpectralIDEPage() {
   };
 
   const lines = code.split("\n");
-  const currentIns = compiled ? compiled.instructions[vmState.pc] : null;
+  // BUG-3 FIX: we have no source-line→instruction mapping, so don't fake it;
+  // highlight the instruction index row (approximate but not misleading)
+  const activeLineIdx = (compiled && !vmState.halted) ? vmState.pc : -1;
 
   const outputColor = (type: string) => {
     switch (type) {
@@ -529,15 +534,26 @@ export default function SpectralIDEPage() {
           </div>
           {contracts.length === 0 && <div className="px-3 py-4 text-xs text-slate-700">No contracts yet — save one to start</div>}
           {contracts.map((c: any) => (
-            <button key={c.id} onClick={() => handleLoadContract(c)}
-              className={`text-left px-3 py-2 text-xs hover:bg-slate-800/60 transition-colors border-b border-slate-800/50 ${selectedContract === c.id ? "bg-slate-800/80 border-l-2 border-l-cyan-500" : ""}`}
-              data-testid={`btn-contract-${c.id}`}>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-300 truncate max-w-[130px]">{c.name}</span>
-                {c.app_slug && <span className="text-green-500 shrink-0" title="Deployed"><Zap size={10} /></span>}
-              </div>
-              <div className="text-slate-700 mt-0.5">{c.instr_count ?? 0} instrs</div>
-            </button>
+            <div key={c.id}
+              className={`flex items-start border-b border-slate-800/50 ${selectedContract === c.id ? "bg-slate-800/80 border-l-2 border-l-cyan-500" : ""}`}>
+              {/* BUG-4 FIX: delete button now wired to deleteMutation */}
+              <button onClick={() => handleLoadContract(c)}
+                className="flex-1 text-left px-3 py-2 text-xs hover:bg-slate-800/40 transition-colors"
+                data-testid={`btn-contract-${c.id}`}>
+                <div className="flex items-center gap-1">
+                  <span className="text-slate-300 truncate max-w-[110px]">{c.name}</span>
+                  {c.app_slug && <span className="text-green-500 shrink-0" title="Deployed"><Zap size={10} /></span>}
+                </div>
+                <div className="text-slate-700 mt-0.5">{c.instr_count ?? 0} instrs</div>
+              </button>
+              <button
+                onClick={() => { if (confirm(`Delete "${c.name}"?`)) deleteMutation.mutate(c.id); }}
+                className="p-2 text-slate-700 hover:text-red-400 transition-colors shrink-0"
+                title="Delete contract"
+                data-testid={`btn-delete-${c.id}`}>
+                <Trash2 size={10} />
+              </button>
+            </div>
           ))}
         </div>
 
@@ -589,11 +605,9 @@ export default function SpectralIDEPage() {
           <div className="flex-1 overflow-auto bg-slate-950 flex">
             {/* Line numbers */}
             <div className="select-none text-right pr-3 pl-3 pt-3 text-slate-700 text-xs leading-[1.6] shrink-0 border-r border-slate-800/50" style={{ minWidth: "42px", fontSize: "13px" }}>
-              {lines.map((_, i) => {
-                const isActive = compiled && currentIns && !vmState.halted &&
-                  compiled.instructions.findIndex(ins => ins === currentIns) >= 0;
-                return <div key={i} className={isActive ? "text-cyan-500" : ""}>{i + 1}</div>;
-              })}
+              {lines.map((_, i) => (
+                <div key={i} className={i === activeLineIdx ? "text-cyan-400 font-bold" : ""}>{i + 1}</div>
+              ))}
             </div>
             {/* Editor area */}
             <div className="flex-1 relative min-w-0 editor-wrap" style={{ paddingLeft: "12px" }}>
@@ -602,7 +616,11 @@ export default function SpectralIDEPage() {
               <textarea
                 ref={textareaRef}
                 value={code}
-                onChange={e => { setCode(e.target.value); setCompiled(null); setVmState(freshVM()); }}
+                onChange={e => {
+                // BUG-2 FIX: stop the run loop when code changes — old bytecode is now stale
+                if (runRef.current) { clearInterval(runRef.current); runRef.current = null; setRunning(false); }
+                setCode(e.target.value); setCompiled(null); setVmState(freshVM());
+              }}
                 spellCheck={false}
                 className="editor-textarea min-h-full"
                 style={{ height: Math.max(lines.length * 1.6 * 13 + 24, 300) + "px" }}
@@ -684,16 +702,19 @@ export default function SpectralIDEPage() {
             ))}
           </div>
 
-          {/* Deploy info */}
-          {contracts.find((c: any) => c.id === selectedContract && c.app_slug) && (
-            <div className="px-3 py-2 border-t border-slate-800 flex items-center gap-2">
-              <Share2 size={11} className="text-purple-400" />
-              <a href={`/app/${contracts.find((c: any) => c.id === selectedContract)?.app_slug}`}
-                className="text-xs text-purple-400 hover:text-purple-300 truncate">
-                /app/{contracts.find((c: any) => c.id === selectedContract)?.app_slug}
-              </a>
-            </div>
-          )}
+          {/* BUG-8 FIX: compute once, not twice */}
+          {(() => {
+            const deployed = contracts.find((c: any) => c.id === selectedContract && c.app_slug);
+            return deployed ? (
+              <div className="px-3 py-2 border-t border-slate-800 flex items-center gap-2">
+                <Share2 size={11} className="text-purple-400" />
+                <a href={`/app/${deployed.app_slug}`}
+                  className="text-xs text-purple-400 hover:text-purple-300 truncate">
+                  /app/{deployed.app_slug}
+                </a>
+              </div>
+            ) : null;
+          })()}
         </div>
       </div>
     </div>

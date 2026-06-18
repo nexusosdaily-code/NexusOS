@@ -14762,6 +14762,9 @@ wnsp.io | t.me/troglodytememe`,
   });
 
   // ── Spectral IDE — Contract CRUD ──────────────────────────────────────────
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function isValidUUID(s: string) { return UUID_RE.test(s); }
+
   app.get("/api/contracts", authenticate, async (req: any, res) => {
     try {
       const pool = (await import("./db")).pool;
@@ -14779,6 +14782,9 @@ wnsp.io | t.me/troglodytememe`,
       const pool = (await import("./db")).pool;
       const { name, description = "", source_code, bytecode = "", assembly = "", manifest = [], instr_count = 0 } = req.body;
       if (!name || !source_code) return res.status(400).json({ error: "name and source_code required" });
+      // BUG-10 FIX: reject oversized payloads before they hit the DB
+      if (name.length > 120) return res.status(400).json({ error: "name too long (max 120 chars)" });
+      if (source_code.length > 65536) return res.status(400).json({ error: "source_code too long (max 64 KB)" });
       const { rows } = await pool.query(
         `INSERT INTO spectral_contracts (user_id, name, description, source_code, bytecode, assembly, manifest, instr_count, status)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'draft') RETURNING *`,
@@ -14789,9 +14795,13 @@ wnsp.io | t.me/troglodytememe`,
   });
 
   app.patch("/api/contracts/:id", authenticate, async (req: any, res) => {
+    // BUG-5 FIX: validate UUID format before any DB call
+    if (!isValidUUID(req.params.id)) return res.status(400).json({ error: "invalid contract id" });
     try {
       const pool = (await import("./db")).pool;
       const { name, description, source_code, bytecode, assembly, manifest, instr_count } = req.body;
+      if (name && name.length > 120) return res.status(400).json({ error: "name too long (max 120 chars)" });
+      if (source_code && source_code.length > 65536) return res.status(400).json({ error: "source_code too long (max 64 KB)" });
       const { rows } = await pool.query(
         `UPDATE spectral_contracts
          SET name=COALESCE($1,name), description=COALESCE($2,description), source_code=COALESCE($3,source_code),
@@ -14806,6 +14816,7 @@ wnsp.io | t.me/troglodytememe`,
   });
 
   app.delete("/api/contracts/:id", authenticate, async (req: any, res) => {
+    if (!isValidUUID(req.params.id)) return res.status(400).json({ error: "invalid contract id" });
     try {
       const pool = (await import("./db")).pool;
       await pool.query(`DELETE FROM spectral_contracts WHERE id=$1 AND user_id=$2`, [req.params.id, req.user.id]);
@@ -14814,6 +14825,7 @@ wnsp.io | t.me/troglodytememe`,
   });
 
   app.post("/api/contracts/:id/deploy", authenticate, async (req: any, res) => {
+    if (!isValidUUID(req.params.id)) return res.status(400).json({ error: "invalid contract id" });
     try {
       const pool = (await import("./db")).pool;
       // Check contract belongs to user

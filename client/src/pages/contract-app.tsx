@@ -105,6 +105,9 @@ export default function ContractAppPage() {
   const [running, setRunning] = useState(false);
   const outputRef = useRef<HTMLDivElement>(null);
   const runRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // BUG-9 FIX: keep channelLoad current inside stale interval closure
+  const channelLoadRef = useRef(channelLoad);
+  useEffect(() => { channelLoadRef.current = channelLoad; }, [channelLoad]);
 
   const { data: contract, isLoading } = useQuery<any>({
     queryKey: ["/api/app", slug],
@@ -132,15 +135,16 @@ export default function ContractAppPage() {
     if (!compiled) return;
     if (running) { if (runRef.current) clearInterval(runRef.current); setRunning(false); return; }
     setRunning(true);
+    // BUG-9 FIX: read channelLoadRef.current — always current, no stale closure
     runRef.current = setInterval(() => {
       setVmState(s => {
         if (s.halted) { setRunning(false); if (runRef.current) clearInterval(runRef.current!); return s; }
-        const n = stepVM(s, compiled, channelLoad);
+        const n = stepVM(s, compiled, channelLoadRef.current);
         setTimeout(() => { if (outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight; }, 0);
         return n;
       });
     }, 100);
-  }, [compiled, running, channelLoad]);
+  }, [compiled, running]);
 
   const handleReset = () => { setVmState(freshVM()); setRunning(false); if (runRef.current) clearInterval(runRef.current); };
   useEffect(() => () => { if (runRef.current) clearInterval(runRef.current); }, []);
