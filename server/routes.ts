@@ -14952,10 +14952,11 @@ wnsp.io | t.me/troglodytememe`,
         try {
           const { rows: txR } = await pool.query(
             `INSERT INTO blockchain_tx_pool
-               (from_address, to_address, amount_nxt, memo, wavelength_nm, psi_channel, fee_paid, status)
-             VALUES ($1, $2, $3, $4, $5, $6, '0.00000000', 'pending')
+               (from_address, to_address, amount_nxt, memo, wavelength_nm, psi_channel, fee_paid, status, tx_type, audit_meta)
+             VALUES ($1, $2, $3, $4, $5, $6, '0.00000000', 'pending', 'contract_xfer', $7)
              RETURNING id`,
-            [contractPsi, fx.to ?? "unknown", amt.toFixed(8), `CONTRACT_XFER:${contract.id}`, contractNm.toFixed(4), contractPsi]
+            [contractPsi, fx.to ?? "unknown", amt.toFixed(8), `CONTRACT_XFER:${contract.id}`, contractNm.toFixed(4), contractPsi,
+             JSON.stringify({ contract_id: contract.id, contract_name: contract.name, to: fx.to, amount: amt.toFixed(8) })]
           );
           transferResults.push({ type: "XFER_NXT", to: fx.to, amount: amt.toFixed(8), tx_id: txR[0].id, status: "executed" });
         } catch (xferErr: any) {
@@ -14996,30 +14997,53 @@ wnsp.io | t.me/troglodytememe`,
         }
       }
 
-      // 7. Persist execution record
+      // 7. Persist execution record (with full audit fields)
+      const effectsCount = transferResults.filter(t => t.status === "executed").length
+                         + subcallResults.filter(s => s.status === "executed").length
+                         + stateDeltaKeys.length;
       const { rows: execRows } = await pool.query(
         `INSERT INTO contract_executions
            (contract_id, caller_user_id, caller_address, channel_load, output, final_registers,
-            final_agents, cycle_count, halted, truncated)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            final_agents, cycle_count, halted, truncated,
+            state_delta, transfer_results, subcall_results, effects_count,
+            contract_name, contract_slug)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
          RETURNING id`,
         [
           contract.id, null, "PUBLIC", channelLoad,
           JSON.stringify(result.output), JSON.stringify(result.registers),
           JSON.stringify(result.agents), result.cycleCount, result.halted, result.truncated,
+          JSON.stringify(result.stateDelta),
+          JSON.stringify(transferResults),
+          JSON.stringify(subcallResults),
+          effectsCount,
+          contract.name,
+          req.params.slug,
         ]
       );
       const executionId = execRows[0].id;
 
-      // 8. Blockchain audit record
+      // 8. Blockchain audit record — rich tx_type + audit_meta
       let chainTxId: string | null = null;
       try {
+        const auditMeta = {
+          execution_id:    executionId,
+          contract_id:     contract.id,
+          contract_name:   contract.name,
+          contract_slug:   req.params.slug,
+          cycle_count:     result.cycleCount,
+          halted:          result.halted,
+          effects_count:   effectsCount,
+          state_keys:      stateDeltaKeys,
+          transfer_count:  transferResults.filter((t: any) => t.status === "executed").length,
+          subcall_count:   subcallResults.filter((s: any) => s.status === "executed").length,
+        };
         const { rows: txRows } = await pool.query(
           `INSERT INTO blockchain_tx_pool
-             (from_address, to_address, amount_nxt, memo, wavelength_nm, psi_channel, fee_paid, status)
-           VALUES ($1, $2, '0.00000000', $3, $4, $5, '0.00000000', 'pending')
+             (from_address, to_address, amount_nxt, memo, wavelength_nm, psi_channel, fee_paid, status, tx_type, audit_meta)
+           VALUES ($1, $2, '0.00000000', $3, $4, $5, '0.00000000', 'pending', 'contract_exec', $6)
            RETURNING id`,
-          ["CONTRACT_EXECUTOR", contractPsi, `CONTRACT_EXEC:${executionId}`, contractNm.toFixed(4), contractPsi]
+          ["CONTRACT_EXECUTOR", contractPsi, `CONTRACT_EXEC:${executionId}`, contractNm.toFixed(4), contractPsi, JSON.stringify(auditMeta)]
         );
         chainTxId = txRows[0].id;
         await pool.query(`UPDATE contract_executions SET chain_tx_id=$1 WHERE id=$2`, [chainTxId, executionId]);
@@ -15111,9 +15135,10 @@ wnsp.io | t.me/troglodytememe`,
       const { nm } = ceEncode(req.user.username || "funder");
       await pool.query(
         `INSERT INTO blockchain_tx_pool
-           (from_address, to_address, amount_nxt, memo, wavelength_nm, psi_channel, fee_paid, status)
-         VALUES ($1, $2, $3, $4, $5, $6, '0.00000000', 'pending')`,
-        [nm.toFixed(4), psi, amountNxt.toFixed(8), `CONTRACT_FUND:${cRows[0].id}`, nm.toFixed(4), psi]
+           (from_address, to_address, amount_nxt, memo, wavelength_nm, psi_channel, fee_paid, status, tx_type, audit_meta)
+         VALUES ($1, $2, $3, $4, $5, $6, '0.00000000', 'pending', 'contract_fund', $7)`,
+        [nm.toFixed(4), psi, amountNxt.toFixed(8), `CONTRACT_FUND:${cRows[0].id}`, nm.toFixed(4), psi,
+         JSON.stringify({ contract_id: cRows[0].id, contract_name: cRows[0].name, funder: req.user.username, amount: amountNxt.toFixed(8) })]
       );
 
       res.json({
@@ -15123,6 +15148,116 @@ wnsp.io | t.me/troglodytememe`,
         contract_nxt_balance: newContractBal.toFixed(8),
         wallet_balance_after: (bal - amountNxt).toFixed(8),
       });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── Nexus Explorer — contract execution audit ledger ─────────────────────
+
+  app.get("/api/explorer/stats", async (_req, res) => {
+    try {
+      const pool = (await import("./db")).pool;
+      const [execs, nxtMoved, contracts, transfers] = await Promise.all([
+        pool.query(`SELECT COUNT(*)::int AS cnt FROM contract_executions`),
+        pool.query(`SELECT COALESCE(SUM(amount_nxt::numeric),0)::text AS total FROM blockchain_tx_pool WHERE tx_type='contract_xfer'`),
+        pool.query(`SELECT COUNT(DISTINCT contract_id)::int AS cnt FROM contract_executions WHERE contract_slug IS NOT NULL`),
+        pool.query(`SELECT COUNT(*)::int AS cnt FROM blockchain_tx_pool WHERE tx_type='contract_xfer'`),
+      ]);
+      res.json({
+        total_executions:  execs.rows[0].cnt,
+        nxt_moved:         nxtMoved.rows[0].total,
+        active_contracts:  contracts.rows[0].cnt,
+        total_transfers:   transfers.rows[0].cnt,
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/explorer/executions", async (req, res) => {
+    try {
+      const pool = (await import("./db")).pool;
+      const slug   = (req.query.slug   as string) || "";
+      const filter = (req.query.filter as string) || "all";
+      const limit  = Math.min(parseInt(req.query.limit  as string) || 50, 200);
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const conditions: string[] = [];
+      const listParams: any[]    = [];
+      let   pi = 1;
+
+      if (slug)                        { conditions.push(`ce.contract_slug = $${pi++}`); listParams.push(slug); }
+      if (filter === "with_transfers") { conditions.push(`ce.effects_count > 0`); }
+      if (filter === "with_state")     { conditions.push(`ce.state_delta <> '{}'::jsonb`); }
+
+      const whereClause  = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+      const countParams  = [...listParams];
+      const pLimit  = pi++;
+      const pOffset = pi++;
+      listParams.push(limit, offset);
+
+      const { rows } = await pool.query(`
+        SELECT
+          ce.id, ce.contract_id, ce.contract_name, ce.contract_slug,
+          ce.caller_address, ce.channel_load, ce.cycle_count,
+          ce.halted, ce.truncated, ce.effects_count,
+          ce.chain_tx_id, ce.executed_at,
+          jsonb_array_length(COALESCE(ce.transfer_results,'[]'::jsonb)) AS transfer_count,
+          (SELECT COUNT(*)::int FROM jsonb_object_keys(COALESCE(ce.state_delta,'{}')::jsonb)) AS state_keys_changed,
+          jsonb_array_length(COALESCE(ce.subcall_results,'[]'::jsonb)) AS subcall_count
+        FROM contract_executions ce
+        ${whereClause}
+        ORDER BY ce.executed_at DESC
+        LIMIT $${pLimit} OFFSET $${pOffset}
+      `, listParams);
+
+      const { rows: cntRows } = await pool.query(
+        `SELECT COUNT(*)::int AS total FROM contract_executions ce ${whereClause}`,
+        countParams
+      );
+
+      res.json({ executions: rows, total: cntRows[0].total, limit, offset });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/explorer/execution/:id", async (req, res) => {
+    if (!isValidUUID(req.params.id)) return res.status(400).json({ error: "Invalid execution ID" });
+    try {
+      const pool = (await import("./db")).pool;
+      const { rows } = await pool.query(`
+        SELECT
+          ce.*,
+          btp.tx_type     AS btp_tx_type,
+          btp.from_address AS btp_from,
+          btp.wavelength_nm,
+          btp.psi_channel,
+          btp.status      AS btp_status,
+          btp.audit_meta  AS btp_audit_meta
+        FROM contract_executions ce
+        LEFT JOIN blockchain_tx_pool btp ON btp.id = ce.chain_tx_id
+        WHERE ce.id = $1
+      `, [req.params.id]);
+      if (!rows[0]) return res.status(404).json({ error: "Execution not found" });
+      res.json(rows[0]);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/explorer/contracts", async (_req, res) => {
+    try {
+      const pool = (await import("./db")).pool;
+      const { rows } = await pool.query(`
+        SELECT
+          sc.id, sc.name, sc.app_slug, sc.description, sc.deployed_at,
+          sc.contract_nxt_balance, sc.instr_count,
+          COUNT(ce.id)::int                    AS execution_count,
+          MAX(ce.executed_at)                  AS last_executed_at,
+          COALESCE(SUM(ce.effects_count),0)::int AS total_effects,
+          COALESCE(SUM(ce.cycle_count),0)::int   AS total_cycles
+        FROM spectral_contracts sc
+        LEFT JOIN contract_executions ce ON ce.contract_id = sc.id
+        WHERE sc.status = 'deployed' AND sc.is_public = true
+        GROUP BY sc.id
+        ORDER BY execution_count DESC, sc.deployed_at DESC
+        LIMIT 100
+      `);
+      res.json({ contracts: rows });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 

@@ -482,6 +482,21 @@ async function runStartupMigrations() {
       ALTER TABLE spectral_contracts ADD COLUMN IF NOT EXISTS contract_nxt_balance NUMERIC(20,8) NOT NULL DEFAULT 0;
     `);
 
+    // 13. Contract Execution Audit Ledger — enrich blockchain_tx_pool & contract_executions
+    await pool.query(`
+      ALTER TABLE blockchain_tx_pool ADD COLUMN IF NOT EXISTS tx_type TEXT DEFAULT 'transfer';
+      ALTER TABLE blockchain_tx_pool ADD COLUMN IF NOT EXISTS audit_meta JSONB DEFAULT NULL;
+      CREATE INDEX IF NOT EXISTS idx_btp_tx_type ON blockchain_tx_pool(tx_type);
+
+      ALTER TABLE contract_executions ADD COLUMN IF NOT EXISTS state_delta       JSONB DEFAULT '{}';
+      ALTER TABLE contract_executions ADD COLUMN IF NOT EXISTS transfer_results  JSONB DEFAULT '[]';
+      ALTER TABLE contract_executions ADD COLUMN IF NOT EXISTS subcall_results   JSONB DEFAULT '[]';
+      ALTER TABLE contract_executions ADD COLUMN IF NOT EXISTS effects_count     INTEGER DEFAULT 0;
+      ALTER TABLE contract_executions ADD COLUMN IF NOT EXISTS contract_name     TEXT;
+      ALTER TABLE contract_executions ADD COLUMN IF NOT EXISTS contract_slug     TEXT;
+      CREATE INDEX IF NOT EXISTS idx_ce_slug ON contract_executions(contract_slug) WHERE contract_slug IS NOT NULL;
+    `);
+
     console.log("[MIGRATION] Startup schema migrations complete.");
   } catch (err: any) {
     console.error("[MIGRATION] Startup migration error:", err.message);

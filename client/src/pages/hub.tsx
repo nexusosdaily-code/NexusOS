@@ -87,6 +87,7 @@ const APP_SECTIONS = [
     items: [
       { title: "Ledger",        href: "/ledger",          Icon: Scale },
       { title: "Blockchain",    href: "/blockchain",     Icon: Layers },
+      { title: "Nexus Explorer",href: "/nexus-explorer", Icon: Activity },
       { title: "Spectral DB",   href: "/spectral-db",    Icon: Database },
       { title: "Secure Docs",   href: "/secure-docs",    Icon: FileText },
       { title: "Agent Bus",     href: "/agent-bus",      Icon: Activity },

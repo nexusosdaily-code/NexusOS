@@ -123,6 +123,7 @@ const WnspStakingPage = lazy(() => import("@/pages/wnsp-staking"));
 const MarketplacePage = lazy(() => import("@/pages/marketplace"));
 const RuneEtchingPage = lazy(() => import("@/pages/rune-etching"));
 const SpectralIDEPage = lazy(() => import("@/pages/spectral-ide"));
+const NexusExplorerPage = lazy(() => import("@/pages/nexus-explorer"));
 const ContractAppPage = lazy(() => import("@/pages/contract-app"));
 const RuneMintPage = lazy(() => import("@/pages/rune-mint"));
 const EtchRunePage = lazy(() => import("@/pages/etch-rune"));
@@ -232,7 +233,7 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/photonic-dev", "/nexus/dev",
   "/quantum-threshold", "/nexus-hardware-os", "/computing-alternatives",
   "/wavelength-os", "/ce-writer", "/pricing",
-  "/spectral-db", "/blockchain", "/agent-bus", "/nexus-command",
+  "/spectral-db", "/blockchain", "/agent-bus", "/nexus-command", "/nexus-explorer",
   "/spectral-workspace", "/chronicle",
   "/spectral-library", "/spectral-audit", "/orbital-treasury",
   "/founders-charity", "/ecosystem", "/ordinal-registry",
@@ -338,6 +339,7 @@ function ProtectedRoutes() {
         <Route path="/blockchain" component={BlockchainPage} />
         <Route path="/agent-bus" component={AgentBusPage} />
         <Route path="/nexus-command" component={NexusCommandPage} />
+        <Route path="/nexus-explorer" component={NexusExplorerPage} />
         <Route path="/kernel-genesis" component={KernelGenesisPage} />
         <Route path="/spectral-workspace" component={SpectralWorkspacePage} />
         <Route path="/chronicle" component={ChroniclePage} />
@@ -458,6 +460,7 @@ function Router() {
       <Route path="/network" component={NetworkPage} />
       <Route path="/wavelength-lang" component={WavelengthLangPage} />
       <Route path="/nexus-command" component={NexusCommandPage} />
+      <Route path="/nexus-explorer" component={NexusExplorerPage} />
       <Route path="/wnsp-bridge" component={WnspBridgePage} />
       <Route path="/wnsp/bridge" component={WnspBridgePage} />
       <Route path="/profile/:username" component={ProfilePage} />
