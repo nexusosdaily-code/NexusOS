@@ -683,6 +683,73 @@ function AgentsPanel() {
   );
 }
 
+// ─── admin panel ────────────────────────────────────────────────────────────
+
+function AdminPanel() {
+  const [result, setResult] = useState<any>(null);
+  const [running, setRunning] = useState(false);
+
+  async function runReconcile() {
+    setRunning(true);
+    setResult(null);
+    try {
+      const res = await apiRequest("POST", "/api/admin/reconcile-ledger");
+      const json = await res.json();
+      setResult({ ok: true, ...json });
+    } catch (e: any) {
+      setResult({ ok: false, error: e.message });
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-xl border border-violet-700/40 bg-slate-900/60 p-5">
+        <h3 className="text-sm font-semibold text-violet-300 mb-1 flex items-center gap-2">
+          <Database className="w-4 h-4" /> Spectral Ledger Reconciliation
+        </h3>
+        <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+          Backfills all transactions that exist in the wallet ledger but are not yet in the spectral records or blockchain tx pool.
+          Safe to run multiple times — idempotent. Required once after first deployment to ledger the genesis transactions.
+        </p>
+        <Button
+          onClick={runReconcile}
+          disabled={running}
+          className="bg-violet-700 hover:bg-violet-600 text-white"
+          data-testid="btn-reconcile-ledger"
+        >
+          {running ? (
+            <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Running…</>
+          ) : (
+            <><RefreshCw className="w-4 h-4 mr-2" /> Run Reconcile Ledger</>
+          )}
+        </Button>
+
+        {result && (
+          <div className={`mt-4 rounded-lg border p-4 text-xs font-mono ${
+            result.ok
+              ? "border-green-700/50 bg-green-950/40 text-green-300"
+              : "border-red-700/50 bg-red-950/40 text-red-300"
+          }`}>
+            {result.ok ? (
+              <div className="space-y-1">
+                <div className="font-bold text-green-400 mb-2">✓ Reconciliation complete</div>
+                <div>Transactions scanned: <span className="text-white">{result.scanned ?? "—"}</span></div>
+                <div>Records created: <span className="text-white">{result.created ?? "—"}</span></div>
+                <div>Already ledgered: <span className="text-white">{result.skipped ?? "—"}</span></div>
+                {result.message && <div className="mt-2 text-slate-400">{result.message}</div>}
+              </div>
+            ) : (
+              <div>✗ {result.error}</div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── main page ─────────────────────────────────────────────────────────────
 
 export default function KernelPage() {
@@ -751,6 +818,7 @@ export default function KernelPage() {
           <TabsTrigger value="events"      data-testid="tab-events">④ Events</TabsTrigger>
           <TabsTrigger value="watchdog"    data-testid="tab-watchdog">⑤ Watchdog</TabsTrigger>
           <TabsTrigger value="agents"      data-testid="tab-agents">⑥ Agents</TabsTrigger>
+          <TabsTrigger value="admin"       data-testid="tab-admin">⑦ Admin</TabsTrigger>
         </TabsList>
 
         <TabsContent value="boot">
@@ -811,6 +879,16 @@ export default function KernelPage() {
             </span>
           </h2>
           <AgentsPanel />
+        </TabsContent>
+
+        <TabsContent value="admin">
+          <h2 className="text-sm font-semibold text-violet-300 mb-3 flex items-center gap-2">
+            <Database className="w-4 h-4" /> System Administration
+            <span className="text-slate-500 text-xs font-normal ml-1">
+              — Nexus / SYSTEM band only
+            </span>
+          </h2>
+          <AdminPanel />
         </TabsContent>
       </Tabs>
     </div>
