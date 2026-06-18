@@ -704,7 +704,7 @@ export async function registerRoutes(
       res.cookie("auth_token", session.token, {
         httpOnly: true,
         sameSite: "lax",
-        maxAge:   7 * 24 * 60 * 60 * 1000,
+        maxAge:   365 * 24 * 60 * 60 * 1000,
         path:     "/",
         secure:   process.env.NODE_ENV === "production",
       });
@@ -785,7 +785,7 @@ export async function registerRoutes(
       res.cookie("auth_token", session.token, {
         httpOnly: true,
         sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: 365 * 24 * 60 * 60 * 1000,
         path: "/",
         secure: process.env.NODE_ENV === "production",
       });
@@ -845,7 +845,7 @@ export async function registerRoutes(
       res.cookie("auth_token", session.token, {
         httpOnly: true,
         sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: 365 * 24 * 60 * 60 * 1000,
         path: "/",
         secure: process.env.NODE_ENV === "production",
       });

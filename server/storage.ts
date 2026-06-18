@@ -28,7 +28,7 @@ import {
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
-const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const SESSION_DURATION_MS = 365 * 24 * 60 * 60 * 1000; // 365 days — owner should never be kicked out
 const INITIAL_NXT_BALANCE = "0"; // Founding era closed — no free NXT for new accounts
 
 export interface IStorage {
