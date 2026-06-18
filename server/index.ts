@@ -73,6 +73,16 @@ declare module "http" {
 app.use(compression());
 app.use(cookieParser());
 
+// ── ide-vm.io hostname redirect ───────────────────────────────────────────────
+// When the custom domain ide-vm.io points here, land visitors straight on the IDE.
+app.use((req, res, next) => {
+  const host = req.hostname ?? "";
+  if ((host === "ide-vm.io" || host === "www.ide-vm.io") && req.path === "/") {
+    return res.redirect(301, "/spectral-ide");
+  }
+  next();
+});
+
 // ── Health / startup guard ───────────────────────────────────────────────────
 // The deployment platform probes / immediately on boot. The server binds to
 // the port (reusePort) before routes/static are fully registered, causing 500s
