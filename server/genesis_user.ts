@@ -8,7 +8,7 @@
  *   λ = 586.8085 nm  ·  Ψ(52,3,V)  ·  WDM 52  → SYSTEM band (WDM 0–63)
  */
 
-const GENESIS_PASSWORD = "Wnsp_nexusos2026";
+const GENESIS_PASSWORD = "NexusOS2026";
 const GENESIS_USERNAME = "Nexus";
 
 // CE-encoded spectral identity — deterministic, permanent
