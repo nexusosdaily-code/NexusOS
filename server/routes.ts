@@ -22,6 +22,7 @@ import { z } from "zod";
 import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT, GENESIS_EXECUTION_ADDRESS } from "./physics";
 import { getEtchStatus } from "./wnsp-btc-rune-etcher";
 import { transpileToWLS, SUPPORTED_LANGS, type SupportedLang } from "./lang-transpiler";
+import { ledgerEvent } from "./spectral-ledger";
 
 // WebSocket clients mapped by userId
 const connectedClients = new Map<string, WebSocket>();
@@ -1601,6 +1602,15 @@ export async function registerRoutes(
           wavelength: wavelength.toString(), frequency: frequency.toString(),
           status: "confirmed", triggeredBy: (req as any).user?.username ?? "user",
         }).catch(() => {});
+      }).catch(() => {});
+
+      // ── Spectral ledger hook (async, fire-and-forget) ────────────────────
+      ledgerEvent({
+        type:        "nxt_transfer",
+        label:       `NXT Transfer: ${amount} NXT → ${toAddress}`,
+        content:     `NXT_TRANSFER:${transaction.id}:${amount}NXT:${fromWallet.address}→${toAddress}:${memo ?? "transfer"}`,
+        fromAddress: fromWallet.address,
+        metadata:    { txId: transaction.id, amount, fromAddress: fromWallet.address, toAddress, memo: memo ?? null, fee: fee.toFixed(8) },
       }).catch(() => {});
 
       res.json({
@@ -10197,6 +10207,13 @@ export async function registerRoutes(
           .set({ status: "completed", paymentHash: payHash, lnbitsPaymentId: payHash, completedAt: new Date() })
           .where(eq(lightningTransactions.id, tx.id));
         await logAction(req, "lightning_withdrawal", "lightning", req.user!.id, { amountSats });
+        ledgerEvent({
+          type:        "lightning_pay",
+          label:       `LN Payment: ${amountSats} sats`,
+          content:     `LN_PAY:${tx.id}:${amountSats}sats:${req.user!.username}:out`,
+          fromAddress: req.user!.walletAddress ?? req.user!.username,
+          metadata:    { txId: tx.id, amountSats, paymentHash: payHash, userId: req.user!.id },
+        }).catch(() => {});
         res.json({ ok: true, paymentHash: payHash, amountSats });
       } catch (payErr: any) {
         // Refund on failure
@@ -10886,6 +10903,65 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // POST /api/admin/reconcile-ledger — backfill all unledgered transactions into spectral DB
+  // Idempotent: checks data->>'txId' before inserting. Run once after deployment to catch up.
+  app.post("/api/admin/reconcile-ledger", authenticate, async (req: Request, res: Response) => {
+    try {
+      if (req.user!.username !== "Nexus" && (req.user! as any).spectralBand !== "SYSTEM") {
+        return res.status(403).json({ error: "SYSTEM band required" });
+      }
+
+      const { pool } = await import("./db");
+
+      // Find all transactions (with wallet join for addresses) not yet in spectral_records
+      const result = await pool.query(`
+        SELECT t.id, t.type, t.amount::text, t.fee::text, t.metadata,
+               t.created_at, t.wavelength::text,
+               fw.address AS from_address, tw.address AS to_address
+        FROM transactions t
+        LEFT JOIN wallets fw ON fw.id = t.from_wallet_id
+        LEFT JOIN wallets tw ON tw.id = t.to_wallet_id
+        WHERE NOT EXISTS (
+          SELECT 1 FROM spectral_records sr
+          WHERE sr.data->>'txId' = t.id
+        )
+        ORDER BY t.created_at ASC
+      `);
+
+      const unledgered = result.rows;
+      if (unledgered.length === 0) {
+        return res.json({ ok: true, message: "All transactions already ledgered", processed: 0 });
+      }
+
+      let processed = 0;
+      let failed = 0;
+      const errors: string[] = [];
+
+      for (const tx of unledgered) {
+        try {
+          const memo = (tx.metadata as any)?.memo ?? null;
+          const toAddr = tx.to_address ?? "unknown";
+          const fromAddr = tx.from_address ?? "system";
+
+          await ledgerEvent({
+            type:        tx.type ?? "nxt_transfer",
+            label:       `${tx.type ?? "Transfer"}: ${tx.amount} NXT → ${toAddr}`,
+            content:     `NXT_TRANSFER:${tx.id}:${tx.amount}NXT:${fromAddr}→${toAddr}:${memo ?? tx.type ?? "transfer"}`,
+            fromAddress: fromAddr,
+            metadata:    { txId: tx.id, amount: tx.amount, fromAddress: fromAddr, toAddress: toAddr, memo, fee: tx.fee, createdAt: tx.created_at },
+          });
+          processed++;
+        } catch (e: any) {
+          failed++;
+          errors.push(`${tx.id}: ${e.message}`);
+        }
+      }
+
+      console.log(`[RECONCILE] Ledger reconciliation: ${processed} processed, ${failed} failed`);
+      res.json({ ok: true, processed, failed, total: unledgered.length, errors: errors.slice(0, 5) });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   // Legacy compat: PUT /api/admin/wnsp-io-address
   app.put("/api/admin/wnsp-io-address", authenticate, async (req: Request, res: Response) => {
     try {
@@ -10997,6 +11073,13 @@ export async function registerRoutes(
       await db.insert(lightningTransactions).values({ userId: req.user!.id, type: "send_p2p", amountSats, memo: txMemo, status: "completed", completedAt: new Date(), spectralSig: wnspSignTx(req.user!, `p2p_send::${amountSats}::${recipient.id}::${Date.now()}`) });
       await db.insert(lightningTransactions).values({ userId: recipient.id, type: "receive_p2p", amountSats, memo: txMemo, status: "completed", completedAt: new Date(), spectralSig: wnspSignTx(recipient, `p2p_recv::${amountSats}::${req.user!.id}::${Date.now()}`) });
       await logAction(req, "lightning_p2p_send", "lightning", req.user!.id, { recipientUsername, amountSats });
+      ledgerEvent({
+        type:        "lightning_p2p",
+        label:       `LN P2P: ${amountSats} sats → ${recipientUsername}`,
+        content:     `LN_P2P:${req.user!.username}→${recipientUsername}:${amountSats}sats:${memo ?? "p2p"}`,
+        fromAddress: req.user!.walletAddress ?? req.user!.username,
+        metadata:    { amountSats, from: req.user!.username, to: recipientUsername, memo: memo ?? null },
+      }).catch(() => {});
       res.json({ ok: true, amountSats, to: recipientUsername });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -11061,6 +11144,13 @@ export async function registerRoutes(
       }
 
       await logAction(req, "sats_stake", "lightning", req.user!.id, { amountSats, lockDays, nxtYield });
+      ledgerEvent({
+        type:        "sats_stake",
+        label:       `Sats Stake: ${amountSats} sats × ${lockDays}d`,
+        content:     `SATS_STAKE:${stake.id}:${amountSats}sats:${lockDays}days:${req.user!.username}`,
+        fromAddress: req.user!.walletAddress ?? req.user!.username,
+        metadata:    { stakeId: stake.id, amountSats, lockDays, nxtYield },
+      }).catch(() => {});
       res.json({ ok: true, stake });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
