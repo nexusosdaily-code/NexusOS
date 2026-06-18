@@ -424,6 +424,50 @@ async function runStartupMigrations() {
       CREATE INDEX IF NOT EXISTS spectral_bundles_status_idx ON spectral_bundles(status);
     `);
 
+    // 10. Contract executions — persistent server-side VM execution records
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contract_executions (
+        id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        contract_id    UUID NOT NULL,
+        caller_user_id UUID,
+        caller_address TEXT,
+        channel_load   INTEGER NOT NULL DEFAULT 42,
+        output         JSONB NOT NULL DEFAULT '[]',
+        final_registers JSONB NOT NULL DEFAULT '[]',
+        final_agents   JSONB NOT NULL DEFAULT '[]',
+        cycle_count    INTEGER NOT NULL DEFAULT 0,
+        halted         BOOLEAN NOT NULL DEFAULT false,
+        truncated      BOOLEAN NOT NULL DEFAULT false,
+        chain_tx_id    VARCHAR(36),
+        executed_at    TIMESTAMPTZ DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS idx_ce_contract  ON contract_executions(contract_id);
+      CREATE INDEX IF NOT EXISTS idx_ce_executed  ON contract_executions(executed_at DESC);
+    `);
+
+    // 11. Spectral contracts table (Spectral IDE)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS spectral_contracts (
+        id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id      UUID NOT NULL,
+        name         TEXT NOT NULL,
+        description  TEXT NOT NULL DEFAULT '',
+        source_code  TEXT NOT NULL,
+        bytecode     TEXT,
+        assembly     TEXT,
+        manifest     JSONB DEFAULT '[]',
+        instr_count  INTEGER DEFAULT 0,
+        status       TEXT DEFAULT 'draft',
+        app_slug     TEXT UNIQUE,
+        is_public    BOOLEAN DEFAULT true,
+        deployed_at  TIMESTAMPTZ,
+        created_at   TIMESTAMPTZ DEFAULT now(),
+        updated_at   TIMESTAMPTZ DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS idx_sc_user ON spectral_contracts(user_id);
+      CREATE INDEX IF NOT EXISTS idx_sc_slug ON spectral_contracts(app_slug) WHERE app_slug IS NOT NULL;
+    `);
+
     console.log("[MIGRATION] Startup schema migrations complete.");
   } catch (err: any) {
     console.error("[MIGRATION] Startup migration error:", err.message);

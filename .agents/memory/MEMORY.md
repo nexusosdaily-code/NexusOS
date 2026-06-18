@@ -14,3 +14,4 @@
 - [Rune Guard — safe UTXO selection](rune-guard.md) — getSafeUTXOs() must be used in all tx builders; Mint Runestone burns unprotected Rune inputs
 - [Founders lineage](founders-lineage.md) — Maxwell → Planck → Einstein → Tesla → QM → Shannon; every NexusOS equation traces to one of these
 - [Founder](founder.md) — Te Rata Pou, NZ Māori descent; name means "the healing post / the doctor"
+- [Contract execution runtime](contract-exec-runtime.md) — server/wnsp_vm.ts is canonical VM; side-effects fire after halt; routes at /api/app/:slug/run (public) and /api/contracts/:id/executions (auth)

@@ -14844,7 +14844,22 @@ wnsp.io | t.me/troglodytememe`,
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  // Public app view — no auth required
+  // ── Contract execution history (authenticated) ───────────────────────────
+  app.get("/api/contracts/:id/executions", authenticate, async (req: any, res) => {
+    if (!isValidUUID(req.params.id)) return res.status(400).json({ error: "invalid contract id" });
+    try {
+      const pool = (await import("./db")).pool;
+      const { rows } = await pool.query(
+        `SELECT id, contract_id, channel_load, output, final_registers, final_agents,
+                cycle_count, halted, truncated, chain_tx_id, executed_at
+         FROM contract_executions WHERE contract_id=$1 ORDER BY executed_at DESC LIMIT 50`,
+        [req.params.id]
+      );
+      res.json(rows);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── Public app view — no auth required ───────────────────────────────────
   app.get("/api/app/:slug", async (req, res) => {
     try {
       const pool = (await import("./db")).pool;
@@ -14855,6 +14870,121 @@ wnsp.io | t.me/troglodytememe`,
       );
       if (!rows[0]) return res.status(404).json({ error: "Not found" });
       res.json(rows[0]);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── Public execution history — no auth required ───────────────────────────
+  app.get("/api/app/:slug/executions", async (req, res) => {
+    try {
+      const pool = (await import("./db")).pool;
+      // Resolve contract_id from slug first
+      const { rows: cRows } = await pool.query(
+        `SELECT id FROM spectral_contracts WHERE app_slug=$1 AND is_public=true AND status='deployed'`,
+        [req.params.slug]
+      );
+      if (!cRows[0]) return res.status(404).json({ error: "Contract not found" });
+      const { rows } = await pool.query(
+        `SELECT id, contract_id, channel_load, output, final_registers, final_agents,
+                cycle_count, halted, truncated, chain_tx_id, executed_at
+         FROM contract_executions WHERE contract_id=$1 ORDER BY executed_at DESC LIMIT 50`,
+        [cRows[0].id]
+      );
+      res.json(rows);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── Public contract run — no auth required ────────────────────────────────
+  // Executes the contract server-side, stores result, logs to blockchain mempool.
+  app.post("/api/app/:slug/run", async (req, res) => {
+    try {
+      const pool = (await import("./db")).pool;
+      const rawLoad = parseInt(req.body?.channel_load ?? "42");
+      const channelLoad = Math.max(0, Math.min(100, isNaN(rawLoad) ? 42 : rawLoad));
+
+      // Load deployed contract
+      const { rows: cRows } = await pool.query(
+        `SELECT id, name, source_code, user_id FROM spectral_contracts
+         WHERE app_slug=$1 AND is_public=true AND status='deployed'`,
+        [req.params.slug]
+      );
+      if (!cRows[0]) return res.status(404).json({ error: "Contract not found" });
+      const contract = cRows[0];
+
+      // Run the VM server-side
+      const { runToHalt, fireEffects, ceEncode } = await import("./wnsp_vm");
+      const result = runToHalt(contract.source_code, channelLoad);
+
+      // Derive psi channel for blockchain record
+      const { psi: contractPsi, nm: contractNm } = ceEncode(contract.name);
+
+      // Persist execution record
+      const { rows: execRows } = await pool.query(
+        `INSERT INTO contract_executions
+           (contract_id, caller_user_id, caller_address, channel_load, output, final_registers,
+            final_agents, cycle_count, halted, truncated)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING id`,
+        [
+          contract.id,
+          null, // public run — no authenticated user
+          "PUBLIC",
+          channelLoad,
+          JSON.stringify(result.output),
+          JSON.stringify(result.registers),
+          JSON.stringify(result.agents),
+          result.cycleCount,
+          result.halted,
+          result.truncated,
+        ]
+      );
+      const executionId = execRows[0].id;
+
+      // Log to blockchain mempool — zero-value record tx
+      let chainTxId: string | null = null;
+      try {
+        const { rows: txRows } = await pool.query(
+          `INSERT INTO blockchain_tx_pool
+             (from_address, to_address, amount_nxt, memo, wavelength_nm, psi_channel, fee_paid, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+           RETURNING id`,
+          [
+            "CONTRACT_EXECUTOR",
+            contractPsi,
+            "0.00000000",
+            `CONTRACT_EXEC:${executionId}`,
+            contractNm.toFixed(4),
+            contractPsi,
+            "0.00000000",
+          ]
+        );
+        chainTxId = txRows[0].id;
+        // Stamp the chain_tx_id back onto the execution record
+        await pool.query(
+          `UPDATE contract_executions SET chain_tx_id=$1 WHERE id=$2`,
+          [chainTxId, executionId]
+        );
+      } catch (txErr: any) {
+        console.warn("[ContractRun] Blockchain tx insert failed:", txErr.message);
+      }
+
+      // Fire kernel side-effects (agent registration, kernel events) — non-blocking
+      fireEffects(result.effects, pool, contract.name, executionId, contract.id).catch(
+        (e: Error) => console.warn("[ContractRun] Side-effect error:", e.message)
+      );
+
+      res.json({
+        id:              executionId,
+        contract_id:     contract.id,
+        channel_load:    channelLoad,
+        output:          result.output,
+        final_registers: result.registers,
+        final_agents:    result.agents,
+        cycle_count:     result.cycleCount,
+        halted:          result.halted,
+        truncated:       result.truncated,
+        chain_tx_id:     chainTxId,
+        executed_at:     new Date().toISOString(),
+      });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
