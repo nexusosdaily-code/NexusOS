@@ -93,12 +93,17 @@ let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 async function heartbeat() {
   try {
     const now = Date.now() / 1000;
-    await db.execute(drizzleSql`
+    const result = await db.execute(drizzleSql`
       UPDATE wnsp_agents SET updated_at = ${now}
       WHERE agent_id = 'blockchain_auditor'
     `);
+    // Fix: if UPDATE hit 0 rows the row doesn't exist yet (race at cold start) — re-register
+    if ((result as any).rowCount === 0) {
+      await registerAgent();
+    }
   } catch (e: any) {
-    console.warn("[AUDITOR] Heartbeat error:", e.message);
+    // Silently re-register if table/row missing — non-fatal at boot
+    try { await registerAgent(); } catch {}
   }
 }
 

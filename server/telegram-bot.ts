@@ -1379,11 +1379,18 @@ Thanks for your message — the team will follow up.
     );
   });
 
-  console.log("[TelegramBot] Launching NexusOS full-spectrum bot…");
-  bot.launch({ dropPendingUpdates: true })
-    .then(()=>console.log("[TelegramBot] All 10 bot modules running."))
-    .catch(err=>console.error("[TelegramBot] Launch error:", err?.message??err));
+  // Fix: clear any existing getUpdates lock before launching to prevent 409 on autoscale redeploy.
+  // deleteWebhook with drop_pending_updates also releases any prior long-poll session.
+  console.log("[TelegramBot] Clearing prior session before launch…");
+  bot.telegram.deleteWebhook({ drop_pending_updates: true })
+    .then(() => new Promise<void>(r => setTimeout(r, 3000)))  // 3s gap — old instance shuts down
+    .then(() => {
+      console.log("[TelegramBot] Launching NexusOS full-spectrum bot…");
+      return bot.launch({ dropPendingUpdates: true });
+    })
+    .then(() => console.log("[TelegramBot] All 10 bot modules running."))
+    .catch(err => console.error("[TelegramBot] Launch error:", err?.message ?? err));
 
-  process.once("SIGINT", ()=>{ try { bot.stop("SIGINT"); } catch {} });
-  process.once("SIGTERM", ()=>{ try { bot.stop("SIGTERM"); } catch {} });
+  process.once("SIGINT",  () => { try { bot.stop("SIGINT");  } catch {} });
+  process.once("SIGTERM", () => { try { bot.stop("SIGTERM"); } catch {} });
 }

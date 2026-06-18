@@ -167,16 +167,23 @@ async function osKernelTick() {
 
 async function schedulerTick() {
   const cutoff = new Date(Date.now() - 30_000); // 30s old = ready to confirm
-  const pending = await db
-    .select({ id: transactions.id })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.status, "pending"),
-        lt(transactions.createdAt, cutoff),
-      ),
-    )
-    .limit(200);
+  // Fix: wrap outer query — boot-time DB timing must not crash the whole tick
+  let pending: { id: string }[] = [];
+  try {
+    pending = await db
+      .select({ id: transactions.id })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.status, "pending"),
+          lt(transactions.createdAt, cutoff),
+        ),
+      )
+      .limit(200);
+  } catch (e: any) {
+    console.error("[SCHEDULER] Pending-scan skipped:", e.message);
+    return;
+  }
 
   if (pending.length > 0) {
     await db
@@ -201,9 +208,16 @@ async function schedulerTick() {
 // ── 3. watchdog_daemon — Wallet anomaly scan (every 2 min) ───────────────────
 
 async function watchdogTick() {
-  const allWallets = await db
-    .select({ id: wallets.id, balance: wallets.balance, userId: wallets.userId })
-    .from(wallets);
+  // Fix: wrap outer query — boot-time DB timing must not crash the whole tick
+  let allWallets: { id: string; balance: string; userId: string }[] = [];
+  try {
+    allWallets = await db
+      .select({ id: wallets.id, balance: wallets.balance, userId: wallets.userId })
+      .from(wallets);
+  } catch (e: any) {
+    console.error("[WATCHDOG] Wallet-scan skipped:", e.message);
+    return;
+  }
 
   const anomalies: string[] = [];
 
@@ -247,11 +261,18 @@ async function watchdogTick() {
 
 async function authGatewayTick() {
   // Find users missing spectral channel assignment
-  const unassigned = await db
-    .select({ id: users.id, username: users.username })
-    .from(users)
-    .where(isNull(users.spectralWdm))
-    .limit(50);
+  // Fix: wrap outer query — a boot-time DB hiccup or missing column must not crash the tick
+  let unassigned: { id: string; username: string }[] = [];
+  try {
+    unassigned = await db
+      .select({ id: users.id, username: users.username })
+      .from(users)
+      .where(isNull(users.spectralWdm))
+      .limit(50);
+  } catch (e: any) {
+    console.error("[AUTH_GATEWAY] Channel-scan skipped:", e.message);
+    return;
+  }
 
   let assigned = 0;
   for (const u of unassigned) {
