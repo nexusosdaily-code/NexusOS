@@ -867,6 +867,7 @@ const NEXUS_DOMAINS: { domain: string; accent: string; founder: string; icon: st
   { domain: "spectralcontracts.io", accent: "#f59e0b", founder: "Shannon", icon: "§", desc: "Smart Contracts",   href: "https://spectralcontracts.io" },
   { domain: "wnspnostr.io",         accent: "#8b5cf6", founder: "Tesla",   icon: "⚡", desc: "Nostr Relay",       href: "https://wnspnostr.io" },
   { domain: "nexussdk.io",          accent: "#3b82f6", founder: "Planck",  icon: "◈", desc: "Mobile SDK",        href: "https://nexussdk.io" },
+  { domain: "octivetone.io",        accent: "#6d28d9", founder: "Russell", icon: "𝄞", desc: "Cavity Resonance",   href: "https://octivetone.io" },
 ];
 
 function EcosystemDomains() {
