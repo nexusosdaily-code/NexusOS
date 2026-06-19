@@ -110,6 +110,8 @@ const DOMAIN_ROUTES: Record<string, string> = {
   "www.wnspnostr.io":      "/nostr-relay",
   "nexussdk.io":           "/mobile-sdk",
   "www.nexussdk.io":       "/mobile-sdk",
+  "octivetone.io":         "/resonance-cavity",
+  "www.octivetone.io":     "/resonance-cavity",
 };
 app.use((req, res, next) => {
   const host = req.hostname ?? "";
