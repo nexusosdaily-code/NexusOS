@@ -10956,7 +10956,7 @@ export async function registerRoutes(
   });
 
   // POST /api/admin/reconcile-ledger — backfill all unledgered transactions into spectral DB
-  // Idempotent: checks data->>'txId' before inserting. Run once after deployment to catch up.
+  // Idempotent: checks data keys before inserting. Scans transactions, lightning_transactions, wnusd_transactions.
   app.post("/api/admin/reconcile-ledger", authenticate, async (req: Request, res: Response) => {
     try {
       if (req.user!.username !== "Nexus" && (req.user! as any).spectralBand !== "SYSTEM") {
@@ -10964,37 +10964,30 @@ export async function registerRoutes(
       }
 
       const { pool } = await import("./db");
+      let scanned = 0, created = 0, skipped = 0, failed = 0;
+      const errors: string[] = [];
 
-      // Find all transactions (with wallet join for addresses) not yet in spectral_records
-      const result = await pool.query(`
+      // ── 1. NXT transactions ──────────────────────────────────────────────
+      const nxtResult = await pool.query(`
         SELECT t.id, t.type, t.amount::text, t.fee::text, t.metadata,
                t.created_at, t.wavelength::text,
                fw.address AS from_address, tw.address AS to_address
         FROM transactions t
         LEFT JOIN wallets fw ON fw.id = t.from_wallet_id
         LEFT JOIN wallets tw ON tw.id = t.to_wallet_id
-        WHERE NOT EXISTS (
-          SELECT 1 FROM spectral_records sr
-          WHERE sr.data->>'txId' = t.id
-        )
         ORDER BY t.created_at ASC
       `);
+      scanned += nxtResult.rows.length;
 
-      const unledgered = result.rows;
-      if (unledgered.length === 0) {
-        return res.json({ ok: true, message: "All transactions already ledgered", processed: 0 });
-      }
-
-      let processed = 0;
-      let failed = 0;
-      const errors: string[] = [];
-
-      for (const tx of unledgered) {
+      for (const tx of nxtResult.rows) {
+        const already = await pool.query(
+          `SELECT 1 FROM spectral_records WHERE data->>'txId' = $1 LIMIT 1`, [tx.id]
+        );
+        if (already.rows.length > 0) { skipped++; continue; }
         try {
           const memo = (tx.metadata as any)?.memo ?? null;
           const toAddr = tx.to_address ?? "unknown";
           const fromAddr = tx.from_address ?? "system";
-
           await ledgerEvent({
             type:        tx.type ?? "nxt_transfer",
             label:       `${tx.type ?? "Transfer"}: ${tx.amount} NXT → ${toAddr}`,
@@ -11002,15 +10995,70 @@ export async function registerRoutes(
             fromAddress: fromAddr,
             metadata:    { txId: tx.id, amount: tx.amount, fromAddress: fromAddr, toAddress: toAddr, memo, fee: tx.fee, createdAt: tx.created_at },
           });
-          processed++;
-        } catch (e: any) {
-          failed++;
-          errors.push(`${tx.id}: ${e.message}`);
-        }
+          created++;
+        } catch (e: any) { failed++; errors.push(`NXT:${tx.id}: ${e.message}`); }
       }
 
-      console.log(`[RECONCILE] Ledger reconciliation: ${processed} processed, ${failed} failed`);
-      res.json({ ok: true, processed, failed, total: unledgered.length, errors: errors.slice(0, 5) });
+      // ── 2. Lightning / sats transactions ────────────────────────────────
+      const ltxResult = await pool.query(`
+        SELECT lt.id, lt.type, lt.amount_sats, lt.nxt_amount, lt.payment_hash,
+               lt.memo, lt.status, lt.created_at, lt.user_id,
+               u.username
+        FROM lightning_transactions lt
+        LEFT JOIN users u ON u.id = lt.user_id
+        ORDER BY lt.created_at ASC
+      `);
+      scanned += ltxResult.rows.length;
+
+      for (const lt of ltxResult.rows) {
+        const already = await pool.query(
+          `SELECT 1 FROM spectral_records WHERE data->>'ltxId' = $1 LIMIT 1`, [String(lt.id)]
+        );
+        if (already.rows.length > 0) { skipped++; continue; }
+        try {
+          const label = `${lt.type}: ${lt.amount_sats} sats${lt.memo ? ` — ${lt.memo}` : ""}`;
+          await ledgerEvent({
+            type:        lt.type ?? "sats_transfer",
+            label,
+            content:     `SATS_TX:${lt.id}:${lt.amount_sats}sats:${lt.username ?? lt.user_id}:${lt.payment_hash ?? "no-hash"}`,
+            fromAddress: lt.username ?? lt.user_id,
+            metadata:    { ltxId: String(lt.id), amountSats: lt.amount_sats, nxtAmount: lt.nxt_amount, paymentHash: lt.payment_hash, memo: lt.memo, status: lt.status, createdAt: lt.created_at },
+          });
+          created++;
+        } catch (e: any) { failed++; errors.push(`LTX:${lt.id}: ${e.message}`); }
+      }
+
+      // ── 3. WNUSD transactions ────────────────────────────────────────────
+      const wnusdResult = await pool.query(`
+        SELECT wt.id, wt.type, wt.sats_delta, wt.wnusd_delta, wt.nxt_fee,
+               wt.col_ratio_pct, wt.created_at, wt.user_id,
+               u.username
+        FROM wnusd_transactions wt
+        LEFT JOIN users u ON u.id = wt.user_id
+        ORDER BY wt.created_at ASC
+      `);
+      scanned += wnusdResult.rows.length;
+
+      for (const wt of wnusdResult.rows) {
+        const already = await pool.query(
+          `SELECT 1 FROM spectral_records WHERE data->>'wnusdTxId' = $1 LIMIT 1`, [wt.id]
+        );
+        if (already.rows.length > 0) { skipped++; continue; }
+        try {
+          const label = `WNUSD ${wt.type}: ${wt.wnusd_delta} WNUSD / ${wt.sats_delta} sats`;
+          await ledgerEvent({
+            type:        wt.type ?? "wnusd_mint",
+            label,
+            content:     `WNUSD_TX:${wt.id}:${wt.wnusd_delta}WNUSD:${wt.sats_delta}sats:${wt.username ?? wt.user_id}`,
+            fromAddress: wt.username ?? wt.user_id,
+            metadata:    { wnusdTxId: wt.id, type: wt.type, satsDelta: wt.sats_delta, wnusdDelta: wt.wnusd_delta, nxtFee: wt.nxt_fee, colRatio: wt.col_ratio_pct, createdAt: wt.created_at },
+          });
+          created++;
+        } catch (e: any) { failed++; errors.push(`WNUSD:${wt.id}: ${e.message}`); }
+      }
+
+      console.log(`[RECONCILE] scanned=${scanned} created=${created} skipped=${skipped} failed=${failed}`);
+      res.json({ ok: true, scanned, created, skipped, failed, errors: errors.slice(0, 10) });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
