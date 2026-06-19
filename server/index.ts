@@ -61,6 +61,16 @@ process.on("SIGINT",  () => { cleanupFlask(); process.exit(0); });
 process.on("SIGTERM", () => { cleanupFlask(); process.exit(0); });
 process.on("exit",    () => { cleanupFlask(); });
 
+// ── Global crash guards ────────────────────────────────────────────────────
+// Without these, a single unhandled rejection in any background agent kills
+// the entire process in Node 18+, causing the uptime monitor to record an outage.
+process.on("uncaughtException", (err) => {
+  console.error("[CRASH GUARD] Uncaught exception — server staying up:", err?.message ?? err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[CRASH GUARD] Unhandled rejection — server staying up:", reason);
+});
+
 startFlaskAPI();
 
 declare module "http" {
@@ -620,15 +630,20 @@ async function runStartupMigrations() {
 
         // Wave 6 — 30s: social bots (last — highest retry tolerance)
         await delay(6_000);
-        startSocialBroadcastAgent();
-        if (process.env.NODE_ENV === "production") startTelegramBot();
-        startNostrDmBot();
-        startNxtCampaignAgent();
-        startPostScheduler();
-        startTgNostrBridge();
-        startWnspBtcEtcher();
-        const { startWnspWavelengthscriptEtcher } = await import("./wnsp-wavelengthscript-rune-etcher");
-        startWnspWavelengthscriptEtcher();
+        const _safe = (name: string, fn: () => void) => {
+          try { fn(); } catch (e: any) { console.error(`[Wave6] ${name} failed to start:`, e?.message ?? e); }
+        };
+        _safe("SocialBroadcast",  () => startSocialBroadcastAgent());
+        if (process.env.NODE_ENV === "production") _safe("TelegramBot", () => startTelegramBot());
+        _safe("NostrDmBot",       () => startNostrDmBot());
+        _safe("NxtCampaign",      () => startNxtCampaignAgent());
+        _safe("PostScheduler",    () => startPostScheduler());
+        _safe("TgNostrBridge",    () => startTgNostrBridge());
+        _safe("WnspBtcEtcher",    () => startWnspBtcEtcher());
+        try {
+          const { startWnspWavelengthscriptEtcher } = await import("./wnsp-wavelengthscript-rune-etcher");
+          startWnspWavelengthscriptEtcher();
+        } catch (e: any) { console.error("[Wave6] WavelengthscriptEtcher failed to start:", e?.message ?? e); }
       })();
     });
     httpServer.once("error", (err: any) => {
