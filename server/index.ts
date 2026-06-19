@@ -539,8 +539,36 @@ async function runStartupMigrations() {
 }
 
 (async () => {
+  const port = parseInt(process.env.PORT || "5000", 10);
+  const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+  // ── Step 1: Bind port FIRST ───────────────────────────────────────────────
+  // The uptime monitor probes / immediately on boot. Binding here — before
+  // migrations and route registration — means the health check answers
+  // within milliseconds instead of after the full startup sequence.
+  // serverReady stays false so "/" returns 200 "ok" until routes are loaded.
+  await new Promise<void>((resolve) => {
+    function tryListen(attemptsLeft: number) {
+      httpServer.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
+        log(`port ${port} open — running startup tasks…`);
+        resolve();
+      });
+      httpServer.once("error", (err: any) => {
+        if (err.code === "EADDRINUSE" && attemptsLeft > 0) {
+          console.warn(`[PORT] Port ${port} busy — retrying in 2s (${attemptsLeft} left)…`);
+          try { execSync(`fuser -k ${port}/tcp 2>/dev/null || true`); } catch {}
+          setTimeout(() => { httpServer.close(() => tryListen(attemptsLeft - 1)); }, 2000);
+        } else {
+          console.error(`[PORT] Fatal: cannot bind port ${port}:`, err.message);
+          process.exit(1);
+        }
+      });
+    }
+    tryListen(5);
+  });
+
+  // ── Step 2: Migrations + route registration (server already answering) ────
   await runStartupMigrations();
-  // Seed LP pools (idempotent — skips if already present)
   try {
     const { seedPools } = await import("./lp-pools");
     await seedPools();
@@ -552,17 +580,11 @@ async function runStartupMigrations() {
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-    if (!res.headersSent) {
-      res.status(status).json({ message });
-    }
-    if (status >= 500) {
-      console.error("[Server Error]", err.message);
-    }
+    if (!res.headersSent) res.status(status).json({ message });
+    if (status >= 500) console.error("[Server Error]", err.message);
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // Static serving must come after routes so the catch-all doesn't swallow API calls
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
@@ -570,92 +592,68 @@ async function runStartupMigrations() {
     await setupVite(httpServer, app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "5000", 10);
+  // ── Step 3: Mark ready — full app now serving ─────────────────────────────
+  serverReady = true;
+  log(`serving on port ${port}`);
 
-  // Retry listen up to 5 times (2s apart) so port conflicts on restart never crash the server
-  function listenWithRetry(attemptsLeft = 5) {
-    httpServer.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
-      serverReady = true;
-      log(`serving on port ${port}`);
+  // ── Step 4: Staggered background agents (server already up, no rush) ──────
+  (async () => {
+    // Wave 1 — 2s: core chain/genesis
+    await delay(2_000);
+    seedGenesisUser().catch((e) => console.error("[GENESIS USER] Boot error:", e));
+    seedGenesisBlock().catch(() => {});
+    seedGenesisNode().catch((e) => console.error("[GENESIS NODE] Error:", e));
 
-      const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+    // Wave 2 — 6s: blockchain auditor + kernel agents
+    await delay(4_000);
+    startBlockchainAuditor().catch((e) => console.error("[AUDITOR] Boot error:", e));
+    startKernelAgents();
 
-      // Stagger all background agents to avoid DB connection storm on boot.
-      // Each wave waits before starting so the pool isn't overwhelmed.
-      (async () => {
-        // Wave 1 — 2s: core chain/genesis (low concurrency)
-        await delay(2_000);
-        seedGenesisUser().catch((e) => console.error("[GENESIS USER] Boot error:", e));
-        seedGenesisBlock().catch(() => {});
-        seedGenesisNode().catch((e) => console.error("[GENESIS NODE] Error:", e));
+    // Wave 3 — 12s: BTC on-chain workers
+    await delay(6_000);
+    import("./btc-bridge-service").then(({ btcBridge }) => {
+      btcBridge.startAutoProcessor();
+    }).catch((e) => console.error("[BTC Bridge] Boot error:", e));
+    import("./btc-withdrawal-processor").then(({ startWithdrawalProcessor }) => {
+      startWithdrawalProcessor(60_000);
+    }).catch((e) => console.error("[BTC Withdrawal] Boot error:", e));
 
-        // Wave 2 — 6s: blockchain auditor + kernel agents
-        await delay(4_000);
-        startBlockchainAuditor().catch((e) => console.error("[AUDITOR] Boot error:", e));
-        startKernelAgents();
+    // Wave 4 — 18s: Rune processor + block scanner
+    await delay(6_000);
+    import("./rune-transfer-processor").then(({ startRuneProcessor }) => {
+      startRuneProcessor(60_000);
+    }).catch((e) => console.error("[Rune Processor] Boot error:", e));
+    import("./btc-block-scanner").then(({ startStakeScanner }) => {
+      startStakeScanner();
+    }).catch((e) => console.error("[BTC Scanner] Boot error:", e));
 
-        // Wave 3 — 12s: BTC on-chain workers
-        await delay(6_000);
-        import("./btc-bridge-service").then(({ btcBridge }) => {
-          btcBridge.startAutoProcessor();
-        }).catch((e) => console.error("[BTC Bridge] Boot error:", e));
-        import("./btc-withdrawal-processor").then(({ startWithdrawalProcessor }) => {
-          startWithdrawalProcessor(60_000);
-        }).catch((e) => console.error("[BTC Withdrawal] Boot error:", e));
+    // Wave 5 — 24s: sentinels + liquidity feed
+    await delay(6_000);
+    import("./btc-wallet-sentinel").then(({ startWalletSentinel }) => {
+      startWalletSentinel();
+    }).catch((e) => console.error("[Sentinel] Boot error:", e));
+    import("./btc-assets-sentinel").then(({ startAssetsSentinel }) => {
+      startAssetsSentinel();
+    }).catch((e) => console.error("[Assets Sentinel] Boot error:", e));
+    import("./wnsp-io-liquidity").then(({ startWnspIoLiquidity }) => {
+      startWnspIoLiquidity();
+    }).catch((e) => console.error("[wnsp.io Liquidity] Boot error:", e));
 
-        // Wave 4 — 18s: Rune processor + block scanner
-        await delay(6_000);
-        import("./rune-transfer-processor").then(({ startRuneProcessor }) => {
-          startRuneProcessor(60_000);
-        }).catch((e) => console.error("[Rune Processor] Boot error:", e));
-        import("./btc-block-scanner").then(({ startStakeScanner }) => {
-          startStakeScanner();
-        }).catch((e) => console.error("[BTC Scanner] Boot error:", e));
-
-        // Wave 5 — 24s: sentinels + liquidity feed
-        await delay(6_000);
-        import("./btc-wallet-sentinel").then(({ startWalletSentinel }) => {
-          startWalletSentinel();
-        }).catch((e) => console.error("[Sentinel] Boot error:", e));
-        import("./btc-assets-sentinel").then(({ startAssetsSentinel }) => {
-          startAssetsSentinel();
-        }).catch((e) => console.error("[Assets Sentinel] Boot error:", e));
-        import("./wnsp-io-liquidity").then(({ startWnspIoLiquidity }) => {
-          startWnspIoLiquidity();
-        }).catch((e) => console.error("[wnsp.io Liquidity] Boot error:", e));
-
-        // Wave 6 — 30s: social bots (last — highest retry tolerance)
-        await delay(6_000);
-        const _safe = (name: string, fn: () => void) => {
-          try { fn(); } catch (e: any) { console.error(`[Wave6] ${name} failed to start:`, e?.message ?? e); }
-        };
-        _safe("SocialBroadcast",  () => startSocialBroadcastAgent());
-        if (process.env.NODE_ENV === "production") _safe("TelegramBot", () => startTelegramBot());
-        _safe("NostrDmBot",       () => startNostrDmBot());
-        _safe("NxtCampaign",      () => startNxtCampaignAgent());
-        _safe("PostScheduler",    () => startPostScheduler());
-        _safe("TgNostrBridge",    () => startTgNostrBridge());
-        _safe("WnspBtcEtcher",    () => startWnspBtcEtcher());
-        try {
-          const { startWnspWavelengthscriptEtcher } = await import("./wnsp-wavelengthscript-rune-etcher");
-          startWnspWavelengthscriptEtcher();
-        } catch (e: any) { console.error("[Wave6] WavelengthscriptEtcher failed to start:", e?.message ?? e); }
-      })();
-    });
-    httpServer.once("error", (err: any) => {
-      if (err.code === "EADDRINUSE" && attemptsLeft > 0) {
-        console.warn(`[PORT] Port ${port} busy — retrying in 2s (${attemptsLeft} attempts left)...`);
-        try { execSync(`fuser -k ${port}/tcp 2>/dev/null || true`); } catch {}
-        setTimeout(() => { httpServer.close(() => listenWithRetry(attemptsLeft - 1)); }, 2000);
-      } else {
-        console.error(`[PORT] Fatal: cannot bind port ${port}:`, err.message);
-        process.exit(1);
-      }
-    });
-  }
-  listenWithRetry();
+    // Wave 6 — 30s: social bots (highest retry tolerance)
+    await delay(6_000);
+    const _safe = (name: string, fn: () => void) => {
+      try { fn(); } catch (e: any) { console.error(`[Wave6] ${name} failed to start:`, e?.message ?? e); }
+    };
+    _safe("SocialBroadcast",  () => startSocialBroadcastAgent());
+    if (process.env.NODE_ENV === "production") _safe("TelegramBot", () => startTelegramBot());
+    _safe("NostrDmBot",       () => startNostrDmBot());
+    _safe("NxtCampaign",      () => startNxtCampaignAgent());
+    _safe("PostScheduler",    () => startPostScheduler());
+    _safe("TgNostrBridge",    () => startTgNostrBridge());
+    _safe("WnspBtcEtcher",    () => startWnspBtcEtcher());
+    try {
+      const { startWnspWavelengthscriptEtcher } = await import("./wnsp-wavelengthscript-rune-etcher");
+      startWnspWavelengthscriptEtcher();
+    } catch (e: any) { console.error("[Wave6] WavelengthscriptEtcher failed to start:", e?.message ?? e); }
+  })();
 })();
