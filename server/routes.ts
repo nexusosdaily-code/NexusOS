@@ -67,7 +67,20 @@ const SPECTRAL_API_URL = "http://127.0.0.1:5001";
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 100;
 const AUTH_RATE_LIMIT_MAX = 10;
+const KEY_AUTH_RATE_LIMIT_MAX = 5;
 const WALLET_RATE_LIMIT_MAX = 30;
+
+function timingSafeCompare(a: string, b: string): boolean {
+  try {
+    const aBuf = Buffer.from(a);
+    const bBuf = Buffer.from(b);
+    if (aBuf.length !== bBuf.length) {
+      crypto.timingSafeEqual(aBuf, aBuf);
+      return false;
+    }
+    return crypto.timingSafeEqual(aBuf, bBuf);
+  } catch { return false; }
+}
 
 async function checkRateLimit(req: Request, res: Response, endpoint: string, maxRequests: number): Promise<boolean> {
   const identifier = req.user?.id || req.ip || "anonymous";
@@ -875,11 +888,12 @@ export async function registerRoutes(
 
   app.post("/api/auth/wif-login", async (req: Request, res: Response) => {
     try {
+      if (!await checkRateLimit(req, res, "/api/auth/wif-login", KEY_AUTH_RATE_LIMIT_MAX)) return;
       const { wifKey } = req.body;
       if (!wifKey) return res.status(400).json({ error: "wifKey required" });
 
       const wif = process.env.BTC_INSCRIPTION_WALLET_WIF ?? "";
-      if (!wif || wifKey.trim() !== wif.trim())
+      if (!wif || !timingSafeCompare(wifKey.trim(), wif.trim()))
         return res.status(401).json({ error: "Invalid wallet key" });
 
       const user = await storage.getUserByUsername("Nexus");
@@ -901,11 +915,12 @@ export async function registerRoutes(
 
   app.post("/api/auth/nsec-login", async (req: Request, res: Response) => {
     try {
+      if (!await checkRateLimit(req, res, "/api/auth/nsec-login", KEY_AUTH_RATE_LIMIT_MAX)) return;
       const { nsecKey } = req.body;
       if (!nsecKey) return res.status(400).json({ error: "nsecKey required" });
 
       const stored = process.env.NOSTR_NSEC ?? "";
-      if (!stored || nsecKey.trim() !== stored.trim())
+      if (!stored || !timingSafeCompare(nsecKey.trim(), stored.trim()))
         return res.status(401).json({ error: "Invalid Nostr key" });
 
       const user = await storage.getUserByUsername("Nexus");
@@ -927,6 +942,7 @@ export async function registerRoutes(
 
   app.post("/api/auth/recover", async (req: Request, res: Response) => {
     try {
+      if (!await checkRateLimit(req, res, "/api/auth/recover", KEY_AUTH_RATE_LIMIT_MAX)) return;
       const { username, newPassword, recoveryKey } = req.body;
       if (!username || !newPassword || !recoveryKey)
         return res.status(400).json({ error: "username, newPassword, and recoveryKey required" });
@@ -934,8 +950,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Password must be at least 8 characters" });
 
       const wif = process.env.BTC_INSCRIPTION_WALLET_WIF ?? "";
-      const trimmed = recoveryKey.trim();
-      if (!wif || trimmed !== wif.trim())
+      if (!wif || !timingSafeCompare(recoveryKey.trim(), wif.trim()))
         return res.status(401).json({ error: "Invalid recovery key" });
 
       const user = await storage.getUserByUsername(username);

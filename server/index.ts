@@ -83,6 +83,16 @@ declare module "http" {
 app.use(compression());
 app.use(cookieParser());
 
+// Security headers — remove fingerprinting, add basic protections
+app.disable("x-powered-by");
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
+
 // ── Custom domain hostname redirects ─────────────────────────────────────────
 // Each branded domain lands visitors on its product page.
 const DOMAIN_ROUTES: Record<string, string> = {
