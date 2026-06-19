@@ -29,6 +29,7 @@ const WalletPage = lazy(() => import("@/pages/wallet"));
 const AnnouncementsPage = lazy(() => import("@/pages/announcements"));
 const AnnouncementSubstrateV2Page = lazy(() => import("@/pages/announcement-substrate-v2"));
 const ResonancePropulsionPage = lazy(() => import("@/pages/resonance-propulsion"));
+const ResonanceCavityPage = lazy(() => import("@/pages/resonance-cavity"));
 const FriendsPage = lazy(() => import("@/pages/friends"));
 const InboxPage = lazy(() => import("@/pages/inbox"));
 const K1InfrastructurePage = lazy(() => import("@/pages/k1-infrastructure"));
@@ -222,6 +223,7 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/wallet",
   "/announcements", "/announcements/substrate-v2",
   "/resonance-propulsion",
+  "/resonance-cavity",
   "/friends", "/inbox", "/messages", "/phonebook",
   "/k1", "/k1/orchestration",
   "/secure-docs",
@@ -302,6 +304,7 @@ function ProtectedRoutes() {
         <Route path="/announcements" component={AnnouncementsPage} />
         <Route path="/announcements/substrate-v2" component={AnnouncementSubstrateV2Page} />
         <Route path="/resonance-propulsion" component={ResonancePropulsionPage} />
+        <Route path="/resonance-cavity" component={ResonanceCavityPage} />
         <Route path="/friends" component={FriendsPage} />
         <Route path="/inbox" component={InboxPage} />
         <Route path="/messages" component={InboxPage} />
@@ -484,6 +487,7 @@ function Router() {
       <Route path="/replit-template"     component={ReplitTemplatePage} />
       <Route path="/proof"               component={ProofPage} />
       {/* ── Science & Protocol pages — publicly crawlable ── */}
+      <Route path="/resonance-cavity" component={ResonanceCavityPage} />
       <Route path="/planck-alignment" component={PlanckAlignmentPage} />
       <Route path="/reposed-theory" component={ReposedTheoryPage} />
       <Route path="/compression-explorer" component={CompressionExplorerPage} />

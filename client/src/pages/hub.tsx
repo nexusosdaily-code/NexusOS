@@ -145,6 +145,7 @@ const APP_SECTIONS = [
       { title: "🗺️ Roadmap",                             href: "/roadmap",            Icon: Waves },
       { title: "🔌 How to Plug In",                     href: "/how-to-plug-in",     Icon: Zap },
       { title: "Oscillating Quanta — First Principles", href: "/oscillating-quanta", Icon: Waves },
+      { title: "Universal Cavity Resonance",            href: "/resonance-cavity",   Icon: Waves },
       { title: "CE-SE Pipeline",                         href: "/ce-se-pipeline",     Icon: Zap },
       { title: "Planck Alignment",                      href: "/planck-alignment",   Icon: Zap },
     ],
