@@ -4579,7 +4579,7 @@ export async function registerRoutes(
   // Recent kernel events
   app.get("/api/agent-bus/events", authenticate, async (req: Request, res: Response) => {
     try {
-      const n = req.query.n ?? 30;
+      const n = Math.min(100, Math.max(1, parseInt(String(req.query.n ?? "30"), 10) || 30));
       const r = await fetch(`${SPECTRAL_API_URL}/api/kernel/events?n=${n}`);
       const d = await r.json();
       res.json(d);
@@ -5277,7 +5277,11 @@ export async function registerRoutes(
       const { db } = await import("./db");
       const { spectralRecords } = await import("@shared/schema");
       const { eq } = await import("drizzle-orm");
-      const [record] = await db.select().from(spectralRecords).where(eq(spectralRecords.id, req.params.id));
+      const id = req.params.id;
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        return res.status(400).json({ error: "Invalid record ID format" });
+      }
+      const [record] = await db.select().from(spectralRecords).where(eq(spectralRecords.id, id));
       if (!record) return res.status(404).json({ error: "Record not found" });
       res.json({ record });
     } catch (err: any) {
@@ -5373,7 +5377,9 @@ export async function registerRoutes(
   // Retrieve by Ψ channel
   app.get("/api/spectral-db/channel/:psi", async (req: Request, res: Response) => {
     try {
-      const psi = decodeURIComponent(req.params.psi);
+      const raw = req.params.psi;
+      if (!raw || raw.length > 200) return res.status(400).json({ error: "Invalid channel identifier" });
+      const psi = decodeURIComponent(raw);
       const { db } = await import("./db");
       const { spectralRecords } = await import("@shared/schema");
       const { eq } = await import("drizzle-orm");

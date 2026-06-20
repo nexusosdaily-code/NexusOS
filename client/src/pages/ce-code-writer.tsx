@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Code2, Zap, Copy, Check, Play, Radio, Package, Layers } from "lucide-react";
+import { Code2, Zap, Copy, Check, Play, Radio, Package, Layers, Music } from "lucide-react";
 import { SpectralPanel } from "@/components/spectral-visuals";
 
 // ── Physics constants ─────────────────────────────────────────────
@@ -48,6 +48,65 @@ const CE_TABLE: number[] = Array.from({ length: 128 }, (_, i) => 380 + (i / 128)
 // ── CE character → wavelength (deterministic, silicon-ready) ─────
 function charToWavelength(char: string): number {
   return CE_TABLE[char.charCodeAt(0) % 128];
+}
+
+// ── OctaveTone Engine — 40-octave optical→acoustic bridge ────────
+// Math: f_acoustic = f_optical / 2^40
+// Visible 555 THz drops to ~505 Hz — perfect mid-piano range (D4–F5)
+const OCTAVE_BRIDGE_N = 40;
+const OCTAVE_DIVISOR  = Math.pow(2, OCTAVE_BRIDGE_N); // ≈ 1.0995 × 10¹²
+
+function nmToAcousticHz(nm: number): number {
+  return (SPEED_C / (nm * 1e-9)) / OCTAVE_DIVISOR;
+}
+
+let _audioCtx: AudioContext | null = null;
+function getAudioCtx(): AudioContext {
+  if (!_audioCtx || _audioCtx.state === "closed") {
+    _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  if (_audioCtx.state === "suspended") _audioCtx.resume();
+  return _audioCtx;
+}
+
+function playAcousticTone(nm: number, duration = 0.45, volume = 0.2): void {
+  try {
+    const ctx  = getAudioCtx();
+    const hz   = nmToAcousticHz(nm);
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = hz;
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration + 0.05);
+  } catch { /* browser audio unavailable */ }
+}
+
+function playAcousticChord(nms: number[], duration = 1.8): void {
+  // Deduplicate to nearest 0.1 Hz to avoid identical oscillators
+  const unique = [...new Set(nms.map(n => Math.round(nmToAcousticHz(n) * 10)))].map(h => h / 10);
+  const vol = Math.max(0.03, 0.18 / Math.sqrt(unique.length));
+  unique.forEach(hz => {
+    try {
+      const ctx  = getAudioCtx();
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = hz;
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + duration + 0.05);
+    } catch { /* browser audio unavailable */ }
+  });
 }
 
 // ── Code generation engine ────────────────────────────────────────
@@ -632,6 +691,7 @@ function LiveEncodeTab() {
   const [text, setText] = useState("Hello, universe. Every symbol is light.");
   const [apiResult, setApiResult] = useState<any>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [chordPlaying, setChordPlaying] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const encodeMut = useMutation({
@@ -727,10 +787,12 @@ function LiveEncodeTab() {
             {chars.map((c, i) => {
               const nm = charToWavelength(c);
               const col = wlToRgb(nm);
+              const hz  = nmToAcousticHz(nm);
               return (
                 <div key={i}
-                  title={`'${c === " " ? "space" : c}' → λ=${nm.toFixed(1)}nm`}
-                  className="inline-flex items-center justify-center w-7 h-7 rounded text-xs font-mono font-bold cursor-default select-none transition-transform hover:scale-110"
+                  title={`'${c === " " ? "space" : c}' → λ=${nm.toFixed(1)}nm · ${hz.toFixed(1)} Hz — click to hear`}
+                  onClick={() => playAcousticTone(nm)}
+                  className="inline-flex items-center justify-center w-7 h-7 rounded text-xs font-mono font-bold cursor-pointer select-none transition-transform hover:scale-125 active:scale-95"
                   style={{ background: col, color: nm > 500 && nm < 620 ? "#000" : "#fff", opacity: 0.92 }}
                   data-testid={`char-chip-${i}`}>
                   {c === " " ? "·" : c === "\n" ? "↵" : c}
@@ -738,7 +800,7 @@ function LiveEncodeTab() {
               );
             })}
           </div>
-          <p className="text-xs text-slate-600">Each chip = one character. Color = its wavelength in the visible spectrum.</p>
+          <p className="text-xs text-slate-600">Click any chip to hear its tone — 40 octaves below its light frequency.</p>
         </div>
       )}
 
@@ -777,6 +839,42 @@ function LiveEncodeTab() {
           <span>380nm</span><span>780nm</span>
         </div>
       </div>
+
+      {/* OctaveTone — Play Chord + bridge info */}
+      {chars.length > 0 && (
+        <div className="p-3 rounded-lg border border-violet-900/60 bg-violet-950/30 space-y-2">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="space-y-0.5">
+              <p className="text-xs font-semibold text-violet-300 flex items-center gap-1.5">
+                <Music className="w-3 h-3" /> OctaveTone Bridge
+              </p>
+              <p className="text-xs text-slate-500 font-mono">
+                f<sub>acoustic</sub> = f<sub>optical</sub> / 2<sup>40</sup> &nbsp;·&nbsp;
+                dominant {displayNm.toFixed(0)} nm → <span className="text-violet-300">{nmToAcousticHz(displayNm).toFixed(1)} Hz</span>
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setChordPlaying(true);
+                playAcousticChord(chars.map(c => charToWavelength(c)));
+                setTimeout(() => setChordPlaying(false), 1900);
+              }}
+              disabled={chordPlaying}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded text-xs font-mono font-semibold transition-all
+                ${chordPlaying
+                  ? "bg-violet-800/60 border border-violet-600 text-violet-300 animate-pulse cursor-not-allowed"
+                  : "bg-violet-900/50 border border-violet-700 text-violet-200 hover:bg-violet-800/60 active:scale-95"}`}
+              data-testid="btn-play-chord">
+              {chordPlaying
+                ? <><Music className="w-3 h-3" /> Playing…</>
+                : <><Music className="w-3 h-3" /> 𝄞 Play Chord</>}
+            </button>
+          </div>
+          <p className="text-xs text-slate-600">
+            Every character has a unique tone — 40 octaves below its light frequency. Chord plays all simultaneously.
+          </p>
+        </div>
+      )}
 
       {/* Export + Save */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
