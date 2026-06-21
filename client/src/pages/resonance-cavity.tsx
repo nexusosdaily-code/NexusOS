@@ -24,7 +24,7 @@ const REFERENCES = [
     title: "The Universal One",
     year: 1926,
     note: "9-octave periodic table; wave motion as the foundation of all matter",
-    url: "https://www.scribd.com/book/271577041/The-Universal-One",
+    url: "https://archive.org/details/the-universal-one-1926-walter-russell",
     tag: "Russell Octaves",
   },
   {
@@ -40,7 +40,7 @@ const REFERENCES = [
     title: "The Problem of Increasing Human Energy",
     year: 1900,
     note: "Resonant energy transfer; the universe as a system of oscillating frequencies",
-    url: "https://teslauniverse.com/nikola-tesla/articles/problem-increasing-human-energy",
+    url: "https://archive.org/details/tesla-the-problem-of-increasing-human-energy",
     tag: "Resonance",
   },
   {
@@ -72,7 +72,7 @@ const REFERENCES = [
     title: "On the Radiation-Free Self-Oscillations of a Conducting Sphere",
     year: 1952,
     note: "Earth–ionosphere cavity resonance at 7.83 Hz — base frequency for harmonic derivation",
-    url: "https://link.springer.com/article/10.1007/BF01298581",
+    url: "https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2006RS003495",
     tag: "Schumann 7.83 Hz",
   },
   {
