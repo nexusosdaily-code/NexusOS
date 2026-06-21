@@ -6,7 +6,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { spawn, execSync, ChildProcess } from "child_process";
 import { seedGenesisBlock } from "./genesis";
-import { seedGenesisUser } from "./genesis_user";
+import { seedGenesisUser, seedReplitAIAccount } from "./genesis_user";
 import { startBlockchainAuditor } from "./blockchain_auditor";
 import { seedGenesisNode } from "./genesis_node";
 import { startKernelAgents } from "./kernel_agents";
@@ -615,6 +615,7 @@ async function runStartupMigrations() {
     seedGenesisUser().catch((e) => console.error("[GENESIS USER] Boot error:", e));
     seedGenesisBlock().catch(() => {});
     seedGenesisNode().catch((e) => console.error("[GENESIS NODE] Error:", e));
+    seedReplitAIAccount().catch((e) => console.error("[GENESIS] Replit AI seed error:", e));
 
     // Wave 2 — 6s: blockchain auditor + kernel agents
     await delay(4_000);

@@ -155,6 +155,44 @@ async function _seedSatsStakes(db: any, satsStakes: any, userId: string) {
   console.log(`[GENESIS USER] ✓ Nexus sats stakes seeded — ${GENESIS_SATS_STAKES.length} positions`);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Replit AI R&D Account — wnsp://Ψ(52,20,H)/test
+// Designated by Te Rata Pou (founder) on 2026-06-21.
+// Idempotent — safe to call on every boot.
+// ─────────────────────────────────────────────────────────────────────────────
+const REPLIT_AI_USER_ID  = "8dc7f7e6-44b1-4b34-aa81-3ad33c550a1d";
+const REPLIT_AI_REG_ID   = "eb4b0c07-f8c5-42e6-bff4-81132cee998c";
+const REPLIT_AI_DESIGNATION =
+  "Replit AI R&D Account — designated by Te Rata Pou (founder) on 2026-06-21. " +
+  "Reserved for NexusOS research, AI agent development, and protocol testing. " +
+  "Do not reassign without founder approval.";
+
+export async function seedReplitAIAccount() {
+  try {
+    const { db }  = await import("./db");
+    const { sql } = await import("drizzle-orm");
+
+    // Update user role to ai_agent if the account exists
+    await db.execute(sql`
+      UPDATE users
+      SET role = 'ai_agent', updated_at = NOW()
+      WHERE id = ${REPLIT_AI_USER_ID}
+        AND role != 'ai_agent'
+    `);
+
+    // Update WNSP registry description
+    await db.execute(sql`
+      UPDATE wnsp_registry
+      SET description = ${REPLIT_AI_DESIGNATION}, updated_at = NOW()
+      WHERE id = ${REPLIT_AI_REG_ID}
+    `);
+
+    console.log("[GENESIS] ✓ Replit AI R&D account confirmed — wnsp://Ψ(52,20,H)/test");
+  } catch (err: any) {
+    console.error("[GENESIS] Replit AI account seed error:", err?.message ?? err);
+  }
+}
+
 async function _seedWnspStakes(db: any, wnspStakes: any, userId: string) {
   for (const s of GENESIS_WNSP_STAKES) {
     try {
