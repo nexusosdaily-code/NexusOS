@@ -40,7 +40,7 @@ const REFERENCES = [
     title: "The Problem of Increasing Human Energy",
     year: 1900,
     note: "Resonant energy transfer; the universe as a system of oscillating frequencies",
-    url: "https://www.gutenberg.org/files/36414/36414-h/36414-h.htm",
+    url: "https://teslauniverse.com/nikola-tesla/articles/problem-increasing-human-energy",
     tag: "Resonance",
   },
   {
@@ -84,11 +84,11 @@ const REFERENCES = [
     tag: "Cavity QED",
   },
   {
-    author: "Applied Physics (Mel Hill)",
-    title: "The Universe as a Cavity Resonator",
-    year: 2023,
-    note: "Higher frequency states as cavity harmonics; each octave doubling compresses into stable matter",
-    url: "https://www.appliedphysics.org",
+    author: "Kulak et al.",
+    title: "Photon in the Earth-Ionosphere Cavity: Schumann Resonances",
+    year: 2018,
+    note: "Rigorous quantum treatment of Earth–ionosphere as a spherical resonant cavity; photon eigenfrequencies match Schumann harmonics; cavity mode quantization",
+    url: "https://arxiv.org/abs/1803.10685",
     tag: "Cavity Model",
   },
   {
