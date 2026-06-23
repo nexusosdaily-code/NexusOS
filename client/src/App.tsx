@@ -63,6 +63,7 @@ const SpectralLibraryPage = lazy(() => import("@/pages/spectral-library"));
 const SpectralAuditPage = lazy(() => import("@/pages/spectral-audit"));
 const OrbitalTreasuryPage = lazy(() => import("@/pages/orbital-treasury"));
 const FoundersCharityPage = lazy(() => import("@/pages/founders-charity"));
+const HardwareTreasuryPage = lazy(() => import("@/pages/hardware-treasury"));
 const EcosystemPage = lazy(() => import("@/pages/ecosystem"));
 const OrdinalRegistryPage = lazy(() => import("@/pages/ordinal-registry"));
 const CommunicationPage = lazy(() => import("@/pages/communication"));
@@ -238,7 +239,7 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/spectral-db", "/blockchain", "/agent-bus", "/nexus-command", "/nexus-explorer",
   "/spectral-workspace", "/chronicle",
   "/spectral-library", "/spectral-audit", "/orbital-treasury",
-  "/founders-charity", "/ecosystem", "/ordinal-registry",
+  "/founders-charity", "/hardware-treasury", "/ecosystem", "/ordinal-registry",
   "/communication", "/comms", "/network", "/wavelength-lang",
   "/evidence", "/transmission", "/wnsp-bridge", "/wnsp/bridge",
   "/directory", "/ledger", "/github", "/settings",
@@ -350,6 +351,7 @@ function ProtectedRoutes() {
         <Route path="/spectral-audit" component={SpectralAuditPage} />
         <Route path="/orbital-treasury" component={OrbitalTreasuryPage} />
         <Route path="/founders-charity" component={FoundersCharityPage} />
+        <Route path="/hardware-treasury" component={HardwareTreasuryPage} />
         <Route path="/ecosystem" component={EcosystemPage} />
         <Route path="/ordinal-registry" component={OrdinalRegistryPage} />
         <Route path="/communication" component={CommunicationPage} />
@@ -502,6 +504,7 @@ function Router() {
       <Route path="/divergence-test" component={DivergenceTestPage} />
       <Route path="/hardware-spec" component={HardwareSpecPage} />
       <Route path="/hardware-lab" component={HardwareLabPage} />
+      <Route path="/hardware-treasury" component={HardwareTreasuryPage} />
       <Route path="/campaign" component={CampaignPage} />
       <Route path="/constitution" component={ConstitutionPage} />
       <Route path="/mobile-sdk" component={MobileSDKPage} />

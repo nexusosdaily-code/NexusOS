@@ -104,6 +104,7 @@ const APP_SECTIONS = [
       { title: "Governance",    href: "/governance",       Icon: Scale },
       { title: "Constitution",  href: "/constitution",    Icon: Shield },
       { title: "Founders Charity", href: "/founders-charity", Icon: Heart },
+      { title: "AI Hardware Fund", href: "/hardware-treasury", Icon: Cpu },
       { title: "SOP",           href: "/sop",             Icon: Radio },
       { title: "Hardware Lab",  href: "/hardware-lab",    Icon: FlaskConical },
       { title: "Settings",      href: "/settings",        Icon: Settings },
