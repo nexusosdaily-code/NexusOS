@@ -9,7 +9,8 @@ import { Link } from "wouter";
 import {
   ArrowLeft, Play, Square, Zap, RefreshCw, Clock, CheckCircle,
   XCircle, Radio, Send, Eye, TrendingUp, Lock, Coins, Rocket,
-  Bot, ChevronDown, ChevronUp, Megaphone,
+  Bot, ChevronDown, ChevronUp, Megaphone, Tag, Sparkles, Code,
+  Wifi, LinkIcon, Cpu, Terminal, Atom, Layers,
 } from "lucide-react";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -42,21 +43,56 @@ function fmtTime(ts: string) {
 }
 
 const SLOT_ICONS: Record<number, JSX.Element> = {
-  0: <TrendingUp className="w-4 h-4" />,
-  1: <Lock className="w-4 h-4" />,
-  2: <Coins className="w-4 h-4" />,
-  3: <Zap className="w-4 h-4" />,
-  4: <Bot className="w-4 h-4" />,
-  5: <Rocket className="w-4 h-4" />,
+  0:  <TrendingUp className="w-4 h-4" />,
+  1:  <Lock       className="w-4 h-4" />,
+  2:  <Coins      className="w-4 h-4" />,
+  3:  <Zap        className="w-4 h-4" />,
+  4:  <Bot        className="w-4 h-4" />,
+  5:  <Rocket     className="w-4 h-4" />,
+  6:  <Tag        className="w-4 h-4" />,
+  7:  <Sparkles   className="w-4 h-4" />,
+  8:  <Code       className="w-4 h-4" />,
+  10: <Wifi       className="w-4 h-4" />,
+  11: <LinkIcon   className="w-4 h-4" />,
+  12: <Cpu        className="w-4 h-4" />,
+  13: <Terminal   className="w-4 h-4" />,
+  14: <Atom       className="w-4 h-4" />,
+  15: <Layers     className="w-4 h-4" />,
+};
+const SLOT_ICONS_SM: Record<number, JSX.Element> = {
+  0:  <TrendingUp className="w-3.5 h-3.5" />,
+  1:  <Lock       className="w-3.5 h-3.5" />,
+  2:  <Coins      className="w-3.5 h-3.5" />,
+  3:  <Zap        className="w-3.5 h-3.5" />,
+  4:  <Bot        className="w-3.5 h-3.5" />,
+  5:  <Rocket     className="w-3.5 h-3.5" />,
+  6:  <Tag        className="w-3.5 h-3.5" />,
+  7:  <Sparkles   className="w-3.5 h-3.5" />,
+  8:  <Code       className="w-3.5 h-3.5" />,
+  10: <Wifi       className="w-3.5 h-3.5" />,
+  11: <LinkIcon   className="w-3.5 h-3.5" />,
+  12: <Cpu        className="w-3.5 h-3.5" />,
+  13: <Terminal   className="w-3.5 h-3.5" />,
+  14: <Atom       className="w-3.5 h-3.5" />,
+  15: <Layers     className="w-3.5 h-3.5" />,
 };
 
 const SLOT_COLORS: Record<number, string> = {
-  0: "text-amber-400",
-  1: "text-teal-400",
-  2: "text-purple-400",
-  3: "text-yellow-400",
-  4: "text-cyan-400",
-  5: "text-indigo-400",
+  0:  "text-amber-400",
+  1:  "text-teal-400",
+  2:  "text-purple-400",
+  3:  "text-yellow-400",
+  4:  "text-cyan-400",
+  5:  "text-indigo-400",
+  6:  "text-orange-400",
+  7:  "text-rose-400",
+  8:  "text-sky-400",
+  10: "text-green-400",
+  11: "text-violet-400",
+  12: "text-yellow-300",
+  13: "text-pink-400",
+  14: "text-blue-400",
+  15: "text-teal-300",
 };
 
 const INTERVALS = [
@@ -277,7 +313,7 @@ export default function NxtCampaignPage() {
           </div>
 
           {slots.map((slot) => {
-            const isNext  = state && (state.slotIndex % slots.length) === slot.id;
+            const isNext  = state && slots[state.slotIndex % slots.length]?.id === slot.id;
             const isExpanded = expandedSlot === slot.id;
             const preview = previewData?.slot;
 
@@ -368,12 +404,16 @@ export default function NxtCampaignPage() {
             <div className="space-y-1.5">
               {history.map((row: any) => (
                 <div key={row.id} className="flex items-center gap-3 bg-slate-800/30 rounded-xl px-3 py-2" data-testid={`hist-row-${row.id}`}>
-                  <div className={`shrink-0 ${SLOT_COLORS[row.slot] ?? "text-slate-400"}`}>
-                    {SLOT_ICONS[row.slot] ?? <Send className="w-3.5 h-3.5" />}
+                  {(() => { const sid = stateData?.slots?.[row.slot]?.id ?? row.slot; return (
+                  <div className={`shrink-0 ${SLOT_COLORS[sid] ?? "text-slate-400"}`}>
+                    {SLOT_ICONS_SM[sid] ?? <Send className="w-3.5 h-3.5" />}
                   </div>
+                  ); })()}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-white font-mono">slot {row.slot}</span>
+                      <span className="text-xs text-white font-mono">
+                        {stateData?.slots?.[row.slot]?.label ?? `slot ${row.slot}`}
+                      </span>
                       <Badge className={`text-[9px] px-1.5 border ${
                         row.status === "ok"    ? "bg-green-950/40 text-green-400 border-green-500/30" :
                         row.status === "error" ? "bg-red-950/40 text-red-400 border-red-500/30" :
@@ -410,10 +450,10 @@ export default function NxtCampaignPage() {
             <div>
               <div className="text-purple-400 font-semibold mb-1">🔄 Rotation</div>
               <ul className="space-y-0.5">
-                <li>• 6 message slots cycle in order</li>
+                <li>• {slots.length} message slots cycle in order</li>
                 <li>• Each covers a different NXT angle</li>
-                <li>• BTC dip • Staking yields • WNUSD</li>
-                <li>• Physics • Nostr bot • K1 mission</li>
+                <li>• BTC dip • Staking • WNUSD • Physics</li>
+                <li>• Nostr • K1 • Ordinals • Runes • CE pipeline</li>
               </ul>
             </div>
             <div>

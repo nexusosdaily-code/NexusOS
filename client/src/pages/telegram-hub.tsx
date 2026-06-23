@@ -225,7 +225,7 @@ Quick starts:
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendCommand(input); }
   }
 
-  const mod = MODULES.find(m => m.id === activeModule)!;
+  const mod = MODULES.find(m => m.id === activeModule) ?? MODULES[0];
 
   return (
     <div className="min-h-screen text-white" style={{ background: "linear-gradient(135deg,#0a0a0f 0%,#0d0d1a 100%)" }}>
