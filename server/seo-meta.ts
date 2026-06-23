@@ -17,6 +17,8 @@ interface PageMeta {
   ogImage?: string;
   twitterTitle?: string;
   twitterDescription?: string;
+  /** Twitter/X account handle for this brand (e.g. "@NexusOS_io"). Falls back to "@NexusOS_io". */
+  twitterSite?: string;
   jsonLd?: object | object[];
   /** Static above-the-fold HTML for non-JS crawlers (injected in a <noscript> block before #root). */
   bodyHtml?: string;
@@ -351,6 +353,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "Physics calibration verifier and live spectrometer. Test CE encoding accuracy, verify wavelength→Ψ channel mappings, and validate SNIC hardware integration.",
     twitterTitle: "NexusOS Hardware Lab",
     twitterDescription: "Live physics calibration. CE encoding verifier. SNIC channel mapping tester. Spectrometer interface.",
+    jsonLd: softwareApp({ url: `${BASE}/hardware-lab`, name: "NexusOS Hardware Lab", description: "Interactive physics calibration verifier and live spectrometer for SNIC and PHR-1 hardware. Tests CE encoding accuracy and wavelength-to-Ψ channel mappings." }),
     bodyHtml: `<h1>NexusOS Hardware Lab — Physics Calibration &amp; Live Spectrometer</h1><p>The Hardware Lab provides an interactive physics calibration verifier and live spectrometer for NexusOS hardware integration. Test CE encoding accuracy, verify wavelength-to-Ψ channel mappings, and validate SNIC hardware integration — all in the browser.</p><ul><li>CE encoding verifier — confirm CE_TABLE[charCode % 128] output against reference values</li><li>Wavelength→Ψ channel mapping checker (256 WDM × 50 OAM × 2 polarisations)</li><li>Live spectrometer interface for connected hardware</li><li>Physics calibration suite for PHR-1 and SNIC integration</li></ul><nav><ul><li><a href="${BASE}/hardware-spec">Hardware Specification (AGPL-3.0)</a></li><li><a href="${BASE}/compression-explorer">Compression Explorer</a></li><li><a href="${BASE}/ce-code-writer">CE Code Writer</a></li></ul></nav>`,
   },
   "/compression-explorer": {
@@ -361,6 +364,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "Interactive compression curve: authority bands, photon energy, Boltzmann entropy, fee multipliers. The physics of NexusOS, rendered across 380–780nm.",
     twitterTitle: "Compression Explorer — Λ=hf/c² Live",
     twitterDescription: "Interactive Λ=hf/c² compression curve. Authority bands, photon energies, fee multipliers. NexusOS physics, live.",
+    jsonLd: techArticle({ url: `${BASE}/compression-explorer`, name: "Compression Explorer — Λ=hf/c² Curve", description: "Interactive visualisation of the NexusOS compression state equation Λ=hf/c². Displays authority band overlays, photon energy, Boltzmann entropy, and fee multipliers across the visible spectrum.", about: "Theory of Compression States, Λ=hf/c², photonic physics" }),
     bodyHtml: `<h1>Compression Explorer — Interactive Λ=hf/c² Curve</h1><p>An interactive SVG visualisation of the Λ=hf/c² compression curve across the full visible spectrum (380–780nm). Explore how authority, energy, fees, and entropy vary with wavelength — the physics foundation of every NexusOS address and transaction.</p><ul><li><strong>Authority bands</strong>: SYSTEM (shortest λ, highest energy) → KERNEL → USER → GUEST</li><li><strong>Photon energy</strong>: E=hf — computed live for each wavelength position</li><li><strong>Compression mass</strong>: Λ=hf/c² — the compression state at each frequency</li><li><strong>Fee multiplier</strong>: derived from compression state, enforced by the physics engine</li><li><strong>Normalized Λ</strong>: relative compression across the visible spectrum</li><li><strong>Boltzmann entropy</strong>: statistical entropy at each spectral position</li></ul><nav><ul><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li><li><a href="${BASE}/hardware-spec">Hardware Specification</a></li><li><a href="${BASE}/proof">Physics Proofs</a></li></ul></nav>`,
   },
   "/ce-code-writer": {
@@ -382,6 +386,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "10 ecosystem domains. WNSP protocol. SNIC photonic NIC. PHR-1 resonator. WASCII encoding. WavelengthScript. Orbital Treasury. NXT token. All connected by Λ=hf/c².",
     twitterTitle: "NexusOS Ecosystem",
     twitterDescription: "Protocol, hardware, encoding, and token — all unified by Λ=hf/c². 10 ecosystem domains.",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "name": "NexusOS Ecosystem",
+      "url": `${BASE}/ecosystem`,
+      "description": "The NexusOS ecosystem: WNSP protocol, SNIC photonic NIC, PHR-1 resonator, WASCII encoding, WavelengthScript, Orbital Treasury, and the NXT token. All unified by Λ=hf/c².",
+      "about": { "@type": "Organization", "name": "NexusOS", "url": `${BASE}/` },
+    },
   },
   "/network": {
     title: "NexusOS Spectral Network — Node Distribution by Authority Band",
@@ -391,6 +403,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "Node distribution by authority band. SYSTEM, KERNEL, USER, GUEST bands. Spectral proximity visualisation. Real-time Ψ channel topology.",
     twitterTitle: "NexusOS Spectral Network",
     twitterDescription: "Spectral node map. Authority bands. Ψ channel topology. Real-time.",
+    jsonLd: softwareApp({ url: `${BASE}/network`, name: "NexusOS Spectral Network", description: "Real-time visualisation of NexusOS node distribution across SYSTEM, KERNEL, USER, and GUEST authority bands. Shows Ψ channel assignments and spectral proximity." }),
     bodyHtml: `<h1>NexusOS Spectral Network — Node Distribution by Authority Band</h1><p>Visualise the live NexusOS node network organised by spectral authority band. Every node occupies a deterministic Ψ channel derived from its wavelength position. Spectral proximity determines routing efficiency — closer wavelengths route with lower energy cost.</p><ul><li><strong>SYSTEM band</strong>: shortest wavelength, highest energy, maximum authority</li><li><strong>KERNEL band</strong>: governance-capable nodes, can submit and vote on protocol proposals</li><li><strong>USER band</strong>: standard participant nodes</li><li><strong>GUEST band</strong>: longest wavelength, lowest energy, read-access nodes</li></ul><p>Each node's Ψ channel is derived from its spectral address using the WNSP Hilbert Space Channel Model: 256 WDM × 50 OAM × 2 polarisations = 25,600 orthogonal channels.</p><nav><ul><li><a href="${BASE}/wnsp">WNSP Protocol</a></li><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li><li><a href="${BASE}/compression-explorer">Compression Explorer</a></li></ul></nav>`,
   },
   "/roadmap": {
@@ -430,6 +443,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "25,600 orthogonal hardware lanes. CE lookups as physical wavelength selections. ⟨Ψᵢ|Ψⱼ⟩=0 by quantum mechanics. No driver rewrite when photonic ASICs arrive.",
     twitterTitle: "SNIC — Photonic NIC of 2032",
     twitterDescription: "25,600 orthogonal photonic channels. CE lookups as physical wavelength selections. AGPL-3.0.",
+    jsonLd: hardwareProduct({ name: "SNIC — Spectral Network Interface Card", url: `${BASE}/snic`, description: "Photonic network interface card with 25,600 orthogonal channels (256 WDM × 50 OAM × 2 polarisations). CE lookups execute as physical wavelength selections. AGPL-3.0, first public disclosure 2026-05-16." }),
   },
   "/open": {
     title: "NexusOS Open Charter — AGPL-3.0 and Open Science",
@@ -439,6 +453,15 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "AGPL-3.0. All specs, protocols, and software open forever. Improvements must be returned to the community. Open science, open hardware.",
     twitterTitle: "NexusOS Open Charter",
     twitterDescription: "AGPL-3.0. Open hardware. Open protocol. Open forever.",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "AboutPage",
+      "name": "NexusOS Open Charter",
+      "url": `${BASE}/open`,
+      "description": "NexusOS is licensed under AGPL-3.0. All hardware specifications, protocol standards, and software are open forever. All improvements must be contributed back to the community.",
+      "about": { "@type": "Organization", "name": "NexusOS", "url": `${BASE}/` },
+      "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
+    },
   },
   "/charter": {
     title: "NexusOS Open Charter — AGPL-3.0 and Open Science",
@@ -462,6 +485,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "Queries encoded to wavelength. Results ranked by EM proximity and Shannon coherence. Search nodes, agents, users, channels, and documents.",
     twitterTitle: "NexusOS Spectral Search",
     twitterDescription: "Physics-based search. CE-encoded queries. EM proximity ranking.",
+    jsonLd: softwareApp({ url: `${BASE}/spectral-search`, name: "NexusOS Spectral Search", description: "Cross-layer search engine for NexusOS. Queries are CE-encoded to a wavelength and results are ranked by electromagnetic proximity and Shannon channel coherence across nodes, agents, users, and documents." }),
   },
   "/blockchain": {
     title: "NexusOS Blockchain — Physics-Based Block Explorer",
@@ -471,6 +495,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "Browse NexusOS blocks and transactions. Spectral addresses. Physics-derived fees. WNSP Ψ channel anchoring. No cryptographic hashing.",
     twitterTitle: "NexusOS Blockchain",
     twitterDescription: "Physics-based blockchain. No cryptographic hashing. Spectral addresses. WNSP Ψ channel anchoring.",
+    jsonLd: softwareApp({ url: `${BASE}/blockchain`, name: "NexusOS Block Explorer", description: "Block explorer for the NexusOS physics-based blockchain. Browse blocks, transactions, and spectral address assignments. Blocks are anchored to WNSP Ψ channels; fees are derived from E=hf." }),
   },
   "/indiegogo": {
     title: "NexusOS on Indiegogo — Fund Physics-Based Computing Hardware",
@@ -480,6 +505,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "Fund PHR-1 and SNIC hardware development. Physics-based computing. AGPL-3.0. Support the Kardashev Type I roadmap.",
     twitterTitle: "NexusOS on Indiegogo",
     twitterDescription: "Fund physics-based computing hardware. PHR-1 resonator. SNIC photonic NIC. AGPL-3.0.",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "FundingScheme",
+      "name": "NexusOS Indiegogo Campaign",
+      "url": `${BASE}/indiegogo`,
+      "description": "Indiegogo crowdfunding campaign to fund development of the PHR-1 resonator, SNIC photonic NIC, and WavelengthScript compiler. Support the Kardashev Type I roadmap.",
+      "about": { "@type": "Organization", "name": "NexusOS" },
+    },
   },
   "/nxt-campaign": {
     title: "NXT Token Campaign — NEXUS•WAVELENGTH on Bitcoin Runes",
@@ -499,6 +532,164 @@ export const ROUTE_META: Record<string, PageMeta> = {
     twitterTitle: "NexusOS Nostr Relay",
     twitterDescription: "Nostr + WNSP spectral anchoring. Physics-native social protocol.",
   },
+
+  // ── Previously missing sitemap pages ─────────────────────────────────────
+
+  "/planck-alignment": {
+    title: "Planck Alignment — Quantum Constant Calibration in NexusOS",
+    description: "Planck constant alignment maps quantum-scale energy values to the NexusOS compression state model. Demonstrates how E=hf and Λ=hf/c² are calibrated at the Planck scale to produce deterministic Ψ channel assignments.",
+    canonical: `${BASE}/planck-alignment`,
+    ogTitle: "Planck Alignment — Quantum Constant Calibration",
+    ogDescription: "How E=hf and Λ=hf/c² are calibrated at the Planck scale. Deterministic Ψ channel assignments derived from first principles. NexusOS physics stack.",
+    twitterTitle: "Planck Alignment — NexusOS",
+    twitterDescription: "Planck-scale calibration of E=hf and Λ=hf/c². Deterministic Ψ channels from first principles.",
+    jsonLd: techArticle({ url: `${BASE}/planck-alignment`, name: "Planck Alignment", description: "Calibration of Planck constant (E=hf) to the NexusOS compression state model (Λ=hf/c²). Demonstrates how quantum-scale energy values produce deterministic Ψ channel assignments.", about: "Theory of Compression States, Planck constant, quantum physics, E=hf" }),
+  },
+  "/reposed-theory": {
+    title: "Reposed Theory — The Complete Theory of Compression States",
+    description: "The full reposed Theory of Compression States: how the universe evolves from the first unobserved oscillation at 555 THz, the Λ=hf/c² compression law, and the derivation of the 25,600 orthogonal Ψ channel address space.",
+    canonical: `${BASE}/reposed-theory`,
+    ogTitle: "Reposed Theory — Theory of Compression States",
+    ogDescription: "Complete theoretical framework: first unobserved oscillation at 555 THz, Λ=hf/c² compression law, derivation of 25,600 orthogonal Ψ channels. NexusOS first principles.",
+    twitterTitle: "Reposed Theory — NexusOS",
+    twitterDescription: "Full Theory of Compression States. 555 THz origin. Λ=hf/c². 25,600 Ψ channels derived from first principles.",
+    jsonLd: techArticle({ url: `${BASE}/reposed-theory`, name: "Reposed Theory — Theory of Compression States", description: "Complete restatement of the Theory of Compression States: the universe evolves from the first unobserved oscillation at 555 THz. Λ=hf/c² is the governing compression law, deriving the 25,600-channel Ψ address space.", about: "Theory of Compression States, 555 THz, Λ=hf/c², photonic physics" }),
+  },
+  "/wnsp-bridge": {
+    title: "WNSP Bridge — TCP/IP Overlay for wnsp:// URIs",
+    description: "The WNSP Bridge provides a TCP/IP overlay mapping wnsp:// URIs to HTTP resources via the wnsp_registry. Enables existing web infrastructure to route WNSP spectral addresses without a full protocol migration.",
+    canonical: `${BASE}/wnsp-bridge`,
+    ogTitle: "WNSP Bridge — TCP/IP Overlay for Spectral URIs",
+    ogDescription: "Map wnsp://Ψ(wdm,oam,pol)/path to HTTP endpoints. Bridge layer for incremental WNSP adoption. wnsp_registry database. No full protocol migration required.",
+    twitterTitle: "WNSP Bridge Layer",
+    twitterDescription: "wnsp:// URI to HTTP bridge. Spectral routing over TCP/IP. Incremental WNSP adoption path.",
+    jsonLd: softwareApp({ url: `${BASE}/wnsp-bridge`, name: "WNSP Bridge", description: "TCP/IP overlay that maps wnsp:// URIs to HTTP resources via the wnsp_registry. Allows existing web infrastructure to route WNSP spectral addresses incrementally." }),
+  },
+  "/spectral-router": {
+    title: "Spectral Router — DNS-Free Packet Routing via Ψ Channels",
+    description: "The NexusOS Spectral Routing Engine enables DNS-free packet routing between network nodes using Ψ channel addressing. Destination addresses are CE-encoded on the fly, eliminating DNS dependency.",
+    canonical: `${BASE}/spectral-router`,
+    ogTitle: "Spectral Router — DNS-Free Ψ Channel Routing",
+    ogDescription: "Route packets without DNS. CE-encoded Ψ channel addresses. Spectral proximity routing. Physics-native networking on 25,600 orthogonal channels.",
+    twitterTitle: "NexusOS Spectral Router",
+    twitterDescription: "DNS-free packet routing via Ψ channels. CE-encoded addresses. Physics-native networking.",
+    jsonLd: softwareApp({ url: `${BASE}/spectral-router`, name: "NexusOS Spectral Router", description: "DNS-free packet routing engine using Ψ channel addressing. Destination addresses are CE-encoded to wavelengths on the fly, routing across 25,600 orthogonal spectral channels." }),
+  },
+  "/spectral-contracts": {
+    title: "Spectral Contracts — Physics-Signed Document Signing",
+    description: "Sign documents using spectral wavelength keys. The NexusOS contract signing system replaces traditional PKI with SHA-256(content) ⊕ hex(λ_signer), anchoring signatures to the WNSP Ψ channel of the signer.",
+    canonical: `${BASE}/spectral-contracts`,
+    ogTitle: "Spectral Contracts — Wavelength-Key Document Signing",
+    ogDescription: "Replace PKI with physics. SHA-256(content) ⊕ hex(λ_signer). Signatures anchored to the signer's WNSP Ψ channel. AGPL-3.0.",
+    twitterTitle: "Spectral Contracts — NexusOS",
+    twitterDescription: "Document signing with wavelength keys. Physics replaces PKI. SHA-256 ⊕ spectral address.",
+    jsonLd: softwareApp({ url: `${BASE}/spectral-contracts`, name: "NexusOS Spectral Contracts", description: "Physics-signed document signing system. Replaces traditional PKI with SHA-256(content) ⊕ hex(λ_signer), anchoring each signature to the signer's WNSP Ψ channel. AGPL-3.0." }),
+  },
+  "/divergence-test": {
+    title: "Divergence Test — Dynamical System Analysis for WNSP Channels",
+    description: "Parameterised channel-dynamics engine for NexusOS. Explores state-dependent routing and system evolution through feedback iterations, classifying attractors and predicting channel regime transitions.",
+    canonical: `${BASE}/divergence-test`,
+    ogTitle: "Divergence Test — WNSP Channel Dynamics",
+    ogDescription: "Feedback iteration engine for Ψ channel state evolution. Attractor classification. Regime prediction. State-dependent routing analysis. NexusOS dynamical systems.",
+    twitterTitle: "Divergence Test — NexusOS",
+    twitterDescription: "Dynamical system analysis for WNSP channels. Attractor classification, feedback iteration, regime prediction.",
+    jsonLd: softwareApp({ url: `${BASE}/divergence-test`, name: "NexusOS Divergence Test", description: "Parameterised dynamical systems engine for WNSP channel analysis. Explores state-dependent routing through feedback iterations, classifies attractors, and predicts channel regime transitions." }),
+  },
+  "/campaign": {
+    title: "NexusOS Campaign — Fund Physics-Based Computing Hardware",
+    description: "Support the NexusOS hardware campaign. Fund development of the PHR-1 resonator, SNIC photonic NIC, and WavelengthScript compiler. Hardware Founder slots, NXT Supporter packs, and Spectral Bundles.",
+    canonical: `${BASE}/crowdfund`,
+    ogTitle: "NexusOS Hardware Campaign",
+    ogDescription: "25 Hardware Founder slots. PHR-1 resonator, SNIC photonic NIC. Fund the world's first physics-based computing hardware. 100M sats / 100,000 NXT per slot.",
+    twitterTitle: "NexusOS Hardware Campaign",
+    twitterDescription: "PHR-1 resonator. SNIC photonic NIC. 25 Hardware Founder slots. Fund physics-based computing.",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "FundingScheme",
+      "name": "NexusOS Hardware Campaign",
+      "url": `${BASE}/crowdfund`,
+      "description": "Hardware crowdfunding campaign for the PHR-1 resonator and SNIC photonic NIC. 25 Hardware Founder slots at 100M sats / 100,000 NXT each.",
+      "about": { "@type": "Organization", "name": "NexusOS" },
+    },
+  },
+  "/evidence": {
+    title: "NexusOS Evidence — Experimental Physics Validation",
+    description: "Experimental and observational evidence supporting the NexusOS Theory of Compression States. Independent measurements, sub-mm wave geometry validation, and THz spectroscopy results consistent with the Λ=hf/c² model.",
+    canonical: `${BASE}/evidence`,
+    ogTitle: "NexusOS Evidence — Physics Validation",
+    ogDescription: "Experimental evidence for the Theory of Compression States. THz research, WGM spectroscopy, Berry phase measurements. Independent validation of Λ=hf/c² and WNSP channel geometry.",
+    twitterTitle: "NexusOS Physics Evidence",
+    twitterDescription: "Experimental validation of Λ=hf/c². THz research, WGM spectroscopy, Berry phase measurements.",
+    jsonLd: techArticle({ url: `${BASE}/evidence`, name: "NexusOS Physics Evidence", description: "Experimental and observational evidence for the Theory of Compression States, including THz spectroscopy and WGM resonance results consistent with Λ=hf/c² and the 25,600-channel Ψ geometry.", about: "Theory of Compression States, THz spectroscopy, WGM resonance, experimental physics" }),
+  },
+  "/spectral-db": {
+    title: "Spectral DB — CE-Encoded Spectral Fingerprint Database",
+    description: "The NexusOS Spectral DB stores CE-encoded spectral fingerprints for text, documents, and code. Save, search, and retrieve content by its electromagnetic signature using WASCII v2.0 encoding.",
+    canonical: `${BASE}/spectral-db`,
+    ogTitle: "Spectral DB — Spectral Fingerprint Database",
+    ogDescription: "Store and retrieve content by electromagnetic signature. CE-encoded WASCII v2.0 fingerprints. Similarity search by spectral proximity. NexusOS data layer.",
+    twitterTitle: "NexusOS Spectral DB",
+    twitterDescription: "CE-encoded spectral fingerprint database. Save and search content by its electromagnetic signature.",
+    jsonLd: softwareApp({ url: `${BASE}/spectral-db`, name: "NexusOS Spectral DB", description: "Database for CE-encoded WASCII v2.0 spectral fingerprints. Stores text, documents, and code indexed by their electromagnetic signature and supports spectral proximity search." }),
+  },
+  "/constitution": {
+    title: "NexusOS Constitution — Governance Framework and Protocol Law",
+    description: "The NexusOS Constitution defines the governance framework: 11 live protocol parameters, authority bands (SYSTEM, KERNEL, USER, GUEST), voting thresholds, proposal requirements, and the indestructibility of the NXT supply.",
+    canonical: `${BASE}/constitution`,
+    ogTitle: "NexusOS Constitution — Governance and Protocol Law",
+    ogDescription: "11 live protocol parameters. Physics-weighted governance. SYSTEM, KERNEL, USER, GUEST authority bands. Vote thresholds, proposal requirements, NXT indestructibility clause.",
+    twitterTitle: "NexusOS Constitution",
+    twitterDescription: "NexusOS governance: 11 protocol parameters, authority bands, voting thresholds. NXT indestructibility clause.",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "NexusOS Constitution",
+      "url": `${BASE}/constitution`,
+      "description": "Governance framework for NexusOS: 11 live protocol parameters governed on-chain, authority band voting weights (SYSTEM, KERNEL, USER, GUEST), proposal thresholds, and the NXT supply indestructibility clause.",
+      "about": { "@type": "Organization", "name": "NexusOS", "url": `${BASE}/` },
+      "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
+    },
+  },
+  "/developer-matrix": {
+    title: "Developer Matrix — NexusOS API, SDK, and Integration Reference",
+    description: "The NexusOS Developer Matrix: full API surface, SDK reference, integration patterns, CE encoder packages (npm + pip), WavelengthScript toolchain, and developer key tiers for building physics-native applications.",
+    canonical: `${BASE}/developer-matrix`,
+    ogTitle: "NexusOS Developer Matrix",
+    ogDescription: "Full API surface, CE encoder (npm + pip), WavelengthScript toolchain, SDK reference, integration patterns. Everything developers need to build on WNSP.",
+    twitterTitle: "NexusOS Developer Matrix",
+    twitterDescription: "API surface, CE encoder packages, WavelengthScript toolchain, integration patterns. Build on WNSP.",
+    jsonLd: techArticle({ url: `${BASE}/developer-matrix`, name: "NexusOS Developer Matrix", description: "Comprehensive developer reference for NexusOS: REST API, CE encoder packages (npm and pip), WavelengthScript toolchain, SDK reference, developer key tiers, and integration patterns.", about: "WNSP, CE encoding, WavelengthScript, developer API" }),
+  },
+  "/nexus-command": {
+    title: "Nexus Command — NexusOS System Administration Console",
+    description: "The Nexus Command console provides system-level administration for the NexusOS kernel: authority band management, protocol parameter governance, agent watchdog control, and blockchain audit interface.",
+    canonical: `${BASE}/nexus-command`,
+    ogTitle: "Nexus Command — NexusOS Admin Console",
+    ogDescription: "System-level administration: authority band management, 11 protocol parameters, agent watchdog, blockchain auditor. KERNEL-band access required.",
+    twitterTitle: "Nexus Command — NexusOS",
+    twitterDescription: "NexusOS system admin console. Authority bands, protocol parameters, agent watchdog, blockchain audit.",
+    jsonLd: softwareApp({ url: `${BASE}/nexus-command`, name: "Nexus Command", description: "System administration console for the NexusOS AI OS kernel. Manages authority bands, protocol parameters, agent watchdog, and blockchain audit interface. KERNEL-band access required." }),
+  },
+  "/mobile-sdk": {
+    title: "NexusOS Mobile SDK — Native iOS and Android Spectral Computing",
+    description: "Native iOS (Swift) and Android (Kotlin) SDKs for spectral-native app development. Includes native wasciiEncode() for offline physics calculations, CE encoding, and WNSP Ψ channel addressing without a server round-trip.",
+    canonical: `${BASE}/mobile-sdk`,
+    ogTitle: "NexusOS Mobile SDK — iOS & Android",
+    ogDescription: "Native Swift and Kotlin SDKs. Offline wasciiEncode(), CE encoding, Ψ channel addressing. Physics-native mobile computing. AGPL-3.0.",
+    twitterTitle: "NexusOS Mobile SDK",
+    twitterDescription: "Native iOS/Android SDKs. Offline CE encoding, Ψ channel addressing. Physics-native mobile apps. AGPL-3.0.",
+    jsonLd: softwareApp({ url: `${BASE}/mobile-sdk`, name: "NexusOS Mobile SDK", description: "Native iOS (Swift) and Android (Kotlin) SDKs for spectral-native mobile development. Provides offline wasciiEncode(), CE encoding, and WNSP Ψ channel addressing. AGPL-3.0." }),
+  },
+  "/research-presentation": {
+    title: "NexusOS Research Presentation — Physics Stack and Protocol Architecture",
+    description: "Formal research presentation covering the NexusOS physics stack: Theory of Compression States, Λ=hf/c² derivation, WNSP protocol architecture, SNIC hardware design, and the path from digital substrate to photonic gate array.",
+    canonical: `${BASE}/research-presentation`,
+    ogTitle: "NexusOS Research Presentation",
+    ogDescription: "Formal research: Theory of Compression States, Λ=hf/c² derivation, WNSP architecture, SNIC hardware design. Digital substrate to photonic gate array (~2032). AGPL-3.0.",
+    twitterTitle: "NexusOS Research Presentation",
+    twitterDescription: "Formal physics research: Theory of Compression States, Λ=hf/c², WNSP protocol, SNIC hardware. Photonic gate array roadmap.",
+    jsonLd: techArticle({ url: `${BASE}/research-presentation`, name: "NexusOS Research Presentation", description: "Formal research presentation of the NexusOS physics stack: Theory of Compression States, Λ=hf/c² derivation, WNSP protocol architecture, SNIC hardware design, and the photonic gate array roadmap to ~2032.", about: "Theory of Compression States, WNSP protocol, SNIC, photonic computing, Λ=hf/c²" }),
+  },
 };
 
 // ── HTML meta injection ───────────────────────────────────────────────────────
@@ -507,7 +698,7 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-const BASE_OG_IMAGE = "https://wnsp.io/opengraph.jpg";
+const BASE_OG_IMAGE = "https://wnsp.io/opengraph.png";
 
 function buildMetaBlock(m: PageMeta): string {
   const title       = esc(m.title);
@@ -539,7 +730,7 @@ function buildMetaBlock(m: PageMeta): string {
     `<meta property="og:image" content="${ogImage}" />`,
     `<meta property="og:site_name" content="${ogSite}" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
-    `<meta name="twitter:site" content="@replit" />`,
+    `<meta name="twitter:site" content="${esc(m.twitterSite ?? "@NexusOS_io")}" />`,
     `<meta name="twitter:title" content="${twTitle}" />`,
     `<meta name="twitter:description" content="${twDesc}" />`,
     `<meta name="twitter:image" content="${twImage}" />`,
