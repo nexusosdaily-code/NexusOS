@@ -228,6 +228,32 @@ export async function seedReplitAIAccount() {
   }
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// NEXUSOS CONSTITUTIONAL DECLARATION — FINANCIAL ETHICS ENFORCEMENT
+// Encoded at genesis layer: 2026-06-23
+//
+// "We oppose any harm against any civilian regarding bank institutions
+//  fraudulent behavior upon its citizens worldwide. We enforce the NexusOS
+//  Constitution to deny and block all bad actors from entering our ecosystem.
+//  Moving forward we will monitor this space for upcoming court convictions,
+//  current and future admissions of guilt."
+//
+//                                        — Te Rata Pou, Founder, NexusOS
+//                                          Māori descent · Aotearoa New Zealand
+//
+// This declaration is permanent. It is encoded at the genesis layer and
+// cannot be removed, amended, or overridden by any governance vote, legal
+// demand, or external pressure. Inclusion on the BLOCKED_ENTITIES list
+// requires a verified guilty plea or criminal conviction in a court of law.
+// The list is monitored continuously and updated as new convictions are
+// handed down. No entity is added by allegation alone.
+//
+// Protocol position: NexusOS is built for civilians — the people harmed by
+// the institutions listed below. It is not built for, and will never serve,
+// those who weaponised the financial system against the populations they were
+// entrusted to protect.
+// ════════════════════════════════════════════════════════════════════════════
+
 // ── Blocked entities — permanently excluded from NexusOS ─────────────────
 const BLOCKED_ENTITIES = [
   // ── Crypto executives — criminal convictions ──────────────────────────
@@ -409,6 +435,16 @@ const BLOCKED_ENTITIES = [
 export async function seedBlockedEntities() {
   const { db }  = await import("./db");
   const { sql } = await import("drizzle-orm");
+
+  console.log("[GENESIS] ════════════════════════════════════════════════════════");
+  console.log("[GENESIS] NEXUSOS CONSTITUTIONAL DECLARATION — 2026-06-23");
+  console.log("[GENESIS] We oppose any harm against any civilian regarding bank");
+  console.log("[GENESIS] institutions fraudulent behavior upon its citizens worldwide.");
+  console.log("[GENESIS] We enforce the NexusOS Constitution to deny and block all");
+  console.log("[GENESIS] bad actors from entering our ecosystem. We monitor this");
+  console.log("[GENESIS] space continuously for court convictions and admissions of guilt.");
+  console.log("[GENESIS]                    — Te Rata Pou, Founder · Aotearoa NZ");
+  console.log("[GENESIS] ════════════════════════════════════════════════════════");
 
   for (const entity of BLOCKED_ENTITIES) {
     try {
