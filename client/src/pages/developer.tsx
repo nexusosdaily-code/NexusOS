@@ -72,14 +72,14 @@ export default function DeveloperPage() {
       {/* Top nav bar */}
       <div className="border-b border-slate-800/60 bg-slate-950/90 sticky top-0 z-20 backdrop-blur">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/">
+          <Link href="/crowdfund">
             <span className="text-white font-bold text-sm tracking-wide cursor-pointer">NexusOS</span>
           </Link>
           <div className="flex items-center gap-4 text-xs">
             <Link href="/docs"><span className="text-slate-400 hover:text-white transition-colors cursor-pointer">Docs</span></Link>
-            <Link href="/packages"><span className="text-slate-400 hover:text-white transition-colors cursor-pointer">Packages</span></Link>
+            <a href="https://www.npmjs.com/package/nexusos-ce-encoder" target="_blank" rel="noreferrer"><span className="text-slate-400 hover:text-white transition-colors cursor-pointer">Packages</span></a>
             <Link href="/developer-matrix"><span className="text-slate-400 hover:text-white transition-colors cursor-pointer">Matrix</span></Link>
-            <Link href="/developer/keys">
+            <Link href="/auth">
               <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition-all">
                 <Key className="w-3 h-3" /> Get API Key
               </button>
@@ -109,7 +109,7 @@ export default function DeveloperPage() {
           </p>
 
           <div className="flex items-center justify-center gap-4 flex-wrap">
-            <Link href="/developer/keys">
+            <Link href="/auth">
               <button className="flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition-all shadow-lg shadow-cyan-900/30">
                 <Key className="w-4 h-4" /> Get API Key — 5,000 sats
               </button>
@@ -298,7 +298,7 @@ const result = ceEncode("hello");
             One API key unlocks all endpoints. 5,000 sats flat fee. No monthly subscription. Pay per action with spectral physics fees.
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">
-            <Link href="/developer/keys">
+            <Link href="/auth">
               <button className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold transition-all shadow-lg shadow-cyan-900/40">
                 <Key className="w-4 h-4" /> Get your API Key
                 <ArrowRight className="w-4 h-4" />

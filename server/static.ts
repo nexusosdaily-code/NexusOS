@@ -4,6 +4,24 @@ import path from "path";
 import { injectMeta } from "./seo-meta";
 
 // ---------------------------------------------------------------------------
+// Custom-domain hosts that are root-only microsites.
+// Any path other than "/" on these hosts returns HTTP 404 so crawlers do not
+// index duplicate landing-page content under deep-link URLs.
+// ---------------------------------------------------------------------------
+const CUSTOM_DOMAIN_HOSTS = new Set<string>([
+  "wnsp.dev", "www.wnsp.dev",
+  "wnsp.blog", "www.wnsp.blog",
+  "snic.io", "www.snic.io",
+  "phr1.io", "www.phr1.io",
+  "lambdagate.io", "www.lambdagate.io",
+  "wavelengthscript.dev", "www.wavelengthscript.dev",
+  "zerogstate.io", "www.zerogstate.io",
+  "wascii.io", "www.wascii.io",
+  "orbitaltreasury.io", "www.orbitaltreasury.io",
+  "555thz.io", "www.555thz.io",
+]);
+
+// ---------------------------------------------------------------------------
 // Public SPA route registry
 //
 // Any URL that the public Router() in App.tsx can serve without authentication.
@@ -73,7 +91,6 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
 
 // Only paths where ANY child segment is valid (true dynamic routes).
 const DYNAMIC_PUBLIC_PREFIXES: string[] = [
-  "/docs/",       // /docs/:section
   "/profile/",    // /profile/:username
 ];
 
@@ -122,13 +139,23 @@ export function serveStatic(app: Express) {
   // SPA fallback — serve index.html for all non-file requests.
   // HTTP 200 for known public paths; HTTP 404 for everything else so
   // search-engine crawlers receive the correct indexation signal.
+  // Custom-domain hosts are root-only microsites: non-root paths get 404.
   // Injects host/route-aware metadata before serving.
   app.use("*", (req, res) => {
     const spaPathname = requestPathname(req);
-    const status = isPublicSpaPath(spaPathname) ? 200 : 404;
-    const host     = req.hostname || (req.headers.host as string) || "";
-    const pathname = req.originalUrl.split("?")[0] || "/";
-    const html     = injectMeta(getHtml(), host, pathname);
+    const host        = req.hostname || (req.headers.host as string) || "";
+    const cleanHost   = host.split(":")[0];
+    const pathname    = req.originalUrl.split("?")[0] || "/";
+
+    let status: number;
+    if (CUSTOM_DOMAIN_HOSTS.has(cleanHost)) {
+      // Custom domains serve only their root landing page.
+      status = (spaPathname === "/" || spaPathname === "") ? 200 : 404;
+    } else {
+      status = isPublicSpaPath(spaPathname) ? 200 : 404;
+    }
+
+    const html = injectMeta(getHtml(), host, pathname);
     res.status(status).setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(html);
   });

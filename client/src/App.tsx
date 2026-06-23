@@ -419,7 +419,6 @@ function Router() {
       <Route path="/developer-matrix" component={DeveloperMatrixPage} />
       <Route path="/developer-matrix/docs" component={DocsPage} />
       <Route path="/docs" component={DocsPage} />
-      <Route path="/docs/:section" component={DocsPage} />
       <Route path="/research-presentation" component={ResearchPresentationPage} />
       <Route path="/research-presentation/developer-matrix" component={DeveloperMatrixPage} />
       {/* ── Nexus Spectral Framework (unified) ── */}
@@ -562,9 +561,23 @@ function TelegramFloat() {
   );
 }
 
+// Hosts treated as root-only microsites on the client side.
+const CUSTOM_DOMAIN_HOST_SET = new Set(Object.keys(DOMAIN_LANDINGS));
+
 function App() {
-  const DomainLanding = DOMAIN_LANDINGS[window.location.hostname];
-  if (DomainLanding) return <DomainLanding />;
+  const hostname = window.location.hostname;
+  const pathname = window.location.pathname;
+  const DomainLanding = DOMAIN_LANDINGS[hostname];
+  // Custom domains are root-only microsites: only "/" renders the landing component.
+  // Any other path returns a not-found experience so content matches the server 404.
+  if (DomainLanding && (pathname === "/" || pathname === "")) return <DomainLanding />;
+  if (CUSTOM_DOMAIN_HOST_SET.has(hostname) && pathname !== "/" && pathname !== "") {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <NotFound />
+      </Suspense>
+    );
+  }
 
   return (
     <ErrorBoundary>

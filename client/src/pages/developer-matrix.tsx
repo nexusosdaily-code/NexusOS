@@ -976,14 +976,12 @@ const INTERNAL_RESOURCES = [
     icon: Zap,
     color: "from-purple-500 to-pink-500",
     links: [
-      { name: "Document Transmission Center", path: "/workspace/transmission", description: "Transmit documents via wavelength encoding", isRoute: true },
-      { name: "Quantum Wavefield Simulator", path: "/workspace/wavefield", description: "Interactive eigenstate superposition", isRoute: true },
-      { name: "NXT Wallet Dashboard", path: "/wallet", description: "Manage NXT tokens and transactions", isRoute: true },
-      { name: "K1 Infrastructure", path: "/k1", description: "Kardashev Type I civilization systems", isRoute: true },
-      { name: "K1 Orchestration Dashboard", path: "/k1/orchestration", description: "Live infrastructure management", isRoute: true },
-      { name: "Encoding Lab", path: "/encoding-lab", description: "Test wavelength encoding algorithms", isRoute: true },
-      { name: "Research Center", path: "/workspace/research", description: "Physics research and simulations", isRoute: true },
-      { name: "Analytics Dashboard", path: "/workspace/analytics", description: "Network metrics and statistics", isRoute: true }
+      { name: "CE Code Writer", path: "/ce-code-writer", description: "Human First Contact CE-SE encoder, live encode", isRoute: true },
+      { name: "CE→SE Pipeline", path: "/ce-se-pipeline", description: "Paste any language → WavelengthScript → bytecode → WNSP VM", isRoute: true },
+      { name: "WNSP Virtual Machine", path: "/wnsp-vm", description: "Browser-native bytecode interpreter, step/run execution", isRoute: true },
+      { name: "Compression Explorer", path: "/compression-explorer", description: "Interactive Λ=hf/c² compression curve visualisation", isRoute: true },
+      { name: "Spectral Router", path: "/spectral-router", description: "DNS-free packet routing using Ψ channel addressing", isRoute: true },
+      { name: "Sign in to access: Wallet, Encoding Lab, K1, Research & more", path: "/auth", description: "These tools require an account", isRoute: true }
     ]
   },
   {
@@ -1311,7 +1309,7 @@ export default function DeveloperMatrixPage() {
       <div className="max-w-7xl mx-auto p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <Link href="/">
+            <Link href="/developer">
               <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white" data-testid="button-home">
                 <ArrowLeft className="w-5 h-5" />
               </Button>

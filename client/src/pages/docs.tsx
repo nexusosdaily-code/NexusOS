@@ -1047,76 +1047,40 @@ export default function DocsPage() {
                 </h3>
                 <div className="space-y-1 text-sm">
                   <Link
-                    href="/wnsp/coordinator"
-                    className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-medium"
-                  >
-                    <Cpu className="w-3 h-3" /> AI/OS Coordinator
-                  </Link>
-                  <Link
-                    href="/kernel"
-                    className="flex items-center gap-2 text-violet-400 hover:text-violet-300 font-medium"
-                  >
-                    <Cpu className="w-3 h-3" /> AI OS Kernel (5 Components)
-                  </Link>
-                  <Link
-                    href="/photonic-dev"
-                    className="flex items-center gap-2 text-yellow-400 hover:text-yellow-300 font-medium"
-                  >
-                    <Cpu className="w-3 h-3" /> Photonic Dev Environment
-                  </Link>
-                  <Link
-                    href="/quantum-threshold"
-                    className="flex items-center gap-2 text-red-400 hover:text-red-300 font-medium"
-                  >
-                    <Cpu className="w-3 h-3" /> Quantum Tunneling Threshold
-                  </Link>
-                  <Link
-                    href="/nexus-hardware-os"
-                    className="flex items-center gap-2 text-violet-400 hover:text-violet-300 font-medium"
-                  >
-                    <Cpu className="w-3 h-3" /> Nexus Hardware OS
-                  </Link>
-                  <Link
-                    href="/computing-alternatives"
-                    className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-medium"
-                  >
-                    <Cpu className="w-3 h-3" /> Computing Alternatives
-                  </Link>
-                  <Link
-                    href="/wavelength-os"
-                    className="flex items-center gap-2 text-violet-400 hover:text-violet-300 font-semibold"
-                  >
-                    <Cpu className="w-3 h-3" /> Wavelength OS — The Case
-                  </Link>
-                  <Link
-                    href="/ce-writer"
+                    href="/ce-code-writer"
                     className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold"
                   >
                     <Cpu className="w-3 h-3" /> CE Code Writer
                   </Link>
                   <Link
-                    href="/pricing"
-                    className="flex items-center gap-2 text-amber-400 hover:text-amber-300 font-semibold"
+                    href="/ce-se-pipeline"
+                    className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-medium"
                   >
-                    <Cpu className="w-3 h-3" /> Monetisation
+                    <Code className="w-3 h-3" /> CE→SE Pipeline
                   </Link>
                   <Link
-                    href="/encoding-lab"
-                    className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
+                    href="/wnsp-vm"
+                    className="flex items-center gap-2 text-violet-400 hover:text-violet-300 font-medium"
                   >
-                    <Code className="w-3 h-3" /> Encoding Lab
+                    <Cpu className="w-3 h-3" /> WNSP Virtual Machine
                   </Link>
                   <Link
-                    href="/workspace/wavefield"
-                    className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
+                    href="/compression-explorer"
+                    className="flex items-center gap-2 text-amber-400 hover:text-amber-300 font-medium"
                   >
-                    <Atom className="w-3 h-3" /> Wavefield Simulator
+                    <Atom className="w-3 h-3" /> Compression Explorer
                   </Link>
                   <Link
-                    href="/k1/orchestration"
+                    href="/spectral-router"
                     className="flex items-center gap-2 text-gray-400 hover:text-cyan-400"
                   >
-                    <Zap className="w-3 h-3" /> K1 Orchestration
+                    <Zap className="w-3 h-3" /> Spectral Router
+                  </Link>
+                  <Link
+                    href="/auth"
+                    className="flex items-center gap-2 text-gray-500 hover:text-gray-400 text-xs"
+                  >
+                    <Cpu className="w-3 h-3" /> Sign in to access AI Kernel, Encoding Lab & more
                   </Link>
                 </div>
               </div>
