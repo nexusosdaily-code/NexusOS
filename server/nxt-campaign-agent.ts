@@ -837,10 +837,21 @@ export async function fireEventBroadcast(opts: {
 }
 
 export async function fireCampaignSlot(slotIndex?: number): Promise<{ slot: Slot; tg: any; nostr: any }> {
-  const idx  = slotIndex ?? (_state.slotIndex % SLOTS.length);
-  const slot = SLOTS[idx];
+  let slot: Slot;
+  let idx: number;
 
-  console.log(`${TAG} Firing slot ${idx} — "${slot.label}"`);
+  if (slotIndex !== undefined) {
+    // Frontend passes slot.id (the id property), not an array index
+    const found = SLOTS.findIndex(s => s.id === slotIndex);
+    if (found === -1) throw new Error(`Slot id ${slotIndex} not found in SLOTS`);
+    idx  = found;
+    slot = SLOTS[found];
+  } else {
+    idx  = _state.slotIndex % SLOTS.length;
+    slot = SLOTS[idx];
+  }
+
+  console.log(`${TAG} Firing slot id=${slot.id} [arr:${idx}] — "${slot.label}"`);
 
   const discordText = `${slot.emoji} **${slot.label}**\n\n${slot.telegram.replace(/<b>(.*?)<\/b>/g, "**$1**").replace(/<[^>]+>/g, "")}`;
 
