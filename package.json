@@ -78,7 +78,7 @@
     "input-otp": "^1.4.2",
     "lucide-react": "^0.545.0",
     "memorystore": "^1.6.7",
-    "multer": "^2.1.1",
+    "multer": "^2.2.0",
     "next-themes": "^0.4.6",
     "nodemon": "^3.1.11",
     "nostr-tools": "^2.23.5",
@@ -139,6 +139,10 @@
     "shell-quote": "^1.8.4",
     "uuid": "^11.1.1",
     "gaxios": "^7.0.0",
-    "@babel/core": "^7.29.6"
+    "@babel/core": "^7.29.6",
+    "form-data": "^4.0.6",
+    "fast-xml-parser": "^5.9.3",
+    "qs": "^6.15.2",
+    "launch-editor": "^2.14.1"
   }
 }
