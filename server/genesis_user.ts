@@ -230,11 +230,97 @@ export async function seedReplitAIAccount() {
 
 // ── Blocked entities — permanently excluded from NexusOS ─────────────────
 const BLOCKED_ENTITIES = [
+  // ── Crypto executives — criminal convictions ──────────────────────────
   {
-    handle:  "cz_binance",
-    name:    "Changpeng Zhao (CZ)",
-    org:     "Binance",
-    reason:  "Convicted of anti-money laundering violations. Presidential pardon does not reverse NexusOS exclusion. Corrupted view incompatible with K1 mission.",
+    handle: "cz_binance",
+    name:   "Changpeng Zhao (CZ)",
+    org:    "Binance",
+    reason: "Guilty plea — anti-money laundering violations (2023). Presidential pardon does not reverse NexusOS exclusion.",
+  },
+  {
+    handle: "sbf",
+    name:   "Sam Bankman-Fried",
+    org:    "FTX",
+    reason: "Guilty on all 7 counts — wire fraud, conspiracy, money laundering (2023). Sentenced 25 years. $11.02B forfeiture.",
+  },
+  {
+    handle: "ftx",
+    name:   "FTX / Alameda Research",
+    org:    "FTX",
+    reason: "Criminal enterprise. Stole $8B+ in customer funds. Founder convicted on all counts.",
+  },
+  {
+    handle: "dokwon",
+    name:   "Do Kwon",
+    org:    "Terraform Labs",
+    reason: "Guilty plea — conspiracy to commit commodities/securities/wire fraud (2025). 15 years. $40B in Terra/Luna losses.",
+  },
+  {
+    handle: "terraform",
+    name:   "Terraform Labs",
+    org:    "Terraform",
+    reason: "Criminal enterprise. Terra/LUNA collapse wiped $40B. Founder convicted.",
+  },
+  {
+    handle: "mashinsky",
+    name:   "Alexander Mashinsky",
+    org:    "Celsius Network",
+    reason: "Guilty plea — securities fraud, commodities fraud, wire fraud (2024). Celsius collapsed, $25B in customer assets frozen.",
+  },
+  {
+    handle: "celsius",
+    name:   "Celsius Network",
+    org:    "Celsius",
+    reason: "Criminal enterprise. Founder convicted. $25B in customer assets defrauded.",
+  },
+  {
+    handle: "arthurhayes",
+    name:   "Arthur Hayes",
+    org:    "BitMEX",
+    reason: "Guilty plea — Bank Secrecy Act violations (2022). Wilfully failed to maintain AML programme.",
+  },
+  {
+    handle: "bitmex",
+    name:   "BitMEX",
+    org:    "BitMEX",
+    reason: "Multiple founders convicted of BSA violations. Criminal enterprise operating without AML controls.",
+  },
+  // ── Banks — criminal guilty pleas ────────────────────────────────────
+  {
+    handle: "tdbank",
+    name:   "TD Bank",
+    org:    "TD Bank",
+    reason: "Guilty plea — money laundering conspiracy + Bank Secrecy Act (2024). Largest bank AML plea in US history. $3.09B fine.",
+  },
+  {
+    handle: "jpmorganchase",
+    name:   "JPMorgan Chase",
+    org:    "JPMorgan",
+    reason: "Guilty plea — felony FX market price-fixing/conspiracy (2015). $550M criminal fine.",
+  },
+  {
+    handle: "citicorp",
+    name:   "Citicorp / Citigroup",
+    org:    "Citigroup",
+    reason: "Guilty plea — felony FX market price-fixing/conspiracy (2015). $925M criminal fine.",
+  },
+  {
+    handle: "barclays",
+    name:   "Barclays PLC",
+    org:    "Barclays",
+    reason: "Guilty plea — FX market rigging conspiracy (2015). Criminal conviction alongside four other major banks.",
+  },
+  {
+    handle: "goldmansachs",
+    name:   "Goldman Sachs (Malaysia subsidiary)",
+    org:    "Goldman Sachs",
+    reason: "Subsidiary guilty plea — 1MDB conspiracy, violating FCPA (2020). $2.9B in penalties. Largest bank penalty in DOJ history at time.",
+  },
+  {
+    handle: "hsbc",
+    name:   "HSBC",
+    org:    "HSBC",
+    reason: "Deferred Prosecution Agreement — laundered $881M for Mexican Sinaloa drug cartel and other cartels (2012). $1.9B fine.",
   },
 ];
 
