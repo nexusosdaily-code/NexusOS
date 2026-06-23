@@ -322,6 +322,88 @@ const BLOCKED_ENTITIES = [
     org:    "HSBC",
     reason: "Deferred Prosecution Agreement — laundered $881M for Mexican Sinaloa drug cartel and other cartels (2012). $1.9B fine.",
   },
+  // ── Global banks — criminal guilty pleas ─────────────────────────────
+  {
+    handle: "bnpparibas",
+    name:   "BNP Paribas",
+    org:    "BNP Paribas",
+    reason: "Guilty plea — U.S. sanctions violations for Sudan, Cuba, Iran (2014). $8.97B fine. Largest criminal bank penalty in history at the time.",
+  },
+  {
+    handle: "creditsuisse",
+    name:   "Credit Suisse AG",
+    org:    "Credit Suisse",
+    reason: "Guilty plea — conspiracy to aid filing of false U.S. income tax returns (2014). $2.6B fine. First major bank to plead guilty to a crime in decades.",
+  },
+  {
+    handle: "ubs",
+    name:   "UBS AG",
+    org:    "UBS",
+    reason: "Guilty plea — wire fraud / LIBOR benchmark rate rigging (2015). $545M criminal fine. Repeat offender across FX and LIBOR manipulation schemes.",
+  },
+  {
+    handle: "rbs",
+    name:   "Royal Bank of Scotland (RBS / NatWest)",
+    org:    "RBS",
+    reason: "Guilty plea — FX market rigging conspiracy (2015). Part of the five-bank coordinated criminal cartel manipulating global currency markets.",
+  },
+  // ── FTX co-conspirators — guilty pleas ────────────────────────────────
+  {
+    handle: "caroline_ellison",
+    name:   "Caroline Ellison",
+    org:    "Alameda Research / FTX",
+    reason: "Guilty plea — 7 counts of fraud and conspiracy (2022). CEO of Alameda Research. $11B forfeiture. Sentenced 2 years.",
+  },
+  {
+    handle: "ryan_salame",
+    name:   "Ryan Salame",
+    org:    "FTX Digital Markets",
+    reason: "Guilty plea — illegal political contributions, unlicensed money transmitting (2023). Co-CEO FTX Bahamas. Sentenced 7.5 years.",
+  },
+  {
+    handle: "gary_wang",
+    name:   "Gary Wang",
+    org:    "FTX",
+    reason: "Guilty plea — wire fraud, securities fraud, commodities fraud (2022). FTX co-founder and CTO. $11B forfeiture.",
+  },
+  {
+    handle: "nishad_singh",
+    name:   "Nishad Singh",
+    org:    "FTX",
+    reason: "Guilty plea — fraud, money laundering, market manipulation, 6 counts (2022). FTX Director of Engineering.",
+  },
+  // ── Ponzi architects — convicted ─────────────────────────────────────
+  {
+    handle: "bernie_madoff",
+    name:   "Bernie Madoff",
+    org:    "Madoff Investment Securities",
+    reason: "Convicted — 150-year sentence. Ran largest Ponzi scheme in history: $65B across 24,000+ victims in 136 countries. Died in prison 2021.",
+  },
+  {
+    handle: "madoff_securities",
+    name:   "Bernard L. Madoff Investment Securities LLC",
+    org:    "Madoff Investment Securities",
+    reason: "Criminal enterprise. Vehicle for the largest Ponzi scheme in history. Founder convicted and died in prison.",
+  },
+  {
+    handle: "allen_stanford",
+    name:   "Allen Stanford",
+    org:    "Stanford Financial Group",
+    reason: "Convicted — 110 years. $7B Ponzi scheme via fraudulent certificates of deposit. Defrauded 18,000 victims across 113 countries.",
+  },
+  {
+    handle: "stanford_financial",
+    name:   "Stanford Financial Group",
+    org:    "Stanford Financial Group",
+    reason: "Criminal enterprise. Vehicle for Allen Stanford's $7B Ponzi scheme. Founder serving 110 years.",
+  },
+  // ── 1MDB co-conspirators — convicted ─────────────────────────────────
+  {
+    handle: "roger_ng",
+    name:   "Roger Ng",
+    org:    "Goldman Sachs Malaysia",
+    reason: "Convicted at trial — conspiracy to launder money, violate FCPA (2022). Former Goldman Sachs managing director. Central to $4.5B 1MDB theft.",
+  },
 ];
 
 export async function seedBlockedEntities() {
