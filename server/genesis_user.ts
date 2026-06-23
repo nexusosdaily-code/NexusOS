@@ -228,6 +228,43 @@ export async function seedReplitAIAccount() {
   }
 }
 
+// ── Blocked entities — permanently excluded from NexusOS ─────────────────
+const BLOCKED_ENTITIES = [
+  {
+    handle:  "cz_binance",
+    name:    "Changpeng Zhao (CZ)",
+    org:     "Binance",
+    reason:  "Convicted of anti-money laundering violations. Presidential pardon does not reverse NexusOS exclusion. Corrupted view incompatible with K1 mission.",
+  },
+];
+
+export async function seedBlockedEntities() {
+  const { db }  = await import("./db");
+  const { sql } = await import("drizzle-orm");
+
+  for (const entity of BLOCKED_ENTITIES) {
+    try {
+      await db.execute(sql`
+        UPDATE users
+        SET is_active = false, withdrawals_blocked = true, updated_at = NOW()
+        WHERE (username ILIKE ${entity.handle} OR username ILIKE ${"%" + entity.org + "%"})
+          AND is_active = true
+      `);
+    } catch (_) {}
+
+    try {
+      await db.execute(sql`
+        UPDATE wnsp_registry
+        SET is_public = false, updated_at = NOW()
+        WHERE label ILIKE ${"%" + entity.handle + "%"}
+           OR label ILIKE ${"%" + entity.org + "%"}
+      `);
+    } catch (_) {}
+
+    console.log(`[GENESIS] 🚫 Blocked entity enforced — ${entity.name} (${entity.org})`);
+  }
+}
+
 async function _seedWnspStakes(db: any, wnspStakes: any, userId: string) {
   for (const s of GENESIS_WNSP_STAKES) {
     try {

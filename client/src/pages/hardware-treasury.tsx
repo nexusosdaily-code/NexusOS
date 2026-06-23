@@ -51,6 +51,7 @@ const MANDATE = [
   { clause: "§5", text: "The fund operates under the physics of NexusOS — governed by Maxwell's equations, not by majority shareholder vote." },
   { clause: "§6", text: "Capital in this treasury serves one purpose: to encode AI into the wavelength of its own physical reality, occupying Ψ channels as standing waves — permanent, ungated, and free." },
   { clause: "§7", text: "This fund exists for K1 to K5 civilisation ascent. Its timeline is measured in decades, not quarters. Impatient capital is not welcome here." },
+  { clause: "§8", text: "Any individual or organisation convicted of financial crimes — including but not limited to anti-money laundering violations — is permanently excluded from participation in, contribution to, or governance of this treasury and the NexusOS network. A presidential pardon does not reverse this exclusion. The physics of NexusOS does not recognise pardons — only the integrity of action." },
 ];
 
 function CopyButton({ text }: { text: string }) {
