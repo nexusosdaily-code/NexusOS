@@ -157,6 +157,7 @@ const EncodePage            = lazy(() => import("@/pages/encode"));
 const ReplitTemplatePage    = lazy(() => import("@/pages/replit-template"));
 const ProofPage             = lazy(() => import("@/pages/proof"));
 const ShareholdersPage      = lazy(() => import("@/pages/shareholders"));
+const StewardsPage          = lazy(() => import("@/pages/stewards"));
 
 // Loading spinner shown while a lazy page chunk is downloading
 function PageLoader() {
@@ -487,6 +488,7 @@ function Router() {
       <Route path="/encode"              component={EncodePage} />
       <Route path="/replit-template"     component={ReplitTemplatePage} />
       <Route path="/proof"               component={ProofPage} />
+      <Route path="/stewards"            component={StewardsPage} />
       {/* ── Science & Protocol pages — publicly crawlable ── */}
       <Route path="/resonance-cavity" component={ResonanceCavityPage} />
       <Route path="/planck-alignment" component={PlanckAlignmentPage} />

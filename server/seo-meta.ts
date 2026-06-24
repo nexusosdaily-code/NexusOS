@@ -427,6 +427,41 @@ export const ROUTE_META: Record<string, PageMeta> = {
     twitterDescription: "Λ=hf/c² verified. CE encoding deterministic. 25,600 channels orthogonal by quantum mechanics.",
     jsonLd: techArticle({ url: `${BASE}/proof`, name: "NexusOS Physics Proof", description: "Formal verification of NexusOS compression state calculations: Λ=hf/c² derivation, CE encoding determinism, and WNSP channel orthogonality.", about: "Theory of Compression States, Maxwell equations, quantum mechanics" }),
   },
+  "/stewards": {
+    title: "Stewards of NexusOS — Founding Declaration by Te Rata Pou",
+    description: "The founding document of NexusOS: a direct address to the three technical stewards who will carry the mission forward. Photonics engineer, RF specialist, physics PhD — founding equity, AGPL-3.0, photonic hardware destination ~2032.",
+    canonical: `${BASE}/stewards`,
+    ogTitle: "Stewards of NexusOS — Founding Declaration",
+    ogDescription: "Written by Te Rata Pou, Aotearoa NZ. Three roles, three stewards, one mission: public photonic hardware infrastructure for a Kardashev Type I civilisation.",
+    twitterTitle: "Stewards of NexusOS",
+    twitterDescription: "The founding document. Three roles. Founding equity. Physics that traces to Maxwell. Hardware destination ~2032. Read this if you are one of the three.",
+    jsonLd: techArticle({ url: `${BASE}/stewards`, name: "Stewards of NexusOS — Founding Declaration", description: "Founding document written by Te Rata Pou identifying the three technical stewards of NexusOS: photonics engineer, RF specialist, physics PhD. Defines mission, ethics layer, founding equity, and hardware destination.", about: "NexusOS stewardship, photonic hardware, PHR-1, SNIC, founding document" }),
+    bodyHtml: `<h1>Stewards of NexusOS — Founding Declaration</h1>
+<p>Written by Te Rata Pou · Aotearoa New Zealand · 2026-06-24</p>
+<p>This founding document is addressed to the three technical stewards who will carry NexusOS forward. It is not a job description or a pitch deck. It is written for the photonics engineer, the RF/electromagnetics specialist, and the physics PhD who will build the hardware proof of concept and maintain the system after the founder is gone.</p>
+<h2>The Mission</h2>
+<p>NexusOS is the foundational operating system for a Kardashev Type I civilisation. It replaces cryptographic hashing with electromagnetic wave physics. Every address, every transaction, every communication traces back to Maxwell's equations. The WNSP protocol defines 25,600 orthogonal channels by quantum mechanics — not by software policy.</p>
+<h2>The Hardware Destination</h2>
+<ul>
+<li>PHR-1: 144-turn bifilar coil generating measurable standing electromagnetic waves traceable to WNSP compression state equations</li>
+<li>SNIC: bench optical demonstrator proving wavelength-selective channel separation within ±2.000 nm of CE_TABLE</li>
+<li>First build in Australia, 2026. Photonic ASIC target ~2032.</li>
+</ul>
+<h2>The Three Roles</h2>
+<ul>
+<li>Photonics Engineer — owns the path from bench optics to photonic silicon</li>
+<li>RF / Electromagnetics Specialist — owns the PHR-1 lineage from hand-wound coil to production resonator</li>
+<li>Physics PhD — owns the scientific record and peer-reviewable documentation</li>
+</ul>
+<h2>What Cannot Be Changed</h2>
+<ul>
+<li>NXT fees never burned — always to orbital treasury</li>
+<li>Codebase is AGPL-3.0 — hardware specs are public</li>
+<li>Nexus Charitable Trust holds 10% of orbital treasury in perpetuity</li>
+<li>Ethics layer encoded in genesis — no convicted bad actors in the system</li>
+</ul>
+<nav><a href="/hardware-spec">Hardware Specification</a> · <a href="/oscillating-quanta">First Principles</a> · <a href="/compression-explorer">Compression Explorer</a> · <a href="/open">Open Charter</a></nav>`,
+  },
   "/protocol": {
     title: "WNSP Protocol Reference — Spectral Communication Standard",
     description: "Full WNSP protocol reference: WNSP-CE v1.0 character encoding, WNSP-SE v1.0 spectral encoding, WNSP-URI v1.0 addressing scheme, Hilbert space channel model, and Maxwell equation validation.",
