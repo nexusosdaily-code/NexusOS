@@ -427,6 +427,16 @@ export const ROUTE_META: Record<string, PageMeta> = {
     twitterDescription: "Λ=hf/c² verified. CE encoding deterministic. 25,600 channels orthogonal by quantum mechanics.",
     jsonLd: techArticle({ url: `${BASE}/proof`, name: "NexusOS Physics Proof", description: "Formal verification of NexusOS compression state calculations: Λ=hf/c² derivation, CE encoding determinism, and WNSP channel orthogonality.", about: "Theory of Compression States, Maxwell equations, quantum mechanics" }),
   },
+  "/poc": {
+    title: "NexusOS Hardware PoC — PHR-1 + SNIC Build Scope & Shopping List",
+    description: "Complete proof-of-concept build scope: PHR-1 bifilar coil and SNIC optical demonstrator. Australian shopping list, 7-phase verification protocol, pass criteria, and recording requirements for every step.",
+    canonical: `${BASE}/poc`,
+    ogTitle: "NexusOS Hardware Proof of Concept",
+    ogDescription: "Shopping list, build phases, pass criteria, and documentation protocol for the PHR-1 bifilar coil and SNIC optical channel verification. Built in Australia. AGPL-3.0.",
+    twitterTitle: "NexusOS Hardware PoC Scope",
+    twitterDescription: "7 build phases. Every step has tools, measurement, pass criteria, and a recording requirement. PHR-1 + SNIC. Australia. AGPL-3.0.",
+    jsonLd: techArticle({ url: `${BASE}/poc`, name: "NexusOS Hardware Proof of Concept Build Scope", description: "PHR-1 bifilar coil and SNIC optical demonstrator proof-of-concept: Australian shopping list, 7-phase verification protocol, and CE_TABLE measurement criteria.", about: "PHR-1, SNIC, photonic hardware, bifilar coil, optical demonstrator, hardware proof" }),
+  },
   "/stewards": {
     title: "Stewards of NexusOS — Founding Declaration by Te Rata Pou",
     description: "The founding document of NexusOS: a direct address to the three technical stewards who will carry the mission forward. Photonics engineer, RF specialist, physics PhD — founding equity, AGPL-3.0, photonic hardware destination ~2032.",
