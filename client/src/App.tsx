@@ -508,6 +508,10 @@ function Router() {
       <Route path="/constitution" component={ConstitutionPage} />
       <Route path="/mobile-sdk" component={MobileSDKPage} />
       <Route path="/shareholders" component={ShareholdersPage} />
+      {/* ── Public infrastructure / economy pages — crawlable ── */}
+      <Route path="/nexus-hardware-os" component={NexusHardwareOsPage} />
+      <Route path="/orbital-treasury" component={OrbitalTreasuryPage} />
+      <Route path="/spectral-library" component={SpectralLibraryPage} />
       {/* Catch-all: shows 404 for unknown paths, auth guard for known protected ones */}
       <Route component={ProtectedOrNotFound} />
     </Switch>

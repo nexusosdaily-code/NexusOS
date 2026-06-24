@@ -70,15 +70,15 @@ const SYSTEM_META: Record<string, { label: string; color: string; icon: any; hre
   blockchain:   { label: "Blockchain",        color: "#8b5cf6", icon: Link2,       href: "/blockchain",         description: "Proof blocks via Λ=hf/c²" },
   treasury:     { label: "Orbital Treasury",  color: "#f43f5e", icon: Coins,       href: "/orbital-treasury",   description: "Ordinal economy — delete → NXT → fund" },
   energyLedger: { label: "Energy Ledger",     color: "#f59e0b", icon: Zap,         href: "/orbital-treasury",   description: "E=hf cost per operation" },
-  agentBus:     { label: "Agent Bus",         color: "#22c55e", icon: Radio,       href: "/agent-bus",          description: "6 kernel agents on Ψ channels" },
-  kernel:       { label: "WNSP Kernel",       color: "#a855f7", icon: Cpu,         href: "/kernel",             description: "Boot, watchdog, event bus, auth" },
+  agentBus:     { label: "Agent Bus",         color: "#22c55e", icon: Radio,       href: "/ecosystem",          description: "6 kernel agents on Ψ channels" },
+  kernel:       { label: "WNSP Kernel",       color: "#a855f7", icon: Cpu,         href: "/ecosystem",          description: "Boot, watchdog, event bus, auth" },
   networkNodes: { label: "Spectral Network",  color: "#4ade80", icon: Globe,       href: "/network",            description: "P2P nodes discovered by CE→SE emission wavelength" },
 };
 
 const LAYER_STACK = [
   { layer: "L5", label: "Spectral Network Discovery", desc: "P2P nodes emit at CE→SE wavelengths · Discovered by band · No IP registry · No DNS · Physics IS the address", color: "#4ade80", href: "/network" },
   { layer: "L4", label: "Constitutional Economy",     desc: "Treasury · Governance · Charitable Trust · 100-Year Fund",               color: "#f43f5e", href: "/orbital-treasury" },
-  { layer: "L3", label: "Agent Intelligence",         desc: "6 kernel agents · Ψ channel routing · Watchdog · Event Bus",             color: "#22c55e", href: "/agent-bus" },
+  { layer: "L3", label: "Agent Intelligence",         desc: "6 kernel agents · Ψ channel routing · Watchdog · Event Bus",             color: "#22c55e", href: "/ecosystem" },
   { layer: "L2", label: "Blockchain Proof",           desc: "Λ=hf/c² blocks · Ordinals · Audit trail · AGPL enforcement",            color: "#8b5cf6", href: "/blockchain" },
   { layer: "L1", label: "Spectral DB & Addressing",  desc: "Files at Ψ(wdm, oam, pol) · 25,600 orthogonal channels · E=hf cost",    color: "#06b6d4", href: "/spectral-library" },
   { layer: "L0", label: "ALPHABET SUBSTRATE",         desc: "The foundational discovery — November 2025 — Alphabet embedded in light", color: "#fbbf24", isBase: true, href: "/ecosystem" },

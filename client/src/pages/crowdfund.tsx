@@ -912,10 +912,10 @@ export default function CrowdfundPage() {
           <div className="flex items-center gap-2 mb-3">
             <Radio size={14} className="text-cyan-400" />
             <span className="text-xs font-bold text-cyan-300">P2P Spectral Transmission — How It Works</span>
-            <a href="/transmission" target="_blank"
-              className="ml-auto text-[9px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-full px-2 py-0.5 hover:bg-cyan-500/20 transition-colors">
-              Open Transmission Console ↗
-            </a>
+            <span
+              className="ml-auto text-[9px] bg-cyan-500/10 text-cyan-400/50 border border-cyan-500/20 rounded-full px-2 py-0.5">
+              Sign in to access console
+            </span>
           </div>
           <p className="text-[11px] text-white/40 mb-4">
             A working P2P data layer — no cloud, no DNS, no middlemen. Data is CE-encoded to a unique wavelength λ and Ψ channel, stored on-chain, retrievable by anyone with the address.
@@ -951,10 +951,11 @@ export default function CrowdfundPage() {
               <Send size={12} className="mr-1" />
               {p2pPromoMut.isPending ? "Broadcasting…" : "Broadcast Tutorial → Nostr + Telegram + Discord"}
             </Button>
-            <a href="/transmission"
-              className="flex items-center gap-1.5 px-3 rounded-lg border border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/40 text-xs transition-colors">
-              <ExternalLink size={11} /> Try It
-            </a>
+            <Link href="/auth">
+              <span className="flex items-center gap-1.5 px-3 rounded-lg border border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/40 text-xs transition-colors cursor-pointer">
+                <ExternalLink size={11} /> Sign In to Try
+              </span>
+            </Link>
           </div>
         </div>
 
@@ -1631,7 +1632,7 @@ export default function CrowdfundPage() {
                     </li>
                   ))}
                 </ul>
-                <Link href="/wallet">
+                <Link href="/auth">
                   <Button className="w-full text-xs font-bold text-black" style={{ background: tier.color }}>
                     Get {tier.shares}
                   </Button>

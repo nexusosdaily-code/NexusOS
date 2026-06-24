@@ -435,7 +435,7 @@ const SYSTEMS = [
   {
     title: "Nexus Message Encoder",
     description: "Turn any text into a wavelength of light. Encode, decode, and send messages that no server can intercept.",
-    href: "/encoding-lab",
+    href: "/auth",
     color: "#8b00ff",
     Icon: Zap,
     action: "Encode a message",
@@ -443,7 +443,7 @@ const SYSTEMS = [
   {
     title: "Live Spectral Streams",
     description: "Broadcast video and audio on an open spectrum channel. No platform, no algorithm, no ban button.",
-    href: "/streaming",
+    href: "/auth",
     color: "#06b6d4",
     Icon: Wifi,
     action: "Start or watch a stream",
@@ -491,7 +491,7 @@ const SYSTEMS = [
   {
     title: "NexusOS Chronicle",
     description: "The permanent historical ledger. Every founding event, discovery, and proof encoded into its wavelength address. The record that cannot be censored.",
-    href: "/chronicle",
+    href: "/auth",
     color: "#eab308",
     Icon: BookOpen,
     action: "View history",
@@ -507,7 +507,7 @@ const SYSTEMS = [
   {
     title: "P2P Media Transmission",
     description: "Share files, video, and documents peer-to-peer, encrypted by wavelength. No middleman server.",
-    href: "/transmission",
+    href: "/auth",
     color: "#7c3aed",
     Icon: Signal,
     action: "Send a file",
@@ -515,7 +515,7 @@ const SYSTEMS = [
   {
     title: "Photonic Dev Environment",
     description: "Write code, build apps, and scaffold operating systems where every instruction is a frequency of light.",
-    href: "/photonic-dev",
+    href: "/auth",
     color: "#2563eb",
     Icon: Code2,
     action: "Open dev environment",
@@ -523,7 +523,7 @@ const SYSTEMS = [
   {
     title: "NXT Wallet",
     description: "Send and receive NXT tokens. Transaction fees are computed from actual physical energy — E=hf.",
-    href: "/wallet",
+    href: "/auth",
     color: "#059669",
     Icon: Cpu,
     action: "Open wallet",
@@ -770,7 +770,7 @@ export default function NexusCommand() {
       {/* Live status row — 7 systems */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
         <StatusCard title="Blockchain height"  value={chainLen}     subtitle="photonic blocks mined"    color="#16a34a" href="/blockchain" />
-        <StatusCard title="Bus messages"       value={busQueued}    subtitle="signals in flight"         color="#06b6d4" href="/agent-bus" />
+        <StatusCard title="Bus messages"       value={busQueued}    subtitle="signals in flight"         color="#06b6d4" href="/ecosystem" />
         <StatusCard title="Spectral records"   value={dbCount}      subtitle="wavelength-addressed data" color="#dc2626" href="/spectral-db" />
         <StatusCard title="Proof coverage"     value={proofPct}     subtitle="blockchain-verified"       color="#22c55e" href="/spectral-audit" />
         <StatusCard title="Treasury balance"   value={treasuryNxt}  subtitle="ordinal economy funded"    color="#f43f5e" href="/orbital-treasury" />

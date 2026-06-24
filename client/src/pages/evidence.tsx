@@ -197,7 +197,7 @@ export default function EvidencePage() {
               <GitBranch size={10} /> Chain Explorer
             </button>
           </Link>
-          <Link href="/chronicle">
+          <Link href="/auth">
             <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-amber-400/20 text-amber-400/60 hover:text-amber-400 transition-all text-[10px]">
               <ExternalLink size={10} /> Chronicle
             </button>
@@ -493,8 +493,8 @@ export default function EvidencePage() {
           <div className="flex items-center justify-center gap-4 pt-2">
             <Link href="/blockchain"><button className="text-[10px] text-blue-400/60 hover:text-blue-400 transition-colors">→ Blockchain Explorer</button></Link>
             <Link href="/spectral-db"><button className="text-[10px] text-purple-400/60 hover:text-purple-400 transition-colors">→ Spectral Database</button></Link>
-            <Link href="/kernel"><button className="text-[10px] text-cyan-400/60 hover:text-cyan-400 transition-colors">→ Kernel Status</button></Link>
-            <Link href="/agent-bus"><button className="text-[10px] text-pink-400/60 hover:text-pink-400 transition-colors">→ Agent Bus</button></Link>
+            <Link href="/auth"><button className="text-[10px] text-cyan-400/60 hover:text-cyan-400 transition-colors">→ Kernel Status</button></Link>
+            <Link href="/auth"><button className="text-[10px] text-pink-400/60 hover:text-pink-400 transition-colors">→ Agent Bus</button></Link>
           </div>
         </div>
 

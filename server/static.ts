@@ -80,6 +80,8 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/divergence-test",
   // Hardware & spec
   "/hardware-spec", "/hardware-lab", "/mobile-sdk",
+  // Infrastructure / economy pages
+  "/nexus-hardware-os", "/orbital-treasury", "/spectral-library",
   // Misc tools / pages
   "/nexus-command", "/receive", "/portfolio", "/lp-pools",
   "/airdrop", "/coinsniper", "/quest",
