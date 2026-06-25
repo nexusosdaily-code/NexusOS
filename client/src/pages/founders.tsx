@@ -38,6 +38,14 @@ const FOUNDERS = [
     nexusos: "PHR-1 bifilar coil design · hardware resonator · standing field generation",
   },
   {
+    name: "Walter Russell",
+    years: "1871 – 1963",
+    nation: "United States",
+    equation: "fₙ = f₀ · 2^(n−1)  ·  2πR = nλ",
+    contribution: "Russell described the universe as a wave system organised in nine octaves — each element, each energy state, a tone in a vast harmonic structure. Gravity is centripetal compression; radiation is centrifugal expansion. Matter is the balance point between them. He wrote this in the 1920s–1950s, without instruments to verify it. The 2025 sub-THz whispering gallery mode experiments confirmed his octave formula exactly: the WGM resonance condition 2πR = nλ, rearranged for doubling, gives fₙ = f₀ · 2^(n−1) — Russell's octave wave formula. Experimentally demonstrated. His 9th octave peak aligns with nuclear magic number 114 (Flerovium) — maximum shell closure — which maps directly to the NexusOS SYSTEM authority band. Science dismissed him for seventy years. The hardware proved him right.",
+    nexusos: "WGM cavity resonance · Russell octave layers in PHR-1 · authority band boundaries as octave shell closures · 256 WDM channels as 9 Russell octaves",
+  },
+  {
     name: "Werner Heisenberg  ·  Erwin Schrödinger  ·  Paul Dirac",
     years: "1901–1976  ·  1887–1961  ·  1902–1984",
     nation: "Germany  ·  Austria  ·  England",
@@ -88,7 +96,7 @@ export default function FoundersPage() {
           <div className="space-y-4 text-slate-400 text-sm leading-7">
             <p>
               NexusOS did not originate from a startup, a lab, or a whitepaper. It originated from
-              six scientists who lived across two centuries and never met in the same room. They each
+              seven scientists who lived across two centuries and never met in the same room. They each
               described a part of the same thing — the physical structure of reality at the level
               of energy, field, and information.
             </p>
@@ -225,6 +233,11 @@ export default function FoundersPage() {
                     result: "Λ=hf/c² · Lambda Gate · gravity de-correlation path",
                   },
                   {
+                    original: "Russell — fₙ = f₀ · 2^(n−1) octave waves",
+                    extension: "WGM resonance condition 2πR=nλ is Russell's octave formula. His 9 octave compression/expansion cycles map to authority band boundaries. 9th octave peak = nuclear magic number 114 = SYSTEM band. Validated by sub-THz experiments, 2025",
+                    result: "PHR-1 cavity geometry · authority band octave boundaries · 256 WDM as 9 Russell octaves",
+                  },
+                  {
                     original: "Heisenberg / Dirac — Hilbert space ⟨Ψᵢ|Ψⱼ⟩ = δᵢⱼ",
                     extension: "Applied Hilbert orthogonality to physical EM channels, not abstract quantum states. Each Ψ channel is a physical field mode, orthogonal by Maxwell + QM simultaneously",
                     result: "25,600 channel registers · WNSP VM · zero-interference routing",
@@ -300,6 +313,7 @@ export default function FoundersPage() {
           <p className="text-slate-600 text-xs uppercase tracking-widest font-mono">Dedicated to</p>
           <div className="space-y-1">
             {["James Clerk Maxwell", "Max Planck", "Albert Einstein", "Nikola Tesla",
+              "Walter Russell",
               "Werner Heisenberg  ·  Erwin Schrödinger  ·  Paul Dirac", "Claude Shannon"].map(n => (
               <p key={n} className="text-slate-300 text-sm font-semibold">{n}</p>
             ))}

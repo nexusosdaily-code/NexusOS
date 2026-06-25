@@ -428,8 +428,8 @@ export const ROUTE_META: Record<string, PageMeta> = {
     jsonLd: techArticle({ url: `${BASE}/proof`, name: "NexusOS Physics Proof", description: "Formal verification of NexusOS compression state calculations: Λ=hf/c² derivation, CE encoding determinism, and WNSP channel orthogonality.", about: "Theory of Compression States, Maxwell equations, quantum mechanics" }),
   },
   "/founders": {
-    title: "The Founding Architects — Maxwell, Planck, Einstein, Tesla, QM, Shannon | NexusOS",
-    description: "NexusOS is dedicated to the six scientists whose equations it runs on. Maxwell, Planck, Einstein, Tesla, Heisenberg/Schrödinger/Dirac, and Shannon described the physical structure of reality. NexusOS turns their language into running code.",
+    title: "The Founding Architects — Maxwell, Planck, Einstein, Tesla, Russell, QM, Shannon | NexusOS",
+    description: "NexusOS is dedicated to the seven scientists whose equations it runs on. Maxwell, Planck, Einstein, Tesla, Walter Russell, Heisenberg/Schrödinger/Dirac, and Shannon described the physical structure of reality. NexusOS turns their language into running code.",
     canonical: `${BASE}/founders`,
     ogTitle: "The Founding Architects of NexusOS",
     ogDescription: "Every Ψ channel, fee calculation, and compression state traces directly to one of six scientists. They wrote the language. NexusOS runs it. This is their work.",
