@@ -427,6 +427,16 @@ export const ROUTE_META: Record<string, PageMeta> = {
     twitterDescription: "Λ=hf/c² verified. CE encoding deterministic. 25,600 channels orthogonal by quantum mechanics.",
     jsonLd: techArticle({ url: `${BASE}/proof`, name: "NexusOS Physics Proof", description: "Formal verification of NexusOS compression state calculations: Λ=hf/c² derivation, CE encoding determinism, and WNSP channel orthogonality.", about: "Theory of Compression States, Maxwell equations, quantum mechanics" }),
   },
+  "/founders": {
+    title: "The Founding Architects — Maxwell, Planck, Einstein, Tesla, QM, Shannon | NexusOS",
+    description: "NexusOS is dedicated to the six scientists whose equations it runs on. Maxwell, Planck, Einstein, Tesla, Heisenberg/Schrödinger/Dirac, and Shannon described the physical structure of reality. NexusOS turns their language into running code.",
+    canonical: `${BASE}/founders`,
+    ogTitle: "The Founding Architects of NexusOS",
+    ogDescription: "Every Ψ channel, fee calculation, and compression state traces directly to one of six scientists. They wrote the language. NexusOS runs it. This is their work.",
+    twitterTitle: "NexusOS — Dedicated to the Founding Architects",
+    twitterDescription: "Maxwell, Planck, Einstein, Tesla, Heisenberg, Schrödinger, Dirac, Shannon. Six scientists. One coordinate system. NexusOS is their equations running as code.",
+    jsonLd: techArticle({ url: `${BASE}/founders`, name: "The Founding Architects of NexusOS", description: "A dedication to the scientists whose equations form the foundation of NexusOS: Maxwell (field equations), Planck (E=hf), Einstein (Λ=hf/c²), Tesla (bifilar coil), quantum mechanics (Hilbert space), Shannon (information entropy).", about: "Maxwell equations, Planck constant, Einstein relativity, Tesla coil, quantum mechanics, Shannon entropy, Kardashev Type I" }),
+  },
   "/joint-venture": {
     title: "Global Infrastructure Joint Venture — An Open Invitation | NexusOS",
     description: "An open invitation to all nations, universities, and research institutions to build Kardashev Type I infrastructure together. Physics-governed, AGPL-3.0, participation conditions based on documented conduct.",

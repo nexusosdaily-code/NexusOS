@@ -160,6 +160,7 @@ const ShareholdersPage      = lazy(() => import("@/pages/shareholders"));
 const StewardsPage          = lazy(() => import("@/pages/stewards"));
 const PocPage               = lazy(() => import("@/pages/poc"));
 const JointVenturePage      = lazy(() => import("@/pages/joint-venture"));
+const FoundersPage          = lazy(() => import("@/pages/founders"));
 
 // Loading spinner shown while a lazy page chunk is downloading
 function PageLoader() {
@@ -493,6 +494,7 @@ function Router() {
       <Route path="/stewards"            component={StewardsPage} />
       <Route path="/poc"                 component={PocPage} />
       <Route path="/joint-venture"       component={JointVenturePage} />
+      <Route path="/founders"            component={FoundersPage} />
       {/* ── Science & Protocol pages — publicly crawlable ── */}
       <Route path="/resonance-cavity" component={ResonanceCavityPage} />
       <Route path="/planck-alignment" component={PlanckAlignmentPage} />
