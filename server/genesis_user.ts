@@ -167,40 +167,6 @@ const REPLIT_AI_DESIGNATION =
   "Reserved for NexusOS research, AI agent development, and protocol testing. " +
   "Do not reassign without founder approval.";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Dsmart account lock — wnsp://Ψ(48,59,H)/dsmart
-// Locked by founder Te Rata Pou until further notice.
-// Idempotent — safe to call on every boot.
-// ─────────────────────────────────────────────────────────────────────────────
-const DSMART_USER_ID = "da62b876-4f10-4fbb-a979-f23b3032cc80";
-const DSMART_REG_ID  = "01dd1ea3-b249-457e-8268-be3deac9b0b0";
-const DSMART_LOCK_NOTE =
-  "LOCKED — Account suspended by founder (Te Rata Pou) until further notice. " +
-  "Pending fulfilment of agreed terms. Address reserved for NexusOS reclaim if unresolved.";
-
-export async function seedDsmartLock() {
-  try {
-    const { db }  = await import("./db");
-    const { sql } = await import("drizzle-orm");
-
-    await db.execute(sql`
-      UPDATE users
-      SET is_active = false, withdrawals_blocked = true, updated_at = NOW()
-      WHERE id = ${DSMART_USER_ID}
-        AND (is_active = true OR withdrawals_blocked = false)
-    `);
-
-    await db.execute(sql`
-      UPDATE wnsp_registry
-      SET is_public = false, description = ${DSMART_LOCK_NOTE}, updated_at = NOW()
-      WHERE id = ${DSMART_REG_ID}
-    `);
-
-    console.log("[GENESIS] 🔒 Dsmart account locked — wnsp://Ψ(48,59,H)/dsmart");
-  } catch (err: any) {
-    console.error("[GENESIS] Dsmart lock error:", err?.message ?? err);
-  }
-}
 
 export async function seedReplitAIAccount() {
   try {

@@ -6,7 +6,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { spawn, execSync, ChildProcess } from "child_process";
 import { seedGenesisBlock } from "./genesis";
-import { seedGenesisUser, seedReplitAIAccount, seedDsmartLock, seedBlockedEntities } from "./genesis_user";
+import { seedGenesisUser, seedReplitAIAccount, seedBlockedEntities } from "./genesis_user";
 import { startBlockchainAuditor } from "./blockchain_auditor";
 import { seedGenesisNode } from "./genesis_node";
 import { startKernelAgents } from "./kernel_agents";
@@ -618,7 +618,6 @@ async function runStartupMigrations() {
     seedGenesisBlock().catch(() => {});
     seedGenesisNode().catch((e) => console.error("[GENESIS NODE] Error:", e));
     seedReplitAIAccount().catch((e) => console.error("[GENESIS] Replit AI seed error:", e));
-    seedDsmartLock().catch((e) => console.error("[GENESIS] Dsmart lock error:", e));
     seedBlockedEntities().catch((e) => console.error("[GENESIS] Blocked entities error:", e));
 
     // Wave 2 — 6s: blockchain auditor + kernel agents
