@@ -112,6 +112,8 @@ const DOMAIN_ROUTES: Record<string, string> = {
   "www.nexussdk.io":       "/mobile-sdk",
   "octivetone.io":         "/resonance-cavity",
   "www.octivetone.io":     "/resonance-cavity",
+  "wnspfounders.org":      "/founders",
+  "www.wnspfounders.org":  "/founders",
 };
 app.use((req, res, next) => {
   const host = req.hostname ?? "";
