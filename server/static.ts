@@ -87,6 +87,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/airdrop", "/coinsniper", "/quest",
   "/wsats", "/roadmap", "/how-to-plug-in",
   "/encode", "/replit-template", "/proof", "/stewards", "/poc", "/joint-venture", "/founders",
+  "/octave-layers", "/paper", "/hardware-results",
   // Legacy redirect paths (SPA handles them)
   "/spectral-video", "/spectral-uri", "/wnsp-uri", "/visualizer", "/btc-bridge",
 ]);
