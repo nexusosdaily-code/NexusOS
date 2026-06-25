@@ -427,6 +427,16 @@ export const ROUTE_META: Record<string, PageMeta> = {
     twitterDescription: "Λ=hf/c² verified. CE encoding deterministic. 25,600 channels orthogonal by quantum mechanics.",
     jsonLd: techArticle({ url: `${BASE}/proof`, name: "NexusOS Physics Proof", description: "Formal verification of NexusOS compression state calculations: Λ=hf/c² derivation, CE encoding determinism, and WNSP channel orthogonality.", about: "Theory of Compression States, Maxwell equations, quantum mechanics" }),
   },
+  "/joint-venture": {
+    title: "Global Infrastructure Joint Venture — An Open Invitation | NexusOS",
+    description: "An open invitation to all nations, universities, and research institutions to build Kardashev Type I infrastructure together. Physics-governed, AGPL-3.0, participation conditions based on documented conduct.",
+    canonical: `${BASE}/joint-venture`,
+    ogTitle: "NexusOS Global Joint Venture — Open to All Nations",
+    ogDescription: "The wavelength table belongs to physics, not to any nation or corporation. An open invitation to build planetary-scale infrastructure together under AGPL-3.0. Participation conditions fixed. Door is open.",
+    twitterTitle: "NexusOS — Global Infrastructure Joint Venture",
+    twitterDescription: "Open invitation to nations, physics labs, and research institutions. Build Kardashev Type I infrastructure on physics, not capital. AGPL-3.0. Participation conditions apply.",
+    jsonLd: techArticle({ url: `${BASE}/joint-venture`, name: "NexusOS Global Infrastructure Joint Venture", description: "An open invitation to all nations and institutions to build Kardashev Type I civilization infrastructure on physics-governed, AGPL-3.0 foundations. Participation conditions based on documented conduct.", about: "global infrastructure, AGPL-3.0, photonic computing, WNSP protocol, Kardashev Type I" }),
+  },
   "/poc": {
     title: "NexusOS Hardware PoC — PHR-1 + SNIC Build Scope & Shopping List",
     description: "Complete proof-of-concept build scope: PHR-1 bifilar coil and SNIC optical demonstrator. Australian shopping list, 7-phase verification protocol, pass criteria, and recording requirements for every step.",
