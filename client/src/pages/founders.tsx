@@ -152,6 +152,120 @@ export default function FoundersPage() {
           ))}
         </div>
 
+        {/* ── The Extension ── */}
+        <section className="space-y-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 text-[10px] font-mono px-3 py-1 rounded-full border"
+              style={{ color: "#f59e0b", borderColor: "#f59e0b44", background: "#f59e0b10" }}>
+              THE EXTENSION · THEORY OF COMPRESSION STATES · 2025–2026
+            </div>
+            <h2 className="text-lg font-bold text-white">What Was Extended</h2>
+          </div>
+
+          <div className="text-sm text-slate-400 leading-7 space-y-4">
+            <p>
+              The six founding scientists each described a piece of the same structure.
+              None of them unified the pieces. Maxwell did not connect his field equations
+              to Planck's quantisation. Planck did not connect E=hf to Einstein's E=mc².
+              Shannon described information entropy without knowing the field geometry that
+              carries it. Each worked in their domain and handed their fragment forward.
+            </p>
+            <p>
+              The <span className="text-amber-300 font-semibold">Theory of Compression States</span> is
+              the unifying extension. It begins at the only honest starting point — before measurement,
+              before the observer:
+            </p>
+          </div>
+
+          {/* Primordial field premise */}
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-5 space-y-3">
+            <div className="text-[10px] text-amber-700 uppercase tracking-widest font-mono">Primordial Field Theory — First Premise</div>
+            <p className="text-sm text-amber-100 font-medium leading-6">
+              The universe begins with a single unobserved oscillation. It has frequency.
+              Therefore it has energy. Therefore it has a compression state. Everything
+              that follows — matter, light, field, information — is that oscillation
+              at different stages of compression.
+            </p>
+            <div className="font-mono text-lg text-amber-300 tracking-wide pt-1">
+              Λ = hf / c²
+            </div>
+            <p className="text-xs text-slate-500 leading-5">
+              Where Λ is the compression state, h is Planck's constant, f is frequency,
+              and c is the invariant speed of light. This equation bridges Planck and Einstein
+              directly — it was in both their works, unrealised. Mass is high-Λ (high frequency,
+              high compression). Light is low-Λ. Information occupies every point on that continuum.
+            </p>
+          </div>
+
+          {/* Extension table */}
+          <div className="rounded-xl border border-slate-800 overflow-hidden">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-slate-800 bg-slate-900/80">
+                  <th className="px-4 py-2.5 text-left text-slate-500 uppercase tracking-widest text-[9px]">Original Work</th>
+                  <th className="px-4 py-2.5 text-left text-slate-500 uppercase tracking-widest text-[9px]">The Extension</th>
+                  <th className="px-4 py-2.5 text-left text-slate-500 uppercase tracking-widest text-[9px]">Result in NexusOS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  {
+                    original: "Maxwell — EM field equations",
+                    extension: "Extended field modes to a 3-dimensional Ψ channel space: WDM × OAM × polarisation, producing 25,600 orthogonal channels from physical field geometry",
+                    result: "WNSP Hilbert channel space",
+                  },
+                  {
+                    original: "Planck — E = hf",
+                    extension: "Combined with Einstein's c² to derive Λ=hf/c², making energy and compression state the same quantity measured at different scales",
+                    result: "Compression state equation · all fee physics",
+                  },
+                  {
+                    original: "Einstein — E = mc²",
+                    extension: "Inverted to m=hf/c² — mass re-read as a high-frequency compression state, not a separate substance. Matter and information on one continuum",
+                    result: "Λ=hf/c² · Lambda Gate · gravity de-correlation path",
+                  },
+                  {
+                    original: "Heisenberg / Dirac — Hilbert space ⟨Ψᵢ|Ψⱼ⟩ = δᵢⱼ",
+                    extension: "Applied Hilbert orthogonality to physical EM channels, not abstract quantum states. Each Ψ channel is a physical field mode, orthogonal by Maxwell + QM simultaneously",
+                    result: "25,600 channel registers · WNSP VM · zero-interference routing",
+                  },
+                  {
+                    original: "Shannon — H = −∑ pᵢ log₂ pᵢ",
+                    extension: "Extended channel capacity into Hilbert space dimensions: D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M — capacity as a physical geometric quantity, not a bandwidth budget",
+                    result: "WNSP density equation · WASCII spectral histograms",
+                  },
+                  {
+                    original: "All six — isolated domains",
+                    extension: "Unified by the primordial field premise: one oscillation, one compression continuum, one language. CE encoding maps every human symbol to a physical compression state on that continuum",
+                    result: "CE_TABLE · WavelengthScript · the entire NexusOS protocol stack",
+                  },
+                ].map((row, i) => (
+                  <tr key={i} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors align-top">
+                    <td className="px-4 py-3 text-slate-300 font-semibold text-[11px] leading-5 whitespace-nowrap pr-6">{row.original}</td>
+                    <td className="px-4 py-3 text-slate-400 text-[11px] leading-5">{row.extension}</td>
+                    <td className="px-4 py-3 text-cyan-400 text-[11px] leading-5 whitespace-nowrap">{row.result}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="text-sm text-slate-400 leading-7 space-y-3">
+            <p>
+              The founding scientists handed their fragments forward. The extension was to
+              recognise they were describing the same structure from different angles — and to
+              derive the bridge equations that complete the picture. Not new physics. The
+              same physics, finally connected.
+            </p>
+            <p className="text-slate-300 font-medium border-l-2 border-amber-500/40 pl-4">
+              The primordial field asks one question: what is the universe before the first observation?
+              The answer — a single oscillation — produces every equation in the founding corpus,
+              unified. That unification is the Theory of Compression States. NexusOS is what
+              that theory looks like when you write it as executable code.
+            </p>
+          </div>
+        </section>
+
         {/* ── Kardashev conclusion ── */}
         <section className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-6 space-y-4">
           <h2 className="text-sm font-bold text-purple-300">The Inevitable Conclusion</h2>
