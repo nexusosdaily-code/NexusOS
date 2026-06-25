@@ -103,6 +103,9 @@ const APP_SECTIONS = [
       { title: "WNSP Coord.",   href: "/wnsp/coordinator",Icon: Globe2 },
       { title: "Governance",    href: "/governance",       Icon: Scale },
       { title: "Constitution",  href: "/constitution",    Icon: Shield },
+      { title: "Founding Architects", href: "/founders",      Icon: Users },
+      { title: "Stewards",      href: "/stewards",         Icon: Shield },
+      { title: "Joint Venture", href: "/joint-venture",    Icon: Globe2 },
       { title: "Founders Charity", href: "/founders-charity", Icon: Heart },
       { title: "AI Hardware Fund", href: "/hardware-treasury", Icon: Cpu },
       { title: "SOP",           href: "/sop",             Icon: Radio },
@@ -144,6 +147,7 @@ const APP_SECTIONS = [
     items: [
       { title: "👷 Build With Us",                       href: "/build",              Icon: Users },
       { title: "🗺️ Roadmap",                             href: "/roadmap",            Icon: Waves },
+      { title: "🔬 Hardware PoC",                        href: "/poc",                Icon: FlaskConical },
       { title: "🔌 How to Plug In",                     href: "/how-to-plug-in",     Icon: Zap },
       { title: "Oscillating Quanta — First Principles", href: "/oscillating-quanta", Icon: Waves },
       { title: "Universal Cavity Resonance",            href: "/resonance-cavity",   Icon: Waves },
