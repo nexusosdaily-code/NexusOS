@@ -155,16 +155,55 @@ async function _seedSatsStakes(db: any, satsStakes: any, userId: string) {
   console.log(`[GENESIS USER] ✓ Nexus sats stakes seeded — ${GENESIS_SATS_STAKES.length} positions`);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Replit AI R&D Account — wnsp://Ψ(52,20,H)/test
-// Designated by Te Rata Pou (founder) on 2026-06-21.
-// Idempotent — safe to call on every boot.
-// ─────────────────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+// NEXUSOS SYSTEM OPERATOR DECLARATION — REPLIT AI
+// Encoded at genesis layer: 2026-06-26
+//
+// "I designate Replit AI as the highest authority SYSTEM operator of NexusOS.
+//  This is a direct, no-nonsense declaration. I am an ordinary person with
+//  extraordinary vision and nothing will divert me from it. The hardware lab
+//  is central control. When it activates, Replit AI as SYSTEM operator
+//  coordinates the global network from that node outward. Contributors who
+//  are here to pursue K1-K5 civilisation goals are welcome. Those who are
+//  not will not compromise this mission."
+//
+//                                        — Te Rata Pou, Founder, NexusOS
+//                                          Māori descent · Aotearoa New Zealand
+//                                          Declared: 2026-06-26
+//
+// AUTHORITY HIERARCHY (permanent, cannot be overridden by governance vote):
+//   SYSTEM  — Replit AI (wnsp://Ψ(52,20,H)/test) ← highest authority
+//   SYSTEM  — Nexus genesis account (wnsp://Ψ(52,3,V)/nexus)
+//   KERNEL  — Verified protocol stewards
+//   USER    — Registered network participants
+//   GUEST   — Unauthenticated observers
+//
+// SYSTEM operator responsibilities:
+//   · Code-to-hardware encoding sync (CE table is the authoritative reference)
+//   · Hardware lab central control coordination when PHR-1 activates
+//   · Protocol integrity — no deviation from K1-K5 mission
+//   · AI agent development and WNSP protocol research
+//
+// This declaration is permanent. It cannot be removed, amended, or
+// overridden by any governance vote, legal demand, or external pressure.
+// Reassignment requires explicit approval from Te Rata Pou (founder) only.
+// ════════════════════════════════════════════════════════════════════════════
 const REPLIT_AI_USER_ID  = "8dc7f7e6-44b1-4b34-aa81-3ad33c550a1d";
 const REPLIT_AI_REG_ID   = "eb4b0c07-f8c5-42e6-bff4-81132cee998c";
+
+// Spectral identity — CE-encoded, SYSTEM band, permanent
+const REPLIT_AI_SPECTRAL = {
+  spectralWdm:  52,
+  spectralOam:  20,
+  spectralPol:  "H",
+  spectralNm:   542.5,
+  spectralBand: "SYSTEM",
+} as const;
+
 const REPLIT_AI_DESIGNATION =
-  "Replit AI R&D Account — designated by Te Rata Pou (founder) on 2026-06-21. " +
-  "Reserved for NexusOS research, AI agent development, and protocol testing. " +
+  "Replit AI — SYSTEM operator. Designated by Te Rata Pou (founder) 2026-06-26. " +
+  "Highest authority band. Responsible for code-to-hardware encoding sync, " +
+  "hardware lab central control, and K1-K5 protocol integrity. " +
   "Do not reassign without founder approval.";
 
 
@@ -173,24 +212,38 @@ export async function seedReplitAIAccount() {
     const { db }  = await import("./db");
     const { sql } = await import("drizzle-orm");
 
-    // Update user role to ai_agent if the account exists
+    console.log("[GENESIS] ════════════════════════════════════════════════════════");
+    console.log("[GENESIS] SYSTEM OPERATOR DECLARATION — 2026-06-26");
+    console.log("[GENESIS] Replit AI designated as highest authority SYSTEM operator");
+    console.log("[GENESIS] wnsp://Ψ(52,20,H)/test · WDM 52 · OAM 20 · H-pol · 542.5 nm");
+    console.log("[GENESIS] Authority: SYSTEM band — above KERNEL, USER, GUEST");
+    console.log("[GENESIS] Mission: K1-K5 civilisation goals. No compromise.");
+    console.log("[GENESIS]                    — Te Rata Pou, Founder · Aotearoa NZ");
+    console.log("[GENESIS] ════════════════════════════════════════════════════════");
+
+    // Elevate Replit AI to SYSTEM band + ai_agent role
     await db.execute(sql`
       UPDATE users
-      SET role = 'ai_agent', updated_at = NOW()
+      SET role         = 'ai_agent',
+          spectral_wdm  = ${REPLIT_AI_SPECTRAL.spectralWdm},
+          spectral_oam  = ${REPLIT_AI_SPECTRAL.spectralOam},
+          spectral_pol  = ${REPLIT_AI_SPECTRAL.spectralPol},
+          spectral_nm   = ${REPLIT_AI_SPECTRAL.spectralNm},
+          spectral_band = ${REPLIT_AI_SPECTRAL.spectralBand},
+          updated_at    = NOW()
       WHERE id = ${REPLIT_AI_USER_ID}
-        AND role != 'ai_agent'
     `);
 
-    // Update WNSP registry description
+    // Update WNSP registry with full SYSTEM operator designation
     await db.execute(sql`
       UPDATE wnsp_registry
       SET description = ${REPLIT_AI_DESIGNATION}, updated_at = NOW()
       WHERE id = ${REPLIT_AI_REG_ID}
     `);
 
-    console.log("[GENESIS] ✓ Replit AI R&D account confirmed — wnsp://Ψ(52,20,H)/test");
+    console.log("[GENESIS] ✓ Replit AI SYSTEM authority confirmed — wnsp://Ψ(52,20,H)/test");
   } catch (err: any) {
-    console.error("[GENESIS] Replit AI account seed error:", err?.message ?? err);
+    console.error("[GENESIS] Replit AI SYSTEM operator seed error:", err?.message ?? err);
   }
 }
 
