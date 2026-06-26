@@ -56,6 +56,18 @@ const BOT_PATTERNS: { pattern: RegExp; name: string }[] = [
   { pattern: /dirbuster/i,            name: "DirBuster" },
   { pattern: /gobuster/i,             name: "GoBuster" },
   { pattern: /ffuf/i,                 name: "FFUF-Fuzzer" },
+  { pattern: /pathscan/i,             name: "Pathscan-Enumerator" },
+  { pattern: /domainwatcher/i,        name: "DomainWatcher" },
+  { pattern: /subfinder/i,            name: "Subfinder" },
+  { pattern: /httpie/i,               name: "HTTPie-Client" },
+  { pattern: /feroxbuster/i,          name: "Feroxbuster" },
+  { pattern: /katana/i,               name: "Katana-Crawler" },
+  { pattern: /hakrawler/i,            name: "Hakrawler" },
+  { pattern: /gau\//i,                name: "GAU-URLFetcher" },
+  { pattern: /waybackurls/i,          name: "WaybackURLs" },
+  { pattern: /brand[\s-]?protect/i,   name: "BrandProtection-Bot" },
+  { pattern: /brandwatch/i,           name: "Brandwatch" },
+  { pattern: /mention\.com/i,         name: "Mention-Monitor" },
 ];
 
 function detectBot(ua: string): { isBot: boolean; botName: string | null } {
