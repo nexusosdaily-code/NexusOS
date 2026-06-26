@@ -1,4 +1,4 @@
-import express, { type Express, type Request } from "express";
+import express, { type Express, type Request, type Response } from "express";
 import fs from "fs";
 import path from "path";
 import { injectMeta } from "./seo-meta";
@@ -35,6 +35,7 @@ const CUSTOM_DOMAIN_HOSTS = new Set<string>([
 // ---------------------------------------------------------------------------
 
 const EXACT_PUBLIC_PATHS = new Set<string>([
+  "/",
   "/auth",
   // Funding & campaign
   "/crowdfund", "/fund", "/indiegogo", "/campaign", "/evidence",
@@ -88,6 +89,11 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/wsats", "/roadmap", "/how-to-plug-in",
   "/encode", "/replit-template", "/proof", "/stewards", "/poc", "/joint-venture", "/founders",
   "/octave-layers", "/paper", "/hardware-results",
+  // Previously missing from allowlist (domain-redirect targets and public routes)
+  "/spectral-ide", "/resonance-cavity",
+  "/build", "/shareholders",
+  // Protocol reference (seo-meta.ts canonical page)
+  "/protocol",
   // Legacy redirect paths (SPA handles them)
   "/spectral-video", "/spectral-uri", "/wnsp-uri", "/visualizer", "/btc-bridge",
 ]);
@@ -95,6 +101,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
 // Only paths where ANY child segment is valid (true dynamic routes).
 const DYNAMIC_PUBLIC_PREFIXES: string[] = [
   "/profile/",    // /profile/:username
+  "/app/",        // /app/:slug — public contract app pages
 ];
 
 function isPublicSpaPath(pathname: string): boolean {
@@ -110,6 +117,32 @@ function requestPathname(req: Request): string {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Canonical root URL for each custom domain (used in sitemap generation).
+// ---------------------------------------------------------------------------
+const CUSTOM_DOMAIN_CANONICAL: Record<string, string> = {
+  "wnsp.dev":              "https://wnsp.dev/",
+  "www.wnsp.dev":          "https://wnsp.dev/",
+  "wnsp.blog":             "https://wnsp.blog/",
+  "www.wnsp.blog":         "https://wnsp.blog/",
+  "snic.io":               "https://snic.io/",
+  "www.snic.io":           "https://snic.io/",
+  "phr1.io":               "https://phr1.io/",
+  "www.phr1.io":           "https://phr1.io/",
+  "lambdagate.io":         "https://lambdagate.io/",
+  "www.lambdagate.io":     "https://lambdagate.io/",
+  "wavelengthscript.dev":  "https://wavelengthscript.dev/",
+  "www.wavelengthscript.dev": "https://wavelengthscript.dev/",
+  "zerogstate.io":         "https://zerogstate.io/",
+  "www.zerogstate.io":     "https://zerogstate.io/",
+  "wascii.io":             "https://wascii.io/",
+  "www.wascii.io":         "https://wascii.io/",
+  "orbitaltreasury.io":    "https://orbitaltreasury.io/",
+  "www.orbitaltreasury.io": "https://orbitaltreasury.io/",
+  "555thz.io":             "https://555thz.io/",
+  "www.555thz.io":         "https://555thz.io/",
+};
+
 export function serveStatic(app: Express) {
   const distPath = path.resolve(__dirname, "public");
   if (!fs.existsSync(distPath)) {
@@ -117,6 +150,64 @@ export function serveStatic(app: Express) {
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
     );
   }
+
+  // ── Host-aware robots.txt ─────────────────────────────────────────────────
+  // Custom domains each advertise their own sitemap URL so crawlers get a
+  // sitemap that actually contains the page they are on. The main wnsp.io
+  // robots.txt is served as a static file from client/public/robots.txt.
+  app.get("/robots.txt", (req: Request, res: Response) => {
+    const host      = req.hostname || (req.headers.host as string) || "";
+    const cleanHost = host.split(":")[0];
+
+    if (CUSTOM_DOMAIN_HOSTS.has(cleanHost)) {
+      const canonical  = CUSTOM_DOMAIN_CANONICAL[cleanHost] ?? `https://${cleanHost}/`;
+      const canonicalOrigin = canonical.replace(/\/$/, "");
+      const sitemapUrl = `${canonicalOrigin}/sitemap.xml`;
+      const domain     = cleanHost.startsWith("www.") ? cleanHost.slice(4) : cleanHost;
+      res
+        .status(200)
+        .type("text/plain")
+        .send(
+          `User-agent: *\nAllow: /\n\n# ${domain} — root microsite\nSitemap: ${sitemapUrl}\n# Canonical: ${canonical}\n`,
+        );
+      return;
+    }
+
+    // Fall through to static file for wnsp.io and unknown hosts.
+    res.sendFile(path.join(distPath, "robots.txt"), (err) => {
+      if (err) res.status(404).end();
+    });
+  });
+
+  // ── Host-aware sitemap.xml ────────────────────────────────────────────────
+  // Custom domains each get a single-URL sitemap containing only their root
+  // canonical page. The main wnsp.io sitemap is served as a static file from
+  // client/public/sitemap.xml (which lists all wnsp.io canonical paths).
+  app.get("/sitemap.xml", (req: Request, res: Response) => {
+    const host      = req.hostname || (req.headers.host as string) || "";
+    const cleanHost = host.split(":")[0];
+
+    if (CUSTOM_DOMAIN_HOSTS.has(cleanHost)) {
+      const canonical = CUSTOM_DOMAIN_CANONICAL[cleanHost] ?? `https://${cleanHost}/`;
+      const xml = [
+        `<?xml version="1.0" encoding="UTF-8"?>`,
+        `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`,
+        `  <url>`,
+        `    <loc>${canonical}</loc>`,
+        `    <changefreq>weekly</changefreq>`,
+        `    <priority>1.0</priority>`,
+        `  </url>`,
+        `</urlset>`,
+      ].join("\n");
+      res.status(200).type("application/xml").send(xml);
+      return;
+    }
+
+    // Fall through to static file for wnsp.io and unknown hosts.
+    res.sendFile(path.join(distPath, "sitemap.xml"), (err) => {
+      if (err) res.status(404).end();
+    });
+  });
 
   // Hashed asset files get a 1-year immutable cache; everything else (index.html) gets no-cache.
   app.use(express.static(distPath, {
