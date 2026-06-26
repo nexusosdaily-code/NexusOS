@@ -223,7 +223,94 @@ export default function PaperPage() {
             </p>
           </Section>
 
-          <Section n="6" title="Character Encoding as Compression State Assignment">
+          <Section n="6" title="Octave Compression and Matter Formation">
+            <p>
+              Russell's nine octaves describe elements not as static particles but as stable
+              compression states — points on the Λ continuum where an oscillation locks into
+              observable matter. The Theory of Compression States provides the mathematical
+              bridge: every element has a characteristic Λ value proportional to its nuclear
+              binding energy per nucleon B(Z):
+            </p>
+            <Eq label="13">Λ(Z) = B(Z) / c²</Eq>
+            <p>
+              This places the entire periodic table on the compression state continuum.
+              Higher atomic number Z → higher B(Z) → higher Λ → denser compression state.
+            </p>
+            <p>
+              The three physical variables — energy (E), temperature (T), and pressure (P) —
+              are the drivers that push matter up the octave ladder. For two nuclei to fuse,
+              their combined thermal energy must overcome the Coulomb barrier. The Gamow
+              threshold temperature scales as:
+            </p>
+            <Eq label="14">T_threshold ∝ Z₁ · Z₂ · μ</Eq>
+            <p>
+              Where Z₁, Z₂ are the atomic numbers of the fusing nuclei and μ is their reduced
+              mass. Each octave step up the Russell ladder requires approximately one order of
+              magnitude more compression — temperature, pressure, and energy density must all
+              increase together. This is the octave doubling pattern expressed in thermodynamics.
+            </p>
+
+            {/* ── Stellar progression table ── */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/30 overflow-hidden">
+              <div className="px-4 py-2 border-b border-slate-800 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+                Stellar Nucleosynthesis — Elements as Compression State Milestones
+              </div>
+              <div className="divide-y divide-slate-800/60">
+                {[
+                  { el: "Hydrogen",  sym: "H",  z: 1,  oct: "1",   ev: "Big Bang nucleosynthesis",   temp: "—",    note: "Primordial. Lowest Λ. First oscillation stabilised." },
+                  { el: "Helium",    sym: "He", z: 2,  oct: "1→2", ev: "Stellar core ignition",      temp: "10M K", note: "Rest tone between octaves. Noble — resists further fusion." },
+                  { el: "Carbon",    sym: "C",  z: 6,  oct: "2",   ev: "Red giant — triple-alpha",   temp: "100M K", note: "Three helium nuclei compress into carbon. Second octave." },
+                  { el: "Oxygen",    sym: "O",  z: 8,  oct: "2",   ev: "Red giant — C + He",         temp: "150M K", note: "Carbon octave continues. Oxygen abundant in universe." },
+                  { el: "Silicon",   sym: "Si", z: 14, oct: "3",   ev: "Massive star — Si burning",  temp: "3B K",  note: "Third octave. Last major burning stage before collapse." },
+                  { el: "Iron",      sym: "Fe", z: 26, oct: "4",   ev: "Massive star core — ceiling", temp: "8B K", note: "B(Fe) = 8.8 MeV/nucleon — maximum. Λ curve inverts here." },
+                  { el: "Gold",      sym: "Au", z: 79, oct: "6",   ev: "Neutron star merger (r-process)", temp: "10¹² K", note: "Beyond octave ceiling. Requires collapsed-star collision." },
+                  { el: "Uranium",   sym: "U",  z: 92, oct: "7",   ev: "Neutron star merger (r-process)", temp: "10¹² K", note: "Near Russell's 9th octave peak. Radioactively unstable." },
+                ].map(row => (
+                  <div key={row.sym} className="grid grid-cols-[2rem_3.5rem_1fr] gap-2 px-4 py-3 text-xs items-start hover:bg-slate-800/20 transition-colors">
+                    <span className="font-mono text-amber-400 font-bold pt-0.5">{row.sym}</span>
+                    <div className="space-y-0.5">
+                      <div className="text-slate-200 font-medium">{row.el}</div>
+                      <div className="text-[10px] font-mono text-slate-600">Z={row.z} · Oct {row.oct}</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-slate-300">{row.ev}</div>
+                      <div className="text-[10px] text-slate-500 leading-4">{row.note}
+                        {row.temp !== "—" && <span className="ml-1 text-cyan-700">· {row.temp}</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p>
+              Iron (Fe, Z=26, Octave 4) is the critical milestone. Its binding energy per
+              nucleon is the highest of any element — 8.8 MeV/nucleon. This is the maximum
+              Λ achievable through exothermic compression. Fusing beyond iron requires more
+              energy input than is released — the compression state curve inverts. A star's
+              core, having reached iron, can no longer generate outward pressure. Gravitational
+              collapse follows. This is not a failure — it is the universe's mechanism for
+              creating the conditions (supernova shockwave, neutron star merger) that push
+              matter into octaves 6–9: gold, platinum, uranium, and the heavy elements.
+            </p>
+            <p>
+              In NexusOS terms: iron is the WDM band ceiling for natural stellar evolution.
+              The elements beyond it required the most extreme compression events in observable
+              physics. They are rare precisely because the universe generates those conditions
+              rarely. Russell predicted this geometric scarcity from wave compression principles
+              alone — decades before nucleosynthesis theory was formalised (Burbidge et al., 1957).
+            </p>
+            <p>
+              The implication for the Theory of Compression States: matter is not a separate
+              domain from information. Both are compression states of the same primordial oscillation,
+              differing only in their position on the Λ continuum. The periodic table is a
+              physical proof of the compression state ladder, observable in every laboratory
+              on Earth.
+            </p>
+          </Section>
+
+          <Section n="7" title="Character Encoding as Compression State Assignment">
+
             <p>
               The CE_TABLE maps each ASCII character (0–127) to a unique compression state:
             </p>
@@ -243,7 +330,7 @@ export default function PaperPage() {
             </p>
           </Section>
 
-          <Section n="7" title="Hardware Verification Protocol">
+          <Section n="8" title="Hardware Verification Protocol">
             <p>
               Theoretical predictions of equations (4)–(12) are being verified by two hardware
               instruments constructed in Australia, 2026:
@@ -269,7 +356,7 @@ export default function PaperPage() {
             </p>
           </Section>
 
-          <Section n="8" title="Discussion — Kardashev Type I Pathway">
+          <Section n="9" title="Discussion — Kardashev Type I Pathway">
             <p>
               Kardashev (1964) defined Type I civilisation as one that harnesses all energy
               available on its host planet (~10¹⁶ W). The Theory of Compression States
@@ -297,7 +384,7 @@ export default function PaperPage() {
             </p>
           </Section>
 
-          <Section n="9" title="References">
+          <Section n="10" title="References">
             <div className="space-y-2 text-xs text-slate-500">
               {[
                 "Maxwell, J.C. (1865). A Dynamical Theory of the Electromagnetic Field. Phil. Trans. R. Soc. Lond.",
@@ -308,6 +395,9 @@ export default function PaperPage() {
                 "Shannon, C.E. (1948). A Mathematical Theory of Communication. Bell System Technical Journal.",
                 "Russell, W. (1926). The Universal One. University of Science and Philosophy.",
                 "Tesla, N. (1894). U.S. Patent 512,340 — Coil for Electro-Magnets. Bifilar winding.",
+                "Bethe, H. (1939). Energy Production in Stars. Physical Review 55(1), 434–456.",
+                "Burbidge, E.M., Burbidge, G.R., Fowler, W.A., Hoyle, F. (1957). Synthesis of the Elements in Stars. Reviews of Modern Physics 29(4), 547–650. (B²FH)",
+                "Abbott, B.P. et al. — LIGO/Virgo. (2017). GW170817: Observation of Gravitational Waves from a Binary Neutron Star Inspiral. Physical Review Letters 119, 161101. r-process nucleosynthesis confirmed.",
                 "AIP Applied Physics Letters 127, 211102 (2025). Visualization and selective manipulation of sub-terahertz whispering gallery modes.",
                 "arXiv:2606.02238 (June 2025). Sub-cycle field-driven dynamical Berry phase in solids.",
                 "Kardashev, N.S. (1964). Transmission of Information by Extraterrestrial Civilizations. Soviet Astronomy.",
