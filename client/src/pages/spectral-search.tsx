@@ -121,7 +121,10 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default function SpectralSearchPage() {
-  const [query, setQuery] = useState("");
+  const initialQuery = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("q") ?? ""
+    : "";
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searched, setSearched] = useState(false);
 
