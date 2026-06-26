@@ -631,9 +631,9 @@ export default function WavelengthLangPage() {
 
             {/* Type system — bands */}
             <div className="border border-white/10 rounded-xl p-5" style={{ background: "rgba(255,255,255,0.01)" }}>
-              <div className="text-white/30 text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2">
+              <h2 className="text-white/30 text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2">
                 <Layers size={11} /> Type System — Spectral Bands
-              </div>
+              </h2>
               <p className="text-white/25 text-[11px] leading-relaxed mb-4">
                 In WavelengthScript, every type has a band. Instead of <code className="text-violet-300">string</code> or <code className="text-violet-300">int</code>,
                 you declare types by their spectral band. The band determines where data lives, who can access it, and what operations are valid on it.
@@ -664,9 +664,9 @@ export default function WavelengthLangPage() {
 
             {/* Syntax reference */}
             <div className="border border-white/10 rounded-xl p-5" style={{ background: "rgba(255,255,255,0.01)" }}>
-              <div className="text-white/30 text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2">
+              <h2 className="text-white/30 text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2">
                 <Code2 size={11} /> Syntax Reference
-              </div>
+              </h2>
               <div className="space-y-3">
                 {SYNTAX.map((s, i) => (
                   <div key={i} className="border border-white/5 rounded-lg p-4" style={{ background: "rgba(255,255,255,0.015)" }}>
@@ -680,9 +680,9 @@ export default function WavelengthLangPage() {
 
             {/* Core operators */}
             <div className="border border-white/10 rounded-xl p-5" style={{ background: "rgba(255,255,255,0.01)" }}>
-              <div className="text-white/30 text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2">
+              <h2 className="text-white/30 text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2">
                 <Zap size={11} /> Core Operators
-              </div>
+              </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {[
                   { op: "@{nm}nm",         desc: "Type prefix — declares wavelength address of a value or function" },

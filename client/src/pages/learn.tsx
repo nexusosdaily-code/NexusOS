@@ -809,7 +809,7 @@ export default function LearnPage() {
         </Link>
         <div className="h-4 w-px bg-white/15" />
         <Radio size={14} className="text-violet-400" />
-        <span className="text-sm font-semibold text-white">WavelengthScript Translator</span>
+        <h1 className="text-sm font-semibold text-white">WavelengthScript Translator</h1>
         <span className="text-xs text-gray-600 hidden sm:block">Any language → WLS → Bytecode → Execute · Browser-native · Zero server</span>
         <div className="ml-auto flex items-center gap-2">
           {timing.translate > 0 && (
@@ -1156,6 +1156,19 @@ export default function LearnPage() {
           </div>
         </div>
       )}
+
+      {/* Related resources — crawlable internal links */}
+      <div className="border-t border-white/8 px-4 py-4 flex-shrink-0 bg-black/20">
+        <div className="text-[9px] text-gray-600 uppercase tracking-widest mb-3">Related Resources</div>
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          <Link href="/wavelength-lang" className="text-[11px] text-violet-400 hover:text-violet-300 transition-colors">WavelengthScript Language Spec</Link>
+          <Link href="/wnsp-vm" className="text-[11px] text-cyan-400 hover:text-cyan-300 transition-colors">WNSP Virtual Machine</Link>
+          <Link href="/hardware-spec" className="text-[11px] text-blue-400 hover:text-blue-300 transition-colors">Hardware Specification</Link>
+          <Link href="/compression-explorer" className="text-[11px] text-green-400 hover:text-green-300 transition-colors">Compression State Explorer</Link>
+          <Link href="/oscillating-quanta" className="text-[11px] text-yellow-400 hover:text-yellow-300 transition-colors">Theory of Compression States</Link>
+          <Link href="/ce-code-writer" className="text-[11px] text-pink-400 hover:text-pink-300 transition-colors">CE→SE Code Writer</Link>
+        </div>
+      </div>
     </div>
   );
 }

@@ -227,7 +227,7 @@ export default function OpenPage() {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Scale size={12} className="text-yellow-400" />
-            <span className="text-yellow-400 text-[10px] uppercase tracking-widest font-bold">AGPL-3.0 — What This License Guarantees</span>
+            <h2 className="text-yellow-400 text-[10px] uppercase tracking-widest font-bold">AGPL-3.0 — What This License Guarantees</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -255,7 +255,7 @@ export default function OpenPage() {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Layers size={12} className="text-white/40" />
-            <span className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Blueprint — Today's Infrastructure → Full Nexus Stack</span>
+            <h2 className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Blueprint — Today's Infrastructure → Full Nexus Stack</h2>
             <span className="text-white/20 text-[9px]">click a layer to expand</span>
           </div>
 
@@ -305,7 +305,7 @@ export default function OpenPage() {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Infinity size={12} className="text-white/40" />
-            <span className="text-white/40 text-[10px] uppercase tracking-widest font-bold">100-Year Build Plan</span>
+            <h2 className="text-white/40 text-[10px] uppercase tracking-widest font-bold">100-Year Build Plan</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -341,7 +341,7 @@ export default function OpenPage() {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <BookOpen size={12} className="text-purple-400" />
-            <span className="text-purple-400 text-[10px] uppercase tracking-widest font-bold">CE→SE — Free Open Encoding Standard</span>
+            <h2 className="text-purple-400 text-[10px] uppercase tracking-widest font-bold">CE→SE — Free Open Encoding Standard</h2>
           </div>
 
           <div className="border border-purple-400/15 rounded-2xl p-6 space-y-4"
@@ -381,7 +381,7 @@ export default function OpenPage() {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <GitBranch size={12} className="text-white/40" />
-            <span className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Source Code — All Public, All AGPL-3.0</span>
+            <h2 className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Source Code — All Public, All AGPL-3.0</h2>
           </div>
 
           <div className="space-y-2">
@@ -406,7 +406,7 @@ export default function OpenPage() {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Users size={12} className="text-white/40" />
-            <span className="text-white/40 text-[10px] uppercase tracking-widest font-bold">How to Contribute</span>
+            <h2 className="text-white/40 text-[10px] uppercase tracking-widest font-bold">How to Contribute</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
