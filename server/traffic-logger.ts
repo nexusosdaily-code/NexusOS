@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { isHoneypotPath } from "./honeypot";
 
 const BOT_PATTERNS: { pattern: RegExp; name: string }[] = [
   { pattern: /assetnote/i,           name: "Assetnote" },
@@ -109,7 +110,12 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
   res.on("finish", () => {
     if (path.startsWith("/api/analytics")) return;
 
-    const statusCode = res.statusCode;
+    const statusCode  = res.statusCode;
+    const isHoneypot  = !!res.locals.honeypotHit || isHoneypotPath(path);
+    const finalBot    = isHoneypot
+      ? `HONEYPOT:${botName ?? "Unknown"}`
+      : (botName ?? null);
+    const finalIsBot  = isHoneypot ? true : isBot;
 
     getDb().then(({ db, trafficLogs }) => {
       db.insert(trafficLogs).values({
@@ -120,8 +126,8 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
         referer:    referer.slice(0, 500) || null,
         country:    country.slice(0, 10) || null,
         ip:         ip.toString().split(",")[0].trim().slice(0, 64) || null,
-        isBot,
-        botName:    botName ?? null,
+        isBot:      finalIsBot,
+        botName:    finalBot,
       }).catch(() => {});
     }).catch(() => {});
   });

@@ -15616,20 +15616,59 @@ wnsp.io | t.me/troglodytememe`,
         LIMIT 60
       `);
 
+      const threats = await db.execute(sql`
+        SELECT
+          path,
+          COALESCE(country, 'Unknown')                        AS country,
+          COALESCE(user_agent, 'Unknown')                     AS user_agent,
+          bot_name,
+          COUNT(*)::int                                       AS hits,
+          MIN(created_at)                                     AS first_seen,
+          MAX(created_at)                                     AS last_seen
+        FROM traffic_logs
+        WHERE bot_name LIKE 'HONEYPOT:%'
+          AND created_at >= NOW() - ${interval}::interval
+        GROUP BY path, country, user_agent, bot_name
+        ORDER BY hits DESC
+        LIMIT 50
+      `);
+
+      const threatSummary = await db.execute(sql`
+        SELECT
+          COUNT(*)::int                                       AS total_probes,
+          COUNT(DISTINCT path)::int                          AS unique_paths,
+          COUNT(DISTINCT COALESCE(country, 'Unknown'))::int  AS countries_probing,
+          COUNT(DISTINCT ip)::int                            AS unique_ips
+        FROM traffic_logs
+        WHERE bot_name LIKE 'HONEYPOT:%'
+          AND created_at >= NOW() - ${interval}::interval
+      `);
+
       res.json({
-        window:     windowParam,
-        totalHits:  (totals as any)?.total_hits  ?? 0,
-        humanHits:  (totals as any)?.human_hits  ?? 0,
-        botHits:    (totals as any)?.bot_hits     ?? 0,
-        topPages:   (topPages  as any[]).map(r => ({ path: r.path, hits: r.hits, humans: r.humans, bots: r.bots })),
-        topBots:    (topBots   as any[]).map(r => ({ name: r.name, hits: r.hits })),
-        countries:  (countries as any[]).map(r => ({ country: r.country, hits: r.hits })),
-        seoIssues:  (seoIssues as any[]).map(r => ({ path: r.path, hits404: r.hits_404 })),
-        recentHits: (recentHits as any[]).map(r => ({
+        window:       windowParam,
+        totalHits:    (totals as any)?.total_hits  ?? 0,
+        humanHits:    (totals as any)?.human_hits  ?? 0,
+        botHits:      (totals as any)?.bot_hits     ?? 0,
+        topPages:     (topPages  as any[]).map(r => ({ path: r.path, hits: r.hits, humans: r.humans, bots: r.bots })),
+        topBots:      (topBots   as any[]).map(r => ({ name: r.name, hits: r.hits })),
+        countries:    (countries as any[]).map(r => ({ country: r.country, hits: r.hits })),
+        seoIssues:    (seoIssues as any[]).map(r => ({ path: r.path, hits404: r.hits_404 })),
+        recentHits:   (recentHits as any[]).map(r => ({
           path: r.path, method: r.method, statusCode: r.status_code,
           country: r.country, isBot: r.is_bot, botName: r.bot_name,
           userAgent: r.user_agent, createdAt: r.created_at,
         })),
+        threats:      (threats as any[]).map(r => ({
+          path: r.path, country: r.country, userAgent: r.user_agent,
+          botName: r.bot_name, hits: r.hits,
+          firstSeen: r.first_seen, lastSeen: r.last_seen,
+        })),
+        threatSummary: {
+          totalProbes:      (threatSummary as any[])[0]?.total_probes     ?? 0,
+          uniquePaths:      (threatSummary as any[])[0]?.unique_paths     ?? 0,
+          countriesProbing: (threatSummary as any[])[0]?.countries_probing ?? 0,
+          uniqueIps:        (threatSummary as any[])[0]?.unique_ips       ?? 0,
+        },
       });
     } catch (e: any) {
       res.status(500).json({ error: e.message });

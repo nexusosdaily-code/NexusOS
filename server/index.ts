@@ -86,6 +86,9 @@ app.use(cookieParser());
 import { trafficLoggerMiddleware } from "./traffic-logger";
 app.use(trafficLoggerMiddleware);
 
+import { honeypotMiddleware } from "./honeypot";
+app.use(honeypotMiddleware);
+
 // Security headers — remove fingerprinting, add basic protections
 app.disable("x-powered-by");
 app.use((_req, res, next) => {
