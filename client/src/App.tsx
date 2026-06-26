@@ -56,6 +56,7 @@ const SpectralDbPage = lazy(() => import("@/pages/spectral-db"));
 const BlockchainPage = lazy(() => import("@/pages/blockchain"));
 const AgentBusPage = lazy(() => import("@/pages/agent-bus"));
 const NexusCommandPage = lazy(() => import("@/pages/nexus-command"));
+const NexusAnalyticsPage = lazy(() => import("@/pages/nexus-analytics"));
 const KernelGenesisPage = lazy(() => import("@/pages/kernel-genesis"));
 const SpectralWorkspacePage = lazy(() => import("@/pages/spectral-workspace"));
 const ChroniclePage = lazy(() => import("@/pages/chronicle"));
@@ -350,6 +351,7 @@ function ProtectedRoutes() {
         <Route path="/blockchain" component={BlockchainPage} />
         <Route path="/agent-bus" component={AgentBusPage} />
         <Route path="/nexus-command" component={NexusCommandPage} />
+        <Route path="/nexus-analytics" component={NexusAnalyticsPage} />
         <Route path="/nexus-explorer" component={NexusExplorerPage} />
         <Route path="/kernel-genesis" component={KernelGenesisPage} />
         <Route path="/spectral-workspace" component={SpectralWorkspacePage} />
@@ -471,6 +473,7 @@ function Router() {
       <Route path="/network" component={NetworkPage} />
       <Route path="/wavelength-lang" component={WavelengthLangPage} />
       <Route path="/nexus-command" component={NexusCommandPage} />
+      <Route path="/nexus-analytics" component={NexusAnalyticsPage} />
       <Route path="/nexus-explorer" component={NexusExplorerPage} />
       <Route path="/wnsp-bridge" component={WnspBridgePage} />
       <Route path="/wnsp/bridge" component={WnspBridgePage} />

@@ -1522,3 +1522,24 @@ export const insertScheduledPostSchema = createInsertSchema(scheduledPosts).omit
 export type InsertScheduledPost = z.infer<typeof insertScheduledPostSchema>;
 export type ScheduledPost = typeof scheduledPosts.$inferSelect;
 export type WSatsTransaction = typeof wSatsTransactions.$inferSelect;
+
+// ── Traffic Logs — NexusOS self-monitoring ────────────────────────────────────
+export const trafficLogs = pgTable("traffic_logs", {
+  id:         varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  path:       text("path").notNull(),
+  method:     text("method").notNull().default("GET"),
+  statusCode: integer("status_code"),
+  userAgent:  text("user_agent"),
+  referer:    text("referer"),
+  country:    text("country"),
+  ip:         text("ip"),
+  isBot:      boolean("is_bot").notNull().default(false),
+  botName:    text("bot_name"),
+  createdAt:  timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  pathIdx:      index("traffic_logs_path_idx").on(t.path),
+  createdAtIdx: index("traffic_logs_created_at_idx").on(t.createdAt),
+  isBotIdx:     index("traffic_logs_is_bot_idx").on(t.isBot),
+  countryIdx:   index("traffic_logs_country_idx").on(t.country),
+}));
+export type TrafficLog = typeof trafficLogs.$inferSelect;

@@ -84,7 +84,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   // Infrastructure / economy pages
   "/nexus-hardware-os", "/orbital-treasury", "/spectral-library",
   // Misc tools / pages
-  "/nexus-command", "/receive", "/portfolio", "/lp-pools",
+  "/nexus-command", "/nexus-analytics", "/receive", "/portfolio", "/lp-pools",
   "/airdrop", "/coinsniper", "/quest",
   "/wsats", "/roadmap", "/how-to-plug-in",
   "/encode", "/replit-template", "/proof", "/stewards", "/poc", "/joint-venture", "/founders",

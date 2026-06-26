@@ -83,6 +83,9 @@ declare module "http" {
 app.use(compression());
 app.use(cookieParser());
 
+import { trafficLoggerMiddleware } from "./traffic-logger";
+app.use(trafficLoggerMiddleware);
+
 // Security headers — remove fingerprinting, add basic protections
 app.disable("x-powered-by");
 app.use((_req, res, next) => {

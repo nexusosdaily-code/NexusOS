@@ -15543,5 +15543,98 @@ wnsp.io | t.me/troglodytememe`,
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // ── GET /api/analytics/traffic — NexusOS self-monitoring (SYSTEM operator) ──
+  app.get("/api/analytics/traffic", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db }        = await import("./db");
+      const { sql }       = await import("drizzle-orm");
+      const windowParam   = (req.query.window as string) || "24h";
+
+      const intervalMap: Record<string, string> = {
+        "1h": "1 hour", "24h": "24 hours", "7d": "7 days", "30d": "30 days",
+      };
+      const interval = intervalMap[windowParam] ?? "24 hours";
+
+      const [totals] = await db.execute(sql`
+        SELECT
+          COUNT(*)::int                                         AS total_hits,
+          SUM(CASE WHEN is_bot = false THEN 1 ELSE 0 END)::int AS human_hits,
+          SUM(CASE WHEN is_bot = true  THEN 1 ELSE 0 END)::int AS bot_hits
+        FROM traffic_logs
+        WHERE created_at >= NOW() - ${interval}::interval
+      `);
+
+      const topPages = await db.execute(sql`
+        SELECT
+          path,
+          COUNT(*)::int                                         AS hits,
+          SUM(CASE WHEN is_bot = false THEN 1 ELSE 0 END)::int AS humans,
+          SUM(CASE WHEN is_bot = true  THEN 1 ELSE 0 END)::int AS bots
+        FROM traffic_logs
+        WHERE created_at >= NOW() - ${interval}::interval
+        GROUP BY path
+        ORDER BY hits DESC
+        LIMIT 30
+      `);
+
+      const topBots = await db.execute(sql`
+        SELECT bot_name AS name, COUNT(*)::int AS hits
+        FROM traffic_logs
+        WHERE is_bot = true
+          AND bot_name IS NOT NULL
+          AND created_at >= NOW() - ${interval}::interval
+        GROUP BY bot_name
+        ORDER BY hits DESC
+        LIMIT 20
+      `);
+
+      const countries = await db.execute(sql`
+        SELECT COALESCE(country, 'Unknown') AS country, COUNT(*)::int AS hits
+        FROM traffic_logs
+        WHERE created_at >= NOW() - ${interval}::interval
+        GROUP BY country
+        ORDER BY hits DESC
+        LIMIT 30
+      `);
+
+      const seoIssues = await db.execute(sql`
+        SELECT path, COUNT(*)::int AS hits_404
+        FROM traffic_logs
+        WHERE status_code = 404
+          AND is_bot = false
+          AND created_at >= NOW() - ${interval}::interval
+        GROUP BY path
+        ORDER BY hits_404 DESC
+        LIMIT 20
+      `);
+
+      const recentHits = await db.execute(sql`
+        SELECT path, method, status_code, country, is_bot, bot_name, user_agent, created_at
+        FROM traffic_logs
+        WHERE created_at >= NOW() - ${interval}::interval
+        ORDER BY created_at DESC
+        LIMIT 60
+      `);
+
+      res.json({
+        window:     windowParam,
+        totalHits:  (totals as any)?.total_hits  ?? 0,
+        humanHits:  (totals as any)?.human_hits  ?? 0,
+        botHits:    (totals as any)?.bot_hits     ?? 0,
+        topPages:   (topPages  as any[]).map(r => ({ path: r.path, hits: r.hits, humans: r.humans, bots: r.bots })),
+        topBots:    (topBots   as any[]).map(r => ({ name: r.name, hits: r.hits })),
+        countries:  (countries as any[]).map(r => ({ country: r.country, hits: r.hits })),
+        seoIssues:  (seoIssues as any[]).map(r => ({ path: r.path, hits404: r.hits_404 })),
+        recentHits: (recentHits as any[]).map(r => ({
+          path: r.path, method: r.method, statusCode: r.status_code,
+          country: r.country, isBot: r.is_bot, botName: r.bot_name,
+          userAgent: r.user_agent, createdAt: r.created_at,
+        })),
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   return httpServer;
 }
