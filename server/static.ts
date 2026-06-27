@@ -38,6 +38,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/",
   "/auth",
   "/contact",
+  "/labs",
   // Funding & campaign
   "/crowdfund", "/fund", "/indiegogo", "/campaign", "/evidence",
   "/nxt-campaign",

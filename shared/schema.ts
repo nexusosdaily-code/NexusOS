@@ -1543,3 +1543,26 @@ export const trafficLogs = pgTable("traffic_logs", {
   countryIdx:   index("traffic_logs_country_idx").on(t.country),
 }));
 export type TrafficLog = typeof trafficLogs.$inferSelect;
+
+// ── Lab Nodes — Engineering labs joining the WNSP network ────────────────────
+// No capital — capabilities only. AGPL-3.0 is the authority.
+export const labNodes = pgTable("lab_nodes", {
+  id:               varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  name:             text("name").notNull(),
+  country:          text("country").notNull(),
+  nodeType:         text("node_type").notNull().default("lab"), // lab | institution | independent | network_hub
+  capabilities:     text("capabilities").array().notNull().default(sql`'{}'::text[]`),
+  contactEmail:     text("contact_email").notNull(),
+  message:          text("message"),
+  psiChannel:       text("psi_channel").notNull(),
+  agplAcknowledged: boolean("agpl_acknowledged").notNull().default(false),
+  status:           text("status").notNull().default("pending"), // pending | active
+  createdAt:        timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  statusIdx:  index("lab_nodes_status_idx").on(t.status),
+  countryIdx: index("lab_nodes_country_idx").on(t.country),
+}));
+
+export const insertLabNodeSchema = createInsertSchema(labNodes).omit({ id: true, createdAt: true });
+export type InsertLabNode = z.infer<typeof insertLabNodeSchema>;
+export type LabNode = typeof labNodes.$inferSelect;

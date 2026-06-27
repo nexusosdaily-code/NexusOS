@@ -15675,5 +15675,46 @@ wnsp.io | t.me/troglodytememe`,
     }
   });
 
+  // ── Lab Node Registry — WNSP engineering lab onboarding ──────────────────────
+  function assignPsiChannel(name: string, country: string): string {
+    const charSum = (s: string) => s.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    const wdm = charSum(name) % 256;
+    const oam = (charSum(country) % 50) + 1;
+    const pol = charSum(name + country) % 2 === 0 ? "H" : "V";
+    return `\u03a8(${wdm},${oam},${pol})`;
+  }
+
+  app.get("/api/labs", async (_req: Request, res: Response) => {
+    try {
+      const nodes = await storage.getLabNodes("active");
+      res.json({ nodes });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/labs/register", async (req: Request, res: Response) => {
+    try {
+      const { name, country, nodeType, capabilities, contactEmail, message, agplAcknowledged } = req.body;
+      if (!name || !country || !contactEmail) {
+        return res.status(400).json({ error: "name, country, and contactEmail are required" });
+      }
+      if (!agplAcknowledged) {
+        return res.status(400).json({ error: "AGPL-3.0 acknowledgment is required" });
+      }
+      const psiChannel = assignPsiChannel(String(name), String(country));
+      const node = await storage.registerLabNode({
+        name:             String(name).trim(),
+        country:          String(country).trim(),
+        nodeType:         nodeType || "lab",
+        capabilities:     Array.isArray(capabilities) ? capabilities : [],
+        contactEmail:     String(contactEmail).trim().toLowerCase(),
+        message:          message ? String(message).trim() : null,
+        psiChannel,
+        agplAcknowledged: true,
+        status:           "pending",
+      });
+      res.json({ node });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   return httpServer;
 }

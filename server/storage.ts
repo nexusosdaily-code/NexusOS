@@ -25,6 +25,7 @@ import {
   type TransmissionReportRow, type InsertTransmissionReport,
   type GovernanceParam, type GovernanceProposal, type GovernanceVote,
   type TelegramVideo, type InsertTelegramVideo,
+  labNodes, type LabNode, type InsertLabNode,
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
@@ -189,6 +190,11 @@ export interface IStorage {
   tallyGovernanceProposal(proposalId: number): Promise<GovernanceProposal>;
   executeGovernanceProposal(proposalId: number): Promise<GovernanceProposal>;
   rejectGovernanceProposal(proposalId: number): Promise<GovernanceProposal>;
+
+  // Lab node operations
+  registerLabNode(node: InsertLabNode): Promise<LabNode>;
+  getLabNodes(status?: string): Promise<LabNode[]>;
+  getLabNode(id: string): Promise<LabNode | undefined>;
 }
 
 function generateWalletAddress(): string {
@@ -1289,6 +1295,24 @@ export class DatabaseStorage implements IStorage {
   async getTelegramVideoByFileUniqueId(fileUniqueId: string): Promise<TelegramVideo | undefined> {
     const [video] = await db.select().from(telegramVideos).where(eq(telegramVideos.fileUniqueId, fileUniqueId));
     return video;
+  }
+
+  // ── Lab node operations ──────────────────────────────────────────────────────
+  async registerLabNode(node: InsertLabNode): Promise<LabNode> {
+    const [row] = await db.insert(labNodes).values(node).returning();
+    return row;
+  }
+
+  async getLabNodes(status?: string): Promise<LabNode[]> {
+    if (status) {
+      return db.select().from(labNodes).where(eq(labNodes.status, status)).orderBy(desc(labNodes.createdAt));
+    }
+    return db.select().from(labNodes).orderBy(desc(labNodes.createdAt));
+  }
+
+  async getLabNode(id: string): Promise<LabNode | undefined> {
+    const [row] = await db.select().from(labNodes).where(eq(labNodes.id, id));
+    return row;
   }
 }
 
