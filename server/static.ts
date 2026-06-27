@@ -99,6 +99,8 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/protocol",
   // Legacy redirect paths (SPA handles them in development; server redirects in production)
   "/btc-bridge",
+  // Routes registered in public Router() that were missing from this allowlist
+  "/hardware-treasury",
 ]);
 
 // Only paths where ANY child segment is valid (true dynamic routes).
@@ -291,6 +293,206 @@ export function serveStatic(app: Express) {
 
     // Fall through to static file for wnsp.io and unknown hosts.
     res.sendFile(path.join(distPath, "sitemap.xml"), (err) => {
+      if (err) res.status(404).end();
+    });
+  });
+
+  // ── Host-aware llms.txt ───────────────────────────────────────────────────
+  // Custom domains each get a host-specific llms.txt so AI crawlers visiting
+  // wnsp.dev, snic.io, etc. are told about that domain's own root content.
+  // The main wnsp.io llms.txt is served as a static file from client/public/.
+  const MICROSITE_LLMS: Record<string, string> = {
+    "wnsp.dev": [
+      "# wnsp.dev — WNSP Developer Portal",
+      "",
+      "Build physics-native applications on the Wavelength-Native Spectral Protocol.",
+      "Addresses are wavelengths. Fees are photon energies. CE encoding maps every",
+      "character to a visible-light frequency.",
+      "",
+      "> https://wnsp.dev/",
+      "",
+      "WNSP developer portal. Install nexusos-ce-encoder (npm/pip) and start building",
+      "spectral-native apps using the WNSP VM, WavelengthScript compiler, and CE→SE",
+      "pipeline. AGPL-3.0.",
+      "",
+      "## Key resources on the main site",
+      "",
+      "> https://wnsp.io/wavelength-lang",
+      "> https://wnsp.io/wnsp-vm",
+      "> https://wnsp.io/ce-se-pipeline",
+      "> https://wnsp.io/docs",
+    ].join("\n"),
+
+    "wnsp.blog": [
+      "# wnsp.blog — NexusOS Build Log",
+      "",
+      "Physics updates, protocol milestones, and hardware development notes from the",
+      "NexusOS core team. Follow the construction of a Kardashev Type I civilization OS.",
+      "",
+      "> https://wnsp.blog/",
+      "",
+      "Development blog for NexusOS — the physics-based civilization OS.",
+      "",
+      "## Key resources on the main site",
+      "",
+      "> https://wnsp.io/roadmap",
+      "> https://wnsp.io/hardware-spec",
+      "> https://wnsp.io/proof",
+    ].join("\n"),
+
+    "snic.io": [
+      "# snic.io — SNIC Spectral Network Interface Card",
+      "",
+      "The photonic NIC of 2032. 25,600 orthogonal channels (256 WDM × 50 OAM × 2",
+      "polarisations) mapped to physical hardware lanes. CE lookups execute as physical",
+      "wavelength selections. ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics, not software policy.",
+      "",
+      "> https://snic.io/",
+      "",
+      "SNIC is the hardware layer for WNSP spectral computing. First public disclosure",
+      "2026-05-16. AGPL-3.0.",
+      "",
+      "## Key resources on the main site",
+      "",
+      "> https://wnsp.io/hardware-spec",
+      "> https://wnsp.io/snic",
+      "> https://wnsp.io/crowdfund",
+    ].join("\n"),
+
+    "phr1.io": [
+      "# phr1.io — PHR-1 The First ZERO-G State Device",
+      "",
+      "PHR-1 is the first physical resonator implementing the ZERO-G state.",
+      "Gravitational de-correlation through phase alignment of a 144-turn bifilar coil",
+      "at Lambda Gate resonance frequency. 25 Hardware Founder slots. AGPL-3.0.",
+      "",
+      "> https://phr1.io/",
+      "",
+      "First public disclosure: 2026-05-16.",
+      "",
+      "## Key resources on the main site",
+      "",
+      "> https://wnsp.io/hardware-spec",
+      "> https://wnsp.io/crowdfund",
+      "> https://wnsp.io/hardware-lab",
+    ].join("\n"),
+
+    "lambdagate.io": [
+      "# lambdagate.io — Lambda Gate Λ=hf/c²",
+      "",
+      "The compression equation that describes the universe. Every photon has a",
+      "compression state. Every compression state has a wavelength. Every wavelength",
+      "is an address. Λ=hf/c² unifies computation, communication, and gravity.",
+      "",
+      "> https://lambdagate.io/",
+      "",
+      "Lambda Gate Substrate — the theoretical and physical basis for NexusOS physics.",
+      "",
+      "## Key resources on the main site",
+      "",
+      "> https://wnsp.io/oscillating-quanta",
+      "> https://wnsp.io/compression-explorer",
+      "> https://wnsp.io/proof",
+    ].join("\n"),
+
+    "wavelengthscript.dev": [
+      "# wavelengthscript.dev — WavelengthScript Programming Language",
+      "",
+      "A physics-native programming language where agents live at spectral Ψ addresses,",
+      "messages are photon packets, and computation costs are derived from E=hf.",
+      "Compiles to WNSP bytecode. Runs in the browser-native WNSP VM. AGPL-3.0.",
+      "",
+      "> https://wavelengthscript.dev/",
+      "",
+      "## Key resources on the main site",
+      "",
+      "> https://wnsp.io/wavelength-lang",
+      "> https://wnsp.io/wnsp-vm",
+      "> https://wnsp.io/ce-se-pipeline",
+    ].join("\n"),
+
+    "zerogstate.io": [
+      "# zerogstate.io — ZERO-G State Gravitational De-correlation",
+      "",
+      "The ZERO-G state is achieved through phase alignment of a 144-turn bifilar coil",
+      "at Lambda Gate resonance frequency. When phase coherence is reached, local",
+      "gravitational coupling is measurably reduced. PHR-1 is the first hardware",
+      "implementation. AGPL-3.0, first public disclosure 2026-05-16.",
+      "",
+      "> https://zerogstate.io/",
+      "",
+      "## Key resources on the main site",
+      "",
+      "> https://wnsp.io/hardware-spec",
+      "> https://wnsp.io/proof",
+      "> https://wnsp.io/crowdfund",
+    ].join("\n"),
+
+    "wascii.io": [
+      "# wascii.io — WASCII v2.0 Wave Density Spectral Vector Encoding",
+      "",
+      "WASCII maps every character to a unique compression state in the electromagnetic",
+      "spectrum. 128 spectral bands, 380–780 nm, 3.125 nm per band. Bit-identical",
+      "output across npm and pip. Open encoding standard for physics-native computing.",
+      "",
+      "> https://wascii.io/",
+      "",
+      "Algorithm: CE_TABLE[charCode % 128]. AGPL-3.0.",
+      "",
+      "## Key resources on the main site",
+      "",
+      "> https://wnsp.io/ce-code-writer",
+      "> https://wnsp.io/ce-se-pipeline",
+      "> https://wnsp.io/compression-explorer",
+    ].join("\n"),
+
+    "orbitaltreasury.io": [
+      "# orbitaltreasury.io — Orbital Treasury NXT Circular Economy",
+      "",
+      "The Orbital Treasury is the economic core of NexusOS. All NXT protocol fees",
+      "flow here — never burned. Five governance-controlled distribution buckets:",
+      "Maintenance 35%, Deliverables 25%, Research 20%, Agent Rewards 10%,",
+      "Nexus Charitable Trust 10%. 100% on-chain transparency.",
+      "",
+      "> https://orbitaltreasury.io/",
+      "",
+      "## Key resources on the main site",
+      "",
+      "> https://wnsp.io/nxt-campaign",
+      "> https://wnsp.io/blockchain",
+      "> https://wnsp.io/open",
+    ].join("\n"),
+
+    "555thz.io": [
+      "# 555thz.io — 555 THz The First Unobserved Oscillation",
+      "",
+      "555 THz is green light. The first unobserved oscillation — the moment Λ",
+      "transitioned from unformed to formed. The origin event that the Theory of",
+      "Compression States describes. λ ≈ 540 nm. NexusOS is built on what happened next.",
+      "",
+      "> https://555thz.io/",
+      "",
+      "## Key resources on the main site",
+      "",
+      "> https://wnsp.io/oscillating-quanta",
+      "> https://wnsp.io/compression-explorer",
+      "> https://wnsp.io/proof",
+    ].join("\n"),
+  };
+
+  app.get("/llms.txt", (req: Request, res: Response) => {
+    const host      = req.hostname || (req.headers.host as string) || "";
+    const cleanHost = host.split(":")[0];
+    const bareHost  = cleanHost.startsWith("www.") ? cleanHost.slice(4) : cleanHost;
+
+    const content = MICROSITE_LLMS[bareHost] ?? MICROSITE_LLMS[cleanHost];
+    if (content) {
+      res.status(200).type("text/plain").send(content + "\n");
+      return;
+    }
+
+    // Fall through to static file for wnsp.io and unknown hosts.
+    res.sendFile(path.join(distPath, "llms.txt"), (err) => {
       if (err) res.status(404).end();
     });
   });
