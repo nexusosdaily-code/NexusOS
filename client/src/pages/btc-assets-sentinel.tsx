@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ function fmtTime(ts: string) {
 
 function shortAddr(a: string) { return `${a.slice(0, 10)}…${a.slice(-6)}`; }
 
-const EVENT_ICONS: Record<string, JSX.Element> = {
+const EVENT_ICONS: Record<string, ReactNode> = {
   new_inscription: <Image  className="w-3.5 h-3.5 text-purple-400" />,
   rune_change:     <Coins  className="w-3.5 h-3.5 text-violet-400" />,
   brc20_change:    <Layers className="w-3.5 h-3.5 text-blue-400" />,
@@ -71,7 +71,7 @@ function WalletTag({ wallet }: { wallet: "service" | "anchor" }) {
 
 function Section({
   icon, title, badge, children, defaultOpen = true,
-}: { icon: JSX.Element; title: string; badge?: string | number; children: React.ReactNode; defaultOpen?: boolean }) {
+}: { icon: ReactNode; title: string; badge?: string | number; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <Card className="bg-slate-900/60 border-slate-700/50 mb-3">

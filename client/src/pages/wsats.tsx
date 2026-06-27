@@ -31,21 +31,21 @@ export default function WSatsPage() {
   const [satInput, setSatInput] = useState("");
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
 
-  const { data: pos, isLoading } = useQuery({
+  const { data: pos, isLoading } = useQuery<any>({
     queryKey: ["/api/wsats/positions"],
-    queryFn: () => fetch("/api/wsats/positions", { credentials: "include", headers: getAuthHeaders() }).then(r => r.json()),
+    queryFn: () => fetch("/api/wsats/positions", { credentials: "include", headers: getAuthHeaders() as Record<string,string> }).then(r => r.json()),
     refetchInterval: 30_000,
-  });
+  } as any);
 
-  const { data: summary } = useQuery({
+  const { data: summary } = useQuery<any>({
     queryKey: ["/api/portfolio/summary"],
-    queryFn: () => fetch("/api/portfolio/summary", { credentials: "include", headers: getAuthHeaders() }).then(r => r.json()),
-  });
+    queryFn: () => fetch("/api/portfolio/summary", { credentials: "include", headers: getAuthHeaders() as Record<string,string> }).then(r => r.json()),
+  } as any);
 
-  const { data: pool } = useQuery({
+  const { data: pool } = useQuery<any>({
     queryKey: ["/api/lp/pools"],
-    queryFn: () => fetch("/api/lp/pools", { credentials: "include", headers: getAuthHeaders() }).then(r => r.json()),
-  });
+    queryFn: () => fetch("/api/lp/pools", { credentials: "include", headers: getAuthHeaders() as Record<string,string> }).then(r => r.json()),
+  } as any);
 
   const wsatsPool = Array.isArray(pool) ? pool.find((p: any) => p.poolId === "wsats-nxwv") : null;
 
@@ -62,39 +62,41 @@ export default function WSatsPage() {
   const btcUsd       = Number(summary?.btcUsd ?? 65_000);
   const wsatsUsd     = totalMinted / 100_000_000 * btcUsd;
 
-  const mintMut = useMutation({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mintMut = (useMutation as any)({
     mutationFn: (satAmount: number) =>
       fetch("/api/wsats/mint", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() } as Record<string, string>,
         body: JSON.stringify({ satAmount }),
       }).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d; }),
-    onSuccess: (d) => {
+    onSuccess: (d: any) => {
       toast({ title: "wSATS minted!", description: `${satsFmt(d.wsatsMinted)} wSATS wrapped from ${satsFmt(d.satAmount)} sats` });
       setSatInput("");
       qc.invalidateQueries({ queryKey: ["/api/wsats/positions"] });
       qc.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
     },
     onError: (e: any) => toast({ title: "Mint failed", description: e.message, variant: "destructive" }),
-  });
+  } as any);
 
-  const redeemMut = useMutation({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const redeemMut = (useMutation as any)({
     mutationFn: (positionId: string) =>
       fetch("/api/wsats/redeem", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() } as Record<string, string>,
         body: JSON.stringify({ positionId }),
       }).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d; }),
-    onSuccess: (d) => {
+    onSuccess: (d: any) => {
       toast({ title: "wSATS redeemed!", description: `${satsFmt(d.satsReturned)} sats returned to your Lightning wallet` });
       setRedeemingId(null);
       qc.invalidateQueries({ queryKey: ["/api/wsats/positions"] });
       qc.invalidateQueries({ queryKey: ["/api/portfolio/summary"] });
     },
     onError: (e: any) => { toast({ title: "Redeem failed", description: e.message, variant: "destructive" }); setRedeemingId(null); },
-  });
+  } as any);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-12">

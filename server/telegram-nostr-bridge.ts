@@ -193,7 +193,7 @@ export function startTgNostrBridge() {
   _state.channels = { tg: hasTg, nostr: hasNostr };
 
   if (!hasTg || !hasNostr) {
-    console.log(`${TAG} Skipping — needs TELEGRAM_BOT_TOKEN + NOSTR_NSEC/NPUB (tg:${hasTg} nostr:${hasNostr})`);
+    console.log(`${TAG} Skipping — missing required credentials (tg:${hasTg} nostr:${hasNostr})`);
     return;
   }
 

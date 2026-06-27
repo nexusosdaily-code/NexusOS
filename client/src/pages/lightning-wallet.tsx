@@ -90,7 +90,7 @@ function QueueProgress({ txId }: { txId: number }) {
   });
 
   if (!data) return null;
-  const { paid, total, paidSats, totalSats, items = [] } = data;
+  const { paid, total, paidSats, totalSats, items = [] } = data as any;
   const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
   const allDone = paid >= total && total > 0;
   const failedItems = items.filter((i: any) => i.status === "failed");
@@ -700,22 +700,22 @@ export default function ChannelDashboard() {
   const [stakeAmount, setStakeAmount] = useState("1000000");
   const [stakeDays, setStakeDays]     = useState<7|14|30|90|180|365>(30);
 
-  const { data: status } = useQuery({
+  const { data: status } = useQuery<any>({
     queryKey: ["/api/lightning/status"],
     refetchInterval: 30_000,
   });
 
-  const { data: lnBalance, refetch: refetchBal } = useQuery({
+  const { data: lnBalance, refetch: refetchBal } = useQuery<any>({
     queryKey: ["/api/lightning/balance"],
     refetchInterval: 15_000,
   });
 
-  const { data: nxtData } = useQuery({
+  const { data: nxtData } = useQuery<any>({
     queryKey: ["/api/wallet"],
     refetchInterval: 15_000,
   });
 
-  const { data: spectral } = useQuery({
+  const { data: spectral } = useQuery<any>({
     queryKey: ["/api/spectral/my-canonical"],
     refetchInterval: 60_000,
   });
@@ -740,7 +740,7 @@ export default function ChannelDashboard() {
     refetchInterval: 120_000,
   });
 
-  const { data: lnHistory } = useQuery({
+  const { data: lnHistory } = useQuery<any>({
     queryKey: ["/api/lightning/transactions"],
     enabled: tab === "log",
     refetchInterval: 10_000,
@@ -997,7 +997,7 @@ export default function ChannelDashboard() {
   });
 
   // ── Saved Lightning Address ────────────────────────────────────────────────
-  const { data: savedLnAddrData, refetch: refetchLnAddr } = useQuery({
+  const { data: savedLnAddrData, refetch: refetchLnAddr } = useQuery<any>({
     queryKey: ["/api/user/lightning-address"],
     queryFn: async () => {
       const r = await apiRequest("GET", "/api/user/lightning-address");

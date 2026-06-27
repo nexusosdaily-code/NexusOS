@@ -138,7 +138,7 @@ export async function sendRuneTransfer(
   const wallet = getServiceWallet();
   if (!wallet) throw new Error("BTC_INSCRIPTION_WALLET_WIF not set");
 
-  const feeRate = await getFeeRate("low");
+  const feeRate = await getFeeRate("slow");
   const utxos   = await getUTXOs(wallet.address);
   if (utxos.length === 0) throw new Error("Service wallet has no UTXOs");
 
@@ -204,7 +204,7 @@ export async function mintOneNXWV(): Promise<string> {
   const wallet = getServiceWallet();
   if (!wallet) throw new Error("BTC_INSCRIPTION_WALLET_WIF not set");
 
-  const feeRate       = await getFeeRate("low");
+  const feeRate       = await getFeeRate("slow");
   const confirmedSats = await getConfirmedBalance(wallet.address);
 
   // ── Rune Guard: ONLY use non-Rune-bearing UTXOs as mint inputs ────────────

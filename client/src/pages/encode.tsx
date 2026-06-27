@@ -55,7 +55,7 @@ export default function EncodePage() {
   const [result, setResult]   = useState<ReturnType<typeof ceEncodeClient> | null>(null);
   const [apiResult, setApiResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const debounce = useRef<ReturnType<typeof setTimeout>>();
+  const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   function encode(text: string) {
     if (!text.trim()) { setResult(null); setApiResult(null); return; }

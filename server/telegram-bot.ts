@@ -172,6 +172,7 @@ export async function sendChannelPhoto(imagePath: string, caption: string): Prom
   try {
     const fs   = await import("fs");
     const path = await import("path");
+    // @ts-ignore — formdata-node resolved at runtime
     const { FormData, File } = await import("formdata-node") as any;
     const buf  = fs.default.readFileSync(imagePath);
     const form = new FormData();

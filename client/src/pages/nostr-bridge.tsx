@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAuthHeaders } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -51,7 +51,7 @@ const STATUS_COLORS: Record<string, string> = {
   unknown: "text-amber-400 bg-amber-950/40 border-amber-500/30",
 };
 
-const CMD_ICONS: Record<string, JSX.Element> = {
+const CMD_ICONS: Record<string, ReactNode> = {
   "!invoice": <Zap className="w-3.5 h-3.5 text-yellow-400" />,
   "!buynxt":  <TrendingUp className="w-3.5 h-3.5 text-purple-400" />,
   "!stake":   <Lock className="w-3.5 h-3.5 text-teal-400" />,

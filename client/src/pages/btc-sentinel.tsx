@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +31,7 @@ function fmtTime(ts: string) {
   return "just now";
 }
 
-const EVENT_ICONS: Record<string, JSX.Element> = {
+const EVENT_ICONS: Record<string, ReactNode> = {
   incoming:   <ArrowDownLeft className="w-3.5 h-3.5 text-orange-400" />,
   confirmed:  <CheckCircle2  className="w-3.5 h-3.5 text-green-400" />,
   low_warn:   <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />,

@@ -1,5 +1,5 @@
 import { ExternalLink, Terminal, Cpu, Radio, Zap, Globe, Code2, ArrowRight, Copy, Check, BookOpen, Shield, Waves, Star, Share2 } from "lucide-react";
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 
 // ── CE physics — client-side, instant, no API needed ─────────────────────────
 const CE_MIN = 380, CE_MAX = 780, CE_BANDS = 128, CE_BW = (CE_MAX - CE_MIN) / CE_BANDS;
@@ -30,7 +30,7 @@ function WnspDevTry({ accent }: { accent: string }) {
   const [input, setInput]   = useState("def add(a, b):\n    return a + b");
   const [result, setResult] = useState(() => ceEncodeLocal("def add(a, b):\n    return a + b"));
   const [copied, setCopied] = useState(false);
-  const debounce = useRef<ReturnType<typeof setTimeout>>();
+  const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   function onInput(v: string) {
     setInput(v);
@@ -1063,7 +1063,7 @@ export function FiveFiveFiveLanding() {
 }
 
 // ── Domain map ────────────────────────────────────────────────────────────────
-export const DOMAIN_LANDINGS: Record<string, () => JSX.Element> = {
+export const DOMAIN_LANDINGS: Record<string, () => React.ReactElement> = {
   "wnsp.dev":              WnspDevLanding,
   "www.wnsp.dev":          WnspDevLanding,
   "wnsp.blog":             WnspBlogLanding,

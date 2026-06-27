@@ -302,7 +302,7 @@ function buildInscriptionScript(
 
   ops.push(bitcoin.opcodes.OP_ENDIF);
 
-  return bitcoin.script.compile(ops as any);
+  return Buffer.from(bitcoin.script.compile(ops as any));
 }
 
 // ── Commit + Reveal ───────────────────────────────────────────────────────────

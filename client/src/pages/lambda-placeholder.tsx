@@ -230,7 +230,7 @@ export default function LambdaPlaceholder() {
           <div className="flex items-center gap-4">
             {user && (
               <span className="text-xs text-slate-500 hidden sm:block font-mono" data-testid="text-user-phone">
-                {user.username ?? user.phone}
+                {user.username ?? (user as any).phone}
               </span>
             )}
             <button onClick={logout}

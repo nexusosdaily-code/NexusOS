@@ -21,7 +21,8 @@ async function enrichBatch() {
 
     const ips = rows.map(r => r.ip);
 
-    const resp = await fetch("http://ip-api.com/batch?fields=query,countryCode,status", {
+    // ip-api.com free tier requires HTTP (HTTPS needs a paid plan)
+    const resp = await fetch("http://ip-api.com/batch?fields=query,countryCode,status", { // nosemgrep: react-insecure-request
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify(ips.map(ip => ({ query: ip }))),

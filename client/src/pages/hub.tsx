@@ -1292,7 +1292,7 @@ export default function HubPage() {
       />
 
       {/* Canonical Address Panel — WNSP address linked in WavelengthScript + spectral DB */}
-      <CanonicalAddressPanel username={user.username} />
+      <CanonicalAddressPanel username={user.username ?? ""} />
 
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         {/* Header */}

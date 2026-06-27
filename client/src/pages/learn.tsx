@@ -661,8 +661,8 @@ export default function LearnPage() {
   const [hitBands, setHitBands] = useState<Record<string, number>>({}); // band → hit count
   const [timing, setTiming] = useState({ translate: 0, compile: 0, execute: 0 });
   const [showDropdown, setShowDropdown] = useState(false);
-  const translateTimer = useRef<ReturnType<typeof setTimeout>>();
-  const animTimer = useRef<ReturnType<typeof setTimeout>>();
+  const translateTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const animTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const cancelRef = useRef<{ cancelled: boolean }>({ cancelled: false });
   const logRef = useRef<HTMLDivElement>(null);
 

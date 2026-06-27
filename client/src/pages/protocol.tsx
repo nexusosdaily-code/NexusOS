@@ -385,7 +385,7 @@ result = ce_encode('A')
               className="rounded-xl border p-4 flex items-center gap-3 hover:scale-[1.02] transition-all cursor-pointer group"
               style={{ borderColor: `${l.color}30`, background: `${l.color}08` }}>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${l.color}20` }}>
-                {l.icon ? <l.icon size={16} className="" style={{ color: l.color } as any} /> : <ExternalLink size={14} style={{ color: l.color }} />}
+                {l.icon ? <l.icon {...({ size: 16, className: "", style: { color: l.color } } as any)} /> : <ExternalLink size={14} style={{ color: l.color }} />}
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-white">{l.label}</p>

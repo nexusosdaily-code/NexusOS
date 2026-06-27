@@ -234,7 +234,7 @@ export default function GovernancePage() {
   });
 
   const myBand = physicsData?.channel?.band ?? "USER";
-  const myBandBase = { SYSTEM: 8, KERNEL: 4, USER: 2, GUEST: 1 }[myBand] ?? 1;
+  const myBandBase = ({ SYSTEM: 8, KERNEL: 4, USER: 2, GUEST: 1 } as Record<string, number>)[myBand] ?? 1;
   const canPropose = ["SYSTEM", "KERNEL"].includes(myBand);
   const isSYSTEM = myBand === "SYSTEM";
 

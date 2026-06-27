@@ -16,6 +16,7 @@
 
 import type { Response } from "express";
 
+const HIRO      = "https://api.hiro.so";
 const ORDINALS  = "https://ordinals.com";
 const MEMPOOL   = "https://mempool.space/api";
 const POLL_MS   = 60_000;        // 1-minute poll

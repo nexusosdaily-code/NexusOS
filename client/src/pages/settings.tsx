@@ -321,11 +321,12 @@ export default function SettingsPage() {
   } as any);
 
   const profile = (profileData as any)?.profile;
-  const wdm  = profile?.spectralWdm  ?? user?.spectralWdm  ?? 128;
-  const oam  = profile?.spectralOam  ?? user?.spectralOam  ?? 0;
-  const pol  = profile?.spectralPol  ?? user?.spectralPol  ?? "H";
-  const nm   = profile?.spectralNm   ?? user?.spectralNm   ?? 550;
-  const band = profile?.spectralBand ?? user?.spectralBand ?? "USER";
+  const u = user as any;
+  const wdm  = profile?.spectralWdm  ?? u?.spectralWdm  ?? 128;
+  const oam  = profile?.spectralOam  ?? u?.spectralOam  ?? 0;
+  const pol  = profile?.spectralPol  ?? u?.spectralPol  ?? "H";
+  const nm   = profile?.spectralNm   ?? u?.spectralNm   ?? 550;
+  const band = profile?.spectralBand ?? u?.spectralBand ?? "USER";
   const color = nmToColor(nm);
   const bandColor = BAND_COLORS[band] ?? "#94a3b8";
   const username = profile?.username ?? user?.username ?? "—";

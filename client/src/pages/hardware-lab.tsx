@@ -540,6 +540,12 @@ interface SpectrometerReading {
   warning?: string;
 }
 
+// ── CE wavelength helper ───────────────────────────────────────────────────
+function nmFromChar(ch: string): number {
+  const BASE = 380, BW = 400, BANDS = 128;
+  return BASE + (ch.charCodeAt(0) % BANDS) / BANDS * BW;
+}
+
 // ── Calibration Verifier tab ───────────────────────────────────────────────
 function Calibration() {
   const [char, setChar] = useState("N");

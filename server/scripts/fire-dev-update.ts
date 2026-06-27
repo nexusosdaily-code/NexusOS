@@ -1,6 +1,7 @@
 /**
  * NexusOS development update broadcast — Nostr
  */
+export {};
 const note =
   `⚡ NexusOS Dev Update — June 2026\n\n` +
   `🔷 WNSP•BTC Rune is LIVE on Bitcoin mainnet\n` +
@@ -21,7 +22,7 @@ const note =
   `Stack: Bitcoin Runes · Lightning · Physics-native AMM · WNSP spectral protocol\n\n` +
   `#NexusOS #WNSPBTC #wSATS #NXWV #Bitcoin #Runes #Lightning #DeFi #Nostr`;
 
-async function main() {
+async function fireDevUpdate() {
   console.log("🔮 Publishing dev update to Nostr…");
   try {
     const { publishToNostr } = await import("../nostr-service.js");
@@ -48,4 +49,4 @@ async function main() {
   process.exit(0);
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+fireDevUpdate().catch(e => { console.error(e); process.exit(1); });

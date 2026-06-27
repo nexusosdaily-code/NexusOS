@@ -450,8 +450,8 @@ export async function constructMarketplacePsbt(params: PsbtParams): Promise<{ ps
 
   const psbtBuffer = psbt.toBuffer();
   return {
-    psbtHex: psbtBuffer.toString("hex"),
-    psbtBase64: psbtBuffer.toString("base64"),
+    psbtHex: Buffer.from(psbtBuffer).toString("hex"),
+    psbtBase64: Buffer.from(psbtBuffer).toString("base64"),
   };
 }
 

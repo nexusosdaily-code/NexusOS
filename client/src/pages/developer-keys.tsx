@@ -104,7 +104,8 @@ export default function DeveloperKeysPage() {
 }
 
 function DeveloperKeysInner() {
-  const { token, user } = useAuth();
+  const { user } = useAuth();
+  const token = localStorage.getItem("auth_token") ?? "";
   const { toast } = useToast();
   const qc = useQueryClient();
   const [newKeyName, setNewKeyName] = useState("");

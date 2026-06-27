@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAuthHeaders } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +23,7 @@ function satsFmt(n: number): string {
   return String(n);
 }
 
-const TOKEN_ICONS: Record<string, JSX.Element> = {
+const TOKEN_ICONS: Record<string, ReactNode> = {
   NXT:   <Coins className="w-4 h-4 text-purple-400" />,
   SATS:  <Zap className="w-4 h-4 text-yellow-400" />,
   WNUSD: <span className="text-green-400 text-sm font-bold">$</span>,

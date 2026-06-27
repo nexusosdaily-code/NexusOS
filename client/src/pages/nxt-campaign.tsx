@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAuthHeaders } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -42,7 +42,7 @@ function fmtTime(ts: string) {
   return "just now";
 }
 
-const SLOT_ICONS: Record<number, JSX.Element> = {
+const SLOT_ICONS: Record<number, ReactNode> = {
   0:  <TrendingUp className="w-4 h-4" />,
   1:  <Lock       className="w-4 h-4" />,
   2:  <Coins      className="w-4 h-4" />,
@@ -59,7 +59,7 @@ const SLOT_ICONS: Record<number, JSX.Element> = {
   14: <Atom       className="w-4 h-4" />,
   15: <Layers     className="w-4 h-4" />,
 };
-const SLOT_ICONS_SM: Record<number, JSX.Element> = {
+const SLOT_ICONS_SM: Record<number, ReactNode> = {
   0:  <TrendingUp className="w-3.5 h-3.5" />,
   1:  <Lock       className="w-3.5 h-3.5" />,
   2:  <Coins      className="w-3.5 h-3.5" />,

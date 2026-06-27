@@ -1201,7 +1201,7 @@ export default function MediaLibraryPage() {
         {/* Live Transmissions */}
         <LiveCastsPanel
           onTuneIn={(cast) => setViewerCast(cast)}
-          myUserId={user?.id}
+          myUserId={user?.id as number | undefined}
         />
 
         {/* Media Constitution */}
