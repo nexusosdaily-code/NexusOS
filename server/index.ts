@@ -141,7 +141,7 @@ app.use((req, res, next) => {
       "media-src 'self' blob:",
       connectSrc,
       "worker-src 'self' blob:",
-      "frame-src 'self'",
+      "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
