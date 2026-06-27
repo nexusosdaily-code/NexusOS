@@ -83,8 +83,9 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
 
 export function optionalAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
-  
-  if (!authHeader) {
+  const cookieToken: string | undefined = (req as any).cookies?.auth_token;
+
+  if (!authHeader && !cookieToken) {
     return next();
   }
 

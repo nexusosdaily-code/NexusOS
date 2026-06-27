@@ -37,6 +37,7 @@ const CUSTOM_DOMAIN_HOSTS = new Set<string>([
 const EXACT_PUBLIC_PATHS = new Set<string>([
   "/",
   "/auth",
+  "/contact",
   // Funding & campaign
   "/crowdfund", "/fund", "/indiegogo", "/campaign", "/evidence",
   "/nxt-campaign",
@@ -145,6 +146,73 @@ const CUSTOM_DOMAIN_CANONICAL: Record<string, string> = {
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(__dirname, "public");
+
+  // ── /.well-known — institutional & security discovery files ──────────────
+  // RFC 9116 security.txt — gives security researchers a clear contact channel.
+  // TLM-Audit-Scanner, SecurityResearch, and pathscan all check this file.
+  app.get("/.well-known/security.txt", (_req: Request, res: Response) => {
+    const expires = new Date();
+    expires.setFullYear(expires.getFullYear() + 1);
+    res.status(200).type("text/plain").send(
+      [
+        "# NexusOS Security Contact",
+        "# WNSP Physics-Based Civilization OS",
+        `Contact: mailto:security@wnsp.tech`,
+        `Contact: https://wnsp.tech/contact`,
+        `Expires: ${expires.toISOString()}`,
+        `Canonical: https://wnsp.tech/.well-known/security.txt`,
+        `Policy: https://wnsp.tech/contact`,
+        `Preferred-Languages: en`,
+        `Scope: https://wnsp.tech`,
+        `Acknowledgments: https://wnsp.tech/contact`,
+        "",
+        "# NexusOS is governed under AGPL-3.0.",
+        "# Responsible disclosure is welcomed and acknowledged.",
+      ].join("\n")
+    );
+  });
+
+  // Google Digital Asset Links — answers GoogleAssociationService probes.
+  // Signals the NexusOS Android app package for deep-link verification.
+  // sha256_cert_fingerprints populated when the Android SDK app is published.
+  app.get("/.well-known/assetlinks.json", (_req: Request, res: Response) => {
+    res.status(200).json([
+      {
+        relation: ["delegate_permission/common.handle_all_urls"],
+        target: {
+          namespace: "android_app",
+          package_name: "io.wnsp.nexusos",
+          sha256_cert_fingerprints: [],
+        },
+      },
+      {
+        relation: ["delegate_permission/common.handle_all_urls"],
+        target: {
+          namespace: "android_app",
+          package_name: "io.psivm.nexusos",
+          sha256_cert_fingerprints: [],
+        },
+      },
+    ]);
+  });
+
+  // Apple App Site Association — for iOS Universal Links
+  app.get("/.well-known/apple-app-site-association", (_req: Request, res: Response) => {
+    res.status(200).type("application/json").json({
+      applinks: {
+        apps: [],
+        details: [
+          {
+            appID: "io.wnsp.nexusos",
+            paths: ["*"],
+          },
+        ],
+      },
+      webcredentials: {
+        apps: ["io.wnsp.nexusos"],
+      },
+    });
+  });
   if (!fs.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`,

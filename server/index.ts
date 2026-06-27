@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
 import cookieParser from "cookie-parser";
+import crypto from "crypto";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -89,13 +90,51 @@ app.use(trafficLoggerMiddleware);
 import { honeypotMiddleware } from "./honeypot";
 app.use(honeypotMiddleware);
 
-// Security headers — remove fingerprinting, add basic protections
+// Security headers — remove fingerprinting, add comprehensive protections
 app.disable("x-powered-by");
-app.use((_req, res, next) => {
+app.use((req, res, next) => {
+  // Request tracing — every request gets a unique ID for forensic correlation
+  const requestId = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  res.setHeader("X-Request-ID", requestId);
+
+  // Prevent MIME sniffing
   res.setHeader("X-Content-Type-Options", "nosniff");
+
+  // Framing — allow only same-origin iframes
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
-  res.setHeader("X-XSS-Protection", "1; mode=block");
+
+  // HSTS — force HTTPS for 1 year including subdomains
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+
+  // Referrer — send origin only on cross-origin requests
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  // Disable browser features that NexusOS does not use
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+
+  // Cross-origin isolation — allow popups for OAuth flows but isolate the main context
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+
+  // Content Security Policy — structured but permissive enough for React/Vite SPA
+  // unsafe-inline required for Vite production bootstrap; unsafe-eval required for some React internals
+  res.setHeader(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https:",
+      "media-src 'self' blob:",
+      "connect-src 'self' ws: wss: https:",
+      "worker-src 'self' blob:",
+      "frame-src 'self'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; ")
+  );
+
   next();
 });
 
@@ -126,6 +165,65 @@ app.use((req, res, next) => {
   const target = DOMAIN_ROUTES[host];
   if (target && req.path === "/") return res.redirect(301, target);
   next();
+});
+
+// ── /.well-known — registered early so Vite dev middleware cannot intercept ──
+// RFC 9116 security.txt — gives TLM-Audit-Scanner, pathscan, and SecurityResearch
+// a clear responsible disclosure channel instead of silence.
+app.get("/.well-known/security.txt", (_req, res) => {
+  const expires = new Date();
+  expires.setFullYear(expires.getFullYear() + 1);
+  res.status(200).type("text/plain").send(
+    [
+      "# NexusOS Security Contact",
+      "# WNSP Physics-Based Civilization OS — AGPL-3.0",
+      "Contact: mailto:security@wnsp.tech",
+      "Contact: https://wnsp.tech/contact",
+      `Expires: ${expires.toISOString()}`,
+      "Canonical: https://wnsp.tech/.well-known/security.txt",
+      "Policy: https://wnsp.tech/contact",
+      "Preferred-Languages: en",
+      "Scope: https://wnsp.tech",
+      "Acknowledgments: https://wnsp.tech/contact",
+      "",
+      "# NexusOS is governed under AGPL-3.0.",
+      "# Responsible disclosure is welcomed and acknowledged.",
+    ].join("\n")
+  );
+});
+
+// Google Digital Asset Links — answers GoogleAssociationService probes.
+// Package names for the NexusOS Android SDK (fingerprints added on Play Store publish).
+app.get("/.well-known/assetlinks.json", (_req, res) => {
+  res.status(200).json([
+    {
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: "io.wnsp.nexusos",
+        sha256_cert_fingerprints: [],
+      },
+    },
+    {
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: "io.psivm.nexusos",
+        sha256_cert_fingerprints: [],
+      },
+    },
+  ]);
+});
+
+// Apple App Site Association — iOS Universal Links support
+app.get("/.well-known/apple-app-site-association", (_req, res) => {
+  res.status(200).type("application/json").json({
+    applinks: {
+      apps: [],
+      details: [{ appID: "io.wnsp.nexusos", paths: ["*"] }],
+    },
+    webcredentials: { apps: ["io.wnsp.nexusos"] },
+  });
 });
 
 // ── Health / startup guard ───────────────────────────────────────────────────
@@ -203,14 +301,14 @@ if (process.env.NODE_ENV !== "production") {
 
 app.use(
   express.json({
-    limit: "150mb",
+    limit: "10mb",
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   }),
 );
 
-app.use(express.urlencoded({ extended: false, limit: "150mb" }));
+app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
