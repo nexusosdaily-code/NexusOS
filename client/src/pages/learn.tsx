@@ -827,7 +827,7 @@ export default function LearnPage() {
 
       {/* Language selector bar */}
       <div className="border-b border-white/10 px-4 py-2 flex items-center gap-2 flex-shrink-0 bg-black/20">
-        <span className="text-[10px] text-gray-600 uppercase tracking-wider mr-1">Source language</span>
+        <h2 className="text-[10px] text-gray-600 uppercase tracking-wider mr-1">Source language</h2>
         {/* Desktop: pill buttons */}
         <div className="hidden sm:flex gap-1">
           {LANGS.map(l => (
@@ -892,9 +892,9 @@ export default function LearnPage() {
         <div className="flex-1 flex flex-col min-h-0 border-t lg:border-t-0 border-white/10">
           <div className="px-4 py-2 border-b border-white/10 flex items-center gap-2 bg-violet-950/20 flex-shrink-0">
             <Radio size={12} className={transpiling ? "text-yellow-400 animate-pulse" : "text-violet-400"} />
-            <span className={`text-[10px] uppercase tracking-wider ${transpiling ? "text-yellow-400" : "text-violet-400"}`}>
+            <h2 className={`text-[10px] uppercase tracking-wider ${transpiling ? "text-yellow-400" : "text-violet-400"}`}>
               WavelengthScript
-            </span>
+            </h2>
             <span className="text-[10px] text-gray-600 ml-1">
               {transpiling
                 ? `${loadProgress.done.toLocaleString()} / ${loadProgress.total.toLocaleString()} lines…`
@@ -993,7 +993,7 @@ export default function LearnPage() {
         <div className={`border-t border-cyan-500/20 bg-black/40 flex-shrink-0 flex flex-col ${compiling ? "h-72" : "max-h-56"}`}>
           <div className="px-4 py-2 border-b border-white/10 flex items-center gap-2 bg-black/80 flex-shrink-0">
             <Binary size={12} className={compiling ? "text-yellow-400 animate-pulse" : "text-cyan-400"} />
-            <span className={`text-[10px] uppercase tracking-wider ${compiling ? "text-yellow-400" : "text-cyan-400"}`}>WNSP Bytecode</span>
+            <h2 className={`text-[10px] uppercase tracking-wider ${compiling ? "text-yellow-400" : "text-cyan-400"}`}>WNSP Bytecode</h2>
             <span className="text-[10px] text-gray-600 ml-1">
               {compiling
                 ? `${loadProgress.done.toLocaleString()} / ${loadProgress.total.toLocaleString()} lines…`
@@ -1091,7 +1091,7 @@ export default function LearnPage() {
 
             {/* Spectrum visualiser */}
             <div className="lg:w-56 border-t lg:border-t-0 lg:border-l border-white/10 p-4 flex flex-col gap-2" style={{ background: "#020805" }}>
-              <div className="text-[9px] text-gray-600 uppercase tracking-wider mb-1 font-mono">Spectrum Activity</div>
+              <h3 className="text-[9px] text-gray-600 uppercase tracking-wider mb-1 font-mono">Spectrum Activity</h3>
               {BANDS.map(band => {
                 const count = hitBands[band.label] ?? 0;
                 const maxCount = Math.max(1, ...Object.values(hitBands));
@@ -1159,7 +1159,7 @@ export default function LearnPage() {
 
       {/* Related resources — crawlable internal links */}
       <div className="border-t border-white/8 px-4 py-4 flex-shrink-0 bg-black/20">
-        <div className="text-[9px] text-gray-600 uppercase tracking-widest mb-3">Related Resources</div>
+        <h2 className="text-[9px] text-gray-600 uppercase tracking-widest mb-3">Related Resources</h2>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           <Link href="/wavelength-lang" className="text-[11px] text-violet-400 hover:text-violet-300 transition-colors">WavelengthScript Language Spec</Link>
           <Link href="/wnsp-vm" className="text-[11px] text-cyan-400 hover:text-cyan-300 transition-colors">WNSP Virtual Machine</Link>

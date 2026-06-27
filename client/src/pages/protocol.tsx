@@ -203,7 +203,7 @@ result = ce_encode('A')
 
         {/* ── Core formula ── */}
         <div className="space-y-4">
-          <p className="text-xs font-mono text-slate-600 uppercase tracking-widest">The Formula</p>
+          <h2 className="text-xs font-mono text-slate-600 uppercase tracking-widest">The Formula</h2>
           <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 space-y-6">
 
             <div className="text-center space-y-2">
@@ -229,7 +229,7 @@ result = ce_encode('A')
 
         {/* ── Physics derivation ── */}
         <div className="space-y-4">
-          <p className="text-xs font-mono text-slate-600 uppercase tracking-widest">Physics Derivation</p>
+          <h2 className="text-xs font-mono text-slate-600 uppercase tracking-widest">Physics Derivation</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
               { eq: "E = hf",       label: "Planck's equation",          desc: "Every character has energy. High-frequency characters (SYSTEM band) cost more to transmit. The fee system is physically derived." },
@@ -250,14 +250,14 @@ result = ce_encode('A')
 
         {/* ── Live encoder demo ── */}
         <div className="space-y-3">
-          <p className="text-xs font-mono text-slate-600 uppercase tracking-widest">Live Encoder — Try It</p>
+          <h2 className="text-xs font-mono text-slate-600 uppercase tracking-widest">Live Encoder — Try It</h2>
           <LiveEncoder />
         </div>
 
         {/* ── CE Table ── */}
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-xs font-mono text-slate-600 uppercase tracking-widest">Full CE Lookup Table — 128 bands</p>
+            <h2 className="text-xs font-mono text-slate-600 uppercase tracking-widest">Full CE Lookup Table — 128 bands</h2>
             <input
               value={tableFilter}
               onChange={e => setTableFilter(e.target.value)}
@@ -293,7 +293,7 @@ result = ce_encode('A')
 
         {/* ── Install ── */}
         <div className="space-y-4">
-          <p className="text-xs font-mono text-slate-600 uppercase tracking-widest">Install the Encoder</p>
+          <h2 className="text-xs font-mono text-slate-600 uppercase tracking-widest">Install the Encoder</h2>
 
           <div className="space-y-3">
             {/* npm */}
@@ -350,7 +350,7 @@ result = ce_encode('A')
 
         {/* ── Authority bands ── */}
         <div className="space-y-3">
-          <p className="text-xs font-mono text-slate-600 uppercase tracking-widest">Authority Bands</p>
+          <h2 className="text-xs font-mono text-slate-600 uppercase tracking-widest">Authority Bands</h2>
           <div className="rounded-xl border border-slate-800 overflow-hidden">
             <div className="grid px-4 py-2 border-b border-slate-800 bg-slate-900/60 text-[10px] font-mono uppercase text-slate-600"
               style={{ gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr" }}>

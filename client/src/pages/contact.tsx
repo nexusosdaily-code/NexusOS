@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { Shield, TrendingUp, Code2, Mail, Globe, Lock, CheckCircle, ExternalLink } from "lucide-react";
 
 type Track = "regulatory" | "investment" | "developer" | "security";
@@ -247,6 +248,19 @@ export default function ContactPage() {
                 </form>
               </div>
             )}
+
+            {/* Related resources */}
+            <div className="mt-6 pt-5 border-t border-gray-800">
+              <p className="text-xs text-gray-500 uppercase tracking-widest font-mono mb-3">Related Resources</p>
+              <div className="flex flex-wrap gap-x-5 gap-y-2">
+                <Link href="/developer" className="text-xs text-violet-400 hover:text-violet-300 transition-colors">Developer Docs</Link>
+                <Link href="/wavelength-lang" className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors">WavelengthScript</Link>
+                <Link href="/crowdfund" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">Crowdfund Campaign</Link>
+                <Link href="/hardware-spec" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">Hardware Specification</Link>
+                <Link href="/constitution" className="text-xs text-yellow-400 hover:text-yellow-300 transition-colors">Constitution</Link>
+                <Link href="/protocol" className="text-xs text-orange-400 hover:text-orange-300 transition-colors">Protocol Overview</Link>
+              </div>
+            </div>
 
             {/* Technical facts footer */}
             <div className="mt-6 grid grid-cols-2 gap-4">
