@@ -55,6 +55,86 @@ async function checkWithdrawalLimits(userId: string, username: string, amountSat
   return null;
 }
 
+// ── Swap limits & circuit breaker ────────────────────────────────────────────
+// Speculators will notice the fixed rate (1 NXT = 1,000 sats). When BTC pumps
+// they buy cheap NXT externally and swap for sats here, draining the Lightning
+// pool. These guards stop that before it becomes a problem.
+const SWAP_EXEMPT_USERS         = new Set(["nexus", "leps"]);
+const SWAP_MAX_PER_TX_SATS      = 500_000;   // 500k sats max per single swap
+const SWAP_USER_DAILY_SATS      = 1_000_000; // 1M sats per user per 24h (either direction)
+const SWAP_GLOBAL_CIRCUIT_SATS  = 8_000_000; // 8M sats total NXT→sats outflow per 24h
+const SWAP_ALERT_THRESHOLD_SATS = 300_000;   // alert founder on any swap ≥ 300k sats
+const SWAP_VELOCITY_WINDOW_MS   = 10 * 60_000; // 10-minute velocity window
+const SWAP_VELOCITY_MAX         = 5;           // max 5 swaps per user per 10 min
+
+async function checkSwapLimits(
+  userId: string,
+  username: string,
+  amountSats: number,
+  direction: "to_nxt" | "to_sats"
+): Promise<string | null> {
+  if (SWAP_EXEMPT_USERS.has(username.toLowerCase())) return null;
+
+  // 1. Per-tx cap
+  if (amountSats > SWAP_MAX_PER_TX_SATS)
+    return `Single swap limit is ${SWAP_MAX_PER_TX_SATS.toLocaleString()} sats. Split into smaller amounts.`;
+
+  const { db } = await import("./db");
+  const { lightningTransactions } = await import("../shared/schema");
+  const { sql: _S, and: _a, eq: _eq, gte: _gte, inArray: _in } = await import("drizzle-orm");
+
+  const since24h  = new Date(Date.now() - 86_400_000);
+  const since10m  = new Date(Date.now() - SWAP_VELOCITY_WINDOW_MS);
+  const bothTypes = ["swap_to_nxt", "swap_to_sats"];
+
+  // 2. Velocity — max 5 swaps (either direction) in 10 minutes
+  const [velRow] = await db.select({ cnt: _S<number>`COUNT(*)::int` })
+    .from(lightningTransactions)
+    .where(_a(_eq(lightningTransactions.userId, userId), _gte(lightningTransactions.createdAt, since10m), _in(lightningTransactions.type, bothTypes)));
+  if (Number(velRow?.cnt ?? 0) >= SWAP_VELOCITY_MAX)
+    return `Too many swaps. Maximum ${SWAP_VELOCITY_MAX} swaps per 10 minutes. Please wait.`;
+
+  // 3. Per-user daily cap (both directions combined)
+  const [userRow] = await db.select({ total: _S<string>`COALESCE(SUM(amount_sats), 0)` })
+    .from(lightningTransactions)
+    .where(_a(_eq(lightningTransactions.userId, userId), _gte(lightningTransactions.createdAt, since24h), _in(lightningTransactions.type, bothTypes)));
+  const userUsed = Number(userRow?.total ?? 0);
+  if (userUsed + amountSats > SWAP_USER_DAILY_SATS) {
+    const rem = Math.max(0, SWAP_USER_DAILY_SATS - userUsed);
+    return `Daily swap limit is ${SWAP_USER_DAILY_SATS.toLocaleString()} sats. Used: ${userUsed.toLocaleString()} sats. Remaining: ${rem.toLocaleString()} sats.`;
+  }
+
+  // 4. Global circuit breaker — total NXT→sats outflow in 24h
+  if (direction === "to_sats") {
+    const [globalRow] = await db.select({ total: _S<string>`COALESCE(SUM(amount_sats), 0)` })
+      .from(lightningTransactions)
+      .where(_a(_gte(lightningTransactions.createdAt, since24h), _eq(lightningTransactions.type, "swap_to_sats")));
+    const globalUsed = Number(globalRow?.total ?? 0);
+    if (globalUsed + amountSats > SWAP_GLOBAL_CIRCUIT_SATS) {
+      // Fire immediate Telegram alert and block
+      try {
+        const { sendAdminAlert } = await import("./telegram-bot");
+        await sendAdminAlert(
+          `🚨 SWAP CIRCUIT BREAKER TRIGGERED\n\nGlobal NXT→sats outflow hit ${(globalUsed + amountSats).toLocaleString()} sats in 24h (cap: ${SWAP_GLOBAL_CIRCUIT_SATS.toLocaleString()}).\n\nUser: ${username}\nAttempted: ${amountSats.toLocaleString()} sats\n\nSwap paused until window resets.`
+        );
+      } catch (_) { /* never block on alert failure */ }
+      return `Global daily swap limit reached. NXT→sats swaps paused until the 24-hour window resets. Contact support if urgent.`;
+    }
+  }
+
+  return null;
+}
+
+async function fireLargeSwapAlert(username: string, amountSats: number, direction: string): Promise<void> {
+  if (amountSats < SWAP_ALERT_THRESHOLD_SATS) return;
+  try {
+    const { sendAdminAlert } = await import("./telegram-bot");
+    await sendAdminAlert(
+      `⚡ Large Swap — NexusOS\n\nUser:      ${username}\nDirection: ${direction}\nAmount:    ${amountSats.toLocaleString()} sats (≈ ${(amountSats / 100_000_000 * 65_000).toFixed(2)} USD)\nTime:      ${new Date().toISOString()}`
+    );
+  } catch (_) { /* never block on alert failure */ }
+}
+
 // Call signaling message types
 interface SignalingMessage {
   type: "offer" | "answer" | "ice-candidate" | "call-initiate" | "call-accept" | "call-reject" | "call-end" | "call-busy";
@@ -10390,6 +10470,10 @@ export async function registerRoutes(
     try {
       const { amountSats } = req.body;
       if (!amountSats || amountSats < 100) return res.status(400).json({ error: "Minimum swap: 100 sats" });
+
+      const swapErr = await checkSwapLimits(req.user!.id, req.user!.username, amountSats, "to_nxt");
+      if (swapErr) return res.status(429).json({ error: swapErr });
+
       const lnWallet = await ensureLnWallet(req.user!.id);
       if (lnWallet.satsBalance < amountSats) return res.status(400).json({ error: `Insufficient sats (have ${lnWallet.satsBalance})` });
 
@@ -10423,6 +10507,7 @@ export async function registerRoutes(
       });
 
       await logAction(req, "lightning_swap_to_nxt", "lightning", req.user!.id, { amountSats, nxtAmount });
+      fireLargeSwapAlert(req.user!.username, amountSats, `sats → NXT (${nxtAmount.toFixed(4)} NXT)`).catch(() => {});
       res.json({ ok: true, amountSats, nxtAmount: nxtAmount.toFixed(8), rate: LN_SATS_PER_NXT });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -10433,6 +10518,9 @@ export async function registerRoutes(
       const { nxtAmount } = req.body;
       if (!nxtAmount || nxtAmount < 0.001) return res.status(400).json({ error: "Minimum swap: 0.001 NXT" });
       const amountSats = Math.floor(nxtAmount * LN_SATS_PER_NXT);
+
+      const swapErr = await checkSwapLimits(req.user!.id, req.user!.username, amountSats, "to_sats");
+      if (swapErr) return res.status(429).json({ error: swapErr });
 
       const { db } = await import("./db");
       const { lightningWallets, lightningTransactions, wallets } = await import("../shared/schema");
@@ -10474,6 +10562,7 @@ export async function registerRoutes(
       });
 
       await logAction(req, "lightning_swap_to_sats", "lightning", req.user!.id, { amountSats, nxtAmount });
+      fireLargeSwapAlert(req.user!.username, amountSats, `NXT → sats (${nxtAmount.toFixed(4)} NXT)`).catch(() => {});
 
       // ── Auto-sweep to WoS ────────────────────────────────────────────────────
       // Fire-and-forget after response: fetch invoice from saved LN address → queue
