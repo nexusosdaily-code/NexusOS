@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, bigint, boolean, decimal, jsonb, index, real, serial, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, bigint, boolean, decimal, jsonb, index, real, serial, uniqueIndex, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -1566,3 +1566,25 @@ export const labNodes = pgTable("lab_nodes", {
 export const insertLabNodeSchema = createInsertSchema(labNodes).omit({ id: true, createdAt: true });
 export type InsertLabNode = z.infer<typeof insertLabNodeSchema>;
 export type LabNode = typeof labNodes.$inferSelect;
+
+// ── Build Catalogue — living record of every shipped feature/fix ──────────────
+export const buildCatalogue = pgTable("build_catalogue", {
+  id:          serial("id").primaryKey(),
+  buildDate:   date("build_date").notNull(),
+  title:       text("title").notNull(),
+  description: text("description").notNull(),
+  category:    text("category").notNull(), // Physics|Protocol|Security|Analytics|SEO|UX|Infrastructure|Content|Wallet|Campaign
+  status:      text("status").notNull().default("shipped"),  // shipped|in-progress|planned
+  impact:      text("impact").notNull().default("medium"),   // high|medium|low
+  tags:        text("tags").array().notNull().default(sql`'{}'::text[]`),
+  commitRef:   text("commit_ref"),
+  createdAt:   timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  dateIdx:     index("build_catalogue_date_idx").on(t.buildDate),
+  categoryIdx: index("build_catalogue_category_idx").on(t.category),
+  statusIdx:   index("build_catalogue_status_idx").on(t.status),
+}));
+
+export const insertBuildCatalogueSchema = createInsertSchema(buildCatalogue).omit({ id: true, createdAt: true });
+export type InsertBuildCatalogue = z.infer<typeof insertBuildCatalogueSchema>;
+export type BuildCatalogue = typeof buildCatalogue.$inferSelect;

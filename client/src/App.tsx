@@ -160,6 +160,7 @@ const ProofPage             = lazy(() => import("@/pages/proof"));
 const ShareholdersPage      = lazy(() => import("@/pages/shareholders"));
 const ContactPage           = lazy(() => import("@/pages/contact"));
 const LabsPage              = lazy(() => import("@/pages/labs"));
+const BuildCataloguePage    = lazy(() => import("@/pages/build-catalogue"));
 const StewardsPage          = lazy(() => import("@/pages/stewards"));
 const PocPage               = lazy(() => import("@/pages/poc"));
 const JointVenturePage      = lazy(() => import("@/pages/joint-venture"));
@@ -529,6 +530,7 @@ function Router() {
       <Route path="/shareholders" component={ShareholdersPage} />
       <Route path="/contact" component={ContactPage} />
       <Route path="/labs" component={LabsPage} />
+      <Route path="/build-catalogue" component={BuildCataloguePage} />
       {/* ── Public infrastructure / economy pages — crawlable ── */}
       <Route path="/nexus-hardware-os" component={NexusHardwareOsPage} />
       <Route path="/orbital-treasury" component={OrbitalTreasuryPage} />

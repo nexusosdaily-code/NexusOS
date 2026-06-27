@@ -26,6 +26,7 @@ import {
   type GovernanceParam, type GovernanceProposal, type GovernanceVote,
   type TelegramVideo, type InsertTelegramVideo,
   labNodes, type LabNode, type InsertLabNode,
+  buildCatalogue, type BuildCatalogue, type InsertBuildCatalogue,
 } from "@shared/schema";
 
 const SALT_ROUNDS = 12;
@@ -195,6 +196,12 @@ export interface IStorage {
   registerLabNode(node: InsertLabNode): Promise<LabNode>;
   getLabNodes(status?: string): Promise<LabNode[]>;
   getLabNode(id: string): Promise<LabNode | undefined>;
+
+  // Build catalogue operations
+  addBuild(build: InsertBuildCatalogue): Promise<BuildCatalogue>;
+  getBuilds(filters?: { category?: string; status?: string; limit?: number }): Promise<BuildCatalogue[]>;
+  getBuildsByDateRange(from: string, to: string): Promise<BuildCatalogue[]>;
+  getBuildStats(): Promise<{ total: number; shipped: number; byCategory: Record<string, number> }>;
 }
 
 function generateWalletAddress(): string {
@@ -1313,6 +1320,36 @@ export class DatabaseStorage implements IStorage {
   async getLabNode(id: string): Promise<LabNode | undefined> {
     const [row] = await db.select().from(labNodes).where(eq(labNodes.id, id));
     return row;
+  }
+
+  // ── Build catalogue operations ───────────────────────────────────────────────
+  async addBuild(build: InsertBuildCatalogue): Promise<BuildCatalogue> {
+    const [row] = await db.insert(buildCatalogue).values(build).returning();
+    return row;
+  }
+
+  async getBuilds(filters?: { category?: string; status?: string; limit?: number }): Promise<BuildCatalogue[]> {
+    let q = db.select().from(buildCatalogue).$dynamic();
+    if (filters?.category) q = q.where(eq(buildCatalogue.category, filters.category));
+    if (filters?.status)   q = q.where(eq(buildCatalogue.status, filters.status));
+    q = q.orderBy(desc(buildCatalogue.buildDate), desc(buildCatalogue.id));
+    if (filters?.limit) q = q.limit(filters.limit);
+    return q;
+  }
+
+  async getBuildsByDateRange(from: string, to: string): Promise<BuildCatalogue[]> {
+    return db.select().from(buildCatalogue)
+      .where(and(gte(buildCatalogue.buildDate, from), lte(buildCatalogue.buildDate, to)))
+      .orderBy(desc(buildCatalogue.buildDate), desc(buildCatalogue.id));
+  }
+
+  async getBuildStats(): Promise<{ total: number; shipped: number; byCategory: Record<string, number> }> {
+    const rows = await db.select().from(buildCatalogue);
+    const total = rows.length;
+    const shipped = rows.filter(r => r.status === "shipped").length;
+    const byCategory: Record<string, number> = {};
+    for (const r of rows) byCategory[r.category] = (byCategory[r.category] ?? 0) + 1;
+    return { total, shipped, byCategory };
   }
 }
 

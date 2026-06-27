@@ -15914,5 +15914,37 @@ wnsp.io | t.me/troglodytememe`,
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // ── Build Catalogue — living log of every shipped build ───────────────────────
+  app.get("/api/build-catalogue", async (req, res) => {
+    try {
+      const { category, status, limit } = req.query;
+      const builds = await storage.getBuilds({
+        category: category as string | undefined,
+        status:   status   as string | undefined,
+        limit:    limit ? parseInt(limit as string, 10) : undefined,
+      });
+      res.json(builds);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/build-catalogue/stats", async (_req, res) => {
+    try {
+      const stats = await storage.getBuildStats();
+      res.json(stats);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/build-catalogue", async (req, res) => {
+    const session = await requireAuth(req, res); if (!session) return;
+    const user = await storage.getUser(session.userId);
+    if (!user || !["SYSTEM","KERNEL"].includes((user as any).authorityBand ?? "")) {
+      return void res.status(403).json({ error: "KERNEL authority required" });
+    }
+    try {
+      const build = await storage.addBuild(req.body);
+      res.json(build);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   return httpServer;
 }
