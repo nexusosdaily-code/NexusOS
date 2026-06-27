@@ -73,7 +73,19 @@ function SectionHeading({ icon: Icon, title, accent }: { icon: any; title: strin
 }
 
 export default function StewardsPage() {
-  usePageMeta("/stewards");
+  usePageMeta({
+    title: "Stewards of NexusOS — Founding Declaration",
+    description:
+      "A founding declaration from Te Rata Pou — designating the three stewards entrusted to carry NexusOS forward under AGPL-3.0. Written for civilian infrastructure, not capital.",
+    canonical: "https://wnsp.tech/stewards",
+    ogTitle: "Stewards of NexusOS — Founding Declaration",
+    ogDescription:
+      "Te Rata Pou's founding declaration designating the three stewards of NexusOS. AGPL-3.0 — no owner, no capital, only physics and the people who will carry it.",
+    ogUrl: "https://wnsp.tech/stewards",
+    twitterTitle: "Stewards of NexusOS — Founding Declaration",
+    twitterDescription:
+      "A founding declaration from Te Rata Pou — the three stewards entrusted to carry NexusOS when he is gone. AGPL-3.0.",
+  });
 
   return (
     <div className="min-h-screen bg-[#040810] text-slate-200">

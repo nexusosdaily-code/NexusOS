@@ -316,7 +316,19 @@ function StepCard({ step, accent }: { step: Step; accent: string }) {
 }
 
 export default function PocPage() {
-  usePageMeta("/poc");
+  usePageMeta({
+    title: "Hardware PoC Scope — PHR-1 & SNIC — NexusOS",
+    description:
+      "7-phase proof-of-concept scope for the PHR-1 Physics Hardware Resonator and SNIC Spectral Node Interface Chip — from component procurement to standing wave measurement, optical bench assembly, and channel separation verification.",
+    canonical: "https://wnsp.tech/poc",
+    ogTitle: "Hardware PoC — PHR-1 Physics Hardware Resonator — NexusOS",
+    ogDescription:
+      "PHR-1 bifilar coil winding, phase control, standing wave measurement. SNIC optical bench assembly and 25,600-channel separation verification. The hardware proof that WNSP spectral addressing is physically real.",
+    ogUrl: "https://wnsp.tech/poc",
+    twitterTitle: "Hardware PoC — PHR-1 & SNIC — NexusOS",
+    twitterDescription:
+      "7-phase hardware proof-of-concept: PHR-1 bifilar resonator → SNIC channel separation → 25,600 orthogonal Ψ channels verified in physical hardware.",
+  });
 
   return (
     <div className="min-h-screen bg-[#040810] text-slate-200">

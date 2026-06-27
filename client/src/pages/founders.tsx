@@ -64,7 +64,19 @@ const FOUNDERS = [
 ];
 
 export default function FoundersPage() {
-  usePageMeta("/founders");
+  usePageMeta({
+    title: "The Founding Architects — NexusOS",
+    description:
+      "Maxwell, Planck, Einstein, Tesla, Russell, Heisenberg, Shannon — seven scientists whose equations form the complete physics stack of NexusOS. Every Ψ channel, fee calculation, and compression state traces directly to their work.",
+    canonical: "https://wnsp.tech/founders",
+    ogTitle: "The Founding Architects — NexusOS",
+    ogDescription:
+      "Seven scientists. Seven equations. One unified physics stack. Maxwell's field equations, Planck's E=hf, Einstein's Λ=hf/c², Tesla's bifilar coil, Russell's octave wave model, quantum Hilbert space, and Shannon's channel capacity — running as executable code.",
+    ogUrl: "https://wnsp.tech/founders",
+    twitterTitle: "The Founding Architects — NexusOS",
+    twitterDescription:
+      "Maxwell → Planck → Einstein → Tesla → Russell → QM → Shannon. Their equations, unified and running as a physics-based civilization OS.",
+  });
 
   return (
     <div className="min-h-screen bg-[#040810] text-slate-200">
@@ -337,6 +349,7 @@ export default function FoundersPage() {
             { href: "/poc",               label: "Hardware PoC Scope" },
             { href: "/compression-explorer", label: "Compression Explorer" },
             { href: "/constitution",       label: "Constitution" },
+            { href: "/contact",            label: "Contact & Collaboration" },
           ].map(l => (
             <Link key={l.href} href={l.href}
               className="block border border-slate-800 rounded-lg px-3 py-2.5 text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-all text-center">
