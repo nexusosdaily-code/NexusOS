@@ -304,7 +304,29 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  
+
+  // ── Block sensitive path probes (git, env, config scanners) ───────────────
+  const BLOCKED_PATH_PATTERNS = [
+    /^\/\.git/i,
+    /^\/\.env/i,
+    /^\/\.htaccess/i,
+    /^\/\.ssh/i,
+    /^\/wp-login\.php/i,
+    /^\/wp-admin/i,
+    /^\/xmlrpc\.php/i,
+    /^\/config\.php/i,
+    /^\/phpinfo\.php/i,
+    /^\/server-status/i,
+    /^\/\.aws/i,
+    /^\/\.config/i,
+  ];
+  app.use((req, res, next) => {
+    if (BLOCKED_PATH_PATTERNS.some(p => p.test(req.path))) {
+      return void res.status(404).end();
+    }
+    next();
+  });
+
   // ============================================
   // WEBSOCKET SIGNALING FOR VIDEO/VOICE CALLS
   // ============================================
