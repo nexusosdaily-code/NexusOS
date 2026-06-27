@@ -94,10 +94,11 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   // Previously missing from allowlist (domain-redirect targets and public routes)
   "/spectral-ide", "/resonance-cavity",
   "/build", "/shareholders",
+  "/contact", "/labs", "/build-catalogue", "/nexus-explorer",
   // Protocol reference (seo-meta.ts canonical page)
   "/protocol",
-  // Legacy redirect paths (SPA handles them)
-  "/spectral-video", "/spectral-uri", "/wnsp-uri", "/visualizer", "/btc-bridge",
+  // Legacy redirect paths (SPA handles them in development; server redirects in production)
+  "/btc-bridge",
 ]);
 
 // Only paths where ANY child segment is valid (true dynamic routes).
@@ -218,6 +219,22 @@ export function serveStatic(app: Express) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
     );
+  }
+
+  // ── Server-side redirects for alias/legacy paths ─────────────────────────
+  // These replace the client-side window.location.replace() pattern so
+  // crawlers that do not execute JavaScript receive a proper 301 redirect
+  // instead of landing on a metadata-only SPA shell.
+  const ALIAS_REDIRECTS: Record<string, string> = {
+    "/spectral-video": "/spectral-db?tab=media",
+    "/spectral-uri":   "/spectral-db?tab=write",
+    "/wnsp-uri":       "/spectral-db?tab=write",
+    "/visualizer":     "/spectral-db?tab=map",
+  };
+  for (const [from, to] of Object.entries(ALIAS_REDIRECTS)) {
+    app.get(from, (_req: Request, res: Response) => {
+      res.redirect(301, to);
+    });
   }
 
   // ── Host-aware robots.txt ─────────────────────────────────────────────────
