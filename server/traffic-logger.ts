@@ -69,6 +69,12 @@ const BOT_PATTERNS: { pattern: RegExp; name: string }[] = [
   { pattern: /brand[\s-]?protect/i,   name: "BrandProtection-Bot" },
   { pattern: /brandwatch/i,           name: "Brandwatch" },
   { pattern: /mention\.com/i,         name: "Mention-Monitor" },
+  { pattern: /undici/i,               name: "Node-Undici-Client" },
+  { pattern: /node-fetch/i,           name: "Node-Fetch-Client" },
+  { pattern: /got\//i,                name: "Got-HTTP-Client" },
+  { pattern: /superagent/i,           name: "SuperAgent-Client" },
+  { pattern: /googleassociationservice/i, name: "GoogleAssociationService" },
+  { pattern: /securityresearch/i,     name: "SecurityResearch" },
 ];
 
 function detectBot(ua: string): { isBot: boolean; botName: string | null } {
