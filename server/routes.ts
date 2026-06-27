@@ -15693,21 +15693,48 @@ wnsp.io | t.me/troglodytememe`,
 
   app.post("/api/labs/register", async (req: Request, res: Response) => {
     try {
+      const ALLOWED_NODE_TYPES  = new Set(["lab", "institution", "independent", "network_hub"]);
+      const ALLOWED_CAPS        = new Set(["hardware", "software", "physics", "education", "manufacturing", "networking"]);
+      const EMAIL_RE            = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const stripHtml           = (s: string) => s.replace(/<[^>]*>/g, "").replace(/[<>]/g, "").trim();
+
       const { name, country, nodeType, capabilities, contactEmail, message, agplAcknowledged } = req.body;
+
       if (!name || !country || !contactEmail) {
         return res.status(400).json({ error: "name, country, and contactEmail are required" });
       }
       if (!agplAcknowledged) {
         return res.status(400).json({ error: "AGPL-3.0 acknowledgment is required" });
       }
-      const psiChannel = assignPsiChannel(String(name), String(country));
+
+      const cleanName    = stripHtml(String(name)).slice(0, 200);
+      const cleanCountry = stripHtml(String(country)).slice(0, 100);
+      const cleanEmail   = String(contactEmail).trim().toLowerCase().slice(0, 254);
+      const cleanMsg     = message ? stripHtml(String(message)).slice(0, 1000) : null;
+      const cleanType    = ALLOWED_NODE_TYPES.has(String(nodeType)) ? String(nodeType) : "lab";
+      const cleanCaps    = Array.isArray(capabilities)
+        ? capabilities.filter((c: unknown) => typeof c === "string" && ALLOWED_CAPS.has(c))
+        : [];
+
+      if (!cleanName)               return res.status(400).json({ error: "Lab name is required" });
+      if (!EMAIL_RE.test(cleanEmail)) return res.status(400).json({ error: "Invalid email address" });
+
+      // IP-based rate limit: max 5 registrations per IP per hour
+      const ip = (req.headers["x-forwarded-for"] as string || req.socket.remoteAddress || "unknown").split(",")[0].trim();
+      const rateLimitOk = await storage.checkRateLimit(ip, "lab_register", 5, 60 * 60 * 1000);
+      if (!rateLimitOk) {
+        return res.status(429).json({ error: "Too many registrations from this address. Try again later." });
+      }
+      await storage.incrementRateLimit(ip, "lab_register", 60 * 60 * 1000);
+
+      const psiChannel = assignPsiChannel(cleanName, cleanCountry);
       const node = await storage.registerLabNode({
-        name:             String(name).trim(),
-        country:          String(country).trim(),
-        nodeType:         nodeType || "lab",
-        capabilities:     Array.isArray(capabilities) ? capabilities : [],
-        contactEmail:     String(contactEmail).trim().toLowerCase(),
-        message:          message ? String(message).trim() : null,
+        name:             cleanName,
+        country:          cleanCountry,
+        nodeType:         cleanType,
+        capabilities:     cleanCaps,
+        contactEmail:     cleanEmail,
+        message:          cleanMsg,
         psiChannel,
         agplAcknowledged: true,
         status:           "pending",

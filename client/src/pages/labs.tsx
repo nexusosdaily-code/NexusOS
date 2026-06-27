@@ -114,6 +114,7 @@ interface LabNode {
   country: string;
   nodeType: string;
   capabilities: string[];
+  contactEmail: string;
   psiChannel: string;
   status: string;
   createdAt: string;
