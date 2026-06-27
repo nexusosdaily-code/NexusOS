@@ -57,11 +57,9 @@ args = "Start application"
 [userenv.shared]
 UV_NO_SYNC = "1"
 PYTHON_DISABLED = "1"
-COINOS_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImE0Y2YwOGU3LWFhMTItNDZkNC05MWJkLWVjYjQwMzIyMzZkYSIsImlhdCI6MTc4MDYwMjU0OH0.Ijs-XiOICm8boZQPiJDajg_JAQRy0Pxek1VgdxBJZPc"
 COINOS_USERNAME = "nexusosmain"
 
 [userenv.development]
-DEV_ACCESS_KEY = "NX-eZY8unnD#sgcnbc4Bvd@"
 
 [deployment]
 run = ["node", "dist/index.cjs"]
