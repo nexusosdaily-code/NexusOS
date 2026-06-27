@@ -86,6 +86,7 @@ app.use(cookieParser());
 
 import { trafficLoggerMiddleware } from "./traffic-logger";
 app.use(trafficLoggerMiddleware);
+import { startGeoIpEnricher } from "./geoip-enricher";
 
 import { honeypotMiddleware } from "./honeypot";
 app.use(honeypotMiddleware);
@@ -751,6 +752,7 @@ async function runStartupMigrations() {
     await delay(4_000);
     startBlockchainAuditor().catch((e) => console.error("[AUDITOR] Boot error:", e));
     startKernelAgents();
+    startGeoIpEnricher();
 
     // Wave 3 — 12s: BTC on-chain workers
     await delay(6_000);

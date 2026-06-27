@@ -15777,6 +15777,75 @@ wnsp.io | t.me/troglodytememe`,
     }
   });
 
+  // ── GET /api/analytics/countries — full country breakdown ──────────────────
+  app.get("/api/analytics/countries", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db }  = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const window  = (req.query.window as string) || "all";
+
+      const intervalMap: Record<string, string | null> = {
+        "1h": "1 hour", "24h": "24 hours", "7d": "7 days", "30d": "30 days", "all": null,
+      };
+      const interval = intervalMap[window] ?? null;
+      const whereClause = interval
+        ? sql`WHERE country IS NOT NULL AND country != 'XX' AND created_at >= NOW() - ${interval}::interval`
+        : sql`WHERE country IS NOT NULL AND country != 'XX'`;
+
+      const rows = await db.execute(sql`
+        SELECT
+          country,
+          COUNT(*)::int                                                            AS hits,
+          COUNT(DISTINCT ip)::int                                                  AS unique_ips,
+          SUM(CASE WHEN is_bot = false THEN 1 ELSE 0 END)::int                    AS human_hits,
+          COUNT(DISTINCT CASE WHEN is_bot = false THEN ip END)::int               AS human_ips,
+          MIN(created_at)                                                          AS first_seen,
+          MAX(created_at)                                                          AS last_seen
+        FROM traffic_logs
+        ${whereClause}
+        GROUP BY country
+        ORDER BY hits DESC
+      `);
+
+      const totalRows = await db.execute(sql`
+        SELECT
+          COUNT(DISTINCT country)::int AS distinct_countries,
+          COUNT(DISTINCT ip)::int      AS total_unique_ips,
+          COUNT(*)::int                AS total_hits
+        FROM traffic_logs
+        WHERE country IS NOT NULL AND country != 'XX'
+      `);
+
+      const pendingRows = await db.execute(sql`
+        SELECT COUNT(DISTINCT ip)::int AS pending_ips
+        FROM traffic_logs
+        WHERE (country IS NULL OR country = '') AND ip IS NOT NULL
+      `);
+
+      res.json({
+        ok: true,
+        window,
+        summary: {
+          distinctCountries: ((totalRows as any).rows as any[])[0]?.distinct_countries ?? 0,
+          totalUniqueIps:    ((totalRows as any).rows as any[])[0]?.total_unique_ips   ?? 0,
+          totalHits:         ((totalRows as any).rows as any[])[0]?.total_hits         ?? 0,
+          pendingEnrichment: ((pendingRows as any).rows as any[])[0]?.pending_ips      ?? 0,
+        },
+        countries: ((rows as any).rows as any[]).map((r: any) => ({
+          country:   r.country,
+          hits:      r.hits,
+          uniqueIps: r.unique_ips,
+          humanHits: r.human_hits,
+          humanIps:  r.human_ips,
+          firstSeen: r.first_seen,
+          lastSeen:  r.last_seen,
+        })),
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // ── Lab Node Registry — WNSP engineering lab onboarding ──────────────────────
   function assignPsiChannel(name: string, country: string): string {
     const charSum = (s: string) => s.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);

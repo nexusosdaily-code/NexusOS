@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { isHoneypotPath } from "./honeypot";
+import { ipCountryCache } from "./geoip-enricher";
 
 const BOT_PATTERNS: { pattern: RegExp; name: string }[] = [
   { pattern: /assetnote/i,           name: "Assetnote" },
@@ -109,8 +110,10 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
 
   const ua        = (req.headers["user-agent"] ?? "") as string;
   const referer   = (req.headers["referer"] ?? req.headers["referrer"] ?? "") as string;
-  const country   = (req.headers["cf-ipcountry"] ?? req.headers["x-country"] ?? "") as string;
   const ip        = (req.headers["cf-connecting-ip"] ?? req.headers["x-forwarded-for"] ?? req.socket?.remoteAddress ?? "") as string;
+  const cleanIp   = ip.toString().split(",")[0].trim();
+  const country   = ipCountryCache.get(cleanIp)
+    ?? (req.headers["cf-ipcountry"] ?? req.headers["x-country"] ?? "") as string;
   const { isBot, botName } = detectBot(ua);
 
   res.on("finish", () => {
