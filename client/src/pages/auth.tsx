@@ -58,7 +58,7 @@ export default function AuthPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
-      if (data.token) localStorage.setItem("auth_token", data.token);
+      // Cookie is set server-side (httpOnly) — no localStorage needed
       toast({ title: "Signed in as Nexus", description: "Welcome back." });
       window.location.href = "/hub";
     } catch (err: any) {
@@ -78,7 +78,7 @@ export default function AuthPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
-      if (data.token) localStorage.setItem("auth_token", data.token);
+      // Cookie is set server-side (httpOnly) — no localStorage needed
       toast({ title: "Signed in as Nexus", description: "Welcome back." });
       window.location.href = "/hub";
     } catch (err: any) {

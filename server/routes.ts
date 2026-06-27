@@ -902,13 +902,22 @@ export async function registerRoutes(
       const session = await storage.createSession(user.id, req.ip, req.headers["user-agent"]);
       await logAction(req, "wif_login", "auth", user.id, {}, "success", "Login via WIF key");
 
+      // Set the same httpOnly cookie as the password login — required for /api/auth/me
+      res.cookie("auth_token", session.token, {
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge:   365 * 24 * 60 * 60 * 1000,
+        path:     "/",
+        secure:   process.env.NODE_ENV === "production",
+      });
+
       const wallet = await storage.getWallet(user.id);
       res.json({
         message: "Login successful",
         user: { id: user.id, username: user.username, email: user.email, role: user.role },
         wallet: wallet ? { address: wallet.address, balance: wallet.balance } : null,
-        token: session.id,
-        expires: session.expiresAt,
+        token:     session.token,
+        expiresAt: session.expiresAt,
       });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -929,13 +938,22 @@ export async function registerRoutes(
       const session = await storage.createSession(user.id, req.ip, req.headers["user-agent"]);
       await logAction(req, "nsec_login", "auth", user.id, {}, "success", "Login via Nostr nsec key");
 
+      // Set the same httpOnly cookie as the password login — required for /api/auth/me
+      res.cookie("auth_token", session.token, {
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge:   365 * 24 * 60 * 60 * 1000,
+        path:     "/",
+        secure:   process.env.NODE_ENV === "production",
+      });
+
       const wallet = await storage.getWallet(user.id);
       res.json({
         message: "Login successful",
         user: { id: user.id, username: user.username, email: user.email, role: user.role },
         wallet: wallet ? { address: wallet.address, balance: wallet.balance } : null,
-        token: session.id,
-        expires: session.expiresAt,
+        token:     session.token,
+        expiresAt: session.expiresAt,
       });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
