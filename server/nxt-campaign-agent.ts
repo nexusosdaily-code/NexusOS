@@ -887,7 +887,7 @@ export async function fireCampaignSlot(slotIndex?: number): Promise<{ slot: Slot
   _state.lastStatus  = anyOk ? `ok — slot ${idx} "${slot.label}"` : `error — ${errMsg}`;
 
   console.log(`${TAG} Slot ${idx} done — TG:${tgRes.ok ? "✓" : "✗"} Nostr:${nsRes.ok ? "✓" : "✗"} Discord:${dcRes.ok ? "✓" : "✗"}`);
-  return { slot, tg: tgRes, nostr: nsRes, discord: dcRes };
+  return { slot, tg: tgRes, nostr: nsRes, discord: dcRes } as any;
 }
 
 // ── Start / stop ─────────────────────────────────────────────────────────────

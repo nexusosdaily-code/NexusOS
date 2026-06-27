@@ -284,7 +284,7 @@ async function authGatewayTick() {
           spectralWdm:  ch.wdm,
           spectralOam:  ch.oam,
           spectralPol:  ch.pol,
-          spectralNm:   ch.nm.toFixed(6),
+          spectralNm:   ch.nm,
           spectralBand: ch.band,
         })
         .where(eq(users.id, u.id));

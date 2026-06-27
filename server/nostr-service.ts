@@ -418,7 +418,7 @@ export async function publishZapGoal(opts: {
   relays?:     string[];
   imageUrl?:   string;
   closedAt?:   number;        // unix timestamp
-}): Promise<{ id: string; relays: string[]; nostrLink: string }> {
+}): Promise<{ id: string; relays: string[]; nostrLink: string; snortLink?: string; njumpLink?: string; primalLink?: string }> {
   const privKey = getPrivKeyBytes();
   const pubkey  = getPublicKey(privKey);
 

@@ -1112,7 +1112,7 @@ export async function registerRoutes(
       // Spectral channel
       const wdm          = user.spectralWdm ?? 100;
       const oam          = user.spectralOam ?? 25;
-      const pol          = user.spectralPolarisation ?? "H";
+      const pol          = user.spectralPol ?? "H";
       const wavelengthNm = parseFloat((380 + (wdm / 256) * 400).toFixed(4));
       const frequencyHz  = (3e8) / (wavelengthNm * 1e-9);
       const energyJ      = 6.626e-34 * frequencyHz;
@@ -2149,7 +2149,7 @@ export async function registerRoutes(
       if (!text) return res.status(400).json({ error: "Missing ?text= parameter" });
       const CE_TABLE: number[] = [];
       for (let i = 0; i < 128; i++) CE_TABLE.push(380 + (i * (780 - 380)) / 128);
-      const chars = [...text].map(ch => {
+      const chars = Array.from(text).map(ch => {
         const code  = ch.codePointAt(0)! % 128;
         const wl    = CE_TABLE[code];
         const bandNm = wl < 450 ? "VIOLET" : wl < 495 ? "BLUE" : wl < 570 ? "GREEN" :
@@ -2168,7 +2168,7 @@ export async function registerRoutes(
         chars,
         summary: {
           avgWavelength: +avgWl.toFixed(3),
-          uniqueBands:   [...new Set(chars.map(c => c.band))],
+          uniqueBands:   Array.from(new Set(chars.map(c => c.band))),
           charCount:     chars.length,
           caller:        { username: req.user!.username, band: req.user!.spectralBand },
         },
@@ -2184,7 +2184,7 @@ export async function registerRoutes(
         ok: true,
         runes: {
           "WNSP•BTC": {
-            runeId:       etch.rune_id ?? "952733:1958",
+            runeId:       (etch as any).rune_id ?? "952733:1958",
             name:         "WNSP•BTC",
             symbol:       "Ψ",
             supply:       "21000000000",
@@ -2286,7 +2286,7 @@ export async function registerRoutes(
         version:   "NexusOS v1.0",
         protocol:  "WNSP v1.0 — Physics-based spectral communication",
         runes: {
-          "WNSP•BTC":           { runeId: etch.rune_id ?? "952733:1958", status: etch.status },
+          "WNSP•BTC":           { runeId: (etch as any).rune_id ?? "952733:1958", status: etch.status },
           "NEXUS•WAVELENGTH":   { runeId: "952596:379",  status: "etched" },
         },
         channels:  25600,
@@ -5028,8 +5028,8 @@ export async function registerRoutes(
       // ── BTC auto-inscription hook — spectral record ──────────────────────────
       import("./btc-bridge-service").then(({ btcBridge }) => {
         btcBridge.triggerFromSpectralRecord({
-          id: record.id, label, psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
-          band: enc.band ?? "CORE", wavelengthNm: String(enc.wavelength_mid_nm ?? 550),
+          id: record.id as any, label, psiChannel: enc.psi_channel ?? "Ψ(0,0,H)",
+          band: enc.band ?? "CORE", wavelengthNm: (enc.wavelength_mid_nm ?? 550) as any,
           contentHash, walletAddress: (req as any).user?.walletAddress,
           triggeredBy: (req as any).user?.username ?? "system",
         }).catch(() => {});
@@ -6959,7 +6959,7 @@ export async function registerRoutes(
               status: stream.status,
               streamType: stream.streamType,
               viewerCount: stream.viewerCount,
-              spectralChannel: stream.spectralChannel,
+              spectralChannel: (stream as any).spectralChannel ?? null,
             },
             href: `/streaming/${stream.id}`,
             createdAt: stream.createdAt,
@@ -6981,7 +6981,7 @@ export async function registerRoutes(
                 status: stream.status,
                 streamType: stream.streamType,
                 viewerCount: stream.viewerCount,
-                spectralChannel: stream.spectralChannel,
+                spectralChannel: (stream as any).spectralChannel ?? null,
                 isOwn: true,
               },
               href: `/streaming/${stream.id}`,
@@ -6998,13 +6998,13 @@ export async function registerRoutes(
           items.push({
             id: `doc-${doc.id}`,
             type: "document",
-            title: doc.title || "Secure Document",
-            preview: doc.content ? doc.content.substring(0, 120) : "Encrypted document",
+            title: (doc as any).title || "Secure Document",
+            preview: (doc as any).content ? (doc as any).content.substring(0, 120) : "Encrypted document",
             meta: {
-              accessLevel: doc.accessLevel,
+              accessLevel: (doc as any).accessLevel,
               lambdaSignature: doc.lambdaSignature,
-              spectralHash: doc.spectralHash,
-              isEncrypted: doc.isEncrypted,
+              spectralHash: (doc as any).spectralHash,
+              isEncrypted: (doc as any).isEncrypted,
             },
             href: `/secure-docs`,
             createdAt: doc.createdAt,
@@ -7020,13 +7020,13 @@ export async function registerRoutes(
             id: `file-${file.id}`,
             type: "upload",
             title: file.originalName || file.filename,
-            preview: `${(file.fileSize / 1024 / 1024).toFixed(2)} MB · ${file.mimeType}`,
+            preview: `${(file.size / 1024 / 1024).toFixed(2)} MB · ${file.mimeType}`,
             meta: {
               mimeType: file.mimeType,
-              fileSize: file.fileSize,
+              fileSize: file.size,
               status: file.status,
-              spectralHash: file.spectralHash,
-              downloadUrl: file.fileUrl,
+              spectralHash: (file as any).spectralHash,
+              downloadUrl: (file as any).fileUrl,
             },
             href: `/workspace/transmission`,
             createdAt: file.createdAt,
@@ -7040,18 +7040,18 @@ export async function registerRoutes(
         if (wallet) {
           const txs = await storage.getTransactions(wallet.id, 10);
           for (const tx of txs) {
-            const isSend = tx.fromAddress === wallet.address;
+            const isSend = (tx as any).fromAddress === wallet.address;
             items.push({
               id: `tx-${tx.id}`,
               type: "transaction",
               title: isSend ? `Sent ${tx.amount} NXT` : `Received ${tx.amount} NXT`,
-              preview: tx.memo || (isSend ? `→ ${tx.toAddress}` : `← ${tx.fromAddress}`),
+              preview: (tx as any).memo || (isSend ? `→ ${(tx as any).toAddress}` : `← ${(tx as any).fromAddress}`),
               meta: {
                 amount: tx.amount,
                 fee: tx.fee,
-                fromAddress: tx.fromAddress,
-                toAddress: tx.toAddress,
-                status: tx.status,
+                fromAddress: (tx as any).fromAddress,
+                toAddress: (tx as any).toAddress,
+                status: (tx as any).status,
                 wavelength: tx.wavelength,
                 energyCost: tx.energyCost,
                 isSend,
@@ -8370,12 +8370,12 @@ export async function registerRoutes(
       // BRC-20 ticks we've deployed/minted
       const brc20Items = await db.select().from(btcInscriptionQueue)
         .where(eq(btcInscriptionQueue.status, "confirmed"));
-      const brc20Ticks = [...new Set(
+      const brc20Ticks = Array.from(new Set(
         brc20Items
           .filter(i => ["BRC20_DEPLOY","BRC20_MINT","BRC20_TRANSFER"].includes(i.eventType))
           .map(i => { try { return JSON.parse(i.inscriptionContent).tick; } catch { return null; } })
           .filter(Boolean)
-      )];
+      ));
 
       res.json({
         address,
@@ -9030,9 +9030,8 @@ export async function registerRoutes(
           amount:       nxt.toFixed(8),
           fee:          "0.00000000",
           type:         "treasury_deposit",
-          status:       "completed",
           metadata:     { reason: "nxt_to_fb_swap", fractalAddress, wnspOut, note: "NXT redirected to Orbital Treasury — not destroyed" },
-        });
+        } as any);
       }
 
       // Queue BRC-20 mint on Fractal Bitcoin (same inscription format)
@@ -9296,7 +9295,7 @@ export async function registerRoutes(
       method,
       (evt: any) => _nostrFinalize(evt, privKey),
       true,        // includeAuthorizationScheme — prefixes "Nostr "
-      body ? JSON.stringify(body) : undefined,
+      body as Record<string, any> | undefined,
     );
     return authHeader;
   }
@@ -10242,7 +10241,7 @@ export async function registerRoutes(
 
       if (tx.status === "completed") return res.json({ paid: true, amountSats: tx.amountSats });
 
-      const paid = await lnCheckInvoice(tx.paymentHash, tx.paymentRequest ?? undefined);
+      const paid = await lnCheckInvoice(tx.paymentHash ?? "", tx.paymentRequest ?? undefined);
       if (paid) {
         const lnWallet = await ensureLnWallet(req.user!.id);
         await db.update(lightningWallets)
@@ -10273,7 +10272,7 @@ export async function registerRoutes(
       let totalSats = 0;
       for (const tx of pending) {
         try {
-          const paid = await lnCheckInvoice(tx.paymentHash, tx.paymentRequest ?? undefined);
+          const paid = await lnCheckInvoice(tx.paymentHash ?? "", tx.paymentRequest ?? undefined);
           if (paid) {
             const lnWallet = await ensureLnWallet(req.user!.id);
             await db.update(lightningWallets)
@@ -10382,7 +10381,7 @@ export async function registerRoutes(
           type:        "lightning_pay",
           label:       `LN Payment: ${amountSats} sats`,
           content:     `LN_PAY:${tx.id}:${amountSats}sats:${req.user!.username}:out`,
-          fromAddress: req.user!.walletAddress ?? req.user!.username,
+          fromAddress: (req.user as any).walletAddress ?? req.user!.username,
           metadata:    { txId: tx.id, amountSats, paymentHash: payHash, userId: req.user!.id },
         }).catch(() => {});
         res.json({ ok: true, paymentHash: payHash, amountSats });
@@ -10468,7 +10467,7 @@ export async function registerRoutes(
   // POST /api/lightning/swap/to-nxt — sats → NXT
   app.post("/api/lightning/swap/to-nxt", authenticate, async (req: Request, res: Response) => {
     try {
-      const { amountSats } = req.body;
+      const amountSats = Math.floor(Number(req.body.amountSats));
       if (!amountSats || amountSats < 100) return res.status(400).json({ error: "Minimum swap: 100 sats" });
 
       const swapErr = await checkSwapLimits(req.user!.id, req.user!.username, amountSats, "to_nxt");
@@ -11305,7 +11304,7 @@ export async function registerRoutes(
         type:        "lightning_p2p",
         label:       `LN P2P: ${amountSats} sats → ${recipientUsername}`,
         content:     `LN_P2P:${req.user!.username}→${recipientUsername}:${amountSats}sats:${memo ?? "p2p"}`,
-        fromAddress: req.user!.walletAddress ?? req.user!.username,
+        fromAddress: (req.user as any).walletAddress ?? req.user!.username,
         metadata:    { amountSats, from: req.user!.username, to: recipientUsername, memo: memo ?? null },
       }).catch(() => {});
       res.json({ ok: true, amountSats, to: recipientUsername });
@@ -11359,13 +11358,13 @@ export async function registerRoutes(
             nxtFeeSent: "0", wnusdMinted: String(wnusdAmt),
             status: "active", colRatioPct: String(colPct),
             btcUsdAtMint: String(btcUsd), stakeId: stake.id,
-          });
+          } as any);
           await tx.insert(wnusdTransactions).values({
             id: randomUUID(), userId: req.user!.id, positionId: posId,
             type: "auto_mint", satsDelta: BigInt(amountSats),
             wnusdDelta: String(wnusdAmt), nxtFee: "0",
             colRatioPct: String(colPct), btcUsdAtTime: String(btcUsd),
-          });
+          } as any);
         });
       } catch (wnusdErr: any) {
         console.warn("[STAKE] WNUSD auto-mint skipped:", wnusdErr.message);
@@ -11376,7 +11375,7 @@ export async function registerRoutes(
         type:        "sats_stake",
         label:       `Sats Stake: ${amountSats} sats × ${lockDays}d`,
         content:     `SATS_STAKE:${stake.id}:${amountSats}sats:${lockDays}days:${req.user!.username}`,
-        fromAddress: req.user!.walletAddress ?? req.user!.username,
+        fromAddress: (req.user as any).walletAddress ?? req.user!.username,
         metadata:    { stakeId: stake.id, amountSats, lockDays, nxtYield },
       }).catch(() => {});
       res.json({ ok: true, stake });
@@ -11424,7 +11423,7 @@ export async function registerRoutes(
       const totalMs   = stake.lockDays * 86_400_000;
       const remainMs  = isEarly ? stake.maturesAt.getTime() - now.getTime() : 0;
       const penaltyFraction = isEarly ? remainMs / totalMs : 0;          // fraction of lock left
-      const fullYield   = parseFloat(stake.nxtYield);
+      const fullYield   = parseFloat(stake.nxtYield ?? "0");
       const penaltyNxt  = parseFloat((fullYield * penaltyFraction).toFixed(8));
       const userNxt     = parseFloat((fullYield - penaltyNxt).toFixed(8));
       const daysRemaining = Math.ceil(remainMs / 86_400_000);
@@ -11480,7 +11479,7 @@ export async function registerRoutes(
               type: "auto_redeem", satsDelta: BigInt(-Number(pos.collateralSats)),
               wnusdDelta: String(-parseFloat(pos.wnusdMinted)), nxtFee: "0",
               colRatioPct: pos.colRatioPct, btcUsdAtTime: String(btcUsd),
-            });
+            } as any);
           });
         }
       } catch (wnusdErr: any) {
@@ -11508,7 +11507,7 @@ export async function registerRoutes(
 
       // Additional yield earned on the extended period (stacks on top of existing)
       const extraYield = ((stake.amountSats / 1000) * (parseFloat(RATES[lockDays]) / 100));
-      const newTotalYield = (parseFloat(stake.nxtYield) + extraYield).toFixed(8);
+      const newTotalYield = (parseFloat(stake.nxtYield ?? "0") + extraYield).toFixed(8);
       const newMaturesAt = new Date(Date.now() + lockDays * 86_400_000);
 
       await db.update(satsStakes).set({
@@ -11610,9 +11609,8 @@ export async function registerRoutes(
           amount:       nxtNeeded.toFixed(8),
           fee:          "0.00000000",
           type:         "treasury_deposit",
-          status:       "completed",
           metadata:     { reason: "nxt_to_rune_swap", btcAddress, runeAmount: runes, note: "NXT → Orbital Treasury; NEXUS•WAVELENGTH queued for BTC delivery" },
-        });
+        } as any);
       }
 
       // Record swap
@@ -11632,8 +11630,8 @@ export async function registerRoutes(
 
       // Telegram alert to admin
       try {
-        const { sendTelegramAlert } = await import("./telegram-bot");
-        await sendTelegramAlert(
+        const { sendAdminAlert } = await import("./telegram-bot");
+        await sendAdminAlert(
           `💜 <b>Rune Swap Request — NXT→NXWV</b>\n\n` +
           `User: ${user.username}\n` +
           `Amount: <b>${runes} NEXUS•WAVELENGTH</b>\n` +
@@ -11706,7 +11704,6 @@ export async function registerRoutes(
           amount:       nxtFee.toFixed(8),
           fee:          "0.00000000",
           type:         "treasury_deposit",
-          status:       "completed",
           metadata:     {
             reason: "pipeline_step2_fee",
             goal,
@@ -11715,7 +11712,7 @@ export async function registerRoutes(
             satsToCredit,
             note: "1% pipeline fee → Orbital Treasury; NXT never burned",
           },
-        });
+        } as any);
       }
 
       // Credit sats to Lightning wallet
@@ -11741,8 +11738,8 @@ export async function registerRoutes(
 
       // Telegram alert
       try {
-        const { sendTelegramAlert } = await import("./telegram-bot");
-        await sendTelegramAlert(
+        const { sendAdminAlert } = await import("./telegram-bot");
+        await sendAdminAlert(
           `⚡ <b>Pipeline Step 2 — NXT→Sats</b>\n\n` +
           `User: ${user.username}\n` +
           `Goal: <b>${goal.toLocaleString()} NXWV</b>\n` +
@@ -11795,9 +11792,8 @@ export async function registerRoutes(
         amount:       nxtOut.toFixed(8),
         fee:          "0.00000000",
         type:         "rune_bridge_credit",
-        status:       "completed",
         metadata:     { reason: "rune_to_nxt_swap", btcTxid, runeAmount: runes },
-      });
+      } as any);
 
       const { db } = await import("./db");
       const { runeSwaps } = await import("../shared/schema");
@@ -11816,8 +11812,8 @@ export async function registerRoutes(
       }).returning();
 
       try {
-        const { sendTelegramAlert } = await import("./telegram-bot");
-        await sendTelegramAlert(
+        const { sendAdminAlert } = await import("./telegram-bot");
+        await sendAdminAlert(
           `💜 <b>Rune Bridge — NXWV→NXT</b>\n\n` +
           `User: ${user.username}\n` +
           `Runes: <b>${runes} NEXUS•WAVELENGTH</b>\n` +
@@ -11914,15 +11910,15 @@ export async function registerRoutes(
         btcAddress:  btcAddress ?? null,
         btcTxid,
         status:      "credited",
-        rate:        String(RUNE_TO_SATS_RATE),
+        rate:        String(RUNE_SWAP_RATE),
         note:        `${runes} NEXUS•WAVELENGTH wrapped → ${satsToCredit.toString()} sats credited`,
         completedAt: new Date(),
       }).returning();
 
       // Telegram alert
       try {
-        const { sendTelegramAlert } = await import("./telegram-bot");
-        await sendTelegramAlert(
+        const { sendAdminAlert } = await import("./telegram-bot");
+        await sendAdminAlert(
           `⚡ <b>Rune Wrap — NXWV→Sats</b>\n\n` +
           `User: ${user.username}\n` +
           `Runes wrapped: <b>${runes.toLocaleString()} NEXUS•WAVELENGTH</b>\n` +
@@ -12033,8 +12029,8 @@ export async function registerRoutes(
 
       // Telegram alert
       try {
-        const { sendTelegramAlert } = await import("./telegram-bot");
-        await sendTelegramAlert(
+        const { sendAdminAlert } = await import("./telegram-bot");
+        await sendAdminAlert(
           `🟣 <b>Pipeline Swap — Sats→NXWV</b>\n\n` +
           `User: ${user.username}\n` +
           `Sats spent: <b>${satsCost.toLocaleString()} sats</b>\n` +
@@ -13083,9 +13079,8 @@ export async function registerRoutes(
           amount:       fee.toFixed(8),
           fee:          "0.00000000",
           type:         "treasury_deposit",
-          status:       "completed",
           metadata:     { reason: "marketplace_fee", listingId, pct: "2.5%", note: "Fee redirected to Orbital Treasury — not destroyed" },
-        });
+        } as any);
       }
 
       // Mark listing sold
@@ -13206,7 +13201,6 @@ export async function registerRoutes(
         // Staked sats breakdown
         stakedSats: totalStakedSats,
         stakedSatsUsd: totalStakedSats * satUsd,
-        treasurySats,
         totalBackingSats,
         circulatingSupply: 0,
         collateralRatioPct: 100 * COL_RATIO,
@@ -13498,7 +13492,7 @@ export async function registerRoutes(
     const COL_RATIO     = 1.5;
     const MINT_FEE_RATE = 0.005; // 0.5% of NXT-equivalent as orbital treasury fee
 
-    async function fetchBtcForWnusd(): Promise<number> {
+    const fetchBtcForWnusd = async (): Promise<number> => {
       try {
         const r = await fetch("https://mempool.space/api/v1/prices",
           { signal: AbortSignal.timeout(4000) });
@@ -13790,7 +13784,7 @@ export async function registerRoutes(
       const isLow = (mp.medium ?? 999) <= 5;
       if (isLow && !_prevFeesWereLow && Date.now() - _lastFeeAlertSentAt > 3_600_000) {
         const msg = `🟢 *Bitcoin fees are low right now!*\n\n⚡ Current rate: *${mp.medium} sat/vB* (Economy: ${mp.slow} sat/vB)\n💡 Good time to withdraw sats to BTC or top up your balance.\n\n→ Open NexusOS Wallet to act now.`;
-        for (const chatId of _feeAlertSubs) {
+        for (const chatId of Array.from(_feeAlertSubs)) {
           try {
             await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
               method: "POST",
@@ -14263,7 +14257,7 @@ export async function registerRoutes(
         .where(eq(airdropClaims.userId, req.user!.id));
 
       // Enrich with campaign title
-      const campaignIds = [...new Set(claims.map(c => c.campaignId))];
+      const campaignIds = Array.from(new Set(claims.map(c => c.campaignId)));
       const camps = campaignIds.length
         ? await db.select({ id: airdropCampaigns.id, title: airdropCampaigns.title, emoji: airdropCampaigns.emoji })
             .from(airdropCampaigns)
@@ -14357,7 +14351,7 @@ export async function registerRoutes(
       // Derive spectral channel for the claim
       const wdm         = req.user!.spectralWdm        ?? 200;
       const oam         = req.user!.spectralOam        ?? 25;
-      const pol         = req.user!.spectralPolarisation ?? "H";
+      const pol         = (req.user as any).spectralPol ?? "H";
       const wavelengthNm = parseFloat((380 + (wdm / 256) * 400).toFixed(4));
       const frequencyHz  = (3e8) / (wavelengthNm * 1e-9);
       const energyJ      = 6.626e-34 * frequencyHz;
@@ -15662,7 +15656,7 @@ wnsp.io | t.me/troglodytememe`,
       };
       const interval = intervalMap[windowParam] ?? "24 hours";
 
-      const [totals] = await db.execute(sql`
+      const _totalsResult = await db.execute(sql`
         SELECT
           COUNT(*)::int                                         AS total_hits,
           SUM(CASE WHEN is_bot = false THEN 1 ELSE 0 END)::int AS human_hits,
@@ -15670,6 +15664,7 @@ wnsp.io | t.me/troglodytememe`,
         FROM traffic_logs
         WHERE created_at >= NOW() - ${interval}::interval
       `);
+      const totals = (_totalsResult as any).rows?.[0] ?? (_totalsResult as any)[0] ?? {};
 
       const topPages = await db.execute(sql`
         SELECT
@@ -15756,25 +15751,25 @@ wnsp.io | t.me/troglodytememe`,
         totalHits:    (totals as any)?.total_hits  ?? 0,
         humanHits:    (totals as any)?.human_hits  ?? 0,
         botHits:      (totals as any)?.bot_hits     ?? 0,
-        topPages:     (topPages  as any[]).map(r => ({ path: r.path, hits: r.hits, humans: r.humans, bots: r.bots })),
-        topBots:      (topBots   as any[]).map(r => ({ name: r.name, hits: r.hits })),
-        countries:    (countries as any[]).map(r => ({ country: r.country, hits: r.hits })),
-        seoIssues:    (seoIssues as any[]).map(r => ({ path: r.path, hits404: r.hits_404 })),
-        recentHits:   (recentHits as any[]).map(r => ({
+        topPages:     ((topPages  as any).rows as any[]).map((r: any) => ({ path: r.path, hits: r.hits, humans: r.humans, bots: r.bots })),
+        topBots:      ((topBots   as any).rows as any[]).map((r: any) => ({ name: r.name, hits: r.hits })),
+        countries:    ((countries as any).rows as any[]).map((r: any) => ({ country: r.country, hits: r.hits })),
+        seoIssues:    ((seoIssues as any).rows as any[]).map((r: any) => ({ path: r.path, hits404: r.hits_404 })),
+        recentHits:   ((recentHits as any).rows as any[]).map((r: any) => ({
           path: r.path, method: r.method, statusCode: r.status_code,
           country: r.country, isBot: r.is_bot, botName: r.bot_name,
           userAgent: r.user_agent, createdAt: r.created_at,
         })),
-        threats:      (threats as any[]).map(r => ({
+        threats:      ((threats as any).rows as any[]).map((r: any) => ({
           path: r.path, country: r.country, userAgent: r.user_agent,
           botName: r.bot_name, hits: r.hits,
           firstSeen: r.first_seen, lastSeen: r.last_seen,
         })),
         threatSummary: {
-          totalProbes:      (threatSummary as any[])[0]?.total_probes     ?? 0,
-          uniquePaths:      (threatSummary as any[])[0]?.unique_paths     ?? 0,
-          countriesProbing: (threatSummary as any[])[0]?.countries_probing ?? 0,
-          uniqueIps:        (threatSummary as any[])[0]?.unique_ips       ?? 0,
+          totalProbes:      ((threatSummary as any).rows as any[])[0]?.total_probes     ?? 0,
+          uniquePaths:      ((threatSummary as any).rows as any[])[0]?.unique_paths     ?? 0,
+          countriesProbing: ((threatSummary as any).rows as any[])[0]?.countries_probing ?? 0,
+          uniqueIps:        ((threatSummary as any).rows as any[])[0]?.unique_ips       ?? 0,
         },
       });
     } catch (e: any) {
