@@ -115,18 +115,30 @@ app.use((req, res, next) => {
   // Cross-origin isolation — allow popups for OAuth flows but isolate the main context
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
 
-  // Content Security Policy — structured but permissive enough for React/Vite SPA
-  // unsafe-inline required for Vite production bootstrap; unsafe-eval required for some React internals
+  // Block Adobe Flash / PDF cross-domain policy files
+  res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
+
+  // Content Security Policy — tightened per environment
+  // Dev:  unsafe-eval allowed (Vite HMR source maps); ws: allowed (Vite HMR websocket)
+  // Prod: unsafe-eval removed; ws: removed (HTTPS only, no plaintext WebSocket needed)
+  const isProd = process.env.NODE_ENV === "production";
+  const scriptSrc = isProd
+    ? "script-src 'self' 'unsafe-inline'"
+    : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+  const connectSrc = isProd
+    ? "connect-src 'self' wss: https:"
+    : "connect-src 'self' ws: wss: https:";
+
   res.setHeader(
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      scriptSrc,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
       "media-src 'self' blob:",
-      "connect-src 'self' ws: wss: https:",
+      connectSrc,
       "worker-src 'self' blob:",
       "frame-src 'self'",
       "object-src 'none'",
@@ -309,6 +321,17 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));
+
+// ── Auth route body guard ─────────────────────────────────────────────────────
+// Login / register payloads are tiny (username + password). Reject anything
+// above 4 KB to make request-flooding and oversized-payload attacks impractical.
+app.use("/api/auth", (req: import("express").Request, res: import("express").Response, next: import("express").NextFunction) => {
+  const raw = (req as any).rawBody as Buffer | undefined;
+  if (raw && raw.length > 4096) {
+    return res.status(413).json({ error: "Payload too large" });
+  }
+  next();
+});
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
