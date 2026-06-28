@@ -15983,5 +15983,105 @@ wnsp.io | t.me/troglodytememe`,
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // ── Spectral Passport ──────────────────────────────────────────────────────
+  app.get("/api/passport", authenticate, async (req, res) => {
+    try {
+      const { db: pdb }       = await import("./db");
+      const { users: usersT, wallets: walletsT, lightningWallets, satsStakes, spectralRecords }
+        = await import("../shared/schema");
+      const { eq: peq, and: pand, desc: pdesc } = await import("drizzle-orm");
+      const userId = req.user!.id;
+
+      const [user] = await pdb.select({
+        spectralNm: usersT.spectralNm, spectralWdm: usersT.spectralWdm,
+        spectralOam: usersT.spectralOam, spectralPol: usersT.spectralPol,
+        spectralBand: usersT.spectralBand,
+      }).from(usersT).where(peq(usersT.id, userId)).limit(1);
+
+      const [wallet] = await pdb.select({ balance: walletsT.balance, address: walletsT.address })
+        .from(walletsT).where(peq(walletsT.userId, userId)).limit(1);
+
+      const [lw] = await pdb.select({ satsBalance: lightningWallets.satsBalance })
+        .from(lightningWallets).where(peq(lightningWallets.userId, userId)).limit(1);
+
+      const stakes = await pdb.select({ amountSats: satsStakes.amountSats })
+        .from(satsStakes).where(pand(peq(satsStakes.userId, userId), peq(satsStakes.status, "active")));
+      const satsStaked = stakes.reduce((acc: bigint, s: any) => acc + BigInt(s.amountSats || 0), 0n);
+
+      const psiChannel = user?.spectralWdm != null
+        ? `Ψ(${user.spectralWdm},${user.spectralOam},${user.spectralPol})`
+        : null;
+
+      let channelActivity: any[] = [];
+      if (psiChannel) {
+        channelActivity = await pdb.select({
+          id: spectralRecords.id, content: spectralRecords.content,
+          label: spectralRecords.label, wavelengthNm: spectralRecords.wavelengthNm,
+          band: spectralRecords.band, createdAt: spectralRecords.createdAt,
+        }).from(spectralRecords)
+          .where(peq(spectralRecords.psiChannel, psiChannel))
+          .orderBy(pdesc(spectralRecords.createdAt))
+          .limit(15);
+      }
+
+      res.json({
+        spectralNm: user?.spectralNm, spectralWdm: user?.spectralWdm,
+        spectralOam: user?.spectralOam, spectralPol: user?.spectralPol,
+        spectralBand: user?.spectralBand, psiChannel,
+        nxtBalance: wallet?.balance?.toString() ?? "0",
+        walletAddress: wallet?.address ?? "",
+        satsBalance: String(lw?.satsBalance ?? 0),
+        satsStaked: satsStaked.toString(),
+        channelActivity,
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/passport/broadcast", authenticate, async (req, res) => {
+    try {
+      const { db: pdb }             = await import("./db");
+      const { users: usersT, spectralRecords } = await import("../shared/schema");
+      const { eq: peq }             = await import("drizzle-orm");
+      const { randomUUID }          = await import("crypto");
+      const userId = req.user!.id;
+      const { message } = req.body;
+      if (!message || typeof message !== "string" || !message.trim())
+        return res.status(400).json({ error: "message required" });
+
+      const [user] = await pdb.select({
+        username: usersT.username, spectralNm: usersT.spectralNm,
+        spectralWdm: usersT.spectralWdm, spectralOam: usersT.spectralOam,
+        spectralPol: usersT.spectralPol, spectralBand: usersT.spectralBand,
+      }).from(usersT).where(peq(usersT.id, userId)).limit(1);
+
+      if (!user?.spectralNm) return res.status(400).json({ error: "No spectral channel assigned" });
+
+      const nm   = parseFloat(String(user.spectralNm));
+      const C    = 299792458;
+      const H    = 6.62607015e-34;
+      const freq = C / (nm * 1e-9);
+      const energy      = H * freq;
+      const lambdaMass  = energy / (C * C);
+      const psiChannel  = `Ψ(${user.spectralWdm},${user.spectralOam},${user.spectralPol})`;
+
+      const [record] = await pdb.insert(spectralRecords).values({
+        id:           randomUUID(),
+        label:        `BROADCAST:${user.username}`,
+        content:      message.trim().slice(0, 280),
+        wavelengthNm: nm.toFixed(4),
+        psiChannel,
+        wdm:          user.spectralWdm!,
+        oam:          user.spectralOam!,
+        polarisation: user.spectralPol!,
+        band:         user.spectralBand ?? "USER",
+        energyJoules: energy.toExponential(6),
+        lambdaMassKg: lambdaMass.toExponential(6),
+        frequencyHz:  freq.toFixed(4),
+      }).returning();
+
+      res.json({ record });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   return httpServer;
 }
