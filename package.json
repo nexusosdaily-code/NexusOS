@@ -10,7 +10,8 @@
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "audit": "node scripts/pre-publish-audit.js"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.18.0",

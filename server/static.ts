@@ -101,6 +101,63 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/btc-bridge",
   // Routes registered in public Router() that were missing from this allowlist
   "/hardware-treasury",
+
+  // ── Batch fix: all routes in App.tsx not previously covered ──────────────
+  // Application shell / navigation
+  "/hub", "/apps",
+  // Version history pages
+  "/v6", "/v7", "/v8", "/v9", "/v10",
+  // Workspace sub-routes
+  "/workspace/analytics", "/workspace/encoding", "/workspace/k1",
+  "/workspace/matrix", "/workspace/orchestration", "/workspace/research",
+  "/workspace/transmission", "/workspace/wavefield", "/workspace/coordinator",
+  // WNSP sub-routes
+  "/wnsp/coordinator", "/wnsp/kernel", "/wnsp-uri", "/wnsp-paper",
+  // Nexus sub-routes
+  "/nexus/dev",
+  // Authenticated app pages (server still needs to return SPA shell, not 404)
+  "/wallet", "/lightning-wallet", "/lightning",
+  "/inbox", "/messages",
+  "/settings",
+  "/friends",
+  "/ledger", "/phonebook", "/directory",
+  "/governance",
+  "/kernel", "/kernel-genesis",
+  "/developer/keys",
+  "/agent-bus",
+  "/streaming",
+  "/transmission",
+  "/media-library",
+  "/p2p-terminal",
+  "/secure-docs",
+  "/social-broadcast",
+  "/telegram-hub",
+  "/stablecoin",
+  "/pricing",
+  "/community",
+  "/communication", "/comms",
+  "/pipeline", "/learn",
+  "/start",
+  "/github",
+  "/sop",
+  // Science & research
+  "/computing-alternatives", "/quantum-threshold",
+  "/photonic-dev", "/photonic-ledger",
+  "/resonance-propulsion",
+  "/wavelength-os",
+  "/visualizer",
+  "/encoding-lab", "/ce-writer",
+  // Tools
+  "/spectral-audit", "/spectral-mirror", "/spectral-uri",
+  "/spectral-video", "/spectral-workspace",
+  "/ordinal-registry",
+  // Community / social
+  "/quora", "/reddit",
+  "/chronicle",
+  "/founders-charity",
+  // Admin
+  "/k1", "/k1/orchestration",
+  "/announcements", "/announcements/substrate-v2",
 ]);
 
 // Only paths where ANY child segment is valid (true dynamic routes).
