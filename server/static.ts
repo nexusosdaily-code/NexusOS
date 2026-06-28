@@ -75,7 +75,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   // Governance / open
   "/open", "/charter", "/constitution",
   // Science & theory
-  "/oscillating-quanta", "/planck-alignment", "/reposed-theory",
+  "/oscillating-quanta", "/planck-alignment", "/reposed-theory", "/silicon-bridge",
   "/compression-explorer",
   // Protocol & language
   "/wavelength-lang", "/ce-se-pipeline", "/ce-code-writer",

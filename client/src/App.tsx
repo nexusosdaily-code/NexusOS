@@ -95,6 +95,7 @@ const SpectralContractsPage = lazy(() => import("@/pages/spectral-contracts"));
 const SOPPage = lazy(() => import("@/pages/sop"));
 const HardwareLabPage = lazy(() => import("@/pages/hardware-lab"));
 const OscillatingQuantaPage = lazy(() => import("@/pages/oscillating-quanta"));
+const SiliconBridgePage     = lazy(() => import("@/pages/silicon-bridge"));
 const LearnPage = lazy(() => import("@/pages/learn"));
 const PipelinePage = lazy(() => import("@/pages/pipeline"));
 const PlanckAlignmentPage = lazy(() => import("@/pages/planck-alignment"));
@@ -485,6 +486,7 @@ function Router() {
       <Route path="/wnsp/bridge" component={WnspBridgePage} />
       <Route path="/profile/:username" component={ProfilePage} />
       <Route path="/oscillating-quanta" component={OscillatingQuantaPage} />
+      <Route path="/silicon-bridge" component={SiliconBridgePage} />
       <Route path="/receive" component={ReceivePage} />
       <Route path="/portfolio" component={PortfolioPage} />
       <Route path="/lp-pools" component={LpPoolsPage} />
