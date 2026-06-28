@@ -1108,6 +1108,22 @@ export default function HardwareLabPage() {
           <TabsContent value="adoption" className="mt-6"><AdoptionPanel /></TabsContent>
         </Tabs>
 
+        <div className="mt-6 pt-4 border-t border-slate-900/60">
+          <p className="text-xs text-slate-600 mb-3 font-semibold uppercase tracking-wider">Related resources</p>
+          <div className="flex flex-wrap gap-3 mb-4">
+            <Link href="/labs">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-cyan-500/20 bg-cyan-500/5 text-cyan-600 text-xs hover:bg-cyan-500/10 hover:border-cyan-500/30 transition-all cursor-pointer">
+                <Microscope className="w-3 h-3" /> NexusOS Labs
+              </span>
+            </Link>
+            <Link href="/hardware-spec">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-violet-500/20 bg-violet-500/5 text-violet-600 text-xs hover:bg-violet-500/10 hover:border-violet-500/30 transition-all cursor-pointer">
+                <Server className="w-3 h-3" /> Hardware Spec (AGPL-3.0)
+              </span>
+            </Link>
+          </div>
+        </div>
+
         <div className="text-xs text-slate-700 border-t border-slate-900 pt-4 flex flex-wrap gap-4">
           <span>NexusOS Hardware Lab v1.0</span>
           <span>WNSP-CE v1.0 / WASCII v7</span>

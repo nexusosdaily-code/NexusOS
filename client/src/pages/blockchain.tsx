@@ -768,6 +768,27 @@ export default function BlockchainPage() {
           <MempoolTab onMinePending={handleMinePreset} />
         </TabsContent>
       </Tabs>
+
+      <div className="mt-8 pt-6 border-t border-slate-800">
+        <p className="text-xs text-slate-500 mb-3 font-semibold uppercase tracking-wider">Related resources</p>
+        <div className="flex flex-wrap gap-3">
+          <Link href="/nexus-explorer">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-blue-500/20 bg-blue-500/5 text-blue-300 text-xs hover:bg-blue-500/10 hover:border-blue-500/30 transition-all cursor-pointer">
+              <Globe2 className="w-3 h-3" /> Nexus Explorer
+            </span>
+          </Link>
+          <Link href="/nexus-analytics">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-cyan-500/20 bg-cyan-500/5 text-cyan-300 text-xs hover:bg-cyan-500/10 hover:border-cyan-500/30 transition-all cursor-pointer">
+              <Activity className="w-3 h-3" /> Nexus Analytics
+            </span>
+          </Link>
+          <Link href="/psi-board">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-violet-500/20 bg-violet-500/5 text-violet-300 text-xs hover:bg-violet-500/10 hover:border-violet-500/30 transition-all cursor-pointer">
+              <Radio className="w-3 h-3" /> Ψ Board
+            </span>
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

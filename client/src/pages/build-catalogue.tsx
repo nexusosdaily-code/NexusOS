@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Zap, Shield, BarChart2, Globe, Cpu, Radio, BookOpen, Wallet, Megaphone, FlaskConical, Package } from "lucide-react";
+import { Search, Zap, Shield, BarChart2, Globe, Cpu, Radio, BookOpen, Wallet, Megaphone, FlaskConical, Package, GitBranch } from "lucide-react";
 
 type Build = {
   id: number;
@@ -236,6 +237,22 @@ export default function BuildCataloguePage() {
             ))}
           </div>
         )}
+
+        <div className="mt-10 pt-6 border-t border-slate-800/60">
+          <p className="text-xs text-slate-500 mb-3 font-semibold uppercase tracking-wider">Related resources</p>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/build">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-blue-500/20 bg-blue-500/5 text-blue-300 text-xs hover:bg-blue-500/10 hover:border-blue-500/30 transition-all cursor-pointer">
+                <GitBranch className="w-3 h-3" /> Build With NexusOS
+              </span>
+            </Link>
+            <Link href="/roadmap">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-violet-500/20 bg-violet-500/5 text-violet-300 text-xs hover:bg-violet-500/10 hover:border-violet-500/30 transition-all cursor-pointer">
+                <Zap className="w-3 h-3" /> Roadmap
+              </span>
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );

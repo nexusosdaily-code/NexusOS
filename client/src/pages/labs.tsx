@@ -441,6 +441,23 @@ export default function LabsPage() {
           </div>
         </div>
 
+        {/* Related resources */}
+        <div className="mt-10 pt-6 border-t border-gray-800/60">
+          <p className="text-xs text-gray-600 mb-3 font-semibold uppercase tracking-wider">Related resources</p>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/hardware-lab">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-cyan-500/20 bg-cyan-500/5 text-cyan-400 text-xs hover:bg-cyan-500/10 hover:border-cyan-500/30 transition-all cursor-pointer">
+                <Cpu className="w-3 h-3" /> Hardware Calibration Lab
+              </span>
+            </Link>
+            <Link href="/hardware-spec">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-violet-500/20 bg-violet-500/5 text-violet-400 text-xs hover:bg-violet-500/10 hover:border-violet-500/30 transition-all cursor-pointer">
+                <Shield className="w-3 h-3" /> Hardware Spec (AGPL-3.0)
+              </span>
+            </Link>
+          </div>
+        </div>
+
         {/* Footer manifest */}
         <div className="mt-16 pt-8 border-t border-gray-900">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

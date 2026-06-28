@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, Radio, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 interface PsiBoardEvent {
   type: string;
@@ -65,6 +66,11 @@ function fmtAge(ms: number): string {
 }
 
 export default function PsiBoard() {
+  usePageMeta({
+    title: "Ψ Board — Live Spectral Signal Monitor | NexusOS",
+    description: "Monitor live WNSP spectral signals across all authority bands in real time. Watch Ψ channel activity, band-level signal counts, and the live event stream for the NexusOS physics network.",
+  });
+
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const pulsesRef  = useRef<Pulse[]>([]);
   const rafRef     = useRef<number>(0);

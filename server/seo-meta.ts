@@ -1495,6 +1495,25 @@ export const ROUTE_META: Record<string, PageMeta> = {
     },
     bodyHtml: `<h1>NexusOS Build Catalogue — Feature & Improvement Log</h1><p>The Build Catalogue is the transparent, searchable record of everything shipped in NexusOS. Every entry is tagged with a category, an impact level, and a commit reference so engineers and researchers can trace any feature back to its implementation.</p><h2>Categories</h2><ul><li><strong>Physics</strong>: changes to the core physics engine, CE encoding, compression curve, Λ calculations</li><li><strong>Protocol</strong>: WNSP protocol updates, WNSP VM opcodes, WavelengthScript compiler, CE→SE pipeline</li><li><strong>Security</strong>: authentication, authority band enforcement, UTXO guard, rune protection</li><li><strong>Analytics</strong>: traffic monitoring, bot detection, threat probe identification</li><li><strong>SEO</strong>: metadata injection, canonical URLs, JSON-LD structured data, AI-readable body content</li><li><strong>Wallet</strong>: NXT token, wSATS, staking, WNUSD auto-collateral, Lightning integration</li><li><strong>Infrastructure</strong>: database schema, API routes, Python kernel, dual-runtime architecture</li></ul><h2>Impact Levels</h2><p>Each build is marked high, medium, or low impact. High-impact builds touch the physics engine, protocol specification, or economic layer. Medium-impact builds extend existing features. Low-impact builds fix edge cases or improve developer experience.</p><nav><ul><li><a href="${BASE}/build-catalogue">Open Build Catalogue</a></li><li><a href="${BASE}/roadmap">NexusOS Roadmap</a></li><li><a href="${BASE}/build">Build With NexusOS</a></li></ul></nav>`,
   },
+  "/psi-board": {
+    title: "Ψ Board — Live Spectral Signal Monitor | NexusOS",
+    description: "Monitor live WNSP spectral signals across all authority bands in real time. Watch Ψ channel activity, band-level signal counts, and the live event stream for the NexusOS physics network.",
+    canonical: `${BASE}/psi-board`,
+    ogTitle: "Ψ Board — Live Spectral Signal Monitor",
+    ogDescription: "Real-time monitor for WNSP spectral signals across SYSTEM, KERNEL, USER, and GUEST authority bands. Visualise Ψ channel activity on the NexusOS physics network.",
+    twitterTitle: "Ψ Board — Live WNSP Signal Monitor",
+    twitterDescription: "Live spectral signal board for the NexusOS physics network. Watch Ψ channel events across all authority bands in real time.",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "NexusOS Ψ Board",
+      "url": `${BASE}/psi-board`,
+      "description": "Real-time monitor for WNSP spectral signals. Displays live Ψ channel events, authority-band activity counts, and a scrolling signal stream for the NexusOS physics network.",
+      "applicationCategory": "DeveloperApplication",
+      "about": { "@type": "Thing", "name": "WNSP spectral communication protocol signal monitoring" },
+    },
+    bodyHtml: `<h1>Ψ Board — Live Spectral Signal Monitor</h1><p>The Ψ Board is a real-time dashboard that displays every WNSP spectral signal emitted on the NexusOS network as it happens. Each signal is mapped to a wavelength in the visible spectrum (380–780 nm) and placed in one of four authority bands: SYSTEM, KERNEL, USER, or GUEST.</p><h2>What the Ψ Board Shows</h2><ul><li><strong>Live canvas</strong>: animated wavelength pulses sweep across the visible-light spectrum — each pulse is a real network event encoded as a physical wavelength</li><li><strong>Band counters</strong>: running signal totals for SYSTEM (violet, &lt;450 nm), KERNEL (blue, 450–490 nm), USER (green, 490–565 nm), and GUEST (orange, 565–780 nm)</li><li><strong>Signal stream</strong>: timestamped list of recent events showing Ψ channel address, band, and label</li><li><strong>Network stats</strong>: total signals, active channels, on-chain records, and pool entries</li></ul><h2>How WNSP Signals Work</h2><p>Every action in NexusOS — a wallet transfer, a governance vote, a smart contract execution — is encoded as a spectral event. The CE (Character Encoding) layer maps the action label to a wavelength (λ nm) using the 128-band WASCII table. The SE (Spectral Encoding) layer wraps it in a physical wave frame (frequency, energy E=hf, OAM mode, polarisation). The Ψ Board captures these frames as they arrive and renders them as light pulses at their native wavelength.</p><h2>Authority Bands</h2><p>The WNSP authority model uses wavelength to encode permission level. Shorter wavelengths carry higher energy and higher authority. The four public bands visible on the Ψ Board correspond to the four NexusOS permission tiers: SYSTEM commands the ultraviolet edge, GUEST sits in the red-to-infrared boundary.</p><nav><ul><li><a href="${BASE}/psi-board">Open Ψ Board</a></li><li><a href="${BASE}/compression-explorer">Compression State Explorer (Λ=hf/c²)</a></li><li><a href="${BASE}/wavelength-lang">WavelengthScript Language Spec</a></li><li><a href="${BASE}/blockchain">WNSP Blockchain Explorer</a></li></ul></nav>`,
+  },
 };
 
 // ── HTML meta injection ───────────────────────────────────────────────────────
