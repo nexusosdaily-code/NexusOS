@@ -13339,11 +13339,14 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/nostr/publish", authenticate, async (req: Request, res: Response) => {
+  app.post("/api/nostr/publish", async (req: Request, res: Response) => {
     try {
       const { kind, content, psi, uri, tags } = req.body;
       if (!content || typeof content !== "string") {
         return res.status(400).json({ error: "content is required" });
+      }
+      if (content.length > 2000) {
+        return res.status(400).json({ error: "content must be 2000 characters or fewer" });
       }
       const result = await nostrService.publishToNostr({ kind: kind ?? "note", content, psi, uri, tags });
       res.json(result);
