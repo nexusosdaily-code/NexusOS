@@ -599,6 +599,7 @@ export default function NexusExplorerPage() {
           </Link>
         </div>
       </div>
+      </div>
     </div>
   );
 }

@@ -333,6 +333,7 @@ export default function NexusAnalyticsPage() {
           </Link>
         </div>
       </div>
+      </div>
     </div>
   );
 }
