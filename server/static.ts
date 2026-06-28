@@ -94,7 +94,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   // Previously missing from allowlist (domain-redirect targets and public routes)
   "/spectral-ide", "/resonance-cavity",
   "/build", "/shareholders",
-  "/contact", "/labs", "/build-catalogue", "/nexus-explorer",
+  "/contact", "/labs", "/build-catalogue", "/nexus-explorer", "/psi-board",
   // Protocol reference (seo-meta.ts canonical page)
   "/protocol",
   // Legacy redirect paths (SPA handles them in development; server redirects in production)

@@ -161,6 +161,7 @@ const ShareholdersPage      = lazy(() => import("@/pages/shareholders"));
 const ContactPage           = lazy(() => import("@/pages/contact"));
 const LabsPage              = lazy(() => import("@/pages/labs"));
 const BuildCataloguePage    = lazy(() => import("@/pages/build-catalogue"));
+const PsiBoardPage          = lazy(() => import("@/pages/psi-board"));
 const StewardsPage          = lazy(() => import("@/pages/stewards"));
 const PocPage               = lazy(() => import("@/pages/poc"));
 const JointVenturePage      = lazy(() => import("@/pages/joint-venture"));
@@ -267,6 +268,7 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/spectral-router", "/spectral-search", "/spectral-contracts",
   "/divergence-test", "/hardware-spec", "/hardware-lab",
   "/campaign", "/constitution", "/mobile-sdk", "/shareholders",
+  "/psi-board",
 ]);
 
 // Only paths where ANY child segment is a valid protected route (dynamic).
@@ -531,6 +533,7 @@ function Router() {
       <Route path="/contact" component={ContactPage} />
       <Route path="/labs" component={LabsPage} />
       <Route path="/build-catalogue" component={BuildCataloguePage} />
+      <Route path="/psi-board" component={PsiBoardPage} />
       {/* ── Public infrastructure / economy pages — crawlable ── */}
       <Route path="/nexus-hardware-os" component={NexusHardwareOsPage} />
       <Route path="/orbital-treasury" component={OrbitalTreasuryPage} />

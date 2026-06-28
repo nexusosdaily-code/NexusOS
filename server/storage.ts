@@ -202,6 +202,15 @@ export interface IStorage {
   getBuilds(filters?: { category?: string; status?: string; limit?: number }): Promise<BuildCatalogue[]>;
   getBuildsByDateRange(from: string, to: string): Promise<BuildCatalogue[]>;
   getBuildStats(): Promise<{ total: number; shipped: number; byCategory: Record<string, number> }>;
+
+  // Ψ Channel Activity Board
+  getPsiBoardActivity(): Promise<Array<{
+    type: string; nm: number; psi: string; label: string; ts: number; band: string;
+  }>>;
+  getPsiBoardStats(): Promise<{
+    bands: { SYSTEM: number; KERNEL: number; USER: number; GUEST: number };
+    totalSignals: number; totalRecords: number; activeChannels: number; totalPoolEntries: number;
+  }>;
 }
 
 function generateWalletAddress(): string {
@@ -1350,6 +1359,126 @@ export class DatabaseStorage implements IStorage {
     const byCategory: Record<string, number> = {};
     for (const r of rows) byCategory[r.category] = (byCategory[r.category] ?? 0) + 1;
     return { total, shipped, byCategory };
+  }
+
+  async getPsiBoardActivity(): Promise<Array<{
+    type: string; nm: number; psi: string; label: string; ts: number; band: string;
+  }>> {
+    function nmToBand(nm: number): string {
+      if (nm < 480) return "SYSTEM";
+      if (nm < 580) return "KERNEL";
+      if (nm < 680) return "USER";
+      return "GUEST";
+    }
+
+    const [signals, records, blocks, pool] = await Promise.all([
+      db.execute(sql`
+        SELECT src_wdm, src_oam, src_pol, src, dst, dispatched_at
+        FROM wnsp_bus_log ORDER BY dispatched_at DESC LIMIT 30
+      `),
+      db.execute(sql`
+        SELECT wavelength_nm::float AS nm, psi_channel, band, created_at, content
+        FROM spectral_records WHERE wavelength_nm IS NOT NULL
+        ORDER BY created_at DESC LIMIT 20
+      `),
+      db.execute(sql`
+        SELECT wavelength_nm::float AS nm, psi_channel, mined_at AS created_at
+        FROM blockchain_blocks WHERE wavelength_nm IS NOT NULL
+        ORDER BY mined_at DESC LIMIT 10
+      `),
+      db.execute(sql`
+        SELECT wavelength_nm::float AS nm, psi_channel, created_at, tx_type
+        FROM blockchain_tx_pool WHERE wavelength_nm IS NOT NULL
+        ORDER BY created_at DESC LIMIT 20
+      `),
+    ]);
+
+    const events: Array<{ type: string; nm: number; psi: string; label: string; ts: number; band: string }> = [];
+
+    for (const r of signals.rows as any[]) {
+      const wdm = parseInt(r.src_wdm) || 0;
+      const nm  = 380 + (wdm / 256) * 400;
+      const pol = parseInt(r.src_pol) % 2 === 0 ? "H" : "V";
+      events.push({
+        type:  "signal",
+        nm,
+        psi:   `Ψ(${wdm},${r.src_oam},${pol})`,
+        label: `${r.src} → ${r.dst}`,
+        ts:    Math.round(parseFloat(r.dispatched_at) * 1000),
+        band:  nmToBand(nm),
+      });
+    }
+    for (const r of records.rows as any[]) {
+      const nm = parseFloat(r.nm) || 580;
+      events.push({
+        type:  "record",
+        nm,
+        psi:   r.psi_channel || "Ψ(128,25,H)",
+        label: r.content ? String(r.content).slice(0, 60) : "Spectral record",
+        ts:    new Date(r.created_at).getTime(),
+        band:  r.band || nmToBand(nm),
+      });
+    }
+    for (const r of blocks.rows as any[]) {
+      const nm = parseFloat(r.nm) || 480;
+      events.push({
+        type:  "block",
+        nm,
+        psi:   r.psi_channel || "Ψ(64,12,H)",
+        label: "Block mined",
+        ts:    new Date(r.created_at).getTime(),
+        band:  nmToBand(nm),
+      });
+    }
+    for (const r of pool.rows as any[]) {
+      const nm = parseFloat(r.nm) || 580;
+      events.push({
+        type:  "pool",
+        nm,
+        psi:   r.psi_channel || "Ψ(128,25,H)",
+        label: r.tx_type || "Pool entry",
+        ts:    new Date(r.created_at).getTime(),
+        band:  nmToBand(nm),
+      });
+    }
+
+    return events.sort((a, b) => b.ts - a.ts).slice(0, 50);
+  }
+
+  async getPsiBoardStats(): Promise<{
+    bands: { SYSTEM: number; KERNEL: number; USER: number; GUEST: number };
+    totalSignals: number; totalRecords: number; activeChannels: number; totalPoolEntries: number;
+  }> {
+    const [sb, rc, pc, cc] = await Promise.all([
+      db.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE (380 + (src_wdm::float / 256) * 400) < 480)  AS system_cnt,
+          COUNT(*) FILTER (WHERE (380 + (src_wdm::float / 256) * 400) >= 480
+                             AND (380 + (src_wdm::float / 256) * 400) < 580)  AS kernel_cnt,
+          COUNT(*) FILTER (WHERE (380 + (src_wdm::float / 256) * 400) >= 580
+                             AND (380 + (src_wdm::float / 256) * 400) < 680)  AS user_cnt,
+          COUNT(*) FILTER (WHERE (380 + (src_wdm::float / 256) * 400) >= 680) AS guest_cnt,
+          COUNT(*) AS total
+        FROM wnsp_bus_log
+      `),
+      db.execute(sql`SELECT COUNT(*) AS total FROM spectral_records`),
+      db.execute(sql`SELECT COUNT(*) AS total FROM blockchain_tx_pool WHERE wavelength_nm IS NOT NULL`),
+      db.execute(sql`SELECT COUNT(DISTINCT psi_channel) AS total FROM spectral_records WHERE psi_channel IS NOT NULL`),
+    ]);
+
+    const s = sb.rows[0] as any;
+    return {
+      bands: {
+        SYSTEM: parseInt(s.system_cnt) || 0,
+        KERNEL: parseInt(s.kernel_cnt) || 0,
+        USER:   parseInt(s.user_cnt)   || 0,
+        GUEST:  parseInt(s.guest_cnt)  || 0,
+      },
+      totalSignals:     parseInt(s.total)                       || 0,
+      totalRecords:     parseInt((rc.rows[0] as any).total)     || 0,
+      activeChannels:   parseInt((cc.rows[0] as any).total)     || 0,
+      totalPoolEntries: parseInt((pc.rows[0] as any).total)     || 0,
+    };
   }
 }
 

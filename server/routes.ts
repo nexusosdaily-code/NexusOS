@@ -15968,5 +15968,20 @@ wnsp.io | t.me/troglodytememe`,
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // ── Ψ Channel Activity Board ──────────────────────────────────────────────────
+  app.get("/api/psi-board/activity", async (_req, res) => {
+    try {
+      const activity = await storage.getPsiBoardActivity();
+      res.json(activity);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/psi-board/stats", async (_req, res) => {
+    try {
+      const stats = await storage.getPsiBoardStats();
+      res.json(stats);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   return httpServer;
 }
