@@ -81,17 +81,30 @@ function hardwareProduct(opts: { name: string; url: string; description: string 
   };
 }
 
-function techArticle(opts: { url: string; name: string; description: string; about: string }): object {
-  return {
+function techArticle(opts: { url: string; name: string; description: string; about: string; datePublished?: string; dateModified?: string }): object {
+  const article: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "TechArticle",
+    "headline": opts.name,
     "name": opts.name,
     "url": opts.url,
     "description": opts.description,
     "about": opts.about,
-    "author": { "@type": "Organization", "name": "NexusOS" },
-    "license": "AGPL-3.0",
+    "mainEntityOfPage": { "@type": "WebPage", "@id": opts.url },
+    "author": { "@type": "Organization", "name": "NexusOS", "url": BASE },
+    "publisher": {
+      "@type": "Organization",
+      "name": "NexusOS",
+      "url": BASE,
+      "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.png" },
+    },
+    "image": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.png" },
+    "inLanguage": "en",
+    "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
   };
+  if (opts.datePublished) article["datePublished"] = opts.datePublished;
+  if (opts.dateModified) article["dateModified"] = opts.dateModified;
+  return article;
 }
 
 // ── Custom domain metadata ────────────────────────────────────────────────────
@@ -303,6 +316,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "WNSP protocol spec, WavelengthScript reference, CE-SE pipeline, REST API reference, NXT token, WNSP VM. Everything you need to build on the wavelength of light.",
     twitterTitle: "NexusOS Documentation",
     twitterDescription: "Complete reference for WNSP protocol, WavelengthScript, CE-SE encoding, and the NexusOS API.",
+    ogType: "article",
     jsonLd: techArticle({ url: `${BASE}/docs`, name: "NexusOS Developer Documentation", description: "Full developer documentation for NexusOS: WNSP protocol, WavelengthScript, CE-SE pipeline, REST API, NXT token, WNSP VM.", about: "WNSP, WavelengthScript, CE encoding, photonic computing" }),
     bodyHtml: `<h1>NexusOS Documentation</h1><p>Complete developer reference for building on the NexusOS physics stack. Everything from the WNSP spectral protocol to the WavelengthScript language, CE-SE encoding pipeline, REST API, NXT token wallet, and WNSP VM bytecode interpreter.</p><nav><ul><li><a href="${BASE}/wnsp">WNSP Protocol Specification</a></li><li><a href="${BASE}/wavelength-lang">WavelengthScript Language Reference</a></li><li><a href="${BASE}/ce-se-pipeline">CE→SE Pipeline</a></li><li><a href="${BASE}/wnsp-vm">WNSP Virtual Machine</a></li><li><a href="${BASE}/ce-code-writer">CE Code Writer &amp; Integration Kit</a></li><li><a href="${BASE}/hardware-spec">Hardware Specification (AGPL-3.0)</a></li></ul></nav><p>Install the CE encoder: <code>npm install nexusos-ce-encoder</code> · <code>pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py</code></p>`,
   },
@@ -314,6 +328,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "Physics-native communication: wavelength addressing, Maxwell validation, E=hf fees, 25,600 Ψ channels. WNSP-CE v1.0, WNSP-SE v1.0, WNSP-URI v1.0.",
     twitterTitle: "WNSP — Wavelength-Native Spectral Protocol",
     twitterDescription: "Replace hashing with physics. Wavelength addressing, Maxwell validation, photon energy fees. 25,600 orthogonal channels.",
+    ogType: "article",
     jsonLd: techArticle({ url: `${BASE}/wnsp`, name: "WNSP Protocol", description: "Wavelength-Native Spectral Protocol — replaces cryptographic hashing with electromagnetic physics for addressing, communication, and fee calculation.", about: "spectral communication, WNSP, photonic computing" }),
     bodyHtml: `<h1>WNSP — Wavelength-Native Spectral Protocol</h1><p>WNSP replaces cryptographic hashing with electromagnetic wave physics. Addresses are wavelengths. Fees are photon energies. Communication channels are orthogonal quantum states — guaranteed by physics, not software policy.</p><ul><li><strong>WNSP-CE v1.0</strong> — Character Encoding: maps every symbol to a visible-light wavelength</li><li><strong>WNSP-SE v1.0</strong> — Spectral Encoding: maps data to physical wave frames</li><li><strong>WNSP-URI v1.0</strong> — Deterministic, censorship-proof addressing via <code>wnsp://Ψ(wdm,oam,pol)/path</code></li><li><strong>Hilbert Space Channel Model</strong> — 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations)</li><li>Maxwell equation validation on every transaction</li><li>Physics-derived fees: E=hf</li></ul><nav><ul><li><a href="${BASE}/ce-se-pipeline">CE→SE Pipeline (live demo)</a></li><li><a href="${BASE}/wavelength-lang">WavelengthScript Language</a></li><li><a href="${BASE}/wnsp-vm">WNSP Virtual Machine</a></li><li><a href="${BASE}/protocol">Full Protocol Reference</a></li></ul></nav>`,
   },
@@ -400,6 +415,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "Interactive compression curve: authority bands, photon energy, Boltzmann entropy, fee multipliers. The physics of NexusOS, rendered across 380–780nm.",
     twitterTitle: "Compression Explorer — Λ=hf/c² Live",
     twitterDescription: "Interactive Λ=hf/c² compression curve. Authority bands, photon energies, fee multipliers. NexusOS physics, live.",
+    ogType: "article",
     jsonLd: techArticle({ url: `${BASE}/compression-explorer`, name: "Compression Explorer — Λ=hf/c² Curve", description: "Interactive visualisation of the NexusOS compression state equation Λ=hf/c². Displays authority band overlays, photon energy, Boltzmann entropy, and fee multipliers across the visible spectrum.", about: "Theory of Compression States, Λ=hf/c², photonic physics" }),
     bodyHtml: `<h1>Compression Explorer — Interactive Λ=hf/c² Curve</h1><p>An interactive SVG visualisation of the Λ=hf/c² compression curve across the full visible spectrum (380–780nm). Explore how authority, energy, fees, and entropy vary with wavelength — the physics foundation of every NexusOS address and transaction.</p><ul><li><strong>Authority bands</strong>: SYSTEM (shortest λ, highest energy) → KERNEL → USER → GUEST</li><li><strong>Photon energy</strong>: E=hf — computed live for each wavelength position</li><li><strong>Compression mass</strong>: Λ=hf/c² — the compression state at each frequency</li><li><strong>Fee multiplier</strong>: derived from compression state, enforced by the physics engine</li><li><strong>Normalized Λ</strong>: relative compression across the visible spectrum</li><li><strong>Boltzmann entropy</strong>: statistical entropy at each spectral position</li></ul><nav><ul><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li><li><a href="${BASE}/hardware-spec">Hardware Specification</a></li><li><a href="${BASE}/proof">Physics Proofs</a></li></ul></nav>`,
   },
@@ -554,6 +570,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "Written by Te Rata Pou, Aotearoa NZ. Three roles, three stewards, one mission: public photonic hardware infrastructure for a Kardashev Type I civilisation.",
     twitterTitle: "Stewards of NexusOS",
     twitterDescription: "The founding document. Three roles. Founding equity. Physics that traces to Maxwell. Hardware destination ~2032. Read this if you are one of the three.",
+    ogType: "article",
     jsonLd: techArticle({ url: `${BASE}/stewards`, name: "Stewards of NexusOS — Founding Declaration", description: "Founding document written by Te Rata Pou identifying the three technical stewards of NexusOS: photonics engineer, RF specialist, physics PhD. Defines mission, ethics layer, founding equity, and hardware destination.", about: "NexusOS stewardship, photonic hardware, PHR-1, SNIC, founding document" }),
     bodyHtml: `<h1>Stewards of NexusOS — Founding Declaration</h1>
 <p>Written by Te Rata Pou · Aotearoa New Zealand · 2026-06-24</p>
@@ -972,6 +989,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "How E=hf and Λ=hf/c² are calibrated at the Planck scale. Deterministic Ψ channel assignments derived from first principles. NexusOS physics stack.",
     twitterTitle: "Planck Alignment — NexusOS",
     twitterDescription: "Planck-scale calibration of E=hf and Λ=hf/c². Deterministic Ψ channels from first principles.",
+    ogType: "article",
     jsonLd: techArticle({ url: `${BASE}/planck-alignment`, name: "Planck Alignment", description: "Calibration of Planck constant (E=hf) to the NexusOS compression state model (Λ=hf/c²). Demonstrates how quantum-scale energy values produce deterministic Ψ channel assignments.", about: "Theory of Compression States, Planck constant, quantum physics, E=hf" }),
     bodyHtml: `<h1>Planck Alignment — Quantum Constant Calibration</h1><p>Planck constant alignment bridges quantum-scale energy values and the NexusOS compression state model. By calibrating E=hf and Λ=hf/c² at the Planck scale, NexusOS derives deterministic Ψ channel assignments from first principles — no cryptographic assumptions required.</p><p>Planck's constant h = 6.626 × 10⁻³⁴ J·s is the direct anchor for every address, fee, and channel in NexusOS. Each visible-light frequency f produces a unique compression mass Λ = hf/c² that maps to a specific Ψ channel.</p><ul><li>E=hf — photon energy as the basis for transaction fees</li><li>Λ=hf/c² — compression state equation governing addressing</li><li>Deterministic Ψ channel derivation from Planck-scale constants</li><li>No probabilistic or cryptographic steps in the calibration chain</li></ul><nav><ul><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li><li><a href="${BASE}/compression-explorer">Interactive Compression Curve</a></li><li><a href="${BASE}/proof">Physics Proofs</a></li></ul></nav>`,
   },
@@ -1056,6 +1074,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "Experimental evidence for the Theory of Compression States. THz research, WGM spectroscopy, Berry phase measurements. Independent validation of Λ=hf/c² and WNSP channel geometry.",
     twitterTitle: "NexusOS Physics Evidence",
     twitterDescription: "Experimental validation of Λ=hf/c². THz research, WGM spectroscopy, Berry phase measurements.",
+    ogType: "article",
     jsonLd: techArticle({ url: `${BASE}/evidence`, name: "NexusOS Physics Evidence", description: "Experimental and observational evidence for the Theory of Compression States, including THz spectroscopy and WGM resonance results consistent with Λ=hf/c² and the 25,600-channel Ψ geometry.", about: "Theory of Compression States, THz spectroscopy, WGM resonance, experimental physics" }),
     bodyHtml: `<h1>NexusOS Evidence — Experimental Physics Validation</h1><p>The Theory of Compression States is not purely theoretical. The following experimental and observational evidence independently supports the Λ=hf/c² model and the 25,600-channel Ψ geometry underlying NexusOS.</p><h2>Key Evidence Categories</h2><ul><li><strong>Sub-mm wave geometry</strong>: 2025 THz research validates the Ψ channel spacing predicted by the WNSP Hilbert space channel model. Observed spectral separations match the 256 WDM × 50 OAM × 2 polarisation geometry.</li><li><strong>Whispering Gallery Mode (WGM) resonance</strong>: WGM spectroscopy results are consistent with the Russell octave structure used to derive OAM mode indices in the 25,600-channel model.</li><li><strong>Berry phase measurements</strong>: Topological phase accumulation in resonant waveguides maps to the Λ=hf/c² extension via Berry phase → compression mass correction.</li><li><strong>Flerovium-114</strong>: Spectral characteristics of element 114 align with SYSTEM-band frequency predictions in the compression state model.</li></ul><nav><ul><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li><li><a href="${BASE}/proof">Formal Physics Proofs</a></li><li><a href="${BASE}/compression-explorer">Interactive Compression Curve</a></li><li><a href="${BASE}/hardware-lab">Hardware Lab</a></li></ul></nav>`,
   },
@@ -1097,6 +1116,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "Full API surface, CE encoder (npm + pip), WavelengthScript toolchain, SDK reference, integration patterns. Everything developers need to build on WNSP.",
     twitterTitle: "NexusOS Developer Matrix",
     twitterDescription: "API surface, CE encoder packages, WavelengthScript toolchain, integration patterns. Build on WNSP.",
+    ogType: "article",
     jsonLd: techArticle({ url: `${BASE}/developer-matrix`, name: "NexusOS Developer Matrix", description: "Comprehensive developer reference for NexusOS: REST API, CE encoder packages (npm and pip), WavelengthScript toolchain, SDK reference, developer key tiers, and integration patterns.", about: "WNSP, CE encoding, WavelengthScript, developer API" }),
     bodyHtml: `<h1>Developer Matrix — NexusOS API, SDK, and Integration Reference</h1><p>The NexusOS Developer Matrix is the complete reference for building physics-native applications on the WNSP stack. It covers the full API surface, both CE encoder packages, the WavelengthScript toolchain, mobile SDKs, and the developer key tier system.</p><h2>CE Encoder Packages</h2><ul><li><strong>npm</strong>: <code>npm install nexusos-ce-encoder</code> — CJS + ESM, TypeScript types, <code>ceEncode(text) → &#123; wavelength, band, psiChannel, energy &#125;</code></li><li><strong>pip</strong>: <code>pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py</code> — Python 3.8+, same API, bit-identical output</li></ul><h2>REST API</h2><ul><li>CE encoding endpoint — encode any text to spectral fingerprint</li><li>Wallet API — NXT balance, transfer, fee calculation</li><li>Governance API — proposal submission, voting (KERNEL-band)</li><li>Spectral DB API — store and retrieve CE-encoded fingerprints</li><li>Developer key management — API key creation with NXT creation fee</li></ul><h2>WavelengthScript Toolchain</h2><ul><li>Source transpiler — any language → WavelengthScript</li><li>Compiler α — WavelengthScript → WNSP bytecode</li><li>WNSP VM — bytecode interpreter with Ψ channel registers</li></ul><nav><ul><li><a href="${BASE}/docs">Full Documentation</a></li><li><a href="${BASE}/ce-code-writer">CE Code Writer &amp; Integration Kit</a></li><li><a href="${BASE}/mobile-sdk">Mobile SDK (iOS &amp; Android)</a></li><li><a href="${BASE}/wavelength-lang">WavelengthScript Specification</a></li></ul></nav>`,
   },
@@ -1130,6 +1150,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "Formal research: Theory of Compression States, Λ=hf/c² derivation, WNSP architecture, SNIC hardware design. Digital substrate to photonic gate array (~2032). AGPL-3.0.",
     twitterTitle: "NexusOS Research Presentation",
     twitterDescription: "Formal physics research: Theory of Compression States, Λ=hf/c², WNSP protocol, SNIC hardware. Photonic gate array roadmap.",
+    ogType: "article",
     jsonLd: techArticle({ url: `${BASE}/research-presentation`, name: "NexusOS Research Presentation", description: "Formal research presentation of the NexusOS physics stack: Theory of Compression States, Λ=hf/c² derivation, WNSP protocol architecture, SNIC hardware design, and the photonic gate array roadmap to ~2032.", about: "Theory of Compression States, WNSP protocol, SNIC, photonic computing, Λ=hf/c²" }),
     bodyHtml: `<h1>NexusOS Research Presentation — Physics Stack and Protocol Architecture</h1><p>This is the formal research presentation of the NexusOS physics stack. It covers the theoretical foundations, protocol architecture, hardware design, and the long-term roadmap from today's digital substrate to the photonic gate array of ~2032.</p><h2>Presentation Structure</h2><ol><li><strong>Theory of Compression States</strong>: The universe evolves from the first unobserved oscillation at 555 THz. Λ=hf/c² is the governing compression law. Every NexusOS address, fee, and channel is derived from this first principle.</li><li><strong>Λ=hf/c² Derivation</strong>: Step-by-step derivation of the compression state equation from Maxwell's equations and Planck's constant. The visible spectrum (380–780nm) as the 128-band address space.</li><li><strong>WNSP Protocol Architecture</strong>: How WNSP-CE, WNSP-SE, and WNSP-URI combine to form a complete physics-native communication protocol. Hilbert space channel model: 256 WDM × 50 OAM × 2 polarisations = 25,600 orthogonal Ψ channels.</li><li><strong>SNIC Hardware Design</strong>: The photonic NIC architecture that implements WNSP in physical waveguides. CE lookups as wavelength selections in glass. ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics.</li><li><strong>Roadmap</strong>: Digital substrate (now) → PHR-1 hardware layer (2026–2028) → photonic gate array (~2032). No code rewrite required at any transition.</li></ol><nav><ul><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li><li><a href="${BASE}/hardware-spec">Hardware Specification (AGPL-3.0)</a></li><li><a href="${BASE}/proof">Physics Proofs</a></li><li><a href="${BASE}/evidence">Experimental Evidence</a></li></ul></nav>`,
   },
@@ -1382,12 +1403,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     title: "Spectral URI — WNSP-URI v1.0 Addressing",
     description: "WNSP-URI v1.0 spectral address format: wnsp://Ψ(wdm,oam,pol)/path. Deterministic, physics-based, censorship-proof addressing for the NexusOS network.",
     canonical: `${BASE}/protocol`,
+    ogType: "article",
     jsonLd: techArticle({ url: `${BASE}/protocol`, name: "WNSP-URI v1.0", description: "Spectral URI addressing: wnsp://Ψ(wdm,oam,pol)/path. Deterministic physics-based addressing.", about: "WNSP-URI, spectral addressing, wnsp protocol" }),
   },
   "/wnsp-uri": {
     title: "WNSP-URI — Wavelength-Native Spectral URI Addressing",
     description: "WNSP-URI v1.0: wnsp://Ψ(wdm,oam,pol)/path. Deterministic physics-based addressing that replaces DNS with electromagnetic channel coordinates.",
     canonical: `${BASE}/protocol`,
+    ogType: "article",
     jsonLd: techArticle({ url: `${BASE}/protocol`, name: "WNSP-URI v1.0 — Spectral Addressing", description: "WNSP-URI addressing scheme: wnsp://Ψ(wdm,oam,pol)/path. Deterministic, censorship-proof, physics-derived addresses.", about: "WNSP-URI, spectral addressing, DNS-free routing" }),
   },
   "/visualizer": {
