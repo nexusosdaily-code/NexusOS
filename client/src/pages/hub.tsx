@@ -73,6 +73,7 @@ const APP_SECTIONS = [
     label: "Communications",
     accent: "#22d3ee",
     items: [
+      { title: "🪪 Spectral Passport", href: "/passport",  Icon: User },
       { title: "Inbox",        href: "/inbox",          Icon: Mail },
       { title: "Wave Channels",href: "/phonebook",      Icon: Radio },
       { title: "Live Streams", href: "/streaming",      Icon: Radio },
