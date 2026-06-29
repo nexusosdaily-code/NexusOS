@@ -3,7 +3,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ExternalLink, Copy, CheckCheck, Terminal, Cpu, FileText, Users, Zap, Radio, BookOpen, GitBranch, Activity } from "lucide-react";
+import { ExternalLink, Copy, CheckCheck, Terminal, Cpu, FileText, Users, Zap, Radio, BookOpen, GitBranch, Activity, Globe } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -195,6 +195,41 @@ export default function BuildWithUsPage() {
             <StatPill label="Protocol" value="WNSP v1.0" color="text-emerald-400" />
             <StatPill label="License" value="AGPL-3.0" color="text-white/60" />
           </div>
+        </section>
+
+        {/* Global Venture */}
+        <section className="rounded-xl border border-white/8 bg-gradient-to-br from-cyan-950/20 via-zinc-900/30 to-violet-950/20 p-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Globe className="w-4 h-4 text-cyan-400" />
+            <span className="text-white/40 text-xs uppercase tracking-widest">Global Venture</span>
+          </div>
+          <h2 className="text-2xl font-bold mb-3">Everyone is invited to build this.</h2>
+          <p className="text-white/55 text-base leading-relaxed max-w-3xl mb-6">
+            NexusOS is not a startup. It is civilisation-scale infrastructure — the first protocol that
+            speaks the language of photonic hardware before the hardware exists. This is a global venture
+            and it belongs to everyone who helps build it.
+          </p>
+          <p className="text-white/45 text-sm leading-relaxed max-w-3xl mb-8">
+            You do not need to be a developer. Physicists, hardware engineers, educators, translators,
+            community organisers, writers — every discipline has a role. The physics is real.
+            The equations are derived from Maxwell, Planck, and Einstein. If you can verify it, you can
+            build on it. If you can explain it, you can grow it. If you can fund it, you can accelerate it.
+          </p>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {[
+              { label: "Developers", desc: "TypeScript, Python, compiler theory, networking — extend the VM, protocol, and physics engine.", color: "text-cyan-400", border: "border-cyan-500/20" },
+              { label: "Scientists & Engineers", desc: "Validate the compression state equations. Prototype the PHR-1 coil. Push the hardware spec forward.", color: "text-amber-400", border: "border-amber-500/20" },
+              { label: "Community Builders", desc: "Translate the vision. Educate others. Grow the network across every language and every country.", color: "text-emerald-400", border: "border-emerald-500/20" },
+            ].map(({ label, desc, color, border }) => (
+              <div key={label} className={`rounded-lg border ${border} bg-white/3 p-4`}>
+                <p className={`text-sm font-semibold mb-2 ${color}`}>{label}</p>
+                <p className="text-white/45 text-xs leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-white/25 text-xs mt-6 font-mono">
+            AGPL-3.0 — open forever. Any improvement must be returned to the commons. The protocol is permanent.
+          </p>
         </section>
 
         {/* WavelengthScript intro */}
