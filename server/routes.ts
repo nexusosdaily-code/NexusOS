@@ -14130,12 +14130,13 @@ export async function registerRoutes(
         .filter(p => p.status === "active")
         .reduce((a, p) => a + parseFloat(p.wnusdMinted), 0);
 
-      // Staked sats + pending NXT yield
+      // Staked sats + pending NXT yield — active positions only
+      const { and: andOp } = await import("drizzle-orm");
       const [stakeRow] = await db.select({
         totalSats:  sqlRaw<string>`coalesce(sum(amount_sats), 0)`,
         totalYield: sqlRaw<string>`coalesce(sum(nxt_yield), 0)`,
         count:      sqlRaw<string>`count(*)`,
-      }).from(satsStakes).where(eq(satsStakes.userId, req.user!.id));
+      }).from(satsStakes).where(andOp(eq(satsStakes.userId, req.user!.id), eq(satsStakes.status, "active")));
       const satsStaked      = Number(stakeRow?.totalSats  ?? 0);
       const nxtYieldPending = stakeRow?.totalYield ?? "0";
       const stakeCount      = Number(stakeRow?.count ?? 0);

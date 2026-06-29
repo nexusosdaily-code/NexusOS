@@ -45,7 +45,6 @@ export default function PortfolioPage() {
   });
 
   const sats        = Number(summary?.satsBalance ?? 0);
-  const satsStaked  = Number(summary?.satsStaked ?? 0);
   const nxtYield    = parseFloat(summary?.nxtYieldPending ?? "0");
   const stakeCount  = Number(summary?.stakeCount ?? 0);
   const nxt         = parseFloat(summary?.nxtBalance ?? "0");
@@ -53,22 +52,23 @@ export default function PortfolioPage() {
   const btcUsd      = Number(summary?.btcUsd ?? 65_000);
   const satsPerNxt  = 1_000;
 
+  // Derive staked sats from the live stakes list (active only) — more accurate than summary
+  const stakesArr       = Array.isArray(lightningStakes?.stakes) ? lightningStakes.stakes : [];
+  const wnusdArr        = Array.isArray(wnusd)  ? wnusd  : [];
+  const lpPosArr        = Array.isArray(lpPos)  ? lpPos  : [];
+
+  const activeStakes    = stakesArr.filter((s: any) => s.status === "active");
+  const stakedSatsTotal = activeStakes.reduce((a: number, s: any) => a + Number(s.amountSats ?? 0), 0);
+  const pendingYield    = activeStakes.reduce((a: number, s: any) => a + parseFloat(s.nxtYield ?? "0"), 0);
+
   const satsUsd     = sats / 100_000_000 * btcUsd;
-  const stakedUsd   = satsStaked / 100_000_000 * btcUsd;
+  const stakedUsd   = stakedSatsTotal / 100_000_000 * btcUsd;
   const nxtUsd      = nxt * satsPerNxt / 100_000_000 * btcUsd;
 
   // NXWV holdings
   const nxwv        = summary?.nxwv ?? null;
   const nxwvUsd     = nxwv?.currentUsd ?? 0;
   const totalUsd    = satsUsd + stakedUsd + nxtUsd + wnusdBal + nxwvUsd;
-
-  const stakesArr   = Array.isArray(lightningStakes?.stakes) ? lightningStakes.stakes : [];
-  const wnusdArr    = Array.isArray(wnusd)  ? wnusd  : [];
-  const lpPosArr    = Array.isArray(lpPos)  ? lpPos  : [];
-
-  const activeStakes    = stakesArr.filter((s: any) => s.status === "active");
-  const stakedSatsTotal = activeStakes.reduce((a: number, s: any) => a + Number(s.amountSats ?? 0), 0);
-  const pendingYield    = activeStakes.reduce((a: number, s: any) => a + parseFloat(s.nxtYield ?? "0"), 0);
   const activeWnusd   = wnusdArr.filter((p: any) => p.status === "active");
   const totalWnusdMinted = activeWnusd.reduce((a: number, p: any) => a + parseFloat(p.wnusdMinted ?? "0"), 0);
   const lpCount       = lpPosArr.filter((p: any) => p.lpTokens > 0).length;
@@ -105,7 +105,7 @@ export default function PortfolioPage() {
                 ${fmt(totalUsd, 2)}
               </div>
               <div className="text-slate-500 text-sm font-mono">
-                ≈ {satsFmt(sats + nxt * satsPerNxt)} sats total
+                ≈ {satsFmt(sats + stakedSatsTotal + nxt * satsPerNxt)} sats total
               </div>
             </>
           )}
@@ -115,7 +115,7 @@ export default function PortfolioPage() {
         <div className="grid grid-cols-2 gap-3 mb-3">
           {[
             { icon: Zap,        label: "Liquid Sats",  value: satsFmt(sats),        sub: `$${fmt(satsUsd)}`,    color: "yellow" },
-            { icon: Lock,       label: "Staked Sats",  value: satsFmt(satsStaked),  sub: `$${fmt(stakedUsd)}`,  color: "orange" },
+            { icon: Lock,       label: "Staked Sats",  value: satsFmt(stakedSatsTotal),  sub: `$${fmt(stakedUsd)}`,  color: "orange" },
           ].map(item => (
             <Card key={item.label} className="bg-slate-900/60 border-slate-700/40 p-3 text-center">
               <item.icon className={`w-5 h-5 mx-auto mb-1.5 ${
