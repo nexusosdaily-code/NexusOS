@@ -9,6 +9,7 @@
 - Authenticated dashboard and workspace routes
 - Logged-in user tools that are intentionally private
 - Admin-only routes
+- User-specific or record-specific entity routes such as `/profile/:username`, `/app/:slug`, and `/passport` until the product intentionally promotes them as search landing pages
 
 ## Target audience
 - Developers, researchers, funders, and technically curious readers evaluating NexusOS, WNSP, and related photonic-computing concepts
