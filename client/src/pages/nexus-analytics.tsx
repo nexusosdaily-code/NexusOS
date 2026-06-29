@@ -99,7 +99,7 @@ export default function NexusAnalyticsPage() {
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <Activity className="w-4 h-4 text-cyan-400" />
-          <span className="text-sm font-medium text-white">NexusOS Traffic Monitor</span>
+          <h1 className="text-sm font-medium text-white">NexusOS Traffic Monitor</h1>
           <div className="ml-auto flex items-center gap-3">
             <span className="text-[10px] text-slate-600 font-mono">Updated {updated}</span>
             <button onClick={() => refetch()} className="text-slate-500 hover:text-slate-300 transition-colors">
@@ -159,6 +159,7 @@ export default function NexusAnalyticsPage() {
             {/* Pages tab */}
             {tab === "pages" && (
               <div className="space-y-2">
+                <h2 className="sr-only">Top Pages</h2>
                 <div className="grid grid-cols-[1fr_4rem_4rem_4rem] gap-2 px-3 text-[10px] text-slate-600 uppercase tracking-widest font-mono">
                   <span>Path</span><span className="text-right">Hits</span>
                   <span className="text-right">Human</span><span className="text-right">Bot</span>
@@ -178,6 +179,7 @@ export default function NexusAnalyticsPage() {
             {/* Bots tab */}
             {tab === "bots" && (
               <div className="space-y-2">
+                <h2 className="sr-only">Top Bots</h2>
                 {data.topBots.length === 0 && <p className="text-slate-600 text-sm text-center py-8">No bots detected in this window.</p>}
                 {data.topBots.map((b, i) => (
                   <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-lg border border-amber-500/10 bg-amber-500/5">
@@ -197,6 +199,7 @@ export default function NexusAnalyticsPage() {
             {/* Countries tab */}
             {tab === "countries" && (
               <div className="space-y-2">
+                <h2 className="sr-only">Countries</h2>
                 {data.countries.map((c, i) => {
                   const pct = Math.round((c.hits / Math.max(data.totalHits, 1)) * 100);
                   return (
@@ -218,6 +221,7 @@ export default function NexusAnalyticsPage() {
             {/* Threats tab */}
             {tab === "threats" && (
               <div className="space-y-4">
+                <h2 className="sr-only">Threat Probes</h2>
                 {/* Threat summary cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <StatCard icon={Skull}        label="Total Probes"      value={data.threatSummary.totalProbes}       color="red" />
@@ -264,6 +268,7 @@ export default function NexusAnalyticsPage() {
             {/* SEO Issues tab */}
             {tab === "seo" && (
               <div className="space-y-3">
+                <h2 className="sr-only">SEO Issues</h2>
                 {data.seoIssues.length === 0 && (
                   <div className="text-center py-12 space-y-2">
                     <div className="text-green-400 text-2xl">✓</div>
@@ -288,6 +293,7 @@ export default function NexusAnalyticsPage() {
             {/* Live feed tab */}
             {tab === "live" && (
               <div className="space-y-1">
+                <h2 className="sr-only">Live Feed</h2>
                 <div className="grid grid-cols-[4rem_1fr_3rem_4rem_5rem] gap-2 px-3 text-[10px] text-slate-600 uppercase tracking-widest font-mono mb-2">
                   <span>Time</span><span>Path</span><span>Code</span><span>Country</span><span>Source</span>
                 </div>

@@ -431,6 +431,7 @@ export default function PaperPage() {
             { href: "/founders",           label: "Founding Architects" },
             { href: "/octave-layers",      label: "Russell Octave Layers" },
             { href: "/oscillating-quanta", label: "First Principles" },
+            { href: "/proof",              label: "Physics Proofs" },
             { href: "/hardware-results",   label: "Hardware Results" },
             { href: "/compression-explorer", label: "Compression Explorer" },
             { href: "/hardware-spec",      label: "Hardware Specification" },

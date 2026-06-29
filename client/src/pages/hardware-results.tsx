@@ -283,6 +283,7 @@ export default function HardwareResultsPage() {
             { href: "/poc",                label: "Full PoC Scope" },
             { href: "/hardware-lab",       label: "Hardware Lab" },
             { href: "/paper",              label: "Theory Paper" },
+            { href: "/proof",              label: "Physics Proofs" },
             { href: "/octave-layers",      label: "Russell Octave Layers" },
             { href: "/hardware-spec",      label: "Hardware Specification" },
             { href: "/founders",           label: "Founding Architects" },

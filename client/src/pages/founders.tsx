@@ -406,6 +406,7 @@ export default function FoundersPage() {
         <nav className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
           {[
             { href: "/oscillating-quanta",    label: "First Principles" },
+            { href: "/proof",                 label: "Physics Proofs" },
             { href: "/hardware-spec",         label: "Hardware Specification" },
             { href: "/joint-venture",         label: "Global Joint Venture" },
             { href: "/poc",                   label: "Hardware PoC Scope" },
