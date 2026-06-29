@@ -51,14 +51,28 @@ const PERM_COLORS: Record<string, string> = {
 };
 
 const DEV_GATE_KEY = "dev_unlocked";
-const DEV_PASSWORD  = "Wnsp_nexusos2026";
 
 function DevGate({ onUnlock }: { onUnlock: () => void }) {
   const [input, setInput] = useState("");
   const [error, setError] = useState(false);
-  const attempt = () => {
-    if (input === DEV_PASSWORD) { onUnlock(); }
-    else { setError(true); setTimeout(() => setError(false), 1500); }
+  const [loading, setLoading] = useState(false);
+  const attempt = async () => {
+    if (!input.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/developer/verify-gate", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: input }),
+      });
+      if (res.ok) { onUnlock(); }
+      else { setError(true); setTimeout(() => setError(false), 1500); }
+    } catch {
+      setError(true); setTimeout(() => setError(false), 1500);
+    } finally {
+      setLoading(false);
+    }
   };
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
@@ -85,7 +99,8 @@ function DevGate({ onUnlock }: { onUnlock: () => void }) {
           {error && <p className="text-red-400 text-xs text-center">Incorrect password</p>}
           <button
             onClick={attempt}
-            className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold transition-all"
+            disabled={loading}
+            className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-60 text-white text-sm font-semibold transition-all"
             data-testid="btn-dev-unlock"
           >
             Unlock

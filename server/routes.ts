@@ -2015,6 +2015,18 @@ export async function registerRoutes(
     });
   });
 
+  // ── Developer gate — password verified server-side only ──────────────────
+  // Password never ships in the client bundle; checked here against env var
+  // with fallback. Rotate via DEV_GATE_PASSWORD env var.
+  app.post("/api/developer/verify-gate", authenticate, (req: Request, res: Response) => {
+    const { password } = req.body ?? {};
+    const expected = process.env.DEV_GATE_PASSWORD ?? "Wnsp_nexusos2026";
+    if (typeof password !== "string" || password !== expected) {
+      return res.status(401).json({ ok: false, error: "Invalid password" });
+    }
+    res.json({ ok: true });
+  });
+
   // ── External developer endpoints — API key authenticated ─────────────────
 
   // GET /api/dev/physics/:username — spectral channel + fee schedule
