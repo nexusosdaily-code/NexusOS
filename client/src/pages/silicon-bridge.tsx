@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, ArrowRight, Cpu, Zap, Radio, Layers, ExternalLink, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
+import { usePageMeta } from "@/hooks/use-page-meta";
 
 // CODATA 2018 / SI exact constants
 const H = 6.62607015e-34;
@@ -50,6 +51,14 @@ const EXAMPLE_CHANNELS = [
 ];
 
 export default function SiliconBridgePage() {
+  usePageMeta({
+    title: "The Silicon Bridge — Solving the Transistor Problem | NexusOS",
+    description: "Silicon transistors are approaching their physical limit. NexusOS is already written in the language of what comes next: photonic computing. Ψ channels map directly to physical waveguide lanes — no rewrite required when photonic ASICs arrive.",
+    canonical: "https://wnsp.io/silicon-bridge",
+    ogTitle: "The Silicon Bridge — Silicon is the Bridge. Photons are the Destination.",
+    ogDescription: "Moore's Law ends at ~1 nm. NexusOS solves the transistor problem by writing in the language of photonic computing today. 25,600 orthogonal Ψ channels map to physical waveguide lanes — no rewrite when ASICs arrive (~2032).",
+  });
+
   const ceA = nmToEnergy(383.1);
   const ceSpace = nmToEnergy(533.6);
 
