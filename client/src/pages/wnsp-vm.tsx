@@ -353,7 +353,7 @@ export default function WnspVMPage() {
           </Link>
           <div className="flex items-center gap-2">
             <Cpu size={13} className="text-violet-400" />
-            <span className="text-sm font-bold tracking-wider text-violet-400">WNSP VIRTUAL MACHINE</span>
+            <h1 className="text-sm font-bold tracking-wider text-violet-400">WNSP Virtual Machine</h1>
             <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
           </div>
           <span className="text-white/20 text-[10px]">Execute WavelengthScript bytecode · Ψ channels as registers · E=hf execution model</span>

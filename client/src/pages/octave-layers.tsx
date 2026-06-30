@@ -148,7 +148,7 @@ export default function OctaveLayersPage() {
     <div className="min-h-screen bg-[#040810] text-slate-200">
       <div className="sticky top-0 z-20 bg-[#040810]/95 backdrop-blur border-b border-slate-800/60 px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
-          <Link href="/hub" className="text-slate-500 hover:text-slate-300 transition-colors">
+          <Link href="/wnsp" className="text-slate-500 hover:text-slate-300 transition-colors">
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <span className="text-xs text-slate-500 font-mono">NexusOS · Russell Octave Layers</span>

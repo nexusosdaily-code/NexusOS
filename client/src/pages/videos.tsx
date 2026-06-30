@@ -112,7 +112,7 @@ export default function VideosPage() {
   return (
     <div className="min-h-screen bg-black text-white font-mono">
       <nav className="sticky top-0 z-40 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/80 backdrop-blur">
-        <Link href="/">
+        <Link href="/wnsp">
           <span className="text-lg font-bold tracking-widest">NEXUS<span className="text-green-400">OS</span></span>
         </Link>
         <div className="flex items-center gap-2 text-xs text-gray-500">

@@ -3,7 +3,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ExternalLink, Copy, CheckCheck, Terminal, Cpu, FileText, Users, Zap, Radio, BookOpen, GitBranch, Activity, Globe } from "lucide-react";
+import { ExternalLink, Copy, CheckCheck, Terminal, Cpu, FileText, Users, Zap, Radio, BookOpen, GitBranch, Activity, Globe, Mail } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -174,6 +174,11 @@ export default function BuildWithUsPage() {
             <a href="https://github.com/nexusosdaily-code/NexusOS" target="_blank" rel="noopener noreferrer">
               <Button variant="outline" className="border-white/20 text-white/60 hover:bg-white/5 gap-2" data-testid="button-hero-github">
                 <GitBranch className="w-4 h-4" /> GitHub
+              </Button>
+            </a>
+            <a href="/contact">
+              <Button variant="outline" className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 gap-2" data-testid="button-hero-contact">
+                <Mail className="w-4 h-4" /> Talk to the Team
               </Button>
             </a>
           </div>

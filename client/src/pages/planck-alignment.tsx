@@ -156,7 +156,7 @@ export default function PlanckAlignmentPage() {
 
       {/* Header */}
       <header className="sticky top-0 z-10 bg-[#060609]/95 backdrop-blur border-b border-white/[0.05] px-6 py-3 flex items-center justify-between">
-        <Link href="/">
+        <Link href="/wnsp">
           <span className="flex items-center gap-2 text-white/40 hover:text-white transition-colors text-sm cursor-pointer">
             <ArrowLeft size={14} /> NexusOS
           </span>

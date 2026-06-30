@@ -808,7 +808,7 @@ export default function CampaignPage() {
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       {/* Header */}
       <div className="border-b border-white/5 px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="text-white/40 hover:text-white/70 text-xs flex items-center gap-1.5 transition-colors">
+        <Link href="/wnsp" className="text-white/40 hover:text-white/70 text-xs flex items-center gap-1.5 transition-colors">
           ← NexusOS
         </Link>
         <span className="text-[10px] font-mono text-white/20 uppercase tracking-wider">Infrastructure Campaign</span>
@@ -1236,6 +1236,9 @@ export default function CampaignPage() {
             </Link>
             <Link href="/evidence" className="text-xs px-5 py-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1.5">
               <Eye size={12} /> Evidence
+            </Link>
+            <Link href="/contact" className="text-xs px-5 py-2 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1.5">
+              Institutional Inquiry
             </Link>
           </div>
         </div>

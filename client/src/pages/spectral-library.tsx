@@ -221,7 +221,7 @@ export default function SpectralLibrary() {
           </button>
         </Link>
         <div className="w-2 h-2 rounded-full animate-pulse bg-green-400" />
-        <span className="text-white/50 text-xs uppercase tracking-widest">Spectral Library</span>
+        <h1 className="text-white/50 text-xs uppercase tracking-widest">Spectral Library</h1>
         <span className="text-white/20 text-xs">
           {isFetching ? "searching…" : `${data?.count ?? 0} records`}
         </span>

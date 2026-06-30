@@ -339,6 +339,7 @@ export default function WnspLandingPage() {
             <Link href="/wnsp-paper" className="hover:text-white/50 transition-colors">Research Paper</Link>
             <Link href="/ce-se-pipeline" className="hover:text-white/50 transition-colors">Live Pipeline</Link>
             <Link href="/campaign" className="hover:text-white/50 transition-colors">Campaign</Link>
+            <Link href="/contact" className="hover:text-white/50 transition-colors">Contact</Link>
           </div>
         </div>
 

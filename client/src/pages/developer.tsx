@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import {
   Zap, Key, Copy, CheckCircle, Terminal, Globe, Shield,
   Code2, Cpu, ArrowRight, ExternalLink, Package, BookOpen,
-  Activity, Wifi, BarChart3, Hash, Layers,
+  Activity, Wifi, BarChart3, Hash, Layers, Mail,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -117,6 +117,11 @@ export default function DeveloperPage() {
             <Link href="/docs">
               <button className="flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white font-semibold transition-all">
                 <BookOpen className="w-4 h-4" /> Read the Docs
+              </button>
+            </Link>
+            <Link href="/contact">
+              <button className="flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white font-semibold transition-all">
+                <Mail className="w-4 h-4" /> Institutional Inquiry
               </button>
             </Link>
           </div>

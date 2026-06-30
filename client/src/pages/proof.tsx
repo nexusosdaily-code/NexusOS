@@ -233,7 +233,7 @@ export default function ProofPage() {
 
       {/* NAV */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-5 py-3.5 border-b border-white/8 bg-black/90 backdrop-blur">
-        <Link href="/">
+        <Link href="/wnsp">
           <span className="text-sm font-bold tracking-widest text-white cursor-pointer">
             NEXUS<span className="text-purple-400">OS</span>
             <span className="text-[10px] text-white/30 ml-3 font-normal tracking-normal">Mathematical Proof</span>

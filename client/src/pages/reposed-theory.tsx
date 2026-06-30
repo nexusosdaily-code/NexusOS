@@ -242,7 +242,7 @@ export default function ReposedTheoryPage() {
       {/* Header */}
       <div className="border-b border-white/5 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/">
+          <Link href="/wnsp">
             <button className="flex items-center gap-2 text-white/30 hover:text-white/60 transition-colors text-[10px]" data-testid="button-back-home">
               <ArrowLeft size={12} /> NexusOS
             </button>
