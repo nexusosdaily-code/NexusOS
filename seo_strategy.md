@@ -11,6 +11,8 @@
 - Admin-only routes
 - User-specific or record-specific entity routes such as `/profile/:username`, `/app/:slug`, and `/passport` until the product intentionally promotes them as search landing pages
 
+Private routes remain out of scope for content-quality review, but they are still in scope for crawlability checks if the server exposes them as indexable public URLs.
+
 ## Target audience
 - Developers, researchers, funders, and technically curious readers evaluating NexusOS, WNSP, and related photonic-computing concepts
 
