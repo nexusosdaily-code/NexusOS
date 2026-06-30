@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // Suppress HMR WebSocket errors — Vite's dev client cannot reach
+      // the HMR WebSocket through Replit's reverse proxy, so these errors
+      // are expected and should not propagate as unhandled rejections.
+      window.addEventListener('unhandledrejection', function(e) {
+        var msg = e.reason && (e.reason.message || String(e.reason));
+        if (msg && (msg.includes('WebSocket') || msg.includes('vite-hmr') || msg.includes('failed to connect'))) {
+          e.preventDefault();
+        }
+      });
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="theme-color" content="#050d1a" />
+    <title>NexusOS — Physics-Based Civilization OS</title>
+    <meta name="description" content="NexusOS is the foundational blueprint for a Kardashev Type I civilization. Built on the Theory of Compression States — physics-based blockchain, WNSP spectral communication, WavelengthScript, and a CE-SE pipeline that maps every symbol to a photon frequency." />
+    <meta name="robots" content="index, follow" />
+    <meta name="keywords" content="WNSP, WavelengthScript, photonic computing, spectral communication, physics blockchain, NXT token, compression states, Kardashev, CE-SE pipeline, open source" />
+    <link rel="canonical" href="https://wnsp.io/" />
+
+    <meta property="og:title" content="NexusOS — Physics-Based Civilization OS" />
+    <meta property="og:description" content="The foundational blueprint for a Kardashev Type I civilization. Physics-based blockchain, WNSP spectral communication, WavelengthScript, and a CE-SE pipeline that maps every symbol to a photon frequency." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://wnsp.io/" />
+    <meta property="og:image" content="https://0a70fadf-e9ae-4e02-8d6d-f55fdb7924c1-00-kxbvkx18na65.riker.replit.dev/opengraph.png" />
+    <meta property="og:site_name" content="NexusOS" />
+    <meta property="og:locale" content="en_US" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@NexusOS_io" />
+    <meta name="twitter:title" content="NexusOS — Physics-Based Civilization OS" />
+    <meta name="twitter:description" content="The foundational blueprint for a Kardashev Type I civilization. Physics-based blockchain, WNSP spectral communication, WavelengthScript." />
+    <meta name="twitter:image" content="https://0a70fadf-e9ae-4e02-8d6d-f55fdb7924c1-00-kxbvkx18na65.riker.replit.dev/opengraph.png" />
+
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Fonts loaded non-blocking: won't delay first paint on mobile -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Fira+Code:wght@300..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Fira+Code:wght@300..700&display=swap"></noscript>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "NexusOS",
+      "url": "https://wnsp.io/",
+      "description": "The foundational blueprint for a Kardashev Type I civilization. Physics-based blockchain, WNSP spectral communication protocol, WavelengthScript compiler, and CE-SE pipeline.",
+      "keywords": "WNSP, WavelengthScript, photonic computing, spectral communication, physics blockchain, NXT token, open source",
+      "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
+      "creator": {
+        "@type": "Organization",
+        "name": "NexusOS",
+        "url": "https://wnsp.io/"
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://wnsp.io/spectral-search?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "NexusOS",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Web",
+      "url": "https://wnsp.io/",
+      "description": "Open-source physics-based OS kernel for a Kardashev Type I civilization. Includes WNSP spectral protocol, WavelengthScript compiler, CE-SE encoding pipeline, NXT token wallet, and WNSP Virtual Machine.",
+      "license": "AGPL-3.0",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "WNSP Spectral Communication Protocol",
+        "WavelengthScript Compiler",
+        "CE-SE Encoding Pipeline",
+        "Physics-Based Blockchain",
+        "NXT Token Wallet",
+        "WNSP Virtual Machine",
+        "Spectral Relay Mesh",
+        "25600 Orthogonal Communication Channels"
+      ]
+    }
+    </script>
+    <script type="module" crossorigin src="/assets/index-YDKJnxMP.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-query-BqLxTKzc.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-radix-Bg2fqeVo.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-charts-DAxvRQzT.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-ww39E20h.css">
+  </head>
+  <body style="background:#050d1a;margin:0;padding:0;">
+    <div id="root"></div>
+  </body>
+</html>

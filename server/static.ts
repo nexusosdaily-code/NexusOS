@@ -19,6 +19,7 @@ const CUSTOM_DOMAIN_HOSTS = new Set<string>([
   "wascii.io", "www.wascii.io",
   "orbitaltreasury.io", "www.orbitaltreasury.io",
   "555thz.io", "www.555thz.io",
+  "spectralmirror.io", "www.spectralmirror.io",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -238,8 +239,10 @@ const CUSTOM_DOMAIN_CANONICAL: Record<string, string> = {
   "www.wascii.io":         "https://wascii.io/",
   "orbitaltreasury.io":    "https://orbitaltreasury.io/",
   "www.orbitaltreasury.io": "https://orbitaltreasury.io/",
-  "555thz.io":             "https://555thz.io/",
-  "www.555thz.io":         "https://555thz.io/",
+  "555thz.io":                "https://555thz.io/",
+  "www.555thz.io":            "https://555thz.io/",
+  "spectralmirror.io":        "https://spectralmirror.io/",
+  "www.spectralmirror.io":    "https://spectralmirror.io/",
 };
 
 export function serveStatic(app: Express) {
@@ -556,6 +559,33 @@ export function serveStatic(app: Express) {
       "> https://wnsp.io/nxt-campaign",
       "> https://wnsp.io/blockchain",
       "> https://wnsp.io/open",
+    ].join("\n"),
+
+    "spectralmirror.io": [
+      "# spectralmirror.io — The First Electromagnetic Archive",
+      "",
+      "Spectral Mirror is a live, permanent archive of every message and P2P transmission",
+      "that passes through the WNSP protocol layer. Each record is CE-encoded: its dominant",
+      "wavelength is derived from λ = 380 + (charCode % 128) × 3.125 nm. The Ψ channel",
+      "address Ψ(wdm, oam, pol) is computed from the content itself.",
+      "",
+      "> https://spectralmirror.io/",
+      "",
+      "Recording began 2 May 2026. This genesis date cannot be recreated — it is the",
+      "first and only continuous electromagnetic archive at these coordinates in history.",
+      "This is a once-only feature: the archive cannot be restarted from its original",
+      "genesis point. Whoever holds spectralmirror.io holds the original record.",
+      "",
+      "## Live archive endpoints (public, no auth required)",
+      "",
+      "> https://wnsp.io/api/mirror/public-stats",
+      "> https://wnsp.io/api/mirror/transmissions?n=30",
+      "",
+      "## Key resources on the main site",
+      "",
+      "> https://wnsp.io/spectral-mirror",
+      "> https://wnsp.io/ce-se-pipeline",
+      "> https://wnsp.io/oscillating-quanta",
     ].join("\n"),
 
     "555thz.io": [

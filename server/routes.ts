@@ -5487,6 +5487,126 @@ export async function registerRoutes(
     }
   });
 
+  // ── Spectral Mirror — public read-only archive endpoints ─────────────────────
+  // No authentication required. Served to spectralmirror.io and wnsp.io.
+  // CORS wildcard is intentional: this is public, read-only aggregate data.
+
+  app.get("/api/mirror/public-stats", async (_req: Request, res: Response) => {
+    try {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Cache-Control", "public, max-age=10");
+      const { db }             = await import("./db");
+      const { spectralRecords } = await import("@shared/schema");
+
+      const all = await db
+        .select({
+          id:          spectralRecords.id,
+          wavelengthNm: spectralRecords.wavelengthNm,
+          band:        spectralRecords.band,
+          psiChannel:  spectralRecords.psiChannel,
+          createdAt:   spectralRecords.createdAt,
+        })
+        .from(spectralRecords);
+
+      if (all.length === 0) {
+        return res.json({
+          total: 0, bands: {}, avgNm: null,
+          dominantBand: null, dominantNm: null,
+          uniqueChannels: 0, recordingSince: "2026-05-02T00:00:00.000Z",
+        });
+      }
+
+      const bandCounts: Record<string, number> = {};
+      const bandNmSum:  Record<string, number> = {};
+      const channels    = new Set<string>();
+      let   totalNm     = 0;
+      let   oldest      = all[0].createdAt;
+
+      for (const r of all) {
+        const nm   = parseFloat(String(r.wavelengthNm));
+        const band = r.band ?? "USER";
+        bandCounts[band] = (bandCounts[band] ?? 0) + 1;
+        bandNmSum[band]  = (bandNmSum[band]  ?? 0) + nm;
+        channels.add(r.psiChannel);
+        totalNm += nm;
+        if (r.createdAt < oldest) oldest = r.createdAt;
+      }
+
+      const total    = all.length;
+      const avgNm    = Math.round((totalNm / total) * 100) / 100;
+      const bands: Record<string, { count: number; pct: number }> = {};
+      let   dominantBand = "USER";
+      let   dominantMax  = 0;
+
+      for (const [band, count] of Object.entries(bandCounts)) {
+        bands[band] = { count, pct: Math.round((count / total) * 10000) / 100 };
+        if (count > dominantMax) { dominantMax = count; dominantBand = band; }
+      }
+
+      const dominantNm = bandNmSum[dominantBand]
+        ? Math.round((bandNmSum[dominantBand] / bandCounts[dominantBand]) * 100) / 100
+        : avgNm;
+
+      res.json({
+        total,
+        bands,
+        avgNm,
+        dominantBand,
+        dominantNm,
+        uniqueChannels: channels.size,
+        recordingSince: oldest instanceof Date ? oldest.toISOString() : String(oldest),
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/mirror/transmissions", async (req: Request, res: Response) => {
+    try {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Cache-Control", "public, max-age=10");
+      const rawN = parseInt(String(req.query.n ?? "30"), 10);
+      const n = Number.isFinite(rawN) ? Math.min(Math.max(rawN, 1), 100) : 30;
+      const { db }             = await import("./db");
+      const { spectralRecords } = await import("@shared/schema");
+      const { desc }            = await import("drizzle-orm");
+
+      const rows = await db
+        .select({
+          id:           spectralRecords.id,
+          label:        spectralRecords.label,
+          wavelengthNm: spectralRecords.wavelengthNm,
+          band:         spectralRecords.band,
+          psiChannel:   spectralRecords.psiChannel,
+          energyJoules: spectralRecords.energyJoules,
+          data:         spectralRecords.data,
+          createdAt:    spectralRecords.createdAt,
+        })
+        .from(spectralRecords)
+        .orderBy(desc(spectralRecords.createdAt))
+        .limit(n);
+
+      const records = rows.map(r => {
+        const meta: any = r.data ?? {};
+        return {
+          id:            r.id,
+          messageText:   r.label,
+          senderHandle:  meta.senderHandle ?? meta.sender ?? null,
+          chatId:        meta.chatId ?? null,
+          nm:            Math.round(parseFloat(String(r.wavelengthNm)) * 100) / 100,
+          band:          r.band,
+          psiChannel:    r.psiChannel,
+          energy:        parseFloat(String(r.energyJoules)),
+          createdAt:     r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+        };
+      });
+
+      res.json({ records, count: records.length });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Proximity search — find records within ±range nm of a target wavelength
   app.get("/api/spectral-db/search", async (req: Request, res: Response) => {
     try {

@@ -1,5 +1,5 @@
 import { ExternalLink, Terminal, Cpu, Radio, Zap, Globe, Code2, ArrowRight, Copy, Check, BookOpen, Shield, Waves, Star, Share2 } from "lucide-react";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 // ── CE physics — client-side, instant, no API needed ─────────────────────────
 const CE_MIN = 380, CE_MAX = 780, CE_BANDS = 128, CE_BW = (CE_MAX - CE_MIN) / CE_BANDS;
@@ -139,13 +139,14 @@ function WnspDevTry({ accent }: { accent: string }) {
 
 // ── Ecosystem tab data ────────────────────────────────────────────────────────
 const ECOSYSTEM_TABS = [
-  { domain: "wnsp.tech",           accent: "#00e5cc", label: "wnsp.tech",           founder: "Maxwell", icon: "〜" },
-  { domain: "snic.io",             accent: "#60a5fa", label: "snic.io",             founder: "Tesla",   icon: "⊛" },
-  { domain: "phr1.io",             accent: "#f87171", label: "phr1.io",             founder: "Tesla",   icon: "⌁" },
-  { domain: "zerogstate.io",       accent: "#818cf8", label: "zerogstate.io",       founder: "Tesla",   icon: "∅" },
-  { domain: "wascii.io",           accent: "#fde047", label: "wascii.io",           founder: "Planck",  icon: "≈" },
-  { domain: "555thz.io",           accent: "#4ade80", label: "555thz.io",           founder: "Planck",  icon: "ƒ" },
-  { domain: "wavelengthscript.dev",accent: "#34d399", label: "wavelengthscript.dev",founder: "Planck",  icon: "ψ" },
+  { domain: "wnsp.tech",              accent: "#00e5cc", label: "wnsp.tech",              founder: "Maxwell", icon: "〜" },
+  { domain: "snic.io",                accent: "#60a5fa", label: "snic.io",                founder: "Tesla",   icon: "⊛" },
+  { domain: "phr1.io",                accent: "#f87171", label: "phr1.io",                founder: "Tesla",   icon: "⌁" },
+  { domain: "zerogstate.io",          accent: "#818cf8", label: "zerogstate.io",          founder: "Tesla",   icon: "∅" },
+  { domain: "wascii.io",              accent: "#fde047", label: "wascii.io",              founder: "Planck",  icon: "≈" },
+  { domain: "555thz.io",              accent: "#4ade80", label: "555thz.io",              founder: "Planck",  icon: "ƒ" },
+  { domain: "wavelengthscript.dev",   accent: "#34d399", label: "wavelengthscript.dev",   founder: "Planck",  icon: "ψ" },
+  { domain: "spectralmirror.io",      accent: "#8b5cf6", label: "spectralmirror.io",      founder: "Maxwell", icon: "◎" },
 ] as const;
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -1062,6 +1063,245 @@ export function FiveFiveFiveLanding() {
   );
 }
 
+// ── 11. spectralmirror.io ─ Live Electromagnetic Archive ─────────────────────
+interface MirrorStats {
+  total: number;
+  bands: Record<string, { count: number; pct: number }>;
+  avgNm: number | null;
+  dominantBand: string | null;
+  dominantNm: number | null;
+  uniqueChannels: number;
+  recordingSince: string;
+}
+interface MirrorTx {
+  id: number; messageText: string; senderHandle: string | null;
+  nm: number; band: string; psiChannel: string; createdAt: string;
+}
+const SM_BAND_COLORS: Record<string, string> = {
+  SYSTEM: "#7c3aed",
+  KERNEL: "#0ea5e9",
+  CORE:   "#0ea5e9",
+  AUTH:   "#6366f1",
+  USER:   "#10b981",
+  GUEST:  "#f59e0b",
+};
+function smBandColor(band: string) {
+  return SM_BAND_COLORS[band] ?? "#8b5cf6";
+}
+function smNmToColor(nm: number) {
+  if (nm < 450) return "#7c3aed";
+  if (nm < 500) return "#0ea5e9";
+  if (nm < 620) return "#10b981";
+  return "#f59e0b";
+}
+function smTimeAgo(iso: string) {
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s/60)}m ago`;
+  if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+  return `${Math.floor(s/86400)}d ago`;
+}
+
+export function SpectralMirrorLanding() {
+  const accent = "#8b5cf6";
+  const [stats, setStats] = useState<MirrorStats | null>(null);
+  const [feed, setFeed]   = useState<MirrorTx[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [sr, tr] = await Promise.all([
+          fetch("https://wnsp.io/api/mirror/public-stats"),
+          fetch("https://wnsp.io/api/mirror/transmissions?n=8"),
+        ]);
+        if (sr.ok) setStats(await sr.json());
+        if (tr.ok) { const d = await tr.json(); setFeed(d.records ?? []); }
+      } catch {}
+      setLoaded(true);
+    }
+    load();
+    const iv = setInterval(load, 20_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-[#07040f] text-white font-mono">
+      <Nav domain="spectralmirror.io" accent={accent} />
+
+      <div className="pt-36 pb-16 px-4 max-w-3xl mx-auto">
+
+        {/* Hero */}
+        <div className="mb-12 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-6 text-[10px] uppercase tracking-widest"
+            style={{ borderColor: accent+"40", color: accent, background: accent+"10" }}>
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: accent }} />
+            Live · Recording since 2 May 2026
+          </div>
+          <h1 className="text-5xl font-bold text-white mb-4">Spectral Mirror</h1>
+          <p className="text-white/50 text-base max-w-xl mx-auto leading-7 mb-3">
+            The first electromagnetic archive in existence. Every message and P2P transmission
+            that passes through the WNSP layer is CE-encoded and permanently stored
+            by its address in the visible light spectrum.
+          </p>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-[11px] font-bold"
+            style={{ borderColor: "#ef444440", color: "#ef4444", background: "#ef444408" }}>
+            ◉ This archive began on 2 May 2026. That genesis date cannot be recreated.
+          </div>
+        </div>
+
+        {/* Live stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
+          {[
+            { label: "Records archived", value: loaded ? (stats?.total.toLocaleString() ?? "0") : "…", color: accent },
+            { label: "Avg wavelength",   value: loaded ? (stats?.avgNm ? `${stats.avgNm.toFixed(1)} nm` : "—") : "…", color: smNmToColor(stats?.avgNm ?? 550) },
+            { label: "Unique Ψ channels", value: loaded ? (stats?.uniqueChannels.toLocaleString() ?? "0") : "…", color: "#0ea5e9" },
+            { label: "Dominant band",    value: loaded ? (stats?.dominantBand ?? "—") : "…", color: smBandColor(stats?.dominantBand ?? "USER") },
+          ].map((s, i) => (
+            <div key={i} className="rounded-xl border border-white/8 bg-white/3 p-4">
+              <div className="text-xl font-bold mb-1" style={{ color: s.color }}>{s.value}</div>
+              <div className="text-[10px] text-white/40 uppercase tracking-widest">{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Spectrum bar */}
+        <div className="rounded-xl border border-white/8 bg-white/2 p-5 mb-8">
+          <div className="text-[10px] uppercase tracking-widest text-white/30 mb-3">Visible Spectrum · 380–780 nm</div>
+          <div className="flex h-6 rounded-lg overflow-hidden w-full mb-2">
+            {Array.from({ length: 128 }, (_, i) => {
+              const nm = 380 + i * 3.125;
+              return <div key={i} className="flex-1" style={{ backgroundColor: `hsl(${270 - (nm-380)/400*270},80%,50%)`, opacity: 0.75 }} />;
+            })}
+          </div>
+          <div className="flex justify-between text-[9px] font-mono text-white/25">
+            <span>380nm SYSTEM</span><span>480nm KERNEL</span><span>495nm USER</span><span>620nm GUEST</span><span>780nm</span>
+          </div>
+          {stats?.dominantNm && (
+            <div className="mt-3 text-[11px] text-white/50">
+              Current dominant: <span style={{ color: smNmToColor(stats.dominantNm) }}>{stats.dominantNm.toFixed(1)} nm · {stats.dominantBand} band</span>
+            </div>
+          )}
+        </div>
+
+        {/* Authority band distribution */}
+        <div className="rounded-xl border border-white/8 bg-white/2 p-5 mb-8">
+          <div className="text-[10px] uppercase tracking-widest text-white/30 mb-4">Authority Band Distribution</div>
+          {!loaded ? (
+            <div className="text-white/20 text-sm text-center py-4 animate-pulse">Loading archive…</div>
+          ) : stats?.total === 0 ? (
+            <p className="text-white/25 text-sm text-center py-4">No records archived yet.</p>
+          ) : (
+            <div className="space-y-4">
+              {Object.entries(stats?.bands ?? {}).sort((a,b) => b[1].count - a[1].count).map(([band, entry]) => {
+                const col   = smBandColor(band);
+                const pct   = entry?.pct ?? 0;
+                const count = entry?.count ?? 0;
+                return (
+                  <div key={band}>
+                    <div className="flex justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ background: col }} />
+                        <span className="text-sm text-white/80">{band}</span>
+                      </div>
+                      <span className="text-sm font-mono" style={{ color: col }}>{pct.toFixed(1)}% · {count}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${Math.max(pct,1)}%`, backgroundColor: col, boxShadow: `0 0 8px ${col}66` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Recent transmissions */}
+        <div className="rounded-xl border border-white/8 bg-white/2 p-5 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-[10px] uppercase tracking-widest text-white/30">Recent Transmissions</div>
+            <div className="flex items-center gap-1.5 text-[9px] text-white/25">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+              auto-refresh 20s
+            </div>
+          </div>
+          {!loaded ? (
+            <div className="text-white/20 text-sm text-center py-6 animate-pulse">Querying archive…</div>
+          ) : feed.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-white/25 text-sm">No transmissions mirrored yet.</p>
+              <p className="text-white/15 text-[11px] mt-1">Transmissions appear here as users go live on the network.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {feed.slice(0,8).map(rec => {
+                const col = smNmToColor(rec.nm);
+                const parts = rec.messageText.split(" · ");
+                return (
+                  <div key={rec.id} className="flex items-start gap-3 px-3 py-2.5 rounded-lg bg-white/2 border border-white/5">
+                    <span className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: col }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] text-white/60 truncate">{parts[1] ?? rec.messageText}</div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-mono" style={{ color: col }}>{rec.nm.toFixed(1)} nm</span>
+                        <span className="text-[10px] text-white/25">{rec.psiChannel}</span>
+                        {rec.senderHandle && <span className="text-[10px] text-white/20">@{rec.senderHandle}</span>}
+                      </div>
+                    </div>
+                    <span className="text-[9px] text-white/20 whitespace-nowrap">{smTimeAgo(rec.createdAt)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* What this means */}
+        <div className="rounded-xl border p-6 mb-8" style={{ borderColor: accent+"25", background: accent+"06" }}>
+          <div className="text-[10px] uppercase tracking-widest mb-4" style={{ color: accent }}>What the Mirror Is</div>
+          <div className="space-y-3 text-[12px] text-white/55 leading-7">
+            <p>
+              Every archived record was CE-encoded: its dominant character's wavelength derived from{" "}
+              <code style={{ color: "#10b981" }}>λ = 380 + (charCode % 128) × 3.125 nm</code>.
+              This gives each transmission a permanent address in the electromagnetic spectrum.
+            </p>
+            <p>
+              The Ψ channel address <code style={{ color: accent }}>Ψ(wdm, oam, pol)</code> is computed
+              from the content itself. Changing the signal changes the address. No certificate authority
+              required — the physics derivation is the proof.
+            </p>
+            <p className="text-white/35 text-[11px] border-t border-white/5 pt-3">
+              ◉ Recording began 2 May 2026. This is the only continuous electromagnetic archive
+              at those coordinates in history. It cannot be restarted from that genesis point.
+              Whoever holds spectralmirror.io holds the original record.
+            </p>
+          </div>
+        </div>
+
+        {/* CTAs */}
+        <div className="flex gap-3 mb-4">
+          <a href="https://wnsp.io/spectral-mirror" target="_blank" rel="noreferrer"
+            className="flex-1 text-center py-3 rounded-xl font-bold text-sm"
+            style={{ background: accent, color: "#fff" }}>
+            Open Full Archive →
+          </a>
+          <a href="https://wnsp.io/crowdfund" target="_blank" rel="noreferrer"
+            className="flex-1 text-center py-3 rounded-xl font-bold text-sm border"
+            style={{ borderColor: accent+"40", color: accent }}>
+            Fund the Network
+          </a>
+        </div>
+        <p className="text-center text-[10px] text-white/20">
+          AGPL-3.0 · NexusOS WNSP Protocol · Recording since 2 May 2026
+        </p>
+      </div>
+
+      <Footer accent={accent} />
+    </div>
+  );
+}
+
 // ── Domain map ────────────────────────────────────────────────────────────────
 export const DOMAIN_LANDINGS: Record<string, () => React.ReactElement> = {
   "wnsp.dev":              WnspDevLanding,
@@ -1082,6 +1322,8 @@ export const DOMAIN_LANDINGS: Record<string, () => React.ReactElement> = {
   "www.wascii.io":         WasciiLanding,
   "orbitaltreasury.io":    OrbitalTreasuryLanding,
   "www.orbitaltreasury.io": OrbitalTreasuryLanding,
-  "555thz.io":             FiveFiveFiveLanding,
-  "www.555thz.io":         FiveFiveFiveLanding,
+  "555thz.io":                FiveFiveFiveLanding,
+  "www.555thz.io":            FiveFiveFiveLanding,
+  "spectralmirror.io":        SpectralMirrorLanding,
+  "www.spectralmirror.io":    SpectralMirrorLanding,
 };
