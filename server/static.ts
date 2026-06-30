@@ -112,14 +112,96 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/hardware-treasury",
 ]);
 
-// Only paths where ANY child segment is valid (true dynamic routes) AND the
-// page is a genuine public marketing/science landing page.
-// /profile/:username and /app/:slug are user-specific or app-specific surfaces
-// that should not be indexed — they are served by the SPA but receive HTTP 404
-// from the server so crawlers do not spend budget on them.
-const DYNAMIC_PUBLIC_PREFIXES: string[] = [
-  "/docs/",       // /docs/:section — public documentation
+// ---------------------------------------------------------------------------
+// Non-indexable SPA paths — the server must still return HTTP 200 + the SPA
+// shell so the app works for authenticated users, but crawlers must NOT index
+// these pages.  Every path here gets:
+//   • X-Robots-Tag: noindex, nofollow  (HTTP header)
+//   • <meta name="robots" content="noindex,nofollow">  (injected into <head>)
+// ---------------------------------------------------------------------------
+const NOINDEX_EXACT_PATHS = new Set<string>([
+  // Root and protocol — mounted inside ProtectedRoutes in App.tsx;
+  // logged-out visitors are redirected to /auth client-side, so these are not
+  // real public landing pages and must not be indexed as such.
+  "/",
+  "/protocol",
+  // Authenticated app screens
+  "/wallet", "/lightning-wallet", "/lightning",
+  "/inbox", "/messages",
+  "/settings",
+  "/friends",
+  "/ledger", "/phonebook", "/directory",
+  "/governance",
+  "/kernel", "/kernel-genesis",
+  "/developer/keys",
+  "/agent-bus",
+  "/streaming",
+  "/transmission",
+  "/media-library",
+  "/p2p-terminal",
+  "/secure-docs",
+  "/social-broadcast",
+  "/telegram-hub",
+  "/stablecoin",
+  "/pricing",
+  "/community",
+  "/communication", "/comms",
+  "/pipeline", "/learn",
+  "/start",
+  "/github",
+  "/sop",
+  // Admin / user-specific
+  "/admin/orders",
+  "/passport",
+  // Application shell / internal navigation
+  "/hub", "/apps",
+  // Version history / internal pages
+  "/v6", "/v7", "/v8", "/v9", "/v10",
+  "/wnsp-uri", "/wnsp-paper",
+  // Workspace sub-routes (internal tools)
+  "/workspace/analytics", "/workspace/encoding", "/workspace/k1",
+  "/workspace/matrix", "/workspace/orchestration", "/workspace/research",
+  "/workspace/transmission", "/workspace/wavefield", "/workspace/coordinator",
+  // WNSP internal sub-routes
+  "/wnsp/coordinator", "/wnsp/kernel",
+  // Nexus internal
+  "/nexus/dev",
+  // Science & research (internal / work-in-progress)
+  "/computing-alternatives", "/quantum-threshold",
+  "/photonic-dev", "/photonic-ledger",
+  "/resonance-propulsion",
+  "/wavelength-os",
+  "/visualizer",
+  "/encoding-lab", "/ce-writer",
+  // Internal tools
+  "/spectral-audit", "/spectral-mirror", "/spectral-uri",
+  "/spectral-video", "/spectral-workspace",
+  "/ordinal-registry",
+  // Internal community / social
+  "/quora", "/reddit",
+  "/chronicle",
+  "/founders-charity",
+  // Admin / kernel
+  "/k1", "/k1/orchestration",
+  "/announcements", "/announcements/substrate-v2",
+]);
+
+// Dynamic prefixes where any child is also non-indexable (user-specific content).
+const NOINDEX_DYNAMIC_PREFIXES: string[] = [
+  "/profile/",    // /profile/:username — user-specific, not a search landing page
+  "/app/",        // /app/:slug — user contract apps, not promoted to search
 ];
+
+// Only paths where ANY child segment is valid AND the page is a true public
+// marketing / science / documentation page.
+const DYNAMIC_PUBLIC_PREFIXES: string[] = [
+  "/docs/",       // /docs/:section — public developer documentation
+];
+
+function isNoindexSpaPath(pathname: string): boolean {
+  if (NOINDEX_EXACT_PATHS.has(pathname)) return true;
+  return NOINDEX_DYNAMIC_PREFIXES.some((p) => pathname.startsWith(p));
+}
 
 function isPublicSpaPath(pathname: string): boolean {
   if (EXACT_PUBLIC_PATHS.has(pathname)) return true;
@@ -543,14 +625,31 @@ export function serveStatic(app: Express) {
     const pathname    = req.originalUrl.split("?")[0] || "/";
 
     let status: number;
+    let noindex = false;
+
     if (CUSTOM_DOMAIN_HOSTS.has(cleanHost)) {
       // Custom domains serve only their root landing page.
       status = (spaPathname === "/" || spaPathname === "") ? 200 : 404;
+    } else if (isNoindexSpaPath(spaPathname)) {
+      // Authenticated / non-promoted routes: serve SPA shell so the app works
+      // for logged-in users, but signal to crawlers that the page must not be
+      // indexed.
+      status  = 200;
+      noindex = true;
     } else {
       status = isPublicSpaPath(spaPathname) ? 200 : 404;
     }
 
-    const html = injectMeta(getHtml(), host, pathname);
+    let html = injectMeta(getHtml(), host, pathname);
+
+    if (noindex) {
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
+      html = html.replace(
+        /(<head[^>]*>)/i,
+        '$1\n    <meta name="robots" content="noindex,nofollow">',
+      );
+    }
+
     res.status(status).setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(html);
   });
