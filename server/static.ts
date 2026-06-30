@@ -34,8 +34,21 @@ const CUSTOM_DOMAIN_HOSTS = new Set<string>([
 //   Keep this list small and intentional.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// True public paths — marketing, science, funding, protocol, and documentation
+// pages that logged-out visitors can use and that crawlers should index.
+//
+// Routes NOT listed here receive HTTP 404 so search engines receive the correct
+// signal that the page is not a valid public landing page.  The SPA still loads
+// for authenticated users who navigate client-side, so removing a path from
+// this set never breaks the app — it only corrects the crawl-budget signal.
+//
+// DO NOT add authenticated app screens (wallet, inbox, settings, governance,
+// workspace/*, kernel, etc.) to this list.  Those paths are behind ProtectedRoute
+// in App.tsx and serve a client-side redirect to /auth for logged-out visitors.
+// Listing them here would make crawlers index thin auth-shell pages.
+// ---------------------------------------------------------------------------
 const EXACT_PUBLIC_PATHS = new Set<string>([
-  "/",
   "/auth",
   "/contact",
   "/labs",
@@ -44,7 +57,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/nxt-campaign",
   // Video / media
   "/videos",
-  // Developer docs (top-level pages; /docs/:section handled via DYNAMIC_PUBLIC_PREFIXES)
+  // Developer docs
   "/docs", "/developer", "/developer-matrix", "/developer-matrix/docs",
   "/research-presentation", "/research-presentation/developer-matrix",
   // Spectral framework
@@ -68,101 +81,44 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/fractal-btc", "/fractal-bitcoin",
   "/nxt-fb-swap", "/swap",
   "/btc-sentinel", "/btc-assets-sentinel",
-  "/mempool", "/admin/orders",
+  "/mempool",
   // Chain / ecosystem
   "/blockchain", "/ecosystem", "/network", "/snic",
-  "/spectral-db", "/nexus-spectral",
-  // Governance / open
+  // Governance / open (public constitutional docs)
   "/open", "/charter", "/constitution",
   // Science & theory
   "/oscillating-quanta", "/planck-alignment", "/reposed-theory", "/silicon-bridge",
   "/compression-explorer",
   // Protocol & language
   "/wavelength-lang", "/ce-se-pipeline", "/ce-code-writer",
-  "/spectral-router", "/spectral-search", "/spectral-contracts",
   "/divergence-test",
   // Hardware & spec
   "/hardware-spec", "/hardware-lab", "/mobile-sdk",
   // Infrastructure / economy pages
   "/nexus-hardware-os", "/orbital-treasury", "/spectral-library",
-  // Misc tools / pages
+  // Misc public tools / pages
   "/nexus-command", "/nexus-analytics", "/receive", "/portfolio", "/lp-pools",
   "/airdrop", "/coinsniper", "/quest",
   "/wsats", "/roadmap", "/how-to-plug-in",
   "/encode", "/replit-template", "/proof", "/stewards", "/poc", "/joint-venture", "/founders",
   "/octave-layers", "/paper", "/hardware-results",
-  // Previously missing from allowlist (domain-redirect targets and public routes)
+  // Public pages added to allowlist
   "/spectral-ide", "/resonance-cavity",
   "/build", "/shareholders",
-  "/contact", "/labs", "/build-catalogue", "/nexus-explorer", "/psi-board", "/passport",
-  // Protocol reference (seo-meta.ts canonical page)
-  "/protocol",
-  // (btc-bridge is handled by ALIAS_REDIRECTS above — not an SPA route)
-  // Routes registered in public Router() that were missing from this allowlist
+  "/build-catalogue", "/nexus-explorer", "/psi-board",
+  // Legacy redirect paths (server redirects in production)
+  "/btc-bridge",
+  // Routes registered in public Router()
   "/hardware-treasury",
-
-  // ── Batch fix: all routes in App.tsx not previously covered ──────────────
-  // Application shell / navigation
-  "/hub", "/apps",
-  // Version history pages
-  "/v6", "/v7", "/v8", "/v9", "/v10",
-  // Workspace sub-routes
-  "/workspace/analytics", "/workspace/encoding", "/workspace/k1",
-  "/workspace/matrix", "/workspace/orchestration", "/workspace/research",
-  "/workspace/transmission", "/workspace/wavefield", "/workspace/coordinator",
-  // WNSP sub-routes
-  "/wnsp/coordinator", "/wnsp/kernel", "/wnsp-uri", "/wnsp-paper",
-  // Nexus sub-routes
-  "/nexus/dev",
-  // Authenticated app pages (server still needs to return SPA shell, not 404)
-  "/wallet", "/lightning-wallet", "/lightning",
-  "/inbox", "/messages",
-  "/settings",
-  "/friends",
-  "/ledger", "/phonebook", "/directory",
-  "/governance",
-  "/kernel", "/kernel-genesis",
-  "/developer/keys",
-  "/agent-bus",
-  "/streaming",
-  "/transmission",
-  "/media-library",
-  "/p2p-terminal",
-  "/secure-docs",
-  "/social-broadcast",
-  "/telegram-hub",
-  "/stablecoin",
-  "/pricing",
-  "/community",
-  "/communication", "/comms",
-  "/pipeline", "/learn",
-  "/start",
-  "/github",
-  "/sop",
-  // Science & research
-  "/computing-alternatives", "/quantum-threshold",
-  "/photonic-dev", "/photonic-ledger",
-  "/resonance-propulsion",
-  "/wavelength-os",
-  "/visualizer",
-  "/encoding-lab", "/ce-writer",
-  // Tools
-  "/spectral-audit", "/spectral-mirror", "/spectral-uri",
-  "/spectral-video", "/spectral-workspace",
-  "/ordinal-registry",
-  // Community / social
-  "/quora", "/reddit",
-  "/chronicle",
-  "/founders-charity",
-  // Admin
-  "/k1", "/k1/orchestration",
-  "/announcements", "/announcements/substrate-v2",
 ]);
 
-// Only paths where ANY child segment is valid (true dynamic routes).
+// Only paths where ANY child segment is valid (true dynamic routes) AND the
+// page is a genuine public marketing/science landing page.
+// /profile/:username and /app/:slug are user-specific or app-specific surfaces
+// that should not be indexed — they are served by the SPA but receive HTTP 404
+// from the server so crawlers do not spend budget on them.
 const DYNAMIC_PUBLIC_PREFIXES: string[] = [
-  "/profile/",    // /profile/:username
-  "/app/",        // /app/:slug — public contract app pages
+  "/docs/",       // /docs/:section — public documentation
 ];
 
 function isPublicSpaPath(pathname: string): boolean {
