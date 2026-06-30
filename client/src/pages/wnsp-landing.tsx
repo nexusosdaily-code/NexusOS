@@ -149,6 +149,9 @@ export default function WnspLandingPage() {
           <Link href="/wnsp-paper" className="text-[11px] text-white/40 hover:text-white/70 transition-colors flex items-center gap-1">
             <BookOpen size={11} /> Research Paper
           </Link>
+          <Link href="/contact" className="text-[11px] text-white/40 hover:text-white/70 transition-colors flex items-center gap-1">
+            Contact
+          </Link>
           <Link href="/campaign" className="text-[11px] font-mono px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 transition-colors flex items-center gap-1.5">
             <Rocket size={10} /> Back the Campaign
           </Link>
