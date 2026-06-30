@@ -97,8 +97,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/contact", "/labs", "/build-catalogue", "/nexus-explorer", "/psi-board", "/passport",
   // Protocol reference (seo-meta.ts canonical page)
   "/protocol",
-  // Legacy redirect paths (SPA handles them in development; server redirects in production)
-  "/btc-bridge",
+  // (btc-bridge is handled by ALIAS_REDIRECTS above — not an SPA route)
   // Routes registered in public Router() that were missing from this allowlist
   "/hardware-treasury",
 
@@ -289,6 +288,7 @@ export function serveStatic(app: Express) {
     "/spectral-uri":   "/spectral-db?tab=write",
     "/wnsp-uri":       "/spectral-db?tab=write",
     "/visualizer":     "/spectral-db?tab=map",
+    "/btc-bridge":     "/wnsp/ordinals",
   };
   for (const [from, to] of Object.entries(ALIAS_REDIRECTS)) {
     app.get(from, (_req: Request, res: Response) => {

@@ -454,7 +454,6 @@ function Router() {
       <Route path="/nostr-relay" component={NostrRelayPage} />
       <Route path="/nostr-bridge" component={NostrBridgePage} />
       <Route path="/nxt-campaign" component={NxtCampaignPage} />
-      <Route path="/btc-bridge">{() => { window.location.replace("/wnsp/ordinals"); return null; }}</Route>
       <Route path="/community-mint" component={CommunityMintPage} />
       <Route path="/wnsp-staking" component={WnspStakingPage} />
       <Route path="/marketplace" component={MarketplacePage} />
