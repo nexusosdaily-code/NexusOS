@@ -69,13 +69,14 @@ function webSite(overrides: Partial<{ url: string; name: string; description: st
   return base;
 }
 
-function hardwareProduct(opts: { name: string; url: string; description: string }): object {
+function hardwareProduct(opts: { name: string; url: string; description: string; image?: string }): object {
   return {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": opts.name,
     "url": opts.url,
     "description": opts.description,
+    "image": opts.image ?? "https://wnsp.io/opengraph.png",
     "brand": { "@type": "Organization", "name": "NexusOS" },
     "license": "AGPL-3.0",
   };
@@ -1181,7 +1182,51 @@ export const ROUTE_META: Record<string, PageMeta> = {
     title: "NexusOS Videos — Physics, Protocol, and Hardware Demonstrations",
     description: "Video demonstrations of NexusOS physics stack: CE encoding live, WNSP VM execution, hardware lab measurements, and the Theory of Compression States explained.",
     canonical: `${BASE}/videos`,
-    jsonLd: softwareApp({ url: `${BASE}/videos`, name: "NexusOS Videos", description: "Video demonstrations of the NexusOS physics stack, CE encoding, WNSP VM, hardware lab, and Theory of Compression States." }),
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "name": "NexusOS Videos — Physics, Protocol, and Hardware Demonstrations",
+      "url": `${BASE}/videos`,
+      "description": "Video demonstrations of the NexusOS physics stack: CE encoding live, WNSP VM execution, hardware lab measurements, and the Theory of Compression States explained.",
+      "inLanguage": "en",
+      "about": {
+        "@type": "SoftwareApplication",
+        "name": "NexusOS",
+        "url": `${BASE}/`,
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "NexusOS",
+        "url": BASE,
+        "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.png" },
+      },
+      "hasPart": [
+        {
+          "@type": "VideoObject",
+          "name": "CE Encoding Live — Characters to Visible-Light Wavelengths",
+          "description": "Live demonstration of the NexusOS CE encoder mapping text to visible-light wavelengths across 128 spectral bands (380–780 nm).",
+          "thumbnailUrl": "https://wnsp.io/opengraph.png",
+          "uploadDate": "2026-05-16",
+          "embedUrl": `${BASE}/videos`,
+        },
+        {
+          "@type": "VideoObject",
+          "name": "WNSP VM Bytecode Execution — WavelengthScript in Action",
+          "description": "Step-by-step execution of WavelengthScript bytecode in the WNSP Virtual Machine, with Ψ channel register inspection.",
+          "thumbnailUrl": "https://wnsp.io/opengraph.png",
+          "uploadDate": "2026-05-16",
+          "embedUrl": `${BASE}/videos`,
+        },
+        {
+          "@type": "VideoObject",
+          "name": "Theory of Compression States — Λ=hf/c² Explained",
+          "description": "Explanation of the Theory of Compression States: the universe evolving from the first unobserved oscillation, and the Λ=hf/c² compression law governing NexusOS.",
+          "thumbnailUrl": "https://wnsp.io/opengraph.png",
+          "uploadDate": "2026-05-16",
+          "embedUrl": `${BASE}/videos`,
+        },
+      ],
+    },
     bodyHtml: `<h1>NexusOS Videos — Physics, Protocol, and Hardware Demonstrations</h1><p>Watch live demonstrations of the NexusOS physics stack: CE encoding in action, WNSP VM executing bytecode, hardware lab measurements, and explanations of the Theory of Compression States.</p><nav><ul><li><a href="${BASE}/hardware-results">Hardware Verification Results</a></li><li><a href="${BASE}/ce-se-pipeline">CE→SE Pipeline (live)</a></li></ul></nav>`,
   },
   "/spectral-bundle": {
@@ -1418,7 +1463,15 @@ export const ROUTE_META: Record<string, PageMeta> = {
     title: "Spectral Video — NexusOS Physics Demonstrations",
     description: "NexusOS spectral video demonstrations. Physics-native video content for the WNSP protocol.",
     canonical: `${BASE}/videos`,
-    jsonLd: softwareApp({ url: `${BASE}/videos`, name: "NexusOS Videos", description: "Spectral video demonstrations of the NexusOS physics stack." }),
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "name": "NexusOS Spectral Video Demonstrations",
+      "url": `${BASE}/videos`,
+      "description": "Spectral video demonstrations of the NexusOS physics stack.",
+      "inLanguage": "en",
+      "publisher": { "@type": "Organization", "name": "NexusOS", "url": BASE },
+    },
   },
   "/spectral-uri": {
     title: "Spectral URI — WNSP-URI v1.0 Addressing",
@@ -1597,6 +1650,7 @@ function buildMetaBlock(m: PageMeta): string {
     `<meta property="og:url" content="${ogUrl}" />`,
     `<meta property="og:image" content="${ogImage}" />`,
     `<meta property="og:site_name" content="${ogSite}" />`,
+    `<meta property="og:locale" content="en_US" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="twitter:site" content="${esc(m.twitterSite ?? "@NexusOS_io")}" />`,
     `<meta name="twitter:title" content="${twTitle}" />`,
@@ -1616,6 +1670,7 @@ const META_PLACEHOLDER_RE = [
   /<meta property="og:url"[^>]*\/>/,
   /<meta property="og:image"[^>]*\/>/,
   /<meta property="og:site_name"[^>]*\/>/,
+  /<meta property="og:locale"[^>]*\/>/,
   /<meta name="twitter:card"[^>]*\/>/,
   /<meta name="twitter:site"[^>]*\/>/,
   /<meta name="twitter:title"[^>]*\/>/,
