@@ -80,6 +80,7 @@ function hardwareProduct(opts: { name: string; url: string; description: string;
     "brand": { "@type": "Organization", "name": "NexusOS" },
     "license": "AGPL-3.0",
   };
+  return product;
 }
 
 function techArticle(opts: { url: string; name: string; description: string; about: string; datePublished?: string; dateModified?: string }): object {
@@ -1189,11 +1190,12 @@ export const ROUTE_META: Record<string, PageMeta> = {
       "url": `${BASE}/videos`,
       "description": "Video demonstrations of the NexusOS physics stack: CE encoding live, WNSP VM execution, hardware lab measurements, and the Theory of Compression States explained.",
       "inLanguage": "en",
-      "about": {
-        "@type": "SoftwareApplication",
-        "name": "NexusOS",
-        "url": `${BASE}/`,
-      },
+      "about": [
+        { "@type": "Thing", "name": "WNSP Spectral Communication Protocol" },
+        { "@type": "Thing", "name": "Theory of Compression States" },
+        { "@type": "Thing", "name": "WavelengthScript" },
+        { "@type": "Thing", "name": "CE-SE Encoding Pipeline" },
+      ],
       "publisher": {
         "@type": "Organization",
         "name": "NexusOS",
