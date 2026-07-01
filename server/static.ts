@@ -1,7 +1,8 @@
 import express, { type Express, type Request, type Response } from "express";
 import fs from "fs";
 import path from "path";
-import { injectMeta } from "./seo-meta";
+import { injectMeta, buildVideosPageMeta, injectCustomMeta } from "./seo-meta";
+import { storage } from "./storage";
 
 // ---------------------------------------------------------------------------
 // Custom-domain hosts that are root-only microsites.
@@ -651,7 +652,7 @@ export function serveStatic(app: Express) {
   // search-engine crawlers receive the correct indexation signal.
   // Custom-domain hosts are root-only microsites: non-root paths get 404.
   // Injects host/route-aware metadata before serving.
-  app.use("*", (req, res) => {
+  app.use("*", async (req, res) => {
     const spaPathname = requestPathname(req);
     const host        = req.hostname || (req.headers.host as string) || "";
     const cleanHost   = host.split(":")[0];
@@ -673,7 +674,20 @@ export function serveStatic(app: Express) {
       status = isPublicSpaPath(spaPathname) ? 200 : 404;
     }
 
-    let html = injectMeta(getHtml(), host, pathname);
+    let html: string;
+    if (spaPathname === "/videos" && !CUSTOM_DOMAIN_HOSTS.has(cleanHost)) {
+      // Inject live video data so crawlers receive real VideoObject schema
+      // and a noscript block with crawlable links to each Telegram post.
+      try {
+        const videos = await storage.getTelegramVideos(20);
+        const meta   = buildVideosPageMeta(videos);
+        html = injectCustomMeta(getHtml(), meta);
+      } catch {
+        html = injectMeta(getHtml(), host, pathname);
+      }
+    } else {
+      html = injectMeta(getHtml(), host, pathname);
+    }
 
     if (noindex) {
       res.setHeader("X-Robots-Tag", "noindex, nofollow");

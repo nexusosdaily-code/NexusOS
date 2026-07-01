@@ -80,8 +80,10 @@ function hardwareProduct(opts: { name: string; url: string; description: string;
     "brand": { "@type": "Organization", "name": "NexusOS" },
     "license": "AGPL-3.0",
   };
-  return product;
 }
+
+const SNIC_IMAGE = "https://wnsp.io/snic-og.svg";
+const PHR1_IMAGE = "https://wnsp.io/phr1-og.svg";
 
 function techArticle(opts: { url: string; name: string; description: string; about: string; datePublished?: string; dateModified?: string }): object {
   const article: Record<string, unknown> = {
@@ -148,10 +150,10 @@ export const DOMAIN_META: Record<string, PageMeta> = {
     ogTitle: "SNIC — The Photonic NIC of 2032",
     ogDescription: "256 WDM × 50 OAM × 2 Pol = 25,600 orthogonal hardware lanes. ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics, not software policy. No driver rewrite when photonic ASICs arrive.",
     ogSiteName: "snic.io",
-    ogImage: "https://wnsp.io/opengraph.png",
+    ogImage: SNIC_IMAGE,
     twitterTitle: "SNIC — The Photonic NIC of 2032",
     twitterDescription: "25,600 orthogonal photonic channels. CE lookups as physical wavelength selections. First public disclosure 2026-05-16. AGPL-3.0.",
-    jsonLd: hardwareProduct({ name: "SNIC — Spectral Network Interface Card", url: "https://snic.io/", description: "Photonic network interface card with 25,600 orthogonal channels (256 WDM × 50 OAM × 2 polarisations). First public disclosure 2026-05-16. AGPL-3.0." }),
+    jsonLd: hardwareProduct({ name: "SNIC — Spectral Network Interface Card", url: "https://snic.io/", description: "Photonic network interface card with 25,600 orthogonal channels (256 WDM × 50 OAM × 2 polarisations). First public disclosure 2026-05-16. AGPL-3.0.", image: SNIC_IMAGE }),
     bodyHtml: `<h1>SNIC — Spectral Network Interface Card</h1><p>The Photonic NIC of 2032. 25,600 orthogonal channels (256 WDM × 50 OAM × 2 polarisations) mapped to physical hardware lanes. CE lookups execute as physical wavelength selections in photonic waveguides. Orthogonality guaranteed by quantum mechanics — ⟨Ψᵢ|Ψⱼ⟩ = 0 by physics, not software policy.</p><nav><ul><li><a href="https://wnsp.io/hardware-spec">Hardware Specification (AGPL-3.0)</a></li><li><a href="https://wnsp.io/crowdfund">Hardware Founder Slots</a></li><li><a href="https://wnsp.io/compression-explorer">Compression Explorer</a></li></ul></nav><p>First public disclosure: 2026-05-16. License: AGPL-3.0.</p>`,
   },
   "spectralmirror.io": {
@@ -190,10 +192,10 @@ export const DOMAIN_META: Record<string, PageMeta> = {
     ogTitle: "PHR-1 — The First ZERO-G State Device",
     ogDescription: "144-turn bifilar coil. Syncbox Controller firmware. ZERO-G gravitational de-correlation. First batch: 25 units. Hardware Founder tier: 100,000 NXT / 100M sats.",
     ogSiteName: "phr1.io",
-    ogImage: "https://wnsp.io/opengraph.png",
+    ogImage: PHR1_IMAGE,
     twitterTitle: "PHR-1 — The First ZERO-G State Device",
     twitterDescription: "Gravitational de-correlation through phase alignment. 144-turn bifilar coil. 25 production slots. AGPL-3.0, disclosed 2026-05-16.",
-    jsonLd: hardwareProduct({ name: "PHR-1 Resonator", url: "https://phr1.io/", description: "First physical implementation of the ZERO-G state. 144-turn bifilar coil, Syncbox Controller, WavelengthScript v1.0 API. AGPL-3.0." }),
+    jsonLd: hardwareProduct({ name: "PHR-1 Resonator", url: "https://phr1.io/", description: "First physical implementation of the ZERO-G state. 144-turn bifilar coil, Syncbox Controller, WavelengthScript v1.0 API. AGPL-3.0.", image: PHR1_IMAGE }),
     bodyHtml: `<h1>PHR-1 — The First ZERO-G State Device</h1><p>The PHR-1 is the first physical resonator implementing the ZERO-G state. Gravitational de-correlation is achieved through phase alignment of a 144-turn bifilar coil at Lambda Gate resonance frequency.</p><ul><li>144-turn bifilar coil</li><li>Syncbox Controller firmware</li><li>WavelengthScript v1.0 API</li><li>First batch: 25 units</li></ul><nav><ul><li><a href="https://wnsp.io/crowdfund">Hardware Founder Slots (25 available)</a></li><li><a href="https://wnsp.io/hardware-spec">Technical Specification (AGPL-3.0)</a></li><li><a href="https://wnsp.io/hardware-lab">Hardware Lab</a></li></ul></nav><p>First public disclosure: 2026-05-16. License: AGPL-3.0. Hardware Founder tier: 100,000 NXT / 100M sats.</p>`,
   },
   "lambdagate.io": {
@@ -658,9 +660,10 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogTitle: "SNIC — Spectral Network Interface Card",
     ogDescription: "25,600 orthogonal hardware lanes. CE lookups as physical wavelength selections. ⟨Ψᵢ|Ψⱼ⟩=0 by quantum mechanics. No driver rewrite when photonic ASICs arrive.",
     ogType: "product",
+    ogImage: SNIC_IMAGE,
     twitterTitle: "SNIC — Photonic NIC of 2032",
     twitterDescription: "25,600 orthogonal photonic channels. CE lookups as physical wavelength selections. AGPL-3.0.",
-    jsonLd: hardwareProduct({ name: "SNIC — Spectral Network Interface Card", url: `${BASE}/snic`, description: "Photonic network interface card with 25,600 orthogonal channels (256 WDM × 50 OAM × 2 polarisations). CE lookups execute as physical wavelength selections. AGPL-3.0, first public disclosure 2026-05-16." }),
+    jsonLd: hardwareProduct({ name: "SNIC — Spectral Network Interface Card", url: `${BASE}/snic`, description: "Photonic network interface card with 25,600 orthogonal channels (256 WDM × 50 OAM × 2 polarisations). CE lookups execute as physical wavelength selections. AGPL-3.0, first public disclosure 2026-05-16.", image: SNIC_IMAGE }),
     bodyHtml: `<h1>SNIC — Spectral Network Interface Card</h1><p>The SNIC is the photonic NIC of 2032. Where conventional network cards process packets through silicon logic gates, the SNIC selects wavelengths in a photonic waveguide — CE lookups that currently run as table scans in RAM execute as physical wavelength selections in glass.</p><p>The 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations) map directly to physical hardware lanes. ⟨Ψᵢ|Ψⱼ⟩ = 0 is guaranteed by quantum mechanics, not software policy. When NexusOS migrates to SNIC hardware, no driver rewrite is required — the protocol already speaks in wavelengths.</p><ul><li>25,600 orthogonal physical lanes (256 WDM × 50 OAM × 2 polarisations)</li><li>CE lookups execute as physical wavelength selections in photonic waveguides</li><li>Channel orthogonality: ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics</li><li>Zero-rewrite migration path from software WNSP to SNIC hardware</li><li>First public disclosure: 2026-05-16. License: AGPL-3.0</li></ul><nav><ul><li><a href="${BASE}/hardware-spec">Full Hardware Specification (AGPL-3.0)</a></li><li><a href="${BASE}/crowdfund">Hardware Founder Slots</a></li><li><a href="${BASE}/hardware-lab">Hardware Lab</a></li></ul></nav>`,
   },
   "/open": {
@@ -1717,6 +1720,126 @@ const META_PLACEHOLDER_RE = [
   /<meta name="twitter:image"[^>]*\/>/,
   /<script type="application\/ld\+json">[\s\S]*?<\/script>/g,
 ];
+
+// Minimal shape of a TelegramVideo used for video schema generation.
+interface VideoForSchema {
+  id: number;
+  caption: string | null;
+  duration: number | null;
+  channelUsername: string | null;
+  channelPostId: number | null;
+  messageId: number | null;
+  thumbFileId: string | null;
+  createdAt: string | Date;
+}
+
+function fmtIsoDuration(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return `PT${h > 0 ? h + "H" : ""}${m > 0 ? m + "M" : ""}${s}S`;
+}
+
+function videoTelegramUrl(v: VideoForSchema): string {
+  if (v.channelUsername && v.channelPostId) return `https://t.me/${v.channelUsername}/${v.channelPostId}`;
+  if (v.channelUsername && v.messageId)     return `https://t.me/${v.channelUsername}/${v.messageId}`;
+  return "https://t.me/nexusosdaily";
+}
+
+/**
+ * Build a live PageMeta for /videos using real video records from the DB.
+ * Pass the result into injectCustomMeta() instead of injectMeta().
+ */
+export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
+  const baseEntry = ROUTE_META["/videos"];
+
+  const hasPart = videos.slice(0, 20).map(v => {
+    const uploadDate = new Date(v.createdAt).toISOString().split("T")[0];
+    const tgUrl      = videoTelegramUrl(v);
+    const obj: Record<string, unknown> = {
+      "@type": "VideoObject",
+      "name": v.caption ? v.caption.slice(0, 110) : `NexusOS Video #${v.id}`,
+      "description": v.caption ?? "NexusOS physics demonstration video.",
+      "uploadDate": uploadDate,
+      "url": tgUrl,
+      "contentUrl": tgUrl,
+      "embedUrl": tgUrl,
+    };
+    if (v.thumbFileId) {
+      obj["thumbnailUrl"] = `${BASE}/api/telegram/video/${encodeURIComponent(v.thumbFileId)}/thumb`;
+    } else {
+      obj["thumbnailUrl"] = "https://wnsp.io/opengraph.png";
+    }
+    if (v.duration) obj["duration"] = fmtIsoDuration(v.duration);
+    return obj;
+  });
+
+  const liveJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "NexusOS Videos — Physics, Protocol, and Hardware Demonstrations",
+    "url": `${BASE}/videos`,
+    "description": "Video demonstrations of the NexusOS physics stack: CE encoding live, WNSP VM execution, hardware lab measurements, and the Theory of Compression States explained.",
+    "inLanguage": "en",
+    "about": [
+      { "@type": "Thing", "name": "WNSP Spectral Communication Protocol" },
+      { "@type": "Thing", "name": "Theory of Compression States" },
+      { "@type": "Thing", "name": "WavelengthScript" },
+      { "@type": "Thing", "name": "CE-SE Encoding Pipeline" },
+    ],
+    "publisher": {
+      "@type": "Organization",
+      "name": "NexusOS",
+      "url": BASE,
+      "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.png" },
+    },
+    "hasPart": hasPart.length > 0 ? hasPart : (baseEntry as any)?.jsonLd?.hasPart ?? [],
+  };
+
+  // Build a noscript body with crawlable links to each video.
+  // All dynamic values are HTML-escaped before interpolation.
+  const videoLinks = videos.slice(0, 20).map(v => {
+    const tgUrl = videoTelegramUrl(v);
+    const label = v.caption ? v.caption.slice(0, 110) : `NexusOS Video #${v.id}`;
+    return `<li><a href="${esc(tgUrl)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a></li>`;
+  }).join("");
+
+  const liveBodyHtml = `<h1>NexusOS Videos — Physics, Protocol, and Hardware Demonstrations</h1>`
+    + `<p>Watch live demonstrations of the NexusOS physics stack: CE encoding in action, WNSP VM executing bytecode, hardware lab measurements, and explanations of the Theory of Compression States.</p>`
+    + (videoLinks ? `<h2>Latest Videos</h2><ul>${videoLinks}</ul>` : "")
+    + `<nav><ul><li><a href="${BASE}/hardware-results">Hardware Verification Results</a></li><li><a href="${BASE}/ce-se-pipeline">CE→SE Pipeline (live)</a></li><li><a href="https://t.me/nexusosdaily">NexusOS Telegram Channel</a></li></ul></nav>`;
+
+  return {
+    ...(baseEntry ?? {}),
+    jsonLd: liveJsonLd,
+    bodyHtml: liveBodyHtml,
+  };
+}
+
+/**
+ * Inject a pre-built PageMeta into an HTML string, bypassing ROUTE_META lookup.
+ * Use this when metadata is generated asynchronously (e.g. live DB data).
+ */
+export function injectCustomMeta(html: string, meta: PageMeta): string {
+  const newBlock = buildMetaBlock(meta);
+  let result = html;
+  for (const re of META_PLACEHOLDER_RE) {
+    if (re.global) {
+      result = result.replace(re, "");
+    } else {
+      result = result.replace(re, "");
+    }
+  }
+  result = result.replace(/(<head[^>]*>)/i, `$1\n    ${newBlock}`);
+  if (meta.bodyHtml) {
+    const noscriptBlock =
+      `<noscript><article id="seo-prerender" style="font-family:system-ui,sans-serif;padding:2rem;max-width:860px;margin:0 auto;color:#111;">` +
+      meta.bodyHtml +
+      `</article></noscript>`;
+    result = result.replace(/(<div id="root">)/, `${noscriptBlock}\n$1`);
+  }
+  return result;
+}
 
 /**
  * Resolve metadata for a given host + path combination.

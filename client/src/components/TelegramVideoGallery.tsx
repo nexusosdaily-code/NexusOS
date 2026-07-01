@@ -138,12 +138,16 @@ function VideoModal({ video, onClose }: { video: TelegramVideo; onClose: () => v
 function VideoCard({ video, onClick }: { video: TelegramVideo; onClick: () => void }) {
   const isChannel = video.source === "channel" && video.channelUsername && video.channelPostId;
   const large = isLargeFile(video);
+  const tgHref = telegramUrl(video);
 
   return (
-    <button
+    <a
+      href={tgHref}
+      target="_blank"
+      rel="noopener noreferrer"
       data-testid={`telegram-video-card-${video.id}`}
-      onClick={onClick}
-      className="group relative w-full text-left rounded-xl border border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06] transition-all overflow-hidden"
+      onClick={(e) => { e.preventDefault(); onClick(); }}
+      className="group relative w-full text-left rounded-xl border border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06] transition-all overflow-hidden block"
     >
       <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
         {video.thumbFileId ? (
@@ -206,7 +210,7 @@ function VideoCard({ video, onClick }: { video: TelegramVideo; onClick: () => vo
           {isChannel ? `@${video.channelUsername} · Post #${video.channelPostId}` : "No caption"}
         </div>
       )}
-    </button>
+    </a>
   );
 }
 
