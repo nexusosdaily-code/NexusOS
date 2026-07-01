@@ -200,7 +200,8 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 p-4 md:p-8 flex items-center justify-center" data-testid="page-auth">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950" data-testid="page-auth">
+      <main id="main-content" className="min-h-screen p-4 md:p-8 flex items-center justify-center" aria-label="NexusOS authentication">
       <div className="w-full max-w-md">
         <Link href="/" className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6" data-testid="link-back">
           <ArrowLeft className="w-4 h-4" />
@@ -209,7 +210,7 @@ export default function AuthPage() {
 
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Sparkles className="w-8 h-8 text-amber-400" />
+            <Sparkles className="w-8 h-8 text-amber-400" aria-hidden="true" />
             <h1 className="text-3xl font-bold text-white" data-testid="text-title">NexusOS</h1>
           </div>
           <p className="text-gray-400" data-testid="text-subtitle">Secure Authentication</p>
@@ -256,7 +257,7 @@ export default function AuthPage() {
                 <div className="space-y-2">
                   <Label htmlFor="login-username" className="text-gray-300">Username</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
+                    <User className="absolute left-3 top-3 w-4 h-4 text-gray-500" aria-hidden="true" />
                     <Input id="login-username" type="text" placeholder="Enter username"
                       className="pl-10 bg-slate-800/50 border-slate-700"
                       value={loginData.username}
@@ -268,7 +269,7 @@ export default function AuthPage() {
                 <div className="space-y-2">
                   <Label htmlFor="login-password" className="text-gray-300">Password</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
+                    <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-500" aria-hidden="true" />
                     <Input id="login-password" type={showLoginPwd ? "text" : "password"} placeholder="Enter password"
                       className="pl-10 pr-10 bg-slate-800/50 border-slate-700"
                       value={loginData.password}
@@ -278,8 +279,9 @@ export default function AuthPage() {
                       data-testid="input-login-password" />
                     <button type="button" tabIndex={-1}
                       onClick={() => setShowLoginPwd(v => !v)}
+                      aria-label={showLoginPwd ? "Hide password" : "Show password"}
                       className="absolute right-3 top-3 text-gray-500 hover:text-gray-300">
-                      {showLoginPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showLoginPwd ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
                     </button>
                   </div>
                 </div>
@@ -306,6 +308,8 @@ export default function AuthPage() {
                   <form onSubmit={handleWifLogin} className="space-y-2">
                     <div className="relative">
                       <textarea
+                        id="wif-key-textarea"
+                        aria-label="Bitcoin WIF wallet key"
                         value={wifKey}
                         onChange={e => setWifKey(e.target.value)}
                         placeholder="Paste your BTC WIF key"
@@ -319,8 +323,9 @@ export default function AuthPage() {
                       />
                       <button type="button" tabIndex={-1}
                         onClick={() => setShowWifInput(v => !v)}
+                        aria-label={showWifInput ? "Show key" : "Hide key"}
                         className="absolute right-2 top-2 text-gray-500 hover:text-gray-300">
-                        {showWifInput ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                        {showWifInput ? <Eye className="w-4 h-4" aria-hidden="true" /> : <EyeOff className="w-4 h-4" aria-hidden="true" />}
                       </button>
                     </div>
                     <Button type="submit" disabled={wifLoginLoading || !wifKey.trim()}
@@ -340,6 +345,8 @@ export default function AuthPage() {
                   <form onSubmit={handleNsecLogin} className="space-y-2">
                     <div className="relative">
                       <textarea
+                        id="nsec-key-textarea"
+                        aria-label="Nostr nsec private key"
                         value={nsecKey}
                         onChange={e => setNsecKey(e.target.value)}
                         placeholder="Paste your nsec key"
@@ -353,8 +360,9 @@ export default function AuthPage() {
                       />
                       <button type="button" tabIndex={-1}
                         onClick={() => setShowNsecInput(v => !v)}
+                        aria-label={showNsecInput ? "Show key" : "Hide key"}
                         className="absolute right-2 top-2 text-gray-500 hover:text-gray-300">
-                        {showNsecInput ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                        {showNsecInput ? <Eye className="w-4 h-4" aria-hidden="true" /> : <EyeOff className="w-4 h-4" aria-hidden="true" />}
                       </button>
                     </div>
                     <Button type="submit" disabled={nsecLoginLoading || !nsecKey.trim()}
@@ -375,37 +383,39 @@ export default function AuthPage() {
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-gray-400 text-xs">Username</Label>
-                    <Input value={recoveryData.username}
+                    <Label htmlFor="recovery-username" className="text-gray-400 text-xs">Username</Label>
+                    <Input id="recovery-username" value={recoveryData.username}
                       onChange={e => setRecoveryData(d => ({ ...d, username: e.target.value }))}
                       className="bg-slate-800/50 border-slate-700 text-sm" placeholder="Nexus" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-gray-400 text-xs">New Password</Label>
+                    <Label htmlFor="recovery-new-password" className="text-gray-400 text-xs">New Password</Label>
                     <div className="relative">
-                      <Input type={showNewPwd ? "text" : "password"} value={recoveryData.newPassword}
+                      <Input id="recovery-new-password" type={showNewPwd ? "text" : "password"} value={recoveryData.newPassword}
                         onChange={e => setRecoveryData(d => ({ ...d, newPassword: e.target.value }))}
                         className="bg-slate-800/50 border-slate-700 text-sm pr-10" placeholder="8+ characters"
                         autoComplete="new-password" autoCorrect="off" autoCapitalize="none" spellCheck={false} />
                       <button type="button" tabIndex={-1}
                         onClick={() => setShowNewPwd(v => !v)}
+                        aria-label={showNewPwd ? "Hide new password" : "Show new password"}
                         className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
-                        {showNewPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showNewPwd ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
                       </button>
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-gray-400 text-xs">Wallet Recovery Key (WIF)</Label>
+                    <Label htmlFor="recovery-wif-key" className="text-gray-400 text-xs">Wallet Recovery Key (WIF)</Label>
                     <div className="relative">
-                      <Input type={showWif ? "text" : "password"} value={recoveryData.recoveryKey}
+                      <Input id="recovery-wif-key" type={showWif ? "text" : "password"} value={recoveryData.recoveryKey}
                         onChange={e => setRecoveryData(d => ({ ...d, recoveryKey: e.target.value }))}
                         className="bg-slate-800/50 border-amber-500/30 text-sm font-mono pr-10"
                         placeholder="Your Bitcoin wallet WIF key"
                         autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false} />
                       <button type="button" tabIndex={-1}
                         onClick={() => setShowWif(v => !v)}
+                        aria-label={showWif ? "Hide wallet key" : "Show wallet key"}
                         className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
-                        {showWif ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showWif ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
                       </button>
                     </div>
                     <p className="text-[10px] text-gray-600">Your BTC_INSCRIPTION_WALLET_WIF from Replit Secrets — only the wallet owner can reset the password.</p>
@@ -422,10 +432,11 @@ export default function AuthPage() {
             <TabsContent value="register">
               <form onSubmit={handleRegister} className="space-y-4 py-2">
                 <div className="space-y-1">
-                  <Label className="text-gray-400 text-xs">Username</Label>
+                  <Label htmlFor="register-username" className="text-gray-400 text-xs">Username</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" aria-hidden="true" />
                     <Input
+                      id="register-username"
                       required minLength={3} maxLength={50}
                       value={registerData.username}
                       onChange={e => setRegisterData(d => ({ ...d, username: e.target.value }))}
@@ -437,8 +448,9 @@ export default function AuthPage() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-gray-400 text-xs">Email <span className="text-slate-600">(optional)</span></Label>
+                  <Label htmlFor="register-email" className="text-gray-400 text-xs">Email <span className="text-slate-600">(optional)</span></Label>
                   <Input
+                    id="register-email"
                     type="email"
                     value={registerData.email}
                     onChange={e => setRegisterData(d => ({ ...d, email: e.target.value }))}
@@ -449,8 +461,9 @@ export default function AuthPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-gray-400 text-xs">Password</Label>
+                  <Label htmlFor="register-password" className="text-gray-400 text-xs">Password</Label>
                   <Input
+                    id="register-password"
                     type="password" required minLength={8}
                     value={registerData.password}
                     onChange={e => setRegisterData(d => ({ ...d, password: e.target.value }))}
@@ -478,10 +491,11 @@ export default function AuthPage() {
         </Card>
 
         <div className="mt-6 text-center text-gray-500 text-sm" data-testid="text-security-info">
-          <Lock className="w-4 h-4 inline mr-1" />
+          <Lock className="w-4 h-4 inline mr-1" aria-hidden="true" />
           Nostr signatures verified server-side · passwords hashed with bcrypt
         </div>
       </div>
+      </main>
     </div>
   );
 }
