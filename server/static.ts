@@ -125,6 +125,9 @@ const NOINDEX_EXACT_PATHS = new Set<string>([
   // logged-out visitors are redirected to /auth client-side, so these are not
   // real public landing pages and must not be indexed as such.
   "/",
+  // Auth / sign-in — functional page but not a search landing page; must not
+  // be indexed or inherit home-page canonical signals.
+  "/auth",
   "/protocol",
   // Authenticated app screens
   "/wallet", "/lightning-wallet", "/lightning",

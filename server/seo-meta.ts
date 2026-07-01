@@ -302,6 +302,17 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ],
     bodyHtml: `<h1>NexusOS — Physics-Based Civilization OS</h1><p>NexusOS is the foundational blueprint for a Kardashev Type I civilization. It replaces cryptographic hashing with electromagnetic wave physics: your addresses are wavelengths, your fees are photon energies, and every character maps to a visible-light frequency.</p><ul><li>WNSP spectral communication protocol — 25,600 orthogonal Ψ channels</li><li>WavelengthScript — physics-native programming language</li><li>CE→SE pipeline — any language to spectral bytecode</li><li>NXT token — 21 billion supply on Bitcoin Runes, never burned</li><li>PHR-1 resonator &amp; SNIC photonic NIC — hardware layer 2026–2032</li></ul><nav><ul><li><a href="${BASE}/docs">Documentation</a></li><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li><li><a href="${BASE}/ce-se-pipeline">CE→SE Pipeline</a></li><li><a href="${BASE}/hardware-spec">Hardware Specification</a></li><li><a href="${BASE}/crowdfund">Crowdfund</a></li></ul></nav>`,
   },
+  "/auth": {
+    title: "Sign In — NexusOS",
+    description: "Sign in to NexusOS with your phone number to access your spectral wallet, WNSP channels, and physics-based OS kernel.",
+    canonical: `${BASE}/auth`,
+    ogTitle: "Sign In — NexusOS",
+    ogDescription: "Sign in to NexusOS to access your spectral wallet, WNSP channels, and the physics-based OS kernel.",
+    twitterTitle: "Sign In — NexusOS",
+    twitterDescription: "Sign in to NexusOS with your phone number.",
+    jsonLd: softwareApp({ url: `${BASE}/auth`, name: "NexusOS Sign In", description: "Phone-based sign-in for the NexusOS physics OS. Access your spectral wallet, NXT tokens, and WNSP channels." }),
+    bodyHtml: `<h1>Sign In to NexusOS</h1><p>Sign in with your phone number to access your NexusOS account — spectral wallet, NXT tokens, WNSP Ψ channel, and the physics-based OS kernel.</p><nav><ul><li><a href="${BASE}/">NexusOS Home</a></li><li><a href="${BASE}/docs">Documentation</a></li></ul></nav>`,
+  },
   "/crowdfund": {
     title: "Crowdfund NexusOS — Hardware Founder & NXT Supporter Tiers",
     description: "Fund the PHR-1 resonator, SNIC photonic NIC, and WavelengthScript compiler. Hardware Founder slots (25 units), NXT Supporter packs, and Spectral Bundles. Physics-based computing starts here.",
