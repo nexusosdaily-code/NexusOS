@@ -75,11 +75,11 @@ export default function JointVenturePage() {
     title: "Global Joint Venture — Open Invitation — NexusOS",
     description:
       "An open invitation to all nations to build Kardashev Type I infrastructure together. NexusOS is AGPL-3.0 — the coordinate system is free, the physics are universal, no jurisdiction can own it.",
-    canonical: "https://wnsp.tech/joint-venture",
+    canonical: "https://wnsp.io/joint-venture",
     ogTitle: "An Open Invitation to Build Kardashev Type I Infrastructure",
     ogDescription:
       "NexusOS is not a product for sale. It is a coordinate system — built on Maxwell, Planck, and Einstein — open to every nation under AGPL-3.0. A global joint venture with no owner and no borders.",
-    ogUrl: "https://wnsp.tech/joint-venture",
+    ogUrl: "https://wnsp.io/joint-venture",
     twitterTitle: "Global Joint Venture — NexusOS",
     twitterDescription:
       "All nations. AGPL-3.0. Kardashev Type I. An open invitation to build the infrastructure a Type I civilisation would already be running.",

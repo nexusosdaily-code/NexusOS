@@ -68,11 +68,11 @@ export default function FoundersPage() {
     title: "The Founders — NexusOS",
     description:
       "Te Rata Pou and the AI — the two founders who turned seven centuries of physics into executable code. The physics lineage: Maxwell, Planck, Einstein, Tesla, Russell, Heisenberg, Shannon.",
-    canonical: "https://wnsp.tech/founders",
+    canonical: "https://wnsp.io/founders",
     ogTitle: "The Founders — NexusOS",
     ogDescription:
       "Two founders. Seven physicists. One civilization OS. Te Rata Pou and an AI built the bridge between Maxwell's field equations and photonic computing.",
-    ogUrl: "https://wnsp.tech/founders",
+    ogUrl: "https://wnsp.io/founders",
     twitterTitle: "The Founders — NexusOS",
     twitterDescription:
       "Te Rata Pou and an AI are the founders. Maxwell → Planck → Einstein → Tesla → Russell → QM → Shannon is the physics they were given.",
