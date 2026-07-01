@@ -104,7 +104,7 @@ export default function NostrRelayPage() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/hub">
+          <Link href="/wnsp">
             <button className="text-gray-500 hover:text-purple-400 transition-colors">
               <ArrowLeft className="w-4 h-4" />
             </button>

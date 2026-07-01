@@ -1333,8 +1333,8 @@ export default function WnspBridgePage() {
                 on the Λ=hf/c² curve, distributed across all 256 WDM bands. Phase 2: full spectrum active. Phase 3: native photonic.
               </p>
             </div>
-            <Link href="/">
-              <Button variant="ghost" size="sm" className="text-slate-500 hover:text-white text-xs flex-shrink-0">← Home</Button>
+            <Link href="/wnsp">
+              <Button variant="ghost" size="sm" className="text-slate-500 hover:text-white text-xs flex-shrink-0">← WNSP</Button>
             </Link>
           </div>
 

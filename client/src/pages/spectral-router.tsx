@@ -236,6 +236,7 @@ export default function SpectralRouterPage() {
       {/* header */}
       <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
+          <h1 className="sr-only">Spectral Routing Engine</h1>
           <Link href="/nexus-command">
             <button className="text-white/30 hover:text-white/60 transition-colors"><ArrowLeft size={15} /></button>
           </Link>

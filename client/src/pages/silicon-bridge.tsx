@@ -67,7 +67,7 @@ export default function SiliconBridgePage() {
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-20 bg-[#040810]/95 backdrop-blur border-b border-slate-800/60 px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <Link href="/hub"><ArrowLeft className="w-4 h-4 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer" /></Link>
+          <Link href="/crowdfund"><ArrowLeft className="w-4 h-4 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer" /></Link>
           <Cpu className="w-4 h-4 text-violet-400" />
           <span className="text-sm font-medium text-white">The Silicon Bridge</span>
           <span className="text-[10px] font-mono text-slate-600 ml-1">— Solving the Transistor Problem</span>

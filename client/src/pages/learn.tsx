@@ -802,7 +802,7 @@ export default function LearnPage() {
 
       {/* Top bar */}
       <div className="border-b border-white/10 px-4 py-3 flex items-center gap-3 flex-shrink-0">
-        <Link href="/">
+        <Link href="/wnsp">
           <button className="text-gray-500 hover:text-white transition-colors">
             <ArrowLeft size={16} />
           </button>

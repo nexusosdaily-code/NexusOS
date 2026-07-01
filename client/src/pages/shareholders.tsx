@@ -60,8 +60,8 @@ export default function ShareholdersPage() {
       {/* ── Header ── */}
       <div className="border-b border-slate-800/60 bg-slate-950/90 sticky top-0 z-20 backdrop-blur">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/hub">
-            <span className="text-slate-400 hover:text-white transition-colors cursor-pointer text-sm">← Hub</span>
+          <Link href="/crowdfund">
+            <span className="text-slate-400 hover:text-white transition-colors cursor-pointer text-sm">← Crowdfund</span>
           </Link>
           <span className="text-xs font-mono text-slate-500">PUBLIC DISCLOSURE · {DISCLOSURE_DATE}</span>
         </div>

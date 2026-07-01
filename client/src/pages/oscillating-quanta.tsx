@@ -408,10 +408,10 @@ export default function OscillatingQuantaPage() {
       <div className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <Link href="/" data-testid="link-back-hub">
+            <Link href="/wnsp" data-testid="link-back-hub">
               <button className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors">
                 <ArrowLeft className="w-4 h-4" />
-                Hub
+                WNSP
               </button>
             </Link>
             <span className="text-slate-700">/</span>

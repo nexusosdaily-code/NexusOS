@@ -1958,7 +1958,7 @@ export default function WnspOrdinalsPage() {
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       {/* Nav */}
       <div className="border-b border-white/5 px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="text-white/40 hover:text-white/70 text-xs flex items-center gap-1.5 transition-colors">← Hub</Link>
+        <Link href="/wnsp" className="text-white/40 hover:text-white/70 text-xs flex items-center gap-1.5 transition-colors">← WNSP</Link>
         <span className="text-[10px] font-mono text-white/20 uppercase tracking-wider">NexusOS × Bitcoin</span>
         <Link href="/hardware-spec" className="text-[11px] font-mono px-3 py-1 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20 flex items-center gap-1.5 hover:bg-orange-500/20 transition-colors">
           <Shield size={10} /> AGPL-3.0
@@ -2020,7 +2020,7 @@ export default function WnspOrdinalsPage() {
 
         {/* Footer */}
         <div className="text-center text-[10px] font-mono text-white/20 flex items-center justify-center gap-4 pb-4 flex-wrap">
-          <Link href="/" className="hover:text-white/50 transition-colors">Hub</Link>
+          <Link href="/wnsp" className="hover:text-white/50 transition-colors">WNSP</Link>
           <Link href="/hardware-spec" className="hover:text-white/50 transition-colors">Hardware Spec</Link>
           <Link href="/campaign" className="hover:text-white/50 transition-colors">Campaign</Link>
           <a href="https://ordinals.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/50 transition-colors flex items-center gap-1">ordinals.com <ExternalLink size={9} /></a>

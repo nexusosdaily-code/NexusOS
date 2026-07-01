@@ -110,6 +110,7 @@ export default function ReceivePage() {
       <div className="max-w-md mx-auto">
 
         {/* Header */}
+        <h1 className="sr-only">Receive — Lightning Wallet</h1>
         <div className="flex items-center justify-between mb-6">
           <Link href="/lightning-wallet">
             <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white" data-testid="button-back">

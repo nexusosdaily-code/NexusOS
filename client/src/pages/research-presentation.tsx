@@ -931,7 +931,7 @@ export default function ResearchPresentationPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center gap-4 mb-6">
-          <Link href="/">
+          <Link href="/wnsp">
             <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white" data-testid="btn-back">
               <ArrowLeft className="w-4 h-4 mr-2" /> Back
             </Button>

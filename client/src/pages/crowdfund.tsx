@@ -674,7 +674,7 @@ export default function CrowdfundPage() {
 
       {/* ── NAV ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/80 backdrop-blur">
-        <Link href="/">
+        <Link href="/wnsp">
           <span className="text-lg font-bold tracking-widest" style={{ color: wlToRgb(534.51) }}>NEXUS<span className="text-white">OS</span></span>
         </Link>
         <div className="flex items-center gap-4">

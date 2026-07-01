@@ -179,6 +179,7 @@ export default function SpectralSearchPage() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col" style={{ fontFamily: "monospace" }}>
       <div className="border-b border-white/10 px-6 py-4 flex items-center gap-3 flex-shrink-0">
+        <h1 className="sr-only">Spectral Search</h1>
         <Link href="/nexus-command">
           <button className="text-white/30 hover:text-white/60 transition-colors"><ArrowLeft size={15} /></button>
         </Link>

@@ -1044,8 +1044,8 @@ export default function HardwareLabPage() {
 
         {/* Header */}
         <div className="space-y-4">
-          <Link href="/" className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors">
-            <ArrowLeft className="w-3 h-3" /> Hub
+          <Link href="/crowdfund" className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors">
+            <ArrowLeft className="w-3 h-3" /> Crowdfund
           </Link>
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl bg-amber-900/30 border border-amber-700/40 flex items-center justify-center flex-shrink-0">

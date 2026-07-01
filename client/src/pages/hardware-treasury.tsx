@@ -101,7 +101,8 @@ export default function HardwareTreasury() {
       <div className="border-b border-white/10 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/hub">
+            <h1 className="sr-only">AI Hardware Development Treasury</h1>
+            <Link href="/crowdfund">
               <button className="text-white/30 hover:text-white/60 transition-colors">
                 <ArrowLeft size={16} />
               </button>

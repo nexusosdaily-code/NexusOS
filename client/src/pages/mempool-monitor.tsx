@@ -205,13 +205,13 @@ export default function MempoolMonitorPage() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/">
+          <Link href="/wnsp">
             <button className="text-gray-400 hover:text-white transition-colors" data-testid="button-back">
               <ArrowLeft className="w-5 h-5" />
             </button>
           </Link>
           <Activity className="w-5 h-5 text-orange-400" />
-          <span className="text-white font-bold text-lg">Mempool Monitor</span>
+          <h1 className="text-white font-bold text-lg">Mempool Monitor</h1>
           <span className="text-gray-600 font-mono text-xs hidden sm:block">Bitcoin network · live</span>
           <div className="flex-1" />
           <button

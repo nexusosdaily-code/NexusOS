@@ -346,9 +346,9 @@ export default function PsiBoard() {
         </div>
 
         <div className="mt-6 flex items-center gap-4 text-[11px] text-white/25 font-mono">
-          <Link href="/">
+          <Link href="/wnsp">
             <span className="hover:text-cyan-400 transition-colors cursor-pointer flex items-center gap-1">
-              ← Hub
+              ← WNSP
             </span>
           </Link>
           <Link href="/compression-explorer">

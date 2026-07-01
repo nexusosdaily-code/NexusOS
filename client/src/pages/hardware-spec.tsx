@@ -96,8 +96,8 @@ export default function HardwareSpecPage() {
 
         {/* ── Header ── */}
         <div className="space-y-4">
-          <Link href="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-xs">
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Hub
+          <Link href="/crowdfund" className="inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-xs">
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Crowdfund
           </Link>
 
           <div>

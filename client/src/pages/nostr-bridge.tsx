@@ -168,9 +168,9 @@ export default function NostrBridgePage() {
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <Link href="/">
+          <Link href="/wnsp">
             <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white" data-testid="button-back">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Back to Home
+              <ArrowLeft className="w-4 h-4 mr-2" /> Back to WNSP
             </Button>
           </Link>
           <Button variant="ghost" size="sm" onClick={() => { refetchLog(); refetchBridge(); }} className="text-slate-400 hover:text-white">
