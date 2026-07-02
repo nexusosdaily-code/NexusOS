@@ -16,7 +16,7 @@ License: AGPL-3.0
 
 import json
 import time
-from typing import Optional
+from typing import Any, Optional
 
 from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
@@ -928,14 +928,30 @@ def agent_log():
 # Agent → Message Bus → Ψ routing → Scheduler queue → Target inbox
 # ─────────────────────────────────────────────────────────────────
 
+def _parse_direction(raw) -> int:
+    """Normalise a direction value to 1 (+k̂) or -1 (−k̂)."""
+    if isinstance(raw, int):
+        return 1 if raw >= 0 else -1
+    if isinstance(raw, str):
+        if raw.strip() in ("-1", "-", "−k̂", "backward", "back", "reverse"):
+            return -1
+    return 1
+
+
 @app.route('/api/wnsp/bus/send', methods=['POST'])
 def bus_send():
-    """Queue a message from one agent to another via the Ψ message bus."""
-    data     = request.get_json() or {}
-    src      = data.get('src', '').strip()
-    dst      = data.get('dst', '').strip()
-    payload  = data.get('payload', '')
-    priority = int(data.get('priority', 5))
+    """Queue a direction-aware message from one agent to another via the Ψ bus.
+
+    Accepts optional 'direction' field:
+      1 or "+"  or "forward"  → +k̂ forward propagation  (default)
+     -1 or "-"  or "backward" → −k̂ backward propagation (phase-conjugate)
+    """
+    data      = request.get_json() or {}
+    src       = data.get('src', '').strip()
+    dst       = data.get('dst', '').strip()
+    payload   = data.get('payload', '')
+    priority  = int(data.get('priority', 5))
+    direction = _parse_direction(data.get('direction', 1))
 
     if not src or not dst:
         return jsonify({"error": "Missing 'src' or 'dst' field"}), 400
@@ -943,6 +959,9 @@ def bus_send():
         return jsonify({"error": "Missing 'payload' field"}), 400
     if not (1 <= priority <= 10):
         return jsonify({"error": "priority must be 1–10"}), 400
+
+    dir_label  = "+k̂" if direction == 1 else "−k̂"
+    dir_symbol = "→"  if direction == 1 else "←"
 
     try:
         # Auto-register agents if needed
@@ -965,20 +984,26 @@ def bus_send():
                 "reason": reason,
             }), 403
 
-        _bus.send(src, dst, payload, priority)
+        _bus.send(src, dst, payload, priority, direction=direction)
 
         # Auto-dispatch immediately so messages never sit in the queue
         dispatch_record = _kernel_dispatch()
 
-        snap = _bus.status()
+        snap     = _bus.status()
         src_band = band_for_agent(src, src_ch.wavelength)
+        src_note = src_ch.directional_notation(direction)
+        dst_note = dst_ch.directional_notation(direction)
+
         return jsonify({
             "status":       "dispatched" if dispatch_record else "queued",
             "src":          src,
             "dst":          dst,
             "payload":      payload,
             "priority":     priority,
-            "route":        f"{src} {src_ch.notation()} → {dst} {dst_ch.notation()}",
+            "direction":    direction,
+            "dir_label":    dir_label,
+            "dir_symbol":   dir_symbol,
+            "route":        f"{src} {src_note} {dir_symbol} {dst} {dst_note}",
             "queue_depth":  snap["queued"],
             "authority":    src_band.name,
             "permitted":    True,
@@ -986,6 +1011,54 @@ def bus_send():
         })
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/wnsp/channel/directions/<agent_id>', methods=['GET'])
+def channel_directions(agent_id):
+    """Return both +k̂ and −k̂ channel addresses for an agent.
+
+    Useful for inspecting the full bidirectional Hilbert address of any agent,
+    and for selecting which wave direction to use when sending a message.
+    """
+    if not agent_id or len(agent_id) > 128:
+        return jsonify({"error": "Invalid agent_id"}), 400
+    try:
+        _coordinator.register_agent(agent_id)
+        ch = _coordinator.get_channel(agent_id)
+        if ch is None:
+            return jsonify({"error": "Channel not found"}), 404
+
+        return jsonify({
+            "agent_id":        agent_id,
+            "base_channel":    ch.to_dict(),
+            "hilbert_dim":     51200,
+            "forward": {
+                "dir":         1,
+                "dir_label":   "+k̂",
+                "dir_symbol":  "→",
+                "notation":    ch.directional_notation(1),
+                "basis":       ch.directional_basis(1),
+                "wavelength_nm": round(ch.wavelength_nm, 2),
+                "description": "Forward propagating wave. Primary send direction.",
+            },
+            "backward": {
+                "dir":         -1,
+                "dir_label":   "−k̂",
+                "dir_symbol":  "←",
+                "notation":    ch.directional_notation(-1),
+                "basis":       ch.directional_basis(-1),
+                "wavelength_nm": round(ch.wavelength_nm, 2),
+                "description": "Backward propagating wave (phase conjugate). "
+                               "Used for replies, echo detection, and full-duplex.",
+            },
+            "physics_note": (
+                "Maxwell time-reversal symmetry guarantees ⟨+k̂|−k̂⟩ = 0. "
+                "Forward and backward modes are orthogonal — they carry "
+                "independent information on the same wavelength simultaneously."
+            ),
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -1015,8 +1088,7 @@ def bus_receive():
         msgs = _bus.receive(agent)
         return jsonify({
             "agent":   agent,
-            "channel": _coordinator.get_channel(agent).to_dict()
-                       if _coordinator.get_channel(agent) else {},
+            "channel": (lambda ch: ch.to_dict() if ch else {})(_coordinator.get_channel(agent)),
             "count":   len(msgs),
             "messages": msgs,
         })
@@ -1842,7 +1914,7 @@ _AS_VREG_RAW_BASE = 0x08   # first raw high-byte register (per sub-device)
 _AS_POLL_TIMEOUT  = 0.5    # seconds before giving up on a single vreg read
 
 
-def _as7265x_vreg_read(bus: "smbus2.SMBus", vReg: int) -> int:
+def _as7265x_vreg_read(bus: Any, vReg: int) -> int:
     """Read one byte from an AS7265x virtual register via the STATUS/WRITE/READ trio."""
     deadline = time.time() + _AS_POLL_TIMEOUT
 
@@ -1870,7 +1942,7 @@ def _as7265x_vreg_read(bus: "smbus2.SMBus", vReg: int) -> int:
     return bus.read_byte_data(_I2C_ADDR, _AS_READ)
 
 
-def _as7265x_vreg_write(bus: "smbus2.SMBus", vReg: int, value: int) -> None:
+def _as7265x_vreg_write(bus: Any, vReg: int, value: int) -> None:
     """Write one byte to an AS7265x virtual register."""
     deadline = time.time() + _AS_POLL_TIMEOUT
     while time.time() < deadline:

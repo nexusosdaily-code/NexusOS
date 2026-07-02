@@ -3,7 +3,7 @@ WNSP Coordinator
 ================
 
 Application-layer runtime that maps AI agents and OS processes onto the
-25,600-dimensional Hilbert space defined by WNSP-SE v1.0.
+51,200-dimensional Hilbert space defined by WNSP-SE v2.0.
 
 Architecture
 ------------
@@ -14,16 +14,21 @@ WNSPCoordinator
  ├── Scheduler         — priority queue for ordered instruction dispatch
  └── Runtime Monitor   — per-agent stats, throughput, uptime
 
-Channel Notation
-----------------
-  Ψ(wdm, oam, H/V)
+Channel Notation (v2.0 — bidirectional)
+----------------------------------------
+  Ψ(wdm, oam, H/V, +k̂)   — forward propagating wave
+  Ψ(wdm, oam, H/V, −k̂)   — backward propagating wave
 
   where:
     wdm ∈ [0, 255]  — WDM wavelength index
     oam ∈ [0, 49]   — OAM mode index
     H/V             — H or V polarisation
+    +k̂ / −k̂        — propagation direction (N_Dir = 2)
 
-  Example: Ψ(12, 4, H)
+  Example: Ψ(12, 4, H, +k̂)
+
+  Hilbert space: 256 × 50 × 2 × 2 = 51,200 orthogonal channels
+  Orthogonality: ⟨Ψᵢ|Ψⱼ⟩ = 0 by Maxwell time-reversal symmetry
 
 Author: Te Rata Pou
 License: AGPL-3.0
@@ -46,7 +51,8 @@ from .constants import (
 TOTAL_WDM = 256
 TOTAL_OAM = 50
 TOTAL_POL = 2
-TOTAL_CHANNELS = TOTAL_WDM * TOTAL_OAM * TOTAL_POL  # 25,600
+TOTAL_DIR = 2   # +k̂ forward (1) / −k̂ backward (-1)
+TOTAL_CHANNELS = TOTAL_WDM * TOTAL_OAM * TOTAL_POL * TOTAL_DIR  # 51,200
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -79,16 +85,33 @@ class PsiChannel:
 
     @property
     def flat_index(self) -> int:
-        """Flat Hilbert index [0, 25599]."""
-        return (self.wavelength * TOTAL_OAM + self.oam) * TOTAL_POL + self.pol
+        """Flat Hilbert index [0, 51199] — includes direction dimension."""
+        base = (self.wavelength * TOTAL_OAM + self.oam) * TOTAL_POL + self.pol
+        return base * TOTAL_DIR  # always forward (dir=+1) for allocation
 
     def notation(self) -> str:
-        """Canonical short-form: Ψ(wdm, oam, H/V)"""
+        """Canonical short-form without direction (base address)."""
         return f"Ψ({self.wavelength}, {self.oam}, {self.polarisation})"
 
+    def directional_notation(self, dir: int = 1) -> str:
+        """Full notation including propagation direction."""
+        dir_label = "+k̂" if dir >= 0 else "−k̂"
+        return f"Ψ({self.wavelength}, {self.oam}, {self.polarisation}, {dir_label})"
+
     def basis(self) -> str:
-        """Full Dirac notation."""
-        return f"|λ_{self.wavelength}⟩ ⊗ |OAM_{self.oam}⟩ ⊗ |Pol_{self.polarisation}⟩"
+        """Full Dirac notation — base (forward) direction."""
+        return (
+            f"|λ_{self.wavelength}⟩ ⊗ |OAM_{self.oam}⟩"
+            f" ⊗ |Pol_{self.polarisation}⟩ ⊗ |Dir_+k̂⟩"
+        )
+
+    def directional_basis(self, dir: int = 1) -> str:
+        """Full Dirac notation with explicit direction sub-space."""
+        dir_ket = "|Dir_+k̂⟩" if dir >= 0 else "|Dir_−k̂⟩"
+        return (
+            f"|λ_{self.wavelength}⟩ ⊗ |OAM_{self.oam}⟩"
+            f" ⊗ |Pol_{self.polarisation}⟩ ⊗ {dir_ket}"
+        )
 
     def to_dict(self) -> dict:
         return {
@@ -101,6 +124,9 @@ class PsiChannel:
             "flat_index":    self.flat_index,
             "wavelength_nm": round(self.wavelength_nm, 2),
             "frequency_hz":  round(self.frequency_hz, 2),
+            # Direction sub-space (both modes always available)
+            "forward":  {"notation": self.directional_notation(1),  "dir":  1, "label": "+k̂", "symbol": "→"},
+            "backward": {"notation": self.directional_notation(-1), "dir": -1, "label": "−k̂", "symbol": "←"},
         }
 
     def __repr__(self) -> str:
@@ -382,24 +408,33 @@ class WNSPMessage:
     dst  → destination agent name
     payload → any serialisable value
     priority → 1 (highest) … 10 (lowest), default 5
+    direction → 1 = +k̂ forward, -1 = −k̂ backward (default +k̂)
     timestamp → creation time (Unix epoch, float)
     """
     src:       str
     dst:       str
     payload:   Any
     priority:  int   = 5
+    direction: int   = 1   # 1 = +k̂ forward, -1 = −k̂ backward
     timestamp: float = field(default_factory=time.time)
 
     def to_dict(self, src_channel: PsiChannel, dst_channel: PsiChannel) -> dict:
+        dir_sym   = "→" if self.direction >= 0 else "←"
+        dir_label = "+k̂" if self.direction >= 0 else "−k̂"
+        src_note  = src_channel.directional_notation(self.direction)
+        dst_note  = dst_channel.directional_notation(self.direction)
         return {
             "src":         self.src,
             "dst":         self.dst,
             "payload":     self.payload,
             "priority":    self.priority,
+            "direction":   self.direction,
+            "dir_label":   dir_label,
+            "dir_symbol":  dir_sym,
             "timestamp":   self.timestamp,
             "src_channel": src_channel.to_dict(),
             "dst_channel": dst_channel.to_dict(),
-            "route":       f"{self.src} {src_channel.notation()} → {self.dst} {dst_channel.notation()}",
+            "route":       f"{self.src} {src_note} {dir_sym} {self.dst} {dst_note}",
         }
 
 
@@ -446,9 +481,13 @@ class WNSPBus:
 
     # ── Send ───────────────────────────────────────────────────────
 
-    def send(self, src: str, dst: str, payload: Any, priority: int = 5) -> WNSPMessage:
+    def send(self, src: str, dst: str, payload: Any,
+             priority: int = 5, direction: int = 1) -> WNSPMessage:
         """
-        Queue a message from src → dst at the given priority.
+        Queue a message from src → dst at the given priority and wave direction.
+
+        direction: 1 = +k̂ forward propagation (default)
+                  -1 = −k̂ backward propagation (phase-conjugate return path)
 
         Both agents must be registered in the coordinator.
         """
@@ -457,7 +496,10 @@ class WNSPBus:
         if dst not in self.coordinator._registry:
             raise ValueError(f"Destination agent '{dst}' not registered")
 
-        msg = WNSPMessage(src=src, dst=dst, payload=payload, priority=priority)
+        msg = WNSPMessage(
+            src=src, dst=dst, payload=payload,
+            priority=priority, direction=direction,
+        )
         heapq.heappush(self._queue, (priority, self._counter, msg))
         self._counter += 1
         return msg

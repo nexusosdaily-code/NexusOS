@@ -3163,6 +3163,10 @@ export async function registerRoutes(
     secureProxyToSpectralAPI(req, res, "/api/wnsp/bus/status");
   });
 
+  app.get("/api/wnsp/channel/directions/:agentId", optionalAuth, (req, res) => {
+    secureProxyToSpectralAPI(req, res, `/api/wnsp/channel/directions/${req.params.agentId}`);
+  });
+
   app.post("/api/wnsp/quanta/oscillate", optionalAuth, (req, res) => {
     secureProxyToSpectralAPI(req, res, "/api/wnsp/quanta/oscillate");
   });

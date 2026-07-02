@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { ArrowLeft, Radio, Zap, Send, Activity, Globe, Wifi, Brain, TrendingUp, TrendingDown, Minus, RotateCcw } from "lucide-react";
+import { ArrowLeft, Radio, Zap, Send, Activity, Globe, Wifi, Brain, TrendingUp, TrendingDown, Minus, RotateCcw, ArrowRight, ArrowLeft as ArrowBack } from "lucide-react";
 
 // ── physics helpers ───────────────────────────────────────────────────────────
 function nmToColor(nm: number): string {
@@ -16,7 +16,7 @@ function nmToBand(nm: number): string {
   if (nm < 590) return "INTERFACE"; if (nm < 625) return "EVENT";
   return "STORAGE";
 }
-function ceEncode(name: string): { nm: number; psi: string; band: string } {
+function ceEncode(name: string, dir: 1 | -1 = 1): { nm: number; psi: string; psiDir: string; band: string } {
   const codes = name.toUpperCase().split("").map(c => c.charCodeAt(0)).filter(c => c >= 32 && c <= 126);
   if (!codes.length) codes.push(77);
   const avg = codes.reduce((a, b) => a + b, 0) / codes.length;
@@ -24,7 +24,13 @@ function ceEncode(name: string): { nm: number; psi: string; band: string } {
   const wdm = Math.floor((nm - 380) / 4) + 1;
   const oam = codes.reduce((a, b) => a + b, 0) % 50;
   const pol = codes.length % 2 === 0 ? "H" : "V";
-  return { nm, psi: `Ψ(${wdm},${oam},${pol})`, band: nmToBand(nm) };
+  const dirLabel = dir === 1 ? "+k̂" : "−k̂";
+  return {
+    nm,
+    psi: `Ψ(${wdm},${oam},${pol})`,
+    psiDir: `Ψ(${wdm},${oam},${pol},${dirLabel})`,
+    band: nmToBand(nm),
+  };
 }
 
 // ── dynamical system functions (learned from analysis sessions) ───────────────
@@ -64,32 +70,44 @@ interface Hop {
   psi: string; action: string; deltaLambda: number;
 }
 interface PacketLog {
-  id: string; ts: string; destPsi: string; destNm: number;
+  id: string; ts: string; destPsi: string; destPsiDir: string; destNm: number;
   payload: string; hops: Hop[]; delivered: boolean;
   finalNodeId?: string; finalNode?: string;
   entropy: number; fgRatio: number; winnerWeight: number;
   routingMode: "adaptive" | "static";
+  direction: 1 | -1;
+  dirLabel: string;
+  dirSymbol: string;
 }
 
 // ── adaptive routing function ─────────────────────────────────────────────────
 function routeAdaptive(
-  destNm: number, destPsi: string, payload: string,
-  nodes: Node[], weights: Record<string, number>
+  destNm: number, destPsi: string, destPsiDir: string, payload: string,
+  nodes: Node[], weights: Record<string, number>,
+  direction: 1 | -1 = 1,
 ): { log: PacketLog; updatedWeights: Record<string, number> } {
   const active = nodes.filter(n => n.status === "active");
   const hops: Hop[] = [];
   let updatedWeights = { ...weights };
+  const dirLabel  = direction === 1 ? "+k̂" : "−k̂";
+  const dirSymbol = direction === 1 ? "→" : "←";
 
   hops.push({
     step: 0, from: "ORIGIN", to: "WNSP-ROUTER",
-    nm: destNm, psi: destPsi,
-    action: `Packet → ${destPsi} · λ=${destNm}nm · adaptive routing active`,
+    nm: destNm, psi: destPsiDir,
+    action: `Packet ${dirSymbol} ${destPsiDir} · λ=${destNm}nm · ${dirLabel} wave · adaptive routing`,
     deltaLambda: 0,
   });
 
   if (active.length === 0) {
     return {
-      log: { id: Math.random().toString(36).slice(2, 8).toUpperCase(), ts: new Date().toISOString(), destPsi, destNm, payload, hops, delivered: false, entropy: 0, fgRatio: 0, winnerWeight: 1, routingMode: "adaptive" },
+      log: {
+        id: Math.random().toString(36).slice(2, 8).toUpperCase(),
+        ts: new Date().toISOString(),
+        destPsi, destPsiDir, destNm, payload, hops,
+        delivered: false, entropy: 0, fgRatio: 0, winnerWeight: 1,
+        routingMode: "adaptive", direction, dirLabel, dirSymbol,
+      },
       updatedWeights,
     };
   }
@@ -147,9 +165,9 @@ function routeAdaptive(
   }
 
   hops.push({
-    step: hops.length, from: scored[scored.length > 1 ? 1 : 0].node.name, to: destPsi,
-    nm: destNm, psi: destPsi,
-    action: `Delivered to ${destPsi} · payload encoded at λ=${destNm}nm`,
+    step: hops.length, from: scored[scored.length > 1 ? 1 : 0].node.name, to: destPsiDir,
+    nm: destNm, psi: destPsiDir,
+    action: `Delivered ${dirSymbol} ${destPsiDir} · payload encoded at λ=${destNm}nm · ${dirLabel}`,
     deltaLambda: 0,
   });
 
@@ -157,9 +175,10 @@ function routeAdaptive(
     log: {
       id: Math.random().toString(36).slice(2, 8).toUpperCase(),
       ts: new Date().toISOString(),
-      destPsi, destNm, payload, hops, delivered: true,
+      destPsi, destPsiDir, destNm, payload, hops, delivered: true,
       finalNodeId: winner.node.id, finalNode: winner.node.name,
-      entropy, fgRatio, winnerWeight: newWinnerWeight, routingMode: "adaptive",
+      entropy, fgRatio, winnerWeight: newWinnerWeight,
+      routingMode: "adaptive", direction, dirLabel, dirSymbol,
     },
     updatedWeights,
   };
@@ -182,6 +201,7 @@ function SparkLine({ vals, color }: { vals: number[]; color: string }) {
 export default function SpectralRouterPage() {
   const [destInput, setDestInput] = useState("ReasoningCore");
   const [payload, setPayload] = useState("Hello from the spectral network");
+  const [direction, setDirection] = useState<1 | -1>(1);
   const [logs, setLogs] = useState<PacketLog[]>([]);
   const [selected, setSelected] = useState<PacketLog | null>(null);
 
@@ -199,11 +219,11 @@ export default function SpectralRouterPage() {
   });
   const nodes = data?.nodes ?? [];
 
-  const destEnc = destInput.trim() ? ceEncode(destInput) : null;
+  const destEnc = destInput.trim() ? ceEncode(destInput, direction) : null;
 
   const sendPacket = useCallback(() => {
     if (!destEnc || !payload.trim()) return;
-    const { log, updatedWeights } = routeAdaptive(destEnc.nm, destEnc.psi, payload, nodes, weightsRef.current);
+    const { log, updatedWeights } = routeAdaptive(destEnc.nm, destEnc.psi, destEnc.psiDir, payload, nodes, weightsRef.current, direction);
     weightsRef.current = updatedWeights;
     if (log.finalNode) winnerHistoryRef.current = [...winnerHistoryRef.current, log.finalNode].slice(-20);
     setLogs(prev => [log, ...prev].slice(0, 20));
@@ -303,13 +323,13 @@ export default function SpectralRouterPage() {
                 {destEnc && (
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { label: "Ψ Channel", value: destEnc.psi, color: "#06b6d4" },
+                      { label: "Ψ Channel", value: destEnc.psiDir, color: "#06b6d4" },
                       { label: "λ", value: `${destEnc.nm}nm`, color: nmToColor(destEnc.nm) },
                       { label: "Band", value: destEnc.band, color: nmToColor(destEnc.nm) },
                     ].map(({ label, value, color }) => (
                       <div key={label} className="border border-white/5 rounded-lg px-2 py-1.5">
                         <div className="text-[6px] text-white/20">{label}</div>
-                        <div className="text-[9px] font-bold" style={{ color }}>{value}</div>
+                        <div className="text-[9px] font-bold truncate" style={{ color }}>{value}</div>
                       </div>
                     ))}
                   </div>
@@ -317,6 +337,43 @@ export default function SpectralRouterPage() {
                 {destEnc && (
                   <div className="h-1 rounded-full" style={{ background: `linear-gradient(to right, ${nmToColor(destEnc.nm - 30)}, ${nmToColor(destEnc.nm)}, ${nmToColor(destEnc.nm + 30)})` }} />
                 )}
+
+                {/* ── Wave Direction Toggle ──────────────────────────────── */}
+                <div>
+                  <label className="text-white/25 text-[8px] uppercase tracking-widest block mb-1.5">
+                    Wave Direction
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setDirection(1)}
+                      data-testid="button-dir-forward"
+                      className={`flex items-center justify-center gap-1.5 py-2 rounded-lg border text-[9px] font-bold transition-all ${
+                        direction === 1
+                          ? "border-emerald-400/60 text-emerald-400 bg-emerald-400/10"
+                          : "border-white/10 text-white/30 hover:border-white/20"
+                      }`}
+                    >
+                      <ArrowRight size={9} /> +k̂ Forward
+                    </button>
+                    <button
+                      onClick={() => setDirection(-1)}
+                      data-testid="button-dir-backward"
+                      className={`flex items-center justify-center gap-1.5 py-2 rounded-lg border text-[9px] font-bold transition-all ${
+                        direction === -1
+                          ? "border-orange-400/60 text-orange-400 bg-orange-400/10"
+                          : "border-white/10 text-white/30 hover:border-white/20"
+                      }`}
+                    >
+                      <ArrowBack size={9} /> −k̂ Backward
+                    </button>
+                  </div>
+                  <div className="text-white/15 text-[7px] mt-1 leading-relaxed">
+                    {direction === 1
+                      ? "+k̂ primary send path · Maxwell forward propagation"
+                      : "−k̂ phase-conjugate return · orthogonal to +k̂ · ⟨+k̂|−k̂⟩=0"}
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-white/25 text-[8px] uppercase tracking-widest block mb-1">Payload</label>
                   <textarea
@@ -331,10 +388,17 @@ export default function SpectralRouterPage() {
                 <button
                   onClick={sendPacket}
                   disabled={!destEnc || !payload.trim()}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-emerald-400/40 text-emerald-400 font-bold text-[10px] hover:border-emerald-400/70 disabled:opacity-30 transition-all"
+                  className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border font-bold text-[10px] disabled:opacity-30 transition-all ${
+                    direction === 1
+                      ? "border-emerald-400/40 text-emerald-400 hover:border-emerald-400/70"
+                      : "border-orange-400/40 text-orange-400 hover:border-orange-400/70"
+                  }`}
                   data-testid="button-send-packet"
                 >
-                  <Zap size={10} /> Transmit on Ψ Channel
+                  {direction === 1
+                    ? <><ArrowRight size={10} /> Transmit +k̂ Forward</>
+                    : <><ArrowBack size={10} /> Transmit −k̂ Backward</>
+                  }
                 </button>
               </div>
             </div>
@@ -449,6 +513,13 @@ export default function SpectralRouterPage() {
                     <Activity size={9} /> Packet Trace — {selected.id}
                   </div>
                   <div className="flex items-center gap-2">
+                    <span className={`text-[7px] px-1.5 py-0.5 rounded-full border font-bold ${
+                      selected.direction === 1
+                        ? "border-emerald-400/30 text-emerald-400"
+                        : "border-orange-400/30 text-orange-400"
+                    }`}>
+                      {selected.dirLabel} {selected.dirSymbol}
+                    </span>
                     <span className="text-[7px] px-1.5 py-0.5 rounded-full border border-purple-400/30 text-purple-400">
                       H={selected.entropy} · F/G={selected.fgRatio}
                     </span>
@@ -487,7 +558,12 @@ export default function SpectralRouterPage() {
                 </div>
 
                 <div className="border border-white/8 rounded-lg px-3 py-2" style={{ background: "rgba(0,0,0,0.3)" }}>
-                  <div className="text-white/20 text-[7px] uppercase tracking-widest mb-1">Payload · λ={selected.destNm}nm</div>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-white/20 text-[7px] uppercase tracking-widest">Payload · λ={selected.destNm}nm</div>
+                    <div className="text-[6px] font-mono" style={{ color: selected.direction === 1 ? "#34d399" : "#fb923c" }}>
+                      {selected.destPsiDir}
+                    </div>
+                  </div>
                   <div className="text-emerald-300/60 text-[9px] font-mono">{selected.payload}</div>
                 </div>
               </div>
@@ -500,12 +576,16 @@ export default function SpectralRouterPage() {
                 <div className="space-y-1">
                   {logs.map(log => {
                     const col = nmToColor(log.destNm);
+                    const isForward = log.direction === 1;
                     return (
                       <button key={log.id} onClick={() => setSelected(log)}
                         className={`w-full flex items-center gap-2 border rounded-lg px-3 py-1.5 text-left transition-all ${selected?.id === log.id ? "border-emerald-400/30" : "border-white/5 hover:border-white/15"}`}
                         data-testid={`packet-${log.id}`}>
                         <span className={`text-[6px] px-1 py-0.5 rounded-full font-bold flex-shrink-0 ${log.delivered ? "bg-emerald-400/15 text-emerald-400" : "bg-red-400/15 text-red-400"}`}>
                           {log.delivered ? "OK" : "ERR"}
+                        </span>
+                        <span className={`text-[6px] px-1 py-0.5 rounded-full border font-bold flex-shrink-0 ${isForward ? "border-emerald-400/20 text-emerald-400/70" : "border-orange-400/20 text-orange-400/70"}`}>
+                          {log.dirLabel}
                         </span>
                         <span className="text-[8px] font-mono text-white/30 flex-shrink-0">{log.id}</span>
                         <span className="text-[8px] font-bold flex-shrink-0" style={{ color: col }}>{log.destPsi}</span>
