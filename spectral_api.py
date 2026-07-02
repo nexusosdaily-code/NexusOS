@@ -49,7 +49,8 @@ from wnsp_protocol_v7 import (
 )
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["http://127.0.0.1:5000", "http://localhost:5000",
+                   "http://127.0.0.1:5001", "http://localhost:5001"])
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -466,9 +467,9 @@ def char_wavelength():
     # CE layer
     ce   = WNSPCharacterEncoder()
     token = ce.encode_char(char)
-    # SE layer
+    # SE layer — derive wavelength from normalised value directly
+    wl   = VISIBLE_MIN_NM + (token["normalised"] * (VISIBLE_MAX_NM - VISIBLE_MIN_NM))
     se   = WNSPSpectralEncoder()
-    wl   = se.normalised_to_wavelength(token["normalised"])
     freq = se.wavelength_to_frequency(wl)
     mass = se.frequency_to_lambda_mass(freq)
 
@@ -734,14 +735,15 @@ def agent_allocate():
         wdm_band = max(1, min(256, int((channel.wavelength - 380) / 4) + 1)) if 380 <= channel.wavelength < 780 else 1
         ch_density = channel_density_at_wdm(wdm_band)
 
+        channel_info = stats["channel"] if stats and stats.get("channel") else {}
         return jsonify({
             "status":   "existing" if already else "allocated",
             "agent_id": agent_id,
             "display":  f"{agent_id} → {channel.notation()}",
-            **stats["channel"],
-            "intent":         stats["intent"],
-            "registered_at":  stats["registered_at"],
-            "routed_count":   stats["routed_count"],
+            **channel_info,
+            "intent":         stats["intent"] if stats else intent,
+            "registered_at":  stats["registered_at"] if stats else None,
+            "routed_count":   stats["routed_count"] if stats else 0,
             "authority_band": band.name,
             "channel_density": {
                 "wdm_band":           ch_density["wdm_band"],
@@ -949,6 +951,9 @@ def bus_send():
 
         src_ch = _coordinator.get_channel(src)
         dst_ch = _coordinator.get_channel(dst)
+
+        if src_ch is None or dst_ch is None:
+            return jsonify({"error": "CHANNEL_NOT_FOUND", "reason": "Agent channel unavailable"}), 404
 
         # ── Authority check ───────────────────────────────────────
         permitted, reason = check_send_permission(
@@ -1785,6 +1790,8 @@ def _probe_hardware() -> bool:
     if now - _hw_probe_last < _HW_PROBE_TTL:
         return _hw_probe_ok
     try:
+        if _smbus2 is None:
+            raise ImportError("smbus2 not available")
         bus = _smbus2.SMBus(_I2C_BUS)
         bus.read_byte_data(_I2C_ADDR, 0x00)  # read STATUS register
         bus.close()
@@ -1795,8 +1802,10 @@ def _probe_hardware() -> bool:
     return _hw_probe_ok
 
 
-def _get_bus() -> "smbus2.SMBus":
+def _get_bus():
     """Return an open SMBus instance for the configured I²C bus."""
+    if _smbus2 is None:
+        raise RuntimeError("smbus2 not installed — hardware I²C unavailable")
     return _smbus2.SMBus(_I2C_BUS)
 
 # ── AS7265x virtual-register protocol ────────────────────────────────────────

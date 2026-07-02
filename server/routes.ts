@@ -2020,7 +2020,10 @@ export async function registerRoutes(
   // with fallback. Rotate via DEV_GATE_PASSWORD env var.
   app.post("/api/developer/verify-gate", authenticate, (req: Request, res: Response) => {
     const { password } = req.body ?? {};
-    const expected = process.env.DEV_GATE_PASSWORD ?? "Wnsp_nexusos2026";
+    const expected = process.env.DEV_GATE_PASSWORD;
+    if (!expected) {
+      return res.status(503).json({ ok: false, error: "Developer gate not configured" });
+    }
     if (typeof password !== "string" || password !== expected) {
       return res.status(401).json({ ok: false, error: "Invalid password" });
     }
@@ -16092,9 +16095,8 @@ wnsp.io | t.me/troglodytememe`,
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post("/api/build-catalogue", async (req, res) => {
-    const session = await requireAuth(req, res); if (!session) return;
-    const user = await storage.getUser(session.userId);
+  app.post("/api/build-catalogue", authenticate, async (req, res) => {
+    const user = await storage.getUser(req.user!.id);
     if (!user || !["SYSTEM","KERNEL"].includes((user as any).authorityBand ?? "")) {
       return void res.status(403).json({ error: "KERNEL authority required" });
     }

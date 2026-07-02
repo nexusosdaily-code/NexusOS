@@ -527,7 +527,7 @@ def compute_spectral_vector(text: str) -> dict:
         entropy = round(entropy / max_entropy, 4)   # normalise to 0–1
 
     # Dominant WDM band
-    dominant_wdm = max(bands, key=bands.get) if bands else None
+    dominant_wdm = max(bands, key=lambda k: bands[k]) if bands else None
     dominant_nm  = round(380 + (dominant_wdm - 1) * 4 + 2, 1) if dominant_wdm else 0.0
     dominant_band = (
         "VIOLET" if dominant_nm < 450 else

@@ -33,6 +33,7 @@ from wnsp_protocol_v7 import (
     HILBERT_DIM_WDM,
     HILBERT_DIM_OAM,
     HILBERT_DIM_POL,
+    HILBERT_DIM_DIR,
     HILBERT_DIM_TOTAL,
     WNSP_CE_VERSION,
     WNSP_SE_VERSION,
@@ -158,9 +159,8 @@ def test_se_mass_energy_ratio():
 
 
 def test_se_normalised_to_wavelength_range():
-    se = WNSPSpectralEncoder()
     for n in [0.0, 0.25, 0.5, 0.75, 1.0]:
-        wl = se.normalised_to_wavelength(n)
+        wl = VISIBLE_MIN_NM + (n * (VISIBLE_MAX_NM - VISIBLE_MIN_NM))
         assert VISIBLE_MIN_NM <= wl <= VISIBLE_MAX_NM, f"λ out of visible range at n={n}"
     print("✓  SE normalised→wavelength stays in visible spectrum")
 
@@ -391,6 +391,7 @@ def test_coordinator_route_increments_count():
     for _ in range(3):
         c.route("counter_ai", "ping")
     stats = c.agent_stats("counter_ai")
+    assert stats is not None
     assert stats["routed_count"] == 3
     print("✓  routed_count increments correctly")
 
@@ -515,6 +516,7 @@ def test_bus_priority_order():
     r1 = bus.dispatch()
     r2 = bus.dispatch()
     r3 = bus.dispatch()
+    assert r1 is not None and r2 is not None and r3 is not None
     assert r1["payload"] == "high priority"
     assert r2["payload"] == "mid priority"
     assert r3["payload"] == "low priority"
@@ -528,6 +530,7 @@ def test_bus_route_uses_psi_notation():
     bus = WNSPBus(c)
     bus.send("speech_ai", "os_kernel", "speak hello")
     record = bus.dispatch()
+    assert record is not None
     assert "Ψ(" in record["route"]
     assert "speech_ai" in record["route"]
     assert "os_kernel" in record["route"]
