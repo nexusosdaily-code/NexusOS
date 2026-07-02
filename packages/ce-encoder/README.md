@@ -45,8 +45,8 @@ result = ceEncode("Hello world")
 
 - Algorithm: `CE_TABLE[charCode % 128]` → 380–780 nm (3.125 nm per band, 128 bands)
 - Energy: `E = hf` where `f = c/λ`
-- Channel: `Ψ(wdm, oam, pol)` — Hilbert-space address in 25,600-channel orthogonal space
-- 25,600 channels = 256 WDM × 50 OAM modes × 2 polarisations (H/V)
+- Channel: `Ψ(wdm, oam, pol, dir)` — Hilbert-space address in 51,200-channel orthogonal space
+- 51,200 channels = 256 WDM × 50 OAM modes × 2 polarisations (H/V) × 2 directions (+k̂/−k̂)
 - Bit-identical output between npm and Python packages for the same input
 
 ## Why orthogonal channels matter

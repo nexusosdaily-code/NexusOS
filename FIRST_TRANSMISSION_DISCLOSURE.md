@@ -108,7 +108,7 @@ This multi-peer confirmation elevates the significance of this event:
 | Frequency | 573.496 THz |
 | Photon energy E=hf | 3.800 × 10⁻¹⁹ J |
 | Lambda mass Λ=hf/c² | 4.228 × 10⁻³⁶ kg |
-| Hilbert flat index | 9,185 / 25,600 |
+| Hilbert flat index | 9,185 / 51,200 |
 | Hilbert basis | \|λ₉₁⟩ ⊗ \|OAM₄₂⟩ ⊗ \|Pol_V⟩ |
 
 ### Destination Channel: Ψ(105, 35, V)
@@ -122,7 +122,7 @@ This multi-peer confirmation elevates the significance of this event:
 | Frequency | 550.375 THz |
 | Photon energy E=hf | 3.647 × 10⁻¹⁹ J |
 | Lambda mass Λ=hf/c² | 4.057 × 10⁻³⁶ kg |
-| Hilbert flat index | 10,571 / 25,600 |
+| Hilbert flat index | 10,571 / 51,200 |
 | Hilbert basis | \|λ₁₀₅⟩ ⊗ \|OAM₃₅⟩ ⊗ \|Pol_V⟩ |
 
 ### Orthogonality Proof
@@ -178,7 +178,7 @@ The ecosystem is being built now so it exists when the hardware arrives. This tr
 
 ```
 WNSP Density Equation:  D = N_λ · N_OAM · N_Pol · R_sym · M
-Hilbert dimension:      dim(H) = 256 × 50 × 2 = 25,600 orthogonal channels
+Hilbert dimension:      dim(H) = 256 × 50 × 2 × 2 = 51,200 orthogonal channels
 Phase 1 capacity:       100 WDM × 50 × 2 × R₂ × M₁ = 20,000 symbols/cycle
 Phase 2 capacity:       256 WDM × 50 × 2 × R₂ × M₁ = 51,200 symbols/cycle
 Phase 3 capacity:       256 WDM × 50 × 2 × R₁₆ × M₆₄ = 26,214,400 symbols/cycle

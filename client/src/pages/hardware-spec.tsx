@@ -289,8 +289,9 @@ public verifyHardwareAnchor(blockIndex: number, readingNm: number): boolean {
             the full Ψ address, SNIC launches the photon.
           </Field>
           <Field label="Channel capacity">
-            <span className="font-mono text-emerald-400">256 WDM × 50 OAM × 2 POL = 25,600 orthogonal channels</span>
+            <span className="font-mono text-emerald-400">256 WDM × 50 OAM × 2 POL × 2 DIR = 51,200 orthogonal channels</span>
             <br /><span className="text-slate-500">⟨Ψᵢ|Ψⱼ⟩ = 0 — quantum mechanical guarantee, not software policy.</span>
+            <br /><span className="text-slate-500 text-xs">DIR: +k̂ forward / −k̂ backward propagating modes. Maxwell time-reversal symmetry guarantees orthogonality. Phase conjugation is the physical reversal mechanism.</span>
           </Field>
 
           <div className="space-y-2">
@@ -360,6 +361,7 @@ if (curr.previousWavelengthHash !== expectedHash) {
             <ImplRef label="Spectral Network" href="/network" file="network.tsx" />
           </div>
           <PriorArt text={`Spectral Relay Mesh v1 — WNSP-addressed photonic relay across TCP/IP overlay and all-optical phases — first specified ${SPEC_DATE}`} />
+          <PriorArt text={`Bidirectional channel dimension N_Dir=2 — forward (+k̂) and backward (−k̂) propagating modes as orthogonal Hilbert sub-space; phase conjugation reversal; 25,600 → 51,200 channel expansion — first specified 2026-07-02`} />
         </Section>
 
         {/* ── Compiler α ── */}

@@ -96,7 +96,7 @@ A wavelength coordinate is not an assigned address. It is a specific compression
 
 The visible spectrum (380–780 nm) where WNSP operates is the compression band where stable matter exists, where photons carry information without destroying the medium, and where human biology evolved to perceive. It sits deep into the decompression curve — far cooler than the Planck origin, but precisely where civilization is possible.
 
-The 25,600 Hilbert space channels are not an engineering decision. A Hilbert space is the mathematical space where superposition states live. The channel count maps to orthogonal quantum states — the network address space is structurally identical to the address space of the first wavefunction itself.
+The 51,200 Hilbert space channels are not an engineering decision. A Hilbert space is the mathematical space where superposition states live. The channel count maps to orthogonal quantum states — the network address space is structurally identical to the address space of the first wavefunction itself.
 
 ---
 
@@ -108,7 +108,7 @@ The question sounds simple. The implications are total.
 
 If the answer is "they don't have to," then every assumption that modern computing rests on — clock cycles, binary gates, memory addresses, schedulers, privilege rings, virtual memory — is not a discovery. It is a workaround. A set of clever answers to problems that only exist because silicon was chosen as the medium in 1947.
 
-The electromagnetic spectrum does not have those problems. A photon does not need a clock to coordinate with other photons. It does not need a scheduler because 25,600 orthogonal channels exist simultaneously. It does not need a privilege ring because 400 nm and 550 nm are physically separate — not by policy, but by the wave equation.
+The electromagnetic spectrum does not have those problems. A photon does not need a clock to coordinate with other photons. It does not need a scheduler because 51,200 orthogonal channels exist simultaneously. It does not need a privilege ring because 400 nm and 550 nm are physically separate — not by policy, but by the wave equation.
 
 From the theory of compression states — Einstein's Λ applied to the first oscillation — an entire computing paradigm emerged:
 
@@ -134,7 +134,7 @@ This is not a theoretical paper. Every component described in this repository is
 | **AI OS Kernel** | 6-phase boot, 6 ACTIVE agents, Hilbert space channel allocation, 120s heartbeat cycle |
 | **Blockchain** | Physics-proof chain, Maxwell equation validation, spectral authority bands |
 | **P2P Media** | Mesh networking, chunk-based distribution, WebRTC/Socket.IO streaming |
-| **Spectral Registry** | 25,600 orthogonal Ψ(wdm,oam,pol) channels, WASCII v1.0 deterministic addressing |
+| **Spectral Registry** | 51,200 orthogonal Ψ(wdm,oam,pol,dir) channels, WASCII v1.0 deterministic addressing |
 | **Public Profiles** | Every user gets a permanent wnsp:// identity derived from compression state — not assigned |
 
 ---
@@ -185,7 +185,7 @@ D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
 
 Where: N_λ = 256 (WDM), N_OAM = 50 (orbital angular momentum), N_Pol = 2 (polarization), R_sym = symbols/cycle, M = modulation depth.
 
-Hilbert space: dim(H) = 256 × 50 × 2 = **25,600 orthogonal channels**. Current density: 51,200 symbols/cycle (R=2, M=1).
+Hilbert space: dim(H) = 256 × 50 × 2 × 2 = **51,200 orthogonal channels**. Current density: 102,400 symbols/cycle (R=2, M=1).
 
 Energy-normalized form: \`D_energy = D_WNSP · λ / (h · c)\` — connects to Λ=hf/c². At higher frequency (shorter λ, higher compression state), photons carry more energy, so density per joule decreases along the compression state curve.
 

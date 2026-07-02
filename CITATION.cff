@@ -12,7 +12,7 @@ abstract: >
   transfers) is governed by E=hf calculations anchored to each user's unique
   spectral identity channel Ψ(WDM, OAM, Pol). The platform introduces the
   Theory of Compression States, WASCII v2.0 spectral character encoding,
-  a 25,600-channel Hilbert-space addressing model (256 WDM × 50 OAM × 2 Pol),
+  a 51,200-channel Hilbert-space addressing model (256 WDM × 50 OAM × 2 Pol × 2 Dir),
   a live AI OS kernel with 6 autonomous agents, on-chain governance, and a
   physics-enforced NXT token economy. Released as free infrastructure under
   AGPL-3.0. Genesis fingerprint: Ψ(228,45,H) · λ≈737.6 nm.

@@ -62,30 +62,32 @@ WNSP_PROTOCOL    = "WNSP/7.1"
 # WNSP-SE Hilbert Space Channel Basis
 # ─────────────────────────────────────────────
 #
-#   Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩
+#   Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩ ⊗ |Dir_d⟩
 #
-#   Each channel is an orthogonal basis vector in a 25,600-dimensional
-#   Hilbert space formed by the tensor product of three sub-spaces:
+#   Each channel is an orthogonal basis vector in a 51,200-dimensional
+#   Hilbert space formed by the tensor product of four sub-spaces:
 #
 #     |λ_i⟩    — wavelength (WDM) sub-space      dim = 256
 #     |OAM_j⟩  — orbital angular momentum        dim = 50
 #     |Pol_k⟩  — polarisation (H / V)            dim = 2
+#     |Dir_d⟩  — propagation direction           dim = 2  (+k̂ / −k̂)
 #
 #   Total Hilbert space dimension:
-#     dim(H) = 256 × 50 × 2 = 25,600
+#     dim(H) = 256 × 50 × 2 × 2 = 51,200
 #
 #   Orthogonality guarantee:
 #     ⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j
 #
 #   This is the formal mathematical basis for channel isolation in WNSP-SE.
-#   All 25,600 channels are simultaneously usable without interference.
+#   All 51,200 channels are simultaneously usable without interference.
 #
 HILBERT_DIM_WDM   = 256   # |λ_i⟩  sub-space dimension
 HILBERT_DIM_OAM   = 50    # |OAM_j⟩ sub-space dimension
 HILBERT_DIM_POL   = 2     # |Pol_k⟩ sub-space dimension
-HILBERT_DIM_TOTAL = HILBERT_DIM_WDM * HILBERT_DIM_OAM * HILBERT_DIM_POL  # 25,600
+HILBERT_DIM_DIR   = 2     # |Dir_d⟩ sub-space dimension  (+k̂ forward / −k̂ backward)
+HILBERT_DIM_TOTAL = HILBERT_DIM_WDM * HILBERT_DIM_OAM * HILBERT_DIM_POL * HILBERT_DIM_DIR  # 51,200
 
-CHANNEL_BASIS_EQUATION = "Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩"
+CHANNEL_BASIS_EQUATION = "Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩ ⊗ |Dir_d⟩"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # WASCII Table  —  Wavelength-Native Character Standard (WNSP Spectral Encoding
@@ -202,26 +204,32 @@ LAMBDA_CHAR_MAP = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# WNSP DENSITY EQUATION  v1.0
+# WNSP DENSITY EQUATION  v2.0
 #
-#   D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
+#   D_WNSP = N_λ · N_OAM · N_Pol · N_Dir · R_sym · M
 #
 #   Where:
 #     N_λ    — wavelength (WDM) channels           = 256
 #     N_OAM  — orbital angular momentum modes       = 50
 #     N_Pol  — polarization states                  = 2
+#     N_Dir  — propagation direction states         = 2  (+k̂ forward / −k̂ backward)
 #     R_sym  — symbols per channel per cycle        (current = 2)
 #     M      — modulation depth                     (current = 1, minimal)
 #
-#   Hilbert space:  dim(H) = 256 × 50 × 2 = 25,600 orthogonal channels
-#   Current density: D_current = 25,600 × 2 × 1 = 51,200 symbols / cycle
+#   Hilbert space:  dim(H) = 256 × 50 × 2 × 2 = 51,200 orthogonal channels
+#   Current density: D_current = 51,200 × 2 × 1 = 102,400 symbols / cycle
+#
+#   Direction basis |Dir_d⟩: forward (+k̂) and backward (−k̂) propagating modes.
+#   These are eigenstates of the propagation operator with eigenvalues +β and −β.
+#   Maxwell time-reversal symmetry guarantees ⟨+k̂|−k̂⟩ = 0 — orthogonal by physics,
+#   not software policy. Phase conjugation is the physical mechanism of reversal.
 #
 #   Energy-normalized form (connects to Λ = hf/c²):
 #     D_energy = D_WNSP · λ / (h · c)
 #
 #   Key insight:
 #     Traditional: C ∝ log(1+SNR)   — capacity via compression
-#     WNSP:        D ∝ N_λ·N_OAM·N_Pol·R_sym·M — capacity via dimensional expansion
+#     WNSP:        D ∝ N_λ·N_OAM·N_Pol·N_Dir·R_sym·M — capacity via dimensional expansion
 #
 #   At higher frequency (shorter λ): photons carry more energy (Λ=hf/c²),
 #   so density per unit energy decreases. The compression state curve is the
@@ -231,14 +239,17 @@ def compute_wnsp_density(
     n_wdm:        int   = HILBERT_DIM_WDM,   # 256
     n_oam:        int   = HILBERT_DIM_OAM,   # 50
     n_pol:        int   = HILBERT_DIM_POL,   # 2
+    n_dir:        int   = HILBERT_DIM_DIR,   # 2  (+k̂ forward / −k̂ backward)
     r_sym:        float = 2.0,               # symbols per channel per cycle
     m:            float = 1.0,               # modulation depth (1 = minimal)
     wavelength_nm: float = 550.0,            # reference wavelength for energy calc
 ) -> dict:
     """
-    WNSP Density Equation — D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
+    WNSP Density Equation v2.0 — D_WNSP = N_λ · N_OAM · N_Pol · N_Dir · R_sym · M
 
     Computes channel capacity via Hilbert space expansion.
+    N_Dir adds bidirectional propagation: forward (+k̂) and backward (−k̂) modes
+    are orthogonal eigenstates (Maxwell time-reversal symmetry, ⟨+k̂|−k̂⟩ = 0).
     Energy-normalized form ties density to the Λ=hf/c² compression state curve.
 
     Returns full breakdown: Hilbert space structure, density metrics,
@@ -248,10 +259,10 @@ def compute_wnsp_density(
     c = SPEED_OF_LIGHT
 
     # ── Hilbert space ─────────────────────────────────────────────────────────
-    hilbert_channels = n_wdm * n_oam * n_pol      # dim(H)
+    hilbert_channels = n_wdm * n_oam * n_pol * n_dir  # dim(H)
 
     # ── Core density ──────────────────────────────────────────────────────────
-    d_raw = hilbert_channels * r_sym * m           # symbols per cycle
+    d_raw = hilbert_channels * r_sym * m               # symbols per cycle
 
     # ── Energy-normalized density (symbols per joule) ─────────────────────────
     wavelength_m  = wavelength_nm * 1e-9
@@ -314,16 +325,17 @@ def compute_wnsp_density(
     ]
 
     return {
-        "equation":        "D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M",
+        "equation":        "D_WNSP = N_λ · N_OAM · N_Pol · N_Dir · R_sym · M",
         "energy_equation": "D_energy = D_WNSP · λ / (h · c)",
         "lambda_equation": "Λ = hf / c²   (compression state at reference wavelength)",
         "hilbert_space": {
             "n_wdm":          n_wdm,
             "n_oam":          n_oam,
             "n_pol":          n_pol,
+            "n_dir":          n_dir,
             "total_channels": hilbert_channels,
             "channel_basis":  CHANNEL_BASIS_EQUATION,
-            "dimension_note": f"dim(H) = {n_wdm} × {n_oam} × {n_pol} = {hilbert_channels:,}",
+            "dimension_note": f"dim(H) = {n_wdm} × {n_oam} × {n_pol} × {n_dir} = {hilbert_channels:,}",
         },
         "parameters": {
             "r_sym":        r_sym,
@@ -356,10 +368,10 @@ def compute_wnsp_density(
             "dimensions rather than compressing a single channel. At higher frequency "
             "(shorter λ, higher compression state), photons carry more energy (Λ=hf/c²), "
             "so density per joule decreases along the compression curve. "
-            "The full photonic address space (25,600 channels) is structurally "
+            "The full photonic address space (51,200 channels) is structurally "
             "identical to the quantum address space of the first wavefunction."
         ),
-        "version": "WNSP-Density-v1.0",
+        "version": "WNSP-Density-v2.0",
     }
 
 
@@ -682,8 +694,8 @@ class WNSPSpectralEncoder:
 
     Channel Basis (Hilbert Space Model)
     ------------------------------------
-        Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩
-        dim(H) = 256 × 50 × 2 = 25,600
+        Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩ ⊗ |Dir_d⟩
+        dim(H) = 256 × 50 × 2 × 2 = 51,200
         ⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j
     """
 
@@ -920,7 +932,7 @@ class WNSPProtocolStack:
                 "unit":            "symbols per cycle",
                 "note": (
                     "cycles_required = ceil(frames / D_WNSP). "
-                    "At Phase 3 (photonic), all 25,600 channels route simultaneously — "
+                    "At Phase 3 (photonic), all 51,200 channels route simultaneously — "
                     "a single cycle carries the entire message."
                 ),
             },

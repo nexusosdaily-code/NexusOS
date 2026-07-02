@@ -60,7 +60,7 @@ The authoritative physics engine enforces WNSP governance on all economic action
 Authentication is phone number-based. The system includes an NXT token wallet (8 decimals, 21 billion supply) with transaction costs derived from physics (`E=hf`). User wallet transfers utilize their unique spectral channel wavelength.
 
 ### Physics-Based Protocol Layer (WNSP)
-This core protocol replaces cryptographic hashing with electromagnetic wave physics, utilizing Maxwell equation validation and wavelength-based addressing. Transaction costs are derived from wavelength-frequency-energy calculations, reflecting energy differences between compression states. It includes WNSP-CE v1.0 (Character Encoding) and WNSP-SE v1.0 (Spectral Encoding) for mapping data to physical wave frames, and WNSP-URI v1.0 for deterministic, censorship-proof addressing (`wnsp://Ψ(wdm,oam,pol)/path`). A Hilbert Space Channel Model defines 25,600 orthogonal communication channels.
+This core protocol replaces cryptographic hashing with electromagnetic wave physics, utilizing Maxwell equation validation and wavelength-based addressing. Transaction costs are derived from wavelength-frequency-energy calculations, reflecting energy differences between compression states. It includes WNSP-CE v1.0 (Character Encoding) and WNSP-SE v1.0 (Spectral Encoding) for mapping data to physical wave frames, and WNSP-URI v1.0 for deterministic, censorship-proof addressing (`wnsp://Ψ(wdm,oam,pol)/path`). A Hilbert Space Channel Model defines 51,200 orthogonal communication channels.
 
 ### WNSP AI Operating System Kernel (v1.0.0)
 A Python kernel with a 6-phase boot process, persistent state via PostgreSQL, an authority/permission layer, a `KernelEventBus` for event handling, a dead agent watchdog, and a blockchain auditor.
@@ -75,7 +75,7 @@ Provides API key management with an NXT creation fee for external access to Nexu
 A P2P media sharing engine with physics-based cost calculations, mesh networking, chunk-based distribution, WebRTC/Socket.IO streaming, HTTP Range Request support, and encryption.
 
 ## Photonic Computing Vision
-Silicon is the bridge encoder. Every CE lookup that today runs as a table scan in RAM will execute as a physical wavelength selection in a photonic waveguide (~2032). NexusOS is written in the language of the destination hardware, not the bridge hardware. When photonic ASICs arrive, no rewrite is needed — the architecture already speaks in wavelengths. The 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations) map directly to physical hardware lanes: ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics, not software policy.
+Silicon is the bridge encoder. Every CE lookup that today runs as a table scan in RAM will execute as a physical wavelength selection in a photonic waveguide (~2032). NexusOS is written in the language of the destination hardware, not the bridge hardware. When photonic ASICs arrive, no rewrite is needed — the architecture already speaks in wavelengths. The 51,200 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations × 2 propagation directions) map directly to physical hardware lanes: ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics, not software policy.
 
 ## System Design Choices
 - **Monorepo Structure**: Organized into `/client`, `/server`, and `/shared`.
@@ -84,7 +84,7 @@ Silicon is the bridge encoder. Every CE lookup that today runs as a table scan i
 - **Environment Variables**: For secure configuration.
 
 ## WNSP Density Equation v1.0
-Defines the WNSP density `D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M`, which quantifies communication capacity via dimensional expansion in Hilbert space (25,600 orthogonal channels).
+Defines the WNSP density `D_WNSP = N_λ · N_OAM · N_Pol · N_Dir · R_sym · M`, which quantifies communication capacity via dimensional expansion in Hilbert space (51,200 orthogonal channels). N_Dir=2 adds bidirectional propagation (+k̂ forward / −k̂ backward) as an orthogonal Hilbert sub-space — first disclosed 2026-07-02.
 
 ## WASCII v2.0 — Wave Density Spectral Vector
 Provides a spectral fingerprint for text, mapping characters to unique compression states and generating spectral histograms for similarity searches.

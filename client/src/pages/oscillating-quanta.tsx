@@ -328,12 +328,12 @@ function CompressionTable() {
 export default function OscillatingQuantaPage() {
   usePageMeta({
     title: "Theory of Compression States — First Principles of NexusOS",
-    description: "The universe evolves from the first unobserved oscillation. Each subsequent state is a compression of the previous one, encoded in the electromagnetic spectrum. 25,600 orthogonal Ψ channels represent the full addressable state space.",
+    description: "The universe evolves from the first unobserved oscillation. Each subsequent state is a compression of the previous one, encoded in the electromagnetic spectrum. 51,200 orthogonal Ψ channels represent the full addressable state space.",
     canonical: "https://wnsp.io/oscillating-quanta",
     ogTitle: "Theory of Compression States — First Principles",
-    ogDescription: "The first unobserved oscillation at 555 THz. Λ=hf/c² compression law. 25,600 orthogonal Ψ channels. The physics foundation of NexusOS.",
+    ogDescription: "The first unobserved oscillation at 555 THz. Λ=hf/c² compression law. 51,200 orthogonal Ψ channels. The physics foundation of NexusOS.",
     twitterTitle: "Theory of Compression States",
-    twitterDescription: "Λ=hf/c². The universe evolves from the first unobserved oscillation. 25,600 orthogonal Ψ channels.",
+    twitterDescription: "Λ=hf/c². The universe evolves from the first unobserved oscillation. 51,200 orthogonal Ψ channels.",
   });
   // Single-channel explorer state (from original)
   const [wdm,     setWdm]     = useState(128);

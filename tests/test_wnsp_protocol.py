@@ -52,8 +52,8 @@ def test_constants():
     assert HILBERT_DIM_WDM  == 256,             "WDM dimension incorrect"
     assert HILBERT_DIM_OAM  == 50,              "OAM dimension incorrect"
     assert HILBERT_DIM_POL  == 2,               "Polarisation dimension incorrect"
-    assert HILBERT_DIM_TOTAL == 25_600,         "Hilbert total dimension must be 25,600"
-    assert HILBERT_DIM_TOTAL == HILBERT_DIM_WDM * HILBERT_DIM_OAM * HILBERT_DIM_POL
+    assert HILBERT_DIM_TOTAL == 51_200,         "Hilbert total dimension must be 51,200"
+    assert HILBERT_DIM_TOTAL == HILBERT_DIM_WDM * HILBERT_DIM_OAM * HILBERT_DIM_POL * HILBERT_DIM_DIR
     assert FIRST_OSCILLATION_THz == 555e12,     "First Oscillation must be 555 THz"
     assert ROOT_HARMONIC_Hz      == 7.83,       "Root Harmonic must be 7.83 Hz (Schumann)"
     print("✓  constants")

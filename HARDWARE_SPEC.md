@@ -176,7 +176,7 @@ Existing fibre optic infrastructure serves as the physical medium unchanged.
 
 ### Channel Capacity
 ```
-Total orthogonal channels: 256 WDM × 50 OAM × 2 POL = 25,600
+Total orthogonal channels: 256 WDM × 50 OAM × 2 POL × 2 DIR = 51,200
 Orthogonality guarantee: ⟨Ψᵢ|Ψⱼ⟩ = 0   (quantum mechanical, not policy)
 ```
 

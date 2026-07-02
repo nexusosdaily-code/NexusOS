@@ -106,7 +106,7 @@
 ### WNSP Protocol (`/hardware-spec`)
 - **AGPL-3.0 protected** formal specification — first public disclosure 2026-05-16.
 - SNIC (Spectral Network Interface Controller), PHR-1 (Photonic Hash Register), Spectral Relay Mesh v1.
-- 25,600 orthogonal channels: 256 WDM × 50 OAM × 2 Polarisations.
+- 51,200 orthogonal channels: 256 WDM × 50 OAM × 2 Polarisations × 2 Propagation Directions.
 - WNSP density: `D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M`.
 - Maxwell equation validation replaces cryptographic hashing.
 
@@ -168,7 +168,7 @@
 | Bitcoin | Taproot P2TR inscriptions · BRC-20 · Ordinals · Fractal Bitcoin L2 |
 | Protocol | WNSP (Wavelength Network Substrate Protocol) — replaces TCP/IP |
 | Language | WavelengthScript v1.0 — compiled to WNSP bytecode |
-| Physics | Maxwell equations · E=hf · Λ=hf/c² · 25,600 Hilbert space channels |
+| Physics | Maxwell equations · E=hf · Λ=hf/c² · 51,200 Hilbert space channels |
 | License | AGPL-3.0 |
 
 ---

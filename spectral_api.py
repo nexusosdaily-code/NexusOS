@@ -268,7 +268,7 @@ def spectral_vector():
 @app.route('/api/wnsp/density', methods=['GET', 'POST'])
 def wnsp_density():
     """
-    WNSP Density Equation v1.0 — D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
+    WNSP Density Equation v2.0 — D_WNSP = N_λ · N_OAM · N_Pol · N_Dir · R_sym · M
 
     Computes channel capacity via Hilbert space expansion and connects
     to the Λ=hf/c² compression state curve through energy normalization.
@@ -401,7 +401,7 @@ def get_constants():
 
 @app.route('/api/spectral/capacity', methods=['GET'])
 def get_capacity():
-    total_channels = HILBERT_DIM_TOTAL  # 25,600
+    total_channels = HILBERT_DIM_TOTAL  # 51,200
     # ── Density equation applied to this capacity report ──────────────────────
     density_phase1 = compute_wnsp_density(n_wdm=100,             r_sym=2.0, m=1, wavelength_nm=550.0)
     density_phase2 = compute_wnsp_density(n_wdm=HILBERT_DIM_WDM, r_sym=2.0, m=1, wavelength_nm=550.0)
@@ -423,7 +423,7 @@ def get_capacity():
             "orthogonality": "⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j",
         },
         "density_equation": {
-            "formula":         "D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M",
+            "formula":         "D_WNSP = N_λ · N_OAM · N_Pol · N_Dir · R_sym · M",
             "energy_formula":  "D_energy = D_WNSP · λ / (h · c)",
             "phase_1_complete": density_phase1["density"]["d_raw"],
             "phase_2_now":      density_phase2["density"]["d_raw"],
@@ -666,7 +666,7 @@ def simulator_reset():
 # ─────────────────────────────────────────────────────────────────
 # AI/OS Channel Coordination Layer
 # Backed by WNSPCoordinator — the formal runtime for mapping agents
-# and OS processes onto the 25,600-dimensional Hilbert space.
+# and OS processes onto the 51,200-dimensional Hilbert space.
 # ─────────────────────────────────────────────────────────────────
 
 from wnsp_v7.wnsp_coordinator import WNSPCoordinator, WNSPBus
@@ -1139,7 +1139,7 @@ def se_simulate():
 @app.route('/api/wnsp/se/orthogonality', methods=['GET'])
 def se_orthogonality():
     """
-    Validate Hilbert-space orthogonality across all 25,600 channels.
+    Validate Hilbert-space orthogonality across all 51,200 channels.
     Proves ⟨Ψ_i | Ψ_j⟩ = 0 for all i ≠ j by unique basis construction.
     """
     try:
@@ -1539,7 +1539,7 @@ def kernel_status():
                 },
             },
             "equation": "Λ = hf/c²",
-            "channels": 25600,
+            "channels": 51200,
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
