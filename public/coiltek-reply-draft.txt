@@ -53,6 +53,16 @@ return a marked-up copy with your recommended core specifications and we
 will approve before you proceed to the full quote.
 
 ────────────────────────────────────────────────────────────
+CORE MATERIAL
+────────────────────────────────────────────────────────────
+Core material: Ferrite.
+
+Please advise the appropriate ferrite grade and core geometry (OD, ID, height)
+to meet the SRF > 1 MHz requirement. We defer entirely to Coiltek's
+recommendation on grade selection — there is no ambiguity on the material
+itself, only on which specific grade best suits the application.
+
+────────────────────────────────────────────────────────────
 QUOTE REQUEST
 ────────────────────────────────────────────────────────────
 Please itemise the quote as discussed:
