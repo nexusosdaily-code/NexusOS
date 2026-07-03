@@ -1091,7 +1091,7 @@ export async function registerRoutes(
   // ── Admin: reset any user's password ─────────────────────────────────────
   app.post("/api/admin/reset-password", authenticate, async (req: Request, res: Response) => {
     try {
-      if (!req.user?.isAdmin)
+      if (!req.user?.isAdmin && req.user?.role !== "admin")
         return res.status(403).json({ error: "Admin access required" });
       const { targetUsername, newPassword } = req.body ?? {};
       if (!targetUsername || !newPassword)
