@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+
+# Known security scanners — disallowed
+User-agent: TLM-Audit-Scanner
+Disallow: /
+
+User-agent: Nuclei
+Disallow: /
+
+User-agent: zgrab
+Disallow: /
+
+User-agent: masscan
+Disallow: /
+
+User-agent: sqlmap
+Disallow: /
+
+Sitemap: https://wnsp.tech/sitemap.xml
