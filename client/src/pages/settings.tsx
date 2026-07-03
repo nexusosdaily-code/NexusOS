@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import {
   ArrowLeft, Settings, User, Lock, Key, Shield, Atom,
   Eye, EyeOff, CheckCircle, XCircle, RefreshCw, ChevronRight,
-  AlertTriangle, Camera, MapPin, Mail, FileText, Upload,
+  AlertTriangle, Camera, MapPin, Mail, FileText, Upload, UserCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -580,6 +580,95 @@ export default function SettingsPage() {
             {pwLoading ? "Updating…" : "Update Password"}
           </Button>
         </SectionCard>
+
+        {user?.isAdmin && <AdminResetPanel />}
+      </div>
+    </div>
+  );
+}
+
+function AdminResetPanel() {
+  const [targetUsername, setTargetUsername] = useState("");
+  const [newPassword, setNewPassword]       = useState("");
+  const [showPwd, setShowPwd]               = useState(false);
+  const [loading, setLoading]               = useState(false);
+  const [result, setResult]                 = useState<{ ok: boolean; message: string } | null>(null);
+
+  const handleReset = async () => {
+    if (!targetUsername.trim() || newPassword.length < 8) return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await apiFetch("/api/admin/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUsername: targetUsername.trim(), newPassword }),
+      });
+      setResult({ ok: true, message: res.message });
+      setTargetUsername("");
+      setNewPassword("");
+    } catch (err: any) {
+      setResult({ ok: false, message: err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-950/10 p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <UserCog className="w-4 h-4 text-red-400" />
+        <span className="text-sm font-semibold text-red-400">Admin — Reset User Password</span>
+      </div>
+      <p className="text-xs text-slate-400 mb-4">
+        Enter the username of the user who is locked out, set a temporary password, then send it to them privately.
+        They can change it themselves after logging in.
+      </p>
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Username</label>
+          <input
+            data-testid="input-admin-reset-username"
+            value={targetUsername}
+            onChange={e => setTargetUsername(e.target.value)}
+            placeholder="Enter their username"
+            className="w-full rounded-lg bg-slate-800/60 border border-slate-700 text-sm text-white px-3 py-2 focus:outline-none focus:border-red-400"
+            autoComplete="off"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 block mb-1">Temporary Password (8+ characters)</label>
+          <div className="relative">
+            <input
+              data-testid="input-admin-reset-password"
+              type={showPwd ? "text" : "password"}
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              placeholder="Set a temporary password"
+              className="w-full rounded-lg bg-slate-800/60 border border-slate-700 text-sm text-white px-3 py-2 pr-10 focus:outline-none focus:border-red-400"
+              autoComplete="new-password"
+            />
+            <button type="button" tabIndex={-1}
+              onClick={() => setShowPwd(v => !v)}
+              className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300">
+              {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+        {result && (
+          <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${result.ok ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"}`}>
+            {result.ok ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+            {result.message}
+          </div>
+        )}
+        <Button
+          data-testid="button-admin-reset-password"
+          onClick={handleReset}
+          disabled={loading || !targetUsername.trim() || newPassword.length < 8}
+          className="w-full bg-red-800 hover:bg-red-700 text-white">
+          {loading ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <UserCog className="w-4 h-4 mr-2" />}
+          {loading ? "Resetting…" : "Reset Password"}
+        </Button>
       </div>
     </div>
   );

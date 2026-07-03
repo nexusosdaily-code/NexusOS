@@ -1088,6 +1088,29 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
+  // ── Admin: reset any user's password ─────────────────────────────────────
+  app.post("/api/admin/reset-password", authenticate, async (req: Request, res: Response) => {
+    try {
+      if (!req.user?.isAdmin)
+        return res.status(403).json({ error: "Admin access required" });
+      const { targetUsername, newPassword } = req.body ?? {};
+      if (!targetUsername || !newPassword)
+        return res.status(400).json({ error: "targetUsername and newPassword required" });
+      if (newPassword.length < 8)
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      const target = await storage.getUserByUsername(targetUsername);
+      if (!target) return res.status(404).json({ error: `User "${targetUsername}" not found` });
+      const bcrypt = await import("bcrypt");
+      const hash = await bcrypt.hash(newPassword, 12);
+      const { db } = await import("./db");
+      const { users } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ passwordHash: hash }).where(eq(users.id, target.id));
+      await logAction(req, "admin_password_reset", "auth", target.id, { resetBy: req.user.id }, "success", `Admin reset password for ${targetUsername}`);
+      res.json({ ok: true, message: `Password reset for ${targetUsername}` });
+    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
   app.post("/api/auth/logout", authenticate, async (req, res) => {
     try {
       if (req.session) {
@@ -1355,6 +1378,7 @@ export async function registerRoutes(
           email:       user.email,
           role:        user.role,
           isVerified:  user.isVerified,
+          isAdmin:     user.isAdmin,
           spectralWdm: spectral.wdm,
           spectralOam: spectral.oam,
           spectralPol: spectral.pol,

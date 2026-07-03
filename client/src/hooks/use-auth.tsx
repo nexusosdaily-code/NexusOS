@@ -6,6 +6,7 @@ interface User {
   username?: string;
   email?: string | null;
   role?: string;
+  isAdmin?: boolean;
   walletAddress?: string;
   balanceUnits?: string;
 }
