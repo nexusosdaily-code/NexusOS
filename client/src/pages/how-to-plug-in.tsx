@@ -82,7 +82,7 @@ export default function HowToPlugInPage() {
     <div className="min-h-screen bg-black text-white px-4 py-8 max-w-3xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-white/30 text-xs mb-6">
-        <Link href="/" className="hover:text-white/60 transition-colors">Hub</Link>
+        <Link href="/wnsp" className="hover:text-white/60 transition-colors">WNSP</Link>
         <ChevronRight size={12} />
         <span>How to Plug In</span>
       </div>

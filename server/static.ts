@@ -329,10 +329,10 @@ export function serveStatic(app: Express) {
   // crawlers that do not execute JavaScript receive a proper 301 redirect
   // instead of landing on a metadata-only SPA shell.
   const ALIAS_REDIRECTS: Record<string, string> = {
-    "/spectral-video": "/spectral-db?tab=media",
-    "/spectral-uri":   "/spectral-db?tab=write",
-    "/wnsp-uri":       "/spectral-db?tab=write",
-    "/visualizer":     "/spectral-db?tab=map",
+    "/spectral-video": "/wnsp",
+    "/spectral-uri":   "/wnsp",
+    "/wnsp-uri":       "/wnsp",
+    "/visualizer":     "/wnsp",
     "/btc-bridge":     "/wnsp/ordinals",
   };
   for (const [from, to] of Object.entries(ALIAS_REDIRECTS)) {

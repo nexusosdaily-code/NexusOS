@@ -441,10 +441,10 @@ function Router() {
       <Route path="/spectral-db" component={SpectralDbPage} />
       <Route path="/nexus-spectral" component={SpectralDbPage} />
       {/* Legacy redirects → unified framework */}
-      <Route path="/spectral-video">{() => { window.location.replace("/spectral-db?tab=media"); return null; }}</Route>
-      <Route path="/spectral-uri">{() => { window.location.replace("/spectral-db?tab=write"); return null; }}</Route>
-      <Route path="/wnsp-uri">{() => { window.location.replace("/spectral-db?tab=write"); return null; }}</Route>
-      <Route path="/visualizer">{() => { window.location.replace("/spectral-db?tab=map"); return null; }}</Route>
+      <Route path="/spectral-video">{() => { window.location.replace("/wnsp"); return null; }}</Route>
+      <Route path="/spectral-uri">{() => { window.location.replace("/wnsp"); return null; }}</Route>
+      <Route path="/wnsp-uri">{() => { window.location.replace("/wnsp"); return null; }}</Route>
+      <Route path="/visualizer">{() => { window.location.replace("/wnsp"); return null; }}</Route>
       {/* Public showcase & proof pages */}
       <Route path="/wnsp" component={WnspLandingPage} />
       <Route path="/wnsp/ordinals" component={WnspOrdinalsPage} />

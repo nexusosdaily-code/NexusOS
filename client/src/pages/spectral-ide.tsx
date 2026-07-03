@@ -668,7 +668,7 @@ export default function SpectralIDEPage() {
 
       {/* Header */}
       <div className="border-b border-slate-800 px-4 py-2 flex items-center gap-3 bg-slate-900/80">
-        <Link href="/hub" className="text-slate-500 hover:text-slate-300 transition-colors"><ArrowLeft size={16} /></Link>
+        <Link href="/wnsp" className="text-slate-500 hover:text-slate-300 transition-colors"><ArrowLeft size={16} /></Link>
         <Code2 size={16} className="text-cyan-400" />
         <span className="text-slate-300 font-semibold text-sm">Spectral IDE</span>
         <span className="text-slate-700">|</span>

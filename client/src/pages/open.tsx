@@ -367,7 +367,7 @@ export default function OpenPage() {
             </div>
 
             <div className="text-center">
-              <Link href="/spectral-uri">
+              <Link href="/wnsp">
                 <button className="inline-flex items-center gap-2 border border-purple-400/30 rounded-lg px-4 py-2 text-purple-400 text-[10px] font-bold hover:border-purple-400/50 transition-colors"
                   data-testid="link-spectral-uri">
                   <Radio size={10} /> Open the live CE→SE encoder → WNSP-URI v1.0
@@ -433,7 +433,7 @@ export default function OpenPage() {
                 title: "Extend the Spec",
                 color: "#3b82f6",
                 desc: "WNSP-URI v1.0 and WASCII v1.0 are living specifications. Propose new WNSP extensions, new encoding ranges, new gate primitives.",
-                href: "/spectral-uri",
+                href: "/wnsp",
                 cta: "View WNSP-URI Spec →",
               },
             ].map(c => (

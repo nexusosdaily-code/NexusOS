@@ -476,7 +476,7 @@ export default function SnicPage() {
           <div className="border border-white/8 rounded-2xl p-5" style={{ background: "rgba(255,255,255,0.01)" }}>
             <div className="flex items-center justify-between mb-4">
               <div className="text-white/30 text-[9px] uppercase tracking-wider">Data path — character to photon</div>
-              <Link href="/spectral-uri">
+              <Link href="/wnsp">
                 <button className="flex items-center gap-1 text-[8px] text-cyan-400/60 hover:text-cyan-400 transition-colors border border-cyan-400/20 rounded px-2 py-0.5">
                   <Radio size={7} /> Encode your own Ψ address →
                 </button>
@@ -488,7 +488,7 @@ export default function SnicPage() {
                 { label: "WASCII gate",    color: "#a855f7", href: null },
                 { label: "Ring resonance", color: ANCHOR_COLOR, href: null },
                 { label: "Photon @ λ nm",  color: ANCHOR_COLOR, href: null },
-                { label: "Ψ(wdm,oam,pol)", color: "#3b82f6", href: "/spectral-uri" },
+                { label: "Ψ(wdm,oam,pol)", color: "#3b82f6", href: "/wnsp" },
                 { label: "Destination",    color: "#06b6d4", href: null },
               ].map((s, i, arr) => (
                 <div key={s.label} className="flex items-center gap-1">
