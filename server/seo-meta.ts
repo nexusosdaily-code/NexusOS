@@ -6,6 +6,12 @@
  * descriptions, canonicals, Open Graph, Twitter Card, and JSON-LD data.
  */
 
+/** Canonical Ψ channel count: 256 WDM × 50 OAM × 2 POL × 2 DIR = 51,200.
+ *  Update this constant when the channel model changes — it is the single
+ *  source of truth for all server-injected metadata and fallback HTML. */
+const PSI_CHANNELS = "51,200";
+const PSI_CHANNEL_FORMULA = "256 WDM × 50 OAM × 2 POL × 2 DIR";
+
 interface PageMeta {
   title: string;
   description: string;
@@ -377,15 +383,15 @@ export const ROUTE_META: Record<string, PageMeta> = {
   },
   "/oscillating-quanta": {
     title: "Theory of Compression States — First Principles of NexusOS",
-    description: "The universe evolves from the first unobserved oscillation. Each subsequent state is a compression of the previous one, encoded in the electromagnetic spectrum. 25,600 orthogonal Ψ channels represent the full addressable state space.",
+    description: `The universe evolves from the first unobserved oscillation. Each subsequent state is a compression of the previous one, encoded in the electromagnetic spectrum. ${PSI_CHANNELS} orthogonal Ψ channels represent the full addressable state space.`,
     canonical: `${BASE}/oscillating-quanta`,
     ogTitle: "Theory of Compression States — First Principles",
-    ogDescription: "The first unobserved oscillation at 555 THz. Λ=hf/c² compression law. 25,600 orthogonal Ψ channels. The physics foundation of NexusOS.",
+    ogDescription: `The first unobserved oscillation at 555 THz. Λ=hf/c² compression law. ${PSI_CHANNELS} orthogonal Ψ channels. The physics foundation of NexusOS.`,
     ogType: "article",
     twitterTitle: "Theory of Compression States",
-    twitterDescription: "Λ=hf/c². The universe evolves from the first unobserved oscillation. 25,600 orthogonal Ψ channels represent the full addressable state space.",
+    twitterDescription: `Λ=hf/c². The universe evolves from the first unobserved oscillation. ${PSI_CHANNELS} orthogonal Ψ channels represent the full addressable state space.`,
     jsonLd: techArticle({ url: `${BASE}/oscillating-quanta`, name: "Theory of Compression States", description: "First principles of the NexusOS physics stack: the universe evolves from the first unobserved oscillation at 555 THz. Λ=hf/c² is the governing compression law.", about: "Theory of Compression States, 555 THz, Λ=hf/c², photonic physics" }),
-    bodyHtml: `<h1>Theory of Compression States — First Principles</h1><p>The universe evolves from the first unobserved oscillation at 555 THz — the centre of the visible spectrum, the moment Λ transitioned from unformed to formed. Each subsequent state is a compression of the previous one, encoded in the electromagnetic spectrum.</p><p>The governing compression law: <strong>Λ = hf/c²</strong> — where h is Planck's constant, f is frequency, and c is the speed of light. This single equation unifies computation, communication, and gravity.</p><ul><li>First oscillation: 555 THz (green light, λ ≈ 540nm)</li><li>25,600 orthogonal Ψ channels — the full addressable state space</li><li>Authority bands: SYSTEM → KERNEL → USER → GUEST (shorter λ = higher authority)</li><li>Every NexusOS address, fee, and channel derived from this first principle</li></ul><nav><ul><li><a href="${BASE}/compression-explorer">Interactive Λ=hf/c² Compression Curve</a></li><li><a href="${BASE}/proof">Physics Proofs</a></li><li><a href="${BASE}/wnsp">WNSP Protocol</a></li></ul></nav>`,
+    bodyHtml: `<h1>Theory of Compression States — First Principles</h1><p>The universe evolves from the first unobserved oscillation at 555 THz — the centre of the visible spectrum, the moment Λ transitioned from unformed to formed. Each subsequent state is a compression of the previous one, encoded in the electromagnetic spectrum.</p><p>The governing compression law: <strong>Λ = hf/c²</strong> — where h is Planck's constant, f is frequency, and c is the speed of light. This single equation unifies computation, communication, and gravity.</p><ul><li>First oscillation: 555 THz (green light, λ ≈ 540nm)</li><li>${PSI_CHANNELS} orthogonal Ψ channels (${PSI_CHANNEL_FORMULA}) — the full addressable state space</li><li>Authority bands: SYSTEM → KERNEL → USER → GUEST (shorter λ = higher authority)</li><li>Every NexusOS address, fee, and channel derived from this first principle</li></ul><nav><ul><li><a href="${BASE}/compression-explorer">Interactive Λ=hf/c² Compression Curve</a></li><li><a href="${BASE}/proof">Physics Proofs</a></li><li><a href="${BASE}/wnsp">WNSP Protocol</a></li></ul></nav>`,
   },
   "/wavelength-lang": {
     title: "WavelengthScript — Physics-Native Programming Language",
@@ -437,7 +443,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     twitterTitle: "NexusOS Hardware Specification",
     twitterDescription: "SNIC photonic NIC, PHR-1 resonator, Spectral Relay Mesh. First disclosed 2026-05-16. AGPL-3.0.",
     jsonLd: techArticle({ url: `${BASE}/hardware-spec`, name: "NexusOS Hardware Specification", description: "Formal specification for SNIC, PHR-1, Spectral Relay Mesh v1, and WavelengthScript Compiler α. First public disclosure 2026-05-16. AGPL-3.0.", about: "SNIC, PHR-1, photonic hardware, WavelengthScript" }),
-    bodyHtml: `<h1>NexusOS Hardware Specification — AGPL-3.0</h1><p>The formal, AGPL-3.0-protected specification for the NexusOS hardware layer. First public disclosure: 2026-05-16. Open forever — any improvements must be contributed back to the community.</p><h2>Specifications Covered</h2><ul><li><strong>SNIC — Spectral Network Interface Card</strong>: 25,600 orthogonal lanes (256 WDM × 50 OAM × 2 polarisations). CE lookups execute as physical wavelength selections in photonic waveguides. ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics.</li><li><strong>PHR-1 — Physical Resonator</strong>: 144-turn bifilar coil, Syncbox Controller firmware, WavelengthScript v1.0 API. First implementation of the ZERO-G state. First batch: 25 units.</li><li><strong>Spectral Relay Mesh v1</strong>: multi-hop WNSP packet routing across physical nodes using Ψ channel addressing.</li><li><strong>WavelengthScript Compiler α</strong>: source-to-bytecode compiler specification.</li></ul><p>License: AGPL-3.0. First public disclosure: 2026-05-16. All hardware improvements must be open-sourced.</p><nav><ul><li><a href="${BASE}/crowdfund">Hardware Founder Slots (25 available)</a></li><li><a href="${BASE}/hardware-lab">Hardware Lab</a></li><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li></ul></nav>`,
+    bodyHtml: `<h1>NexusOS Hardware Specification — AGPL-3.0</h1><p>The formal, AGPL-3.0-protected specification for the NexusOS hardware layer. First public disclosure: 2026-05-16. Open forever — any improvements must be contributed back to the community.</p><h2>Specifications Covered</h2><ul><li><strong>SNIC — Spectral Network Interface Card</strong>: ${PSI_CHANNELS} orthogonal channels (${PSI_CHANNEL_FORMULA}). CE lookups execute as physical wavelength selections in photonic waveguides. ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics.</li><li><strong>PHR-1 — Physical Resonator</strong>: 144-turn bifilar coil, Syncbox Controller firmware, WavelengthScript v1.0 API. First implementation of the ZERO-G state. First batch: 25 units.</li><li><strong>Spectral Relay Mesh v1</strong>: multi-hop WNSP packet routing across physical nodes using Ψ channel addressing.</li><li><strong>WavelengthScript Compiler α</strong>: source-to-bytecode compiler specification.</li></ul><p>License: AGPL-3.0. First public disclosure: 2026-05-16. All hardware improvements must be open-sourced.</p><nav><ul><li><a href="${BASE}/crowdfund">Hardware Founder Slots (25 available)</a></li><li><a href="${BASE}/hardware-lab">Hardware Lab</a></li><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li></ul></nav>`,
   },
   "/hardware-lab": {
     title: "NexusOS Hardware Lab — Physics Calibration & Live Spectrometer",
