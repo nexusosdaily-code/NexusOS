@@ -4,6 +4,7 @@
 - [WNUSD auto-collateral system](wnusd-auto-collateral.md) — stake auto-mints WNUSD; unstake auto-redeems; stake_id FK; backfill pattern
 - [Staking system](staking-system.md) — 6 lock periods, yield rates, extend route, early-exit penalty, deposit cap 10B sats
 - [Accounts and auth](accounts-auth.md) — Nexus genesis account, password, registration locked, developer keys gate
+- [Admin role check pattern](admin-role-check.md) — always check role==="admin" OR isAdmin; isAdmin column may lag in production
 - [NXT indestructibility](nxt-indestructibility.md) — NXT fees NEVER burned; always go to orbital_treasury
 - [Domain setup](domain-setup.md) — wnsp.tech on Cloudflare; GoDaddy nameserver update pending
 - [Coinos JWT auth](coinos-jwt-auth.md) — NIP-98 blocked server-side; use COINOS_JWT Bearer token for all Coinos calls
