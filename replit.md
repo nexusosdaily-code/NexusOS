@@ -4,7 +4,7 @@ NexusOS is a full-stack web application designed as the foundational blueprint f
 
 # User Preferences
 
-Preferred communication style: Simple, everyday language.
+Preferred communication style: Simple, everyday language. Always refer to the project and team as "us" — never "you" when discussing NexusOS work.
 
 # PROTECTED FEATURES — DO NOT REMOVE OR OVERWRITE
 
