@@ -174,11 +174,37 @@ async function sendHoneypotAlert(req: Request, path: string): Promise<void> {
   } catch (_) { /* never block on alert failure */ }
 }
 
+const BLOCKED_UA_PATTERNS = [
+  /TLM-Audit-Scanner/i,
+  /Nuclei/i,
+  /zgrab/i,
+  /masscan/i,
+  /sqlmap/i,
+  /nikto/i,
+  /nmap/i,
+  /dirbuster/i,
+  /gobuster/i,
+  /wfuzz/i,
+  /hydra/i,
+  /metasploit/i,
+  /WPScan/i,
+  /nessus/i,
+  /openvas/i,
+  /acunetix/i,
+  /burpsuite/i,
+];
+
 export function honeypotMiddleware(req: Request, res: Response, next: NextFunction) {
+  const ua = req.headers["user-agent"] ?? "";
+  if (BLOCKED_UA_PATTERNS.some(p => p.test(ua))) {
+    res.locals.honeypotHit = true;
+    sendHoneypotAlert(req, `[SCANNER-BLOCKED] UA: ${ua.substring(0, 80)}`);
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
   const p = req.path;
   if (HONEYPOT_PATHS.has(p) || HONEYPOT_PATHS.has(p.toLowerCase())) {
     res.locals.honeypotHit = true;
-    // Fire Telegram alert asynchronously — don't block the 404 response
     sendHoneypotAlert(req, p);
     return res.status(404).json({ error: "Not found" });
   }
