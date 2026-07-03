@@ -365,3 +365,15 @@ id = "y9eG4kzTWzq0YaCl_QRCP"
 uri = "file://screenshots/wavelengthscript-intro.docx"
 type = "word_document"
 title = "WavelengthScript — 5-Minute Introduction"
+
+[[outputs]]
+id = "tF-y-c14Y3jCTU_3Y91Xz"
+uri = "file://public/PHR-1-toroid-drawing.svg"
+type = "image"
+title = "PHR-1 Toroid Technical Drawing (NEXOS-PHR1-T001 Rev A)"
+
+[[outputs]]
+id = "dvi1vBFlujAIHvaTw1Nwe"
+uri = "file://public/coiltek-reply-draft.txt"
+type = "text"
+title = "Coiltek Reply Email Draft"

@@ -1,0 +1,68 @@
+DRAFT REPLY — Coiltek Electronics
+Subject: Re: PHR-1 Bifilar Toroid Prototype Quote
+
+Hi [Coiltek contact name],
+
+Thank you for the thorough response and for the pinout sketches — very helpful.
+
+Please find our answers to your questions below, and a drawing is attached
+(NEXOS-PHR1-T001 Rev A).
+
+────────────────────────────────────────────────────────────
+OPERATING FREQUENCY
+────────────────────────────────────────────────────────────
+The PHR-1 bifilar toroid is a precision DC driver for a microheater element.
+The control loop bandwidth is DC to approximately 10 kHz.
+
+Our primary electrical constraint is:
+  Self-resonant frequency (SRF) > 1 MHz
+
+We do not have a fixed inductance target. We are happy for Coiltek to
+recommend inductance and core grade based on the SRF requirement above.
+If you could suggest a starting point we will verify it works for our
+application and confirm.
+
+────────────────────────────────────────────────────────────
+BIFILAR WINDING
+────────────────────────────────────────────────────────────
+Side-by-side, no crossing or twisting — confirmed. Thank you for noting
+that this suits hand winding for the prototype run. We understand production
+quantities will carry a higher per-unit cost due to labour — that is fine
+for our purposes at this stage.
+
+────────────────────────────────────────────────────────────
+PINOUT
+────────────────────────────────────────────────────────────
+Pinout A (Vertical) — confirmed. We agree this is the better option for
+bench testing and we have no objection to it being your preferred approach.
+
+────────────────────────────────────────────────────────────
+LEAD LENGTH
+────────────────────────────────────────────────────────────
+60 mm minimum — confirmed and accepted.
+
+────────────────────────────────────────────────────────────
+DRAWING
+────────────────────────────────────────────────────────────
+Please find attached: NEXOS-PHR1-T001-RevA.svg
+
+The drawing is indicative. We have intentionally left OD, ID, core height,
+and inductance as "to be advised by Coiltek" based on your recommendation
+for meeting the SRF > 1 MHz constraint. Please feel free to annotate or
+return a marked-up copy with your recommended core specifications and we
+will approve before you proceed to the full quote.
+
+────────────────────────────────────────────────────────────
+QUOTE REQUEST
+────────────────────────────────────────────────────────────
+Please itemise the quote as discussed:
+  1. NRE (engineering / setup)
+  2. Prototype samples x 3
+  3. Drawing / documentation
+
+We look forward to your response.
+
+Kind regards,
+Te Rata Pou
+NexusOS / WNSP Project
+wnsp.tech
