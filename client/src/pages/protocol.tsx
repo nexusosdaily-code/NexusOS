@@ -215,7 +215,7 @@ result = ce_encode('A')
               {[
                 { label: "Range",     value: "380 – 780 nm", sub: "full visible spectrum" },
                 { label: "Bands",     value: "128",          sub: "3.125 nm per band" },
-                { label: "Channels",  value: "25,600",       sub: "256 WDM × 50 OAM × 2 pol" },
+                { label: "Channels",  value: "51,200",       sub: "256 WDM × 50 OAM × 2 POL × 2 DIR" },
               ].map(s => (
                 <div key={s.label} className="text-center">
                   <p className="text-xs text-slate-600 font-mono uppercase">{s.label}</p>
@@ -235,7 +235,7 @@ result = ce_encode('A')
               { eq: "E = hf",       label: "Planck's equation",          desc: "Every character has energy. High-frequency characters (SYSTEM band) cost more to transmit. The fee system is physically derived." },
               { eq: "f = c / λ",    label: "Wave equation",              desc: "Frequency and wavelength are the same physical quantity. Wavelength addressing is frequency addressing." },
               { eq: "Λ = hf / c²",  label: "Compression density",        desc: "Einstein's E=mc² + Planck's E=hf → Λ=hf/c². A character has mass-equivalent density. Information has weight." },
-              { eq: "⟨Ψᵢ|Ψⱼ⟩ = δᵢⱼ","label": "Hilbert-space orthogonality", desc: "25,600 channels are mathematically orthogonal. Zero collision — guaranteed by quantum mechanics, not software policy." },
+              { eq: "⟨Ψᵢ|Ψⱼ⟩ = δᵢⱼ","label": "Hilbert-space orthogonality", desc: "51,200 channels are mathematically orthogonal. Zero collision — guaranteed by quantum mechanics, not software policy." },
             ].map(d => (
               <div key={d.eq} className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-2">
                 <div className="flex items-baseline gap-3">

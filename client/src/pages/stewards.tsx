@@ -156,9 +156,9 @@ export default function StewardsPage() {
             equations, not to mathematical convention.
           </Para>
           <Para>
-            The core protocol, WNSP, defines 25,600 orthogonal communication channels
+            The core protocol, WNSP, defines 51,200 orthogonal communication channels
             across 256 wavelength-division multiplexing bands, 50 orbital angular momentum
-            modes, and 2 polarisation states. These are not software constructs. They are
+            modes, 2 polarisation states, and 2 propagation directions. These are not software constructs. They are
             physical properties of light. The channels are orthogonal by quantum
             mechanics — ⟨Ψᵢ|Ψⱼ⟩ = 0 — not by policy.
           </Para>
@@ -225,7 +225,7 @@ export default function StewardsPage() {
                 and fibre Bragg gratings to prove wavelength-selective channel separation
                 matching the CE_TABLE formula to within ±2.000 nm. Verified by
                 spectrometer, documented in video, published under AGPL-3.0. This is the
-                optical proof that the 25,600 Ψ channels are physically realisable.
+                optical proof that the 51,200 Ψ channels are physically realisable.
               </p>
             </div>
           </div>

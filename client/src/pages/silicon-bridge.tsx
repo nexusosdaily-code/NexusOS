@@ -56,7 +56,7 @@ export default function SiliconBridgePage() {
     description: "Silicon transistors are approaching their physical limit. NexusOS is already written in the language of what comes next: photonic computing. Ψ channels map directly to physical waveguide lanes — no rewrite required when photonic ASICs arrive.",
     canonical: "https://wnsp.io/silicon-bridge",
     ogTitle: "The Silicon Bridge — Silicon is the Bridge. Photons are the Destination.",
-    ogDescription: "Moore's Law ends at ~1 nm. NexusOS solves the transistor problem by writing in the language of photonic computing today. 25,600 orthogonal Ψ channels map to physical waveguide lanes — no rewrite when ASICs arrive (~2032).",
+    ogDescription: "Moore's Law ends at ~1 nm. NexusOS solves the transistor problem by writing in the language of photonic computing today. 51,200 orthogonal Ψ channels map to physical waveguide lanes — no rewrite when ASICs arrive (~2032).",
   });
 
   const ceA = nmToEnergy(383.1);
@@ -178,7 +178,7 @@ if (bit == 1) {
         <div className="rounded-2xl border border-cyan-900/40 bg-cyan-950/5 overflow-hidden">
           <div className="px-6 py-4 border-b border-cyan-900/30 flex items-center gap-2">
             <Radio className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-wider">25,600-Channel Hilbert Space Architecture</span>
+            <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-wider">51,200-Channel Hilbert Space Architecture</span>
           </div>
           <div className="px-6 py-6 space-y-6">
             <div className="grid md:grid-cols-3 gap-4">
@@ -202,7 +202,7 @@ if (bit == 1) {
                 <div className="text-[11px] text-slate-500">
                   Every pair of Ψ channels is orthogonal by quantum mechanics — not software policy.
                   This is not an engineering choice. It is a consequence of the Hilbert space inner product.
-                  256 × 50 × 2 = <span className="text-cyan-300">25,600</span> independent, zero-crosstalk communication lanes.
+                  256 × 50 × 2 × 2 = <span className="text-cyan-300">51,200</span> independent, zero-crosstalk communication lanes.
                 </div>
               </div>
             </div>
@@ -276,7 +276,7 @@ ceEncode(' ')  → charCode=32  → band=32  → λ = 533.6 nm   f = ${ceSpace.t
           <div className="px-6 py-6 space-y-5">
             <p className="text-sm text-slate-400 leading-relaxed">
               SNIC is the photonic NIC of ~2032. Where today's NICs move electrons across copper,
-              SNIC moves photons across optical waveguides. Each of the 25,600 Ψ channels
+              SNIC moves photons across optical waveguides. Each of the 51,200 Ψ channels
               corresponds to a physical hardware lane. CE lookups that today run as table scans in
               RAM will execute as physical wavelength selections in a photonic waveguide — a single
               optical pulse replacing millions of transistor operations.
@@ -411,9 +411,9 @@ ceEncode(' ')  → charCode=32  → band=32  → λ = 533.6 nm   f = ${ceSpace.t
               <div className="space-y-6 pl-6">
                 {[
                   { year: "2016–2024", color: "#ef4444", label: "Transistor crisis recognised", desc: "5nm → 3nm → 2nm. Intel, TSMC, Samsung all publish photonic research. IBM integrates 800Gbps silicon photonics. Quantum tunnelling leakage becomes primary design constraint." },
-                  { year: "2026", color: "#f97316", label: "WNSP protocol published", desc: "NexusOS ships the first full-stack software model for photonic computation. CE encoding, 25,600-channel Hilbert space, WavelengthScript compiler, WNSP VM, and SNIC specification are publicly disclosed under AGPL-3.0." },
+                  { year: "2026", color: "#f97316", label: "WNSP protocol published", desc: "NexusOS ships the first full-stack software model for photonic computation. CE encoding, 51,200-channel Hilbert space, WavelengthScript compiler, WNSP VM, and SNIC specification are publicly disclosed under AGPL-3.0." },
                   { year: "2027–2030", color: "#eab308", label: "Photonic co-processing emerges", desc: "First silicon-photonic co-processors appear in data centres for AI inference. WNSP provides the first ready-made software stack for these chips — no new paradigm to invent, just compile WavelengthScript to photonic gate sequences." },
-                  { year: "~2032", color: "#4ade80", label: "SNIC — photonic NIC ships", desc: "25,600 orthogonal Ψ channels on-chip. CE lookups execute as physical wavelength selections. Every WNSP address written today resolves to a hardware lane. No rewrite needed. NexusOS was written in the language of this hardware from day one." },
+                  { year: "~2032", color: "#4ade80", label: "SNIC — photonic NIC ships", desc: "51,200 orthogonal Ψ channels on-chip. CE lookups execute as physical wavelength selections. Every WNSP address written today resolves to a hardware lane. No rewrite needed. NexusOS was written in the language of this hardware from day one." },
                 ].map(({ year, color, label, desc }) => (
                   <div key={year} className="relative">
                     <div className="absolute -left-6 w-2 h-2 rounded-full mt-1.5" style={{ background: color, boxShadow: `0 0 8px ${color}` }} />
@@ -510,7 +510,7 @@ ceEncode(' ')  → charCode=32  → band=32  → λ = 533.6 nm   f = ${ceSpace.t
         {/* ── Footer note ─────────────────────────────────────────────────── */}
         <div className="pt-4 pb-8 border-t border-slate-800/40 text-[10px] text-slate-700 font-mono space-y-1">
           <div>NexusOS · WNSP Protocol · AGPL-3.0 · First public disclosure of SNIC, PHR-1, and WavelengthScript Compiler α: 2026-05-16</div>
-          <div>Theory of Compression States · Λ = hf/c² · ⟨Ψᵢ|Ψⱼ⟩ = 0 · 25,600 orthogonal Hilbert-space channels</div>
+          <div>Theory of Compression States · Λ = hf/c² · ⟨Ψᵢ|Ψⱼ⟩ = 0 · 51,200 orthogonal Hilbert-space channels</div>
           <div>Founders: Maxwell · Planck · Einstein · Tesla · Shannon · Bohr · Schrödinger</div>
         </div>
 

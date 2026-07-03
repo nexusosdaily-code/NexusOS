@@ -121,7 +121,7 @@ function SpectralTuner() {
 
       <div className="px-5 pb-4 pt-1">
         <p className="text-[10px] text-white/20 font-mono leading-relaxed">
-          Algorithm: CE_TABLE[charCode % 128] · 128 bands · 380–780 nm · 3.125 nm/band · 25,600 orthogonal Ψ channels
+          Algorithm: CE_TABLE[charCode % 128] · 128 bands · 380–780 nm · 3.125 nm/band · 51,200 orthogonal Ψ channels
           · same output as <code className="text-white/40">nexusos-ce-encoder</code> on npm
         </p>
       </div>
@@ -133,12 +133,12 @@ function SpectralTuner() {
 export default function WnspLandingPage() {
   usePageMeta({
     title: "WNSP — Wavelength-Native Spectral Protocol",
-    description: "WNSP replaces cryptographic hashing with electromagnetic wave physics. Maxwell equation validation, wavelength-based addressing, physics-derived fees (E=hf), and 25,600 orthogonal communication channels.",
+    description: "WNSP replaces cryptographic hashing with electromagnetic wave physics. Maxwell equation validation, wavelength-based addressing, physics-derived fees (E=hf), and 51,200 orthogonal communication channels.",
     canonical: "https://wnsp.io/wnsp",
     ogTitle: "WNSP — Wavelength-Native Spectral Protocol",
-    ogDescription: "Physics-native communication: wavelength addressing, Maxwell validation, E=hf fees, 25,600 Ψ channels. WNSP-CE v1.0, WNSP-SE v1.0, WNSP-URI v1.0.",
+    ogDescription: "Physics-native communication: wavelength addressing, Maxwell validation, E=hf fees, 51,200 Ψ channels. WNSP-CE v1.0, WNSP-SE v1.0, WNSP-URI v1.0.",
     twitterTitle: "WNSP — Wavelength-Native Spectral Protocol",
-    twitterDescription: "Replace hashing with physics. Wavelength addressing, Maxwell validation, photon energy fees. 25,600 orthogonal channels.",
+    twitterDescription: "Replace hashing with physics. Wavelength addressing, Maxwell validation, photon energy fees. 51,200 orthogonal channels.",
   });
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -214,8 +214,8 @@ export default function WnspLandingPage() {
               the instruction set already speaks in wavelengths.
             </p>
             <p>
-              <span className="text-white/80 font-medium">The 25,600 Ψ channels</span> (256 WDM × 50 OAM ×
-              2 polarisations) satisfy ⟨Ψ<sub>i</sub>|Ψ<sub>j</sub>⟩ = 0 by quantum mechanics — not software
+              <span className="text-white/80 font-medium">The 51,200 Ψ channels</span> (256 WDM × 50 OAM ×
+              2 POL × 2 DIR) satisfy ⟨Ψ<sub>i</sub>|Ψ<sub>j</sub>⟩ = 0 by quantum mechanics — not software
               policy. Orthogonality is enforced by physics.
             </p>
           </div>

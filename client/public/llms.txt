@@ -40,7 +40,7 @@ Unified 4-stage pipeline: paste any language → transpile to WavelengthScript �
 
 Human First Contact interface for CE-SE encoding. Live encode with character chip visualisation, code builder, integration kit (Node.js / Python / Browser JS), and spectral linter.
 
-WNSP-CE v1.0 maps every Unicode character to a unique compression state (wavelength 380–780 nm, 128 bands, 3.125 nm/band). WNSP-URI v1.0 provides deterministic, censorship-proof addressing: wnsp://Ψ(wdm,oam,pol)/path across 25,600 orthogonal Hilbert-space channels (256 WDM × 50 OAM × 2 polarisations).
+WNSP-CE v1.0 maps every Unicode character to a unique compression state (wavelength 380–780 nm, 128 bands, 3.125 nm/band). WNSP-URI v1.0 provides deterministic, censorship-proof addressing: wnsp://Ψ(wdm,oam,pol)/path across 51,200 orthogonal Hilbert-space channels (256 WDM × 50 OAM × 2 POL × 2 DIR).
 
 ## Network & Routing
 
@@ -87,7 +87,7 @@ Both expose `ceEncode(text) → { wavelength, band, psiChannel, energy }` with b
 ## Key Equations
 
 - Compression state: Λ = hf/c²
-- WNSP channel density: D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M  (25,600 orthogonal channels)
+- WNSP channel density: D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M  (51,200 orthogonal channels)
 - Physics fee: fee = base_fee × (E_sender / E_reference)
 - Transaction energy: E = hf  (Planck relation)
 - Spectral signing: SHA-256(content) ⊕ hex(λ_signer)

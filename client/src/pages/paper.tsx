@@ -31,12 +31,12 @@ function Section({ n, title, children }: { n: string; title: string; children: R
 export default function PaperPage() {
   usePageMeta({
     title: "Theory of Compression States — Preprint | NexusOS",
-    description: "Preprint: A unified physics of information, field, and matter derived from the primordial oscillation. Λ=hf/c² compression state operator, 25,600 Hilbert space channels, Russell octave structure. AGPL-3.0.",
+    description: "Preprint: A unified physics of information, field, and matter derived from the primordial oscillation. Λ=hf/c² compression state operator, 51,200 Hilbert space channels, Russell octave structure. AGPL-3.0.",
     canonical: "https://wnsp.io/paper",
     ogTitle: "Theory of Compression States — NexusOS Preprint",
-    ogDescription: "Λ=hf/c² unifies Maxwell, Planck, Einstein, Shannon, and Russell. 25,600 orthogonal channels. arXiv submission pending.",
+    ogDescription: "Λ=hf/c² unifies Maxwell, Planck, Einstein, Shannon, and Russell. 51,200 orthogonal channels. arXiv submission pending.",
     twitterTitle: "Theory of Compression States — Preprint",
-    twitterDescription: "Unified physics: information, field, matter as compression states. Λ=hf/c². 25,600 Hilbert channels. AGPL-3.0.",
+    twitterDescription: "Unified physics: information, field, matter as compression states. Λ=hf/c². 51,200 Hilbert channels. AGPL-3.0.",
   });
 
   return (
@@ -93,7 +93,7 @@ export default function PaperPage() {
             quantisation (E=hf) and Einstein's mass-energy equivalence (E=mc²), we derive the
             compression state operator Λ=hf/c², which places matter and information on a single
             continuous spectrum. We extend Maxwell's electromagnetic field equations into a
-            three-dimensional Hilbert channel space (WDM × OAM × polarisation), producing 25,600
+            three-dimensional Hilbert channel space (WDM × OAM × polarisation), producing 51,200
             physically orthogonal communication channels. We show that Walter Russell's octave wave
             formula (fₙ=f₀·2^(n−1)) is equivalent to the whispering gallery mode resonance
             condition (2πR=nλ), validated experimentally in 2025. We implement this framework as
@@ -185,7 +185,7 @@ export default function PaperPage() {
             </p>
             <Eq label="6">{"⟨Ψᵢ | Ψⱼ⟩ = δᵢⱼ"}</Eq>
             <p>
-              Equation (6) guarantees that the 25,600 channels (256 × 50 × 2) cannot interfere.
+              Equation (6) guarantees that the 51,200 channels (256 × 50 × 2 × 2) cannot interfere.
               This is not enforced by software policy. It is guaranteed by quantum mechanics applied
               to physical electromagnetic field modes.
             </p>
@@ -365,7 +365,7 @@ export default function PaperPage() {
             </p>
             <div className="space-y-1 pl-4 border-l-2 border-slate-700">
               {[
-                "25,600 orthogonal channels — capacity scales geometrically, not linearly",
+                "51,200 orthogonal channels — capacity scales geometrically, not linearly",
                 "Physics-governed fees — economic actions priced by E=hf, not by institutional convention",
                 "Jurisdiction-agnostic addressing — wnsp://Ψ(wdm,oam,pol)/ is valid in every nation",
                 "Photonic substrate — when photonic ASICs arrive (~2032), the architecture maps directly to hardware lanes",

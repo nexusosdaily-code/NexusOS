@@ -445,8 +445,8 @@ export function serveStatic(app: Express) {
     "snic.io": [
       "# snic.io — SNIC Spectral Network Interface Card",
       "",
-      "The photonic NIC of 2032. 25,600 orthogonal channels (256 WDM × 50 OAM × 2",
-      "polarisations) mapped to physical hardware lanes. CE lookups execute as physical",
+      "The photonic NIC of 2032. 51,200 orthogonal channels (256 WDM × 50 OAM × 2 POL × 2 DIR)",
+      "mapped to physical hardware lanes. CE lookups execute as physical",
       "wavelength selections. ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics, not software policy.",
       "",
       "> https://snic.io/",

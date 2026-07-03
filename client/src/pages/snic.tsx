@@ -449,7 +449,7 @@ export default function SnicPage() {
               {
                 layer: "L2",
                 name: "Ψ Channel Multiplexer",
-                desc: "25,600 orthogonal channels via WDM + OAM + polarisation. Parallel streams with zero crosstalk.",
+                desc: "51,200 orthogonal channels via WDM + OAM + polarisation. Parallel streams with zero crosstalk.",
                 color: "#3b82f6",
                 status: "MODELLED",
               },
@@ -573,7 +573,7 @@ export default function SnicPage() {
               },
               {
                 title: "The Ψ channel model is proved",
-                body: "25,600 orthogonal channels modelled, Block #4 stored at Ψ(211,35,H) = 534.51 nm on-chain. The addressing layer is live.",
+                body: "51,200 orthogonal channels modelled, Block #4 stored at Ψ(211,35,H) = 534.51 nm on-chain. The addressing layer is live.",
                 color: "#3b82f6",
               },
             ].map(w => (
