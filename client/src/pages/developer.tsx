@@ -264,7 +264,7 @@ const result = ceEncode("hello");
               {
                 icon: <Cpu className="w-5 h-5 text-cyan-400" />,
                 title: "Spectral addressing",
-                body: "Every user, message, and document gets a Ψ channel (ψ = WDM×OAM×Pol). 51,200 orthogonal channels. DNS-free routing via wnsp:// URIs.",
+                body: "Every user, message, and document gets a Ψ channel (ψ = WDM×OAM×Pol×Dir). 51,200 orthogonal channels. DNS-free routing via wnsp:// URIs.",
               },
               {
                 icon: <Shield className="w-5 h-5 text-purple-400" />,

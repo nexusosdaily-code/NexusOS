@@ -532,7 +532,7 @@ export default function PipelinePage() {
               E = hf = hc/λ · Λ = hf/c²
             </div>
             <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", fontFamily: "monospace" }}>
-              Ψ(wdm, oam, pol) · 256×50×2×2 = 51,200 channels
+              Ψ(wdm, oam, pol, dir) · 256×50×2×2 = 51,200 channels
             </div>
           </div>
         </div>

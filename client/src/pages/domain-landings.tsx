@@ -414,7 +414,7 @@ export function SnicLanding() {
           <div>N_WDM  = 256  <span className="text-white/25">// wavelength division lanes (380–780nm)</span></div>
           <div>N_OAM  = 50   <span className="text-white/25">// orbital angular momentum modes</span></div>
           <div>N_Pol  = 2    <span className="text-white/25">// polarisation axes (H/V)</span></div>
-          <div>N_Dir  = 2    <span className="text-white/25">// propagation directions (+k̂/−k̂)</span></div>
+          <div>N_Dir  = 2    <span className="text-white/25">// propagation directions (+k̂ / −k̂)</span></div>
           <div>TOTAL  = <span className="text-white">51,200</span> <span className="text-white/25">// ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics</span></div>
         </div>
 
@@ -904,7 +904,7 @@ ceEncode("Hello")
             "128 spectral bands — 380nm to 780nm visible spectrum",
             "CE_TABLE[charCode % 128] — deterministic, no randomness",
             "Bit-identical output: npm and pip return same results",
-            "OAM + polarisation + direction axes → 51,200 orthogonal Ψ channels",
+            "OAM + polarisation + propagation direction axes → 51,200 orthogonal Ψ channels",
             "AGPL-3.0 — open forever",
           ].map(f => (
             <div key={f} className="flex items-center gap-3 text-[12px] text-white/55">

@@ -1461,7 +1461,7 @@ export default function CrowdfundPage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
                 { name: "Spectral Relay Node (×10)", spec: "Free-space optical · CE→SE addressed · 380–780 nm TX/RX", purpose: "Physical P2P network nodes — emitting at their CE→SE wavelength, no DNS" },
-                { name: "OAM Channel Allocator Hardware", spec: "Ψ(wdm, oam, pol) · 51,200 orthogonal channels · deterministic allocation", purpose: "Maps software Ψ channels to physical photon modes in the field" },
+                { name: "OAM Channel Allocator Hardware", spec: "Ψ(wdm, oam, pol, dir) · 51,200 orthogonal channels · deterministic allocation", purpose: "Maps software Ψ channels to physical photon modes in the field" },
                 { name: "Free-Space Optical Transceiver", spec: "Sub-mm beam steering · polarisation-maintaining · <1 ns latency", purpose: "Point-to-point optical link for node-to-node communication on the mesh" },
                 { name: "Schumann Resonance Detector", spec: "7.83 Hz ± 0.5 Hz · ELF antenna · K1 sync reference", purpose: "Locks planetary resonance sync for K1 orchestration timing reference" },
                 { name: "Vector Network Analyser (VNA)", spec: "1 Hz–6 GHz · S-parameter measurement · impedance spectroscopy", purpose: "Characterises impedance matching across the full resonator assembly" },
