@@ -49,7 +49,7 @@ const PILLARS = [
     title: "Photonic ASIC — Destination Hardware",
     status: "Target ~2032",
     statusColor: "#8b5cf6",
-    desc: "When photonic ASICs arrive, no rewrite is needed. NexusOS is already written in the language of the destination hardware — wavelength-addressed channels, 25,600 orthogonal Ψ slots, direct physical lane mapping.",
+    desc: "When photonic ASICs arrive, no rewrite is needed. NexusOS is already written in the language of the destination hardware — wavelength-addressed channels, 51,200 orthogonal Ψ slots, direct physical lane mapping.",
   },
   {
     icon: Globe,

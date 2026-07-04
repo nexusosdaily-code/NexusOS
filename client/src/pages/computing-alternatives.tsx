@@ -73,7 +73,7 @@ const PARADIGMS = [
     nonlinear: true,
     roomTemp: true,
     energyPerOp: "Near-zero (field-mediated, reversible)",
-    parallelism: "Full Hilbert space — 25,600 channels simultaneously",
+    parallelism: "Full Hilbert space — 51,200 channels simultaneously",
     companies: ["Nexus (AGPL-3.0)"],
     physics: [
       "At CZC⁴⁴ coherence (99.56%), the photonic field develops macroscopic phase correlations.",
@@ -183,7 +183,7 @@ const INTEGRATION_LAYERS = [
     name: "L2 — Channel Layer",
     color: "#059669",
     paradigms: ["oam-analog", "reservoir"],
-    description: "The 25,600-channel Hilbert space doubles as a computing substrate. OAM analog computing repurposes the Ψ allocator as a programmable linear operator. The reservoir's output is read from OAM channel measurements.",
+    description: "The 51,200-channel Hilbert space doubles as a computing substrate. OAM analog computing repurposes the Ψ allocator as a programmable linear operator. The reservoir's output is read from OAM channel measurements.",
   },
   {
     id: "L3",
@@ -487,7 +487,7 @@ function ImplementationRoadmap() {
         "All 5 paradigms specified and modelled in the Nexus kernel",
         "WNSP protocol encodes instructions into spectral addresses",
         "Kernel dispatcher routes tasks by type — ready for hardware to plug in",
-        "25,600-channel Hilbert space proven orthogonal in simulation",
+        "51,200-channel Hilbert space proven orthogonal in simulation",
       ],
       hw: "Classical CPU — full software simulation",
     },

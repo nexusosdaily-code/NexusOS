@@ -119,7 +119,7 @@ const LAYERS: Layer[] = [
     name: "WavelengthScript VM",
     subtitle: "Executes bytecode at spectral addresses · Ψ channels as registers · E=hf execution model",
     nm: 530,
-    formula: "E = hf · Λ = hf/c² · 25,600 register space",
+    formula: "E = hf · Λ = hf/c² · 51,200 register space",
     services: [
       { label: "WNSP VM",        href: "/wnsp-vm",         icon: Cpu,      activeFor: ["All"],              detail: "step / run / fast mode" },
       { label: "Game Studio",    href: "/wavelength-lang", icon: Zap,      activeFor: ["All"],              detail: "4 WLS games" },
@@ -131,7 +131,7 @@ const LAYERS: Layer[] = [
   {
     id: "se_psi", step: 5,
     name: "SE / Ψ Channels",
-    subtitle: "256 WDM × 50 OAM × 2 POL = 25,600 orthogonal positions · the universal physics-based bus",
+    subtitle: "256 WDM × 50 OAM × 2 POL × 2 DIR = 51,200 orthogonal positions · the universal physics-based bus",
     nm: 570,
     formula: "Ψ(wdm, oam, pol) · ⟨Ψᵢ|Ψⱼ⟩ = 0 for i ≠ j",
     services: [
@@ -532,7 +532,7 @@ export default function PipelinePage() {
               E = hf = hc/λ · Λ = hf/c²
             </div>
             <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", fontFamily: "monospace" }}>
-              Ψ(wdm, oam, pol) · 256×50×2 = 25,600 channels
+              Ψ(wdm, oam, pol) · 256×50×2×2 = 51,200 channels
             </div>
           </div>
         </div>

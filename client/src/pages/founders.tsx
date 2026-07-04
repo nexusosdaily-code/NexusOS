@@ -10,7 +10,7 @@ const PHYSICS_LINEAGE = [
     years: "1831 – 1879",
     nation: "Scotland",
     equation: "∇ × E = −∂B/∂t  ·  ∇ × B = μ₀ε₀ ∂E/∂t",
-    contribution: "Maxwell's field equations prove that electromagnetic waves exist, propagate at c, and are fully described by frequency and wavelength. Every Ψ channel in NexusOS is a solution to these equations. The 25,600 orthogonal channels are not software constructs — they are orthogonal field modes permitted by Maxwell's mathematics. The PHR-1 bifilar coil produces a standing field described entirely in his language.",
+    contribution: "Maxwell's field equations prove that electromagnetic waves exist, propagate at c, and are fully described by frequency and wavelength. Every Ψ channel in NexusOS is a solution to these equations. The 51,200 orthogonal channels are not software constructs — they are orthogonal field modes permitted by Maxwell's mathematics. The PHR-1 bifilar coil produces a standing field described entirely in his language.",
     nexusos: "WNSP channel space · PHR-1 field geometry · all wnsp:// addressing",
   },
   {
@@ -50,8 +50,8 @@ const PHYSICS_LINEAGE = [
     years: "1901–1976  ·  1887–1961  ·  1902–1984",
     nation: "Germany  ·  Austria  ·  England",
     equation: "⟨Ψᵢ | Ψⱼ⟩ = δᵢⱼ",
-    contribution: "Quantum mechanics gave us Hilbert space — an infinite-dimensional space where states are orthogonal by mathematical necessity, not policy. The 25,600 WNSP channels are orthogonal in exactly this sense: ⟨Ψᵢ|Ψⱼ⟩ = 0 is guaranteed by physics, not enforced by software. Interference between channels is impossible by construction. This is the security model. No cryptographic primitive needed — just quantum mechanics.",
-    nexusos: "Hilbert space channel orthogonality · all 25,600 Ψ registers · WNSP VM channel isolation",
+    contribution: "Quantum mechanics gave us Hilbert space — an infinite-dimensional space where states are orthogonal by mathematical necessity, not policy. The 51,200 WNSP channels are orthogonal in exactly this sense: ⟨Ψᵢ|Ψⱼ⟩ = 0 is guaranteed by physics, not enforced by software. Interference between channels is impossible by construction. This is the security model. No cryptographic primitive needed — just quantum mechanics.",
+    nexusos: "Hilbert space channel orthogonality · all 51,200 Ψ registers · WNSP VM channel isolation",
   },
   {
     name: "Claude Shannon",
@@ -329,11 +329,11 @@ export default function FoundersPage() {
               </thead>
               <tbody>
                 {[
-                  { original: "Maxwell — EM field equations", extension: "Extended field modes to a 3-dimensional Ψ channel space: WDM × OAM × polarisation, producing 25,600 orthogonal channels from physical field geometry", result: "WNSP Hilbert channel space" },
+                  { original: "Maxwell — EM field equations", extension: "Extended field modes to a 4-dimensional Ψ channel space: WDM × OAM × polarisation × propagation direction, producing 51,200 orthogonal channels from physical field geometry", result: "WNSP Hilbert channel space" },
                   { original: "Planck — E = hf", extension: "Combined with Einstein's c² to derive Λ=hf/c², making energy and compression state the same quantity measured at different scales", result: "Compression state equation · all fee physics" },
                   { original: "Einstein — E = mc²", extension: "Inverted to m=hf/c² — mass re-read as a high-frequency compression state, not a separate substance. Matter and information on one continuum", result: "Λ=hf/c² · Lambda Gate · gravity de-correlation path" },
                   { original: "Russell — fₙ = f₀ · 2^(n−1) octave waves", extension: "WGM resonance condition 2πR=nλ is Russell's octave formula. His 9 octave compression/expansion cycles map to authority band boundaries. 9th octave peak = nuclear magic number 114 = SYSTEM band. Validated 2025", result: "PHR-1 cavity geometry · authority band octave boundaries" },
-                  { original: "Heisenberg / Dirac — ⟨Ψᵢ|Ψⱼ⟩ = δᵢⱼ", extension: "Applied Hilbert orthogonality to physical EM channels, not abstract quantum states. Each Ψ channel is a physical field mode, orthogonal by Maxwell + QM simultaneously", result: "25,600 channel registers · WNSP VM · zero-interference routing" },
+                  { original: "Heisenberg / Dirac — ⟨Ψᵢ|Ψⱼ⟩ = δᵢⱼ", extension: "Applied Hilbert orthogonality to physical EM channels, not abstract quantum states. Each Ψ channel is a physical field mode, orthogonal by Maxwell + QM simultaneously", result: "51,200 channel registers · WNSP VM · zero-interference routing" },
                   { original: "Shannon — H = −∑ pᵢ log₂ pᵢ", extension: "Extended channel capacity into Hilbert space dimensions: D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M — capacity as a physical geometric quantity, not a bandwidth budget", result: "WNSP density equation · WASCII spectral histograms" },
                   { original: "All seven — isolated domains", extension: "Unified by the primordial field premise: one oscillation, one compression continuum, one language. CE encoding maps every human symbol to a physical compression state on that continuum", result: "CE_TABLE · WavelengthScript · the entire NexusOS protocol stack" },
                 ].map((row, i) => (

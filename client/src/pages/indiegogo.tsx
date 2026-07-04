@@ -127,7 +127,7 @@ const PERKS = [
 const FAQ = [
   {
     q: "What is NexusOS?",
-    a: "NexusOS is the world's first wavelength operating system — a full-stack platform where every character, instruction, and transaction is encoded to a physical point in the electromagnetic spectrum using Λ=hf/c². It includes a live blockchain, 6 AI kernel agents, 25,600 orthogonal Ψ communication channels, and the PHR-1 resonance hardware prototype.",
+    a: "NexusOS is the world's first wavelength operating system — a full-stack platform where every character, instruction, and transaction is encoded to a physical point in the electromagnetic spectrum using Λ=hf/c². It includes a live blockchain, 6 AI kernel agents, 51,200 orthogonal Ψ communication channels, and the PHR-1 resonance hardware prototype.",
   },
   {
     q: "What is the PHR-1?",

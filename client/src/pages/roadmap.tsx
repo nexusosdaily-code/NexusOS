@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { PSI_CHANNELS } from "@/lib/channel-model";
 import { Zap, Cpu, Radio, Waves, ChevronRight, ExternalLink, Lock } from "lucide-react";
 
 const PHASES = [
@@ -22,7 +23,7 @@ const PHASES = [
       { done: true,  text: "NEXUS•WAVELENGTH Rune etched — block 952596" },
       { done: true,  text: "npm package: nexusos-ce-encoder@1.0.0" },
       { done: true,  text: "Python SDK: pip install via GitHub" },
-      { done: true,  text: "25,600 orthogonal Ψ channels defined" },
+      { done: true,  text: "51,200 orthogonal Ψ channels defined" },
       { done: true,  text: "WavelengthScript compiler + WNSP VM" },
       { done: false, text: "100 nodes synced to Lambda Anchor" },
       { done: false, text: "CoinSniper KYC verified" },
@@ -91,7 +92,7 @@ const STATUS_BADGE: Record<string, { label: string; color: string; bg: string }>
 export default function RoadmapPage() {
   usePageMeta({
     title: "NexusOS Roadmap — From Digital Substrate to Photonic Gate Array",
-    description: "NexusOS development roadmap: current digital substrate (25,600 Ψ channels live), PHR-1 hardware layer (2026–2028), and the photonic gate array (~2032). Step-by-step to Kardashev Type I.",
+    description: `NexusOS development roadmap: current digital substrate (${PSI_CHANNELS} Ψ channels live), PHR-1 hardware layer (2026–2028), and the photonic gate array (~2032). Step-by-step to Kardashev Type I.`,
     canonical: "https://wnsp.io/roadmap",
     ogTitle: "NexusOS Roadmap",
     ogDescription: "Now: digital substrate live. 2026–2028: PHR-1 physical hardware. ~2032: photonic gate array. The path from WNSP protocol to Type I civilization OS.",
@@ -226,7 +227,7 @@ export default function RoadmapPage() {
         <div className="text-xs font-semibold text-white/50 uppercase tracking-widest mb-2">Why This Sequence</div>
         <p className="text-xs text-white/40 leading-relaxed">
           The WNSP protocol is written in the language of the destination hardware — photonic waveguides (~2032).
-          The 25,600 orthogonal Ψ channels map directly to physical hardware lanes.
+          The 51,200 orthogonal Ψ channels map directly to physical hardware lanes.
           Today's silicon is the bridge encoder. The sequence is: <span className="text-white/60">define the physics → encode in software → verify in hardware → let hardware amplify.</span>
         </p>
         <div className="flex gap-4 mt-4">

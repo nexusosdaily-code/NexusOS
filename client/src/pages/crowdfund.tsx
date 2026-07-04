@@ -941,7 +941,7 @@ export default function CrowdfundPage() {
           <div className="flex items-center gap-2 p-2.5 rounded-lg bg-black/20 border border-cyan-500/10 mb-4">
             <Waves size={12} className="text-cyan-500 flex-shrink-0" />
             <p className="text-[10px] text-white/35 leading-relaxed">
-              <strong className="text-cyan-400/80">25,600 orthogonal channels.</strong> This architecture runs on silicon today — migrates to photonic hardware ~2032. Zero rewrite needed because NexusOS is already written in the language of the destination hardware.
+              <strong className="text-cyan-400/80">51,200 orthogonal channels.</strong> This architecture runs on silicon today — migrates to photonic hardware ~2032. Zero rewrite needed because NexusOS is already written in the language of the destination hardware.
             </p>
           </div>
           <div className="flex gap-2">
@@ -1003,9 +1003,9 @@ export default function CrowdfundPage() {
         {(() => {
           const TWEETS = [
             { label: "Hardware CTA",       text: "Fund the PHR-1 resonator — the first physical implementation of ZERO-G state.\n\n🔬 Physics-based OS · Λ=hf/c²\n🌈 NXWV Rune 952596:379 sealed on Bitcoin\n📄 Full disclosure: wnsp.io/wnsp-paper\n\nDonate: wnsp.io/crowdfund\n\n@wnsptech #NexusOS #Bitcoin #Lightning #Photonics" },
-            { label: "Science angle",      text: "NexusOS replaces cryptographic hashing with Maxwell equation validation.\n\n25,600 orthogonal Ψ channels · 21B NXWV Rune · AGPL-3.0\n\nBuilding the OS of a Kardashev Type I civilisation.\n\nwnsp.io/crowdfund\n\n@wnsptech #Physics #Bitcoin #OpenSource #Photonics" },
+            { label: "Science angle",      text: "NexusOS replaces cryptographic hashing with Maxwell equation validation.\n\n51,200 orthogonal Ψ channels · 21B NXWV Rune · AGPL-3.0\n\nBuilding the OS of a Kardashev Type I civilisation.\n\nwnsp.io/crowdfund\n\n@wnsptech #Physics #Bitcoin #OpenSource #Photonics" },
             { label: "Founder tier",       text: "25 Hardware Founder slots open.\n\n100,000 sats → PHR-1 resonator unit + 100,000 Nexus Shares (Class A).\n\nFirst production batch. Hardware advisory seat.\n\nwnsp.io/crowdfund\n\n@wnsptech #NexusOS #Bitcoin #Hardware #Lightning" },
-            { label: "Viral hook",         text: "What if communication ran on physics, not software policy?\n\n25,600 orthogonal light channels. No DNS. No IP. Just wavelengths.\n\n@wnsptech — NexusOS. wnsp.io\n\n#Photonics #Bitcoin #NexusOS" },
+            { label: "Viral hook",         text: "What if communication ran on physics, not software policy?\n\n51,200 orthogonal light channels. No DNS. No IP. Just wavelengths.\n\n@wnsptech — NexusOS. wnsp.io\n\n#Photonics #Bitcoin #NexusOS" },
             { label: "P2P transmission",   text: "Send data across a P2P network using wavelength addresses — no cloud, no DNS.\n\nEncode → Ψ channel → Spectral Receipt → Permanent on-chain ordinal.\n\nTry it: wnsp.io/transmission\n\n@wnsptech #NexusOS #P2P #WNSP #Photonics #Bitcoin" },
             { label: "Blockchain owner",   text: OWNER_TWEET },
           ];
@@ -1461,7 +1461,7 @@ export default function CrowdfundPage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
                 { name: "Spectral Relay Node (×10)", spec: "Free-space optical · CE→SE addressed · 380–780 nm TX/RX", purpose: "Physical P2P network nodes — emitting at their CE→SE wavelength, no DNS" },
-                { name: "OAM Channel Allocator Hardware", spec: "Ψ(wdm, oam, pol) · 25,600 orthogonal channels · deterministic allocation", purpose: "Maps software Ψ channels to physical photon modes in the field" },
+                { name: "OAM Channel Allocator Hardware", spec: "Ψ(wdm, oam, pol) · 51,200 orthogonal channels · deterministic allocation", purpose: "Maps software Ψ channels to physical photon modes in the field" },
                 { name: "Free-Space Optical Transceiver", spec: "Sub-mm beam steering · polarisation-maintaining · <1 ns latency", purpose: "Point-to-point optical link for node-to-node communication on the mesh" },
                 { name: "Schumann Resonance Detector", spec: "7.83 Hz ± 0.5 Hz · ELF antenna · K1 sync reference", purpose: "Locks planetary resonance sync for K1 orchestration timing reference" },
                 { name: "Vector Network Analyser (VNA)", spec: "1 Hz–6 GHz · S-parameter measurement · impedance spectroscopy", purpose: "Characterises impedance matching across the full resonator assembly" },

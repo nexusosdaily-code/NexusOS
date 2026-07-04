@@ -133,7 +133,7 @@ export default function DeveloperPage() {
             { icon: <Activity className="w-4 h-4" />, label: "Platform", val: status?.status ?? "…", color: "text-green-400" },
             { icon: <Hash className="w-4 h-4" />, label: "WNSP•BTC Rune ID", val: etchStatus?.rune_id ?? runeId, color: "text-orange-400" },
             { icon: <Layers className="w-4 h-4" />, label: "NEXUS•WAVELENGTH", val: "952596:379", color: "text-purple-400" },
-            { icon: <BarChart3 className="w-4 h-4" />, label: "Spectral Channels", val: "25,600", color: "text-cyan-400" },
+            { icon: <BarChart3 className="w-4 h-4" />, label: "Spectral Channels", val: "51,200", color: "text-cyan-400" },
           ].map(s => (
             <div key={s.label} className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
               <div className={`${s.color} mb-2`}>{s.icon}</div>
@@ -264,7 +264,7 @@ const result = ceEncode("hello");
               {
                 icon: <Cpu className="w-5 h-5 text-cyan-400" />,
                 title: "Spectral addressing",
-                body: "Every user, message, and document gets a Ψ channel (ψ = WDM×OAM×Pol). 25,600 orthogonal channels. DNS-free routing via wnsp:// URIs.",
+                body: "Every user, message, and document gets a Ψ channel (ψ = WDM×OAM×Pol). 51,200 orthogonal channels. DNS-free routing via wnsp:// URIs.",
               },
               {
                 icon: <Shield className="w-5 h-5 text-purple-400" />,

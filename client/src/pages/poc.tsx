@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { PSI_CHANNELS } from "@/lib/channel-model";
 import {
   ArrowLeft, ShoppingCart, Cpu, Radio,
   Zap, FlaskConical, Camera, FileText, AlertCircle, CheckSquare
@@ -323,11 +324,11 @@ export default function PocPage() {
     canonical: "https://wnsp.io/poc",
     ogTitle: "Hardware PoC — PHR-1 Physics Hardware Resonator — NexusOS",
     ogDescription:
-      "PHR-1 bifilar coil winding, phase control, standing wave measurement. SNIC optical bench assembly and 25,600-channel separation verification. The hardware proof that WNSP spectral addressing is physically real.",
+      `PHR-1 bifilar coil winding, phase control, standing wave measurement. SNIC optical bench assembly and ${PSI_CHANNELS}-channel separation verification. The hardware proof that WNSP spectral addressing is physically real.`,
     ogUrl: "https://wnsp.io/poc",
     twitterTitle: "Hardware PoC — PHR-1 & SNIC — NexusOS",
     twitterDescription:
-      "7-phase hardware proof-of-concept: PHR-1 bifilar resonator → SNIC channel separation → 25,600 orthogonal Ψ channels verified in physical hardware.",
+      `7-phase hardware proof-of-concept: PHR-1 bifilar resonator → SNIC channel separation → ${PSI_CHANNELS} orthogonal Ψ channels verified in physical hardware.`,
   });
 
   return (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { PSI_CHANNELS } from "@/lib/channel-model";
 import { Link } from "wouter";
 import { Check, Copy, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 
@@ -186,17 +187,19 @@ function ChannelCalc() {
   const [wdm, setWdm]   = useState(256);
   const [oam, setOam]   = useState(50);
   const [pol, setPol]   = useState(2);
+  const [ndir, setNdir] = useState(2);
   const [rsym, setRsym] = useState(1);
   const [m, setM]       = useState(1);
-  const total = wdm * oam * pol * rsym * m;
+  const total = wdm * oam * pol * ndir * rsym * m;
   return (
     <div className="rounded-xl border border-white/10 bg-white/2 p-5 my-4">
       <div className="text-[10px] text-white/30 uppercase tracking-widest mb-4">D_WNSP calculator — adjust parameters</div>
-      <div className="grid grid-cols-5 gap-3 mb-5">
+      <div className="grid grid-cols-6 gap-3 mb-5">
         {[
           { l: "N_λ (WDM)", v: wdm, s: setWdm, min: 1, max: 512 },
           { l: "N_OAM", v: oam, s: setOam, min: 1, max: 200 },
           { l: "N_Pol", v: pol, s: setPol, min: 1, max: 4 },
+          { l: "N_Dir", v: ndir, s: setNdir, min: 1, max: 4 },
           { l: "R_sym", v: rsym, s: setRsym, min: 1, max: 16 },
           { l: "M (layers)", v: m, s: setM, min: 1, max: 8 },
         ].map(({ l, v, s, min, max }) => (
@@ -209,7 +212,7 @@ function ChannelCalc() {
         ))}
       </div>
       <div className="rounded-xl border border-purple-500/30 bg-purple-500/8 p-4 text-center">
-        <div className="text-[10px] text-purple-300/60 mb-1">D_WNSP = {wdm} × {oam} × {pol} × {rsym} × {m}</div>
+        <div className="text-[10px] text-purple-300/60 mb-1">D_WNSP = {wdm} × {oam} × {pol} × {ndir} × {rsym} × {m}</div>
         <div className="text-3xl font-bold text-purple-300">{total.toLocaleString()}</div>
         <div className="text-[10px] text-purple-300/40 mt-1">orthogonal channels</div>
       </div>
@@ -226,7 +229,7 @@ export default function ProofPage() {
     ogTitle: "NexusOS Physics Proof",
     ogDescription: "Λ=hf/c² derivation. CE encoding determinism. ⟨Ψᵢ|Ψⱼ⟩=0 orthogonality. Maxwell equation validation. The physics of NexusOS, verified.",
     twitterTitle: "NexusOS Physics Proof",
-    twitterDescription: "Λ=hf/c² verified. CE encoding deterministic. 25,600 channels orthogonal by quantum mechanics.",
+    twitterDescription: `Λ=hf/c² verified. CE encoding deterministic. ${PSI_CHANNELS} channels orthogonal by quantum mechanics.`,
   });
   return (
     <div className="min-h-screen bg-black text-white font-mono">
@@ -445,9 +448,9 @@ print(f"\\n'A' → charCode={code} → band={band} → λ={wl:.4f} nm")`} />
         </ProofBlock>
 
         {/* ── PROOF 4 ── */}
-        <ProofBlock index={4} accent="#f59e0b" title="25,600 Orthogonal Ψ Channels" badge="Hilbert Space · WDM × OAM × Polarisation">
+        <ProofBlock index={4} accent="#f59e0b" title="51,200 Orthogonal Ψ Channels" badge="Hilbert Space · WDM × OAM × Polarisation × Propagation Direction">
           <p className="text-[12px] text-white/50 mb-4 leading-relaxed">
-            The WNSP channel space is 3-dimensional. Each axis is orthogonal by distinct physical laws.
+            The WNSP channel space is 4-dimensional. Each axis is orthogonal by distinct physical laws.
             The total channel count is their product.
           </p>
 
@@ -456,6 +459,7 @@ print(f"\\n'A' → charCode={code} → band={band} → λ={wl:.4f} nm")`} />
               { dim: "N_λ — WDM (Wavelength Division Multiplexing)", value: "256 channels", law: "Optical frequency-division orthogonality", calc: "400nm range ÷ 1.5625nm per channel = 256 exactly" },
               { dim: "N_OAM — Orbital Angular Momentum modes", value: "50 modes", law: "Laguerre-Gaussian beam orthogonality", calc: "modes ℓ = 0…49 (or −24 to +25)" },
               { dim: "N_Pol — Polarisation states", value: "2 states", law: "Jones vector orthogonality", calc: "H (horizontal) and V (vertical)" },
+              { dim: "N_Dir — Propagation direction", value: "2 directions", law: "Hilbert sub-space orthogonality", calc: "+k̂ forward / −k̂ backward (first disclosed 2026-07-02)" },
             ].map(({ dim, value, law, calc }) => (
               <div key={dim} className="rounded-xl border border-white/8 bg-white/2 p-4">
                 <div className="flex items-start justify-between mb-2">
@@ -468,7 +472,7 @@ print(f"\\n'A' → charCode={code} → band={band} → λ={wl:.4f} nm")`} />
             ))}
           </div>
 
-          <Eq caption="Total orthogonal channels">N_λ × N_OAM × N_Pol = 256 × 50 × 2 = <strong>25,600</strong></Eq>
+          <Eq caption="Total orthogonal channels">N_λ × N_OAM × N_Pol × N_Dir = 256 × 50 × 2 × 2 = <strong>51,200</strong></Eq>
 
           <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 mb-4">
             <div className="text-[10px] text-amber-400 uppercase tracking-widest mb-2">Orthogonality proof: ⟨Ψᵢ|Ψⱼ⟩ = δᵢⱼ</div>
@@ -480,20 +484,22 @@ print(f"\\n'A' → charCode={code} → band={band} → λ={wl:.4f} nm")`} />
               <div><span className="text-white">WDM orthogonality: </span>∫ E*(ν₁) · E(ν₂) dν = δ(ν₁−ν₂) — different carrier frequencies do not interfere</div>
               <div><span className="text-white">OAM orthogonality: </span>∫ φ_ℓ₁*(θ) · φ_ℓ₂(θ) dθ = δ_ℓ₁ℓ₂ — different angular momentum modes are orthogonal by Laguerre-Gaussian beam theory</div>
               <div><span className="text-white">Polarisation orthogonality: </span>ê_H · ê_V = 0 — Jones vector inner product is zero</div>
-              <div className="mt-2 text-white/35">Combined (tensor product): ⟨Ψᵢ|Ψⱼ⟩ = ⟨WDM_i|WDM_j⟩ · ⟨OAM_i|OAM_j⟩ · ⟨Pol_i|Pol_j⟩ = δᵢⱼ</div>
+              <div><span className="text-white">Direction orthogonality: </span>⟨+k̂|−k̂⟩ = 0 — forward and backward propagating modes are orthogonal Hilbert sub-spaces</div>
+              <div className="mt-2 text-white/35">Combined (tensor product): ⟨Ψᵢ|Ψⱼ⟩ = ⟨WDM_i|WDM_j⟩ · ⟨OAM_i|OAM_j⟩ · ⟨Pol_i|Pol_j⟩ · ⟨Dir_i|Dir_j⟩ = δᵢⱼ</div>
             </div>
           </div>
 
           <ChannelCalc />
 
-          <Code lang="python" code={`# Verify 25,600 channel count (Python)
+          <Code lang="python" code={`# Verify 51,200 channel count (Python)
 N_lambda = 256   # WDM channels: 400nm ÷ 1.5625nm
 N_OAM    = 50    # OAM modes: ℓ = 0..49
 N_pol    = 2     # Polarisations: H, V
+N_dir    = 2     # Propagation directions: +k̂ forward / −k̂ backward
 
-total = N_lambda * N_OAM * N_pol
-print(f"D_WNSP = {N_lambda} × {N_OAM} × {N_pol} = {total:,}")
-assert total == 25_600
+total = N_lambda * N_OAM * N_pol * N_dir
+print(f"D_WNSP = {N_lambda} × {N_OAM} × {N_pol} × {N_dir} = {total:,}")
+assert total == 51_200
 
 # WDM channel width verification
 span = 780 - 380   # nm
@@ -562,19 +568,20 @@ for band, nm in [("SYSTEM",430), ("KERNEL",530), ("USER",630), ("GUEST",730)]:
         </ProofBlock>
 
         {/* ── PROOF 6 ── */}
-        <ProofBlock index={6} accent="#22d3ee" title="WNSP Density Equation" badge="D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M">
+        <ProofBlock index={6} accent="#22d3ee" title="WNSP Density Equation" badge="D_WNSP = N_λ · N_OAM · N_Pol · N_Dir · R_sym · M">
           <p className="text-[12px] text-white/50 mb-4 leading-relaxed">
             The full density equation quantifies the total addressable channel capacity, including
-            temporal symbol rate and modulation layer parameters.
+            propagation direction, temporal symbol rate, and modulation layer parameters.
           </p>
-          <Eq caption="Full dimensional expansion in Hilbert space">D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M</Eq>
+          <Eq caption="Full dimensional expansion in Hilbert space">D_WNSP = N_λ · N_OAM · N_Pol · N_Dir · R_sym · M</Eq>
           <div className="space-y-1 mb-5">
             {[
-              { sym: "N_λ",   desc: "WDM channels (256)",            unit: "frequency bins" },
-              { sym: "N_OAM", desc: "OAM modes (50)",                 unit: "angular momentum modes" },
-              { sym: "N_Pol", desc: "Polarisation states (2)",        unit: "H, V" },
-              { sym: "R_sym", desc: "Symbol rate multiplier (≥1)",    unit: "dimensionless" },
-              { sym: "M",     desc: "Modulation layers (≥1)",         unit: "e.g. QAM order" },
+              { sym: "N_λ",   desc: "WDM channels (256)",                      unit: "frequency bins" },
+              { sym: "N_OAM", desc: "OAM modes (50)",                           unit: "angular momentum modes" },
+              { sym: "N_Pol", desc: "Polarisation states (2)",                  unit: "H, V" },
+              { sym: "N_Dir", desc: "Propagation directions (2)",               unit: "+k̂ / −k̂" },
+              { sym: "R_sym", desc: "Symbol rate multiplier (≥1)",              unit: "dimensionless" },
+              { sym: "M",     desc: "Modulation layers (≥1)",                   unit: "e.g. QAM order" },
             ].map(({ sym, desc, unit }) => (
               <div key={sym} className="flex items-center gap-4 py-2 border-b border-white/5 last:border-0 text-[11px]">
                 <span className="w-16 font-bold text-cyan-400 flex-shrink-0">{sym}</span>
@@ -585,8 +592,8 @@ for band, nm in [("SYSTEM",430), ("KERNEL",530), ("USER",630), ("GUEST",730)]:
           </div>
           <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4 mb-4">
             <div className="text-[10px] text-cyan-400 uppercase tracking-widest mb-2">Base case (R_sym=1, M=1)</div>
-            <div className="text-2xl font-bold text-white mb-1">D = 256 × 50 × 2 × 1 × 1 = 25,600</div>
-            <p className="text-[10px] text-white/35">Minimum configuration. With QAM-64 (M=6) and 8× symbol rate: D = 25,600 × 8 × 6 = 1,228,800 addressable states.</p>
+            <div className="text-2xl font-bold text-white mb-1">D = 256 × 50 × 2 × 2 × 1 × 1 = 51,200</div>
+            <p className="text-[10px] text-white/35">Minimum configuration. With QAM-64 (M=6) and 8× symbol rate: D = 51,200 × 8 × 6 = 2,457,600 addressable states.</p>
           </div>
         </ProofBlock>
 
@@ -634,7 +641,7 @@ print(f"Λ₀  = {L:.6e} kg  (compression mass)")`} />
               { claim: "E = hf is exact physics (Planck, 1900; NIST verified)", ok: true },
               { claim: "Λ = hf/c² follows from E=mc² + E=hf by direct substitution", ok: true },
               { claim: "CE band algorithm is deterministic and ASCII-injective", ok: true },
-              { claim: "25,600 = 256 × 50 × 2 (WDM × OAM × Pol) is arithmetically exact", ok: true },
+              { claim: "51,200 = 256 × 50 × 2 × 2 (WDM × OAM × Pol × Dir) is arithmetically exact", ok: true },
               { claim: "Channel orthogonality ⟨Ψᵢ|Ψⱼ⟩ = 0 follows from WDM, OAM, Jones vector theory", ok: true },
               { claim: "Fee = base × (E_sender/E_ref) is dimensionally consistent (J/J = dimensionless)", ok: true },
               { claim: "Authority bands are energy-ordered (shorter λ = higher f = higher E)", ok: true },

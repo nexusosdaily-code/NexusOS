@@ -10,7 +10,7 @@ const BTC_FUND_ADDRESS = "bc1pwp8a08guyncsq89yl3k4w9fwfa9efuv8penfw9aprxvlg6qr5u
 const MILESTONES = [
   {
     phase: "Phase 0", label: "Spectral Foundation", status: "complete",
-    description: "Physics engine live. WNSP protocol deployed. 25,600 Ψ channels defined. CE/SE encoding operational. AI kernel running.",
+    description: "Physics engine live. WNSP protocol deployed. 51,200 Ψ channels defined. CE/SE encoding operational. AI kernel running.",
     year: "2026",
   },
   {
@@ -135,7 +135,7 @@ export default function HardwareTreasury() {
           <div className="flex items-center gap-4 mt-3 flex-wrap">
             <div className="flex items-center gap-1.5 text-xs text-white/40">
               <Waves size={12} className="text-purple-400" />
-              <span>25,600 orthogonal Ψ channels</span>
+              <span>51,200 orthogonal Ψ channels</span>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-white/40">
               <Zap size={12} className="text-blue-400" />
@@ -301,7 +301,7 @@ export default function HardwareTreasury() {
                 <p>• Silicon computing is approaching its physical limit. Moore's Law ends at a wall.</p>
                 <p>• NexusOS is already written in the language of photonic hardware — no rewrite needed when ASICs arrive.</p>
                 <p>• AI encoded into wavelengths cannot be censored, seized, or switched off by any government or corporation.</p>
-                <p>• The 25,600 Ψ channels are governed by quantum mechanics, not by a company's terms of service.</p>
+                <p>• The 51,200 Ψ channels are governed by quantum mechanics, not by a company's terms of service.</p>
                 <p>• A K1 civilisation with shared, ungated intelligence infrastructure has no resource wars to fight.</p>
               </div>
             </div>

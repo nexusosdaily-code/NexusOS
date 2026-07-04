@@ -89,7 +89,7 @@ function generateCETable(): string {
   return lines.join("\n");
 }
 const CE_TABLE_ASCII = generateCETable();
-const WNSP_SPEC_ASCII = `WNSP-SPEC-v1.0\nWavelength Network Spectral Protocol — Core Specification\nAGPL-3.0 | NexusOS | First public disclosure: 2026-05-16\n${"═".repeat(72)}\n\nCHANNEL SPACE\n  WDM channels  : 256\n  OAM modes     : 50\n  Polarisations : 2\n  Total channels: 25,600 orthogonal Psi channels\n\nORTHOGONALITY\n  <Psi_i|Psi_j> = 0 for all i != j\n\nCHARACTER ENCODING (CE v1.0)\n  CE_TABLE[charCode % 128]\n  lambda = 380 + (charCode % 128) * 3.125 + 1.5625 (nm)\n  f = c / lambda  |  E = hf\n\nCOMPRESSION STATE EQUATION\n  Lambda_compress = hf / c^2\n\nAUTHORITY BANDS\n  SYSTEM : lambda < 450nm\n  KERNEL : lambda 450-495nm\n  USER   : lambda 495-590nm\n  GUEST  : lambda > 590nm\n\nWNSP URI FORMAT\n  wnsp://Psi(wdm,oam,pol)/path\n\nSOURCE: https://wnsp.io\n${"─".repeat(72)}\nThis inscription is permanent. The protocol is free.`;
+const WNSP_SPEC_ASCII = `WNSP-SPEC-v1.0\nWavelength Network Spectral Protocol — Core Specification\nAGPL-3.0 | NexusOS | First public disclosure: 2026-05-16\n${"═".repeat(72)}\n\nCHANNEL SPACE\n  WDM channels  : 256\n  OAM modes     : 50\n  Polarisations : 2\n  Directions    : 2\n  Total channels: 51,200 orthogonal Psi channels\n\nORTHOGONALITY\n  <Psi_i|Psi_j> = 0 for all i != j\n\nCHARACTER ENCODING (CE v1.0)\n  CE_TABLE[charCode % 128]\n  lambda = 380 + (charCode % 128) * 3.125 + 1.5625 (nm)\n  f = c / lambda  |  E = hf\n\nCOMPRESSION STATE EQUATION\n  Lambda_compress = hf / c^2\n\nAUTHORITY BANDS\n  SYSTEM : lambda < 450nm\n  KERNEL : lambda 450-495nm\n  USER   : lambda 495-590nm\n  GUEST  : lambda > 590nm\n\nWNSP URI FORMAT\n  wnsp://Psi(wdm,oam,pol)/path\n\nSOURCE: https://wnsp.io\n${"─".repeat(72)}\nThis inscription is permanent. The protocol is free.`;
 
 // ── Shared helpers ───────────────────────────────────────────────────────────
 function CopyBtn({ text, label = "Copy" }: { text: string; label?: string }) {
@@ -114,7 +114,7 @@ async function apiFetch(url: string, opts?: RequestInit) {
 // ══════════════════════════════════════════════════════════════════════════════
 const PROTO_INSCRIPTIONS = [
   { id: "CE-TABLE-v1", title: "WNSP CE Encoding Table", subtitle: "128-band character-to-wavelength lookup", icon: Zap, color: "#fbbf24", content: CE_TABLE_ASCII, why: "The atomic unit of WNSP. Every character anyone encodes traces back here. On Bitcoin it's permanently verifiable by any physicist — no server required." },
-  { id: "SPEC-v1", title: "WNSP Core Specification", subtitle: "25,600 Ψ channels, URI format, authority bands", icon: Waves, color: "#22d3ee", content: WNSP_SPEC_ASCII, why: "The Hilbert space, compression state equation, and authority bands — timestamped on Bitcoin as the canonical protocol reference. Owned by no one." },
+  { id: "SPEC-v1", title: "WNSP Core Specification", subtitle: "51,200 Ψ channels, URI format, authority bands", icon: Waves, color: "#22d3ee", content: WNSP_SPEC_ASCII, why: "The Hilbert space, compression state equation, and authority bands — timestamped on Bitcoin as the canonical protocol reference. Owned by no one." },
   { id: "HARDWARE-v1", title: "Hardware Spec (AGPL-3.0)", subtitle: "SNIC, PHR-1, Spectral Relay Mesh, WavelengthScript Compiler α", icon: Shield, color: "#a78bfa", content: "", why: "First published 2026-05-16. Bitcoin timestamp proves prior art — verifiable by any court or patent office. AGPL-3.0 protects the IP." },
 ];
 
@@ -1710,7 +1710,7 @@ function RunesTab() {
           <li>→ A Rune name <em>is</em> a spectral fingerprint: <span className="text-purple-400">NEXUSOS•KERNEL•BAND</span> encodes authority, wavelength range, and function</li>
           <li>→ 21B supply per band mirrors NXT economics — physics-consistent scarcity</li>
           <li>→ Runes use OP_RETURN (more efficient than BRC-20 inscriptions) — lower fees, faster confirmation</li>
-          <li>→ WNSP•PROTOCOL supply = 25,600 — exactly the number of orthogonal Ψ channels in Hilbert space</li>
+          <li>→ WNSP•PROTOCOL supply = 51,200 — exactly the number of orthogonal Ψ channels in Hilbert space</li>
           <li>→ Once etched, each Rune is permanently owned by Bitcoin — no server, no permission required</li>
         </ul>
       </div>

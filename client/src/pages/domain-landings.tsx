@@ -349,7 +349,7 @@ export function WnspBlogLanding() {
     { date: "2026-05-16", tag: "Hardware", title: "PHR-1 resonator spec published under AGPL-3.0", summary: "First public disclosure of SNIC, PHR-1 bifilar coil, Spectral Relay Mesh v1, and WavelengthScript Compiler α. Full AGPL-3.0 protection in place." },
     { date: "2026-05-10", tag: "Physics", title: "Block #4 — 'angry birds' 25MB at Ψ(211,35,H) 534.51nm", summary: "A 25MB media file written to the NexusOS blockchain at wavelength 534.51nm. Physics-based addressing, no cryptographic hash required." },
     { date: "2026-04-28", tag: "Protocol", title: "NEXUS•WAVELENGTH Rune etched at block 952596:379", summary: "The NXT utility token is now permanently sealed on Bitcoin via the Runes protocol. 21 billion supply, 8 decimals, orbital treasury distribution." },
-    { date: "2026-04-14", tag: "Encoding", title: "WASCII v2.0 — Wave Density Spectral Vector released", summary: "CE encoding extended with OAM and polarisation axes. 25,600 orthogonal Ψ channels. Full spectral fingerprint for any text string." },
+    { date: "2026-04-14", tag: "Encoding", title: "WASCII v2.0 — Wave Density Spectral Vector released", summary: "CE encoding extended with OAM, polarisation, and propagation-direction axes. 51,200 orthogonal Ψ channels. Full spectral fingerprint for any text string." },
     { date: "2026-03-30", tag: "AI Kernel", title: "WNSP AI OS Kernel v1.0.0 — 6-phase boot sequence live", summary: "KernelEventBus, dead agent watchdog, blockchain auditor. Authority band enforcement. KERNEL, USER, GUEST bands operational." },
   ];
   return (
@@ -410,18 +410,19 @@ export function SnicLanding() {
         </p>
 
         <div className="rounded-xl border border-white/10 bg-white/2 p-6 mb-8 font-mono text-[11px] text-white/50 leading-relaxed">
-          <div style={{ color: accent }} className="mb-2">// SNIC channel map — 25,600 orthogonal lanes</div>
+          <div style={{ color: accent }} className="mb-2">// SNIC channel map — 51,200 orthogonal lanes</div>
           <div>N_WDM  = 256  <span className="text-white/25">// wavelength division lanes (380–780nm)</span></div>
           <div>N_OAM  = 50   <span className="text-white/25">// orbital angular momentum modes</span></div>
           <div>N_Pol  = 2    <span className="text-white/25">// polarisation axes (H/V)</span></div>
-          <div>TOTAL  = <span className="text-white">25,600</span> <span className="text-white/25">// ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics</span></div>
+          <div>N_Dir  = 2    <span className="text-white/25">// propagation directions (+k̂/−k̂)</span></div>
+          <div>TOTAL  = <span className="text-white">51,200</span> <span className="text-white/25">// ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics</span></div>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mb-8">
           {[
             { val: "256", label: "WDM Channels" },
             { val: "50", label: "OAM Modes" },
-            { val: "25,600", label: "Orthogonal Lanes" },
+            { val: "51,200", label: "Orthogonal Lanes" },
           ].map(({ val, label }) => (
             <div key={label} className="rounded-xl border p-4 text-center" style={{ borderColor: accent + "25", background: accent + "08" }}>
               <div className="text-2xl font-bold mb-1" style={{ color: accent }}>{val}</div>
@@ -432,7 +433,7 @@ export function SnicLanding() {
 
         <div className="space-y-2 mb-8">
           {[
-            "Maps directly to 25,600 physical hardware lanes",
+            "Maps directly to 51,200 physical hardware lanes",
             "Orthogonality guaranteed by quantum mechanics, not software policy",
             "CE lookup executes as physical wavelength selection (~2032)",
             "AGPL-3.0 protected — first public disclosure 2026-05-16",
@@ -553,9 +554,9 @@ export function LambdaGateLanding() {
 
         <div className="space-y-4 mb-10">
           {[
-            { phase: "Now", title: "Digital Substrate", desc: "25,600 Ψ channels live. CE→SE encoding. WavelengthScript. WNSP VM. Physics validated on-chain.", color: "#34d399" },
+            { phase: "Now", title: "Digital Substrate", desc: "51,200 Ψ channels live. CE→SE encoding. WavelengthScript. WNSP VM. Physics validated on-chain.", color: "#34d399" },
             { phase: "2026–2028", title: "PHR-1 Hardware Layer", desc: "144-turn bifilar coil. ZERO-G state demonstration. Syncbox Controller. First physical Lambda Gate proof.", color: accent },
-            { phase: "~2032", title: "Photonic Gate Array", desc: "SNIC ASICs execute CE lookups as physical wavelength selections. 25,600 hardware lanes. No rewrite. NexusOS already speaks this language.", color: "#60a5fa" },
+            { phase: "~2032", title: "Photonic Gate Array", desc: "SNIC ASICs execute CE lookups as physical wavelength selections. 51,200 hardware lanes. No rewrite. NexusOS already speaks this language.", color: "#60a5fa" },
           ].map(({ phase, title, desc, color }) => (
             <div key={phase} className="rounded-xl border border-white/8 bg-white/2 p-5">
               <div className="flex items-center gap-3 mb-2">
@@ -571,8 +572,8 @@ export function LambdaGateLanding() {
         <div className="rounded-xl border p-5 mb-8" style={{ borderColor: accent + "30", background: accent + "06" }}>
           <div className="text-[11px] text-white/40 mb-3">The WNSP density equation</div>
           <pre className="text-sm text-white/80">D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M</pre>
-          <pre className="text-[11px] text-white/40 mt-1">= 256 × 50 × 2 × R_sym × M = 25,600 · R_sym · M</pre>
-          <p className="text-[10px] text-white/25 mt-2">25,600 orthogonal channels. ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics, not software policy.</p>
+          <pre className="text-[11px] text-white/40 mt-1">= 256 × 50 × 2 × 2 × R_sym × M = 51,200 · R_sym · M</pre>
+          <p className="text-[10px] text-white/25 mt-2">51,200 orthogonal channels. ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics, not software policy.</p>
         </div>
 
         <div className="flex gap-3">
@@ -903,7 +904,7 @@ ceEncode("Hello")
             "128 spectral bands — 380nm to 780nm visible spectrum",
             "CE_TABLE[charCode % 128] — deterministic, no randomness",
             "Bit-identical output: npm and pip return same results",
-            "OAM + polarisation axes → 25,600 orthogonal Ψ channels",
+            "OAM + polarisation + direction axes → 51,200 orthogonal Ψ channels",
             "AGPL-3.0 — open forever",
           ].map(f => (
             <div key={f} className="flex items-center gap-3 text-[12px] text-white/55">
@@ -1039,7 +1040,7 @@ export function FiveFiveFiveLanding() {
           <div className="text-[11px] text-white/30 mb-3 uppercase tracking-widest">Theory of Compression States</div>
           <p className="text-[13px] text-white/65 leading-relaxed">
             The universe evolves from the first unobserved oscillation. Each subsequent state is a compression
-            of the previous one — encoded in the electromagnetic spectrum. 25,600 orthogonal Ψ channels represent
+            of the previous one — encoded in the electromagnetic spectrum. 51,200 orthogonal Ψ channels represent
             the full addressable state space of observable matter. NexusOS maps computation, communication, and
             energy onto this same space. When photonic hardware arrives (~2032), the software already speaks its language.
           </p>
