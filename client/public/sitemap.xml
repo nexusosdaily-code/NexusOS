@@ -3,500 +3,500 @@
 
   <!-- ── Core Theory & Science ─────────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/oscillating-quanta</loc>
+    <loc>https://wnsp.tech/oscillating-quanta</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/silicon-bridge</loc>
+    <loc>https://wnsp.tech/silicon-bridge</loc>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/hardware-spec</loc>
+    <loc>https://wnsp.tech/hardware-spec</loc>
     <changefreq>monthly</changefreq>
     <priority>0.95</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/ce-se-pipeline</loc>
+    <loc>https://wnsp.tech/ce-se-pipeline</loc>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/proof</loc>
+    <loc>https://wnsp.tech/proof</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/paper</loc>
+    <loc>https://wnsp.tech/paper</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/evidence</loc>
+    <loc>https://wnsp.tech/evidence</loc>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/compression-explorer</loc>
+    <loc>https://wnsp.tech/compression-explorer</loc>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/planck-alignment</loc>
+    <loc>https://wnsp.tech/planck-alignment</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/reposed-theory</loc>
+    <loc>https://wnsp.tech/reposed-theory</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/octave-layers</loc>
+    <loc>https://wnsp.tech/octave-layers</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/resonance-cavity</loc>
+    <loc>https://wnsp.tech/resonance-cavity</loc>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
 
   <!-- ── Protocol & Language ───────────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/wnsp</loc>
+    <loc>https://wnsp.tech/wnsp</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/wavelength-lang</loc>
+    <loc>https://wnsp.tech/wavelength-lang</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/wnsp-vm</loc>
+    <loc>https://wnsp.tech/wnsp-vm</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/ce-code-writer</loc>
+    <loc>https://wnsp.tech/ce-code-writer</loc>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/encode</loc>
+    <loc>https://wnsp.tech/encode</loc>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/wnsp-bridge</loc>
+    <loc>https://wnsp.tech/wnsp-bridge</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/wnsp-ordinals</loc>
+    <loc>https://wnsp.tech/wnsp-ordinals</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/wnsp/ordinals</loc>
+    <loc>https://wnsp.tech/wnsp/ordinals</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <!-- ── Hardware & Spec ───────────────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/snic</loc>
+    <loc>https://wnsp.tech/snic</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/hardware-lab</loc>
+    <loc>https://wnsp.tech/hardware-lab</loc>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/hardware-results</loc>
+    <loc>https://wnsp.tech/hardware-results</loc>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/hardware-treasury</loc>
+    <loc>https://wnsp.tech/hardware-treasury</loc>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/nexus-hardware-os</loc>
+    <loc>https://wnsp.tech/nexus-hardware-os</loc>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/poc</loc>
+    <loc>https://wnsp.tech/poc</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/mobile-sdk</loc>
+    <loc>https://wnsp.tech/mobile-sdk</loc>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
 
   <!-- ── Campaign & Funding ────────────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/campaign</loc>
+    <loc>https://wnsp.tech/campaign</loc>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/crowdfund</loc>
+    <loc>https://wnsp.tech/crowdfund</loc>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/indiegogo</loc>
+    <loc>https://wnsp.tech/indiegogo</loc>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/nxt-campaign</loc>
+    <loc>https://wnsp.tech/nxt-campaign</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/build</loc>
+    <loc>https://wnsp.tech/build</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/shareholders</loc>
+    <loc>https://wnsp.tech/shareholders</loc>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
 
   <!-- ── Developer & Documentation ─────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/docs</loc>
+    <loc>https://wnsp.tech/docs</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/developer</loc>
+    <loc>https://wnsp.tech/developer</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/developer-matrix</loc>
+    <loc>https://wnsp.tech/developer-matrix</loc>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/how-to-plug-in</loc>
+    <loc>https://wnsp.tech/how-to-plug-in</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/replit-template</loc>
+    <loc>https://wnsp.tech/replit-template</loc>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/spectral-bundle</loc>
+    <loc>https://wnsp.tech/spectral-bundle</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/research-presentation</loc>
+    <loc>https://wnsp.tech/research-presentation</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <!-- ── Network, Search & Routing ─────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/network</loc>
+    <loc>https://wnsp.tech/network</loc>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/spectral-router</loc>
+    <loc>https://wnsp.tech/spectral-router</loc>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/spectral-search</loc>
+    <loc>https://wnsp.tech/spectral-search</loc>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/spectral-db</loc>
+    <loc>https://wnsp.tech/spectral-db</loc>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/spectral-contracts</loc>
+    <loc>https://wnsp.tech/spectral-contracts</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/spectral-library</loc>
+    <loc>https://wnsp.tech/spectral-library</loc>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/divergence-test</loc>
+    <loc>https://wnsp.tech/divergence-test</loc>
     <changefreq>monthly</changefreq>
     <priority>0.65</priority>
   </url>
 
   <!-- ── Governance & Constitution ─────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/open</loc>
+    <loc>https://wnsp.tech/open</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/constitution</loc>
+    <loc>https://wnsp.tech/constitution</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/orbital-treasury</loc>
+    <loc>https://wnsp.tech/orbital-treasury</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <!-- ── Ecosystem, Community & Founders ───────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/ecosystem</loc>
+    <loc>https://wnsp.tech/ecosystem</loc>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/founders</loc>
+    <loc>https://wnsp.tech/founders</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/stewards</loc>
+    <loc>https://wnsp.tech/stewards</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/joint-venture</loc>
+    <loc>https://wnsp.tech/joint-venture</loc>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/join-community</loc>
+    <loc>https://wnsp.tech/join-community</loc>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/community-mint</loc>
+    <loc>https://wnsp.tech/community-mint</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <!-- ── Roadmap & Transparency ────────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/roadmap</loc>
+    <loc>https://wnsp.tech/roadmap</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/blockchain</loc>
+    <loc>https://wnsp.tech/blockchain</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/videos</loc>
+    <loc>https://wnsp.tech/videos</loc>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
 
   <!-- ── Nostr & Social ────────────────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/nostr</loc>
+    <loc>https://wnsp.tech/nostr</loc>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/nostr-bridge</loc>
+    <loc>https://wnsp.tech/nostr-bridge</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <!-- ── Token Economy & Staking ───────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/wnsp-staking</loc>
+    <loc>https://wnsp.tech/wnsp-staking</loc>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/stake-earn</loc>
+    <loc>https://wnsp.tech/stake-earn</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/wsats</loc>
+    <loc>https://wnsp.tech/wsats</loc>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/swap</loc>
+    <loc>https://wnsp.tech/swap</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/nxt-fb-swap</loc>
+    <loc>https://wnsp.tech/nxt-fb-swap</loc>
     <changefreq>weekly</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/lp-pools</loc>
+    <loc>https://wnsp.tech/lp-pools</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/airdrop</loc>
+    <loc>https://wnsp.tech/airdrop</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <!-- ── Marketplace & Trading ─────────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/marketplace</loc>
+    <loc>https://wnsp.tech/marketplace</loc>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/market</loc>
+    <loc>https://wnsp.tech/market</loc>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
 
   <!-- ── Bitcoin Runes & Ordinals ──────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/etch-rune</loc>
+    <loc>https://wnsp.tech/etch-rune</loc>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/rune-etching</loc>
+    <loc>https://wnsp.tech/rune-etching</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/rune-mint</loc>
+    <loc>https://wnsp.tech/rune-mint</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/rune-staking</loc>
+    <loc>https://wnsp.tech/rune-staking</loc>
     <changefreq>weekly</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/rune-swap</loc>
+    <loc>https://wnsp.tech/rune-swap</loc>
     <changefreq>weekly</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/rune-pipeline</loc>
+    <loc>https://wnsp.tech/rune-pipeline</loc>
     <changefreq>weekly</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/fractal-btc</loc>
+    <loc>https://wnsp.tech/fractal-btc</loc>
     <changefreq>weekly</changefreq>
     <priority>0.65</priority>
   </url>
 
   <!-- ── Bitcoin Monitoring ────────────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/btc-sentinel</loc>
+    <loc>https://wnsp.tech/btc-sentinel</loc>
     <changefreq>weekly</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/btc-assets-sentinel</loc>
+    <loc>https://wnsp.tech/btc-assets-sentinel</loc>
     <changefreq>weekly</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/mempool</loc>
+    <loc>https://wnsp.tech/mempool</loc>
     <changefreq>weekly</changefreq>
     <priority>0.65</priority>
   </url>
 
   <!-- ── Wallet & Portfolio ────────────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/receive</loc>
+    <loc>https://wnsp.tech/receive</loc>
     <changefreq>monthly</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/portfolio</loc>
+    <loc>https://wnsp.tech/portfolio</loc>
     <changefreq>weekly</changefreq>
     <priority>0.65</priority>
   </url>
 
   <!-- ── Discovery & Quests ────────────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/coinsniper</loc>
+    <loc>https://wnsp.tech/coinsniper</loc>
     <changefreq>weekly</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/quest</loc>
+    <loc>https://wnsp.tech/quest</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <!-- ── Command & Analytics ───────────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/nexus-command</loc>
+    <loc>https://wnsp.tech/nexus-command</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/nexus-analytics</loc>
+    <loc>https://wnsp.tech/nexus-analytics</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/nexus-explorer</loc>
+    <loc>https://wnsp.tech/nexus-explorer</loc>
     <changefreq>daily</changefreq>
     <priority>0.75</priority>
   </url>
 
   <!-- ── Developer Tools ───────────────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/spectral-ide</loc>
+    <loc>https://wnsp.tech/spectral-ide</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/build-catalogue</loc>
+    <loc>https://wnsp.tech/build-catalogue</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <!-- ── Live Network ──────────────────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/psi-board</loc>
+    <loc>https://wnsp.tech/psi-board</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
 
   <!-- ── Community & Contact ───────────────────────────────────────────── -->
   <url>
-    <loc>https://wnsp.io/labs</loc>
+    <loc>https://wnsp.tech/labs</loc>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/contact</loc>
+    <loc>https://wnsp.tech/contact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

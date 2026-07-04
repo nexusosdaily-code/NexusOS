@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://wnsp.io/sitemap.xml
+Sitemap: https://wnsp.tech/sitemap.xml

@@ -1,6 +1,6 @@
 import { Switch, Route, useLocation } from "wouter";
 import { lazy, Suspense, Component, type ReactNode, type ErrorInfo, useEffect } from "react";
-import GuideBot from "@/components/GuideBot";
+const GuideBot = lazy(() => import("@/components/GuideBot"));
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -626,7 +626,7 @@ function App() {
                 </Suspense>
               </AuthLoading>
               <TelegramFloat />
-              <GuideBot />
+              <Suspense fallback={null}><GuideBot /></Suspense>
             </AuthProvider>
           </UniSatProvider>
         </TooltipProvider>
