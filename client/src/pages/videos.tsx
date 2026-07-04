@@ -153,7 +153,7 @@ export default function VideosPage() {
           <Link href="/crowdfund"><span className="hover:text-white cursor-pointer">Crowdfund</span></Link>
           <Link href="/campaign"><span className="hover:text-white cursor-pointer">Campaign</span></Link>
           <Link href="/evidence"><span className="hover:text-white cursor-pointer">Evidence</span></Link>
-          <Link href="/wnsp-paper"><span className="hover:text-white cursor-pointer">WNSP Paper</span></Link>
+          <Link href="/hardware-spec"><span className="hover:text-white cursor-pointer">Hardware Spec</span></Link>
           <a href="https://t.me/nexusosdaily" target="_blank" rel="noopener noreferrer" className="hover:text-white">Telegram Channel</a>
         </div>
       </div>

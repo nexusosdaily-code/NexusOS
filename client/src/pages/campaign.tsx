@@ -886,7 +886,7 @@ export default function CampaignPage() {
             <div className="text-[10px] font-mono uppercase tracking-wider text-white/30 mb-1">Peer-Reviewable Research</div>
             <h2 className="text-lg font-bold text-white">The physics is published. Read it yourself.</h2>
           </div>
-          <Link href="/wnsp-paper">
+          <Link href="/hardware-spec">
             <div className="group rounded-xl border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-blue-900/10 p-5 hover:border-violet-500/50 hover:from-violet-500/15 hover:to-blue-900/15 transition-all cursor-pointer">
               <div className="flex items-start justify-between gap-4 mb-3">
                 <div className="flex items-center gap-2">

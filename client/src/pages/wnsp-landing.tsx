@@ -146,8 +146,8 @@ export default function WnspLandingPage() {
       <div className="border-b border-white/5 px-4 py-3 flex items-center justify-between">
         <span className="text-xs font-mono text-white/40 tracking-wider">WNSP.IO</span>
         <div className="flex items-center gap-3">
-          <Link href="/wnsp-paper" className="text-[11px] text-white/40 hover:text-white/70 transition-colors flex items-center gap-1">
-            <BookOpen size={11} /> Research Paper
+          <Link href="/hardware-spec" className="text-[11px] text-white/40 hover:text-white/70 transition-colors flex items-center gap-1">
+            <BookOpen size={11} /> Hardware Spec
           </Link>
           <Link href="/contact" className="text-[11px] text-white/40 hover:text-white/70 transition-colors flex items-center gap-1">
             Contact
@@ -219,8 +219,8 @@ export default function WnspLandingPage() {
               policy. Orthogonality is enforced by physics.
             </p>
           </div>
-          <Link href="/wnsp-paper" className="inline-flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 transition-colors">
-            <BookOpen size={12} /> Read the research paper <ArrowRight size={10} />
+          <Link href="/hardware-spec" className="inline-flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 transition-colors">
+            <BookOpen size={12} /> Read the hardware specification <ArrowRight size={10} />
           </Link>
         </div>
 
@@ -339,7 +339,7 @@ export default function WnspLandingPage() {
           <div>NexusOS · Physics-based civilisation infrastructure · Phase 0 complete</div>
           <div className="flex items-center justify-center gap-4 pt-1">
             <Link href="/oscillating-quanta" className="hover:text-white/50 transition-colors">Theory of Compression States</Link>
-            <Link href="/wnsp-paper" className="hover:text-white/50 transition-colors">Research Paper</Link>
+            <Link href="/hardware-spec" className="hover:text-white/50 transition-colors">Hardware Spec</Link>
             <Link href="/ce-se-pipeline" className="hover:text-white/50 transition-colors">Live Pipeline</Link>
             <Link href="/campaign" className="hover:text-white/50 transition-colors">Campaign</Link>
             <Link href="/contact" className="hover:text-white/50 transition-colors">Contact</Link>

@@ -258,7 +258,7 @@ export default function ContactPage() {
                 <Link href="/crowdfund" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">Crowdfund Campaign</Link>
                 <Link href="/hardware-spec" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">Hardware Specification</Link>
                 <Link href="/constitution" className="text-xs text-yellow-400 hover:text-yellow-300 transition-colors">Constitution</Link>
-                <Link href="/protocol" className="text-xs text-orange-400 hover:text-orange-300 transition-colors">Protocol Overview</Link>
+                <Link href="/wnsp" className="text-xs text-orange-400 hover:text-orange-300 transition-colors">WNSP Protocol</Link>
               </div>
             </div>
 
