@@ -6,6 +6,8 @@ NexusOS is a full-stack web application designed as the foundational blueprint f
 
 Preferred communication style: Simple, everyday language. Always refer to the project and team as "us" — never "you" when discussing NexusOS work.
 
+**Primary domain: wnsp.io** — All canonical URLs, OG tags, Twitter cards, JSON-LD schemas, sitemap entries, and robots.txt must point to wnsp.io. wnsp.tech is a secondary domain that redirects to wnsp.io. Never switch canonical references to wnsp.tech.
+
 # PROTECTED FEATURES — DO NOT REMOVE OR OVERWRITE
 
 The following pages and routes are core to the NexusOS mission. Any agent or developer working on this project MUST preserve them. Never delete, rename, or overwrite these files without explicit user approval.

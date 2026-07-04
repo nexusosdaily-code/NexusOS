@@ -6,7 +6,7 @@
 - [Accounts and auth](accounts-auth.md) — Nexus genesis account, password, registration locked, developer keys gate
 - [Admin role check pattern](admin-role-check.md) — always check role==="admin" OR isAdmin; isAdmin column may lag in production
 - [NXT indestructibility](nxt-indestructibility.md) — NXT fees NEVER burned; always go to orbital_treasury
-- [Domain setup](domain-setup.md) — wnsp.tech on Cloudflare; GoDaddy nameserver update pending
+- [Domain setup](domain-setup.md) — wnsp.io is PRIMARY; wnsp.tech redirects to it. All canonicals/OG/sitemap/robots must use wnsp.io — never wnsp.tech
 - [Coinos JWT auth](coinos-jwt-auth.md) — NIP-98 blocked server-side; use COINOS_JWT Bearer token for all Coinos calls
 - [Goal hierarchy](goal-hierarchy.md) — NexusOS/NXT is the vehicle (medium-term); photonic hardware ~2032 is the destination (long-term)
 - [Blink Lightning integration](blink-lightning.md) — BTC wallet must be fetched via API (not connection string); invoice check uses lnInvoicePaymentStatus + balance sync for gap recovery
