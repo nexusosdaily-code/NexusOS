@@ -7,7 +7,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, ProtectedRoute, AuthLoading } from "@/hooks/use-auth";
 import { UniSatProvider } from "@/hooks/use-unisat";
-import { DOMAIN_LANDINGS } from "@/pages/domain-landings";
+import { CUSTOM_DOMAIN_HOSTS } from "@/lib/domain-keys";
+const DomainRouter = lazy(() => import("@/components/DomainRouter"));
 import { useToast } from "@/hooks/use-toast";
 
 const AuthPage = lazy(() => import("@/pages/auth"));
@@ -594,17 +595,20 @@ function TelegramFloat() {
   );
 }
 
-// Hosts treated as root-only microsites on the client side.
-const CUSTOM_DOMAIN_HOST_SET = new Set(Object.keys(DOMAIN_LANDINGS));
-
 function App() {
   const hostname = window.location.hostname;
   const pathname = window.location.pathname;
-  const DomainLanding = DOMAIN_LANDINGS[hostname];
-  // Custom domains are root-only microsites: only "/" renders the landing component.
-  // Any other path returns a not-found experience so content matches the server 404.
-  if (DomainLanding && (pathname === "/" || pathname === "")) return <DomainLanding />;
-  if (CUSTOM_DOMAIN_HOST_SET.has(hostname) && pathname !== "/" && pathname !== "") {
+  // Custom domains: only "/"  renders the microsite landing; all other paths → 404.
+  // domain-landings.tsx (1,300+ lines) is NOT in the initial bundle — lazy loaded only
+  // when someone visits from an actual custom domain.
+  if (CUSTOM_DOMAIN_HOSTS.has(hostname)) {
+    if (pathname === "/" || pathname === "") {
+      return (
+        <Suspense fallback={<PageLoader />}>
+          <DomainRouter hostname={hostname} />
+        </Suspense>
+      );
+    }
     return (
       <Suspense fallback={<PageLoader />}>
         <NotFound />
