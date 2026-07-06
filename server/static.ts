@@ -333,7 +333,8 @@ export function serveStatic(app: Express) {
     "/spectral-uri":   "/wnsp",
     "/wnsp-uri":       "/wnsp",
     "/visualizer":     "/wnsp",
-    "/btc-bridge":     "/wnsp/ordinals",
+    "/btc-bridge":     "/wnsp-ordinals",
+    "/wnsp/ordinals":  "/wnsp-ordinals",
   };
   for (const [from, to] of Object.entries(ALIAS_REDIRECTS)) {
     app.get(from, (_req: Request, res: Response) => {

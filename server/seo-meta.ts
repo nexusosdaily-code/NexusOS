@@ -1023,12 +1023,12 @@ export const ROUTE_META: Record<string, PageMeta> = {
   "/wnsp/ordinals": {
     title: "WNSP Ordinals — Bitcoin Ordinals with Spectral Verification | NexusOS",
     description: "Bitcoin Ordinals inscribed and verified with WNSP spectral signatures. CE-encoded ordinal content, Ψ channel anchoring, and physics-native provenance for Bitcoin-native digital artefacts.",
-    canonical: `${BASE}/wnsp/ordinals`,
+    canonical: `${BASE}/wnsp-ordinals`,
     ogTitle: "WNSP Ordinals — Spectral-Verified Bitcoin Ordinals",
     ogDescription: "Bitcoin Ordinals + WNSP spectral verification. CE-encoded inscription content. Ψ channel anchoring. Physics-native provenance.",
     twitterTitle: "WNSP Ordinals — Bitcoin + Physics",
     twitterDescription: "Bitcoin Ordinals with WNSP spectral signatures. CE-encoded content, Ψ channel anchoring.",
-    jsonLd: softwareApp({ url: `${BASE}/wnsp/ordinals`, name: "WNSP Ordinals", description: "Bitcoin Ordinals with WNSP spectral verification: CE-encoded inscription content and Ψ channel anchoring for physics-native provenance." }),
+    jsonLd: softwareApp({ url: `${BASE}/wnsp-ordinals`, name: "WNSP Ordinals", description: "Bitcoin Ordinals with WNSP spectral verification: CE-encoded inscription content and Ψ channel anchoring for physics-native provenance." }),
     bodyHtml: `<h1>WNSP Ordinals — Bitcoin Ordinals with Spectral Verification</h1><p>WNSP Ordinals extends the Bitcoin Ordinals protocol with WNSP spectral verification. Inscription content is CE-encoded to a wavelength position, and the resulting Ψ channel address is anchored on-chain. This gives every WNSP Ordinal a physics-native provenance trail that is as permanent as the Bitcoin blockchain itself.</p><nav><ul><li><a href="${BASE}/nxt-campaign">NXT Token (NEXUS•WAVELENGTH Rune)</a></li><li><a href="${BASE}/wnsp">WNSP Protocol</a></li><li><a href="${BASE}/ce-se-pipeline">CE→SE Pipeline</a></li></ul></nav>`,
   },
   // ── Previously missing sitemap pages ─────────────────────────────────────
