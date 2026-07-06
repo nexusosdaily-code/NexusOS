@@ -3,6 +3,7 @@ import { usePageMeta } from "@/hooks/use-page-meta";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PSI_CHANNELS, PSI_CHANNEL_MATH } from "@/lib/channel-model";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "wouter";
@@ -172,10 +173,10 @@ Frame = (λ₁ → λ₂) oscillation, achieving ≥ 2 chars per photon particle
       },
       {
         heading: "Hilbert Space Channel Model",
-        text: `Each transmission channel is a formal basis vector in a 25,600-dimensional Hilbert space:
+        text: `Each transmission channel is a formal basis vector in a 51,200-dimensional Hilbert space:
 
 **Channel Basis Equation:**
-Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩
+Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩ ⊗ |Dir_l⟩
 
 **Sub-space dimensions:**
 | Sub-space | Basis      | Description                  | dim |
@@ -183,14 +184,15 @@ Frame = (λ₁ → λ₂) oscillation, achieving ≥ 2 chars per photon particle
 | |λ_i⟩    | WDM        | Wavelength channels 380-780nm | 256 |
 | |OAM_j⟩  | OAM modes  | Orbital angular momentum      |  50 |
 | |Pol_k⟩  | Polarisation | H and V states              |   2 |
+| |Dir_l⟩  | Propagation direction | +k̂ forward / −k̂ backward |   2 |
 
 **Total Hilbert space dimension:**
-dim(H) = 256 × 50 × 2 = 25,600
+dim(H) = 256 × 50 × 2 × 2 = 51,200
 
 **Orthogonality guarantee:**
 ⟨Ψ_i | Ψ_j⟩ = 0  for i ≠ j
 
-All 25,600 channels are simultaneously usable without interference. This is not an engineering approximation — it is a mathematical guarantee from the tensor product structure of the Hilbert space.`,
+All 51,200 channels are simultaneously usable without interference. This is not an engineering approximation — it is a mathematical guarantee from the tensor product structure of the Hilbert space.`,
       },
       {
         heading: "Handoff Point — CE to SE",
@@ -214,14 +216,14 @@ All 25,600 channels are simultaneously usable without interference. This is not 
       },
       {
         heading: "AI/OS Channel Coordination Layer",
-        text: `Every AI agent in NexusOS is assigned a unique, deterministically allocated Ψ_channel from the 25,600-dimensional Hilbert space. Orthogonality is a mathematical guarantee — agents cannot interfere with each other regardless of how many are running simultaneously.
+        text: `Every AI agent in NexusOS is assigned a unique, deterministically allocated Ψ_channel from the 51,200-dimensional Hilbert space. Orthogonality is a mathematical guarantee — agents cannot interfere with each other regardless of how many are running simultaneously.
 
 **Channel Allocation — how it works:**
 1. Agent registers with an ID and intent (inference / routing / monitoring / …)
-2. System hashes agent_id with SHA256, maps to a channel index in [0, 25599]
+2. System hashes agent_id with SHA256, maps to a channel index in [0, 51199]
 3. If that channel is occupied, increment until a free slot is found
-4. Agent receives its channel coordinates: (wdm_i, oam_j, pol_k)
-5. Channel basis is recorded: Ψ_{n} = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩
+4. Agent receives its channel coordinates: (wdm_i, oam_j, pol_k, dir_l)
+5. Channel basis is recorded: Ψ_{n} = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩ ⊗ |Dir_l⟩
 
 **Instruction mapping — CE → SE → Ψ_channel:**
 Any AI system command is run through the full WNSP stack (CE tokenisation → SE wave frames) and bound to the agent's allocated channel. This means every instruction has a precise physical address in the Hilbert space.
@@ -263,7 +265,7 @@ Any AI system command is run through the full WNSP stack (CE tokenisation → SE
 **Wavelength strip:** The coordinator page renders a colour-coded strip showing each frame's position in the visible spectrum, giving an immediate visual read of the spectral spread.
 
 **Endpoint:** POST /api/wnsp/se/simulate — returns full occupation table + energy totals + orthogonality proof
-**Orthogonality proof:** GET /api/wnsp/se/orthogonality — samples 100 of 25,600 channels, proves unique (wdm, oam, pol) triplets`,
+**Orthogonality proof:** GET /api/wnsp/se/orthogonality — samples 100 of 51,200 channels, proves unique (wdm, oam, pol, dir) quadruplets`,
       },
       {
         heading: "Test Suite — CI Protocol Verification",
@@ -276,7 +278,7 @@ Physical constants
 - Speed of light c = 299,792,458 m/s
 - First Oscillation = 555 THz
 - Root Harmonic = 7.83 Hz (Schumann)
-- Hilbert dim(H) = 25,600
+- Hilbert dim(H) = 51,200
 
 CE Layer
 - Single-character encoding and normalised range [0, 1]
@@ -299,7 +301,7 @@ CE → SE Handoff
 
 Hilbert Space Integrity
 - Channel index ↔ (wdm, oam, pol) roundtrip
-- All 25,600 triplets unique (orthogonality proof)
+- All 51,200 quadruplets unique (orthogonality proof)
 - All sub-space coordinates within declared bounds
 
 Packing Efficiency
@@ -904,18 +906,19 @@ A beam of light twisted with ℓ = 1 is orthogonal to ℓ = 2, ℓ = 3, and so o
       },
       {
         heading: "The WNSP Channel Model",
-        text: `NexusOS uses three orthogonal dimensions simultaneously:
+        text: `NexusOS uses four orthogonal dimensions simultaneously:
 
-Ψ(wdm, oam, pol)
+Ψ(wdm, oam, pol, dir)
 
 - **WDM (wavelength)**: 256 bands — separation by wavelength
 - **OAM (ℓ mode)**: 50 modes — angular momentum: ⟨ℓ₁|ℓ₂⟩ = δ_{ℓ₁ℓ₂}
 - **Polarization**: H or V — Stokes vector separation
+- **Propagation direction**: +k̂ forward / −k̂ backward — bidirectional Hilbert sub-space
 
-Total orthogonal channels: 256 × 50 × 2 = **25,600**
+Total orthogonal channels: 256 × 50 × 2 × 2 = **51,200**
 
-Each channel Ψ(w,o,p) satisfies:
-⟨Ψ(w₁,o₁,p₁) | Ψ(w₂,o₂,p₂)⟩ = 0  whenever (w₁,o₁,p₁) ≠ (w₂,o₂,p₂)
+Each channel Ψ(w,o,p,d) satisfies:
+⟨Ψ(w₁,o₁,p₁,d₁) | Ψ(w₂,o₂,p₂,d₂)⟩ = 0  whenever (w₁,o₁,p₁,d₁) ≠ (w₂,o₂,p₂,d₂)
 
 Any two users on different channels cannot interfere with each other — not by policy, not by encryption, but because their carrier waves integrate to zero.`,
       },
@@ -1245,7 +1248,7 @@ export default function DocsPage() {
                     <div className="text-gray-400 text-xs space-y-1 text-center">
                       <div>
                         <span className="text-white font-bold text-base">
-                          25,600
+                          {PSI_CHANNELS}
                         </span>{" "}
                         orthogonal channels
                       </div>

@@ -22,7 +22,7 @@ const API_PLANS = [
     ctaVariant: "outline" as const,
     features: [
       { text: "Full WNSP protocol source (CE + SE)",           included: true  },
-      { text: "25,600-channel Hilbert space specification",    included: true  },
+      { text: "51,200-channel Hilbert space specification",    included: true  },
       { text: "AI OS Kernel — all 5 components",              included: true  },
       { text: "Lambda Gate v4 specification",                  included: true  },
       { text: "100 spectral encodes / day (hosted API)",       included: true  },
@@ -233,7 +233,7 @@ const AGPL_POINTS = [
   },
   {
     question: "Why would a hardware company pay for something they could build themselves?",
-    answer: "Because building the OS takes longer than building the hardware. Intel has the InP fab capability. They do not have the kernel, the WNSP protocol, the 25,600-channel Hilbert model, the dead-agent watchdog, or the spectral authority system. That took years. The hardware partnership buys a ready OS — so their chip ships with a working kernel from day one.",
+    answer: "Because building the OS takes longer than building the hardware. Intel has the InP fab capability. They do not have the kernel, the WNSP protocol, the 51,200-channel Hilbert model, the dead-agent watchdog, or the spectral authority system. That took years. The hardware partnership buys a ready OS — so their chip ships with a working kernel from day one.",
     color: "#7c3aed",
     icon: "⚙",
   },

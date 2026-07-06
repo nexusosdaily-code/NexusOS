@@ -713,7 +713,7 @@ export default function NexusV10Page() {
             { label: "Version",        value: "v10.0",     sub: "Coherence Release",     color: "#f59e0b" },
             { label: "Core Equation",  value: "Λ=hf/c²",   sub: "Lambda Boson",          color: "#a78bfa" },
             { label: "Key Insight",    value: "Coherence",  sub: "Stability = Reality",   color: "#06b6d4" },
-            { label: "Channels",       value: "25,600",     sub: "Orthogonal Ψ channels", color: "#16a34a" },
+            { label: "Channels",       value: "51,200",     sub: "Orthogonal Ψ channels", color: "#16a34a" },
           ].map((s, i) => (
             <div key={i} className="rounded-2xl border p-4 text-center"
               style={{ borderColor: `${s.color}40`, background: `${s.color}0a` }}>

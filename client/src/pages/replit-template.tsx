@@ -207,7 +207,7 @@ export default function ReplitTemplatePage() {
             </div>
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: ACCENT }} />
-              <div><span className="text-white">25,600 Ψ channels</span><span className="text-white/45"> — 256 WDM × 50 OAM × 2 polarisations. Orthogonal by quantum mechanics.</span></div>
+              <div><span className="text-white">51,200 Ψ channels — 256 WDM × 50 OAM × 2 polarisations × 2 propagation directions. Orthogonal by quantum mechanics.</span></div>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: ACCENT }} />

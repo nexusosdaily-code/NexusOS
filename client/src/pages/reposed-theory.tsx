@@ -68,7 +68,7 @@ This sum does not equal zero. Each mode k
 contributes zero-point energy ½ℏω_k.
 
 The vacuum is a superposition of all possible
-modes — including all 25,600 Ψ channels —
+modes — including all 51,200 Ψ channels —
 each with irreducible minimum energy.`,
     plain: `A field is not a thing. It is a condition that exists at every point in space. Temperature is a field — every point in a room has a temperature value. Gravity is a field.\n\nThe quantum vacuum is a field. It exists everywhere. And unlike temperature, it cannot reach zero — quantum mechanics forbids it. Every possible wave that could exist leaves a small irreducible trace in the vacuum, even when no wave is actually present.\n\nThe field is not empty space. It is full of potential — every possible vibration held at its minimum, waiting.`,
     nm: 650,
@@ -95,7 +95,7 @@ The Reposed State is characterised by:
 
 This is not the same as void. Void has no
 structure. The Reposed State has full structure —
-25,600 orthogonal channels — but zero amplitude.
+51,200 orthogonal channels — but zero amplitude.
 It is a loaded system with no trigger pulled.`,
     plain: `Repose is not emptiness. There is a precise difference.\n\nAn empty room has nothing in it. A reposed room has a fully tuned instrument in it — strings taut, resonant frequency determined, ready — but no note has been struck yet.\n\nThe vacuum in its Reposed State has every possible wave channel defined, with the exact wavelength and frequency each channel would carry — but none of them are vibrating yet. Everything is set. Nothing is moving. The potential is absolute.\n\nThis is the moment before the first note. The universe fully formed in potential, held in perfect tension.`,
     nm: 590,
@@ -160,7 +160,7 @@ In WNSP terms: Ψ(228,45,H) · λ≈737.6nm
 is the first occupied channel — the first
 non-zero amplitude in what was previously
 pure reposed potential.`,
-    plain: `When the vacuum's first fluctuation held — when it didn't annihilate itself and return to repose — what did it look like?\n\nA smooth, symmetric wave. Bell-shaped. Spreading equally in both directions from a centre. This is called the ground state wavefunction and it is not a design choice — it is the only shape that satisfies all of nature's constraints simultaneously.\n\nThe first wave was the simplest wave possible. Not because simplicity was chosen. Because anything more complex would have required energy that wasn't there yet.\n\nIn NexusOS terms, this is the genesis point: Ψ(228,45,H) at 737.6nm — deep red, the first channel to hold an amplitude. Before that moment, all 25,600 channels existed as potential. After it, one was occupied. The universe had its first address.`,
+    plain: `When the vacuum's first fluctuation held — when it didn't annihilate itself and return to repose — what did it look like?\n\nA smooth, symmetric wave. Bell-shaped. Spreading equally in both directions from a centre. This is called the ground state wavefunction and it is not a design choice — it is the only shape that satisfies all of nature's constraints simultaneously.\n\nThe first wave was the simplest wave possible. Not because simplicity was chosen. Because anything more complex would have required energy that wasn't there yet.\n\nIn NexusOS terms, this is the genesis point: Ψ(228,45,H) at 737.6nm — deep red, the first channel to hold an amplitude. Before that moment, all 51,200 channels existed as potential. After it, one was occupied. The universe had its first address.`,
     nm: 490,
   },
   {
@@ -209,9 +209,9 @@ assigns by default.
 
 The WNSP density equation:
 
-  D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
-         = 256 · 50 · 2 · 1 · 1
-         = 25,600 orthogonal channels
+  D_WNSP = N_λ · N_OAM · N_Pol · N_Dir · R_sym · M
+         = 256 · 50 · 2 · 2 · 1 · 1
+         = 51,200 orthogonal channels
 
 represents the full address space of the
 first wavefunction's descendants — every

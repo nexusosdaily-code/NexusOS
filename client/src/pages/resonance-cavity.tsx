@@ -175,7 +175,7 @@ export default function ResonanceCavityPage() {
 
   const nodeCount = networkData?.nodes?.length ?? networkData?.total ?? 0;
   const registeredChannels = spectralData?.total ?? spectralData?.count ?? 0;
-  const totalChannels = 25600;
+  const totalChannels = 51200;
   const cavityFill = Math.min((registeredChannels / totalChannels) * 100, 100);
   const schumannPhase = (tick % 8) / 8;
 
@@ -237,7 +237,7 @@ export default function ResonanceCavityPage() {
           {[
             { label: "Schumann Base", value: "7.83 Hz", sub: "Earth cavity fundamental", icon: Radio, color: "emerald" },
             { label: "Russell Octaves", value: "9", sub: "universal tonal periods", icon: Waves, color: "indigo" },
-            { label: "Ψ Channels", value: "25,600", sub: "orthogonal cavity modes", icon: Activity, color: "violet" },
+            { label: "Ψ Channels", value: "51,200", sub: "orthogonal cavity modes", icon: Activity, color: "violet" },
             { label: "Cavity Fill", value: `${cavityFill.toFixed(3)}%`, sub: `${registeredChannels} modes populated`, icon: Circle, color: cavityFill > 10 ? "amber" : "slate" },
           ].map(({ label, value, sub, icon: Icon, color }) => (
             <div key={label} className={`rounded-xl border border-${color}-700/30 bg-${color}-950/20 p-4`}>
@@ -259,7 +259,7 @@ export default function ResonanceCavityPage() {
                 <Zap className="w-4 h-4" /> Cavity Coherence Engine
               </div>
               <div className="text-xs text-gray-500 mt-0.5">
-                Mode population as fraction of lasing threshold (φ = 0.618 of 25,600 channels)
+                Mode population as fraction of lasing threshold (φ = 0.618 of 51,200 channels)
               </div>
             </div>
             <div className="text-right">

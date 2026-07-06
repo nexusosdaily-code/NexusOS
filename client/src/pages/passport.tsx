@@ -140,7 +140,7 @@ export default function PassportPage() {
                 >
                   {data?.spectralBand ?? "—"}
                 </span>
-                <span className="text-[10px] text-slate-600 font-mono">authority band · 25,600-channel Hilbert space</span>
+                <span className="text-[10px] text-slate-600 font-mono">authority band · 51,200-channel Hilbert space</span>
               </div>
 
               <div className="font-mono text-4xl font-bold tracking-tight" style={{ color: color.glow, textShadow: `0 0 30px ${color.glow}60` }}>

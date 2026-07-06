@@ -39,10 +39,10 @@ const PILLARS = [
     icon: "λ",
     body: [
       "Memory addresses (0x7fff5fbff4c0) are arbitrary. They have no physical meaning. Two processes can collide at the same address — the OS prevents this through privilege rings, not physics.",
-      "Wavelength addresses (543 nm, Ψ(87,12,H)) are deterministic and physically orthogonal. Two instructions at different wavelengths cannot interfere — ⟨Ψᵢ|Ψⱼ⟩ = 0 is a theorem of quantum mechanics, not a software guarantee.",
-      "The Hilbert space formed by 256 WDM channels × 50 OAM modes × 2 polarisations gives 25,600 orthogonal process slots. No scheduler needed for isolation — the physics does it.",
+      "Wavelength addresses (543 nm, Ψ(87,12,H,+k̂)) are deterministic and physically orthogonal. Two instructions at different wavelengths cannot interfere — ⟨Ψᵢ|Ψⱼ⟩ = 0 is a theorem of quantum mechanics, not a software guarantee.",
+      "The Hilbert space formed by 256 WDM channels × 50 OAM modes × 2 polarisations × 2 propagation directions gives 51,200 orthogonal process slots. No scheduler needed for isolation — the physics does it.",
     ],
-    proof: "See /wnsp/coordinator — live Hilbert-space orthogonality proof across all 25,600 channels.",
+    proof: "See /wnsp/coordinator — live Hilbert-space orthogonality proof across all 51,200 channels.",
   },
   {
     number: "03",
@@ -67,7 +67,7 @@ const PARTNERS = [
     why: "CUDA parallelism is limited by PCIe bandwidth and GPU memory heat dissipation. A photonic tensor processor implements matrix multiply at c with zero switching energy — the natural successor to CUDA for AI workloads. NexusOS provides the OS layer that schedules photonic compute kernels the same way CUDA schedules GPU kernels, but with Ψ-channel isolation instead of thread blocks.",
     nexus_value: [
       "Photonic matrix multiply (shipping in Lightmatter) replaces GPU VRAM bandwidth bottleneck",
-      "25,600 orthogonal Ψ channels replace CUDA thread synchronisation primitives",
+      "51,200 orthogonal Ψ channels replace CUDA thread synchronisation primitives",
       "WNSP protocol provides the photonic interconnect standard (vs NVLink)",
       "NexusOS kernel boots on NVIDIA photonic co-processor — driver model already specified",
     ],
@@ -116,9 +116,9 @@ const BUILT = [
     route: "/kernel",
   },
   {
-    name: "25,600-Channel Hilbert Space",
+    name: "51,200-Channel Hilbert Space",
     status: "LIVE",
-    description: "SHA256-allocated Ψ channels with orthogonality proven across all 256×50×2 combinations.",
+    description: "SHA256-allocated Ψ channels with orthogonality proven across all 256×50×2×2 combinations.",
     route: "/wnsp/coordinator",
   },
   {
@@ -157,7 +157,7 @@ const ADVOCACY_PATHS = [
     icon: "🧠",
     color: "#7c3aed",
     channels: ["ArXiv (cs.ET, quant-ph)", "NeurIPS workshop on neuromorphic/photonic computing", "LinkedIn (DeepMind, OpenAI, Anthropic Research)"],
-    message: "25,600 orthogonal Ψ channels provide physics-enforced process isolation that no software scheduler can match. Relevant to multi-agent AI safety.",
+    message: "51,200 orthogonal Ψ channels provide physics-enforced process isolation that no software scheduler can match. Relevant to multi-agent AI safety.",
     assets: ["/wnsp/coordinator", "/kernel", "/computing-alternatives"],
     cta: "The multi-agent kernel is open source (AGPL-3.0) — run it, test it, break it",
   },
@@ -206,7 +206,7 @@ const LICENSE_POINTS = [
   },
   {
     point: "Community owns the spectral addressing standard",
-    detail: "WNSP is open. No company can patent the CE→SE encoding pipeline. The 25,600-channel Hilbert space is mathematics — it belongs to everyone.",
+    detail: "WNSP is open. No company can patent the CE→SE encoding pipeline. The 51,200-channel Hilbert space is mathematics — it belongs to everyone.",
     icon: "🌐",
     color: "#10b981",
   },
@@ -233,7 +233,7 @@ function ManifestoTab() {
           {CLAIM.subline}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3 text-xs font-mono">
-          {["Λ = hf/c²", "⟨Ψᵢ|Ψⱼ⟩ = 0", "AGPL-3.0", "25,600 channels", "555 THz First Oscillation"].map((tag, i) => (
+          {["Λ = hf/c²", "⟨Ψᵢ|Ψⱼ⟩ = 0", "AGPL-3.0", "51,200 channels", "555 THz First Oscillation"].map((tag, i) => (
             <span key={i} className="px-3 py-1 rounded-full border border-slate-600 text-slate-300">
               {tag}
             </span>

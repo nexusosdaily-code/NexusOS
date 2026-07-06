@@ -760,8 +760,8 @@ const TIERS = [
     ],
   },
   {
-    label: "Tier 3", name: "Full Ψ(wdm, oam, pol) — 3D Channel", cost: "~$2,000–3,000",
-    desc: "All three Hilbert-space dimensions encoded simultaneously in a single beam. Physics-native addressing fully demonstrated.",
+    label: "Tier 3", name: "Full Ψ(wdm, oam, pol, dir) — 4D Channel", cost: "~$2,000–3,000",
+    desc: "All four Hilbert-space dimensions encoded simultaneously in a single beam. Physics-native addressing fully demonstrated.",
     color: "#7c3aed",
     items: [
       { name: "Everything in Tier 2", spec: "", source: "", cost: "~$1,200" },
@@ -1064,7 +1064,7 @@ export default function HardwareLabPage() {
           <div className="flex flex-wrap gap-3">
             {[
               { label: "CE Encoder", status: "Live", color: "#16a34a" },
-              { label: "WASCII Table", status: "25,600 channels", color: "#2563eb" },
+              { label: "WASCII Table", status: "51,200 channels", color: "#2563eb" },
               { label: "Pi Script", status: "Ready to download", color: "#ca8a04" },
               { label: "Hardware", status: "Tier 1 in 3–4 months", color: "#7c3aed" },
             ].map(s => (

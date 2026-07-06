@@ -80,7 +80,7 @@ const LAYER_STACK = [
   { layer: "L4", label: "Constitutional Economy",     desc: "Treasury · Governance · Charitable Trust · 100-Year Fund",               color: "#f43f5e", href: "/orbital-treasury" },
   { layer: "L3", label: "Agent Intelligence",         desc: "6 kernel agents · Ψ channel routing · Watchdog · Event Bus",             color: "#22c55e", href: "/ecosystem" },
   { layer: "L2", label: "Blockchain Proof",           desc: "Λ=hf/c² blocks · Ordinals · Audit trail · AGPL enforcement",            color: "#8b5cf6", href: "/blockchain" },
-  { layer: "L1", label: "Spectral DB & Addressing",  desc: "Files at Ψ(wdm, oam, pol) · 25,600 orthogonal channels · E=hf cost",    color: "#06b6d4", href: "/spectral-library" },
+  { layer: "L1", label: "Spectral DB & Addressing",  desc: "Files at Ψ(wdm, oam, pol, dir) · 51,200 orthogonal channels · E=hf cost",    color: "#06b6d4", href: "/spectral-library" },
   { layer: "L0", label: "ALPHABET SUBSTRATE",         desc: "The foundational discovery — November 2025 — Alphabet embedded in light", color: "#fbbf24", isBase: true, href: "/ecosystem" },
 ];
 

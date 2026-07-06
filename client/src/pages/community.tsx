@@ -27,8 +27,8 @@ const PILLARS = [
   {
     icon: Layers,
     color: "#8b5cf6",
-    title: "25,600 lanes. Zero collision.",
-    body: "Quantum mechanics guarantees that two orthogonal light channels cannot interfere. WNSP uses 256 wavelengths × 50 orbital angular momentum modes × 2 polarisations = 25,600 channels. Each is physically separate — not enforced by software, guaranteed by Maxwell's equations.",
+    title: "51,200 lanes. Zero collision.",
+    body: "Quantum mechanics guarantees that two orthogonal light channels cannot interfere. WNSP uses 256 wavelengths × 50 orbital angular momentum modes × 2 polarisations × 2 propagation directions = 51,200 channels. Each is physically separate — not enforced by software, guaranteed by Maxwell's equations.",
   },
   {
     icon: FlaskConical,
@@ -120,7 +120,7 @@ const LINKS = [
 
 const TIMELINE = [
   { year: "2024", label: "CE→λ mapping published", desc: "Alphabet embedded into the electromagnetic spectrum. First principle established." },
-  { year: "2025", label: "WNSP protocol + NexusOS kernel", desc: "25,600 Hilbert-space channels. Blockchain on E=hf fees. Constitution ratified." },
+  { year: "2025", label: "WNSP protocol + NexusOS kernel", desc: "51,200 Hilbert-space channels. Blockchain on E=hf fees. Constitution ratified." },
   { year: "2026", label: "Tier 1–3 hardware builds begin", desc: "Physical demonstration: CE-encoded light, spectrometer-verified, database-logged." },
   { year: "2028", label: "SNIC prototype", desc: "Spectral Network Interface Card. Hardware WASCII-to-wavelength gates. 185,000× silicon speed target." },
   { year: "2032", label: "Photonic hardware era", desc: "Commercial photonic ASICs arrive. NexusOS is already written in their language. No rewrite needed." },

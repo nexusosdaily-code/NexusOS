@@ -766,10 +766,10 @@ function MultidimensionalActivity() {
       <Card className="bg-gradient-to-br from-indigo-950/60 to-slate-900/60 border-indigo-500/30 p-5">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-bold text-indigo-400 flex items-center gap-2">
-            <Atom className="w-5 h-5" /> Hilbert Space — 25,600 Orthogonal Channels
+            <Atom className="w-5 h-5" /> Hilbert Space — 51,200 Orthogonal Channels
           </h2>
           <div className="text-xs font-mono text-indigo-300/70 bg-indigo-950/50 px-3 py-1 rounded-full">
-            dim(H) = N_λ × N_OAM × N_Pol = 256 × 50 × 2
+            dim(H) = N_λ × N_OAM × N_Pol × N_Dir = 256 × 50 × 2 × 2
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">

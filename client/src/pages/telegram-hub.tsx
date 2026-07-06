@@ -441,7 +441,7 @@ Quick starts:
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: "Bot modules",    value: "10",                         color: "#8b5cf6" },
-              { label: "Ψ channels",     value: "25,600",                     color: "#0ea5e9" },
+              { label: "Ψ channels",     value: "51,200",                     color: "#0ea5e9" },
               { label: "CE formula",     value: "λ=380+(n%128×3.125)nm",      color: "#10b981" },
             ].map(s => (
               <div key={s.label} className="rounded-xl border border-white/5 p-3 text-center"

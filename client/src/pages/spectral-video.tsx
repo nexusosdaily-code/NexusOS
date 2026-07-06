@@ -41,10 +41,12 @@ function frameEnergy(nm: number) {
   return h * f;
 }
 function psChannel(nm: number) {
-  const wdm = Math.round((nm - 380) / 0.016); // 0.016 nm resolution → 25600 channels
+  const wdm = Math.round((nm - 380) / 0.016); // 0.016 nm sub-band resolution, capped to 51,200-channel model
   const oam = wdm % 64;
   const pol = wdm % 2 === 0 ? "H" : "V";
-  return { wdm: Math.min(wdm, 25599), oam, pol, notation: `Ψ(${Math.min(wdm, 25599)},${oam},${pol})` };
+  const dir = (wdm >> 1) % 2 === 0 ? "+k̂" : "−k̂";
+  const capped = Math.min(wdm, 51199);
+  return { wdm: capped, oam, pol, dir, notation: `Ψ(${capped},${oam},${pol},${dir})` };
 }
 
 // ── Video streaming modes ─────────────────────────────────────────────────────
@@ -708,7 +710,7 @@ export default function SpectralVideoPage() {
               },
               {
                 title: "The channel model is defined",
-                body: "25,600 orthogonal Hilbert-space channels. WDM index × OAM mode × polarisation. No collision. Any video stream gets a unique physical address.",
+                body: "51,200 orthogonal Hilbert-space channels. WDM index × OAM mode × polarisation. No collision. Any video stream gets a unique physical address.",
               },
               {
                 title: "Energy cost is exact",

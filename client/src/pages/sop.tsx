@@ -50,7 +50,7 @@ const AXIOMS = [
   },
   {
     id: "A3", label: "Density",
-    math: "D = N_λ × N_OAM × N_Pol × R_sym × M = 25,600",
+    math: "D = N_λ × N_OAM × N_Pol × R_sym × M = 51,200",
     plain: "The total channel count is the product of all orthogonal dimensions. Each dimension multiplies — not adds — the capacity. This is why OAM multiplexing is powerful: 50 OAM states × existing WDM = 50× capacity on the same fibre.",
   },
   {
@@ -71,7 +71,7 @@ const DIMS = [
 
 // ── TCP/IP vs SOP comparison ──────────────────────────────────────────────────
 const COMPARE = [
-  { aspect: "Addressing",         tcp: "32-bit integer (IPv4) / 128-bit (IPv6)",    sop: "Ψ(wdm, oam, pol) — physics-derived from content" },
+  { aspect: "Addressing",         tcp: "32-bit integer (IPv4) / 128-bit (IPv6)",    sop: "Ψ(wdm, oam, pol, dir) — physics-derived from content" },
   { aspect: "Channel isolation",  tcp: "Software-enforced ports, firewalls",         sop: "Physical orthogonality — hardware guarantee" },
   { aspect: "Collision handling", tcp: "CSMA/CD, ACK/NACK, retransmit",             sop: "Impossible between orthogonal channels — zero overhead" },
   { aspect: "Capacity scaling",   tcp: "More cables / spectrum licences",            sop: "Add OAM/pol dimensions — same physical medium" },
@@ -122,7 +122,7 @@ export default function SOPPage() {
           <span className="text-sm font-bold tracking-wider text-cyan-400">SPECTRAL ORTHOGONAL PROTOCOL</span>
           <span className="text-white/20 text-[9px] px-2 py-0.5 border border-white/10 rounded-full">SOP v1.0</span>
         </div>
-        <div className="text-white/20 text-[9px]">Hilbert-space channel isolation · 25,600 orthogonal channels · collision-free by physics</div>
+        <div className="text-white/20 text-[9px]">Hilbert-space channel isolation · 51,200 orthogonal channels · collision-free by physics</div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-8">
@@ -137,7 +137,7 @@ export default function SOPPage() {
             <div className="flex items-center gap-4 text-[9px]">
               <span className="text-emerald-400">✓ 10,000 channels live today (λ × OAM × pol)</span>
               <span className="text-white/30">·</span>
-              <span className="text-amber-400">25,600 at full density (+ R_sym × M · PHR-1 hardware)</span>
+              <span className="text-amber-400">51,200 at full density (+ R_sym × M · PHR-1 hardware)</span>
               <span className="text-white/30">·</span>
               <span className="text-cyan-400/60">AGPL-3.0 · free infrastructure</span>
             </div>

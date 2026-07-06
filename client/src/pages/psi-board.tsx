@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Activity, Radio, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { PSI_CHANNELS, PSI_CHANNEL_FORMULA } from "@/lib/channel-model";
 
 interface PsiBoardEvent {
   type: string;
@@ -244,7 +245,7 @@ export default function PsiBoard() {
           </span>
         </div>
         <p className="text-sm text-white/35 font-mono mb-6">
-          25,600 orthogonal Ψ channels · 256 WDM × 50 OAM × 2 polarisations · 380–780 nm
+          {PSI_CHANNELS} orthogonal Ψ channels · {PSI_CHANNEL_FORMULA} · 380–780 nm
         </p>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">

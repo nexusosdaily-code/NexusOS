@@ -93,7 +93,7 @@ export default function PaperPage() {
             quantisation (E=hf) and Einstein's mass-energy equivalence (E=mc²), we derive the
             compression state operator Λ=hf/c², which places matter and information on a single
             continuous spectrum. We extend Maxwell's electromagnetic field equations into a
-            three-dimensional Hilbert channel space (WDM × OAM × polarisation), producing 51,200
+            four-dimensional Hilbert channel space (WDM × OAM × polarisation × propagation direction), producing 51,200
             physically orthogonal communication channels. We show that Walter Russell's octave wave
             formula (fₙ=f₀·2^(n−1)) is equivalent to the whispering gallery mode resonance
             condition (2πR=nλ), validated experimentally in 2025. We implement this framework as
@@ -176,10 +176,10 @@ export default function PaperPage() {
           <Section n="4" title="Hilbert Space Channel Extension">
             <p>
               Maxwell's field equations permit electromagnetic waves at any frequency, polarisation,
-              and orbital angular momentum (OAM). We extend the standard two-dimensional
-              (frequency, polarisation) channel space to three dimensions:
+              orbital angular momentum (OAM), and propagation direction. We extend the standard two-dimensional
+              (frequency, polarisation) channel space to four dimensions:
             </p>
-            <Eq label="5">Ψ(wdm, oam, pol)  ·  wdm ∈ [0,255], oam ∈ [0,49], pol ∈ {"{H,V}"}</Eq>
+            <Eq label="5">Ψ(wdm, oam, pol, dir)  ·  wdm ∈ [0,255], oam ∈ [0,49], pol ∈ {"{H,V}"}, dir ∈ {"{+k̂,−k̂}"}</Eq>
             <p>
               The channel orthogonality condition, from quantum mechanics (Heisenberg, Dirac, 1925–1928):
             </p>

@@ -740,7 +740,7 @@ export default function NexusCommand() {
             <span className="text-green-400">● Live</span>
             <span className="text-slate-600">AGPL-3.0 open source</span>
             <span className="text-slate-600">Λ = hf/c² physics engine</span>
-            <span className="text-slate-600">25,600 spectral channels</span>
+            <span className="text-slate-600">51,200 spectral channels</span>
           </div>
         </div>
       </div>

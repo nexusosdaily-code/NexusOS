@@ -132,7 +132,7 @@ What almost no communication system does today is use these properties for addre
 
 λ = 380 + (charCode mod 128) / 128 × 400 nm
 
-The result: 25,600 orthogonal Ψ channels (256 WDM × 50 orbital angular momentum modes × 2 polarisations), each physically guaranteed not to interfere with the others — not because software enforces it, but because Maxwell's equations do.
+The result: 51,200 orthogonal Ψ channels (256 WDM × 50 orbital angular momentum modes × 2 polarisations × 2 propagation directions), each physically guaranteed not to interfere with the others — not because software enforces it, but because Maxwell's equations do.
 
 This is what native photonic communication looks like. You can try the live encoder at ${DEPLOYED_URL}/start, or install it:
 
@@ -152,7 +152,7 @@ Type the letter 'A'. Its character code is 65. Apply the formula: 65 mod 128 = 6
 
 Why does it matter?
 
-Photonic computers — processors that compute with light instead of electricity — are arriving commercially around 2032. When they do, every existing communication system will need rebuilding for the new hardware. This protocol is already written in the language of that hardware. 25,600 orthogonal channels. Fees derived from E=hf — not set by policy. Addressing from Maxwell's equations — not from IANA committees.
+Photonic computers — processors that compute with light instead of electricity — are arriving commercially around 2032. When they do, every existing communication system will need rebuilding for the new hardware. This protocol is already written in the language of that hardware. 51,200 orthogonal channels. Fees derived from E=hf — not set by policy. Addressing from Maxwell's equations — not from IANA committees.
 
 The encoder is on npm (nexusos-ce-encoder, 95 weekly downloads in its first week). The GitHub repo has over 2,200 clones in two weeks. The full specification is public at ${DEPLOYED_URL}/protocol.
 
@@ -165,7 +165,7 @@ Whether or not this becomes the dominant standard, it is the most physically pri
 
 IP addresses are administrative labels. Someone decided 192.168.1.1 means something, registered it, and enforced that convention through DNS and IANA. The whole system is human-governed, which makes it censorable, capturable, and subject to political control.
 
-WNSP (Wave-Navigated Spectral Protocol) replaces that with addresses derived from electromagnetic physics. Every node gets a Ψ channel — a unique position in the 25,600-dimensional Hilbert space of visible light:
+WNSP (Wave-Navigated Spectral Protocol) replaces that with addresses derived from electromagnetic physics. Every node gets a Ψ channel — a unique position in the 51,200-dimensional Hilbert space of visible light:
 
 Ψ(wdm, oam, polarisation)
 

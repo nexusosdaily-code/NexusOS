@@ -136,7 +136,7 @@ export default function BuildWithUsPage() {
 
   const blockCount  = chain?.total ?? "—";
   const agentCount  = Array.isArray(agents) ? agents.length : (agents?.count ?? "—");
-  const channelCount = platform?.channels ?? 25600;
+  const channelCount = platform?.channels ?? 51200;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">

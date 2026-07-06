@@ -917,7 +917,7 @@ export default function MobileSDKPage() {
                 {[
                   { label: "Deterministic",   val: "Same input → same wavelength, everywhere, forever. No server state." },
                   { label: "Physics-rooted",  val: "ASCII ordinal → average → nm position on the visible spectrum (380–780nm)." },
-                  { label: "Hilbert-stable",  val: "WDM/OAM/Pol derived from nm value — matches the 25,600-channel Hilbert space." },
+                  { label: "Hilbert-stable",  val: "WDM/OAM/Pol derived from nm value — matches the 51,200-channel Hilbert space." },
                 ].map(({ label, val }) => (
                   <div key={label} className="border border-white/8 rounded-lg p-3">
                     <div className="text-amber-400/70 font-bold mb-1">{label}</div>

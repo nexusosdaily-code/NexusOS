@@ -218,7 +218,7 @@ export default function StartPage() {
           <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 font-mono text-xs space-y-2">
             {[
               ["2024", "CE→λ mapping published · alphabet embedded in EM spectrum"],
-              ["2025", "WNSP protocol · 25,600 Hilbert channels · NexusOS kernel"],
+              ["2025", "WNSP protocol · 51,200 Hilbert channels · NexusOS kernel"],
               ["2026", "npm + pip packages live · 2,200+ GitHub clones · community open"],
               ["~2032", "Photonic ASICs arrive · NexusOS runs native · no rewrite needed"],
             ].map(([yr, ev]) => (

@@ -307,7 +307,7 @@ export default function RuneEtchingPage() {
             <Row label="Language"       val="WavelengthScript" />
             <Row label="Purpose"        val="Spectral compute unit" />
             <Row label="VM"             val="WNSP Virtual Machine" />
-            <Row label="Channel ops"    val="25,600 Ψ channels" mono />
+            <Row label="Channel ops"    val="51,200 Ψ channels" mono />
             <Row label="Encoding"       val="CE-SE v1.0" mono />
             <Row label="Physics basis"  val="E = hf, Λ = hf/c²" mono />
             <Row label="Photonic target" val="~2032 ASIC" />

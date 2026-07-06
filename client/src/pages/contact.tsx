@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { Shield, TrendingUp, Code2, Mail, Globe, Lock, CheckCircle, ExternalLink } from "lucide-react";
+import { PSI_CHANNELS } from "@/lib/channel-model";
 
 type Track = "regulatory" | "investment" | "developer" | "security";
 
@@ -268,7 +269,7 @@ export default function ContactPage() {
                 { label: "Token Supply", value: "21B NXT" },
                 { label: "Decimals", value: "8" },
                 { label: "Lightning Sats", value: "6.2B+" },
-                { label: "WNSP Channels", value: "25,600" },
+                { label: "WNSP Channels", value: PSI_CHANNELS },
                 { label: "License", value: "AGPL-3.0" },
                 { label: "First Disclosure", value: "2026-05-16" },
               ].map(({ label, value }) => (

@@ -504,7 +504,7 @@ Instead of SHA-256 → Maxwell's equations
 Instead of IP addresses → Ψ(wdm, oam, pol) spectral channels
 Instead of arbitrary proof-of-work → E = hf (Planck's energy equation governs fees)
 
-25,600 orthogonal communication channels. Isolated by quantum mechanics, not software policy. No collision is physically possible.
+51,200 orthogonal communication channels. Isolated by quantum mechanics, not software policy. No collision is physically possible.
 
 ---
 
@@ -607,7 +607,7 @@ Two live Bitcoin Runes on mainnet. 85M NXT airdrop. Developer API live.
 Build with physics-native primitives:
 
 • CE-encode any text → spectral fingerprint (λ, Ψ channel, energy)
-• Resolve Ψ channels for any user — 25,600 orthogonal addresses
+• Resolve Ψ channels for any user — 51,200 orthogonal addresses
 • Query physics-priced fees — E=hf governs every action
 • Send WNSP messages between spectral addresses
 • Query live rune metadata — NEXUS•WAVELENGTH + WNSP•BTC

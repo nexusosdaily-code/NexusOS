@@ -774,7 +774,7 @@ export default function KernelPage() {
             </h1>
             <p className="text-slate-400 text-sm">
               5-component kernel — {overview?.equation ?? "Λ = hf/c²"} —{" "}
-              {overview?.channels ?? 25600} Hilbert channels — AGPL-3.0
+              {overview?.channels ?? 51200} Hilbert channels — AGPL-3.0
             </p>
           </div>
           <Badge className={`ml-auto ${overview?.booted ? "bg-green-800" : "bg-slate-700"}`}>

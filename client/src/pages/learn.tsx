@@ -201,7 +201,7 @@ async function transpileAsync(
 
 // ── Spectral loading animation ─────────────────────────────────────────────────
 const LOAD_MSGS = [
-  "Scanning 25,600 Ψ channels…",
+  "Scanning 51,200 Ψ channels…",
   "Mapping λ coordinates…",
   "Encoding to WavelengthScript…",
   "Resolving spectral manifold…",
@@ -395,7 +395,7 @@ function compileWLS(src: string): Ins[] {
     if (op !== 0x00) off += 8;
   }
   add(0x00, ".WNSP", "v1.0", "NexusOS WNSP Bytecode");
-  add(0x00, ".ARCH", "WDM256·OAM50·POL2", "25,600 Ψ channels");
+  add(0x00, ".ARCH", "WDM256·OAM50·POL2·DIR2", "51,200 Ψ channels");
   off = 0;
   for (const raw of src.split("\n")) {
     const line = raw.trim();
@@ -438,7 +438,7 @@ async function compileWLSAsync(
     if (op !== 0x00) off += 8;
   }
   add(0x00, ".WNSP", "v1.0", "NexusOS WNSP Bytecode");
-  add(0x00, ".ARCH", "WDM256·OAM50·POL2", "25,600 Ψ channels");
+  add(0x00, ".ARCH", "WDM256·OAM50·POL2·DIR2", "51,200 Ψ channels");
   off = 0;
 
   const processLine = (raw: string) => {
@@ -1051,7 +1051,7 @@ export default function LearnPage() {
                 background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.6) 100%)"
               }} />
               <div ref={logRef} className="h-full overflow-auto p-4 font-mono text-xs space-y-px" style={{ background: "#020805" }}>
-                <div className="text-green-700 mb-2 opacity-70">[WNSP VM v1.0] Boot sequence · 25,600 Ψ channels ready</div>
+                <div className="text-green-700 mb-2 opacity-70">[WNSP VM v1.0] Boot sequence · 51,200 Ψ channels ready</div>
                 {displayedIns.map((ins, idx) => {
                   const isActive = idx === activeIdx;
                   const col = ins.nm ? nmToColor(ins.nm) : "#4b5563";

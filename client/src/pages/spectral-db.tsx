@@ -1084,7 +1084,7 @@ export default function SpectralDbPage() {
               { label: "Media Files",      value: videoCount,     color: "#8b5cf6" },
               { label: "Chain Blocks",     value: chainHeight,    color: "#3b82f6" },
               { label: "Ψ Channels Used",  value: new Set(records.map(r => r.psiChannel)).size, color: "#00cfcf" },
-              { label: "Total Capacity",   value: "25,600",       color: "#ff8c00" },
+              { label: "Total Capacity",   value: "51,200",       color: "#ff8c00" },
             ].map((s, i) => (
               <div key={i} className="rounded-lg bg-slate-900 border border-slate-800 px-3 py-2">
                 <div className="text-lg font-bold font-mono" style={{ color: s.color }}>{s.value}</div>
@@ -1182,7 +1182,7 @@ export default function SpectralDbPage() {
         <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-4 text-xs font-mono text-slate-600">
           <span>Nexus Spectral Framework · AGPL-3.0</span>
           <span>CE→SE: nm = 380 + ((avg−32)/94)×400</span>
-          <span>Ψ(wdm, oam, pol) · 25,600 channels</span>
+          <span>Ψ(wdm, oam, pol, dir) · 51,200 channels</span>
           <span>Λ = hf/c²</span>
           <Link href="/open" className="text-slate-500 hover:text-slate-300 transition-colors ml-auto">Charter →</Link>
           <Link href="/blockchain" className="text-slate-500 hover:text-slate-300 transition-colors">Blockchain →</Link>

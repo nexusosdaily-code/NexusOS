@@ -179,7 +179,7 @@ export default function SpectralMirrorPage() {
                 { label: "Records archived", value: stats?.total.toLocaleString() ?? "0", sub: "all time", color: "#10b981" },
                 { label: "Transmissions logged", value: txFeed.length > 0 ? txFeed.filter(r => r.messageText.startsWith("CAST_LIVE")).length.toString() : "0", sub: "sessions mirrored", color: "#ef4444" },
                 { label: "Average wavelength", value: stats?.avgNm ? `${stats.avgNm.toFixed(1)} nm` : "—", sub: "across all records", color: "#8b5cf6" },
-                { label: "Unique Ψ channels", value: stats?.uniqueChannels.toLocaleString() ?? "0", sub: "of 25,600 possible", color: "#0ea5e9" },
+                { label: "Unique Ψ channels", value: stats?.uniqueChannels.toLocaleString() ?? "0", sub: "of 51,200 possible", color: "#0ea5e9" },
               ].map((s, i) => (
                 <div key={i} data-testid={`stat-card-${i}`} className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-5">
                   <div className="text-2xl font-bold font-mono mb-1" style={{ color: s.color }}>{s.value}</div>

@@ -249,7 +249,7 @@ export default function SpectralUriPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
               {[
                 { title: "Deterministic", desc: "Same resource name always produces the same Ψ address. No central registry, no DNS lookup.", color: "#22c55e" },
-                { title: "Collision-free", desc: "25,600 orthogonal channels via WDM × OAM × Polarisation. Each name occupies a unique physical coordinate.", color: "#3b82f6" },
+                { title: "Collision-free", desc: "51,200 orthogonal channels via WDM × OAM × Polarisation. Each name occupies a unique physical coordinate.", color: "#3b82f6" },
                 { title: "Physics-rooted", desc: "WDM index maps directly to a wavelength in nanometres. The address IS a position in the electromagnetic spectrum.", color: "#a855f7" },
               ].map(p => (
                 <div key={p.title} className="border border-white/6 rounded-xl p-3">
@@ -492,7 +492,7 @@ export default function SpectralUriPage() {
                   ["Address derivation", "CE→SE physics — deterministic from resource name", "DNS — human → IP lookup, centralised"],
                   ["Authority", "Physics (Ψ channel = EM coordinate)", "ICANN + TLD registrar + CA"],
                   ["Trust model", "Trustless — math is the registry", "Certificate Authority chain"],
-                  ["Address space", "25,600 orthogonal channels", "~4.3 billion IPv4 / IPv6 (effectively unlimited)"],
+                  ["Address space", "51,200 orthogonal channels", "~4.3 billion IPv4 / IPv6 (effectively unlimited)"],
                   ["Routing layer", "WNSP-SE spectral framing", "TCP/IP + TLS"],
                   ["Resolution latency", "0 ms — computed locally", "DNS lookup: 20–200 ms"],
                   ["Censorship resistance", "No central registry to seize", "Domain can be seized / blocked"],
@@ -546,7 +546,7 @@ path       = *( pchar / "/" )   ; same as RFC 3986 path`,
               {
                 heading: "§3 Resolution",
                 code: `No lookup required. The Ψ address IS the destination.
-A WNSP-capable node resolves wnsp://Ψ(w,o,p)/path by:
+A WNSP-capable node resolves wnsp://Ψ(w,o,p,d)/path by:
   - Tuning its optical receiver to WDM channel w
   - Filtering OAM order o
   - Selecting polarisation p

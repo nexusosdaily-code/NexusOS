@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import TelegramVideoGallery from "@/components/TelegramVideoGallery";
+import { PSI_CHANNELS } from "@/lib/channel-model";
 import {
   Zap, Cpu, Radio, Waves, Shield, Globe, Layers, Activity,
   ArrowRight, ExternalLink, Check, ChevronDown, ChevronUp,
@@ -904,9 +905,9 @@ export default function CampaignPage() {
               </div>
               <p className="text-xs text-white/50 leading-relaxed mb-3 pl-10">
                 We present WNSP — a communication framework replacing software-defined addressing with
-                physics-derived channel allocation across three orthogonal electromagnetic dimensions: WDM (256 channels),
-                OAM (50 modes), and polarization (2 states). The combined Hilbert space yields{" "}
-                <span className="text-emerald-400 font-semibold">25,600 mutually orthogonal channels</span>{" "}
+                physics-derived channel allocation across four orthogonal electromagnetic dimensions: WDM (256 channels),
+                OAM (50 modes), polarization (2 states), and propagation direction (2 states). The combined Hilbert space yields{" "}
+                <span className="text-emerald-400 font-semibold">{PSI_CHANNELS} mutually orthogonal channels</span>{" "}
                 satisfying ⟨Ψ<sub>i</sub>|Ψ<sub>j</sub>⟩ = 0 by quantum mechanical principle — enforced by physics, not software policy.
               </p>
               <div className="flex flex-wrap gap-1.5 pl-10">

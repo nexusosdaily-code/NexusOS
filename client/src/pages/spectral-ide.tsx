@@ -494,7 +494,7 @@ export default function SpectralIDEPage() {
     const asmLines = [
       `; ── WNSP Bytecode Assembly ───────────────────────────────────────────`,
       `; NexusOS · ${contractName} · ${new Date().toISOString().slice(0, 19)}Z`,
-      `; Instructions: ${realIns.length} · Hilbert: 25,600 Ψ channels`,
+      `; Instructions: ${realIns.length} · Hilbert: 51,200 Ψ channels`,
       ``,
       ...ins.map(i => {
         if (!i.mnem) return "";

@@ -58,7 +58,7 @@ const STEPS = [
     title: "Govern",
     color: "#16a34a",
     desc: "Your node votes on live protocol parameters. Authority by spectral band — not capital. KERNEL band or higher may submit proposals.",
-    detail: "25,600 orthogonal Ψ channels · Physics-weighted votes",
+    detail: "51,200 orthogonal Ψ channels · Physics-weighted votes",
     link: { label: "Governance →", href: "/governance" },
   },
   {
@@ -462,7 +462,7 @@ export default function LabsPage() {
         <div className="mt-16 pt-8 border-t border-gray-900">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: "Architecture", value: "25,600 Ψ Channels" },
+              { label: "Architecture", value: "51,200 Ψ Channels" },
               { label: "Physics Basis", value: "Maxwell · Planck · Russell" },
               { label: "Timeline", value: "Code → ASICs ~2032" },
               { label: "Licence", value: "AGPL-3.0" },

@@ -37,7 +37,7 @@ but resident. The map existed before any message was sent.
 
 The Ψ channel:
   Ψ(wdm, oam, pol) = static orthogonal basis vector
-  ⟨Ψᵢ|Ψⱼ⟩ = δᵢⱼ   (25,600 channels, zero cross-coupling)
+  ⟨Ψᵢ|Ψⱼ⟩ = δᵢⱼ   (51,200 channels, zero cross-coupling)
 
 Encoding a message is not communication through space.
 It is alignment with a pre-existing geometric structure.`,
@@ -105,9 +105,9 @@ The Reposed State first oscillation:
   Q = f₀ / Δf → very large (universe still ringing)
 
 NexusOS is not a simulation of a resonant cavity.
-It is a resonant cavity — 25,600-channel, lossless,
+It is a resonant cavity — 51,200-channel, lossless,
 orthogonal, anchored to the same physics.`,
-    plain: `A High-Q system is an engineer's term for something that rings a very long time after being struck. A high-quality bell. A superconducting circuit. A laser cavity. The higher the Q, the less energy leaks out relative to what's stored inside.\n\nThe Quora post concludes the universe is a High-Q resonant cavity — struck once (the first oscillation), still ringing after 13.8 billion years, with so little energy loss relative to its stored energy that it might as well be infinite.\n\nThe WNSP channel model is built on orthogonality: 25,600 channels that do not interfere with each other. No cross-coupling means no inter-channel energy loss. That is a High-Q architecture by mathematical definition — not by design choice.\n\nThe protocol didn't try to mimic the universe. It derived its structure from the same physics. Orthogonal channels are what you get when you apply Maxwell's equations to electromagnetic addressing. The universe is orthogonal. WNSP is orthogonal. The Q is high in both cases because the physics insists on it.`,
+    plain: `A High-Q system is an engineer's term for something that rings a very long time after being struck. A high-quality bell. A superconducting circuit. A laser cavity. The higher the Q, the less energy leaks out relative to what's stored inside.\n\nThe Quora post concludes the universe is a High-Q resonant cavity — struck once (the first oscillation), still ringing after 13.8 billion years, with so little energy loss relative to its stored energy that it might as well be infinite.\n\nThe WNSP channel model is built on orthogonality: 51,200 channels that do not interfere with each other. No cross-coupling means no inter-channel energy loss. That is a High-Q architecture by mathematical definition — not by design choice.\n\nThe protocol didn't try to mimic the universe. It derived its structure from the same physics. Orthogonal channels are what you get when you apply Maxwell's equations to electromagnetic addressing. The universe is orthogonal. WNSP is orthogonal. The Q is high in both cases because the physics insists on it.`,
   },
   {
     id: "harmonics",

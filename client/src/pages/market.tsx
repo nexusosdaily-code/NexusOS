@@ -220,7 +220,7 @@ export default function MarketPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <StatPill label="NXWV Supply" value="21 Trillion" color="#a78bfa" />
             <StatPill label="Mints" value="1,000 / 1,000" color="#22d3ee" />
-            <StatPill label="Ψ Channels" value="25,600" color="#4ade80" />
+            <StatPill label="Ψ Channels" value="51,200" color="#4ade80" />
             <StatPill label="NXT Max Supply" value="21 Billion" color="#fbbf24" />
           </div>
           <p className="text-center text-[10px] font-mono text-white/20 mt-3">
@@ -342,8 +342,8 @@ export default function MarketPage() {
               },
               {
                 icon: Radio, color: "#22d3ee",
-                title: "25,600 orthogonal channels",
-                body: "⟨Ψᵢ|Ψⱼ⟩ = 0. The Hilbert space channel model gives 256 WDM × 50 OAM × 2 polarisations. Orthogonality is enforced by quantum mechanics, not software.",
+                title: "51,200 orthogonal channels",
+                body: "⟨Ψᵢ|Ψⱼ⟩ = 0. The Hilbert space channel model gives 256 WDM × 50 OAM × 2 polarisations × 2 propagation directions. Orthogonality is enforced by quantum mechanics, not software.",
               },
               {
                 icon: Wallet, color: "#22d3ee",

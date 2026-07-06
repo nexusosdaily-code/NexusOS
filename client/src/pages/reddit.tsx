@@ -121,7 +121,7 @@ Instead of assigning arbitrary IP addresses, WNSP assigns addresses derived from
 
 λ = 380 + (charCode mod 128) / 128 × 400 nm
 
-Every character maps to a real wavelength. Every node on the network gets a Ψ channel — a physical position in the 25,600-dimensional Hilbert space of visible light. Two channels cannot interfere with each other, not because software enforces it, but because Maxwell's equations do.
+Every character maps to a real wavelength. Every node on the network gets a Ψ channel — a physical position in the 51,200-dimensional Hilbert space of visible light. Two channels cannot interfere with each other, not because software enforces it, but because Maxwell's equations do.
 
 Transaction fees are derived from E = hf. Higher-frequency channels cost more by physics, not policy. You cannot lobby Maxwell.
 
@@ -159,7 +159,7 @@ Why does this matter for programming?
 
 3. Photonic-native from day one. When photonic ASICs arrive (~2032), no rewrite is needed. The architecture already speaks in wavelengths. Today's silicon is the bridge, not the destination.
 
-The result: 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations). Orthogonality guaranteed by quantum mechanics: ⟨Ψᵢ|Ψⱼ⟩ = 0.
+The result: 51,200 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations × 2 propagation directions). Orthogonality guaranteed by quantum mechanics: ⟨Ψᵢ|Ψⱼ⟩ = 0.
 
 Try it right now:
 
@@ -179,7 +179,7 @@ Source: github.com/nexusosdaily-code/NexusOS (AGPL-3.0)`,
   {
     type: "post" as const,
     subreddits: ["photonics", "Physics"],
-    title: "Physics-first spectral protocol: CE→λ mapping, 25,600 orthogonal Ψ channels, working implementation",
+    title: "Physics-first spectral protocol: CE→λ mapping, 51,200 orthogonal Ψ channels, working implementation",
     tip: "r/photonics is small and technical. Be precise. Cite the physics correctly. The Hilbert space channel model and Maxwell validation are what this audience cares about most.",
     body: `The core premise: if photonic hardware will eventually replace silicon, the communication protocols running on that hardware should be derived from the same physics — not retrofitted from TCP/IP.
 
@@ -192,12 +192,13 @@ Every character maps to a wavelength via:
 128 bands, 380–780 nm (visible spectrum), 3.125 nm/band. Deterministic, collision-free.
 
 **Channel Model**
-Ψ(wdm, oam, pol) where:
+Ψ(wdm, oam, pol, dir) where:
 - wdm ∈ {1…256} — wavelength division multiplexing index
 - oam ∈ {1…50} — orbital angular momentum mode
 - pol ∈ {H, V} — polarisation
+- dir ∈ {+k̂, −k̂} — propagation direction
 
-Total channels: 256 × 50 × 2 = 25,600
+Total channels: 256 × 50 × 2 × 2 = 51,200
 Orthogonality: ⟨Ψᵢ|Ψⱼ⟩ = 0 — guaranteed by quantum mechanics, not software policy.
 
 **Fee model**
@@ -234,7 +235,7 @@ Every node gets a Ψ channel: Ψ(wdm, oam, polarisation)
 - 256 wavelength division multiplexing indices
 - 50 orbital angular momentum modes
 - 2 polarisation states
-= 25,600 orthogonal channels
+= 51,200 orthogonal channels
 
 Addressing formula: λ = 380 + (charCode mod 128) / 128 × 400 nm
 
@@ -256,7 +257,7 @@ Interested in technical critique of the channel model, the addressing scheme, an
     tip: "Drop this as a comment in threads about AI hardware bottlenecks, photonic chips, or post-silicon computing. Works well as a reply to 'what comes after GPUs?' type comments.",
     body: `Worth flagging: there is a group building communication infrastructure explicitly designed for photonic hardware rather than retrofitted from TCP/IP.
 
-The core idea is character encoding to wavelength: λ = 380 + (charCode mod 128) / 128 × 400 nm. Every character gets a unique physical address in the visible spectrum. Network channels are Ψ(wdm, oam, pol) positions in Hilbert space — 25,600 total, orthogonal by quantum mechanics.
+The core idea is character encoding to wavelength: λ = 380 + (charCode mod 128) / 128 × 400 nm. Every character gets a unique physical address in the visible spectrum. Network channels are Ψ(wdm, oam, pol, dir) positions in Hilbert space — 51,200 total, orthogonal by quantum mechanics.
 
 The reason it matters for AI: when models run on photonic chips, the data bus and addressing layer should speak natively in wavelengths. Latency from address translation is a real cost at inference scale.
 

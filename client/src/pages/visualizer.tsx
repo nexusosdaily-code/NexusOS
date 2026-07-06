@@ -34,7 +34,7 @@ const WORD_FRAMES = WORD.split("").map((ch, i) => {
 
 const LAYERS = [
   { id:"L0", label:"Alphabet Substrate", sub:"PROVED Nov 2025 · A=380nm Z=530nm", color:"#9333ea", bg:"rgba(147,51,234,0.12)" },
-  { id:"L1", label:"Spectral DB & Addressing", sub:"620+ records · 25,600 Ψ channels · E=hf cost", color:"#3b82f6", bg:"rgba(59,130,246,0.12)" },
+  { id:"L1", label:"Spectral DB & Addressing", sub:"620+ records · 51,200 Ψ channels · E=hf cost", color:"#3b82f6", bg:"rgba(59,130,246,0.12)" },
   { id:"L2", label:"Blockchain Proof", sub:"Λ=hf/c² blocks · SHA-256 audit · AGPL", color:"#06b6d4", bg:"rgba(6,182,212,0.12)" },
   { id:"L3", label:"Agent Intelligence", sub:"6 WNSP kernel agents · KernelEventBus SSE", color:"#10b981", bg:"rgba(16,185,129,0.12)" },
   { id:"L4", label:"Constitutional Economy", sub:"NXT ordinal economy · Orbital Treasury", color:"#f59e0b", bg:"rgba(245,158,11,0.12)" },
@@ -445,7 +445,7 @@ export default function VisualizerPage() {
                 </>}
                 {activeLayer === 1 && <>
                   <div style={{ color: "#3b82f6", marginBottom: 4 }}>Hilbert Space channels:</div>
-                  <div style={{ color: "#64748b" }}>25,600 orthogonal Ψ channels</div>
+                  <div style={{ color: "#64748b" }}>51,200 orthogonal Ψ channels</div>
                   <div style={{ color: "#64748b" }}>λ × OAM × polarization</div>
                   <div style={{ color: "#64748b" }}>620+ spectral records live</div>
                 </>}

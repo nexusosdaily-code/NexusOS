@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { PSI_CHANNEL_COUNT } from "@/lib/channel-model";
 import { useToast } from "@/hooks/use-toast";
 import {
   Radio, Zap, Globe, Copy, Check, ChevronRight, ExternalLink,
@@ -718,7 +719,7 @@ function BridgeSpec() {
         "Photonic hardware routes data at physical light frequencies",
         "wnsp:// addresses ARE the physical routing — no translation layer",
         "Einstein's Λ=hf/c² — each transmission validated at its physical compression state",
-        "25,600 orthogonal Hilbert space channels replace IP address space",
+        "51,200 orthogonal Hilbert space channels replace IP address space",
         "NexusOS becomes the OS of light — the infrastructure of civilization",
       ],
     },
@@ -761,7 +762,8 @@ const VISIBLE_MAX_NM = 750;
 const HILBERT_WDM = 256;
 const HILBERT_OAM = 50;
 const HILBERT_POL = 2;
-const HILBERT_TOTAL = HILBERT_WDM * HILBERT_OAM * HILBERT_POL; // 25,600
+const HILBERT_DIR = 2;
+const HILBERT_TOTAL = PSI_CHANNEL_COUNT; // 256 × 50 × 2 × 2 = 51,200 (from channel-model.ts)
 
 function wdmToNm(wdm: number) {
   return VISIBLE_MIN_NM + (wdm / (HILBERT_WDM - 1)) * (VISIBLE_MAX_NM - VISIBLE_MIN_NM);
@@ -810,11 +812,11 @@ function HilbertPanel() {
       <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="text-cyan-400 font-mono font-bold text-sm">Hilbert Space Explorer</div>
-          <Badge variant="outline" className="text-xs border-cyan-800/50 text-cyan-500 font-mono">dim(H) = 25,600</Badge>
-          <Badge variant="outline" className="text-xs border-violet-800/50 text-violet-400 font-mono">256 × 50 × 2</Badge>
+          <Badge variant="outline" className="text-xs border-cyan-800/50 text-cyan-500 font-mono">dim(H) = 51,200</Badge>
+          <Badge variant="outline" className="text-xs border-violet-800/50 text-violet-400 font-mono">256 × 50 × 2 × 2</Badge>
         </div>
         <p className="text-xs text-slate-500 leading-relaxed">
-          Three orthogonal quantum sub-spaces form the complete WNSP channel basis.
+          Four orthogonal quantum sub-spaces form the complete WNSP channel basis.
           Any two distinct Ψ channels satisfy{" "}
           <span className="text-cyan-400 font-mono">⟨Ψ_i | Ψ_j⟩ = 0</span> — they never interfere.
           Navigate the space below, then read your channel's compression-state physics.
@@ -1131,9 +1133,9 @@ function DensityPanel() {
       {/* Hilbert space breakdown */}
       <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-5 space-y-3">
         <div className="text-xs text-slate-400 font-mono font-semibold uppercase tracking-wider">
-          Hilbert Space — dim(H) = {hilbert ? hilbert.total_channels.toLocaleString() : "25,600"}
+          Hilbert Space — dim(H) = {hilbert ? hilbert.total_channels.toLocaleString() : "51,200"}
         </div>
-        <div className="text-xs text-slate-500 font-mono mb-3">{hilbert?.channel_basis ?? "Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩"}</div>
+        <div className="text-xs text-slate-500 font-mono mb-3">{hilbert?.channel_basis ?? "Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩ ⊗ |Dir_l⟩"}</div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
@@ -1151,9 +1153,9 @@ function DensityPanel() {
 
         <div className="flex items-center gap-3 rounded-lg bg-slate-950 border border-slate-800 px-4 py-3">
           <div className="font-mono text-xs text-slate-500">
-            <span className="text-violet-400">256</span> × <span className="text-blue-400">50</span> × <span className="text-emerald-400">2</span>
+            <span className="text-violet-400">256</span> × <span className="text-blue-400">50</span> × <span className="text-emerald-400">2</span> × <span className="text-amber-400">2</span>
             {" = "}
-            <span className="text-white font-bold text-sm">25,600</span>
+            <span className="text-white font-bold text-sm">51,200</span>
             <span className="text-slate-600 ml-2">orthogonal channels</span>
           </div>
         </div>
@@ -1209,7 +1211,7 @@ function DensityPanel() {
                 <span className="text-xs text-slate-600">symbols / joule</span>
               </div>
               <div className="flex items-center gap-3 text-xs font-mono text-slate-600">
-                <span>25,600 × {rSym} × {modDepth} = {(25600 * rSym * modDepth).toLocaleString()}</span>
+                <span>51,200 × {rSym} × {modDepth} = {(51200 * rSym * modDepth).toLocaleString()}</span>
               </div>
               <div className="mt-2">
                 <div className="flex justify-between text-xs font-mono text-slate-600 mb-1">
@@ -1348,7 +1350,7 @@ export default function WnspBridgePage() {
             <span>·</span>
             <span>pol = len%2 ? V : H</span>
             <span>·</span>
-            <span className="text-cyan-400">25,600 Hilbert channels</span>
+            <span className="text-cyan-400">51,200 Hilbert channels</span>
           </div>
         </div>
       </div>

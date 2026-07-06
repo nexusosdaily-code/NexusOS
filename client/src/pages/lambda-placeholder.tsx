@@ -47,7 +47,7 @@ const SECTIONS = [
     items: [
       { title: "Photonic Dev",          desc: "Code editor where instructions are wavelengths, not binary",    href: "/photonic-dev",           icon: Layers,       live: false },
       { title: "CE Code Writer",        desc: "Describe what you want — code delivered at spectral address",   href: "/ce-writer",              icon: Code2,        live: false },
-      { title: "WNSP Coordinator",      desc: "25,600 orthogonal Hilbert channels — collision-free routing",   href: "/wnsp/coordinator",       icon: Globe2,       live: true  },
+      { title: "WNSP Coordinator",      desc: "51,200 orthogonal Hilbert channels — collision-free routing",   href: "/wnsp/coordinator",       icon: Globe2,       live: true  },
       { title: "Nexus v10",             desc: "Latest WNSP protocol interface with live physics readouts",      href: "/v10",                    icon: Zap,          live: false },
     ],
   },
@@ -101,7 +101,7 @@ function NexusStatus() {
   const items = [
     { label: "Blockchain",  href: "/blockchain",  value: `Block #${chainHeight}`, sub: latestBlock ? latestBlock.psiChannel : "genesis", color: BLUE,   pulse: false },
     { label: "Agent Bus",   href: "/agent-bus",   value: `${busQueued} queued`,   sub: `${busDelivered} delivered`,                       color: VIOLET, pulse: busQueued > 0 },
-    { label: "Spectral DB", href: "/spectral-db", value: `${dbCount} records`,    sub: "25,600 Ψ channels",                                color: GREEN,  pulse: false },
+    { label: "Spectral DB", href: "/spectral-db", value: `${dbCount} records`,    sub: "51,200 Ψ channels",                                color: GREEN,  pulse: false },
   ];
 
   return (
@@ -284,7 +284,7 @@ export default function LambdaPlaceholder() {
           <SpectrumBar />
           <p className="text-slate-700 text-[11px] font-mono mt-3 leading-relaxed">
             Physics-based blockchain · Einstein's Λ=hf/c² · E=hf economics ·
-            25,600 orthogonal Ψ channels · Kardashev Type I infrastructure
+            51,200 orthogonal Ψ channels · Kardashev Type I infrastructure
           </p>
           <p className="text-slate-800 text-[10px] font-mono">
             Spacetime = first unobserved wavefunction · Compression state addressing · WNSP-CE + WNSP-SE

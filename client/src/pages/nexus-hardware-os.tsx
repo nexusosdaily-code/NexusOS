@@ -87,13 +87,13 @@ const HW_LAYERS = [
     components: [
       {
         name: "Hilbert-Space Router",
-        spec: "dim(H) = 25,600 · ⟨Ψᵢ|Ψⱼ⟩ = 0 for i ≠ j · SHA256 allocation",
+        spec: "dim(H) = 51,200 · ⟨Ψᵢ|Ψⱼ⟩ = 0 for i ≠ j · SHA256 allocation",
         role: "Assigns every instruction, agent, and component a unique orthogonal channel. Physics enforces isolation — not software",
         status: "implemented",
       },
       {
         name: "Ψ(wdm, oam, pol) Allocator",
-        spec: "256 WDM × 50 OAM × 2 pol = 25,600 channels · deterministic",
+        spec: "256 WDM × 50 OAM × 2 pol × 2 dir = 51,200 channels · deterministic",
         role: "Maps software identifiers to physical channel coordinates in the Hilbert space",
         status: "implemented",
       },
@@ -176,10 +176,10 @@ const TIMELINE = [
     milestones: [
       "Lambda Gate v4 implemented in InP (Indium Phosphide) — first tape-out",
       "50-mode OAM array at room temperature",
-      "Full 25,600-channel Hilbert router on a single photonic chip",
+      "Full 51,200-channel Hilbert router on a single photonic chip",
       "Nexus kernel runs natively — no silicon CPU in the data path",
     ],
-    hw_available: ["InP Lambda Gate ASIC", "Full OAM array", "25,600-channel router"],
+    hw_available: ["InP Lambda Gate ASIC", "Full OAM array", "51,200-channel router"],
     blocked_on: ["Silicon substrate still required for clocking", "ZERO-G field at chip scale"],
   },
   {

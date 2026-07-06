@@ -148,10 +148,10 @@ export default function WnspPaperPage() {
           <p className="text-sm text-white/80 leading-7">
             We present <strong className="text-white">WNSP</strong> (Waveform Node Spectral Protocol), a multidimensional
             communication framework that replaces software-defined addressing and cryptographic hashing with
-            physics-derived channel allocation across three orthogonal electromagnetic dimensions:
+            physics-derived channel allocation across four orthogonal electromagnetic dimensions:
             Wavelength Division Multiplexing (WDM, 256 channels), Orbital Angular Momentum (OAM, 50 modes),
-            and polarization (2 states). The combined Hilbert space yields
-            <strong className="text-[#10b981]"> 25,600 mutually orthogonal channels</strong> satisfying
+            polarization (2 states), and propagation direction (2 states: +k̂ / −k̂). The combined Hilbert space yields
+            <strong className="text-[#10b981]"> 51,200 mutually orthogonal channels</strong> satisfying
             ⟨Ψ<sub>i</sub>|Ψ<sub>j</sub>⟩ = 0 by quantum mechanical principle — enforced by physics,
             not software policy. We characterize five security properties that emerge directly from
             this orthogonality: collision-free addressing, channel isolation, photon-energy authority
@@ -185,15 +185,15 @@ export default function WnspPaperPage() {
           </P>
           <P>
             This paper presents WNSP (Waveform Node Spectral Protocol), a protocol that constructs
-            its channel space from three independent electromagnetic dimensions — WDM, OAM, and
-            polarization — and derives all addresses, costs, and authority levels from Planck's law
+            its channel space from four independent electromagnetic dimensions — WDM, OAM,
+            polarization, and propagation direction — and derives all addresses, costs, and authority levels from Planck's law
             (E = hf) and its mass equivalent Λ = hf/c². The result is a communication architecture
             whose security properties are grounded in physics, whose addressing is deterministic and
             verifiable without trust, and whose structure is forward-compatible with photonic computing
             hardware expected around 2032.
           </P>
           <P>
-            The primary contributions of this paper are: (i) a formal definition of the 25,600-channel
+            The primary contributions of this paper are: (i) a formal definition of the 51,200-channel
             Hilbert space and its orthogonality conditions; (ii) a security analysis of the five
             properties that emerge from physical channel separation; (iii) a description of the
             CE/SE/URI communication stack and its derivation from first principles; and (iv) empirical
@@ -251,15 +251,16 @@ export default function WnspPaperPage() {
 
         <Section number="3." title="The Hilbert Space Channel Model">
           <P>
-            The WNSP channel space is defined as a tensor product of three independent
+            The WNSP channel space is defined as a tensor product of four independent
             electromagnetic subspaces.
           </P>
           <Callout type="definition">
-            A WNSP channel Ψ is a triple (w, ℓ, p) where w ∈ {"{"}0, …, 255{"}"} is the WDM index,
-            ℓ ∈ {"{"}0, …, 49{"}"} is the OAM mode number, and p ∈ {"{"}H, V{"}"} is the polarization state.
-            The full channel space is ℋ = ℋ<sub>WDM</sub> ⊗ ℋ<sub>OAM</sub> ⊗ ℋ<sub>Pol</sub>.
+            A WNSP channel Ψ is a quadruple (w, ℓ, p, d) where w ∈ {"{"}0, …, 255{"}"} is the WDM index,
+            ℓ ∈ {"{"}0, …, 49{"}"} is the OAM mode number, p ∈ {"{"}H, V{"}"} is the polarization state,
+            and d ∈ {"{"}+k̂, −k̂{"}"} is the propagation direction.
+            The full channel space is ℋ = ℋ<sub>WDM</sub> ⊗ ℋ<sub>OAM</sub> ⊗ ℋ<sub>Pol</sub> ⊗ ℋ<sub>Dir</sub>.
           </Callout>
-          <Eq label="1">|ℋ| = 256 × 50 × 2 = 25,600</Eq>
+          <Eq label="1">|ℋ| = 256 × 50 × 2 × 2 = 51,200</Eq>
 
           <SubSection number="3.1" title="Orthogonality Condition">
             <P>
@@ -308,9 +309,9 @@ export default function WnspPaperPage() {
             </P>
             <Eq label="4">C<sub>total</sub> = Σᵢ Bᵢ · log₂(1 + SNRᵢ)</Eq>
             <P>
-              where the sum runs over all 25,600 channels. In the idealized case of equal bandwidth
-              and SNR, C<sub>total</sub> = 25,600 · C<sub>single</sub>. This represents a
-              25,600× capacity multiplier over single-mode optical transmission using the same
+              where the sum runs over all 51,200 channels. In the idealized case of equal bandwidth
+              and SNR, C<sub>total</sub> = 51,200 · C<sub>single</sub>. This represents a
+              51,200× capacity multiplier over single-mode optical transmission using the same
               physical medium.
             </P>
           </SubSection>
@@ -321,7 +322,8 @@ export default function WnspPaperPage() {
               ["WDM", "Wavelength index w", "0 – 255", "256", "Spectral separation, Maxwell equations"],
               ["OAM", "Mode number ℓ", "0 – 49", "50", "Azimuthal phase e^{iℓφ}, Allen et al. 1992"],
               ["Polarization", "State p", "H, V", "2", "Jones vector orthogonality"],
-              ["Combined", "Channel Ψ(w,ℓ,p)", "25,600 states", "25,600", "Tensor product, ⟨Ψᵢ|Ψⱼ⟩ = 0"],
+              ["Propagation", "Direction d", "+k̂, −k̂", "2", "Bidirectional Hilbert sub-space"],
+              ["Combined", "Channel Ψ(w,ℓ,p,d)", "51,200 states", "51,200", "Tensor product, ⟨Ψᵢ|Ψⱼ⟩ = 0"],
             ]}
           />
         </Section>
@@ -710,7 +712,7 @@ export default function WnspPaperPage() {
               The 50 OAM modes used in WNSP are limited by practical generation and detection
               considerations. Free-space OAM transmission degrades with atmospheric turbulence;
               fiber-based OAM requires specialty few-mode or multicore fiber. Production deployment
-              of the full 25,600-channel space awaits corresponding photonic hardware maturity.
+              of the full 51,200-channel space awaits corresponding photonic hardware maturity.
             </P>
           </SubSection>
           <SubSection number="9.2" title="Future Work">
@@ -730,7 +732,7 @@ export default function WnspPaperPage() {
           <P>
             We have presented WNSP, a communication protocol whose channel space, addressing,
             security, and cost model are derived from electromagnetic physics rather than software
-            convention. The 25,600-channel Hilbert space provides mutual orthogonality by quantum
+            convention. The 51,200-channel Hilbert space provides mutual orthogonality by quantum
             mechanical law. Five security properties — collision-free addressing, channel isolation,
             energy-based authority, OAM eavesdropping detection, and content-derived anti-spoofing
             — hold as physical laws rather than computational hardness assumptions. The character

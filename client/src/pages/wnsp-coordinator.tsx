@@ -190,8 +190,8 @@ export default function WNSPCoordinator() {
   /* ── derived values ── */
   const agents    = Object.entries(agentStatus?.agents ?? {}) as [string, any][];
   const occupied    = agentStatus?.occupied_channels ?? 0;
-  const available   = agentStatus?.available_channels ?? 25600;
-  const total       = agentStatus?.total_channels ?? 25600;
+  const available   = agentStatus?.available_channels ?? 51200;
+  const total       = agentStatus?.total_channels ?? 51200;
   const queueDepth  = agentStatus?.queue_depth ?? 0;
   const sysDensity  = agentStatus?.system_density ?? null;
 
@@ -213,7 +213,7 @@ export default function WNSPCoordinator() {
               <Cpu className="w-6 h-6" /> AI/OS Channel Coordinator
             </h1>
             <p className="text-gray-400 text-sm mt-1">
-              Ψ(wdm, oam, H/V) &nbsp;·&nbsp; 25,600 orthogonal channels &nbsp;·&nbsp; ⟨Ψ_i | Ψ_j⟩ = 0
+              Ψ(wdm, oam, H/V, dir) &nbsp;·&nbsp; 51,200 orthogonal channels &nbsp;·&nbsp; ⟨Ψ_i | Ψ_j⟩ = 0
             </p>
           </div>
           <Badge className="bg-green-500/20 text-green-300 border-green-500/30 flex items-center gap-1">
@@ -247,8 +247,8 @@ export default function WNSPCoordinator() {
           </Card>
           <Card className="bg-gray-900/60 border-gray-700 p-4">
             <div className="text-xs text-gray-400 mb-1">dim(H)</div>
-            <div className="text-2xl font-bold text-purple-300">25,600</div>
-            <div className="text-xs text-gray-500 mt-1">256 × 50 × 2</div>
+            <div className="text-2xl font-bold text-purple-300">51,200</div>
+            <div className="text-xs text-gray-500 mt-1">256 × 50 × 2 × 2</div>
           </Card>
           <Card className="bg-gray-900/60 border-gray-700 p-4">
             <div className="text-xs text-gray-400 mb-1">Queue Depth</div>
@@ -804,7 +804,7 @@ export default function WNSPCoordinator() {
                   <div>pol = <span className="text-yellow-300">h[2]</span> % 2</div>
                   <div className="text-gray-500 mt-2">while (wdm, oam, pol) in used:</div>
                   <div className="pl-4">wdm = (wdm + 1) % 256</div>
-                  <div className="text-cyan-300 mt-2">→ Ψ(wdm, oam, H/V)</div>
+                  <div className="text-cyan-300 mt-2">→ Ψ(wdm, oam, H/V, dir)</div>
                 </div>
               </div>
 
@@ -997,7 +997,7 @@ export default function WNSPCoordinator() {
                 <Lock className="w-4 h-4 text-green-400" /> Hilbert Space Orthogonality Proof
               </h2>
               <p className="text-gray-400 text-xs mb-4">
-                Validates ⟨Ψ_i | Ψ_j⟩ = 0 for all i ≠ j across the 25,600-dimensional channel space.
+                Validates ⟨Ψ_i | Ψ_j⟩ = 0 for all i ≠ j across the 51,200-dimensional channel space.
               </p>
 
               {orthoData && (

@@ -161,7 +161,7 @@ function compileWLS(src: string): { assembly: string; hex: string; manifest: Arr
   }
 
   add(0x00, ".WNSP",  "v1.0",              "NexusOS WNSP Bytecode · AGPL-3.0");
-  add(0x00, ".ARCH",  "WDM256·OAM50·POL2", "25,600 orthogonal Ψ channels");
+  add(0x00, ".ARCH",  "WDM256·OAM50·POL2·DIR2", "51,200 orthogonal Ψ channels");
   add(0x00, ".MODEL", "Λ=hf/c² SPECTRAL",  "Einstein first-principle execution");
   add(0x00, "", "", "");
   off = 0;
@@ -204,7 +204,7 @@ function compileWLS(src: string): { assembly: string; hex: string; manifest: Arr
   const asmLines = [
     `; ── WNSP Bytecode Assembly v1.0 ────────────────────────────────────`,
     `; NexusOS · AGPL-3.0 · ${new Date().toISOString().slice(0, 19)}Z`,
-    `; Hilbert-space: 25,600 orthogonal channels · E=hf · Λ=hf/c²`,
+    `; Hilbert-space: 51,200 orthogonal channels · E=hf · Λ=hf/c²`,
     `; ────────────────────────────────────────────────────────────────────`,
     ``,
     ...ins.map(i => {

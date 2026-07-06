@@ -252,7 +252,7 @@ export default function DirectoryPage() {
         )}
 
         <p className="text-center text-slate-700 text-xs mt-8 font-mono">
-          Hilbert space: 25,600 orthogonal channels · dim(H) = 256 × 50 × 2
+          Hilbert space: 51,200 orthogonal channels · dim(H) = 256 × 50 × 2 × 2
         </p>
       </div>
     </div>
