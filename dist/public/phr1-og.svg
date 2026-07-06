@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#050510;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0a0a20;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="coilglow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#7c4dff;stop-opacity:0.4" />
+      <stop offset="60%" style="stop-color:#e040fb;stop-opacity:0.15" />
+      <stop offset="100%" style="stop-color:#050510;stop-opacity:0" />
+    </radialGradient>
+    <radialGradient id="coreglow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.9" />
+      <stop offset="40%" style="stop-color:#e040fb;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#7c4dff;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)" />
+
+  <!-- Grid lines -->
+  <g stroke="#ffffff" stroke-opacity="0.04" stroke-width="1">
+    <line x1="0" y1="105" x2="1200" y2="105" />
+    <line x1="0" y1="210" x2="1200" y2="210" />
+    <line x1="0" y1="315" x2="1200" y2="315" />
+    <line x1="0" y1="420" x2="1200" y2="420" />
+    <line x1="0" y1="525" x2="1200" y2="525" />
+    <line x1="200" y1="0" x2="200" y2="630" />
+    <line x1="400" y1="0" x2="400" y2="630" />
+    <line x1="600" y1="0" x2="600" y2="630" />
+    <line x1="800" y1="0" x2="800" y2="630" />
+    <line x1="1000" y1="0" x2="1000" y2="630" />
+  </g>
+
+  <!-- Glow behind coil -->
+  <ellipse cx="420" cy="315" rx="200" ry="200" fill="url(#coilglow)" />
+
+  <!-- Bifilar coil — 144-turn schematic (concentric rings) -->
+  <g stroke-width="2" fill="none">
+    <circle cx="420" cy="315" r="170" stroke="#7c4dff" stroke-opacity="0.15" />
+    <circle cx="420" cy="315" r="158" stroke="#e040fb" stroke-opacity="0.18" />
+    <circle cx="420" cy="315" r="146" stroke="#7c4dff" stroke-opacity="0.22" />
+    <circle cx="420" cy="315" r="134" stroke="#e040fb" stroke-opacity="0.26" />
+    <circle cx="420" cy="315" r="122" stroke="#7c4dff" stroke-opacity="0.30" />
+    <circle cx="420" cy="315" r="110" stroke="#e040fb" stroke-opacity="0.35" />
+    <circle cx="420" cy="315" r="98"  stroke="#7c4dff" stroke-opacity="0.40" />
+    <circle cx="420" cy="315" r="86"  stroke="#e040fb" stroke-opacity="0.45" />
+    <circle cx="420" cy="315" r="74"  stroke="#7c4dff" stroke-opacity="0.50" />
+    <circle cx="420" cy="315" r="62"  stroke="#e040fb" stroke-opacity="0.55" />
+    <circle cx="420" cy="315" r="50"  stroke="#7c4dff" stroke-opacity="0.60" />
+    <circle cx="420" cy="315" r="38"  stroke="#e040fb" stroke-opacity="0.65" stroke-width="2.5" />
+    <circle cx="420" cy="315" r="26"  stroke="#7c4dff" stroke-opacity="0.70" stroke-width="3" />
+  </g>
+
+  <!-- Core glow -->
+  <circle cx="420" cy="315" r="14" fill="url(#coreglow)" />
+  <circle cx="420" cy="315" r="7"  fill="#ffffff" opacity="0.95" />
+
+  <!-- Phase coherence arc -->
+  <path d="M 420 135 A 180 180 0 0 1 600 315" stroke="#00e5ff" stroke-width="2" fill="none" stroke-opacity="0.5" stroke-dasharray="8 4" />
+  <text x="542" y="205" font-family="monospace" font-size="11" fill="#00e5ff" fill-opacity="0.7" transform="rotate(-42, 542, 205)">ZERO-G phase</text>
+
+  <!-- Right panel — specs -->
+  <text x="700" y="210" font-family="monospace" font-size="14" fill="#ffffff" fill-opacity="0.9">144-turn bifilar coil</text>
+  <text x="700" y="235" font-family="monospace" font-size="14" fill="#e040fb" fill-opacity="0.8">Λ = hf/c² resonance</text>
+  <text x="700" y="260" font-family="monospace" font-size="14" fill="#7c4dff" fill-opacity="0.8">Syncbox Controller v1.0</text>
+  <text x="700" y="285" font-family="monospace" font-size="14" fill="#ffffff" fill-opacity="0.7">WavelengthScript API</text>
+  <text x="700" y="310" font-family="monospace" font-size="14" fill="#00e5ff" fill-opacity="0.7">AGPL-3.0</text>
+
+  <!-- ZERO-G band label -->
+  <rect x="695" y="335" width="220" height="32" rx="6" fill="#e040fb" fill-opacity="0.1" stroke="#e040fb" stroke-opacity="0.3" stroke-width="1" />
+  <text x="805" y="356" font-family="monospace" font-size="13" fill="#e040fb" text-anchor="middle">ZERO-G STATE</text>
+
+  <!-- Main label -->
+  <text x="600" y="80" font-family="system-ui, -apple-system, sans-serif" font-size="48" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="-1">PHR-1</text>
+  <text x="600" y="115" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#e040fb" text-anchor="middle" letter-spacing="2">Physics Harmonic Resonator</text>
+
+  <!-- Bottom text -->
+  <text x="600" y="558" font-family="monospace" font-size="20" font-weight="700" fill="#ffffff" text-anchor="middle">First ZERO-G State Device</text>
+  <text x="600" y="588" font-family="monospace" font-size="13" fill="#e040fb" fill-opacity="0.8" text-anchor="middle">First public disclosure: 2026-05-16  ·  25 Hardware Founder slots</text>
+
+  <!-- NexusOS badge -->
+  <text x="60" y="45" font-family="monospace" font-size="13" fill="#ffffff" fill-opacity="0.4">NexusOS · AGPL-3.0 · 2026</text>
+</svg>

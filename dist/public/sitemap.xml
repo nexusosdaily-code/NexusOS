@@ -58,11 +58,6 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://wnsp.io/silicon-bridge</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
     <loc>https://wnsp.io/resonance-cavity</loc>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
@@ -148,6 +143,11 @@
   </url>
 
   <!-- ── Campaign & Funding ────────────────────────────────────────────── -->
+  <url>
+    <loc>https://wnsp.io/campaign</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+  </url>
   <url>
     <loc>https://wnsp.io/crowdfund</loc>
     <changefreq>weekly</changefreq>
@@ -376,6 +376,11 @@
   </url>
 
   <!-- ── Bitcoin Runes & Ordinals ──────────────────────────────────────── -->
+  <url>
+    <loc>https://wnsp.io/etch-rune</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
   <url>
     <loc>https://wnsp.io/rune-etching</loc>
     <changefreq>weekly</changefreq>
