@@ -151,6 +151,7 @@ const APP_SECTIONS = [
       { title: "🗺️ Roadmap",                             href: "/roadmap",            Icon: Waves },
       { title: "🔬 Hardware PoC",                        href: "/poc",                Icon: FlaskConical },
       { title: "📊 Hardware Results",                    href: "/hardware-results",    Icon: Activity },
+      { title: "⚛️ Unified Compression Theory",           href: "/unified-compression-theory", Icon: Zap },
       { title: "📄 Theory Paper",                        href: "/paper",              Icon: FileText },
       { title: "🌊 Russell Octave Layers",               href: "/octave-layers",      Icon: Waves },
       { title: "🔌 How to Plug In",                     href: "/how-to-plug-in",     Icon: Zap },
