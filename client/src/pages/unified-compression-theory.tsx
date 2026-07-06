@@ -83,6 +83,7 @@ export default function UnifiedCompressionTheoryPage() {
     description: "A formal unification of Russell's 9 Octave Layers, the Theory of Compression States (Λ=hf/c²), and the Four Fundamental Forces. Matter is compressed light; forces are compression gradients across octave tiers.",
     ogDescription: "UCT v1.0: All four fundamental forces unified as a single compression gradient across Russell's 9 octave tiers. Matter = compressed light. Energy = decompression. First disclosure 2026-07-06.",
     twitterDescription: "Unified Compression Theory: gravity, EM, weak & strong nuclear forces are one thing — four expressions of Λ=hf/c² across Russell's 9 octave tiers.",
+    canonical: "https://wnsp.io/unified-compression-theory",
   });
 
   return (
