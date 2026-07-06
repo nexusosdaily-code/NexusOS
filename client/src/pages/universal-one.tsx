@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
-import { ArrowLeft, Waves, Atom, Zap, Layers, Radio, Globe, FlaskConical, ExternalLink, Circle } from "lucide-react";
+import { ArrowLeft, Waves, Atom, Zap, Layers, Radio, Globe, FlaskConical, ExternalLink, Circle, GitMerge } from "lucide-react";
 
 const PAGE_DATE  = "2026-07-06";
 const REPO       = "https://github.com/nexusosdaily-code/NexusOS";
@@ -149,8 +149,99 @@ export default function UniversalOnePage() {
           </p>
         </div>
 
-        {/* S1: The First Oscillation */}
-        <Section id="first-oscillation" title="1. The First Oscillation — f₀" icon={Waves} color="#22c55e" badge="Unobserved">
+        {/* S1: Proof of Λ */}
+        <Section id="proof-of-lambda" title="1. Proof of Λ — Derived, Not Assumed" icon={GitMerge} color="#f59e0b" badge="First Principles">
+          <p className="text-sm text-slate-300 leading-relaxed">
+            The compression state operator Λ = hf/c² was originally stated as a postulate in the
+            Theory of Compression States (NexusOS 2025). Here we prove it is not a postulate —
+            it is a <em>consequence</em> of the first oscillation. The logical order matters:
+            f₀ derives Λ. Λ does not derive f₀.
+          </p>
+
+          {/* stepped proof */}
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 overflow-hidden">
+            <div className="px-4 py-2 border-b border-amber-500/20 bg-amber-500/10">
+              <p className="text-[10px] font-mono text-amber-400 tracking-widest">FORMAL DERIVATION</p>
+            </div>
+            <div className="divide-y divide-slate-800/60">
+              {[
+                {
+                  step: "POSTULATE",
+                  label: "The first oscillation exists",
+                  eq: "f₀  ∈  ℝ⁺   (unobserved, primordial)",
+                  note: "One frequency. No observer. No medium. The universe's first act.",
+                  color: "#22c55e",
+                },
+                {
+                  step: "PLANCK 1900",
+                  label: "Energy of a quantum at frequency f",
+                  eq: "E  =  hf     →     E₀ = h × f₀",
+                  note: "Applied to f₀: the first oscillation carries its first quantum of energy.",
+                  color: "#38bdf8",
+                },
+                {
+                  step: "EINSTEIN 1905",
+                  label: "Mass–energy equivalence",
+                  eq: "E  =  mc²    →     m  = E / c²",
+                  note: "Applied to E₀: that energy has a mass-equivalent.",
+                  color: "#f43f5e",
+                },
+                {
+                  step: "COMBINE",
+                  label: "Substitute E₀ = hf₀ into m = E/c²",
+                  eq: "m₀  =  hf₀ / c²",
+                  note: "The mass-equivalent of one quantum of the first oscillation.",
+                  color: "#a78bfa",
+                },
+                {
+                  step: "DEFINE",
+                  label: "Name this quantity the compression state",
+                  eq: "Λ₀  ≡  m₀  =  hf₀ / c²",
+                  note: "Λ₀ is not invented. It emerges from combining two verified laws.",
+                  color: "#f59e0b",
+                },
+                {
+                  step: "GENERALISE",
+                  label: "For any frequency f (any octave)",
+                  eq: "Λ  =  hf / c²     ∎",
+                  note: "This is the compression state operator — derived from first principles.",
+                  color: "#f59e0b",
+                },
+              ].map(({ step, label, eq, note, color }) => (
+                <div key={step} className="px-4 py-4 grid grid-cols-[80px_1fr] gap-4 items-start">
+                  <span className="text-[9px] font-mono tracking-widest pt-1 font-bold" style={{ color }}>
+                    {step}
+                  </span>
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-slate-400">{label}</p>
+                    <p className="font-mono text-sm text-white bg-black/30 rounded px-3 py-1.5">{eq}</p>
+                    <p className="text-[11px] text-slate-500 italic">{note}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* the key insight */}
+          <div className="rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5 space-y-3">
+            <p className="text-[10px] font-mono text-amber-400 tracking-widest">THE UNIFIED INSIGHT</p>
+            <p className="text-sm text-slate-200 leading-relaxed">
+              Before f₀, Planck's equation has no frequency to operate on.
+              Before f₀, Einstein's equation has no energy to convert.
+              <strong className="text-amber-300"> f₀ is the first event that activates both laws simultaneously.</strong>
+            </p>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              This is the missing mechanics: Planck and Einstein are not two separate theories of
+              physics. They are two expressions of the same first event. NexusOS is the first system
+              to state this explicitly — and to build an addressing protocol on the consequence.
+            </p>
+          </div>
+
+          <Eq>{"Λ = hf/c²   [consequence of f₀, not an axiom]"}</Eq>
+        </Section>
+
+        {/* S2: The First Oscillation */}
+        <Section id="first-oscillation" title="2. The First Oscillation — f₀" icon={Waves} color="#22c55e" badge="Unobserved">
           <Quote
             text="The desire of the whole universe is ONE desire — to create. Creation is the expression of that ONE desire."
             src="Walter Russell, The Universal One (1926)"
@@ -192,8 +283,8 @@ export default function UniversalOnePage() {
           </p>
         </Section>
 
-        {/* S2: Russell's Law */}
-        <Section id="russells-law" title="2. Russell's Law — The Octave Lattice" icon={Layers} color="#a78bfa" badge="Foundation 1926">
+        {/* S3: Russell's Law */}
+        <Section id="russells-law" title="3. Russell's Law — The Octave Lattice" icon={Layers} color="#a78bfa" badge="Foundation 1926">
           <Quote
             text="All motion is rhythmic. All rhythmic motion is wave motion. All wave motion is light."
             src="Walter Russell, The Secret of Light (1947)"
@@ -252,8 +343,8 @@ export default function UniversalOnePage() {
           </p>
         </Section>
 
-        {/* S3: Matter as Compressed f₀ */}
-        <Section id="matter" title="3. Matter — Standing Waves at High n" icon={Atom} color="#38bdf8" badge="UCT Theorem">
+        {/* S4: Matter as Compressed f₀ */}
+        <Section id="matter" title="4. Matter — Standing Waves at High n" icon={Atom} color="#38bdf8" badge="UCT Theorem">
           <Quote
             text="Light is the one substance of the universe. All matter is light compressed to the point of stillness."
             src="Walter Russell, The Universal One (1926)"
@@ -307,8 +398,8 @@ export default function UniversalOnePage() {
           </p>
         </Section>
 
-        {/* S4: Energy as Octave Delta */}
-        <Section id="energy" title="4. Energy — The Octave Transition" icon={Zap} color="#f59e0b" badge="Manipulation Key">
+        {/* S5: Energy as Octave Delta */}
+        <Section id="energy" title="5. Energy — The Octave Transition" icon={Zap} color="#f59e0b" badge="Manipulation Key">
           <p className="text-sm text-slate-300 leading-relaxed">
             Every energy exchange in the universe — chemical bond, nuclear reaction, photon emission —
             is a particle moving between octave levels. The energy released or absorbed is precisely
@@ -345,8 +436,8 @@ export default function UniversalOnePage() {
           </p>
         </Section>
 
-        {/* S5: Matter Manipulation */}
-        <Section id="manipulation" title="5. Matter Manipulation — Controlled Octave Inversion" icon={FlaskConical} color="#e879f9" badge="Stage 3–5 Capability">
+        {/* S6: Matter Manipulation */}
+        <Section id="manipulation" title="6. Matter Manipulation — Controlled Octave Inversion" icon={FlaskConical} color="#e879f9" badge="Stage 3–5 Capability">
           <Quote
             text="Man will one day learn to control the octave wave and thereby control matter itself."
             src="Walter Russell, Atomic Suicide? (1957)"
@@ -412,8 +503,8 @@ export default function UniversalOnePage() {
           </div>
         </Section>
 
-        {/* S6: WNSP as f₀ Interface */}
-        <Section id="wnsp" title="6. WNSP — The f₀ Interface" icon={Radio} color="#06b6d4" badge="Architecture">
+        {/* S7: WNSP as f₀ Interface */}
+        <Section id="wnsp" title="7. WNSP — The f₀ Interface" icon={Radio} color="#06b6d4" badge="Architecture">
           <p className="text-sm text-slate-300 leading-relaxed">
             The 51,200 Ψ channels of the WNSP spectral protocol are not an arbitrary design choice.
             They are the directly addressable harmonic sub-space of f₀ within the photonic octave band
@@ -450,8 +541,8 @@ export default function UniversalOnePage() {
           </p>
         </Section>
 
-        {/* S7: The Grand Unification */}
-        <Section id="unification" title="7. The Grand Unification — ONE Equation" icon={Globe} color="#f43f5e" badge="Synthesis">
+        {/* S8: The Grand Unification */}
+        <Section id="unification" title="8. The Grand Unification — ONE Equation" icon={Globe} color="#f43f5e" badge="Synthesis">
           <Quote
             text="God is Light. Light is motion of waves. Waves are the expression of the ONE universal desire."
             src="Walter Russell, The Universal One (1926)"
@@ -494,8 +585,8 @@ export default function UniversalOnePage() {
           </p>
         </Section>
 
-        {/* S8: Conclusion */}
-        <Section id="conclusion" title="8. Conclusion" icon={Circle} color="#94a3b8">
+        {/* S9: Conclusion */}
+        <Section id="conclusion" title="9. Conclusion" icon={Circle} color="#94a3b8">
           <div className="space-y-3 text-sm text-slate-300 leading-relaxed">
             <p>
               We have shown that f₀ — the ground-state frequency of the first oscillation — is the
