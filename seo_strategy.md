@@ -31,5 +31,8 @@ Private routes remain out of scope for content-quality review, but they are stil
 - Public marketing and science pages should not use `/`, `/hub`, or private `/spectral-db?...` tabs as their primary internal-link destinations because those surfaces are intentionally private/noindex.
 - If `/protocol` or `/wnsp-paper` remain noindex, public landing pages should not use them as prominent reference links. If we want them linked as SEO targets, they need to become indexable first.
 
+- New public React routes must be wired into the server allowlist, `ROUTE_META`, and `sitemap.xml` together. If any one of those is skipped, the page can become invisible or inconsistent to crawlers.
+- Public alias routes should resolve to one canonical URL. Only the primary URL should appear in the sitemap; aliases should redirect or canonicalize to that primary path.
+
 ## Dismissed categories
 - None yet
