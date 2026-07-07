@@ -670,7 +670,7 @@ export default function SpectralIDEPage() {
       <div className="border-b border-slate-800 px-4 py-2 flex items-center gap-3 bg-slate-900/80">
         <Link href="/wnsp" className="text-slate-500 hover:text-slate-300 transition-colors"><ArrowLeft size={16} /></Link>
         <Code2 size={16} className="text-cyan-400" />
-        <span className="text-slate-300 font-semibold text-sm">Spectral IDE</span>
+        <h1 className="text-slate-300 font-semibold text-sm">Spectral IDE</h1>
         <span className="text-slate-700">|</span>
         <input
           value={contractName}

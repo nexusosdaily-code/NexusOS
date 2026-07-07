@@ -364,7 +364,7 @@ export default function DivergenceTestPage() {
         <div className="flex items-center gap-3">
           <Link href="/nexus-command"><button className="text-white/30 hover:text-white/60 transition-colors"><ArrowLeft size={14} /></button></Link>
           <FlaskConical size={12} className="text-emerald-400" />
-          <span className="text-[11px] font-bold tracking-wider text-emerald-400">DYNAMICAL SYSTEM ANALYSIS</span>
+          <h1 className="text-[11px] font-bold tracking-wider text-emerald-400">Dynamical System Analysis</h1>
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
         </div>
         <div className="flex items-center gap-2">
