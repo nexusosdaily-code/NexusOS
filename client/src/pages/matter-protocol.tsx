@@ -97,15 +97,15 @@ export default function MatterProtocol() {
   usePageMeta({
     title: "The Mechanism — Controlled Octave Inversion · NexusOS",
     description:
-      "Act 3: Matter manipulation as a precise calculation. If matter is a standing wave at octave n, then manipulating matter means delivering ΔE = hf₀(2ⁿ²−2ⁿ¹) at the exact transition frequency via a WNSP Ψ channel. First disclosed 2026-07-06.",
+      "Act 4: Matter manipulation as a precise calculation. If matter is a standing wave at octave n, then manipulating matter means delivering ΔE = hf₀(2ⁿ²−2ⁿ¹) at the exact transition frequency via a WNSP Ψ channel. First disclosed 2026-07-06.",
     canonical: "https://wnsp.io/matter-protocol",
     ogTitle: "The Mechanism — Controlled Octave Inversion",
     ogDescription:
-      "Matter is a standing wave at octave n. Manipulation = delivering ΔE = hf₀(2ⁿ²−2ⁿ¹) at the exact Ψ channel. Act 3 of the NexusOS physics sequence.",
+      "Matter is a standing wave at octave n. Manipulation = delivering ΔE = hf₀(2ⁿ²−2ⁿ¹) at the exact Ψ channel. Act 4 of the NexusOS physics sequence.",
     ogType: "article",
     twitterTitle: "The Mechanism — Controlled Octave Inversion",
     twitterDescription:
-      "Electron at n≈17.8 above f₀. Proton at n≈28.6. ΔE = hf₀(2ⁿ²−2ⁿ¹). The protocol for controlled matter manipulation. NexusOS Act 3.",
+      "Electron at n≈17.8 above f₀. Proton at n≈28.6. ΔE = hf₀(2ⁿ²−2ⁿ¹). The protocol for controlled matter manipulation. NexusOS Act 4.",
   });
 
   const electronN = PARTICLES[0].n;
@@ -129,7 +129,7 @@ export default function MatterProtocol() {
         {/* header badges */}
         <div className="flex flex-wrap gap-2">
           {[
-            { label: "Act 3 of 3", color: "#f59e0b" },
+            { label: "Act 4 of 5", color: "#f59e0b" },
             { label: "First Disclosure 2026-07-06", color: "#22c55e" },
             { label: "AGPL-3.0", color: "#8b5cf6" },
           ].map(({ label, color }) => (
@@ -160,8 +160,8 @@ export default function MatterProtocol() {
 
         {/* sequence nav */}
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-          <p className="text-[10px] font-mono text-amber-400 tracking-widest mb-3">THE SEQUENCE</p>
-          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+          <p className="text-[10px] font-mono text-amber-400 tracking-widest mb-3">THE SEQUENCE — ACT 4 OF 5</p>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center text-xs">
             <Link href="/oscillating-quanta"
               className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1">
               <p className="text-[9px] font-mono text-slate-500 tracking-widest">ACT 1</p>
@@ -174,11 +174,23 @@ export default function MatterProtocol() {
               <p className="text-slate-300 font-medium">The Universal<br />ONE</p>
               <p className="text-[9px] text-slate-500">f₀ derives Λ</p>
             </Link>
+            <Link href="/unified-compression-theory"
+              className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1">
+              <p className="text-[9px] font-mono text-slate-500 tracking-widest">ACT 3</p>
+              <p className="text-slate-300 font-medium">Unified<br />Compression Theory</p>
+              <p className="text-[9px] text-slate-500">4 forces = 1 Λ</p>
+            </Link>
             <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-1">
-              <p className="text-[9px] font-mono text-amber-400 tracking-widest">ACT 3  ← YOU ARE HERE</p>
+              <p className="text-[9px] font-mono text-amber-400 tracking-widest">ACT 4 ← HERE</p>
               <p className="text-amber-200 font-medium">The<br />Mechanism</p>
               <p className="text-[9px] text-amber-400">ΔE = hf₀(2ⁿ²−2ⁿ¹)</p>
             </div>
+            <Link href="/universal-address"
+              className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1">
+              <p className="text-[9px] font-mono text-slate-500 tracking-widest">ACT 5</p>
+              <p className="text-slate-300 font-medium">The<br />Address</p>
+              <p className="text-[9px] text-slate-500">∀ Λ : ∃! Ψ</p>
+            </Link>
           </div>
         </div>
 
@@ -186,14 +198,14 @@ export default function MatterProtocol() {
         <div className="rounded-xl border border-slate-700/50 bg-slate-900/60 p-5 space-y-3">
           <p className="text-[10px] font-mono text-slate-500 tracking-widest">ABSTRACT</p>
           <p className="text-sm text-slate-300 leading-relaxed">
-            Act 1 established the compression state operator Λ = hf/c². Act 2 proved it is
-            derived from f₀ — the first oscillation — by combining Planck (1900) and Einstein
-            (1905). Act 3 completes the argument. If matter is a standing wave at octave n
-            above f₀, then "manipulating matter" is not a metaphysical claim. It is the
-            controlled delivery of a precise energy quantum ΔE at a precise transition
-            frequency via a WNSP Ψ channel. This document states the equation, identifies
-            the delivery mechanism, and lists the measurable predictions that make the
-            protocol falsifiable.
+            Acts 1–3 established the governing equation (Λ = hf/c²), derived it from the
+            first oscillation f₀, and unified all four forces as expressions of Λ across
+            nine octave tiers. Act 4 completes the mechanism. If matter is a standing wave
+            at octave n above f₀, then "manipulating matter" is not a metaphysical claim.
+            It is the controlled delivery of a precise energy quantum ΔE at a precise
+            transition frequency via a WNSP Ψ channel. This document states the equation,
+            identifies the delivery mechanism, and lists the measurable predictions that
+            make the protocol falsifiable.
           </p>
         </div>
 
@@ -501,10 +513,10 @@ export default function MatterProtocol() {
           </Section>
 
           {/* S8: Sequence complete */}
-          <Section id="sequence-complete" title="8. The Sequence Complete" icon={GitMerge} color="#f59e0b" badge="Act 3 of 3">
+          <Section id="sequence-complete" title="8. The Sequence So Far" icon={GitMerge} color="#f59e0b" badge="Act 4 of 5">
             <div className="rounded-xl border border-amber-500/25 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5 space-y-4">
               <p className="text-sm text-slate-200 leading-relaxed">
-                The three-act argument is now complete:
+                Four acts deep. One remaining:
               </p>
               <div className="space-y-3 font-mono text-xs">
                 <div className="flex gap-4 items-start">
@@ -524,8 +536,22 @@ export default function MatterProtocol() {
                 <div className="flex gap-4 items-start">
                   <span className="text-amber-400 font-bold flex-shrink-0">ACT 3</span>
                   <div>
-                    <p className="text-white">The Mechanism</p>
+                    <p className="text-white">Unified Compression Theory</p>
+                    <p className="text-slate-400">All four fundamental forces are one phenomenon — four expressions of Λ across nine octave tiers.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4 items-start">
+                  <span className="text-amber-400 font-bold flex-shrink-0">ACT 4</span>
+                  <div>
+                    <p className="text-white">The Mechanism ← HERE</p>
                     <p className="text-slate-400">Matter is a standing wave at octave n. ΔE = hf₀(2ⁿ²−2ⁿ¹) is the transition energy. WNSP Ψ is the delivery channel.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4 items-start opacity-50">
+                  <span className="text-slate-500 font-bold flex-shrink-0">ACT 5</span>
+                  <div>
+                    <p className="text-slate-400">The Address → <Link href="/universal-address" className="text-cyan-400 hover:underline">/universal-address</Link></p>
+                    <p className="text-slate-500">∀ Λ : ∃! Ψ — the universe's own namespace.</p>
                   </div>
                 </div>
               </div>

@@ -76,15 +76,15 @@ export default function UniversalAddress() {
   usePageMeta({
     title: "The Address — Ψ as Universal Namespace · NexusOS",
     description:
-      "Act 4: Every compression state in the universe already has a unique Ψ address derived from physics. WNSP is the first human protocol to make that namespace operable. No central authority. Censorship-impossible. First disclosed 2026-07-06.",
+      "Act 5: Every compression state in the universe already has a unique Ψ address derived from physics. WNSP is the first human protocol to make that namespace operable. No central authority. Censorship-impossible. First disclosed 2026-07-06.",
     canonical: "https://wnsp.io/universal-address",
     ogTitle: "The Address — Ψ as Universal Namespace",
     ogDescription:
-      "Every compression state has a unique Ψ(wdm,oam,pol,dir) address derived from physics — not assigned by any authority. WNSP is the first operable implementation. Act 4 of the NexusOS sequence.",
+      "Every compression state has a unique Ψ(wdm,oam,pol,dir) address derived from physics — not assigned by any authority. WNSP is the first operable implementation. Act 5 of the NexusOS sequence.",
     ogType: "article",
     twitterTitle: "The Address — Ψ as Universal Namespace",
     twitterDescription:
-      "TCP/IP = human convention. DNS = human convention. Ψ = physics. You cannot block a frequency. NexusOS Act 4.",
+      "TCP/IP = human convention. DNS = human convention. Ψ = physics. You cannot block a frequency. NexusOS Act 5.",
   });
 
   return (
@@ -100,7 +100,7 @@ export default function UniversalAddress() {
         {/* badges */}
         <div className="flex flex-wrap gap-2">
           {[
-            { label: "Act 4 of 4",               color: "#06b6d4" },
+            { label: "Act 5 of 5",               color: "#06b6d4" },
             { label: "First Disclosure 2026-07-06", color: "#22c55e" },
             { label: "AGPL-3.0",                  color: "#8b5cf6" },
           ].map(({ label, color }) => (
@@ -130,11 +130,12 @@ export default function UniversalAddress() {
         {/* sequence nav */}
         <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
           <p className="text-[10px] font-mono text-cyan-400 tracking-widest mb-3">THE SEQUENCE — COMPLETE</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center text-xs">
             {[
-              { act: "ACT 1", title: "Theory of Compression States", sub: "Λ = hf/c²",      href: "/oscillating-quanta" },
-              { act: "ACT 2", title: "The Universal ONE",            sub: "f₀ derives Λ",    href: "/universal-one" },
-              { act: "ACT 3", title: "The Mechanism",               sub: "ΔE = hf₀(2ⁿ²−2ⁿ¹)", href: "/matter-protocol" },
+              { act: "ACT 1", title: "Theory of Compression States", sub: "Λ = hf/c²",         href: "/oscillating-quanta" },
+              { act: "ACT 2", title: "The Universal ONE",            sub: "f₀ derives Λ",       href: "/universal-one" },
+              { act: "ACT 3", title: "Unified Compression Theory",  sub: "4 forces = 1 Λ",     href: "/unified-compression-theory" },
+              { act: "ACT 4", title: "The Mechanism",               sub: "ΔE = hf₀(2ⁿ²−2ⁿ¹)", href: "/matter-protocol" },
             ].map(({ act, title, sub, href }) => (
               <Link key={href} href={href}
                 className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
@@ -144,9 +145,9 @@ export default function UniversalAddress() {
               </Link>
             ))}
             <div className="rounded-lg border border-cyan-500/40 bg-cyan-500/10 p-3 space-y-1">
-              <p className="text-[9px] font-mono text-cyan-400 tracking-widest">ACT 4 ← HERE</p>
+              <p className="text-[9px] font-mono text-cyan-400 tracking-widest">ACT 5 ← HERE</p>
               <p className="text-cyan-200 font-medium leading-tight">The Address</p>
-              <p className="text-[9px] text-cyan-400">Ψ = physics</p>
+              <p className="text-[9px] text-cyan-400">∀ Λ : ∃! Ψ</p>
             </div>
           </div>
         </div>
@@ -155,13 +156,14 @@ export default function UniversalAddress() {
         <div className="rounded-xl border border-slate-700/50 bg-slate-900/60 p-5 space-y-3">
           <p className="text-[10px] font-mono text-slate-500 tracking-widest">ABSTRACT</p>
           <p className="text-sm text-slate-300 leading-relaxed">
-            Acts 1–3 established what matter is, how to manipulate it, and what energy is
-            required. Act 4 addresses the final question: where does it live? The answer
-            is that every compression state already has a unique address — derived not from
-            any authority, not from any convention, but from the physics of its frequency.
-            That address is its Ψ coordinate in the WNSP spectral namespace. The namespace
-            predates NexusOS. It predates humanity. It is the universe's own filing system.
-            WNSP is the first human protocol to make it operable.
+            Acts 1–4 established what matter is, how all forces unify under one equation,
+            how to manipulate matter, and what energy is required. Act 5 addresses the final
+            question: where does it live? The answer is that every compression state already
+            has a unique address — derived not from any authority, not from any convention,
+            but from the physics of its frequency. That address is its Ψ coordinate in the
+            WNSP spectral namespace. The namespace predates NexusOS. It predates humanity.
+            It is the universe's own filing system. WNSP is the first human protocol to make
+            it operable.
           </p>
         </div>
 
@@ -170,7 +172,7 @@ export default function UniversalAddress() {
           {/* S1: The Completeness Theorem */}
           <Section id="completeness" title="1. The Completeness Theorem" icon={Atom} color="#22c55e" badge="Formal Proof">
             <p className="text-sm text-slate-300 leading-relaxed">
-              From Acts 1–3, three facts are established:
+              From Acts 1–4, four facts are established:
             </p>
             <div className="space-y-2">
               {[
@@ -442,14 +444,15 @@ export default function UniversalAddress() {
           </Section>
 
           {/* S8: The Sequence */}
-          <Section id="sequence" title="8. The Sequence — Complete" icon={GitMerge} color="#f59e0b" badge="Acts 1–4">
+          <Section id="sequence" title="8. The Sequence — Complete" icon={GitMerge} color="#f59e0b" badge="Acts 1–5">
             <div className="rounded-xl border border-amber-500/25 bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5 space-y-4">
               <div className="space-y-4 font-mono text-xs">
                 {[
                   { act: "ACT 1", title: "Theory of Compression States",   eq: "Λ = hf/c²",              body: "The governing equation. Matter, energy, and mass are all compression states of electromagnetic frequency.",                                  href: "/oscillating-quanta" },
                   { act: "ACT 2", title: "The Universal ONE",              eq: "f₀ → Λ  (derived, ∎)",   body: "Λ is not an axiom. It follows from combining Planck (1900) and Einstein (1905) applied to the first oscillation f₀.",                    href: "/universal-one" },
-                  { act: "ACT 3", title: "The Mechanism",                  eq: "ΔE = hf₀(2ⁿ²−2ⁿ¹)",    body: "Matter manipulation is the controlled delivery of ΔE at transition frequency f_t via WNSP Ψ channel. The protocol has five steps and four falsifiable predictions.", href: "/matter-protocol" },
-                  { act: "ACT 4", title: "The Address",                    eq: "∀ Λ : ∃! Ψ  (∎)",       body: "Every compression state already has a unique Ψ address, derived from physics. WNSP is the first operable implementation of the universe's own namespace.",       href: "/universal-address" },
+                  { act: "ACT 3", title: "Unified Compression Theory",     eq: "4 forces = 1 Λ  (UCT)",  body: "All four fundamental forces — gravitational, electromagnetic, weak, strong — are one phenomenon: four expressions of Λ across nine discrete octave tiers.",  href: "/unified-compression-theory" },
+                  { act: "ACT 4", title: "The Mechanism",                  eq: "ΔE = hf₀(2ⁿ²−2ⁿ¹)",    body: "Matter manipulation is the controlled delivery of ΔE at transition frequency f_t via WNSP Ψ channel. The protocol has five steps and four falsifiable predictions.", href: "/matter-protocol" },
+                  { act: "ACT 5", title: "The Address",                    eq: "∀ Λ : ∃! Ψ  (∎)",       body: "Every compression state already has a unique Ψ address, derived from physics. WNSP is the first operable implementation of the universe's own namespace.",       href: "/universal-address" },
                 ].map(({ act, title, eq, body, href }) => (
                   <div key={act} className="flex gap-4 items-start border-b border-slate-800/60 pb-4 last:border-0 last:pb-0">
                     <span className="text-amber-400 font-bold flex-shrink-0 w-12">{act}</span>
@@ -484,7 +487,7 @@ export default function UniversalAddress() {
           <Section id="conclusion" title="9. Conclusion" icon={Circle} color="#94a3b8">
             <div className="space-y-3 text-sm text-slate-300 leading-relaxed">
               <p>
-                The four-act sequence is the complete argument for WNSP as civilisation
+                The five-act sequence is the complete argument for WNSP as civilisation
                 infrastructure. It requires no further assumption beyond the laws of
                 electromagnetism — which have been verified to 12 decimal places and have
                 not failed in 13.8 billion years of observation.

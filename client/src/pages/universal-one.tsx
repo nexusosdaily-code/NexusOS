@@ -107,6 +107,9 @@ export default function UniversalOnePage() {
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-emerald-500/40 text-emerald-400 bg-emerald-500/10">
+              Act 2 of 5
+            </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-emerald-500/40 text-emerald-400 bg-emerald-500/10">
               f₀ = 555 THz
             </span>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-cyan-500/40 text-cyan-400 bg-cyan-500/10">
@@ -115,6 +118,36 @@ export default function UniversalOnePage() {
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-violet-500/40 text-violet-400 bg-violet-500/10">
               AGPL-3.0
             </span>
+          </div>
+
+          {/* sequence nav */}
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+            <p className="text-[10px] font-mono text-emerald-400 tracking-widest mb-3">THE SEQUENCE — ACT 2 OF 5</p>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center text-xs">
+              <Link href="/oscillating-quanta"
+                className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
+                <p className="text-[9px] font-mono text-slate-500 tracking-widest">ACT 1</p>
+                <p className="text-slate-300 font-medium leading-tight">Theory of<br />Compression States</p>
+                <p className="text-[9px] text-slate-500">Λ = hf/c²</p>
+              </Link>
+              <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 space-y-1">
+                <p className="text-[9px] font-mono text-emerald-400 tracking-widest">ACT 2 ← HERE</p>
+                <p className="text-emerald-200 font-medium leading-tight">The Universal<br />ONE</p>
+                <p className="text-[9px] text-emerald-400">f₀ derives Λ</p>
+              </div>
+              {[
+                { act: "ACT 3", title: "Unified Compression Theory",  sub: "4 forces = 1 Λ",      href: "/unified-compression-theory" },
+                { act: "ACT 4", title: "The Mechanism",               sub: "ΔE = hf₀(2ⁿ²−2ⁿ¹)", href: "/matter-protocol" },
+                { act: "ACT 5", title: "The Address",                 sub: "∀ Λ : ∃! Ψ",         href: "/universal-address" },
+              ].map(({ act, title, sub, href }) => (
+                <Link key={href} href={href}
+                  className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
+                  <p className="text-[9px] font-mono text-slate-500 tracking-widest">{act}</p>
+                  <p className="text-slate-300 font-medium leading-tight">{title}</p>
+                  <p className="text-[9px] text-slate-500">{sub}</p>
+                </Link>
+              ))}
+            </div>
           </div>
 
           <h1 className="text-2xl font-bold text-white tracking-tight">

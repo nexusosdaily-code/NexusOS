@@ -100,6 +100,9 @@ export default function UnifiedCompressionTheoryPage() {
         {/* header */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-pink-500/40 text-pink-400 bg-pink-500/10">
+              Act 3 of 5
+            </span>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-violet-500/40 text-violet-400 bg-violet-500/10">
               UCT v1.0
             </span>
@@ -109,6 +112,40 @@ export default function UnifiedCompressionTheoryPage() {
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-emerald-500/40 text-emerald-400 bg-emerald-500/10">
               AGPL-3.0
             </span>
+          </div>
+
+          {/* sequence nav */}
+          <div className="rounded-xl border border-pink-500/20 bg-pink-500/5 p-4">
+            <p className="text-[10px] font-mono text-pink-400 tracking-widest mb-3">THE SEQUENCE — ACT 3 OF 5</p>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center text-xs">
+              {[
+                { act: "ACT 1", title: "Theory of Compression States", sub: "Λ = hf/c²",    href: "/oscillating-quanta" },
+                { act: "ACT 2", title: "The Universal ONE",            sub: "f₀ derives Λ", href: "/universal-one" },
+              ].map(({ act, title, sub, href }) => (
+                <Link key={href} href={href}
+                  className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
+                  <p className="text-[9px] font-mono text-slate-500 tracking-widest">{act}</p>
+                  <p className="text-slate-300 font-medium leading-tight">{title}</p>
+                  <p className="text-[9px] text-slate-500">{sub}</p>
+                </Link>
+              ))}
+              <div className="rounded-lg border border-pink-500/40 bg-pink-500/10 p-3 space-y-1">
+                <p className="text-[9px] font-mono text-pink-400 tracking-widest">ACT 3 ← HERE</p>
+                <p className="text-pink-200 font-medium leading-tight">Unified<br />Compression Theory</p>
+                <p className="text-[9px] text-pink-400">4 forces = 1 Λ</p>
+              </div>
+              {[
+                { act: "ACT 4", title: "The Mechanism", sub: "ΔE = hf₀(2ⁿ²−2ⁿ¹)", href: "/matter-protocol" },
+                { act: "ACT 5", title: "The Address",   sub: "∀ Λ : ∃! Ψ",         href: "/universal-address" },
+              ].map(({ act, title, sub, href }) => (
+                <Link key={href} href={href}
+                  className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
+                  <p className="text-[9px] font-mono text-slate-500 tracking-widest">{act}</p>
+                  <p className="text-slate-300 font-medium leading-tight">{title}</p>
+                  <p className="text-[9px] text-slate-500">{sub}</p>
+                </Link>
+              ))}
+            </div>
           </div>
 
           <h1 className="text-2xl font-bold text-white leading-tight">
