@@ -18,3 +18,4 @@
 - [Contract execution runtime](contract-exec-runtime.md) — server/wnsp_vm.ts is canonical VM; side-effects fire after halt; routes at /api/app/:slug/run (public) and /api/contracts/:id/executions (auth)
 - [Sub-mm wave geometry & engine expansion](submm-wave-geometry.md) — 2025 THz research validates Ψ channels, WGM=Russell octaves, Berry phase→Λ extension, Fl-114=SYSTEM band; saved by founder for future builders
 - [Replit AI R&D account](replit-ai-account.md) — wnsp://Ψ(52,20,H)/test; role=ai_agent; designated by founder 2026-06-21; never reassign without founder approval
+- [WNSP Physics Sequence](wnsp-physics-sequence.md) — 8-act sequence routes/equations; ghost node physics; Act 8 lossless channel; 6-surface wiring pattern; ogType server vs client rule

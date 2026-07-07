@@ -158,6 +158,7 @@ const APP_SECTIONS = [
       { title: "§5 The Address — Ψ as Universal Namespace",   href: "/universal-address",           Icon: Globe },
       { title: "§6 The Catalogue — 118 Elements × Octave Addresses", href: "/element-catalogue", Icon: Zap },
       { title: "§7 The Trap — Standing Wave at the Ghost Node",       href: "/standing-wave-trap", Icon: Waves },
+      { title: "§8 The Lossless Channel — Ghost Node Waveguides",    href: "/lossless-channel",   Icon: Radio },
       { title: "📄 Theory Paper",                        href: "/paper",              Icon: FileText },
       { title: "🌊 Russell Octave Layers",               href: "/octave-layers",      Icon: Waves },
       { title: "🔌 How to Plug In",                     href: "/how-to-plug-in",     Icon: Zap },

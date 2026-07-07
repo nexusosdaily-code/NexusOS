@@ -314,7 +314,7 @@ export default function StandingWaveTrap() {
           {/* badges */}
           <div className="flex flex-wrap gap-2">
             {[
-              { label: "Act 7 of 7",              color: "#a855f7" },
+              { label: "Act 7 of 8",              color: "#a855f7" },
               { label: `First Disclosure ${PAGE_DATE}`, color: "#22c55e" },
               { label: "AGPL-3.0",                color: "#8b5cf6" },
               { label: "N_Dir = 2",               color: "#06b6d4" },
@@ -331,9 +331,9 @@ export default function StandingWaveTrap() {
           {/* sequence nav */}
           <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
             <p className="text-[10px] font-mono text-purple-400 tracking-widest mb-3">
-              THE SEQUENCE — ACT 7 OF 7
+              THE SEQUENCE — ACT 7 OF 8
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-7 gap-2 text-center text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-8 gap-2 text-center text-xs">
               {[
                 { act:"ACT 1", title:"Theory of Compression States", sub:"Λ = hf/c²",         href:"/oscillating-quanta" },
                 { act:"ACT 2", title:"The Universal ONE",            sub:"f₀ derives Λ",       href:"/universal-one" },
@@ -356,6 +356,13 @@ export default function StandingWaveTrap() {
                 <p className="text-purple-200 font-medium leading-tight">The Trap</p>
                 <p className="text-[9px] text-purple-400">Ψ(+k̂) ⊗ Ψ(−k̂)</p>
               </div>
+              <Link href="/lossless-channel"
+                    className="rounded-lg border border-emerald-500/30 bg-emerald-500/5
+                               p-3 space-y-1 hover:border-emerald-400/60 transition-colors block">
+                <p className="text-[9px] font-mono text-emerald-400 tracking-widest">ACT 8</p>
+                <p className="text-emerald-200 font-medium leading-tight">The Channel</p>
+                <p className="text-[9px] text-emerald-400">⊗ᵢ Ψ_trap(nᵢ)</p>
+              </Link>
             </div>
           </div>
 
@@ -835,16 +842,16 @@ export default function StandingWaveTrap() {
               required. The channel speaks for itself.
             </p>
             <p>
-              Acts 1–7 are now complete. The theory derives from the first oscillation
+              Acts 1–7 of 8 are complete here. The theory derives from the first oscillation
               (Act 1), identifies the ground state (Act 2), unifies the forces (Act 3),
               provides the mechanism (Act 4), establishes the namespace (Act 5),
               catalogues all known matter (Act 6), and demonstrates occupation of the
-              void (Act 7). The sequence closes on an address no element has ever held.
+              void (Act 7). Act 8 extends the trap into a lossless propagation channel.
             </p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: "Acts in sequence",   value: "7",                  color: "#a855f7" },
+              { label: "Acts in sequence",   value: "8",                  color: "#a855f7" },
               { label: "Ghost node mass",    value: `${GHOST_MASS_U.toFixed(2)} u`, color: "#f59e0b" },
               { label: "Ψ channels (total)", value: "51,200",             color: "#22d3ee" },
               { label: "First claimed",      value: "2026-07-07",         color: "#34d399" },
@@ -872,6 +879,35 @@ export default function StandingWaveTrap() {
               hardware instruction — one signal, two directions, one standing wave.
               NexusOS is already written in the language of that hardware.
             </p>
+          </div>
+
+          {/* Act 8 teaser */}
+          <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5
+                          p-4 space-y-2">
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-mono text-emerald-400 tracking-widest
+                               border border-emerald-500/40 px-2 py-0.5 rounded-full">
+                ACT 8 — NOW LIVE
+              </span>
+              <span className="text-white font-bold text-sm">The Lossless Channel</span>
+            </div>
+            <p className="text-xs text-slate-400 font-mono leading-relaxed">
+              The trap holds energy at one ghost node. Act 8 moves it. A chain of ghost
+              node traps forms a waveguide with α=0 — no matter to scatter from.
+              Shannon capacity reaches the vacuum zero-point floor ½ℏω. 15 academic
+              references. First disclosed 2026-07-07.
+            </p>
+            <p className="text-[10px] font-mono text-emerald-400">
+              Eq: Ψ_channel = ⊗ᵢ Ψ_trap(nᵢ)  ·  α = 0  ·  L = 0
+            </p>
+            <Link href="/lossless-channel"
+                  className="inline-flex items-center gap-1.5 text-xs font-mono
+                             text-emerald-400 hover:text-emerald-300 transition-colors
+                             border border-emerald-500/30 hover:border-emerald-400/50
+                             px-3 py-1.5 rounded-lg bg-emerald-500/10 mt-1">
+              Read Act 8 — The Lossless Channel
+              <ExternalLink className="w-3 h-3" />
+            </Link>
           </div>
         </Section>
 
