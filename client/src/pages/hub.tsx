@@ -156,6 +156,7 @@ const APP_SECTIONS = [
       { title: "§3 Unified Compression Theory",               href: "/unified-compression-theory",  Icon: Zap },
       { title: "§4 The Mechanism — Controlled Octave Inversion", href: "/matter-protocol",          Icon: Zap },
       { title: "§5 The Address — Ψ as Universal Namespace",   href: "/universal-address",           Icon: Globe },
+      { title: "§6 The Catalogue — 118 Elements × Octave Addresses", href: "/element-catalogue", Icon: Zap },
       { title: "📄 Theory Paper",                        href: "/paper",              Icon: FileText },
       { title: "🌊 Russell Octave Layers",               href: "/octave-layers",      Icon: Waves },
       { title: "🔌 How to Plug In",                     href: "/how-to-plug-in",     Icon: Zap },

@@ -91,7 +91,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   // Science & theory
   "/oscillating-quanta", "/planck-alignment", "/reposed-theory", "/silicon-bridge",
   "/compression-explorer",
-  "/unified-compression-theory", "/universal-one", "/matter-protocol", "/universal-address",
+  "/unified-compression-theory", "/universal-one", "/matter-protocol", "/universal-address", "/element-catalogue",
   // Protocol & language
   "/wavelength-lang", "/ce-se-pipeline", "/ce-code-writer",
   "/divergence-test",

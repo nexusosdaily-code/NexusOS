@@ -176,6 +176,7 @@ const UnifiedCompressionTheoryPage = lazy(() => import("@/pages/unified-compress
 const UniversalOnePage              = lazy(() => import("@/pages/universal-one"));
 const MatterProtocolPage            = lazy(() => import("@/pages/matter-protocol"));
 const UniversalAddressPage          = lazy(() => import("@/pages/universal-address"));
+const ElementCataloguePage          = lazy(() => import("@/pages/element-catalogue"));
 
 // Loading spinner shown while a lazy page chunk is downloading
 function PageLoader() {
@@ -275,7 +276,7 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/spectral-router", "/spectral-search", "/spectral-contracts",
   "/divergence-test", "/hardware-spec", "/hardware-lab",
   "/campaign", "/constitution", "/mobile-sdk", "/shareholders",
-  "/psi-board", "/unified-compression-theory", "/universal-one", "/matter-protocol", "/universal-address",
+  "/psi-board", "/unified-compression-theory", "/universal-one", "/matter-protocol", "/universal-address", "/element-catalogue",
 ]);
 
 // Only paths where ANY child segment is a valid protected route (dynamic).
@@ -520,6 +521,7 @@ function Router() {
       <Route path="/universal-one"              component={UniversalOnePage} />
       <Route path="/matter-protocol"            component={MatterProtocolPage} />
       <Route path="/universal-address"          component={UniversalAddressPage} />
+      <Route path="/element-catalogue"          component={ElementCataloguePage} />
       {/* ── Science & Protocol pages — publicly crawlable ── */}
       <Route path="/resonance-cavity" component={ResonanceCavityPage} />
       <Route path="/planck-alignment" component={PlanckAlignmentPage} />
