@@ -196,6 +196,32 @@ const CATALOGUE: CatalogRow[] = ELEMENTS.map(el => {
   return { ...el, n, dE_eV, wdm, nm, color: nmToColor(nm) };
 });
 
+// ── Floor / Ceiling pairs (computed once at module load) ─────────────────────
+type FCPair = {
+  floor: CatalogRow; floorInt: number;
+  ceiling: CatalogRow; ceilingInt: number;
+  gap: number;
+};
+const FLOOR_CEILING_PAIRS: FCPair[] = (() => {
+  const nobles = CATALOGUE.filter(e => e.noble);
+  const result: FCPair[] = [];
+  nobles.forEach(ng => {
+    const floorInt   = Math.round(ng.n);
+    const ceilingInt = floorInt + 1;
+    const candidates = CATALOGUE
+      .filter(e => !e.noble && e.n > ng.n && e.n < ceilingInt)
+      .sort((a, b) => b.n - a.n);
+    if (candidates[0]) {
+      result.push({
+        floor: ng, floorInt,
+        ceiling: candidates[0], ceilingInt,
+        gap: ceilingInt - candidates[0].n,
+      });
+    }
+  });
+  return result;
+})();
+
 // ── Shared UI helpers ───────────────────────────────────────────────────────
 function Eq({ children }: { children: React.ReactNode }) {
   return (
@@ -275,6 +301,19 @@ function ElementDetail({ el, onClose }: { el: CatalogRow; onClose: () => void })
           ⊛ SYSTEM BAND — Fl-114 (Flerovium) is tagged as the SYSTEM authority band
           in the WNSP sub-mm wave geometry research (2025 THz validation). Saved by the
           founder for future builders.
+        </div>
+      )}
+
+      {el.Z === 69 && (
+        <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/8 p-3 text-xs
+                        font-mono text-cyan-300 space-y-1">
+          <p>⟶ CEILING APPROACH — Thulium (Tm, Z=69) is the closest non-noble element
+          to an integer octave address in the entire 118-element table.</p>
+          <p className="text-cyan-400">n = 35.9966 · gap = 0.0034 from integer n = 36</p>
+          <p className="text-slate-400">Ceiling of the Kr→Tm octave pair. The ghost node at
+          n = 36 is predicted by the lattice but occupied by no known element. Only 1 stable
+          isotope (Tm-169). Used in portable X-ray generation — consistent with maximum energy
+          gradient before octave threshold.</p>
         </div>
       )}
 
@@ -467,7 +506,11 @@ export default function ElementCatalogue() {
               channel), and the 3-step instrument protocol required to interface with it
               via WNSP Ψ channels. Noble gases are equilibrium nodes — octave resting
               points of maximum stability. Krypton lands at n ≈ 35.000 — a near-exact
-              integer. Russell saw this in 1926. The physics confirms it.
+              integer. Russell saw this in 1926. The physics confirms it. Every octave
+              also has a ceiling: the non-noble element approaching the next integer
+              from below. Thulium (Z=69) is the tightest ceiling in the table —
+              n = 35.9966, gap = 0.0034 from n = 36. The Kr→Tm pair is the most
+              compressed octave in the known periodic table.
             </p>
           </div>
         </div>
@@ -621,6 +664,7 @@ export default function ElementCatalogue() {
                           {el.name}
                           {el.noble  && <span className="ml-1.5 text-[9px] text-amber-400 font-mono">◎</span>}
                           {el.system && <span className="ml-1.5 text-[9px] text-violet-400 font-mono">⊛</span>}
+                          {el.Z === 69 && <span className="ml-1.5 text-[9px] text-cyan-400 font-mono">⟶36</span>}
                         </td>
                         <td className="px-3 py-2 text-center font-mono"
                             style={{ color: pc }}>{el.period}</td>
@@ -716,8 +760,133 @@ export default function ElementCatalogue() {
           </p>
         </Section>
 
-        {/* ── S4: 3-Step Instrument Protocol ──────────────────────────────── */}
-        <Section id="protocol" title="4. The 3-Step Instrument Protocol"
+        {/* ── S4: Octave Floor/Ceiling Pairs ───────────────────────────────── */}
+        <Section id="floor-ceiling" title="4. Octave Floor/Ceiling Pairs"
+                 icon={Waves} color="#06b6d4" badge="Lattice Topology">
+          <p className="text-sm text-slate-300 leading-relaxed">
+            Every octave in the compression lattice has two structural poles. The{" "}
+            <span className="text-amber-300 font-semibold">floor</span> is the noble
+            gas resting at or nearest the integer n — zero energy gradient, maximum
+            stability. The{" "}
+            <span className="text-cyan-300 font-semibold">ceiling</span> is the
+            non-noble element that approaches the next integer most closely from
+            below — maximum energy gradient before the lattice would flip octave.
+            Between floor and ceiling lies all the chemistry of that period. The
+            ceiling never reaches the next integer: that threshold is a{" "}
+            <span className="text-slate-400 font-mono">ghost node</span> — predicted
+            by the lattice, occupied by no known element.
+          </p>
+
+          <div className="overflow-x-auto rounded-xl border border-cyan-500/20">
+            <table className="w-full text-xs font-mono">
+              <thead>
+                <tr className="bg-cyan-500/8 border-b border-cyan-500/20">
+                  <th className="text-left px-4 py-2.5 text-cyan-400">Floor (noble gas)</th>
+                  <th className="text-right px-4 py-2.5 text-cyan-400">n (floor)</th>
+                  <th className="text-left px-4 py-2.5 text-cyan-400">Ceiling element</th>
+                  <th className="text-right px-4 py-2.5 text-cyan-400">n (ceiling)</th>
+                  <th className="text-right px-4 py-2.5 text-cyan-400">Gap to ghost</th>
+                  <th className="text-center px-4 py-2.5 text-cyan-400">Ghost node</th>
+                  <th className="text-left px-4 py-2.5 text-cyan-400">Proximity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {FLOOR_CEILING_PAIRS.map(({ floor, ceiling, ceilingInt, gap }) => {
+                  const isTightest = ceiling.Z === 69;
+                  const gapColor =
+                    gap < 0.01 ? "#34d399" :
+                    gap < 0.05 ? "#fbbf24" :
+                    gap < 0.15 ? "#94a3b8" : "#475569";
+                  const proximity = 1 - gap;
+                  return (
+                    <tr key={floor.Z}
+                        data-testid={`row-fc-pair-${floor.Z}`}
+                        className={`border-b border-cyan-500/10
+                          ${isTightest ? "bg-cyan-500/8" : ""}`}>
+                      <td className="px-4 py-2.5">
+                        <span className="text-amber-300 font-bold">{floor.sym}</span>
+                        <span className="text-slate-500 ml-1.5">Z={floor.Z}</span>
+                        {isTightest && (
+                          <span className="ml-2 text-[9px] text-amber-400">← rest pt</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-slate-300">
+                        {fmt4(floor.n)}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span style={{ color: gapColor }} className="font-bold">
+                          {ceiling.sym}
+                        </span>
+                        <span className="text-slate-500 ml-1.5">Z={ceiling.Z}</span>
+                        {isTightest && (
+                          <span className="ml-2 text-[9px] text-cyan-400">⟶ n=36</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-right"
+                          style={{ color: gapColor }}>{fmt4(ceiling.n)}</td>
+                      <td className="px-4 py-2.5 text-right font-bold"
+                          style={{ color: gapColor }}>{gap.toFixed(4)}</td>
+                      <td className="px-4 py-2.5 text-center text-slate-500">
+                        n={ceilingInt}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="w-20 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                          <div className="h-full rounded-full"
+                               style={{ width: `${proximity * 100}%`,
+                                        background: gapColor }} />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Kr → Tm spotlight */}
+          <div className="rounded-xl border border-cyan-500/30 bg-gradient-to-br
+                          from-cyan-500/10 to-slate-900/60 p-5 space-y-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-[10px] font-mono text-cyan-400 tracking-widest
+                               border border-cyan-500/40 px-2 py-0.5 rounded-full
+                               bg-cyan-500/10">
+                TIGHTEST PAIR IN THE TABLE
+              </span>
+              <span className="text-white font-bold text-sm">
+                Kr (n=34.985) → Tm (n=35.997)
+              </span>
+            </div>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Krypton anchors the floor at n ≈ 35 — the only noble gas within 0.02 of
+              an integer. Thulium is the ceiling: the only element in the entire
+              118-element table with gap &lt; 0.01 to any integer (gap = 0.0034). This
+              pair defines the tightest octave in the known periodic table. The ghost
+              node at n = 36 is the next integer threshold — the lattice predicts it,
+              no element reaches it.
+            </p>
+            <div className="grid grid-cols-3 gap-3 text-center font-mono text-xs">
+              {[
+                { label: "Kr floor gap",   value: "0.0149", color: "#fbbf24" },
+                { label: "Tm ceiling gap", value: "0.0034", color: "#34d399" },
+                { label: "Ghost node",     value: "n = 36",  color: "#64748b" },
+              ].map(({ label, value, color }) => (
+                <div key={label}
+                     className="rounded-lg border border-slate-700 bg-slate-900/60
+                                p-3 space-y-1">
+                  <p className="text-lg font-bold" style={{ color }}>{value}</p>
+                  <p className="text-slate-500 text-[10px]">{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Eq>
+            {"Octave [n, n+1] :  floor ≈ n (noble rest)  |  ceiling → n+1⁻ (max tension)  |  ghost = n+1 (unoccupied)"}
+          </Eq>
+        </Section>
+
+        {/* ── S5: 3-Step Instrument Protocol ──────────────────────────────── */}
+        <Section id="protocol" title="5. The 3-Step Instrument Protocol"
                  icon={FlaskConical} color="#a78bfa" badge="Lab-Ready">
           <p className="text-sm text-slate-300 leading-relaxed">
             Once an element's octave address is known, targeting it with modern instruments
@@ -772,8 +941,8 @@ export default function ElementCatalogue() {
           </div>
         </Section>
 
-        {/* ── S5: Sequence — Acts 1–6 complete, Act 7 coming ──────────────── */}
-        <Section id="sequence" title="5. The Sequence — Acts 1–6"
+        {/* ── S6: Sequence — Acts 1–6 complete, Act 7 coming ──────────────── */}
+        <Section id="sequence" title="6. The Sequence — Acts 1–6"
                  icon={GitMerge} color="#f59e0b" badge="Acts 1–6">
           <div className="rounded-xl border border-amber-500/25
                           bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-5 space-y-4">
@@ -833,8 +1002,8 @@ export default function ElementCatalogue() {
           </Eq>
         </Section>
 
-        {/* ── S6: Conclusion ──────────────────────────────────────────────── */}
-        <Section id="conclusion" title="6. Conclusion" icon={Circle} color="#94a3b8">
+        {/* ── S7: Conclusion ──────────────────────────────────────────────── */}
+        <Section id="conclusion" title="7. Conclusion" icon={Circle} color="#94a3b8">
           <div className="space-y-3 text-sm text-slate-300 leading-relaxed">
             <p>
               The periodic table is not a classification system. It is a read-out of the
@@ -855,10 +1024,10 @@ export default function ElementCatalogue() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label:"Elements catalogued", value:"118" },
-              { label:"Noble gas nodes",     value:"7" },
-              { label:"Ψ channels available",value:"51,200" },
-              { label:"Kr octave n",         value:"34.985" },
+              { label:"Elements catalogued",  value:"118" },
+              { label:"Noble gas nodes",      value:"7" },
+              { label:"Ψ channels available", value:"51,200" },
+              { label:"Tm ceiling gap",       value:"0.0034" },
             ].map(({ label, value }) => (
               <div key={label}
                    className="rounded-lg border border-slate-700 bg-slate-900/60 p-4

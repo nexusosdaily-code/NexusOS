@@ -1334,7 +1334,8 @@ export default function DocsPage() {
                         );
                       }
 
-                      const formattedParagraph = paragraph
+                      const _esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                      const formattedParagraph = _esc(paragraph)
                         .replace(
                           /\*\*(.*?)\*\*/g,
                           '<strong class="text-white">$1</strong>',

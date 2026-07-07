@@ -2151,7 +2151,8 @@ print(f"1000 NXT = {mass:.2e} kg Lambda mass")
                                   );
                                 }
                                 
-                                const formattedParagraph = paragraph
+                                const _esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                                const formattedParagraph = _esc(paragraph)
                                   .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
                                   .replace(/`(.*?)`/g, '<code class="bg-gray-800 px-1 rounded text-cyan-300">$1</code>');
                                 
