@@ -975,26 +975,33 @@ export default function ElementCatalogue() {
               ))}
             </div>
 
-            {/* Act 7 teaser */}
-            <div className="mt-4 rounded-lg border border-slate-700/50 bg-slate-900/40
-                            p-4 space-y-2">
+            {/* Act 7 link */}
+            <div className="mt-4 rounded-lg border border-purple-500/30
+                            bg-purple-500/5 p-4 space-y-2">
               <div className="flex items-center gap-3">
-                <span className="text-[10px] font-mono text-slate-500 tracking-widest
-                                 border border-slate-700 px-2 py-0.5 rounded-full">
-                  ACT 7 — COMING
+                <span className="text-[10px] font-mono text-purple-400 tracking-widest
+                                 border border-purple-500/40 px-2 py-0.5 rounded-full">
+                  ACT 7 — NOW LIVE
                 </span>
-                <span className="text-slate-300 font-bold text-sm">The Trap</span>
+                <span className="text-white font-bold text-sm">The Trap</span>
               </div>
               <p className="text-xs text-slate-400 font-mono leading-relaxed">
-                Counter-propagating wave pairs (+k̂/−k̂) create a localized geometric
-                standing wave at the exact Ψ address of the target element. ΔE is not
-                delivered as a single brute-force beam — it is split across orthogonal
-                sub-harmonic channels that constructively interfere at one spatial point.
-                No thermal chaos. Coherent, targeted, stable.
+                Ghost node n=36 sits at 169.33 u — a valid WNSP address occupied by
+                no nucleus. Thulium (Z=69, 4f¹³) is 0.0034 octaves short.
+                Counter-propagating wave pairs (+k̂/−k̂) create a standing wave that
+                claims the void. First disclosed 2026-07-07.
               </p>
-              <p className="text-[10px] font-mono text-slate-600">
+              <p className="text-[10px] font-mono text-purple-400">
                 Eq: Ψ_trap = Ψ(+k̂) ⊗ Ψ(−k̂)  →  |E|² → max at (x₀, y₀, z₀)
               </p>
+              <Link href="/standing-wave-trap"
+                    className="inline-flex items-center gap-1.5 text-xs font-mono
+                               text-purple-400 hover:text-purple-300 transition-colors
+                               border border-purple-500/30 hover:border-purple-400/50
+                               px-3 py-1.5 rounded-lg bg-purple-500/10 mt-1">
+                Read Act 7 — The Trap
+                <ExternalLink className="w-3 h-3" />
+              </Link>
             </div>
           </div>
           <Eq>
