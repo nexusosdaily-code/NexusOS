@@ -155,7 +155,8 @@ app.use((req, res, next) => {
 // Return 404 immediately for file extensions that do not exist in NexusOS.
 // Without this, the SPA fallback serves HTTP 200 to PHP/ASP/CGI probes,
 // which signals to scanners "something lives here — keep probing."
-const ATTACK_EXTS = /\.(php\d*|asp|aspx|cgi|do|jsp|jspx|pl|py|rb|sh|cfm|shtml|phtml)$/i;
+// Covers: server-side scripts, infrastructure secrets, backups, databases, archives.
+const ATTACK_EXTS = /\.(php\d*|asp|aspx|cgi|do|jsp|jspx|pl|rb|sh|cfm|shtml|phtml|tfstate|tfvars|bak|backup|sql|sqlite|sqlite3|db|tar|gz|zip|rar|7z|swp|tmp|log|env|pem|key|p12|pfx|ovpn)$/i;
 app.use((req: Request, res: Response, next: NextFunction) => {
   if (ATTACK_EXTS.test(req.path)) return res.status(404).end();
   next();
