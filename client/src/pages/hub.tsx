@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Mail, Radio, FileText, Upload, ArrowRightLeft, Bitcoin,
-  Activity, Layers, Cpu, Code2, Wallet, Globe2,
+  Activity, Layers, Cpu, Code2, Wallet, Globe, Globe2,
   Zap, Atom, Waves, Rocket, Users, Database,
   Shield, BookOpen, HardDrive, GitBranch,
   ChevronRight, Rss, Eye, Clock,
