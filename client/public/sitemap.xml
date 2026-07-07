@@ -68,6 +68,11 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://wnsp.io/universal-address</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://wnsp.io/octave-layers</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
