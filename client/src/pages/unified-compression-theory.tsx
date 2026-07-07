@@ -92,8 +92,8 @@ export default function UnifiedCompressionTheoryPage() {
 
         {/* nav */}
         <div className="flex items-center gap-3">
-          <Link href="/hub" className="flex items-center gap-2 text-slate-400 hover:text-cyan-400 transition-colors text-sm">
-            <ArrowLeft className="w-4 h-4" /> Back to NexusOS
+          <Link href="/oscillating-quanta" className="flex items-center gap-2 text-slate-400 hover:text-cyan-400 transition-colors text-sm">
+            <ArrowLeft className="w-4 h-4" /> Back to First Principles
           </Link>
         </div>
 

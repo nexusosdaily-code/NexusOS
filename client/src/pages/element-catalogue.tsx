@@ -418,11 +418,11 @@ export default function ElementCatalogue() {
       <div className="sticky top-0 z-20 bg-slate-950/90 backdrop-blur border-b
                       border-slate-800/60">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-3">
-          <Link href="/"
+          <Link href="/oscillating-quanta"
                 className="flex items-center gap-2 text-slate-400 hover:text-white
                            transition-colors text-sm">
             <ArrowLeft className="w-4 h-4" />
-            Back to NexusOS
+            Back to First Principles
           </Link>
         </div>
       </div>

@@ -92,9 +92,9 @@ export default function UniversalAddress() {
       <div className="max-w-3xl mx-auto px-4 py-10 space-y-12">
 
         {/* back */}
-        <Link href="/hub" className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-200 text-sm transition-colors">
+        <Link href="/oscillating-quanta" className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-200 text-sm transition-colors">
           <ArrowLeft className="w-4 h-4" />
-          Back to NexusOS
+          Back to First Principles
         </Link>
 
         {/* badges */}
