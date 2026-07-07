@@ -151,6 +151,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// ── Attack-extension block ────────────────────────────────────────────────────
+// Return 404 immediately for file extensions that do not exist in NexusOS.
+// Without this, the SPA fallback serves HTTP 200 to PHP/ASP/CGI probes,
+// which signals to scanners "something lives here — keep probing."
+const ATTACK_EXTS = /\.(php\d*|asp|aspx|cgi|do|jsp|jspx|pl|py|rb|sh|cfm|shtml|phtml)$/i;
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (ATTACK_EXTS.test(req.path)) return res.status(404).end();
+  next();
+});
+
 // ── Custom domain hostname redirects ─────────────────────────────────────────
 // Each branded domain lands visitors on its product page.
 const DOMAIN_ROUTES: Record<string, string> = {
@@ -190,14 +200,14 @@ app.get("/.well-known/security.txt", (_req, res) => {
     [
       "# NexusOS Security Contact",
       "# WNSP Physics-Based Civilization OS — AGPL-3.0",
-      "Contact: mailto:security@wnsp.tech",
-      "Contact: https://wnsp.tech/contact",
+      "Contact: mailto:security@wnsp.io",
+      "Contact: https://wnsp.io/contact",
       `Expires: ${expires.toISOString()}`,
-      "Canonical: https://wnsp.tech/.well-known/security.txt",
-      "Policy: https://wnsp.tech/contact",
+      "Canonical: https://wnsp.io/.well-known/security.txt",
+      "Policy: https://wnsp.io/contact",
       "Preferred-Languages: en",
-      "Scope: https://wnsp.tech",
-      "Acknowledgments: https://wnsp.tech/contact",
+      "Scope: https://wnsp.io",
+      "Acknowledgments: https://wnsp.io/contact",
       "",
       "# NexusOS is governed under AGPL-3.0.",
       "# Responsible disclosure is welcomed and acknowledged.",
