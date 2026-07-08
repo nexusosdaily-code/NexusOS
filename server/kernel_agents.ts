@@ -16,7 +16,7 @@
 import { db } from "./db";
 import { eq, and, lt, isNull, sql, desc, inArray } from "drizzle-orm";
 import { users, wallets, transactions, streams } from "../shared/schema";
-import { deriveChannel } from "./physics";
+import { deriveChannel, GHOST_NODES } from "./physics";
 
 // ── Agent state store ─────────────────────────────────────────────────────────
 
@@ -316,9 +316,39 @@ async function authGatewayTick() {
   }
 }
 
+// ── Ghost node service initialiser ───────────────────────────────────────────
+// Ghost node services are NOT autonomous agents with tick loops — they are
+// static system-reserved channels registered at boot. Their Ψ addresses are
+// locked and cannot be claimed by any user wallet.
+
+function initGhostNodeService(agentId: string, g: typeof GHOST_NODES[number]): void {
+  _agents.set(agentId, {
+    agentId,
+    displayName:           `${g.service}  ${g.serviceName}`,
+    band:                  g.authority,
+    channelNm:             g.nm,
+    channelNotation:       g.psi,
+    status:                "ACTIVE",
+    lastAction:            `Ghost node ${g.psi} LOCKED — ${g.orbital}-orbital gate  [n=${g.n}, ${g.massU.toFixed(4)} u, ${g.boundary}]`,
+    lastRunAt:             Date.now(),
+    cycleCount:            0,
+    totalActionsCompleted: 0,
+    errorCount:            0,
+  });
+}
+
 // ── Boot all agents ───────────────────────────────────────────────────────────
 
 export function startKernelAgents(): void {
+  // ── Ghost node system services — registered first, highest priority ─────────
+  // These are static system-reserved Ψ channels, not tick-loop daemons.
+  // Their addresses are locked at boot; no user wallet may occupy them.
+  for (const g of GHOST_NODES) {
+    initGhostNodeService(`ghost_${g.service.toLowerCase().replace("-", "_")}`, g);
+  }
+  console.log(`[KERNEL AGENTS] ${GHOST_NODES.length} ghost node system channels secured`);
+
+  // ── Autonomous daemon agents ────────────────────────────────────────────────
   // Register agents with their deterministic Ψ channels (from SHA-256 of agent name)
   initAgent("os_kernel",        "OS Kernel",        "SYSTEM", 420.5,  8,  0, "H");
   initAgent("scheduler_daemon", "Scheduler Daemon", "KERNEL", 492.0,  80, 5, "H");
@@ -331,4 +361,24 @@ export function startKernelAgents(): void {
   runLoop("auth_gateway",     5 * 60_000, authGatewayTick);
 
   console.log("[KERNEL AGENTS] 4 autonomous agents started");
+}
+
+// ── Ghost node service registry (public export) ───────────────────────────────
+
+export function getGhostNodeServices(): Array<{
+  agentId:     string;
+  node:        typeof GHOST_NODES[number];
+  status:      string;
+  lockedAt:    number;
+}> {
+  return GHOST_NODES.map(g => {
+    const agentId = `ghost_${g.service.toLowerCase().replace("-", "_")}`;
+    const state   = _agents.get(agentId);
+    return {
+      agentId,
+      node:     g,
+      status:   state?.status ?? "BOOTING",
+      lockedAt: state?.lastRunAt ?? Date.now(),
+    };
+  });
 }

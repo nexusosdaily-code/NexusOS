@@ -67,11 +67,121 @@ export function applyGovernanceParam(key: string, value: number): void {
   }
 }
 
+// ── Ghost Node Registry ───────────────────────────────────────────────────────
+/**
+ * Ghost nodes are integer octave addresses in the WNSP compression lattice
+ * where no stable nucleus exists. Each lies at an orbital shell boundary,
+ * making it a lossless, zero-entropy quantum register tuned to the adjacent
+ * matter class. These Ψ channels are RESERVED as NexusOS system services.
+ *
+ * All ghost nodes sit at WDM=0 (integer octave → frac(n)=0 → 380 nm, SYSTEM
+ * band) and are distinguished by their OAM index (= n for n < OAM_MODES=50).
+ *
+ * Physical basis: M_n = (h·f₀/c²) · 2ⁿ   where f₀ = 555 THz (green anchor)
+ * Addressing:     WDM = frac(n) × 255 = 0,   OAM = n mod 50,   Pol = H
+ */
+
+export interface GhostNode {
+  readonly n:           number;
+  readonly massU:       number;
+  readonly oam:         number;
+  readonly wdm:         number;
+  readonly nm:          number;
+  readonly psi:         string;
+  readonly orbital:     string;
+  readonly boundary:    string;
+  readonly service:     string;
+  readonly serviceName: string;
+  readonly authority:   AuthBand;
+  readonly fn:          string;
+}
+
+export const GHOST_NODES: readonly GhostNode[] = Object.freeze([
+  {
+    n: 31, massU: 5.2915, oam: 31, wdm: 0, nm: 380,
+    psi: "Ψ(0,31,H)",
+    orbital: "s",
+    boundary: "He → Li  (1s² → 2s¹)",
+    service: "NXS-BASE",
+    serviceName: "NexusOS Base Wallet Service",
+    authority: "SYSTEM" as AuthBand,
+    fn: "Core NXT wallet engine, base fee physics, s-orbital chemistry gate — foundation of all economic activity",
+  },
+  {
+    n: 33, massU: 21.1660, oam: 33, wdm: 0, nm: 380,
+    psi: "Ψ(0,33,H)",
+    orbital: "p",
+    boundary: "Ne → Na  (2p⁶ → 3s¹)",
+    service: "NXS-LIFE",
+    serviceName: "NexusOS Biological Protocol Service",
+    authority: "KERNEL" as AuthBand,
+    fn: "P2P media engine, mesh networking, health data channels, p-orbital organic chemistry gate",
+  },
+  {
+    n: 34, massU: 42.3320, oam: 34, wdm: 0, nm: 380,
+    psi: "Ψ(0,34,H)",
+    orbital: "d",
+    boundary: "Ca → Sc  (4s² → 3d¹)",
+    service: "NXS-MECH",
+    serviceName: "NexusOS Hardware Bridge Service",
+    authority: "KERNEL" as AuthBand,
+    fn: "Photonic hardware I/O, spectral relay mesh, IoT channels, d-orbital catalysis/magnetism gate",
+  },
+  {
+    n: 36, massU: 169.3310, oam: 36, wdm: 0, nm: 380,
+    psi: "Ψ(0,36,H)",
+    orbital: "f",
+    boundary: "Tm → Yb  (4f¹³ → 4f¹⁴)",
+    service: "NXS-MIND",
+    serviceName: "NexusOS AI Operating System Kernel",
+    authority: "SYSTEM" as AuthBand,
+    fn: "AI OS kernel, KernelEventBus, boot sequencer, agent watchdog, blockchain auditor, f-orbital precision gate",
+  },
+] as const);
+
+/** OAM indices that are reserved system channels (when WDM = 0). */
+const _GHOST_OAM_SET: ReadonlySet<number> = new Set(GHOST_NODES.map(g => g.oam));
+
+/**
+ * Returns true if (wdm, oam) maps to a ghost node system-reserved address.
+ * Ghost node channels belong to NexusOS; no user wallet may occupy them.
+ */
+export function isGhostNodeAddress(wdm: number, oam: number): boolean {
+  return wdm === 0 && _GHOST_OAM_SET.has(oam);
+}
+
+/**
+ * Look up a ghost node by its OAM index (when WDM=0).
+ * Returns undefined if the address is not a registered ghost node.
+ */
+export function getGhostNodeByOam(oam: number): GhostNode | undefined {
+  return GHOST_NODES.find(g => g.oam === oam);
+}
+
+/**
+ * If (wdm, oam) lands on a ghost node address, step OAM forward by 1
+ * (wrapping within OAM_MODES) until clear.
+ * Ensures user wallet derivation never collides with system channels.
+ */
+function _stepAwayFromGhostNode(wdm: number, oam: number): number {
+  let safe = oam;
+  let guard = 0;
+  while (isGhostNodeAddress(wdm, safe) && guard < OAM_MODES) {
+    safe = (safe + 1) % OAM_MODES;
+    guard++;
+  }
+  return safe;
+}
+
 // ── Channel derivation ────────────────────────────────────────────────────────
 /**
  * Derive a deterministic Ψ channel from a username.
  * SHA-256(username) → bytes → wdm, oam, pol, nm
  * The same username always maps to the same channel.
+ *
+ * Ghost-node guard: if the hash lands on a reserved system channel
+ * (WDM=0 with OAM ∈ {31,33,34,36}), OAM is stepped forward by 1 until
+ * the address is clear. User wallets may never occupy ghost node channels.
  */
 export function deriveChannel(username: string): {
   wdm: number; oam: number; pol: string;
@@ -80,8 +190,11 @@ export function deriveChannel(username: string): {
 } {
   const hash = crypto.createHash("sha256").update(username).digest();
   const wdm  = hash[0] % WDM_CHANNELS;           // 0–255
-  const oam  = hash[1] % OAM_MODES;              // 0–49
+  let   oam  = hash[1] % OAM_MODES;              // 0–49
   const pol  = (hash[2] & 1) === 0 ? "H" : "V"; // H or V
+
+  // Ghost-node guard — step away from reserved system channels
+  oam = _stepAwayFromGhostNode(wdm, oam);
 
   const nm          = NM_MIN + wdm * ((NM_MAX - NM_MIN) / (WDM_CHANNELS - 1));
   const frequencyHz = C_LIGHT / (nm * 1e-9);

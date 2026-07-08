@@ -4877,6 +4877,47 @@ export async function registerRoutes(
     }
   });
 
+  // ── Ghost Node System Channel Registry ────────────────────────────────────
+  // Returns the 4 reserved ghost node Ψ addresses and their NexusOS services.
+  // These channels cannot be claimed by any user wallet — physics-layer lock.
+  app.get("/api/ghost-nodes", optionalAuth, async (req: Request, res: Response) => {
+    try {
+      const { getGhostNodeServices } = await import("./kernel_agents");
+      const { GHOST_NODES, isGhostNodeAddress } = await import("./physics");
+      const services = getGhostNodeServices();
+      res.json({
+        count:       GHOST_NODES.length,
+        protocol:    "WNSP Ghost Node Reservation — v1.0",
+        description: "Integer octave addresses where no stable nucleus exists. Reserved as NexusOS system service channels. Lossless quantum registers, zero entropy, orbital-class tuned.",
+        channels:    services.map(s => ({
+          service:     s.node.service,
+          serviceName: s.node.serviceName,
+          n:           s.node.n,
+          massU:       s.node.massU,
+          psi:         s.node.psi,
+          wdm:         s.node.wdm,
+          oam:         s.node.oam,
+          nm:          s.node.nm,
+          orbital:     s.node.orbital,
+          boundary:    s.node.boundary,
+          authority:   s.node.authority,
+          function:    s.node.fn,
+          status:      s.status,
+          locked:      true,
+          agentId:     s.agentId,
+          lockedAt:    s.lockedAt,
+        })),
+        verification: {
+          note:   "Call isGhostNodeAddress(wdm, oam) in physics engine to verify any address against the reservation table.",
+          locked: GHOST_NODES.map(g => ({ psi: g.psi, wdm: g.wdm, oam: g.oam, reserved: isGhostNodeAddress(g.wdm, g.oam) })),
+        },
+        serverTime: Date.now(),
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/api/kernel/genesis", optionalAuth, async (req: Request, res: Response) => {
     try {
       const { db } = await import("./db");
