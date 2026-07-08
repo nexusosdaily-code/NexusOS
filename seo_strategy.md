@@ -28,6 +28,7 @@ Private routes remain out of scope for content-quality review, but they are stil
 ## Durable notes
 - The canonical public channel model is 51,200 orthogonal Ψ channels (`256 WDM × 50 OAM × 2 polarisations × 2 propagation directions`). Public SEO copy, structured data, and AI-crawl assets should align to that number.
 - The canonical public host is `https://wnsp.io`. Discovery assets, fallback shell metadata, social URLs, and structured data should not drift onto `wnsp.tech` unless the whole SEO layer changes with them.
+- Branded microsites should not self-canonicalize away from `https://wnsp.io` unless the project explicitly decides they are independent SEO properties. If they stay secondary brand domains, their canonicals, structured data, robots targets, sitemap entries, and `llms.txt` references should consolidate to the intended `wnsp.io` landing page.
 - Public marketing and science pages should not use `/`, `/hub`, or private `/spectral-db?...` tabs as their primary internal-link destinations because those surfaces are intentionally private/noindex.
 - If `/protocol` or `/wnsp-paper` remain noindex, public landing pages should not use them as prominent reference links. If we want them linked as SEO targets, they need to become indexable first.
 
