@@ -32,8 +32,10 @@ const TM_N      = octaveOf(TM_MASS_U);
 const TM_GAP    = N_GHOST - TM_N;
 
 // ── Ytterbium (Z=70, first element past ghost) ───────────────────────────────
-const YB_MASS_U = 173.045;
-const YB_N      = octaveOf(YB_MASS_U);
+const YB_MASS_U  = 173.045;    // IUPAC standard atomic weight (conventional element reference)
+const YB_N       = octaveOf(YB_MASS_U);
+const YB170_MASS_U = 169.935;  // Yb-170 — nearest Yb isotope ABOVE ghost (true nuclear boundary)
+const YB170_N    = octaveOf(YB170_MASS_U);
 
 // ΔE to lift Tm to ghost node (MeV)
 const DELTA_E_MEV = TM_MASS_U * (AMU_EV / 1e6) * (Math.pow(2, TM_GAP) - 1);
@@ -395,9 +397,11 @@ export default function StandingWaveTrap() {
               coordinate in the WNSP compression lattice that no stable nucleus occupies.
               The gap exists because nuclear binding energy mass defects never produce
               that atomic mass. Thulium (Z=69, 4f¹³) approaches from below at
-              n=35.9966 — only 0.0034 octaves short. Ytterbium (Z=70, 4f¹⁴) overshoots
-              at n≈36.07. The ghost node sits precisely at the threshold between the most
-              incomplete and the first complete lanthanide shell. Act 7 shows how
+              n=35.9966 — only 0.0034 octaves short. The nearest stable Yb isotope
+              above the ghost is Yb-170 at n=36.0051 — only 0.0051 oct above,
+              giving a true nuclear gap of just 0.0085 octaves. The ghost node
+              sits precisely at the threshold between the most incomplete and the
+              first complete lanthanide shell. Act 7 shows how
               counter-propagating wave pairs (+k̂/−k̂) on the same Ψ channel create a
               standing wave whose antinode is positioned at n=36 — the first NexusOS
               operation that occupies a spectral address nature left permanently vacant.
@@ -658,7 +662,7 @@ export default function StandingWaveTrap() {
               Kr (floor, n=34.985) → … →{" "}
               <span className="text-cyan-300">Tm 4f¹³ (n=35.9966)</span> →{" "}
               <span className="text-purple-300 font-bold">[n=36 void]</span> →{" "}
-              <span className="text-red-300">Yb 4f¹⁴ (n≈36.07)</span>
+              <span className="text-red-300">Yb-170 (n=36.0051, nearest nuclear boundary)</span>
             </div>
           </div>
         </Section>

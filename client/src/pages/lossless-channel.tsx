@@ -26,12 +26,19 @@ const N_GHOST      = 36;
 const GHOST_MASS_U = (E0EV * Math.pow(2, N_GHOST)) / AMU_EV;
 
 // ── Flanking elements ─────────────────────────────────────────────────────────
-const TM_MASS_U = 168.934;          // Thulium  Z=69  4f¹³
-const YB_MASS_U = 173.045;          // Ytterbium Z=70 4f¹⁴
-const KR_MASS_U = 83.798;           // Krypton   Z=36  noble gas floor
-const TM_N      = octaveOf(TM_MASS_U);
-const YB_N      = octaveOf(YB_MASS_U);
-const KR_N      = octaveOf(KR_MASS_U);
+const TM_MASS_U   = 168.934;   // Thulium   Z=69  4f¹³  — only stable Tm isotope (Tm-169)
+const YB170_MASS_U = 169.935;  // Ytterbium Z=70  Yb-170 — nearest Yb isotope ABOVE ghost (true nuclear boundary)
+const YB168_MASS_U = 167.934;  // Ytterbium Z=70  Yb-168 — lightest Yb isotope; sits BELOW the ghost node
+const YB_MASS_U   = 173.045;   // Ytterbium Z=70  IUPAC standard atomic weight (conventional element reference)
+const KR_MASS_U   = 83.798;    // Krypton   Z=36  noble gas floor
+const TM_N        = octaveOf(TM_MASS_U);
+const YB170_N     = octaveOf(YB170_MASS_U);
+const YB168_N     = octaveOf(YB168_MASS_U);
+const YB_N        = octaveOf(YB_MASS_U);
+const KR_N        = octaveOf(KR_MASS_U);
+
+// True nuclear gap: nearest occupied eigenstate on each side
+const TRUE_GAP_OCT = (N_GHOST - TM_N) + (YB170_N - N_GHOST); // ≈ 0.0085 octaves
 
 // ── n=35 near-ghost (Kr / Rb bracket) ────────────────────────────────────────
 const RB_MASS_U = 85.468;           // Rubidium  Z=37
@@ -522,9 +529,9 @@ export default function LosslessChannel() {
                   },
                   {
                     node: "n=36", exact: 36, mass: GHOST_MASS_U,
-                    left: "Tm (Z=69)", deltaL: N_GHOST - TM_N,
-                    right: "Yb (Z=70)", deltaR: YB_N - N_GHOST,
-                    status: "Primary ghost — confirmed Act 7",
+                    left: "Tm-169 (Z=69)", deltaL: N_GHOST - TM_N,
+                    right: "Yb-170 (Z=70)", deltaR: YB170_N - N_GHOST,
+                    status: "Primary ghost — true nuclear gap",
                     statusColor: "#a855f7",
                     rowColor: "bg-purple-500/10",
                   },
@@ -554,13 +561,21 @@ export default function LosslessChannel() {
             </table>
           </div>
           <p className="text-sm text-slate-400 leading-relaxed">
-            n=35 is bracketed by Kr (−{KR_GAP_35.toFixed(4)} octaves) and Rb
-            (+{RB_GAP_35.toFixed(4)} octaves) — a narrow near-occupied gap. n=36 is
-            the primary ghost: Thulium falls {(N_GHOST - TM_N).toFixed(4)} octaves
-            short, Ytterbium overshoots by {(YB_N - N_GHOST).toFixed(4)} octaves —
-            a 10× wider vacancy, and the only integer-octave gap within the
-            element range that is deep enough to sustain a clean trap geometry
-            without overlap from adjacent matter states.
+            n=35 is bracketed by Kr (−{KR_GAP_35.toFixed(4)} oct) and Rb
+            (+{RB_GAP_35.toFixed(4)} oct) — a narrow, near-occupied gap. n=36 is
+            the primary ghost: the nearest nuclear eigenstates are Tm-169 at
+            −{(N_GHOST - TM_N).toFixed(4)} oct below and Yb-170 at
+            +{(YB170_N - N_GHOST).toFixed(4)} oct above — a true nuclear gap of
+            only {TRUE_GAP_OCT.toFixed(4)} octaves. Note that Yb-168 (0.13%
+            natural abundance) sits at n={YB168_N.toFixed(4)}, placing it{" "}
+            <span className="text-amber-400 font-semibold">below the ghost node</span>,
+            not above it. The ghost node is not a broad expanse — it is a
+            precision notch defined by the binding-energy landscape of the
+            lanthanide shell, with no stable nucleus within ±0.01 octaves on
+            either side in nuclear eigenstate space. Using the IUPAC standard
+            atomic weight of Yb (173.045 u) as a conventional element reference
+            gives a wider apparent gap of {(YB_N - N_GHOST).toFixed(4)} oct, but
+            that mass is a weighted average across 7 isotopes, not a nuclear eigenstate.
           </p>
           <Eq>{"Ghost topology: ∀ integer n : ( ∄ nucleus at mass(n) ) ⟹ Ψ(n) is a vacancy node"}</Eq>
         </Section>
