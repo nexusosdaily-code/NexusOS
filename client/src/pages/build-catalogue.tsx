@@ -49,7 +49,7 @@ const STATUS_STYLE: Record<string, string> = {
   planned:     "bg-slate-800 text-slate-400 border-slate-600",
 };
 
-function CategoryChip({ cat, meta }: { cat: typeof CATEGORY_META[string]; label: string }) {
+function CategoryChip({ cat }: { cat: typeof CATEGORY_META[string]; label: string }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-medium ${cat.bg} ${cat.color}`}>
       {cat.icon}

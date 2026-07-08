@@ -68,7 +68,7 @@ function OctaveRow({ n, freq, element, state, color }: {
   );
 }
 
-function PBlock({ label, children }: { label: string; children: React.ReactNode }) {
+function PBlock({ label, children }: { label: string; children?: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
       <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">{label}</div>

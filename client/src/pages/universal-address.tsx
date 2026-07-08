@@ -81,7 +81,6 @@ export default function UniversalAddress() {
     ogTitle: "The Address — Ψ as Universal Namespace",
     ogDescription:
       "Every compression state has a unique Ψ(wdm,oam,pol,dir) address derived from physics — not assigned by any authority. WNSP is the first operable implementation. Act 5 of the NexusOS sequence.",
-    ogType: "article",
     twitterTitle: "The Address — Ψ as Universal Namespace",
     twitterDescription:
       "TCP/IP = human convention. DNS = human convention. Ψ = physics. You cannot block a frequency. NexusOS Act 5.",

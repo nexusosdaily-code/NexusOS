@@ -384,7 +384,6 @@ export default function ElementCatalogue() {
     ogTitle: "The Catalogue — Periodic Table Octave Addresses",
     ogDescription:
       "118 elements. Each mapped to its octave integer n via n = log₂(m·c²/E₀). Krypton lands at n ≈ 35.000 — Russell's exact integer node. NexusOS Act 6.",
-    ogType: "article",
     twitterTitle: "The Catalogue — Periodic Table Octave Addresses",
     twitterDescription:
       "The periodic table is the octave lattice printed on paper. Every element has a precise n, ΔE, and Ψ address. NexusOS Act 6.",

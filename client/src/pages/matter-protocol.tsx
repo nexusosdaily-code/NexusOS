@@ -102,7 +102,6 @@ export default function MatterProtocol() {
     ogTitle: "The Mechanism — Controlled Octave Inversion",
     ogDescription:
       "Matter is a standing wave at octave n. Manipulation = delivering ΔE = hf₀(2ⁿ²−2ⁿ¹) at the exact Ψ channel. Act 4 of the NexusOS physics sequence.",
-    ogType: "article",
     twitterTitle: "The Mechanism — Controlled Octave Inversion",
     twitterDescription:
       "Electron at n≈17.8 above f₀. Proton at n≈28.6. ΔE = hf₀(2ⁿ²−2ⁿ¹). The protocol for controlled matter manipulation. NexusOS Act 4.",
