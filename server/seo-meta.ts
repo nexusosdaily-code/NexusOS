@@ -1839,21 +1839,37 @@ function videoTelegramUrl(v: VideoForSchema): string {
 /**
  * Build a live PageMeta for /videos using real video records from the DB.
  * Pass the result into injectCustomMeta() instead of injectMeta().
+ *
+ * JSON-LD strategy: emit VideoObject entries as top-level schema entities
+ * (alongside the CollectionPage) so Google's video indexer can discover each
+ * item directly without having to traverse hasPart nesting.
  */
 export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
   const baseEntry = ROUTE_META["/videos"];
+  const publisher = {
+    "@type": "Organization",
+    "name": "NexusOS",
+    "url": BASE,
+    "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.png" },
+  };
 
-  const hasPart = videos.slice(0, 20).map(v => {
+  // Build top-level VideoObject entries — Google's video rich-result spec
+  // requires VideoObject to appear at the top level of JSON-LD, not nested
+  // inside CollectionPage.hasPart, to be eligible for video carousels.
+  const videoObjects = videos.slice(0, 20).map(v => {
     const uploadDate = new Date(v.createdAt).toISOString().split("T")[0];
     const tgUrl      = videoTelegramUrl(v);
+    const name       = v.caption ? v.caption.slice(0, 110) : `NexusOS Video #${v.id}`;
     const obj: Record<string, unknown> = {
+      "@context": "https://schema.org",
       "@type": "VideoObject",
-      "name": v.caption ? v.caption.slice(0, 110) : `NexusOS Video #${v.id}`,
+      "name": name,
       "description": v.caption ?? "NexusOS physics demonstration video.",
       "uploadDate": uploadDate,
       "url": tgUrl,
       "contentUrl": tgUrl,
       "embedUrl": tgUrl,
+      "publisher": publisher,
     };
     if (v.thumbFileId) {
       obj["thumbnailUrl"] = `${BASE}/api/telegram/video/${encodeURIComponent(v.thumbFileId)}/thumb`;
@@ -1864,7 +1880,14 @@ export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
     return obj;
   });
 
-  const liveJsonLd = {
+  // CollectionPage references the VideoObjects as hasPart (without @context
+  // on each child — they share the top-level array context).
+  const hasPart = videoObjects.map(o => {
+    const { "@context": _ctx, ...rest } = o as Record<string, unknown>;
+    return rest;
+  });
+
+  const collectionPage = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     "name": "NexusOS Videos — Physics, Protocol, and Hardware Demonstrations",
@@ -1877,29 +1900,44 @@ export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
       { "@type": "Thing", "name": "WavelengthScript" },
       { "@type": "Thing", "name": "CE-SE Encoding Pipeline" },
     ],
-    "publisher": {
-      "@type": "Organization",
-      "name": "NexusOS",
-      "url": BASE,
-      "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.png" },
-    },
+    "publisher": publisher,
     "hasPart": hasPart.length > 0 ? hasPart : (baseEntry as any)?.jsonLd?.hasPart ?? [],
   };
 
-  // Build a noscript body with crawlable links to each video.
-  // All dynamic values are HTML-escaped before interpolation.
-  const videoLinks = videos.slice(0, 20).map(v => {
-    const tgUrl = videoTelegramUrl(v);
-    const label = v.caption ? v.caption.slice(0, 110) : `NexusOS Video #${v.id}`;
-    return `<li><a href="${esc(tgUrl)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a></li>`;
+  // Emit as an array: [CollectionPage, VideoObject, VideoObject, …]
+  // so each VideoObject is discoverable at the top level by the video indexer.
+  const liveJsonLd: object[] = [collectionPage, ...videoObjects];
+
+  // Build a noscript body with rich per-video metadata for non-JS crawlers
+  // and AI bots. Each item includes thumbnail, title, date, and duration so
+  // crawlers receive structured, meaningful content rather than bare links.
+  const videoItems = videos.slice(0, 20).map(v => {
+    const tgUrl      = videoTelegramUrl(v);
+    const label      = v.caption ? v.caption.slice(0, 110) : `NexusOS Video #${v.id}`;
+    const uploadDate = new Date(v.createdAt).toISOString().split("T")[0];
+    const thumbUrl   = v.thumbFileId
+      ? `${BASE}/api/telegram/video/${encodeURIComponent(v.thumbFileId)}/thumb`
+      : "https://wnsp.io/opengraph.png";
+    const durationStr = v.duration ? ` · ${fmtIsoDuration(v.duration).replace("PT", "").toLowerCase()}` : "";
+
+    return `<article style="margin-bottom:1.5rem;">`
+      + `<a href="${esc(tgUrl)}" target="_blank" rel="noopener noreferrer">`
+      + `<img src="${esc(thumbUrl)}" alt="${esc(label)}" width="320" height="180" loading="lazy" style="display:block;max-width:100%;height:auto;border-radius:6px;" />`
+      + `</a>`
+      + `<h3 style="margin:0.5rem 0 0.25rem;"><a href="${esc(tgUrl)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a></h3>`
+      + `<p style="margin:0;font-size:0.85em;color:#666;"><time datetime="${esc(uploadDate)}">${esc(uploadDate)}</time>${esc(durationStr)}</p>`
+      + `</article>`;
   }).join("");
 
   const liveBodyHtml = `<h1>NexusOS Videos — Physics, Protocol, and Hardware Demonstrations</h1>`
     + `<p>Watch live demonstrations of the NexusOS physics stack: CE encoding in action, WNSP VM executing bytecode, hardware lab measurements, and explanations of the Theory of Compression States.</p>`
-    + (videoLinks ? `<h2>Latest Videos</h2><ul>${videoLinks}</ul>` : "")
+    + (videoItems ? `<h2>Latest Videos</h2>${videoItems}` : "")
     + `<nav><ul><li><a href="${BASE}/hardware-results">Hardware Verification Results</a></li><li><a href="${BASE}/ce-se-pipeline">CE→SE Pipeline (live)</a></li><li><a href="https://t.me/nexusosdaily">NexusOS Telegram Channel</a></li></ul></nav>`;
 
   return {
+    title: baseEntry?.title ?? "NexusOS Videos — Physics, Protocol, and Hardware Demonstrations",
+    description: baseEntry?.description ?? "Video demonstrations of the NexusOS physics stack.",
+    canonical: baseEntry?.canonical ?? `${BASE}/videos`,
     ...(baseEntry ?? {}),
     jsonLd: liveJsonLd,
     bodyHtml: liveBodyHtml,
