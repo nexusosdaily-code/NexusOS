@@ -122,8 +122,8 @@ export default function UniversalOnePage() {
 
           {/* sequence nav */}
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-            <p className="text-[10px] font-mono text-emerald-400 tracking-widest mb-3">THE SEQUENCE — ACT 2 OF 5</p>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center text-xs">
+            <p className="text-[10px] font-mono text-emerald-400 tracking-widest mb-3">THE SEQUENCE — ACT 2 OF 8</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs">
               <Link href="/oscillating-quanta"
                 className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
                 <p className="text-[9px] font-mono text-slate-500 tracking-widest">ACT 1</p>
@@ -136,9 +136,12 @@ export default function UniversalOnePage() {
                 <p className="text-[9px] text-emerald-400">f₀ derives Λ</p>
               </div>
               {[
-                { act: "ACT 3", title: "Unified Compression Theory",  sub: "4 forces = 1 Λ",      href: "/unified-compression-theory" },
-                { act: "ACT 4", title: "The Mechanism",               sub: "ΔE = hf₀(2ⁿ²−2ⁿ¹)", href: "/matter-protocol" },
-                { act: "ACT 5", title: "The Address",                 sub: "∀ Λ : ∃! Ψ",         href: "/universal-address" },
+                { act: "ACT 3", title: "Unified Compression Theory",  sub: "4 forces = 1 Λ",         href: "/unified-compression-theory" },
+                { act: "ACT 4", title: "The Mechanism",               sub: "ΔE = hf₀(2ⁿ²−2ⁿ¹)",    href: "/matter-protocol" },
+                { act: "ACT 5", title: "The Address",                 sub: "∀ Λ : ∃! Ψ",            href: "/universal-address" },
+                { act: "ACT 6", title: "The Catalogue",               sub: "n = log₂(mc²/E₀)",       href: "/element-catalogue" },
+                { act: "ACT 7", title: "The Trap",                    sub: "Ψ(+k̂) ⊗ Ψ(−k̂)",       href: "/standing-wave-trap" },
+                { act: "ACT 8", title: "The Lossless Channel",        sub: "α = 0, C = ZPE floor",    href: "/lossless-channel" },
               ].map(({ act, title, sub, href }) => (
                 <Link key={href} href={href}
                   className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">

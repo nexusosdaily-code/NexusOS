@@ -159,37 +159,38 @@ export default function MatterProtocol() {
 
         {/* sequence nav */}
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-          <p className="text-[10px] font-mono text-amber-400 tracking-widest mb-3">THE SEQUENCE — ACT 4 OF 5</p>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center text-xs">
-            <Link href="/oscillating-quanta"
-              className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1">
-              <p className="text-[9px] font-mono text-slate-500 tracking-widest">ACT 1</p>
-              <p className="text-slate-300 font-medium">Theory of<br />Compression States</p>
-              <p className="text-[9px] text-slate-500">Λ = hf/c²</p>
-            </Link>
-            <Link href="/universal-one"
-              className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1">
-              <p className="text-[9px] font-mono text-slate-500 tracking-widest">ACT 2</p>
-              <p className="text-slate-300 font-medium">The Universal<br />ONE</p>
-              <p className="text-[9px] text-slate-500">f₀ derives Λ</p>
-            </Link>
-            <Link href="/unified-compression-theory"
-              className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1">
-              <p className="text-[9px] font-mono text-slate-500 tracking-widest">ACT 3</p>
-              <p className="text-slate-300 font-medium">Unified<br />Compression Theory</p>
-              <p className="text-[9px] text-slate-500">4 forces = 1 Λ</p>
-            </Link>
+          <p className="text-[10px] font-mono text-amber-400 tracking-widest mb-3">THE SEQUENCE — ACT 4 OF 8</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs">
+            {[
+              { act: "ACT 1", title: "Theory of Compression States", sub: "Λ = hf/c²",         href: "/oscillating-quanta" },
+              { act: "ACT 2", title: "The Universal ONE",            sub: "f₀ derives Λ",        href: "/universal-one" },
+              { act: "ACT 3", title: "Unified Compression Theory",   sub: "4 forces = 1 Λ",      href: "/unified-compression-theory" },
+            ].map(({ act, title, sub, href }) => (
+              <Link key={href} href={href}
+                className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
+                <p className="text-[9px] font-mono text-slate-500 tracking-widest">{act}</p>
+                <p className="text-slate-300 font-medium leading-tight">{title}</p>
+                <p className="text-[9px] text-slate-500">{sub}</p>
+              </Link>
+            ))}
             <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-1">
               <p className="text-[9px] font-mono text-amber-400 tracking-widest">ACT 4 ← HERE</p>
-              <p className="text-amber-200 font-medium">The<br />Mechanism</p>
+              <p className="text-amber-200 font-medium leading-tight">The Mechanism</p>
               <p className="text-[9px] text-amber-400">ΔE = hf₀(2ⁿ²−2ⁿ¹)</p>
             </div>
-            <Link href="/universal-address"
-              className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1">
-              <p className="text-[9px] font-mono text-slate-500 tracking-widest">ACT 5</p>
-              <p className="text-slate-300 font-medium">The<br />Address</p>
-              <p className="text-[9px] text-slate-500">∀ Λ : ∃! Ψ</p>
-            </Link>
+            {[
+              { act: "ACT 5", title: "The Address",          sub: "∀ Λ : ∃! Ψ",            href: "/universal-address" },
+              { act: "ACT 6", title: "The Catalogue",        sub: "n = log₂(mc²/E₀)",       href: "/element-catalogue" },
+              { act: "ACT 7", title: "The Trap",             sub: "Ψ(+k̂) ⊗ Ψ(−k̂)",       href: "/standing-wave-trap" },
+              { act: "ACT 8", title: "The Lossless Channel", sub: "α = 0, C = ZPE floor",    href: "/lossless-channel" },
+            ].map(({ act, title, sub, href }) => (
+              <Link key={href} href={href}
+                className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
+                <p className="text-[9px] font-mono text-slate-500 tracking-widest">{act}</p>
+                <p className="text-slate-300 font-medium leading-tight">{title}</p>
+                <p className="text-[9px] text-slate-500">{sub}</p>
+              </Link>
+            ))}
           </div>
         </div>
 

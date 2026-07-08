@@ -128,13 +128,13 @@ export default function UniversalAddress() {
 
         {/* sequence nav */}
         <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
-          <p className="text-[10px] font-mono text-cyan-400 tracking-widest mb-3">THE SEQUENCE — COMPLETE</p>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center text-xs">
+          <p className="text-[10px] font-mono text-cyan-400 tracking-widest mb-3">THE SEQUENCE — ACT 5 OF 8</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs">
             {[
               { act: "ACT 1", title: "Theory of Compression States", sub: "Λ = hf/c²",         href: "/oscillating-quanta" },
-              { act: "ACT 2", title: "The Universal ONE",            sub: "f₀ derives Λ",       href: "/universal-one" },
-              { act: "ACT 3", title: "Unified Compression Theory",  sub: "4 forces = 1 Λ",     href: "/unified-compression-theory" },
-              { act: "ACT 4", title: "The Mechanism",               sub: "ΔE = hf₀(2ⁿ²−2ⁿ¹)", href: "/matter-protocol" },
+              { act: "ACT 2", title: "The Universal ONE",            sub: "f₀ derives Λ",        href: "/universal-one" },
+              { act: "ACT 3", title: "Unified Compression Theory",   sub: "4 forces = 1 Λ",      href: "/unified-compression-theory" },
+              { act: "ACT 4", title: "The Mechanism",                sub: "ΔE = hf₀(2ⁿ²−2ⁿ¹)",  href: "/matter-protocol" },
             ].map(({ act, title, sub, href }) => (
               <Link key={href} href={href}
                 className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
@@ -148,6 +148,18 @@ export default function UniversalAddress() {
               <p className="text-cyan-200 font-medium leading-tight">The Address</p>
               <p className="text-[9px] text-cyan-400">∀ Λ : ∃! Ψ</p>
             </div>
+            {[
+              { act: "ACT 6", title: "The Catalogue",        sub: "n = log₂(mc²/E₀)",       href: "/element-catalogue" },
+              { act: "ACT 7", title: "The Trap",             sub: "Ψ(+k̂) ⊗ Ψ(−k̂)",       href: "/standing-wave-trap" },
+              { act: "ACT 8", title: "The Lossless Channel", sub: "α = 0, C = ZPE floor",    href: "/lossless-channel" },
+            ].map(({ act, title, sub, href }) => (
+              <Link key={href} href={href}
+                className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
+                <p className="text-[9px] font-mono text-slate-500 tracking-widest">{act}</p>
+                <p className="text-slate-300 font-medium leading-tight">{title}</p>
+                <p className="text-[9px] text-slate-500">{sub}</p>
+              </Link>
+            ))}
           </div>
         </div>
 
