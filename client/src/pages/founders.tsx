@@ -58,7 +58,7 @@ const PHYSICS_LINEAGE = [
     years: "1916 – 2001",
     nation: "United States",
     equation: "H = −∑ pᵢ log₂ pᵢ  ·  C = B log₂(1 + S/N)",
-    contribution: "Shannon proved that information is physical — it has entropy, capacity, and geometric structure. His channel capacity theorem defines the maximum information any physical channel can carry. The WNSP density equation D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M is Shannon's capacity theorem applied to the Ψ channel Hilbert space. WASCII spectral histograms are Shannon entropy made visible. Every CE encoding is an assignment of a symbol to a physical state, exactly as Shannon described.",
+    contribution: "Shannon proved that information is physical — it has entropy, capacity, and geometric structure. His channel capacity theorem defines the maximum information any physical channel can carry. The WNSP density equation D_WNSP = N_λ · N_OAM · N_Pol · N_Dir · R_sym · M is Shannon's capacity theorem applied to the Ψ channel Hilbert space. WASCII spectral histograms are Shannon entropy made visible. Every CE encoding is an assignment of a symbol to a physical state, exactly as Shannon described.",
     nexusos: "WNSP density equation · WASCII spectral encoding · all channel capacity reasoning",
   },
 ];
@@ -334,7 +334,7 @@ export default function FoundersPage() {
                   { original: "Einstein — E = mc²", extension: "Inverted to m=hf/c² — mass re-read as a high-frequency compression state, not a separate substance. Matter and information on one continuum", result: "Λ=hf/c² · Lambda Gate · gravity de-correlation path" },
                   { original: "Russell — fₙ = f₀ · 2^(n−1) octave waves", extension: "WGM resonance condition 2πR=nλ is Russell's octave formula. His 9 octave compression/expansion cycles map to authority band boundaries. 9th octave peak = nuclear magic number 114 = SYSTEM band. Validated 2025", result: "PHR-1 cavity geometry · authority band octave boundaries" },
                   { original: "Heisenberg / Dirac — ⟨Ψᵢ|Ψⱼ⟩ = δᵢⱼ", extension: "Applied Hilbert orthogonality to physical EM channels, not abstract quantum states. Each Ψ channel is a physical field mode, orthogonal by Maxwell + QM simultaneously", result: "51,200 channel registers · WNSP VM · zero-interference routing" },
-                  { original: "Shannon — H = −∑ pᵢ log₂ pᵢ", extension: "Extended channel capacity into Hilbert space dimensions: D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M — capacity as a physical geometric quantity, not a bandwidth budget", result: "WNSP density equation · WASCII spectral histograms" },
+                  { original: "Shannon — H = −∑ pᵢ log₂ pᵢ", extension: "Extended channel capacity into Hilbert space dimensions: D_WNSP = N_λ · N_OAM · N_Pol · N_Dir · R_sym · M — capacity as a physical geometric quantity, not a bandwidth budget", result: "WNSP density equation · WASCII spectral histograms" },
                   { original: "All seven — isolated domains", extension: "Unified by the primordial field premise: one oscillation, one compression continuum, one language. CE encoding maps every human symbol to a physical compression state on that continuum", result: "CE_TABLE · WavelengthScript · the entire NexusOS protocol stack" },
                 ].map((row, i) => (
                   <tr key={i} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors align-top">

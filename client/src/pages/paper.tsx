@@ -192,7 +192,7 @@ export default function PaperPage() {
             <p>
               The channel capacity, extending Shannon (1948) into the Hilbert dimension:
             </p>
-            <Eq label="7">D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M</Eq>
+            <Eq label="7">D_WNSP = N_λ · N_OAM · N_Pol · N_Dir · R_sym · M</Eq>
             <p>
               Where N_λ=256, N_OAM=50, N_Pol=2 are the physical channel dimensions. Capacity
               grows geometrically with each added dimension rather than linearly with bandwidth —

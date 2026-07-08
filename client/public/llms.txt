@@ -87,7 +87,7 @@ Both expose `ceEncode(text) → { wavelength, band, psiChannel, energy }` with b
 ## Key Equations
 
 - Compression state: Λ = hf/c²
-- WNSP channel density: D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M  (51,200 orthogonal channels)
+- WNSP channel density: D_WNSP = N_λ · N_OAM · N_Pol · N_Dir · R_sym · M  (51,200 orthogonal channels; N_Dir=2 adds bidirectional propagation as an orthogonal Hilbert sub-space)
 - Physics fee: fee = base_fee × (E_sender / E_reference)
 - Transaction energy: E = hf  (Planck relation)
 - Spectral signing: SHA-256(content) ⊕ hex(λ_signer)

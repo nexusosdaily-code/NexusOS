@@ -571,7 +571,7 @@ export function LambdaGateLanding() {
 
         <div className="rounded-xl border p-5 mb-8" style={{ borderColor: accent + "30", background: accent + "06" }}>
           <div className="text-[11px] text-white/40 mb-3">The WNSP density equation</div>
-          <pre className="text-sm text-white/80">D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M</pre>
+          <pre className="text-sm text-white/80">D_WNSP = N_λ · N_OAM · N_Pol · N_Dir · R_sym · M</pre>
           <pre className="text-[11px] text-white/40 mt-1">= 256 × 50 × 2 × 2 × R_sym × M = 51,200 · R_sym · M</pre>
           <p className="text-[10px] text-white/25 mt-2">51,200 orthogonal channels. ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics, not software policy.</p>
         </div>
