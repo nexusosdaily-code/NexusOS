@@ -1091,7 +1091,7 @@ export async function registerRoutes(
   // ── Admin: reset any user's password ─────────────────────────────────────
   app.post("/api/admin/reset-password", authenticate, async (req: Request, res: Response) => {
     try {
-      if (req.user?.role !== "admin")
+      if (req.user?.role !== "admin" && !req.user?.isAdmin)
         return res.status(403).json({ error: "Admin access required" });
       const { targetUsername, newPassword } = req.body ?? {};
       if (!targetUsername || !newPassword)
@@ -3040,7 +3040,7 @@ export async function registerRoutes(
 
   app.get("/api/audit-logs", authenticate, async (req, res) => {
     try {
-      if (req.user!.role !== "admin") {
+      if (req.user!.role !== "admin" && !req.user!.isAdmin) {
         return res.status(403).json({ error: "Admin access required" });
       }
       
@@ -3891,7 +3891,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "File not found" });
       }
 
-      if (file.userId && file.userId !== req.user!.id && req.user!.role !== "admin") {
+      if (file.userId && file.userId !== req.user!.id && req.user!.role !== "admin" && !req.user!.isAdmin) {
         return res.status(403).json({ error: "Not authorized to delete this file" });
       }
 
@@ -4140,7 +4140,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Document not found" });
       }
 
-      if (doc.userId !== req.user!.id && req.user!.role !== "admin") {
+      if (doc.userId !== req.user!.id && req.user!.role !== "admin" && !req.user!.isAdmin) {
         return res.status(403).json({ error: "Not authorized to delete this document" });
       }
 
@@ -12319,7 +12319,7 @@ export async function registerRoutes(
   app.get("/api/admin/orders", authenticate, async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
-      if (user.spectralBand !== "KERNEL" && user.role !== "admin")
+      if (user.spectralBand !== "KERNEL" && user.role !== "admin" && !user.isAdmin)
         return res.status(403).json({ error: "KERNEL band required" });
       const { db } = await import("./db");
       const { runeSwaps } = await import("../shared/schema");
@@ -12334,7 +12334,7 @@ export async function registerRoutes(
   app.patch("/api/admin/orders/:id", authenticate, async (req: Request, res: Response) => {
     try {
       const user = (req as any).user;
-      if (user.spectralBand !== "KERNEL" && user.role !== "admin")
+      if (user.spectralBand !== "KERNEL" && user.role !== "admin" && !user.isAdmin)
         return res.status(403).json({ error: "KERNEL band required" });
       const orderId = parseInt(req.params.id, 10);
       if (isNaN(orderId)) return res.status(400).json({ error: "Invalid order id" });

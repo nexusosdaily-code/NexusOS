@@ -223,7 +223,7 @@ function StandingWaveViz() {
       ctx!.font = "9px monospace";
       ctx!.textAlign = "right";
       ctx!.fillStyle = "#34d399";
-      ctx!.fillText("Tm  n=35.9966", tmX - 6, midY - 10);
+      ctx!.fillText(`Tm  n=${TM_N.toFixed(4)}`, tmX - 6, midY - 10);
 
       // legend
       const leg = [
@@ -397,10 +397,11 @@ export default function StandingWaveTrap() {
               coordinate in the WNSP compression lattice that no stable nucleus occupies.
               The gap exists because nuclear binding energy mass defects never produce
               that atomic mass. Thulium (Z=69, 4f¹³) approaches from below at
-              n=35.9966 — only 0.0034 octaves short. The nearest stable Yb isotope
-              above the ghost is Yb-170 at n=36.0051 — only 0.0051 oct above,
-              giving a true nuclear gap of just 0.0085 octaves. The ghost node
-              sits precisely at the threshold between the most incomplete and the
+              n={TM_N.toFixed(4)} — only {TM_GAP.toFixed(4)} octaves short. The nearest
+              stable Yb isotope above the ghost is Yb-170 at n={YB170_N.toFixed(4)} —
+              only {(YB170_N - N_GHOST).toFixed(4)} oct above, giving a true nuclear
+              gap of just {(TM_GAP + YB170_N - N_GHOST).toFixed(4)} octaves. The ghost
+              node sits precisely at the threshold between the most incomplete and the
               first complete lanthanide shell. Act 7 shows how
               counter-propagating wave pairs (+k̂/−k̂) on the same Ψ channel create a
               standing wave whose antinode is positioned at n=36 — the first NexusOS
@@ -660,9 +661,9 @@ export default function StandingWaveTrap() {
             </p>
             <div className="font-mono text-xs text-center text-slate-400 pt-1">
               Kr (floor, n=34.985) → … →{" "}
-              <span className="text-cyan-300">Tm 4f¹³ (n=35.9966)</span> →{" "}
+              <span className="text-cyan-300">{`Tm 4f¹³ (n=${TM_N.toFixed(4)})`}</span> →{" "}
               <span className="text-purple-300 font-bold">[n=36 void]</span> →{" "}
-              <span className="text-red-300">Yb-170 (n=36.0051, nearest nuclear boundary)</span>
+              <span className="text-red-300">{`Yb-170 (n=${YB170_N.toFixed(4)}, nearest nuclear boundary)`}</span>
             </div>
           </div>
         </Section>
