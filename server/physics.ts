@@ -128,6 +128,16 @@ export const GHOST_NODES: readonly GhostNode[] = Object.freeze([
     fn: "Photonic hardware I/O, spectral relay mesh, IoT channels, d-orbital catalysis/magnetism gate",
   },
   {
+    n: 35, massU: 84.6655, oam: 35, wdm: 0, nm: 380,
+    psi: "Ψ(0,35,H)",
+    orbital: "s(outer)",
+    boundary: "Kr → Rb  (4p⁶ → 5s¹)",
+    service: "NXS-FIELD",
+    serviceName: "NexusOS Quantum Field Service",
+    authority: "SYSTEM" as AuthBand,
+    fn: "Quantum sensing, BEC channels, Rydberg field coupling, long-range field physics, 5s-orbital gate — Rb-87 BEC regime",
+  },
+  {
     n: 36, massU: 169.3310, oam: 36, wdm: 0, nm: 380,
     psi: "Ψ(0,36,H)",
     orbital: "f",
