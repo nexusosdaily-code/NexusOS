@@ -55,24 +55,24 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/contact",
   "/labs",
   // Funding & campaign
-  "/crowdfund", "/fund", "/indiegogo", "/campaign", "/evidence",
+  "/crowdfund", "/indiegogo", "/campaign", "/evidence",
   "/nxt-campaign",
   // Video / media
   "/videos",
   // Developer docs
-  "/docs", "/developer", "/developer-matrix", "/developer-matrix/docs",
-  "/research-presentation", "/research-presentation/developer-matrix",
+  "/docs", "/developer", "/developer-matrix",
+  "/research-presentation",
   // Spectral framework
-  "/spectral-db", "/nexus-spectral",
+  "/spectral-db",
   "/spectral-router", "/spectral-search", "/spectral-contracts",
   "/spectral-bundle",
   // WNSP landing + known child routes
-  "/wnsp", "/wnsp/ordinals", "/wnsp/bridge",
-  "/bitcoin-ordinals", "/wnsp-ordinals",
+  "/wnsp", "/wnsp/ordinals",
+  "/wnsp-ordinals",
   "/wnsp-bridge",
   "/wnsp-vm",
   // Nostr
-  "/nostr", "/nostr-relay", "/nostr-bridge",
+  "/nostr", "/nostr-bridge",
   // Community & staking
   "/community-mint", "/wnsp-staking", "/join-community",
   // Marketplace / runes / BTC
@@ -80,14 +80,14 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/rune-etching", "/rune-mint", "/etch-rune", "/rune-staking",
   "/rune-swap", "/rune-pipeline",
   "/stake-earn",
-  "/fractal-btc", "/fractal-bitcoin",
+  "/fractal-btc",
   "/nxt-fb-swap", "/swap",
   "/btc-sentinel", "/btc-assets-sentinel",
   "/mempool",
   // Chain / ecosystem
   "/blockchain", "/ecosystem", "/network", "/snic",
   // Governance / open (public constitutional docs)
-  "/open", "/charter", "/constitution",
+  "/open", "/constitution",
   // Science & theory
   "/oscillating-quanta", "/planck-alignment", "/reposed-theory", "/silicon-bridge",
   "/compression-explorer",
@@ -330,12 +330,22 @@ export function serveStatic(app: Express) {
   // crawlers that do not execute JavaScript receive a proper 301 redirect
   // instead of landing on a metadata-only SPA shell.
   const ALIAS_REDIRECTS: Record<string, string> = {
-    "/spectral-video": "/wnsp",
-    "/spectral-uri":   "/wnsp",
-    "/wnsp-uri":       "/wnsp",
-    "/visualizer":     "/wnsp",
-    "/btc-bridge":     "/wnsp-ordinals",
-    "/wnsp/ordinals":  "/wnsp-ordinals",
+    "/spectral-video":                       "/wnsp",
+    "/spectral-uri":                         "/wnsp",
+    "/wnsp-uri":                             "/wnsp",
+    "/visualizer":                           "/wnsp",
+    "/btc-bridge":                           "/wnsp-ordinals",
+    "/wnsp/ordinals":                        "/wnsp-ordinals",
+    // SEO consolidation — alias → canonical 301 redirects
+    "/fund":                                 "/crowdfund",
+    "/developer-matrix/docs":               "/docs",
+    "/research-presentation/developer-matrix": "/developer-matrix",
+    "/nexus-spectral":                       "/spectral-db",
+    "/bitcoin-ordinals":                     "/wnsp-ordinals",
+    "/nostr-relay":                          "/nostr",
+    "/fractal-bitcoin":                      "/fractal-btc",
+    "/charter":                              "/open",
+    "/wnsp/bridge":                          "/wnsp-bridge",
   };
   for (const [from, to] of Object.entries(ALIAS_REDIRECTS)) {
     app.get(from, (_req: Request, res: Response) => {
