@@ -92,6 +92,17 @@ const BOT_PATTERNS: { pattern: RegExp; name: string }[] = [
   { pattern: /J2ME/i,                 name: "Legacy-Device-J2ME" },
   { pattern: /Windows CE/i,           name: "Legacy-Device-WindowsCE" },
   { pattern: /SIE-[A-Z0-9]+/i,        name: "Legacy-Device-Siemens" },
+  { pattern: /MSIE [0-9]|Trident\//i, name: "Legacy-Device-InternetExplorer" },
+
+  // Self-identifying scanners / crawlers observed hitting the site — these
+  // advertise a contact domain or research label instead of pretending to be
+  // a browser.
+  { pattern: /jagitek/i,              name: "Jagitek-Scanner" },
+
+  // Politeness-URL bot convention: real browsers NEVER embed a domain/URL in
+  // their own User-Agent string. Any UA carrying "http(s)://" is a crawler or
+  // scanner identifying its operator, even if we haven't named it yet.
+  { pattern: /https?:\/\//i,          name: "Self-Identifying-Crawler" },
 
   // Headless / automation frameworks — never a real human visitor.
   { pattern: /HeadlessChrome/i,       name: "Headless-Chrome" },
