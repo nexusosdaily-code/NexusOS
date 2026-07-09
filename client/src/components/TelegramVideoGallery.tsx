@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { Play, Clock, MessageSquare, Tv, ChevronRight, X, ExternalLink } from "lucide-react";
+import { Play, Tv, ChevronRight, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 
 const TG_BOT_URL = "https://t.me/Nexuswnspbot";
@@ -43,110 +42,14 @@ function isLargeFile(video: TelegramVideo): boolean {
   return !!video.fileSize && video.fileSize > TG_SIZE_LIMIT;
 }
 
-function telegramUrl(video: TelegramVideo): string {
-  if (video.channelUsername && video.channelPostId) {
-    return `https://t.me/${video.channelUsername}/${video.channelPostId}`;
-  }
-  if (video.channelUsername && video.messageId) {
-    return `https://t.me/${video.channelUsername}/${video.messageId}`;
-  }
-  return TG_BOT_URL;
-}
-
-function VideoModal({ video, onClose }: { video: TelegramVideo; onClose: () => void }) {
+function VideoCard({ video }: { video: TelegramVideo }) {
   const isChannel = video.source === "channel" && video.channelUsername && video.channelPostId;
   const large = isLargeFile(video);
-  const tgUrl = telegramUrl(video);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0a0a14] overflow-hidden"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            {isChannel ? <Tv size={12} className="text-blue-400" /> : <MessageSquare size={12} className="text-green-400" />}
-            <span>{isChannel ? `@${video.channelUsername}` : "Telegram Bot Upload"}</span>
-            {video.duration ? <><Clock size={10} /><span>{fmtDuration(video.duration)}</span></> : null}
-            {video.fileSize ? <span className="text-gray-600">{fmtSize(video.fileSize)}</span> : null}
-          </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors"><X size={16} /></button>
-        </div>
-
-        {isChannel ? (
-          <div className="p-0" style={{ height: 480 }}>
-            <iframe
-              src={`https://t.me/${video.channelUsername}/${video.channelPostId}?embed=1&mode=tme`}
-              className="w-full h-full border-0"
-              allowFullScreen
-            />
-          </div>
-        ) : large ? (
-          /* Large file — Telegram bot API cap exceeded, redirect to Telegram */
-          <div className="flex flex-col items-center justify-center py-12 px-6 gap-5 bg-black">
-            {video.thumbFileId && (
-              <div className="relative w-full max-w-sm rounded-xl overflow-hidden">
-                <img
-                  src={`/api/telegram/video/${encodeURIComponent(video.thumbFileId)}/thumb`}
-                  alt={video.caption || "Video"}
-                  className="w-full object-cover opacity-60"
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-16 h-16 rounded-full bg-blue-500/80 flex items-center justify-center">
-                    <Play size={24} className="text-white ml-1" />
-                  </div>
-                </div>
-              </div>
-            )}
-            <div className="text-center space-y-1">
-              <p className="text-white/70 text-sm">This video is {fmtSize(video.fileSize)} — too large to stream directly.</p>
-              <p className="text-gray-600 text-xs">Watch it on Telegram instead.</p>
-            </div>
-            <a
-              href={tgUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-500 hover:bg-blue-400 transition-colors text-white text-sm font-semibold"
-            >
-              <ExternalLink size={14} />
-              Watch on Telegram
-            </a>
-          </div>
-        ) : (
-          <video
-            className="w-full max-h-[60vh] bg-black"
-            controls
-            autoPlay
-            src={`/api/telegram/video/${encodeURIComponent(video.fileId)}/stream`}
-          />
-        )}
-
-        {video.caption && (
-          <div className="px-4 py-3 text-sm text-gray-300 leading-relaxed border-t border-white/10">
-            {video.caption}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function VideoCard({ video, onClick }: { video: TelegramVideo; onClick: () => void }) {
-  const isChannel = video.source === "channel" && video.channelUsername && video.channelPostId;
-  const large = isLargeFile(video);
-  const tgHref = telegramUrl(video);
-
-  return (
-    <a
-      href={tgHref}
-      target="_blank"
-      rel="noopener noreferrer"
+    <Link
+      href={`/videos/${video.id}`}
       data-testid={`telegram-video-card-${video.id}`}
-      onClick={(e) => { e.preventDefault(); onClick(); }}
       className="group relative w-full text-left rounded-xl border border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06] transition-all overflow-hidden block"
     >
       <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
@@ -210,7 +113,7 @@ function VideoCard({ video, onClick }: { video: TelegramVideo; onClick: () => vo
           {isChannel ? `@${video.channelUsername} · Post #${video.channelPostId}` : "No caption"}
         </div>
       )}
-    </a>
+    </Link>
   );
 }
 
@@ -227,8 +130,6 @@ export default function TelegramVideoGallery({
   showLink = true,
   accentColor = "#3b82f6",
 }: TelegramVideoGalleryProps) {
-  const [activeVideo, setActiveVideo] = useState<TelegramVideo | null>(null);
-
   const { data, isLoading } = useQuery<{ videos: TelegramVideo[] }>({
     queryKey: ["/api/telegram/videos"],
     retry: false,
@@ -259,7 +160,7 @@ export default function TelegramVideoGallery({
     <>
       <div className={`grid gap-3 ${compact ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"}`}>
         {videos.map(v => (
-          <VideoCard key={v.id} video={v} onClick={() => setActiveVideo(v)} />
+          <VideoCard key={v.id} video={v} />
         ))}
       </div>
 
@@ -274,10 +175,6 @@ export default function TelegramVideoGallery({
             </span>
           </Link>
         </div>
-      )}
-
-      {activeVideo && (
-        <VideoModal video={activeVideo} onClose={() => setActiveVideo(null)} />
       )}
     </>
   );

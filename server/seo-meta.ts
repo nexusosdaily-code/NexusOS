@@ -1849,6 +1849,13 @@ function videoTelegramUrl(v: VideoForSchema): string {
   return "https://t.me/nexusosdaily";
 }
 
+// First-party NexusOS URL for a video's detail page — the canonical
+// crawlable destination. Telegram remains a secondary/outbound (sameAs)
+// link for playback syndication, never the primary schema URL.
+function videoFirstPartyUrl(v: VideoForSchema): string {
+  return `${BASE}/videos/${v.id}`;
+}
+
 /**
  * Build a live PageMeta for /videos using real video records from the DB.
  * Pass the result into injectCustomMeta() instead of injectMeta().
@@ -1872,6 +1879,7 @@ export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
   const videoObjects = videos.slice(0, 20).map(v => {
     const uploadDate = new Date(v.createdAt).toISOString().split("T")[0];
     const tgUrl      = videoTelegramUrl(v);
+    const fpUrl      = videoFirstPartyUrl(v);
     const name       = v.caption ? v.caption.slice(0, 110) : `NexusOS Video #${v.id}`;
     const obj: Record<string, unknown> = {
       "@context": "https://schema.org",
@@ -1879,9 +1887,10 @@ export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
       "name": name,
       "description": v.caption ?? "NexusOS physics demonstration video.",
       "uploadDate": uploadDate,
-      "url": tgUrl,
-      "contentUrl": tgUrl,
-      "embedUrl": tgUrl,
+      "url": fpUrl,
+      "contentUrl": fpUrl,
+      "embedUrl": fpUrl,
+      "sameAs": tgUrl,
       "publisher": publisher,
     };
     if (v.thumbFileId) {
@@ -1926,6 +1935,7 @@ export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
   // crawlers receive structured, meaningful content rather than bare links.
   const videoItems = videos.slice(0, 20).map(v => {
     const tgUrl      = videoTelegramUrl(v);
+    const fpUrl      = videoFirstPartyUrl(v);
     const label      = v.caption ? v.caption.slice(0, 110) : `NexusOS Video #${v.id}`;
     const uploadDate = new Date(v.createdAt).toISOString().split("T")[0];
     const thumbUrl   = v.thumbFileId
@@ -1934,11 +1944,11 @@ export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
     const durationStr = v.duration ? ` · ${fmtIsoDuration(v.duration).replace("PT", "").toLowerCase()}` : "";
 
     return `<article style="margin-bottom:1.5rem;">`
-      + `<a href="${esc(tgUrl)}" target="_blank" rel="noopener noreferrer">`
+      + `<a href="${esc(fpUrl)}">`
       + `<img src="${esc(thumbUrl)}" alt="${esc(label)}" width="320" height="180" loading="lazy" style="display:block;max-width:100%;height:auto;border-radius:6px;" />`
       + `</a>`
-      + `<h3 style="margin:0.5rem 0 0.25rem;"><a href="${esc(tgUrl)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a></h3>`
-      + `<p style="margin:0;font-size:0.85em;color:#666;"><time datetime="${esc(uploadDate)}">${esc(uploadDate)}</time>${esc(durationStr)}</p>`
+      + `<h3 style="margin:0.5rem 0 0.25rem;"><a href="${esc(fpUrl)}">${esc(label)}</a></h3>`
+      + `<p style="margin:0;font-size:0.85em;color:#666;"><time datetime="${esc(uploadDate)}">${esc(uploadDate)}</time>${esc(durationStr)} · <a href="${esc(tgUrl)}" target="_blank" rel="noopener noreferrer">Watch on Telegram</a></p>`
       + `</article>`;
   }).join("");
 
@@ -1954,6 +1964,74 @@ export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
     ...(baseEntry ?? {}),
     jsonLd: liveJsonLd,
     bodyHtml: liveBodyHtml,
+  };
+}
+
+/**
+ * Build a live PageMeta for a single first-party video detail page
+ * (/videos/:id). Emits a canonical VideoObject whose url/contentUrl/embedUrl
+ * resolve to the NexusOS page itself, with the Telegram post retained only
+ * as a secondary `sameAs` outbound reference for playback syndication.
+ */
+export function buildVideoDetailPageMeta(video: VideoForSchema): PageMeta {
+  const fpUrl      = videoFirstPartyUrl(video);
+  const tgUrl      = videoTelegramUrl(video);
+  const uploadDate = new Date(video.createdAt).toISOString().split("T")[0];
+  const name       = video.caption ? video.caption.slice(0, 110) : `NexusOS Video #${video.id}`;
+  const description = video.caption ?? "NexusOS physics demonstration video.";
+  const thumbUrl   = video.thumbFileId
+    ? `${BASE}/api/telegram/video/${encodeURIComponent(video.thumbFileId)}/thumb`
+    : "https://wnsp.io/opengraph.png";
+
+  const publisher = {
+    "@type": "Organization",
+    "name": "NexusOS",
+    "url": BASE,
+    "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.png" },
+  };
+
+  const videoObject: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    "name": name,
+    "description": description,
+    "uploadDate": uploadDate,
+    "url": fpUrl,
+    "contentUrl": fpUrl,
+    "embedUrl": fpUrl,
+    "sameAs": tgUrl,
+    "thumbnailUrl": thumbUrl,
+    "publisher": publisher,
+  };
+  if (video.duration) videoObject["duration"] = fmtIsoDuration(video.duration);
+
+  const breadcrumb = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Videos", "item": `${BASE}/videos` },
+      { "@type": "ListItem", "position": 2, "name": name, "item": fpUrl },
+    ],
+  };
+
+  const durationStr = video.duration ? ` · ${fmtIsoDuration(video.duration).replace("PT", "").toLowerCase()}` : "";
+  const bodyHtml = `<h1>${esc(name)}</h1>`
+    + `<p><time datetime="${esc(uploadDate)}">${esc(uploadDate)}</time>${esc(durationStr)}</p>`
+    + `<img src="${esc(thumbUrl)}" alt="${esc(name)}" width="640" height="360" loading="lazy" style="display:block;max-width:100%;height:auto;border-radius:6px;" />`
+    + (video.caption ? `<p>${esc(video.caption)}</p>` : "")
+    + `<nav><ul><li><a href="${BASE}/videos">All NexusOS Videos</a></li><li><a href="${esc(tgUrl)}" target="_blank" rel="noopener noreferrer">Watch on Telegram</a></li></ul></nav>`;
+
+  return {
+    title: `${name} — NexusOS Videos`,
+    description: description.slice(0, 160),
+    canonical: fpUrl,
+    ogTitle: name,
+    ogDescription: description.slice(0, 200),
+    ogType: "video.other",
+    twitterTitle: name,
+    twitterDescription: description.slice(0, 200),
+    jsonLd: [videoObject, breadcrumb],
+    bodyHtml: bodyHtml,
   };
 }
 

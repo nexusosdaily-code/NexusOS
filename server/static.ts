@@ -1,7 +1,7 @@
 import express, { type Express, type Request, type Response } from "express";
 import fs from "fs";
 import path from "path";
-import { injectMeta, buildVideosPageMeta, injectCustomMeta } from "./seo-meta";
+import { injectMeta, buildVideosPageMeta, buildVideoDetailPageMeta, injectCustomMeta } from "./seo-meta";
 import { storage } from "./storage";
 
 // ---------------------------------------------------------------------------
@@ -202,6 +202,7 @@ const NOINDEX_DYNAMIC_PREFIXES: string[] = [
 // marketing / science / documentation page.
 const DYNAMIC_PUBLIC_PREFIXES: string[] = [
   "/docs/",       // /docs/:section — public developer documentation
+  "/videos/",     // /videos/:id — first-party video detail pages
 ];
 
 // Valid /docs/:section slugs — must stay in sync with DOCS_SECTIONS in
@@ -698,6 +699,7 @@ export function serveStatic(app: Express) {
     }
 
     let html: string;
+    const videoDetailMatch = !CUSTOM_DOMAIN_HOSTS.has(cleanHost) ? spaPathname.match(/^\/videos\/(\d+)$/) : null;
     if (spaPathname === "/videos" && !CUSTOM_DOMAIN_HOSTS.has(cleanHost)) {
       // Inject live video data so crawlers receive real VideoObject schema
       // and a noscript block with crawlable links to each Telegram post.
@@ -705,6 +707,22 @@ export function serveStatic(app: Express) {
         const videos = await storage.getTelegramVideos(20);
         const meta   = buildVideosPageMeta(videos);
         html = injectCustomMeta(getHtml(), meta);
+      } catch {
+        html = injectMeta(getHtml(), host, pathname);
+      }
+    } else if (videoDetailMatch) {
+      // First-party video detail page — emit a canonical VideoObject that
+      // resolves to this NexusOS URL, with Telegram kept as a secondary
+      // outbound (sameAs) reference only.
+      try {
+        const video = await storage.getTelegramVideo(Number(videoDetailMatch[1]));
+        if (video) {
+          const meta = buildVideoDetailPageMeta(video);
+          html = injectCustomMeta(getHtml(), meta);
+        } else {
+          status = 404;
+          html = injectMeta(getHtml(), host, pathname);
+        }
       } catch {
         html = injectMeta(getHtml(), host, pathname);
       }

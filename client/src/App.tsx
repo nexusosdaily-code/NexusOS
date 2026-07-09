@@ -116,6 +116,7 @@ const HardwareSpecPage = lazy(() => import("@/pages/hardware-spec"));
 const P2PTerminalPage = lazy(() => import("@/pages/p2p-terminal"));
 const CampaignPage = lazy(() => import("@/pages/campaign"));
 const VideosPage = lazy(() => import("@/pages/videos"));
+const VideoDetailPage = lazy(() => import("@/pages/video-detail"));
 const SocialBroadcastPage = lazy(() => import("@/pages/social-broadcast"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const WnspLandingPage = lazy(() => import("@/pages/wnsp-landing"));
@@ -437,6 +438,7 @@ function Router() {
       <Route path="/crowdfund" component={CrowdfundPage} />
       <Route path="/fund" component={CrowdfundPage} />
       <Route path="/videos" component={VideosPage} />
+      <Route path="/videos/:id" component={VideoDetailPage} />
       <Route path="/indiegogo" component={IndiegogoPage} />
       <Route path="/developer" component={DeveloperPage} />
       <Route path="/developer-matrix" component={DeveloperMatrixPage} />

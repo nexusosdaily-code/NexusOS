@@ -5,7 +5,7 @@ import viteConfig from "../vite.config";
 import fs from "fs";
 import path from "path";
 import { nanoid } from "nanoid";
-import { injectMeta, buildVideosPageMeta, injectCustomMeta } from "./seo-meta";
+import { injectMeta, buildVideosPageMeta, buildVideoDetailPageMeta, injectCustomMeta } from "./seo-meta";
 import { storage } from "./storage";
 
 const viteLogger = createLogger();
@@ -54,11 +54,21 @@ export async function setupVite(server: Server, app: Express) {
       const transformed = await vite.transformIndexHtml(url, template);
 
       let page: string;
+      const videoDetailMatch = pathname.match(/^\/videos\/(\d+)$/);
       if (pathname === "/videos") {
         try {
           const videos = await storage.getTelegramVideos(20);
           const meta   = buildVideosPageMeta(videos);
           page = injectCustomMeta(transformed, meta);
+        } catch {
+          page = injectMeta(transformed, host, pathname);
+        }
+      } else if (videoDetailMatch) {
+        try {
+          const video = await storage.getTelegramVideo(Number(videoDetailMatch[1]));
+          page = video
+            ? injectCustomMeta(transformed, buildVideoDetailPageMeta(video))
+            : injectMeta(transformed, host, pathname);
         } catch {
           page = injectMeta(transformed, host, pathname);
         }
