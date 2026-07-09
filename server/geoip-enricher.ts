@@ -2,9 +2,21 @@ import { Pool } from "pg";
 
 const BATCH_SIZE  = 100;
 const INTERVAL_MS = 2 * 60 * 1000;
+const MAX_CACHE_ENTRIES = 50_000;
 
 export const ipCountryCache = new Map<string, string>();
 export const ipHostingCache = new Map<string, boolean>();
+
+// Bounded set: evicts the oldest entry (Maps preserve insertion order) once a
+// cache grows past MAX_CACHE_ENTRIES, so long-running processes under heavy
+// scraper/bot churn (many distinct IPs) can't grow these caches unbounded.
+function setCapped<V>(map: Map<string, V>, key: string, value: V) {
+  if (!map.has(key) && map.size >= MAX_CACHE_ENTRIES) {
+    const oldestKey = map.keys().next().value;
+    if (oldestKey !== undefined) map.delete(oldestKey);
+  }
+  map.set(key, value);
+}
 
 // Real browsers always advertise a rendering engine token. Kept in sync with
 // server/traffic-logger.ts's BROWSER_ENGINE_TOKENS.
@@ -45,8 +57,8 @@ async function enrichBatch() {
       const code       = r.status === "success" && r.countryCode ? r.countryCode : "XX";
       const isDatacenter = r.status === "success" && (r.hosting === true || r.proxy === true);
 
-      ipCountryCache.set(r.query, code);
-      ipHostingCache.set(r.query, isDatacenter);
+      setCapped(ipCountryCache, r.query, code);
+      setCapped(ipHostingCache, r.query, isDatacenter);
 
       await pool.query(
         `UPDATE traffic_logs

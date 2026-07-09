@@ -1543,6 +1543,7 @@ export const trafficLogs = pgTable("traffic_logs", {
   isBotIdx:     index("traffic_logs_is_bot_idx").on(t.isBot),
   countryIdx:   index("traffic_logs_country_idx").on(t.country),
   datacenterIdx: index("traffic_logs_datacenter_idx").on(t.isDatacenterIp),
+  ipIdx:        index("traffic_logs_ip_idx").on(t.ip),
 }));
 export type TrafficLog = typeof trafficLogs.$inferSelect;
 
