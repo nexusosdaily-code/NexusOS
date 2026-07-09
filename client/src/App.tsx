@@ -409,7 +409,6 @@ function ProtectedRoutes() {
         <Route path="/learn" component={LearnPage} />
         <Route path="/pipeline" component={PipelinePage} />
         <Route path="/planck-alignment" component={PlanckAlignmentPage} />
-        <Route path="/spectral-mirror" component={SpectralMirrorPage} />
         <Route path="/community" component={CommunityPage} />
         <Route path="/media-library" component={MediaLibraryPage} />
         <Route path="/quora" component={QuoraPage} />
@@ -543,6 +542,7 @@ function Router() {
       <Route path="/divergence-test" component={DivergenceTestPage} />
       <Route path="/hardware-spec" component={HardwareSpecPage} />
       <Route path="/hardware-lab" component={HardwareLabPage} />
+      <Route path="/spectral-mirror" component={SpectralMirrorPage} />
       <Route path="/hardware-treasury" component={HardwareTreasuryPage} />
       <Route path="/campaign" component={CampaignPage} />
       <Route path="/constitution" component={ConstitutionPage} />

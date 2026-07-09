@@ -112,7 +112,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   // Legacy redirect paths (server redirects in production)
   "/btc-bridge",
   // Routes registered in public Router()
-  "/hardware-treasury",
+  "/hardware-treasury", "/spectral-mirror",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -180,7 +180,7 @@ const NOINDEX_EXACT_PATHS = new Set<string>([
   "/visualizer",
   "/encoding-lab", "/ce-writer",
   // Internal tools
-  "/spectral-audit", "/spectral-mirror", "/spectral-uri",
+  "/spectral-audit", "/spectral-uri",
   "/spectral-video", "/spectral-workspace",
   "/ordinal-registry",
   // Internal community / social
