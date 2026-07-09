@@ -305,6 +305,33 @@ export default function WnspLandingPage() {
           </div>
         </div>
 
+        {/* More ways to explore the network */}
+        <div className="rounded-xl border border-white/8 bg-white/3 p-5 space-y-3">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-white/40">Explore the network</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {[
+              { href: "/resonance-cavity", label: "Resonance Cavity" },
+              { href: "/community-mint", label: "Community Mint" },
+              { href: "/fractal-btc", label: "Fractal BTC" },
+              { href: "/airdrop", label: "Airdrop" },
+              { href: "/shareholders", label: "Shareholders" },
+              { href: "/spectral-bundle", label: "Spectral Bundle" },
+              { href: "/research-presentation", label: "Research Presentation" },
+              { href: "/nostr", label: "Nostr Relay" },
+              { href: "/wsats", label: "wSats" },
+            ].map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                data-testid={`link-explore-network-${href.replace(/\//g, "")}`}
+                className="text-xs px-3 py-2 rounded-lg bg-black/20 border border-white/5 text-white/50 hover:text-white hover:border-white/15 transition-colors text-center"
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+        </div>
+
         {/* Campaign CTA */}
         <div className="rounded-2xl border border-cyan-500/25 bg-gradient-to-br from-cyan-500/10 to-violet-900/10 p-7 text-center space-y-4">
           <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-400/60">Infrastructure Campaign — Phase 1</div>

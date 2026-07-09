@@ -59,7 +59,7 @@ const STEPS = [
     color: "#16a34a",
     desc: "Your node votes on live protocol parameters. Authority by spectral band — not capital. KERNEL band or higher may submit proposals.",
     detail: "51,200 orthogonal Ψ channels · Physics-weighted votes",
-    link: { label: "Governance →", href: "/governance" },
+    link: { label: "Governance →", href: "/open" },
   },
   {
     n: "05",

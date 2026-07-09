@@ -355,10 +355,10 @@ if (curr.previousWavelengthHash !== expectedHash) {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <ImplRef label="P2P Terminal" href="/p2p-terminal" file="p2p-sync-engine.ts" />
             <ImplRef label="Spectral Router" href="/spectral-router" file="spectral-router.tsx" />
             <ImplRef label="WNSP Bridge" href="/wnsp-bridge" file="wnsp-bridge.tsx" />
             <ImplRef label="Spectral Network" href="/network" file="network.tsx" />
+            <ImplRef label="Developer Docs" href="/docs" file="docs.tsx" />
           </div>
           <PriorArt text={`Spectral Relay Mesh v1 — WNSP-addressed photonic relay across TCP/IP overlay and all-optical phases — first specified ${SPEC_DATE}`} />
           <PriorArt text={`Bidirectional channel dimension N_Dir=2 — forward (+k̂) and backward (−k̂) propagating modes as orthogonal Hilbert sub-space; phase conjugation reversal; 25,600 → 51,200 channel expansion — first specified 2026-07-02`} />
@@ -490,7 +490,7 @@ Genesis anchor → blockWavelengthAnchor=380nm  lambda-state.ts`}</CodeBlock>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {[
               { title: "Photonic Ledger",   href: "/photonic-ledger",      desc: "LambdaStateMachine — live chain, block commit, audit" },
-              { title: "P2P Terminal",      href: "/p2p-terminal",         desc: "P2PSyncEngine — node handshake, consensus, broadcast" },
+              { title: "Spectral Network",  href: "/network",              desc: "Node distribution by authority band, spectral proximity" },
               { title: "CE–SE Pipeline",    href: "/ce-se-pipeline",       desc: "4-stage: paste → WavelengthScript → bytecode → WNSP VM" },
               { title: "WNSP VM",           href: "/wnsp-vm",              desc: "Bytecode interpreter — step/run, Ψ channel registers" },
               { title: "WavelengthScript",  href: "/wavelength-lang",      desc: "Language spec, transpiler, compiler interface" },

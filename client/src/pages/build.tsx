@@ -372,7 +372,7 @@ export default function BuildWithUsPage() {
               { href: "/blockchain",         label: "Blockchain Explorer",  desc: "Live blocks & mempool",       icon: Activity,   color: "text-emerald-400" },
               { href: "/hardware-spec",      label: "Hardware Spec",        desc: "SNIC, PHR-1, Relay Mesh",     icon: BookOpen,   color: "text-pink-400" },
               { href: "/compression-explorer", label: "Compression Curve", desc: "Interactive Λ=hf/c² viz",     icon: Radio,      color: "text-orange-400" },
-              { href: "/governance",         label: "Governance",           desc: "On-chain protocol voting",    icon: Users,      color: "text-blue-400" },
+              { href: "/open",               label: "Governance",           desc: "On-chain protocol voting",    icon: Users,      color: "text-blue-400" },
               { href: "/developer",          label: "Developer API",        desc: "/api/dev/* endpoints",        icon: GitBranch,  color: "text-white/50" },
               { href: "/join-community",     label: "Community Roles",      desc: "Moderator, Creator, Engager", icon: Users,      color: "text-yellow-400" },
               { href: "/build-catalogue",    label: "Build Catalogue",       desc: "Full log of shipped features", icon: FileText,   color: "text-slate-400" },

@@ -1147,7 +1147,7 @@ export default function CrowdfundPage() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label: "Technical Whitepaper",      url: "/wnsp-paper",      icon: "📄" },
+              { label: "Technical Whitepaper",      url: "/paper",           icon: "📄" },
               { label: "Hardware Specification",    url: "/hardware-spec",   icon: "🔧" },
               { label: "Tokenomics Breakdown",      url: "/campaign",        icon: "📊" },
               { label: "Audit Report",              url: "/coinsniper",      icon: "✅" },
