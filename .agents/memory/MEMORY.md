@@ -19,3 +19,5 @@
 - [Sub-mm wave geometry & engine expansion](submm-wave-geometry.md) — 2025 THz research validates Ψ channels, WGM=Russell octaves, Berry phase→Λ extension, Fl-114=SYSTEM band; saved by founder for future builders
 - [Replit AI R&D account](replit-ai-account.md) — wnsp://Ψ(52,20,H)/test; role=ai_agent; designated by founder 2026-06-21; never reassign without founder approval
 - [WNSP Physics Sequence](wnsp-physics-sequence.md) — 8-act sequence routes/equations; ghost node physics; Act 8 lossless channel; 6-surface wiring pattern; ogType server vs client rule
+- [Traffic bot detection layering](traffic-bot-detection.md) — sync UA-pattern layer + async datacenter-IP reclassification layer; why one alone isn't airtight
+- [drizzle-kit push TTY workaround](drizzle-push-tty-workaround.md) — for safe additive columns, apply ALTER TABLE directly instead of fighting the interactive resolver

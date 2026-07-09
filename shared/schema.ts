@@ -1535,12 +1535,14 @@ export const trafficLogs = pgTable("traffic_logs", {
   ip:         text("ip"),
   isBot:      boolean("is_bot").notNull().default(false),
   botName:    text("bot_name"),
+  isDatacenterIp: boolean("is_datacenter_ip").notNull().default(false),
   createdAt:  timestamp("created_at").notNull().defaultNow(),
 }, (t) => ({
   pathIdx:      index("traffic_logs_path_idx").on(t.path),
   createdAtIdx: index("traffic_logs_created_at_idx").on(t.createdAt),
   isBotIdx:     index("traffic_logs_is_bot_idx").on(t.isBot),
   countryIdx:   index("traffic_logs_country_idx").on(t.country),
+  datacenterIdx: index("traffic_logs_datacenter_idx").on(t.isDatacenterIp),
 }));
 export type TrafficLog = typeof trafficLogs.$inferSelect;
 

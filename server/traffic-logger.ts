@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { isHoneypotPath } from "./honeypot";
-import { ipCountryCache } from "./geoip-enricher";
+import { ipCountryCache, ipHostingCache } from "./geoip-enricher";
 
 const BOT_PATTERNS: { pattern: RegExp; name: string }[] = [
   { pattern: /assetnote/i,           name: "Assetnote" },
@@ -76,14 +76,49 @@ const BOT_PATTERNS: { pattern: RegExp; name: string }[] = [
   { pattern: /superagent/i,           name: "SuperAgent-Client" },
   { pattern: /googleassociationservice/i, name: "GoogleAssociationService" },
   { pattern: /securityresearch/i,     name: "SecurityResearch" },
+
+  // Legacy / feature-phone device signatures — no genuine visitor in 2026 runs
+  // these stacks; almost always a scraper spoofing an obscure UA to dodge filters.
+  { pattern: /NetFront/i,             name: "Legacy-Device-NetFront" },
+  { pattern: /UP\.Browser/i,          name: "Legacy-Device-UPBrowser" },
+  { pattern: /Profile\/MIDP/i,        name: "Legacy-Device-MIDP" },
+  { pattern: /Configuration\/CLDC/i,  name: "Legacy-Device-CLDC" },
+  { pattern: /SEC-SGH/i,              name: "Legacy-Device-SamsungSGH" },
+  { pattern: /SAMSUNG-SGH/i,          name: "Legacy-Device-SamsungSGH" },
+  { pattern: /SymbianOS/i,            name: "Legacy-Device-Symbian" },
+  { pattern: /Series60/i,             name: "Legacy-Device-Series60" },
+  { pattern: /BlackBerry[0-9]+\/[4-7]\./i, name: "Legacy-Device-BlackBerry" },
+  { pattern: /Opera Mini\/[0-4]\./i,  name: "Legacy-Device-OperaMini" },
+  { pattern: /J2ME/i,                 name: "Legacy-Device-J2ME" },
+  { pattern: /Windows CE/i,           name: "Legacy-Device-WindowsCE" },
+  { pattern: /SIE-[A-Z0-9]+/i,        name: "Legacy-Device-Siemens" },
+
+  // Headless / automation frameworks — never a real human visitor.
+  { pattern: /HeadlessChrome/i,       name: "Headless-Chrome" },
+  { pattern: /PhantomJS/i,            name: "Headless-PhantomJS" },
+  { pattern: /Selenium/i,             name: "Automation-Selenium" },
+  { pattern: /Puppeteer/i,            name: "Automation-Puppeteer" },
+  { pattern: /Playwright/i,           name: "Automation-Playwright" },
+  { pattern: /jsdom/i,                name: "Automation-Jsdom" },
 ];
 
+// Real browsers always advertise a rendering engine token. Absence of every
+// one of these — especially from a datacenter/hosting IP — is a strong
+// signal of a script or spoofed client rather than a human on a real browser.
+const BROWSER_ENGINE_TOKENS = /(Chrome\/|CriOS\/|FxiOS\/|Firefox\/|Safari\/|Edg(e|A|iOS)?\/|Gecko\/|OPR\/)/i;
+
 function detectBot(ua: string): { isBot: boolean; botName: string | null } {
-  if (!ua) return { isBot: false, botName: null };
+  if (!ua || ua.trim().length === 0) {
+    return { isBot: true, botName: "Blank-User-Agent" };
+  }
   for (const { pattern, name } of BOT_PATTERNS) {
     if (pattern.test(ua)) return { isBot: true, botName: name };
   }
   return { isBot: false, botName: null };
+}
+
+export function looksLikeRealBrowserEngine(ua: string): boolean {
+  return !!ua && BROWSER_ENGINE_TOKENS.test(ua);
 }
 
 const SKIP_PATHS = new Set(["/__vite_ping", "/favicon.ico", "/@vite", "/@fs"]);
@@ -114,7 +149,13 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
   const cleanIp   = ip.toString().split(",")[0].trim();
   const country   = ipCountryCache.get(cleanIp)
     ?? (req.headers["cf-ipcountry"] ?? req.headers["x-country"] ?? "") as string;
-  const { isBot, botName } = detectBot(ua);
+  const isDatacenter = ipHostingCache.get(cleanIp) === true;
+  const { isBot: patternBot, botName: patternBotName } = detectBot(ua);
+  // Defense-in-depth: a known datacenter/hosting IP whose UA carries no real
+  // browser rendering-engine token is a script or spoofed client, even if it
+  // doesn't match any specific known bot signature yet.
+  const isBot     = patternBot || (isDatacenter && !looksLikeRealBrowserEngine(ua));
+  const botName   = patternBotName ?? (isDatacenter && isBot ? "Cloud-Datacenter-NonBrowser" : null);
 
   res.on("finish", () => {
     if (path.startsWith("/api/analytics")) return;
@@ -137,6 +178,7 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
         ip:         ip.toString().split(",")[0].trim().slice(0, 64) || null,
         isBot:      finalIsBot,
         botName:    finalBot,
+        isDatacenterIp: isDatacenter,
       }).catch(() => {});
     }).catch(() => {});
   });
