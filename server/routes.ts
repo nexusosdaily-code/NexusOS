@@ -14739,7 +14739,7 @@ OPEN SOURCE: AGPL-3.0. All code public. No hidden logic. No admin keys. No team 
         description:   goalDesc,
         goalMsats:     goalSats * 1000,
         lightningAddr,
-        imageUrl:      "https://wnsp.io/opengraph.jpg",
+        imageUrl:      "https://wnsp.io/crowdfund-og.png",
       });
 
       // Also fire a promo note

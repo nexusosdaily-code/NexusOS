@@ -721,7 +721,7 @@ export default function CrowdfundPage() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/5 text-amber-400 text-[10px] font-bold uppercase tracking-widest mb-3">
             <Rss size={10} /> Crowdfund Hub — All Platforms
           </div>
-          <h2 className="text-2xl font-bold text-white">Promote. Disclose. Receive.</h2>
+          <p className="text-2xl font-bold text-white">Promote. Disclose. Receive.</p>
           <p className="text-sm text-white/40 mt-1">All donation outlets connected. Full transparency on every channel.</p>
         </div>
 

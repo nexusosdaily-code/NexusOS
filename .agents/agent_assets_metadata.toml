@@ -108,6 +108,12 @@ uri = "file://client/public/opengraph.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "eMl6p4ouBXXPDc3HLcb8k"
+uri = "file://client/public/crowdfund-og.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "H5DxipQLmLvHtAwbjOE_f"
 uri = "file://attached_assets/phase0_campaign.png"
