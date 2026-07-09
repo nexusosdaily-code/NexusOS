@@ -98,6 +98,7 @@ const BOT_PATTERNS: { pattern: RegExp; name: string }[] = [
   // advertise a contact domain or research label instead of pretending to be
   // a browser.
   { pattern: /jagitek/i,              name: "Jagitek-Scanner" },
+  { pattern: /lead[\s-]?research/i,   name: "LeadResearch-Scanner" },
 
   // Politeness-URL bot convention: real browsers NEVER embed a domain/URL in
   // their own User-Agent string. Any UA carrying "http(s)://" is a crawler or
