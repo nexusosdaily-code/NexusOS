@@ -88,8 +88,8 @@ function hardwareProduct(opts: { name: string; url: string; description: string;
   };
 }
 
-const SNIC_IMAGE = "https://wnsp.io/snic-og.svg";
-const PHR1_IMAGE = "https://wnsp.io/phr1-og.svg";
+const SNIC_IMAGE = "https://wnsp.io/snic-og.png";
+const PHR1_IMAGE = "https://wnsp.io/phr1-og.png";
 
 function techArticle(opts: { url: string; name: string; description: string; about: string; datePublished?: string; dateModified?: string }): object {
   const article: Record<string, unknown> = {
