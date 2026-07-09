@@ -367,7 +367,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     twitterDescription: "Complete reference for WNSP protocol, WavelengthScript, CE-SE encoding, and the NexusOS API.",
     ogType: "article",
     jsonLd: techArticle({ url: `${BASE}/docs`, name: "NexusOS Developer Documentation", description: "Full developer documentation for NexusOS: WNSP protocol, WavelengthScript, CE-SE pipeline, REST API, NXT token, WNSP VM.", about: "WNSP, WavelengthScript, CE encoding, photonic computing" }),
-    bodyHtml: `<h1>NexusOS Documentation</h1><p>Complete developer reference for building on the NexusOS physics stack. Everything from the WNSP spectral protocol to the WavelengthScript language, CE-SE encoding pipeline, REST API, NXT token wallet, and WNSP VM bytecode interpreter.</p><nav><ul><li><a href="${BASE}/wnsp">WNSP Protocol Specification</a></li><li><a href="${BASE}/wavelength-lang">WavelengthScript Language Reference</a></li><li><a href="${BASE}/ce-se-pipeline">CE→SE Pipeline</a></li><li><a href="${BASE}/wnsp-vm">WNSP Virtual Machine</a></li><li><a href="${BASE}/ce-code-writer">CE Code Writer &amp; Integration Kit</a></li><li><a href="${BASE}/hardware-spec">Hardware Specification (AGPL-3.0)</a></li></ul></nav><p>Install the CE encoder: <code>npm install nexusos-ce-encoder</code> · <code>pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py</code></p>`,
+    bodyHtml: `<h1>NexusOS Documentation</h1><p>Complete developer reference for building on the NexusOS physics stack. Everything from the WNSP spectral protocol to the WavelengthScript language, CE-SE encoding pipeline, REST API, NXT token wallet, and WNSP VM bytecode interpreter.</p><nav><ul><li><a href="${BASE}/docs/substrate">Lambda Gate Substrate v4</a></li><li><a href="${BASE}/docs/wascii">WNSP Protocol — Two-Layer Standard</a></li><li><a href="${BASE}/docs/consensus">Proof of Spectrum Consensus</a></li><li><a href="${BASE}/docs/economics">NXT Token Economics</a></li><li><a href="${BASE}/docs/bhls">BHLS Floor System</a></li><li><a href="${BASE}/docs/governance">Planetary Governance</a></li><li><a href="${BASE}/docs/infrastructure">K1 Infrastructure</a></li><li><a href="${BASE}/docs/hardware">Hardware Control Layer</a></li><li><a href="${BASE}/docs/simulators">Energy Simulators</a></li><li><a href="${BASE}/docs/massless">Massless Technologies</a></li><li><a href="${BASE}/docs/sop">Spectral Orthogonal Protocol (SOP)</a></li></ul></nav><p>Install the CE encoder: <code>npm install nexusos-ce-encoder</code> · <code>pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py</code></p>`,
   },
   "/wnsp": {
     title: "WNSP — Wavelength-Native Spectral Protocol",
@@ -1973,6 +1973,75 @@ export function injectCustomMeta(html: string, meta: PageMeta): string {
  * Resolve metadata for a given host + path combination.
  * Domain metadata takes priority over route metadata.
  */
+// Per-section metadata for /docs/:section deep links. Keep slugs in sync with
+// DOCS_SECTIONS in client/src/pages/docs.tsx and DOCS_SECTION_SLUGS in
+// server/static.ts.
+const DOCS_SECTION_META: Record<string, { title: string; description: string }> = {
+  substrate: {
+    title: "Lambda Gate Substrate v4",
+    description: "The foundational NexusOS layer where all operations occur as wavefield transformations: Lambda mode state vectors, the master energy equation, and the 8 Lambda Gate primitives.",
+  },
+  wascii: {
+    title: "WNSP Protocol — Two-Layer Standard",
+    description: "The WNSP-CE and WNSP-SE two-layer standard mapping characters to wavelengths and spectral Ψ channels for physics-native communication.",
+  },
+  consensus: {
+    title: "Proof of Spectrum Consensus",
+    description: "How NexusOS reaches consensus using spectral proof-of-work derived from electromagnetic wave physics instead of cryptographic hashing.",
+  },
+  economics: {
+    title: "NXT Token Economics",
+    description: "NXT token supply, fee mechanics, and the physics-derived economic model (E=hf) underpinning the NexusOS token.",
+  },
+  bhls: {
+    title: "BHLS Floor System",
+    description: "The BHLS Floor System — NexusOS's mechanism for maintaining wavelength-based economic stability.",
+  },
+  governance: {
+    title: "Planetary Governance",
+    description: "On-chain protocol governance: proposals, spectral-authority-weighted voting, and live parameter changes for NexusOS.",
+  },
+  infrastructure: {
+    title: "K1 Infrastructure",
+    description: "K1 Orchestration infrastructure — the coordination layer for spectral compute and communication across NexusOS.",
+  },
+  hardware: {
+    title: "Hardware Control Layer",
+    description: "The Hardware Control Layer specification: SNIC, PHR-1, and Spectral Relay Mesh integration for physical spectral hardware.",
+  },
+  simulators: {
+    title: "Energy Simulators",
+    description: "NexusOS energy simulators for modelling photon energy, compression states, and wavelength-based cost calculations.",
+  },
+  massless: {
+    title: "Massless Technologies",
+    description: "Massless Technologies — NexusOS's exploration of zero-rest-mass computation and communication primitives.",
+  },
+  sop: {
+    title: "Spectral Orthogonal Protocol (SOP)",
+    description: "The Spectral Orthogonal Protocol (SOP) — orthogonal Hilbert-space channel guarantees underpinning collision-free NexusOS communication.",
+  },
+};
+
+function docsSectionMeta(slug: string): PageMeta | null {
+  const section = DOCS_SECTION_META[slug];
+  if (!section) return null;
+  const url = `${BASE}/docs/${slug}`;
+  const title = `${section.title} — NexusOS Documentation`;
+  return {
+    title,
+    description: section.description,
+    canonical: url,
+    ogTitle: title,
+    ogDescription: section.description,
+    twitterTitle: title,
+    twitterDescription: section.description,
+    ogType: "article",
+    jsonLd: techArticle({ url, name: `${section.title} — NexusOS Documentation`, description: section.description, about: "WNSP, WavelengthScript, CE encoding, photonic computing" }),
+    bodyHtml: `<h1>${section.title}</h1><p>${section.description}</p><nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li></ul></nav>`,
+  };
+}
+
 export function resolveMeta(host: string, pathname: string): PageMeta | null {
   const cleanHost = host.split(":")[0].toLowerCase();
 
@@ -1981,6 +2050,11 @@ export function resolveMeta(host: string, pathname: string): PageMeta | null {
   }
 
   const cleanPath = pathname.split("?")[0].replace(/\/$/, "") || "/";
+
+  if (cleanPath.startsWith("/docs/")) {
+    const slug = cleanPath.slice("/docs/".length).split("/")[0];
+    return docsSectionMeta(slug);
+  }
 
   return ROUTE_META[cleanPath] ?? null;
 }

@@ -204,6 +204,15 @@ const DYNAMIC_PUBLIC_PREFIXES: string[] = [
   "/docs/",       // /docs/:section — public developer documentation
 ];
 
+// Valid /docs/:section slugs — must stay in sync with DOCS_SECTIONS in
+// client/src/pages/docs.tsx. Unknown slugs under /docs/ receive HTTP 404
+// instead of a false public 200 so crawl budget isn't wasted on thin shells.
+const DOCS_SECTION_SLUGS = new Set<string>([
+  "substrate", "wascii", "consensus", "economics", "bhls",
+  "governance", "infrastructure", "hardware", "simulators",
+  "massless", "sop",
+]);
+
 function isNoindexSpaPath(pathname: string): boolean {
   if (NOINDEX_EXACT_PATHS.has(pathname)) return true;
   return NOINDEX_DYNAMIC_PREFIXES.some((p) => pathname.startsWith(p));
@@ -211,6 +220,10 @@ function isNoindexSpaPath(pathname: string): boolean {
 
 function isPublicSpaPath(pathname: string): boolean {
   if (EXACT_PUBLIC_PATHS.has(pathname)) return true;
+  if (pathname.startsWith("/docs/")) {
+    const slug = pathname.slice("/docs/".length).split("/")[0];
+    return DOCS_SECTION_SLUGS.has(slug);
+  }
   return DYNAMIC_PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 }
 

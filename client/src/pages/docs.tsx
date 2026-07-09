@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { PSI_CHANNELS, PSI_CHANNEL_MATH } from "@/lib/channel-model";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Link } from "wouter";
+import { Link, useParams } from "wouter";
 import {
   ArrowLeft,
   Cpu,
@@ -961,21 +960,35 @@ This is why it is the correct foundation for infrastructure at Kardashev Type I 
 };
 
 export default function DocsPage() {
-  usePageMeta({
-    title: "NexusOS Documentation — WNSP Protocol, WavelengthScript & CE-SE API",
-    description: "Complete developer documentation for NexusOS: WNSP spectral protocol, WavelengthScript language reference, CE-SE encoding pipeline, REST API, NXT token wallet, WNSP VM bytecode, and governance.",
-    canonical: "https://wnsp.io/docs",
-    ogTitle: "NexusOS Documentation",
-    ogDescription: "WNSP protocol spec, WavelengthScript reference, CE-SE pipeline, REST API reference, NXT token, WNSP VM. Everything you need to build on the wavelength of light.",
-    twitterTitle: "NexusOS Documentation",
-    twitterDescription: "Complete reference for WNSP protocol, WavelengthScript, CE-SE encoding, and the NexusOS API.",
-  });
-  const [activeSection, setActiveSection] = useState("substrate");
-
+  const params = useParams<{ section?: string }>();
   const sections = Object.entries(DOCS_SECTIONS);
-  const currentSection =
-    DOCS_SECTIONS[activeSection as keyof typeof DOCS_SECTIONS];
+  const validSection =
+    params.section && params.section in DOCS_SECTIONS
+      ? (params.section as keyof typeof DOCS_SECTIONS)
+      : "substrate";
+  const activeSection = validSection;
+  const currentSection = DOCS_SECTIONS[activeSection];
   const IconComponent = currentSection.icon;
+  const isSectionUrl = Boolean(params.section);
+  const sectionCanonical = isSectionUrl
+    ? `https://wnsp.io/docs/${activeSection}`
+    : "https://wnsp.io/docs";
+  const sectionTitle = isSectionUrl
+    ? `${currentSection.title} — NexusOS Documentation`
+    : "NexusOS Documentation — WNSP Protocol, WavelengthScript & CE-SE API";
+  const sectionDescription = isSectionUrl
+    ? `${currentSection.title}: ${currentSection.content[0]?.heading ?? "developer reference"} and full technical documentation for building on NexusOS.`
+    : "Complete developer documentation for NexusOS: WNSP spectral protocol, WavelengthScript language reference, CE-SE encoding pipeline, REST API, NXT token wallet, WNSP VM bytecode, and governance.";
+
+  usePageMeta({
+    title: sectionTitle,
+    description: sectionDescription,
+    canonical: sectionCanonical,
+    ogTitle: sectionTitle,
+    ogDescription: sectionDescription,
+    twitterTitle: sectionTitle,
+    twitterDescription: sectionDescription,
+  });
 
   return (
     <div className="min-h-screen bg-black text-white" data-testid="page-docs">
@@ -1027,9 +1040,9 @@ export default function DocsPage() {
                   const SectionIcon = section.icon;
                   const isActive = activeSection === key;
                   return (
-                    <button
+                    <Link
                       key={key}
-                      onClick={() => setActiveSection(key)}
+                      href={`/docs/${key}`}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
                         isActive
                           ? "bg-purple-600 text-white"
@@ -1039,7 +1052,7 @@ export default function DocsPage() {
                     >
                       <SectionIcon className="w-4 h-4" />
                       <span className="text-sm">{section.title}</span>
-                    </button>
+                    </Link>
                   );
                 })}
               </nav>

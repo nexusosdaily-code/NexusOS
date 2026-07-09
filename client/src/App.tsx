@@ -282,8 +282,9 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
 ]);
 
 // Only paths where ANY child segment is a valid protected route (dynamic).
+// NOTE: /docs/:section is public (see Router() below) and intentionally NOT
+// listed here — it must not require authentication.
 const DYNAMIC_PROTECTED_PREFIXES: string[] = [
-  "/docs/",        // /docs/:section
   "/streaming/",   // /streaming/:streamId
 ];
 
@@ -348,8 +349,7 @@ function ProtectedRoutes() {
         <Route path="/governance" component={GovernancePage} />
         <Route path="/constitution" component={ConstitutionPage} />
         <Route path="/workspace/matrix" component={DeveloperMatrixPage} />
-        <Route path="/docs" component={DocsPage} />
-        <Route path="/docs/:section" component={DocsPage} />
+        {/* /docs and /docs/:section are public — handled in Router() above */}
         <Route path="/wnsp/coordinator" component={WNSPCoordinator} />
         <Route path="/workspace/coordinator" component={WNSPCoordinator} />
         <Route path="/kernel" component={KernelPage} />
@@ -443,6 +443,7 @@ function Router() {
       <Route path="/developer-matrix" component={DeveloperMatrixPage} />
       <Route path="/developer-matrix/docs" component={DocsPage} />
       <Route path="/docs" component={DocsPage} />
+      <Route path="/docs/:section" component={DocsPage} />
       <Route path="/research-presentation" component={ResearchPresentationPage} />
       <Route path="/research-presentation/developer-matrix" component={DeveloperMatrixPage} />
       {/* ── Nexus Spectral Framework (unified) ── */}
