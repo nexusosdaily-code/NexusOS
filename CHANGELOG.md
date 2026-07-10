@@ -5,6 +5,84 @@
 
 ---
 
+## [2026-07-09] Platform Security & Bot Defense Hardening
+
+### Traffic Logging & Bot Detection (`server/traffic-logger.ts`)
+- Multi-layer bot/scanner detection: 90+ signature patterns covering known crawlers, AI bots (GPTBot, ClaudeBot, PerplexityBot, ByteDance-Spider…), pentest/recon tools (Nuclei, Nikto, Nmap, Masscan, Shodan, Censys, SQLMap, Gobuster, FFUF…), and headless automation (Puppeteer, Playwright, Selenium, HeadlessChrome).
+- Defense-in-depth Layer 2: any request from a known datacenter/hosting IP that lacks a real browser rendering-engine token (Chrome/, Firefox/, Safari/, Gecko/…) is flagged even without a matching signature — catches unknown spoofed clients.
+- Legacy/dead-browser detection: flags UAs spoofing extinct device stacks (Internet Explorer/Trident, Samsung SGH, Symbian, BlackBerry ≤7, Opera Mini ≤4, J2ME, Windows CE, Siemens) — no genuine 2026 visitor runs these.
+- Self-identifying-crawler rule: any User-Agent embedding a URL (`http://`/`https://`) is flagged — real browsers never do this, only bots advertising a contact/operator link.
+- Named scanner blocks added: Jagitek, LeadResearch, SecurityResearch, Assetnote, TLM-Audit-Scanner, RecordedFuture, Dataminr, and others.
+- Honeypot-path hits are tagged and force-classified as bot traffic regardless of UA.
+- GeoIP country + hosting-provider enrichment pipeline, with in-memory caches now capped at 50k entries (oldest-key eviction) to prevent unbounded memory growth under sustained scraper traffic.
+- Added `traffic_logs_ip_idx` index — the country-fill and reclassification queries were doing full table scans on `ip` as the table grows.
+
+### Vulnerability Fixes
+- Added HTML escaping on developer and docs pages to close a cross-site-scripting (XSS) gap.
+- Removed a hardcoded API key from the codebase.
+- Patched dependencies flagged critical/high severity in security audits (multiple passes).
+- Hardened admin-role checks to consistently accept `role === "admin"` OR the `isAdmin` flag, closing a gap where either check alone could lag in production.
+- Rune Guard — enforced safe UTXO selection (`getSafeUTXOs()`) across every Bitcoin transaction builder so Mint/Transfer Runestones can no longer accidentally burn a Rune-bearing UTXO.
+- Rune short-name etching now uses a proper commit/reveal (tapscript) flow with a 6-block gap for names under 13 characters, fixing a silent single-transaction etch failure.
+
+---
+
+## [2026-07-02 – 2026-07-09] WNSP Physics Sequence — 8-Act Series & Bidirectional Channels
+
+### Full 8-Act Physics Sequence (published in order)
+1. `/oscillating-quanta` — Theory of Compression States (Λ = hf/c²)
+2. `/universal-one` — The Universal ONE (f₀ seeds the lattice)
+3. `/unified-compression-theory` — Unified Compression Theory (4 forces = 1 Λ)
+4. `/matter-protocol` — The Mechanism (ΔE = hf₀(2ⁿ²−2ⁿ¹))
+5. `/universal-address` — The Address (∀ Λ : ∃! Ψ)
+6. `/element-catalogue` — The Catalogue (n = log₂(mc²/E₀))
+7. `/standing-wave-trap` — The Trap (Ψ_trap = Ψ(+k̂) ⊗ Ψ(−k̂)) — disclosed 2026-07-07
+8. `/lossless-channel` — The Lossless Channel (Ψ_channel = ⊗ᵢ Ψ_trap(nᵢ)) — disclosed 2026-07-07
+- Unified cross-act navigation added to every page in the series ("Act N of 8" + next/previous teasers).
+- Matter-manipulation protocol documented: octave address calculation → energy requirement → instrument interface configuration.
+
+### WNSP Density Equation v1.0 — Bidirectional Channels
+- Added `N_Dir = 2` (bidirectional propagation, +k̂ forward / −k̂ backward) as a new orthogonal Hilbert sub-space.
+- **Total orthogonal Ψ channels doubled: 25,600 → 51,200** (256 WDM × 50 OAM × 2 Polarisations × 2 Directions) — first disclosed 2026-07-02.
+- All public copy, structured data, and SEO metadata updated site-wide for channel-model consistency.
+
+### Ghost Node & ZPE Physics
+- Ghost node n=36 (169.33 u, no stable nucleus) and neighboring occupancy (Tm, Yb, Kr, Rb) fully modeled.
+- Zero-point-energy floor and Shannon capacity at the ZPE floor derived for Act 8 (`C = B·log₂(1 + hf₀/½ℏω)`).
+- New quantum-field reservation services for ghost node ranges.
+
+---
+
+## [2026-06-08 – 2026-07-09] SEO & Discoverability Overhaul
+
+- **Canonical domain consolidation** — every canonical URL, OG tag, Twitter card, JSON-LD schema, sitemap entry, and `robots.txt` rule unified on **wnsp.io** (wnsp.tech now redirects to it, never the reverse).
+- `llms.txt` added for AI/GEO crawler discoverability (AI Readiness).
+- Static `bodyHtml` + full structured data (JSON-LD) added across dozens of public routes and microsites for crawler/LLM visibility.
+- Fixed recurring crawlability issues across many passes: noindex/canonical conflicts, sitemap accuracy, dead-end internal linking, route-metadata parity across custom domains, missing `<h1>` semantics on science pages.
+- Social preview images (OG/Twitter) regenerated and fixed for every custom-domain entry.
+- Channel-model consistency pass — replaced legacy 25,600-channel references with the current 51,200-channel model across all public-facing copy and metadata.
+
+---
+
+## [2026-06-18] Spectral IDE & On-Chain Contract Execution
+
+- **Spectral IDE + Contract Apps** — browser-based WavelengthScript editor with live transpile/compile and app scaffolding.
+- **Server-side contract execution engine** — canonical WNSP VM runtime, public run endpoint (`/api/app/:slug/run`) plus authenticated execution history (`/api/contracts/:id/executions`).
+- **Nexus Explorer** — on-chain VM execution audit ledger.
+- Universal any-language → WavelengthScript transpiler, with API rate limiting added.
+
+---
+
+## [2026-06-08 – 2026-06-17] Ecosystem Growth, Wallet Integrity & Governance
+
+- **Multi-domain ecosystem hub** — unified navigation tabs across every Nexus-owned domain.
+- **Crowdfunding platform hub** — Nostr zap goals, Indiegogo campaign copy generator, scheduled cross-platform posting to Discord/Telegram/Nostr/X.
+- Founding-era free NXT allocation formally closed; withdrawal limits, balance-correction tooling, and duplicate-crediting fixes shipped for the wallet system.
+- **Founders & Governance pages** — founding architects/stewards disclosed, System Operator (Genesis) designation formalized, and a constitutional declaration against financial misconduct added to the genesis layer, including a maintained list of blocked bad-actor entities.
+- CoinGecko/CoinSniper listing preparation — audit, KYC, and verification documentation added.
+
+---
+
 ## [Unreleased — 2026-05-29] Spectral DeFi & Bitcoin Bridge Layer
 
 ### Canonical WNSP Address → WavelengthScript → Spectral Database
