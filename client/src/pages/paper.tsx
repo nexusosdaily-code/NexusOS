@@ -435,6 +435,7 @@ export default function PaperPage() {
             { href: "/hardware-results",   label: "Hardware Results" },
             { href: "/compression-explorer", label: "Compression Explorer" },
             { href: "/hardware-spec",      label: "Hardware Specification" },
+            { href: "/joint-venture",      label: "Build This With Us" },
           ].map(l => (
             <Link key={l.href} href={l.href}
               className="block border border-slate-800 rounded-lg px-3 py-2.5 text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-all text-center">
