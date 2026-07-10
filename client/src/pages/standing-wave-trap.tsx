@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { EcosystemNav } from "@/components/ecosystem-nav";
 import {
   ArrowLeft, Waves, Circle, ExternalLink, Zap, Atom,
   GitMerge, Target, Radio, Lock,
@@ -915,6 +916,8 @@ export default function StandingWaveTrap() {
             </Link>
           </div>
         </Section>
+
+        <EcosystemNav />
 
       </div>
     </div>

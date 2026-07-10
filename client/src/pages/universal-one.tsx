@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { EcosystemNav } from "@/components/ecosystem-nav";
 import { ArrowLeft, Waves, Atom, Zap, Layers, Radio, Globe, FlaskConical, ExternalLink, Circle, GitMerge } from "lucide-react";
 
 const PAGE_DATE  = "2026-07-06";
@@ -673,6 +674,8 @@ export default function UniversalOnePage() {
             </Link>
           </div>
         </div>
+
+        <EcosystemNav />
 
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { EcosystemNav } from "@/components/ecosystem-nav";
 import {
   ArrowLeft, Search, Atom, BookOpen,
   Star, Circle, GitMerge, ExternalLink, Zap, Waves, FlaskConical,
@@ -1056,6 +1057,8 @@ export default function ElementCatalogue() {
             ))}
           </div>
         </Section>
+
+        <EcosystemNav />
 
       </div>
     </div>

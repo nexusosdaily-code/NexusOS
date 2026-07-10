@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { EcosystemNav } from "@/components/ecosystem-nav";
 import {
   ArrowLeft, Zap, Atom, Waves, Radio, FlaskConical,
   AlertTriangle, CheckCircle, Circle, ExternalLink, GitMerge,
@@ -617,6 +618,9 @@ export default function MatterProtocol() {
             </p>
           </div>
         </div>
+
+        <EcosystemNav />
+
       </div>
     </div>
   );

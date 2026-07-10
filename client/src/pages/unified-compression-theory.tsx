@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { EcosystemNav } from "@/components/ecosystem-nav";
 import {
   ArrowLeft, Shield, Zap, Radio, Layers, Atom, Globe,
   FlaskConical, BookOpen, ExternalLink, ChevronRight
@@ -554,6 +555,8 @@ export default function UnifiedCompressionTheoryPage() {
             </Link>
           </div>
         </div>
+
+        <EcosystemNav />
 
       </div>
     </div>

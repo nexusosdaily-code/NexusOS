@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { EcosystemNav } from "@/components/ecosystem-nav";
 import {
   ArrowLeft, Waves, Zap, Radio, ExternalLink,
   GitMerge, Lock, Database, BookOpen,
@@ -1063,6 +1064,8 @@ export default function LosslessChannel() {
             />
           </div>
         </Section>
+
+        <EcosystemNav />
 
       </div>
     </div>

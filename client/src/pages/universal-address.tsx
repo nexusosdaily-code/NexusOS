@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { EcosystemNav } from "@/components/ecosystem-nav";
 import {
   ArrowLeft, Radio, Shield, Globe, Zap, Lock,
   ExternalLink, Circle, GitMerge, Atom,
@@ -537,6 +538,9 @@ export default function UniversalAddress() {
               className="text-emerald-500 hover:text-emerald-400 underline underline-offset-2">{REPO}</a></p>
           </div>
         </div>
+
+        <EcosystemNav />
+
       </div>
     </div>
   );

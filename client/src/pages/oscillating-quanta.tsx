@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { Link } from "wouter";
+import { EcosystemNav } from "@/components/ecosystem-nav";
 import { ArrowLeft, Waves, Play, Pause, RotateCcw, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
 
 // ── CODATA 2018 / SI exact constants ─────────────────────────────────────────
@@ -919,6 +920,8 @@ waveform     : [128 floats]`}</pre>
             </div>
           </div>
         </section>
+
+        <EcosystemNav />
 
       </div>
     </div>
