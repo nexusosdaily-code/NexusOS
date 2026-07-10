@@ -21,6 +21,7 @@ import {
 import { z } from "zod";
 import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT, GENESIS_EXECUTION_ADDRESS } from "./physics";
 import { getEtchStatus } from "./wnsp-btc-rune-etcher";
+import { isValidMainnetBtcAddress } from "./btc-address-validate";
 import { transpileToWLS, SUPPORTED_LANGS, type SupportedLang } from "./lang-transpiler";
 import { ledgerEvent } from "./spectral-ledger";
 
@@ -845,7 +846,7 @@ export async function registerRoutes(
     try {
       if (!await checkRateLimit(req, res, "/api/auth/register", AUTH_RATE_LIMIT_MAX)) return;
       
-      const { username, password, email, phoneNumber } = req.body;
+      const { username, password, email, phoneNumber, btcAddress } = req.body;
       
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
@@ -860,7 +861,14 @@ export async function registerRoutes(
         }
       }
 
-      const user = await storage.createUser(username, password, email, phoneNumber);
+      // BTC receiving address is optional at registration, but if the user
+      // supplies one it must be a real, checksum-valid mainnet address — we
+      // never silently drop a bad address, we reject so they can fix it.
+      if (btcAddress && !isValidMainnetBtcAddress(btcAddress)) {
+        return res.status(400).json({ error: "That Bitcoin address doesn't look valid. Double-check it or leave it blank — you can add it later." });
+      }
+
+      const user = await storage.createUser(username, password, email, phoneNumber, btcAddress || undefined);
       const session = await storage.createSession(user.id, req.ip, req.headers["user-agent"]);
 
       // ── Assign deterministic spectral channel from username hash ──────────
@@ -869,7 +877,7 @@ export async function registerRoutes(
         await storage.updateUserSpectral(user.id, { wdm: ch.wdm, oam: ch.oam, pol: ch.pol, nm: ch.nm, band: ch.band });
       } catch (_e) { /* non-blocking */ }
 
-      await logAction(req, "user_registered", "auth", user.id, { username });
+      await logAction(req, "user_registered", "auth", user.id, { username, btcAddressSet: !!btcAddress });
 
       // ── Auto-register canonical wnsp:// identity on signup ─────────────
       try {
@@ -11009,6 +11017,40 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  // GET /api/user/default-btc-address — the address captured at registration (or set later),
+  // used ONLY to prefill Rune/inscription delivery forms client-side. Never used server-side
+  // as an implicit fallback for a swap — every swap request must still carry an explicit btcAddress.
+  app.get("/api/user/default-btc-address", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { users: usersT } = await import("../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [user] = await db.select({
+        defaultBtcAddress:      usersT.defaultBtcAddress,
+        defaultBtcAddressSetAt: usersT.defaultBtcAddressSetAt,
+      }).from(usersT).where(eq(usersT.id, req.user!.id));
+      res.json({
+        btcAddress: user?.defaultBtcAddress ?? null,
+        setAt:      user?.defaultBtcAddressSetAt ?? null,
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // PATCH /api/user/default-btc-address — set or update the saved default BTC receiving address
+  app.patch("/api/user/default-btc-address", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { btcAddress } = req.body;
+      if (!btcAddress || typeof btcAddress !== "string")
+        return res.status(400).json({ error: "btcAddress is required" });
+      if (!isValidMainnetBtcAddress(btcAddress))
+        return res.status(400).json({ error: "That Bitcoin address doesn't look valid — check for typos." });
+
+      await storage.updateUserDefaultBtcAddress(req.user!.id, btcAddress.trim());
+      await logAction(req, "default_btc_address_updated", "user", req.user!.id, { btcAddress: btcAddress.trim() });
+      res.json({ ok: true, btcAddress: btcAddress.trim() });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // POST /api/lightning/get-invoices — resolve a Lightning Address into payable bolt11 invoice(s)
   // Returns the invoice(s) directly — no balance deduction, no queue. User pays from their own wallet (e.g. WoS).
   app.post("/api/lightning/get-invoices", authenticate, async (req: Request, res: Response) => {
@@ -11805,7 +11847,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: `Minimum swap is ${RUNE_SWAP_MIN} NEXUS•WAVELENGTH` });
       if (runes > RUNE_SWAP_MAX)
         return res.status(400).json({ error: `Maximum swap is ${RUNE_SWAP_MAX} NEXUS•WAVELENGTH per transaction` });
-      if (!btcAddress || !String(btcAddress).match(/^(bc1|1|3)/i))
+      if (!btcAddress || !isValidMainnetBtcAddress(String(btcAddress)))
         return res.status(400).json({ error: "Valid Bitcoin address required for Rune delivery" });
 
       const nxtNeeded = runes * RUNE_SWAP_RATE;
@@ -12000,6 +12042,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: `Minimum swap is ${RUNE_SWAP_MIN} NEXUS•WAVELENGTH` });
       if (!btcTxid || String(btcTxid).length < 30)
         return res.status(400).json({ error: "Valid Bitcoin transaction ID required" });
+      if (btcAddress && !isValidMainnetBtcAddress(String(btcAddress)))
+        return res.status(400).json({ error: "That Bitcoin address doesn't look valid — check for typos." });
 
       const nxtOut = runes * RUNE_SWAP_RATE;
 
@@ -12099,6 +12143,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Maximum 21,000,000,000,000 NEXUS•WAVELENGTH per swap" });
       if (!btcTxid || String(btcTxid).length < 30)
         return res.status(400).json({ error: "Valid Bitcoin transaction ID required" });
+      if (btcAddress && !isValidMainnetBtcAddress(String(btcAddress)))
+        return res.status(400).json({ error: "That Bitcoin address doesn't look valid — check for typos." });
 
       const satsToCredit = BigInt(Math.floor(runes / NXWV_PER_SAT));
 
@@ -12201,8 +12247,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Minimum 1,000,000 NEXUS•WAVELENGTH (= 1 sat)" });
       if (runes > 21_000_000_000_000)
         return res.status(400).json({ error: "Maximum 21,000,000,000,000 NEXUS•WAVELENGTH per swap" });
-      if (!btcAddress || String(btcAddress).length < 10)
-        return res.status(400).json({ error: "Bitcoin address required for NXWV delivery" });
+      if (!btcAddress || !isValidMainnetBtcAddress(String(btcAddress)))
+        return res.status(400).json({ error: "Valid Bitcoin address required for NXWV delivery" });
 
       const satsCost = BigInt(Math.ceil(runes / NXWV_PER_SAT));
 

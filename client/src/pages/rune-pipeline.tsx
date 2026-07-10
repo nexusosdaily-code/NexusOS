@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,6 +125,15 @@ export default function RunePipelinePage() {
   const { data: walletData } = useQuery<any>({ queryKey: ["/api/wallet"],            refetchInterval: 8000 });
   const { data: lightData  } = useQuery<any>({ queryKey: ["/api/lightning/balance"],  refetchInterval: 8000 });
   const { data: marketData } = useQuery<any>({ queryKey: ["/api/market/price"],       refetchInterval: 30000 });
+  // Saved BTC receiving address from registration/profile — prefills this field once
+  // when empty. Stays fully editable; never applied server-side.
+  const { data: savedBtc } = useQuery<{ btcAddress: string | null; setAt: string | null }>({
+    queryKey: ["/api/user/default-btc-address"],
+  });
+  useEffect(() => {
+    if (savedBtc?.btcAddress && !btcAddress) setBtcAddress(savedBtc.btcAddress);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedBtc?.btcAddress]);
 
   const nxtBal  = parseFloat(walletData?.wallet?.balance ?? "0");
   const satsBal = Number(lightData?.satsBalance ?? 0);
@@ -251,6 +260,11 @@ export default function RunePipelinePage() {
                   className="bg-black/30 border-white/10 text-white font-mono text-xs"
                   placeholder="bc1p… or bc1q…"
                 />
+                {savedBtc?.btcAddress && btcAddress === savedBtc.btcAddress && (
+                  <p className="text-[11px] text-cyan-400/70 mt-1" data-testid="text-saved-address-hint">
+                    Prefilled from your saved receiving address — feel free to edit it
+                  </p>
+                )}
               </div>
             </div>
 

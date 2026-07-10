@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,6 +99,16 @@ export default function RuneSwapPage() {
     queryKey: ["/api/rune-swap/history"],
     refetchInterval: 30000,
   });
+  // Saved BTC receiving address from registration/profile — used only to prefill this
+  // field client-side (once, when empty). Never sent implicitly by the server; the
+  // field stays fully editable and the address is always visible before submit.
+  const { data: savedBtc } = useQuery<{ btcAddress: string | null; setAt: string | null }>({
+    queryKey: ["/api/user/default-btc-address"],
+  });
+  useEffect(() => {
+    if (savedBtc?.btcAddress && !btcAddr) setBtcAddr(savedBtc.btcAddress);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedBtc?.btcAddress]);
 
   const runes    = parseInt(runeAmt) || 0;
   const nxtVal   = runes * (rate?.rate ?? 1);
@@ -435,6 +445,11 @@ export default function RuneSwapPage() {
                   className="bg-black/30 border-white/10 text-white font-mono text-xs"
                   placeholder="bc1p… or bc1q…"
                 />
+                {savedBtc?.btcAddress && btcAddr === savedBtc.btcAddress && (
+                  <p className="text-xs text-cyan-400/70 mt-1" data-testid="text-saved-address-hint">
+                    Prefilled from your saved receiving address — feel free to edit it
+                  </p>
+                )}
                 <p className="text-xs text-white/30 mt-1">
                   We'll send {runes.toLocaleString()} NXWV to this address from the service wallet
                 </p>
@@ -563,6 +578,11 @@ export default function RuneSwapPage() {
                 data-testid="input-btc-address"
                 className="bg-black/30 border-white/10 text-white font-mono text-xs"
                 placeholder="bc1p… or bc1q…" />
+              {savedBtc?.btcAddress && btcAddr === savedBtc.btcAddress && (
+                <p className="text-xs text-cyan-400/70 mt-1" data-testid="text-saved-address-hint">
+                  Prefilled from your saved receiving address — feel free to edit it
+                </p>
+              )}
               <p className="text-xs text-white/30 mt-1">
                 NXT goes to Orbital Treasury · {RUNE_NAME} sent to your BTC address from service wallet
               </p>

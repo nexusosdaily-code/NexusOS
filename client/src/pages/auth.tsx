@@ -29,7 +29,7 @@ export default function AuthPage() {
   const [nostrLoading, setNostrLoading] = useState(false);
   const inFlight = useRef(false);
   const [loginData, setLoginData]         = useState({ username: "", password: "" });
-  const [registerData, setRegisterData]   = useState({ username: "", password: "", email: "" });
+  const [registerData, setRegisterData]   = useState({ username: "", password: "", email: "", btcAddress: "" });
   const [registerLoading, setRegisterLoading] = useState(false);
   const [showRecovery, setShowRecovery]   = useState(false);
   const [recoveryData, setRecoveryData] = useState({ username: "Nexus", newPassword: "", recoveryKey: "" });
@@ -162,6 +162,7 @@ export default function AuthPage() {
           username: registerData.username,
           password: registerData.password,
           ...(registerData.email ? { email: registerData.email } : {}),
+          ...(registerData.btcAddress ? { btcAddress: registerData.btcAddress } : {}),
         }),
       });
       const data = await res.json();
@@ -459,6 +460,19 @@ export default function AuthPage() {
                     autoComplete="email"
                     data-testid="input-register-email"
                   />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="register-btc-address" className="text-gray-400 text-xs">Bitcoin receiving address <span className="text-slate-600">(optional)</span></Label>
+                  <Input
+                    id="register-btc-address"
+                    value={registerData.btcAddress}
+                    onChange={e => setRegisterData(d => ({ ...d, btcAddress: e.target.value }))}
+                    className="bg-slate-800/50 border-slate-700 text-sm font-mono"
+                    placeholder="bc1p… or bc1q…"
+                    autoComplete="off"
+                    data-testid="input-register-btc-address"
+                  />
+                  <p className="text-[10px] text-slate-600">Save it once here and it'll auto-fill on future Rune swaps.</p>
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="register-password" className="text-gray-400 text-xs">Password</Label>

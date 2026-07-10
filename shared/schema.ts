@@ -32,6 +32,12 @@ export const users = pgTable("users", {
   // ── Admin BTC wallet (UniSat / on-chain) ──
   adminBtcAddress:      text("admin_btc_address"),
   adminBtcAddressSetAt: timestamp("admin_btc_address_set_at"),
+  // ── Default BTC receiving address — captured (optionally) at registration.
+  // Used ONLY to prefill client-side forms for Rune/inscription delivery; the
+  // server never silently substitutes this into a swap request — the client
+  // must always send an explicit btcAddress, shown to the user before submit.
+  defaultBtcAddress:      text("default_btc_address"),
+  defaultBtcAddressSetAt: timestamp("default_btc_address_set_at"),
   // ── Lightning Address (e.g. user@walletofsatoshi.com) ──
   lightningAddress: text("lightning_address"),
   // ── On-chain sweep settings ── route large amounts to BTC address instead of Lightning
@@ -314,6 +320,7 @@ export const registerSchema = z.object({
   email: z.string().email().optional(),
   phoneNumber: z.string().optional(),
   password: z.string().min(8).max(100),
+  btcAddress: z.string().min(1).max(120).optional(),
 });
 
 export const spectralEncodeSchema = z.object({

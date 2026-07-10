@@ -38,10 +38,11 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(username: string, password: string, email?: string, phoneNumber?: string): Promise<User>;
+  createUser(username: string, password: string, email?: string, phoneNumber?: string, btcAddress?: string): Promise<User>;
   verifyPassword(user: User, password: string): Promise<boolean>;
   updateUserLastLogin(userId: string): Promise<void>;
   updateUserSpectral(userId: string, spectral: { wdm: number; oam: number; pol: string; nm: number; band: string }): Promise<void>;
+  updateUserDefaultBtcAddress(userId: string, btcAddress: string): Promise<void>;
 
   // Session operations
   createSession(userId: string, ipAddress?: string, userAgent?: string): Promise<Session>;
@@ -252,19 +253,26 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async createUser(username: string, password: string, email?: string, phoneNumber?: string): Promise<User> {
+  async createUser(username: string, password: string, email?: string, phoneNumber?: string, btcAddress?: string): Promise<User> {
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     const result = await db.insert(users).values({
       username,
       passwordHash,
       email,
       phoneNumber,
+      ...(btcAddress ? { defaultBtcAddress: btcAddress, defaultBtcAddressSetAt: new Date() } : {}),
     }).returning();
     
     const user = result[0];
     await this.createWallet(user.id);
     
     return user;
+  }
+
+  async updateUserDefaultBtcAddress(userId: string, btcAddress: string): Promise<void> {
+    await db.update(users)
+      .set({ defaultBtcAddress: btcAddress, defaultBtcAddressSetAt: new Date(), updatedAt: new Date() })
+      .where(eq(users.id, userId));
   }
 
   async verifyPassword(user: User, password: string): Promise<boolean> {
