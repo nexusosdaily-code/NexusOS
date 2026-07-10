@@ -129,6 +129,32 @@ export const HONEYPOT_PATHS = new Set<string>([
   "/redirect?to=http://169.254.169.254",
 ]);
 
+// ── Regex patterns for scanner probes that vary their path prefix ─────────────
+// (absolute filesystem paths, nested traversal, double-URL-encoding) — these
+// don't fit a static Set because attackers vary the leading directory
+// (/var/www/html/..., /home/ubuntu/..., /srv/..., /app/..., etc).
+const HONEYPOT_PATTERNS: RegExp[] = [
+  // SSH keys / credentials anywhere in the path
+  /\.ssh\/(id_rsa|id_ed25519|id_ecdsa|id_dsa|authorized_keys|known_hosts)/i,
+  /\.bash_history$/i,
+  // .env files anywhere in the path (not just web root)
+  /(^|\/)\.env(\.[a-z0-9_-]+)?$/i,
+  // Git config anywhere in the path
+  /\.git\/config$/i,
+  // Common *nix system/log files probed via absolute paths
+  /\/etc\/(passwd|shadow|hosts|nginx\/nginx\.conf|apache2\/apache2\.conf)$/i,
+  /\/proc\/(version|self\/environ|self\/cmdline)$/i,
+  /\/var\/log\/(apache2|nginx|auth)[a-z0-9_/]*\.log$/i,
+  // WordPress / PHP config probed via nested paths
+  /\/(wp-config|config)\.php$/i,
+  // Double / mixed URL-encoded traversal (%252e = encoded "%2e")
+  /%25(2e|2f)/i,
+];
+
+function matchesHoneypotPattern(p: string): boolean {
+  return HONEYPOT_PATTERNS.some((re) => re.test(p));
+}
+
 // ── Paths whose hits should trigger an immediate Telegram alert ───────────────
 const HIGH_ALERT_PATHS = new Set<string>([
   "/api/withdraw", "/api/withdrawal", "/api/sweep", "/api/drain",
@@ -203,7 +229,7 @@ export function honeypotMiddleware(req: Request, res: Response, next: NextFuncti
   }
 
   const p = req.path;
-  if (HONEYPOT_PATHS.has(p) || HONEYPOT_PATHS.has(p.toLowerCase())) {
+  if (HONEYPOT_PATHS.has(p) || HONEYPOT_PATHS.has(p.toLowerCase()) || matchesHoneypotPattern(p)) {
     res.locals.honeypotHit = true;
     sendHoneypotAlert(req, p);
     return res.status(404).json({ error: "Not found" });
@@ -212,5 +238,5 @@ export function honeypotMiddleware(req: Request, res: Response, next: NextFuncti
 }
 
 export function isHoneypotPath(p: string): boolean {
-  return HONEYPOT_PATHS.has(p) || HONEYPOT_PATHS.has(p.toLowerCase());
+  return HONEYPOT_PATHS.has(p) || HONEYPOT_PATHS.has(p.toLowerCase()) || matchesHoneypotPattern(p);
 }
