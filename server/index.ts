@@ -187,11 +187,14 @@ const DOMAIN_ROUTES: Record<string, string> = {
 app.use((req, res, next) => {
   const host = req.hostname ?? "";
   const target = DOMAIN_ROUTES[host];
-  // Redirect every request on a branded domain (not just "/") to the
-  // canonical https://wnsp.io/... URL so crawlers never see duplicate
-  // content served under a non-canonical hostname.
-  if (target) return res.redirect(301, `https://wnsp.io${target}`);
-  next();
+  if (!target) return next();
+  // For root requests, send to the product page on wnsp.io.
+  // For all other paths, redirect to the same path on wnsp.io so crawlers
+  // never index duplicate content under a branded hostname.
+  const destination = req.path === "/"
+    ? `https://wnsp.io${target}`
+    : `https://wnsp.io${req.path}`;
+  return res.redirect(301, destination);
 });
 
 // ── /.well-known — registered early so Vite dev middleware cannot intercept ──
