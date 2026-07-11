@@ -202,7 +202,7 @@ const NOINDEX_DYNAMIC_PREFIXES: string[] = [
 // marketing / science / documentation page.
 const DYNAMIC_PUBLIC_PREFIXES: string[] = [
   "/docs/",       // /docs/:section — public developer documentation
-  "/videos/",     // /videos/:id — first-party video detail pages
+  // NOTE: /videos/:id is handled explicitly in isPublicSpaPath (numeric IDs only)
 ];
 
 // Valid /docs/:section slugs — must stay in sync with DOCS_SECTIONS in
@@ -226,6 +226,10 @@ function isPublicSpaPath(pathname: string): boolean {
     // Only exact /docs/<known-section> — no deeper segments allowed.
     if (rest.includes("/")) return false;
     return DOCS_SECTION_SLUGS.has(rest);
+  }
+  // Only exact numeric-ID paths are valid video detail pages; anything else gets 404.
+  if (pathname.startsWith("/videos/")) {
+    return /^\/videos\/\d+$/.test(pathname);
   }
   return DYNAMIC_PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 }
@@ -397,9 +401,10 @@ export function serveStatic(app: Express) {
 
   // ── Host-aware sitemap.xml ────────────────────────────────────────────────
   // Custom domains each get a single-URL sitemap containing only their root
-  // canonical page. The main wnsp.io sitemap is served as a static file from
-  // client/public/sitemap.xml (which lists all wnsp.io canonical paths).
-  app.get("/sitemap.xml", (req: Request, res: Response) => {
+  // canonical page. For wnsp.io, the static sitemap.xml is merged with live
+  // video detail URLs fetched from the database so every public /videos/:id
+  // page is discoverable without manual maintenance.
+  app.get("/sitemap.xml", async (req: Request, res: Response) => {
     const host      = req.hostname || (req.headers.host as string) || "";
     const cleanHost = host.split(":")[0];
 
@@ -419,10 +424,44 @@ export function serveStatic(app: Express) {
       return;
     }
 
-    // Fall through to static file for wnsp.io and unknown hosts.
-    res.sendFile(path.join(distPath, "sitemap.xml"), (err) => {
-      if (err) res.status(404).end();
-    });
+    // For wnsp.io: read the static sitemap and append live video detail URLs.
+    try {
+      const staticPath = path.join(distPath, "sitemap.xml");
+      const staticXml  = await fs.promises.readFile(staticPath, "utf8");
+
+      // Fetch all public video records from the DB.
+      let videoEntries = "";
+      try {
+        const videos = await storage.getTelegramVideos(10000);
+        if (videos.length > 0) {
+          videoEntries = videos.map((v) => [
+            `  <url>`,
+            `    <loc>https://wnsp.io/videos/${v.id}</loc>`,
+            `    <changefreq>weekly</changefreq>`,
+            `    <priority>0.75</priority>`,
+            `  </url>`,
+          ].join("\n")).join("\n");
+        }
+      } catch {
+        // DB unavailable — serve static sitemap without video entries.
+      }
+
+      let merged: string;
+      if (videoEntries) {
+        // Insert video <url> entries before the closing </urlset> tag.
+        merged = staticXml.replace(
+          /(<\/urlset>)\s*$/,
+          `\n  <!-- ── Video Detail Pages (dynamic) ──────────────────────────────────── -->\n${videoEntries}\n\n$1`,
+        );
+      } else {
+        merged = staticXml;
+      }
+
+      res.status(200).type("application/xml").send(merged);
+    } catch {
+      // Static file missing — send a minimal fallback.
+      res.status(404).end();
+    }
   });
 
   // ── Host-aware llms.txt ───────────────────────────────────────────────────
