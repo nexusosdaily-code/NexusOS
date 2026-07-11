@@ -2143,8 +2143,10 @@ export function resolveMeta(host: string, pathname: string): PageMeta | null {
   const cleanPath = pathname.split("?")[0].replace(/\/$/, "") || "/";
 
   if (cleanPath.startsWith("/docs/")) {
-    const slug = cleanPath.slice("/docs/".length).split("/")[0];
-    return docsSectionMeta(slug);
+    const rest = cleanPath.slice("/docs/".length);
+    // Only resolve metadata for exact /docs/<known-section> — no deeper paths.
+    if (rest.includes("/")) return null;
+    return docsSectionMeta(rest);
   }
 
   return ROUTE_META[cleanPath] ?? null;

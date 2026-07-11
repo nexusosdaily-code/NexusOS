@@ -222,8 +222,10 @@ function isNoindexSpaPath(pathname: string): boolean {
 function isPublicSpaPath(pathname: string): boolean {
   if (EXACT_PUBLIC_PATHS.has(pathname)) return true;
   if (pathname.startsWith("/docs/")) {
-    const slug = pathname.slice("/docs/".length).split("/")[0];
-    return DOCS_SECTION_SLUGS.has(slug);
+    const rest = pathname.slice("/docs/".length);
+    // Only exact /docs/<known-section> — no deeper segments allowed.
+    if (rest.includes("/")) return false;
+    return DOCS_SECTION_SLUGS.has(rest);
   }
   return DYNAMIC_PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 }
