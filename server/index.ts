@@ -730,6 +730,13 @@ async function runStartupMigrations() {
   }
   await registerRoutes(httpServer, app);
 
+  // Stage B: backfill lattice pubkeys for all existing users missing one
+  import("./lattice-identity").then(({ backfillLatticePubKeys }) =>
+    backfillLatticePubKeys().then(n => {
+      if (n > 0) console.log(`[LatticeID] Stage B backfill — ${n} user(s) now have a channel lattice pubkey`);
+    }).catch(() => {})
+  ).catch(() => {});
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";

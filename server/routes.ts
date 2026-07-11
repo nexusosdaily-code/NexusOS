@@ -872,10 +872,15 @@ export async function registerRoutes(
       const user = await storage.createUser(username, password, email, phoneNumber, btcAddress || undefined);
       const session = await storage.createSession(user.id, req.ip, req.headers["user-agent"]);
 
-      // ── Assign deterministic spectral channel from username hash ──────────
+      // ── Assign deterministic spectral channel + Stage B lattice pubkey ──
+      let _regLatticePubKey: string | null = null;
       try {
         const ch = deriveChannel(username);
         await storage.updateUserSpectral(user.id, { wdm: ch.wdm, oam: ch.oam, pol: ch.pol, nm: ch.nm, band: ch.band });
+        // Stage B: derive and immediately store the channel's lattice public key
+        const { getPublicKey: _gp } = await import("./lattice-identity");
+        _regLatticePubKey = _gp(user.id, ch.wavelengthNm);
+        await storage.updateUserLatticeKey(user.id, _regLatticePubKey);
       } catch (_e) { /* non-blocking */ }
 
       await logAction(req, "user_registered", "auth", user.id, { username, btcAddressSet: !!btcAddress });
@@ -902,6 +907,7 @@ export async function registerRoutes(
           label: username, ceInput: username, resourceType: "user", resourceId: user.id,
           httpUrl: `/profile/${username}`, description: `Canonical spectral identity for ${username}`,
           registeredBy: user.id, isPublic: true, isCanonical: true,
+          latticePubKey: _regLatticePubKey ?? undefined,
         }).onConflictDoNothing();
       } catch (_e) { /* non-blocking — identity can be registered later */ }
 
@@ -961,6 +967,13 @@ export async function registerRoutes(
       }
 
       await storage.updateUserLastLogin(user.id);
+      // Stage B backfill: ensure channel lattice pubkey is stored on every login
+      if (!user.latticePubKey && user.spectralNm) {
+        import("./lattice-identity").then(({ getPublicKey: _gpLogin }) => {
+          const pk = _gpLogin(user.id, user.spectralNm!);
+          storage.updateUserLatticeKey(user.id, pk).catch(() => {});
+        }).catch(() => {});
+      }
       const session = await storage.createSession(user.id, req.ip, req.headers["user-agent"]);
       
       await logAction(req, "user_login", "auth", user.id);
@@ -1958,14 +1971,26 @@ export async function registerRoutes(
 
       const { key, apiKey } = await storage.createApiKey(req.user!.id, name.trim(), permissions);
 
+      // Stage B: attach channel lattice pubkey to the API key row
+      try {
+        const ownerPubKey = req.user!.latticePubKey;
+        if (ownerPubKey) {
+          const { db: _akDb } = await import("./db");
+          const { apiKeys: _akTbl } = await import("../shared/schema");
+          const { eq: _akEq } = await import("drizzle-orm");
+          await _akDb.update(_akTbl).set({ latticeOwnerPubKey: ownerPubKey }).where(_akEq(_akTbl.id, apiKey.id));
+        }
+      } catch { /* non-fatal */ }
+
       res.status(201).json({
         key,
         apiKey: {
-          id:          apiKey.id,
-          name:        apiKey.name,
-          prefix:      apiKey.keyPrefix,
-          permissions: apiKey.permissions,
-          createdAt:   apiKey.createdAt,
+          id:                apiKey.id,
+          name:              apiKey.name,
+          prefix:            apiKey.keyPrefix,
+          permissions:       apiKey.permissions,
+          createdAt:         apiKey.createdAt,
+          latticeOwnerPubKey: req.user!.latticePubKey ?? null,
         },
         fee: { sats: API_KEY_FEE_SATS },
         warning: "Store this key now — it will not be shown again.",
@@ -2774,6 +2799,18 @@ export async function registerRoutes(
         isDecoded: false,
       });
 
+      // Stage B: non-fatal ML-DSA-65 lattice sign — binds sender channel to this message
+      try {
+        const { latticeSign: _lsMsg, lambdaMessage: _lmMsg } = await import("./lattice-identity");
+        const _senderNm = req.user!.spectralNm ?? 550;
+        const _msgBytes = _lmMsg(req.user!.id, message.id, recipientId, spectralHash);
+        const { signature: _latticeSig, scheme: _sigScheme } = _lsMsg(req.user!.id, _senderNm, _msgBytes);
+        const { db: _lmDb } = await import("./db");
+        const { lambdaMessages: _lmTbl } = await import("../shared/schema");
+        const { eq: _lmEq } = await import("drizzle-orm");
+        await _lmDb.update(_lmTbl).set({ latticeSig: _latticeSig, sigScheme: _sigScheme }).where(_lmEq(_lmTbl.id, message.id));
+      } catch { /* non-fatal */ }
+
       await logAction(req, "message_sent", "messages", message.id, {
         recipientId,
         hasEncoding: !!encodedFrames,
@@ -3296,6 +3333,70 @@ export async function registerRoutes(
   });
   app.get("/api/nexus/dev/spec", optionalAuth, (req, res) => {
     secureProxyToSpectralAPI(req, res, "/api/nexus/dev/spec");
+  });
+
+  // ── Stage B: Ψ Channel Lattice Identity — public lookup ─────────────────
+  // GET /api/identity/channel/:psiChannel
+  // Returns the ML-DSA-65 public key and metadata for any registered channel.
+  // No authentication required — lattice pubkeys are public by design.
+  app.get("/api/identity/channel/:psiChannel", async (req: Request, res: Response) => {
+    try {
+      const raw = decodeURIComponent(req.params.psiChannel);
+      const match = raw.match(/[Ψ\u03A8]\((\d+),(\d+),([HVhv])\)/);
+      if (!match) {
+        return res.status(400).json({ error: "Invalid format. Expected Ψ(wdm,oam,pol) e.g. Ψ(52,20,H)" });
+      }
+      const [, wdmS, oamS, polS] = match;
+      const { db: _idDb } = await import("./db");
+      const { users: _idUsers } = await import("../shared/schema");
+      const { and, eq: _idEq } = await import("drizzle-orm");
+
+      const [found] = await _idDb.select({
+        id:           _idUsers.id,
+        username:     _idUsers.username,
+        spectralNm:   _idUsers.spectralNm,
+        spectralBand: _idUsers.spectralBand,
+        spectralWdm:  _idUsers.spectralWdm,
+        spectralOam:  _idUsers.spectralOam,
+        spectralPol:  _idUsers.spectralPol,
+        latticePubKey: _idUsers.latticePubKey,
+      }).from(_idUsers).where(
+        and(
+          _idEq(_idUsers.spectralWdm, parseInt(wdmS)),
+          _idEq(_idUsers.spectralOam, parseInt(oamS)),
+          _idEq(_idUsers.spectralPol, polS.toUpperCase()),
+        )
+      );
+
+      if (!found) {
+        return res.status(404).json({ error: "No user registered on this channel", psiChannel: raw });
+      }
+
+      // If pubkey missing, derive it on-the-fly and backfill
+      let pubKey = found.latticePubKey;
+      if (!pubKey && found.spectralNm) {
+        try {
+          const { getPublicKey: _gp2 } = await import("./lattice-identity");
+          pubKey = _gp2(found.id, found.spectralNm);
+          storage.updateUserLatticeKey(found.id, pubKey).catch(() => {});
+        } catch { pubKey = null; }
+      }
+
+      return res.json({
+        psiChannel:   raw,
+        wdm:          found.spectralWdm,
+        oam:          found.spectralOam,
+        pol:          found.spectralPol,
+        wavelengthNm: found.spectralNm,
+        band:         found.spectralBand,
+        username:     found.username,
+        latticePubKey: pubKey,
+        sigScheme:    pubKey ? "ML-DSA-65/FIPS-204" : null,
+        verified:     !!pubKey,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // SPECTRAL API PROXY ROUTES (Rate Limited & Logged)

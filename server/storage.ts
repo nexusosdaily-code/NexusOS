@@ -42,6 +42,7 @@ export interface IStorage {
   verifyPassword(user: User, password: string): Promise<boolean>;
   updateUserLastLogin(userId: string): Promise<void>;
   updateUserSpectral(userId: string, spectral: { wdm: number; oam: number; pol: string; nm: number; band: string }): Promise<void>;
+  updateUserLatticeKey(userId: string, pubKeyHex: string): Promise<void>;
   updateUserDefaultBtcAddress(userId: string, btcAddress: string): Promise<void>;
 
   // Session operations
@@ -298,6 +299,12 @@ export class DatabaseStorage implements IStorage {
         spectralBand: spectral.band,
         updatedAt:    new Date(),
       })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserLatticeKey(userId: string, pubKeyHex: string): Promise<void> {
+    await db.update(users)
+      .set({ latticePubKey: pubKeyHex, updatedAt: new Date() })
       .where(eq(users.id, userId));
   }
 

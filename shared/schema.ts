@@ -48,6 +48,8 @@ export const users = pgTable("users", {
   nostrPubkey:  text("nostr_pubkey").unique(), // hex pubkey — primary Nostr login key
   // ── Security flags ──
   withdrawalsBlocked: boolean("withdrawals_blocked").notNull().default(false),
+  // ── Stage B: Ψ channel lattice identity (ML-DSA-65, NIST FIPS 204) ──
+  latticePubKey: text("lattice_pub_key"),
 }, (table) => ({
   usernameIdx: index("users_username_idx").on(table.username),
   emailIdx: index("users_email_idx").on(table.email),
@@ -234,6 +236,7 @@ export const apiKeys = pgTable("api_keys", {
   expiresAt: timestamp("expires_at"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  latticeOwnerPubKey: text("lattice_owner_pub_key"),
 }, (table) => ({
   userIdIdx: index("api_keys_user_id_idx").on(table.userId),
   keyPrefixIdx: index("api_keys_key_prefix_idx").on(table.keyPrefix),
@@ -411,6 +414,8 @@ export const lambdaMessages = pgTable("lambda_messages", {
   isDecoded: boolean("is_decoded").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   readAt: timestamp("read_at"),
+  latticeSig: text("lattice_sig"),
+  sigScheme:  text("sig_scheme"),
 }, (table) => ({
   senderIdx: index("lambda_messages_sender_idx").on(table.senderId),
   recipientIdx: index("lambda_messages_recipient_idx").on(table.recipientId),
@@ -784,6 +789,7 @@ export const wnspRegistry = pgTable("wnsp_registry", {
   resolveCount:  integer("resolve_count").notNull().default(0),
   createdAt:     timestamp("created_at").notNull().defaultNow(),
   updatedAt:     timestamp("updated_at").notNull().defaultNow(),
+  latticePubKey: text("lattice_pub_key"),
 }, (table) => ({
   psiIdx:        index("wnsp_registry_psi_idx").on(table.psiChannel),
   labelIdx:      index("wnsp_registry_label_idx").on(table.label),

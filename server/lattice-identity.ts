@@ -144,3 +144,52 @@ export function getPublicKey(userId: string, wavelengthNm: number): string {
   const { publicKey } = deriveKeypair(userId, wavelengthNm);
   return Buffer.from(publicKey).toString("hex");
 }
+
+/**
+ * Build canonical message bytes for a lambda message signature.
+ * Binds sender + message ID + recipient so the sig cannot be replayed.
+ */
+export function lambdaMessage(
+  senderId: string,
+  messageId: string,
+  recipientId: string,
+  spectralHash: string | null
+): Uint8Array {
+  const digest = createHash("sha256")
+    .update(
+      `${senderId}::lambda-msg-sig::${messageId}::${recipientId}::${spectralHash ?? "none"}::wnsp-ml-dsa-v1`
+    )
+    .digest("hex");
+  return Buffer.from(digest, "utf8");
+}
+
+/**
+ * Stage B — update every user that has a spectral channel but no lattice
+ * public key yet.  Called once at startup; safe to re-run (idempotent).
+ */
+export async function backfillLatticePubKeys(): Promise<number> {
+  const { db } = await import("./db");
+  const { users } = await import("../shared/schema");
+  const { isNull, isNotNull } = await import("drizzle-orm");
+
+  const rows = await db
+    .select({ id: users.id, spectralNm: users.spectralNm })
+    .from(users)
+    .where(
+      /* spectralNm set AND latticePubKey missing */
+      isNull(users.latticePubKey)
+    );
+
+  let updated = 0;
+  for (const row of rows) {
+    if (!row.spectralNm) continue;
+    try {
+      const pubKeyHex = getPublicKey(row.id, row.spectralNm);
+      await db.update(users)
+        .set({ latticePubKey: pubKeyHex })
+        .where((await import("drizzle-orm")).eq(users.id, row.id));
+      updated++;
+    } catch { /* skip individual failures */ }
+  }
+  return updated;
+}
