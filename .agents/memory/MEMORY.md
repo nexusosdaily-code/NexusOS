@@ -22,3 +22,4 @@
 - [Traffic bot detection layering](traffic-bot-detection.md) — sync UA-pattern layer + async datacenter-IP reclassification layer; why one alone isn't airtight
 - [drizzle-kit push TTY workaround](drizzle-push-tty-workaround.md) — for safe additive columns, apply ALTER TABLE directly instead of fighting the interactive resolver
 - [Saved BTC address prefill pattern](btc-address-prefill.md) — dedicated defaultBtcAddress column, checksum validation, client-side-only prefill, never server-side auto-substitution
+- [noble-post-quantum ML-DSA API](noble-post-quantum-ml-dsa-api.md) — import needs .js ext; sign(msg,sk)/verify(sig,msg,pk) msg-first, opposite of most crypto APIs

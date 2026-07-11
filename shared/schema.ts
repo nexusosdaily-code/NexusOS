@@ -452,6 +452,10 @@ export const secureDocuments = pgTable("secure_documents", {
   energyHash: text("energy_hash").notNull(),
   isVerified: boolean("is_verified").notNull().default(false),
   encryptionStatus: text("encryption_status").notNull().default("encrypted"),
+  // Stage A — Post-quantum lattice signature (ML-DSA-65 / NIST FIPS 204)
+  latticePubKey: text("lattice_pub_key"),
+  latticeSig: text("lattice_sig"),
+  sigScheme: text("sig_scheme").notNull().default("WNSP-SIG-v1"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   userIdIdx: index("secure_documents_user_id_idx").on(table.userId),

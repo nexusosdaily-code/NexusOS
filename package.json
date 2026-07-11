@@ -18,6 +18,7 @@
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@noble/hashes": "^2.2.0",
+    "@noble/post-quantum": "^0.6.1",
     "@noble/secp256k1": "^3.1.0",
     "@octokit/rest": "^22.0.0",
     "@radix-ui/react-accordion": "^1.2.12",

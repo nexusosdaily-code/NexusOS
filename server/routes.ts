@@ -22,6 +22,7 @@ import { z } from "zod";
 import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT, GENESIS_EXECUTION_ADDRESS } from "./physics";
 import { getEtchStatus } from "./wnsp-btc-rune-etcher";
 import { isValidMainnetBtcAddress } from "./btc-address-validate";
+import { latticeSign, latticeVerify, documentMessage } from "./lattice-identity";
 import { transpileToWLS, SUPPORTED_LANGS, type SupportedLang } from "./lang-transpiler";
 import { ledgerEvent } from "./spectral-ledger";
 
@@ -4000,6 +4001,24 @@ export async function registerRoutes(
       const energyHash = `Λ${energy.toExponential(6)}_${timestamp}_${req.user!.id.slice(0, 8)}`;
       const lambdaSignature = `WNSP-Λ-${wavelength.toFixed(4)}nm-${frequency.toExponential(4)}Hz-${timestamp}`;
 
+      // ── Stage A: ML-DSA-65 post-quantum lattice signature ──────────────
+      // Signs a deterministic message covering userId + physics params +
+      // document identity so the signature cannot be detached and reused.
+      let latticePubKey: string | undefined;
+      let latticeSig:    string | undefined;
+      let sigScheme      = "WNSP-SIG-v1";
+      try {
+        const msg     = documentMessage(req.user!.id, lambdaSignature, originalName, energyHash);
+        const lattice = latticeSign(req.user!.id, wavelength, msg);
+        latticePubKey = lattice.publicKey;
+        latticeSig    = lattice.signature;
+        sigScheme     = `WNSP-SIG-v2::${lattice.scheme}`;
+      } catch (latticeErr: any) {
+        // Non-fatal — fall back to physics-only signing so documents still save
+        console.error("[LatticeID] Sign failed (non-fatal):", latticeErr.message);
+      }
+      // ────────────────────────────────────────────────────────────────────
+
       const document = await storage.createSecureDocument({
         userId: req.user!.id,
         filename,
@@ -4013,6 +4032,9 @@ export async function registerRoutes(
         energyHash,
         isVerified: true,
         encryptionStatus: "encrypted",
+        latticePubKey,
+        latticeSig,
+        sigScheme,
       });
 
       await logAction(req, "secure_document_created", "secure_documents", document.id, {
@@ -4048,7 +4070,20 @@ export async function registerRoutes(
       const energy = planckConstant * frequency;
       const energyHashValid = doc.energyHash.startsWith("Λ") && doc.energyHash.includes(energy.toExponential(6).slice(0, 8));
 
-      const isValid = frequencyMatch && energyHashValid;
+      // ── Stage A: ML-DSA-65 lattice verification ─────────────────────────
+      let latticeValid: boolean | null = null;
+      if (doc.latticePubKey && doc.latticeSig) {
+        try {
+          const msg = documentMessage(doc.userId, doc.lambdaSignature, doc.originalName, doc.energyHash);
+          latticeValid = latticeVerify(doc.latticePubKey, doc.latticeSig, msg);
+        } catch (e: any) {
+          console.error("[LatticeID] Verify error (non-fatal):", e.message);
+          latticeValid = false;
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────
+
+      const isValid = frequencyMatch && energyHashValid && (latticeValid === null || latticeValid === true);
 
       await storage.updateSecureDocumentVerification(doc.id, isValid);
 
@@ -4058,7 +4093,15 @@ export async function registerRoutes(
         frequency,
       });
 
-      res.json({ isValid, document: { ...doc, isVerified: isValid } });
+      res.json({
+        isValid,
+        document: { ...doc, isVerified: isValid },
+        verification: {
+          physicsCoherence: frequencyMatch && energyHashValid,
+          lattice: latticeValid === null ? "not-signed" : latticeValid ? "valid" : "invalid",
+          scheme: doc.sigScheme ?? "WNSP-SIG-v1",
+        },
+      });
     } catch (error: any) {
       console.error("Verify secure document error:", error);
       res.status(500).json({ error: "Failed to verify document" });

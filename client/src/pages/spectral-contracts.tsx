@@ -191,6 +191,7 @@ Signed under the NexusOS AGPL-3.0 open-source license.`);
               { step: "2", label: "SHA-256 Content", desc: "Document content is hashed with SHA-256 to produce a 64-char content fingerprint." },
               { step: "3", label: "Spectral XOR", desc: "hash(content) ⊕ hex(λ) = raw spectral signature. The wavelength physically imprints the signer's identity onto the content." },
               { step: "4", label: "WNSP-SIG-v1", desc: "Final signature: WNSP-SIG-v1::{username}::{λ}::{sig_fragment}::{check}. Verifiable by anyone with CE encoder." },
+              { step: "5", label: "ML-DSA-65 ⚛", desc: "Stage A post-quantum layer: CRYSTALS-Dilithium (NIST FIPS 204) signs the document message server-side. Survives quantum computers." },
             ].map(({ step, label, desc }) => (
               <div key={step} className="border border-white/8 rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-1">
@@ -275,6 +276,15 @@ Signed under the NexusOS AGPL-3.0 open-source license.`);
                 <div className="border border-white/10 rounded-lg p-3" style={{ background: "rgba(0,0,0,0.4)" }}>
                   <div className="text-white/20 text-[7px] uppercase tracking-widest mb-2">Final Signature String</div>
                   <div className="text-[9px] font-mono break-all" style={{ color: nmToColor(signed.signerNm) }}>{signed.signature}</div>
+                </div>
+
+                {/* Stage A — ML-DSA-65 post-quantum badge */}
+                <div className="flex items-center gap-2 rounded-lg border border-cyan-400/20 bg-cyan-400/5 px-3 py-2" data-testid="badge-ml-dsa">
+                  <span className="text-cyan-400 text-[10px]">⚛</span>
+                  <div className="flex-1">
+                    <div className="text-cyan-400/80 text-[9px] font-bold">ML-DSA-65 · NIST FIPS 204</div>
+                    <div className="text-white/25 text-[8px]">Post-quantum lattice signature generated server-side and stored with this document. Resistant to Shor's algorithm.</div>
+                  </div>
                 </div>
 
                 <button onClick={copySignature}
