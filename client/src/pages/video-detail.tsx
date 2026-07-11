@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useParams } from "wouter";
+import { Link, useLocation, useParams } from "wouter";
 import { ArrowLeft, Clock, ExternalLink, MessageSquare, Tv } from "lucide-react";
 
 const TG_SIZE_LIMIT = 20 * 1024 * 1024; // 20 MB — Telegram bot download cap
@@ -49,14 +50,28 @@ function telegramUrl(video: TelegramVideo): string {
 
 export default function VideoDetailPage() {
   const params = useParams<{ id: string }>();
-  const videoId = Number(params.id);
+  const [, setLocation] = useLocation();
+
+  // Only pure-numeric IDs are valid video detail routes. Non-numeric params
+  // (e.g. /videos/foo) are soft-404s on the server and must redirect on the
+  // client so no invalid URL ever renders under a nominal 200 route.
+  const numericId = /^\d+$/.test(params.id ?? "") ? Number(params.id) : null;
+
+  useEffect(() => {
+    if (numericId === null) setLocation("/videos");
+  }, [numericId, setLocation]);
 
   const { data, isLoading } = useQuery<{ videos: TelegramVideo[] }>({
     queryKey: ["/api/telegram/videos"],
     retry: false,
+    enabled: numericId !== null,
   });
 
-  const video = (data?.videos || []).find(v => v.id === videoId);
+  const video = numericId !== null
+    ? (data?.videos || []).find(v => v.id === numericId)
+    : undefined;
+
+  if (numericId === null) return null;
 
   return (
     <div className="min-h-screen bg-black text-white font-mono">
