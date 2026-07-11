@@ -319,6 +319,9 @@ export default function WnspLandingPage() {
               { href: "/research-presentation", label: "Research Presentation" },
               { href: "/nostr", label: "Nostr Relay" },
               { href: "/wsats", label: "wSats" },
+              { href: "/silicon-bridge", label: "Silicon Bridge" },
+              { href: "/spectral-mirror", label: "Spectral Mirror" },
+              { href: "/planck-alignment", label: "Planck Alignment" },
             ].map(({ href, label }) => (
               <Link
                 key={href}

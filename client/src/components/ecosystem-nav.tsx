@@ -5,11 +5,11 @@ export function EcosystemNav() {
   return (
     <div className="grid grid-cols-2 gap-3 text-xs">
       <Link
-        href="/wnsp"
-        data-testid="link-back-to-hub"
+        href="/build"
+        data-testid="link-back-to-build"
         className="flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900/50 px-4 py-3 font-medium text-slate-300 transition-all hover:border-slate-500 hover:text-white"
       >
-        <Radio className="w-3.5 h-3.5" /> WNSP Protocol
+        <Radio className="w-3.5 h-3.5" /> Build Hub
       </Link>
       <Link
         href="/joint-venture"
