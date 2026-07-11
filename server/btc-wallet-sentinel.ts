@@ -495,7 +495,7 @@ export async function processIncomingDeposit(txid: string, satsReceived: number)
         VALUES (${txid}, ${senderAddress}, ${satsReceived}, ${nxtAmount.toFixed(8)}, ${matched.user_id}, ${matched.username}, 'credited', NOW())
       `);
 
-      console.log(`[Deposit] ✅ Credited ${nxtAmount.toFixed(2)} NXT to ${matched.username} for ${satsReceived} sats (TX ${txid.slice(0,16)}…)`);
+      console.log(`[Deposit] ✅ Credited ${nxtAmount.toFixed(2)} NXT to ${matched.username.slice(0,3)}*** for ${satsReceived} sats (TX ${txid.slice(0,16)}…)`);
       await alert(
         `💰 <b>BTC → NXT Deposit Auto-Credited</b>\n\n` +
         `User:    <b>${matched.username}</b>\n` +

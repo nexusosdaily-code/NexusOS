@@ -807,13 +807,13 @@ export async function registerRoutes(
           }).onConflictDoNothing();
         } catch { /* non-blocking */ }
 
-        console.log(`[NostrAuth] New user created — ${username} · ${npub.slice(0, 20)}…`);
+        console.log(`[NostrAuth] New user created — ${username.slice(0,3)}*** · ${npub.slice(0, 20)}…`);
       } else {
         // Backfill pubkey if missing
         if (!user.nostrPubkey) {
           await _db.update(usersT).set({ nostrPubkey: pubkeyHex }).where(eqN(usersT.id, user.id));
         }
-        console.log(`[NostrAuth] Existing user — ${user.username} · ${npub.slice(0, 20)}…`);
+        console.log(`[NostrAuth] Existing user — ${user.username.slice(0,3)}*** · ${npub.slice(0, 20)}…`);
       }
 
       const session = await storage.createSession(user.id, req.ip, req.headers["user-agent"]);
@@ -7625,7 +7625,24 @@ export async function registerRoutes(
         proposedValue: proposed.toString(),
         closesAt,
       });
-      res.status(201).json({ proposal });
+
+      // Non-fatal ML-DSA-65 lattice signature — binds proposer identity to this proposal ID
+      let signedProposal: typeof proposal = proposal;
+      try {
+        const { latticeSign, governanceMessage } = await import("./lattice-identity");
+        const msg = governanceMessage(user.id, proposal.id, title, parameterKey, proposed.toString());
+        const { publicKey: latticePubKey, signature: latticeSig, scheme: sigScheme } = latticeSign(
+          user.id, channel.wavelengthNm, msg
+        );
+        const { db: lDb } = await import("./db");
+        const { governanceProposals: lGp } = await import("../shared/schema");
+        const { eq: lEq } = await import("drizzle-orm");
+        await lDb.update(lGp).set({ latticePubKey, latticeSig, sigScheme }).where(lEq(lGp.id, proposal.id));
+        signedProposal = { ...proposal, latticePubKey, latticeSig, sigScheme };
+      } catch {
+        // non-fatal — proposal saved without lattice sig
+      }
+      res.status(201).json({ proposal: signedProposal });
     } catch (err: any) {
       if (err.message?.includes("unique") || err.code === "23505") {
         res.status(409).json({ error: "You already have an active proposal for this parameter" });
@@ -14718,7 +14735,7 @@ export async function registerRoutes(
         status:      newStatus,
       }).where(eq(airdropCampaigns.id, campaignId));
 
-      console.log(`[Airdrop] Claim — user=${req.user!.username} campaign="${campaign.title}" amount=${perClaim} NXT Ψ=${psiChannel}`);
+      console.log(`[Airdrop] Claim — user=${req.user!.username.slice(0,3)}*** campaign="${campaign.title}" amount=${perClaim} NXT Ψ=${psiChannel}`);
 
       // Fire event broadcast on every 10th claim
       if (newCount % 10 === 0) {

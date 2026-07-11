@@ -80,6 +80,26 @@ export function documentMessage(
 }
 
 /**
+ * Build the canonical message bytes for a governance proposal.
+ * Binds proposer identity + proposal ID + key params so no field
+ * can be swapped after the signature is stored.
+ */
+export function governanceMessage(
+  userId: string,
+  proposalId: number,
+  title: string,
+  parameterKey: string,
+  proposedValue: string
+): Uint8Array {
+  const digest = createHash("sha256")
+    .update(
+      `${userId}::gov-proposal-sig::${proposalId}::${title}::${parameterKey}::${proposedValue}::wnsp-ml-dsa-v1`
+    )
+    .digest("hex");
+  return Buffer.from(digest, "utf8");
+}
+
+/**
  * Sign a document on behalf of userId.
  * Returns hex-encoded publicKey and signature for storage.
  */

@@ -924,6 +924,9 @@ export const governanceProposals = pgTable("governance_proposals", {
   closesAt:      timestamp("closes_at").notNull(),
   executedAt:    timestamp("executed_at"),
   createdAt:     timestamp("created_at").notNull().defaultNow(),
+  latticePubKey: text("lattice_pub_key"),
+  latticeSig:    text("lattice_sig"),
+  sigScheme:     text("sig_scheme"),
 }, (table) => ({
   statusIdx:   index("gov_proposals_status_idx").on(table.status),
   proposerIdx: index("gov_proposals_proposer_idx").on(table.proposerId),
