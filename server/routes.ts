@@ -22,7 +22,7 @@ import { z } from "zod";
 import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT, GENESIS_EXECUTION_ADDRESS } from "./physics";
 import { getEtchStatus } from "./wnsp-btc-rune-etcher";
 import { isValidMainnetBtcAddress } from "./btc-address-validate";
-import { latticeSign, latticeVerify, documentMessage } from "./lattice-identity";
+import { latticeSign, latticeVerify, documentMessage, getPublicKey as latticeGetPublicKey } from "./lattice-identity";
 import { transpileToWLS, SUPPORTED_LANGS, type SupportedLang } from "./lang-transpiler";
 import { ledgerEvent } from "./spectral-ledger";
 
@@ -3394,8 +3394,9 @@ export async function registerRoutes(
         sigScheme:    pubKey ? "ML-DSA-65/FIPS-204" : null,
         verified:     !!pubKey,
       });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (_identityErr: any) {
+      console.error("[IdentityEndpoint] error:", _identityErr.message);
+      res.status(500).json({ error: "Internal error resolving channel identity" });
     }
   });
 
@@ -4176,7 +4177,17 @@ export async function registerRoutes(
       if (doc.latticePubKey && doc.latticeSig) {
         try {
           const msg = documentMessage(doc.userId, doc.lambdaSignature, doc.originalName, doc.energyHash);
-          latticeValid = latticeVerify(doc.latticePubKey, doc.latticeSig, msg);
+          // Step 1: signature integrity — does the sig verify against the stored pubKey?
+          const sigOk = latticeVerify(doc.latticePubKey, doc.latticeSig, msg);
+          // Step 2: canonical identity check — does the stored pubKey match the
+          // freshly re-derived channel key?  Detects DB-level forgery where an
+          // attacker replaces both pubKey + sig with their own valid pair.
+          const canonicalPub = latticeGetPublicKey(doc.userId, wavelength);
+          const pubKeyMatch  = doc.latticePubKey === canonicalPub;
+          latticeValid = sigOk && pubKeyMatch;
+          if (!pubKeyMatch) {
+            console.warn("[LatticeID] Canonical pubKey mismatch on doc", doc.id, "— possible DB-level tampering");
+          }
         } catch (e: any) {
           console.error("[LatticeID] Verify error (non-fatal):", e.message);
           latticeValid = false;

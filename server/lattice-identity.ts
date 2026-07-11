@@ -167,18 +167,26 @@ export function lambdaMessage(
  * Stage B — update every user that has a spectral channel but no lattice
  * public key yet.  Called once at startup; safe to re-run (idempotent).
  */
+const BACKFILL_BATCH_SIZE = 200;
+
 export async function backfillLatticePubKeys(): Promise<number> {
   const { db } = await import("./db");
   const { users } = await import("../shared/schema");
-  const { isNull, isNotNull } = await import("drizzle-orm");
+  const { isNull, isNotNull, and } = await import("drizzle-orm");
 
+  // Only fetch users that have a spectral channel but no lattice pubkey yet.
+  // Capped at BACKFILL_BATCH_SIZE rows per call to avoid memory pressure at
+  // startup when there are many existing users.
   const rows = await db
     .select({ id: users.id, spectralNm: users.spectralNm })
     .from(users)
     .where(
-      /* spectralNm set AND latticePubKey missing */
-      isNull(users.latticePubKey)
-    );
+      and(
+        isNull(users.latticePubKey),
+        isNotNull(users.spectralNm),
+      )
+    )
+    .limit(BACKFILL_BATCH_SIZE);
 
   let updated = 0;
   for (const row of rows) {
@@ -189,7 +197,10 @@ export async function backfillLatticePubKeys(): Promise<number> {
         .set({ latticePubKey: pubKeyHex })
         .where((await import("drizzle-orm")).eq(users.id, row.id));
       updated++;
-    } catch { /* skip individual failures */ }
+      // Yield to the event loop between PBKDF2-heavy operations so we don't
+      // stall request handling during startup batch processing.
+      await new Promise<void>(resolve => setImmediate(resolve));
+    } catch { /* skip individual failures — will be backfilled on next login */ }
   }
   return updated;
 }
