@@ -187,7 +187,10 @@ const DOMAIN_ROUTES: Record<string, string> = {
 app.use((req, res, next) => {
   const host = req.hostname ?? "";
   const target = DOMAIN_ROUTES[host];
-  if (target && req.path === "/") return res.redirect(301, target);
+  // Redirect every request on a branded domain (not just "/") to the
+  // canonical https://wnsp.io/... URL so crawlers never see duplicate
+  // content served under a non-canonical hostname.
+  if (target) return res.redirect(301, `https://wnsp.io${target}`);
   next();
 });
 
