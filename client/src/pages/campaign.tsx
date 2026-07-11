@@ -1220,6 +1220,34 @@ export default function CampaignPage() {
           </div>
         </div>
 
+        {/* Campaign tools & resources */}
+        <div>
+          <div className="mb-4">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-white/30 mb-1">Campaign Tools &amp; Resources</div>
+            <h2 className="text-lg font-bold text-white">Explore the ecosystem</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {[
+              { href: "/hardware-treasury", label: "AI Hardware Fund", desc: "Fund the SNIC hardware build" },
+              { href: "/nxt-fb-swap",       label: "NXT ↔ FB Swap",   desc: "Swap NXT and Fractal BTC" },
+              { href: "/mempool",           label: "Mempool Monitor",  desc: "Live BTC mempool viewer" },
+              { href: "/nostr-bridge",      label: "Nostr Bridge",     desc: "WNSP ↔ Nostr relay layer" },
+              { href: "/quest",             label: "Genesis Quest",    desc: "On-chain genesis challenges" },
+              { href: "/spectral-mirror",   label: "Spectral Mirror",  desc: "Symmetric Ψ channel reflection" },
+            ].map(({ href, label, desc }) => (
+              <Link
+                key={href}
+                href={href}
+                data-testid={`link-campaign-tool-${href.replace(/\//g, "")}`}
+                className="flex flex-col gap-0.5 px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/8 hover:bg-white/[0.06] hover:border-white/15 transition-all"
+              >
+                <span className="text-xs font-medium text-white/80">{label}</span>
+                <span className="text-[10px] text-white/35 leading-snug">{desc}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
         {/* CTA */}
         <div className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 to-violet-500/10 p-6 text-center space-y-3">
           <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-400/60">The pitch writes itself</div>

@@ -376,6 +376,9 @@ export default function BuildWithUsPage() {
               { href: "/developer",          label: "Developer API",        desc: "/api/dev/* endpoints",        icon: GitBranch,  color: "text-white/50" },
               { href: "/join-community",     label: "Community Roles",      desc: "Moderator, Creator, Engager", icon: Users,      color: "text-yellow-400" },
               { href: "/build-catalogue",    label: "Build Catalogue",       desc: "Full log of shipped features", icon: FileText,   color: "text-slate-400" },
+              { href: "/silicon-bridge",     label: "Silicon Bridge",        desc: "CE encoding on silicon — the bridge to photonics", icon: Cpu,       color: "text-cyan-400" },
+              { href: "/planck-alignment",   label: "Planck Alignment",      desc: "Planck-scale physics alignment proofs", icon: Zap,       color: "text-amber-400" },
+              { href: "/spectral-mirror",    label: "Spectral Mirror",       desc: "Symmetric channel reflection in Ψ space", icon: Radio,      color: "text-violet-400" },
             ].map(({ href, label, desc, icon: Icon, color }) => (
               <a key={href} href={href} data-testid={`link-explore-${label.toLowerCase().replace(/\W+/g, "-")}`}>
                 <div className="group flex items-start gap-3 p-4 rounded-lg border border-white/8 bg-white/3 hover:bg-white/6 hover:border-white/15 transition-all">
