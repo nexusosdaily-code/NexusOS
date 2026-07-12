@@ -12,13 +12,13 @@ import {
   RefreshCw, ExternalLink, QrCode, AlertCircle,
 } from "lucide-react";
 
-function QRImage({ value, size = 180 }: { value: string; size?: number }) {
+function QRImage({ value, alt = "QR code", size = 180 }: { value: string; alt?: string; size?: number }) {
   if (!value) return <div className="w-[180px] h-[180px] bg-slate-800 rounded-xl flex items-center justify-center"><QrCode className="w-8 h-8 text-slate-600" /></div>;
   const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}&bgcolor=0f1117&color=c4b5fd&margin=10`;
   return (
     <img
       src={url}
-      alt="QR code"
+      alt={alt}
       width={size}
       height={size}
       className="rounded-xl border border-slate-700/50"
@@ -199,7 +199,7 @@ export default function ReceivePage() {
                 ) : (
                   <div className="space-y-4">
                     <div className="flex justify-center">
-                      <QRImage value={invoice.paymentRequest} size={200} />
+                      <QRImage value={invoice.paymentRequest} size={200} alt={`Lightning payment QR code for ${invoice.amountSats.toLocaleString()} sats`} />
                     </div>
                     <div className="bg-slate-800/50 rounded-xl p-3">
                       <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">BOLT11 Invoice</div>
@@ -234,7 +234,7 @@ export default function ReceivePage() {
             {btcInfo ? (
               <div className="space-y-4">
                 <div className="flex justify-center">
-                  <QRImage value={`bitcoin:${btcInfo.depositAddress}`} size={200} />
+                  <QRImage value={`bitcoin:${btcInfo.depositAddress}`} size={200} alt="Bitcoin deposit address QR code" />
                 </div>
                 <div className="bg-slate-800/50 rounded-xl p-3">
                   <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Deposit Address</div>
@@ -278,7 +278,7 @@ export default function ReceivePage() {
             {wallet ? (
               <div className="space-y-4">
                 <div className="flex justify-center">
-                  <QRImage value={wallet.address} size={200} />
+                  <QRImage value={wallet.address} size={200} alt="NXT wallet address QR code" />
                 </div>
                 <div className="bg-slate-800/50 rounded-xl p-3">
                   <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">NXT Address</div>

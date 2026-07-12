@@ -56,7 +56,7 @@ function VideoCard({ video }: { video: TelegramVideo }) {
         {video.thumbFileId ? (
           <img
             src={`/api/telegram/video/${encodeURIComponent(video.thumbFileId)}/thumb`}
-            alt={video.caption || "Video"}
+            alt={video.caption || (video.channelUsername ? `@${video.channelUsername} video thumbnail` : "NexusOS video thumbnail")}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
           />

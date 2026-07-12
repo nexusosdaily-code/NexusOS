@@ -111,7 +111,7 @@ function ImageUpload({ value, onChange }: {
   if (value) return (
     <div className="relative group rounded-2xl overflow-hidden border border-slate-600/60 bg-slate-900"
       style={{ aspectRatio: "1" }}>
-      <img src={value.url} alt="rune icon" className="w-full h-full object-cover" />
+      <img src={value.url} alt={value.file.name.replace(/\.[^/.]+$/, "") || "Rune icon"} className="w-full h-full object-cover" />
       <button
         onClick={() => onChange(null)}
         className="absolute top-2 right-2 w-7 h-7 rounded-full bg-slate-900/90 border border-slate-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-900/60 hover:border-red-500/50"
@@ -180,7 +180,7 @@ function RunePreviewCard({ name, symbol, image, supply, decimals }: {
         <div className="absolute inset-0"
           style={{ background: `radial-gradient(circle at 50% 130%, hsl(${hue},80%,50%) 0%, transparent 60%)`, opacity: 0.25 }} />
         {image ? (
-          <img src={image} alt="rune" className="relative z-10 w-14 h-14 rounded-xl object-cover border-2"
+          <img src={image} alt={`${displayName} rune artwork`} className="relative z-10 w-14 h-14 rounded-xl object-cover border-2"
             style={{ borderColor: `hsl(${hue},50%,35%)` }} />
         ) : (
           <span className="relative z-10 text-4xl font-bold select-none"

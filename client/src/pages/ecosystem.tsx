@@ -112,7 +112,7 @@ export default function Ecosystem() {
       <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <Link href="/nexus-command">
-            <button className="text-white/30 hover:text-white/60 transition-colors"><ArrowLeft size={16} /></button>
+            <button className="text-white/30 hover:text-white/60 transition-colors" aria-label="Back to Nexus Command"><ArrowLeft size={16} /></button>
           </Link>
           <div>
             <div className="flex items-center gap-2">

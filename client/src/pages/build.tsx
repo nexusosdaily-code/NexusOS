@@ -98,6 +98,7 @@ function CopyBlock({ code, label }: { code: string; label: string }) {
       <button
         onClick={copy}
         className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-white/10 hover:bg-white/20 rounded p-1.5"
+        aria-label={copied ? "Code copied" : "Copy code sample"}
         data-testid="button-copy-code"
       >
         {copied ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-white/60" />}

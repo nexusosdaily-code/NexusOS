@@ -349,7 +349,7 @@ export default function WnspVMPage() {
       <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <Link href="/nexus-command">
-            <button className="text-white/30 hover:text-white/60 transition-colors"><ArrowLeft size={15} /></button>
+            <button className="text-white/30 hover:text-white/60 transition-colors" aria-label="Back to Nexus Command"><ArrowLeft size={15} /></button>
           </Link>
           <div className="flex items-center gap-2">
             <Cpu size={13} className="text-violet-400" />

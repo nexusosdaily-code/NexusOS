@@ -506,7 +506,7 @@ function DonateModal({ t, onClose }: { t: typeof LAB_TIERS[0]; onClose: () => vo
               <div className="text-[10px] font-mono text-white/30">{t.nxtLabel} · {t.usd}</div>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/30 hover:text-white/70 transition-colors">
+          <button onClick={onClose} className="text-white/30 hover:text-white/70 transition-colors" aria-label="Close donation dialog">
             <X size={16} />
           </button>
         </div>

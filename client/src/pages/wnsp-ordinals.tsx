@@ -1634,7 +1634,7 @@ function RunesTab() {
               </div>
               {selectedBand && (
                 <div className="rounded-lg overflow-hidden border border-white/5 mt-1">
-                  <img src={`/api/btc-bridge/runes/band-art/${selectedBand.band}`} alt="band art preview"
+                  <img src={`/api/btc-bridge/runes/band-art/${selectedBand.band}`} alt={`${selectedBand.band} band artwork preview`}
                     className="w-full block max-h-32 object-cover object-top" />
                 </div>
               )}

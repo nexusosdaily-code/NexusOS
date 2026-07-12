@@ -258,7 +258,7 @@ export default function SpectralRouterPage() {
         <div className="flex items-center gap-3">
           <h1 className="sr-only">Spectral Routing Engine</h1>
           <Link href="/nexus-command">
-            <button className="text-white/30 hover:text-white/60 transition-colors"><ArrowLeft size={15} /></button>
+            <button className="text-white/30 hover:text-white/60 transition-colors" aria-label="Back to Nexus Command"><ArrowLeft size={15} /></button>
           </Link>
           <Radio size={13} className="text-emerald-400" />
           <span className="text-sm font-bold tracking-wider text-emerald-400">SPECTRAL ROUTING ENGINE</span>

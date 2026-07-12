@@ -747,7 +747,7 @@ export default function MobileSDKPage() {
       <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <Link href="/nexus-command">
-            <button className="text-white/30 hover:text-white/60 transition-colors" data-testid="button-back"><ArrowLeft size={15} /></button>
+            <button className="text-white/30 hover:text-white/60 transition-colors" aria-label="Back to Nexus Command" data-testid="button-back"><ArrowLeft size={15} /></button>
           </Link>
           <div className="flex items-center gap-2">
             <Smartphone size={13} className="text-cyan-400" />
