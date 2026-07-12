@@ -30,6 +30,7 @@ Private routes remain out of scope for content-quality review, but they are stil
 - The canonical public host is `https://wnsp.io`. Discovery assets, fallback shell metadata, social URLs, and structured data should not drift onto `wnsp.tech` unless the whole SEO layer changes with them.
 - Branded microsites should not self-canonicalize away from `https://wnsp.io` unless the project explicitly decides they are independent SEO properties. If they stay secondary brand domains, their canonicals, structured data, robots targets, sitemap entries, and `llms.txt` references should consolidate to the intended `wnsp.io` landing page.
 - Public marketing and science pages should not use `/`, `/hub`, or private `/spectral-db?...` tabs as their primary internal-link destinations because those surfaces are intentionally private/noindex.
+- Public pages should link to the indexable canonical route, not suppressed legacy aliases such as `/pipeline` or `/ce-writer`, and not the noindex root `/` when the intended destination is the public auth page at `/auth`.
 - If `/protocol` or `/wnsp-paper` remain noindex, public landing pages should not use them as prominent reference links. If we want them linked as SEO targets, they need to become indexable first.
 
 - New public React routes must be wired into the server allowlist, `ROUTE_META`, and `sitemap.xml` together. If any one of those is skipped, the page can become invisible or inconsistent to crawlers.
