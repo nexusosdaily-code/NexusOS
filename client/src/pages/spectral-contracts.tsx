@@ -234,7 +234,7 @@ Signed under the NexusOS AGPL-3.0 open-source license.`);
               <div className="border border-white/10 rounded-xl p-4 text-center">
                 <Lock size={20} className="text-white/20 mx-auto mb-2" />
                 <div className="text-white/30 text-[11px]">Log in to sign contracts with your spectral identity</div>
-                <Link href="/"><button className="mt-2 text-[10px] px-3 py-1.5 rounded-lg border border-white/15 text-white/40 hover:text-white/60 transition-all">Go to login</button></Link>
+                <Link href="/auth"><button className="mt-2 text-[10px] px-3 py-1.5 rounded-lg border border-white/15 text-white/40 hover:text-white/60 transition-all">Go to login</button></Link>
               </div>
             ) : (
               <button onClick={signContract} disabled={signing || !content.trim() || !userNm}

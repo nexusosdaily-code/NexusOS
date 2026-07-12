@@ -72,7 +72,7 @@ export default function ReplitTemplatePage() {
 
       {/* NAV */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-5 py-3.5 border-b border-white/8 bg-black/85 backdrop-blur">
-        <Link href="/">
+        <Link href="/auth">
           <span className="text-sm font-bold tracking-widest cursor-pointer" style={{ color: ACCENT }}>
             NEXUS<span className="text-white">OS</span>
           </span>

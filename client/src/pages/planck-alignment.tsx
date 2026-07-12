@@ -379,7 +379,7 @@ The equations were the same before the post was written.`}</pre>
                   Compression Explorer
                 </button>
               </Link>
-              <Link href="/pipeline">
+              <Link href="/ce-se-pipeline">
                 <button className="px-4 py-2 rounded-lg border border-green-400/20 text-green-400/60 hover:border-green-400/40 hover:text-green-400 text-[9px] font-bold uppercase tracking-wider transition-all"
                   data-testid="button-goto-pipeline">
                   The Full Pipeline

@@ -361,7 +361,7 @@ export default function QuestHubPage() {
               NXT→NXWV Pipeline <ChevronRight className="w-3 h-3" />
             </Button>
           </Link>
-          <Link href="/hub">
+          <Link href="/build">
             <Button variant="outline" size="sm" className="border-gray-700 text-gray-400 hover:text-white gap-1.5 text-xs">
               Hub <ChevronRight className="w-3 h-3" />
             </Button>

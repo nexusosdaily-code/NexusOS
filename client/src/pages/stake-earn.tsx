@@ -447,7 +447,7 @@ export default function StakeEarnPage() {
     <div className="min-h-screen bg-[#080808] text-white">
       {/* nav */}
       <div className="max-w-lg mx-auto px-4 pt-6 pb-2">
-        <Link href="/hub" className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors">
+        <Link href="/build" className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors">
           <ArrowLeft size={12} /> Back to Hub
         </Link>
       </div>

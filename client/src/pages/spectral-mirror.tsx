@@ -136,7 +136,7 @@ export default function SpectralMirrorPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white font-sans">
       <header className="sticky top-0 z-10 bg-[#0a0a0f]/90 backdrop-blur border-b border-white/[0.06] px-6 py-3 flex items-center justify-between">
-        <Link href="/">
+        <Link href="/auth">
           <span className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm cursor-pointer">
             <ArrowLeft size={14} /> NexusOS
           </span>
@@ -349,11 +349,11 @@ export default function SpectralMirrorPage() {
                 <span className="text-[#ef4444] hover:underline cursor-pointer">Media Library</span>
               </Link>
               <span className="text-white/20">·</span>
-              <Link href="/wnsp-paper">
+              <Link href="/hardware-spec">
                 <span className="text-[#8b5cf6] hover:underline cursor-pointer">Research Paper §11</span>
               </Link>
               <span className="text-white/20">·</span>
-              <Link href="/ce-writer">
+              <Link href="/ce-code-writer">
                 <span className="text-[#0ea5e9] hover:underline cursor-pointer">CE Encoder</span>
               </Link>
               <span className="text-white/20">·</span>
