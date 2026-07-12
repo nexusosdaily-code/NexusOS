@@ -327,6 +327,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     canonical: `${BASE}/crowdfund`,
     ogTitle: "Crowdfund NexusOS Hardware — PHR-1 & SNIC",
     ogDescription: "25 Hardware Founder slots. PHR-1 resonator, SNIC photonic NIC. Fund the world's first physics-based computing hardware. 100M sats / 100,000 NXT per slot.",
+    ogImage: "https://wnsp.io/crowdfund-og.png",
     twitterTitle: "Crowdfund NexusOS — Hardware Founder Slots Open",
     twitterDescription: "PHR-1 resonator. SNIC photonic NIC. 25 Hardware Founder slots. Fund physics-based computing.",
     jsonLd: {
@@ -345,6 +346,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     canonical: `${BASE}/crowdfund`,
     ogTitle: "Crowdfund NexusOS Hardware — PHR-1 & SNIC",
     ogDescription: "25 Hardware Founder slots. PHR-1 resonator, SNIC photonic NIC. Fund the world's first physics-based computing hardware.",
+    ogImage: "https://wnsp.io/crowdfund-og.png",
     twitterTitle: "Crowdfund NexusOS — Hardware Founder Slots Open",
     twitterDescription: "PHR-1 resonator. SNIC photonic NIC. 25 Hardware Founder slots.",
     jsonLd: {
@@ -366,7 +368,48 @@ export const ROUTE_META: Record<string, PageMeta> = {
     twitterTitle: "NexusOS Documentation",
     twitterDescription: "Complete reference for WNSP protocol, WavelengthScript, CE-SE encoding, and the NexusOS API.",
     ogType: "article",
-    jsonLd: techArticle({ url: `${BASE}/docs`, name: "NexusOS Developer Documentation", description: "Full developer documentation for NexusOS: WNSP protocol, WavelengthScript, CE-SE pipeline, REST API, NXT token, WNSP VM.", about: "WNSP, WavelengthScript, CE encoding, photonic computing" }),
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": "NexusOS Developer Documentation",
+        "url": `${BASE}/docs`,
+        "description": "Full developer documentation for NexusOS: WNSP protocol, WavelengthScript, CE-SE pipeline, REST API, NXT token, WNSP VM.",
+        "publisher": { "@type": "Organization", "name": "NexusOS", "url": BASE },
+        "hasPart": [
+          { "@type": "TechArticle", "name": "Lambda Gate Substrate v4", "url": `${BASE}/docs/substrate` },
+          { "@type": "TechArticle", "name": "WNSP Protocol — Two-Layer Standard", "url": `${BASE}/docs/wascii` },
+          { "@type": "TechArticle", "name": "Proof of Spectrum Consensus", "url": `${BASE}/docs/consensus` },
+          { "@type": "TechArticle", "name": "NXT Token Economics", "url": `${BASE}/docs/economics` },
+          { "@type": "TechArticle", "name": "BHLS Floor System", "url": `${BASE}/docs/bhls` },
+          { "@type": "TechArticle", "name": "Planetary Governance", "url": `${BASE}/docs/governance` },
+          { "@type": "TechArticle", "name": "K1 Infrastructure", "url": `${BASE}/docs/infrastructure` },
+          { "@type": "TechArticle", "name": "Hardware Control Layer", "url": `${BASE}/docs/hardware` },
+          { "@type": "TechArticle", "name": "Energy Simulators", "url": `${BASE}/docs/simulators` },
+          { "@type": "TechArticle", "name": "Massless Technologies", "url": `${BASE}/docs/massless` },
+          { "@type": "TechArticle", "name": "Spectral Orthogonal Protocol (SOP)", "url": `${BASE}/docs/sop` },
+        ],
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "name": "NexusOS Documentation Sections",
+        "url": `${BASE}/docs`,
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Lambda Gate Substrate v4", "url": `${BASE}/docs/substrate` },
+          { "@type": "ListItem", "position": 2, "name": "WNSP Protocol — Two-Layer Standard", "url": `${BASE}/docs/wascii` },
+          { "@type": "ListItem", "position": 3, "name": "Proof of Spectrum Consensus", "url": `${BASE}/docs/consensus` },
+          { "@type": "ListItem", "position": 4, "name": "NXT Token Economics", "url": `${BASE}/docs/economics` },
+          { "@type": "ListItem", "position": 5, "name": "BHLS Floor System", "url": `${BASE}/docs/bhls` },
+          { "@type": "ListItem", "position": 6, "name": "Planetary Governance", "url": `${BASE}/docs/governance` },
+          { "@type": "ListItem", "position": 7, "name": "K1 Infrastructure", "url": `${BASE}/docs/infrastructure` },
+          { "@type": "ListItem", "position": 8, "name": "Hardware Control Layer", "url": `${BASE}/docs/hardware` },
+          { "@type": "ListItem", "position": 9, "name": "Energy Simulators", "url": `${BASE}/docs/simulators` },
+          { "@type": "ListItem", "position": 10, "name": "Massless Technologies", "url": `${BASE}/docs/massless` },
+          { "@type": "ListItem", "position": 11, "name": "Spectral Orthogonal Protocol (SOP)", "url": `${BASE}/docs/sop` },
+        ],
+      },
+    ],
     bodyHtml: `<h1>NexusOS Documentation</h1><p>Complete developer reference for building on the NexusOS physics stack. Everything from the WNSP spectral protocol to the WavelengthScript language, CE-SE encoding pipeline, REST API, NXT token wallet, and WNSP VM bytecode interpreter.</p><nav><ul><li><a href="${BASE}/docs/substrate">Lambda Gate Substrate v4</a></li><li><a href="${BASE}/docs/wascii">WNSP Protocol — Two-Layer Standard</a></li><li><a href="${BASE}/docs/consensus">Proof of Spectrum Consensus</a></li><li><a href="${BASE}/docs/economics">NXT Token Economics</a></li><li><a href="${BASE}/docs/bhls">BHLS Floor System</a></li><li><a href="${BASE}/docs/governance">Planetary Governance</a></li><li><a href="${BASE}/docs/infrastructure">K1 Infrastructure</a></li><li><a href="${BASE}/docs/hardware">Hardware Control Layer</a></li><li><a href="${BASE}/docs/simulators">Energy Simulators</a></li><li><a href="${BASE}/docs/massless">Massless Technologies</a></li><li><a href="${BASE}/docs/sop">Spectral Orthogonal Protocol (SOP)</a></li></ul></nav><p>Install the CE encoder: <code>npm install nexusos-ce-encoder</code> · <code>pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py</code></p>`,
   },
   "/wnsp": {
@@ -526,7 +569,20 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "product",
     twitterTitle: "NexusOS Hardware Specification",
     twitterDescription: "SNIC photonic NIC, PHR-1 resonator, Spectral Relay Mesh. First disclosed 2026-05-16. AGPL-3.0.",
-    jsonLd: techArticle({ url: `${BASE}/hardware-spec`, name: "NexusOS Hardware Specification", description: "Formal specification for SNIC, PHR-1, Spectral Relay Mesh v1, and WavelengthScript Compiler α. First public disclosure 2026-05-16. AGPL-3.0.", about: "SNIC, PHR-1, photonic hardware, WavelengthScript" }),
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": "NexusOS Hardware Specification",
+        "url": `${BASE}/hardware-spec`,
+        "description": "Formal specification for SNIC, PHR-1, Spectral Relay Mesh v1, and WavelengthScript Compiler α. First public disclosure 2026-05-16. AGPL-3.0.",
+        "publisher": { "@type": "Organization", "name": "NexusOS", "url": BASE },
+        "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
+        "datePublished": "2026-05-16",
+      },
+      hardwareProduct({ name: "SNIC — Spectral Network Interface Card", url: `${BASE}/snic`, description: `${PSI_CHANNELS} orthogonal Ψ channels (${PSI_CHANNEL_FORMULA}). CE lookups execute as physical wavelength selections in photonic waveguides. ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics. AGPL-3.0.`, image: SNIC_IMAGE }),
+      hardwareProduct({ name: "PHR-1 — Physical Resonator", url: `${BASE}/hardware-spec`, description: "144-turn bifilar coil, Syncbox Controller firmware, WavelengthScript v1.0 API. First implementation of the ZERO-G state. First batch: 25 units. AGPL-3.0.", image: PHR1_IMAGE }),
+    ],
     bodyHtml: `<h1>NexusOS Hardware Specification — AGPL-3.0</h1><p>The formal, AGPL-3.0-protected specification for the NexusOS hardware layer. First public disclosure: 2026-05-16. Open forever — any improvements must be contributed back to the community.</p><h2>Specifications Covered</h2><ul><li><strong>SNIC — Spectral Network Interface Card</strong>: ${PSI_CHANNELS} orthogonal channels (${PSI_CHANNEL_FORMULA}). CE lookups execute as physical wavelength selections in photonic waveguides. ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics.</li><li><strong>PHR-1 — Physical Resonator</strong>: 144-turn bifilar coil, Syncbox Controller firmware, WavelengthScript v1.0 API. First implementation of the ZERO-G state. First batch: 25 units.</li><li><strong>Spectral Relay Mesh v1</strong>: multi-hop WNSP packet routing across physical nodes using Ψ channel addressing.</li><li><strong>WavelengthScript Compiler α</strong>: source-to-bytecode compiler specification.</li></ul><p>License: AGPL-3.0. First public disclosure: 2026-05-16. All hardware improvements must be open-sourced.</p><nav><ul><li><a href="${BASE}/crowdfund">Hardware Founder Slots (25 available)</a></li><li><a href="${BASE}/hardware-lab">Hardware Lab</a></li><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li></ul></nav>`,
   },
   "/hardware-lab": {
@@ -829,6 +885,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     canonical: `${BASE}/indiegogo`,
     ogTitle: "NexusOS Indiegogo Campaign",
     ogDescription: "Fund PHR-1 and SNIC hardware development. Physics-based computing. AGPL-3.0. Support the Kardashev Type I roadmap.",
+    ogImage: "https://wnsp.io/crowdfund-og.png",
     twitterTitle: "NexusOS on Indiegogo",
     twitterDescription: "Fund physics-based computing hardware. PHR-1 resonator. SNIC photonic NIC. AGPL-3.0.",
     jsonLd: {
@@ -1209,6 +1266,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     canonical: `${BASE}/campaign`,
     ogTitle: "NexusOS Infrastructure Campaign",
     ogDescription: "25 Hardware Founder slots. PHR-1 resonator, SNIC photonic NIC. Fund the world's first physics-based computing hardware. 100M sats / 100,000 NXT per slot.",
+    ogImage: "https://wnsp.io/crowdfund-og.png",
     twitterTitle: "NexusOS Infrastructure Campaign",
     twitterDescription: "PHR-1 resonator. SNIC photonic NIC. 25 Hardware Founder slots. Building infrastructure for a Type I Civilisation.",
     jsonLd: {
@@ -2027,6 +2085,7 @@ export function buildVideoDetailPageMeta(video: VideoForSchema): PageMeta {
     canonical: fpUrl,
     ogTitle: name,
     ogDescription: description.slice(0, 200),
+    ogImage: thumbUrl,
     ogType: "video.other",
     twitterTitle: name,
     twitterDescription: description.slice(0, 200),
@@ -2128,7 +2187,17 @@ function docsSectionMeta(slug: string): PageMeta | null {
     twitterTitle: title,
     twitterDescription: section.description,
     ogType: "article",
-    jsonLd: techArticle({ url, name: `${section.title} — NexusOS Documentation`, description: section.description, about: "WNSP, WavelengthScript, CE encoding, photonic computing" }),
+    jsonLd: [
+      techArticle({ url, name: `${section.title} — NexusOS Documentation`, description: section.description, about: "WNSP, WavelengthScript, CE encoding, photonic computing" }),
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Documentation", "item": `${BASE}/docs` },
+          { "@type": "ListItem", "position": 2, "name": section.title, "item": url },
+        ],
+      },
+    ],
     bodyHtml: `<h1>${section.title}</h1><p>${section.description}</p><nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li></ul></nav>`,
   };
 }
