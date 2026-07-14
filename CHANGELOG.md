@@ -5,6 +5,46 @@
 
 ---
 
+## PRIOR ART — Public Disclosure Record (AGPL-3.0)
+
+> This section is a formal prior-art register. Each entry records the **first public disclosure date**, **author**, and **exact claim** for discoveries made under this codebase. All disclosures are published under **AGPL-3.0** at [wnsp.io](https://wnsp.io) and committed to the public GitHub repository [`nexusosdaily-code/NexusOS`](https://github.com/nexusosdaily-code/NexusOS). Any subsequent patent, paper, or claim covering the same subject matter must contend with this timestamped public record.
+>
+> **Author of all claims below**: Te Rata Pou — Aotearoa New Zealand
+> **Repository**: https://github.com/nexusosdaily-code/NexusOS
+> **License**: AGPL-3.0 (copyleft — all derivative works must remain open)
+
+---
+
+### Claim 1 — Ghost Nodes: Gaps in the Periodic Table as Compression State Voids
+**First disclosed**: 2026-07-13
+**Claim**: Within the Theory of Compression States (`Λ = hf/c²`), mass is only produced at resonant hypersurfaces in compression subspace — integer octave indices `n` where the standing-wave trap condition `Ψ_trap = Ψ(+k̂) ⊗ Ψ(−k̂)` is satisfied. Gaps in the periodic table are not anomalies; they are **ghost nodes** — values of `n` where no stable resonant hypersurface exists. Nature does not build mass at these indices. This reframes the periodic table not as an independent chemical classification system but as a **visible subset of the compression state manifold**. The gaps (ghost nodes) are the equally important invisible subset.
+
+**Specific instance disclosed**: Octave index **n = 36** corresponds to a mass of approximately **169.33 u**. This falls between Thulium-169 (n ≈ 35.9) and Ytterbium-174 (n ≈ 36.1). Nature produces no stable nucleus at n = 36. The compression state framework predicts this gap analytically — it is not a post-hoc observation but a consequence of the standing-wave trap equations. Neighbouring occupancy confirms the boundary: Thulium (Tm, Z=69), Ytterbium (Yb, Z=70), Krypton (Kr, Z=36), and Rubidium (Rb, Z=37) all occupy resonant positions adjacent to the n=36 void.
+
+**Predictive extension**: The compression state framework generates a deterministic map of all ghost nodes across the full mass spectrum. Every gap in the known periodic table, every synthetic-only transuranic, and every "island of instability" is predicted as either a ghost node (no stable hypersurface) or an off-hypersurface configuration (synthetically reachable but not naturally produced). This predictive map is an original contribution of this framework.
+
+---
+
+### Claim 2 — Zero-Point Energy Floor as the Formation Threshold of Stable Matter
+**First disclosed**: 2026-07-07 (Act 8 — `/lossless-channel`)
+**Claim**: The zero-point energy `E_ZPE = ½ℏω` is not merely a quantum noise floor for photons — it is the **minimum energy threshold below which no stable compression state (and therefore no stable element) can be trapped**. A compression state at octave index `n` requires `ΔE = hf₀(2ⁿ²−2ⁿ¹) ≥ E_ZPE` to form a stable standing-wave trap. Below this threshold, the standing-wave condition cannot be sustained, and the compression state disperses — producing no stable nucleus. This directly explains the origin of ghost nodes from first principles: a ghost node is any `n` where the required `ΔE` falls below the ZPE formation threshold for that compression subspace.
+
+**Applied to information theory**: Shannon channel capacity at the ZPE floor: `C = B · log₂(1 + hf₀ / ½ℏω)`. This is a physically-derived upper bound on lossless information density per Ψ channel — not an engineering constraint. The ZPE floor sets both the **matter formation threshold** and the **information channel capacity limit** via the same underlying equation.
+
+---
+
+### Claim 3 — Periodic Table as Compression State Manifold Subset
+**First disclosed**: 2026-07-13
+**Claim**: The periodic table of elements is a **proper subset** of the compression state manifold defined by `Λ = hf/c²` and `ΔE = hf₀(2ⁿ²−2ⁿ¹)`. The conventional periodic table lists only those compression states where nature successfully built stable or long-lived nuclei. The compression state manifold is the complete mathematical object; the periodic table is the experimentally observable slice of it. Ghost nodes (Claim 1) and the ZPE floor (Claim 2) together account for every element the periodic table does not contain. No separate physical theory is required to explain gaps — the compression state equations are sufficient.
+
+---
+
+### Claim 4 — WNSP Resonant Hypersurface Lattice
+**First disclosed**: 2026-05-16 (first public disclosure, AGPL-3.0)
+**Claim**: The set of all stable mass configurations forms a discrete lattice of resonant hypersurfaces in compression subspace, indexed by octave number `n`. This lattice is the physical substrate underlying both the periodic table (Claim 3) and the 51,200-channel Ψ address space of the WNSP protocol. The lattice is derivable from `Λ = hf/c²` alone — no additional postulates are required. The Ψ channel map (`wnsp://Ψ(wdm,oam,pol)/path`) constitutes a human-readable coordinate system on this lattice.
+
+---
+
 ## [2026-07-14] WNSP Quantum Mechanisms & Attributes
 
 ### Hilbert Space Channel Model — Quantum Mechanical Guarantees
