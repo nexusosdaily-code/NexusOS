@@ -11,13 +11,15 @@ import {
   MessageSquare, Users, ChevronLeft, Phone, Zap, Search,
 } from "lucide-react";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function authFetch(url: string, opts: RequestInit = {}) {
   const token = localStorage.getItem("auth_token");
   return fetch(url, {
     ...opts,
-    headers: { Authorization: `Bearer ${token}`, ...(opts.headers ?? {}) },
+    credentials: "include",
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(opts.headers ?? {}) },
   });
 }
 
@@ -435,9 +437,10 @@ function ThreadPanel({
 export default function InboxPage() {
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const qc = useQueryClient();
+  const { user, isLoading: authLoading } = useAuth();
   const token = localStorage.getItem("auth_token");
 
-  // Decode my user ID from auth endpoint
+  // Decode my user ID from auth endpoint (fallback if hook doesn't have it)
   const { data: meData } = useQuery<{ user: { id: string; username: string } }>({
     queryKey: ["/api/auth/me"],
     queryFn: async () => {
@@ -445,10 +448,10 @@ export default function InboxPage() {
       if (!res.ok) throw new Error("Not logged in");
       return res.json();
     },
-    enabled: !!token,
+    enabled: !!user,
   });
 
-  const myUserId = meData?.user.id ?? "";
+  const myUserId = user?.id ?? meData?.user.id ?? "";
 
   const { data: friendsData, refetch: refetchFriends } = useQuery<{
     friends: Friend[];
@@ -460,14 +463,14 @@ export default function InboxPage() {
       if (!res.ok) throw new Error("Failed to load contacts");
       return res.json();
     },
-    enabled: !!token,
+    enabled: !!user,
     refetchInterval: 15000,
   });
 
   // WebSocket: live alerts for new messages + friend requests
   const { toast } = useToast();
   useEffect(() => {
-    if (!token) return;
+    if (!user && !token) return;
     const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
     const ws = new WebSocket(`${wsProto}//${location.host}/ws/signaling?token=${token}`);
     ws.onmessage = (ev) => {
@@ -489,16 +492,12 @@ export default function InboxPage() {
     return () => ws.close();
   }, [token, qc, toast]);
 
-  if (!token) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
         <div className="text-center space-y-4">
-          <MessageSquare className="w-12 h-12 text-purple-500 mx-auto" />
-          <h2 className="text-white text-lg font-semibold">Lambda Messages</h2>
-          <p className="text-slate-400 text-sm">Log in to access your spectrally encoded messages.</p>
-          <Link href="/auth">
-            <Button className="bg-purple-700 hover:bg-purple-600">Log In</Button>
-          </Link>
+          <Waves className="w-12 h-12 text-purple-500 mx-auto animate-pulse" />
+          <p className="text-slate-400 text-sm">Loading messages…</p>
         </div>
       </div>
     );
