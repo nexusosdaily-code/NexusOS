@@ -1,12 +1,13 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Sparkles, Lock, User, ArrowLeft, Zap, RefreshCw, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 async function nostrSignIn(): Promise<{ signedEvent: any } | null> {
   const w = window as any;
@@ -24,8 +25,16 @@ async function nostrSignIn(): Promise<{ signedEvent: any } | null> {
 }
 
 export default function AuthPage() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading]       = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      setLocation("/hub", { replace: true });
+    }
+  }, [authLoading, isAuthenticated, setLocation]);
   const [nostrLoading, setNostrLoading] = useState(false);
   const inFlight = useRef(false);
   const [loginData, setLoginData]         = useState({ username: "", password: "" });

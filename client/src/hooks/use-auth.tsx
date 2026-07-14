@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const token = localStorage.getItem("auth_token");
       const headers: Record<string, string> = {};
-      if (token) {
+      if (token && token !== "undefined" && token !== "null") {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
@@ -43,9 +43,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user);
         setIsLoading(false);
       } else if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem("auth_token");
-        setUser(null);
-        setIsLoading(false);
+        if (attempt < 3) {
+          // Retry — the session may have just been created and a transient
+          // DB connection issue is causing a false 401.  Give it up to two
+          // extra tries before evicting the token.
+          setTimeout(() => fetchUser(attempt + 1), 600 * attempt);
+        } else {
+          localStorage.removeItem("auth_token");
+          setUser(null);
+          setIsLoading(false);
+        }
       } else if (attempt < 3) {
         setTimeout(() => fetchUser(attempt + 1), 1500 * attempt);
       } else {
@@ -110,21 +117,13 @@ export function useAuth() {
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
-  const [location, setLocation] = useLocation();
-  const [shouldRedirect, setShouldRedirect] = useState(false);
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && location !== "/auth") {
-      setShouldRedirect(true);
-    }
-  }, [isLoading, isAuthenticated, location]);
-
-  useEffect(() => {
-    if (shouldRedirect) {
+    if (!isLoading && !isAuthenticated) {
       setLocation("/auth", { replace: true });
-      setShouldRedirect(false);
     }
-  }, [shouldRedirect, setLocation]);
+  }, [isLoading, isAuthenticated, setLocation]);
 
   if (isLoading) {
     return (
