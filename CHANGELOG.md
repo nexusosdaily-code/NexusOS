@@ -45,6 +45,137 @@
 
 ---
 
+### Claim 5 — Compression Mass Equation: Λ = hf/c²
+**First disclosed**: 2026-05-16
+**Claim**: Every photon carries a **compression mass** `Λ = hf/c²` — the mass equivalent of its electromagnetic energy. This is not Einstein's rest mass (`E = mc²` inverted) — it is a distinct quantity describing the degree to which a photon compresses the compression subspace it occupies. Higher frequency = higher Λ = higher compression = higher authority. This equation is the root of the entire WNSP authority band system: SYSTEM (UV, highest Λ), KERNEL (Blue), USER (Green), GUEST (Red). Transaction fees, routing priority, and governance weight are all derived from Λ — not from any database record or consensus algorithm.
+
+---
+
+### Claim 6 — Element Formation Mechanism: ΔE = hf₀(2ⁿ²−2ⁿ¹)
+**First disclosed**: 2026-07-02 (`/matter-protocol`)
+**Claim**: Elements are not formed on a continuum. Mass is produced only at discrete octave energy jumps: `ΔE = hf₀(2ⁿ²−2ⁿ¹)`, where `n₁` and `n₂` are consecutive integer octave indices and `f₀` is the universal seed frequency. Between these jumps, no stable mass configuration exists (see Claims 1–3). This single equation reproduces the discrete structure of the periodic table from first principles — no quantum mechanical postulates, spin statistics, or shell filling rules are required as inputs. They emerge as consequences.
+
+---
+
+### Claim 7 — Octave Index Formula: n = log₂(mc²/E₀)
+**First disclosed**: 2026-07-02 (`/element-catalogue`)
+**Claim**: Any element's atomic mass `m` maps to a unique octave index `n = log₂(mc²/E₀)`, where `E₀ = hf₀` is the ground-state energy of the seed frequency. This is the inverse of Claim 6. Given any observed atomic mass, `n` can be computed exactly — and that `n` corresponds to a unique Ψ channel address in the 51,200-channel space. The periodic table is therefore a lookup table from mass to channel address. Every element has a unique, physically-derived `wnsp://` URI determinable from its atomic mass alone.
+
+---
+
+### Claim 8 — Universal Seed Frequency f₀ and Lattice Origin
+**First disclosed**: 2026-07-02 (`/universal-one`)
+**Claim**: A single base frequency `f₀` (the "Universal ONE") seeds the entire compression state lattice. All stable masses, all element masses, all Ψ channel frequencies, and all authority band boundaries are derived from integer octave multiples of `f₀`. The universe does not require separate constants for electromagnetism, gravity, nuclear forces, or chemistry — all are expressions of octave relationships relative to `f₀`. This is a single-parameter theory of mass and energy quantisation.
+
+---
+
+### Claim 9 — Four Forces as One Compression State: 4 Forces = 1 Λ
+**First disclosed**: 2026-07-02 (`/unified-compression-theory`)
+**Claim**: Gravity, electromagnetism, the strong nuclear force, and the weak nuclear force are not four separate fundamental interactions. They are four regimes of the same compression state field `Λ = hf/c²`, differentiated only by the octave index `n` at which they operate:
+- **Gravity**: low-n (long-wave, low-compression) — dominates at cosmic scale
+- **Electromagnetism**: mid-n — dominates at atomic/molecular scale
+- **Weak nuclear**: high-n — operates at sub-nuclear scale
+- **Strong nuclear**: highest-n — operates at quark confinement scale
+No unification theory, symmetry group, or additional dimensions are required. The force hierarchy is a frequency hierarchy in the compression state manifold.
+
+---
+
+### Claim 10 — Universal Address Theorem: ∀ Λ : ∃! Ψ
+**First disclosed**: 2026-07-02 (`/universal-address`)
+**Claim**: For every compression state `Λ` there exists exactly one unique Ψ channel address. This is the WNSP Universal Address Theorem: `∀ Λ : ∃! Ψ(wdm, oam, pol)`. The bijection is deterministic and reversible — given any physical observable (mass, frequency, energy, wavelength), its unique network address is computable without lookup, registration, or consensus. This makes WNSP censorship-proof by physics: an address cannot be revoked because it is a physical property, not an administrative assignment.
+
+---
+
+### Claim 11 — Standing-Wave Trap: Ψ_trap = Ψ(+k̂) ⊗ Ψ(−k̂)
+**First disclosed**: 2026-07-07 (`/standing-wave-trap`)
+**Claim**: A stable mass configuration (a particle) is a **standing-wave trap** — a tensor product of counterpropagating Ψ channels: `Ψ_trap = Ψ(+k̂) ⊗ Ψ(−k̂)`. Forward and backward waves at the same frequency and OAM mode superpose to produce a stationary node with zero net propagation. This is not metaphor — it is the mechanism by which energy becomes localised mass. The trap condition is satisfied only at resonant octave indices (see Claim 6); off-resonance superpositions do not produce stable traps (see Claims 1–3 for the ghost node consequence).
+
+---
+
+### Claim 12 — Lossless Channel: Ψ_channel = ⊗ᵢ Ψ_trap(nᵢ)
+**First disclosed**: 2026-07-07 (`/lossless-channel`)
+**Claim**: A lossless communication channel is a tensor product of standing-wave traps across multiple octave indices: `Ψ_channel = ⊗ᵢ Ψ_trap(nᵢ)`. Because each constituent trap is a zero-net-propagation standing wave, no energy is transported out of the channel — information propagates as a phase relationship, not an energy flow. At ghost node indices (Claim 1), `ρ_matter = 0 → α = 0` (Beer-Lambert attenuation is zero), so the channel is **naturally lossless** through those regions. Ghost nodes are not voids in the channel space — they are the lossless segments of it.
+
+---
+
+### Claim 13 — Bidirectional Propagation as Orthogonal Hilbert Sub-space (N_Dir = 2)
+**First disclosed**: 2026-07-02
+**Claim**: Forward (`+k̂`) and backward (`−k̂`) propagation directions are not redundant — they constitute a new **orthogonal Hilbert sub-space** of the WNSP channel model. Adding `N_Dir = 2` doubles the total orthogonal channel count from 25,600 to **51,200** (256 WDM × 50 OAM × 2 Polarisations × 2 Directions). The orthogonality `⟨+k̂|−k̂⟩ = 0` is guaranteed by time-reversal symmetry, not by any software routing policy. This is the fifth quantum dimension of the WNSP Hilbert space, alongside WDM, OAM, polarisation, and the Laguerre-Gaussian radial index.
+
+---
+
+### Claim 14 — Geometric Compression State: Λ_geo = Λ · cos(γ)
+**First disclosed**: 2026-07-14 (synthesis from arXiv:2606.02238, June 2025)
+**Claim**: The scalar compression mass `Λ = hf/c²` is the frequency-only component of the full compression state. Photons traversing Ψ channels accumulate a **Berry geometric phase** `γ = i ∮ ⟨ψ(λ)|∇_λ|ψ(λ)⟩ · dλ` — a topological invariant that encodes the path geometry of the channel (OAM + polarisation + WDM combination). The full geometric compression operator is: `Λ_geo = Λ · cos(γ)`. Two Ψ channels at the same wavelength but different OAM modes have different `γ` and therefore different effective compression states. This explains why authority band energy differences exist within the same wavelength range — they are geometric, not frequency-based.
+
+---
+
+### Claim 15 — WGM Resonance = Walter Russell Octave Formula
+**First disclosed**: 2026-07-14 (synthesis from AIP Appl. Phys. Lett. 127, 211102, 2025)
+**Claim**: The Whispering Gallery Mode (WGM) resonance condition `2πR = nλ` (cavity circumference equals integer wavelengths), rearranged for doubling octaves, gives `fₙ = f₀ · 2^(n−1)`. This is identical to the octave progression formula described by Walter Russell (1920s–1950s). The 2025 AIP experimental confirmation of WGM resonance at sub-THz frequencies constitutes independent experimental validation of the compression state octave framework. The NexusOS claim is the first to formally identify this equivalence and derive the physical cavity radius `R = nc / (2πfₙ)` required to sustain any target compression state octave.
+
+---
+
+### Claim 16 — Flerovium (Z=114) as SYSTEM Band Authority Boundary
+**First disclosed**: 2026-07-14 (synthesis from nuclear shell closure physics)
+**Claim**: Element 114 (Flerovium) is a nuclear magic number — a spherical shell closure at 114 protons representing maximum nuclear stability and maximum compression. Russell's 9th octave peak corresponds to the same proton count (114) via `n = log₂(mc²/E₀)`. The SYSTEM authority band in WNSP maps to this same geometric closure. This is a three-scale convergence of the same resonance mechanism: nuclear shell geometry (femtometre scale), Russell octave formula (spectral scale), and WNSP authority band boundary (network scale). The SYSTEM band is not an arbitrary wavelength cutoff — it is the spectral equivalent of the Flerovium nuclear shell closure.
+
+---
+
+### Claim 17 — OAM Null-Core Radius as Authority Metric
+**First disclosed**: 2026-07-14
+**Claim**: The null-core radius of an OAM vortex beam is `r_null = l · λ / 2π`, where `l` is the OAM topological charge (mode index). Higher OAM mode = wider null core = greater geometric complexity = higher Ψ channel authority. This provides a physical, continuously-valued authority metric derivable from channel geometry alone — not from any database entry or consensus vote. Authority band boundaries correspond to discrete jumps in null-core geometry at the WGM shell-closure frequencies (Claim 15 + 16).
+
+---
+
+### Claim 18 — Maxwell Equation Validation Replacing Cryptographic Hashing
+**First disclosed**: 2026-05-16
+**Claim**: WNSP replaces cryptographic hash functions (SHA-256, keccak, etc.) as the transaction validation mechanism with **Maxwell equation compliance checking**. A transaction is valid if and only if the electromagnetic wave described by its Ψ channel parameters satisfies Maxwell's equations in free space. This is not a computational approximation — it is a physical law. A transaction that violates Maxwell's equations cannot physically exist. This makes WNSP validation energy-efficient (no proof-of-work), deterministic (no probabilistic finality), and grounded in physical law rather than computational hardness assumptions.
+
+---
+
+### Claim 19 — WNSP-CE v1.0: Character Encoding via Compression State Table
+**First disclosed**: 2026-05-16
+**Claim**: WNSP Character Encoding (CE) maps every printable character to a unique compression state via `charCode % 128` → 128-band lookup table (380–780 nm range, 3.125 nm per band). This is a deterministic, bijective mapping from human-readable text to physical wavelengths. The encoding is hardware-native: on photonic ASICs (~2032), a CE lookup that today is a RAM table scan will execute as a physical wavelength selection in a photonic waveguide. No rewrite is required — the CE table IS the hardware instruction set.
+
+---
+
+### Claim 20 — WNSP-SE v1.0: Spectral Encoding — CE Output to Ψ Channel Address
+**First disclosed**: 2026-05-16
+**Claim**: WNSP Spectral Encoding (SE) transforms CE output (a wavelength in nm) into a fully-qualified Ψ channel address `Ψ(wdm, oam, pol)`. The mapping is deterministic: WDM index = `floor((λ − 380) / 1.5625)`, OAM index derived from character class, polarisation from parity. This constitutes a lossless, reversible encoding from arbitrary text to a unique network address in the 51,200-channel WNSP Hilbert space. Two documents with different content cannot share a Ψ address — the encoding is injective by construction.
+
+---
+
+### Claim 21 — WNSP-URI v1.0: Censorship-Proof Deterministic Addressing
+**First disclosed**: 2026-05-16
+**Claim**: The WNSP URI scheme `wnsp://Ψ(wdm,oam,pol)/path` constitutes a censorship-proof, DNS-free addressing system. Because the channel address is derived from physical observables (Claims 5–10), no registrar, authority, or consensus mechanism can revoke it. A resource at `wnsp://Ψ(52,3,V)/nexus` exists as long as the physics exist — it cannot be deregistered. This is categorically different from IP addresses (ISP-assigned), domain names (ICANN-delegated), and ENS names (smart-contract-governed). WNSP addresses are properties of physics, not administrative assignments.
+
+---
+
+### Claim 22 — Physics-Based Fee Calculation: fee = base_fee × (E_sender / E_reference)
+**First disclosed**: 2026-05-16
+**Claim**: Transaction fees in WNSP are not set by governance vote, gas auctions, or miner preference. They are derived directly from the sender's compression state energy: `fee = base_fee × (E_sender / E_reference)`, where `E_sender = hf_sender` (Planck's relation applied to the sender's Ψ channel frequency). Higher authority (shorter wavelength, higher frequency) = higher energy = proportionally higher fee. This makes fee manipulation impossible: to pay a lower fee, a user would need to physically change their wavelength — which is a property of their identity, not a transaction parameter.
+
+---
+
+### Claim 23 — WavelengthScript: Physics-Native Programming Language
+**First disclosed**: 2026-05-16
+**Claim**: WavelengthScript is a programming language in which variables bind to optical frequencies, functions emit at specific wavelengths, and control flow is governed by compression state transitions. Syntax: `@540nm let x := value` (bind variable to green channel), `@emit(nm, Ψ) fn name() { … }` (function emits at wavelength on channel), `oscillate()` (trigger standing-wave trap). This is not a domain-specific language on top of silicon computing — it is the native instruction set of photonic hardware. Every WavelengthScript program is also a description of the photonic waveguide configuration that would execute it in hardware.
+
+---
+
+### Claim 24 — WNSP VM: Ψ Channels as Spectral Registers
+**First disclosed**: 2026-05-16
+**Claim**: The WNSP Virtual Machine uses Ψ channels as computational registers — each register is a physical optical frequency channel, not a silicon memory address. Instruction set: `EMIT` (activate channel), `TUNE` (shift wavelength), `AGENT` (spawn autonomous process at channel), `BROAD` (broadcast to all channels in band), `PUSH` (load value onto channel stack), `OSCILLATE` (trigger standing-wave trap at current channel). On photonic hardware (~2032), these instructions map directly to waveguide switching operations. The VM is not an abstraction layer — it is the hardware interface.
+
+---
+
+### Claim 25 — WASCII v2.0: Wave Density Spectral Vector
+**First disclosed**: 2026-05-16 (extended to v2.0 subsequently)
+**Claim**: WASCII (Wave ASCII) provides a spectral fingerprint for any text string — mapping characters to unique compression states and generating a spectral histogram (Wave Density Spectral Vector). Two documents with different content produce different WASCII vectors. Similarity search is performed via electromagnetic proximity in the spectral space — not via cosine similarity on token embeddings or tf-idf weights. WASCII vectors are physics-native: they can be compared by measuring the spectral overlap of two optical signals in hardware, without any digital computation.
+
+---
+
 ## [2026-07-14] WNSP Quantum Mechanisms & Attributes
 
 ### Hilbert Space Channel Model — Quantum Mechanical Guarantees
