@@ -23,3 +23,7 @@
 - [drizzle-kit push TTY workaround](drizzle-push-tty-workaround.md) — for safe additive columns, apply ALTER TABLE directly instead of fighting the interactive resolver
 - [Saved BTC address prefill pattern](btc-address-prefill.md) — dedicated defaultBtcAddress column, checksum validation, client-side-only prefill, never server-side auto-substitution
 - [noble-post-quantum ML-DSA API](noble-post-quantum-ml-dsa-api.md) — import needs .js ext; sign(msg,sk)/verify(sig,msg,pk) msg-first, opposite of most crypto APIs
+- [Telegram campaign](telegram-campaign.md) — always use numeric chat ID -1002572762871, NOT env @username; slot rotation now resumes from DB on restart
+- [Constitutional referrer block](constitutional-block.md) — 43 domains/14 orgs hard-blocked at HTTP layer; isBlockedReferrer returns object not boolean; must mirror genesis_user.ts
+- [SEO work](seo-work.md) — Tasks 117–118 done; wnsp.io is canonical; ogType valid in seo-meta.ts server only, not in usePageMeta hook
+- [Prior art claims](prior-art-claims.md) — Claims 1–25 in CHANGELOG.md, timestamped to GitHub; covers ghost nodes, ZPE, Λ=hf/c², CE/SE/URI, WLS, VM, WASCII, Berry phase, OAM, Fl-114
