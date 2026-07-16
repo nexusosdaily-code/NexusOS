@@ -1427,6 +1427,30 @@ export async function registerRoutes(
     }
   });
 
+  // ── Ghost Node Band Reservation — public ───────────────────────────────────
+  app.get("/api/physics/ghost-bands", async (_req, res) => {
+    try {
+      const { GHOST_NODE_WDM_RANGES, GHOST_NODES, isGhostNodeBand, getGhostNodeBandTier } = await import("./physics.js");
+      const bands = GHOST_NODE_WDM_RANGES.map(r => ({
+        ...r,
+        channels: Array.from({ length: r.wdmEnd - r.wdmStart + 1 }, (_, i) => r.wdmStart + i),
+      }));
+      const ghostSummary = GHOST_NODES.map(g => ({
+        n: g.n, oam: g.oam, wdm: g.wdm, psi: g.psi, authority: g.authority,
+        service: g.serviceName, isGhostBand: isGhostNodeBand(g.wdm),
+        bandTier: getGhostNodeBandTier(g.wdm),
+      }));
+      res.json({
+        description: "Ghost node WDM band ranges for lossless routing preference. ρ_matter→0 at integer octave nodes → Beer-Lambert α→0 → zero absorption.",
+        ranges: bands,
+        ghostNodes: ghostSummary,
+        totalReservedChannels: bands.reduce((sum, b) => sum + b.channels.length, 0),
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ── Physics Profile ────────────────────────────────────────────────────────
   app.get("/api/physics/my", authenticate, async (req, res) => {
     try {

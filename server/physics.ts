@@ -246,6 +246,133 @@ export function hasAuthority(userWdm: number, requiredBand: AuthBand): boolean {
 }
 
 // ── Fee calculation ───────────────────────────────────────────────────────────
+// ── OAM Null-Core Radius ──────────────────────────────────────────────────────
+/**
+ * Item 2 (Forward Agenda, July 2026):
+ * Compute the null-core radius of an OAM vortex beam.
+ * r_null = l · λ / (2π)
+ * Higher OAM mode → wider null core → greater geometric complexity → higher authority.
+ * Physically validated by 2025 THz metasurface experiments (50+ OAM modes separable).
+ *
+ * @param oam          OAM topological charge index l (1–50)
+ * @param wavelengthNm wavelength in nanometres
+ * @returns null-core radius in metres and micrometres
+ */
+export function oamNullCoreRadius(oam: number, wavelengthNm: number): {
+  radiusM: number; radiusUm: number; oam: number; wavelengthNm: number;
+} {
+  const l = Math.max(1, oam);
+  const lambdaM = wavelengthNm * 1e-9;
+  const radiusM = (l * lambdaM) / (2 * Math.PI);
+  return { radiusM, radiusUm: radiusM * 1e6, oam: l, wavelengthNm };
+}
+
+// ── Berry Phase ───────────────────────────────────────────────────────────────
+/**
+ * Item 3 (Forward Agenda, July 2026):
+ * Estimate the geometric (Berry) phase accumulated by a photon traversing a Ψ channel.
+ * γ = π · (l / OAM_MODES) · ±1  (sign determined by polarisation — H vs V traces
+ * opposite paths on the Poincaré sphere).
+ *
+ * Physical basis: arXiv:2606.02238 (June 2025) — sub-cycle field-driven dynamical
+ * Berry phase. Higher OAM sweeps a larger solid angle → larger γ → lower Λ_geo.
+ *
+ * @param oam  OAM topological charge index l (0–49)
+ * @param pol  polarisation state: "H" or "V"
+ * @returns Berry phase γ in radians, and Λ_geo correction factor cos(γ)
+ */
+export function berryPhaseEstimate(oam: number, pol: string): {
+  gammaRad: number; cosFactor: number; lambdaGeoFactor: number;
+} {
+  const sign = pol === "V" ? -1 : 1;
+  const gammaRad = sign * Math.PI * (oam / OAM_MODES);
+  const cosFactor = Math.cos(gammaRad);
+  return { gammaRad, cosFactor, lambdaGeoFactor: cosFactor };
+}
+
+// ── Ghost Node Band Reservation ───────────────────────────────────────────────
+/**
+ * Item 4 (Forward Agenda, July 2026):
+ * Ghost node WDM band ranges for lossless routing preference.
+ * In the compression lattice, ghost-node compression subspace (WDM ≈ 0) has
+ * ρ_matter → 0, which means Beer-Lambert α → 0 (no absorption). Routing
+ * through these bands is preferred for lossless transmission.
+ *
+ * Tier 1 (highest preference): WDM 0     — integer octave nodes, α = 0 exactly
+ * Tier 2 (high preference):    WDM 1–3   — near-ghost zone, α ≈ 0
+ * Tier 3 (elevated preference): WDM 252–255 — high-energy boundary reflection zone
+ */
+export const GHOST_NODE_WDM_RANGES: ReadonlyArray<{
+  wdmStart: number; wdmEnd: number;
+  tier: 1 | 2 | 3;
+  label: string;
+  physics: string;
+}> = Object.freeze([
+  {
+    wdmStart: 0,   wdmEnd: 0,   tier: 1,
+    label: "Exact Ghost Node Band",
+    physics: "Integer octave resonance — ρ_matter = 0, α = 0, Λ_geo minimal",
+  },
+  {
+    wdmStart: 1,   wdmEnd: 3,   tier: 2,
+    label: "Near-Ghost Zone",
+    physics: "Sub-octave fractional offset — ρ_matter ≈ 0, α ≈ 0",
+  },
+  {
+    wdmStart: 252, wdmEnd: 255, tier: 3,
+    label: "GUEST Band Boundary",
+    physics: "High-wavelength shell boundary — topological edge mode protection",
+  },
+]);
+
+/**
+ * Returns true if the given WDM channel is in a ghost-node lossless routing band.
+ */
+export function isGhostNodeBand(wdm: number): boolean {
+  return GHOST_NODE_WDM_RANGES.some(r => wdm >= r.wdmStart && wdm <= r.wdmEnd);
+}
+
+/**
+ * Returns the ghost-node band tier (1=best, 3=elevated, null=not a ghost band)
+ * for a given WDM channel. Used by the spectral routing engine for path selection.
+ */
+export function getGhostNodeBandTier(wdm: number): 1 | 2 | 3 | null {
+  const range = GHOST_NODE_WDM_RANGES.find(r => wdm >= r.wdmStart && wdm <= r.wdmEnd);
+  return range ? range.tier : null;
+}
+
+// ── Cavity Radius (Whispering Gallery Mode) ───────────────────────────────────
+/**
+ * Item 1 (Forward Agenda, July 2026):
+ * Compute the physical cavity radius required to sustain a WGM resonance
+ * at octave index n with seed frequency f₀.
+ * R = n · c / (2π · f₀ · 2^(n−1))
+ *
+ * Validated by AIP Appl. Phys. Lett. 127, 211102 (2025):
+ * WGM condition 2πR = nλ → R = nc/(2πfₙ) where fₙ = f₀ · 2^(n−1).
+ * This is algebraically identical to Walter Russell's octave formula.
+ *
+ * @param octaveIndex  target octave n (integer, ≥ 1)
+ * @param f0Hz         seed frequency in Hz (default: 555 THz — NexusOS anchor)
+ * @returns cavity radius in metres, metres (scientific), and nanometres;
+ *          plus the resonant frequency fₙ and wavelength λₙ
+ */
+export function wmgCavityRadius(octaveIndex: number, f0Hz: number = 555e12): {
+  radiusM: number; radiusNm: number;
+  frequencyHz: number; wavelengthNm: number;
+  octaveIndex: number; f0Hz: number;
+} {
+  const n  = Math.max(1, Math.round(octaveIndex));
+  const fn = f0Hz * Math.pow(2, n - 1);
+  const lambdaM = C_LIGHT / fn;
+  const radiusM = (n * lambdaM) / (2 * Math.PI);
+  return {
+    radiusM, radiusNm: radiusM * 1e9,
+    frequencyHz: fn, wavelengthNm: lambdaM * 1e9,
+    octaveIndex: n, f0Hz,
+  };
+}
+
 export interface PhysicsFee {
   feeNxt: string;        // NXT amount to deduct
   baseFeeNxt: number;
@@ -254,17 +381,21 @@ export interface PhysicsFee {
   frequencyHz: number;
   energyJ: number;
   lambdaKg: number;
+  lambdaGeoKg: number;   // Λ_geo = Λ · cos(γ) — Berry-phase corrected compression state
+  berryPhaseRad: number; // γ — geometric phase of the channel path
+  nullCoreRadiusUm: number; // r_null = l·λ/2π — OAM null-core radius in μm
   band: AuthBand;
 }
 
 /**
  * Calculate the NXT fee for an action performed by a user at a given WDM channel.
  * For upload actions, pass fileSizeBytes for per-MB pricing.
+ * Optional oam + pol enable Berry-phase (Λ_geo) and OAM null-core fields.
  */
 export function calcFee(
   actionType: string,
   senderWdm: number,
-  opts: { fileSizeBytes?: number; transferAmount?: number } = {},
+  opts: { fileSizeBytes?: number; transferAmount?: number; oam?: number; pol?: string } = {},
 ): PhysicsFee {
   const nm          = NM_MIN + senderWdm * ((NM_MAX - NM_MIN) / (WDM_CHANNELS - 1));
   const frequencyHz = C_LIGHT / (nm * 1e-9);
@@ -272,6 +403,15 @@ export function calcFee(
   const lambdaKg    = energyJ / (C_LIGHT * C_LIGHT);
   const multiplier  = energyJ / REF_E;
   const band        = getBand(senderWdm);
+
+  // Berry phase — use provided oam/pol or fall back to WDM midpoint defaults
+  const oam = opts.oam ?? Math.round((senderWdm / WDM_CHANNELS) * OAM_MODES);
+  const pol  = opts.pol ?? "H";
+  const berry = berryPhaseEstimate(oam, pol);
+  const lambdaGeoKg = lambdaKg * berry.cosFactor;
+
+  // OAM null-core radius
+  const nullCore = oamNullCoreRadius(Math.max(1, oam), nm);
 
   let baseFeeNxt: number;
 
@@ -287,7 +427,13 @@ export function calcFee(
   const rawFee   = baseFeeNxt * multiplier;
   const feeNxt   = Math.max(rawFee, 0.00000001).toFixed(8);
 
-  return { feeNxt, baseFeeNxt, multiplier, wavelengthNm: nm, frequencyHz, energyJ, lambdaKg, band };
+  return {
+    feeNxt, baseFeeNxt, multiplier, wavelengthNm: nm,
+    frequencyHz, energyJ, lambdaKg,
+    lambdaGeoKg, berryPhaseRad: berry.gammaRad,
+    nullCoreRadiusUm: nullCore.radiusUm,
+    band,
+  };
 }
 
 // ── WNSP URI ──────────────────────────────────────────────────────────────────

@@ -31,6 +31,17 @@ The following pages and routes are core to the NexusOS mission. Any agent or dev
 4. If a task adds new pages, add them WITHOUT removing existing ones.
 5. When in doubt, check the route still exists in `App.tsx` before marking a task complete.
 
+## Post-Build Security Audit (STANDING DIRECTIVE — applies after EVERY build)
+
+After any build or significant code change, the following checks MUST be run before marking the task complete:
+
+1. **TypeScript typecheck** — `npx tsc --noEmit --incremental` — zero type errors required
+2. **Dependency audit** — `runDependencyAudit()` — fix all critical/high CVEs
+3. **SAST scan** — `runSastScan()` — fix all critical/high static analysis findings
+4. **HoundDog scan** — `runHoundDogScan()` — fix all critical/high privacy/security dataflow findings
+
+Run scanners in parallel. Do not mark a task complete if any critical or high finding remains unresolved. This directive was established 2026-07-16 by Te Rata Pou (founder).
+
 # System Architecture
 
 ## UI/UX Decisions

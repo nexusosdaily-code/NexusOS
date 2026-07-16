@@ -162,7 +162,7 @@ const APP_SECTIONS = [
       { title: "📄 Theory Paper",                        href: "/paper",              Icon: FileText },
       { title: "🌊 Russell Octave Layers",               href: "/octave-layers",      Icon: Waves },
       { title: "🔌 How to Plug In",                     href: "/how-to-plug-in",     Icon: Zap },
-      { title: "Universal Cavity Resonance",            href: "/resonance-cavity",   Icon: Waves },
+      { title: "§9 Resonance Cavity — WGM & OAM Physics",  href: "/resonance-cavity",   Icon: Waves },
       { title: "CE-SE Pipeline",                         href: "/ce-se-pipeline",     Icon: Zap },
       { title: "Planck Alignment",                      href: "/planck-alignment",   Icon: Zap },
     ],

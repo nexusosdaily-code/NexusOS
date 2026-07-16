@@ -382,7 +382,7 @@ export default function LosslessChannel() {
           {/* badges */}
           <div className="flex flex-wrap gap-2">
             {[
-              { label: "Act 8 of 8",                    color: "#10b981" },
+              { label: "Act 8 of 9",                    color: "#10b981" },
               { label: `First Disclosure ${PAGE_DATE}`, color: "#22c55e" },
               { label: "AGPL-3.0",                      color: "#8b5cf6" },
               { label: "α = 0",                         color: "#06b6d4" },
@@ -399,9 +399,9 @@ export default function LosslessChannel() {
           {/* 8-act sequence nav */}
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
             <p className="text-[10px] font-mono text-emerald-400 tracking-widest mb-3">
-              THE SEQUENCE — ACT 8 OF 8
+              THE SEQUENCE — ACT 8 OF 9
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-8 gap-2 text-center text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-9 gap-2 text-center text-xs">
               {[
                 { act:"ACT 1", title:"Theory of Compression States", sub:"Λ = hf/c²",             href:"/oscillating-quanta" },
                 { act:"ACT 2", title:"The Universal ONE",            sub:"f₀ derives Λ",           href:"/universal-one" },
@@ -425,6 +425,13 @@ export default function LosslessChannel() {
                 <p className="text-emerald-200 font-medium leading-tight text-[10px]">The Channel</p>
                 <p className="text-[8px] text-emerald-400">Ψ_channel = ⊗ᵢ Ψ_trap</p>
               </div>
+              <Link href="/resonance-cavity"
+                    className="rounded-lg border border-indigo-500/30 bg-indigo-500/5 p-2
+                               hover:border-indigo-400/60 transition-colors space-y-1 block">
+                <p className="text-[8px] font-mono text-indigo-400 tracking-widest">ACT 9 →</p>
+                <p className="text-indigo-200 font-medium leading-tight text-[10px]">The Cavity</p>
+                <p className="text-[8px] text-indigo-400">R = nc/2πfₙ</p>
+              </Link>
             </div>
           </div>
 
@@ -1064,6 +1071,28 @@ export default function LosslessChannel() {
             />
           </div>
         </Section>
+
+        {/* ── Act 9 teaser ─────────────────────────────────────────────────── */}
+        <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/5 p-5">
+          <p className="text-[10px] font-mono text-indigo-400 tracking-widest mb-2">
+            NEXT — ACT 9 OF 9
+          </p>
+          <h3 className="text-lg font-bold text-white mb-1">The Cavity</h3>
+          <p className="text-sm text-slate-400 leading-relaxed mb-4">
+            A lossless channel needs physical containment — a resonant cavity that
+            holds the standing wave trap in place. Act 9 derives the cavity radius
+            R = nc/(2πfₙ) from the WGM resonance condition, connects it to Russell's
+            octave formula, and introduces the OAM null-core geometry (r_null = l·λ/2π)
+            that makes every Ψ channel's authority measurable from first principles.
+          </p>
+          <Link href="/resonance-cavity"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg
+                           bg-indigo-500/15 border border-indigo-500/40
+                           text-indigo-300 hover:text-white hover:bg-indigo-500/25
+                           transition-colors text-sm font-medium">
+            Continue to Act 9 — The Cavity →
+          </Link>
+        </div>
 
         <EcosystemNav />
 
