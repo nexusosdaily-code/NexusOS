@@ -107,13 +107,16 @@ async function main() {
   const token     = process.env.TELEGRAM_BOT_TOKEN;
   const channelId = process.env.TELEGRAM_CHANNEL_ID;
 
-  if (token && channelId) {
+  // Use confirmed numeric ID — @troglodytememe (wnsp.io channel)
+  const CHAT_ID = "-1002572762871";
+
+  if (token) {
     console.log("📢 Posting to Telegram channel…");
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id:                  channelId,
+        chat_id:                  CHAT_ID,
         text:                     tgMsg,
         parse_mode:               "HTML",
         disable_web_page_preview: false,
@@ -126,7 +129,7 @@ async function main() {
       console.error("❌ Telegram failed:", JSON.stringify(body));
     }
   } else {
-    console.warn("⚠️  TELEGRAM_BOT_TOKEN or TELEGRAM_CHANNEL_ID not set — skipping Telegram.");
+    console.warn("⚠️  TELEGRAM_BOT_TOKEN not set — skipping Telegram.");
   }
 
   // ── Nostr ───────────────────────────────────────────────────────────────────

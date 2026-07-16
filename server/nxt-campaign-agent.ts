@@ -891,6 +891,25 @@ export async function fireCampaignSlot(slotIndex?: number): Promise<{ slot: Slot
 }
 
 // ── Start / stop ─────────────────────────────────────────────────────────────
+
+/** Resume slot rotation from DB — reads last fired slot and advances by one. */
+async function resumeSlotIndex(): Promise<void> {
+  try {
+    const rows = await db.select({ slot: campaignLog.slot })
+      .from(campaignLog)
+      .orderBy(desc(campaignLog.sentAt))
+      .limit(1);
+    if (rows.length > 0) {
+      const lastSlot = rows[0].slot ?? 0;
+      // Advance past the last-sent slot so we don't repeat it
+      _state.slotIndex = (lastSlot + 1) % SLOTS.length;
+      console.log(`${TAG} Resuming from slot ${_state.slotIndex} (last sent: ${lastSlot})`);
+    }
+  } catch (e: any) {
+    console.warn(`${TAG} Could not resume slot index:`, e.message);
+  }
+}
+
 export function startNxtCampaignAgent(intervalMs?: number) {
   if (_timer) return;
   if (process.env.NXT_CAMPAIGN_DISABLED === "true") {
@@ -908,10 +927,13 @@ export function startNxtCampaignAgent(intervalMs?: number) {
     nostrOk ? "Nostr" : null,
   ].filter(Boolean) as string[];
 
-  console.log(`${TAG} Started — interval ${ms / 60000}min · channels: ${_state.channels.join(", ")}`);
-
-  _state.running   = true;
+  _state.running    = true;
   _state.nextFireAt = Date.now() + ms;
+
+  // Restore slot position from DB before starting the timer
+  resumeSlotIndex().then(() => {
+    console.log(`${TAG} Started — interval ${ms / 60000}min · next slot: ${_state.slotIndex} · channels: ${_state.channels.join(", ")}`);
+  });
 
   _timer = setInterval(async () => {
     _state.nextFireAt = Date.now() + ms;
