@@ -136,28 +136,88 @@ export function looksLikeRealBrowserEngine(ua: string): boolean {
 const SKIP_PATHS = new Set(["/__vite_ping", "/favicon.ico", "/@vite", "/@fs"]);
 
 // ── Constitutionally blocked referrer domains ─────────────────────────────────
-// These entities are excluded from the NexusOS ecosystem by genesis declaration.
+// These entities are permanently excluded from the NexusOS ecosystem by genesis
+// constitutional declaration. Every entry corresponds to an organisation or
+// individual that has entered a criminal guilty plea or received a criminal
+// conviction for financial crimes against civilians.
+// Source of truth: server/genesis_user.ts BLOCKED_ENTITIES list.
 // Any HTTP request whose Referer header originates from these domains is refused
 // with a 403 before it reaches the application layer.
-const BLOCKED_REFERRER_DOMAINS = [
-  "binance.com",
-  "binance.us",
-  "binance.org",
-  "binance.me",
-  "binance.info",
-  "binance.cc",
-  "bnb.org",
-  "bnbchain.org",
+const BLOCKED_REFERRER_DOMAINS: { domain: string; label: string }[] = [
+  // ── Binance / CZ — AML guilty plea (2023) ─────────────────────────────
+  { domain: "binance.com",      label: "Binance" },
+  { domain: "binance.us",       label: "Binance" },
+  { domain: "binance.org",      label: "Binance" },
+  { domain: "binance.me",       label: "Binance" },
+  { domain: "binance.info",     label: "Binance" },
+  { domain: "binance.cc",       label: "Binance" },
+  { domain: "bnb.org",          label: "Binance-BNB" },
+  { domain: "bnbchain.org",     label: "Binance-BNBChain" },
+  // ── FTX / SBF — convicted all 7 counts (2023) ────────────────────────
+  { domain: "ftx.com",          label: "FTX" },
+  { domain: "ftx.us",           label: "FTX" },
+  { domain: "ftxdigital.com",   label: "FTX-Digital" },
+  { domain: "alameda-research.com", label: "Alameda-Research" },
+  // ── Terraform Labs / Do Kwon — guilty plea (2025) ─────────────────────
+  { domain: "terra.money",      label: "Terraform-Labs" },
+  { domain: "terraclassic.io",  label: "Terraform-Labs" },
+  { domain: "terraform.money",  label: "Terraform-Labs" },
+  { domain: "lunaclassic.io",   label: "Terraform-Labs" },
+  // ── Celsius Network / Mashinsky — guilty plea (2024) ──────────────────
+  { domain: "celsius.network",  label: "Celsius" },
+  { domain: "celsius.com",      label: "Celsius" },
+  // ── BitMEX / Arthur Hayes — BSA guilty plea (2022) ────────────────────
+  { domain: "bitmex.com",       label: "BitMEX" },
+  // ── TD Bank — money laundering guilty plea (2024) ─────────────────────
+  { domain: "td.com",           label: "TD-Bank" },
+  { domain: "tdbank.com",       label: "TD-Bank" },
+  { domain: "tdcanadatrust.com",label: "TD-Bank" },
+  // ── JPMorgan Chase — FX price-fixing guilty plea (2015) ───────────────
+  { domain: "jpmorgan.com",     label: "JPMorgan" },
+  { domain: "jpmorganchase.com",label: "JPMorgan" },
+  { domain: "chase.com",        label: "JPMorgan-Chase" },
+  // ── Citicorp / Citigroup — FX conspiracy guilty plea (2015) ──────────
+  { domain: "citi.com",         label: "Citigroup" },
+  { domain: "citigroup.com",    label: "Citigroup" },
+  { domain: "citibank.com",     label: "Citigroup" },
+  // ── Barclays — FX market rigging guilty plea (2015) ───────────────────
+  { domain: "barclays.com",     label: "Barclays" },
+  { domain: "barclaysus.com",   label: "Barclays" },
+  { domain: "barclaycard.com",  label: "Barclays" },
+  // ── Goldman Sachs — 1MDB FCPA guilty plea (2020) ─────────────────────
+  { domain: "goldmansachs.com", label: "Goldman-Sachs" },
+  { domain: "gs.com",           label: "Goldman-Sachs" },
+  // ── HSBC — cartel money laundering DPA (2012) ─────────────────────────
+  { domain: "hsbc.com",         label: "HSBC" },
+  { domain: "hsbc.co.uk",       label: "HSBC" },
+  { domain: "hsbc.com.hk",      label: "HSBC" },
+  { domain: "hsbc.com.au",      label: "HSBC" },
+  // ── BNP Paribas — sanctions violations guilty plea (2014) ─────────────
+  { domain: "bnpparibas.com",   label: "BNP-Paribas" },
+  { domain: "bnpparibas.net",   label: "BNP-Paribas" },
+  // ── Credit Suisse — tax conspiracy guilty plea (2014) ─────────────────
+  { domain: "credit-suisse.com",label: "Credit-Suisse" },
+  { domain: "creditsuisse.com", label: "Credit-Suisse" },
+  // ── UBS — LIBOR wire fraud guilty plea (2015) ─────────────────────────
+  { domain: "ubs.com",          label: "UBS" },
+  // ── Royal Bank of Scotland / NatWest — FX rigging guilty plea (2015) ──
+  { domain: "rbs.com",          label: "RBS" },
+  { domain: "natwest.com",      label: "NatWest-RBS" },
+  { domain: "royalbankofscotland.com", label: "RBS" },
+  { domain: "rbsgroup.com",     label: "RBS" },
 ];
 
-function isBlockedReferrer(referer: string): boolean {
-  if (!referer) return false;
+function isBlockedReferrer(referer: string): { blocked: boolean; label: string } {
+  if (!referer) return { blocked: false, label: "" };
   try {
     const hostname = new URL(referer).hostname.toLowerCase().replace(/^www\./, "");
-    return BLOCKED_REFERRER_DOMAINS.some(d => hostname === d || hostname.endsWith("." + d));
-  } catch {
-    return false;
-  }
+    for (const { domain, label } of BLOCKED_REFERRER_DOMAINS) {
+      if (hostname === domain || hostname.endsWith("." + domain)) {
+        return { blocked: true, label };
+      }
+    }
+  } catch { /* malformed URL — not a valid referrer */ }
+  return { blocked: false, label: "" };
 }
 
 let _db: any = null;
@@ -186,7 +246,8 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
   const cleanIp   = ip.toString().split(",")[0].trim();
 
   // ── Referrer block — constitutionally excluded entities ───────────────────
-  if (isBlockedReferrer(referer)) {
+  const { blocked: refBlocked, label: refLabel } = isBlockedReferrer(referer);
+  if (refBlocked) {
     const country = (req.headers["cf-ipcountry"] ?? req.headers["x-country"] ?? "") as string;
     getDb().then(({ db, trafficLogs }) => {
       db.insert(trafficLogs).values({
@@ -198,7 +259,7 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
         country:    country.slice(0, 10) || null,
         ip:         cleanIp.slice(0, 64) || null,
         isBot:      true,
-        botName:    "BLOCKED-REFERRER:Binance",
+        botName:    `BLOCKED-REFERRER:${refLabel}`,
         isDatacenterIp: false,
       }).catch(() => {});
     }).catch(() => {});
