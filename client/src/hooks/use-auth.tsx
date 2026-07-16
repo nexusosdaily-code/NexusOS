@@ -121,8 +121,10 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      const redirect = location !== "/auth" ? `?redirect=${encodeURIComponent(location)}` : "";
-      setLocation(`/auth${redirect}`, { replace: true });
+      if (location && location !== "/auth") {
+        sessionStorage.setItem("auth_redirect", location);
+      }
+      setLocation("/auth", { replace: true });
     }
   }, [isLoading, isAuthenticated, location, setLocation]);
 
