@@ -383,3 +383,9 @@ id = "dvi1vBFlujAIHvaTw1Nwe"
 uri = "file://public/coiltek-reply-draft.txt"
 type = "text"
 title = "Coiltek Reply Email Draft (updated)"
+
+[[outputs]]
+id = "hBU_DE86ZR0Mwi5WanEUg"
+uri = "file://docs/NexusOS_July2026_Update_Paper.md"
+type = "text"
+title = "NexusOS — Technical Update Paper · July 2026"
