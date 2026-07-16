@@ -135,6 +135,31 @@ export function looksLikeRealBrowserEngine(ua: string): boolean {
 
 const SKIP_PATHS = new Set(["/__vite_ping", "/favicon.ico", "/@vite", "/@fs"]);
 
+// ── Constitutionally blocked referrer domains ─────────────────────────────────
+// These entities are excluded from the NexusOS ecosystem by genesis declaration.
+// Any HTTP request whose Referer header originates from these domains is refused
+// with a 403 before it reaches the application layer.
+const BLOCKED_REFERRER_DOMAINS = [
+  "binance.com",
+  "binance.us",
+  "binance.org",
+  "binance.me",
+  "binance.info",
+  "binance.cc",
+  "bnb.org",
+  "bnbchain.org",
+];
+
+function isBlockedReferrer(referer: string): boolean {
+  if (!referer) return false;
+  try {
+    const hostname = new URL(referer).hostname.toLowerCase().replace(/^www\./, "");
+    return BLOCKED_REFERRER_DOMAINS.some(d => hostname === d || hostname.endsWith("." + d));
+  } catch {
+    return false;
+  }
+}
+
 let _db: any = null;
 let _trafficLogs: any = null;
 
@@ -159,6 +184,27 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
   const referer   = (req.headers["referer"] ?? req.headers["referrer"] ?? "") as string;
   const ip        = (req.headers["cf-connecting-ip"] ?? req.headers["x-forwarded-for"] ?? req.socket?.remoteAddress ?? "") as string;
   const cleanIp   = ip.toString().split(",")[0].trim();
+
+  // ── Referrer block — constitutionally excluded entities ───────────────────
+  if (isBlockedReferrer(referer)) {
+    const country = (req.headers["cf-ipcountry"] ?? req.headers["x-country"] ?? "") as string;
+    getDb().then(({ db, trafficLogs }) => {
+      db.insert(trafficLogs).values({
+        path:       path.slice(0, 500),
+        method:     req.method,
+        statusCode: 403,
+        userAgent:  ua.slice(0, 500) || null,
+        referer:    referer.slice(0, 500) || null,
+        country:    country.slice(0, 10) || null,
+        ip:         cleanIp.slice(0, 64) || null,
+        isBot:      true,
+        botName:    "BLOCKED-REFERRER:Binance",
+        isDatacenterIp: false,
+      }).catch(() => {});
+    }).catch(() => {});
+    res.status(403).json({ error: "Access denied." });
+    return;
+  }
   const country   = ipCountryCache.get(cleanIp)
     ?? (req.headers["cf-ipcountry"] ?? req.headers["x-country"] ?? "") as string;
   const isDatacenter = ipHostingCache.get(cleanIp) === true;
