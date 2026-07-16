@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { Sparkles, Lock, User, ArrowLeft, Zap, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -27,14 +27,16 @@ async function nostrSignIn(): Promise<{ signedEvent: any } | null> {
 export default function AuthPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const redirectTo = new URLSearchParams(search).get("redirect") || "/hub";
   const { toast } = useToast();
   const [isLoading, setIsLoading]       = useState(false);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      setLocation("/hub", { replace: true });
+      setLocation(redirectTo, { replace: true });
     }
-  }, [authLoading, isAuthenticated, setLocation]);
+  }, [authLoading, isAuthenticated, setLocation, redirectTo]);
   const [nostrLoading, setNostrLoading] = useState(false);
   const inFlight = useRef(false);
   const [loginData, setLoginData]         = useState({ username: "", password: "" });
@@ -69,7 +71,7 @@ export default function AuthPage() {
       if (!res.ok) throw new Error(data.error || "Login failed");
       // Cookie is set server-side (httpOnly) — no localStorage needed
       toast({ title: "Signed in as Nexus", description: "Welcome back." });
-      window.location.href = "/hub";
+      window.location.href = redirectTo;
     } catch (err: any) {
       toast({ title: "Login failed", description: err.message, variant: "destructive" });
     } finally { setWifLoginLoading(false); }
@@ -89,7 +91,7 @@ export default function AuthPage() {
       if (!res.ok) throw new Error(data.error || "Login failed");
       // Cookie is set server-side (httpOnly) — no localStorage needed
       toast({ title: "Signed in as Nexus", description: "Welcome back." });
-      window.location.href = "/hub";
+      window.location.href = redirectTo;
     } catch (err: any) {
       toast({ title: "Login failed", description: err.message, variant: "destructive" });
     } finally { setNsecLoginLoading(false); }
@@ -122,7 +124,7 @@ export default function AuthPage() {
 
       localStorage.setItem("auth_token", data.token);
       toast({ title: "⚡ Nostr login successful", description: data.message });
-      window.location.replace("/");
+      window.location.replace(redirectTo);
     } catch (e: any) {
       toast({ title: "Nostr login failed", description: e.message, variant: "destructive" });
     } finally {
@@ -147,7 +149,7 @@ export default function AuthPage() {
       if (!response.ok) throw new Error(data.error || data.details?.[0]?.message || "Invalid credentials");
       localStorage.setItem("auth_token", data.token);
       toast({ title: "Login successful", description: `Welcome back, ${data.user.username}!` });
-      window.location.replace("/");
+      window.location.replace(redirectTo);
     } catch (error: any) {
       toast({ title: "Login failed", description: error.message, variant: "destructive" });
     } finally {
@@ -178,7 +180,7 @@ export default function AuthPage() {
       if (!res.ok) throw new Error(data.error || data.details?.[0]?.message || "Registration failed");
       localStorage.setItem("auth_token", data.token);
       toast({ title: "Welcome to NexusOS!", description: `Account created for ${data.user.username}. Your spectral wallet is ready.` });
-      window.location.replace("/");
+      window.location.replace(redirectTo);
     } catch (err: any) {
       toast({ title: "Registration failed", description: err.message, variant: "destructive" });
     } finally {

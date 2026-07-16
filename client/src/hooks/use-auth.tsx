@@ -117,13 +117,14 @@ export function useAuth() {
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      setLocation("/auth", { replace: true });
+      const redirect = location !== "/auth" ? `?redirect=${encodeURIComponent(location)}` : "";
+      setLocation(`/auth${redirect}`, { replace: true });
     }
-  }, [isLoading, isAuthenticated, setLocation]);
+  }, [isLoading, isAuthenticated, location, setLocation]);
 
   if (isLoading) {
     return (
