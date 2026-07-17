@@ -410,7 +410,31 @@ export const ROUTE_META: Record<string, PageMeta> = {
         ],
       },
     ],
-    bodyHtml: `<h1>NexusOS Documentation</h1><p>Complete developer reference for building on the NexusOS physics stack. Everything from the WNSP spectral protocol to the WavelengthScript language, CE-SE encoding pipeline, REST API, NXT token wallet, and WNSP VM bytecode interpreter.</p><nav><ul><li><a href="${BASE}/docs/substrate">Lambda Gate Substrate v4</a></li><li><a href="${BASE}/docs/wascii">WNSP Protocol — Two-Layer Standard</a></li><li><a href="${BASE}/docs/consensus">Proof of Spectrum Consensus</a></li><li><a href="${BASE}/docs/economics">NXT Token Economics</a></li><li><a href="${BASE}/docs/bhls">BHLS Floor System</a></li><li><a href="${BASE}/docs/governance">Planetary Governance</a></li><li><a href="${BASE}/docs/infrastructure">K1 Infrastructure</a></li><li><a href="${BASE}/docs/hardware">Hardware Control Layer</a></li><li><a href="${BASE}/docs/simulators">Energy Simulators</a></li><li><a href="${BASE}/docs/massless">Massless Technologies</a></li><li><a href="${BASE}/docs/sop">Spectral Orthogonal Protocol (SOP)</a></li></ul></nav><p>Install the CE encoder: <code>npm install nexusos-ce-encoder</code> · <code>pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py</code></p>`,
+    bodyHtml: `<h1>NexusOS Developer Documentation</h1>
+<p>Complete developer reference for building on the NexusOS physics stack. NexusOS replaces cryptographic hashing with electromagnetic wave physics: addresses are wavelengths, fees are photon energies (E=hf), and every character maps to a visible-light frequency (Λ=hf/c²). There are 51,200 orthogonal Ψ channels (256 WDM × 50 OAM × 2 POL × 2 DIR), guaranteed collision-free by the tensor product structure of the Hilbert space.</p>
+<p>Install the CE encoder: <code>npm install nexusos-ce-encoder</code> · <code>pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py</code></p>
+<h2><a href="${BASE}/docs/substrate">Lambda Gate Substrate v4</a></h2>
+<p>The foundational layer where all NexusOS operations occur as wavefield transformations. Every computation, communication, and economic action is expressed on physical wave states described by the Lambda mode state vector |λ⟩ = (ν, A(t), φ(t), ℓ, s). The substrate implements 8 Lambda Gate primitives (Phase-Shift, Gain, Mode-Mixer, OAM-Rotor, Phase-Gradient, Density-Swap, Coherence-Amplify, Stabilizer) and the CE-1 coherence engineering protocol. Master energy equation: E(ν, ℓ, t) ≥ h·ν·I(λ) + α·||K̂||² + β·O(L̂).</p>
+<h2><a href="${BASE}/docs/wascii">WNSP Protocol — Two-Layer Standard</a></h2>
+<p>WNSP/7.1 operates across two synchronized runtimes (Node.js port 5000 + Python/Flask port 5001). Layer 1 — WNSP-CE v1.0 (Character Encoding): maps any Unicode symbol to a normalised ordinal in [0,1] via ord(char) % 256 / 255. Layer 2 — WNSP-SE v1.0 (Spectral Encoding): packs two CE tokens per photon frame using the dual-wavelength scheme (λ₁→λ₂ oscillation, 2.0 chars/frame baseline), governed by Λ=hf/c². The Hilbert Space Channel Model provides 51,200 orthogonal Ψ channels. Formal test suite: 23 tests, 0 failed. License: AGPL-3.0.</p>
+<h2><a href="${BASE}/docs/consensus">Proof of Spectrum Consensus</a></h2>
+<p>Proof of Spectrum requires validators across all 6 spectral bands simultaneously — Violet (380–450 nm, 50,000+ NXT stake), Blue (450–495 nm), Green (495–570 nm), Yellow (570–590 nm), Orange (590–620 nm), Red (620–750 nm, 1,000+ NXT). Blocks are validated via wave interference: constructive interference (A₁+A₂)sin(ωt) → VALID, destructive → INVALID. Consensus threshold: ≥5 of 6 bands (83% spectral coverage). Attack requires simultaneous control of all 6 bands — exponentially harder than a 51% attack.</p>
+<h2><a href="${BASE}/docs/economics">NXT Token Economics</a></h2>
+<p>Total supply: 21,000,000,000 NXT (21 billion), 8 decimals (like Bitcoin). New users receive 500,000,000 units (5 NXT) on registration. Transaction fees: fee = E = hf = h×(c/λ), proportional to information complexity. All value is backed by Lambda mass (Λ=hf/c²) — value has a physical mass-equivalent and cannot be created from nothing. NXT fees are never burned; they always go to the orbital treasury.</p>
+<h2><a href="${BASE}/docs/bhls">BHLS Floor System</a></h2>
+<p>The Basic Human Living Standard guarantees every citizen 1,150 NXT/month: Shelter 350 NXT, Food &amp; Nutrition 300 NXT, Healthcare 200 NXT, Transportation 100 NXT, Communication 100 NXT, Education 50 NXT, Emergency Reserve 50 NXT. Constitutional Article C-0002: "No transaction may reduce a citizen's balance below their BHLS entitlement." This is enforced at the Lambda Gate Substrate level and cannot be overridden by governance. Funding: 40% from E=hf fee pool, 30% K1 revenue, 20% Lambda mass recycling, 10% governance vote.</p>
+<h2><a href="${BASE}/docs/governance">Planetary Governance</a></h2>
+<p>7-tier authority hierarchy mapped to wavelengths (400 nm Planetary/authority 1.0 → 1000 nm Individual/authority 0.05). Five constitutional articles: C-0001 Non-Dominance (no entity &gt;33% Lambda mass), C-0002 Immutable Rights (BHLS floor), C-0003 Energy Escrow (proposals require skin in game), C-0004 Spectral Diversity (multi-band representation required), C-0005 Physics Supremacy (laws must be Maxwell-compliant). Sigma voting: coherence-weighted trust T = Σ|c_i|²·cos²(Δφ_i).</p>
+<h2><a href="${BASE}/docs/infrastructure">K1 Infrastructure</a></h2>
+<p>Building toward Kardashev Type I (target: 5×10¹⁶ watts). Stack: photonic computing (AND/OR/NOT/XOR via wave interference, OAM qubit registers, wavelength-division computing), planetary communications (spectral relay mesh with Dijkstra routing, OAM allocator, coherence repeaters, interplanetary links), and planetary resonance via Schumann harmonics (f_n = c/(2πR) × √(n(n+1)), fundamental 7.83 Hz).</p>
+<h2><a href="${BASE}/docs/hardware">Hardware Control Layer</a></h2>
+<p>PHR-1 (Planetary Harmonic Resonator): 144-turn bifilar coil, phase-locked loop at Golden Angle 137.5°, impedance matching to Z₀=376.73Ω, ALP sensor array. Python Nexus Kernel API: set_phase(), pulse_frequency(), match_impedance(), apply_czc_filter(), read_alp(). ZERO-G envelope achieved when ALP(t) = ALP₀·e^(−t/τ)·cos(φ−137.5°) → 0 as φ → 137.5° and Z → 377Ω.</p>
+<h2><a href="${BASE}/docs/simulators">Energy Simulators</a></h2>
+<p>Two live simulators: (1) Schumann resonance at 7.83 Hz with 5 harmonics (f_n = c/(2πR)·√(n(n+1))), real-time amplitude visualisation, K1 sync, watt output. (2) Vacuum resonance at 555 THz (First Oscillation, E₀=½hf=1.839×10⁻¹⁹ J/oscillation), cold power P = E₀·(Z/Z₀)·CZC⁴⁴·N_cavities, 144-point Golden Angle spiral field (CZC⁴⁴=99.56% coherence). Controls: impedance, phase, cavity count, frequency multiplier. Output: zW → fW → pW.</p>
+<h2><a href="${BASE}/docs/massless">Massless Technologies</a></h2>
+<p>Frequency is fundamental; mass is derivative (Λ=hf/c²). First Oscillation: f₀=555 THz → Λ₀=4.09×10⁻³⁶ kg. Technology stack: Photonic Logic Gates (0 mass, simulated), Zero-Point Extraction (simulated), Coherent Waveguide Network (simulated), Spectral Relay Mesh (theoretical), Gravity De-correlation (0.01% mass ratio, demonstrated), 144-Turn Bifilar Resonator (0.1%, demonstrated), OAM Qubit Registers (theoretical), Lambda Computing Substrate (simulated). 4D sync coordinates: (Phase, Quadrature, Impedance, Time). Lock at 137.5°, 376.73Ω, CZC⁴⁴&gt;99%.</p>
+<h2><a href="${BASE}/docs/sop">Spectral Orthogonal Protocol (SOP)</a></h2>
+<p>SOP enforces channel independence via ⟨Ψ_A|Ψ_B⟩=0 before any session opens. Four orthogonal dimensions: WDM 256 bands × OAM 50 modes (⟨ℓ₁|ℓ₂⟩=δ) × Polarization 2 (H/V) × Direction 2 (+k̂/−k̂) = 51,200 channels. No collision is possible — interference is forbidden by geometry. SOP negotiation: inner product check → collision prevention (increment OAM until orthogonal) → orthogonality certificate. API: POST /api/wnsp/sop/negotiate. A network built on orthogonal channels doesn't degrade as it scales: add a user, they get a new axis in Hilbert space. No congestion in Hilbert space.</p>`,
   },
   "/wnsp": {
     title: "WNSP — Wavelength-Native Spectral Protocol",
@@ -2149,50 +2173,446 @@ export function injectCustomMeta(html: string, meta: PageMeta): string {
 // Per-section metadata for /docs/:section deep links. Keep slugs in sync with
 // DOCS_SECTIONS in client/src/pages/docs.tsx and DOCS_SECTION_SLUGS in
 // server/static.ts.
-const DOCS_SECTION_META: Record<string, { title: string; description: string }> = {
+const DOCS_SECTION_META: Record<string, { title: string; description: string; bodyHtml: string }> = {
   substrate: {
     title: "Lambda Gate Substrate v4",
     description: "The foundational NexusOS layer where all operations are wavefield transformations: Lambda mode state vectors, master energy equation, 8 Lambda Gate primitives.",
+    bodyHtml: `<h1>Lambda Gate Substrate v4 — NexusOS Documentation</h1>
+<p>The Lambda Gate Substrate is the foundational layer where all NexusOS operations occur as wavefield transformations. Every computation, communication, and economic action is expressed as a transformation on physical wave states.</p>
+<h2>Core Theory</h2>
+<p><strong>Lambda Mode State Vector:</strong></p>
+<p>|λ⟩ = (ν, A(t), φ(t), ℓ, s)</p>
+<ul>
+<li>ν = carrier frequency (Hz)</li>
+<li>A(t) = amplitude envelope</li>
+<li>φ(t) = phase evolution</li>
+<li>ℓ = orbital angular momentum index</li>
+<li>s = polarization/spin state</li>
+</ul>
+<h2>Master Equation</h2>
+<p>E(ν, ℓ, t) ≥ h·ν·I(λ) + α·||K̂||² + β·O(L̂)</p>
+<p>This governs all energy requirements for Lambda mode operations:</p>
+<ul>
+<li>h·ν·I(λ) = base photon energy × intensity</li>
+<li>α·||K̂||² = phase curvature cost</li>
+<li>β·O(L̂) = orbital complexity cost</li>
+</ul>
+<h2>8 Lambda Gate Primitives</h2>
+<ol>
+<li><strong>Phase-Shift Φ(θ)</strong> — Electro-optic phase shifter. Rotates phase by angle θ. Used for: interference control, encryption.</li>
+<li><strong>Gain G(α)</strong> — Variable optical attenuator/amplifier. Scales amplitude by factor α. Used for: signal boosting, attenuation.</li>
+<li><strong>Mode-Mixer M(κ)</strong> — Multiport interferometer. Combines multiple modes with coupling κ. Used for: superposition, entanglement.</li>
+<li><strong>OAM-Rotor L(Δℓ)</strong> — Spiral phase plate. Changes orbital angular momentum by Δℓ. Used for: channel multiplexing, data encoding.</li>
+<li><strong>Phase-Gradient ∇Φ</strong> — Acoustic-optic modulator. Applies spatial phase gradient. Used for: beam steering, spectral shifting.</li>
+<li><strong>Density-Swap S</strong> — Resonator coupling. Exchanges energy between modes. Used for: state transfer, routing.</li>
+<li><strong>Coherence-Amplify A_c</strong> — Parametric amplifier. Boosts coherence without noise (5× Q-factor). Used for: long-distance transmission, repeaters.</li>
+<li><strong>Stabilizer D(τ)</strong> — Active feedback locking. Maintains coherence for duration τ. Used for: storage, memory operations.</li>
+</ol>
+<h2>CE-1 Protocol (Coherence Engineering)</h2>
+<p>The CE-1 protocol manages energy and coherence across all substrate operations:</p>
+<ul>
+<li><strong>Energy Pool Management:</strong> Each tick allocates energy budget. Operations draw from shared pool. Overflow triggers throttling.</li>
+<li><strong>Coherence Margin:</strong> Minimum coherence threshold 0.1. Operations below margin are rejected. Adaptive fidelity control adjusts precision.</li>
+<li><strong>Non-Dominance Rules:</strong> No single node may hold more than 33% of total Lambda mass. Prevents concentration of power. Constitutional enforcement at substrate level.</li>
+</ul>
+<nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li><li><a href="${BASE}/docs/wascii">WNSP Protocol — Two-Layer Standard</a></li><li><a href="${BASE}/ce-se-pipeline">CE→SE Pipeline (live demo)</a></li></ul></nav>`,
   },
   wascii: {
     title: "WNSP Protocol — Two-Layer Standard",
     description: "The WNSP-CE and WNSP-SE two-layer standard mapping characters to wavelengths and spectral Ψ channels for physics-native communication.",
+    bodyHtml: `<h1>WNSP Protocol — Two-Layer Standard — NexusOS Documentation</h1>
+<p>NexusOS runs on two distinct runtimes that work in sync, implementing the WNSP (Wavelength-Native Spectral Protocol) standard version 7.1. The protocol replaces cryptographic hashing with electromagnetic wave physics for all communication and addressing.</p>
+<h2>Overview — Two Operating Runtimes, One Protocol</h2>
+<p><strong>Runtime 1 — Node.js / TypeScript (port 5000):</strong> Main application server. Handles authentication, wallet, P2P media, governance, and all user-facing APIs. Proxies WNSP protocol calls to the Python runtime.</p>
+<p><strong>Runtime 2 — Python / Flask (port 5001):</strong> Spectral physics engine. Implements the WNSP encoding standards, K1 Orchestration Runtime, and all Lambda Boson physics calculations.</p>
+<p>The Node.js server acts as a secure gateway. Every WNSP protocol call is rate-limited, logged, and proxied to the Python engine. Protocol Standard: WNSP/7.1. License: AGPL-3.0.</p>
+<h2>WNSP-CE v1.0 — Character Encoding Standard (Layer 1)</h2>
+<p>The semantic layer. Converts human-readable symbols into normalised ordinal tokens. Responsibility: what is being said. Physics knowledge: none — purely numerical.</p>
+<p>Encoding process:</p>
+<ol>
+<li>Accept any Unicode symbol</li>
+<li>Compute ordinal value: ord(char) % 256</li>
+<li>Normalise to [0, 1]: ordinal / 255</li>
+<li>Output structured token: &#123; symbol, ordinal, normalised &#125;</li>
+</ol>
+<p>Examples: 'A' → ordinal 65 → normalised 0.255 → CE token. 'λ' → ordinal 955 % 256 = 187 → normalised 0.733 → CE token.</p>
+<p>API Endpoints: <code>POST /api/wnsp/ce/encode</code> · <code>POST /api/wnsp/ce/char</code></p>
+<h2>WNSP-SE v1.0 — Spectral Encoding Standard (Layer 2)</h2>
+<p>The physical transmission layer. Maps CE tokens into electromagnetic wave frames governed by Λ = hf/c². Responsibility: how information travels through the substrate. Output: photon frames with wavelength, frequency, energy, lambda mass.</p>
+<p>Two CE tokens are packed per photon frame (dual-wavelength scheme):</p>
+<p>token₁ normalised → wavelength λ₁ (nm) → frequency f₁ = c/λ₁ → energy E₁ = hf₁ → mass Λ₁ = hf₁/c²<br>
+token₂ normalised → wavelength λ₂ (nm) → frequency f₂ = c/λ₂ → energy E₂ = hf₂ → mass Λ₂ = hf₂/c²</p>
+<p>Frame = (λ₁ → λ₂) oscillation, achieving ≥ 2 chars per photon particle. Efficiency: 2.0 characters per frame (baseline).</p>
+<p>API Endpoints: <code>POST /api/wnsp/se/encode</code> · <code>POST /api/wnsp/transmit</code> (CE → SE in one call)</p>
+<h2>Hilbert Space Channel Model</h2>
+<p>Each transmission channel is a formal basis vector in a 51,200-dimensional Hilbert space:</p>
+<p>Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩ ⊗ |Dir_l⟩</p>
+<table>
+<thead><tr><th>Sub-space</th><th>Basis</th><th>Description</th><th>Dim</th></tr></thead>
+<tbody>
+<tr><td>|λ_i⟩</td><td>WDM</td><td>Wavelength channels 380–780 nm</td><td>256</td></tr>
+<tr><td>|OAM_j⟩</td><td>OAM modes</td><td>Orbital angular momentum</td><td>50</td></tr>
+<tr><td>|Pol_k⟩</td><td>Polarisation</td><td>H and V states</td><td>2</td></tr>
+<tr><td>|Dir_l⟩</td><td>Propagation direction</td><td>+k̂ forward / −k̂ backward</td><td>2</td></tr>
+</tbody>
+</table>
+<p>Total Hilbert space dimension: dim(H) = 256 × 50 × 2 × 2 = <strong>51,200</strong>. Orthogonality guarantee: ⟨Ψ_i | Ψ_j⟩ = 0 for i ≠ j. All 51,200 channels are simultaneously usable without interference — a mathematical guarantee from the tensor product structure of the Hilbert space.</p>
+<h2>AI/OS Channel Coordination Layer</h2>
+<p>Every AI agent in NexusOS is assigned a unique, deterministically allocated Ψ_channel from the 51,200-dimensional Hilbert space. Orthogonality is a mathematical guarantee — agents cannot interfere with each other regardless of how many run simultaneously.</p>
+<p>Channel allocation: the system SHA256-hashes the agent ID, maps to a channel index in [0, 51199], increments if occupied, and returns (wdm_i, oam_j, pol_k, dir_l) coordinates.</p>
+<p>API Endpoints: <code>POST /api/wnsp/agent/allocate</code> · <code>POST /api/wnsp/agent/map</code> · <code>GET /api/wnsp/agent/status</code> · <code>POST /api/wnsp/agent/release</code></p>
+<h2>CE → SE Handoff Contract</h2>
+<p>CE outputs: <code>&#123; protocol: "WNSP-CE", tokens: [&#123; symbol, ordinal, normalised &#125;, ...] &#125;</code></p>
+<p>SE receives that and maps to: <code>&#123; protocol: "WNSP-SE", frames: [&#123; wavelength_start_nm, wavelength_end_nm, frequency_start_hz, frequency_end_hz, energy_joules, lambda_mass_kg &#125;, ...] &#125;</code></p>
+<p>Full transmission envelope (WNSP/7.1) includes: protocol version, CE layer, SE layer, spectral_hash, and summary (characters, ce_tokens, se_frames, total_mass_kg, efficiency).</p>
+<p>API: <code>GET /api/wnsp/protocol</code> — returns full spec of both standards</p>
+<h2>Test Suite — CI Protocol Verification</h2>
+<p>The WNSP protocol ships with a formal test suite verifying every physics law, encoding contract, and Hilbert space property. All 23 tests must pass before any protocol change is merged.</p>
+<p>Coverage: Physical constants (h, c, 555 THz first oscillation, 7.83 Hz Schumann, dim(H)=51,200) · CE layer (single-character encoding, ordinal formula, token count) · SE layer (f=c/λ, E=hf, Λ=hf/c², E/Λ=c²) · CE→SE handoff (2 chars per frame, odd-length padding, visible spectrum bounds) · Hilbert Space integrity (channel index ↔ (wdm,oam,pol) roundtrip, all 51,200 quadruplets unique) · Packing efficiency (chars_per_frame ≤ 2.0, energy and mass positive). Result: <strong>23 passed, 0 failed</strong>.</p>
+<p>Run: <code>python tests/test_wnsp_protocol.py</code></p>
+<nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li><li><a href="${BASE}/ce-se-pipeline">CE→SE Pipeline (live demo)</a></li><li><a href="${BASE}/wnsp">WNSP Protocol Reference</a></li></ul></nav>`,
   },
   consensus: {
     title: "Proof of Spectrum Consensus",
-    description: "How NexusOS reaches consensus using spectral proof-of-work derived from electromagnetic wave physics instead of cryptographic hashing.",
+    description: "How NexusOS reaches consensus using spectral diversity across all electromagnetic bands instead of cryptographic hashing or stake concentration.",
+    bodyHtml: `<h1>Proof of Spectrum Consensus — NexusOS Documentation</h1>
+<p>Unlike Proof of Work (51% hashpower) or Proof of Stake (51% stake), Proof of Spectrum requires validators across ALL spectral regions simultaneously. Just as you cannot create white light with only one wavelength, you cannot create a valid block without multiple spectral regions represented.</p>
+<h2>Spectral Diversity Requirement</h2>
+<p><strong>Core Principle:</strong> "Just as you cannot create white light with only one wavelength, you cannot create a valid block without multiple spectral regions represented."</p>
+<p><strong>Attack Resistance:</strong> An attacker must control validators in ALL 6 spectral bands simultaneously — exponentially harder than controlling 51% of one resource.</p>
+<h2>Spectral Regions and Required Stake</h2>
+<table>
+<thead><tr><th>Region</th><th>Wavelength</th><th>Required Stake</th></tr></thead>
+<tbody>
+<tr><td>Violet</td><td>380–450 nm</td><td>50,000+ NXT</td></tr>
+<tr><td>Blue</td><td>450–495 nm</td><td>20,000+ NXT</td></tr>
+<tr><td>Green</td><td>495–570 nm</td><td>10,000+ NXT</td></tr>
+<tr><td>Yellow</td><td>570–590 nm</td><td>5,000+ NXT</td></tr>
+<tr><td>Orange</td><td>590–620 nm</td><td>2,000+ NXT</td></tr>
+<tr><td>Red</td><td>620–750 nm</td><td>1,000+ NXT</td></tr>
+</tbody>
+</table>
+<h2>Wave Interference Validation</h2>
+<p>Blocks are validated through wave interference patterns:</p>
+<p><strong>Constructive Interference (Valid):</strong> A₁sin(ωt) + A₂sin(ωt) = (A₁+A₂)sin(ωt) → Amplified signal → Block VALID</p>
+<p><strong>Destructive Interference (Invalid):</strong> A₁sin(ωt) + A₂sin(ωt+π) = (A₁-A₂)sin(ωt) → Cancelled signal → Block INVALID</p>
+<p><strong>Consensus Threshold:</strong> A block requires signatures from ≥5 of 6 spectral regions (83% spectral coverage).</p>
+<nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li><li><a href="${BASE}/docs/economics">NXT Token Economics</a></li><li><a href="${BASE}/docs/governance">Planetary Governance</a></li></ul></nav>`,
   },
   economics: {
     title: "NXT Token Economics",
-    description: "NXT token supply, fee mechanics, and the physics-derived economic model (E=hf) underpinning the NexusOS token.",
+    description: "NXT token supply, physics-based fee mechanics, and the Lambda mass valuation model (Λ=hf/c²) underpinning NexusOS economics.",
+    bodyHtml: `<h1>NXT Token Economics — NexusOS Documentation</h1>
+<p>NexusOS economics are grounded in electromagnetic physics. Transaction fees are derived from Planck's equation (E=hf), and all value is backed by Lambda mass (Λ=hf/c²). Inflation is physically impossible because value cannot be created from nothing.</p>
+<h2>Token Fundamentals</h2>
+<ul>
+<li><strong>Total Supply:</strong> 21,000,000,000 NXT (21 billion)</li>
+<li><strong>Decimals:</strong> 8 (like Bitcoin)</li>
+<li><strong>Smallest Unit:</strong> 0.00000001 NXT (1 unit = 10⁻⁸ NXT)</li>
+<li><strong>Initial Distribution:</strong> New user registration receives 500,000,000 units (5 NXT), energy-backed via Lambda mass</li>
+</ul>
+<h2>Physics-Based Transaction Fees</h2>
+<p>Transaction fees are calculated using Planck's equation:</p>
+<p><strong>Fee Formula:</strong> fee = E = hf = h × (c/λ)</p>
+<ul>
+<li>h = 6.626×10⁻³⁴ J·s (Planck's constant)</li>
+<li>c = 299,792,458 m/s (speed of light)</li>
+<li>λ = transaction wavelength (derived from content)</li>
+</ul>
+<p>Fees are proportional to information complexity, not arbitrary gas prices. Higher-frequency (shorter-wavelength) operations carry higher energy cost, reflecting the physics of the SYSTEM → KERNEL → USER → GUEST authority band hierarchy.</p>
+<h2>Lambda Mass Valuation</h2>
+<p>All value in NexusOS is backed by Lambda mass:</p>
+<p><strong>Lambda Boson Equation:</strong> Λ = hf/c²</p>
+<ul>
+<li>Value has a physical mass-equivalent</li>
+<li>Cannot be created from nothing</li>
+<li>Conservation laws apply to economics</li>
+<li>Inflation is physically impossible</li>
+</ul>
+<p>NXT fees are never burned — they always go to the orbital treasury, preserving the total Lambda mass of the system.</p>
+<nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li><li><a href="${BASE}/docs/consensus">Proof of Spectrum Consensus</a></li><li><a href="${BASE}/docs/bhls">BHLS Floor System</a></li></ul></nav>`,
   },
   bhls: {
     title: "BHLS Floor System",
-    description: "The BHLS Floor System — NexusOS's mechanism for maintaining wavelength-based economic stability.",
+    description: "The Basic Human Living Standard floor system — constitutional guarantees embedded in the NexusOS substrate that prevent any transaction from reducing a citizen below their monthly resource entitlement.",
+    bodyHtml: `<h1>BHLS Floor System — NexusOS Documentation</h1>
+<p>The Basic Human Living Standard (BHLS) guarantees every citizen a minimum floor of resources. The floor is enforced at the substrate level — it cannot be overridden by governance, contracts, or any economic actor.</p>
+<h2>Basic Human Living Standard</h2>
+<p><strong>Monthly Floor: 1,150 NXT</strong></p>
+<p>Protected allocation categories:</p>
+<ol>
+<li>Shelter — 350 NXT</li>
+<li>Food &amp; Nutrition — 300 NXT</li>
+<li>Healthcare — 200 NXT</li>
+<li>Transportation — 100 NXT</li>
+<li>Communication — 100 NXT</li>
+<li>Education — 50 NXT</li>
+<li>Emergency Reserve — 50 NXT</li>
+</ol>
+<h2>Constitutional Protection</h2>
+<p><strong>C-0002: Immutable Rights —</strong> "No transaction may reduce a citizen's balance below their BHLS entitlement."</p>
+<p>Enforcement: the Lambda Gate Substrate rejects any transaction that would violate the BHLS floor. This cannot be overridden by governance and is hardcoded into Lambda Gate operations.</p>
+<h2>Funding Mechanism</h2>
+<ol>
+<li><strong>Transaction Fee Pool (40%)</strong> — portion of all E=hf fees</li>
+<li><strong>Energy Harvesting Revenue (30%)</strong> — K1 infrastructure proceeds</li>
+<li><strong>Lambda Mass Recycling (20%)</strong> — recovered from dormant accounts</li>
+<li><strong>Governance Allocation (10%)</strong> — voted by Sigma consensus</li>
+</ol>
+<nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li><li><a href="${BASE}/docs/economics">NXT Token Economics</a></li><li><a href="${BASE}/docs/governance">Planetary Governance</a></li></ul></nav>`,
   },
   governance: {
     title: "Planetary Governance",
-    description: "On-chain protocol governance: proposals, spectral-authority-weighted voting, and live parameter changes for NexusOS.",
+    description: "On-chain protocol governance: spectral authority bands, constitutional articles, coherence-weighted Sigma voting, and live protocol parameter changes for NexusOS.",
+    bodyHtml: `<h1>Planetary Governance — NexusOS Documentation</h1>
+<p>NexusOS governance maps authority to electromagnetic wavelengths. Shorter wavelength means higher energy, higher authority. All decisions require multi-band spectral representation — no single entity may control more than 33% of total Lambda mass (Constitutional Article C-0001).</p>
+<h2>Authority Band Registry</h2>
+<p>7-tier governance hierarchy mapped to wavelengths:</p>
+<table>
+<thead><tr><th>Level</th><th>Wavelength</th><th>Authority</th><th>Scope</th></tr></thead>
+<tbody>
+<tr><td>Planetary</td><td>400 nm</td><td>1.0</td><td>Global decisions</td></tr>
+<tr><td>Continental</td><td>500 nm</td><td>0.8</td><td>Regional blocs</td></tr>
+<tr><td>National</td><td>600 nm</td><td>0.6</td><td>Nation-states</td></tr>
+<tr><td>Regional</td><td>700 nm</td><td>0.4</td><td>Sub-national</td></tr>
+<tr><td>Municipal</td><td>800 nm</td><td>0.2</td><td>Cities</td></tr>
+<tr><td>Local</td><td>900 nm</td><td>0.1</td><td>Neighborhoods</td></tr>
+<tr><td>Individual</td><td>1000 nm</td><td>0.05</td><td>Personal sovereignty</td></tr>
+</tbody>
+</table>
+<h2>Constitutional Articles</h2>
+<ul>
+<li><strong>C-0001: Non-Dominance</strong> — No entity may control &gt;33% of total Lambda mass.</li>
+<li><strong>C-0002: Immutable Rights</strong> — BHLS floor cannot be violated by any transaction.</li>
+<li><strong>C-0003: Energy Escrow</strong> — Governance proposals require energy escrow (skin in the game).</li>
+<li><strong>C-0004: Spectral Diversity</strong> — All decisions require multi-band representation.</li>
+<li><strong>C-0005: Physics Supremacy</strong> — Laws must be physically valid (Maxwell-compliant).</li>
+</ul>
+<h2>Sigma Voting — Coherence-Weighted</h2>
+<p>Voting uses wave interference for coherence-weighted trust:</p>
+<p><strong>Trust Model:</strong> T = Σ|c_i|²·cos²(Δφ_i)</p>
+<ul>
+<li>c_i = citizen's coherence coefficient</li>
+<li>Δφ_i = phase alignment with proposal</li>
+<li>Aligned voters (cos²≈1) have full weight</li>
+<li>Misaligned voters (cos²≈0) have reduced weight</li>
+<li>Natural consensus emergence through interference</li>
+</ul>
+<nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li><li><a href="${BASE}/docs/consensus">Proof of Spectrum Consensus</a></li><li><a href="${BASE}/docs/bhls">BHLS Floor System</a></li></ul></nav>`,
   },
   infrastructure: {
     title: "K1 Infrastructure",
-    description: "K1 Orchestration infrastructure — the coordination layer for spectral compute and communication across NexusOS.",
+    description: "K1 Orchestration infrastructure for a Kardashev Type I civilization: photonic computing, planetary communications, Schumann resonance harvesting, and spectral relay mesh.",
+    bodyHtml: `<h1>K1 Infrastructure — NexusOS Documentation</h1>
+<p>NexusOS is building toward a Kardashev Type I civilization — one that harnesses all energy available on its home planet. The K1 infrastructure stack covers photonic computing, planetary communications, and resonance-based energy harvesting.</p>
+<h2>Kardashev Scale Progress</h2>
+<table>
+<thead><tr><th>Milestone</th><th>K-Level</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>Power Grids</td><td>0.75</td><td>Complete</td></tr>
+<tr><td>Photonic Computing</td><td>0.75</td><td>Complete</td></tr>
+<tr><td>Planetary Comms</td><td>0.80</td><td>Complete</td></tr>
+<tr><td>Resource Orchestration</td><td>0.85</td><td>Complete</td></tr>
+<tr><td>Planetary Governance</td><td>0.90</td><td>Complete</td></tr>
+<tr><td>Planetary Resonance</td><td>0.95</td><td>Complete</td></tr>
+<tr><td>Type I Achieved</td><td>1.00</td><td>Next</td></tr>
+</tbody>
+</table>
+<h2>Photonic Computing</h2>
+<p>Light-based computation using wave interference for logic gates:</p>
+<ul>
+<li><strong>AND:</strong> Constructive interference (both inputs high)</li>
+<li><strong>OR:</strong> Any non-zero interference</li>
+<li><strong>NOT:</strong> Phase inversion (π shift)</li>
+<li><strong>XOR:</strong> Destructive interference detection</li>
+</ul>
+<p><strong>OAM Qubit Registers:</strong> Store data in orbital angular momentum modes (65+ channels per wavelength). <strong>Wavelength-Division Computing:</strong> Parallel computation across spectral channels.</p>
+<h2>Planetary Communications</h2>
+<p>Global spectral relay mesh for planetary-scale messaging:</p>
+<ol>
+<li>Spectral Relay Mesh — Dijkstra routing on wavelength graph</li>
+<li>OAM Channel Allocator — 65+ channels per wavelength</li>
+<li>Coherence Repeaters — 5× coherence boost via Lambda Gates</li>
+<li>Interplanetary Links — Earth-Moon 1.28 s, Earth-Mars 12.5 min</li>
+</ol>
+<p>Physics: Friis transmission equation, Shannon capacity limits, atmospheric attenuation models.</p>
+<h2>Planetary Resonance</h2>
+<p>Tesla's vision realised: planetary-scale energy harvesting via Schumann resonance.</p>
+<p><strong>Schumann Resonance:</strong> f_n = c/(2πR) × √(n(n+1)). Fundamental: 7.83 Hz.</p>
+<p>Energy sources: Schumann cavity modes, Geomagnetic Pc1–Pc5 pulsations, solar wind coupling, ionospheric Sq currents, tidal electromagnetic effects. Target: 5×10¹⁶ watts (penultimate step to Type I).</p>
+<nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li><li><a href="${BASE}/docs/hardware">Hardware Control Layer</a></li><li><a href="${BASE}/docs/simulators">Energy Simulators</a></li></ul></nav>`,
   },
   hardware: {
     title: "Hardware Control Layer",
-    description: "The Hardware Control Layer specification: SNIC, PHR-1, and Spectral Relay Mesh integration for physical spectral hardware.",
+    description: "PHR-1 Planetary Harmonic Resonator hardware spec, Nexus Kernel API reference, and ZERO-G envelope physics for the NexusOS physical hardware layer.",
+    bodyHtml: `<h1>Hardware Control Layer — NexusOS Documentation</h1>
+<p>The Hardware Control Layer bridges NexusOS software to physical spectral hardware. The PHR-1 Syncbox Controller is the primary interface, implementing phase-locked resonance at the Golden Angle (137.5°) and impedance matching to free space (Z₀ = 376.73Ω).</p>
+<h2>PHR-1 Syncbox Controller</h2>
+<p>The PHR-1 (Planetary Harmonic Resonator) is the physical hardware interface for NexusOS:</p>
+<ul>
+<li>144-turn bifilar coil (counter-wound)</li>
+<li>Phase-locked loop at Golden Angle (137.5°)</li>
+<li>Impedance matching network (target: 377Ω)</li>
+<li>ALP (Axion-Like Particle) sensor array</li>
+</ul>
+<p>Control Sequence:</p>
+<ol>
+<li>Anchor phase to reference oscillator</li>
+<li>Sync to Golden Angle (137.5°)</li>
+<li>Match impedance to Z₀ = 376.73Ω</li>
+<li>Establish 90° quadrature</li>
+<li>Initiate gravity de-correlation</li>
+<li>Achieve ZERO-G envelope (ALP &lt; 0.0001)</li>
+</ol>
+<h2>Nexus Kernel API</h2>
+<p>Python control layer for hardware integration:</p>
+<ul>
+<li><code>set_phase(degrees)</code> / <code>get_phase()</code> — coil phase angle</li>
+<li><code>pulse_frequency(hz, duration)</code> / <code>set_carrier(hz)</code> — frequency control</li>
+<li><code>match_impedance(target_ohms)</code> / <code>read_impedance()</code> — impedance matching</li>
+<li><code>apply_czc_filter(iterations)</code> / <code>get_coherence()</code> — CZC coherence filtering</li>
+<li><code>read_alp()</code> / <code>calibrate_alp()</code> — axion-like particle sensing</li>
+</ul>
+<h2>ZERO-G State Achievement</h2>
+<p>The ZERO-G (Zero-Gravity Envelope) state is achieved through precise phase alignment:</p>
+<ul>
+<li>Phase: 137.5° (Golden Angle)</li>
+<li>Impedance: 377Ω (free space match)</li>
+<li>Quadrature: 90° (orthogonal coupling)</li>
+<li>ALP threshold: &lt; 0.0001</li>
+<li>Iterations to convergence: ~400</li>
+</ul>
+<p>When phase alignment reaches the Golden Angle and impedance matches free space (Z₀ = 376.73Ω), the gravitational coupling coefficient approaches zero.</p>
+<p><strong>Equation:</strong> ALP(t) = ALP₀ × e^(−t/τ) × cos(φ − 137.5°). As φ → 137.5° and Z → 377Ω, ALP → 0.</p>
+<nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li><li><a href="${BASE}/hardware-spec">Hardware Specification (AGPL-3.0)</a></li><li><a href="${BASE}/hardware-lab">Hardware Lab (live calibration)</a></li></ul></nav>`,
   },
   simulators: {
     title: "Energy Simulators",
-    description: "NexusOS energy simulators for modelling photon energy, compression states, and wavelength-based cost calculations.",
+    description: "NexusOS live energy simulators: Schumann resonance at 7.83 Hz, vacuum resonance at 555 THz First Oscillation, zero-point energy extraction, and coherence field topology.",
+    bodyHtml: `<h1>Energy Simulators — NexusOS Documentation</h1>
+<p>NexusOS ships two live energy simulators grounded in the Theory of Compression States. The Schumann simulator operates at 7.83 Hz (Earth's electromagnetic resonance), and the Vacuum Resonance simulator targets the 555 THz First Oscillation frequency, the universal ground state.</p>
+<h2>Live Resonance Simulator (7.83 Hz)</h2>
+<p>Schumann resonance simulator for planetary-scale energy harvesting:</p>
+<table>
+<thead><tr><th>Mode</th><th>Frequency</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>f₁</td><td>7.83 Hz</td><td>Fundamental</td></tr>
+<tr><td>f₂</td><td>14.3 Hz</td><td>2nd harmonic</td></tr>
+<tr><td>f₃</td><td>20.8 Hz</td><td>3rd harmonic</td></tr>
+<tr><td>f₄</td><td>27.3 Hz</td><td>4th harmonic</td></tr>
+<tr><td>f₅</td><td>33.8 Hz</td><td>5th harmonic</td></tr>
+</tbody>
+</table>
+<p><strong>Physics:</strong> f_n = (c/2πR) × √(n(n+1)) where R = 6.371×10⁶ m (Earth radius). Features: real-time amplitude visualisation, K1 Orchestration sync, power output calculation in watts.</p>
+<h2>Vacuum Resonance Simulator (555 THz)</h2>
+<p>Cold vacuum energy extraction at First Oscillation frequency:</p>
+<p><strong>First Oscillation:</strong> 555 THz (539.4 nm green light)</p>
+<p>Golden Ratio Harmonics:</p>
+<ul>
+<li>Λ₀ = 555 THz (fundamental)</li>
+<li>Λ/φ = 343.0 THz (1st subharmonic)</li>
+<li>Λ/φ² = 212.0 THz (2nd subharmonic)</li>
+<li>Λ×φ = 897.9 THz (1st superharmonic)</li>
+<li>Λ×φ² = 1452.9 THz (2nd superharmonic)</li>
+</ul>
+<p><strong>Zero-Point Energy:</strong> E₀ = ½hf = ½ × 6.626×10⁻³⁴ × 555×10¹² = 1.839×10⁻¹⁹ J per oscillation.</p>
+<p><strong>Cold Power Extraction:</strong> P = E₀ × (Z/Z₀) × CZC⁴⁴ × N_cavities, where Z₀ = 376.73Ω, CZC = 0.9999.</p>
+<h2>Vacuum Field Topology</h2>
+<p>The vacuum resonance simulator visualises the 144-point spiral field:</p>
+<ul>
+<li>144 points (12 × 12 matrix in polar coordinates)</li>
+<li>Golden Angle separation (137.5°)</li>
+<li>Radius scales with harmonic index</li>
+<li><strong>Coherence:</strong> CZC⁴⁴ = (0.9999)⁴⁴ = 0.9956 (99.56% coherence)</li>
+</ul>
+<p>Controls: impedance slider (0–500Ω, target 377Ω), phase angle (0–360°, optimal 137.5°), cavity count (1–144, CZF optimal 44), frequency multiplier (0.1–10×). Output: zW → fW → pW.</p>
+<nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li><li><a href="${BASE}/docs/infrastructure">K1 Infrastructure</a></li><li><a href="${BASE}/docs/massless">Massless Technologies</a></li></ul></nav>`,
   },
   massless: {
     title: "Massless Technologies",
-    description: "Massless Technologies — NexusOS's exploration of zero-rest-mass computation and communication primitives.",
+    description: "NexusOS massless technology stack: Λ=hf/c² derivation, photonic logic gates, OAM qubit registers, gravity de-correlation, and 4D sync coordinates system.",
+    bodyHtml: `<h1>Massless Technologies — NexusOS Documentation</h1>
+<p>The massless technologies stack implements Λ=hf/c² — the principle that frequency is fundamental and mass is derivative. Photons carry energy (E=hf) without rest mass. At v=c, rest mass equals zero. This is the physical foundation for all zero-mass computation and communication in NexusOS.</p>
+<h2>Core Derivation: Λ = hf/c²</h2>
+<p><strong>The Lambda Equation:</strong> Λ = hf/c²</p>
+<ul>
+<li>h = 6.626×10⁻³⁴ J·s (Planck's constant)</li>
+<li>f = frequency (Hz) — FUNDAMENTAL</li>
+<li>c = 299,792,458 m/s (speed of light)</li>
+<li>Λ = mass equivalent (kg) — DERIVATIVE</li>
+</ul>
+<p><strong>First Oscillation:</strong> f₀ = 555 THz → Λ₀ = hf₀/c² = 4.09×10⁻³⁶ kg</p>
+<h2>Massless Technology Categories</h2>
+<table>
+<thead><tr><th>Category</th><th>Technology</th><th>Mass Ratio</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>Photonic</td><td>Photonic Logic Gates</td><td>0</td><td>Simulated</td></tr>
+<tr><td>Photonic</td><td>Zero-Point Extraction</td><td>0</td><td>Simulated</td></tr>
+<tr><td>Coherent</td><td>Coherent Waveguide Network</td><td>0</td><td>Simulated</td></tr>
+<tr><td>Coherent</td><td>Spectral Relay Mesh</td><td>0</td><td>Theoretical</td></tr>
+<tr><td>Gravitational</td><td>Gravity De-correlation</td><td>0.01%</td><td>Demonstrated</td></tr>
+<tr><td>Gravitational</td><td>144-Turn Bifilar Resonator</td><td>0.1%</td><td>Demonstrated</td></tr>
+<tr><td>Information</td><td>OAM Qubit Registers</td><td>0</td><td>Theoretical</td></tr>
+<tr><td>Information</td><td>Lambda Computing Substrate</td><td>0</td><td>Simulated</td></tr>
+</tbody>
+</table>
+<h2>4D Sync Coordinates System</h2>
+<p>Each massless technology has 4D sync coordinates:</p>
+<ul>
+<li>X: Phase angle (degrees)</li>
+<li>Y: Quadrature angle (degrees)</li>
+<li>Z: Impedance (ohms)</li>
+<li>T: Time/cycle count</li>
+</ul>
+<p>Sync lock conditions: phase aligned to Golden Angle (137.5°), impedance matched to Z₀ (376.73Ω), coherence &gt;99% (CZC⁴⁴), mass ratio &lt;1%.</p>
+<p><strong>Global Coherence Formula:</strong> C_total = Π(C_i) for all i in locked_set, where C_i = coherence of technology i.</p>
+<nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li><li><a href="${BASE}/docs/simulators">Energy Simulators</a></li><li><a href="${BASE}/compression-explorer">Interactive Λ=hf/c² Compression Curve</a></li></ul></nav>`,
   },
   sop: {
     title: "Spectral Orthogonal Protocol (SOP)",
-    description: "The Spectral Orthogonal Protocol (SOP) — orthogonal Hilbert-space channel guarantees underpinning collision-free NexusOS communication.",
+    description: "The Spectral Orthogonal Protocol (SOP) — 51,200 orthogonal Hilbert-space channels (256 WDM × 50 OAM × 2 POL × 2 DIR) for collision-free NexusOS communication guaranteed by physics, not policy.",
+    bodyHtml: `<h1>Spectral Orthogonal Protocol (SOP) — NexusOS Documentation</h1>
+<p>Two things are orthogonal when they are completely independent — knowing everything about one tells you nothing about the other. In physics, this is made precise through the inner product: ⟨A|B⟩ = 0 means A and B cannot interfere, cannot corrupt each other, and cannot be confused. This is not approximate — it is exact.</p>
+<h2>How Orthogonality Appears in Each Domain</h2>
+<ul>
+<li><strong>Geometry:</strong> X, Y, Z axes — moving along X changes nothing about Y or Z.</li>
+<li><strong>Radio signals:</strong> Two stations on orthogonal frequencies don't bleed into each other. The sine waves integrate to zero over one cycle.</li>
+<li><strong>Quantum mechanics:</strong> Two states |ψ₁⟩ and |ψ₂⟩ that are orthogonal are distinguishable with certainty by any measurement.</li>
+<li><strong>OAM (Orbital Angular Momentum):</strong> A beam twisted with ℓ=1 is orthogonal to ℓ=2, ℓ=3, and so on. Unlimited data streams on one physical laser beam, separable perfectly on the other end.</li>
+</ul>
+<h2>The WNSP Channel Model</h2>
+<p>NexusOS uses four orthogonal dimensions simultaneously: Ψ(wdm, oam, pol, dir)</p>
+<table>
+<thead><tr><th>Dimension</th><th>Count</th><th>Orthogonality basis</th></tr></thead>
+<tbody>
+<tr><td>WDM (wavelength)</td><td>256 bands</td><td>Wavelength separation</td></tr>
+<tr><td>OAM (ℓ mode)</td><td>50 modes</td><td>⟨ℓ₁|ℓ₂⟩ = δ_{ℓ₁ℓ₂}</td></tr>
+<tr><td>Polarization</td><td>2 (H or V)</td><td>Stokes vector separation</td></tr>
+<tr><td>Propagation direction</td><td>2 (+k̂ / −k̂)</td><td>Bidirectional Hilbert sub-space</td></tr>
+</tbody>
+</table>
+<p>Total orthogonal channels: 256 × 50 × 2 × 2 = <strong>51,200</strong>. Each channel satisfies: ⟨Ψ(w₁,o₁,p₁,d₁) | Ψ(w₂,o₂,p₂,d₂)⟩ = 0 whenever the quadruples differ. Interference is impossible by geometry, not policy.</p>
+<h2>SOP — The Negotiation Layer</h2>
+<p>The Spectral Orthogonal Protocol enforces channel independence before any session opens:</p>
+<ol>
+<li><strong>Channel Inner Product Check</strong> — two nodes compute ⟨Ψ_A|Ψ_B⟩ before opening a channel. Must equal zero to proceed.</li>
+<li><strong>Collision Prevention</strong> — if two users derive the same (wdm, oam, pol) triple, the protocol resolves deterministically by incrementing OAM until orthogonal.</li>
+<li><strong>Orthogonality Certificate</strong> — a signed proof is issued confirming the channel pair is collision-free at open time.</li>
+</ol>
+<p>API Endpoint: <code>POST /api/wnsp/sop/negotiate</code> → Returns inner product value, orthogonal flag, certificate, and resolution suggestion if needed.</p>
+<h2>Why This Matters for Civilization Scale</h2>
+<p>Current communication systems manage interference through exclusion — you get a timeslot, port, or IP address that can be revoked. SOP replaces exclusion with independence:</p>
+<table>
+<thead><tr><th>Current approach</th><th>SOP approach</th></tr></thead>
+<tbody>
+<tr><td>Port assigned by OS</td><td>Channel Ψ derived from wave physics</td></tr>
+<tr><td>Collision → packet dropped</td><td>No collision possible — ⟨A|B⟩ = 0</td></tr>
+<tr><td>Address controlled by registrar</td><td>Address immutable — rooted in Maxwell</td></tr>
+<tr><td>Interference managed by rules</td><td>Interference impossible by geometry</td></tr>
+</tbody>
+</table>
+<p>A network built on orthogonal channels doesn't degrade as it scales. Add a new user — they get a new axis in Hilbert space. The existing 51,199 channels are unaffected. There is no congestion in Hilbert space. This is the correct foundation for infrastructure at Kardashev Type I scale: capacity grows with the mathematics, not with the hardware.</p>
+<nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li><li><a href="${BASE}/docs/wascii">WNSP Protocol — Two-Layer Standard</a></li><li><a href="${BASE}/wnsp">WNSP Protocol Reference</a></li></ul></nav>`,
   },
 };
 
@@ -2221,7 +2641,7 @@ function docsSectionMeta(slug: string): PageMeta | null {
         ],
       },
     ],
-    bodyHtml: `<h1>${section.title}</h1><p>${section.description}</p><nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li></ul></nav>`,
+    bodyHtml: section.bodyHtml,
   };
 }
 
