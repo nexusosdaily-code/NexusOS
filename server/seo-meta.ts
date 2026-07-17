@@ -1885,6 +1885,8 @@ const META_PLACEHOLDER_RE = [
 // Minimal shape of a TelegramVideo used for video schema generation.
 interface VideoForSchema {
   id: number;
+  fileId: string;
+  fileSize: number | null;
   caption: string | null;
   duration: number | null;
   channelUsername: string | null;
@@ -1892,6 +1894,18 @@ interface VideoForSchema {
   messageId: number | null;
   thumbFileId: string | null;
   createdAt: string | Date;
+}
+
+/** 20 MB — Telegram bot download cap; matches client/src/pages/video-detail.tsx */
+const TG_STREAM_THRESHOLD = 20 * 1024 * 1024;
+
+function isStreamable(v: VideoForSchema): boolean {
+  // Treat unknown size as streamable (conservative); large files are Telegram-only.
+  return v.fileSize === null || v.fileSize <= TG_STREAM_THRESHOLD;
+}
+
+function videoStreamUrl(v: VideoForSchema): string {
+  return `${BASE}/api/telegram/video/${encodeURIComponent(v.fileId)}/stream`;
 }
 
 function fmtIsoDuration(sec: number): string {
@@ -1939,6 +1953,7 @@ export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
     const tgUrl      = videoTelegramUrl(v);
     const fpUrl      = videoFirstPartyUrl(v);
     const name       = v.caption ? v.caption.slice(0, 110) : `NexusOS Video #${v.id}`;
+    const streamable = isStreamable(v);
     const obj: Record<string, unknown> = {
       "@context": "https://schema.org",
       "@type": "VideoObject",
@@ -1946,11 +1961,15 @@ export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
       "description": v.caption ?? "NexusOS physics demonstration video.",
       "uploadDate": uploadDate,
       "url": fpUrl,
-      "contentUrl": fpUrl,
-      "embedUrl": fpUrl,
+      // contentUrl must point to the actual playable media file, not the HTML page.
+      "contentUrl": streamable ? videoStreamUrl(v) : tgUrl,
       "sameAs": tgUrl,
       "publisher": publisher,
     };
+    // embedUrl is only valid when NexusOS actually embeds a player on the page.
+    // Large videos (>20 MB) cannot be streamed via the bot API and are
+    // Telegram-only, so we omit embedUrl for those.
+    if (streamable) obj["embedUrl"] = fpUrl;
     if (v.thumbFileId) {
       obj["thumbnailUrl"] = `${BASE}/api/telegram/video/${encodeURIComponent(v.thumbFileId)}/thumb`;
     } else {
@@ -2048,6 +2067,7 @@ export function buildVideoDetailPageMeta(video: VideoForSchema): PageMeta {
     "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.png" },
   };
 
+  const streamable = isStreamable(video);
   const videoObject: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "VideoObject",
@@ -2055,12 +2075,15 @@ export function buildVideoDetailPageMeta(video: VideoForSchema): PageMeta {
     "description": description,
     "uploadDate": uploadDate,
     "url": fpUrl,
-    "contentUrl": fpUrl,
-    "embedUrl": fpUrl,
+    // contentUrl must point to the actual playable media file, not the HTML page.
+    "contentUrl": streamable ? videoStreamUrl(video) : tgUrl,
     "sameAs": tgUrl,
     "thumbnailUrl": thumbUrl,
     "publisher": publisher,
   };
+  // embedUrl is only valid when NexusOS actually embeds a player on the page.
+  // Large videos (>20 MB) are Telegram-only, so omit embedUrl for those.
+  if (streamable) videoObject["embedUrl"] = fpUrl;
   if (video.duration) videoObject["duration"] = fmtIsoDuration(video.duration);
 
   const breadcrumb = {
