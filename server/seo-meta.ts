@@ -2232,6 +2232,17 @@ export function resolveMeta(host: string, pathname: string): PageMeta | null {
     return DOMAIN_META[cleanHost];
   }
 
+  // Normalise www. prefix: fall back to bare host so that e.g. www.wnsp.dev
+  // resolves to the same branded metadata as wnsp.dev.  This ensures AI
+  // crawlers and other non-JS bots see correct JSON-LD and <noscript> content
+  // for every advertised microsite hostname, not just the bare variant.
+  if (cleanHost.startsWith("www.")) {
+    const bareHost = cleanHost.slice(4);
+    if (DOMAIN_META[bareHost]) {
+      return DOMAIN_META[bareHost];
+    }
+  }
+
   const cleanPath = pathname.split("?")[0].replace(/\/$/, "") || "/";
 
   if (cleanPath.startsWith("/docs/")) {
