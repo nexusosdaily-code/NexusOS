@@ -362,7 +362,7 @@ export default function DivergenceTestPage() {
       {/* header */}
       <div className="border-b border-white/10 px-6 py-3.5 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <Link href="/nexus-command"><button className="text-white/30 hover:text-white/60 transition-colors"><ArrowLeft size={14} /></button></Link>
+          <Link href="/nexus-command" aria-label="Back to Nexus Command" className="text-white/30 hover:text-white/60 transition-colors inline-flex"><ArrowLeft size={14} /><span className="sr-only">Back to Nexus Command</span></Link>
           <FlaskConical size={12} className="text-emerald-400" />
           <h1 className="text-[11px] font-bold tracking-wider text-emerald-400">Dynamical System Analysis</h1>
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />

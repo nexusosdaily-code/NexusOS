@@ -153,9 +153,7 @@ export default function NetworkPage() {
       {/* Header */}
       <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <Link href="/nexus-command">
-            <button className="text-white/30 hover:text-white/60 transition-colors"><ArrowLeft size={15} /></button>
-          </Link>
+          <Link href="/nexus-command" aria-label="Back to Nexus Command" className="text-white/30 hover:text-white/60 transition-colors inline-flex"><ArrowLeft size={15} /><span className="sr-only">Back to Nexus Command</span></Link>
           <div className="flex items-center gap-2">
             <Globe size={13} className="text-emerald-400" />
             <h1 className="text-sm font-bold tracking-wider text-emerald-400 m-0 p-0 leading-none">SPECTRAL NETWORK</h1>

@@ -328,7 +328,7 @@ function QueueCard({ item, onInscribe, inscribing }: { item: any; onInscribe: (i
             <div className="flex gap-1">
               <input value={manualId} onChange={e => setManualId(e.target.value)} placeholder="or paste inscription ID..."
                 className="bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-[11px] font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 w-44" />
-              <button onClick={confirmManual} className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] font-mono text-white/50 hover:text-white/80"><CheckCircle2 size={11} /></button>
+              <button onClick={confirmManual} aria-label="Confirm manual inscription ID" className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] font-mono text-white/50 hover:text-white/80"><CheckCircle2 size={11} /></button>
             </div>
           </div>
         ) : null}

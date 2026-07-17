@@ -345,8 +345,8 @@ export default function SpectralMirrorPage() {
 
             {/* Footer links */}
             <div className="flex flex-wrap gap-4 justify-center text-xs font-mono">
-              <Link href="/media-library">
-                <span className="text-[#ef4444] hover:underline cursor-pointer">Media Library</span>
+              <Link href="/videos">
+                <span className="text-[#ef4444] hover:underline cursor-pointer">Video Archive</span>
               </Link>
               <span className="text-white/20">·</span>
               <Link href="/hardware-spec">
