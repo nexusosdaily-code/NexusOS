@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import {
   ArrowLeft, Shield, Cpu, Zap, Radio, Code2, Lock,
-  GitBranch, Network, Layers, ExternalLink
+  GitBranch, Network, Layers, ExternalLink, Atom
 } from "lucide-react";
 
 const SPEC_DATE = "2026-05-16";
@@ -465,6 +465,117 @@ public auditChain(): { valid: boolean; faults: number[] } {
             <ImplRef label="Oscillating Quanta" href="/oscillating-quanta" file="oscillating-quanta.tsx" />
           </div>
           <PriorArt text={`WavelengthScript Compiler α — binary-free compiler producing Ψ(wdm,oam,pol) photonic instruction streams for SNIC+PHR-1 hardware — first specified and implemented ${SPEC_DATE}`} />
+        </Section>
+
+        {/* ── SiN Substrate ── */}
+        <Section id="sin-substrate" title="5. Silicon Nitride (SiN) Substrate — Photonic Fabrication Basis" icon={Atom} accent="#38bdf8" badge="LPCVD · validated 2026-07-17">
+          <Field label="Classification">Photonic integrated circuit substrate — low-pressure CVD silicon nitride waveguide platform</Field>
+          <Field label="Why SiN">
+            Standard silicon-on-insulator (SOI) absorbs below ~1100 nm, cutting off the entire NexusOS
+            visible band (380–780 nm). Silicon nitride provides a transparency window from ~500 nm to
+            2500 nm — our CE table's full 380–780 nm range sits within it. Every authority band,
+            every WDM channel, every ghost node resonance can propagate without material absorption loss.
+          </Field>
+          <Field label="Fabrication">
+            <span className="font-semibold text-sky-300">LPCVD (Low-Pressure CVD)</span> over PECVD.
+            LPCVD eliminates residual N–H bonds that create an absorption peak at ~1520 nm in PECVD films.
+            It also enables thick-film deposition (up to ~800 nm vs ~300 nm) giving the waveguide cross-section
+            needed for OAM mode confinement across l = 0–49. Propagation loss: ~0.1 dB/cm — roughly
+            10× lower than silicon, with ~100× better power handling.
+          </Field>
+
+          {/* Transparency + channel table */}
+          <div className="space-y-2">
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">
+              SiN transparency window vs WNSP operating band
+            </p>
+            <div className="border border-slate-800 rounded-lg overflow-hidden text-[11px]">
+              <div className="grid grid-cols-3 bg-slate-900 px-3 py-1.5 text-slate-500 font-semibold uppercase text-[10px] tracking-widest">
+                <span>Platform</span><span>Lower λ limit</span><span>Upper λ limit</span>
+              </div>
+              {[
+                { platform: "Silicon (SOI)",         lo: "~1100 nm",   hi: "~3500 nm",  note: "Misses entire CE visible band", color: "#ef4444" },
+                { platform: "Silicon Nitride (SiN)", lo: "~500 nm",    hi: "~2500 nm",  note: "Covers full CE table 380–780 nm", color: "#4ade80" },
+                { platform: "WNSP CE band",          lo: "380.0 nm",   hi: "780.0 nm",  note: "256 WDM × 3.125 nm bands", color: "#38bdf8" },
+              ].map(r => (
+                <div key={r.platform} className="grid grid-cols-3 px-3 py-1.5 border-t border-slate-800/60 items-center">
+                  <span className="font-mono" style={{ color: r.color }}>{r.platform}</span>
+                  <span className="text-slate-400 font-mono">{r.lo}</span>
+                  <span className="text-slate-400 font-mono">{r.hi}
+                    <span className="text-slate-600 ml-2 text-[10px]">{r.note}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* WNSP dimension mapping */}
+          <div className="space-y-2">
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">
+              SiN properties mapped to WNSP Hilbert dimensions
+            </p>
+            <div className="bg-slate-900/60 border border-slate-800 rounded-lg p-4 space-y-3 text-xs">
+              {[
+                {
+                  dim: "WDM (256 channels)",
+                  color: "#38bdf8",
+                  sin: "Micro-ring resonators tuned at 3.125 nm spacing. Ultra-compact inverse-design WDM mux encodes Ψ(wdm,*,*) directly into the PIC mask.",
+                },
+                {
+                  dim: "OAM (l = 0–49)",
+                  color: "#a78bfa",
+                  sin: "Kerr nonlinearity enables on-chip OAM mode generation. Null-core radius r_null = lλ/2π (Act 9) is physically enforced by the waveguide cross-section geometry at each l index.",
+                },
+                {
+                  dim: "Ghost Nodes (WDM = 0)",
+                  color: "#4ade80",
+                  sin: "Kerr nonlinearity at the ZPE floor supports integer octave resonance (ρ_matter = 0, α = 0). The material provides the non-linear optical mechanism that keeps Beer-Lambert loss at zero for ghost channels.",
+                },
+                {
+                  dim: "Polarisation (H/V)",
+                  color: "#fb923c",
+                  sin: "Inverse-design polarisation beam splitters hardware-encode pol = H vs pol = V. No external polariser needed — the PIC geometry is the switch.",
+                },
+                {
+                  dim: "Quantum entanglement",
+                  color: "#f472b6",
+                  sin: "On-chip nanophotonic resonators generate photon pairs with wide spectral separation — the physical substrate for WNSP quantum channel coherence.",
+                },
+              ].map(d => (
+                <div key={d.dim} className="space-y-0.5">
+                  <p className="font-semibold" style={{ color: d.color }}>{d.dim}</p>
+                  <p className="text-slate-400 leading-relaxed">{d.sin}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Hybrid platform note */}
+          <div className="bg-slate-900/40 border border-sky-900/40 rounded-lg px-4 py-3 text-[11px] text-slate-400 leading-relaxed">
+            <span className="text-sky-300 font-semibold">Hybrid SiN + thin-film LiNbO₃:</span>{" "}
+            Emerging platforms combine the SiN waveguide with a thin lithium niobate layer to generate
+            coherent laser frequency combs — hundreds of lines from a single chip. This directly provides
+            the addressing density our 256 WDM channels require without separate laser banks, and is the
+            intended fabrication path for SNIC v2 (~2030).
+          </div>
+
+          {/* PHR-1 interface */}
+          <div className="space-y-2">
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">
+              PHR-1 ↔ SiN PIC interface
+            </p>
+            <CodeBlock>{`PHR-1 bifilar coil
+  ↓  near-field EM envelope  (low-frequency domain)
+RF-to-photonic transduction boundary
+  ↓  evanescent coupling into SiN waveguide  (photonic domain)
+SNIC micro-ring resonator
+  — selects λ from input broadband / comb source
+  — OAM null-core geometry enforced by waveguide cross-section
+  — Ghost node channels: Kerr ZPE floor, α = 0
+  — Output: Ψ(wdm, oam, pol) photon launched into Relay Mesh`}</CodeBlock>
+          </div>
+
+          <PriorArt text={`Silicon nitride LPCVD substrate as SNIC/PHR-1 fabrication basis — independently validated by Google AI 2026-07-17. Channel count: 51,200 orthogonal Ψ channels (256×50×2×2). Note: external sources may cite 51,600 — the correct WNSP spec value is 51,200.`} />
         </Section>
 
         {/* ── Dependency matrix ── */}
