@@ -4,7 +4,7 @@
 - [WNUSD auto-collateral system](wnusd-auto-collateral.md) — stake auto-mints WNUSD; unstake auto-redeems; stake_id FK; backfill pattern
 - [Staking system](staking-system.md) — 6 lock periods, yield rates, extend route, early-exit penalty, deposit cap 10B sats
 - [Accounts and auth](accounts-auth.md) — Nexus genesis account, password, registration locked, developer keys gate
-- [Admin role check pattern](admin-role-check.md) — always check role==="admin" OR isAdmin; isAdmin column may lag in production
+- [Admin role check pattern](admin-role-check.md) — use role==="admin" only; isAdmin does NOT exist on the TypeScript user type
 - [NXT indestructibility](nxt-indestructibility.md) — NXT fees NEVER burned; always go to orbital_treasury
 - [Domain setup](domain-setup.md) — wnsp.io is PRIMARY; wnsp.tech redirects to it. All canonicals/OG/sitemap/robots must use wnsp.io — never wnsp.tech
 - [Coinos JWT auth](coinos-jwt-auth.md) — NIP-98 blocked server-side; use COINOS_JWT Bearer token for all Coinos calls
@@ -18,7 +18,7 @@
 - [Contract execution runtime](contract-exec-runtime.md) — server/wnsp_vm.ts is canonical VM; side-effects fire after halt; routes at /api/app/:slug/run (public) and /api/contracts/:id/executions (auth)
 - [Sub-mm wave geometry & engine expansion](submm-wave-geometry.md) — 2025 THz research validates Ψ channels, WGM=Russell octaves, Berry phase→Λ extension, Fl-114=SYSTEM band; saved by founder for future builders
 - [Replit AI R&D account](replit-ai-account.md) — wnsp://Ψ(52,20,H)/test; role=ai_agent; designated by founder 2026-06-21; never reassign without founder approval
-- [WNSP Physics Sequence](wnsp-physics-sequence.md) — 8-act sequence routes/equations; ghost node physics; Act 8 lossless channel; 6-surface wiring pattern; ogType server vs client rule
+- [WNSP Physics Sequence](wnsp-physics-sequence.md) — 9-act sequence; Act 9 = Resonance Cavity (/resonance-cavity); ghost node physics; ogType server vs client rule
 - [Traffic bot detection layering](traffic-bot-detection.md) — sync UA-pattern layer + async datacenter-IP reclassification layer; why one alone isn't airtight
 - [drizzle-kit push TTY workaround](drizzle-push-tty-workaround.md) — for safe additive columns, apply ALTER TABLE directly instead of fighting the interactive resolver
 - [Saved BTC address prefill pattern](btc-address-prefill.md) — dedicated defaultBtcAddress column, checksum validation, client-side-only prefill, never server-side auto-substitution

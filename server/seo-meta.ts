@@ -2083,10 +2083,10 @@ export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
     + `<nav><ul><li><a href="${BASE}/hardware-results">Hardware Verification Results</a></li><li><a href="${BASE}/ce-se-pipeline">CE→SE Pipeline (live)</a></li><li><a href="https://t.me/nexusosdaily">NexusOS Telegram Channel</a></li></ul></nav>`;
 
   return {
+    ...(baseEntry ?? {}),
     title: baseEntry?.title ?? "NexusOS Videos — Physics, Protocol, and Hardware Demonstrations",
     description: baseEntry?.description ?? "Video demonstrations of the NexusOS physics stack.",
     canonical: baseEntry?.canonical ?? `${BASE}/videos`,
-    ...(baseEntry ?? {}),
     jsonLd: liveJsonLd,
     bodyHtml: liveBodyHtml,
   };

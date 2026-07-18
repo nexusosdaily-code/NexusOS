@@ -879,7 +879,7 @@ export async function registerRoutes(
         await storage.updateUserSpectral(user.id, { wdm: ch.wdm, oam: ch.oam, pol: ch.pol, nm: ch.nm, band: ch.band });
         // Stage B: derive and immediately store the channel's lattice public key
         const { getPublicKey: _gp } = await import("./lattice-identity");
-        _regLatticePubKey = _gp(user.id, ch.wavelengthNm);
+        _regLatticePubKey = _gp(user.id, ch.nm);
         await storage.updateUserLatticeKey(user.id, _regLatticePubKey);
       } catch (_e) { /* non-blocking */ }
 
@@ -1113,7 +1113,7 @@ export async function registerRoutes(
   // ── Admin: reset any user's password ─────────────────────────────────────
   app.post("/api/admin/reset-password", authenticate, async (req: Request, res: Response) => {
     try {
-      if (req.user?.role !== "admin" && !req.user?.isAdmin)
+      if (req.user?.role !== "admin")
         return res.status(403).json({ error: "Admin access required" });
       const { targetUsername, newPassword } = req.body ?? {};
       if (!targetUsername || !newPassword)
@@ -3110,7 +3110,7 @@ export async function registerRoutes(
 
   app.get("/api/audit-logs", authenticate, async (req, res) => {
     try {
-      if (req.user!.role !== "admin" && !req.user!.isAdmin) {
+      if (req.user!.role !== "admin") {
         return res.status(403).json({ error: "Admin access required" });
       }
       
@@ -4026,7 +4026,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "File not found" });
       }
 
-      if (file.userId && file.userId !== req.user!.id && req.user!.role !== "admin" && !req.user!.isAdmin) {
+      if (file.userId && file.userId !== req.user!.id && req.user!.role !== "admin") {
         return res.status(403).json({ error: "Not authorized to delete this file" });
       }
 
@@ -4327,7 +4327,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Document not found" });
       }
 
-      if (doc.userId !== req.user!.id && req.user!.role !== "admin" && !req.user!.isAdmin) {
+      if (doc.userId !== req.user!.id && req.user!.role !== "admin") {
         return res.status(403).json({ error: "Not authorized to delete this document" });
       }
 
@@ -7768,7 +7768,7 @@ export async function registerRoutes(
         const { latticeSign, governanceMessage } = await import("./lattice-identity");
         const msg = governanceMessage(user.id, proposal.id, title, parameterKey, proposed.toString());
         const { publicKey: latticePubKey, signature: latticeSig, scheme: sigScheme } = latticeSign(
-          user.id, channel.wavelengthNm, msg
+          user.id, channel.nm, msg
         );
         const { db: lDb } = await import("./db");
         const { governanceProposals: lGp } = await import("../shared/schema");
