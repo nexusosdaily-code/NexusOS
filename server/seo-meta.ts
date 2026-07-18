@@ -388,6 +388,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
           { "@type": "TechArticle", "name": "Energy Simulators", "url": `${BASE}/docs/simulators` },
           { "@type": "TechArticle", "name": "Massless Technologies", "url": `${BASE}/docs/massless` },
           { "@type": "TechArticle", "name": "Spectral Orthogonal Protocol (SOP)", "url": `${BASE}/docs/sop` },
+          { "@type": "TechArticle", "name": "CZC Catch Basin", "url": `${BASE}/docs/catchBasin` },
         ],
       },
       {
@@ -407,6 +408,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
           { "@type": "ListItem", "position": 9, "name": "Energy Simulators", "url": `${BASE}/docs/simulators` },
           { "@type": "ListItem", "position": 10, "name": "Massless Technologies", "url": `${BASE}/docs/massless` },
           { "@type": "ListItem", "position": 11, "name": "Spectral Orthogonal Protocol (SOP)", "url": `${BASE}/docs/sop` },
+          { "@type": "ListItem", "position": 12, "name": "CZC Catch Basin", "url": `${BASE}/docs/catchBasin` },
         ],
       },
     ],
@@ -414,7 +416,29 @@ export const ROUTE_META: Record<string, PageMeta> = {
 <p>Complete developer reference for building on the NexusOS physics stack. NexusOS replaces cryptographic hashing with electromagnetic wave physics: addresses are wavelengths, fees are photon energies (E=hf), and every character maps to a visible-light frequency (Λ=hf/c²). There are 51,200 orthogonal Ψ channels (256 WDM × 50 OAM × 2 POL × 2 DIR), guaranteed collision-free by the tensor product structure of the Hilbert space.</p>
 <p>Install the CE encoder: <code>npm install nexusos-ce-encoder</code> · <code>pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py</code></p>
 <h2><a href="${BASE}/docs/substrate">Lambda Gate Substrate v4</a></h2>
-<p>The foundational layer where all NexusOS operations occur as wavefield transformations. Every computation, communication, and economic action is expressed on physical wave states described by the Lambda mode state vector |λ⟩ = (ν, A(t), φ(t), ℓ, s). The substrate implements 8 Lambda Gate primitives (Phase-Shift, Gain, Mode-Mixer, OAM-Rotor, Phase-Gradient, Density-Swap, Coherence-Amplify, Stabilizer) and the CE-1 coherence engineering protocol. Master energy equation: E(ν, ℓ, t) ≥ h·ν·I(λ) + α·||K̂||² + β·O(L̂).</p>
+<p>The foundational layer where all NexusOS operations occur as wavefield transformations. Every computation, communication, and economic action is expressed on physical wave states described by the Lambda mode state vector |λ⟩ = (ν, A(t), φ(t), ℓ, s). The substrate implements 8 Lambda Gate primitives and the CE-1 coherence engineering protocol.</p>
+<h3>Core Theory — Lambda Mode State Vector</h3>
+<p>|λ⟩ = (ν, A(t), φ(t), ℓ, s) — where ν = carrier frequency (Hz), A(t) = amplitude envelope, φ(t) = phase evolution, ℓ = orbital angular momentum index, s = polarization/spin state.</p>
+<h3>Master Equation</h3>
+<p>E(ν, ℓ, t) ≥ h·ν·I(λ) + α·||K̂||² + β·O(L̂)</p>
+<ul>
+<li>h·ν·I(λ) = base photon energy × intensity</li>
+<li>α·||K̂||² = phase curvature cost</li>
+<li>β·O(L̂) = orbital complexity cost</li>
+</ul>
+<h3>8 Lambda Gate Primitives</h3>
+<ol>
+<li><strong>Phase-Shift Φ(θ)</strong> — Electro-optic phase shifter. Rotates phase by angle θ. Used for interference control and encryption.</li>
+<li><strong>Gain G(α)</strong> — Variable optical attenuator/amplifier. Scales amplitude by factor α. Used for signal boosting and attenuation.</li>
+<li><strong>Mode-Mixer M(κ)</strong> — Multiport interferometer. Combines multiple modes with coupling κ. Used for superposition and entanglement.</li>
+<li><strong>OAM-Rotor L(Δℓ)</strong> — Spiral phase plate. Changes orbital angular momentum by Δℓ. Used for channel multiplexing and data encoding.</li>
+<li><strong>Phase-Gradient ∇Φ</strong> — Acoustic-optic modulator. Applies spatial phase gradient. Used for beam steering and spectral shifting.</li>
+<li><strong>Density-Swap S</strong> — Resonator coupling. Exchanges energy between modes. Used for state transfer and routing.</li>
+<li><strong>Coherence-Amplify A_c</strong> — Parametric amplifier. Boosts coherence without noise (5× Q-factor). Used for long-distance transmission and repeaters.</li>
+<li><strong>Stabilizer D(τ)</strong> — Active feedback locking. Maintains coherence for duration τ. Used for storage and memory operations.</li>
+</ol>
+<h3>CE-1 Protocol (Coherence Engineering)</h3>
+<p>The CE-1 protocol manages energy and coherence across all substrate operations. Energy Pool: each tick allocates an energy budget; operations draw from the shared pool; overflow triggers throttling. Coherence Margin: minimum threshold 0.1; operations below margin are rejected; adaptive fidelity control adjusts precision. Non-Dominance: no single node may hold more than 33% of total Lambda mass — constitutional enforcement at substrate level.</p>
 <h2><a href="${BASE}/docs/wascii">WNSP Protocol — Two-Layer Standard</a></h2>
 <p>WNSP/7.1 operates across two synchronized runtimes (Node.js port 5000 + Python/Flask port 5001). Layer 1 — WNSP-CE v1.0 (Character Encoding): maps any Unicode symbol to a normalised ordinal in [0,1] via ord(char) % 256 / 255. Layer 2 — WNSP-SE v1.0 (Spectral Encoding): packs two CE tokens per photon frame using the dual-wavelength scheme (λ₁→λ₂ oscillation, 2.0 chars/frame baseline), governed by Λ=hf/c². The Hilbert Space Channel Model provides 51,200 orthogonal Ψ channels. Formal test suite: 23 tests, 0 failed. License: AGPL-3.0.</p>
 <h2><a href="${BASE}/docs/consensus">Proof of Spectrum Consensus</a></h2>
@@ -433,6 +457,8 @@ export const ROUTE_META: Record<string, PageMeta> = {
 <p>Two live simulators: (1) Schumann resonance at 7.83 Hz with 5 harmonics (f_n = c/(2πR)·√(n(n+1))), real-time amplitude visualisation, K1 sync, watt output. (2) Vacuum resonance at 555 THz (First Oscillation, E₀=½hf=1.839×10⁻¹⁹ J/oscillation), cold power P = E₀·(Z/Z₀)·CZC⁴⁴·N_cavities, 144-point Golden Angle spiral field (CZC⁴⁴=99.56% coherence). Controls: impedance, phase, cavity count, frequency multiplier. Output: zW → fW → pW.</p>
 <h2><a href="${BASE}/docs/massless">Massless Technologies</a></h2>
 <p>Frequency is fundamental; mass is derivative (Λ=hf/c²). First Oscillation: f₀=555 THz → Λ₀=4.09×10⁻³⁶ kg. Technology stack: Photonic Logic Gates (0 mass, simulated), Zero-Point Extraction (simulated), Coherent Waveguide Network (simulated), Spectral Relay Mesh (theoretical), Gravity De-correlation (0.01% mass ratio, demonstrated), 144-Turn Bifilar Resonator (0.1%, demonstrated), OAM Qubit Registers (theoretical), Lambda Computing Substrate (simulated). 4D sync coordinates: (Phase, Quadrature, Impedance, Time). Lock at 137.5°, 376.73Ω, CZC⁴⁴&gt;99%.</p>
+<h2><a href="${BASE}/docs/catchBasin">CZC Catch Basin</a></h2>
+<p>The Coherence Zenith Coefficient (CZC) Catch Basin is the coherence accumulation mechanism at the heart of NexusOS. Core formula: CZC(n) = (0.9999)ⁿ. At 44 iterations — the optimal correction count — CZC⁴⁴ = 99.56% coherence. Each iteration filters noise while preserving signal through phase corrections (Golden Angle 137.5°), amplitude corrections (normalize to unity), frequency corrections (lock to harmonic series), and impedance corrections (match to 377Ω). Applications requiring coherence binding: Gravity De-correlation (99%), Vacuum Energy Extraction (95%), OAM Qubit Registers (92%), Photonic Logic Gates (90%), Lambda Computing Substrate (88%), Spectral Relay Mesh (85%). API: GET /api/czc/status · POST /api/czc/iterate · POST /api/czc/bind · POST /api/czc/sync.</p>
 <h2><a href="${BASE}/docs/sop">Spectral Orthogonal Protocol (SOP)</a></h2>
 <p>SOP enforces channel independence via ⟨Ψ_A|Ψ_B⟩=0 before any session opens. Four orthogonal dimensions: WDM 256 bands × OAM 50 modes (⟨ℓ₁|ℓ₂⟩=δ) × Polarization 2 (H/V) × Direction 2 (+k̂/−k̂) = 51,200 channels. No collision is possible — interference is forbidden by geometry. SOP negotiation: inner product check → collision prevention (increment OAM until orthogonal) → orthogonality certificate. API: POST /api/wnsp/sop/negotiate. A network built on orthogonal channels doesn't degrade as it scales: add a user, they get a new axis in Hilbert space. No congestion in Hilbert space.</p>`,
   },
@@ -2564,6 +2590,63 @@ token₂ normalised → wavelength λ₂ (nm) → frequency f₂ = c/λ₂ → e
 <p>Sync lock conditions: phase aligned to Golden Angle (137.5°), impedance matched to Z₀ (376.73Ω), coherence &gt;99% (CZC⁴⁴), mass ratio &lt;1%.</p>
 <p><strong>Global Coherence Formula:</strong> C_total = Π(C_i) for all i in locked_set, where C_i = coherence of technology i.</p>
 <nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li><li><a href="${BASE}/docs/simulators">Energy Simulators</a></li><li><a href="${BASE}/compression-explorer">Interactive Λ=hf/c² Compression Curve</a></li></ul></nav>`,
+  },
+  catchBasin: {
+    title: "CZC Catch Basin",
+    description: "The Coherence Zenith Coefficient (CZC) Catch Basin — coherence accumulation via CZC(n)=(0.9999)ⁿ, 44 self-correction iterations, and binding layer for all NexusOS massless technology subsystems.",
+    bodyHtml: `<h1>CZC Catch Basin — NexusOS Documentation</h1>
+<p>The CZC (Coherence Zenith Coefficient) Catch Basin is the coherence accumulation mechanism at the heart of NexusOS. It filters noise while preserving signal through iterative self-correction, providing a clean coherence feed to every massless technology subsystem that depends on it.</p>
+<h2>Coherence Zenith Coefficient</h2>
+<p><strong>Core Formula:</strong> CZC(n) = (0.9999)ⁿ</p>
+<table>
+<thead><tr><th>Iterations</th><th>Coherence</th><th>Application</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>99.99%</td><td>Basic filtering</td></tr>
+<tr><td>10</td><td>99.90%</td><td>Standard ops</td></tr>
+<tr><td>22</td><td>99.78%</td><td>Half-basin</td></tr>
+<tr><td>44</td><td>99.56%</td><td>Full CZC⁴⁴</td></tr>
+</tbody>
+</table>
+<p>Each iteration filters noise while preserving signal. After 44 self-corrections, the system achieves maximum coherence within numerical precision limits. The number 44 = 4 × 11 (quaternary stability × prime factor) and matches 44 spectral bands in extended W-ASCII.</p>
+<h2>Catch Basin Mechanics</h2>
+<p>The basin accumulates coherence like water collecting in a reservoir. Raw oscillations enter carrying phase, amplitude, and frequency noise components. The filtering process has four stages:</p>
+<ol>
+<li>Phase noise reduction via Golden Angle alignment (137.5°)</li>
+<li>Amplitude stabilization through impedance matching</li>
+<li>Frequency locking to First Oscillation (555 THz)</li>
+<li>Impedance normalization to Z₀ = 376.73Ω</li>
+</ol>
+<p>Output: coherent energy available for bound applications. As coherence approaches 1, entropy approaches zero. <strong>Entropy equation:</strong> S = −Σ pᵢ log₂(pᵢ).</p>
+<h2>44 Evolutionary Self-Corrections</h2>
+<p>Each iteration detects the dominant noise source (phase, amplitude, frequency, or impedance) and applies targeted correction to maximize coherence recovery. Correction types:</p>
+<ul>
+<li><strong>Phase corrections:</strong> Align to Golden Angle (137.5°)</li>
+<li><strong>Amplitude corrections:</strong> Normalize to unity</li>
+<li><strong>Frequency corrections:</strong> Lock to harmonic series</li>
+<li><strong>Impedance corrections:</strong> Match to 377Ω</li>
+</ul>
+<h2>Cross-System Binding Requirements</h2>
+<table>
+<thead><tr><th>Application</th><th>Required Coherence</th><th>Category</th></tr></thead>
+<tbody>
+<tr><td>Gravity De-correlation</td><td>99%</td><td>Gravitational</td></tr>
+<tr><td>Vacuum Energy Extraction</td><td>95%</td><td>Energy</td></tr>
+<tr><td>OAM Qubit Registers</td><td>92%</td><td>Computing</td></tr>
+<tr><td>Photonic Logic Gates</td><td>90%</td><td>Computing</td></tr>
+<tr><td>Lambda Computing Substrate</td><td>88%</td><td>Computing</td></tr>
+<tr><td>Spectral Relay Mesh</td><td>85%</td><td>Communication</td></tr>
+</tbody>
+</table>
+<p>Global coherence formula: C_total = Π(C_i) for all i in locked_set.</p>
+<h2>API Endpoints</h2>
+<ul>
+<li><code>GET /api/czc/status</code> — current basin state</li>
+<li><code>GET /api/czc/coherence</code> — calculate CZC for N iterations</li>
+<li><code>POST /api/czc/iterate</code> — run one iteration</li>
+<li><code>POST /api/czc/bind</code> — bind application to basin</li>
+<li><code>POST /api/czc/sync</code> — sync with K1 Orchestration</li>
+</ul>
+<nav><ul><li><a href="${BASE}/docs">Full Documentation Index</a></li><li><a href="${BASE}/docs/massless">Massless Technologies</a></li><li><a href="${BASE}/docs/simulators">Energy Simulators</a></li></ul></nav>`,
   },
   sop: {
     title: "Spectral Orthogonal Protocol (SOP)",
