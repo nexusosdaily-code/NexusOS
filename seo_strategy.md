@@ -34,6 +34,7 @@ Private routes remain out of scope for content-quality review, but they are stil
 - Public pages should link to the indexable canonical route, not suppressed legacy aliases such as `/pipeline` or `/ce-writer`, and not the noindex root `/` when the intended destination is the public auth page at `/auth`.
 - If `/protocol` or `/wnsp-paper` remain noindex, public landing pages should not use them as prominent reference links. If we want them linked as SEO targets, they need to become indexable first.
 - For public documentation and research pages, AI-visible fallback HTML should contain substantive body copy, not just a teaser paragraph and nav links. If React holds the canonical long-form content, mirror enough of that content into `bodyHtml` or prerender it.
+- If a legacy public alias redirects to a canonical page, every redirect layer and metadata entry must agree on the same destination. Do not keep 301 redirects pointing at one page while `ROUTE_META` canonicals those aliases to different pages.
 
 - New public React routes must be wired into the server allowlist, `ROUTE_META`, and `sitemap.xml` together. If any one of those is skipped, the page can become invisible or inconsistent to crawlers.
 - Public alias routes should resolve to one canonical URL. Only the primary URL should appear in the sitemap; aliases should redirect or canonicalize to that primary path.
