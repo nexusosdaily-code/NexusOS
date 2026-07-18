@@ -350,10 +350,10 @@ export function serveStatic(app: Express) {
   // crawlers that do not execute JavaScript receive a proper 301 redirect
   // instead of landing on a metadata-only SPA shell.
   const ALIAS_REDIRECTS: Record<string, string> = {
-    "/spectral-video":                       "/wnsp",
-    "/spectral-uri":                         "/wnsp",
-    "/wnsp-uri":                             "/wnsp",
-    "/visualizer":                           "/wnsp",
+    "/spectral-video":                       "/videos",
+    "/spectral-uri":                         "/protocol",
+    "/wnsp-uri":                             "/protocol",
+    "/visualizer":                           "/compression-explorer",
     "/btc-bridge":                           "/wnsp-ordinals",
     "/wnsp/ordinals":                        "/wnsp-ordinals",
     // SEO consolidation — alias → canonical 301 redirects
