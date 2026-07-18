@@ -166,8 +166,9 @@ export default function NetworkPage() {
             {data ? `${data.active} active · ${data.total} total` : "Loading…"}
           </span>
           <button onClick={() => qc.invalidateQueries({ queryKey: ["/api/network/nodes"] })}
+            aria-label="Refresh network nodes"
             className="text-white/30 hover:text-white/60 transition-colors">
-            <RefreshCw size={12} />
+            <RefreshCw size={12} aria-hidden="true" />
           </button>
           {isLoggedIn ? (
             <button

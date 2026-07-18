@@ -160,7 +160,7 @@ function WasciiTab() {
             </div>
             <div className="rounded-lg bg-black/40 border border-emerald-500/20 px-3 py-2 font-mono text-xs text-emerald-300 flex items-center justify-between gap-3">
               <span className="truncate">{enc.uri}</span>
-              <button onClick={() => navigator.clipboard.writeText(enc.uri)} className="text-white/30 hover:text-white/60 shrink-0"><Copy size={11} /></button>
+              <button onClick={() => navigator.clipboard.writeText(enc.uri)} aria-label="Copy spectral URI" className="text-white/30 hover:text-white/60 shrink-0"><Copy size={11} aria-hidden="true" /></button>
             </div>
             <div>
               <div className="text-[9px] font-mono text-white/30 uppercase mb-1.5">Spectral density — 380nm → 780nm</div>
@@ -257,8 +257,8 @@ function WalletCard({ info }: { info: any }) {
           <div className="text-[9px] font-mono text-white/30 uppercase mb-1">Taproot Address (bc1p)</div>
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-mono text-orange-300 break-all flex-1">{info.address}</span>
-            <button onClick={() => { navigator.clipboard.writeText(info.address); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="text-white/30 hover:text-white/60 shrink-0">
-              {copied ? <CheckCircle2 size={11} className="text-emerald-400" /> : <Copy size={11} />}
+            <button onClick={() => { navigator.clipboard.writeText(info.address); setCopied(true); setTimeout(() => setCopied(false), 2000); }} aria-label="Copy service wallet address" className="text-white/30 hover:text-white/60 shrink-0">
+              {copied ? <CheckCircle2 size={11} className="text-emerald-400" aria-hidden="true" /> : <Copy size={11} aria-hidden="true" />}
             </button>
           </div>
         </div>
@@ -668,7 +668,7 @@ function AutoBridgeTab() {
           </div>
           <div className="flex items-center gap-2">
             {queueLoading && <RefreshCw size={12} className="text-white/30 animate-spin" />}
-            <button onClick={() => qc.invalidateQueries({ queryKey: ["/api/btc-bridge/queue"] })} className="text-white/30 hover:text-white/60 transition-colors"><RefreshCw size={13} /></button>
+            <button onClick={() => qc.invalidateQueries({ queryKey: ["/api/btc-bridge/queue"] })} aria-label="Refresh inscription queue" className="text-white/30 hover:text-white/60 transition-colors"><RefreshCw size={13} aria-hidden="true" /></button>
           </div>
         </div>
         {(!queueData?.items || queueData.items.length === 0) && (
@@ -1488,7 +1488,8 @@ function RunesTab() {
             <span className="text-xs font-mono font-bold text-cyan-400 uppercase tracking-wider">Spectral Band → Rune Mapping</span>
           </div>
           <button onClick={() => qc.invalidateQueries({ queryKey: ["/api/btc-bridge/runes"] })}
-            className="text-white/30 hover:text-white/60 transition-colors"><RefreshCw size={12} /></button>
+            aria-label="Refresh rune map"
+            className="text-white/30 hover:text-white/60 transition-colors"><RefreshCw size={12} aria-hidden="true" /></button>
         </div>
 
         {isLoading && <div className="text-xs text-white/30 text-center py-4 font-mono">Loading Rune map…</div>}
