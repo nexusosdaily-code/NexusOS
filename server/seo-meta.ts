@@ -1436,7 +1436,6 @@ export const ROUTE_META: Record<string, PageMeta> = {
           "description": "Live demonstration of the NexusOS CE encoder mapping text to visible-light wavelengths across 128 spectral bands (380–780 nm).",
           "thumbnailUrl": "https://wnsp.io/opengraph.png",
           "uploadDate": "2026-05-16",
-          "embedUrl": `${BASE}/videos`,
         },
         {
           "@type": "VideoObject",
@@ -1444,7 +1443,6 @@ export const ROUTE_META: Record<string, PageMeta> = {
           "description": "Step-by-step execution of WavelengthScript bytecode in the WNSP Virtual Machine, with Ψ channel register inspection.",
           "thumbnailUrl": "https://wnsp.io/opengraph.png",
           "uploadDate": "2026-05-16",
-          "embedUrl": `${BASE}/videos`,
         },
         {
           "@type": "VideoObject",
@@ -1452,7 +1450,6 @@ export const ROUTE_META: Record<string, PageMeta> = {
           "description": "Explanation of the Theory of Compression States: the universe evolving from the first unobserved oscillation, and the Λ=hf/c² compression law governing NexusOS.",
           "thumbnailUrl": "https://wnsp.io/opengraph.png",
           "uploadDate": "2026-05-16",
-          "embedUrl": `${BASE}/videos`,
         },
       ],
     },
