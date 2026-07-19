@@ -195,9 +195,9 @@ export default function PolaritonExchangePage() {
           {/* 10-act sequence nav */}
           <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
             <p className="text-[10px] font-mono text-rose-400 tracking-widest mb-3">
-              THE SEQUENCE — ACT 10 OF 10
+              THE SEQUENCE — ACT 10 OF 11
             </p>
-            <div className="grid grid-cols-3 md:grid-cols-10 gap-1.5 text-center text-xs">
+            <div className="grid grid-cols-3 md:grid-cols-11 gap-1.5 text-center text-xs">
               {[
                 { act:"1",  title:"Compression States", sub:"Λ=hf/c²",          href:"/oscillating-quanta" },
                 { act:"2",  title:"The Universal ONE",  sub:"f₀ derives Λ",      href:"/universal-one" },
@@ -222,6 +222,13 @@ export default function PolaritonExchangePage() {
                 <p className="text-rose-100 font-medium leading-tight text-[8px]">The Exchange</p>
                 <p className="text-[7px] text-rose-400">Ω_R=2g</p>
               </div>
+              <Link href="/the-emitter"
+                    className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-1.5
+                               hover:border-sky-400/60 transition-colors space-y-0.5 block">
+                <p className="text-[7px] font-mono text-sky-400 tracking-widest">ACT 11 →</p>
+                <p className="text-sky-200 font-medium leading-tight text-[8px]">The Emitter</p>
+                <p className="text-[7px] text-sky-400">F_p=(Q/V)(λ/n)³</p>
+              </Link>
             </div>
           </div>
 
@@ -673,7 +680,7 @@ export default function PolaritonExchangePage() {
         {/* ── Bottom sequence nav + teaser ───────────────────────────────── */}
         <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 mt-6">
           <p className="text-[10px] font-mono text-rose-400 tracking-widest mb-3">
-            THE SEQUENCE — ACT 10 OF 10
+            THE SEQUENCE — ACT 10 OF 11
           </p>
           <div className="grid grid-cols-3 md:grid-cols-10 gap-1.5 text-center text-xs mb-4">
             {[
@@ -700,9 +707,16 @@ export default function PolaritonExchangePage() {
               <p className="text-rose-100 font-medium leading-tight text-[8px]">The Exchange</p>
               <p className="text-[7px] text-rose-400">Ω_R=2g</p>
             </div>
+            <Link href="/the-emitter"
+                  className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-1.5
+                             hover:border-sky-400/60 transition-colors space-y-0.5 block">
+              <p className="text-[7px] font-mono text-sky-400 tracking-widest">ACT 11 →</p>
+              <p className="text-sky-200 font-medium leading-tight text-[8px]">The Emitter</p>
+              <p className="text-[7px] text-sky-400">F_p=(Q/V)(λ/n)³</p>
+            </Link>
           </div>
           <div className="border-t border-slate-800 pt-3 text-center">
-            <p className="text-[10px] font-mono text-slate-600 tracking-widest mb-1">NEXT — ACT 11 OF ?</p>
+            <p className="text-[10px] font-mono text-slate-600 tracking-widest mb-1">NEXT — ACT 12 OF ?</p>
             <p className="text-slate-500 text-xs">
               The Emitter · The Network · The Observer — three paths open from The Exchange.
               The sequence continues when the physics is ready.
