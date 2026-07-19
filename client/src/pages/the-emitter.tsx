@@ -103,9 +103,9 @@ function SequenceNav({ current }: { current: 11 }) {
   return (
     <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-4">
       <p className="text-[10px] font-mono text-sky-400 tracking-widest mb-3">
-        THE SEQUENCE — ACT {current} OF 11
+        THE SEQUENCE — ACT {current} OF 12
       </p>
-      <div className="grid grid-cols-3 md:grid-cols-11 gap-1.5 text-center text-xs">
+      <div className="grid grid-cols-3 md:grid-cols-12 gap-1.5 text-center text-xs">
         {ACT_NAV.map(({ act, title, sub, href }) => (
           <Link key={href} href={href}
                 className="rounded-lg border border-slate-700 bg-slate-900 p-1.5
@@ -120,6 +120,13 @@ function SequenceNav({ current }: { current: 11 }) {
           <p className="text-sky-100 font-medium leading-tight text-[8px]">The Emitter</p>
           <p className="text-[7px] text-sky-400">F_p=(3λ³/4π²n³)(Q/V)</p>
         </div>
+        <Link href="/the-network"
+              className="rounded-lg border border-teal-500/30 bg-teal-500/5 p-1.5
+                         hover:border-teal-400/60 transition-colors space-y-0.5 block">
+          <p className="text-[7px] font-mono text-teal-400 tracking-widest">ACT 12 →</p>
+          <p className="text-teal-200 font-medium leading-tight text-[8px]">The Network</p>
+          <p className="text-[7px] text-teal-400">ω=ω₀−2J·cos(ka)</p>
+        </Link>
       </div>
     </div>
   );
@@ -694,11 +701,11 @@ export default function TheEmitterPage() {
           <SequenceNav current={11} />
           <div className="border-t border-slate-800 pt-3 mt-4 text-center">
             <p className="text-[10px] font-mono text-slate-600 tracking-widest mb-1">
-              NEXT — ACT 12 OF ?
+              NEXT — ACT 13 OF ?
             </p>
             <p className="text-slate-500 text-xs">
-              The Network · Coupled cavities, polariton hopping, CROW waveguides →
-              Spectral Relay Mesh from first principles
+              The Observer · QND dispersive readout · χ = g²/Δ — reading the
+              photon state without destroying it
             </p>
           </div>
         </div>

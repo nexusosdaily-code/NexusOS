@@ -481,7 +481,7 @@ export default function TheNetworkPage() {
               <div className="rounded-lg border border-slate-700 p-3 text-[10px] space-y-1">
                 <p className="text-slate-300">
                   <span className="font-semibold" style={{ color: TEAL }}>Boundary conditions:</span>{" "}
-                  hard walls (ψ₀ = ψ_{N+1} = 0). Photon reflects at chain ends — standing wave
+                  hard walls (ψ₀ = ψ_&#123;N+1&#125; = 0). Photon reflects at chain ends — standing wave
                   interference between left- and right-propagating modes.
                 </p>
                 <p className="text-slate-500">

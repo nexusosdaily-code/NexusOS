@@ -41,7 +41,7 @@ Every Act page **must** link to **all** other Act pages via the sequence nav gri
 3. Update the `md:grid-cols-N` class to match the new total where used (e.g. Acts 7, 8).
 4. The new Act page itself must include all prior Acts in its own sequence nav.
 
-**Current Act registry (11 Acts as of 2026-07-19):**
+**Current Act registry (12 Acts as of 2026-07-19):**
 
 | Act | Title | Sub | Route |
 |-----|-------|-----|-------|
@@ -56,6 +56,7 @@ Every Act page **must** link to **all** other Act pages via the sequence nav gri
 | 9 | The Cavity | WGM resonance, r_c | `/resonance-cavity` |
 | 10 | The Exchange | Ω_R=2g, polariton formation | `/polariton-exchange` |
 | 11 | The Emitter | F_p=(3/4π²)(λ/n)³(Q/V) | `/the-emitter` |
+| 12 | The Network | ω(k)=ω₀−2J·cos(ka) | `/the-network` |
 
 ## Post-Build Security Audit (STANDING DIRECTIVE — applies after EVERY build)
 
