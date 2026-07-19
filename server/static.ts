@@ -351,8 +351,8 @@ export function serveStatic(app: Express) {
   // instead of landing on a metadata-only SPA shell.
   const ALIAS_REDIRECTS: Record<string, string> = {
     "/spectral-video":                       "/videos",
-    "/spectral-uri":                         "/protocol",
-    "/wnsp-uri":                             "/protocol",
+    "/spectral-uri":                         "/wnsp",
+    "/wnsp-uri":                             "/wnsp",
     "/visualizer":                           "/compression-explorer",
     "/btc-bridge":                           "/wnsp-ordinals",
     "/wnsp/ordinals":                        "/wnsp-ordinals",

@@ -467,8 +467,8 @@ function Router() {
       <Route path="/nexus-spectral" component={SpectralDbPage} />
       {/* Legacy redirects → unified framework */}
       <Route path="/spectral-video">{() => { window.location.replace("/videos"); return null; }}</Route>
-      <Route path="/spectral-uri">{() => { window.location.replace("/protocol"); return null; }}</Route>
-      <Route path="/wnsp-uri">{() => { window.location.replace("/protocol"); return null; }}</Route>
+      <Route path="/spectral-uri">{() => { window.location.replace("/wnsp"); return null; }}</Route>
+      <Route path="/wnsp-uri">{() => { window.location.replace("/wnsp"); return null; }}</Route>
       <Route path="/visualizer">{() => { window.location.replace("/compression-explorer"); return null; }}</Route>
       {/* Public showcase & proof pages */}
       <Route path="/wnsp" component={WnspLandingPage} />

@@ -1793,16 +1793,16 @@ export const ROUTE_META: Record<string, PageMeta> = {
   "/spectral-uri": {
     title: "Spectral URI — WNSP-URI v1.0 Addressing",
     description: "WNSP-URI v1.0 spectral address format: wnsp://Ψ(wdm,oam,pol)/path. Deterministic, physics-based, censorship-proof addressing for the NexusOS network.",
-    canonical: `${BASE}/protocol`,
+    canonical: `${BASE}/wnsp`,
     ogType: "article",
-    jsonLd: techArticle({ url: `${BASE}/protocol`, name: "WNSP-URI v1.0", description: "Spectral URI addressing: wnsp://Ψ(wdm,oam,pol)/path. Deterministic physics-based addressing.", about: "WNSP-URI, spectral addressing, wnsp protocol" }),
+    jsonLd: techArticle({ url: `${BASE}/wnsp`, name: "WNSP-URI v1.0", description: "Spectral URI addressing: wnsp://Ψ(wdm,oam,pol)/path. Deterministic physics-based addressing.", about: "WNSP-URI, spectral addressing, wnsp protocol" }),
   },
   "/wnsp-uri": {
     title: "WNSP-URI — Wavelength-Native Spectral URI Addressing",
     description: "WNSP-URI v1.0: wnsp://Ψ(wdm,oam,pol)/path. Deterministic physics-based addressing that replaces DNS with electromagnetic channel coordinates.",
-    canonical: `${BASE}/protocol`,
+    canonical: `${BASE}/wnsp`,
     ogType: "article",
-    jsonLd: techArticle({ url: `${BASE}/protocol`, name: "WNSP-URI v1.0 — Spectral Addressing", description: "WNSP-URI addressing scheme: wnsp://Ψ(wdm,oam,pol)/path. Deterministic, censorship-proof, physics-derived addresses.", about: "WNSP-URI, spectral addressing, DNS-free routing" }),
+    jsonLd: techArticle({ url: `${BASE}/wnsp`, name: "WNSP-URI v1.0 — Spectral Addressing", description: "WNSP-URI addressing scheme: wnsp://Ψ(wdm,oam,pol)/path. Deterministic, censorship-proof, physics-derived addresses.", about: "WNSP-URI, spectral addressing, DNS-free routing" }),
   },
   "/visualizer": {
     title: "NexusOS Visualizer — Spectral Network and Compression Curve",
