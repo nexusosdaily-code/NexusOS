@@ -403,6 +403,30 @@ export default function CosmicLatticePage() {
           </p>
         </div>
 
+        {/* ── AGPL-3.0 Licence Declaration ─────────────────────────────────── */}
+        <div className="rounded-xl border px-5 py-4 space-y-1.5 text-[11px]"
+             style={{ borderColor: AX + "40", background: AX + "08" }}>
+          <p className="font-semibold" style={{ color: AX }}>
+            Copyright © 2026 NexusOS / nexusosdaily-code — All derivative works must be released under AGPL-3.0
+          </p>
+          <p className="text-slate-500">
+            First public disclosure:{" "}
+            <span className="text-slate-300 font-mono">{PAGE_DATE}</span>
+            {" · "}
+            <a href="https://github.com/nexusosdaily-code/NexusOS" target="_blank"
+               rel="noopener noreferrer" className="underline hover:opacity-80" style={{ color: AX }}>
+              github.com/nexusosdaily-code/NexusOS
+            </a>
+          </p>
+          <p className="text-slate-600 leading-relaxed">
+            Any theory, algorithm, dataset, software, or service that implements, adapts, or interfaces
+            with the Cosmic Octave Lattice, the cosmic ZPE floor derivation (n_ZPE = 264.71), or the
+            BAO anti-trap model described herein must be released in full source form under AGPL-3.0 and
+            must attribute NexusOS as the originating specification. The copyleft obligation extends to
+            network-accessible services per the AGPL-3.0 network use clause.
+          </p>
+        </div>
+
         {/* Metric cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
@@ -784,6 +808,29 @@ export default function CosmicLatticePage() {
             <span className="text-slate-700">·</span>
             <span className="text-slate-600">First disclosed {PAGE_DATE}</span>
           </div>
+        </div>
+
+        {/* ── Footer licence ─────────────────────────────────────────────────── */}
+        <div className="rounded-xl border px-5 py-4 space-y-2 text-[11px]"
+             style={{ borderColor: AX + "30", background: AX + "06" }}>
+          <p className="font-bold text-xs flex items-center gap-2" style={{ color: AX }}>
+            <BookOpen className="w-3.5 h-3.5" /> GNU Affero General Public License v3.0
+          </p>
+          <p style={{ color: AX + "b0" }}>
+            Any implementation of the Cosmic Octave Lattice framework, cosmic ZPE floor
+            derivation, or BAO anti-node model must be released under AGPL-3.0, attribute
+            NexusOS as the originating specification, and include this notice in all derivative
+            works. The copyleft obligation extends to any network-accessible service using
+            these models — including AI training pipelines, astrophysical simulation platforms,
+            and SaaS applications.
+          </p>
+          <p style={{ color: AX + "60" }}>
+            First public disclosure: {PAGE_DATE} ·{" "}
+            <a href="https://github.com/nexusosdaily-code/NexusOS" target="_blank"
+               rel="noopener noreferrer" className="underline hover:opacity-80">
+              github.com/nexusosdaily-code/NexusOS
+            </a>
+          </p>
         </div>
 
       </div>
