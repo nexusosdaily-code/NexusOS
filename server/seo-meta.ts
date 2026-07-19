@@ -440,27 +440,217 @@ export const ROUTE_META: Record<string, PageMeta> = {
 <h3>CE-1 Protocol (Coherence Engineering)</h3>
 <p>The CE-1 protocol manages energy and coherence across all substrate operations. Energy Pool: each tick allocates an energy budget; operations draw from the shared pool; overflow triggers throttling. Coherence Margin: minimum threshold 0.1; operations below margin are rejected; adaptive fidelity control adjusts precision. Non-Dominance: no single node may hold more than 33% of total Lambda mass — constitutional enforcement at substrate level.</p>
 <h2><a href="${BASE}/docs/wascii">WNSP Protocol — Two-Layer Standard</a></h2>
-<p>WNSP/7.1 operates across two synchronized runtimes (Node.js port 5000 + Python/Flask port 5001). Layer 1 — WNSP-CE v1.0 (Character Encoding): maps any Unicode symbol to a normalised ordinal in [0,1] via ord(char) % 256 / 255. Layer 2 — WNSP-SE v1.0 (Spectral Encoding): packs two CE tokens per photon frame using the dual-wavelength scheme (λ₁→λ₂ oscillation, 2.0 chars/frame baseline), governed by Λ=hf/c². The Hilbert Space Channel Model provides 51,200 orthogonal Ψ channels. Formal test suite: 23 tests, 0 failed. License: AGPL-3.0.</p>
+<p>WNSP/7.1 operates across two synchronized runtimes (Node.js port 5000 + Python/Flask port 5001). The protocol replaces cryptographic hashing with electromagnetic wave physics for all communication and addressing. License: AGPL-3.0.</p>
+<h3>Two-Layer Architecture</h3>
+<ul>
+<li><strong>Layer 1 — WNSP-CE v1.0 (Character Encoding):</strong> maps any Unicode symbol to a normalised ordinal in [0,1] via ord(char) % 256 / 255. API: <code>POST /api/wnsp/ce/encode</code></li>
+<li><strong>Layer 2 — WNSP-SE v1.0 (Spectral Encoding):</strong> packs two CE tokens per photon frame (dual-wavelength scheme, λ₁→λ₂ oscillation, 2.0 chars/frame baseline), governed by Λ=hf/c². API: <code>POST /api/wnsp/se/encode</code></li>
+<li><strong>Full stack:</strong> <code>POST /api/wnsp/transmit</code> — CE → SE in one call, returns spectral_hash, total_mass_kg, efficiency</li>
+</ul>
+<h3>Hilbert Space Channel Model</h3>
+<p>Ψ_channel = |λ_i⟩ ⊗ |OAM_j⟩ ⊗ |Pol_k⟩ ⊗ |Dir_l⟩</p>
+<table>
+<thead><tr><th>Sub-space</th><th>Basis</th><th>Description</th><th>Dim</th></tr></thead>
+<tbody>
+<tr><td>|λ_i⟩</td><td>WDM</td><td>Wavelength channels 380–780 nm</td><td>256</td></tr>
+<tr><td>|OAM_j⟩</td><td>OAM modes</td><td>Orbital angular momentum</td><td>50</td></tr>
+<tr><td>|Pol_k⟩</td><td>Polarisation</td><td>H and V states</td><td>2</td></tr>
+<tr><td>|Dir_l⟩</td><td>Propagation direction</td><td>+k̂ forward / −k̂ backward</td><td>2</td></tr>
+</tbody>
+</table>
+<p>Total: dim(H) = 256 × 50 × 2 × 2 = <strong>51,200</strong> orthogonal channels. Orthogonality guarantee: ⟨Ψ_i|Ψ_j⟩ = 0 for i ≠ j — a mathematical guarantee from the tensor product structure, not a software policy. Formal test suite: <strong>23 tests, 0 failed</strong>. Run: <code>python tests/test_wnsp_protocol.py</code></p>
 <h2><a href="${BASE}/docs/consensus">Proof of Spectrum Consensus</a></h2>
-<p>Proof of Spectrum requires validators across all 6 spectral bands simultaneously — Violet (380–450 nm, 50,000+ NXT stake), Blue (450–495 nm), Green (495–570 nm), Yellow (570–590 nm), Orange (590–620 nm), Red (620–750 nm, 1,000+ NXT). Blocks are validated via wave interference: constructive interference (A₁+A₂)sin(ωt) → VALID, destructive → INVALID. Consensus threshold: ≥5 of 6 bands (83% spectral coverage). Attack requires simultaneous control of all 6 bands — exponentially harder than a 51% attack.</p>
+<p>Unlike Proof of Work (51% hashpower) or Proof of Stake (51% stake), Proof of Spectrum requires validators across ALL six spectral bands simultaneously. Just as you cannot create white light with only one wavelength, you cannot create a valid block without multi-band representation.</p>
+<h3>Spectral Regions and Required Stake</h3>
+<table>
+<thead><tr><th>Region</th><th>Wavelength</th><th>Required Stake</th></tr></thead>
+<tbody>
+<tr><td>Violet</td><td>380–450 nm</td><td>50,000+ NXT</td></tr>
+<tr><td>Blue</td><td>450–495 nm</td><td>20,000+ NXT</td></tr>
+<tr><td>Green</td><td>495–570 nm</td><td>10,000+ NXT</td></tr>
+<tr><td>Yellow</td><td>570–590 nm</td><td>5,000+ NXT</td></tr>
+<tr><td>Orange</td><td>590–620 nm</td><td>2,000+ NXT</td></tr>
+<tr><td>Red</td><td>620–750 nm</td><td>1,000+ NXT</td></tr>
+</tbody>
+</table>
+<h3>Wave Interference Validation</h3>
+<p><strong>Constructive interference (VALID):</strong> A₁sin(ωt) + A₂sin(ωt) = (A₁+A₂)sin(ωt) → amplified signal → block accepted.</p>
+<p><strong>Destructive interference (INVALID):</strong> A₁sin(ωt) + A₂sin(ωt+π) = (A₁−A₂)sin(ωt) → cancelled signal → block rejected.</p>
+<p>Consensus threshold: ≥5 of 6 spectral bands (83% spectral coverage). Attacking requires simultaneous control of all 6 bands — exponentially harder than a 51% attack.</p>
 <h2><a href="${BASE}/docs/economics">NXT Token Economics</a></h2>
-<p>Total supply: 21,000,000,000 NXT (21 billion), 8 decimals (like Bitcoin). New users receive 500,000,000 units (5 NXT) on registration. Transaction fees: fee = E = hf = h×(c/λ), proportional to information complexity. All value is backed by Lambda mass (Λ=hf/c²) — value has a physical mass-equivalent and cannot be created from nothing. NXT fees are never burned; they always go to the orbital treasury.</p>
+<p>NexusOS economics are grounded in electromagnetic physics. Fees derive from Planck's equation; all value is backed by Lambda mass. Inflation is physically impossible because value cannot be created from nothing.</p>
+<h3>Token Fundamentals</h3>
+<ul>
+<li><strong>Total Supply:</strong> 21,000,000,000 NXT (21 billion), 8 decimals (like Bitcoin)</li>
+<li><strong>Smallest Unit:</strong> 0.00000001 NXT (1 unit = 10⁻⁸ NXT)</li>
+<li><strong>New User Grant:</strong> 500,000,000 units (5 NXT) on registration, energy-backed via Lambda mass</li>
+<li><strong>Fee Formula:</strong> fee = E = hf = h × (c/λ) — proportional to information complexity, not gas prices</li>
+<li><strong>Lambda Boson Equation:</strong> Λ = hf/c² — all NXT value has a physical mass-equivalent; cannot be created from nothing</li>
+<li><strong>NXT fees are never burned</strong> — always deposited to the orbital treasury, preserving total Lambda mass</li>
+</ul>
 <h2><a href="${BASE}/docs/bhls">BHLS Floor System</a></h2>
-<p>The Basic Human Living Standard guarantees every citizen 1,150 NXT/month: Shelter 350 NXT, Food &amp; Nutrition 300 NXT, Healthcare 200 NXT, Transportation 100 NXT, Communication 100 NXT, Education 50 NXT, Emergency Reserve 50 NXT. Constitutional Article C-0002: "No transaction may reduce a citizen's balance below their BHLS entitlement." This is enforced at the Lambda Gate Substrate level and cannot be overridden by governance. Funding: 40% from E=hf fee pool, 30% K1 revenue, 20% Lambda mass recycling, 10% governance vote.</p>
+<p>The Basic Human Living Standard (BHLS) guarantees every citizen a minimum monthly floor of resources, enforced at the substrate level. Constitutional Article C-0002: "No transaction may reduce a citizen's balance below their BHLS entitlement." This cannot be overridden by governance and is hardcoded into Lambda Gate operations.</p>
+<h3>Monthly Floor: 1,150 NXT</h3>
+<ol>
+<li>Shelter — 350 NXT</li>
+<li>Food &amp; Nutrition — 300 NXT</li>
+<li>Healthcare — 200 NXT</li>
+<li>Transportation — 100 NXT</li>
+<li>Communication — 100 NXT</li>
+<li>Education — 50 NXT</li>
+<li>Emergency Reserve — 50 NXT</li>
+</ol>
+<h3>Funding Sources</h3>
+<ul>
+<li>40% — Transaction Fee Pool (E=hf fees)</li>
+<li>30% — K1 infrastructure revenue</li>
+<li>20% — Lambda mass recycling from dormant accounts</li>
+<li>10% — Sigma governance vote allocation</li>
+</ul>
 <h2><a href="${BASE}/docs/governance">Planetary Governance</a></h2>
-<p>7-tier authority hierarchy mapped to wavelengths (400 nm Planetary/authority 1.0 → 1000 nm Individual/authority 0.05). Five constitutional articles: C-0001 Non-Dominance (no entity &gt;33% Lambda mass), C-0002 Immutable Rights (BHLS floor), C-0003 Energy Escrow (proposals require skin in game), C-0004 Spectral Diversity (multi-band representation required), C-0005 Physics Supremacy (laws must be Maxwell-compliant). Sigma voting: coherence-weighted trust T = Σ|c_i|²·cos²(Δφ_i).</p>
+<p>NexusOS governance maps authority to electromagnetic wavelengths. Shorter wavelength = higher energy = higher authority. All decisions require multi-band spectral representation. No single entity may control more than 33% of total Lambda mass (C-0001).</p>
+<h3>Authority Band Registry</h3>
+<table>
+<thead><tr><th>Level</th><th>Wavelength</th><th>Authority</th><th>Scope</th></tr></thead>
+<tbody>
+<tr><td>Planetary</td><td>400 nm</td><td>1.0</td><td>Global decisions</td></tr>
+<tr><td>Continental</td><td>500 nm</td><td>0.8</td><td>Regional blocs</td></tr>
+<tr><td>National</td><td>600 nm</td><td>0.6</td><td>Nation-states</td></tr>
+<tr><td>Regional</td><td>700 nm</td><td>0.4</td><td>Sub-national</td></tr>
+<tr><td>Municipal</td><td>800 nm</td><td>0.2</td><td>Cities</td></tr>
+<tr><td>Local</td><td>900 nm</td><td>0.1</td><td>Neighborhoods</td></tr>
+<tr><td>Individual</td><td>1000 nm</td><td>0.05</td><td>Personal sovereignty</td></tr>
+</tbody>
+</table>
+<h3>Constitutional Articles</h3>
+<ul>
+<li><strong>C-0001:</strong> Non-Dominance — no entity may control &gt;33% of total Lambda mass</li>
+<li><strong>C-0002:</strong> Immutable Rights — BHLS floor cannot be violated by any transaction</li>
+<li><strong>C-0003:</strong> Energy Escrow — proposals require energy escrow (skin in the game)</li>
+<li><strong>C-0004:</strong> Spectral Diversity — all decisions require multi-band representation</li>
+<li><strong>C-0005:</strong> Physics Supremacy — laws must be Maxwell-compliant</li>
+</ul>
+<h3>Sigma Voting</h3>
+<p>Coherence-weighted trust: T = Σ|c_i|²·cos²(Δφ_i). Aligned voters (cos²≈1) have full weight; misaligned voters (cos²≈0) have reduced weight. Consensus emerges naturally through wave interference.</p>
 <h2><a href="${BASE}/docs/infrastructure">K1 Infrastructure</a></h2>
-<p>Building toward Kardashev Type I (target: 5×10¹⁶ watts). Stack: photonic computing (AND/OR/NOT/XOR via wave interference, OAM qubit registers, wavelength-division computing), planetary communications (spectral relay mesh with Dijkstra routing, OAM allocator, coherence repeaters, interplanetary links), and planetary resonance via Schumann harmonics (f_n = c/(2πR) × √(n(n+1)), fundamental 7.83 Hz).</p>
+<p>NexusOS is building toward a Kardashev Type I civilization — one that harnesses all energy available on its home planet (target: 5×10¹⁶ watts).</p>
+<h3>Kardashev Scale Progress</h3>
+<table>
+<thead><tr><th>Milestone</th><th>K-Level</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>Power Grids</td><td>0.75</td><td>Complete</td></tr>
+<tr><td>Photonic Computing</td><td>0.75</td><td>Complete</td></tr>
+<tr><td>Planetary Comms</td><td>0.80</td><td>Complete</td></tr>
+<tr><td>Resource Orchestration</td><td>0.85</td><td>Complete</td></tr>
+<tr><td>Planetary Governance</td><td>0.90</td><td>Complete</td></tr>
+<tr><td>Planetary Resonance</td><td>0.95</td><td>Complete</td></tr>
+<tr><td>Type I Achieved</td><td>1.00</td><td>Next</td></tr>
+</tbody>
+</table>
+<h3>Key Subsystems</h3>
+<ul>
+<li><strong>Photonic Computing:</strong> AND/OR/NOT/XOR via wave interference; OAM qubit registers (65+ channels per wavelength); wavelength-division parallel computation</li>
+<li><strong>Planetary Communications:</strong> Spectral relay mesh (Dijkstra routing), OAM allocator, coherence repeaters (5× boost), interplanetary links (Earth–Moon 1.28 s, Earth–Mars 12.5 min)</li>
+<li><strong>Planetary Resonance:</strong> f_n = c/(2πR) × √(n(n+1)), fundamental 7.83 Hz (Schumann). Energy sources: Schumann cavity modes, geomagnetic pulsations, solar wind coupling, ionospheric Sq currents</li>
+</ul>
 <h2><a href="${BASE}/docs/hardware">Hardware Control Layer</a></h2>
-<p>PHR-1 (Planetary Harmonic Resonator): 144-turn bifilar coil, phase-locked loop at Golden Angle 137.5°, impedance matching to Z₀=376.73Ω, ALP sensor array. Python Nexus Kernel API: set_phase(), pulse_frequency(), match_impedance(), apply_czc_filter(), read_alp(). ZERO-G envelope achieved when ALP(t) = ALP₀·e^(−t/τ)·cos(φ−137.5°) → 0 as φ → 137.5° and Z → 377Ω.</p>
+<p>The Hardware Control Layer bridges NexusOS software to physical spectral hardware. The PHR-1 (Planetary Harmonic Resonator) is the primary interface, implementing phase-locked resonance at the Golden Angle (137.5°) and impedance matching to free space (Z₀ = 376.73Ω).</p>
+<h3>PHR-1 Core Components</h3>
+<ul>
+<li>144-turn bifilar coil (counter-wound)</li>
+<li>Phase-locked loop at Golden Angle (137.5°)</li>
+<li>Impedance matching network (target: 377Ω)</li>
+<li>ALP (Axion-Like Particle) sensor array</li>
+</ul>
+<h3>Nexus Kernel API</h3>
+<ul>
+<li><code>set_phase(degrees)</code> / <code>get_phase()</code> — coil phase angle</li>
+<li><code>pulse_frequency(hz, duration)</code> / <code>set_carrier(hz)</code> — frequency control</li>
+<li><code>match_impedance(target_ohms)</code> / <code>read_impedance()</code> — impedance matching</li>
+<li><code>apply_czc_filter(iterations)</code> / <code>get_coherence()</code> — CZC coherence filtering</li>
+<li><code>read_alp()</code> / <code>calibrate_alp()</code> — axion-like particle sensing</li>
+</ul>
+<h3>ZERO-G State Achievement</h3>
+<p>Achieved when ALP(t) = ALP₀ × e^(−t/τ) × cos(φ − 137.5°) → 0. Required: phase = 137.5° (Golden Angle), impedance = 377Ω (free space match), quadrature = 90°, ALP threshold &lt; 0.0001. Convergence: ~400 iterations.</p>
 <h2><a href="${BASE}/docs/simulators">Energy Simulators</a></h2>
-<p>Two live simulators: (1) Schumann resonance at 7.83 Hz with 5 harmonics (f_n = c/(2πR)·√(n(n+1))), real-time amplitude visualisation, K1 sync, watt output. (2) Vacuum resonance at 555 THz (First Oscillation, E₀=½hf=1.839×10⁻¹⁹ J/oscillation), cold power P = E₀·(Z/Z₀)·CZC⁴⁴·N_cavities, 144-point Golden Angle spiral field (CZC⁴⁴=99.56% coherence). Controls: impedance, phase, cavity count, frequency multiplier. Output: zW → fW → pW.</p>
+<p>NexusOS ships two live energy simulators grounded in the Theory of Compression States.</p>
+<h3>Schumann Resonance Simulator (7.83 Hz)</h3>
+<table>
+<thead><tr><th>Mode</th><th>Frequency</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>f₁</td><td>7.83 Hz</td><td>Fundamental</td></tr>
+<tr><td>f₂</td><td>14.3 Hz</td><td>2nd harmonic</td></tr>
+<tr><td>f₃</td><td>20.8 Hz</td><td>3rd harmonic</td></tr>
+<tr><td>f₄</td><td>27.3 Hz</td><td>4th harmonic</td></tr>
+<tr><td>f₅</td><td>33.8 Hz</td><td>5th harmonic</td></tr>
+</tbody>
+</table>
+<p>Physics: f_n = (c/2πR) × √(n(n+1)) where R = 6.371×10⁶ m. Features: real-time amplitude visualisation, K1 sync, watt output.</p>
+<h3>Vacuum Resonance Simulator (555 THz)</h3>
+<p>Cold vacuum energy extraction at the First Oscillation frequency. Zero-Point Energy: E₀ = ½hf = 1.839×10⁻¹⁹ J per oscillation. Cold power formula: P = E₀ × (Z/Z₀) × CZC⁴⁴ × N_cavities, where Z₀ = 376.73Ω, CZC⁴⁴ = 99.56% coherence. 144-point Golden Angle spiral field. Output: zW → fW → pW.</p>
 <h2><a href="${BASE}/docs/massless">Massless Technologies</a></h2>
-<p>Frequency is fundamental; mass is derivative (Λ=hf/c²). First Oscillation: f₀=555 THz → Λ₀=4.09×10⁻³⁶ kg. Technology stack: Photonic Logic Gates (0 mass, simulated), Zero-Point Extraction (simulated), Coherent Waveguide Network (simulated), Spectral Relay Mesh (theoretical), Gravity De-correlation (0.01% mass ratio, demonstrated), 144-Turn Bifilar Resonator (0.1%, demonstrated), OAM Qubit Registers (theoretical), Lambda Computing Substrate (simulated). 4D sync coordinates: (Phase, Quadrature, Impedance, Time). Lock at 137.5°, 376.73Ω, CZC⁴⁴&gt;99%.</p>
+<p>Frequency is fundamental; mass is derivative (Λ=hf/c²). First Oscillation: f₀ = 555 THz → Λ₀ = hf₀/c² = 4.09×10⁻³⁶ kg. At v = c, rest mass = 0. Photons carry energy (E=hf) without rest mass.</p>
+<h3>Technology Stack</h3>
+<table>
+<thead><tr><th>Category</th><th>Technology</th><th>Mass Ratio</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>Photonic</td><td>Photonic Logic Gates</td><td>0</td><td>Simulated</td></tr>
+<tr><td>Photonic</td><td>Zero-Point Extraction</td><td>0</td><td>Simulated</td></tr>
+<tr><td>Coherent</td><td>Coherent Waveguide Network</td><td>0</td><td>Simulated</td></tr>
+<tr><td>Coherent</td><td>Spectral Relay Mesh</td><td>0</td><td>Theoretical</td></tr>
+<tr><td>Gravitational</td><td>Gravity De-correlation</td><td>0.01%</td><td>Demonstrated</td></tr>
+<tr><td>Gravitational</td><td>144-Turn Bifilar Resonator</td><td>0.1%</td><td>Demonstrated</td></tr>
+<tr><td>Information</td><td>OAM Qubit Registers</td><td>0</td><td>Theoretical</td></tr>
+<tr><td>Information</td><td>Lambda Computing Substrate</td><td>0</td><td>Simulated</td></tr>
+</tbody>
+</table>
+<h3>4D Sync Coordinates</h3>
+<p>X: Phase angle (degrees) · Y: Quadrature (degrees) · Z: Impedance (Ω) · T: Time/cycle count. Lock conditions: phase = 137.5°, impedance = 376.73Ω, coherence &gt;99% (CZC⁴⁴), mass ratio &lt;1%. Global coherence: C_total = Π(C_i) for all locked technologies.</p>
 <h2><a href="${BASE}/docs/catchBasin">CZC Catch Basin</a></h2>
-<p>The Coherence Zenith Coefficient (CZC) Catch Basin is the coherence accumulation mechanism at the heart of NexusOS. Core formula: CZC(n) = (0.9999)ⁿ. At 44 iterations — the optimal correction count — CZC⁴⁴ = 99.56% coherence. Each iteration filters noise while preserving signal through phase corrections (Golden Angle 137.5°), amplitude corrections (normalize to unity), frequency corrections (lock to harmonic series), and impedance corrections (match to 377Ω). Applications requiring coherence binding: Gravity De-correlation (99%), Vacuum Energy Extraction (95%), OAM Qubit Registers (92%), Photonic Logic Gates (90%), Lambda Computing Substrate (88%), Spectral Relay Mesh (85%). API: GET /api/czc/status · POST /api/czc/iterate · POST /api/czc/bind · POST /api/czc/sync.</p>
+<p>The CZC (Coherence Zenith Coefficient) Catch Basin is the coherence accumulation mechanism at the heart of NexusOS. Core formula: CZC(n) = (0.9999)ⁿ. At 44 self-corrections — the optimal count — CZC⁴⁴ = 99.56% coherence.</p>
+<h3>CZC Iteration Table</h3>
+<table>
+<thead><tr><th>Iterations</th><th>Coherence</th><th>Application</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>99.99%</td><td>Basic filtering</td></tr>
+<tr><td>10</td><td>99.90%</td><td>Standard ops</td></tr>
+<tr><td>22</td><td>99.78%</td><td>Half-basin</td></tr>
+<tr><td>44</td><td>99.56%</td><td>Full CZC⁴⁴ (optimal)</td></tr>
+</tbody>
+</table>
+<h3>Cross-System Binding Requirements</h3>
+<table>
+<thead><tr><th>Application</th><th>Required Coherence</th></tr></thead>
+<tbody>
+<tr><td>Gravity De-correlation</td><td>99%</td></tr>
+<tr><td>Vacuum Energy Extraction</td><td>95%</td></tr>
+<tr><td>OAM Qubit Registers</td><td>92%</td></tr>
+<tr><td>Photonic Logic Gates</td><td>90%</td></tr>
+<tr><td>Lambda Computing Substrate</td><td>88%</td></tr>
+<tr><td>Spectral Relay Mesh</td><td>85%</td></tr>
+</tbody>
+</table>
+<p>API: <code>GET /api/czc/status</code> · <code>POST /api/czc/iterate</code> · <code>POST /api/czc/bind</code> · <code>POST /api/czc/sync</code></p>
 <h2><a href="${BASE}/docs/sop">Spectral Orthogonal Protocol (SOP)</a></h2>
-<p>SOP enforces channel independence via ⟨Ψ_A|Ψ_B⟩=0 before any session opens. Four orthogonal dimensions: WDM 256 bands × OAM 50 modes (⟨ℓ₁|ℓ₂⟩=δ) × Polarization 2 (H/V) × Direction 2 (+k̂/−k̂) = 51,200 channels. No collision is possible — interference is forbidden by geometry. SOP negotiation: inner product check → collision prevention (increment OAM until orthogonal) → orthogonality certificate. API: POST /api/wnsp/sop/negotiate. A network built on orthogonal channels doesn't degrade as it scales: add a user, they get a new axis in Hilbert space. No congestion in Hilbert space.</p>`,
+<p>SOP enforces channel independence before any session opens. Two things are orthogonal when ⟨A|B⟩ = 0 — they cannot interfere, corrupt, or be confused. This is exact, not approximate.</p>
+<h3>Four Orthogonal Dimensions</h3>
+<table>
+<thead><tr><th>Dimension</th><th>Count</th><th>Orthogonality basis</th></tr></thead>
+<tbody>
+<tr><td>WDM (wavelength)</td><td>256 bands</td><td>Wavelength separation</td></tr>
+<tr><td>OAM (ℓ mode)</td><td>50 modes</td><td>⟨ℓ₁|ℓ₂⟩ = δ_{ℓ₁ℓ₂}</td></tr>
+<tr><td>Polarization</td><td>2 (H or V)</td><td>Stokes vector separation</td></tr>
+<tr><td>Propagation direction</td><td>2 (+k̂ / −k̂)</td><td>Bidirectional Hilbert sub-space</td></tr>
+</tbody>
+</table>
+<p>Total: 256 × 50 × 2 × 2 = <strong>51,200 orthogonal channels</strong>. No collision possible — interference is forbidden by geometry, not policy.</p>
+<h3>SOP Negotiation Steps</h3>
+<ol>
+<li><strong>Channel Inner Product Check</strong> — two nodes compute ⟨Ψ_A|Ψ_B⟩; must equal zero to proceed</li>
+<li><strong>Collision Prevention</strong> — if two users share the same (wdm, oam, pol) triple, increment OAM until orthogonal</li>
+<li><strong>Orthogonality Certificate</strong> — signed proof issued confirming channel pair is collision-free</li>
+</ol>
+<p>API: <code>POST /api/wnsp/sop/negotiate</code> → returns inner product value, orthogonal flag, certificate, and resolution suggestion. Add a user to the network and they get a new axis in Hilbert space — existing channels are unaffected. No congestion in Hilbert space.</p>`,
   },
   "/wnsp": {
     title: "WNSP — Wavelength-Native Spectral Protocol",
