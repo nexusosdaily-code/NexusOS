@@ -163,7 +163,8 @@ const NOINDEX_EXACT_PATHS = new Set<string>([
   "/hub", "/apps",
   // Version history / internal pages
   "/v6", "/v7", "/v8", "/v9", "/v10",
-  "/wnsp-uri", "/wnsp-paper",
+  // "/wnsp-uri" — omitted: 301-redirects to /wnsp (indexable); noindex not needed
+  "/wnsp-paper",
   // Workspace sub-routes (internal tools)
   "/workspace/analytics", "/workspace/encoding", "/workspace/k1",
   "/workspace/matrix", "/workspace/orchestration", "/workspace/research",
@@ -180,7 +181,8 @@ const NOINDEX_EXACT_PATHS = new Set<string>([
   "/visualizer",
   "/encoding-lab", "/ce-writer",
   // Internal tools
-  "/spectral-audit", "/spectral-uri",
+  // "/spectral-uri" — omitted: 301-redirects to /wnsp (indexable); noindex not needed
+  "/spectral-audit",
   "/spectral-video", "/spectral-workspace",
   "/ordinal-registry",
   // Internal community / social
