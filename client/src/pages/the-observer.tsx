@@ -83,9 +83,9 @@ function SequenceNav({ current }: { current: 13 }) {
   return (
     <div className="rounded-xl border p-4" style={{ borderColor: OR + "20", background: OR + "08" }}>
       <p className="text-[10px] font-mono tracking-widest mb-3" style={{ color: OR }}>
-        THE SEQUENCE — ACT {current} OF 13
+        THE SEQUENCE — ACT {current} OF 14
       </p>
-      <div className="grid grid-cols-3 md:grid-cols-13 gap-1.5 text-center text-xs">
+      <div className="grid grid-cols-3 md:grid-cols-14 gap-1.5 text-center text-xs">
         {ACT_NAV.map(({ act, title, sub, href }) => (
           <Link key={href} href={href}
                 className="rounded-lg border border-slate-700 bg-slate-900 p-1.5
@@ -101,6 +101,13 @@ function SequenceNav({ current }: { current: 13 }) {
           <p className="font-medium leading-tight text-[8px]" style={{ color: "#fff7ed" }}>The Observer</p>
           <p className="text-[7px]" style={{ color: OR }}>χ=g²/Δ</p>
         </div>
+        <Link href="/the-memory"
+              className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/5 p-1.5
+                         hover:border-fuchsia-400/60 transition-colors space-y-0.5 block">
+          <p className="text-[7px] font-mono text-fuchsia-400 tracking-widest">ACT 14 →</p>
+          <p className="text-fuchsia-200 font-medium leading-tight text-[8px]">The Memory</p>
+          <p className="text-[7px] text-fuchsia-400">T₂≤2T₁</p>
+        </Link>
       </div>
     </div>
   );
@@ -648,10 +655,11 @@ export default function TheObserverPage() {
           <SequenceNav current={13} />
           <div className="border-t border-slate-800 pt-3 mt-4 text-center">
             <p className="text-[10px] font-mono text-slate-600 tracking-widest mb-1">
-              NEXT — ACT 14 OF ?
+              NEXT — ACT 14
             </p>
             <p className="text-slate-500 text-xs">
-              The Memory · Long-lived quantum state storage · spin-photon interface, T₁, T₂
+              <a href="/the-memory" style={{ color: "#d946ef" }} className="hover:opacity-80">The Memory →</a>
+              {" "}· Long-lived quantum state storage · T₂ ≤ 2T₁
             </p>
           </div>
         </div>

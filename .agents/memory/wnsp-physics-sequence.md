@@ -1,9 +1,9 @@
 ---
 name: WNSP Physics Sequence
-description: 9-act NexusOS physics sequence — acts, routes, equations, disclosure dates, and wiring pattern
+description: 14-act NexusOS physics sequence — acts, routes, equations, disclosure dates, and wiring pattern
 ---
 
-## The 9-Act Sequence
+## The 14-Act Sequence
 
 | Act | Route | Title | Equation | Disclosed |
 |-----|-------|-------|----------|-----------|

@@ -103,9 +103,9 @@ function SequenceNav({ current }: { current: 11 }) {
   return (
     <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-4">
       <p className="text-[10px] font-mono text-sky-400 tracking-widest mb-3">
-        THE SEQUENCE — ACT {current} OF 13
+        THE SEQUENCE — ACT {current} OF 14
       </p>
-      <div className="grid grid-cols-3 md:grid-cols-13 gap-1.5 text-center text-xs">
+      <div className="grid grid-cols-3 md:grid-cols-14 gap-1.5 text-center text-xs">
         {ACT_NAV.map(({ act, title, sub, href }) => (
           <Link key={href} href={href}
                 className="rounded-lg border border-slate-700 bg-slate-900 p-1.5
@@ -133,6 +133,13 @@ function SequenceNav({ current }: { current: 11 }) {
           <p className="text-[7px] font-mono text-orange-400 tracking-widest">ACT 13 →</p>
           <p className="text-orange-200 font-medium leading-tight text-[8px]">The Observer</p>
           <p className="text-[7px] text-orange-400">χ=g²/Δ</p>
+        </Link>
+        <Link href="/the-memory"
+              className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/5 p-1.5
+                         hover:border-fuchsia-400/60 transition-colors space-y-0.5 block">
+          <p className="text-[7px] font-mono text-fuchsia-400 tracking-widest">ACT 14 →</p>
+          <p className="text-fuchsia-200 font-medium leading-tight text-[8px]">The Memory</p>
+          <p className="text-[7px] text-fuchsia-400">T₂≤2T₁</p>
         </Link>
       </div>
     </div>
