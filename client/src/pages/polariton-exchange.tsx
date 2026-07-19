@@ -181,6 +181,7 @@ export default function PolaritonExchangePage() {
               { label: "Act 10 of 10",              color: "#f43f5e" },
               { label: `First Disclosure ${PAGE_DATE}`, color: "#fb923c" },
               { label: "AGPL-3.0",                   color: "#fb923c" },
+              { label: "Copyleft",                   color: "#fb923c" },
               { label: "Ω_R = 2g",                   color: "#06b6d4" },
               { label: "ΔE = 2ℏg",                   color: "#10b981" },
               { label: "g > κ, γ",                   color: "#f59e0b" },

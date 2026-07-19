@@ -170,6 +170,7 @@ export default function ResonanceCavityPage() {
               { label: "Act 9 of 9",           color: "#6366f1" },
               { label: `First Disclosure ${PAGE_DATE}`, color: "#8b5cf6" },
               { label: "AGPL-3.0",              color: "#8b5cf6" },
+              { label: "Copyleft",              color: "#8b5cf6" },
               { label: "R = nc/2πfₙ",           color: "#06b6d4" },
               { label: "r_null = l·λ/2π",       color: "#10b981" },
               { label: "Λ_geo = Λ·cos(γ)",      color: "#f59e0b" },

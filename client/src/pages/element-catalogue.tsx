@@ -436,6 +436,7 @@ export default function ElementCatalogue() {
               { label: "Act 6 of 7",              color: "#06b6d4" },
               { label: `First Disclosure ${PAGE_DATE}`, color: "#22c55e" },
               { label: "AGPL-3.0",                color: "#8b5cf6" },
+              { label: "Copyleft",                color: "#8b5cf6" },
               { label: "118 elements",            color: "#f59e0b" },
             ].map(({ label, color }) => (
               <span key={label}

@@ -132,6 +132,7 @@ export default function MatterProtocol() {
             { label: "Act 4 of 5", color: "#f59e0b" },
             { label: "First Disclosure 2026-07-06", color: "#22c55e" },
             { label: "AGPL-3.0", color: "#8b5cf6" },
+            { label: "Copyleft", color: "#8b5cf6" },
           ].map(({ label, color }) => (
             <span key={label}
               className="text-[10px] font-mono px-2.5 py-1 rounded-full border"

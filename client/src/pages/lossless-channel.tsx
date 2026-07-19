@@ -385,6 +385,7 @@ export default function LosslessChannel() {
               { label: "Act 8 of 9",                    color: "#10b981" },
               { label: `First Disclosure ${PAGE_DATE}`, color: "#22c55e" },
               { label: "AGPL-3.0",                      color: "#8b5cf6" },
+              { label: "Copyleft",                      color: "#8b5cf6" },
               { label: "α = 0",                         color: "#06b6d4" },
               { label: "Ψ_channel = ⊗ᵢ Ψ_trap(nᵢ)",   color: "#f59e0b" },
             ].map(({ label, color }) => (

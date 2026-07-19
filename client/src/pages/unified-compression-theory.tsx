@@ -113,6 +113,9 @@ export default function UnifiedCompressionTheoryPage() {
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-emerald-500/40 text-emerald-400 bg-emerald-500/10">
               AGPL-3.0
             </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-emerald-500/40 text-emerald-400 bg-emerald-500/10">
+              Copyleft
+            </span>
           </div>
 
           {/* sequence nav */}

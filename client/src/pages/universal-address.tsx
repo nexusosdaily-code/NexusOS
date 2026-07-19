@@ -103,6 +103,7 @@ export default function UniversalAddress() {
             { label: "Act 5 of 5",               color: "#06b6d4" },
             { label: "First Disclosure 2026-07-06", color: "#22c55e" },
             { label: "AGPL-3.0",                  color: "#8b5cf6" },
+            { label: "Copyleft",                  color: "#8b5cf6" },
           ].map(({ label, color }) => (
             <span key={label}
               className="text-[10px] font-mono px-2.5 py-1 rounded-full border"

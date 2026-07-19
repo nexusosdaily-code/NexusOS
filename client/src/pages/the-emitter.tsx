@@ -191,6 +191,7 @@ export default function TheEmitterPage() {
               { label: "Act 11 of 11",             color: "#0ea5e9" },
               { label: `First Disclosure ${PAGE_DATE}`, color: "#fb923c" },
               { label: "AGPL-3.0",                  color: "#fb923c" },
+              { label: "Copyleft",                  color: "#fb923c" },
               { label: "F_p = (3λ³/4π²n³)(Q/V)",   color: "#0ea5e9" },
               { label: "β → 1 ideal",               color: "#10b981" },
               { label: "τ_eff = τ₀/(1+Fp)",         color: "#a78bfa" },

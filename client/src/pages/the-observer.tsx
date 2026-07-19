@@ -225,6 +225,7 @@ export default function TheObserverPage() {
               { label: "Act 13 of 13",                color: OR },
               { label: `First Disclosure ${PAGE_DATE}`, color: "#fb923c" },
               { label: "AGPL-3.0",                    color: "#fb923c" },
+              { label: "Copyleft",                    color: "#fb923c" },
               { label: "χ = g²/Δ",                    color: OR },
               { label: "QND — non-demolition",         color: "#a78bfa" },
               { label: "Dispersive readout",           color: "#10b981" },

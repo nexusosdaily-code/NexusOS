@@ -119,6 +119,9 @@ export default function UniversalOnePage() {
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-violet-500/40 text-violet-400 bg-violet-500/10">
               AGPL-3.0
             </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-violet-500/40 text-violet-400 bg-violet-500/10">
+              Copyleft
+            </span>
           </div>
 
           {/* sequence nav */}

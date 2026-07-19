@@ -293,6 +293,7 @@ export default function TheNetworkPage() {
               { label: "Act 12 of 12",               color: TEAL },
               { label: `First Disclosure ${PAGE_DATE}`, color: "#fb923c" },
               { label: "AGPL-3.0",                    color: "#fb923c" },
+              { label: "Copyleft",                    color: "#fb923c" },
               { label: "ω(k)=ω₀−2J·cos(ka)",          color: TEAL },
               { label: "CROW — slow light",            color: "#a78bfa" },
               { label: "Spectral Relay Mesh basis",    color: "#10b981" },

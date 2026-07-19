@@ -446,6 +446,7 @@ export default function OscillatingQuantaPage() {
               { label: "Act 1 of 8", color: "#8b5cf6" },
               { label: "First Disclosure 2025", color: "#22c55e" },
               { label: "AGPL-3.0", color: "#8b5cf6" },
+              { label: "Copyleft", color: "#8b5cf6" },
             ].map(({ label, color }) => (
               <span key={label} className="text-[10px] font-mono px-2.5 py-1 rounded-full border"
                 style={{ color, borderColor: color + "55", background: color + "11" }}>
