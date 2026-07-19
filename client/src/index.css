@@ -39,7 +39,7 @@
   --color-ring: hsl(212 100% 47%);
 
   --font-sans: "Inter", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, "DejaVu Sans Mono", monospace;
 }
 
 @layer base {
