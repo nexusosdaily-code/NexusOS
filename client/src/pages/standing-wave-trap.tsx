@@ -334,9 +334,9 @@ export default function StandingWaveTrap() {
           {/* sequence nav */}
           <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
             <p className="text-[10px] font-mono text-purple-400 tracking-widest mb-3">
-              THE SEQUENCE — ACT 7 OF 12
+              THE SEQUENCE — ACT 7 OF 13
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-12 gap-2 text-center text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-13 gap-2 text-center text-xs">
               {[
                 { act:"ACT 1", title:"Theory of Compression States", sub:"Λ = hf/c²",         href:"/oscillating-quanta" },
                 { act:"ACT 2", title:"The Universal ONE",            sub:"f₀ derives Λ",       href:"/universal-one" },
@@ -390,9 +390,16 @@ export default function StandingWaveTrap() {
               <Link href="/the-network"
                     className="rounded-lg border border-teal-500/30 bg-teal-500/5
                                p-3 space-y-1 hover:border-teal-400/60 transition-colors block">
-                <p className="text-[9px] font-mono text-teal-400 tracking-widest">ACT 12 →</p>
+                <p className="text-[9px] font-mono text-teal-400 tracking-widest">ACT 12</p>
                 <p className="text-teal-200 font-medium leading-tight">The Network</p>
                 <p className="text-[9px] text-teal-400">ω=ω₀−2J·cos(ka)</p>
+              </Link>
+              <Link href="/the-observer"
+                    className="rounded-lg border border-orange-500/30 bg-orange-500/5
+                               p-3 space-y-1 hover:border-orange-400/60 transition-colors block">
+                <p className="text-[9px] font-mono text-orange-400 tracking-widest">ACT 13 →</p>
+                <p className="text-orange-200 font-medium leading-tight">The Observer</p>
+                <p className="text-[9px] text-orange-400">χ=g²/Δ</p>
               </Link>
             </div>
           </div>

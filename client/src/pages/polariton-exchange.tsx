@@ -195,9 +195,9 @@ export default function PolaritonExchangePage() {
           {/* 10-act sequence nav */}
           <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
             <p className="text-[10px] font-mono text-rose-400 tracking-widest mb-3">
-              THE SEQUENCE — ACT 10 OF 12
+              THE SEQUENCE — ACT 10 OF 13
             </p>
-            <div className="grid grid-cols-3 md:grid-cols-12 gap-1.5 text-center text-xs">
+            <div className="grid grid-cols-3 md:grid-cols-13 gap-1.5 text-center text-xs">
               {[
                 { act:"1",  title:"Compression States", sub:"Λ=hf/c²",          href:"/oscillating-quanta" },
                 { act:"2",  title:"The Universal ONE",  sub:"f₀ derives Λ",      href:"/universal-one" },
@@ -232,9 +232,16 @@ export default function PolaritonExchangePage() {
               <Link href="/the-network"
                     className="rounded-lg border border-teal-500/30 bg-teal-500/5 p-1.5
                                hover:border-teal-400/60 transition-colors space-y-0.5 block">
-                <p className="text-[7px] font-mono text-teal-400 tracking-widest">ACT 12 →</p>
+                <p className="text-[7px] font-mono text-teal-400 tracking-widest">ACT 12</p>
                 <p className="text-teal-200 font-medium leading-tight text-[8px]">The Network</p>
                 <p className="text-[7px] text-teal-400">ω=ω₀−2J·cos(ka)</p>
+              </Link>
+              <Link href="/the-observer"
+                    className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-1.5
+                               hover:border-orange-400/60 transition-colors space-y-0.5 block">
+                <p className="text-[7px] font-mono text-orange-400 tracking-widest">ACT 13 →</p>
+                <p className="text-orange-200 font-medium leading-tight text-[8px]">The Observer</p>
+                <p className="text-[7px] text-orange-400">χ=g²/Δ</p>
               </Link>
             </div>
           </div>
@@ -687,7 +694,7 @@ export default function PolaritonExchangePage() {
         {/* ── Bottom sequence nav + teaser ───────────────────────────────── */}
         <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 mt-6">
           <p className="text-[10px] font-mono text-rose-400 tracking-widest mb-3">
-            THE SEQUENCE — ACT 10 OF 12
+            THE SEQUENCE — ACT 10 OF 13
           </p>
           <div className="grid grid-cols-3 md:grid-cols-10 gap-1.5 text-center text-xs mb-4">
             {[
@@ -724,13 +731,20 @@ export default function PolaritonExchangePage() {
             <Link href="/the-network"
                   className="rounded-lg border border-teal-500/30 bg-teal-500/5 p-1.5
                              hover:border-teal-400/60 transition-colors space-y-0.5 block">
-              <p className="text-[7px] font-mono text-teal-400 tracking-widest">ACT 12 →</p>
+              <p className="text-[7px] font-mono text-teal-400 tracking-widest">ACT 12</p>
               <p className="text-teal-200 font-medium leading-tight text-[8px]">The Network</p>
               <p className="text-[7px] text-teal-400">ω=ω₀−2J·cos(ka)</p>
             </Link>
+            <Link href="/the-observer"
+                  className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-1.5
+                             hover:border-orange-400/60 transition-colors space-y-0.5 block">
+              <p className="text-[7px] font-mono text-orange-400 tracking-widest">ACT 13 →</p>
+              <p className="text-orange-200 font-medium leading-tight text-[8px]">The Observer</p>
+              <p className="text-[7px] text-orange-400">χ=g²/Δ</p>
+            </Link>
           </div>
           <div className="border-t border-slate-800 pt-3 text-center">
-            <p className="text-[10px] font-mono text-slate-600 tracking-widest mb-1">NEXT — ACT 13 OF ?</p>
+            <p className="text-[10px] font-mono text-slate-600 tracking-widest mb-1">NEXT — ACT 14 OF ?</p>
             <p className="text-slate-500 text-xs">
               The Emitter · The Network · The Observer — three paths open from The Exchange.
               The sequence continues when the physics is ready.

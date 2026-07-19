@@ -103,9 +103,9 @@ function SequenceNav({ current }: { current: 11 }) {
   return (
     <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-4">
       <p className="text-[10px] font-mono text-sky-400 tracking-widest mb-3">
-        THE SEQUENCE — ACT {current} OF 12
+        THE SEQUENCE — ACT {current} OF 13
       </p>
-      <div className="grid grid-cols-3 md:grid-cols-12 gap-1.5 text-center text-xs">
+      <div className="grid grid-cols-3 md:grid-cols-13 gap-1.5 text-center text-xs">
         {ACT_NAV.map(({ act, title, sub, href }) => (
           <Link key={href} href={href}
                 className="rounded-lg border border-slate-700 bg-slate-900 p-1.5
@@ -123,9 +123,16 @@ function SequenceNav({ current }: { current: 11 }) {
         <Link href="/the-network"
               className="rounded-lg border border-teal-500/30 bg-teal-500/5 p-1.5
                          hover:border-teal-400/60 transition-colors space-y-0.5 block">
-          <p className="text-[7px] font-mono text-teal-400 tracking-widest">ACT 12 →</p>
+          <p className="text-[7px] font-mono text-teal-400 tracking-widest">ACT 12</p>
           <p className="text-teal-200 font-medium leading-tight text-[8px]">The Network</p>
           <p className="text-[7px] text-teal-400">ω=ω₀−2J·cos(ka)</p>
+        </Link>
+        <Link href="/the-observer"
+              className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-1.5
+                         hover:border-orange-400/60 transition-colors space-y-0.5 block">
+          <p className="text-[7px] font-mono text-orange-400 tracking-widest">ACT 13 →</p>
+          <p className="text-orange-200 font-medium leading-tight text-[8px]">The Observer</p>
+          <p className="text-[7px] text-orange-400">χ=g²/Δ</p>
         </Link>
       </div>
     </div>
@@ -701,11 +708,10 @@ export default function TheEmitterPage() {
           <SequenceNav current={11} />
           <div className="border-t border-slate-800 pt-3 mt-4 text-center">
             <p className="text-[10px] font-mono text-slate-600 tracking-widest mb-1">
-              NEXT — ACT 13 OF ?
+              NEXT — ACT 14 OF ?
             </p>
             <p className="text-slate-500 text-xs">
-              The Observer · QND dispersive readout · χ = g²/Δ — reading the
-              photon state without destroying it
+              The Memory · long-lived quantum state storage · spin-photon interface, T₁, T₂
             </p>
           </div>
         </div>

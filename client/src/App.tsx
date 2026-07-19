@@ -183,6 +183,7 @@ const LosslessChannelPage           = lazy(() => import("@/pages/lossless-channe
 const PolaritonExchangePage         = lazy(() => import("@/pages/polariton-exchange"));
 const TheEmitterPage                = lazy(() => import("@/pages/the-emitter"));
 const TheNetworkPage                = lazy(() => import("@/pages/the-network"));
+const TheObserverPage               = lazy(() => import("@/pages/the-observer"));
 
 // Loading spinner shown while a lazy page chunk is downloading
 function PageLoader() {
@@ -254,6 +255,7 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/polariton-exchange",
   "/the-emitter",
   "/the-network",
+  "/the-observer",
   "/friends", "/inbox", "/messages", "/phonebook",
   "/k1", "/k1/orchestration",
   "/secure-docs",
@@ -340,6 +342,7 @@ function ProtectedRoutes() {
         <Route path="/polariton-exchange" component={PolaritonExchangePage} />
         <Route path="/the-emitter" component={TheEmitterPage} />
         <Route path="/the-network" component={TheNetworkPage} />
+        <Route path="/the-observer" component={TheObserverPage} />
         <Route path="/friends" component={FriendsPage} />
         <Route path="/inbox" component={InboxPage} />
         <Route path="/messages" component={InboxPage} />
@@ -542,6 +545,7 @@ function Router() {
       <Route path="/polariton-exchange" component={PolaritonExchangePage} />
       <Route path="/the-emitter" component={TheEmitterPage} />
       <Route path="/the-network" component={TheNetworkPage} />
+      <Route path="/the-observer" component={TheObserverPage} />
       <Route path="/planck-alignment" component={PlanckAlignmentPage} />
       <Route path="/reposed-theory" component={ReposedTheoryPage} />
       <Route path="/compression-explorer" component={CompressionExplorerPage} />

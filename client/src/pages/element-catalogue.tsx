@@ -449,7 +449,7 @@ export default function ElementCatalogue() {
           {/* sequence nav */}
           <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
             <p className="text-[10px] font-mono text-cyan-400 tracking-widest mb-3">
-              THE SEQUENCE — ACT 6 OF 12
+              THE SEQUENCE — ACT 6 OF 13
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs">
               {[
@@ -479,6 +479,7 @@ export default function ElementCatalogue() {
                 { act:"ACT 10", title:"The Exchange", sub:"Ω_R = 2g",            href:"/polariton-exchange" },
                 { act:"ACT 11", title:"The Emitter",  sub:"F_p=(Q/V)(λ/n)³",    href:"/the-emitter" },
                 { act:"ACT 12", title:"The Network",  sub:"ω=ω₀−2J·cos(ka)",    href:"/the-network" },
+                { act:"ACT 13", title:"The Observer", sub:"χ=g²/Δ",              href:"/the-observer" },
               ].map(({ act, title, sub, href }) => (
                 <Link key={href} href={href}
                       className="rounded-lg border border-slate-700 bg-slate-900 p-3

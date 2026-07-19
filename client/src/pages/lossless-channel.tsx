@@ -399,9 +399,9 @@ export default function LosslessChannel() {
           {/* 10-act sequence nav */}
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
             <p className="text-[10px] font-mono text-emerald-400 tracking-widest mb-3">
-              THE SEQUENCE — ACT 8 OF 12
+              THE SEQUENCE — ACT 8 OF 13
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-12 gap-2 text-center text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-13 gap-2 text-center text-xs">
               {[
                 { act:"ACT 1", title:"Theory of Compression States", sub:"Λ = hf/c²",             href:"/oscillating-quanta" },
                 { act:"ACT 2", title:"The Universal ONE",            sub:"f₀ derives Λ",           href:"/universal-one" },
@@ -449,9 +449,16 @@ export default function LosslessChannel() {
               <Link href="/the-network"
                     className="rounded-lg border border-teal-500/30 bg-teal-500/5 p-2
                                hover:border-teal-400/60 transition-colors space-y-1 block">
-                <p className="text-[8px] font-mono text-teal-400 tracking-widest">ACT 12 →</p>
+                <p className="text-[8px] font-mono text-teal-400 tracking-widest">ACT 12</p>
                 <p className="text-teal-200 font-medium leading-tight text-[10px]">The Network</p>
                 <p className="text-[8px] text-teal-400">ω=ω₀−2J·cos(ka)</p>
+              </Link>
+              <Link href="/the-observer"
+                    className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-2
+                               hover:border-orange-400/60 transition-colors space-y-1 block">
+                <p className="text-[8px] font-mono text-orange-400 tracking-widest">ACT 13 →</p>
+                <p className="text-orange-200 font-medium leading-tight text-[10px]">The Observer</p>
+                <p className="text-[8px] text-orange-400">χ=g²/Δ</p>
               </Link>
             </div>
           </div>
