@@ -137,7 +137,7 @@ export default function BtcSentinelPage() {
         <h1 className="sr-only">Wallet Sentinel</h1>
         <div className="flex items-center gap-3 mb-6">
           <Link href="/wnsp">
-            <button className="text-gray-400 hover:text-white transition-colors">
+            <button className="text-gray-400 hover:text-white transition-colors" aria-label="Back to WNSP">
               <ArrowLeft className="w-5 h-5" />
             </button>
           </Link>
@@ -243,7 +243,7 @@ export default function BtcSentinelPage() {
                 </div>
                 <div className="flex items-center gap-2 bg-black/30 rounded p-2">
                   <span className="font-mono text-xs text-amber-300 break-all">{snap.address}</span>
-                  <button onClick={() => copy(snap.address)} className="text-amber-500/50 hover:text-amber-400 shrink-0">
+                  <button onClick={() => copy(snap.address)} className="text-amber-500/50 hover:text-amber-400 shrink-0" aria-label="Copy service wallet address">
                     <Copy className="w-3 h-3" />
                   </button>
                 </div>
@@ -378,7 +378,8 @@ function MyBtcWalletCard() {
         <button
           onClick={e => { e.stopPropagation(); refetch(); }}
           className="text-gray-600 hover:text-cyan-400 mr-1"
-          title="Refresh">
+          title="Refresh"
+          aria-label="Refresh wallet data">
           <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
         </button>
         {open ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
@@ -647,7 +648,7 @@ function BtcDepositPanel() {
                   <span className="text-green-200 font-mono text-[10px] flex-1 truncate" data-testid="text-registered-btc-address">
                     {registered.btc_address}
                   </span>
-                  <button onClick={() => copy(registered.btc_address)} className="text-gray-500 hover:text-green-400">
+                  <button onClick={() => copy(registered.btc_address)} className="text-gray-500 hover:text-green-400" aria-label="Copy registered Bitcoin address">
                     <Copy className="w-3 h-3" />
                   </button>
                 </div>
@@ -694,7 +695,7 @@ function BtcDepositPanel() {
         <div className="px-4 pb-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Deposit history</span>
-            <button onClick={() => refetchHist()} className="text-gray-600 hover:text-gray-400">
+            <button onClick={() => refetchHist()} className="text-gray-600 hover:text-gray-400" aria-label="Refresh deposit history">
               <RefreshCw className="w-3 h-3" />
             </button>
           </div>

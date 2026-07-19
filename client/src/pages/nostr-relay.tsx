@@ -265,7 +265,8 @@ export default function NostrRelayPage() {
               </div>
               <button
                 onClick={() => tab === "feed" ? refetchFeed() : refetchGlobal()}
-                className="text-gray-600 hover:text-purple-400 transition-colors">
+                className="text-gray-600 hover:text-purple-400 transition-colors"
+                aria-label="Refresh feed">
                 <RefreshCw className="w-3.5 h-3.5" />
               </button>
             </div>
