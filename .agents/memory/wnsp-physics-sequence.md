@@ -1,9 +1,9 @@
 ---
 name: WNSP Physics Sequence
-description: 14-act NexusOS physics sequence — acts, routes, equations, disclosure dates, and wiring pattern
+description: 15-act NexusOS physics sequence — acts, routes, equations, disclosure dates, and wiring pattern
 ---
 
-## The 14-Act Sequence
+## The 15-Act Sequence
 
 | Act | Route | Title | Equation | Disclosed |
 |-----|-------|-------|----------|-----------|
@@ -16,12 +16,28 @@ description: 14-act NexusOS physics sequence — acts, routes, equations, disclo
 | 7 | /standing-wave-trap | The Trap | Ψ_trap = Ψ(+k̂) ⊗ Ψ(−k̂) | 2026-07-07 |
 | 8 | /lossless-channel | The Lossless Channel | Ψ_channel = ⊗ᵢ Ψ_trap(nᵢ) | 2026-07-07 |
 | 9 | /resonance-cavity | The Cavity | R=nc/2πfₙ, r_null=lλ/2π, Λ_geo=Λcos(γ) | 2026-07-16 |
+| 10 | /polariton-exchange | The Exchange | Ω_R=2g, polariton formation | prior |
+| 11 | /the-emitter | The Emitter | F_p=(3/4π²)(λ/n)³(Q/V) | prior |
+| 12 | /the-network | The Network | ω(k)=ω₀−2J·cos(ka) | prior |
+| 13 | /the-observer | The Observer | χ=g²/Δ | prior |
+| 14 | /the-memory | The Memory | T₂≤2T₁ | 2026-07-19 |
+| 15 | /cosmic-lattice | The Void | n_ZPE=264.71 (Claim 30) | 2026-07-19 |
 
 ## Ghost Node Physics
 - Ghost node n=36 at 169.33 u — no stable nucleus (binding energy mass defect)
 - Tm (Z=69, 4f¹³): n=35.9966, gap=−0.0034 octaves below n=36
 - Yb (Z=70, 4f¹⁴): n≈36.07, gap=+0.07 octaves above n=36
 - n=35 is near-occupied: Kr (−0.015), Rb (+0.012) — narrow gap only
+
+## Act 15 Key Physics (Cosmic Lattice / The Void)
+- Cosmic ZPE floor: n=264.71 (M=10¹⁴ M☉), σ(M)=1.680≈δ_c=1.686
+- Above n=264.71 is the "cosmic ghost zone" — PS mass fn P→0
+- Boötes Void: n=271.95, P≈10⁻¹⁰¹ — physically impossible, not just unlikely
+- BAO anti-nodes λ=147 Mpc, k×λ/3: 4 confirmed supervoids within 5-13% of predictions:
+  - Canes Venatici 55Mpc (λ/3=49Mpc, 12.2%)
+  - Boötes 101Mpc (2λ/3=98Mpc, 3.1%)
+  - Eridanus 153Mpc (λ=147Mpc, 4.1%)
+  - CMB Cold Spot 200Mpc (4λ/3=196Mpc, 2.0%)
 
 ## Act 9 Key Physics (Forward Agenda, July 2026)
 

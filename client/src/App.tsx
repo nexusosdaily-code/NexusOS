@@ -185,6 +185,7 @@ const TheEmitterPage                = lazy(() => import("@/pages/the-emitter"));
 const TheNetworkPage                = lazy(() => import("@/pages/the-network"));
 const TheObserverPage               = lazy(() => import("@/pages/the-observer"));
 const TheMemoryPage                 = lazy(() => import("@/pages/the-memory"));
+const CosmicLatticePage             = lazy(() => import("@/pages/cosmic-lattice"));
 
 // Loading spinner shown while a lazy page chunk is downloading
 function PageLoader() {
@@ -290,6 +291,7 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/divergence-test", "/hardware-spec", "/hardware-lab",
   "/campaign", "/constitution", "/mobile-sdk", "/shareholders",
   "/psi-board", "/unified-compression-theory", "/universal-one", "/matter-protocol", "/universal-address", "/element-catalogue", "/standing-wave-trap", "/lossless-channel",
+  "/cosmic-lattice",
 ]);
 
 // Only paths where ANY child segment is a valid protected route (dynamic).
@@ -550,6 +552,7 @@ function Router() {
       <Route path="/the-network" component={TheNetworkPage} />
       <Route path="/the-observer" component={TheObserverPage} />
       <Route path="/the-memory" component={TheMemoryPage} />
+      <Route path="/cosmic-lattice" component={CosmicLatticePage} />
       <Route path="/planck-alignment" component={PlanckAlignmentPage} />
       <Route path="/reposed-theory" component={ReposedTheoryPage} />
       <Route path="/compression-explorer" component={CompressionExplorerPage} />

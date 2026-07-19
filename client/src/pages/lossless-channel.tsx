@@ -400,9 +400,9 @@ export default function LosslessChannel() {
           {/* 10-act sequence nav */}
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
             <p className="text-[10px] font-mono text-emerald-400 tracking-widest mb-3">
-              THE SEQUENCE — ACT 8 OF 14
+              THE SEQUENCE — ACT 8 OF 15
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-14 gap-2 text-center text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-15 gap-2 text-center text-xs">
               {[
                 { act:"ACT 1", title:"Theory of Compression States", sub:"Λ = hf/c²",             href:"/oscillating-quanta" },
                 { act:"ACT 2", title:"The Universal ONE",            sub:"f₀ derives Λ",           href:"/universal-one" },
@@ -467,6 +467,13 @@ export default function LosslessChannel() {
                 <p className="text-[8px] font-mono text-fuchsia-400 tracking-widest">ACT 14 →</p>
                 <p className="text-fuchsia-200 font-medium leading-tight text-[10px]">The Memory</p>
                 <p className="text-[8px] text-fuchsia-400">T₂≤2T₁</p>
+              </Link>
+              <Link href="/cosmic-lattice"
+                    className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-2
+                               hover:border-violet-400/60 transition-colors space-y-1 block">
+                <p className="text-[8px] font-mono text-violet-400 tracking-widest">ACT 15 →</p>
+                <p className="text-violet-200 font-medium leading-tight text-[10px]">The Void</p>
+                <p className="text-[8px] text-violet-400">n_ZPE=264.71</p>
               </Link>
             </div>
           </div>

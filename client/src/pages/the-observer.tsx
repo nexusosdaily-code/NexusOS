@@ -83,9 +83,9 @@ function SequenceNav({ current }: { current: 13 }) {
   return (
     <div className="rounded-xl border p-4" style={{ borderColor: OR + "20", background: OR + "08" }}>
       <p className="text-[10px] font-mono tracking-widest mb-3" style={{ color: OR }}>
-        THE SEQUENCE — ACT {current} OF 14
+        THE SEQUENCE — ACT {current} OF 15
       </p>
-      <div className="grid grid-cols-3 md:grid-cols-14 gap-1.5 text-center text-xs">
+      <div className="grid grid-cols-3 md:grid-cols-15 gap-1.5 text-center text-xs">
         {ACT_NAV.map(({ act, title, sub, href }) => (
           <Link key={href} href={href}
                 className="rounded-lg border border-slate-700 bg-slate-900 p-1.5
@@ -107,6 +107,13 @@ function SequenceNav({ current }: { current: 13 }) {
           <p className="text-[7px] font-mono text-fuchsia-400 tracking-widest">ACT 14 →</p>
           <p className="text-fuchsia-200 font-medium leading-tight text-[8px]">The Memory</p>
           <p className="text-[7px] text-fuchsia-400">T₂≤2T₁</p>
+        </Link>
+        <Link href="/cosmic-lattice"
+              className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-1.5
+                         hover:border-violet-400/60 transition-colors space-y-0.5 block">
+          <p className="text-[7px] font-mono text-violet-400 tracking-widest">ACT 15 →</p>
+          <p className="text-violet-200 font-medium leading-tight text-[8px]">The Void</p>
+          <p className="text-[7px] text-violet-400">n_ZPE=264.71</p>
         </Link>
       </div>
     </div>

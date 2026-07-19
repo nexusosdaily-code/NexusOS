@@ -196,9 +196,9 @@ export default function PolaritonExchangePage() {
           {/* 10-act sequence nav */}
           <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
             <p className="text-[10px] font-mono text-rose-400 tracking-widest mb-3">
-              THE SEQUENCE — ACT 10 OF 14
+              THE SEQUENCE — ACT 10 OF 15
             </p>
-            <div className="grid grid-cols-3 md:grid-cols-14 gap-1.5 text-center text-xs">
+            <div className="grid grid-cols-3 md:grid-cols-15 gap-1.5 text-center text-xs">
               {[
                 { act:"1",  title:"Compression States", sub:"Λ=hf/c²",          href:"/oscillating-quanta" },
                 { act:"2",  title:"The Universal ONE",  sub:"f₀ derives Λ",      href:"/universal-one" },
@@ -250,6 +250,13 @@ export default function PolaritonExchangePage() {
                 <p className="text-[7px] font-mono text-fuchsia-400 tracking-widest">ACT 14 →</p>
                 <p className="text-fuchsia-200 font-medium leading-tight text-[8px]">The Memory</p>
                 <p className="text-[7px] text-fuchsia-400">T₂≤2T₁</p>
+              </Link>
+              <Link href="/cosmic-lattice"
+                    className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-1.5
+                               hover:border-violet-400/60 transition-colors space-y-0.5 block">
+                <p className="text-[7px] font-mono text-violet-400 tracking-widest">ACT 15 →</p>
+                <p className="text-violet-200 font-medium leading-tight text-[8px]">The Void</p>
+                <p className="text-[7px] text-violet-400">n_ZPE=264.71</p>
               </Link>
             </div>
           </div>
@@ -702,7 +709,7 @@ export default function PolaritonExchangePage() {
         {/* ── Bottom sequence nav + teaser ───────────────────────────────── */}
         <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 mt-6">
           <p className="text-[10px] font-mono text-rose-400 tracking-widest mb-3">
-            THE SEQUENCE — ACT 10 OF 14
+            THE SEQUENCE — ACT 10 OF 15
           </p>
           <div className="grid grid-cols-3 md:grid-cols-10 gap-1.5 text-center text-xs mb-4">
             {[
@@ -756,6 +763,13 @@ export default function PolaritonExchangePage() {
               <p className="text-[7px] font-mono text-fuchsia-400 tracking-widest">ACT 14 →</p>
               <p className="text-fuchsia-200 font-medium leading-tight text-[8px]">The Memory</p>
               <p className="text-[7px] text-fuchsia-400">T₂≤2T₁</p>
+            </Link>
+            <Link href="/cosmic-lattice"
+                  className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-1.5
+                             hover:border-violet-400/60 transition-colors space-y-0.5 block">
+              <p className="text-[7px] font-mono text-violet-400 tracking-widest">ACT 15 →</p>
+              <p className="text-violet-200 font-medium leading-tight text-[8px]">The Void</p>
+              <p className="text-[7px] text-violet-400">n_ZPE=264.71</p>
             </Link>
           </div>
           <div className="border-t border-slate-800 pt-3 text-center">
