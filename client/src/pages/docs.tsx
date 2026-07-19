@@ -962,6 +962,11 @@ This is why it is the correct foundation for infrastructure at Kardashev Type I 
 export default function DocsPage() {
   const params = useParams<{ section?: string }>();
   const sections = Object.entries(DOCS_SECTIONS);
+
+  // /docs (no section param) → hub/index view; canonical = https://wnsp.io/docs
+  // /docs/:section           → section article view; canonical = https://wnsp.io/docs/:section
+  // The two URLs are intentionally distinct: /docs is a CollectionPage hub while
+  // each /docs/:section page is a TechArticle. They NEVER share content or canonical.
   const validSection =
     params.section && params.section in DOCS_SECTIONS
       ? (params.section as keyof typeof DOCS_SECTIONS)

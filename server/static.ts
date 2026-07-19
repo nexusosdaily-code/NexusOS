@@ -208,12 +208,27 @@ const DYNAMIC_PUBLIC_PREFIXES: string[] = [
 ];
 
 // Valid /docs/:section slugs — must stay in sync with DOCS_SECTIONS in
-// client/src/pages/docs.tsx. Unknown slugs under /docs/ receive HTTP 404
-// instead of a false public 200 so crawl budget isn't wasted on thin shells.
+// client/src/pages/docs.tsx AND with DOCS_SECTION_META in server/seo-meta.ts.
+// Every slug listed here:
+//   • returns HTTP 200 (not 404) from the SPA catch-all route
+//   • has a dedicated entry in DOCS_SECTION_META with title, description, and bodyHtml
+//   • is linked from the /docs CollectionPage JSON-LD and sidebar nav
+// Unknown slugs under /docs/ receive HTTP 404 so crawl budget isn't wasted on
+// thin shells. If a section is removed from docs.tsx or seo-meta.ts it must
+// also be removed here, and vice-versa.
 const DOCS_SECTION_SLUGS = new Set<string>([
-  "substrate", "wascii", "consensus", "economics", "bhls",
-  "governance", "infrastructure", "hardware", "simulators",
-  "massless", "sop", "catchBasin",
+  "substrate",      // Lambda Gate Substrate v4
+  "wascii",         // WNSP Protocol — Two-Layer Standard
+  "consensus",      // Proof of Spectrum Consensus
+  "economics",      // NXT Token Economics
+  "bhls",           // BHLS Floor System
+  "governance",     // Planetary Governance
+  "infrastructure", // K1 Infrastructure
+  "hardware",       // Hardware Control Layer
+  "simulators",     // Energy Simulators
+  "massless",       // Massless Technologies
+  "catchBasin",     // CZC Catch Basin — returns HTTP 200 with full SEO metadata
+  "sop",            // Spectral Orthogonal Protocol
 ]);
 
 function isNoindexSpaPath(pathname: string): boolean {

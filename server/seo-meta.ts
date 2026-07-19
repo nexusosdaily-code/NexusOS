@@ -367,7 +367,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "WNSP protocol spec, WavelengthScript reference, CE-SE pipeline, REST API reference, NXT token, WNSP VM. Everything you need to build on the wavelength of light.",
     twitterTitle: "NexusOS Documentation",
     twitterDescription: "Complete reference for WNSP protocol, WavelengthScript, CE-SE encoding, and the NexusOS API.",
-    ogType: "article",
+    ogType: "website",
     jsonLd: [
       {
         "@context": "https://schema.org",
@@ -389,7 +389,6 @@ export const ROUTE_META: Record<string, PageMeta> = {
           { "@type": "TechArticle", "name": "Massless Technologies", "url": `${BASE}/docs/massless` },
           { "@type": "TechArticle", "name": "CZC Catch Basin", "url": `${BASE}/docs/catchBasin` },
           { "@type": "TechArticle", "name": "Spectral Orthogonal Protocol (SOP)", "url": `${BASE}/docs/sop` },
-          { "@type": "TechArticle", "name": "CZC Catch Basin", "url": `${BASE}/docs/catchBasin` },
         ],
       },
       {
