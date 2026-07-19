@@ -965,18 +965,18 @@ export default function DocsPage() {
   const validSection =
     params.section && params.section in DOCS_SECTIONS
       ? (params.section as keyof typeof DOCS_SECTIONS)
-      : "substrate";
+      : null;
   const activeSection = validSection;
-  const currentSection = DOCS_SECTIONS[activeSection];
-  const IconComponent = currentSection.icon;
-  const isSectionUrl = Boolean(params.section);
-  const sectionCanonical = isSectionUrl
+  const currentSection = activeSection ? DOCS_SECTIONS[activeSection] : null;
+  const IconComponent = currentSection?.icon ?? null;
+  const isSectionUrl = Boolean(validSection);
+  const sectionCanonical = isSectionUrl && activeSection
     ? `https://wnsp.io/docs/${activeSection}`
     : "https://wnsp.io/docs";
-  const sectionTitle = isSectionUrl
+  const sectionTitle = isSectionUrl && currentSection
     ? `${currentSection.title} — NexusOS Documentation`
     : "NexusOS Documentation — WNSP Protocol, WavelengthScript & CE-SE API";
-  const sectionDescription = isSectionUrl
+  const sectionDescription = isSectionUrl && currentSection
     ? `${currentSection.title}: ${currentSection.content[0]?.heading ?? "developer reference"} and full technical documentation for building on NexusOS.`
     : "Complete developer documentation for NexusOS: WNSP spectral protocol, WavelengthScript language reference, CE-SE encoding pipeline, REST API, NXT token wallet, WNSP VM bytecode, and governance.";
 
@@ -1152,6 +1152,45 @@ export default function DocsPage() {
           </div>
 
           <div className="lg:col-span-3">
+            {!activeSection || !currentSection || !IconComponent ? (
+              /* Hub / index view — rendered when visiting /docs with no section */
+              <div data-testid="docs-hub">
+                <Card className="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center">
+                      <BookOpen className="w-7 h-7 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold">NexusOS Documentation</h2>
+                      <p className="text-white/70">
+                        Complete reference for building on the WNSP spectral protocol
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                  {sections.map(([key, section]) => {
+                    const SectionIcon = section.icon;
+                    return (
+                      <Link key={key} href={`/docs/${key}`} data-testid={`hub-card-${key}`}>
+                        <Card className="bg-gray-900/50 border-gray-700 p-4 hover:border-purple-500/50 transition-colors cursor-pointer h-full">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${section.color} flex items-center justify-center shrink-0`}>
+                              <SectionIcon className="w-4 h-4 text-white" />
+                            </div>
+                            <span className="font-semibold text-white">{section.title}</span>
+                          </div>
+                          <p className="text-gray-400 text-xs leading-relaxed">
+                            {section.content[0]?.heading ?? "Developer reference"}
+                          </p>
+                        </Card>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <>
             <Card
               className={`bg-gradient-to-r ${currentSection.color} p-6 mb-6`}
             >
@@ -1487,6 +1526,8 @@ export default function DocsPage() {
                 </div>
               </div>
             </Card>
+            </>
+            )}
           </div>
         </div>
       </div>

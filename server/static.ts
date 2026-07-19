@@ -211,7 +211,7 @@ const DYNAMIC_PUBLIC_PREFIXES: string[] = [
 const DOCS_SECTION_SLUGS = new Set<string>([
   "substrate", "wascii", "consensus", "economics", "bhls",
   "governance", "infrastructure", "hardware", "simulators",
-  "massless", "sop",
+  "massless", "sop", "catchBasin",
 ]);
 
 function isNoindexSpaPath(pathname: string): boolean {
