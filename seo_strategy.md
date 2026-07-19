@@ -38,6 +38,8 @@ Private routes remain out of scope for content-quality review, but they are stil
 
 - New public React routes must be wired into the server allowlist, `ROUTE_META`, and `sitemap.xml` together. If any one of those is skipped, the page can become invisible or inconsistent to crawlers.
 - Public alias routes should resolve to one canonical URL. Only the primary URL should appear in the sitemap; aliases should redirect or canonicalize to that primary path.
+- Legacy aliases and branded-domain redirects must not terminate on a `noindex` page. If a route is meant to absorb historical SEO signals, its final destination needs to be indexable.
+- The root `/docs` URL must stay in parity across server HTML and hydrated React. Do not let the server describe `/docs` as a docs index while the client turns the same URL into the first section article.
 
 ## Dismissed categories
 - None yet
