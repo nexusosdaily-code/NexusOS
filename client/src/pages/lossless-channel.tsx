@@ -396,7 +396,7 @@ export default function LosslessChannel() {
             ))}
           </div>
 
-          {/* 8-act sequence nav */}
+          {/* 9-act sequence nav */}
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
             <p className="text-[10px] font-mono text-emerald-400 tracking-widest mb-3">
               THE SEQUENCE — ACT 8 OF 9

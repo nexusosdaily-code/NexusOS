@@ -123,7 +123,7 @@ export default function UniversalOnePage() {
 
           {/* sequence nav */}
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-            <p className="text-[10px] font-mono text-emerald-400 tracking-widest mb-3">THE SEQUENCE — ACT 2 OF 8</p>
+            <p className="text-[10px] font-mono text-emerald-400 tracking-widest mb-3">THE SEQUENCE — ACT 2 OF 9</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs">
               <Link href="/oscillating-quanta"
                 className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
@@ -143,6 +143,7 @@ export default function UniversalOnePage() {
                 { act: "ACT 6", title: "The Catalogue",               sub: "n = log₂(mc²/E₀)",       href: "/element-catalogue" },
                 { act: "ACT 7", title: "The Trap",                    sub: "Ψ(+k̂) ⊗ Ψ(−k̂)",       href: "/standing-wave-trap" },
                 { act: "ACT 8", title: "The Lossless Channel",        sub: "α = 0, C = ZPE floor",    href: "/lossless-channel" },
+                { act: "ACT 9", title: "The Cavity",               sub: "WGM resonance, r_c",      href: "/resonance-cavity" },
               ].map(({ act, title, sub, href }) => (
                 <Link key={href} href={href}
                   className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">

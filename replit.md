@@ -31,6 +31,30 @@ The following pages and routes are core to the NexusOS mission. Any agent or dev
 4. If a task adds new pages, add them WITHOUT removing existing ones.
 5. When in doubt, check the route still exists in `App.tsx` before marking a task complete.
 
+## Act Sequence — Mandatory Cross-Linking Rule (STANDING DIRECTIVE)
+
+Every Act page **must** link to **all** other Act pages via the sequence nav grid at the top of the page.
+
+**When a new Act is added:**
+1. Add the new Act entry to the `[{act, title, sub, href}]` array (or standalone `<Link>`) in **every existing** Act page.
+2. Update the "ACT X OF N" label on **every** Act page to reflect the new total count N.
+3. Update the `md:grid-cols-N` class to match the new total where used (e.g. Acts 7, 8).
+4. The new Act page itself must include all prior Acts in its own sequence nav.
+
+**Current Act registry (9 Acts as of 2026-07-19):**
+
+| Act | Title | Sub | Route |
+|-----|-------|-----|-------|
+| 1 | Theory of Compression States | Λ=hf/c² | `/oscillating-quanta` |
+| 2 | The Universal ONE | f₀ derives Λ | `/universal-one` |
+| 3 | Unified Compression Theory | 4 forces = 1 Λ | `/unified-compression-theory` |
+| 4 | The Mechanism | ΔE=hf₀(2ⁿ²−2ⁿ¹) | `/matter-protocol` |
+| 5 | The Address | ∀ Λ : ∃! Ψ | `/universal-address` |
+| 6 | The Catalogue | n=log₂(mc²/E₀) | `/element-catalogue` |
+| 7 | The Trap | Ψ(+k̂)⊗Ψ(−k̂) | `/standing-wave-trap` |
+| 8 | The Lossless Channel | α=0, C=ZPE floor | `/lossless-channel` |
+| 9 | The Cavity | WGM resonance, r_c | `/resonance-cavity` |
+
 ## Post-Build Security Audit (STANDING DIRECTIVE — applies after EVERY build)
 
 After any build or significant code change, the following checks MUST be run before marking the task complete:
