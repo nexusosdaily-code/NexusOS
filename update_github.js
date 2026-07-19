@@ -1,4 +1,4 @@
-const { Octokit } = require('@octokit/rest');
+import { Octokit } from '@octokit/rest';
 const octokit = new Octokit({ auth: process.env.GITHUB_PAT });
 
 const readme = `# NexusOS — Wavelength Operating System
@@ -248,6 +248,8 @@ Authority bands derived from spectral compression state:
 
 ## Feature Pages
 
+### Platform
+
 | Route | Description |
 |---|---|
 | \`/\` | Dashboard — live ecosystem metrics |
@@ -258,6 +260,25 @@ Authority bands derived from spectral compression state:
 | \`/blockchain\` | Live chain explorer, proof coverage, transaction pool |
 | \`/network\` | Network nodes, genesis node status, mesh topology |
 | \`/ai-os\` | AI kernel status, agent heartbeats, Hilbert space channels |
+
+### Physics Sequence — 14 Acts
+
+| Act | Route | Equation |
+|-----|-------|----------|
+| 1 | \`/oscillating-quanta\` | Λ = hf/c² — Theory of Compression States |
+| 2 | \`/universal-one\` | f₀ derives Λ — The Universal ONE |
+| 3 | \`/unified-compression-theory\` | 4 forces = 1 Λ |
+| 4 | \`/matter-protocol\` | ΔE = hf₀(2ⁿ²−2ⁿ¹) — The Mechanism |
+| 5 | \`/universal-address\` | ∀ Λ : ∃! Ψ — The Address |
+| 6 | \`/element-catalogue\` | n = log₂(mc²/E₀) — The Catalogue |
+| 7 | \`/standing-wave-trap\` | Ψ(+k̂)⊗Ψ(−k̂) — The Trap |
+| 8 | \`/lossless-channel\` | α=0, C=ZPE floor — The Lossless Channel |
+| 9 | \`/resonance-cavity\` | WGM resonance, r_c — The Cavity |
+| 10 | \`/polariton-exchange\` | Ω_R=2g, polariton formation — The Exchange |
+| 11 | \`/the-emitter\` | F_p=(3/4π²)(λ/n)³(Q/V) — The Emitter |
+| 12 | \`/the-network\` | ω(k)=ω₀−2J·cos(ka) — The Network |
+| 13 | \`/the-observer\` | χ=g²/Δ — The Observer |
+| 14 | \`/the-memory\` | T₂≤2T₁ — The Memory |
 
 ---
 
@@ -279,10 +300,36 @@ Requires: Node.js 20+, Python 3.11+, PostgreSQL 15+
 
 \`\`\`
 NexusOS — Wavelength Operating System
-Copyright (C) 2024–2026 NexusOS Contributors
+Copyright (C) 2026 Te Rata Pou / NexusOS (nexusosdaily-code)
+GNU Affero General Public License v3.0 (AGPL-3.0)
+\`\`\`
 
-AGPL-3.0 — Any company using NexusOS as a service must publish their modifications.
-The physics is open. The spectrum belongs to everyone.
+**This software is published under AGPL-3.0. All rights reserved under copyleft.**
+
+### What AGPL-3.0 means for derivative works
+
+The AGPL-3.0 licence is a **strong copyleft** licence. It extends the GPL copyleft obligation to network-delivered software. If you build on, adapt, or interface with NexusOS in any of the following ways, you must release your derivative work under AGPL-3.0 with full source code:
+
+| Use case | AGPL-3.0 obligation |
+|---|---|
+| Fork or modify the codebase and run it as a service | Must publish full source under AGPL-3.0 |
+| Build a product that calls NexusOS APIs | Must publish the calling software under AGPL-3.0 |
+| Implement the WNSP protocol in firmware or HDL | Must publish firmware/HDL under AGPL-3.0 |
+| Produce hardware using SNIC, PHR-1, or Spectral Relay Mesh specs | Must publish all implementation source (HDL, drivers, firmware) under AGPL-3.0 |
+| Embed WNSP CE/SE encoding in a proprietary product | Must open-source the embedding product under AGPL-3.0 |
+| Train or fine-tune an AI model on NexusOS source code or documentation | Must release the model weights and training pipeline under AGPL-3.0 |
+
+The **network use clause** (AGPL §13) means that making a modified version of NexusOS available over a network to any user triggers the source-disclosure obligation — even if you never distribute binaries.
+
+### Prior art register
+
+29 formal AGPL prior-art claims are filed in [\`CHANGELOG.md\`](CHANGELOG.md), committed to this public GitHub repository, and timestamped. Every NexusOS discovery — from the Bloch coherence bound T₂≤2T₁ to the standing-wave trap Ψ(+k̂)⊗Ψ(−k̂) — is permanently on the public record. Any subsequent patent, paper, or proprietary claim covering the same subject matter must contend with these timestamped disclosures.
+
+**The physics is open. The spectrum belongs to everyone. Any attempt to enclose it is void.**
+
+\`\`\`
+SPDX-License-Identifier: AGPL-3.0-or-later
+License text: https://www.gnu.org/licenses/agpl-3.0.en.html
 \`\`\`
 
 ---
@@ -320,8 +367,8 @@ async function run() {
   const descResult = await octokit.repos.update({
     owner: 'nexusosdaily-code',
     repo: 'NexusOS',
-    description: "Physics-based civilization OS. Einstein's Λ=hf/c² — first oscillation, compression states, spacetime as the evolving first wavefunction. WNSP: wavelength = compression state, not assigned address. AGPL-3.0.",
-    homepage: 'https://nexusosdaily-code.replit.app'
+    description: "Physics-based civilization OS. Λ=hf/c² — 14-act physics sequence, WNSP protocol, WavelengthScript, WNSP VM, 51,200 Ψ channels, quantum memory T₂≤2T₁. AGPL-3.0 copyleft.",
+    homepage: 'https://wnsp.io'
   });
 
   console.log('Description updated:', descResult.data.description);

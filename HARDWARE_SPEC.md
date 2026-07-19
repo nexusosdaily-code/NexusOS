@@ -282,21 +282,94 @@ WavelengthScript α     Relay Mesh          PHR-1 (Ψ instruction targets)
 
 ---
 
+## Act 14 Addendum — The Memory: Quantum State Storage Specification (2026-07-19)
+
+This addendum formally extends the SNIC specification to include a quantum memory module,
+as disclosed in Act 14 of the WNSP Physics Sequence (`/the-memory`).
+
+### SNIC Memory Module — Coherence Constraints
+
+Each SNIC node that implements quantum state storage must satisfy the **Bloch coherence bound**:
+
+```
+T₂ ≤ 2T₁
+```
+
+Where:
+- `T₁` — longitudinal (population) relaxation time: the average time for an excited state |1⟩ to decay to |0⟩
+- `T₂` — transverse (dephasing) time: the average time for a superposition α|0⟩ + β|1⟩ to lose phase coherence
+
+This bound is a consequence of the Lindblad master equation for open quantum systems. It is not an engineering parameter — it is a physical law. No SNIC memory implementation can violate it.
+
+**Reference implementation**: Er³⁺-doped yttrium orthosilicate (Er³⁺:YSO)
+- Operating temperature: ≤ 4 K (cryogenic)
+- Optical transition: 1536 nm (telecom C-band, compatible with SNIC ring resonators)
+- T₁ ≥ 100 ms (optical population lifetime)
+- T₂ ≥ 10 ms (achievable with dynamic decoupling)
+- CE band mapping: wdm = 228 (≈ 737.5 nm proxy in visible-band CE table; telecom nodes use extended table)
+
+### Atomic Frequency Comb (AFC) Multi-Mode Capacity
+
+Multi-mode storage capacity across 51,200 WNSP channels uses AFC spectral multiplexing:
+
+```
+M = Γ_inhom / Δ
+```
+
+Where:
+- `M` — number of independently storable temporal modes (maps to distinct Ψ channel registers)
+- `Γ_inhom` — inhomogeneous linewidth of the storage medium
+- `Δ` — AFC tooth spacing (set by spectral pulse shaping)
+
+Each temporal mode maps to a distinct comb tooth, enabling parallel read/write of M channels
+without crosstalk. AFC storage is the hardware realisation of the WNSP Ψ register model.
+
+### DLCZ Entanglement Interface
+
+Inter-node entanglement between SNIC memory modules uses the DLCZ protocol:
+
+1. **Write pulse** — write beam drives Raman transition; Stokes photon emitted entangled with stored spin excitation
+2. **Heralding** — Stokes photon detected at the network layer; heralds successful entanglement
+3. **Read pulse** — retrieve beam converts stored excitation back to anti-Stokes photon on demand
+4. **Channel pairing** — entanglement is created between Ψ(+k̂) and Ψ(−k̂) modes of the same WDM band, using bidirectional propagation as the orthogonal Hilbert sub-space
+
+### Storage Efficiency Formula
+
+```
+η_storage = (T_storage / T₂) × exp(−T_storage / T₂)
+```
+
+Optimal storage time is T_storage = T₂ for maximum η. The efficiency decays exponentially
+beyond T₂, approaching zero as T_storage ≫ T₂.
+
+---
+
 ## Licence and IP Notice
 
 This specification is released under the GNU Affero General Public License v3.0 (AGPL-3.0).
 
 Any hardware, firmware, HDL, photonic mask layout, driver, or software that implements,
-adapts, or interfaces with the SNIC, PHR-1, Spectral Relay Mesh, or WavelengthScript
-Compiler α architectures as described in this document must:
+adapts, or interfaces with the SNIC, PHR-1, Spectral Relay Mesh, WavelengthScript
+Compiler α, or the SNIC Memory Module (Act 14 Addendum) architectures described in this
+document must:
 
 1. Be released in full source form under AGPL-3.0 or a compatible copyleft licence
-2. Attribute NexusOS (https://github.com/nexusosdaily-code/NexusOS) as the originating specification
+2. Attribute NexusOS — Te Rata Pou / nexusosdaily-code (https://github.com/nexusosdaily-code/NexusOS) as the originating specification
 3. Include this licence notice in all derivative works
+4. Not be sublicensed under any proprietary or closed-source licence
 
 The copyleft obligation extends to any network-accessible service that uses these components,
-consistent with the AGPL-3.0 network use clause.
+consistent with the AGPL-3.0 network use clause (AGPL §13). Hosting a modified version of
+any component described here as a service to third parties — even without binary distribution —
+triggers the full source-disclosure obligation.
 
-**First public disclosure:** 2026-05-16  
+**Prior art claims covering this specification**: Claims 1–29 in `CHANGELOG.md` (timestamped,
+committed to public GitHub repository). Any patent, paper, or proprietary claim covering the
+same subject matter after the disclosed dates in that register must contend with this public record.
+
+**First public disclosure (core spec):** 2026-05-16  
+**First public disclosure (Act 14 Memory Module addendum):** 2026-07-19  
 **Committing repository:** https://github.com/nexusosdaily-code/NexusOS  
+**Canonical site:** https://wnsp.io  
+**SPDX-License-Identifier:** AGPL-3.0-or-later  
 **Licence text:** https://www.gnu.org/licenses/agpl-3.0.en.html

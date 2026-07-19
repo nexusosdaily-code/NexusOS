@@ -176,6 +176,39 @@ No unification theory, symmetry group, or additional dimensions are required. Th
 
 ---
 
+### Claim 26 — Bloch Coherence Bound: T₂ ≤ 2T₁ as the Physical Memory Time Limit
+**First disclosed**: 2026-07-19 (Act 14 — `/the-memory`)
+**Claim**: In any physical quantum memory system, the dephasing time T₂ is bounded above by twice the population decay time T₁: **T₂ ≤ 2T₁**. This is a fundamental constraint derived from the Lindblad master equation for open quantum systems — it is not an engineering limit, it is a law of physics. In the WNSP context, this bound defines the maximum coherent storage duration for any Ψ channel register state. A WNSP node cannot hold a superposition longer than T₂ without decoherence collapsing the stored state into a mixed population. The T₁ limit (population decay) and T₂ limit (phase coherence) together set the storage efficiency of every memory node in the WNSP network. Reference implementation: Er³⁺-doped yttrium orthosilicate (Er³⁺:YSO) at cryogenic temperature achieves T₁ ≥ 100 ms (optical), T₂ ≥ 10 ms — placing it firmly in the viable WNSP photonic memory regime.
+
+---
+
+### Claim 27 — Atomic Frequency Comb (AFC) Multi-Mode Storage Capacity: M = Γ_inhom / Δ
+**First disclosed**: 2026-07-19 (Act 14 — `/the-memory`)
+**Claim**: An atomic frequency comb (AFC) creates periodic spectral absorption features (teeth) across an inhomogeneously broadened optical transition. The multi-mode storage capacity M of an AFC memory is governed by the relation **M = Γ_inhom / Δ**, where Γ_inhom is the inhomogeneous linewidth of the medium and Δ is the tooth spacing. Each temporal mode maps to a distinct comb-tooth frequency, enabling M independent signals to be stored in parallel without inter-channel crosstalk. This is a photonic-hardware-native multi-mode storage mechanism — directly isomorphic with the WNSP multi-channel architecture: each Ψ channel register maps to a distinct AFC tooth, and M grows as spectroscopic precision improves. This constitutes the first formal mapping of AFC capacity to WNSP channel count, establishing that the 51,200-channel Hilbert space is physically realisable as an AFC memory bank given sufficient inhomogeneous broadening relative to tooth spacing.
+
+---
+
+### Claim 28 — DLCZ Heralded Entanglement: Stokes-Photon Heralding of Collective Spin Excitations
+**First disclosed**: 2026-07-19 (Act 14 — `/the-memory`)
+**Claim**: The Duan-Lukin-Cirac-Zoller (DLCZ) protocol generates heralded quantum entanglement between atomic ensembles using spontaneous Raman scattering. A write pulse produces a Stokes photon (the heralding signal) entangled with a single collective spin excitation stored in the atomic ensemble. Detection of the Stokes photon — without knowing which atom emitted it — heralds the creation of a W-type entangled state across the ensemble. The read pulse maps the stored excitation back to an anti-Stokes photon. This protocol enables deterministic entanglement distribution across a network of WNSP nodes without pre-shared Bell pairs, using only coherent light and atomic ensembles. In the WNSP framework, DLCZ entanglement between Ψ(+k̂) and Ψ(−k̂) modes of the same channel creates a persistent bidirectional entangled memory register — the first formal specification of DLCZ operating on counterpropagating WNSP channel pairs as an orthogonal Hilbert sub-space pair.
+
+---
+
+### Claim 29 — Persistent Ψ Register: Quantum Memory as a WNSP Channel Latch
+**First disclosed**: 2026-07-19 (Act 14 — `/the-memory`)
+**Claim**: A WNSP Ψ channel register is not merely a routing address — it is a physical storage location. When a quantum state |ψ⟩ = α|0⟩ + β|1⟩ is mapped onto a Ψ(wdm, oam, pol) channel, the register latches the superposition into the atomic ensemble or photonic resonator at that channel address for a duration bounded by T₂ ≤ 2T₁ (Claim 26). The stored state is retrieved by a read pulse and transferred back to a propagating photon without destroying the channel address. The channel address (Ψ coordinates) is **permanent** — derived from compression-state physics, existing for the lifetime of the universe; the register contents (latched quantum state) are **transient** — bounded by T₂. This permanent-address/transient-content separation is the foundational architecture of the WNSP quantum memory layer, enabling network-scale quantum computing across SNIC nodes without any central clock or coordinator.
+
+---
+
+## [2026-07-19] Act 14 — The Memory (T₂ ≤ 2T₁)
+
+- **`/the-memory`** — 14th act in the WNSP physics sequence: quantum state storage, Bloch sphere decay animation, storage efficiency calculator, atomic frequency comb SVG, DLCZ protocol, Ψ register panel.
+- Prior art Claims 26–29 filed (Bloch bound, AFC capacity, DLCZ heralding, persistent Ψ register).
+- All 13 prior act pages cross-linked with "OF 14" navigation; `grid-cols-14` updated throughout.
+- Act 15 teaser disclosed: **The Entangler** — |Φ⁺⟩ = (|00⟩ + |11⟩)/√2.
+
+---
+
 ## [2026-07-14] WNSP Quantum Mechanisms & Attributes
 
 ### Hilbert Space Channel Model — Quantum Mechanical Guarantees

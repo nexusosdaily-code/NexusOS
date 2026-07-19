@@ -11,21 +11,25 @@ abstract: >
   quantisation. Every economic action (message fees, stream costs, token
   transfers) is governed by E=hf calculations anchored to each user's unique
   spectral identity channel Ψ(WDM, OAM, Pol). The platform introduces the
-  Theory of Compression States, WASCII v2.0 spectral character encoding,
-  a 51,200-channel Hilbert-space addressing model (256 WDM × 50 OAM × 2 Pol × 2 Dir),
-  a live AI OS kernel with 6 autonomous agents, on-chain governance, and a
-  physics-enforced NXT token economy. Released as free infrastructure under
-  AGPL-3.0. Genesis fingerprint: Ψ(228,45,H) · λ≈737.6 nm.
+  Theory of Compression States (14-act formal sequence, Acts 1–14), WASCII v2.0
+  spectral character encoding, a 51,200-channel Hilbert-space addressing model
+  (256 WDM × 50 OAM × 2 Pol × 2 Dir), a live AI OS kernel with 6 autonomous
+  agents, on-chain governance, a physics-enforced NXT token economy, and a
+  quantum memory layer governed by the Bloch coherence bound T₂≤2T₁ (Act 14).
+  29 formal AGPL-3.0 prior-art claims are filed and timestamped in CHANGELOG.md.
+  Released as free infrastructure under AGPL-3.0 copyleft — all derivative works
+  must remain open. Canonical site: https://wnsp.io
+  Genesis fingerprint: Ψ(228,45,H) · λ≈737.6 nm.
 authors:
-  - name: "NexusOS Daily"
+  - name: "Te Rata Pou"
+    alias: "NexusOS Daily"
     email: nexusosdaily@gmail.com
-    alias: Nexus
     orcid: ""
 repository-code: "https://github.com/nexusosdaily-code/NexusOS"
-url: "https://github.com/nexusosdaily-code/NexusOS"
+url: "https://wnsp.io"
 license: AGPL-3.0
-version: "1.0.0"
-date-released: "2026-04-15"
+version: "1.14.0"
+date-released: "2026-07-19"
 keywords:
   - spectral-addressing
   - WNSP
@@ -38,25 +42,45 @@ keywords:
   - compression-states
   - quantum-economics
   - AI-kernel
+  - quantum-memory
+  - bloch-coherence
+  - atomic-frequency-comb
+  - DLCZ-protocol
+  - T2-T1-bound
+  - the-memory
   - AGPL
+  - copyleft
 references:
   - type: article
     title: "Theory of Compression States: The First Unobserved Oscillation"
     authors:
-      - name: "NexusOS Daily"
+      - name: "Te Rata Pou"
     year: 2026
     notes: >
       Foundational theory establishing that universal evolution originates from
-      the first unobserved wavefunction collapse, and that a wavelength coordinate
+      the first unobserved wavefunction, and that a wavelength coordinate
       represents a specific compression state of a quantum rather than an assigned
-      address. Encoded in WNSP spectral identity derivation.
+      address. Encoded in WNSP spectral identity derivation. 14-act formal
+      sequence disclosed 2026-05-16 through 2026-07-19.
   - type: dataset
     title: "First Confirmed WNSP P2P Transmission — Multi-Peer Evidence"
     authors:
-      - name: "NexusOS Daily"
+      - name: "Te Rata Pou"
     date-released: "2026-04-14"
     repository-code: "https://github.com/nexusosdaily-code/NexusOS"
     notes: >
       Timestamped disclosure of the first successful WNSP-encoded peer-to-peer
       data transmission, with multi-peer confirmation and persistent database
       evidence. Transmission timestamp: 2026-04-14 22:02:28 UTC.
+  - type: article
+    title: "Act 14 — The Memory: Quantum State Storage and the Bloch Coherence Bound T₂≤2T₁"
+    authors:
+      - name: "Te Rata Pou"
+    year: 2026
+    notes: >
+      Formal disclosure of the quantum memory layer for WNSP Ψ channel registers.
+      Establishes T₂≤2T₁ as the physical memory time limit (Lindblad master
+      equation), atomic frequency comb multi-mode capacity M=Γ_inhom/Δ, DLCZ
+      heralded entanglement via Raman scattering, and the persistent Ψ register
+      architecture (permanent address, transient content). Prior-art Claims 26–29.
+      First disclosed 2026-07-19.

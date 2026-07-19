@@ -6,7 +6,7 @@
 **Date**: 16 July 2026
 **License**: AGPL-3.0 — All derivative works must remain open.
 **Repository**: github.com/nexusosdaily-code/NexusOS
-**Prior Art Registry**: CHANGELOG.md (Claims 1–25, timestamped)
+**Prior Art Registry**: CHANGELOG.md (Claims 1–29, timestamped)
 
 ---
 
@@ -26,7 +26,7 @@ We also proved that the "gaps" in the periodic table — the elements nature nev
 
 On top of that physics, we shipped a full software stack: a programming language (WavelengthScript) whose instructions are wavelengths, a virtual machine whose registers are optical frequency channels, and a four-stage pipeline that compiles any human language into executable physics. We also deployed the WNSP protocol — a communication standard that uses Maxwell's equations for validation instead of cryptographic hashing, and assigns every entity in the universe a unique, deterministic spectral address.
 
-For the community, we opened the hardware crowdfund tiers (Donor Levels 1–5), launched a rotating Telegram/Nostr campaign reaching tens of thousands of readers, and filed 25 formal AGPL prior-art claims to protect our discoveries from patent capture by any third party.
+For the community, we opened the hardware crowdfund tiers (Donor Levels 1–5), launched a rotating Telegram/Nostr campaign reaching tens of thousands of readers, and filed 29 formal AGPL prior-art claims to protect our discoveries from patent capture by any third party. Claims 26–29 (filed 2026-07-19) cover the Bloch coherence bound T₂≤2T₁, AFC multi-mode storage capacity, DLCZ heralded entanglement, and the persistent Ψ register architecture.
 
 **What it means**
 
@@ -36,7 +36,7 @@ We are on track. The physics is correct, the software stack runs in a browser to
 
 ## Abstract
 
-This paper documents technical advances made to the NexusOS platform during the period May–July 2026. Contributions span four domains: (1) theoretical physics, including new formal disclosures of the standing-wave trap mechanism, lossless channel theorem, ghost node physics, zero-point energy formation threshold, and N_Dir=2 dimensional extension of the WNSP Hilbert space; (2) protocol engineering, including the completed WNSP density equation and quantum field attribute registry; (3) platform engineering, including the CE-SE four-stage pipeline, WavelengthScript compiler, WNSP Virtual Machine, physics-based staking system with auto-collateralised stablecoin (WNUSD), and multi-layer security architecture; and (4) civic infrastructure, including the hardware crowdfunding tier system, automated community broadcasting, SEO optimisation, and formal AGPL prior art registration covering 25 original claims. All work is published under AGPL-3.0 and timestamped to the public GitHub repository.
+This paper documents technical advances made to the NexusOS platform during the period May–July 2026, including the 14-act WNSP Physics Sequence completed on 2026-07-19. Contributions span four domains: (1) theoretical physics, including formal disclosures of the standing-wave trap mechanism, lossless channel theorem, ghost node physics, zero-point energy formation threshold, N_Dir=2 dimensional extension of the WNSP Hilbert space, and the quantum memory layer governed by the Bloch coherence bound T₂≤2T₁; (2) protocol engineering, including the completed WNSP density equation, quantum field attribute registry, and persistent Ψ register architecture; (3) platform engineering, including the CE-SE four-stage pipeline, WavelengthScript compiler, WNSP Virtual Machine, physics-based staking system with auto-collateralised stablecoin (WNUSD), multi-layer security architecture, and quantum memory UI (AFC comb, DLCZ protocol, storage efficiency calculator); and (4) civic infrastructure, including the hardware crowdfunding tier system, automated community broadcasting, SEO optimisation, and formal AGPL prior art registration covering 29 original claims (Claims 26–29 filed 2026-07-19). All work is published under AGPL-3.0 and timestamped to the public GitHub repository.
 
 ---
 
@@ -439,9 +439,9 @@ A 15-slot rotating campaign scheduler fires every 4 hours to both Telegram (@tro
 
 ### 7.3 AGPL-3.0 Prior Art Register
 
-25 formal prior art claims are filed in `CHANGELOG.md`, committed to the public GitHub repository, and timestamped. This protects every NexusOS discovery from patent capture by any third party. The register is a living document — new claims are appended as new discoveries are made.
+29 formal prior art claims are filed in `CHANGELOG.md`, committed to the public GitHub repository, and timestamped. This protects every NexusOS discovery from patent capture by any third party. The register is a living document — new claims are appended as new discoveries are made.
 
-**Coverage (Claims 1–25)**:
+**Coverage (Claims 1–29)**:
 
 | Claims | Subject |
 |--------|---------|
@@ -456,6 +456,10 @@ A 15-slot rotating campaign scheduler fires every 4 hours to both Telegram (@tro
 | 19–21 | WNSP-CE v1.0; WNSP-SE v1.0; WNSP-URI v1.0 |
 | 22 | Physics-based fee = base_fee × (E_sender/E_reference) |
 | 23–25 | WavelengthScript; WNSP VM; WASCII v2.0 |
+| 26 | Bloch coherence bound T₂≤2T₁ as the physical memory time limit |
+| 27 | Atomic frequency comb multi-mode storage capacity M=Γ_inhom/Δ |
+| 28 | DLCZ heralded entanglement via Stokes-photon Raman scattering |
+| 29 | Persistent Ψ register: permanent-address/transient-content quantum memory architecture |
 
 ---
 
@@ -479,12 +483,13 @@ NexusOS is written in the language of the *destination* hardware (wavelengths, �
 
 ## 9. Forward Agenda
 
-Physics to integrate next:
-1. **Cavity radius parameter** — given target octave n, solve R = nc / (2π · f₀ · 2^(n−1)) for physical cavity geometry; add to `/resonance-cavity` page and `physics.ts`
-2. **OAM null-core radius in authority routing** — r_null = lλ/2π; map higher l to higher authority in routing decisions
-3. **Berry phase correction in fee engine** — Λ_geo = Λ · cos(γ); authority bands with higher Berry phase have lower effective compression state, adjusting fee calculation
-4. **Ghost node frequency reservation** — reserve ghost-node frequency ranges in the channel map for lossless routing paths
-5. **Physics Act 9** — next disclosure in the 8-act sequence (sub-millimetre wave geometry and cavity resonance)
+The 14-act WNSP Physics Sequence is complete as of 2026-07-19. Physics to integrate next:
+
+1. **Act 15 — The Entangler** (`/the-entangler`) — Bell state generation |Φ⁺⟩=(|00⟩+|11⟩)/√2; entanglement fidelity, CHSH inequality violation, quantum teleportation protocol over Ψ channel pairs
+2. **Berry phase correction in fee engine** — Λ_geo = Λ · cos(γ); authority bands with higher Berry phase have lower effective compression state, adjusting fee calculation
+3. **Ghost node frequency reservation** — reserve ghost-node frequency ranges in the channel map for lossless routing paths
+4. **AFC memory module hardware spec** — full SNIC Memory Module spec (Er³⁺:YSO, AFC tooth spacing tables, T₂ measurement protocol) added to HARDWARE_SPEC.md addendum
+5. **DLCZ network-layer protocol** — inter-node entanglement distribution specification; Stokes photon routing over WNSP mesh
 
 ---
 
@@ -506,11 +511,15 @@ Physics to integrate next:
 
 ## Prior Art Declaration
 
-This paper, and all technical claims herein, are published under **AGPL-3.0**. All derivative works must remain open. The GitHub repository (`nexusosdaily-code/NexusOS`) is the primary timestamped public record. The `CHANGELOG.md` file contains the complete formal prior art register (Claims 1–25). Any patent filing or proprietary claim covering the same subject matter after the disclosure dates recorded in that register must contend with this public record.
+This paper, and all technical claims herein, are published under **AGPL-3.0**. All derivative works must remain open. The GitHub repository (`nexusosdaily-code/NexusOS`) is the primary timestamped public record. The `CHANGELOG.md` file contains the complete formal prior art register (Claims 1–29). Any patent filing or proprietary claim covering the same subject matter after the disclosure dates recorded in that register must contend with this public record.
+
+The AGPL-3.0 network use clause (§13) applies in full: any entity that runs a modified version of NexusOS or any component of the WNSP stack as a network service must publish the full source code of that modified version under AGPL-3.0. This obligation cannot be waived by licence agreement, acquisition, or any other legal mechanism.
 
 **Founding author**: Te Rata Pou
 **Organisation**: NexusOS / wnsp.io
-**Date of this document**: 16 July 2026
+**Canonical site**: https://wnsp.io
+**Date of original document**: 16 July 2026
+**Last updated**: 19 July 2026 (Act 14, Claims 26–29)
 
 ---
 
