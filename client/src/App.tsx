@@ -180,6 +180,7 @@ const UniversalAddressPage          = lazy(() => import("@/pages/universal-addre
 const ElementCataloguePage          = lazy(() => import("@/pages/element-catalogue"));
 const StandingWaveTrapPage          = lazy(() => import("@/pages/standing-wave-trap"));
 const LosslessChannelPage           = lazy(() => import("@/pages/lossless-channel"));
+const PolaritonExchangePage         = lazy(() => import("@/pages/polariton-exchange"));
 
 // Loading spinner shown while a lazy page chunk is downloading
 function PageLoader() {
@@ -248,6 +249,7 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/announcements", "/announcements/substrate-v2",
   "/resonance-propulsion",
   "/resonance-cavity",
+  "/polariton-exchange",
   "/friends", "/inbox", "/messages", "/phonebook",
   "/k1", "/k1/orchestration",
   "/secure-docs",
@@ -331,6 +333,7 @@ function ProtectedRoutes() {
         <Route path="/announcements/substrate-v2" component={AnnouncementSubstrateV2Page} />
         <Route path="/resonance-propulsion" component={ResonancePropulsionPage} />
         <Route path="/resonance-cavity" component={ResonanceCavityPage} />
+        <Route path="/polariton-exchange" component={PolaritonExchangePage} />
         <Route path="/friends" component={FriendsPage} />
         <Route path="/inbox" component={InboxPage} />
         <Route path="/messages" component={InboxPage} />
@@ -530,6 +533,7 @@ function Router() {
       <Route path="/lossless-channel"           component={LosslessChannelPage} />
       {/* ── Science & Protocol pages — publicly crawlable ── */}
       <Route path="/resonance-cavity" component={ResonanceCavityPage} />
+      <Route path="/polariton-exchange" component={PolaritonExchangePage} />
       <Route path="/planck-alignment" component={PlanckAlignmentPage} />
       <Route path="/reposed-theory" component={ReposedTheoryPage} />
       <Route path="/compression-explorer" component={CompressionExplorerPage} />

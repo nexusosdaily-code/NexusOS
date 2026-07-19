@@ -41,7 +41,7 @@ Every Act page **must** link to **all** other Act pages via the sequence nav gri
 3. Update the `md:grid-cols-N` class to match the new total where used (e.g. Acts 7, 8).
 4. The new Act page itself must include all prior Acts in its own sequence nav.
 
-**Current Act registry (9 Acts as of 2026-07-19):**
+**Current Act registry (10 Acts as of 2026-07-19):**
 
 | Act | Title | Sub | Route |
 |-----|-------|-----|-------|
@@ -54,6 +54,7 @@ Every Act page **must** link to **all** other Act pages via the sequence nav gri
 | 7 | The Trap | Ψ(+k̂)⊗Ψ(−k̂) | `/standing-wave-trap` |
 | 8 | The Lossless Channel | α=0, C=ZPE floor | `/lossless-channel` |
 | 9 | The Cavity | WGM resonance, r_c | `/resonance-cavity` |
+| 10 | The Exchange | Ω_R=2g, polariton formation | `/polariton-exchange` |
 
 ## Post-Build Security Audit (STANDING DIRECTIVE — applies after EVERY build)
 

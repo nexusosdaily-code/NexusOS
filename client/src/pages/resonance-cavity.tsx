@@ -184,9 +184,9 @@ export default function ResonanceCavityPage() {
           {/* 9-act sequence nav */}
           <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
             <p className="text-[10px] font-mono text-indigo-400 tracking-widest mb-3">
-              THE SEQUENCE — ACT 9 OF 9
+              THE SEQUENCE — ACT 9 OF 10
             </p>
-            <div className="grid grid-cols-3 md:grid-cols-9 gap-2 text-center text-xs">
+            <div className="grid grid-cols-3 md:grid-cols-10 gap-2 text-center text-xs">
               {[
                 { act:"1", title:"Compression States", sub:"Λ=hf/c²",          href:"/oscillating-quanta" },
                 { act:"2", title:"The Universal ONE",  sub:"f₀ derives Λ",      href:"/universal-one" },
@@ -210,6 +210,13 @@ export default function ResonanceCavityPage() {
                 <p className="text-indigo-100 font-medium leading-tight text-[9px]">The Cavity</p>
                 <p className="text-[8px] text-indigo-400">R=nc/2πfₙ</p>
               </div>
+              <Link href="/polariton-exchange"
+                    className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-2
+                               hover:border-rose-400/60 transition-colors space-y-0.5 block">
+                <p className="text-[8px] font-mono text-rose-400 tracking-widest">ACT 10 →</p>
+                <p className="text-rose-200 font-medium leading-tight text-[9px]">The Exchange</p>
+                <p className="text-[8px] text-rose-400">Ω_R=2g</p>
+              </Link>
             </div>
           </div>
 
