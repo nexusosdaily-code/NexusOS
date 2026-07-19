@@ -179,11 +179,11 @@ export default function BtcSentinelPage() {
               {/* Address */}
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-xs font-mono text-gray-400 break-all">{snap.address}</span>
-                <button onClick={() => copy(snap.address)} className="text-gray-600 hover:text-gray-300 shrink-0">
+                <button onClick={() => copy(snap.address)} className="text-gray-600 hover:text-gray-300 shrink-0" aria-label="Copy Bitcoin address">
                   <Copy className="w-3 h-3" />
                 </button>
                 {memUrl && (
-                  <a href={memUrl} target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-orange-400 shrink-0">
+                  <a href={memUrl} target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-orange-400 shrink-0" aria-label="View address on mempool.space">
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
@@ -427,12 +427,12 @@ function MyBtcWalletCard() {
                 <span className="text-cyan-200 font-mono text-[10px] flex-1 truncate" data-testid="text-my-btc-address">
                   {wallet.address}
                 </span>
-                <button onClick={() => copy(wallet.address)} className="text-gray-500 hover:text-cyan-400 shrink-0">
+                <button onClick={() => copy(wallet.address)} className="text-gray-500 hover:text-cyan-400 shrink-0" aria-label="Copy my Bitcoin address">
                   <Copy className="w-3 h-3" />
                 </button>
                 <a href={`https://mempool.space/address/${wallet.address}`}
                   target="_blank" rel="noopener noreferrer"
-                  className="text-gray-500 hover:text-cyan-400 shrink-0">
+                  className="text-gray-500 hover:text-cyan-400 shrink-0" aria-label="View my address on mempool.space">
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
@@ -478,7 +478,7 @@ function MyBtcWalletCard() {
                           {tx.confirmed ? (tx.blockHeight ? `#${tx.blockHeight.toLocaleString()}` : "confirmed") : "mempool"}
                         </span>
                         <a href={`https://mempool.space/tx/${tx.txid}`} target="_blank" rel="noopener noreferrer"
-                          className="text-gray-600 hover:text-cyan-400 shrink-0">
+                          className="text-gray-600 hover:text-cyan-400 shrink-0" aria-label="View transaction on mempool.space">
                           <ExternalLink className="w-2.5 h-2.5" />
                         </a>
                       </div>
@@ -606,11 +606,11 @@ function BtcDepositPanel() {
           <span className="text-orange-200 font-mono text-[10px] flex-1 truncate" data-testid="text-service-wallet">
             {SERVICE_WALLET}
           </span>
-          <button onClick={() => copy(SERVICE_WALLET)} className="text-gray-500 hover:text-orange-400 shrink-0">
+          <button onClick={() => copy(SERVICE_WALLET)} className="text-gray-500 hover:text-orange-400 shrink-0" aria-label="Copy service wallet address">
             <Copy className="w-3 h-3" />
           </button>
           <a href={`https://mempool.space/address/${SERVICE_WALLET}`} target="_blank" rel="noopener noreferrer"
-            className="text-gray-500 hover:text-orange-400 shrink-0">
+            className="text-gray-500 hover:text-orange-400 shrink-0" aria-label="View service wallet on mempool.space">
             <ExternalLink className="w-3 h-3" />
           </a>
         </div>
@@ -720,7 +720,7 @@ function BtcDepositPanel() {
                       : "bg-amber-500/20 text-amber-400"
                   }`}>{d.status}</span>
                   <a href={`https://mempool.space/tx/${d.txid}`} target="_blank" rel="noopener noreferrer"
-                    className="text-gray-600 hover:text-orange-400 shrink-0">
+                    className="text-gray-600 hover:text-orange-400 shrink-0" aria-label="View deposit transaction on mempool.space">
                     <ExternalLink className="w-2.5 h-2.5" />
                   </a>
                 </div>
@@ -903,7 +903,7 @@ function WnspIoLiquidityPanel() {
                 <span className="text-gray-400 flex-1 truncate">{f.txid?.slice(0, 14)}…</span>
                 <span className="text-cyan-300 shrink-0">+{Number(f.sats_received).toLocaleString()} sats</span>
                 <a href={`https://mempool.space/tx/${f.txid}`} target="_blank" rel="noopener noreferrer"
-                  className="text-gray-600 hover:text-cyan-400 shrink-0">
+                  className="text-gray-600 hover:text-cyan-400 shrink-0" aria-label="View fee transaction on mempool.space">
                   <ExternalLink className="w-2.5 h-2.5" />
                 </a>
               </div>
@@ -1029,7 +1029,7 @@ function UtxoCard({ utxo, address }: { utxo: any; address: string }) {
                         {isDust && " ⚠"}
                       </span>
                       <a href={`https://mempool.space/tx/${u.txid}`} target="_blank" rel="noopener noreferrer"
-                        className="text-gray-700 hover:text-orange-400 shrink-0">
+                        className="text-gray-700 hover:text-orange-400 shrink-0" aria-label="View UTXO transaction on mempool.space">
                         <ExternalLink className="w-2.5 h-2.5" />
                       </a>
                     </div>

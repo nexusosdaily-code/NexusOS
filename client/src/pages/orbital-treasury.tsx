@@ -89,7 +89,7 @@ export default function OrbitalTreasury() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/spectral-audit">
-              <button className="text-white/30 hover:text-white/60 transition-colors">
+              <button className="text-white/30 hover:text-white/60 transition-colors" aria-label="Back to Spectral Audit">
                 <ArrowLeft size={16} />
               </button>
             </Link>

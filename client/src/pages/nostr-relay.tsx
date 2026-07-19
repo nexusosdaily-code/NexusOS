@@ -105,7 +105,7 @@ export default function NostrRelayPage() {
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <Link href="/wnsp">
-            <button className="text-gray-500 hover:text-purple-400 transition-colors">
+            <button className="text-gray-500 hover:text-purple-400 transition-colors" aria-label="Back to WNSP">
               <ArrowLeft className="w-4 h-4" />
             </button>
           </Link>
@@ -131,7 +131,7 @@ export default function NostrRelayPage() {
                 <div className="font-mono text-gray-600 text-[10px] truncate mt-0.5">hex: {status.pubkeyHex.slice(0, 24)}…</div>
               </div>
               <button onClick={copyNpub}
-                className="shrink-0 p-1.5 rounded text-gray-500 hover:text-purple-300 transition-colors">
+                className="shrink-0 p-1.5 rounded text-gray-500 hover:text-purple-300 transition-colors" aria-label="Copy Nostr public key">
                 {copied ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>

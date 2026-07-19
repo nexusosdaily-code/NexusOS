@@ -127,7 +127,7 @@ function SentinelMini() {
         {health === "critical" && <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]"><AlertTriangle className="w-2.5 h-2.5 mr-1" />Critical</Badge>}
         {health === "unknown"  && <Badge className="bg-slate-500/20 text-slate-400 border-slate-500/30 text-[10px]"><Clock className="w-2.5 h-2.5 mr-1" />—</Badge>}
         <Link href="/btc-sentinel">
-          <button className="text-gray-600 hover:text-orange-400 ml-1">
+          <button className="text-gray-600 hover:text-orange-400 ml-1" aria-label="Open Bitcoin Sentinel">
             <ExternalLink className="w-3.5 h-3.5" />
           </button>
         </Link>
@@ -206,7 +206,7 @@ export default function MempoolMonitorPage() {
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <Link href="/wnsp">
-            <button className="text-gray-400 hover:text-white transition-colors" data-testid="button-back">
+            <button className="text-gray-400 hover:text-white transition-colors" data-testid="button-back" aria-label="Back to WNSP">
               <ArrowLeft className="w-5 h-5" />
             </button>
           </Link>

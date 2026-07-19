@@ -99,11 +99,11 @@ function AddrRow({ label, addr }: { label: string; addr: string }) {
       <span className="text-[10px] text-gray-500 font-mono w-14 shrink-0">{label}</span>
       <span className="text-[10px] font-mono text-gray-400 break-all">{shortAddr(addr)}</span>
       <button onClick={() => { navigator.clipboard.writeText(addr); toast({ title: "Copied" }); }}
-        className="text-gray-600 hover:text-gray-300 shrink-0">
+        className="text-gray-600 hover:text-gray-300 shrink-0" aria-label={`Copy ${label} address`}>
         <Copy className="w-2.5 h-2.5" />
       </button>
       <a href={`https://mempool.space/address/${addr}`} target="_blank" rel="noopener noreferrer"
-        className="text-gray-600 hover:text-orange-400 shrink-0">
+        className="text-gray-600 hover:text-orange-400 shrink-0" aria-label={`View ${label} address on mempool.space`}>
         <ExternalLink className="w-2.5 h-2.5" />
       </a>
     </div>
@@ -145,7 +145,7 @@ export default function BtcAssetsSentinelPage() {
         <h1 className="sr-only">Assets Sentinel</h1>
         <div className="flex items-center gap-3 mb-6">
           <Link href="/wnsp">
-            <button className="text-gray-400 hover:text-white transition-colors">
+            <button className="text-gray-400 hover:text-white transition-colors" aria-label="Back to WNSP">
               <ArrowLeft className="w-5 h-5" />
             </button>
           </Link>
@@ -218,7 +218,7 @@ export default function BtcAssetsSentinelPage() {
                 <span className="text-[10px] text-gray-600 ml-2">{ins.contentType}</span>
               </div>
               <a href={`https://ordinals.com/inscription/${ins.id}`} target="_blank" rel="noopener noreferrer"
-                className="text-gray-600 hover:text-purple-400 shrink-0">
+                className="text-gray-600 hover:text-purple-400 shrink-0" aria-label={`View inscription #${ins.number} on ordinals.com`}>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>

@@ -517,7 +517,7 @@ export default function MarketplacePage() {
         {/* ── Header ── */}
         <div className="flex items-center gap-4 mb-6">
           <Link href="/nexus-command">
-            <button className="text-slate-400 hover:text-white transition-colors">
+            <button className="text-slate-400 hover:text-white transition-colors" aria-label="Back to Nexus Command">
               <ArrowLeft className="w-5 h-5" />
             </button>
           </Link>

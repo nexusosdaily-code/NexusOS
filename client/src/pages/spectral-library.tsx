@@ -256,7 +256,7 @@ export default function SpectralLibrary() {
             className="w-full bg-white/5 border border-white/10 rounded pl-8 pr-8 py-2 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/30"
           />
           {(q || tuneNm !== null) && (
-            <button onClick={clearFilters} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
+            <button onClick={clearFilters} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white" aria-label="Clear search filters">
               <X size={13} />
             </button>
           )}
