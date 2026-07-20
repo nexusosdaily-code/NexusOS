@@ -35,11 +35,12 @@ Private routes remain out of scope for content-quality review, but they are stil
 - If `/protocol` or `/wnsp-paper` remain noindex, public landing pages should not use them as prominent reference links. If we want them linked as SEO targets, they need to become indexable first.
 - For public documentation and research pages, AI-visible fallback HTML should contain substantive body copy, not just a teaser paragraph and nav links. If React holds the canonical long-form content, mirror enough of that content into `bodyHtml` or prerender it.
 - If a legacy public alias redirects to a canonical page, every redirect layer and metadata entry must agree on the same destination. Do not keep 301 redirects pointing at one page while `ROUTE_META` canonicals those aliases to different pages.
-
 - New public React routes must be wired into the server allowlist, `ROUTE_META`, and `sitemap.xml` together. If any one of those is skipped, the page can become invisible or inconsistent to crawlers.
 - Public alias routes should resolve to one canonical URL. Only the primary URL should appear in the sitemap; aliases should redirect or canonicalize to that primary path.
 - Legacy aliases and branded-domain redirects must not terminate on a `noindex` page. If a route is meant to absorb historical SEO signals, its final destination needs to be indexable.
 - The root `/docs` URL must stay in parity across server HTML and hydrated React. Do not let the server describe `/docs` as a docs index while the client turns the same URL into the first section article.
+- When a public page emits `Article` or `TechArticle` JSON-LD, include `datePublished` and `dateModified` whenever the content is editorial, scientific, or documentation-like. The helper already supports these fields, so missing dates are usually a metadata gap rather than a platform limit.
+- Keep list-style structured data deduplicated. `CollectionPage.hasPart`, `ItemList`, and similar arrays should not repeat the same URL under different or duplicate entries.
 
 ## Dismissed categories
 - None yet
