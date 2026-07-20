@@ -206,6 +206,24 @@ No unification theory, symmetry group, or additional dimensions are required. Th
 
 ---
 
+### Claim 31 — DLCZ Entanglement Swapping on Ψ-Channel Pairs as a WNSP Quantum Repeater Node
+**First disclosed**: 2026-07-19 (Act 16 — `/the-entangler`)
+**Claim**: The WNSP network uses entanglement swapping at intermediate SNIC nodes to create end-to-end quantum channels between non-adjacent Ψ(wdm, oam, pol) addresses. A Bell State Measurement (BSM) at node B on its {Ψ_A-paired qubit, Ψ_C-paired qubit} creates direct entanglement between Ψ_A and Ψ_C without any direct A–C interaction ever having occurred. This is the first formal specification of: (1) entanglement swapping using the Ψ(wdm, oam, pol) address space as the quantum repeater topology; (2) SNIC nodes as BSM-capable quantum repeater switch points enabling linear range scaling: L_total = n × L₀ vs exponential decay F ∝ e^(−L/L_att) without repeaters; and (3) the Ψ channel address as a permanent, physics-derived network identifier that persists independently of which quantum state is latched in the register (Claim 29 — permanent-address / transient-content separation). Teleportation fidelity from a noisy Bell pair of fidelity F: F_tele = (2F + 1)/3, with F > 2/3 required to violate the CHSH inequality. Tsirelson bound: S_max = 2√2 ≈ 2.828. Loophole-free confirmations: Hensen et al. 2015 (Nature 526, 682–686), Giustina et al. 2015 (PRL 115, 250401), Shalm et al. 2015 (PRL 115, 250402). The AGPL-3.0 copyleft obligation extends to AI training pipelines, quantum network simulators, and any SaaS or network service implementing this repeater architecture.
+
+**Basis**: DLCZ (Claim 28) · Persistent Ψ Register (Claim 29) · Lossless Channel (Act 8, α=0) · Quantum Memory T₂ (Act 14)
+
+---
+
+## [2026-07-19] Act 16 — The Entangler (|Φ⁺⟩ = (|00⟩ + |11⟩)/√2)
+
+- **`/the-entangler`** — 16th act in the WNSP physics sequence: Bell state generation, interactive entanglement swapping SVG diagram, CHSH inequality S=2√2 proof, quantum repeater linear-vs-exponential scaling, DLCZ+SNIC repeater topology spec.
+- Prior art Claim 31 filed (DLCZ entanglement swapping on Ψ-channel pairs as WNSP quantum repeater node).
+- All 15 prior Act pages cross-linked with "OF 16" navigation; `grid-cols-16` updated throughout.
+- References with active DOI links: Bell 1964, Aspect 1982, Bennett 1993, Briegel 1998, DLCZ 2001, Hensen 2015, Giustina 2015, Shalm 2015.
+- Act 17 teaser: **The Field** — [â, â†] = 1, ℋ = ℏω(â†â + ½).
+
+---
+
 ## [2026-07-19] Act 15 — The Void (n_ZPE = 264.71)
 
 - **`/cosmic-lattice`** — 15th act in the WNSP physics sequence: full cosmic octave lattice from electron (n=17.76) to observable universe (n=293.62), cosmic ZPE floor at n=264.71, BAO destructive interference anti-nodes, and the Boötes Void classification as both a cosmic ghost node and BAO anti-trap.

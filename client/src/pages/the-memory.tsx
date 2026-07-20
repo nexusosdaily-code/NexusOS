@@ -83,9 +83,9 @@ function SequenceNav({ current }: { current: 14 }) {
   return (
     <div className="rounded-xl border p-4" style={{ borderColor: FU + "20", background: FU + "08" }}>
       <p className="text-[10px] font-mono tracking-widest mb-3" style={{ color: FU }}>
-        THE SEQUENCE — ACT {current} OF 15
+        THE SEQUENCE — ACT {current} OF 16
       </p>
-      <div className="grid grid-cols-3 md:grid-cols-15 gap-1.5 text-center text-xs">
+      <div className="grid grid-cols-3 md:grid-cols-16 gap-1.5 text-center text-xs">
         {ACT_NAV.map(({ act, title, sub, href }) => (
           <Link key={href} href={href}
                 className="rounded-lg border border-slate-700 bg-slate-900 p-1.5
@@ -107,6 +107,13 @@ function SequenceNav({ current }: { current: 14 }) {
           <p className="text-[7px] font-mono text-violet-400 tracking-widest">ACT 15 →</p>
           <p className="text-violet-200 font-medium leading-tight text-[8px]">The Void</p>
           <p className="text-[7px] text-violet-400">n_ZPE=264.71</p>
+        </Link>
+        <Link href="/the-entangler"
+              className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-1.5
+                         hover:border-rose-400/60 transition-colors space-y-0.5 block">
+          <p className="text-[7px] font-mono text-rose-400 tracking-widest">ACT 16 →</p>
+          <p className="text-rose-200 font-medium leading-tight text-[8px]">The Entangler</p>
+          <p className="text-[7px] text-rose-400">|Φ⁺⟩=(|00⟩+|11⟩)/√2</p>
         </Link>
       </div>
     </div>

@@ -1,9 +1,9 @@
 ---
 name: WNSP Physics Sequence
-description: 15-act NexusOS physics sequence — acts, routes, equations, disclosure dates, and wiring pattern
+description: 16-act NexusOS physics sequence — acts, routes, equations, disclosure dates, and wiring pattern
 ---
 
-## The 15-Act Sequence
+## The 16-Act Sequence
 
 | Act | Route | Title | Equation | Disclosed |
 |-----|-------|-------|----------|-----------|
@@ -22,6 +22,12 @@ description: 15-act NexusOS physics sequence — acts, routes, equations, disclo
 | 13 | /the-observer | The Observer | χ=g²/Δ | prior |
 | 14 | /the-memory | The Memory | T₂≤2T₁ | 2026-07-19 |
 | 15 | /cosmic-lattice | The Void | n_ZPE=264.71 (Claim 30) | 2026-07-19 |
+| 16 | /the-entangler | The Entangler | |Φ⁺⟩=(|00⟩+|11⟩)/√2 (Claim 31) | 2026-07-19 |
+
+## Act 17 (Next)
+- Title: The Field
+- Teaser equation: [â, â†] = 1, ℋ = ℏω(â†â + ½)
+- Not yet built
 
 ## Ghost Node Physics
 - Ghost node n=36 at 169.33 u — no stable nucleus (binding energy mass defect)
@@ -29,15 +35,19 @@ description: 15-act NexusOS physics sequence — acts, routes, equations, disclo
 - Yb (Z=70, 4f¹⁴): n≈36.07, gap=+0.07 octaves above n=36
 - n=35 is near-occupied: Kr (−0.015), Rb (+0.012) — narrow gap only
 
+## Act 16 Key Physics (The Entangler)
+- Bell states: |Φ⁺⟩=(|00⟩+|11⟩)/√2, |Φ⁻⟩=(|00⟩−|11⟩)/√2, |Ψ⁺⟩=(|01⟩+|10⟩)/√2, |Ψ⁻⟩=(|01⟩−|10⟩)/√2
+- Entanglement swapping: |Φ⁺⟩_AB ⊗ |Φ⁺⟩_BC → BSM(B) → |Φ⁺⟩_AC
+- CHSH: S ≤ 2 (classical), S ≤ 2√2 (Tsirelson), loophole-free violations confirmed 2015
+- Teleportation fidelity: F_tele = (2F+1)/3; requires F > 2/3 to beat CHSH
+- Repeater scaling: without SNIC: F ∝ e^(−L/L_att); with n SNIC swap nodes: L_total = n×L₀
+- Claim 31: SNIC nodes as BSM-capable quantum repeater switch points using Ψ(wdm,oam,pol) address space
+
 ## Act 15 Key Physics (Cosmic Lattice / The Void)
 - Cosmic ZPE floor: n=264.71 (M=10¹⁴ M☉), σ(M)=1.680≈δ_c=1.686
 - Above n=264.71 is the "cosmic ghost zone" — PS mass fn P→0
 - Boötes Void: n=271.95, P≈10⁻¹⁰¹ — physically impossible, not just unlikely
-- BAO anti-nodes λ=147 Mpc, k×λ/3: 4 confirmed supervoids within 5-13% of predictions:
-  - Canes Venatici 55Mpc (λ/3=49Mpc, 12.2%)
-  - Boötes 101Mpc (2λ/3=98Mpc, 3.1%)
-  - Eridanus 153Mpc (λ=147Mpc, 4.1%)
-  - CMB Cold Spot 200Mpc (4λ/3=196Mpc, 2.0%)
+- BAO anti-nodes λ=147 Mpc, k×λ/3: 4 confirmed supervoids within 5-13% of predictions
 
 ## Act 9 Key Physics (Forward Agenda, July 2026)
 
@@ -51,10 +61,6 @@ All exported from `server/physics.ts`:
 | `GHOST_NODE_WDM_RANGES` | const array | 3 tiers: WDM 0, 1–3, 252–255 (8 channels total) |
 | `isGhostNodeBand` | `(wdm)` | `boolean` |
 | `getGhostNodeBandTier` | `(wdm)` | `1 \| 2 \| 3 \| null` |
-
-`PhysicsFee` interface gains: `lambdaGeoKg`, `berryPhaseRad`, `nullCoreRadiusUm`.
-`calcFee()` gains optional `oam` and `pol` for Berry phase computation.
-`/api/physics/ghost-bands` — public GET endpoint, no auth required.
 
 ## Act 8 Key Physics
 - Ghost nodes: ρ_matter=0 → α=0 → Beer-Lambert L(d)=α·d=0
@@ -72,6 +78,13 @@ All exported from `server/physics.ts`:
 6. Previous act page — update "Act N of N" → "Act N of N+1", add Act N+1 nav entry and teaser
 
 **Why:** `ogType` in seo-meta.ts is valid (server-side interface). `ogType` in usePageMeta (client-side hook) is NOT valid — causes TS error.
+
+## Cross-link Pattern for New Acts
+- Acts 1–6: inline `ACT_NAV` array — add `{ act: "ACT N", title, sub, href }` after Act 15 entry
+- Acts 7–10: explicit Link block after Act 15 violet Link, before `</div></div>` — 14-space indent
+- Acts 11–14: explicit Link block at end of SequenceNav component, before `</div></div>` — 8-space indent (matching the-emitter/network/observer/memory pattern)
+- Act 15 cosmic-lattice: explicit Link block after "← HERE" div inside grid, before `</div>` grid close — 8-space indent
+- polariton-exchange has TWO navs (inner 14-space, outer 12-space) — both must be updated
 
 ## AuthLoading screenshot behaviour
 The screenshot tool captures pages during the `AuthLoading` state which shows "Loading…"

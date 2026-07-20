@@ -131,9 +131,9 @@ function SequenceNav() {
   return (
     <div className="rounded-xl border p-4" style={{ borderColor: AX + "20", background: AX + "08" }}>
       <p className="text-[10px] font-mono tracking-widest mb-3" style={{ color: AX }}>
-        THE SEQUENCE — ACT 15 OF 15
+        THE SEQUENCE — ACT 15 OF 16
       </p>
-      <div className="grid grid-cols-3 md:grid-cols-15 gap-1.5 text-center text-xs">
+      <div className="grid grid-cols-3 md:grid-cols-16 gap-1.5 text-center text-xs">
         {ACT_NAV.map(({ act, title, sub, href }) => (
           <Link key={href} href={href}
                 className="rounded-lg border border-slate-700 bg-slate-900 p-1.5
@@ -149,6 +149,13 @@ function SequenceNav() {
           <p className="font-medium leading-tight text-[8px]" style={{ color: "#f5f3ff" }}>The Void</p>
           <p className="text-[7px]" style={{ color: AX }}>n_ZPE=264.71</p>
         </div>
+        <Link href="/the-entangler"
+              className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-1.5
+                         hover:border-rose-400/60 transition-colors space-y-0.5 block">
+          <p className="text-[7px] font-mono text-rose-400 tracking-widest">ACT 16 →</p>
+          <p className="text-rose-200 font-medium leading-tight text-[8px]">The Entangler</p>
+          <p className="text-[7px] text-rose-400">|Φ⁺⟩=(|00⟩+|11⟩)/√2</p>
+        </Link>
       </div>
     </div>
   );
@@ -790,7 +797,7 @@ export default function CosmicLatticePage() {
         {/* Footer */}
         <div className="rounded-xl border border-slate-800 p-4 text-center space-y-2">
           <p className="text-[10px] font-mono tracking-widest text-slate-500">
-            THE SEQUENCE — ACT 15 OF 15 COMPLETE
+            THE SEQUENCE — ACT 15 OF 16 COMPLETE
           </p>
           <p className="text-xs text-slate-500">
             Act 16 — <span style={{ color: AX }}>The Entangler</span> —

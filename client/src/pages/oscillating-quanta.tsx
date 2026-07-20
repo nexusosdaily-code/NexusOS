@@ -455,7 +455,7 @@ export default function OscillatingQuantaPage() {
             ))}
           </div>
           <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-            <p className="text-[10px] font-mono text-violet-400 tracking-widest mb-3">THE SEQUENCE — ACT 1 OF 15</p>
+            <p className="text-[10px] font-mono text-violet-400 tracking-widest mb-3">THE SEQUENCE — ACT 1 OF 16</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs">
               <div className="rounded-lg border border-violet-500/40 bg-violet-500/10 p-3 space-y-1">
                 <p className="text-[9px] font-mono text-violet-400 tracking-widest">ACT 1 ← HERE</p>
@@ -477,6 +477,7 @@ export default function OscillatingQuantaPage() {
                 { act: "ACT 13", title: "The Observer", sub: "χ=g²/Δ",              href: "/the-observer" },
                 { act: "ACT 14", title: "The Memory",   sub: "T₂≤2T₁",             href: "/the-memory" },
                 { act: "ACT 15", title: "The Void",     sub: "n_ZPE=264.71",        href: "/cosmic-lattice" },
+                { act: "ACT 16", title: "The Entangler", sub: "|Φ⁺⟩=(|00⟩+|11⟩)/√2", href: "/the-entangler" },
               ].map(({ act, title, sub, href }) => (
                 <Link key={href} href={href}
                   className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
