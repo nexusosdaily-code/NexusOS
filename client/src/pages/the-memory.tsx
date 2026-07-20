@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, type ElementType, type ReactNode } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, ExternalLink, Database, Activity, Zap, Layers, Clock, BarChart2 } from "lucide-react";
+import { ActSequenceNav } from "@/components/act-sequence-nav";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const PAGE_DATE = "2026-07-19";
@@ -63,70 +64,6 @@ function MetricCard({ label, value, sub, color }: {
 }
 
 // ── Sequence nav ─────────────────────────────────────────────────────────────
-const ACT_NAV = [
-  { act:"1",  title:"Compression States", sub:"Λ=hf/c²",          href:"/oscillating-quanta" },
-  { act:"2",  title:"The Universal ONE",  sub:"f₀ derives Λ",      href:"/universal-one" },
-  { act:"3",  title:"Unified Theory",     sub:"4 forces=1 Λ",      href:"/unified-compression-theory" },
-  { act:"4",  title:"The Mechanism",      sub:"ΔE=hf₀(2ⁿ²−2ⁿ¹)", href:"/matter-protocol" },
-  { act:"5",  title:"The Address",        sub:"∀Λ:∃!Ψ",            href:"/universal-address" },
-  { act:"6",  title:"The Catalogue",      sub:"n=log₂(mc²/E₀)",   href:"/element-catalogue" },
-  { act:"7",  title:"The Trap",           sub:"Ψ(+k̂)⊗Ψ(−k̂)",   href:"/standing-wave-trap" },
-  { act:"8",  title:"The Channel",        sub:"α=0, C=ZPE",        href:"/lossless-channel" },
-  { act:"9",  title:"The Cavity",         sub:"R=nc/2πfₙ",         href:"/resonance-cavity" },
-  { act:"10", title:"The Exchange",       sub:"Ω_R=2g",            href:"/polariton-exchange" },
-  { act:"11", title:"The Emitter",        sub:"F_p=(Q/V)(λ/n)³",  href:"/the-emitter" },
-  { act:"12", title:"The Network",        sub:"ω=ω₀−2J·cos(ka)", href:"/the-network" },
-  { act:"13", title:"The Observer",       sub:"χ=g²/Δ",            href:"/the-observer" },
-];
-
-function SequenceNav({ current }: { current: 14 }) {
-  return (
-    <div className="rounded-xl border p-4" style={{ borderColor: FU + "20", background: FU + "08" }}>
-      <p className="text-[10px] font-mono tracking-widest mb-3" style={{ color: FU }}>
-        THE SEQUENCE — ACT {current} OF 17
-      </p>
-      <div className="grid grid-cols-3 md:grid-cols-17 gap-1.5 text-center text-xs">
-        {ACT_NAV.map(({ act, title, sub, href }) => (
-          <Link key={href} href={href}
-                className="rounded-lg border border-slate-700 bg-slate-900 p-1.5
-                           hover:border-slate-500 transition-colors space-y-0.5 block">
-            <p className="text-[7px] font-mono text-slate-500 tracking-widest">ACT {act}</p>
-            <p className="text-slate-300 font-medium leading-tight text-[8px]">{title}</p>
-            <p className="text-[7px] text-slate-500">{sub}</p>
-          </Link>
-        ))}
-        <div className="rounded-lg border p-1.5 space-y-0.5"
-          style={{ borderColor: FU + "50", background: FU + "15" }}>
-          <p className="text-[7px] font-mono tracking-widest" style={{ color: "#f5d0fe" }}>ACT 14 ← HERE</p>
-          <p className="font-medium leading-tight text-[8px]" style={{ color: "#fdf4ff" }}>The Memory</p>
-          <p className="text-[7px]" style={{ color: FU }}>T₂≤2T₁</p>
-        </div>
-        <Link href="/cosmic-lattice"
-              className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-1.5
-                         hover:border-violet-400/60 transition-colors space-y-0.5 block">
-          <p className="text-[7px] font-mono text-violet-400 tracking-widest">ACT 15 →</p>
-          <p className="text-violet-200 font-medium leading-tight text-[8px]">The Void</p>
-          <p className="text-[7px] text-violet-400">n_ZPE=264.71</p>
-        </Link>
-        <Link href="/the-entangler"
-              className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-1.5
-                         hover:border-rose-400/60 transition-colors space-y-0.5 block">
-          <p className="text-[7px] font-mono text-rose-400 tracking-widest">ACT 16 →</p>
-          <p className="text-rose-200 font-medium leading-tight text-[8px]">The Entangler</p>
-          <p className="text-[7px] text-rose-400">|Φ⁺⟩=(|00⟩+|11⟩)/√2</p>
-        </Link>
-        <Link href="/the-field"
-              className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-1.5
-                         hover:border-amber-400/60 transition-colors space-y-0.5 block">
-          <p className="text-[7px] font-mono text-amber-400 tracking-widest">ACT 17 →</p>
-          <p className="text-amber-200 font-medium leading-tight text-[8px]">The Field</p>
-          <p className="text-[7px] text-amber-400">[â,â†]=1</p>
-        </Link>
-      </div>
-    </div>
-  );
-}
-
 // ── Decay plot animation ──────────────────────────────────────────────────────
 function DecayPlot({ t1Us, t2Us }: { t1Us: number; t2Us: number }) {
   const [phase, setPhase] = useState(0);
@@ -269,7 +206,7 @@ export default function TheMemoryPage() {
             ))}
           </div>
 
-          <SequenceNav current={14} />
+          <ActSequenceNav current={14} />
 
           <div className="flex items-start gap-3">
             <Link href="/the-observer">
@@ -609,7 +546,7 @@ export default function TheMemoryPage() {
         {/* ── Bottom sequence nav + teaser ──────────────────────────── */}
         <div className="rounded-xl border p-4 mt-6"
           style={{ borderColor: FU + "20", background: FU + "08" }}>
-          <SequenceNav current={14} />
+          <ActSequenceNav current={14} />
           <div className="border-t border-slate-800 pt-3 mt-4 text-center">
             <p className="text-[10px] font-mono text-slate-600 tracking-widest mb-1">
               NEXT — ACT 15 OF ?

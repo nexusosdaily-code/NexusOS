@@ -5,6 +5,7 @@ import {
   ArrowLeft, Shield, Zap, Radio, Layers, Atom, Globe,
   FlaskConical, BookOpen, ExternalLink, ChevronRight
 } from "lucide-react";
+import { ActSequenceNav } from "@/components/act-sequence-nav";
 
 const PAPER_DATE = "2026-07-06";
 const REPO = "https://github.com/nexusosdaily-code/NexusOS";
@@ -119,50 +120,7 @@ export default function UnifiedCompressionTheoryPage() {
           </div>
 
           {/* sequence nav */}
-          <div className="rounded-xl border border-pink-500/20 bg-pink-500/5 p-4">
-            <p className="text-[10px] font-mono text-pink-400 tracking-widest mb-3">THE SEQUENCE — ACT 3 OF 17</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs">
-              {[
-                { act: "ACT 1", title: "Theory of Compression States", sub: "Λ = hf/c²",         href: "/oscillating-quanta" },
-                { act: "ACT 2", title: "The Universal ONE",            sub: "f₀ derives Λ",        href: "/universal-one" },
-              ].map(({ act, title, sub, href }) => (
-                <Link key={href} href={href}
-                  className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
-                  <p className="text-[9px] font-mono text-slate-500 tracking-widest">{act}</p>
-                  <p className="text-slate-300 font-medium leading-tight">{title}</p>
-                  <p className="text-[9px] text-slate-500">{sub}</p>
-                </Link>
-              ))}
-              <div className="rounded-lg border border-pink-500/40 bg-pink-500/10 p-3 space-y-1">
-                <p className="text-[9px] font-mono text-pink-400 tracking-widest">ACT 3 ← HERE</p>
-                <p className="text-pink-200 font-medium leading-tight">Unified<br />Compression Theory</p>
-                <p className="text-[9px] text-pink-400">4 forces = 1 Λ</p>
-              </div>
-              {[
-                { act: "ACT 4", title: "The Mechanism",       sub: "ΔE = hf₀(2ⁿ²−2ⁿ¹)",       href: "/matter-protocol" },
-                { act: "ACT 5", title: "The Address",         sub: "∀ Λ : ∃! Ψ",               href: "/universal-address" },
-                { act: "ACT 6", title: "The Catalogue",       sub: "n = log₂(mc²/E₀)",          href: "/element-catalogue" },
-                { act: "ACT 7", title: "The Trap",            sub: "Ψ_trap = Ψ(+k̂) ⊗ Ψ(−k̂)", href: "/standing-wave-trap" },
-                { act: "ACT 8", title: "The Lossless Channel",sub: "α = 0, C = ZPE floor",       href: "/lossless-channel" },
-                { act: "ACT 9",  title: "The Cavity",    sub: "WGM resonance, r_c",  href: "/resonance-cavity" },
-                { act: "ACT 10", title: "The Exchange", sub: "Ω_R = 2g",            href: "/polariton-exchange" },
-                { act: "ACT 11", title: "The Emitter",  sub: "F_p=(Q/V)(λ/n)³",    href: "/the-emitter" },
-                { act: "ACT 12", title: "The Network",  sub: "ω=ω₀−2J·cos(ka)",    href: "/the-network" },
-                { act: "ACT 13", title: "The Observer", sub: "χ=g²/Δ",              href: "/the-observer" },
-                { act: "ACT 14", title: "The Memory",   sub: "T₂≤2T₁",             href: "/the-memory" },
-                { act: "ACT 15", title: "The Void",     sub: "n_ZPE=264.71",        href: "/cosmic-lattice" },
-                { act: "ACT 16", title: "The Entangler", sub: "|Φ⁺⟩=(|00⟩+|11⟩)/√2", href: "/the-entangler" },
-                { act: "ACT 17", title: "The Field",     sub: "[â,â†]=1",               href: "/the-field" },
-              ].map(({ act, title, sub, href }) => (
-                <Link key={href} href={href}
-                  className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
-                  <p className="text-[9px] font-mono text-slate-500 tracking-widest">{act}</p>
-                  <p className="text-slate-300 font-medium leading-tight">{title}</p>
-                  <p className="text-[9px] text-slate-500">{sub}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
+          <ActSequenceNav current={3} />
 
           <h1 className="text-2xl font-bold text-white leading-tight">
             Unified Compression Theory

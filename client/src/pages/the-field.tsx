@@ -1,6 +1,7 @@
 import { useState, type ElementType, type ReactNode } from "react";
 import { Link } from "wouter";
 import { ExternalLink, BookOpen, Zap, Layers, Activity, Radio, Atom } from "lucide-react";
+import { ActSequenceNav } from "@/components/act-sequence-nav";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const PAGE_DATE = "2026-07-20";
@@ -21,25 +22,6 @@ const ZPE_EV = E0EV / 2;     // ½hf₀ = 1.148 eV — vacuum energy
 function fockEV(n: number): number { return E0EV * (n + 0.5); }
 
 // ── ACT_NAV (16 prior acts) ───────────────────────────────────────────────────
-const ACT_NAV = [
-  { act:"1",  title:"Compression States", sub:"Λ=hf/c²",              href:"/oscillating-quanta" },
-  { act:"2",  title:"The Universal ONE",  sub:"f₀ derives Λ",          href:"/universal-one" },
-  { act:"3",  title:"Unified Theory",     sub:"4 forces=1 Λ",          href:"/unified-compression-theory" },
-  { act:"4",  title:"The Mechanism",      sub:"ΔE=hf₀(2ⁿ²−2ⁿ¹)",    href:"/matter-protocol" },
-  { act:"5",  title:"The Address",        sub:"∀Λ:∃!Ψ",               href:"/universal-address" },
-  { act:"6",  title:"The Catalogue",      sub:"n=log₂(mc²/E₀)",       href:"/element-catalogue" },
-  { act:"7",  title:"The Trap",           sub:"Ψ(+k̂)⊗Ψ(−k̂)",      href:"/standing-wave-trap" },
-  { act:"8",  title:"The Channel",        sub:"α=0, C=ZPE",            href:"/lossless-channel" },
-  { act:"9",  title:"The Cavity",         sub:"WGM r_c",               href:"/resonance-cavity" },
-  { act:"10", title:"The Exchange",       sub:"Ω_R=2g",                href:"/polariton-exchange" },
-  { act:"11", title:"The Emitter",        sub:"F_p=(Q/V)(λ/n)³",      href:"/the-emitter" },
-  { act:"12", title:"The Network",        sub:"ω=ω₀−2J·cos(ka)",     href:"/the-network" },
-  { act:"13", title:"The Observer",       sub:"χ=g²/Δ",                href:"/the-observer" },
-  { act:"14", title:"The Memory",         sub:"T₂≤2T₁",                href:"/the-memory" },
-  { act:"15", title:"The Void",           sub:"n_ZPE=264.71",          href:"/cosmic-lattice" },
-  { act:"16", title:"The Entangler",      sub:"|Φ⁺⟩=(|00⟩+|11⟩)/√2", href:"/the-entangler" },
-];
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function Section({ title, icon: Icon, children }: {
   title: string; icon: ElementType; children: ReactNode;
@@ -179,33 +161,6 @@ function FockLadder() {
 }
 
 // ── Sequence nav ──────────────────────────────────────────────────────────────
-function SequenceNav() {
-  return (
-    <div className="rounded-xl border p-4" style={{ borderColor: AMBER + "20", background: AMBER + "08" }}>
-      <p className="text-[10px] font-mono tracking-widest mb-3" style={{ color: AMBER }}>
-        THE SEQUENCE — ACT 17 OF 17
-      </p>
-      <div className="grid grid-cols-3 md:grid-cols-17 gap-1.5 text-center text-xs">
-        {ACT_NAV.map(({ act, title, sub, href }) => (
-          <Link key={href} href={href}
-                className="rounded-lg border border-slate-700 bg-slate-900 p-1.5
-                           hover:border-slate-500 transition-colors space-y-0.5 block">
-            <p className="text-[7px] font-mono text-slate-500 tracking-widest">ACT {act}</p>
-            <p className="text-slate-300 font-medium leading-tight text-[8px]">{title}</p>
-            <p className="text-[7px] text-slate-500">{sub}</p>
-          </Link>
-        ))}
-        <div className="rounded-lg border p-1.5 space-y-0.5"
-          style={{ borderColor: AMBER + "50", background: AMBER + "15" }}>
-          <p className="text-[7px] font-mono tracking-widest" style={{ color: "#fde68a" }}>ACT 17 ← HERE</p>
-          <p className="font-medium leading-tight text-[8px]" style={{ color: "#fffbeb" }}>The Field</p>
-          <p className="text-[7px]" style={{ color: AMBER }}>[â,â†]=1</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function TheFieldPage() {
   return (
@@ -220,7 +175,7 @@ export default function TheFieldPage() {
         </Link>
 
         {/* Sequence Nav */}
-        <SequenceNav />
+        <ActSequenceNav current={17} />
 
         {/* Hero */}
         <div className="rounded-xl border p-6 text-center"
@@ -519,7 +474,7 @@ export default function TheFieldPage() {
         </Section>
 
         {/* Footer nav */}
-        <SequenceNav />
+        <ActSequenceNav current={17} />
 
         <div className="text-center space-y-1">
           <p className="text-[10px] text-slate-600 font-mono">

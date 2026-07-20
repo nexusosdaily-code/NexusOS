@@ -5,6 +5,7 @@ import {
   ArrowLeft, ExternalLink, Waves, Zap, Circle, Activity,
   Radio, Atom, Aperture, GitBranch,
 } from "lucide-react";
+import { ActSequenceNav } from "@/components/act-sequence-nav";
 
 // ── Physics constants ─────────────────────────────────────────────────────────
 const C_LIGHT    = 2.998e8;    // m/s
@@ -183,92 +184,7 @@ export default function ResonanceCavityPage() {
           </div>
 
           {/* 9-act sequence nav */}
-          <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
-            <p className="text-[10px] font-mono text-indigo-400 tracking-widest mb-3">
-              THE SEQUENCE — ACT 9 OF 17
-            </p>
-            <div className="grid grid-cols-3 md:grid-cols-17 gap-2 text-center text-xs">
-              {[
-                { act:"1", title:"Compression States", sub:"Λ=hf/c²",          href:"/oscillating-quanta" },
-                { act:"2", title:"The Universal ONE",  sub:"f₀ derives Λ",      href:"/universal-one" },
-                { act:"3", title:"Unified Theory",     sub:"4 forces=1 Λ",      href:"/unified-compression-theory" },
-                { act:"4", title:"The Mechanism",      sub:"ΔE=hf₀(2ⁿ²−2ⁿ¹)", href:"/matter-protocol" },
-                { act:"5", title:"The Address",        sub:"∀Λ:∃!Ψ",            href:"/universal-address" },
-                { act:"6", title:"The Catalogue",      sub:"n=log₂(mc²/E₀)",   href:"/element-catalogue" },
-                { act:"7", title:"The Trap",           sub:"Ψ(+k̂)⊗Ψ(−k̂)",   href:"/standing-wave-trap" },
-                { act:"8", title:"The Channel",        sub:"Ψ_ch=⊗ᵢΨ_trap",   href:"/lossless-channel" },
-              ].map(({ act, title, sub, href }) => (
-                <Link key={href} href={href}
-                      className="rounded-lg border border-slate-700 bg-slate-900 p-2
-                                 hover:border-slate-500 transition-colors space-y-0.5 block">
-                  <p className="text-[8px] font-mono text-slate-500 tracking-widest">ACT {act}</p>
-                  <p className="text-slate-300 font-medium leading-tight text-[9px]">{title}</p>
-                  <p className="text-[8px] text-slate-500">{sub}</p>
-                </Link>
-              ))}
-              <div className="rounded-lg border border-indigo-500/50 bg-indigo-500/15 p-2 space-y-0.5">
-                <p className="text-[8px] font-mono text-indigo-300 tracking-widest">ACT 9 ← HERE</p>
-                <p className="text-indigo-100 font-medium leading-tight text-[9px]">The Cavity</p>
-                <p className="text-[8px] text-indigo-400">R=nc/2πfₙ</p>
-              </div>
-              <Link href="/polariton-exchange"
-                    className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-2
-                               hover:border-rose-400/60 transition-colors space-y-0.5 block">
-                <p className="text-[8px] font-mono text-rose-400 tracking-widest">ACT 10</p>
-                <p className="text-rose-200 font-medium leading-tight text-[9px]">The Exchange</p>
-                <p className="text-[8px] text-rose-400">Ω_R=2g</p>
-              </Link>
-              <Link href="/the-emitter"
-                    className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-2
-                               hover:border-sky-400/60 transition-colors space-y-0.5 block">
-                <p className="text-[8px] font-mono text-sky-400 tracking-widest">ACT 11</p>
-                <p className="text-sky-200 font-medium leading-tight text-[9px]">The Emitter</p>
-                <p className="text-[8px] text-sky-400">F_p=(Q/V)(λ/n)³</p>
-              </Link>
-              <Link href="/the-network"
-                    className="rounded-lg border border-teal-500/30 bg-teal-500/5 p-2
-                               hover:border-teal-400/60 transition-colors space-y-0.5 block">
-                <p className="text-[8px] font-mono text-teal-400 tracking-widest">ACT 12</p>
-                <p className="text-teal-200 font-medium leading-tight text-[9px]">The Network</p>
-                <p className="text-[8px] text-teal-400">ω=ω₀−2J·cos(ka)</p>
-              </Link>
-              <Link href="/the-observer"
-                    className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-2
-                               hover:border-orange-400/60 transition-colors space-y-0.5 block">
-                <p className="text-[8px] font-mono text-orange-400 tracking-widest">ACT 13 →</p>
-                <p className="text-orange-200 font-medium leading-tight text-[9px]">The Observer</p>
-                <p className="text-[8px] text-orange-400">χ=g²/Δ</p>
-              </Link>
-              <Link href="/the-memory"
-                    className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/5 p-2
-                               hover:border-fuchsia-400/60 transition-colors space-y-0.5 block">
-                <p className="text-[8px] font-mono text-fuchsia-400 tracking-widest">ACT 14 →</p>
-                <p className="text-fuchsia-200 font-medium leading-tight text-[9px]">The Memory</p>
-                <p className="text-[8px] text-fuchsia-400">T₂≤2T₁</p>
-              </Link>
-              <Link href="/cosmic-lattice"
-                    className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-2
-                               hover:border-violet-400/60 transition-colors space-y-0.5 block">
-                <p className="text-[8px] font-mono text-violet-400 tracking-widest">ACT 15 →</p>
-                <p className="text-violet-200 font-medium leading-tight text-[9px]">The Void</p>
-                <p className="text-[8px] text-violet-400">n_ZPE=264.71</p>
-              </Link>
-              <Link href="/the-entangler"
-                    className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-2
-                               hover:border-rose-400/60 transition-colors space-y-0.5 block">
-                <p className="text-[8px] font-mono text-rose-400 tracking-widest">ACT 16 →</p>
-                <p className="text-rose-200 font-medium leading-tight text-[9px]">The Entangler</p>
-                <p className="text-[8px] text-rose-400">|Φ⁺⟩=(|00⟩+|11⟩)/√2</p>
-              </Link>
-              <Link href="/the-field"
-                    className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2
-                               hover:border-amber-400/60 transition-colors space-y-0.5 block">
-                <p className="text-[8px] font-mono text-amber-400 tracking-widest">ACT 17 →</p>
-                <p className="text-amber-200 font-medium leading-tight text-[9px]">The Field</p>
-                <p className="text-[8px] text-amber-400">[â,â†]=1</p>
-              </Link>
-            </div>
-          </div>
+          <ActSequenceNav current={9} />
 
           {/* Back arrow + title */}
           <div className="flex items-start gap-3">

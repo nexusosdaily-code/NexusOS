@@ -3,6 +3,7 @@ import { usePageMeta } from "@/hooks/use-page-meta";
 import { Link } from "wouter";
 import { EcosystemNav } from "@/components/ecosystem-nav";
 import { ArrowLeft, Waves, Play, Pause, RotateCcw, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { ActSequenceNav } from "@/components/act-sequence-nav";
 
 // ── CODATA 2018 / SI exact constants ─────────────────────────────────────────
 const H  = 6.62607015e-34;   // J·s  (exact 2019 SI)
@@ -454,41 +455,7 @@ export default function OscillatingQuantaPage() {
               </span>
             ))}
           </div>
-          <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-            <p className="text-[10px] font-mono text-violet-400 tracking-widest mb-3">THE SEQUENCE — ACT 1 OF 17</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs">
-              <div className="rounded-lg border border-violet-500/40 bg-violet-500/10 p-3 space-y-1">
-                <p className="text-[9px] font-mono text-violet-400 tracking-widest">ACT 1 ← HERE</p>
-                <p className="text-violet-200 font-medium leading-tight">Theory of<br />Compression States</p>
-                <p className="text-[9px] text-violet-400">Λ = hf/c²</p>
-              </div>
-              {[
-                { act: "ACT 2", title: "The Universal ONE",           sub: "f₀ derives Λ",         href: "/universal-one" },
-                { act: "ACT 3", title: "Unified Compression Theory",  sub: "4 forces = 1 Λ",        href: "/unified-compression-theory" },
-                { act: "ACT 4", title: "The Mechanism",               sub: "ΔE = hf₀(2ⁿ²−2ⁿ¹)",   href: "/matter-protocol" },
-                { act: "ACT 5", title: "The Address",                 sub: "∀ Λ : ∃! Ψ",           href: "/universal-address" },
-                { act: "ACT 6", title: "The Catalogue",               sub: "n = log₂(mc²/E₀)",      href: "/element-catalogue" },
-                { act: "ACT 7", title: "The Trap",                    sub: "Ψ(+k̂) ⊗ Ψ(−k̂)",      href: "/standing-wave-trap" },
-                { act: "ACT 8", title: "The Lossless Channel",        sub: "α = 0, C = ZPE floor",   href: "/lossless-channel" },
-                { act: "ACT 9",  title: "The Cavity",    sub: "WGM resonance, r_c",  href: "/resonance-cavity" },
-                { act: "ACT 10", title: "The Exchange", sub: "Ω_R = 2g",            href: "/polariton-exchange" },
-                { act: "ACT 11", title: "The Emitter",  sub: "F_p=(Q/V)(λ/n)³",    href: "/the-emitter" },
-                { act: "ACT 12", title: "The Network",  sub: "ω=ω₀−2J·cos(ka)",    href: "/the-network" },
-                { act: "ACT 13", title: "The Observer", sub: "χ=g²/Δ",              href: "/the-observer" },
-                { act: "ACT 14", title: "The Memory",   sub: "T₂≤2T₁",             href: "/the-memory" },
-                { act: "ACT 15", title: "The Void",     sub: "n_ZPE=264.71",        href: "/cosmic-lattice" },
-                { act: "ACT 16", title: "The Entangler", sub: "|Φ⁺⟩=(|00⟩+|11⟩)/√2", href: "/the-entangler" },
-                { act: "ACT 17", title: "The Field",     sub: "[â,â†]=1",               href: "/the-field" },
-              ].map(({ act, title, sub, href }) => (
-                <Link key={href} href={href}
-                  className="rounded-lg border border-slate-700 bg-slate-900 p-3 hover:border-slate-500 transition-colors space-y-1 block">
-                  <p className="text-[9px] font-mono text-slate-500 tracking-widest">{act}</p>
-                  <p className="text-slate-300 font-medium leading-tight">{title}</p>
-                  <p className="text-[9px] text-slate-500">{sub}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
+          <ActSequenceNav current={1} />
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════ */}
