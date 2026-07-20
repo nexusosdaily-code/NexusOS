@@ -185,9 +185,9 @@ export default function ResonanceCavityPage() {
           {/* 9-act sequence nav */}
           <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
             <p className="text-[10px] font-mono text-indigo-400 tracking-widest mb-3">
-              THE SEQUENCE — ACT 9 OF 16
+              THE SEQUENCE — ACT 9 OF 17
             </p>
-            <div className="grid grid-cols-3 md:grid-cols-16 gap-2 text-center text-xs">
+            <div className="grid grid-cols-3 md:grid-cols-17 gap-2 text-center text-xs">
               {[
                 { act:"1", title:"Compression States", sub:"Λ=hf/c²",          href:"/oscillating-quanta" },
                 { act:"2", title:"The Universal ONE",  sub:"f₀ derives Λ",      href:"/universal-one" },
@@ -259,6 +259,13 @@ export default function ResonanceCavityPage() {
                 <p className="text-[8px] font-mono text-rose-400 tracking-widest">ACT 16 →</p>
                 <p className="text-rose-200 font-medium leading-tight text-[9px]">The Entangler</p>
                 <p className="text-[8px] text-rose-400">|Φ⁺⟩=(|00⟩+|11⟩)/√2</p>
+              </Link>
+              <Link href="/the-field"
+                    className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2
+                               hover:border-amber-400/60 transition-colors space-y-0.5 block">
+                <p className="text-[8px] font-mono text-amber-400 tracking-widest">ACT 17 →</p>
+                <p className="text-amber-200 font-medium leading-tight text-[9px]">The Field</p>
+                <p className="text-[8px] text-amber-400">[â,â†]=1</p>
               </Link>
             </div>
           </div>

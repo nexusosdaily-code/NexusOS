@@ -83,9 +83,9 @@ function SequenceNav({ current }: { current: 13 }) {
   return (
     <div className="rounded-xl border p-4" style={{ borderColor: OR + "20", background: OR + "08" }}>
       <p className="text-[10px] font-mono tracking-widest mb-3" style={{ color: OR }}>
-        THE SEQUENCE — ACT {current} OF 16
+        THE SEQUENCE — ACT {current} OF 17
       </p>
-      <div className="grid grid-cols-3 md:grid-cols-16 gap-1.5 text-center text-xs">
+      <div className="grid grid-cols-3 md:grid-cols-17 gap-1.5 text-center text-xs">
         {ACT_NAV.map(({ act, title, sub, href }) => (
           <Link key={href} href={href}
                 className="rounded-lg border border-slate-700 bg-slate-900 p-1.5
@@ -121,6 +121,13 @@ function SequenceNav({ current }: { current: 13 }) {
           <p className="text-[7px] font-mono text-rose-400 tracking-widest">ACT 16 →</p>
           <p className="text-rose-200 font-medium leading-tight text-[8px]">The Entangler</p>
           <p className="text-[7px] text-rose-400">|Φ⁺⟩=(|00⟩+|11⟩)/√2</p>
+        </Link>
+        <Link href="/the-field"
+              className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-1.5
+                         hover:border-amber-400/60 transition-colors space-y-0.5 block">
+          <p className="text-[7px] font-mono text-amber-400 tracking-widest">ACT 17 →</p>
+          <p className="text-amber-200 font-medium leading-tight text-[8px]">The Field</p>
+          <p className="text-[7px] text-amber-400">[â,â†]=1</p>
         </Link>
       </div>
     </div>

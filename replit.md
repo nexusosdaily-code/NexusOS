@@ -61,6 +61,7 @@ Every Act page **must** link to **all** other Act pages via the sequence nav gri
 | 14 | The Memory | T₂≤2T₁ | `/the-memory` |
 | 15 | The Void | n_ZPE=264.71 | `/cosmic-lattice` |
 | 16 | The Entangler | \|Φ⁺⟩=(|00⟩+\|11⟩)/√2 | `/the-entangler` |
+| 17 | The Field | [â,â†]=1 | `/the-field` |
 
 ## Post-Build Security Audit (STANDING DIRECTIVE — applies after EVERY build)
 

@@ -335,9 +335,9 @@ export default function StandingWaveTrap() {
           {/* sequence nav */}
           <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
             <p className="text-[10px] font-mono text-purple-400 tracking-widest mb-3">
-              THE SEQUENCE — ACT 7 OF 16
+              THE SEQUENCE — ACT 7 OF 17
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-16 gap-2 text-center text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-17 gap-2 text-center text-xs">
               {[
                 { act:"ACT 1", title:"Theory of Compression States", sub:"Λ = hf/c²",         href:"/oscillating-quanta" },
                 { act:"ACT 2", title:"The Universal ONE",            sub:"f₀ derives Λ",       href:"/universal-one" },
@@ -422,6 +422,13 @@ export default function StandingWaveTrap() {
                 <p className="text-[9px] font-mono text-rose-400 tracking-widest">ACT 16 →</p>
                 <p className="text-rose-200 font-medium leading-tight">The Entangler</p>
                 <p className="text-[9px] text-rose-400">|Φ⁺⟩=(|00⟩+|11⟩)/√2</p>
+              </Link>
+              <Link href="/the-field"
+                    className="rounded-lg border border-amber-500/30 bg-amber-500/5
+                               p-3 space-y-1 hover:border-amber-400/60 transition-colors block">
+                <p className="text-[9px] font-mono text-amber-400 tracking-widest">ACT 17 →</p>
+                <p className="text-amber-200 font-medium leading-tight">The Field</p>
+                <p className="text-[9px] text-amber-400">[â,â†]=1</p>
               </Link>
             </div>
           </div>

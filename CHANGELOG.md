@@ -214,6 +214,25 @@ No unification theory, symmetry group, or additional dimensions are required. Th
 
 ---
 
+### Claim 32 — Each WNSP Ψ Channel is a Single-Mode Bosonic Field Quantised by [â, â†] = 1
+**First disclosed**: 2026-07-20 (Act 17 — `/the-field`)
+**Claim**: Each of the 51,200 WNSP Ψ(wdm, oam, pol) channels is formalised as a single-mode bosonic field quantised by the canonical commutation relation [â, â†] = 1. The primordial mode at f₀ = 555 THz (E₀ = hf₀ = 2.295 eV, ZPE = ½hf₀ = 1.148 eV) is the seed excitation — the ground state |0⟩ from which Act 1's first oscillation emerges via â†|0⟩ = |1⟩. The Fock Hamiltonian ℋ = ℏω(â†â + ½) generates the octave energy ladder E_n = hf₀(n + ½), n ∈ ℕ, which — via n = log₂(mc²/E₀) — maps every known elementary particle, atom, and cosmological structure to a unique compression state. This is the first formal specification of: (1) the WNSP channel as a rigorously quantised bosonic mode (not merely an electromagnetic metaphor); (2) the vacuum state |0⟩ at f₀ as the pre-condition for Act 1's Theory of Compression States; (3) the ZPE floor ½hf₀ at cosmological scale (n_ZPE = 264.71, M = 10¹⁴ M☉, Act 15) as a direct consequence of the same commutation relation that governs visible-light photons in a SNIC cavity. The AGPL-3.0 copyleft obligation extends to AI training pipelines, photonic hardware simulators, quantum field simulators, and any SaaS or network service implementing this quantised channel architecture.
+
+**Basis**: Theory of Compression States (Act 1, Λ=hf/c²) · Primordial Frequency f₀=555 THz (Act 2) · Fock Space (Dirac 1927, Phys. Lett.) · Zero-Point Energy floor (Act 15, n_ZPE=264.71) · Bosonic commutation (Planck 1900, Einstein 1905)
+
+---
+
+## [2026-07-20] Act 17 — The Field ([â, â†] = 1, ℋ = ℏω(â†â + ½))
+
+- **`/the-field`** — 17th act in the WNSP physics sequence: primordial bosonic field, interactive Fock ladder visualisation (amber #f59e0b), ZPE=1.148 eV, E₀=2.295 eV, f₀=555 THz.
+- Prior art Claim 32 filed (each WNSP Ψ channel as single-mode bosonic field quantised by [â, â†] = 1).
+- All 16 prior Act pages cross-linked with "OF 17" navigation; `grid-cols-17` updated throughout.
+- Hub.tsx §10–§17 entries added.
+- SEO meta (seo-meta.ts) `/the-field` entry added; `/cosmic-lattice` and `/the-entangler` updated to 17-act.
+- Sitemap.xml updated: Acts 10–17 entries added.
+
+---
+
 ## [2026-07-19] Act 16 — The Entangler (|Φ⁺⟩ = (|00⟩ + |11⟩)/√2)
 
 - **`/the-entangler`** — 16th act in the WNSP physics sequence: Bell state generation, interactive entanglement swapping SVG diagram, CHSH inequality S=2√2 proof, quantum repeater linear-vs-exponential scaling, DLCZ+SNIC repeater topology spec.

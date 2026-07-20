@@ -100,7 +100,47 @@
   <url>
     <loc>https://wnsp.io/resonance-cavity</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.75</priority>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://wnsp.io/polariton-exchange</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://wnsp.io/the-emitter</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://wnsp.io/the-network</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://wnsp.io/the-observer</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://wnsp.io/the-memory</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://wnsp.io/cosmic-lattice</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://wnsp.io/the-entangler</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://wnsp.io/the-field</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
   </url>
 
   <!-- ── Protocol & Language ───────────────────────────────────────────── -->

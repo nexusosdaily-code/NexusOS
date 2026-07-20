@@ -196,9 +196,9 @@ export default function PolaritonExchangePage() {
           {/* 10-act sequence nav */}
           <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
             <p className="text-[10px] font-mono text-rose-400 tracking-widest mb-3">
-              THE SEQUENCE — ACT 10 OF 16
+              THE SEQUENCE — ACT 10 OF 17
             </p>
-            <div className="grid grid-cols-3 md:grid-cols-16 gap-1.5 text-center text-xs">
+            <div className="grid grid-cols-3 md:grid-cols-17 gap-1.5 text-center text-xs">
               {[
                 { act:"1",  title:"Compression States", sub:"Λ=hf/c²",          href:"/oscillating-quanta" },
                 { act:"2",  title:"The Universal ONE",  sub:"f₀ derives Λ",      href:"/universal-one" },
@@ -264,6 +264,13 @@ export default function PolaritonExchangePage() {
                 <p className="text-[7px] font-mono text-rose-400 tracking-widest">ACT 16 →</p>
                 <p className="text-rose-200 font-medium leading-tight text-[8px]">The Entangler</p>
                 <p className="text-[7px] text-rose-400">|Φ⁺⟩=(|00⟩+|11⟩)/√2</p>
+              </Link>
+              <Link href="/the-field"
+                    className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-1.5
+                               hover:border-amber-400/60 transition-colors space-y-0.5 block">
+                <p className="text-[7px] font-mono text-amber-400 tracking-widest">ACT 17 →</p>
+                <p className="text-amber-200 font-medium leading-tight text-[8px]">The Field</p>
+                <p className="text-[7px] text-amber-400">[â,â†]=1</p>
               </Link>
             </div>
           </div>
@@ -716,7 +723,7 @@ export default function PolaritonExchangePage() {
         {/* ── Bottom sequence nav + teaser ───────────────────────────────── */}
         <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 mt-6">
           <p className="text-[10px] font-mono text-rose-400 tracking-widest mb-3">
-            THE SEQUENCE — ACT 10 OF 16
+            THE SEQUENCE — ACT 10 OF 17
           </p>
           <div className="grid grid-cols-3 md:grid-cols-10 gap-1.5 text-center text-xs mb-4">
             {[
@@ -784,6 +791,13 @@ export default function PolaritonExchangePage() {
               <p className="text-[7px] font-mono text-rose-400 tracking-widest">ACT 16 →</p>
               <p className="text-rose-200 font-medium leading-tight text-[8px]">The Entangler</p>
               <p className="text-[7px] text-rose-400">|Φ⁺⟩=(|00⟩+|11⟩)/√2</p>
+            </Link>
+            <Link href="/the-field"
+                  className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-1.5
+                             hover:border-amber-400/60 transition-colors space-y-0.5 block">
+              <p className="text-[7px] font-mono text-amber-400 tracking-widest">ACT 17 →</p>
+              <p className="text-amber-200 font-medium leading-tight text-[8px]">The Field</p>
+              <p className="text-[7px] text-amber-400">[â,â†]=1</p>
             </Link>
           </div>
           <div className="border-t border-slate-800 pt-3 text-center">
