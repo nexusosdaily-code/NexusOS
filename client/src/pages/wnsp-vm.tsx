@@ -33,7 +33,7 @@ function ceEncode(name: string): { nm: number; psi: string; band: string } {
   return { nm, psi: `Ψ(${wdm},${oam},${pol})`, band: nmToBand(nm) };
 }
 
-interface Ins { off: number; op: number; mnem: string; args: string; nm?: number; ch?: string; cmt: string; gateThreshold?: number; gateHigh?: number; gateLow?: number; }
+interface Ins { off: number; op: number; mnem: string; args: string; nm?: number; ch?: string; cmt: string; gateThreshold?: number; gateHigh?: number; gateLow?: number; qSym?: string; }
 
 function compileWLS(src: string): Ins[] {
   if (!src.trim()) return [];
@@ -70,7 +70,29 @@ function compileWLS(src: string): Ins[] {
     const m8 = line.match(/@(\d+\.?\d*)nm\s+let\s+(\w+)\s*:=/);
     if (m8) { add(0x02, "PUSH", `@${m8[1]}nm  "${m8[2]}"`, `bind at λ=${m8[1]}nm`, parseFloat(m8[1])); continue; }
     const m9 = line.match(/^\s*emit\s+(.+)/);
-    if (m9) { const e = ceEncode(m9[1].replace(/[^a-zA-Z]/g, "") || "out"); add(0x03, "EMIT", m9[1].trim(), `output at λ=${e.nm}nm`, e.nm); continue; }
+    if (m9) { const e = ceEncode(m9[1].replace(/[^a-zA-Z]/g, "") || "out"); add(0x03, "EMIT", m9[1].trim(), `â† create quantum · λ=${e.nm}nm`, e.nm, undefined, { qSym: "â†" }); continue; }
+    // ── WLS v2.0 keywords ──────────────────────────────────────────────────
+    // channel / field declarations → PUSH (initialise |0⟩)
+    const mChan = line.match(/^\s*(?:channel|field)\s+(\w+)\s*(?::=|=)\s*(.*)/);
+    if (mChan) { const e = ceEncode(mChan[1]); add(0x02, "PUSH", `"${mChan[1]}"  |0⟩  ${e.psi}`, `â†|0⟩: initialise Fock vacuum at λ=${e.nm}nm`, e.nm, e.psi, { qSym: "|0⟩" }); continue; }
+    // absorb → annihilation operator â
+    const mAbs = line.match(/^\s*absorb\s*\(?(.+?)\)?$/);
+    if (mAbs) { const e = ceEncode(mAbs[1].replace(/[^a-zA-Z]/g, "") || "ch"); add(0x0C, "ANNIH", mAbs[1].trim(), `â annihilate · λ=${e.nm}nm`, e.nm, undefined, { qSym: "â" }); continue; }
+    // observe → number operator n̂ = â†â
+    const mObs = line.match(/^\s*(?:\w+\s*:=\s*)?observe\s*\(?(.+?)\)?$/);
+    if (mObs) { const e = ceEncode(mObs[1].replace(/[^a-zA-Z]/g, "") || "ch"); add(0x0D, "NHAT", mObs[1].trim(), `n̂ = â†â · measure occupation · λ=${e.nm}nm`, e.nm, undefined, { qSym: "n̂" }); continue; }
+    // collapse → extract classical value (wavefunction terminates)
+    const mColl = line.match(/^\s*collapse\s*\(?(.+?)\)?$/);
+    if (mColl) { const e = ceEncode(mColl[1].replace(/[^a-zA-Z]/g, "") || "ch"); add(0x0E, "COLL", mColl[1].trim(), `collapse |n⟩ → classical value · λ=${e.nm}nm`, e.nm, undefined, { qSym: "⟨n|" }); continue; }
+    // entangle → create Bell state |Φ⁺⟩ across two channels
+    const mEnt = line.match(/^\s*entangle\s*\((.+?),\s*(.+?)\)/);
+    if (mEnt) { const e1 = ceEncode(mEnt[1]); add(0x0F, "ENTGL", `${mEnt[1]} ⊗ ${mEnt[2]}`, `|Φ⁺⟩=(|00⟩+|11⟩)/√2 · λ=${e1.nm}nm`, e1.nm, e1.psi, { qSym: "|Φ⁺⟩" }); continue; }
+    // resonate when → conditional on Fock state (JMPZ)
+    if (line.match(/^\s*resonate\s+when\b/)) { add(0x08, "JMPZ", line.replace(/^\s*resonate\s+when\s+/, "").trim(), "photon path branch · resonance condition", undefined, undefined, { qSym: "?λ" }); continue; }
+    // propagate over → non-blocking wave loop (OCS)
+    if (line.match(/^\s*propagate\s+over\b/)) { add(0x06, "OCS", line.replace(/^\s*propagate\s+over\s+/, "").trim(), "non-blocking wave propagation", undefined, undefined, { qSym: "∿" }); continue; }
+    // ∿ inline comment → skip
+    if (line.startsWith("∿")) continue;
     if (line.startsWith("?λ ")) { add(0x08, "JMPZ", line.slice(3).trim(), "photon path branch"); continue; }
     if (line === "}" || line.match(/^end\b/)) { add(0xFE, "RET", "", "scope end — wave collapses"); continue; }
     const word = line.split(/\s/)[0].replace(/[^a-zA-Z]/g, "") || "op";
@@ -83,9 +105,9 @@ function compileWLS(src: string): Ins[] {
 
 interface VMState {
   pc: number;
-  registers: { nm: number; name: string; value: string; band: string }[];
+  registers: { nm: number; name: string; value: string; band: string; fockN: number }[];
   agents: { name: string; nm: number; psi: string; status: "ACTIVE" | "IDLE" }[];
-  output: { text: string; nm?: number; type: "emit" | "broad" | "sys" | "agent" | "gate" | "proof" }[];
+  output: { text: string; nm?: number; type: "emit" | "broad" | "sys" | "agent" | "gate" | "proof" | "annih" | "nhat" | "coll" | "entgl" }[];
   tuned: number;
   halted: boolean;
   cycleCount: number;
@@ -109,15 +131,52 @@ function stepVM(state: VMState, ins: Ins[], channelLoad: number): VMState {
       s.tuned = i.nm ?? s.tuned;
       s.output.push({ text: `TUNE → ${i.nm}nm  [${nmToBand(i.nm ?? s.tuned)}]`, nm: i.nm, type: "sys" });
       break;
-    case 0x02:
+    case 0x02: {
       s.registers = [...s.registers.filter(r => r.nm !== (i.nm ?? s.tuned))];
       const regName = i.args.match(/"([^"]+)"/)?.[1] ?? "val";
-      s.registers.push({ nm: i.nm ?? s.tuned, name: regName, value: `@${i.nm}nm`, band: nmToBand(i.nm ?? s.tuned) });
-      s.output.push({ text: `PUSH "${regName}" → register @${i.nm}nm`, nm: i.nm, type: "sys" });
+      const isVacuum = i.qSym === "|0⟩";
+      s.registers.push({ nm: i.nm ?? s.tuned, name: regName, value: `@${i.nm}nm`, band: nmToBand(i.nm ?? s.tuned), fockN: 0 });
+      s.output.push({ text: isVacuum ? `PUSH "${regName}"  |0⟩ ← vacuum initialised  @${i.nm}nm` : `PUSH "${regName}" → register @${i.nm}nm`, nm: i.nm, type: "sys" });
       break;
-    case 0x03:
-      s.output.push({ text: `EMIT  ${i.args}`, nm: i.nm, type: "emit" });
+    }
+    case 0x03: {
+      const emitNm = i.nm ?? s.tuned;
+      s.registers = s.registers.map(r => r.nm === emitNm ? { ...r, fockN: r.fockN + 1 } : r);
+      const regAfter = s.registers.find(r => r.nm === emitNm);
+      s.output.push({ text: `â†  EMIT  ${i.args}  ${regAfter ? `|${regAfter.fockN - 1}⟩→|${regAfter.fockN}⟩` : ""}`, nm: i.nm, type: "emit" });
       break;
+    }
+    case 0x0C: {
+      const anhNm = i.nm ?? s.tuned;
+      const anhReg = s.registers.find(r => r.nm === anhNm);
+      if (anhReg && anhReg.fockN > 0) {
+        s.registers = s.registers.map(r => r.nm === anhNm ? { ...r, fockN: Math.max(0, r.fockN - 1) } : r);
+        const after = s.registers.find(r => r.nm === anhNm);
+        s.output.push({ text: `â   ANNIH  ${i.args}  |${anhReg.fockN}⟩→|${after?.fockN ?? 0}⟩  value absorbed`, nm: i.nm, type: "annih" });
+      } else {
+        s.output.push({ text: `â   ANNIH  ${i.args}  â|0⟩ = 0  (vacuum — nothing to absorb)`, nm: i.nm, type: "annih" });
+      }
+      break;
+    }
+    case 0x0D: {
+      const obsNm = i.nm ?? s.tuned;
+      const obsReg = s.registers.find(r => r.nm === obsNm);
+      const n = obsReg?.fockN ?? 0;
+      s.output.push({ text: `n̂   NHAT  ${i.args}  n̂|${n}⟩ = ${n}·|${n}⟩  (state preserved)`, nm: i.nm, type: "nhat" });
+      break;
+    }
+    case 0x0E: {
+      const collNm = i.nm ?? s.tuned;
+      const collReg = s.registers.find(r => r.nm === collNm);
+      const cn = collReg?.fockN ?? 0;
+      s.registers = s.registers.map(r => r.nm === collNm ? { ...r, fockN: 0 } : r);
+      s.output.push({ text: `⟨n| COLL  ${i.args}  |${cn}⟩ → classical ${cn}  (wavefunction collapsed)`, nm: i.nm, type: "coll" });
+      break;
+    }
+    case 0x0F: {
+      s.output.push({ text: `|Φ⁺⟩ ENTGL  ${i.args}  (|00⟩+|11⟩)/√2  Bell state created`, nm: i.nm, type: "entgl" });
+      break;
+    }
     case 0x04:
       s.output.push({ text: `PHASE shift applied → channel coherence updated`, type: "sys" });
       break;
@@ -273,6 +332,44 @@ agent TrustLayer {
 
 node.register("TrustLayer", @468.3nm)` },
   { label: "Computation Proof", color: "#10b981", src: COMPUTATION_PROOF_SRC },
+  { label: "Fock State — â†â", color: "#f59e0b", src: `∿ WLS v2.0 — Fock state execution model
+∿ [â,â†]=1 · vacuum |0⟩ is the starting state of every channel
+∿ emit = â† (creation)   absorb = â (annihilation)   observe = n̂ = â†â
+
+∿ Declare channels — initialise each to vacuum |0⟩
+channel sender   := |0⟩      ∿ AUTH band  468nm
+channel receiver := |0⟩      ∿ AUTH band  471nm
+channel fee      := |0⟩      ∿ LOGIC band 541nm
+
+∿ Load 5 quanta into sender (apply â† five times)
+emit sender
+emit sender
+emit sender
+emit sender
+emit sender
+
+∿ Observe occupation without destroying — n̂|5⟩ = 5·|5⟩
+observe(sender)
+
+∿ Transfer 3 quanta: absorb from sender, emit into receiver
+absorb(sender)
+absorb(sender)
+absorb(sender)
+emit receiver
+emit receiver
+emit receiver
+
+∿ Observe final states
+observe(sender)
+observe(receiver)
+
+∿ Deduct 1 quantum for fee
+absorb(sender)
+emit fee
+observe(fee)
+
+∿ Collapse fee channel to classical value
+collapse(fee)` },
 ];
 
 export default function WnspVMPage() {
@@ -339,6 +436,7 @@ export default function WnspVMPage() {
     TUNE: "#06b6d4", PUSH: "#a78bfa", EMIT: "#f59e0b", BROAD: "#f97316",
     OCS: "#16a34a", LABEL: "#8b00ff", JMPZ: "#dc2626", AGENT: "#0ea5e9",
     GATE: "#10b981", EXEC: "#6b7280", RET: "#4b5563", HALT: "#374151",
+    ANNIH: "#06b6d4", NHAT: "#10b981", COLL: "#e879f9", ENTGL: "#f43f5e",
   };
 
   const loadColor = channelLoad > 5 ? "#10b981" : "#ca8a04";
@@ -356,7 +454,7 @@ export default function WnspVMPage() {
             <h1 className="text-sm font-bold tracking-wider text-violet-400">WNSP Virtual Machine</h1>
             <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
           </div>
-          <span className="text-white/20 text-[10px]">Execute WavelengthScript bytecode · Ψ channels as registers · E=hf execution model</span>
+          <span className="text-white/20 text-[10px]">Execute WavelengthScript bytecode · Ψ channels as Fock registers · [â,â†]=1 execution model</span>
         </div>
         <div className="flex items-center gap-2">
           {loaded && !vm.halted && <span className="text-[8px] px-2 py-1 rounded border border-emerald-400/30 text-emerald-400/60">PC: {vm.pc}/{instructions.length}</span>}
@@ -463,19 +561,31 @@ export default function WnspVMPage() {
 
             {/* Registers */}
             <div className="border border-white/10 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.01)" }}>
-              <div className="text-white/25 text-[9px] uppercase tracking-widest mb-2 flex items-center gap-1"><Database size={9} /> Spectral Registers ({vm.registers.length})</div>
+              <div className="text-white/25 text-[9px] uppercase tracking-widest mb-2 flex items-center gap-1"><Database size={9} /> Fock Registers ({vm.registers.length})</div>
               {vm.registers.length === 0 ? (
-                <div className="text-white/15 text-[9px]">No registers bound yet</div>
+                <div className="text-white/15 text-[9px]">No registers bound — vacuum |0,0,…⟩</div>
               ) : (
-                <div className="space-y-1 max-h-28 overflow-y-auto">
-                  {vm.registers.map(r => (
-                    <div key={r.nm} className="flex items-center gap-2 text-[9px]">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: nmToColor(r.nm) }} />
-                      <span className="font-bold" style={{ color: nmToColor(r.nm) }}>{r.nm}nm</span>
-                      <span className="text-white/40">{r.name}</span>
-                      <span className="text-white/20 text-[8px] ml-auto">[{r.band}]</span>
-                    </div>
-                  ))}
+                <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                  {vm.registers.map(r => {
+                    const col = nmToColor(r.nm);
+                    const bars = Math.min(r.fockN, 6);
+                    return (
+                      <div key={r.nm} className="flex items-center gap-2 text-[9px]">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: col }} />
+                        <span className="font-bold w-14 flex-shrink-0" style={{ color: col }}>{r.nm}nm</span>
+                        <span className="text-white/40 flex-shrink-0 w-16 truncate">{r.name}</span>
+                        {/* |n⟩ Fock state */}
+                        <span className="font-mono font-bold text-[10px] flex-shrink-0" style={{ color: r.fockN === 0 ? "#374151" : col }}>|{r.fockN}⟩</span>
+                        {/* occupation bars */}
+                        <div className="flex gap-px flex-shrink-0">
+                          {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="w-1.5 h-1.5 rounded-sm" style={{ background: i < bars ? col : col + "18" }} />
+                          ))}
+                        </div>
+                        <span className="text-white/15 text-[8px] ml-auto">[{r.band}]</span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -546,6 +656,10 @@ export default function WnspVMPage() {
                   <div className="text-white/15 text-[9px] text-center py-8">No output yet</div>
                 ) : vm.output.map((o, idx) => {
                   const col = o.type === "emit" ? "#f59e0b"
+                    : o.type === "annih" ? "#06b6d4"
+                    : o.type === "nhat" ? "#10b981"
+                    : o.type === "coll" ? "#e879f9"
+                    : o.type === "entgl" ? "#f43f5e"
                     : o.type === "broad" ? "#f97316"
                     : o.type === "agent" ? "#0ea5e9"
                     : o.type === "gate" ? "#10b981"

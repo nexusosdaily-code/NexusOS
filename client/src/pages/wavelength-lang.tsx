@@ -638,6 +638,25 @@ export default function WavelengthLangPage() {
   const [output, setOutput]     = useState("");
   const [activeTab, setActiveTab] = useState<"spec" | "grammar" | "transpiler" | "compiler" | "ai" | "sdk">("spec");
   const [grammarExample, setGrammarExample] = useState<"transfer" | "contract" | "governance" | "wallet">("transfer");
+  const [fockChannels, setFockChannels] = useState([
+    { id: "sender",   label: "sender",   psi: "Ψ(23,83,V)", nm: 468, n: 0 },
+    { id: "receiver", label: "receiver", psi: "Ψ(24,10,H)", nm: 471, n: 0 },
+    { id: "fee",      label: "fee",      psi: "Ψ(41,12,V)", nm: 541, n: 0 },
+    { id: "ledger",   label: "ledger",   psi: "Ψ(68,44,H)", nm: 648, n: 0 },
+  ]);
+  const [fockLog, setFockLog] = useState<{op: string; sym: string; ch: string; from: number; to: number}[]>([]);
+
+  function fockApply(id: string, op: "create" | "annihilate" | "observe") {
+    setFockChannels(prev => prev.map(ch => {
+      if (ch.id !== id) return ch;
+      const from = ch.n;
+      const to = op === "create" ? ch.n + 1 : op === "annihilate" ? Math.max(0, ch.n - 1) : ch.n;
+      const sym = op === "create" ? "â†" : op === "annihilate" ? "â" : "n̂";
+      const verb = op === "create" ? "emit" : op === "annihilate" ? "absorb" : "observe";
+      setFockLog(l => [...l.slice(-11), { op: verb, sym, ch: ch.label, from, to }]);
+      return { ...ch, n: to };
+    }));
+  }
   const [liveEncode, setLiveEncode] = useState("");
   const [copied, setCopied] = useState(false);
   const [compilerSrc, setCompilerSrc]   = useState(SAMPLE_WLS);
@@ -860,6 +879,129 @@ export default function WavelengthLangPage() {
               operation — not a metaphor. The type system is Fock space: values are occupation numbers <code className="text-violet-300">|n⟩</code>,
               channels are Ψ registers, and computation is state evolution. This grammar closes the gap between
               pseudocode and a language you can learn, compile, and run today on the WNSP VM.
+            </div>
+
+            {/* ═══ Fock State Execution Model ═══ */}
+            <div className="border border-amber-400/20 rounded-xl p-5 space-y-5" style={{ background: "rgba(251,191,36,0.025)" }}>
+              <div className="flex items-center gap-2">
+                <span className="text-amber-400 text-[10px] uppercase tracking-widest font-bold">[â,â†]=1</span>
+                <span className="text-white/20 text-[9px]">—</span>
+                <span className="text-white/50 text-[11px]">Execution Model — WLS programs are sequences of creation &amp; annihilation operators on the vacuum</span>
+              </div>
+
+              {/* Operator reference */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                {[
+                  { sym: "|0⟩",    wls: "—",        col: "#6b7280", desc: "vacuum · null · uninitialised" },
+                  { sym: "|n⟩",    wls: "—",        col: "#a78bfa", desc: "n quanta · integer n" },
+                  { sym: "â†",     wls: "emit",     col: "#f59e0b", desc: "creation · write · +1 quantum" },
+                  { sym: "â",      wls: "absorb",   col: "#06b6d4", desc: "annihilation · read · −1 quantum" },
+                  { sym: "n̂=â†â", wls: "observe",  col: "#10b981", desc: "measure occupation · no collapse" },
+                ].map(r => (
+                  <div key={r.sym} className="rounded-lg px-3 py-2.5 border" style={{ borderColor: r.col + "30", background: r.col + "08" }}>
+                    <div className="font-mono text-base font-bold leading-none mb-1" style={{ color: r.col }}>{r.sym}</div>
+                    {r.wls !== "—" && <div className="text-[8px] text-white/40 font-mono mb-1">wls: <span style={{ color: r.col + "cc" }}>{r.wls}</span></div>}
+                    <div className="text-[8px] text-white/30 leading-tight">{r.desc}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Live playground */}
+              <div>
+                <div className="text-white/25 text-[9px] uppercase tracking-widest mb-3">Live Playground — apply operators to Ψ channels</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {fockChannels.map(ch => {
+                    const hue = ch.nm < 450 ? "#8b00ff" : ch.nm < 495 ? "#2563eb" : ch.nm < 520 ? "#06b6d4" : ch.nm < 565 ? "#16a34a" : ch.nm < 590 ? "#ca8a04" : "#dc2626";
+                    const bars = Math.min(ch.n, 8);
+                    return (
+                      <div key={ch.id} className="border rounded-xl p-3 space-y-2" style={{ borderColor: hue + "35", background: hue + "06" }}>
+                        {/* Channel header */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-bold" style={{ color: hue }}>{ch.label}</span>
+                          <span className="text-[8px] text-white/25">{ch.psi}</span>
+                        </div>
+                        {/* Fock state display */}
+                        <div className="text-center">
+                          <span className="text-2xl font-mono font-black leading-none" style={{ color: ch.n === 0 ? "#374151" : hue }}>
+                            |{ch.n}⟩
+                          </span>
+                          {ch.n === 0 && <div className="text-[7px] text-white/20 mt-0.5">vacuum</div>}
+                        </div>
+                        {/* Occupation bar */}
+                        <div className="flex gap-0.5 justify-center">
+                          {Array.from({ length: 8 }).map((_, i) => (
+                            <div key={i} className="w-2 h-2 rounded-sm transition-all" style={{ background: i < bars ? hue : hue + "18" }} />
+                          ))}
+                        </div>
+                        {/* Operator buttons */}
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => fockApply(ch.id, "create")}
+                            className="flex-1 text-[9px] py-1 rounded border font-mono font-bold transition-all hover:opacity-90 active:scale-95"
+                            style={{ borderColor: "#f59e0b60", color: "#f59e0b", background: "#f59e0b10" }}
+                            data-testid={`button-fock-create-${ch.id}`}
+                            title="Create operator â† — adds 1 quantum"
+                          >â†</button>
+                          <button
+                            onClick={() => fockApply(ch.id, "observe")}
+                            className="flex-1 text-[8px] py-1 rounded border font-mono font-bold transition-all hover:opacity-90 active:scale-95"
+                            style={{ borderColor: "#10b98160", color: "#10b981", background: "#10b98110" }}
+                            data-testid={`button-fock-observe-${ch.id}`}
+                            title="Number operator n̂ = â†â — measure without destroying"
+                          >n̂</button>
+                          <button
+                            onClick={() => fockApply(ch.id, "annihilate")}
+                            disabled={ch.n === 0}
+                            className="flex-1 text-[9px] py-1 rounded border font-mono font-bold transition-all hover:opacity-90 active:scale-95 disabled:opacity-20"
+                            style={{ borderColor: "#06b6d460", color: "#06b6d4", background: "#06b6d410" }}
+                            data-testid={`button-fock-annihilate-${ch.id}`}
+                            title="Annihilation operator â — removes 1 quantum"
+                          >â</button>
+                        </div>
+                        <div className="text-[7px] text-white/15 text-center">{ch.nm}nm</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Reset */}
+                <button
+                  onClick={() => { setFockChannels(prev => prev.map(ch => ({ ...ch, n: 0 }))); setFockLog([]); }}
+                  className="mt-2 text-[8px] text-white/20 hover:text-white/40 transition-colors border border-white/10 rounded px-2 py-0.5"
+                  data-testid="button-fock-reset"
+                >reset to |0,0,0,0⟩</button>
+              </div>
+
+              {/* Operator log */}
+              {fockLog.length > 0 && (
+                <div>
+                  <div className="text-white/20 text-[8px] uppercase tracking-widest mb-2">Operator sequence — this is your WLS program</div>
+                  <div className="bg-black/40 rounded-lg p-3 font-mono text-[9px] space-y-0.5 max-h-32 overflow-y-auto border border-white/5">
+                    {fockLog.map((entry, i) => {
+                      const col = entry.op === "emit" ? "#f59e0b" : entry.op === "observe" ? "#10b981" : "#06b6d4";
+                      return (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-white/20 w-4 text-right">{i + 1}.</span>
+                          <span className="font-bold" style={{ color: col }}>{entry.sym}</span>
+                          <span className="text-white/50">{entry.op}</span>
+                          <span className="text-white/30">{entry.ch}</span>
+                          <span className="text-white/20">|{entry.from}⟩→|{entry.to}⟩</span>
+                          <span className="text-white/15 text-[8px] ml-auto">
+                            {entry.op === "emit" ? `â†|${entry.from}⟩ = √${entry.from + 1}·|${entry.to}⟩`
+                            : entry.op === "absorb" ? `â|${entry.from}⟩ = √${entry.from}·|${entry.to}⟩`
+                            : `n̂|${entry.from}⟩ = ${entry.from}·|${entry.from}⟩`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Physics derivation note */}
+              <div className="border-t border-white/5 pt-3 text-[9px] text-white/25 leading-relaxed">
+                <span className="text-amber-400/50">From Act 17 — The Field:</span>{" "}
+                â†|n⟩ = √(n+1)·|n+1⟩ · â|n⟩ = √n·|n−1⟩ · n̂|n⟩ = n·|n⟩ · â|0⟩ = 0 (vacuum is destroyed by â, never negative) · ℋ = ℏω(n̂ + ½)
+              </div>
             </div>
 
             {/* BNF Production Rules */}
