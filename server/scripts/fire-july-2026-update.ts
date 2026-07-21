@@ -3,6 +3,7 @@
  * Fires to Telegram channel + Nostr relay network.
  * Run: npx tsx server/scripts/fire-july-2026-update.ts
  */
+export {};
 
 const tgMsg =
 `⚡ <b>NexusOS — July 2026 Update</b>

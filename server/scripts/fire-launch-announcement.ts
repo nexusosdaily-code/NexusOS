@@ -2,6 +2,7 @@
  * One-shot launch announcement for WNSP•BTC
  * Run: npx tsx server/scripts/fire-launch-announcement.ts
  */
+export {};
 const TXID = "8e1614818d96e494bbde4d90b57ef7ce596aebee50b15b48c132ed8ece3ae11c";
 
 const launchMsgTg =
