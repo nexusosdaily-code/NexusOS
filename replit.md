@@ -41,7 +41,7 @@ Every Act page **must** link to **all** other Act pages via the sequence nav gri
 3. Update the `md:grid-cols-N` class to match the new total where used (e.g. Acts 7, 8).
 4. The new Act page itself must include all prior Acts in its own sequence nav.
 
-**Current Act registry (19 Acts as of 2026-07-21):**
+**Current Act registry (20 Acts as of 2026-07-21):**
 
 | Act | Title | Sub | Route |
 |-----|-------|-----|-------|
@@ -64,6 +64,7 @@ Every Act page **must** link to **all** other Act pages via the sequence nav gri
 | 17 | The Field | [â,â†]=1 | `/the-field` |
 | 18 | The Coherent State | â\|α⟩=α\|α⟩ | `/the-coherent-state` |
 | 19 | The Squeezed State | ΔX₁·ΔX₂ ≥ ¼ | `/the-squeezed-state` |
+| 20 | The Bogoliubov Transform | S†âS=â·cosh−â†·sinh | `/the-bogoliubov-transform` |
 
 ## Post-Build Security Audit (STANDING DIRECTIVE — applies after EVERY build)
 

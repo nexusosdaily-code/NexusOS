@@ -21,6 +21,7 @@ const ALL_ACTS = [
   { n: 17, title: "The Field",                     sub: "[â,â†]=1",                href: "/the-field" },
   { n: 18, title: "The Coherent State",            sub: "â|α⟩=α|α⟩",             href: "/the-coherent-state" },
   { n: 19, title: "The Squeezed State",            sub: "ΔX₁·ΔX₂ ≥ ¼",           href: "/the-squeezed-state" },
+  { n: 20, title: "The Bogoliubov Transform",      sub: "S†âS=â·cosh−â†·sinh",    href: "/the-bogoliubov-transform" },
 ];
 
 interface Props { current: number }

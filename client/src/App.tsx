@@ -190,6 +190,7 @@ const TheEntanglerPage              = lazy(() => import("@/pages/the-entangler")
 const TheFieldPage                  = lazy(() => import("@/pages/the-field"));
 const TheCoherentStatePage          = lazy(() => import("@/pages/the-coherent-state"));
 const TheSqueezedStatePage          = lazy(() => import("@/pages/the-squeezed-state"));
+const TheBogoliubovTransformPage    = lazy(() => import("@/pages/the-bogoliubov-transform"));
 
 // Loading spinner shown while a lazy page chunk is downloading
 function PageLoader() {
@@ -300,6 +301,7 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/the-field",
   "/the-coherent-state",
   "/the-squeezed-state",
+  "/the-bogoliubov-transform",
 ]);
 
 // Only paths where ANY child segment is a valid protected route (dynamic).
@@ -565,6 +567,7 @@ function Router() {
       <Route path="/the-field" component={TheFieldPage} />
       <Route path="/the-coherent-state" component={TheCoherentStatePage} />
       <Route path="/the-squeezed-state" component={TheSqueezedStatePage} />
+      <Route path="/the-bogoliubov-transform" component={TheBogoliubovTransformPage} />
       <Route path="/planck-alignment" component={PlanckAlignmentPage} />
       <Route path="/reposed-theory" component={ReposedTheoryPage} />
       <Route path="/compression-explorer" component={CompressionExplorerPage} />
