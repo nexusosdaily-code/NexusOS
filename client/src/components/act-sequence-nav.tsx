@@ -19,6 +19,7 @@ const ALL_ACTS = [
   { n: 15, title: "The Void",                      sub: "n_ZPE=264.71",            href: "/cosmic-lattice" },
   { n: 16, title: "The Entangler",                 sub: "|Φ⁺⟩=(|00⟩+|11⟩)/√2",   href: "/the-entangler" },
   { n: 17, title: "The Field",                     sub: "[â,â†]=1",                href: "/the-field" },
+  { n: 18, title: "The Coherent State",            sub: "â|α⟩=α|α⟩",             href: "/the-coherent-state" },
 ];
 
 interface Props { current: number }

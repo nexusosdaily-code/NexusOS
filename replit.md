@@ -62,6 +62,7 @@ Every Act page **must** link to **all** other Act pages via the sequence nav gri
 | 15 | The Void | n_ZPE=264.71 | `/cosmic-lattice` |
 | 16 | The Entangler | \|Φ⁺⟩=(|00⟩+\|11⟩)/√2 | `/the-entangler` |
 | 17 | The Field | [â,â†]=1 | `/the-field` |
+| 18 | The Coherent State | â\|α⟩=α\|α⟩ | `/the-coherent-state` |
 
 ## Post-Build Security Audit (STANDING DIRECTIVE — applies after EVERY build)
 
