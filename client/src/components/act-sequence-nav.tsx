@@ -20,6 +20,7 @@ const ALL_ACTS = [
   { n: 16, title: "The Entangler",                 sub: "|Φ⁺⟩=(|00⟩+|11⟩)/√2",   href: "/the-entangler" },
   { n: 17, title: "The Field",                     sub: "[â,â†]=1",                href: "/the-field" },
   { n: 18, title: "The Coherent State",            sub: "â|α⟩=α|α⟩",             href: "/the-coherent-state" },
+  { n: 19, title: "The Squeezed State",            sub: "ΔX₁·ΔX₂ ≥ ¼",           href: "/the-squeezed-state" },
 ];
 
 interface Props { current: number }
