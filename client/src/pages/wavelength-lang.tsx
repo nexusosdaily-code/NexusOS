@@ -40,9 +40,10 @@ function transpile(src: string, srcLang: "python" | "javascript" | "rust"): stri
 
   const lines = src.split("\n");
   const out: string[] = [
-    `// ── WavelengthScript v1.0 · AGPL-3.0 · NexusOS ─────────────────`,
-    `// Source: ${srcLang.toUpperCase()} → WLS transpilation`,
-    `// Generated: ${new Date().toISOString()}`,
+    `∿ ── WavelengthScript v2.0 · AGPL-3.0 · NexusOS ────────────────`,
+    `∿ Source: ${srcLang.toUpperCase()} → WLS transpilation`,
+    `∿ Generated: ${new Date().toISOString()}`,
+    `∿ Every symbol has a physical wavelength address in light.`,
     ``,
   ];
 
@@ -52,7 +53,7 @@ function transpile(src: string, srcLang: "python" | "javascript" | "rust"): stri
 
     // Comments
     if (line.startsWith("#") || line.startsWith("//")) {
-      out.push(`// ${line.replace(/^[#/]+\s*/, "")}`);
+      out.push(`∿ ${line.replace(/^[#/]+\s*/, "")}`);
       continue;
     }
 
@@ -64,10 +65,10 @@ function transpile(src: string, srcLang: "python" | "javascript" | "rust"): stri
       const paramList = params.split(",").map(p => p.trim()).filter(Boolean)
         .map(p => {
           const pe = ceEncode(p.replace(/[^a-zA-Z]/g, "") || "x");
-          return `@${pe.nm}nm ${p.trim()}`;
+          return `channel ${p.trim()} : @${pe.nm}nm`;
         }).join(", ");
-      out.push(`@emit(${enc.nm}nm, ${enc.psi}) // λ=${enc.nm}nm · ${enc.band}`);
-      out.push(`fn ${name}(${paramList}) {`);
+      out.push(`∿ λ=${enc.nm}nm ${enc.psi} [${enc.band}]`);
+      out.push(`field ${name}(${paramList}) → @${enc.nm}nm {`);
       continue;
     }
 
@@ -75,8 +76,8 @@ function transpile(src: string, srcLang: "python" | "javascript" | "rust"): stri
     const classMatch = line.match(/^(?:class|struct)\s+(\w+)/);
     if (classMatch) {
       const enc = ceEncode(classMatch[1]);
-      out.push(`@channel(${enc.psi}) // ${enc.nm}nm · ${enc.band}`);
-      out.push(`type ${classMatch[1]} : SpectralNode {`);
+      out.push(`∿ spectral type → λ=${enc.nm}nm ${enc.psi} [${enc.band}]`);
+      out.push(`channel ${classMatch[1]} : SpectralType {`);
       continue;
     }
 
@@ -85,13 +86,13 @@ function transpile(src: string, srcLang: "python" | "javascript" | "rust"): stri
     if (varMatch) {
       const [, vname, val] = varMatch;
       const enc = ceEncode(vname);
-      out.push(`@${enc.nm}nm let ${vname} := ${val.replace(/;$/, "")}  // ${enc.psi}`);
+      out.push(`  channel ${vname} := ${val.replace(/;$/, "")}  ∿ λ=${enc.nm}nm ${enc.psi}`);
       continue;
     }
 
     // Return
     if (line.startsWith("return")) {
-      out.push(`  emit ${line.slice(6).trim()}  // → spectral output`);
+      out.push(`  collapse ${line.slice(6).trim()}  ∿ spectral output`);
       continue;
     }
 
@@ -100,47 +101,53 @@ function transpile(src: string, srcLang: "python" | "javascript" | "rust"): stri
       const modMatch = line.match(/["']([^"']+)["']/);
       const modName = modMatch ? modMatch[1] : "module";
       const enc = ceEncode(modName.replace(/[^a-zA-Z]/g, "") || "mod");
-      out.push(`tune(${enc.nm}nm)  // import ${modName} at ${enc.psi}`);
+      out.push(`absorb(${enc.nm}nm)  ∿ import ${modName} at ${enc.psi}`);
       continue;
     }
 
     // Print / log / console
     if (line.match(/^(?:print|console\.log|println!|System\.out)/)) {
-      out.push(`  broadcast(${line.replace(/^[^(]+/, "")})  // → 520nm STREAM band`);
+      out.push(`  observe(${line.replace(/^[^(]+/, "")})  ∿ stream band 520nm`);
       continue;
     }
 
     // If / else
-    if (line.startsWith("if ") || line === "else" || line.startsWith("else")) {
-      out.push(`  ?λ ${line.replace(/^else\s*/, "// else ")}:`);
+    if (line.startsWith("if ")) {
+      const cond = line.replace(/^if\s+/, "").replace(/:$/, "").replace(/^\(/, "").replace(/\)\s*\{?$/, "");
+      out.push(`  resonate when ${cond} {`);
+      continue;
+    }
+    if (line === "else" || line.startsWith("else {") || line.startsWith("else:")) {
+      out.push(`  } resonate when else {`);
       continue;
     }
 
     // For / while loops
     if (line.startsWith("for ") || line.startsWith("while ")) {
-      out.push(`  oscillate(${line.replace(/^(for|while)\s+/, "")}) {`);
+      const iter = line.replace(/^(for|while)\s+/, "").replace(/:$/, "").replace(/\{$/, "");
+      out.push(`  propagate over ${iter} {`);
       continue;
     }
 
     // Closing braces
-    if (line === "}" || line === "}" || line.match(/^end(\s|$)/)) {
+    if (line === "}" || line.match(/^end(\s|$)/)) {
       out.push("}");
       continue;
     }
 
-    // Default — wrap in spectral comment
+    // Default — annotate with wavelength
     const enc = ceEncode(line.split(" ")[0] || "op");
-    out.push(`  /* @${enc.nm}nm */ ${line}`);
+    out.push(`  ${line}  ∿ @${enc.nm}nm [${enc.band}]`);
   }
 
   out.push(``);
-  out.push(`// ── Spectral manifest ───────────────────────────────────────────`);
+  out.push(`∿ ── Spectral manifest ──────────────────────────────────────────`);
 
   // Generate manifest from identifiers in source
   const identifiers = Array.from(new Set(src.match(/\b[a-zA-Z_][a-zA-Z0-9_]{2,}\b/g) ?? [])).slice(0, 8);
   for (const id of identifiers) {
     const enc = ceEncode(id);
-    out.push(`// ${id.padEnd(20)} → ${enc.nm}nm  ${enc.psi}  [${enc.band}]`);
+    out.push(`∿ ${id.padEnd(20)} → λ=${enc.nm}nm  ${enc.psi}  [${enc.band}]`);
   }
 
   return out.join("\n");
@@ -473,6 +480,130 @@ agent.register().await?;`,
   },
 ];
 
+const SAMPLE_WLS_TRANSFER = `∿ WavelengthScript v2.0 · AGPL-3.0 · NexusOS
+∿ Phase 1 — Token Transfer: NXT physics-priced transfer
+∿ Fee = hf_sender / hf_reference  (E=hf energy difference)
+
+absorb(468nm)  ∿ AUTH band — identity required
+
+field transfer(
+  channel sender    : @468nm,
+  channel recipient : @468nm,
+  channel amount    : @550nm
+) → @648nm {
+  channel λ_sender := physics.wavelength(sender.psi)  ∿ sender spectral address
+  channel fee      := physics.fee(λ_sender, amount)   ∿ Λ=hf/c² derived fee
+  channel balance  := observe(sender.psi)              ∿ read current Fock state
+
+  resonate when balance >= (amount + fee) {
+    emit sender.psi → absorb (amount + fee)             ∿ debit sender
+    observe recipient.psi ← amount                      ∿ credit recipient
+    observe spectral_ledger.record({
+      channel from   := sender.psi,
+      channel to     := recipient.psi,
+      channel amount := amount,
+      channel fee    := fee,
+      channel lambda := λ_sender
+    })
+    collapse { txId: spectral_ledger.lastId, fee, lambda: λ_sender }
+  }
+
+  collapse { error: "insufficient_energy", required: (amount + fee) }
+}
+`;
+
+const SAMPLE_WLS_CONTRACT = `∿ WavelengthScript v2.0 · AGPL-3.0 · NexusOS
+∿ Phase 1 — Smart Contract: Physics-Signed Escrow
+∿ Self-executing agreement governed by wave mechanics
+
+absorb(468nm)  ∿ AUTH band — contract requires KERNEL authority
+
+field escrow(
+  channel depositor  : @468nm,
+  channel beneficiary: @468nm,
+  channel condition  : @540nm,
+  channel amount     : @550nm
+) → @648nm {
+  channel escrow_ch := Ψ(depositor.wdm, depositor.oam, V)  ∿ derive escrow channel
+  observe escrow_ch ← amount                                 ∿ lock funds in channel
+
+  propagate over oracle.watch(condition) {
+    resonate when condition.met {
+      collapse beneficiary ← amount   ∿ release to beneficiary
+    }
+    resonate when condition.expired {
+      collapse depositor ← amount     ∿ refund depositor
+    }
+  }
+}
+
+entangle Ψ(depositor) → Ψ(beneficiary)  ∿ atomic spectral binding
+`;
+
+const SAMPLE_WLS_GOVERNANCE_V2 = `∿ WavelengthScript v2.0 · AGPL-3.0 · NexusOS
+∿ Phase 1 — Governance Vote: on-chain protocol parameter change
+∿ Voting weight = spectral authority band (shorter λ = higher weight)
+
+absorb(468nm)  ∿ AUTH band — governance requires KERNEL or higher
+
+field submitProposal(
+  channel param     : @540nm,
+  channel newValue  : @540nm,
+  channel proposer  : @468nm
+) → @540nm {
+  channel proposal := GovernanceRegistry.create({
+    channel param   := param,
+    channel value   := newValue,
+    channel creator := proposer.psi
+  })
+  collapse proposal.id
+}
+
+field castVote(
+  channel proposalId: @540nm,
+  channel voteYes   : @540nm,
+  channel voter     : @468nm
+) → @648nm {
+  channel weight := SpectralAuth.bandWeight(voter.band)  ∿ λ → authority weight
+  channel record := VoteStore.append(proposalId, voteYes, weight)
+  resonate when record.thresholdMet {
+    observe record.executeNow()  ∿ live protocol update
+  }
+  collapse record
+}
+
+entangle Ψ(voter) → Ψ(proposal)  ∿ vote binding
+`;
+
+const SAMPLE_WLS_WALLET_V2 = `∿ WavelengthScript v2.0 · AGPL-3.0 · NexusOS
+∿ Phase 1 — Spectral Wallet: observe any Ψ channel balance
+∿ Balance = current Fock occupation number of that channel
+
+absorb(468nm)  ∿ AUTH band — wallet requires identity
+
+field walletBalance(channel owner: @468nm) → @550nm {
+  channel psi     := owner.psi          ∿ e.g. Ψ(52,3,V)
+  channel state   := observe(psi)       ∿ measure Fock state |n⟩
+  channel lambda  := physics.wavelength(psi)
+  channel energy  := physics.energy(lambda)  ∿ E = hf = hc/λ
+  collapse {
+    channel balance := state.nxt,
+    channel psi     := psi,
+    channel lambda  := lambda,
+    channel energy  := energy,
+    channel band    := physics.band(lambda)
+  }
+}
+
+field walletHistory(channel owner: @468nm) → @648nm {
+  channel txs := spectral_ledger.query(owner.psi)
+  propagate over txs {
+    observe tx.render()  ∿ stream each record to output
+  }
+  collapse txs.count
+}
+`;
+
 const SAMPLE_PYTHON = `import math
 
 def lambda_energy(freq_hz, mass):
@@ -505,7 +636,8 @@ export default function WavelengthLangPage() {
   const [srcLang, setSrcLang]   = useState<"python" | "javascript" | "rust">("python");
   const [source, setSource]     = useState(SAMPLE_PYTHON);
   const [output, setOutput]     = useState("");
-  const [activeTab, setActiveTab] = useState<"spec" | "transpiler" | "compiler" | "ai" | "sdk">("spec");
+  const [activeTab, setActiveTab] = useState<"spec" | "grammar" | "transpiler" | "compiler" | "ai" | "sdk">("spec");
+  const [grammarExample, setGrammarExample] = useState<"transfer" | "contract" | "governance" | "wallet">("transfer");
   const [liveEncode, setLiveEncode] = useState("");
   const [copied, setCopied] = useState(false);
   const [compilerSrc, setCompilerSrc]   = useState(SAMPLE_WLS);
@@ -619,6 +751,7 @@ export default function WavelengthLangPage() {
         {/* Tab bar */}
         <div className="flex flex-wrap gap-2">
           {TAB("spec",       "Language Spec")}
+          {TAB("grammar",    "WLS v2.0 Grammar")}
           {TAB("transpiler", "Transpiler")}
           {TAB("compiler",   "Compiler → Bytecode")}
           {TAB("ai",         "AI Integration")}
@@ -717,6 +850,232 @@ export default function WavelengthLangPage() {
           </div>
         )}
 
+        {/* ── TAB: WLS v2.0 GRAMMAR ──────────────────────────────────────── */}
+        {activeTab === "grammar" && (
+          <div className="space-y-6">
+
+            {/* Intro */}
+            <div className="text-white/25 text-[11px] leading-relaxed max-w-3xl">
+              WavelengthScript v2.0 is a formally specified, physics-native language. Every keyword is a physical
+              operation — not a metaphor. The type system is Fock space: values are occupation numbers <code className="text-violet-300">|n⟩</code>,
+              channels are Ψ registers, and computation is state evolution. This grammar closes the gap between
+              pseudocode and a language you can learn, compile, and run today on the WNSP VM.
+            </div>
+
+            {/* BNF Production Rules */}
+            <div className="border border-white/10 rounded-xl p-5" style={{ background: "rgba(255,255,255,0.01)" }}>
+              <h2 className="text-white/30 text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2">
+                <Code2 size={11} /> Formal Grammar — BNF Production Rules
+              </h2>
+              <pre className="text-[10px] leading-[1.9] overflow-x-auto" style={{ color: "#c4b5fd" }}>{`program      ::= statement*
+
+statement    ::= field_def
+               | channel_decl
+               | entangle_stmt
+               | resonate_stmt
+               | propagate_stmt
+               | absorb_stmt
+               | emit_stmt
+               | observe_stmt
+               | collapse_stmt
+               | comment
+
+field_def    ::= "field" IDENT "(" param_list? ")" ("→" type)? "{" statement* "}"
+param_list   ::= param ("," param)*
+param        ::= "channel" IDENT ":" type
+
+channel_decl ::= "channel" IDENT (":=" expr)? ("∿" TEXT)?
+
+resonate_stmt ::= "resonate" "when" expr "{" statement* "}"
+propagate_stmt::= "propagate" "over" expr "{" statement* "}"
+entangle_stmt ::= "entangle" psi "→" psi  ("∿" TEXT)?
+absorb_stmt  ::= "absorb" "(" nm_or_psi ")"  ("∿" TEXT)?
+emit_stmt    ::= "emit" expr ("→" psi)?
+observe_stmt ::= "observe" expr ("←" expr)?
+collapse_stmt::= "collapse" expr
+
+comment      ::= "∿" TEXT
+
+type         ::= "@" FLOAT "nm"              ∿ spectral band type
+               | "Fock"                       ∿ occupation number |n⟩
+               | "Joules"                     ∿ scalar energy
+               | psi                          ∿ channel reference
+               | IDENT                        ∿ named type
+
+psi          ::= "Ψ(" INT "," INT "," POL ")"
+POL          ::= "H" | "V"
+nm_or_psi    ::= FLOAT "nm" | psi
+expr         ::= literal | IDENT | psi | call | binary_op
+call         ::= IDENT "." IDENT "(" args? ")"
+args         ::= expr ("," expr)*
+literal      ::= INT | FLOAT | STRING | "|" INT "⟩"   ∿ Fock state literal`}</pre>
+            </div>
+
+            {/* Keyword table */}
+            <div className="border border-white/10 rounded-xl p-5" style={{ background: "rgba(255,255,255,0.01)" }}>
+              <h2 className="text-white/30 text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2">
+                <Zap size={11} /> Keyword Reference — v2.0
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[10px]">
+                  <thead>
+                    <tr className="border-b border-white/5">
+                      {["Keyword", "Physics operator", "Classical equiv.", "Description"].map(h => (
+                        <th key={h} className="text-left text-white/20 py-2 pr-6 font-normal">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {[
+                      { kw: "channel",       phys: "—",        cls: "var / let",      desc: "Declare a Ψ register. Holds a Fock state |n⟩ or typed value." },
+                      { kw: "field",         phys: "—",        cls: "function / def", desc: "Define a named spectral operation. Returns collapse value." },
+                      { kw: "emit",          phys: "â†  (â†)",   cls: "write / push",   desc: "Raise occupation number — add a quantum to the channel." },
+                      { kw: "absorb",        phys: "â  (â)",   cls: "read / receive",  desc: "Lower occupation number — consume a quantum from the channel." },
+                      { kw: "observe",       phys: "n̂ = â†â", cls: "read / measure",  desc: "Measure current Fock state without destroying it. |n⟩ → n." },
+                      { kw: "resonate when", phys: "δ(cond)",  cls: "if",              desc: "Conditional resonance. Block executes only when condition is met." },
+                      { kw: "propagate over",phys: "∑ₙ",       cls: "for / while",    desc: "Iterate over a set of states. Each step is a wave cycle." },
+                      { kw: "collapse",      phys: "|Ψ⟩ → x", cls: "return",          desc: "Terminate and output. Wavefunction collapses to a classical value." },
+                      { kw: "entangle",      phys: "|Φ⁺⟩",    cls: "bind / ref",      desc: "Create a Bell-state binding between two Ψ channels." },
+                      { kw: "∿",            phys: "—",        cls: "// or #",         desc: "Comment — the wave symbol. Everything after is ignored." },
+                    ].map(({ kw, phys, cls, desc }) => (
+                      <tr key={kw}>
+                        <td className="py-2.5 pr-6"><code className="text-violet-300 font-bold text-[11px]">{kw}</code></td>
+                        <td className="py-2.5 pr-6 text-cyan-400/70 font-mono">{phys}</td>
+                        <td className="py-2.5 pr-6 text-white/30">{cls}</td>
+                        <td className="py-2.5 text-white/40 leading-relaxed">{desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Fock-space type system */}
+            <div className="border border-white/10 rounded-xl p-5" style={{ background: "rgba(255,255,255,0.01)" }}>
+              <h2 className="text-white/30 text-[10px] uppercase tracking-widest mb-4 flex items-center gap-2">
+                <Atom size={11} /> Type System — Fock Space
+              </h2>
+              <p className="text-white/25 text-[11px] leading-relaxed mb-4">
+                WLS v2.0 is grounded in quantum field theory, not traditional type theory.
+                Every value is an occupation number in a Hilbert space channel. The type annotation
+                <code className="text-violet-300 mx-1">@540nm</code> doesn't just name a type —
+                it specifies the physical wavelength where that data lives.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { type: "|0⟩", label: "Fock vacuum", desc: "null / zero / empty channel", col: "#6b7280" },
+                  { type: "|1⟩", label: "Single quant", desc: "boolean / unit value", col: "#8b00ff" },
+                  { type: "|n⟩", label: "Occupation n", desc: "integer / count", col: "#2563eb" },
+                  { type: "|α⟩", label: "Coherent state", desc: "float / continuous", col: "#06b6d4" },
+                  { type: "@Xnm", label: "Spectral type", desc: "data at wavelength X", col: "#16a34a" },
+                  { type: "Ψ(w,o,p)", label: "Channel ref", desc: "pointer to Ψ register", col: "#ca8a04" },
+                  { type: "Fock", label: "Any Fock state", desc: "untyped quantum value", col: "#ea580c" },
+                  { type: "Joules", label: "Energy scalar", desc: "hf — classical bridge", col: "#dc2626" },
+                ].map(({ type, label, desc, col }) => (
+                  <div key={type} className="border border-white/5 rounded-lg p-3" style={{ background: col + "08" }}>
+                    <code className="text-[13px] font-bold block mb-1" style={{ color: col }}>{type}</code>
+                    <div className="text-[9px] font-semibold mb-0.5" style={{ color: col + "cc" }}>{label}</div>
+                    <div className="text-[8px] text-white/25">{desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Phase 1 Bridge Programs */}
+            <div className="border border-white/10 rounded-xl p-5" style={{ background: "rgba(255,255,255,0.01)" }}>
+              <h2 className="text-white/30 text-[10px] uppercase tracking-widest mb-1 flex items-center gap-2">
+                <Play size={11} /> Phase 1 — Bridge Programs
+              </h2>
+              <p className="text-white/20 text-[10px] mb-4">
+                These are the simple, understood things the transpiler must handle: contracts, transfers,
+                governance, wallet ops. Real WLS v2.0 syntax — paste into the Compiler tab to emit bytecode.
+              </p>
+
+              <div className="flex gap-2 mb-4 flex-wrap">
+                {([
+                  { id: "transfer",   label: "Token Transfer",    col: "#ca8a04" },
+                  { id: "contract",   label: "Smart Contract",    col: "#2563eb" },
+                  { id: "governance", label: "Governance Vote",   col: "#8b00ff" },
+                  { id: "wallet",     label: "Wallet Balance",    col: "#16a34a" },
+                ] as const).map(({ id, label, col }) => (
+                  <button
+                    key={id}
+                    onClick={() => setGrammarExample(id)}
+                    className="text-[9px] px-3 py-1 rounded-full border transition-all"
+                    style={{
+                      borderColor: grammarExample === id ? col + "80" : col + "25",
+                      color: grammarExample === id ? col : col + "70",
+                      background: grammarExample === id ? col + "15" : "transparent",
+                    }}
+                    data-testid={`button-grammar-${id}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <pre className="text-[10px] leading-relaxed overflow-x-auto p-4 rounded-xl border border-violet-400/10 font-mono"
+                style={{ background: "rgba(139,0,255,0.04)", color: "#ddd6fe" }}>
+                {grammarExample === "transfer"   ? SAMPLE_WLS_TRANSFER
+                : grammarExample === "contract"  ? SAMPLE_WLS_CONTRACT
+                : grammarExample === "governance"? SAMPLE_WLS_GOVERNANCE_V2
+                : SAMPLE_WLS_WALLET_V2}
+              </pre>
+
+              <div className="mt-3 flex justify-end">
+                <button
+                  onClick={() => {
+                    const src = grammarExample === "transfer"    ? SAMPLE_WLS_TRANSFER
+                              : grammarExample === "contract"   ? SAMPLE_WLS_CONTRACT
+                              : grammarExample === "governance" ? SAMPLE_WLS_GOVERNANCE_V2
+                              : SAMPLE_WLS_WALLET_V2;
+                    setCompilerSrc(src);
+                    setActiveTab("compiler");
+                  }}
+                  className="flex items-center gap-1.5 text-[9px] px-3 py-1.5 rounded-lg border border-violet-400/30 text-violet-400/70 hover:text-violet-400 hover:border-violet-400/50 transition-all"
+                  data-testid="button-load-in-compiler"
+                >
+                  <Cpu size={9} /> Load in Compiler →
+                </button>
+              </div>
+            </div>
+
+            {/* Unique syntax — looks like nothing else */}
+            <div className="border border-amber-400/10 rounded-xl p-5" style={{ background: "rgba(251,191,36,0.02)" }}>
+              <div className="text-amber-400/50 text-[9px] uppercase tracking-widest mb-3 flex items-center gap-2">
+                <Atom size={9} /> Why WLS Looks Like Nothing Else
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[10px]">
+                <div>
+                  <div className="text-white/50 font-semibold mb-1">No assignment operator</div>
+                  <div className="text-white/25 leading-relaxed">
+                    <code className="text-violet-300">channel x := val</code> is a channel declaration, not assignment.
+                    The <code className="text-violet-300">:=</code> symbol means "initialise the Fock state of this register."
+                    You don't store a value — you prepare a quantum state.
+                  </div>
+                </div>
+                <div>
+                  <div className="text-white/50 font-semibold mb-1">Types are wavelengths</div>
+                  <div className="text-white/25 leading-relaxed">
+                    <code className="text-violet-300">@468nm</code> isn't a tag — it's the physical address where
+                    that data lives in the EM spectrum. AUTH band (450–495nm). Change the wavelength,
+                    change the authority tier.
+                  </div>
+                </div>
+                <div>
+                  <div className="text-white/50 font-semibold mb-1">Functions don't call — they resonate</div>
+                  <div className="text-white/25 leading-relaxed">
+                    <code className="text-violet-300">field</code> definitions declare a standing wave pattern.
+                    Execution is resonance — the wavefunction propagates until <code className="text-violet-300">collapse</code>
+                    makes the result classical.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
+
         {/* ── TAB: TRANSPILER ─────────────────────────────────────────────── */}
         {activeTab === "transpiler" && (
           <div className="space-y-4">
@@ -791,10 +1150,14 @@ export default function WavelengthLangPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-white/20 text-[9px] uppercase tracking-widest mr-1">Load sample:</span>
               {([
-                { label: "AI Agent",        src: SAMPLE_WLS,             col: "#a78bfa" },
-                { label: "Governance Vote", src: SAMPLE_WLS_GOVERNANCE,  col: "#2563eb" },
-                { label: "P2P Transfer",    src: SAMPLE_WLS_P2P,         col: "#06b6d4" },
-                { label: "Spectral Wallet", src: SAMPLE_WLS_WALLET,      col: "#ca8a04" },
+                { label: "AI Agent",           src: SAMPLE_WLS,               col: "#a78bfa" },
+                { label: "Governance v1",      src: SAMPLE_WLS_GOVERNANCE,    col: "#2563eb" },
+                { label: "P2P Transfer",       src: SAMPLE_WLS_P2P,           col: "#06b6d4" },
+                { label: "Spectral Wallet",    src: SAMPLE_WLS_WALLET,        col: "#ca8a04" },
+                { label: "Transfer v2.0",      src: SAMPLE_WLS_TRANSFER,      col: "#f59e0b" },
+                { label: "Contract v2.0",      src: SAMPLE_WLS_CONTRACT,      col: "#3b82f6" },
+                { label: "Governance v2.0",    src: SAMPLE_WLS_GOVERNANCE_V2, col: "#8b00ff" },
+                { label: "Wallet v2.0",        src: SAMPLE_WLS_WALLET_V2,     col: "#22c55e" },
               ]).map(({ label, src, col }) => (
                 <button
                   key={label}
@@ -813,7 +1176,7 @@ export default function WavelengthLangPage() {
               <div className="border border-white/10 rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.01)" }}>
                 <div className="px-4 py-2.5 border-b border-white/5 flex items-center justify-between">
                   <span className="text-white/40 text-[9px] uppercase tracking-widest">WavelengthScript Source</span>
-                  <span className="text-[8px] text-violet-400/40">WLS v1.0</span>
+                  <span className="text-[8px] text-violet-400/40">WLS v2.0</span>
                 </div>
                 <textarea
                   className="w-full bg-transparent p-4 text-[11px] text-white/70 outline-none resize-none font-mono leading-relaxed"
