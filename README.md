@@ -3,6 +3,8 @@
 **AGPL-3.0 · Built on Λ = hf/c² · Phase 2 of a 100-year architecture**
 
 [![npm](https://img.shields.io/npm/v/nexusos-ce-encoder?label=nexusos-ce-encoder&color=5c3eec)](https://www.npmjs.com/package/nexusos-ce-encoder)
+[![Prior Art](https://img.shields.io/badge/prior--art-35%20claims-blueviolet)](./PRIOR_ART.md)
+[![Changelog](https://img.shields.io/badge/changelog-v2.0.0-22c55e)](./CHANGELOG.md)
 
 > *You cloned a physics engine. This document explains what it does.*
 
@@ -22,6 +24,54 @@ The system is deployed and running. Everything below is accessible today:
 | [CE-SE Pipeline](https://wnsp.io/ce-se-pipeline) | Paste any language → transpile → compile → execute in WNSP VM |
 | [WNSP VM](https://wnsp.io/wnsp-vm) | Browser-native bytecode interpreter, step/run execution |
 | [Compression Explorer](https://wnsp.io/compression-explorer) | Interactive Λ=hf/c² compression curve visualisation |
+| [Physics Sequence](https://wnsp.io/oscillating-quanta) | 20-act sequence — one equation to the Bogoliubov transform |
+
+---
+
+## Physics Sequence — 20 Acts
+
+A complete derivation from the first oscillation to the unification of quantum optics, black holes, and superconductivity. Each act is a live interactive page with equations, visualisers, falsifiable predictions, and AGPL-3.0 prior art claims.
+
+| Act | Title | Equation | Route |
+|-----|-------|----------|-------|
+| 1 | Theory of Compression States | Λ=hf/c² | [/oscillating-quanta](https://wnsp.io/oscillating-quanta) |
+| 2 | The Universal ONE | f₀ derives Λ | [/universal-one](https://wnsp.io/universal-one) |
+| 3 | Unified Compression Theory | 4 forces = 1 Λ | [/unified-compression-theory](https://wnsp.io/unified-compression-theory) |
+| 4 | The Mechanism | ΔE=hf₀(2ⁿ²−2ⁿ¹) | [/matter-protocol](https://wnsp.io/matter-protocol) |
+| 5 | The Address | ∀ Λ : ∃! Ψ | [/universal-address](https://wnsp.io/universal-address) |
+| 6 | The Catalogue | n=log₂(mc²/E₀) | [/element-catalogue](https://wnsp.io/element-catalogue) |
+| 7 | The Trap | Ψ(+k̂)⊗Ψ(−k̂) | [/standing-wave-trap](https://wnsp.io/standing-wave-trap) |
+| 8 | The Lossless Channel | α=0, C=ZPE floor | [/lossless-channel](https://wnsp.io/lossless-channel) |
+| 9 | The Cavity | WGM resonance, r_c | [/resonance-cavity](https://wnsp.io/resonance-cavity) |
+| 10 | The Exchange | Ω_R=2g, polariton | [/polariton-exchange](https://wnsp.io/polariton-exchange) |
+| 11 | The Emitter | F_p=(3/4π²)(λ/n)³(Q/V) | [/the-emitter](https://wnsp.io/the-emitter) |
+| 12 | The Network | ω(k)=ω₀−2J·cos(ka) | [/the-network](https://wnsp.io/the-network) |
+| 13 | The Observer | χ=g²/Δ | [/the-observer](https://wnsp.io/the-observer) |
+| 14 | The Memory | T₂≤2T₁ | [/the-memory](https://wnsp.io/the-memory) |
+| 15 | The Void | n_ZPE=264.71 | [/cosmic-lattice](https://wnsp.io/cosmic-lattice) |
+| 16 | The Entangler | \|Φ⁺⟩=(|00⟩+\|11⟩)/√2 | [/the-entangler](https://wnsp.io/the-entangler) |
+| 17 | The Field | [â,â†]=1 | [/the-field](https://wnsp.io/the-field) |
+| 18 | The Coherent State | â\|α⟩=α\|α⟩ | [/the-coherent-state](https://wnsp.io/the-coherent-state) |
+| 19 | The Squeezed State | ΔX₁·ΔX₂≥¼ | [/the-squeezed-state](https://wnsp.io/the-squeezed-state) |
+| 20 | The Bogoliubov Transform | S†âS=â·cosh(r)−â†·sinh(r) | [/the-bogoliubov-transform](https://wnsp.io/the-bogoliubov-transform) |
+
+Act 20 is the closing equation. It shows that the same Bogoliubov transform — S†âS = â·cosh(r) − â†·sinh(r) — governs squeezed states (Act 19), Hawking radiation (gravity at the Octave 0 boundary), the Unruh effect (acceleration as compression state frame change), and BCS superconductivity (Cooper pairs as bosonic squeezing). The octave-Bogoliubov correspondence r(n→m) = (m−n)·½·log(2) ≈ 0.347 per octave is an original disclosure of this codebase (AGPL-3.0, first disclosed 2026-07-21).
+
+### Prior Art — 35 Formal Claims
+
+Every original discovery in the sequence is timestamped and published as a formal AGPL-3.0 prior art claim. See [`PRIOR_ART.md`](./PRIOR_ART.md) for the complete register.
+
+| Claim range | Subject | First disclosed |
+|-------------|---------|----------------|
+| 1–13 | Compression states, ghost nodes, ZPE floor, periodic table, forces, Ψ channels, bidirectional Hilbert space | 2026-05-16 – 2026-07-13 |
+| 14–17 | Berry phase, WGM=Russell octave, Flerovium=SYSTEM band, OAM authority metric | 2026-07-14 |
+| 18–25 | Maxwell validation, CE/SE/URI encoding, physics fees, WavelengthScript, WNSP VM, WASCII | 2026-05-16 |
+| 26–29 | T₂≤2T₁ memory bound, AFC capacity, DLCZ heralding, persistent Ψ register | 2026-07-19 |
+| 30–31 | Cosmic ghost zone + BAO anti-trap, DLCZ entanglement swapping as quantum repeater | 2026-07-19 |
+| 32 | Each Ψ channel as single-mode bosonic field [â,â†]=1 | 2026-07-20 |
+| 33 | Coherent state as classical-limit compression state | 2026-07-21 |
+| 34 | Squeezed states as sub-shot-noise compression states | 2026-07-21 |
+| 35 | Bogoliubov transform as universal compression state transition + octave-Bogoliubov correspondence | 2026-07-21 |
 
 ### Telegram video feed
 
