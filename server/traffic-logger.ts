@@ -2,6 +2,19 @@ import type { Request, Response, NextFunction } from "express";
 import { isHoneypotPath } from "./honeypot";
 import { ipCountryCache, ipHostingCache } from "./geoip-enricher";
 
+const PHP_SCANNER_PATHS = new Set([
+  "/admin.php", "/file.php", "/wp-login.php", "/wp-admin.php",
+  "/wp-admin", "/wp-config.php", "/wp-includes", "/xmlrpc.php",
+  "/phpmyadmin", "/pma", "/myadmin", "/mysql", "/dbadmin",
+  "/.env", "/.git/config", "/.aws/credentials",
+  "/shell.php", "/c99.php", "/r57.php", "/cmd.php", "/webshell.php",
+  "/config.php", "/setup.php", "/install.php", "/installer.php",
+  "/backup.php", "/db.php", "/database.php", "/sql.php",
+  "/filemanager.php", "/upload.php", "/manager.php",
+  "/joomla", "/administrator", "/magento", "/drupal",
+  "/cgi-bin/luci", "/cgi-bin/admin",
+]);
+
 const BOT_PATTERNS: { pattern: RegExp; name: string }[] = [
   { pattern: /assetnote/i,           name: "Assetnote" },
   { pattern: /tlm[-_]audit/i,        name: "TLM-Audit-Scanner" },
@@ -266,6 +279,36 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
     res.status(403).json({ error: "Access denied." });
     return;
   }
+
+  // ── PHP scanner / vulnerability probe block ───────────────────────────────
+  const lowerPath = path.toLowerCase();
+  const isPhpProbe = PHP_SCANNER_PATHS.has(lowerPath)
+    || lowerPath.endsWith(".php")
+    || lowerPath.endsWith(".env")
+    || lowerPath.includes("/.git/")
+    || lowerPath.includes("/.aws/")
+    || lowerPath.includes("/wp-")
+    || lowerPath.includes("/cgi-bin/");
+  if (isPhpProbe) {
+    const country = (req.headers["cf-ipcountry"] ?? req.headers["x-country"] ?? "") as string;
+    getDb().then(({ db, trafficLogs }) => {
+      db.insert(trafficLogs).values({
+        path:           path.slice(0, 500),
+        method:         req.method,
+        statusCode:     403,
+        userAgent:      ua.slice(0, 500) || null,
+        referer:        referer.slice(0, 500) || null,
+        country:        country.slice(0, 10) || null,
+        ip:             cleanIp.slice(0, 64) || null,
+        isBot:          true,
+        botName:        "PHP-SCANNER",
+        isDatacenterIp: false,
+      }).catch(() => {});
+    }).catch(() => {});
+    res.status(403).json({ error: "Not found." });
+    return;
+  }
+
   const country   = ipCountryCache.get(cleanIp)
     ?? (req.headers["cf-ipcountry"] ?? req.headers["x-country"] ?? "") as string;
   const isDatacenter = ipHostingCache.get(cleanIp) === true;
