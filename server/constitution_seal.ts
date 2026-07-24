@@ -146,9 +146,14 @@ async function ceEncodeHash(hash: string): Promise<{ psiChannel: string; wavelen
  *  - Checks blockchain_blocks for an existing constitution marker before inserting.
  *  - If constants row is missing but block exists, backfills constants from the block.
  *
+ * Returns:
+ *  - true  : constitution was freshly sealed on this call
+ *  - false : constitution was already sealed (idempotent, no-op)
+ *  - throws: any DB / lock / network error — caller must handle
+ *
  * Call AFTER seedGenesisBlock() completes (enforced in server/index.ts).
  */
-export async function sealConstitution(): Promise<void> {
+export async function sealConstitution(): Promise<boolean> {
   let client: any = null;
   try {
     const { pool } = await import("./db");
@@ -212,7 +217,7 @@ export async function sealConstitution(): Promise<void> {
       }
       await client.query("COMMIT");
       console.log(`[CONSTITUTION] Already sealed at block #${existingBlock.block_number} — ${existingBlock.psi_channel} · ${CONSTITUTION_WAVELENGTH_NM} nm`);
-      return;
+      return false;
     }
 
     // 4. Not yet sealed — mine the constitution block inside the transaction
@@ -237,7 +242,7 @@ export async function sealConstitution(): Promise<void> {
     if (doubleCheck.rows.length) {
       await client.query("COMMIT");
       console.log(`[CONSTITUTION] Already sealed at block #${doubleCheck.rows[0].block_number} — sealed by concurrent process`);
-      return;
+      return false;
     }
 
     // Get next block number (inside transaction — safe)
@@ -319,11 +324,14 @@ export async function sealConstitution(): Promise<void> {
     if (ceResult) console.log(`[CONSTITUTION] CE-encode: hash → ${ceResult.psiChannel} · ${ceResult.wavelengthNm}nm`);
     console.log(`[CONSTITUTION] ════════════════════════════════════════════════════`);
 
+    return true;
+
   } catch (err: any) {
     if (client) {
       try { await client.query("ROLLBACK"); } catch {}
     }
-    console.error("[CONSTITUTION] Seal error:", err?.message ?? err);
+    // Re-throw so the caller (server/index.ts) can surface the failure
+    throw err;
   } finally {
     if (client) {
       try { client.release(); } catch {}

@@ -771,7 +771,29 @@ async function runStartupMigrations() {
     // sealConstitution runs AFTER seedGenesisBlock to avoid block-number races
     seedGenesisBlock()
       .then(() => sealConstitution())
-      .catch((e) => console.error("[CONSTITUTION] Seal error:", e));
+      .then((sealed) => {
+        if (sealed === true) {
+          console.log("[CONSTITUTION] Fresh seal written to chain — boot complete.");
+        }
+        // false = already existed, which is the normal path on restarts
+      })
+      .catch((e: any) => {
+        const msg = e?.message ?? String(e);
+        console.error("[CONSTITUTION] SEAL FAILED — constitution block was NOT written:", msg);
+        // Fire-and-forget Telegram alert so the founder is notified immediately
+        const token = process.env.TELEGRAM_BOT_TOKEN;
+        if (token) {
+          fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: "-1002572762871",
+              parse_mode: "HTML",
+              text: `🚨 <b>NexusOS BOOT ALERT</b>\n<b>sealConstitution() failed</b>\n\nThe constitution seal was NOT written to the chain on this boot.\nThe /api/constitution/seal endpoint will return 503 until fixed.\n\n<b>Error:</b> ${msg.slice(0, 300)}`,
+            }),
+          }).catch(() => {});
+        }
+      });
     seedGenesisNode().catch((e) => console.error("[GENESIS NODE] Error:", e));
     seedReplitAIAccount().catch((e) => console.error("[GENESIS] Replit AI seed error:", e));
     seedBlockedEntities().catch((e) => console.error("[GENESIS] Blocked entities error:", e));

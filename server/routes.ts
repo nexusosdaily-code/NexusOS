@@ -4911,6 +4911,26 @@ export async function registerRoutes(
       const { getConstitutionSeal, computeConstitutionHash } = await import("./constitution_seal");
       const seal = await getConstitutionSeal();
       if (!seal) {
+        // Distinguish: did the sealing process fail (table exists, no block) vs
+        // server is still in its 2-second warm-up window (table may not exist yet)?
+        const { pool } = await import("./db");
+        const tableExists = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables
+            WHERE table_name = 'blockchain_blocks'
+          ) AS exists
+        `);
+        if (tableExists.rows[0]?.exists) {
+          // Table is up — seal should have been written but wasn't. Signal error.
+          return res.status(503).json({
+            error: "Constitution seal missing",
+            message:
+              "The blockchain_blocks table exists but no constitution seal block was found. " +
+              "The sealConstitution() boot process may have failed. " +
+              "Check server logs for [CONSTITUTION] SEAL FAILED entries and restart the server.",
+          });
+        }
+        // Table not ready yet — normal during the first few seconds of a fresh boot
         return res.status(404).json({
           error: "Constitution not yet sealed",
           message: "The genesis sealing process runs at server startup. Try again in a few seconds.",
