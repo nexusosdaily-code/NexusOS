@@ -294,7 +294,7 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/ce-se-pipeline", "/ce-code-writer", "/wnsp-vm",
   "/spectral-router", "/spectral-search", "/spectral-contracts",
   "/divergence-test", "/hardware-spec", "/hardware-lab",
-  "/campaign", "/constitution", "/mobile-sdk", "/shareholders",
+  "/campaign", "/mobile-sdk", "/shareholders",
   "/psi-board", "/unified-compression-theory", "/universal-one", "/matter-protocol", "/universal-address", "/element-catalogue", "/standing-wave-trap", "/lossless-channel",
   "/cosmic-lattice",
   "/the-entangler",
@@ -375,7 +375,6 @@ function ProtectedRoutes() {
         <Route path="/developer-matrix/docs" component={DocsPage} />
         <Route path="/developer/keys" component={DeveloperKeysPage} />
         <Route path="/governance" component={GovernancePage} />
-        <Route path="/constitution" component={ConstitutionPage} />
         <Route path="/workspace/matrix" component={DeveloperMatrixPage} />
         {/* /docs and /docs/:section are public — handled in Router() above */}
         <Route path="/wnsp/coordinator" component={WNSPCoordinator} />
