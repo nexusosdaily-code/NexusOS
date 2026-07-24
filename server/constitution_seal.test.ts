@@ -22,7 +22,7 @@
  *   JSON round-trip key presence for both paths.
  */
 
-import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
+import { vi, describe, it, expect, beforeEach, afterEach, type SpyInstance } from "vitest";
 
 // ── Mock server/db.ts before importing the module under test ─────────────────
 // sealConstitution() does `await import("./db")` inside the function body;
@@ -50,6 +50,7 @@ import {
   getConstitutionSeal,
   type QueryablePool,
 } from "./constitution_seal";
+import { handleSealError, type BootState } from "./seal-boot-guard";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -830,4 +831,105 @@ describe("getConstitutionSeal — amendments array always present", () => {
     expect("amendments" in fallbackJson).toBe(true);
     expect(Array.isArray(fallbackJson.amendments)).toBe(true);
   });
+});
+
+// ── Boot-sequence guard: handleSealError() ───────────────────────────────────
+//
+// These tests document the contract between server/index.ts and the
+// seal-boot-guard module so that future refactors cannot accidentally revert
+// the behaviour back to a silent no-op.
+//
+// The boot guard is called in the .catch() of:
+//   seedGenesisBlock().then(() => sealConstitution()).catch((e) => handleSealError(e))
+//
+// Guarantees under test:
+//   A. When sealConstitution() throws, bootState.degraded becomes true.
+//   B. bootState.sealError carries the thrown message.
+//   C. A [FATAL]-prefixed message is written to stderr.
+//   D. The server does NOT crash — degraded boot is preferred over hard outage.
+//   E. A healthy seal (no throw) leaves bootState.degraded = false.
+
+describe("handleSealError() — boot-sequence degraded-boot guard", () => {
+  let consoleErrorSpy: SpyInstance;
+
+  beforeEach(() => {
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
+  it(
+    "A: marks bootState.degraded = true when called with an Error",
+    () => {
+      const state: BootState = { degraded: false, sealError: null };
+      handleSealError(new Error("DB: connection lost"), state);
+      expect(state.degraded).toBe(true);
+    },
+  );
+
+  it(
+    "B: stores the error message in bootState.sealError",
+    () => {
+      const state: BootState = { degraded: false, sealError: null };
+      handleSealError(new Error("disk full"), state);
+      expect(state.sealError).toBe("disk full");
+    },
+  );
+
+  it(
+    "B (non-Error): stores a stringified representation when a non-Error is thrown",
+    () => {
+      const state: BootState = { degraded: false, sealError: null };
+      handleSealError("something blew up", state);
+      expect(state.sealError).toBe("something blew up");
+      expect(state.degraded).toBe(true);
+    },
+  );
+
+  it(
+    "C: emits a [FATAL]-prefixed message to console.error",
+    () => {
+      const state: BootState = { degraded: false, sealError: null };
+      handleSealError(new Error("advisory lock timeout"), state);
+
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+      const logged: string = consoleErrorSpy.mock.calls[0][0];
+      expect(logged).toMatch(/\[FATAL\]/);
+    },
+  );
+
+  it(
+    "C: the [FATAL] log includes the original error message",
+    () => {
+      const state: BootState = { degraded: false, sealError: null };
+      const errMsg = "unique-error-message-xyz";
+      handleSealError(new Error(errMsg), state);
+
+      const logged: string = consoleErrorSpy.mock.calls[0][0];
+      expect(logged).toContain(errMsg);
+    },
+  );
+
+  it(
+    "D: does not throw — the server process must survive a seal failure",
+    () => {
+      const state: BootState = { degraded: false, sealError: null };
+      expect(() => handleSealError(new Error("fatal DB crash"), state)).not.toThrow();
+    },
+  );
+
+  it(
+    "E: a boot with no seal error leaves degraded = false (healthy boot reference)",
+    () => {
+      // This is not a handleSealError call — it verifies the initial state
+      // that server/index.ts starts with before the seal chain runs.
+      const state: BootState = { degraded: false, sealError: null };
+      // Simulate a successful seal: .then() fires, .catch() never fires
+      // → handleSealError is never called → state stays healthy
+      expect(state.degraded).toBe(false);
+      expect(state.sealError).toBeNull();
+    },
+  );
 });

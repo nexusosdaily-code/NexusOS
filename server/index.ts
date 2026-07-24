@@ -9,6 +9,7 @@ import { spawn, execSync, ChildProcess } from "child_process";
 import { seedGenesisBlock } from "./genesis";
 import { seedGenesisUser, seedReplitAIAccount, seedBlockedEntities } from "./genesis_user";
 import { sealConstitution } from "./constitution_seal";
+import { bootState, handleSealError } from "./seal-boot-guard";
 import { startBlockchainAuditor } from "./blockchain_auditor";
 import { seedGenesisNode } from "./genesis_node";
 import { startKernelAgents } from "./kernel_agents";
@@ -263,7 +264,13 @@ app.get("/.well-known/apple-app-site-association", (_req, res) => {
 // that the uptime monitor records as outages on every deploy.
 // Fix: answer / with 200 during the startup window, then hand off to static.
 let serverReady = false;
-app.get("/health", (_req, res) => res.json({ status: "ok", ready: serverReady, ts: Date.now() }));
+app.get("/health", (_req, res) => res.json({
+  status:   bootState.degraded ? "degraded" : "ok",
+  ready:    serverReady,
+  degraded: bootState.degraded,
+  ...(bootState.sealError ? { sealError: bootState.sealError } : {}),
+  ts: Date.now(),
+}));
 app.get("/", (req, res, next) => {
   if (!serverReady) return res.status(200).send("ok");
   next();
@@ -778,18 +785,19 @@ async function runStartupMigrations() {
         // false = already existed, which is the normal path on restarts
       })
       .catch((e: any) => {
-        const msg = e?.message ?? String(e);
-        console.error("[CONSTITUTION] SEAL FAILED — constitution block was NOT written:", msg);
+        // Mark boot degraded + emit [FATAL] log (never silent)
+        handleSealError(e);
         // Fire-and-forget Telegram alert so the founder is notified immediately
         const token = process.env.TELEGRAM_BOT_TOKEN;
         if (token) {
+          const msg = e?.message ?? String(e);
           fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               chat_id: "-1002572762871",
               parse_mode: "HTML",
-              text: `🚨 <b>NexusOS BOOT ALERT</b>\n<b>sealConstitution() failed</b>\n\nThe constitution seal was NOT written to the chain on this boot.\nThe /api/constitution/seal endpoint will return 503 until fixed.\n\n<b>Error:</b> ${msg.slice(0, 300)}`,
+              text: `🚨 <b>NexusOS BOOT ALERT</b>\n<b>sealConstitution() FATAL failure</b>\n\nServer is running DEGRADED — constitution block was NOT written.\n/health returns <code>degraded: true</code> until fixed.\n\n<b>Error:</b> ${msg.slice(0, 300)}`,
             }),
           }).catch(() => {});
         }
