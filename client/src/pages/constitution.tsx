@@ -1,7 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
-import { Shield, ArrowLeft, Lock, Globe, Cpu, Users, Scale, AlertTriangle, Clock, CheckCircle2, Loader2, FileEdit } from "lucide-react";
+import { useState } from "react";
+import { Shield, ArrowLeft, Lock, Globe, Cpu, Users, Scale, AlertTriangle, Clock, CheckCircle2, Loader2, FileEdit, PlusCircle, X, Send } from "lucide-react";
 
 const SPECTRAL_BANDS = [
   {
@@ -221,6 +223,57 @@ function SealSection() {
       query.state.data === null && !query.state.error ? 5_000 : false,
   });
 
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const canPropose =
+    user?.spectralBand === "SYSTEM" || user?.spectralBand === "KERNEL";
+
+  const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+
+  const mutation = useMutation({
+    mutationFn: async (payload: { title: string; body: string }) => {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token && token !== "undefined" && token !== "null") {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      const res = await fetch("/api/constitution/amendments", {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error ?? "Failed to mine amendment block");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/constitution/seal"] });
+      setFormOpen(false);
+      setTitle("");
+      setBody("");
+      setFormError(null);
+    },
+    onError: (err: Error) => {
+      setFormError(err.message);
+    },
+  });
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+    if (!title.trim()) { setFormError("Title is required."); return; }
+    if (!body.trim())  { setFormError("Amendment body is required."); return; }
+    mutation.mutate({ title: title.trim(), body: body.trim() });
+  }
+
   const SEAL_COLOR = "#22d3ee";
   const sealFailed = (error as SealFetchError)?.status === 503;
 
@@ -354,16 +407,19 @@ function SealSection() {
         </div>
       </div>
 
-      {/* Amendment log — only shown when amendments exist */}
-      {data.amendments && data.amendments.length > 0 && (
-        <div className="space-y-3" data-testid="section-amendment-log">
-          <div className="flex items-center gap-2">
-            <FileEdit className="w-4 h-4 text-amber-400" />
-            <span className="text-sm font-bold text-white">Amendment History</span>
+      {/* Amendment log — always shown once seal is loaded */}
+      <div className="space-y-3" data-testid="section-amendment-log">
+        <div className="flex items-center gap-2">
+          <FileEdit className="w-4 h-4 text-amber-400" />
+          <span className="text-sm font-bold text-white">Amendment History</span>
+          {data.amendments && data.amendments.length > 0 && (
             <span className="text-xs font-mono text-amber-400 border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded-full">
               {data.amendments.length} amendment{data.amendments.length !== 1 ? "s" : ""}
             </span>
-          </div>
+          )}
+        </div>
+
+        {data.amendments && data.amendments.length > 0 ? (
           <div className="max-h-72 overflow-y-auto rounded-xl border border-amber-500/20 bg-amber-500/5 divide-y divide-amber-500/10">
             {data.amendments.map((amendment, idx) => {
               const amendDate = amendment.timestamp
@@ -412,9 +468,142 @@ function SealSection() {
               );
             })}
           </div>
-          <p className="text-[10px] text-slate-600 text-center">
-            Amendment blocks are appended to the chain — the original seal is never altered or deleted (Article VI).
-          </p>
+        ) : (
+          <div className="rounded-xl border border-amber-500/10 bg-amber-500/5 px-4 py-5 text-center">
+            <p className="text-xs text-slate-500 font-mono">No amendments on-chain yet.</p>
+          </div>
+        )}
+
+        <p className="text-[10px] text-slate-600 text-center">
+          Amendment blocks are appended to the chain — the original seal is never altered or deleted (Article VI).
+        </p>
+      </div>
+
+      {/* Propose Amendment — SYSTEM/KERNEL only */}
+      {canPropose && (
+        <div className="space-y-3" data-testid="section-propose-amendment">
+          {!formOpen ? (
+            <button
+              data-testid="button-propose-amendment"
+              onClick={() => { setFormOpen(true); setFormError(null); }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-amber-500/30 bg-amber-500/8 text-amber-300 text-sm font-semibold hover:bg-amber-500/15 hover:border-amber-500/50 transition-colors"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Propose Amendment
+              <span
+                className="ml-1 text-[10px] font-mono px-1.5 py-0.5 rounded"
+                style={{
+                  background: user?.spectralBand === "SYSTEM" ? "rgba(139,0,255,0.20)" : "rgba(37,99,235,0.20)",
+                  color:      user?.spectralBand === "SYSTEM" ? "#c084fc" : "#93c5fd",
+                }}
+              >
+                {user?.spectralBand}
+              </span>
+            </button>
+          ) : (
+            <form
+              onSubmit={handleSubmit}
+              data-testid="form-propose-amendment"
+              className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileEdit className="w-4 h-4 text-amber-400" />
+                  <span className="text-sm font-bold text-white">New Amendment Block</span>
+                  <span
+                    className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                    style={{
+                      background: user?.spectralBand === "SYSTEM" ? "rgba(139,0,255,0.20)" : "rgba(37,99,235,0.20)",
+                      color:      user?.spectralBand === "SYSTEM" ? "#c084fc" : "#93c5fd",
+                    }}
+                  >
+                    {user?.spectralBand} · {user?.username}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  data-testid="button-close-amendment-form"
+                  onClick={() => { setFormOpen(false); setFormError(null); setTitle(""); setBody(""); }}
+                  className="text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold" htmlFor="amendment-title">
+                  Amendment Title
+                </label>
+                <input
+                  id="amendment-title"
+                  data-testid="input-amendment-title"
+                  type="text"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  maxLength={200}
+                  placeholder="e.g. Article VII — Emergency Protocol Override"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 transition-colors font-mono"
+                />
+                <div className="text-right text-[10px] text-slate-600 font-mono">{title.length}/200</div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold" htmlFor="amendment-body">
+                  Amendment Body
+                </label>
+                <textarea
+                  id="amendment-body"
+                  data-testid="textarea-amendment-body"
+                  value={body}
+                  onChange={e => setBody(e.target.value)}
+                  maxLength={4000}
+                  rows={6}
+                  placeholder="Write the full text of the amendment here. This will be stored verbatim on-chain."
+                  className="w-full rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 transition-colors font-mono resize-none"
+                />
+                <div className="text-right text-[10px] text-slate-600 font-mono">{body.length}/4000</div>
+              </div>
+
+              {formError && (
+                <div
+                  data-testid="text-amendment-error"
+                  className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-400"
+                >
+                  {formError}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="submit"
+                  data-testid="button-submit-amendment"
+                  disabled={mutation.isPending}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-sm font-semibold hover:bg-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {mutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                  {mutation.isPending ? "Mining block…" : "Mine Amendment Block"}
+                </button>
+                <button
+                  type="button"
+                  data-testid="button-cancel-amendment"
+                  onClick={() => { setFormOpen(false); setFormError(null); setTitle(""); setBody(""); }}
+                  disabled={mutation.isPending}
+                  className="text-sm text-slate-500 hover:text-slate-300 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <p className="text-[10px] text-slate-600">
+                This action mines a <code className="font-mono">CONSTITUTION_AMENDMENT[vN]</code> block
+                on-chain at your authority band. It cannot be undone.
+              </p>
+            </form>
+          )}
         </div>
       )}
     </section>

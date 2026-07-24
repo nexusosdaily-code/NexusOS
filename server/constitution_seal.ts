@@ -339,6 +339,120 @@ export async function sealConstitution(): Promise<boolean> {
   }
 }
 
+// Physics constants (reused for amendment block mining)
+const C_AMEND = 299_792_458;
+const H_AMEND = 6.62607015e-34;
+
+/**
+ * Mine a CONSTITUTION_AMENDMENT block on behalf of a SYSTEM/KERNEL operator.
+ *
+ * The block content follows the pattern:
+ *   CONSTITUTION_AMENDMENT[vN]: <title> | author=<username> | band=<band> | psi=<psi> | body=<body> | t=<ms>
+ *
+ * Returns the new block number and its timestamp.
+ * Throws on any DB error — caller must handle.
+ */
+export async function mineAmendmentBlock(params: {
+  title: string;
+  body: string;
+  authoredBand: string;
+  authorUsername: string;
+  authorWdm: number;
+  authorOam: number;
+  authorPol: string;
+}): Promise<{ blockNumber: number; timestamp: string }> {
+  const { pool } = await import("./db");
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Count existing amendment blocks to derive version number
+    const amendCount = await client.query(
+      `SELECT COUNT(*) AS cnt FROM blockchain_blocks
+       WHERE content LIKE 'CONSTITUTION_AMENDMENT[v%]:%'`
+    );
+    const versionNum = parseInt(amendCount.rows[0]?.cnt ?? "0", 10) + 1;
+
+    // Next sequential block number (inside the transaction for consistency)
+    const latestRes = await client.query(
+      `SELECT COALESCE(MAX(block_number), -1) AS max_num FROM blockchain_blocks`
+    );
+    const nextNumber: number = (parseInt(latestRes.rows[0]?.max_num, 10) ?? -1) + 1;
+
+    const prevRes = await client.query(
+      `SELECT psi_channel FROM blockchain_blocks ORDER BY block_number DESC LIMIT 1`
+    );
+    const previousPsi: string | null = prevRes.rows[0]?.psi_channel ?? null;
+
+    const psi = `Ψ(${params.authorWdm},${params.authorOam},${params.authorPol})`;
+
+    // Physics derived from the author's WDM channel (380–780 nm range)
+    const wavelengthNm = 380 + (params.authorWdm / 255) * 400;
+    const freqHz = C_AMEND / (wavelengthNm * 1e-9);
+    const energyJ = H_AMEND * freqHz;
+    const lambdaKg = energyJ / (C_AMEND * C_AMEND);
+
+    // Sanitise body — pipe chars would break the field parser
+    const safeBody = params.body.replace(/\|/g, ";");
+
+    const content = [
+      `CONSTITUTION_AMENDMENT[v${versionNum}]: ${params.title}`,
+      `author=${params.authorUsername}`,
+      `band=${params.authoredBand}`,
+      `psi=${psi}`,
+      `body=${safeBody}`,
+      `t=${Date.now()}`,
+    ].join(" | ");
+
+    await client.query(
+      `INSERT INTO blockchain_blocks
+         (block_number, content, wavelength_nm, psi_channel, wdm, oam, polarisation,
+          band, energy_joules, lambda_mass_kg, frequency_hz, previous_psi,
+          nxt_reward, miner_address, tx_count, transactions)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+      [
+        nextNumber,
+        content,
+        wavelengthNm.toFixed(4),
+        psi,
+        params.authorWdm,
+        params.authorOam,
+        params.authorPol,
+        params.authoredBand,
+        energyJ.toExponential(20),
+        lambdaKg.toExponential(20),
+        freqHz.toFixed(4),
+        previousPsi,
+        "0.00000000",
+        params.authorUsername,
+        1,
+        JSON.stringify([{
+          type: "CONSTITUTION_AMENDMENT",
+          version: versionNum,
+          title: params.title,
+          author: params.authorUsername,
+          ts: Date.now(),
+        }]),
+      ]
+    );
+
+    const minedAt = new Date();
+    await client.query("COMMIT");
+
+    console.log(
+      `[CONSTITUTION] Amendment v${versionNum} mined at block #${nextNumber}` +
+      ` by ${params.authorUsername} (${params.authoredBand}) — "${params.title}"`
+    );
+
+    return { blockNumber: nextNumber, timestamp: minedAt.toISOString() };
+  } catch (err) {
+    try { await client.query("ROLLBACK"); } catch {}
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 export interface ConstitutionAmendment {
   blockNumber: number;
   title: string;
