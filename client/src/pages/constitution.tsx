@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { Link } from "wouter";
-import { Shield, ArrowLeft, Lock, Globe, Cpu, Users, Scale, AlertTriangle, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { Shield, ArrowLeft, Lock, Globe, Cpu, Users, Scale, AlertTriangle, Clock, CheckCircle2, Loader2, FileEdit } from "lucide-react";
 
 const SPECTRAL_BANDS = [
   {
@@ -166,6 +166,13 @@ function NmBadge({ nm, color }: { nm: string; color: string }) {
   );
 }
 
+interface SealAmendment {
+  blockNumber: number;
+  title: string;
+  authoredBand: string;
+  timestamp: string;
+}
+
 interface SealData {
   blockNumber: number;
   psiChannel: string;
@@ -176,6 +183,7 @@ interface SealData {
   energyJoules: number;
   band: string;
   declaration: string;
+  amendments: SealAmendment[];
 }
 
 function SealSection() {
@@ -290,6 +298,70 @@ function SealSection() {
           </p>
         </div>
       </div>
+
+      {/* Amendment log — only shown when amendments exist */}
+      {data.amendments && data.amendments.length > 0 && (
+        <div className="space-y-3" data-testid="section-amendment-log">
+          <div className="flex items-center gap-2">
+            <FileEdit className="w-4 h-4 text-amber-400" />
+            <span className="text-sm font-bold text-white">Amendment History</span>
+            <span className="text-xs font-mono text-amber-400 border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded-full">
+              {data.amendments.length} amendment{data.amendments.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="max-h-72 overflow-y-auto rounded-xl border border-amber-500/20 bg-amber-500/5 divide-y divide-amber-500/10">
+            {data.amendments.map((amendment, idx) => {
+              const amendDate = amendment.timestamp
+                ? new Date(amendment.timestamp).toLocaleString("en-NZ", {
+                    timeZone: "Pacific/Auckland",
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })
+                : "—";
+              return (
+                <div
+                  key={amendment.blockNumber}
+                  className="flex items-start gap-4 px-4 py-3"
+                  data-testid={`amendment-entry-${amendment.blockNumber}`}
+                >
+                  <div className="flex-shrink-0 flex flex-col items-center gap-1 mt-0.5">
+                    <div className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[9px] font-mono text-amber-400">
+                      {idx + 1}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="text-sm font-semibold text-white truncate" data-testid={`amendment-title-${amendment.blockNumber}`}>
+                      {amendment.title}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
+                        Block <span className="text-amber-400">#{amendment.blockNumber}</span>
+                      </span>
+                      <span
+                        className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                        style={{
+                          background: amendment.authoredBand === "SYSTEM" ? "rgba(139,0,255,0.15)" : "rgba(37,99,235,0.15)",
+                          color: amendment.authoredBand === "SYSTEM" ? "#a855f7" : "#60a5fa",
+                        }}
+                        data-testid={`amendment-band-${amendment.blockNumber}`}
+                      >
+                        {amendment.authoredBand}
+                      </span>
+                      <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                        <Clock className="w-2.5 h-2.5" />
+                        {amendDate}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-slate-600 text-center">
+            Amendment blocks are appended to the chain — the original seal is never altered or deleted (Article VI).
+          </p>
+        </div>
+      )}
     </section>
   );
 }

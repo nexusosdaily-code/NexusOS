@@ -4947,6 +4947,7 @@ export async function registerRoutes(
         band:         "SYSTEM",
         declaration:  "NexusOS Constitution sealed at SYSTEM band — immutable, physics-signed",
         verifyHash:   computeConstitutionHash(),
+        amendments:   seal.amendments,
       });
     } catch (err: any) {
       return res.status(500).json({ error: "Failed to read constitution seal", message: err.message });

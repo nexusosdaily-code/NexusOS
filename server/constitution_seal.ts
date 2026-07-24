@@ -339,6 +339,13 @@ export async function sealConstitution(): Promise<boolean> {
   }
 }
 
+export interface ConstitutionAmendment {
+  blockNumber: number;
+  title: string;
+  authoredBand: string;
+  timestamp: string;
+}
+
 /**
  * Read the current seal metadata.
  * Primary source: blockchain_blocks (on-chain truth).
@@ -353,6 +360,7 @@ export async function getConstitutionSeal(): Promise<{
   sealedAt: string;
   frequencyHz: number;
   energyJoules: number;
+  amendments: ConstitutionAmendment[];
 } | null> {
   try {
     const { pool } = await import("./db");
@@ -375,6 +383,26 @@ export async function getConstitutionSeal(): Promise<{
        LIMIT 1`
     );
 
+    // Also query amendment blocks
+    const amendmentRows = await pool.query(
+      `SELECT block_number, content, band, mined_at
+       FROM blockchain_blocks
+       WHERE content LIKE 'CONSTITUTION_AMENDMENT[v%]:%'
+       ORDER BY block_number ASC`
+    );
+
+    const amendments: ConstitutionAmendment[] = amendmentRows.rows.map((r: any) => {
+      // Extract title from content: CONSTITUTION_AMENDMENT[vN]: <title> | ...
+      const titleMatch = r.content?.match(/^CONSTITUTION_AMENDMENT\[v\d+\]:\s*([^|]+)/);
+      const title = titleMatch ? titleMatch[1].trim() : `Amendment block #${r.block_number}`;
+      return {
+        blockNumber:  parseInt(r.block_number, 10),
+        title,
+        authoredBand: r.band ?? "SYSTEM",
+        timestamp:    r.mined_at?.toISOString() ?? "",
+      };
+    });
+
     if (blockRow.rows.length) {
       const row = blockRow.rows[0];
       // Extract hash from content field
@@ -388,6 +416,7 @@ export async function getConstitutionSeal(): Promise<{
         sealedAt:     row.mined_at?.toISOString() ?? "",
         frequencyHz:  CONSTITUTION_FREQ_HZ,
         energyJoules: CONSTITUTION_ENERGY_J,
+        amendments,
       };
     }
 
@@ -416,6 +445,7 @@ export async function getConstitutionSeal(): Promise<{
       sealedAt:     kv["constitution_sealed_at"]      ?? "",
       frequencyHz:  CONSTITUTION_FREQ_HZ,
       energyJoules: CONSTITUTION_ENERGY_J,
+      amendments,
     };
   } catch {
     return null;
