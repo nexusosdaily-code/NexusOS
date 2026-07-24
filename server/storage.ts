@@ -174,6 +174,7 @@ export interface IStorage {
   saveTelegramVideo(video: InsertTelegramVideo): Promise<TelegramVideo>;
   getTelegramVideos(limit?: number): Promise<TelegramVideo[]>;
   getTelegramVideo(id: number): Promise<TelegramVideo | undefined>;
+  getPublishedTelegramVideo(id: number): Promise<TelegramVideo | undefined>;
   getTelegramVideoByFileUniqueId(fileUniqueId: string): Promise<TelegramVideo | undefined>;
 
   // Governance operations
@@ -1320,6 +1321,13 @@ export class DatabaseStorage implements IStorage {
 
   async getTelegramVideo(id: number): Promise<TelegramVideo | undefined> {
     const [video] = await db.select().from(telegramVideos).where(eq(telegramVideos.id, id));
+    return video;
+  }
+
+  async getPublishedTelegramVideo(id: number): Promise<TelegramVideo | undefined> {
+    const [video] = await db.select().from(telegramVideos).where(
+      and(eq(telegramVideos.id, id), eq(telegramVideos.isPublished, true))
+    );
     return video;
   }
 

@@ -773,8 +773,9 @@ export function serveStatic(app: Express) {
       // First-party video detail page — emit a canonical VideoObject that
       // resolves to this NexusOS URL, with Telegram kept as a secondary
       // outbound (sameAs) reference only.
+      // Only published records are served publicly; unpublished IDs → 404.
       try {
-        const video = await storage.getTelegramVideo(Number(videoDetailMatch[1]));
+        const video = await storage.getPublishedTelegramVideo(Number(videoDetailMatch[1]));
         if (video) {
           const meta = buildVideoDetailPageMeta(video);
           html = injectCustomMeta(getHtml(), meta);
@@ -783,7 +784,13 @@ export function serveStatic(app: Express) {
           html = injectMeta(getHtml(), host, pathname);
         }
       } catch {
-        html = injectMeta(getHtml(), host, pathname);
+        // Storage error: signal a temporary failure rather than serving
+        // home-page metadata under a video URL (which would mislead crawlers).
+        res.status(503)
+          .set("Retry-After", "30")
+          .set("Content-Type", "text/html; charset=utf-8")
+          .send("<!doctype html><html><head><title>Service Unavailable</title></head><body><p>Temporarily unavailable. Please try again shortly.</p></body></html>");
+        return;
       }
     } else {
       html = injectMeta(getHtml(), host, pathname);
