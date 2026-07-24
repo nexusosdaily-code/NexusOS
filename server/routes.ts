@@ -4902,6 +4902,37 @@ export async function registerRoutes(
     });
   });
 
+  // ============================================
+  // CONSTITUTION SEAL — public, no auth required
+  // ============================================
+
+  app.get("/api/constitution/seal", async (_req: Request, res: Response) => {
+    try {
+      const { getConstitutionSeal, computeConstitutionHash } = await import("./constitution_seal");
+      const seal = await getConstitutionSeal();
+      if (!seal) {
+        return res.status(404).json({
+          error: "Constitution not yet sealed",
+          message: "The genesis sealing process runs at server startup. Try again in a few seconds.",
+        });
+      }
+      return res.json({
+        blockNumber:  seal.blockNumber,
+        psiChannel:   seal.psiChannel,
+        wavelengthNm: seal.wavelengthNm,
+        hash:         seal.hash,
+        timestamp:    seal.sealedAt,
+        frequencyHz:  seal.frequencyHz,
+        energyJoules: seal.energyJoules,
+        band:         "SYSTEM",
+        declaration:  "NexusOS Constitution sealed at SYSTEM band — immutable, physics-signed",
+        verifyHash:   computeConstitutionHash(),
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: "Failed to read constitution seal", message: err.message });
+    }
+  });
+
   // ── Agent Message Bus API ─────────────────────────────────────────
   // Proxy to the Python WNSP bus + persistent message history in PostgreSQL
 

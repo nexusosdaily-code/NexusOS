@@ -8,6 +8,7 @@ import { createServer } from "http";
 import { spawn, execSync, ChildProcess } from "child_process";
 import { seedGenesisBlock } from "./genesis";
 import { seedGenesisUser, seedReplitAIAccount, seedBlockedEntities } from "./genesis_user";
+import { sealConstitution } from "./constitution_seal";
 import { startBlockchainAuditor } from "./blockchain_auditor";
 import { seedGenesisNode } from "./genesis_node";
 import { startKernelAgents } from "./kernel_agents";
@@ -767,7 +768,10 @@ async function runStartupMigrations() {
     // Wave 1 — 2s: core chain/genesis
     await delay(2_000);
     seedGenesisUser().catch((e) => console.error("[GENESIS USER] Boot error:", e));
-    seedGenesisBlock().catch(() => {});
+    // sealConstitution runs AFTER seedGenesisBlock to avoid block-number races
+    seedGenesisBlock()
+      .then(() => sealConstitution())
+      .catch((e) => console.error("[CONSTITUTION] Seal error:", e));
     seedGenesisNode().catch((e) => console.error("[GENESIS NODE] Error:", e));
     seedReplitAIAccount().catch((e) => console.error("[GENESIS] Replit AI seed error:", e));
     seedBlockedEntities().catch((e) => console.error("[GENESIS] Blocked entities error:", e));
