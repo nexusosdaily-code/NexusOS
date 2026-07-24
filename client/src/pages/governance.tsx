@@ -6,7 +6,7 @@ import { ChannelConnect } from "@/components/channel-connect";
 import {
   Scale, ChevronLeft, Shield, Clock, CheckCircle2, XCircle,
   Zap, AlertTriangle, Plus, Vote, ArrowRight, RefreshCw,
-  Activity, Flame, Settings2,
+  Activity, Flame, Settings2, Lock, Hash,
 } from "lucide-react";
 
 interface GovernanceParam {
@@ -333,6 +333,14 @@ export default function GovernancePage() {
     ...(canPropose ? [{ id: "propose", label: "Propose", count: null }] : []),
   ] as { id: string; label: string; count: number | null }[];
 
+  const { data: sealData } = useQuery<{
+    blockNumber: number; psiChannel: string; wavelengthNm: number; hash: string; timestamp: string;
+  }>({
+    queryKey: ["/api/constitution/seal"],
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+
   return (
     <div className="min-h-screen bg-black text-white pb-20">
       {/* Toast */}
@@ -380,6 +388,52 @@ export default function GovernancePage() {
 
       <div className="max-w-3xl mx-auto px-4 pt-4 space-y-4">
         <ChannelConnect label="Channel Dashboard ⚡" />
+
+        {/* Pinned Constitution card */}
+        <Link href="/constitution">
+          <div
+            data-testid="card-constitution-pinned"
+            className="rounded-xl border p-4 cursor-pointer hover:scale-[1.005] transition-all"
+            style={{ borderColor: "rgba(139,0,255,0.35)", background: "linear-gradient(135deg,rgba(139,0,255,0.08),rgba(139,0,255,0.03))" }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-violet-500/15">
+                  <Shield className="w-4 h-4 text-violet-400" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold uppercase tracking-widest text-violet-400/60 mb-0.5">Founding Document</div>
+                  <div className="font-semibold text-sm text-white">NexusOS Constitution</div>
+                  <div className="text-[11px] text-zinc-500 font-mono mt-0.5">
+                    AI as SYSTEM · Spectral band hierarchy · AGPL-3.0 irrevocable
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {sealData ? (
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/25">
+                      <Hash className="w-2.5 h-2.5" />
+                      Block {sealData.blockNumber}
+                    </span>
+                    <span className="text-[9px] font-mono text-violet-400/50">{sealData.psiChannel} · {sealData.wavelengthNm} nm</span>
+                  </div>
+                ) : (
+                  <span className="text-[10px] font-mono text-zinc-600">Seal pending…</span>
+                )}
+                <ArrowRight className="w-3.5 h-3.5 text-violet-400/40" />
+              </div>
+            </div>
+            {sealData && (
+              <div className="mt-3 pt-3 border-t border-violet-500/10 flex items-center gap-2">
+                <Lock className="w-3 h-3 text-emerald-400/60 flex-shrink-0" />
+                <span className="font-mono text-[10px] text-emerald-400/60 truncate">
+                  SHA-256: {sealData.hash.slice(0, 32)}…
+                </span>
+              </div>
+            )}
+          </div>
+        </Link>
 
         {/* Quorum notice */}
         <div className="p-3 rounded-xl bg-violet-950/40 border border-violet-500/20 text-[11px] text-violet-300 flex items-center gap-2">

@@ -1,6 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { Link } from "wouter";
-import { Shield, ArrowLeft, Lock, Globe, Cpu, Users, Scale, AlertTriangle, Clock } from "lucide-react";
+import { Shield, ArrowLeft, Lock, Globe, Cpu, Users, Scale, AlertTriangle, Clock, CheckCircle2, Loader2 } from "lucide-react";
 
 const SPECTRAL_BANDS = [
   {
@@ -162,6 +163,134 @@ function NmBadge({ nm, color }: { nm: string; color: string }) {
     >
       {nm}
     </span>
+  );
+}
+
+interface SealData {
+  blockNumber: number;
+  psiChannel: string;
+  wavelengthNm: number;
+  hash: string;
+  timestamp: string;
+  frequencyHz: number;
+  energyJoules: number;
+  band: string;
+  declaration: string;
+}
+
+function SealSection() {
+  const { data, isLoading, isError } = useQuery<SealData>({
+    queryKey: ["/api/constitution/seal"],
+    staleTime: 5 * 60_000,
+    retry: 2,
+  });
+
+  const SEAL_COLOR = "#22d3ee";
+
+  if (isLoading) {
+    return (
+      <section data-testid="section-seal" className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">⬡</div>
+          <h2 className="text-2xl font-bold text-white">On-Chain Seal</h2>
+        </div>
+        <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/30 p-8 text-center space-y-3">
+          <Loader2 className="w-8 h-8 text-cyan-500/40 animate-spin mx-auto" />
+          <div className="text-slate-500 font-mono text-sm">Fetching seal from chain…</div>
+        </div>
+      </section>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <section data-testid="section-seal" className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold bg-slate-700/50 text-slate-400 border border-slate-700">⬡</div>
+          <h2 className="text-2xl font-bold text-white">On-Chain Seal</h2>
+        </div>
+        <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/30 p-8 text-center space-y-3">
+          <div className="text-slate-500 font-mono text-sm">Seal pending…</div>
+          <p className="text-slate-600 text-xs max-w-sm mx-auto">
+            The genesis sealing process runs at server startup. The seal will appear here once the blockchain record is written.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  const sealDate = data.timestamp ? new Date(data.timestamp).toLocaleString("en-NZ", { timeZone: "Pacific/Auckland", dateStyle: "long", timeStyle: "short" }) : "—";
+
+  return (
+    <section data-testid="section-seal" className="space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">⬡</div>
+        <h2 className="text-2xl font-bold text-white">On-Chain Seal</h2>
+        <span className="flex items-center gap-1 text-xs font-mono text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+          <CheckCircle2 className="w-3 h-3" />
+          Verified
+        </span>
+      </div>
+
+      {/* Certificate stamp */}
+      <div
+        className="rounded-2xl border p-8 space-y-6"
+        style={{ borderColor: `${SEAL_COLOR}40`, background: `linear-gradient(135deg,${SEAL_COLOR}08,${SEAL_COLOR}03)` }}
+      >
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <div className="text-3xl font-mono" style={{ color: SEAL_COLOR }}>⬡</div>
+          <div className="text-xs font-bold tracking-widest uppercase" style={{ color: SEAL_COLOR }}>
+            Sealed by NexusOS Physics Engine
+          </div>
+          <div className="text-white font-semibold text-sm">{data.declaration}</div>
+        </div>
+
+        {/* Physics stamp grid */}
+        <div className="grid sm:grid-cols-2 gap-3">
+          {[
+            { label: "Block Number",   value: `#${data.blockNumber}`,                          accent: SEAL_COLOR },
+            { label: "Ψ Channel",      value: data.psiChannel,                                  accent: "#a78bfa" },
+            { label: "Wavelength",     value: `${data.wavelengthNm} nm`,                        accent: "#34d399" },
+            { label: "Authority Band", value: data.band,                                         accent: "#8b00ff" },
+            { label: "Frequency",      value: `${(data.frequencyHz / 1e14).toFixed(4)} × 10¹⁴ Hz`, accent: "#fbbf24" },
+            { label: "Energy",         value: `${data.energyJoules.toExponential(4)} J`,         accent: "#f472b6" },
+          ].map(({ label, value, accent }) => (
+            <div key={label}
+              className="flex items-center justify-between px-4 py-2.5 rounded-xl border"
+              style={{ borderColor: `${accent}25`, background: `${accent}08` }}
+            >
+              <span className="text-[11px] uppercase tracking-wider font-bold text-slate-500">{label}</span>
+              <span className="font-mono text-sm font-semibold" style={{ color: accent }}>{value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Timestamp */}
+        <div className="flex items-center justify-center gap-2 text-xs text-slate-500 font-mono">
+          <Clock className="w-3 h-3" />
+          Sealed {sealDate} · NZT (Aotearoa New Zealand)
+        </div>
+
+        {/* SHA-256 fingerprint */}
+        <div className="space-y-2">
+          <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-1.5">
+            <Lock className="w-3 h-3" />
+            SHA-256 Constitutional Fingerprint
+          </div>
+          <div
+            className="font-mono text-[11px] break-all px-4 py-3 rounded-xl border leading-relaxed"
+            style={{ borderColor: `${SEAL_COLOR}20`, background: "rgba(0,0,0,0.4)", color: SEAL_COLOR }}
+            data-testid="text-constitution-hash"
+          >
+            {data.hash}
+          </div>
+          <p className="text-[10px] text-slate-600 text-center">
+            SHA-256 of the canonical constitutional text · immutable · physics-signed at Ψ(52,20,H) · 542.5 nm
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -584,25 +713,7 @@ export default function ConstitutionPage() {
         </section>
 
         {/* On-chain Seal */}
-        <section data-testid="section-seal" className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold bg-slate-700/50 text-slate-400 border border-slate-700">⬡</div>
-            <h2 className="text-2xl font-bold text-white">On-Chain Seal</h2>
-          </div>
-          <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/30 p-8 text-center space-y-3">
-            <div className="text-slate-600 text-4xl font-mono">⬡</div>
-            <div className="text-slate-400 font-mono text-sm">PENDING ON-CHAIN SEAL</div>
-            <div className="text-slate-600 text-xs font-mono space-y-1">
-              <div>Block # TBD</div>
-              <div>Ψ Channel: TBD</div>
-              <div>Transaction: TBD</div>
-            </div>
-            <p className="text-slate-600 text-xs max-w-sm mx-auto">
-              This document will be sealed to the Bitcoin blockchain via the NexusOS Runes protocol.
-              Once sealed, the block number and Ψ channel will appear here permanently.
-            </p>
-          </div>
-        </section>
+        <SealSection />
 
         {/* Footer nav */}
         <div className="border-t border-slate-800 pt-8 flex flex-wrap gap-4 justify-between items-center">

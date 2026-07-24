@@ -759,6 +759,12 @@ function NavDropdowns() {
   const [, navigate] = useLocation();
   const barRef = useRef<HTMLDivElement>(null);
 
+  const { data: sealData } = useQuery<{ blockNumber: number }>({
+    queryKey: ["/api/constitution/seal"],
+    staleTime: 10 * 60_000,
+    retry: 1,
+  });
+
   // Close on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -833,6 +839,11 @@ function NavDropdowns() {
                   >
                     <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: section.accent }} />
                     <span className="truncate text-xs">{title}</span>
+                    {href === "/constitution" && sealData?.blockNumber != null && (
+                      <span className="ml-auto flex-shrink-0 font-mono text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/25">
+                        #{sealData.blockNumber}
+                      </span>
+                    )}
                   </div>
                 </Link>
               ))}
