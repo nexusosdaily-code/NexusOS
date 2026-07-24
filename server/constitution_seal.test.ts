@@ -37,7 +37,7 @@ vi.mock("./db", () => ({
 // and returns null (it is best-effort — the seal should proceed regardless).
 vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("fetch blocked in tests")));
 
-import { sealConstitution } from "./constitution_seal";
+import { sealConstitution, computeConstitutionHash } from "./constitution_seal";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -329,6 +329,118 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
         ([sql]) => typeof sql === "string" && sql.includes("INSERT INTO blockchain_blocks"),
       );
       expect(blockInsert).toBeUndefined();
+    },
+  );
+
+  it(
+    "backfill writes every constant with values derived exactly from the surviving block row",
+    async () => {
+      // Simulate the partial-failure state: blockchain_blocks has the seal block
+      // but system_constants was never written (crash between INSERT and upsert).
+      const crashedBlock = {
+        id:           7,
+        block_number: 7,
+        psi_channel:  "Ψ(52,20,H)",
+        mined_at:     new Date("2026-05-16T08:00:00.000Z"),
+      };
+
+      let backfillParams: unknown[] | null = null;
+
+      const mockClient = makeMockClient(async (sql, params) => {
+        if (sql.includes("pg_advisory_xact_lock")) return { rows: [] };
+        if (sql.includes("CONSTITUTION_SEAL[v1]")) {
+          return { rows: [crashedBlock] };
+        }
+        // constCheck — constants missing (mid-seal crash state)
+        if (sql.includes("constitution_block_number") && sql.includes("SELECT value")) {
+          return { rows: [] };
+        }
+        // Capture the exact backfill params
+        if (sql.includes("INSERT INTO system_constants")) {
+          backfillParams = params ?? null;
+          return { rows: [] };
+        }
+        return { rows: [] };
+      });
+
+      mockPoolConnect.mockResolvedValue(mockClient);
+
+      const result = await sealConstitution();
+
+      expect(result).toBe(false);
+      expect(backfillParams, "backfill INSERT must have fired").not.toBeNull();
+
+      // The INSERT binds: ($1=block_number, $2=now/sealed_at, $3=psi_channel,
+      //                    $4=wavelength_nm, $5=hash)
+      const [p1, p2, p3, p4, p5] = backfillParams as [string, string, string, string, string];
+
+      // $1 — block_number: must match the surviving block's number exactly
+      expect(p1).toBe(String(crashedBlock.block_number));
+
+      // $2 — sealed_at / timestamps: must be derived from mined_at, not now()
+      expect(p2).toBe(crashedBlock.mined_at.toISOString());
+
+      // $3 — psi_channel: must carry forward the Ψ channel from the block row
+      expect(p3).toBe(crashedBlock.psi_channel);
+
+      // $4 — wavelength_nm: must match the SYSTEM band constant (542.5 nm)
+      expect(p4).toBe("542.5");
+
+      // $5 — hash: must be the deterministic SHA-256 of the canonical constitutional text
+      expect(p5).toBe(computeConstitutionHash());
+    },
+  );
+
+  it(
+    "second boot after mid-seal crash recovers to fully consistent state without user intervention",
+    async () => {
+      // The chain state after a crash between block INSERT and constants upsert:
+      //   • blockchain_blocks row EXISTS  (block was committed before crash)
+      //   • system_constants rows MISSING (upsert never ran)
+      // On the next boot, sealConstitution() must silently repair the gap.
+      const crashedBlock = {
+        id:           3,
+        block_number: 3,
+        psi_channel:  "Ψ(52,20,H)",
+        mined_at:     new Date("2026-06-01T09:30:00.000Z"),
+      };
+
+      let backfillFired  = false;
+      let newBlockMined  = false;
+
+      const mockClient = makeMockClient(async (sql) => {
+        if (sql.includes("pg_advisory_xact_lock")) return { rows: [] };
+        if (sql.includes("CONSTITUTION_SEAL[v1]")) {
+          return { rows: [crashedBlock] };
+        }
+        // Constants are absent — simulating the partial write state
+        if (sql.includes("SELECT value") && sql.includes("constitution_block_number")) {
+          return { rows: [] };
+        }
+        if (sql.includes("INSERT INTO system_constants")) {
+          backfillFired = true;
+          return { rows: [] };
+        }
+        // A new block must NOT be mined during backfill
+        if (sql.includes("INSERT INTO blockchain_blocks")) {
+          newBlockMined = true;
+          return { rows: [] };
+        }
+        return { rows: [] };
+      });
+
+      mockPoolConnect.mockResolvedValue(mockClient);
+
+      const result = await sealConstitution();
+
+      // Must return false — block already exists, this was a recovery, not a fresh seal
+      expect(result).toBe(false);
+
+      // Constants backfill must have run to restore the missing rows
+      expect(backfillFired).toBe(true);
+
+      // The chain must be untouched — no second block should be mined
+      expect(newBlockMined).toBe(false);
     },
   );
 });
