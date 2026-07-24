@@ -185,7 +185,7 @@ interface SealData {
   energyJoules: number;
   band: string;
   declaration: string;
-  amendments: SealAmendment[];
+  amendments?: SealAmendment[];
 }
 
 interface SealFetchError extends Error {

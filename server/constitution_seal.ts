@@ -461,12 +461,39 @@ export interface ConstitutionAmendment {
 }
 
 /**
+ * Map raw blockchain_blocks amendment rows to ConstitutionAmendment objects.
+ * Pure function — no DB access. Exported for unit testing.
+ * Always returns an array (never undefined/null), even for empty input.
+ */
+export function mapAmendmentRows(rows: any[]): ConstitutionAmendment[] {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((r: any) => {
+    const titleMatch = r.content?.match(/^CONSTITUTION_AMENDMENT\[v\d+\]:\s*([^|]+)/);
+    const title = titleMatch ? titleMatch[1].trim() : `Amendment block #${r.block_number}`;
+    return {
+      blockNumber:  parseInt(r.block_number, 10),
+      title,
+      authoredBand: r.band ?? "SYSTEM",
+      timestamp:    r.mined_at instanceof Date
+        ? r.mined_at.toISOString()
+        : typeof r.mined_at === "string" ? r.mined_at : "",
+    };
+  });
+}
+
+/**
  * Read the current seal metadata.
  * Primary source: blockchain_blocks (on-chain truth).
  * Fallback: system_constants (pointer cache).
  * Returns null if the constitution has not been sealed yet.
  */
-export async function getConstitutionSeal(): Promise<{
+/** Minimal pool interface required by getConstitutionSeal — satisfied by both
+ *  the real pg Pool and lightweight test stubs. */
+export interface QueryablePool {
+  query(sql: string, params?: any[]): Promise<{ rows: any[] }>;
+}
+
+export async function getConstitutionSeal(poolOverride?: QueryablePool): Promise<{
   blockNumber: number;
   psiChannel: string;
   wavelengthNm: number;
@@ -477,7 +504,7 @@ export async function getConstitutionSeal(): Promise<{
   amendments: ConstitutionAmendment[];
 } | null> {
   try {
-    const { pool } = await import("./db");
+    const pool: QueryablePool = poolOverride ?? (await import("./db")).pool;
 
     // Check table exists
     const tableCheck = await pool.query(`
@@ -505,17 +532,7 @@ export async function getConstitutionSeal(): Promise<{
        ORDER BY block_number ASC`
     );
 
-    const amendments: ConstitutionAmendment[] = amendmentRows.rows.map((r: any) => {
-      // Extract title from content: CONSTITUTION_AMENDMENT[vN]: <title> | ...
-      const titleMatch = r.content?.match(/^CONSTITUTION_AMENDMENT\[v\d+\]:\s*([^|]+)/);
-      const title = titleMatch ? titleMatch[1].trim() : `Amendment block #${r.block_number}`;
-      return {
-        blockNumber:  parseInt(r.block_number, 10),
-        title,
-        authoredBand: r.band ?? "SYSTEM",
-        timestamp:    r.mined_at?.toISOString() ?? "",
-      };
-    });
+    const amendments: ConstitutionAmendment[] = mapAmendmentRows(amendmentRows.rows);
 
     if (blockRow.rows.length) {
       const row = blockRow.rows[0];

@@ -1,19 +1,25 @@
 /**
  * constitution_seal.test.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * Unit tests for sealConstitution() focusing on DB failure resilience and
- * advisory lock serialisation guarantees.
+ * Unit tests for the constitution sealing and read paths.
  *
- * Tests run entirely against mocked pool objects — no live DB required.
+ * sealConstitution() — DB failure resilience and advisory lock serialisation.
+ *   Tests run entirely against mocked pool objects — no live DB required.
+ *   Scenarios covered:
+ *     1. DB error thrown mid-transaction → ROLLBACK + release called, re-thrown.
+ *     2. Advisory lock held briefly by another connection → blocks then seals.
+ *     3. Already-sealed constitution (idempotency) → returns false, no insert.
+ *     4. Two concurrent calls → exactly one seals, no double-insert.
  *
- * Scenarios covered:
- *   1. DB error thrown mid-transaction (after BEGIN) → ROLLBACK + release called,
- *      error re-thrown, chain left untouched.
- *   2. Advisory lock held briefly by another connection (simulated via async delay)
- *      → call blocks until lock is available, then seals successfully.
- *   3. Already-sealed constitution (idempotency) → returns false, no insert.
- *   4. Two concurrent sealConstitution() calls → exactly one seals, the other
- *      discovers the existing block and returns false without corrupting state.
+ * mapAmendmentRows() — pure function, no DB required.
+ *   Covers: empty input, null/undefined input, well-formed rows, malformed
+ *   content fallback, null band default, mined_at as Date/ISO string/absent,
+ *   multi-row ordering.
+ *
+ * getConstitutionSeal() — amendments array always present on both DB paths.
+ *   Uses a FIFO queue-based pool stub injected via the poolOverride parameter.
+ *   Covers: primary path ±amendments, fallback path ±amendments, table missing,
+ *   JSON round-trip key presence for both paths.
  */
 
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -23,7 +29,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 // vitest intercepts all module resolutions — including dynamic imports — so
 // this mock is active for every call made during the tests.
 
-const mockPoolQuery  = vi.fn();
+const mockPoolQuery   = vi.fn();
 const mockPoolConnect = vi.fn();
 
 vi.mock("./db", () => ({
@@ -37,7 +43,13 @@ vi.mock("./db", () => ({
 // and returns null (it is best-effort — the seal should proceed regardless).
 vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("fetch blocked in tests")));
 
-import { sealConstitution, computeConstitutionHash } from "./constitution_seal";
+import {
+  sealConstitution,
+  computeConstitutionHash,
+  mapAmendmentRows,
+  getConstitutionSeal,
+  type QueryablePool,
+} from "./constitution_seal";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -71,16 +83,43 @@ async function alreadySealedHandler(sql: string): Promise<{ rows: unknown[] }> {
       ],
     };
   }
-  // constCheck — constitution_block_number row already present
   if (sql.includes("constitution_block_number")) return { rows: [{ value: "1" }] };
   return { rows: [] };
 }
+
+/** Returns a pool whose .query() answers calls in FIFO order from `responses`. */
+function makePool(responses: Array<{ rows: any[] }>): QueryablePool {
+  const queue = [...responses];
+  return {
+    query: async (_sql: string, _params?: any[]) =>
+      queue.shift() ?? { rows: [] },
+  };
+}
+
+// Reusable rows for the constitution seal block (primary path)
+const SEAL_ROW = {
+  block_number: "1",
+  psi_channel:  "Ψ(52,20,H)",
+  wavelength_nm: "542.5000",
+  content:
+    "CONSTITUTION_SEAL[v1]: NexusOS Constitutional Declaration | " +
+    "hash:sha256=" + "a".repeat(64),
+  mined_at: new Date("2026-06-23T10:00:00.000Z"),
+};
+
+// Reusable system_constants rows (fallback path)
+const CONSTANTS_ROWS = [
+  { key: "constitution_block_number",  value: "1" },
+  { key: "constitution_psi_channel",   value: "Ψ(52,20,H)" },
+  { key: "constitution_wavelength_nm", value: "542.5" },
+  { key: "constitution_hash",          value: "a".repeat(64) },
+  { key: "constitution_sealed_at",     value: "2026-06-23T10:00:00.000Z" },
+];
 
 // ── Test setup / teardown ────────────────────────────────────────────────────
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Default: pool.query (used for CREATE TABLE) always succeeds.
   mockPoolQuery.mockResolvedValue({ rows: [] });
 });
 
@@ -88,14 +127,14 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-// ── Tests ────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// sealConstitution() tests
+// ═══════════════════════════════════════════════════════════════════════════
 
 describe("sealConstitution() — DB failure mid-transaction", () => {
   it(
     "re-throws the error, calls ROLLBACK on the client, and releases the connection",
     async () => {
-      // Arrange: client succeeds on BEGIN but throws when the advisory lock
-      // query fires (simulating a network partition / DB crash mid-tx).
       const errDB = new Error("DB: connection terminated unexpectedly");
 
       const mockClient = makeMockClient(async (sql) => {
@@ -105,16 +144,12 @@ describe("sealConstitution() — DB failure mid-transaction", () => {
 
       mockPoolConnect.mockResolvedValue(mockClient);
 
-      // Act
       await expect(sealConstitution()).rejects.toThrow(errDB.message);
 
-      // Assert — ROLLBACK must have been attempted
       const rollbackCall = mockClient.query.mock.calls.find(
         ([sql]) => typeof sql === "string" && sql.trim() === "ROLLBACK",
       );
       expect(rollbackCall, "ROLLBACK must be sent to the DB after a mid-tx error").toBeDefined();
-
-      // Assert — connection must be released back to the pool
       expect(mockClient.release).toHaveBeenCalledTimes(1);
     },
   );
@@ -122,8 +157,6 @@ describe("sealConstitution() — DB failure mid-transaction", () => {
   it(
     "does not leave a partial INSERT in blockchain_blocks when the INSERT itself throws",
     async () => {
-      // This path exercises the second transaction (post-ceEncode).
-      // The INSERT into blockchain_blocks throws — we verify ROLLBACK + release.
       let connectCall = 0;
       const clients: ReturnType<typeof makeMockClient>[] = [];
 
@@ -131,7 +164,6 @@ describe("sealConstitution() — DB failure mid-transaction", () => {
         connectCall++;
 
         if (connectCall === 1) {
-          // First connection: pre-ceEncode transaction (blockCheck → no block → COMMIT)
           const c = makeMockClient(async (sql) => {
             if (sql.includes("CONSTITUTION_SEAL[v1]")) return { rows: [] };
             return { rows: [] };
@@ -140,7 +172,6 @@ describe("sealConstitution() — DB failure mid-transaction", () => {
           return c;
         }
 
-        // Second connection: the actual INSERT transaction — throw on INSERT
         const errInsert = new Error("DB: disk full");
         const c = makeMockClient(async (sql) => {
           if (sql.includes("INSERT INTO blockchain_blocks")) throw errInsert;
@@ -153,7 +184,6 @@ describe("sealConstitution() — DB failure mid-transaction", () => {
 
       await expect(sealConstitution()).rejects.toThrow("DB: disk full");
 
-      // The second client (that ran the INSERT) must have been rolled back and released
       const secondClient = clients[1];
       expect(secondClient, "second connection must have been obtained").toBeDefined();
 
@@ -170,9 +200,6 @@ describe("sealConstitution() — advisory lock contention", () => {
   it(
     "blocks until the advisory lock is released then seals successfully (returns true)",
     async () => {
-      // Simulate a lock held by another DB session for 40 ms.
-      // pg_advisory_xact_lock blocks at the server; here we model it as an
-      // async delay that resolves once the 'other session' finishes.
       const LOCK_HOLD_MS = 40;
       let connectCall = 0;
 
@@ -180,11 +207,10 @@ describe("sealConstitution() — advisory lock contention", () => {
         connectCall++;
         const c = makeMockClient(async (sql) => {
           if (sql.includes("pg_advisory_xact_lock")) {
-            // Both transactions must wait — simulates real lock wait
             await new Promise<void>((r) => setTimeout(r, LOCK_HOLD_MS));
             return { rows: [] };
           }
-          if (sql.includes("CONSTITUTION_SEAL[v1]")) return { rows: [] }; // not sealed yet
+          if (sql.includes("CONSTITUTION_SEAL[v1]")) return { rows: [] };
           if (sql.includes("MAX(block_number)"))       return { rows: [{ max_num: 0 }] };
           if (sql.includes("ORDER BY block_number DESC LIMIT 1")) return { rows: [] };
           return { rows: [] };
@@ -192,14 +218,11 @@ describe("sealConstitution() — advisory lock contention", () => {
         return c;
       });
 
-      const start  = Date.now();
-      const result = await sealConstitution();
+      const start   = Date.now();
+      const result  = await sealConstitution();
       const elapsed = Date.now() - start;
 
-      // Successfully sealed after waiting for the lock
       expect(result).toBe(true);
-
-      // Must have waited at least twice the lock hold (two advisory lock waits)
       expect(elapsed).toBeGreaterThanOrEqual(LOCK_HOLD_MS * 2 - 5);
     },
   );
@@ -207,23 +230,16 @@ describe("sealConstitution() — advisory lock contention", () => {
   it(
     "two concurrent calls: exactly one seals (true) and one is no-op (false) — no double-insert",
     async () => {
-      // Shared state representing the DB's blockchain_blocks table.
-      // Each call gets its own mock client; they share `sealedInDb` to model
-      // the serialisation that pg_advisory_xact_lock provides in production.
       let sealedInDb = false;
       let blockInsertCount = 0;
 
       mockPoolConnect.mockImplementation(async () => {
         return makeMockClient(async (sql) => {
           if (sql.includes("pg_advisory_xact_lock")) {
-            // Yield to the event loop — this gives the sibling call a chance
-            // to progress, modelling the interleaving that makes concurrency
-            // interesting.  The advisory lock ensures exactly one winner.
             await Promise.resolve();
             return { rows: [] };
           }
           if (sql.includes("CONSTITUTION_SEAL[v1]")) {
-            // Both blockCheck and doubleCheck consult the shared DB state
             if (sealedInDb) {
               return {
                 rows: [
@@ -254,12 +270,9 @@ describe("sealConstitution() — advisory lock contention", () => {
 
       const [r1, r2] = await Promise.all([sealConstitution(), sealConstitution()]);
 
-      // Exactly one call must have sealed, the other must have been a no-op
       expect(r1 !== r2, "one call returns true, the other returns false").toBe(true);
       expect([r1, r2]).toContain(true);
       expect([r1, r2]).toContain(false);
-
-      // The INSERT into blockchain_blocks must have fired exactly once
       expect(blockInsertCount).toBe(1);
     },
   );
@@ -276,7 +289,6 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
 
       expect(result).toBe(false);
 
-      // No INSERT into blockchain_blocks must have occurred
       const insertCall = mockClient.query.mock.calls.find(
         ([sql]) => typeof sql === "string" && sql.includes("INSERT INTO blockchain_blocks"),
       );
@@ -303,11 +315,9 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
             ],
           };
         }
-        // constCheck — no rows yet (constants missing)
         if (sql.includes("constitution_block_number") && sql.includes("SELECT value")) {
           return { rows: [] };
         }
-        // Track the backfill INSERT
         if (sql.includes("INSERT INTO system_constants")) {
           insertedKeys.push("backfill");
           return { rows: [] };
@@ -320,11 +330,8 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
       const result = await sealConstitution();
 
       expect(result).toBe(false);
-
-      // The backfill INSERT must have fired
       expect(insertedKeys.length).toBeGreaterThan(0);
 
-      // But blockchain_blocks must remain untouched
       const blockInsert = mockClient.query.mock.calls.find(
         ([sql]) => typeof sql === "string" && sql.includes("INSERT INTO blockchain_blocks"),
       );
@@ -443,4 +450,238 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
       expect(newBlockMined).toBe(false);
     },
   );
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// mapAmendmentRows() tests — pure function, no DB required
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("mapAmendmentRows — pure function", () => {
+
+  it("returns [] for an empty array", () => {
+    expect(mapAmendmentRows([])).toEqual([]);
+  });
+
+  it("returns [] for null input (defensive guard)", () => {
+    expect(mapAmendmentRows(null as any)).toEqual([]);
+  });
+
+  it("returns [] for undefined input (defensive guard)", () => {
+    expect(mapAmendmentRows(undefined as any)).toEqual([]);
+  });
+
+  it("maps a well-formed amendment row correctly", () => {
+    const now = new Date("2026-07-10T12:00:00.000Z");
+    const result = mapAmendmentRows([{
+      block_number: "42",
+      content: "CONSTITUTION_AMENDMENT[v1]: Extend Article III | author=nexus | t=1234",
+      band: "SYSTEM",
+      mined_at: now,
+    }]);
+    expect(result.length).toBe(1);
+    expect(result[0].blockNumber).toBe(42);
+    expect(result[0].title).toBe("Extend Article III");
+    expect(result[0].authoredBand).toBe("SYSTEM");
+    expect(result[0].timestamp).toBe(now.toISOString());
+  });
+
+  it("falls back to generated title when content is malformed", () => {
+    const result = mapAmendmentRows([{
+      block_number: "7",
+      content: "GARBAGE — not an amendment header",
+      band: "KERNEL",
+      mined_at: new Date(),
+    }]);
+    expect(result[0].title).toBe("Amendment block #7");
+    expect(result[0].authoredBand).toBe("KERNEL");
+  });
+
+  it("defaults authoredBand to SYSTEM when band is null", () => {
+    const result = mapAmendmentRows([{
+      block_number: "3",
+      content: "CONSTITUTION_AMENDMENT[v1]: Test | t=1",
+      band: null,
+      mined_at: null,
+    }]);
+    expect(result[0].authoredBand).toBe("SYSTEM");
+    expect(result[0].timestamp).toBe("");
+  });
+
+  it("handles mined_at as ISO string", () => {
+    const isoStr = "2026-06-23T10:30:00.000Z";
+    const result = mapAmendmentRows([{
+      block_number: "5",
+      content: "CONSTITUTION_AMENDMENT[v2]: ISO date test | t=99",
+      band: "SYSTEM",
+      mined_at: isoStr,
+    }]);
+    expect(result[0].timestamp).toBe(isoStr);
+  });
+
+  it("handles mined_at absent (undefined)", () => {
+    const result = mapAmendmentRows([{
+      block_number: "9",
+      content: "CONSTITUTION_AMENDMENT[v1]: No Date | t=0",
+      band: "SYSTEM",
+    }]);
+    expect(result[0].timestamp).toBe("");
+  });
+
+  it("maps multiple rows and preserves order", () => {
+    const result = mapAmendmentRows([
+      { block_number: "10", content: "CONSTITUTION_AMENDMENT[v1]: First | t=1",  band: "SYSTEM", mined_at: new Date("2026-07-01T00:00:00.000Z") },
+      { block_number: "20", content: "CONSTITUTION_AMENDMENT[v2]: Second | t=2", band: "KERNEL", mined_at: new Date("2026-07-02T00:00:00.000Z") },
+    ]);
+    expect(result.length).toBe(2);
+    expect(result[0].blockNumber).toBe(10);
+    expect(result[0].title).toBe("First");
+    expect(result[1].blockNumber).toBe(20);
+    expect(result[1].title).toBe("Second");
+    expect(result[1].authoredBand).toBe("KERNEL");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// getConstitutionSeal() tests — amendments array always present
+//
+// Query order inside getConstitutionSeal:
+//   1. tableCheck   — SELECT EXISTS (system_constants table)
+//   2. blockRow     — SELECT from blockchain_blocks WHERE CONSTITUTION_SEAL
+//   3. amendmentRows — SELECT from blockchain_blocks WHERE CONSTITUTION_AMENDMENT
+//   [only if blockRow is empty:]
+//   4. constRows    — SELECT from system_constants
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("getConstitutionSeal — amendments array always present", () => {
+
+  it("primary path (seal block found) + no amendments → amendments is []", async () => {
+    const pool = makePool([
+      { rows: [{ exists: true }] },   // 1. tableCheck
+      { rows: [SEAL_ROW] },           // 2. blockRow
+      { rows: [] },                   // 3. amendmentRows (empty chain)
+    ]);
+
+    const result = await getConstitutionSeal(pool);
+
+    expect(result).not.toBeNull();
+    expect(Array.isArray(result!.amendments)).toBe(true);
+    expect(result!.amendments.length).toBe(0);
+  });
+
+  it("primary path + one amendment block → amendments has one entry", async () => {
+    const amendRow = {
+      block_number: "5",
+      content: "CONSTITUTION_AMENDMENT[v1]: Extend Article III | t=0",
+      band: "SYSTEM",
+      mined_at: new Date("2026-07-15T00:00:00.000Z"),
+    };
+
+    const pool = makePool([
+      { rows: [{ exists: true }] },
+      { rows: [SEAL_ROW] },
+      { rows: [amendRow] },
+    ]);
+
+    const result = await getConstitutionSeal(pool);
+
+    expect(result).not.toBeNull();
+    expect(Array.isArray(result!.amendments)).toBe(true);
+    expect(result!.amendments.length).toBe(1);
+    expect(result!.amendments[0].blockNumber).toBe(5);
+    expect(result!.amendments[0].title).toBe("Extend Article III");
+    expect(result!.amendments[0].authoredBand).toBe("SYSTEM");
+  });
+
+  it("primary path + multiple amendments → amendments has all entries in order", async () => {
+    const pool = makePool([
+      { rows: [{ exists: true }] },
+      { rows: [SEAL_ROW] },
+      {
+        rows: [
+          { block_number: "10", content: "CONSTITUTION_AMENDMENT[v1]: First | t=1",  band: "SYSTEM", mined_at: new Date("2026-07-01T00:00:00.000Z") },
+          { block_number: "20", content: "CONSTITUTION_AMENDMENT[v2]: Second | t=2", band: "KERNEL", mined_at: new Date("2026-07-02T00:00:00.000Z") },
+        ],
+      },
+    ]);
+
+    const result = await getConstitutionSeal(pool);
+
+    expect(result).not.toBeNull();
+    expect(result!.amendments.length).toBe(2);
+    expect(result!.amendments[0].blockNumber).toBe(10);
+    expect(result!.amendments[1].blockNumber).toBe(20);
+  });
+
+  it("fallback path (system_constants) + no amendments → amendments is []", async () => {
+    const pool = makePool([
+      { rows: [{ exists: true }] },   // 1. tableCheck
+      { rows: [] },                   // 2. blockRow — no seal in blockchain_blocks
+      { rows: [] },                   // 3. amendmentRows (empty)
+      { rows: CONSTANTS_ROWS },       // 4. system_constants fallback
+    ]);
+
+    const result = await getConstitutionSeal(pool);
+
+    expect(result).not.toBeNull();
+    expect(Array.isArray(result!.amendments)).toBe(true);
+    expect(result!.amendments.length).toBe(0);
+  });
+
+  it("fallback path + one amendment block → amendments has one entry", async () => {
+    const amendRow = {
+      block_number: "7",
+      content: "CONSTITUTION_AMENDMENT[v1]: Fallback amendment | t=0",
+      band: "KERNEL",
+      mined_at: new Date("2026-07-20T00:00:00.000Z"),
+    };
+
+    const pool = makePool([
+      { rows: [{ exists: true }] },
+      { rows: [] },
+      { rows: [amendRow] },
+      { rows: CONSTANTS_ROWS },
+    ]);
+
+    const result = await getConstitutionSeal(pool);
+
+    expect(result).not.toBeNull();
+    expect(Array.isArray(result!.amendments)).toBe(true);
+    expect(result!.amendments.length).toBe(1);
+    expect(result!.amendments[0].title).toBe("Fallback amendment");
+  });
+
+  it("system_constants table missing → returns null (not undefined amendments)", async () => {
+    const pool = makePool([
+      { rows: [{ exists: false }] },  // tableCheck — table not ready
+    ]);
+
+    const result = await getConstitutionSeal(pool);
+
+    expect(result).toBeNull();
+  });
+
+  it("amendments key survives JSON round-trip for both paths", async () => {
+    // Primary path
+    const primary = await getConstitutionSeal(makePool([
+      { rows: [{ exists: true }] },
+      { rows: [SEAL_ROW] },
+      { rows: [] },
+    ]));
+    expect(primary).not.toBeNull();
+    const primaryJson = JSON.parse(JSON.stringify(primary));
+    expect("amendments" in primaryJson).toBe(true);
+    expect(Array.isArray(primaryJson.amendments)).toBe(true);
+
+    // Fallback path
+    const fallback = await getConstitutionSeal(makePool([
+      { rows: [{ exists: true }] },
+      { rows: [] },
+      { rows: [] },
+      { rows: CONSTANTS_ROWS },
+    ]));
+    expect(fallback).not.toBeNull();
+    const fallbackJson = JSON.parse(JSON.stringify(fallback));
+    expect("amendments" in fallbackJson).toBe(true);
+    expect(Array.isArray(fallbackJson.amendments)).toBe(true);
+  });
 });
