@@ -186,14 +186,43 @@ interface SealData {
   amendments: SealAmendment[];
 }
 
+interface SealFetchError extends Error {
+  status?: number;
+  serverMessage?: string;
+}
+
+async function fetchSeal(): Promise<SealData | null> {
+  const res = await fetch("/api/constitution/seal", { credentials: "include" });
+  if (res.status === 503) {
+    const body = await res.json().catch(() => ({}));
+    const err: SealFetchError = new Error(
+      body.message || "Seal failed on last boot — contact the founder",
+    );
+    err.status = 503;
+    err.serverMessage = body.message;
+    throw err;
+  }
+  if (!res.ok) {
+    return null;
+  }
+  return res.json();
+}
+
 function SealSection() {
-  const { data, isLoading, isError } = useQuery<SealData>({
+  const { data, isLoading, error } = useQuery<SealData | null, SealFetchError>({
     queryKey: ["/api/constitution/seal"],
+    queryFn: fetchSeal,
     staleTime: 5 * 60_000,
-    retry: 2,
+    retry: (failureCount, err) => {
+      if ((err as SealFetchError)?.status === 503) return false;
+      return failureCount < 3;
+    },
+    refetchInterval: (query) =>
+      query.state.data === null && !query.state.error ? 5_000 : false,
   });
 
   const SEAL_COLOR = "#22d3ee";
+  const sealFailed = (error as SealFetchError)?.status === 503;
 
   if (isLoading) {
     return (
@@ -210,7 +239,32 @@ function SealSection() {
     );
   }
 
-  if (isError || !data) {
+  if (sealFailed) {
+    return (
+      <section data-testid="section-seal" className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold bg-red-500/15 text-red-400 border border-red-500/30">⬡</div>
+          <h2 className="text-2xl font-bold text-white">On-Chain Seal</h2>
+        </div>
+        <div className="rounded-2xl border border-red-500/40 bg-red-950/30 p-8 space-y-3">
+          <div className="flex items-center gap-3 text-red-400">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            <span className="font-semibold text-sm">Seal failed on last boot — contact the founder</span>
+          </div>
+          {(error as SealFetchError)?.serverMessage && (
+            <p className="text-red-300/70 text-xs font-mono leading-relaxed pl-8">
+              {(error as SealFetchError).serverMessage}
+            </p>
+          )}
+          <p className="text-red-400/60 text-xs pl-8">
+            Check server logs for <span className="font-mono">[CONSTITUTION] SEAL FAILED</span> entries and restart the server.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  if (data === null || data === undefined) {
     return (
       <section data-testid="section-seal" className="space-y-4">
         <div className="flex items-center gap-3">
@@ -218,6 +272,7 @@ function SealSection() {
           <h2 className="text-2xl font-bold text-white">On-Chain Seal</h2>
         </div>
         <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/30 p-8 text-center space-y-3">
+          <Loader2 className="w-8 h-8 text-slate-600 animate-spin mx-auto" />
           <div className="text-slate-500 font-mono text-sm">Seal pending…</div>
           <p className="text-slate-600 text-xs max-w-sm mx-auto">
             The genesis sealing process runs at server startup. The seal will appear here once the blockchain record is written.
