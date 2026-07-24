@@ -494,6 +494,57 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
   );
 
   it(
+    "backfill uses CONSTITUTION_PSI fallback (Ψ(52,20,H)) when psi_channel is null in the surviving block row",
+    async () => {
+      // This test documents an intentional design decision:
+      //   existingBlock.psi_channel ?? CONSTITUTION_PSI
+      // When the DB row has a null psi_channel (e.g. written by an older schema
+      // that lacked the column), the canonical SYSTEM-band address Ψ(52,20,H)
+      // is substituted.  The fallback must appear verbatim as $3 in the INSERT
+      // so that system_constants is always populated with a valid Ψ address.
+      //
+      // If CONSTITUTION_PSI is ever changed, this test will fail immediately,
+      // making the fallback change visible and deliberate rather than silent.
+      const nullPsiBlock = {
+        id:           9,
+        block_number: 9,
+        psi_channel:  null as unknown as string, // corrupt / pre-migration row
+        mined_at:     new Date("2026-07-01T00:00:00.000Z"),
+      };
+
+      let backfillParams: unknown[] | null = null;
+
+      const mockClient = makeMockClient(async (sql, params) => {
+        if (sql.includes("pg_advisory_xact_lock")) return { rows: [] };
+        if (sql.includes("CONSTITUTION_SEAL[v1]")) {
+          return { rows: [nullPsiBlock] };
+        }
+        // Constants absent — triggers the backfill path
+        if (sql.includes("constitution_block_number") && sql.includes("SELECT value")) {
+          return { rows: [] };
+        }
+        if (sql.includes("INSERT INTO system_constants")) {
+          backfillParams = params ?? null;
+          return { rows: [] };
+        }
+        return { rows: [] };
+      });
+
+      mockPoolConnect.mockResolvedValue(mockClient);
+
+      const result = await sealConstitution();
+
+      expect(result).toBe(false);
+      expect(backfillParams, "backfill INSERT must have fired").not.toBeNull();
+
+      const [_p1, _p2, p3] = backfillParams as [string, string, string, string, string];
+
+      // $3 — psi_channel: null in the DB row → must resolve to the canonical fallback
+      expect(p3).toBe("Ψ(52,20,H)");
+    },
+  );
+
+  it(
     "second boot after mid-seal crash recovers to fully consistent state without user intervention",
     async () => {
       // The chain state after a crash between block INSERT and constants upsert:
