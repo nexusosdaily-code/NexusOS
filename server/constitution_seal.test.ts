@@ -546,6 +546,53 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
   );
 
   it(
+    "backfill preserves the original mined_at when pg returns it as an ISO string (not a Date)",
+    async () => {
+      // This is the regression test for the bug where
+      //   existingBlock.mined_at?.toISOString()
+      // returned undefined at runtime when pg sent a string instead of a Date,
+      // causing the fallback `new Date()` to fire and write a wrong "now" timestamp.
+      const ORIGINAL_ISO = "2026-05-16T08:00:00.000Z";
+
+      // Simulate the pg driver returning mined_at as a string
+      const stringMineBlock = {
+        id:           11,
+        block_number: 11,
+        psi_channel:  "Ψ(52,20,H)",
+        mined_at:     ORIGINAL_ISO,  // <— string, not a Date object
+      };
+
+      let backfillParams: unknown[] | null = null;
+
+      const mockClient = makeMockClient(async (sql, params) => {
+        if (sql.includes("pg_advisory_xact_lock")) return { rows: [] };
+        if (sql.includes("CONSTITUTION_SEAL[v1]")) return { rows: [stringMineBlock] };
+        if (sql.includes("constitution_block_number") && sql.includes("SELECT value")) {
+          return { rows: [] };
+        }
+        if (sql.includes("INSERT INTO system_constants")) {
+          backfillParams = params ?? null;
+          return { rows: [] };
+        }
+        return { rows: [] };
+      });
+
+      mockPoolConnect.mockResolvedValue(mockClient);
+
+      const result = await sealConstitution();
+
+      expect(result).toBe(false);
+      expect(backfillParams, "backfill INSERT must have fired").not.toBeNull();
+
+      // $2 is the sealed_at / timestamp param — it must equal the original ISO string
+      // NOT a fresh new Date() from the fallback branch.
+      const [, p2] = backfillParams as [string, string, string, string, string];
+
+      expect(p2).toBe(ORIGINAL_ISO);
+    },
+  );
+
+  it(
     "second boot after mid-seal crash recovers to fully consistent state without user intervention",
     async () => {
       // The chain state after a crash between block INSERT and constants upsert:

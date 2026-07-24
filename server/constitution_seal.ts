@@ -194,7 +194,9 @@ export async function sealConstitution(): Promise<boolean> {
       );
       if (!constCheck.rows.length) {
         // Backfill constants from the existing block
-        const now = existingBlock.mined_at?.toISOString() ?? new Date().toISOString();
+        const now = existingBlock.mined_at
+          ? new Date(existingBlock.mined_at).toISOString()
+          : new Date().toISOString();
         await client.query(
           `INSERT INTO system_constants (key, value, created_at, updated_at)
            VALUES
