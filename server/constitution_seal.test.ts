@@ -399,6 +399,101 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
   );
 
   it(
+    "backfill falls back to a valid ISO timestamp when mined_at is null (no crash, no undefined)",
+    async () => {
+      // Arrange: block row exists but mined_at was never set (older data / migration artifact)
+      const nullMineBlock = {
+        id:           9,
+        block_number: 9,
+        psi_channel:  "Ψ(52,20,H)",
+        mined_at:     null,
+      };
+
+      let backfillParams: unknown[] | null = null;
+
+      const mockClient = makeMockClient(async (sql, params) => {
+        if (sql.includes("pg_advisory_xact_lock")) return { rows: [] };
+        if (sql.includes("CONSTITUTION_SEAL[v1]")) return { rows: [nullMineBlock] };
+        if (sql.includes("constitution_block_number") && sql.includes("SELECT value")) {
+          return { rows: [] };
+        }
+        if (sql.includes("INSERT INTO system_constants")) {
+          backfillParams = params ?? null;
+          return { rows: [] };
+        }
+        return { rows: [] };
+      });
+
+      mockPoolConnect.mockResolvedValue(mockClient);
+
+      // Act — must not throw even though mined_at is null
+      const result = await sealConstitution();
+
+      expect(result).toBe(false);
+      expect(backfillParams, "backfill INSERT must have fired").not.toBeNull();
+
+      // $2 is constitution_sealed_at — with null mined_at it falls back to new Date()
+      const [, p2] = backfillParams as [string, string, string, string, string];
+
+      // Must be a well-formed ISO-8601 string, not undefined / null / "Invalid Date"
+      expect(typeof p2).toBe("string");
+      expect(p2).not.toBe("Invalid Date");
+      expect(() => new Date(p2).toISOString()).not.toThrow();
+      expect(new Date(p2).toISOString()).toBe(p2);
+    },
+  );
+
+  it(
+    "backfill writes block_number, psi_channel, wavelength_nm, and hash correctly even when mined_at is null",
+    async () => {
+      // All four non-timestamp constants must still come from the surviving block row
+      // and the physics constants — mined_at being null must not corrupt them.
+      const nullMineBlock = {
+        id:           10,
+        block_number: 42,
+        psi_channel:  "Ψ(52,20,H)",
+        mined_at:     null,
+      };
+
+      let backfillParams: unknown[] | null = null;
+
+      const mockClient = makeMockClient(async (sql, params) => {
+        if (sql.includes("pg_advisory_xact_lock")) return { rows: [] };
+        if (sql.includes("CONSTITUTION_SEAL[v1]")) return { rows: [nullMineBlock] };
+        if (sql.includes("constitution_block_number") && sql.includes("SELECT value")) {
+          return { rows: [] };
+        }
+        if (sql.includes("INSERT INTO system_constants")) {
+          backfillParams = params ?? null;
+          return { rows: [] };
+        }
+        return { rows: [] };
+      });
+
+      mockPoolConnect.mockResolvedValue(mockClient);
+
+      const result = await sealConstitution();
+
+      expect(result).toBe(false);
+      expect(backfillParams, "backfill INSERT must have fired").not.toBeNull();
+
+      const [p1, , p3, p4, p5] = backfillParams as [string, string, string, string, string];
+
+      // $1 — block_number must match the surviving block exactly
+      expect(p1).toBe(String(nullMineBlock.block_number));
+
+      // $3 — psi_channel must carry forward from the block row
+      expect(p3).toBe(nullMineBlock.psi_channel);
+
+      // $4 — wavelength_nm must match the SYSTEM band constant (542.5 nm)
+      expect(p4).toBe("542.5");
+
+      // $5 — hash must be the deterministic SHA-256 of the constitutional text
+      expect(p5).toBe(computeConstitutionHash());
+    },
+  );
+
+  it(
     "second boot after mid-seal crash recovers to fully consistent state without user intervention",
     async () => {
       // The chain state after a crash between block INSERT and constants upsert:
