@@ -81,7 +81,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/rune-swap", "/rune-pipeline",
   "/stake-earn",
   "/fractal-btc",
-  "/nxt-fb-swap", "/swap",
+  "/nxt-fb-swap",
   "/btc-sentinel", "/btc-assets-sentinel",
   "/mempool",
   // Chain / ecosystem
@@ -384,6 +384,7 @@ export function serveStatic(app: Express) {
     "/fractal-bitcoin":                      "/fractal-btc",
     "/charter":                              "/open",
     "/wnsp/bridge":                          "/wnsp-bridge",
+    "/swap":                                 "/nxt-fb-swap",
   };
   for (const [from, to] of Object.entries(ALIAS_REDIRECTS)) {
     app.get(from, (_req: Request, res: Response) => {

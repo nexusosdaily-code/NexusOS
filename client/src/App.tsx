@@ -503,7 +503,6 @@ function Router() {
       <Route path="/fractal-btc" component={FractalBtcBridgePage} />
       <Route path="/fractal-bitcoin" component={FractalBtcBridgePage} />
       <Route path="/nxt-fb-swap" component={NxtFbSwapPage} />
-      <Route path="/swap" component={NxtFbSwapPage} />
       <Route path="/btc-sentinel" component={BtcSentinelPage} />
       <Route path="/btc-assets-sentinel" component={BtcAssetsSentinelPage} />
       <Route path="/mempool" component={MempoolMonitorPage} />
