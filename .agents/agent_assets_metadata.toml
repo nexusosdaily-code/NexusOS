@@ -389,3 +389,9 @@ id = "hBU_DE86ZR0Mwi5WanEUg"
 uri = "file://docs/NexusOS_July2026_Update_Paper.md"
 type = "text"
 title = "NexusOS — Technical Update Paper · July 2026"
+
+[[outputs]]
+id = "Yipjj15PK3cRNhm1_9a_2"
+uri = "file://NexusOS_Toroid_Driver_Spec_v1.0.pdf"
+type = "pdf"
+title = "NexusOS — 3-Axis Toroid Driver Spec v1.0"
