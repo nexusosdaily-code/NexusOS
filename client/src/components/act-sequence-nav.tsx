@@ -60,7 +60,8 @@ export function ActSequenceNav({ current }: Props) {
 
         {/* ⌂ Hub */}
         <div className="flex">
-          <Link href="/"
+          <Link href="/wnsp"
+            aria-label="WNSP research hub"
             className="flex flex-col items-center justify-center gap-1 rounded-lg border border-slate-700
                        bg-slate-900 hover:border-slate-500 hover:bg-slate-800 transition-colors p-2.5 w-full group">
             <Home className="w-4 h-4 text-slate-400 group-hover:text-white" />

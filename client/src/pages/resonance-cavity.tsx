@@ -189,7 +189,7 @@ export default function ResonanceCavityPage() {
           {/* Back arrow + title */}
           <div className="flex items-start gap-3">
             <Link href="/lossless-channel">
-              <button className="text-gray-500 hover:text-white transition-colors mt-1">
+              <button className="text-gray-500 hover:text-white transition-colors mt-1" aria-label="Back to The Lossless Channel">
                 <ArrowLeft className="w-5 h-5" />
               </button>
             </Link>

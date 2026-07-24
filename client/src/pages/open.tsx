@@ -172,7 +172,7 @@ export default function OpenPage() {
         style={{ background: "rgba(5,5,8,0.92)" }}>
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
           <Link href="/nexus-command">
-            <button className="text-white/30 hover:text-white/70 transition-colors" data-testid="back-nexus-command">
+            <button className="text-white/30 hover:text-white/70 transition-colors" data-testid="back-nexus-command" aria-label="Back to Nexus Command">
               <ArrowLeft size={16} />
             </button>
           </Link>
