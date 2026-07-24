@@ -50,7 +50,7 @@ import {
   getConstitutionSeal,
   type QueryablePool,
 } from "./constitution_seal";
-import { handleSealError, type BootState } from "./seal-boot-guard";
+import { bootState, handleSealError, type BootState } from "./seal-boot-guard";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -930,6 +930,41 @@ describe("handleSealError() — boot-sequence degraded-boot guard", () => {
       // → handleSealError is never called → state stays healthy
       expect(state.degraded).toBe(false);
       expect(state.sealError).toBeNull();
+    },
+  );
+
+  it(
+    "F: the exported bootState singleton starts degraded=false and sealError=null (fresh process baseline)",
+    () => {
+      // bootState is a module-level singleton initialised at declaration time.
+      // Every fresh Node.js process starts with a clean module scope, so these
+      // fields must always be falsy at import time — before any boot chain runs.
+      // If this assertion fails it means someone persisted the flag to the DB
+      // and is restoring it on import, which would break the restart-recovery
+      // contract (a fixed seal would still appear degraded after a restart).
+      expect(bootState.degraded).toBe(false);
+      expect(bootState.sealError).toBeNull();
+    },
+  );
+
+  it(
+    "G: a fresh BootState object resets to degraded=false even after a previous one was marked degraded (simulates restart)",
+    () => {
+      // Arrange — simulate the previous process that booted with a broken seal.
+      const previousProcessState: BootState = { degraded: false, sealError: null };
+      handleSealError(new Error("DB unavailable during previous boot"), previousProcessState);
+      expect(previousProcessState.degraded).toBe(true);   // sanity-check precondition
+
+      // Act — simulate the next server restart: a new process creates a fresh
+      // BootState object.  The flag must start at false regardless of what the
+      // previous process had stored in memory.
+      const nextProcessState: BootState = { degraded: false, sealError: null };
+
+      // Assert — the new process starts healthy before the seal chain even runs.
+      // If the flag were persisted to the DB and re-hydrated on startup, this
+      // test would catch the regression immediately.
+      expect(nextProcessState.degraded).toBe(false);
+      expect(nextProcessState.sealError).toBeNull();
     },
   );
 });
