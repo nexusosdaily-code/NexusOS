@@ -55,6 +55,50 @@ export function metaImagesPlugin(): Plugin {
   };
 }
 
+/**
+ * Vite plugin that converts render-blocking CSS <link rel="stylesheet"> tags
+ * injected by the build into non-render-blocking preloads.
+ *
+ * Pattern used (same as Google Fonts in client/index.html):
+ *   <link rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'" href="...">
+ *   <noscript><link rel="stylesheet" href="..."></noscript>
+ *
+ * Safe to apply because:
+ *  - The <body> already has inline background:#050d1a so there is no white flash.
+ *  - The inline boot spinner runs while JS + CSS load in parallel.
+ *  - React does not mount until JS is parsed; by then the preloaded CSS is
+ *    already in cache and applied before the first React paint.
+ *
+ * Only the hashed app bundles (e.g. /assets/index-*.css) are deferred.
+ * Any existing hand-authored <link rel="stylesheet"> in index.html are left alone.
+ */
+export function cssPreloadPlugin(): Plugin {
+  return {
+    name: 'vite-plugin-css-preload',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        return html.replace(
+          /<link([^>]*)\shref="(\/assets\/[^"]+\.css)"([^>]*)>/g,
+          (match, before, href, after) => {
+            const attrs = (before + after).trim();
+            const isCssStylesheet =
+              /rel="stylesheet"/.test(attrs) ||
+              /rel="stylesheet"/.test(match);
+            if (!isCssStylesheet) return match;
+            const cross = /crossorigin/.test(attrs) ? ' crossorigin' : '';
+            return (
+              `<link rel="preload" as="style"${cross} href="${href}" onload="this.onload=null;this.rel='stylesheet'">` +
+              `<noscript><link rel="stylesheet"${cross} href="${href}"></noscript>`
+            );
+          }
+        );
+      },
+    },
+  };
+}
+
 function getDeploymentUrl(): string | null {
   if (process.env.REPLIT_INTERNAL_APP_DOMAIN) {
     const url = `https://${process.env.REPLIT_INTERNAL_APP_DOMAIN}`;

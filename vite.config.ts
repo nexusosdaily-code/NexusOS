@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
-import { metaImagesPlugin } from "./vite-plugin-meta-images";
+import { metaImagesPlugin, cssPreloadPlugin } from "./vite-plugin-meta-images";
 
 export default defineConfig({
   plugins: [
@@ -11,6 +11,7 @@ export default defineConfig({
     runtimeErrorOverlay(),
     tailwindcss(),
     metaImagesPlugin(),
+    cssPreloadPlugin(),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
@@ -39,6 +40,7 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    cssCodeSplit: true,
     chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
