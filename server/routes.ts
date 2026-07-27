@@ -313,14 +313,32 @@ export async function registerRoutes(
     /^\/\.env/i,
     /^\/\.htaccess/i,
     /^\/\.ssh/i,
+    /^\/\.aws/i,
+    /^\/\.config/i,
+    /^\/\.DS_Store/i,
+    // WordPress scanner family
     /^\/wp-login\.php/i,
     /^\/wp-admin/i,
+    /^\/wp-json/i,
+    /^\/wp-content/i,
+    /^\/wp-includes/i,
+    /^\/wordpress/i,
+    // PHP probes
     /^\/xmlrpc\.php/i,
     /^\/config\.php/i,
     /^\/phpinfo\.php/i,
+    /^\/php-fpm/i,
+    /\.php$/i,
+    // Server info probes
     /^\/server-status/i,
+    /^\/server-info/i,
+    /^\/_profiler/i,
+    /^\/actuator/i,
+    /^\/cgi-bin/i,
+    // Cloud credential probes
     /^\/\.aws/i,
-    /^\/\.config/i,
+    /^\/metadata\/v1/i,
+    /^\/latest\/meta-data/i,
   ];
   app.use((req, res, next) => {
     if (BLOCKED_PATH_PATTERNS.some(p => p.test(req.path))) {
