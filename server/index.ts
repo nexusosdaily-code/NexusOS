@@ -318,7 +318,9 @@ if (process.env.NODE_ENV !== "production") {
     const provided = (req.body?.key || "").trim();
     if (!DEV_KEY || provided === DEV_KEY) {
       res.cookie(COOKIE, DEV_KEY, { httpOnly: true, sameSite: "strict" });
-      res.redirect(302, req.query.next?.toString() || "/");
+      const raw = req.query.next?.toString() ?? "";
+      const safePath = /^\/[^/\\]/.test(raw) ? raw : "/";
+      res.redirect(302, safePath);
     } else {
       res.status(401).send(lockScreen("Invalid access key."));
     }

@@ -153,6 +153,8 @@
     "fast-xml-parser": "^5.10.1",
     "qs": "^6.15.2",
     "launch-editor": "^2.14.1",
-    "ws": "^8.21.0"
+    "ws": "^8.21.0",
+    "brace-expansion": "^4.0.0",
+    "valibot": "^1.4.2"
   }
 }
