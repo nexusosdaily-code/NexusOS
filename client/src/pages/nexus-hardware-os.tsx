@@ -22,10 +22,10 @@ const HW_LAYERS = [
     status: "PROTOTYPE",
     components: [
       {
-        name: "PHR-1 — 144-Turn Bifilar-Toroid Syncbox",
-        spec: "Golden Angle 137.5° · Impedance 377Ω · ALP < 0.0001",
-        role: "Generates coherent photonic field — the physical power source for the Λ substrate",
-        status: "spec-complete",
+        name: "PHR-1 — Bifilar-Toroid Syncbox · PROTO-001",
+        spec: "NEX-0589-PROTO-001 · Coiltek SA · 2026-07-27 · L=62.2μH · DCR≈295mΩ · 3 units · 100% PASS",
+        role: "Generates coherent photonic field — the physical power source for the Λ substrate. First prototype manufactured and electrically verified.",
+        status: "manufactured",
       },
       {
         name: "CZC Catch Basin (44 iterations)",
@@ -327,12 +327,14 @@ function HardwareStack() {
   const [expanded, setExpanded] = useState<string | null>("L3");
 
   const statusColor: Record<string, string> = {
+    "manufactured":  "#10b981",
     "implemented":   "#4ade80",
     "spec-complete": "#60a5fa",
     "near-term":     "#facc15",
     "prototype":     "#fb923c",
   };
   const statusLabel: Record<string, string> = {
+    "manufactured":  "MANUFACTURED",
     "implemented":   "LIVE",
     "spec-complete": "SPECIFIED",
     "near-term":     "NEAR-TERM",

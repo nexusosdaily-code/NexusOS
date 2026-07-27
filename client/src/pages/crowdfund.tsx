@@ -645,7 +645,7 @@ export default function CrowdfundPage() {
     },
     {
       q: "What is the money actually funding?",
-      a: "100% of R&D funding goes to communication hardware development: the PHR-1 resonator prototype, 144-turn bifilar coil manufacturing, Syncbox Controller firmware, ZERO-G state testing, and the Spectral Relay Mesh network nodes. The Orbital Treasury distributes funds across 5 buckets: 35% maintenance, 25% deliverables, 20% research, 10% agent rewards, 10% Nexus Charitable Trust.",
+      a: "100% of R&D funding goes to communication hardware development: PHR-1 resonator production (PROTO-001 already manufactured & tested by Coiltek SA — 2026-07-27, 3 units, 100% PASS), Syncbox Controller firmware, ZERO-G state testing, and the Spectral Relay Mesh network nodes. The Orbital Treasury distributes funds across 5 buckets: 35% maintenance, 25% deliverables, 20% research, 10% agent rewards, 10% Nexus Charitable Trust.",
     },
     {
       q: "What is NXT and how does it work?",
@@ -661,7 +661,7 @@ export default function CrowdfundPage() {
     },
     {
       q: "What is the PHR-1 hardware unit?",
-      a: "PHR-1 is the first physical resonator implementing the ZERO-G state — gravitational de-correlation through phase alignment of a 144-turn bifilar coil. It is the first hardware layer of the Lambda Gate Substrate. Hardware Founders receive a unit in the first production batch of 25.",
+      a: "PHR-1 is the first physical resonator implementing the ZERO-G state — gravitational de-correlation through phase alignment of a bifilar toroid coil. PROTO-001 (NEX-0589-PROTO-001) was manufactured by Coiltek Pty Ltd (SA, Australia) and 100% electrically tested on 2026-07-27: 3 units, L_avg = 62.2 μH, DCR_avg ≈ 295 mΩ, all PASS. Hardware Founders receive a unit in the first production batch of 25.",
     },
     {
       q: "Is this real working software today?",
