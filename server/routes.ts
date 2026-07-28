@@ -3302,13 +3302,63 @@ export async function registerRoutes(
     secureProxyToSpectralAPI(req, res, "/api/wnsp/se/orthogonality");
   });
 
-  // ── WASCII Table & Lookup — public, no auth required ─────────
-  app.get("/api/wnsp/wascii/table", (req, res) => {
-    secureProxyToSpectralAPI(req, res, "/api/wnsp/wascii/table");
+  // ── WASCII Table & Lookup — computed natively, no Spectral API required ─────────
+  // Formula: λ(nm) = 380 + (charCode % 128) / 128 × 400
+  // Physics: f = c / λ,  E = h·f   (WNSP-CE v1.0 / WASCII v7)
+  function buildWasciiTable() {
+    const C = 299_792_458;          // m/s
+    const H = 6.62607015e-34;       // J·s
+    const BASE = 380.0;             // nm
+    const BAND = 400.0;             // nm span
+    const entries = [];
+    // Printable ASCII 32 (space) through 126 (~)
+    for (let code = 32; code <= 126; code++) {
+      const char = String.fromCharCode(code);
+      const wl   = BASE + (code % 128) / 128.0 * BAND;
+      const freq = C / (wl * 1e-9);
+      entries.push({
+        char,
+        wavelength_nm:  Math.round(wl * 1000) / 1000,
+        frequency_hz:   Math.round(freq),
+        energy_joules:  H * freq,
+      });
+    }
+    return entries;
+  }
+
+  app.get("/api/wnsp/wascii/table", (_req, res) => {
+    try {
+      const table = buildWasciiTable();
+      res.json({
+        table,
+        date:    new Date().toISOString().slice(0, 10),
+        version: "v7",
+        count:   table.length,
+        formula: "λ(nm) = 380 + (charCode % 128) / 128 × 400",
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   app.post("/api/wnsp/wascii/lookup", (req, res) => {
-    secureProxyToSpectralAPI(req, res, "/api/wnsp/wascii/lookup");
+    try {
+      const { char } = req.body as { char?: string };
+      if (!char || char.length === 0) return res.status(400).json({ error: "char required" });
+      const C = 299_792_458;
+      const H = 6.62607015e-34;
+      const code = char.charCodeAt(0);
+      const wl   = 380.0 + (code % 128) / 128.0 * 400.0;
+      const freq = C / (wl * 1e-9);
+      res.json({
+        char,
+        wavelength_nm: Math.round(wl * 1000) / 1000,
+        frequency_hz:  Math.round(freq),
+        energy_joules: H * freq,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // ── WASCII v2.0 — Wave Density Spectral Vector ────────────────
