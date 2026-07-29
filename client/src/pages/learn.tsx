@@ -1304,9 +1304,10 @@ export default function LearnPage() {
           </div>
           <textarea
             data-testid="code-input"
+            aria-label="Source code input"
             value={code}
             onChange={e => setCode(e.target.value)}
-            className="flex-1 w-full bg-transparent p-4 font-mono text-sm text-green-300 resize-none focus:outline-none leading-relaxed"
+            className="flex-1 w-full bg-transparent p-4 font-mono text-sm text-green-300 resize-none focus:outline-none focus:ring-1 focus:ring-violet-500 leading-relaxed"
             spellCheck={false}
             placeholder="Paste or type any code here..."
           />
