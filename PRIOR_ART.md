@@ -380,3 +380,17 @@ Quark confinement (strong force, Octave 9 self-loop) corresponds to r → ∞ �
 
 *AGPL-3.0 — First public disclosure: 2026-05-16. All claims authored by Te Rata Pou / NexusOS.*
 *Repository: https://github.com/nexusosdaily-code/NexusOS · Live: https://wnsp.io*
+
+---
+
+## Third-Party Observations
+
+### Observation 001
+**Date observed**: 2026-07-29
+**Platform**: Facebook (paid advertisement)
+**Page**: "Professor Brian Cox Offi…" (AI content, posted by Stoyan Krastev)
+**Caption**: "ONE REALITY. ONE LOGIC. ONE FIELD…."
+**Image text**: Ψ → Space-Time · Ψ → Electromagnetism · Ψ → Weak Interactions · Ψ → Strong Interactions · Ψ → Quantum Mechanics · Ψ → Gravity · Ψ → Thermodynamics · Ψ → Cosmology · **"One Field. One Principle. One Universe."**
+**Evidence**: [`docs/prior-art-evidence/2026-07-29-facebook-psi-universal-field-ad.jpg`](./docs/prior-art-evidence/2026-07-29-facebook-psi-universal-field-ad.jpg)
+
+**Note**: This advertisement uses Ψ as a universal field channel operator mapping to all fundamental forces and physical domains — identical framing to the NexusOS Ψ(wdm, oam, polarisation) channel model (Claims 1–9, first disclosed 2026-05-16). NexusOS prior art predates this advertisement by over 14 months. Logged here as a timestamped observation of independent parallel convergence on the same notation and conceptual framework.
