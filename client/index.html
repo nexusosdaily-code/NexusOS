@@ -25,7 +25,7 @@
     <meta property="og:description" content="The foundational blueprint for a Kardashev Type I civilization. Physics-based blockchain, WNSP spectral communication, WavelengthScript, and a CE-SE pipeline that maps every symbol to a photon frequency." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://wnsp.io/" />
-    <meta property="og:image" content="https://wnsp.io/opengraph.png" />
+    <meta property="og:image" content="https://wnsp.io/opengraph.jpg" />
     <meta property="og:site_name" content="NexusOS" />
     <meta property="og:locale" content="en_US" />
 
@@ -33,7 +33,7 @@
     <meta name="twitter:site" content="@NexusOS_io" />
     <meta name="twitter:title" content="NexusOS — Physics-Based Civilization OS" />
     <meta name="twitter:description" content="The foundational blueprint for a Kardashev Type I civilization. Physics-based blockchain, WNSP spectral communication, WavelengthScript." />
-    <meta name="twitter:image" content="https://wnsp.io/opengraph.png" />
+    <meta name="twitter:image" content="https://wnsp.io/opengraph.jpg" />
 
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
@@ -46,52 +46,69 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "NexusOS",
-      "url": "https://wnsp.io/",
-      "description": "The foundational blueprint for a Kardashev Type I civilization. Physics-based blockchain, WNSP spectral communication protocol, WavelengthScript compiler, and CE-SE pipeline.",
-      "keywords": "WNSP, WavelengthScript, photonic computing, spectral communication, physics blockchain, NXT token, open source",
-      "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
-      "creator": {
-        "@type": "Organization",
-        "name": "NexusOS",
-        "url": "https://wnsp.io/"
-      },
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": {
-          "@type": "EntryPoint",
-          "urlTemplate": "https://wnsp.io/spectral-search?q={search_term_string}"
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://wnsp.io/#organization",
+          "name": "NexusOS",
+          "url": "https://wnsp.io/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://wnsp.io/opengraph.jpg"
+          },
+          "description": "Open-source physics-based OS kernel for a Kardashev Type I civilization. WNSP protocol, WavelengthScript, CE-SE pipeline, NXT token. AGPL-3.0.",
+          "sameAs": [
+            "https://github.com/nexusosdaily-code/NexusOS",
+            "https://t.me/nexusosdaily"
+          ],
+          "founder": {
+            "@type": "Person",
+            "name": "Te Rata Pou"
+          }
         },
-        "query-input": "required name=search_term_string"
-      }
-    }
-    </script>
-
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "NexusOS",
-      "applicationCategory": "DeveloperApplication",
-      "operatingSystem": "Web",
-      "url": "https://wnsp.io/",
-      "description": "Open-source physics-based OS kernel for a Kardashev Type I civilization. Includes WNSP spectral protocol, WavelengthScript compiler, CE-SE encoding pipeline, NXT token wallet, and WNSP Virtual Machine.",
-      "license": "AGPL-3.0",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
-      "featureList": [
-        "WNSP Spectral Communication Protocol",
-        "WavelengthScript Compiler",
-        "CE-SE Encoding Pipeline",
-        "Physics-Based Blockchain",
-        "NXT Token Wallet",
-        "WNSP Virtual Machine",
-        "Spectral Relay Mesh",
-        "51,200 Orthogonal Communication Channels (256 WDM × 50 OAM × 2 Pol × 2 Dir)"
+        {
+          "@type": "WebSite",
+          "@id": "https://wnsp.io/#website",
+          "name": "NexusOS",
+          "url": "https://wnsp.io/",
+          "description": "The foundational blueprint for a Kardashev Type I civilization. Physics-based blockchain, WNSP spectral communication protocol, WavelengthScript compiler, and CE-SE pipeline.",
+          "keywords": "WNSP, WavelengthScript, photonic computing, spectral communication, physics blockchain, NXT token, open source",
+          "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
+          "creator": { "@id": "https://wnsp.io/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://wnsp.io/spectral-search?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "NexusOS",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Web",
+          "url": "https://wnsp.io/",
+          "description": "Open-source physics-based OS kernel for a Kardashev Type I civilization. Includes WNSP spectral protocol, WavelengthScript compiler, CE-SE encoding pipeline, NXT token wallet, and WNSP Virtual Machine.",
+          "license": "AGPL-3.0",
+          "author": { "@id": "https://wnsp.io/#organization" },
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "featureList": [
+            "WNSP Spectral Communication Protocol",
+            "WavelengthScript Compiler",
+            "CE-SE Encoding Pipeline",
+            "Physics-Based Blockchain",
+            "NXT Token Wallet",
+            "WNSP Virtual Machine",
+            "Spectral Relay Mesh",
+            "51,200 Orthogonal Communication Channels (256 WDM × 50 OAM × 2 Pol × 2 Dir)"
+          ]
+        }
       ]
     }
     </script>
