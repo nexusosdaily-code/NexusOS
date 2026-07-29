@@ -51,7 +51,6 @@ const CUSTOM_DOMAIN_HOSTS = new Set<string>([
 // Listing them here would make crawlers index thin auth-shell pages.
 // ---------------------------------------------------------------------------
 const EXACT_PUBLIC_PATHS = new Set<string>([
-  "/auth",
   "/contact",
   "/labs",
   // Funding & campaign
@@ -67,7 +66,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/spectral-router", "/spectral-search", "/spectral-contracts",
   "/spectral-bundle",
   // WNSP landing + known child routes
-  "/wnsp", "/wnsp/ordinals",
+  "/wnsp",
   "/wnsp-ordinals",
   "/wnsp-bridge",
   "/wnsp-vm",
@@ -93,6 +92,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/compression-explorer",
   "/unified-compression-theory", "/universal-one", "/matter-protocol", "/universal-address", "/element-catalogue", "/standing-wave-trap", "/lossless-channel",
   "/resonance-cavity", "/polariton-exchange", "/the-emitter", "/the-network", "/the-observer", "/the-memory", "/cosmic-lattice", "/the-entangler", "/the-field",
+  "/the-coherent-state", "/the-squeezed-state", "/the-bogoliubov-transform",
   // Protocol & language
   "/wavelength-lang", "/ce-se-pipeline", "/ce-code-writer",
   "/divergence-test",
@@ -110,8 +110,6 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/spectral-ide", "/resonance-cavity",
   "/build", "/shareholders",
   "/build-catalogue", "/nexus-explorer", "/psi-board",
-  // Legacy redirect paths (server redirects in production)
-  "/btc-bridge",
   // Routes registered in public Router()
   "/hardware-treasury", "/spectral-mirror",
 ]);

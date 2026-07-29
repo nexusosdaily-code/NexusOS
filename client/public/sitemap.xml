@@ -142,6 +142,21 @@
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
+  <url>
+    <loc>https://wnsp.io/the-coherent-state</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://wnsp.io/the-squeezed-state</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://wnsp.io/the-bogoliubov-transform</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.95</priority>
+  </url>
 
   <!-- ── Protocol & Language ───────────────────────────────────────────── -->
   <url>

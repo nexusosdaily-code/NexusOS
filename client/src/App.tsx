@@ -299,9 +299,6 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/cosmic-lattice",
   "/the-entangler",
   "/the-field",
-  "/the-coherent-state",
-  "/the-squeezed-state",
-  "/the-bogoliubov-transform",
 ]);
 
 // Only paths where ANY child segment is a valid protected route (dynamic).
