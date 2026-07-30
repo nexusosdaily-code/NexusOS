@@ -22,7 +22,7 @@ const INDEX_HTML = path.resolve("dist/public/index.html");
  * index.html after every build. Keep this in sync with the CRITICAL set
  * in criticalChunkPreloadPlugin() inside vite.config.ts.
  */
-const REQUIRED_CHUNKS = ["wallet", "lightning-wallet"] as const;
+const REQUIRED_CHUNKS = ["hub", "auth", "wallet", "lightning-wallet"] as const;
 
 // ─── core check (shared by export and standalone main) ───────────────────────
 
