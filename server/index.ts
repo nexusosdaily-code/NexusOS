@@ -777,9 +777,38 @@ async function runStartupMigrations() {
     // Wave 1 — 2s: core chain/genesis
     await delay(2_000);
     seedGenesisUser().catch((e) => console.error("[GENESIS USER] Boot error:", e));
-    // sealConstitution runs AFTER seedGenesisBlock to avoid block-number races
+    // sealConstitution runs AFTER seedGenesisBlock to avoid block-number races.
+    // Wrapped with retry logic for transient DB connectivity errors that are
+    // common on first boot in production (DNS not yet ready, pool cold-start).
+    async function sealConstitutionWithRetry(
+      maxAttempts = 5,
+      retryDelayMs = 6_000,
+    ): Promise<boolean> {
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          return await sealConstitution();
+        } catch (err: any) {
+          const msg: string = err?.message ?? String(err);
+          const isTransient =
+            msg.includes("ENOTFOUND") ||
+            msg.includes("ETIMEDOUT") ||
+            msg.includes("Connection terminated") ||
+            msg.includes("connection timeout") ||
+            msg.includes("connect ECONNREFUSED") ||
+            msg.includes("timeout exceeded");
+          if (!isTransient || attempt === maxAttempts) throw err;
+          console.warn(
+            `[CONSTITUTION] Seal attempt ${attempt}/${maxAttempts} failed (transient): ${msg.slice(0, 120)} — retrying in ${retryDelayMs / 1000}s`,
+          );
+          await new Promise((r) => setTimeout(r, retryDelayMs));
+        }
+      }
+      // unreachable — loop always throws or returns
+      throw new Error("sealConstitutionWithRetry: exhausted");
+    }
+
     seedGenesisBlock()
-      .then(() => sealConstitution())
+      .then(() => sealConstitutionWithRetry())
       .then((sealed) => {
         if (sealed === true) {
           console.log("[CONSTITUTION] Fresh seal written to chain — boot complete.");
