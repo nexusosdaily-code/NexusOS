@@ -15,7 +15,7 @@ function criticalChunkPreloadPlugin(): Plugin {
     name: "inject-critical-modulepreloads",
     enforce: "post",
     generateBundle(_, bundle) {
-      const CRITICAL = new Set(["hub", "auth"]);
+      const CRITICAL = new Set(["hub", "auth", "wallet", "lightning-wallet"]);
       const preloadTags: string[] = [];
 
       for (const [fileName, chunk] of Object.entries(bundle)) {
