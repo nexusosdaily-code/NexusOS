@@ -65,7 +65,7 @@
     "bcrypt": "^6.0.0",
     "bitcoinjs-lib": "^7.0.1",
     "body-parser": "^1.20.6",
-    "brace-expansion": "^2.1.2",
+    "brace-expansion": "^5.0.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -88,7 +88,7 @@
     "memorystore": "^1.6.7",
     "multer": "^2.2.0",
     "next-themes": "^0.4.6",
-    "nodemon": "^3.1.11",
+    "nodemon": "^3.1.14",
     "nostr-tools": "^2.23.5",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
@@ -155,6 +155,7 @@
     "fast-xml-parser": "^5.10.1",
     "qs": "^6.15.2",
     "launch-editor": "^2.14.1",
-    "ws": "^8.21.0"
+    "ws": "^8.21.0",
+    "minimatch": "10.2.6"
   }
 }
