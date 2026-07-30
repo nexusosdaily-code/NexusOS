@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { metaImagesPlugin } from "./vite-plugin-meta-images";
+import { CRITICAL_CHUNKS } from "./scripts/critical-chunks";
 
 /**
  * Injects <link rel="modulepreload"> tags for the hub (homepage) and auth
@@ -15,7 +16,7 @@ function criticalChunkPreloadPlugin(): Plugin {
     name: "inject-critical-modulepreloads",
     enforce: "post",
     generateBundle(_, bundle) {
-      const CRITICAL = new Set(["hub", "auth", "wallet", "lightning-wallet"]);
+      const CRITICAL = new Set(CRITICAL_CHUNKS);
       const preloadTags: string[] = [];
 
       for (const [fileName, chunk] of Object.entries(bundle)) {

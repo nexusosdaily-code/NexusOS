@@ -14,15 +14,16 @@
 
 import { readFile } from "fs/promises";
 import path from "path";
+import { CRITICAL_CHUNKS } from "./critical-chunks.js";
 
 const INDEX_HTML = path.resolve("dist/public/index.html");
 
 /**
  * The chunk name prefixes that MUST appear as modulepreload hrefs in
- * index.html after every build. Keep this in sync with the CRITICAL set
- * in criticalChunkPreloadPlugin() inside vite.config.ts.
+ * index.html after every build. Derived from the single source of truth
+ * in scripts/critical-chunks.ts — no manual sync required.
  */
-const REQUIRED_CHUNKS = ["hub", "auth", "wallet", "lightning-wallet"] as const;
+const REQUIRED_CHUNKS = CRITICAL_CHUNKS;
 
 // ─── core check (shared by export and standalone main) ───────────────────────
 
