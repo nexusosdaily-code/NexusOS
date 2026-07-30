@@ -2,6 +2,7 @@ import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
 import { rm, readFile } from "fs/promises";
 import { checkBundleSize } from "../scripts/check-bundle-size.js";
+import { checkPreloads } from "../scripts/check-preloads.js";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
@@ -41,6 +42,9 @@ async function buildAll() {
 
   console.log("checking bundle sizes...");
   await checkBundleSize();
+
+  console.log("checking critical modulepreloads...");
+  await checkPreloads();
 
   console.log("building server...");
   const pkg = JSON.parse(await readFile("package.json", "utf-8"));
