@@ -1,9 +1,43 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { metaImagesPlugin } from "./vite-plugin-meta-images";
+
+/**
+ * Injects <link rel="modulepreload"> tags for the hub (homepage) and auth
+ * chunks into index.html so the browser can download them in parallel with
+ * the main bundle instead of waiting for it to parse first.
+ */
+function criticalChunkPreloadPlugin(): Plugin {
+  return {
+    name: "inject-critical-modulepreloads",
+    enforce: "post",
+    generateBundle(_, bundle) {
+      const CRITICAL = new Set(["hub", "auth"]);
+      const preloadTags: string[] = [];
+
+      for (const [fileName, chunk] of Object.entries(bundle)) {
+        if (chunk.type === "chunk" && CRITICAL.has(chunk.name)) {
+          preloadTags.push(
+            `    <link rel="modulepreload" crossorigin href="/${fileName}">`
+          );
+        }
+      }
+
+      if (preloadTags.length === 0) return;
+
+      const htmlAsset = bundle["index.html"];
+      if (htmlAsset && htmlAsset.type === "asset" && typeof htmlAsset.source === "string") {
+        htmlAsset.source = htmlAsset.source.replace(
+          /(\s*<\/head>)/,
+          `\n${preloadTags.join("\n")}$1`
+        );
+      }
+    },
+  };
+}
 
 export default defineConfig({
   plugins: [
@@ -11,6 +45,7 @@ export default defineConfig({
     runtimeErrorOverlay(),
     tailwindcss(),
     metaImagesPlugin(),
+    criticalChunkPreloadPlugin(),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
