@@ -43,41 +43,36 @@ export default defineConfig({
     chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
-        manualChunks: {
-          "vendor-react": ["react", "react-dom"],
-          "vendor-query": ["@tanstack/react-query"],
-          "vendor-router": ["wouter"],
-          "vendor-icons": ["lucide-react"],
-          "vendor-charts": ["recharts"],
-          "vendor-radix": [
-            "@radix-ui/react-accordion",
-            "@radix-ui/react-alert-dialog",
-            "@radix-ui/react-aspect-ratio",
-            "@radix-ui/react-avatar",
-            "@radix-ui/react-checkbox",
-            "@radix-ui/react-collapsible",
-            "@radix-ui/react-context-menu",
-            "@radix-ui/react-dialog",
-            "@radix-ui/react-dropdown-menu",
-            "@radix-ui/react-hover-card",
-            "@radix-ui/react-label",
-            "@radix-ui/react-menubar",
-            "@radix-ui/react-navigation-menu",
-            "@radix-ui/react-popover",
-            "@radix-ui/react-progress",
-            "@radix-ui/react-radio-group",
-            "@radix-ui/react-scroll-area",
-            "@radix-ui/react-select",
-            "@radix-ui/react-separator",
-            "@radix-ui/react-slider",
-            "@radix-ui/react-slot",
-            "@radix-ui/react-switch",
-            "@radix-ui/react-tabs",
-            "@radix-ui/react-toast",
-            "@radix-ui/react-toggle",
-            "@radix-ui/react-toggle-group",
-            "@radix-ui/react-tooltip",
-          ],
+        // Function-based manualChunks is required for React 19 — the array form silently
+        // produces empty chunks because React 19 ESM internals resolve to different IDs.
+        manualChunks(id) {
+          // React core — must come before the generic node_modules check
+          if (
+            id.includes("/node_modules/react/") ||
+            id.includes("/node_modules/react-dom/") ||
+            id.includes("/node_modules/scheduler/")
+          ) {
+            return "vendor-react";
+          }
+          if (id.includes("/node_modules/@radix-ui/")) {
+            return "vendor-radix";
+          }
+          if (id.includes("/node_modules/lucide-react/")) {
+            return "vendor-icons";
+          }
+          if (
+            id.includes("/node_modules/recharts/") ||
+            id.includes("/node_modules/d3-") ||
+            id.includes("/node_modules/victory-")
+          ) {
+            return "vendor-charts";
+          }
+          if (id.includes("/node_modules/@tanstack/react-query/")) {
+            return "vendor-query";
+          }
+          if (id.includes("/node_modules/wouter/")) {
+            return "vendor-router";
+          }
         },
       },
     },

@@ -13,10 +13,10 @@
         }
       });
     </script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#050d1a" />
     <title>NexusOS — Physics-Based Civilization OS</title>
-    <meta name="description" content="NexusOS is the foundational blueprint for a Kardashev Type I civilization. Built on the Theory of Compression States — physics-based blockchain, WNSP spectral communication, WavelengthScript, and a CE-SE pipeline that maps every symbol to a photon frequency." />
+    <meta name="description" content="NexusOS: the foundational blueprint for a Kardashev Type I civilization. Physics-based blockchain, WNSP spectral communication, and WavelengthScript." />
     <meta name="robots" content="index, follow" />
     <meta name="keywords" content="WNSP, WavelengthScript, photonic computing, spectral communication, physics blockchain, NXT token, compression states, Kardashev, CE-SE pipeline, open source" />
     <link rel="canonical" href="https://wnsp.io/" />
@@ -25,7 +25,7 @@
     <meta property="og:description" content="The foundational blueprint for a Kardashev Type I civilization. Physics-based blockchain, WNSP spectral communication, WavelengthScript, and a CE-SE pipeline that maps every symbol to a photon frequency." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://wnsp.io/" />
-    <meta property="og:image" content="https://0a70fadf-e9ae-4e02-8d6d-f55fdb7924c1-00-kxbvkx18na65-baxdvj19.riker.replit.dev/opengraph.png" />
+    <meta property="og:image" content="https://0a70fadf-e9ae-4e02-8d6d-f55fdb7924c1-00-kxbvkx18na65.riker.replit.dev/opengraph.jpg" />
     <meta property="og:site_name" content="NexusOS" />
     <meta property="og:locale" content="en_US" />
 
@@ -33,7 +33,7 @@
     <meta name="twitter:site" content="@NexusOS_io" />
     <meta name="twitter:title" content="NexusOS — Physics-Based Civilization OS" />
     <meta name="twitter:description" content="The foundational blueprint for a Kardashev Type I civilization. Physics-based blockchain, WNSP spectral communication, WavelengthScript." />
-    <meta name="twitter:image" content="https://0a70fadf-e9ae-4e02-8d6d-f55fdb7924c1-00-kxbvkx18na65-baxdvj19.riker.replit.dev/opengraph.png" />
+    <meta name="twitter:image" content="https://0a70fadf-e9ae-4e02-8d6d-f55fdb7924c1-00-kxbvkx18na65.riker.replit.dev/opengraph.jpg" />
 
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
@@ -46,62 +46,79 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "NexusOS",
-      "url": "https://wnsp.io/",
-      "description": "The foundational blueprint for a Kardashev Type I civilization. Physics-based blockchain, WNSP spectral communication protocol, WavelengthScript compiler, and CE-SE pipeline.",
-      "keywords": "WNSP, WavelengthScript, photonic computing, spectral communication, physics blockchain, NXT token, open source",
-      "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
-      "creator": {
-        "@type": "Organization",
-        "name": "NexusOS",
-        "url": "https://wnsp.io/"
-      },
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": {
-          "@type": "EntryPoint",
-          "urlTemplate": "https://wnsp.io/spectral-search?q={search_term_string}"
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://wnsp.io/#organization",
+          "name": "NexusOS",
+          "url": "https://wnsp.io/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://wnsp.io/opengraph.jpg"
+          },
+          "description": "Open-source physics-based OS kernel for a Kardashev Type I civilization. WNSP protocol, WavelengthScript, CE-SE pipeline, NXT token. AGPL-3.0.",
+          "sameAs": [
+            "https://github.com/nexusosdaily-code/NexusOS",
+            "https://t.me/nexusosdaily"
+          ],
+          "founder": {
+            "@type": "Person",
+            "name": "Te Rata Pou"
+          }
         },
-        "query-input": "required name=search_term_string"
-      }
-    }
-    </script>
-
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "NexusOS",
-      "applicationCategory": "DeveloperApplication",
-      "operatingSystem": "Web",
-      "url": "https://wnsp.io/",
-      "description": "Open-source physics-based OS kernel for a Kardashev Type I civilization. Includes WNSP spectral protocol, WavelengthScript compiler, CE-SE encoding pipeline, NXT token wallet, and WNSP Virtual Machine.",
-      "license": "AGPL-3.0",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
-      "featureList": [
-        "WNSP Spectral Communication Protocol",
-        "WavelengthScript Compiler",
-        "CE-SE Encoding Pipeline",
-        "Physics-Based Blockchain",
-        "NXT Token Wallet",
-        "WNSP Virtual Machine",
-        "Spectral Relay Mesh",
-        "51,200 Orthogonal Communication Channels (256 WDM × 50 OAM × 2 Pol × 2 Dir)"
+        {
+          "@type": "WebSite",
+          "@id": "https://wnsp.io/#website",
+          "name": "NexusOS",
+          "url": "https://wnsp.io/",
+          "description": "The foundational blueprint for a Kardashev Type I civilization. Physics-based blockchain, WNSP spectral communication protocol, WavelengthScript compiler, and CE-SE pipeline.",
+          "keywords": "WNSP, WavelengthScript, photonic computing, spectral communication, physics blockchain, NXT token, open source",
+          "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
+          "creator": { "@id": "https://wnsp.io/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://wnsp.io/spectral-search?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "NexusOS",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Web",
+          "url": "https://wnsp.io/",
+          "description": "Open-source physics-based OS kernel for a Kardashev Type I civilization. Includes WNSP spectral protocol, WavelengthScript compiler, CE-SE encoding pipeline, NXT token wallet, and WNSP Virtual Machine.",
+          "license": "AGPL-3.0",
+          "author": { "@id": "https://wnsp.io/#organization" },
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "featureList": [
+            "WNSP Spectral Communication Protocol",
+            "WavelengthScript Compiler",
+            "CE-SE Encoding Pipeline",
+            "Physics-Based Blockchain",
+            "NXT Token Wallet",
+            "WNSP Virtual Machine",
+            "Spectral Relay Mesh",
+            "51,200 Orthogonal Communication Channels (256 WDM × 50 OAM × 2 Pol × 2 Dir)"
+          ]
+        }
       ]
     }
     </script>
-    <script type="module" crossorigin src="/assets/index-B7n_VJ-G.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/vendor-router-tr6KpmeX.js">
-    <link rel="modulepreload" crossorigin href="/assets/vendor-query-Bv9H5-RN.js">
-    <link rel="modulepreload" crossorigin href="/assets/vendor-radix-U50gSQ5i.js">
-    <link rel="modulepreload" crossorigin href="/assets/vendor-charts-D6_ndWWt.js">
-    <link rel="modulepreload" crossorigin href="/assets/vendor-icons-DxZLqVKp.js">
-    <link rel="preload" as="style" crossorigin href="/assets/index-TV_EpeyG.css" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" crossorigin href="/assets/index-TV_EpeyG.css"></noscript>
+    <script type="module" crossorigin src="/assets/index-DPqRIfRB.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-Dbq4-fkY.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-router-BNSZfxZx.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-query-BjGBBAlo.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-radix-Bzu4Wl3g.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-icons-taAWd6pV.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-Dg8NIFdO.css">
   </head>
   <body style="background:#050d1a;margin:0;padding:0;">
     <a href="#main-content" style="position:absolute;left:-9999px;top:4px;z-index:9999;background:#4f46e5;color:#fff;padding:8px 16px;border-radius:6px;font-weight:600;font-size:14px;text-decoration:none;" onfocus="this.style.left='4px'" onblur="this.style.left='-9999px'">Skip to main content</a>

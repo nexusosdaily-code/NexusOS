@@ -22,13 +22,14 @@ export function metaImagesPlugin(): Plugin {
       const opengraphJpgPath = path.join(publicDir, 'opengraph.jpg');
       const opengraphJpegPath = path.join(publicDir, 'opengraph.jpeg');
 
+      // Prefer JPG/JPEG (much smaller) over PNG
       let imageExt: string | null = null;
-      if (fs.existsSync(opengraphPngPath)) {
-        imageExt = 'png';
-      } else if (fs.existsSync(opengraphJpgPath)) {
+      if (fs.existsSync(opengraphJpgPath)) {
         imageExt = 'jpg';
       } else if (fs.existsSync(opengraphJpegPath)) {
         imageExt = 'jpeg';
+      } else if (fs.existsSync(opengraphPngPath)) {
+        imageExt = 'png';
       }
 
       if (!imageExt) {
