@@ -3461,7 +3461,7 @@ export async function registerRoutes(
       const raw = decodeURIComponent(req.params.psiChannel);
       const match = raw.match(/[Ψ\u03A8]\((\d+),(\d+),([HVhv])\)/);
       if (!match) {
-        return res.status(400).json({ error: "Invalid format. Expected Ψ(wdm,oam,pol) e.g. Ψ(52,20,H)" });
+        return res.status(400).json({ error: "Invalid format. Expected Ψ(wdm,oam,pol) e.g. Ψ(1,1,H)" });
       }
       const [, wdmS, oamS, polS] = match;
       const { db: _idDb } = await import("./db");

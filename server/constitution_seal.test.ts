@@ -496,7 +496,7 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
   );
 
   it(
-    "backfill uses CONSTITUTION_PSI fallback (Ψ(52,20,H)) when psi_channel is null in the surviving block row",
+    "backfill uses CONSTITUTION_PSI fallback (Ψ(52,20,H)) when psi_channel is null in the surviving block row", // check:allow-literal — test description documents the fallback value, not functional code
     async () => {
       // This test documents an intentional design decision:
       //   existingBlock.psi_channel ?? CONSTITUTION_PSI

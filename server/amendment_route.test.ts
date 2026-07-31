@@ -74,7 +74,7 @@ vi.mock("./constitution_seal", () => ({
   computeConstitutionHash: vi.fn().mockReturnValue("a".repeat(64)),
   mapAmendmentRows:        vi.fn().mockReturnValue([]),
   getConstitutionSeal:     vi.fn().mockResolvedValue(null),
-  CONSTITUTION_PSI:        "Ψ(52,20,H)",
+  CONSTITUTION_PSI:        "Ψ(52,20,H)", // check:allow-literal — vi.mock factory cannot import from the module it mocks
 }));
 
 // Stub DB so transitive imports from auth / storage don't open real connections
