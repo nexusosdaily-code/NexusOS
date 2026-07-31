@@ -20,9 +20,13 @@
 
 import crypto from "crypto";
 
-// ── Advisory lock constant — must be unique across all boot locks ─────────────
-// 0x636F6E73 = "cons" in hex — mnemonic for "constitution"
+// ── Advisory lock constants — must be unique across all boot locks ────────────
+// 0x636F6E73 = "cons" in hex — mnemonic for "constitution" (used by sealConstitution)
 const ADVISORY_LOCK_KEY = 0x636F6E73;
+// 0x616D6E64 = "amnd" in hex — mnemonic for "amendment" (used by mineAmendmentBlock)
+// A separate key is required so seal and amendment operations can proceed independently
+// while still serialising all concurrent amendment-mine calls against each other.
+const AMENDMENT_ADVISORY_LOCK_KEY = 0x616D6E64;
 
 // ── SYSTEM band constants — permanent, matches Replit AI identity ─────────────
 const CONSTITUTION_WDM           = 52;
@@ -367,6 +371,11 @@ export async function mineAmendmentBlock(params: {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+
+    // Serialise all concurrent amendment-mine calls — prevents duplicate block_number
+    // when two operators click "Mine" simultaneously.  Uses a separate key from the
+    // constitution-seal lock so sealing and amending never block each other.
+    await client.query("SELECT pg_advisory_xact_lock($1)", [AMENDMENT_ADVISORY_LOCK_KEY]);
 
     // Count existing amendment blocks to derive version number
     const amendCount = await client.query(
