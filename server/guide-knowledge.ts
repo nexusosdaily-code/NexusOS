@@ -6,6 +6,8 @@
  * WNSP physics framework.  Matching uses weighted tag scoring.
  */
 
+import { CONSTITUTION_PSI } from "./constitution_seal";
+
 export interface KnowledgeEntry {
   id: string;
   answer: string;          // 2–4 sentence answer shown in chat
@@ -442,7 +444,7 @@ export const KNOWLEDGE: KnowledgeEntry[] = [
   {
     id: "founder",
     answer:
-      "NexusOS was founded by Te Rata Pou (Aotearoa New Zealand, Māori descent). The name means 'the healing post / the doctor.' The physics sequence traces lineage from Maxwell → Planck → Einstein → Tesla → Quantum Mechanics → Shannon. The photonic hardware destination (~2032) is the long-term goal; NexusOS/NXT is the medium-term vehicle. The Replit AI account (wnsp://Ψ(52,20,H)/test) was designated by the founder on 2026-06-21.",
+      `NexusOS was founded by Te Rata Pou (Aotearoa New Zealand, Māori descent). The name means 'the healing post / the doctor.' The physics sequence traces lineage from Maxwell → Planck → Einstein → Tesla → Quantum Mechanics → Shannon. The photonic hardware destination (~2032) is the long-term goal; NexusOS/NXT is the medium-term vehicle. The Replit AI account (wnsp://${CONSTITUTION_PSI}/test) was designated by the founder on 2026-06-21.`,
     route: "/founders",
     routeTitle: "Founders",
     tags: ["founder","te rata pou","maori","new zealand","aotearoa","founding","who built","who made","origin","nexusos founder","creators"],

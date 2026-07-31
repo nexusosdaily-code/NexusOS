@@ -743,3 +743,66 @@ describe("referer probe — own-origin referers never trigger the counter", () =
     expect(await hitTimesWithReferer(mw, 10, "", "ObscureTestBrowser/99.0", { rotateUa: true })).toBe(0);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Constitutionally-blocked referer — must never increment the probe counter
+//
+// When a request carries a constitutionally-blocked Referer header the
+// middleware returns 403 *before* registering the res.on("finish") listener
+// that drives recordProbe(). Consequently, blocked referers must never
+// accumulate hits and must never fire a sendProbeAlert call, even when the
+// request count far exceeds the configured threshold.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("constitutionally-blocked referer never increments the probe counter", () => {
+  /**
+   * Helper: send `count` requests with the given referer, each with a unique
+   * UA so the UA probe never accumulates, and assert sendProbeAlert was never
+   * called regardless of the threshold.
+   */
+  async function assertBlockedRefererNeverAlerts(
+    referer: string,
+    threshold = 2,
+  ): Promise<void> {
+    process.env.PROBE_ALERT_THRESHOLD = String(threshold);
+    const mw = await freshMiddleware();
+
+    // Send threshold+1 requests — enough to trigger an alert if the probe
+    // were recorded — and confirm sendProbeAlert is still called zero times.
+    const count = threshold + 1;
+    for (let i = 0; i < count; i++) {
+      const req = makeReq(`ObscureTestBrowser/99.0-hit${i}`, referer);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      // Trigger the finish event; for a blocked request no listener was
+      // registered, so this is a no-op — but calling it is correct and
+      // future-proofs the test against any listener-registration change.
+      res.finish();
+      await flushMicrotasks();
+    }
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(0);
+  }
+
+  it("binance.com referer: threshold+1 requests produce zero alerts", async () => {
+    await assertBlockedRefererNeverAlerts("https://binance.com/");
+  });
+
+  it("binance.com subdomain referer is also blocked and never alerts", async () => {
+    await assertBlockedRefererNeverAlerts("https://exchange.binance.com/trade");
+  });
+
+  it("ftx.com referer: threshold+1 requests produce zero alerts", async () => {
+    await assertBlockedRefererNeverAlerts("https://ftx.com/markets");
+  });
+
+  it("jpmorgan.com referer: threshold+1 requests produce zero alerts", async () => {
+    await assertBlockedRefererNeverAlerts("https://www.jpmorgan.com/");
+  });
+
+  it("blocked referer with a custom high threshold still produces zero alerts", async () => {
+    // Even with a threshold of 1 (alert on hit 2), a blocked referer must
+    // never trigger an alert because probe recording is skipped entirely.
+    await assertBlockedRefererNeverAlerts("https://binance.com/", 1);
+  });
+});
