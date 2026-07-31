@@ -9,11 +9,8 @@
  *   3. Input validation         — blank/oversized fields → 400
  *   4. Happy path               — SYSTEM-band account    → 201
  *
- * Strategy: the handler in routes.ts is not exported as a standalone function,
- * so these tests drive a thin re-implementation of the same logic that imports
- * the same mocked modules.  Any drift between this file and routes.ts ~5026
- * will be surfaced by the 403 / 400 message-string assertions, because those
- * strings are copied verbatim from the route handler.
+ * Strategy: the handler is imported directly from server/amendment-handler.ts
+ * so any change to the real implementation is automatically exercised here.
  *
  * Mocked modules
  *   ./auth              — authenticate: controls whether req.user is present
@@ -86,74 +83,10 @@ vi.mock("./db", () => ({
   db:   {},
 }));
 
-// ── Handler under test ────────────────────────────────────────────────────────
-// This function mirrors the POST /api/constitution/amendments handler in
-// server/routes.ts (~line 5026) exactly.  If the route logic changes, update
-// this function to match and the tests will continue to document the contract.
-
-async function handlePostAmendment(req: any, res: any): Promise<void> {
-  try {
-    const user    = (req as any).user;
-    const channel = mockDeriveChannel(user.username);
-    const band    = mockGetBand(channel.wdm);
-
-    if (!mockHasAuthority(channel.wdm, "KERNEL")) {
-      res.status(403).json({
-        error: `SYSTEM or KERNEL band required to mine an amendment block. Your band: ${band}`,
-      });
-      return;
-    }
-
-    // Per-user rate limit — uses the REAL function from amendment-rate-limit.ts
-    if (!checkAmendmentRateLimit(user.id)) {
-      res.status(429).json({
-        error: `Amendment rate limit exceeded. Maximum ${AMENDMENT_MAX_PER_DAY} amendments per 24 hours.`,
-      });
-      return;
-    }
-
-    const { title, body } = req.body;
-
-    if (!title || typeof title !== "string" || !title.trim()) {
-      res.status(400).json({ error: "title is required" });
-      return;
-    }
-    if (!body || typeof body !== "string" || !body.trim()) {
-      res.status(400).json({ error: "body is required" });
-      return;
-    }
-    if (title.trim().length > 200) {
-      res.status(400).json({ error: "title must be 200 characters or fewer" });
-      return;
-    }
-    if (body.trim().length > 4000) {
-      res.status(400).json({ error: "body must be 4000 characters or fewer" });
-      return;
-    }
-
-    // Dynamic import — intercepted by vitest's module mock
-    const { mineAmendmentBlock } = await import("./constitution_seal");
-    const result = await mineAmendmentBlock({
-      title:          title.trim(),
-      body:           body.trim(),
-      authoredBand:   band,
-      authorUsername: user.username,
-      authorWdm:      channel.wdm,
-      authorOam:      channel.oam,
-      authorPol:      channel.pol,
-    });
-
-    res.status(201).json({
-      blockNumber:  result.blockNumber,
-      timestamp:    result.timestamp,
-      title:        title.trim(),
-      authoredBand: band,
-      message:      "Amendment block mined successfully",
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: "Failed to mine amendment block", message: err.message });
-  }
-}
+// ── Real handler under test ───────────────────────────────────────────────────
+// Imported directly so any change to the real implementation is automatically
+// reflected here — no manual mirror to maintain.
+import { amendmentHandler } from "./amendment-handler";
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
 
@@ -164,7 +97,7 @@ function makeAuthMiddleware(opts: {
 }) {
   // next is typed to return void | Promise<void> so we can await it.
   // Express itself never awaits next(), but our test pipeline must so that
-  // runRequest doesn't return before handlePostAmendment has resolved.
+  // amendmentHandler doesn't return before runRequest has resolved.
   return async (req: any, res: any, next: () => void | Promise<void>) => {
     const authHeader = req.headers?.authorization;
     const cookieToken = req.cookies?.auth_token;
@@ -180,7 +113,7 @@ function makeAuthMiddleware(opts: {
     }
 
     req.user = opts.user;
-    await next(); // must await so handlePostAmendment fully resolves before runRequest returns
+    await next(); // must await so amendmentHandler fully resolves before runRequest returns
   };
 }
 
@@ -221,7 +154,7 @@ async function runRequest(opts: {
   const user = opts.user !== undefined ? opts.user : null;
   await makeAuthMiddleware({ user })(req, res, async () => {
     settled = true;
-    await handlePostAmendment(req, res);
+    await amendmentHandler(req, res);
   });
 
   if (!settled) {

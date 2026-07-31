@@ -5048,61 +5048,7 @@ export async function registerRoutes(
   });
 
   // ── Constitution Amendments — SYSTEM/KERNEL only ─────────────────
-  app.post("/api/constitution/amendments", authenticate, async (req: Request, res: Response) => {
-    try {
-      const user = (req as any).user;
-      const channel = deriveChannel(user.username);
-      const band = getBand(channel.wdm);
-
-      if (!hasAuthority(channel.wdm, "KERNEL")) {
-        return res.status(403).json({
-          error: `SYSTEM or KERNEL band required to mine an amendment block. Your band: ${band}`,
-        });
-      }
-
-      // Per-user rate limit — max 5 amendments per 24 hours
-      if (!checkAmendmentRateLimit(user.id)) {
-        return res.status(429).json({
-          error: `Amendment rate limit exceeded. Maximum ${AMENDMENT_MAX_PER_DAY} amendments per 24 hours.`,
-        });
-      }
-
-      const { title, body } = req.body;
-      if (!title || typeof title !== "string" || !title.trim()) {
-        return res.status(400).json({ error: "title is required" });
-      }
-      if (!body || typeof body !== "string" || !body.trim()) {
-        return res.status(400).json({ error: "body is required" });
-      }
-      if (title.trim().length > 200) {
-        return res.status(400).json({ error: "title must be 200 characters or fewer" });
-      }
-      if (body.trim().length > 4000) {
-        return res.status(400).json({ error: "body must be 4000 characters or fewer" });
-      }
-
-      const { mineAmendmentBlock } = await import("./constitution_seal");
-      const result = await mineAmendmentBlock({
-        title:         title.trim(),
-        body:          body.trim(),
-        authoredBand:  band,
-        authorUsername: user.username,
-        authorWdm:     channel.wdm,
-        authorOam:     channel.oam,
-        authorPol:     channel.pol,
-      });
-
-      return res.status(201).json({
-        blockNumber:  result.blockNumber,
-        timestamp:    result.timestamp,
-        title:        title.trim(),
-        authoredBand: band,
-        message:      "Amendment block mined successfully",
-      });
-    } catch (err: any) {
-      return res.status(500).json({ error: "Failed to mine amendment block", message: err.message });
-    }
-  });
+  app.post("/api/constitution/amendments", authenticate, amendmentHandler);
 
   // ── Agent Message Bus API ─────────────────────────────────────────
   // Proxy to the Python WNSP bus + persistent message history in PostgreSQL
