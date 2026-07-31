@@ -112,6 +112,7 @@ const BOT_PATTERNS: { pattern: RegExp; name: string }[] = [
   // a browser.
   { pattern: /jagitek/i,              name: "Jagitek-Scanner" },
   { pattern: /lead[\s-]?research/i,   name: "LeadResearch-Scanner" },
+  { pattern: /ghost[\s-]?rider/i,     name: "GhostRider-Recon" },
 
   // Politeness-URL bot convention: real browsers NEVER embed a domain/URL in
   // their own User-Agent string. Any UA carrying "http(s)://" is a crawler or
@@ -218,10 +219,22 @@ const BLOCKED_REFERRER_DOMAINS: { domain: string; label: string }[] = [
   { domain: "natwest.com",      label: "NatWest-RBS" },
   { domain: "royalbankofscotland.com", label: "RBS" },
   { domain: "rbsgroup.com",     label: "RBS" },
+  // ── Data scrapers / recon tools — active probing observed ─────────────
+  { domain: "dataindex.pro",    label: "DataIndex-Scraper" },
+];
+
+// Raw-string patterns for non-URL referers (e.g. "ghost-rider/" — a custom
+// recon script that injects itself as a Referer header but is not a valid URL).
+const BLOCKED_REFERRER_RAW: { pattern: RegExp; label: string }[] = [
+  { pattern: /ghost[\s-]?rider/i, label: "GhostRider-Recon" },
 ];
 
 function isBlockedReferrer(referer: string): { blocked: boolean; label: string } {
   if (!referer) return { blocked: false, label: "" };
+  // Check raw patterns first (catches non-URL referers like "ghost-rider/")
+  for (const { pattern, label } of BLOCKED_REFERRER_RAW) {
+    if (pattern.test(referer)) return { blocked: true, label };
+  }
   try {
     const hostname = new URL(referer).hostname.toLowerCase().replace(/^www\./, "");
     for (const { domain, label } of BLOCKED_REFERRER_DOMAINS) {
