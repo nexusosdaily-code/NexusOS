@@ -806,3 +806,116 @@ describe("constitutionally-blocked referer never increments the probe counter", 
     await assertBlockedRefererNeverAlerts("https://binance.com/", 1);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Double-counting guard — uaProbes and refererProbes are fully independent
+//
+// A single request that carries BOTH an unknown UA and an unknown referer
+// must increment each counter exactly once — one hit in uaProbes and one hit
+// in refererProbes.  The two maps must never bleed into each other.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("double-counting guard — uaProbes and refererProbes are independent", () => {
+  /**
+   * Send `n` requests each carrying BOTH an unknown UA and an external referer.
+   * Returns the full list of [field, value, hits] triples passed to sendProbeAlert.
+   */
+  async function hitBothFields(
+    middleware: Middleware,
+    n: number,
+    ua  = "DualFieldTestBrowser/1.0",
+    ref = "https://dual-field-scraper.example/",
+  ): Promise<Array<[string, string, number]>> {
+    for (let i = 0; i < n; i++) {
+      const req = makeReq(ua, ref);
+      const res = makeRes();
+      middleware(req, res as any, () => {});
+      res.finish();
+      // Two probes may alert on the same hit — each fires its own
+      // import("./telegram-bot").then(cb) chain concurrently.
+      // Four setImmediate rounds ensure both chains drain completely.
+      await flushMicrotasks();
+      await flushMicrotasks();
+    }
+    return mockSendProbeAlert.mock.calls as Array<[string, string, number]>;
+  }
+
+  it("threshold+1 hits with both fields set: sendProbeAlert is called exactly twice, once per field", async () => {
+    // Threshold = 3 (alert fires when hits > 3, i.e. at hit 4+).
+    process.env.PROBE_ALERT_THRESHOLD = "3";
+    const mw = await freshMiddleware();
+
+    // ── Stagger the two probes so they alert on different hits ───────────────
+    // Sending one UA-only hit first gives the UA map a 1-hit head-start over
+    // the referer map.  When the subsequent dual-field hits arrive the UA map
+    // crosses the threshold one hit earlier than the referer map, so each probe
+    // fires its alert in its own microtask batch — no concurrent import() race.
+
+    // UA pre-warm hit (no referer): UA=1, referer=0.
+    const prewarm = makeReq("DualFieldTestBrowser/1.0");
+    const prewarmRes = makeRes();
+    mw(prewarm, prewarmRes as any, () => {});
+    prewarmRes.finish();
+    await flushMicrotasks();
+    expect(mockSendProbeAlert.mock.calls.length).toBe(0);
+
+    // Dual-field hit 1: UA=2, referer=1.  No alert.
+    // Dual-field hit 2: UA=3, referer=2.  No alert.
+    // Dual-field hit 3: UA=4 > threshold → UA alert fires alone.
+    //                   referer=3 = threshold → no referer alert yet.
+    let calls = await hitBothFields(mw, 3);
+    expect(calls.length).toBe(1);
+    expect(calls[0][0]).toBe("ua");
+
+    // Dual-field hit 4: UA=5 (cooldown suppresses re-alert).
+    //                   referer=4 > threshold → referer alert fires alone.
+    calls = await hitBothFields(mw, 1);
+    expect(calls.length).toBe(2);
+
+    // Each alert must carry the correct field label.
+    const fields = calls.map(([field]) => field).sort();
+    expect(fields).toEqual(["referer", "ua"]);
+  });
+
+  it("hitting only with referer (rotating UA) does not trigger a UA alert", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mw = await freshMiddleware();
+
+    // 20 hits with a stable external referer but a unique UA per hit.
+    // Only the referer probe accumulates; the UA probe never exceeds threshold.
+    for (let i = 0; i < 20; i++) {
+      const req = makeReq(`UniqueUA-${i}/1.0`, "https://referer-only-test.example/");
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+    }
+
+    const calls = mockSendProbeAlert.mock.calls as Array<[string, string, number]>;
+    // At least one referer alert must have fired.
+    expect(calls.some(([field]) => field === "referer")).toBe(true);
+    // No UA alert must have fired — each UA key only appears once.
+    expect(calls.some(([field]) => field === "ua")).toBe(false);
+  });
+
+  it("hitting only with UA (no referer) does not trigger a referer alert", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mw = await freshMiddleware();
+
+    // 20 hits with a stable unknown UA and no referer header at all.
+    // Only the UA probe accumulates; the referer probe is never touched.
+    for (let i = 0; i < 20; i++) {
+      const req = makeReq("StableNoRefererUA/1.0"); // no referer arg → ""
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+    }
+
+    const calls = mockSendProbeAlert.mock.calls as Array<[string, string, number]>;
+    // At least one UA alert must have fired.
+    expect(calls.some(([field]) => field === "ua")).toBe(true);
+    // No referer alert must have fired.
+    expect(calls.some(([field]) => field === "referer")).toBe(false);
+  });
+});
