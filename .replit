@@ -36,6 +36,10 @@ args = "Start application"
 task = "workflow.run"
 args = "check:preloads"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "test:constitution"
+
 [[workflows.workflow]]
 name = "check:preloads"
 author = "agent"
@@ -46,6 +50,17 @@ args = "npm run check:preloads"
 
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow]]
+name = "test:constitution"
+author = "agent"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run test:constitution"
 
 [userenv]
 
@@ -77,4 +92,3 @@ externalPort = 3000
 [[ports]]
 localPort = 24678
 externalPort = 3001
-

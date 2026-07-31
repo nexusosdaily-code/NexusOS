@@ -15,7 +15,8 @@
     "audit": "node scripts/pre-publish-audit.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check:preloads": "tsx scripts/check-preloads.ts"
+    "check:preloads": "tsx scripts/check-preloads.ts",
+    "test:constitution": "npx vitest run server/constitution_seal.test.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.18.0",

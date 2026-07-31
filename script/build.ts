@@ -1,6 +1,7 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
 import { rm, readFile } from "fs/promises";
+import { execSync } from "child_process";
 import { checkPreloads } from "../scripts/check-preloads.js";
 
 // server deps to bundle to reduce openat(2) syscalls
@@ -34,6 +35,9 @@ const allowlist = [
 ];
 
 async function buildAll() {
+  console.log("running constitution seal tests...");
+  execSync("npx vitest run server/constitution_seal.test.ts", { stdio: "inherit" });
+
   await rm("dist", { recursive: true, force: true });
 
   console.log("building client...");

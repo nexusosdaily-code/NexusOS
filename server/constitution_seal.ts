@@ -119,16 +119,15 @@ export function computeConstitutionHash(): string {
  * Returns null on timeout or API unavailability — the seal proceeds regardless.
  */
 async function ceEncodeHash(hash: string): Promise<{ psiChannel: string; wavelengthNm: number } | null> {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), 5_000);
   try {
-    const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 5_000);
     const res = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ instruction: hash, label: "constitution_hash" }),
       signal: ctrl.signal,
     });
-    clearTimeout(tid);
     if (!res.ok) return null;
     const enc: any = await res.json();
     const psiChannel  = enc.psi_channel ?? null;
@@ -138,6 +137,8 @@ async function ceEncodeHash(hash: string): Promise<{ psiChannel: string; wavelen
     return { psiChannel, wavelengthNm };
   } catch {
     return null;
+  } finally {
+    clearTimeout(tid);
   }
 }
 
