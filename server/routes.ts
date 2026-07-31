@@ -16323,6 +16323,7 @@ wnsp.io | t.me/troglodytememe`,
         FROM traffic_logs
         WHERE is_bot = true
           AND bot_name IS NOT NULL
+          AND bot_name NOT LIKE 'BLOCKED-REFERRER:%'
           AND created_at >= NOW() - ${interval}::interval
         GROUP BY bot_name
         ORDER BY hits DESC
@@ -16385,6 +16386,22 @@ wnsp.io | t.me/troglodytememe`,
           AND created_at >= NOW() - ${interval}::interval
       `);
 
+      // Blocked referrers — constitutional exclusions that returned HTTP 403
+      const blockedReferrers = await db.execute(sql`
+        SELECT
+          REPLACE(bot_name, 'BLOCKED-REFERRER:', '') AS label,
+          COUNT(*)::int                              AS hits,
+          MAX(created_at)                            AS last_seen,
+          COUNT(DISTINCT ip)::int                    AS unique_ips
+        FROM traffic_logs
+        WHERE bot_name LIKE 'BLOCKED-REFERRER:%'
+          AND status_code = 403
+          AND created_at >= NOW() - ${interval}::interval
+        GROUP BY bot_name
+        ORDER BY hits DESC
+        LIMIT 50
+      `);
+
       res.json({
         window:       windowParam,
         totalHits:    (totals as any)?.total_hits  ?? 0,
@@ -16410,6 +16427,11 @@ wnsp.io | t.me/troglodytememe`,
           countriesProbing: ((threatSummary as any).rows as any[])[0]?.countries_probing ?? 0,
           uniqueIps:        ((threatSummary as any).rows as any[])[0]?.unique_ips       ?? 0,
         },
+        blockedReferrers: ((blockedReferrers as any).rows as any[]).map((r: any) => ({
+          label: r.label, hits: r.hits,
+          lastSeen: r.last_seen, uniqueIps: r.unique_ips,
+        })),
+        blockedHits: ((blockedReferrers as any).rows as any[]).reduce((sum: number, r: any) => sum + (r.hits ?? 0), 0),
       });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
