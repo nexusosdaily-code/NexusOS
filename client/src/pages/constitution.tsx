@@ -211,7 +211,7 @@ async function fetchSeal(): Promise<SealData | null> {
   return res.json();
 }
 
-function SealSection() {
+export function SealSection() {
   const { data, isLoading, error } = useQuery<SealData | null, SealFetchError>({
     queryKey: ["/api/constitution/seal"],
     queryFn: fetchSeal,
