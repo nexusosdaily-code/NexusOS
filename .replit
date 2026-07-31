@@ -38,7 +38,7 @@ args = "check:preloads"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "test:constitution"
+args = "test:all"
 
 [[workflows.workflow]]
 name = "check:preloads"
@@ -61,6 +61,17 @@ isValidation = true
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run test:constitution"
+
+[[workflows.workflow]]
+name = "test:all"
+author = "agent"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run test:all"
 
 [userenv]
 

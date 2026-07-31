@@ -35,8 +35,8 @@ const allowlist = [
 ];
 
 async function buildAll() {
-  console.log("running constitution seal tests...");
-  execSync("npx vitest run server/constitution_seal.test.ts", { stdio: "inherit" });
+  console.log("running all server tests...");
+  execSync("npx vitest run", { stdio: "inherit" });
 
   await rm("dist", { recursive: true, force: true });
 
