@@ -447,3 +447,140 @@ describe("300-character truncation of probe keys in alert message", () => {
     expect(value).toContain("<xss>");
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Referer probe — HTML escaping
+// The referer key passed to sendProbeAlert is referer.slice(0,500).toLowerCase().
+// Escaping HTML specials (<, >, &) is sendProbeAlert's responsibility, not
+// traffic-logger's, so the raw (lowercased) value must arrive unchanged.
+// A known-bot UA (Googlebot) is used so only the referer probe fires.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("Referer probe — HTML escaping: raw value passed through to sendProbeAlert", () => {
+  const BOT_UA = "Googlebot/2.1 (+http://www.google.com/bot.html)";
+
+  /**
+   * Drive the middleware threshold+1 times with a Googlebot UA (so the UA
+   * probe is suppressed) and a specific referer. Returns the [field, value, hits]
+   * args received by sendProbeAlert.
+   */
+  async function getRefererProbeCall(
+    referer: string,
+    threshold = 2,
+  ): Promise<[string, string, number]> {
+    process.env.PROBE_ALERT_THRESHOLD = String(threshold);
+    const mw = await freshMiddleware();
+    for (let i = 0; i < threshold + 1; i++) {
+      const req = makeReq(BOT_UA, referer);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+    }
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    return mockSendProbeAlert.mock.calls[0] as [string, string, number];
+  }
+
+  it("field label is 'referer' for referer probe alerts", async () => {
+    const [field] = await getRefererProbeCall("http://example-scanner.com/probe");
+    expect(field).toBe("referer");
+  });
+
+  it("referer containing '<' is passed raw — sendProbeAlert handles escaping", async () => {
+    const rawRef = "http://evil.com/<script>alert(1)</script>";
+    const [field, value] = await getRefererProbeCall(rawRef);
+    expect(field).toBe("referer");
+    // traffic-logger lowercases the key but does NOT escape HTML
+    expect(value).toContain("<script>");
+    expect(value).toContain("</script>");
+  });
+
+  it("referer containing '>' is passed raw — sendProbeAlert handles escaping", async () => {
+    const rawRef = "http://evil.com/foo>bar";
+    const [field, value] = await getRefererProbeCall(rawRef);
+    expect(field).toBe("referer");
+    expect(value).toContain("foo>bar");
+  });
+
+  it("referer containing '&' is passed raw — sendProbeAlert handles escaping", async () => {
+    const rawRef = "http://evil.com/page?a=1&b=2";
+    const [field, value] = await getRefererProbeCall(rawRef);
+    expect(field).toBe("referer");
+    expect(value).toContain("&");
+  });
+
+  it("referer with all three HTML specials (<, >, &) is passed as lowercased raw string", async () => {
+    const rawRef = "http://bad.com/<b>Click</b>&foo=1";
+    const [field, value] = await getRefererProbeCall(rawRef);
+    expect(field).toBe("referer");
+    // The key is lowercased before storage and forwarding
+    expect(value).toBe(rawRef.toLowerCase());
+    expect(value).toContain("<b>");
+    expect(value).toContain("</b>");
+    expect(value).toContain("&foo=1");
+  });
+
+  it("a plain referer with no HTML specials is not mangled", async () => {
+    const safeRef = "http://ordinarysite.com/page";
+    const [field, value] = await getRefererProbeCall(safeRef);
+    expect(field).toBe("referer");
+    expect(value).toBe(safeRef.toLowerCase());
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Referer probe — 300-character handling
+// traffic-logger stores the key as referer.slice(0, 500).toLowerCase().
+// The 300-char truncation before embedding in the Telegram message is
+// sendProbeAlert's responsibility — traffic-logger must pass the raw (≤500)
+// lowercased value unchanged.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("Referer probe — 300-character handling: raw value (≤500) passed to sendProbeAlert", () => {
+  const BOT_UA = "Googlebot/2.1 (+http://www.google.com/bot.html)";
+
+  async function hitReferer(referer: string, threshold = 2): Promise<string> {
+    process.env.PROBE_ALERT_THRESHOLD = String(threshold);
+    const mw = await freshMiddleware();
+    for (let i = 0; i < threshold + 1; i++) {
+      const req = makeReq(BOT_UA, referer);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+    }
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    return (mockSendProbeAlert.mock.calls[0] as [string, string, number])[1];
+  }
+
+  it("referer of exactly 300 characters is passed through intact", async () => {
+    // "http://x.com/" is 14 chars; pad to 300 total
+    const ref300 = "http://x.com/" + "a".repeat(287);
+    const value = await hitReferer(ref300);
+    expect(value).toBe(ref300.toLowerCase());
+    expect(value.length).toBe(300);
+  });
+
+  it("referer longer than 300 but under 500 chars is passed raw — sendProbeAlert truncates to 300", async () => {
+    const ref400 = "http://x.com/" + "b".repeat(387); // 400 chars total
+    const value = await hitReferer(ref400);
+    expect(value).toBe(ref400.toLowerCase());
+    expect(value.length).toBe(400);
+  });
+
+  it("HTML specials beyond position 300 are present in the raw value — sendProbeAlert truncates them away", async () => {
+    // '<evil>' starts at position 301
+    const ref = "http://x.com/" + "c".repeat(287) + "<evil>";
+    expect(ref.length).toBe(306);
+    const value = await hitReferer(ref);
+    expect(value).toBe(ref.toLowerCase());
+    expect(value).toContain("<evil>");
+  });
+
+  it("HTML specials within the first 300 chars are passed raw to sendProbeAlert", async () => {
+    // '<xss>' at position 14 — well within 300
+    const ref = "http://x.com/<xss>" + "d".repeat(350);
+    const value = await hitReferer(ref);
+    expect(value).toContain("<xss>");
+  });
+});
