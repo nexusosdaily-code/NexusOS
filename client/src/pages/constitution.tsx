@@ -285,6 +285,7 @@ export function SealSection() {
     setFormError(null);
     if (!title.trim()) { setFormError("Title is required."); return; }
     if (!body.trim())  { setFormError("Amendment body is required."); return; }
+    if (body.length > 4000) { setFormError("Amendment body must be 4000 characters or fewer."); return; }
     mutation.mutate({ title: title.trim(), body: body.trim() });
   }
 
@@ -629,7 +630,7 @@ export function SealSection() {
                 <button
                   type="submit"
                   data-testid="button-submit-amendment"
-                  disabled={mutation.isPending}
+                  disabled={mutation.isPending || body.length > 4000}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-sm font-semibold hover:bg-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {mutation.isPending ? (
