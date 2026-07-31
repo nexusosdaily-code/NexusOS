@@ -737,6 +737,222 @@ describe("mapAmendmentRows — pure function", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// mapAmendmentRows() — body field extraction
+//
+// mineAmendmentBlock() writes content in this exact format:
+//   CONSTITUTION_AMENDMENT[v<n>]: <title> | author=<user> | band=<band> |
+//   psi=<Ψ> | body=<text> | t=<ms>
+//
+// These tests confirm every UI field (blockNumber, title, authoredBand,
+// timestamp, body) survives the round-trip from that wire format through
+// mapAmendmentRows — the same pipeline the Amendment History section reads.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("mapAmendmentRows — body field extraction (mineAmendmentBlock wire format)", () => {
+
+  /** Produce content in the exact format written by mineAmendmentBlock. */
+  function makeContent(opts: {
+    version?: number;
+    title: string;
+    author?: string;
+    band?: string;
+    psi?: string;
+    body: string;
+    t?: number;
+  }): string {
+    const { version = 1, title, author = "nexus", band = "SYSTEM",
+            psi = "Ψ(52,20,H)", body, t = 1_700_000_000_000 } = opts;
+    return [
+      `CONSTITUTION_AMENDMENT[v${version}]: ${title}`,
+      `author=${author}`,
+      `band=${band}`,
+      `psi=${psi}`,
+      `body=${body}`,
+      `t=${t}`,
+    ].join(" | ");
+  }
+
+  it("extracts body from the exact mineAmendmentBlock wire format", () => {
+    const content = makeContent({
+      title: "Article VII — Emergency Override",
+      body:  "This amendment grants the SYSTEM operator emergency override authority.",
+    });
+    const result = mapAmendmentRows([{
+      block_number: "99",
+      content,
+      band: "SYSTEM",
+      mined_at: new Date("2026-07-31T00:00:00.000Z"),
+    }]);
+    expect(result[0].body).toBe(
+      "This amendment grants the SYSTEM operator emergency override authority.",
+    );
+  });
+
+  it("all five UI fields round-trip correctly for a SYSTEM-band amendment with body", () => {
+    const minedAt = new Date("2026-07-31T08:00:00.000Z");
+    const content = makeContent({
+      version: 1,
+      title:   "Article VII — Emergency Override",
+      author:  "nexus",
+      band:    "SYSTEM",
+      psi:     "Ψ(52,20,H)",
+      body:    "Grants emergency override authority to the SYSTEM operator.",
+      t:       minedAt.getTime(),
+    });
+
+    const result = mapAmendmentRows([{
+      block_number: "100",
+      content,
+      band:     "SYSTEM",
+      mined_at: minedAt,
+    }]);
+
+    expect(result.length).toBe(1);
+    const a = result[0];
+
+    // blockNumber — rendered as "#<n>" in the UI
+    expect(a.blockNumber).toBe(100);
+
+    // title — shown as the heading of each amendment entry
+    expect(a.title).toBe("Article VII — Emergency Override");
+
+    // authoredBand — used for the colour-coded band badge
+    expect(a.authoredBand).toBe("SYSTEM");
+
+    // timestamp — must be a valid ISO-8601 string so NZT formatting succeeds
+    expect(typeof a.timestamp).toBe("string");
+    expect(a.timestamp).toBe(minedAt.toISOString());
+    expect(() => new Date(a.timestamp).toLocaleString("en-NZ", {
+      timeZone: "Pacific/Auckland",
+      dateStyle: "medium",
+      timeStyle: "short",
+    })).not.toThrow();
+
+    // body — shown in the collapsible "read" panel
+    expect(a.body).toBe("Grants emergency override authority to the SYSTEM operator.");
+  });
+
+  it("all five UI fields round-trip correctly for a KERNEL-band amendment with body", () => {
+    const minedAt = new Date("2026-07-31T10:00:00.000Z");
+    const content = makeContent({
+      version: 2,
+      title:   "Article VIII — Fee Schedule Update",
+      author:  "steward1",
+      band:    "KERNEL",
+      psi:     "Ψ(80,5,V)",
+      body:    "Updates the BASE_FEE parameter from 100 to 150 sats.",
+      t:       minedAt.getTime(),
+    });
+
+    const result = mapAmendmentRows([{
+      block_number: "200",
+      content,
+      band:     "KERNEL",
+      mined_at: minedAt,
+    }]);
+
+    expect(result.length).toBe(1);
+    const a = result[0];
+
+    expect(a.blockNumber).toBe(200);
+    expect(a.title).toBe("Article VIII — Fee Schedule Update");
+    expect(a.authoredBand).toBe("KERNEL");
+    expect(a.timestamp).toBe(minedAt.toISOString());
+    expect(a.body).toBe("Updates the BASE_FEE parameter from 100 to 150 sats.");
+  });
+
+  it("body is undefined when no body field appears in content (no body = no expand button)", () => {
+    const content = [
+      "CONSTITUTION_AMENDMENT[v1]: Title Only",
+      "author=nexus",
+      "band=SYSTEM",
+      "psi=Ψ(52,20,H)",
+      "t=1700000000000",
+    ].join(" | ");
+
+    const result = mapAmendmentRows([{
+      block_number: "5",
+      content,
+      band:     "SYSTEM",
+      mined_at: new Date("2026-07-31T00:00:00.000Z"),
+    }]);
+
+    expect(result[0].body).toBeUndefined();
+  });
+
+  it("pipe chars in body are sanitised to semicolons by mineAmendmentBlock — parser still extracts body", () => {
+    // mineAmendmentBlock calls:  safeBody = params.body.replace(/\|/g, ";")
+    // so a body that originally had pipes arrives at the DB with semicolons.
+    const safeBody = "Rule A; Rule B; Rule C";   // pipes already replaced → semicolons
+    const content = makeContent({ title: "Multi-rule amendment", body: safeBody });
+
+    const result = mapAmendmentRows([{
+      block_number: "77",
+      content,
+      band:     "SYSTEM",
+      mined_at: new Date("2026-07-31T00:00:00.000Z"),
+    }]);
+
+    expect(result[0].body).toBe("Rule A; Rule B; Rule C");
+  });
+
+  it("multi-line body (newlines) round-trips correctly", () => {
+    // Newlines are safe because mineAmendmentBlock only sanitises pipe chars.
+    // A body with embedded newlines must arrive intact for the <pre> block.
+    const bodyText = "Line one.\nLine two.\nLine three.";
+    const content = makeContent({ title: "Multi-line amendment", body: bodyText });
+
+    const result = mapAmendmentRows([{
+      block_number: "88",
+      content,
+      band:     "SYSTEM",
+      mined_at: new Date("2026-07-31T00:00:00.000Z"),
+    }]);
+
+    expect(result[0].body).toBe(bodyText);
+  });
+
+  it("two amendments both have body populated — getConstitutionSeal returns both correctly", async () => {
+    const makeAmendRow = (blockNum: string, version: number, title: string, body: string, band: string, minedAt: Date) => ({
+      block_number: blockNum,
+      content: makeContent({ version, title, band, body, t: minedAt.getTime() }),
+      band,
+      mined_at: minedAt,
+    });
+
+    const pool = makePool([
+      { rows: [{ exists: true }] },   // 1. tableCheck
+      { rows: [SEAL_ROW] },           // 2. blockRow (seal block found)
+      {
+        rows: [
+          makeAmendRow("50", 1, "Article VII — Emergency Override",  "Body of amendment 1.", "SYSTEM", new Date("2026-07-31T08:00:00.000Z")),
+          makeAmendRow("60", 2, "Article VIII — Fee Schedule Update", "Body of amendment 2.", "KERNEL", new Date("2026-07-31T09:00:00.000Z")),
+        ],
+      },
+    ]);
+
+    const result = await getConstitutionSeal(pool);
+
+    expect(result).not.toBeNull();
+    expect(result!.amendments.length).toBe(2);
+
+    const [a1, a2] = result!.amendments;
+
+    expect(a1.blockNumber).toBe(50);
+    expect(a1.title).toBe("Article VII — Emergency Override");
+    expect(a1.authoredBand).toBe("SYSTEM");
+    expect(a1.body).toBe("Body of amendment 1.");
+    expect(typeof a1.timestamp).toBe("string");
+    expect(() => new Date(a1.timestamp).toLocaleString("en-NZ", { timeZone: "Pacific/Auckland", dateStyle: "medium", timeStyle: "short" })).not.toThrow();
+
+    expect(a2.blockNumber).toBe(60);
+    expect(a2.title).toBe("Article VIII — Fee Schedule Update");
+    expect(a2.authoredBand).toBe("KERNEL");
+    expect(a2.body).toBe("Body of amendment 2.");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // getConstitutionSeal() tests — amendments array always present
 //
 // Query order inside getConstitutionSeal:
