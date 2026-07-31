@@ -2,6 +2,112 @@ import type { Request, Response, NextFunction } from "express";
 import { isHoneypotPath } from "./honeypot";
 import { ipCountryCache, ipHostingCache } from "./geoip-enricher";
 
+// ── Unknown-probe threshold alerting ─────────────────────────────────────────
+// Fires a Telegram admin alert when a single unrecognised referer or
+// User-Agent string not in any block list *exceeds* ALERT_THRESHOLD hits
+// within a true sliding WINDOW_MS window. A per-key cooldown (COOLDOWN_MS)
+// prevents the same key from re-alerting more than once per hour.
+
+const ALERT_THRESHOLD = 5;                    // alert fires when hits EXCEED this value
+const WINDOW_MS       = 24 * 60 * 60 * 1000; // 24-hour sliding window
+const COOLDOWN_MS     =  1 * 60 * 60 * 1000; // 1-hour cooldown between alerts for same key
+
+interface ProbeEntry {
+  // True sliding window: each element is the epoch-ms timestamp of one hit.
+  // Timestamps older than WINDOW_MS are evicted on each call so the array
+  // always reflects only hits within the most recent 24 hours.
+  hits:        number[]; // sorted ascending
+  lastAlerted: number;   // epoch ms — last time we sent an alert (0 = never)
+}
+
+// Separate maps for referer keys and UA keys so the same string in both
+// fields doesn't trigger double-counting against a single counter.
+const refererProbes = new Map<string, ProbeEntry>();
+const uaProbes      = new Map<string, ProbeEntry>();
+
+// Prune map entries that have no hits within the window, once per hour.
+let lastPrune = 0;
+function pruneProbes(now: number): void {
+  if (now - lastPrune < 60 * 60 * 1000) return;
+  lastPrune = now;
+  const cutoff = now - WINDOW_MS;
+  for (const [key, entry] of refererProbes) {
+    if (entry.hits.length === 0 || entry.hits[entry.hits.length - 1] < cutoff) {
+      refererProbes.delete(key);
+    }
+  }
+  for (const [key, entry] of uaProbes) {
+    if (entry.hits.length === 0 || entry.hits[entry.hits.length - 1] < cutoff) {
+      uaProbes.delete(key);
+    }
+  }
+}
+
+/** Escape a raw header value so it is safe to embed inside a Telegram HTML message. */
+function escapeTelegramHtml(raw: string): string {
+  return raw
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// Own-origin hostnames: referers from these are never flagged as unknown probes.
+// Covers the production domains and the Replit dev domain (present in all
+// development and preview sessions).
+const OWN_HOSTNAMES: readonly string[] = ["wnsp.io", "wnsp.tech"];
+
+function isOwnOriginReferer(referer: string): boolean {
+  if (!referer) return false;
+  // Allow the Replit dev domain at runtime without hardcoding it.
+  const devDomain = process.env.REPLIT_DEV_DOMAIN ?? "";
+  try {
+    const host = new URL(referer).hostname.toLowerCase().replace(/^www\./, "");
+    if (devDomain && (host === devDomain || host.endsWith("." + devDomain))) return true;
+    for (const own of OWN_HOSTNAMES) {
+      if (host === own || host.endsWith("." + own)) return true;
+    }
+  } catch { /* malformed URL — not an own-origin ref */ }
+  return false;
+}
+
+function recordProbe(
+  map: Map<string, ProbeEntry>,
+  key: string,
+  label: "referer" | "ua",
+  now: number,
+): void {
+  let entry = map.get(key);
+  if (!entry) {
+    entry = { hits: [], lastAlerted: 0 };
+    map.set(key, entry);
+  }
+
+  // Evict hits that have fallen outside the sliding window.
+  const cutoff = now - WINDOW_MS;
+  let lo = 0;
+  while (lo < entry.hits.length && entry.hits[lo] <= cutoff) lo++;
+  if (lo > 0) entry.hits = entry.hits.slice(lo);
+
+  // Record this hit.
+  entry.hits.push(now);
+
+  // Alert when the in-window count *exceeds* the threshold and the cooldown
+  // period has elapsed since the last alert for this key.
+  if (
+    entry.hits.length > ALERT_THRESHOLD &&
+    now - entry.lastAlerted >= COOLDOWN_MS
+  ) {
+    entry.lastAlerted = now;
+    const field    = label === "referer" ? "Referer" : "User-Agent";
+    const safeVal  = escapeTelegramHtml(key.slice(0, 300));
+    const msg = `⚠️ <b>Unknown probe alert</b>\n\n<b>Field:</b> ${field}\n<b>Value:</b> <code>${safeVal}</code>\n<b>Hits (24 h):</b> ${entry.hits.length}\n\nNot in any block list — consider adding it.`;
+    // Lazy-import to avoid circular deps; fire-and-forget
+    import("./telegram-bot").then(({ sendAdminAlert }) => {
+      sendAdminAlert(msg).catch(() => {});
+    }).catch(() => {});
+  }
+}
+
 const PHP_SCANNER_PATHS = new Set([
   "/admin.php", "/file.php", "/wp-login.php", "/wp-admin.php",
   "/wp-admin", "/wp-config.php", "/wp-includes", "/xmlrpc.php",
@@ -356,6 +462,30 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
         isDatacenterIp: isDatacenter,
       }).catch(() => {});
     }).catch(() => {});
+
+    // ── Unknown-probe threshold alerting ──────────────────────────────────
+    // Only probe-track after the response is done to avoid adding latency.
+    const now = Date.now();
+    pruneProbes(now);
+
+    // Track referers that are non-empty, not already in the block list, and not
+    // from the site's own origin (wnsp.io / wnsp.tech / Replit dev domain).
+    // Internal navigation referers from our own pages are never unknown probes.
+    if (referer && !refBlocked && !isOwnOriginReferer(referer)) {
+      const refKey = referer.slice(0, 500).toLowerCase();
+      recordProbe(refererProbes, refKey, "referer", now);
+    }
+
+    // Track every User-Agent string not matched by any known bot pattern,
+    // regardless of whether it carries a browser-engine token. Scrapers
+    // routinely spoof Chrome/Firefox UAs, so the engine token alone is not a
+    // reliable indicator of a legitimate visitor. The threshold (> 5 identical
+    // UA strings in 24 h) naturally filters out real human visitors whose
+    // browser version/OS combinations vary across sessions.
+    if (ua && !patternBot) {
+      const uaKey = ua.slice(0, 500);
+      recordProbe(uaProbes, uaKey, "ua", now);
+    }
   });
 
   next();
