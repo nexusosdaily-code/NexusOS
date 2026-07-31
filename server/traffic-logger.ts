@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { sql } from "drizzle-orm";
 import { isHoneypotPath } from "./honeypot";
 import { ipCountryCache, ipHostingCache } from "./geoip-enricher";
 
@@ -31,7 +32,6 @@ interface ProbeEntry {
 const refererProbes = new Map<string, ProbeEntry>();
 const uaProbes      = new Map<string, ProbeEntry>();
 
-// Prune map entries that have no hits within the window, once per hour.
 let lastPrune = 0;
 function pruneProbes(now: number): void {
   if (now - lastPrune < 60 * 60 * 1000) return;
@@ -112,6 +112,11 @@ function recordProbe(
       sendAdminAlert(msg).catch(() => {});
     }).catch(() => {});
   }
+
+  // Persist the new hit atomically (fire-and-forget).
+  // We pass only the single new timestamp so PostgreSQL appends it in one
+  // atomic statement — concurrent requests cannot overwrite each other's counts.
+  persistProbeEntry(label, key, now, entry.lastAlerted, cutoff);
 }
 
 const PHP_SCANNER_PATHS = new Set([
@@ -357,19 +362,90 @@ function isBlockedReferrer(referer: string): { blocked: boolean; label: string }
   } catch { /* malformed URL — not a valid referrer */ }
   return { blocked: false, label: "" };
 }
-
 let _db: any = null;
+
+let _probeCounters: any = null;
 let _trafficLogs: any = null;
 
 async function getDb() {
   if (!_db) {
     const { db } = await import("./db");
-    const { trafficLogs } = await import("../shared/schema");
+    const { trafficLogs, probeCounters } = await import("../shared/schema");
     _db = db;
     _trafficLogs = trafficLogs;
+    _probeCounters = probeCounters;
   }
-  return { db: _db, trafficLogs: _trafficLogs };
+  return { db: _db, trafficLogs: _trafficLogs, probeCounters: _probeCounters };
 }
+
+/**
+ * Load all probe counters from the DB into the in-memory maps.
+ * Exported so tests can await it directly on a fresh import.
+ * The module-level _initPromise gates all probe recording until this resolves,
+ * so counts accumulated before a restart are never lost.
+ */
+export async function initProbeCounters(): Promise<void> {
+  try {
+    const { db, probeCounters } = await getDb();
+
+    // Self-provision the table on first deploy so the feature works without
+    // manually running db:push.  CREATE TABLE IF NOT EXISTS is idempotent.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS probe_counters (
+        id           SERIAL PRIMARY KEY,
+        field_type   TEXT    NOT NULL,
+        key          TEXT    NOT NULL,
+        hits         JSONB   NOT NULL DEFAULT '[]',
+        last_alerted BIGINT  NOT NULL DEFAULT 0,
+        updated_at   TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS probe_counters_field_key_idx
+        ON probe_counters (field_type, key)
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS probe_counters_updated_at_idx
+        ON probe_counters (updated_at)
+    `);
+
+    const cutoff = Date.now() - WINDOW_MS;
+
+    // Load all rows; skip those whose newest hit is already outside the window
+    // and whose cooldown is also expired (nothing useful to restore).
+    const rows: Array<{ fieldType: string; key: string; hits: unknown; lastAlerted: number }> =
+      await db.select().from(probeCounters);
+
+    for (const row of rows) {
+      const rawHits = Array.isArray(row.hits) ? (row.hits as number[]) : [];
+      // Keep only hits still within the window.
+      const activeHits = rawHits.filter((t: number) => t > cutoff);
+      if (activeHits.length === 0 && row.lastAlerted === 0) continue;
+
+      const entry: ProbeEntry = {
+        hits:        activeHits,
+        lastAlerted: row.lastAlerted ?? 0,
+      };
+      if (row.fieldType === "referer") {
+        refererProbes.set(row.key, entry);
+      } else if (row.fieldType === "ua") {
+        uaProbes.set(row.key, entry);
+      }
+    }
+  } catch (err) {
+    // Non-fatal: if DB is unavailable at boot, in-memory mode stays active.
+    // Persistence will resume automatically once the DB becomes reachable.
+    console.warn("[probe-counters] init failed (in-memory mode active):", (err as Error).message);
+  }
+}
+
+/**
+ * Module-level init promise.  Probe recording in res.on("finish") awaits this
+ * before touching the in-memory maps so restart-hydration always completes
+ * first — a scraper at hit-4 before a restart still triggers the alert on hit-5
+ * after the restart.
+ */
+const _initPromise: Promise<void> = initProbeCounters();
 
 export function trafficLoggerMiddleware(req: Request, res: Response, next: NextFunction) {
   const path = req.path;
@@ -470,29 +546,86 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
     }).catch(() => {});
 
     // ── Unknown-probe threshold alerting ──────────────────────────────────
-    // Only probe-track after the response is done to avoid adding latency.
-    const now = Date.now();
-    pruneProbes(now);
+    // Await the startup hydration promise before touching the in-memory maps.
+    // This ensures counts accumulated before a restart are loaded first, so a
+    // scraper at hit-4 before a restart still triggers the alert on hit-5 after.
+    _initPromise.then(() => {
+      const now = Date.now();
+      pruneProbes(now);
 
-    // Track referers that are non-empty, not already in the block list, and not
-    // from the site's own origin (wnsp.io / wnsp.tech / Replit dev domain).
-    // Internal navigation referers from our own pages are never unknown probes.
-    if (referer && !refBlocked && !isOwnOriginReferer(referer)) {
-      const refKey = referer.slice(0, 500).toLowerCase();
-      recordProbe(refererProbes, refKey, "referer", now);
-    }
+      // Track referers that are non-empty, not already in the block list, and not
+      // from the site's own origin (wnsp.io / wnsp.tech / Replit dev domain).
+      // Internal navigation referers from our own pages are never unknown probes.
+      if (referer && !refBlocked && !isOwnOriginReferer(referer)) {
+        const refKey = referer.slice(0, 500).toLowerCase();
+        recordProbe(refererProbes, refKey, "referer", now);
+      }
 
-    // Track every User-Agent string not matched by any known bot pattern,
-    // regardless of whether it carries a browser-engine token. Scrapers
-    // routinely spoof Chrome/Firefox UAs, so the engine token alone is not a
-    // reliable indicator of a legitimate visitor. The threshold (> 5 identical
-    // UA strings in 24 h) naturally filters out real human visitors whose
-    // browser version/OS combinations vary across sessions.
-    if (ua && !patternBot) {
-      const uaKey = ua.slice(0, 500);
-      recordProbe(uaProbes, uaKey, "ua", now);
-    }
+      // Track every User-Agent string not matched by any known bot pattern,
+      // regardless of whether it carries a browser-engine token. Scrapers
+      // routinely spoof Chrome/Firefox UAs, so the engine token alone is not a
+      // reliable indicator of a legitimate visitor. The threshold (> 5 identical
+      // UA strings in 24 h) naturally filters out real human visitors whose
+      // browser version/OS combinations vary across sessions.
+      if (ua && !patternBot) {
+        const uaKey = ua.slice(0, 500);
+        recordProbe(uaProbes, uaKey, "ua", now);
+      }
+    }).catch(() => {});
   });
 
   next();
 }
+
+/**
+ * Atomically append a single new hit to the probe_counters row in PostgreSQL.
+ *
+ * Rather than sending the full in-memory hits array (which causes a last-writer-
+ * wins race when two concurrent requests finish at the same time), we send only
+ * the new timestamp and let Postgres do the append + stale-hit pruning in a
+ * single atomic statement.  The GREATEST() on last_alerted means the cooldown
+ * is also safe under concurrent writes.
+ *
+ * Fire-and-forget — never awaited on the request path.
+ */
+function persistProbeEntry(
+  fieldType: "referer" | "ua",
+  key: string,
+  newHit: number,
+  lastAlerted: number,
+  cutoff: number,
+): void {
+  getDb()
+    .then(({ db }) => db.execute(sql`
+      INSERT INTO probe_counters (field_type, key, hits, last_alerted, updated_at)
+      VALUES (
+        ${fieldType},
+        ${key},
+        jsonb_build_array(${newHit}::bigint),
+        ${lastAlerted},
+        NOW()
+      )
+      ON CONFLICT (field_type, key) DO UPDATE SET
+        hits = COALESCE(
+          (
+            SELECT jsonb_agg(v)
+            FROM jsonb_array_elements(
+              probe_counters.hits || jsonb_build_array(${newHit}::bigint)
+            ) v
+            WHERE (v::text)::bigint > ${cutoff}
+          ),
+          jsonb_build_array(${newHit}::bigint)
+        ),
+        last_alerted = GREATEST(probe_counters.last_alerted, ${lastAlerted}),
+        updated_at   = NOW()
+    `))
+    .catch(() => {
+      // DB unavailable — not fatal; in-memory counts are still correct for
+      // this process lifetime.
+    });
+}
+
+// ── Test-only exports ─────────────────────────────────────────────────────────
+// Prefixed with _ to signal "internal — do not import in production code".
+export { refererProbes as _refererProbes, uaProbes as _uaProbes };
+export { recordProbe as _recordProbe };
