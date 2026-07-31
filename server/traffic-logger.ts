@@ -8,9 +8,15 @@ import { ipCountryCache, ipHostingCache } from "./geoip-enricher";
 // within a true sliding WINDOW_MS window. A per-key cooldown (COOLDOWN_MS)
 // prevents the same key from re-alerting more than once per hour.
 
-const ALERT_THRESHOLD = 5;                    // alert fires when hits EXCEED this value
+const ALERT_THRESHOLD = (() => {
+  const v = parseInt(process.env.PROBE_ALERT_THRESHOLD ?? "", 10);
+  return Number.isFinite(v) && v > 0 ? v : 5;
+})();                                          // alert fires when hits EXCEED this value (default 5; override via PROBE_ALERT_THRESHOLD)
 const WINDOW_MS       = 24 * 60 * 60 * 1000; // 24-hour sliding window
-const COOLDOWN_MS     =  1 * 60 * 60 * 1000; // 1-hour cooldown between alerts for same key
+const COOLDOWN_MS     = (() => {
+  const v = parseFloat(process.env.PROBE_ALERT_COOLDOWN_HOURS ?? "");
+  return Number.isFinite(v) && v > 0 ? v * 60 * 60 * 1000 : 1 * 60 * 60 * 1000;
+})();                                          // cooldown between alerts for same key (default 1 h; override via PROBE_ALERT_COOLDOWN_HOURS)
 
 interface ProbeEntry {
   // True sliding window: each element is the epoch-ms timestamp of one hit.
