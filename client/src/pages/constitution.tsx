@@ -4,6 +4,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { useState } from "react";
 import { Shield, ArrowLeft, Lock, Globe, Cpu, Users, Scale, AlertTriangle, Clock, CheckCircle2, Loader2, FileEdit, PlusCircle, X, Send, ChevronDown, ChevronUp, Activity } from "lucide-react";
+import {
+  fetchSeal,
+  sealRetryFn,
+  sealRefetchIntervalFn,
+  type SealData,
+  type SealAmendment,
+  type SealFetchError,
+} from "@/lib/constitution-seal-query";
 
 const SPECTRAL_BANDS = [
   {
@@ -167,61 +175,13 @@ function NmBadge({ nm, color }: { nm: string; color: string }) {
     </span>
   );
 }
-
-interface SealAmendment {
-  blockNumber: number;
-  title: string;
-  authoredBand: string;
-  timestamp: string;
-  body?: string;
-}
-
-interface SealData {
-  blockNumber: number;
-  psiChannel: string;
-  wavelengthNm: number;
-  hash: string;
-  timestamp: string;
-  frequencyHz: number;
-  energyJoules: number;
-  band: string;
-  declaration: string;
-  amendments?: SealAmendment[];
-}
-
-interface SealFetchError extends Error {
-  status?: number;
-  serverMessage?: string;
-}
-
-async function fetchSeal(): Promise<SealData | null> {
-  const res = await fetch("/api/constitution/seal", { credentials: "include" });
-  if (res.status === 503) {
-    const body = await res.json().catch(() => ({}));
-    const err: SealFetchError = new Error(
-      body.message || "Seal failed on last boot — contact the founder",
-    );
-    err.status = 503;
-    err.serverMessage = body.message;
-    throw err;
-  }
-  if (!res.ok) {
-    return null;
-  }
-  return res.json();
-}
-
 export function SealSection() {
   const { data, isLoading, error } = useQuery<SealData | null, SealFetchError>({
     queryKey: ["/api/constitution/seal"],
     queryFn: fetchSeal,
     staleTime: 5 * 60_000,
-    retry: (failureCount, err) => {
-      if ((err as SealFetchError)?.status === 503) return false;
-      return failureCount < 3;
-    },
-    refetchInterval: (query) =>
-      query.state.data === null && !query.state.error ? 5_000 : false,
+    retry: sealRetryFn,
+    refetchInterval: sealRefetchIntervalFn,
   });
 
   const { user } = useAuth();

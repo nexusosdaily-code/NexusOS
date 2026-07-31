@@ -11,13 +11,18 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "node",
-    include:     ["server/**/*.test.ts", "scripts/**/*.test.ts", "client/**/*.test.tsx", "client/**/*.test.ts"],
-    globals:     true,
-    setupFiles: ["client/src/test-setup.ts"],
+    globals: true,
+    include: [
+      "server/**/*.test.ts",
+      "scripts/**/*.test.ts",
+      "client/**/*.test.tsx",
+      "client/**/*.test.ts",
+    ],
     environmentMatchGlobs: [
       ["client/**/*.test.tsx", "happy-dom"],
       ["client/**/*.test.ts",  "happy-dom"],
     ],
+    // @testing-library/jest-dom/vitest only extends `expect` — safe in node too.
+    setupFiles: ["client/src/__tests__/setup.ts"],
   },
 });
