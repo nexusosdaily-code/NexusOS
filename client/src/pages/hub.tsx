@@ -397,6 +397,20 @@ function IdentityRail({
   });
   const pendingFriends = friendsData?.pendingRequests?.length ?? 0;
 
+  // ── Constitutional compliance poll ─────────────────────────────────────
+  const { data: constitutionData } = useQuery<{
+    constitution: { articles: Record<string, { status: "COMPLIANT" | "VIOLATED" }> };
+  }>({
+    queryKey: ["/api/constitution/status"],
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const constitutionViolated =
+    constitutionData?.constitution?.articles &&
+    Object.values(constitutionData.constitution.articles).some(
+      (a) => a.status === "VIOLATED"
+    );
+
   return (
     <div
       data-testid="identity-rail"
@@ -443,6 +457,26 @@ function IdentityRail({
       </div>
 
       <div className="flex-1" />
+
+      {/* Constitutional violation alert */}
+      {constitutionViolated && (
+        <Link href="/constitution/compliance">
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded cursor-pointer text-xs animate-pulse"
+            style={{
+              background: "rgba(239,68,68,0.18)",
+              color: "#f87171",
+              border: "1px solid rgba(239,68,68,0.45)",
+            }}
+            title="Constitutional violation detected — click to view compliance dashboard"
+            data-testid="badge-constitution-violation"
+          >
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="hidden sm:inline font-semibold">Constitution Violated</span>
+            <span className="sm:hidden font-semibold">Violation</span>
+          </div>
+        </Link>
+      )}
 
       {/* Pending friend requests badge */}
       {pendingFriends > 0 && (
