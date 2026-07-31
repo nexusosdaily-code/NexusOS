@@ -86,7 +86,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   // Chain / ecosystem
   "/blockchain", "/ecosystem", "/network", "/snic",
   // Governance / open (public constitutional docs)
-  "/open", "/constitution",
+  "/open", "/constitution", "/constitution/compliance",
   // Science & theory
   "/oscillating-quanta", "/planck-alignment", "/reposed-theory", "/silicon-bridge",
   "/compression-explorer",
@@ -235,7 +235,7 @@ function isNoindexSpaPath(pathname: string): boolean {
   return NOINDEX_DYNAMIC_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
-function isPublicSpaPath(pathname: string): boolean {
+export function isPublicSpaPath(pathname: string): boolean {
   if (EXACT_PUBLIC_PATHS.has(pathname)) return true;
   if (pathname.startsWith("/docs/")) {
     const rest = pathname.slice("/docs/".length);

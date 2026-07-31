@@ -113,6 +113,7 @@ export default function ConstitutionCompliancePage() {
   usePageMeta({
     title: "Live Protocol Compliance · NexusOS",
     description: "Real-time constitutional compliance monitor — C-0001 through C-0006.",
+    canonical: "https://wnsp.io/constitution/compliance",
   });
 
   const { data, isLoading, error, dataUpdatedAt, refetch, isFetching } =

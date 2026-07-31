@@ -435,6 +435,31 @@ export default function GovernancePage() {
           </div>
         </Link>
 
+        {/* Compliance Dashboard card */}
+        <Link href="/constitution/compliance">
+          <div
+            data-testid="card-compliance-dashboard"
+            className="rounded-xl border p-4 cursor-pointer hover:scale-[1.005] transition-all"
+            style={{ borderColor: "rgba(34,197,94,0.30)", background: "linear-gradient(135deg,rgba(34,197,94,0.07),rgba(34,197,94,0.02))" }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-emerald-500/15">
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold uppercase tracking-widest text-emerald-400/60 mb-0.5">Live Enforcement</div>
+                  <div className="font-semibold text-sm text-white">Compliance Dashboard</div>
+                  <div className="text-[11px] text-zinc-500 font-mono mt-0.5">
+                    C-0001 · C-0002 · C-0005 · C-0006 — publicly verifiable
+                  </div>
+                </div>
+              </div>
+              <ArrowRight className="w-3.5 h-3.5 text-emerald-400/40 flex-shrink-0" />
+            </div>
+          </div>
+        </Link>
+
         {/* Quorum notice */}
         <div className="p-3 rounded-xl bg-violet-950/40 border border-violet-500/20 text-[11px] text-violet-300 flex items-center gap-2">
           <Vote className="w-3.5 h-3.5 shrink-0" />
