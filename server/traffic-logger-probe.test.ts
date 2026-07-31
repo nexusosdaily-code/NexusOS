@@ -334,3 +334,120 @@ describe("valid PROBE_ALERT_COOLDOWN_HOURS — alert suppressed within cooldown 
     expect(mockSendAdminAlert.mock.calls.length).toBe(1);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HTML escaping — malicious content in probe keys must be escaped
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("Telegram HTML escaping — malicious characters in probe keys", () => {
+  /**
+   * Helper: fire the middleware enough times to cross the threshold, using the
+   * supplied UA string, and return the first alert message sent to Telegram.
+   */
+  async function getAlertMsg(ua: string, threshold = 2): Promise<string> {
+    process.env.PROBE_ALERT_THRESHOLD = String(threshold);
+    const mw = await freshMiddleware();
+    // threshold+1 hits so the alert fires
+    await hitTimes(mw, threshold + 1, ua);
+    expect(mockSendAdminAlert).toHaveBeenCalledTimes(1);
+    return mockSendAdminAlert.mock.calls[0][0] as string;
+  }
+
+  it("escapes '<' to '&lt;' in the alert message", async () => {
+    const msg = await getAlertMsg("EvilUA/<script>alert(1)</script>");
+    expect(msg).toContain("&lt;script&gt;");
+    expect(msg).not.toContain("<script>");
+  });
+
+  it("escapes '>' to '&gt;' in the alert message", async () => {
+    const msg = await getAlertMsg("EvilUA/foo>bar");
+    expect(msg).toContain("foo&gt;bar");
+    expect(msg).not.toMatch(/foo>bar/);
+  });
+
+  it("escapes '&' to '&amp;' in the alert message", async () => {
+    const msg = await getAlertMsg("EvilUA/foo&bar=1");
+    expect(msg).toContain("foo&amp;bar=1");
+    // raw & must not survive — check the code portion (not the surrounding HTML tags)
+    const codeContent = msg.match(/<code>(.*?)<\/code>/s)?.[1] ?? "";
+    expect(codeContent).not.toContain("foo&bar=1");
+  });
+
+  it("escapes all three special characters together", async () => {
+    // escapeTelegramHtml escapes &, < and > (not quotes — Telegram HTML is not
+    // attribute-safe, only tag-safe).
+    const msg = await getAlertMsg("UA/<b>click</b>&foo=1");
+    const codeContent = msg.match(/<code>(.*?)<\/code>/s)?.[1] ?? "";
+    expect(codeContent).toContain("&lt;b&gt;click&lt;/b&gt;");
+    expect(codeContent).toContain("&amp;foo=1");
+    expect(codeContent).not.toContain("<b>");
+    expect(codeContent).not.toMatch(/[^&]&foo/); // raw & must not survive
+  });
+
+  it("a plain UA with no special characters is not mangled", async () => {
+    // Use a UA that has no HTML-special chars and does not match any BOT_PATTERNS.
+    const safeUa = "TotallyNormalBrowser/42.0 StableChannel Desktop";
+    const msg = await getAlertMsg(safeUa);
+    // The UA value should appear verbatim inside the <code> block
+    const codeContent = msg.match(/<code>(.*?)<\/code>/s)?.[1] ?? "";
+    expect(codeContent).toBe(safeUa);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 300-character truncation — oversized keys are cut before escaping
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("300-character truncation of probe keys in alert message", () => {
+  it("a key of exactly 300 characters is NOT truncated", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mw = await freshMiddleware();
+    const ua300 = "A".repeat(300);
+    await hitTimes(mw, 3, ua300);
+    expect(mockSendAdminAlert).toHaveBeenCalledTimes(1);
+    const msg = mockSendAdminAlert.mock.calls[0][0] as string;
+    const codeContent = msg.match(/<code>(.*?)<\/code>/s)?.[1] ?? "";
+    expect(codeContent).toBe(ua300);
+    expect(codeContent.length).toBe(300);
+  });
+
+  it("a key longer than 300 characters is truncated to 300 chars in the alert", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mw = await freshMiddleware();
+    const ua400 = "B".repeat(400);
+    await hitTimes(mw, 3, ua400);
+    expect(mockSendAdminAlert).toHaveBeenCalledTimes(1);
+    const msg = mockSendAdminAlert.mock.calls[0][0] as string;
+    const codeContent = msg.match(/<code>(.*?)<\/code>/s)?.[1] ?? "";
+    expect(codeContent.length).toBe(300);
+    expect(codeContent).toBe("B".repeat(300));
+  });
+
+  it("special characters after position 300 are not present (truncation comes before escaping)", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mw = await freshMiddleware();
+    // First 300 chars safe, then a '<' at position 300 that should be cut off
+    const ua = "C".repeat(300) + "<evil>";
+    await hitTimes(mw, 3, ua);
+    expect(mockSendAdminAlert).toHaveBeenCalledTimes(1);
+    const msg = mockSendAdminAlert.mock.calls[0][0] as string;
+    const codeContent = msg.match(/<code>(.*?)<\/code>/s)?.[1] ?? "";
+    // The truncated portion should only contain the 300 'C' chars
+    expect(codeContent).toBe("C".repeat(300));
+    expect(codeContent).not.toContain("evil");
+  });
+
+  it("special characters within the first 300 chars are still escaped after truncation", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mw = await freshMiddleware();
+    // Put the '<' at position 10 (well within the 300-char window)
+    const ua = "D".repeat(10) + "<xss>" + "E".repeat(350);
+    await hitTimes(mw, 3, ua);
+    expect(mockSendAdminAlert).toHaveBeenCalledTimes(1);
+    const msg = mockSendAdminAlert.mock.calls[0][0] as string;
+    const codeContent = msg.match(/<code>(.*?)<\/code>/s)?.[1] ?? "";
+    // Escaped form must be present, raw '<' must not appear inside the code block
+    expect(codeContent).toContain("&lt;xss&gt;");
+    expect(codeContent).not.toContain("<xss>");
+  });
+});
