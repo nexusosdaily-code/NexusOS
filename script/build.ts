@@ -1,7 +1,6 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
 import { rm, readFile } from "fs/promises";
-import { checkBundleSize } from "../scripts/check-bundle-size.js";
 import { checkPreloads } from "../scripts/check-preloads.js";
 
 // server deps to bundle to reduce openat(2) syscalls
@@ -38,10 +37,7 @@ async function buildAll() {
   await rm("dist", { recursive: true, force: true });
 
   console.log("building client...");
-  await viteBuild();
-
-  console.log("checking bundle sizes...");
-  await checkBundleSize();
+  await viteBuild(); // bundle-size check fires inside Vite's closeBundle plugin hook
 
   console.log("checking critical modulepreloads...");
   await checkPreloads();

@@ -7,6 +7,24 @@ import { metaImagesPlugin } from "./vite-plugin-meta-images";
 import { CRITICAL_CHUNKS } from "./scripts/critical-chunks";
 
 /**
+ * Enforces gzip size limits on the entry chunk and vendor-react chunk.
+ * Runs as a Vite `closeBundle` hook so the check fires whether the build is
+ * invoked via `npm run build` or directly via `vite build`.
+ */
+function bundleSizeCheckPlugin(): Plugin {
+  return {
+    name: "bundle-size-check",
+    apply: "build",
+    async closeBundle() {
+      const { checkBundleSize } = await import(
+        "./scripts/check-bundle-size.js"
+      );
+      await checkBundleSize();
+    },
+  };
+}
+
+/**
  * Injects <link rel="modulepreload"> tags for the hub (homepage) and auth
  * chunks into index.html so the browser can download them in parallel with
  * the main bundle instead of waiting for it to parse first.
@@ -47,6 +65,7 @@ export default defineConfig({
     tailwindcss(),
     metaImagesPlugin(),
     criticalChunkPreloadPlugin(),
+    bundleSizeCheckPlugin(),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
