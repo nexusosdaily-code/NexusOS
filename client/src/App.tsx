@@ -43,6 +43,7 @@ const DeveloperKeysPage = lazy(() => import("@/pages/developer-keys"));
 const DeveloperPage = lazy(() => import("@/pages/developer"));
 const GovernancePage = lazy(() => import("@/pages/governance"));
 const ConstitutionPage = lazy(() => import("@/pages/constitution"));
+const ConstitutionCompliancePage = lazy(() => import("@/pages/constitution-compliance"));
 const DocsPage = lazy(() => import("@/pages/docs"));
 const WNSPCoordinator = lazy(() => import("@/pages/wnsp-coordinator"));
 const KernelPage = lazy(() => import("@/pages/kernel"));
@@ -581,6 +582,7 @@ function Router() {
       <Route path="/hardware-treasury" component={HardwareTreasuryPage} />
       <Route path="/campaign" component={CampaignPage} />
       <Route path="/constitution" component={ConstitutionPage} />
+      <Route path="/constitution/compliance" component={ConstitutionCompliancePage} />
       <Route path="/mobile-sdk" component={MobileSDKPage} />
       <Route path="/shareholders" component={ShareholdersPage} />
       <Route path="/contact" component={ContactPage} />

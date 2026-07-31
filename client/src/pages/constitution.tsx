@@ -3,7 +3,7 @@ import { usePageMeta } from "@/hooks/use-page-meta";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { useState } from "react";
-import { Shield, ArrowLeft, Lock, Globe, Cpu, Users, Scale, AlertTriangle, Clock, CheckCircle2, Loader2, FileEdit, PlusCircle, X, Send, ChevronDown, ChevronUp } from "lucide-react";
+import { Shield, ArrowLeft, Lock, Globe, Cpu, Users, Scale, AlertTriangle, Clock, CheckCircle2, Loader2, FileEdit, PlusCircle, X, Send, ChevronDown, ChevronUp, Activity } from "lucide-react";
 
 const SPECTRAL_BANDS = [
   {
@@ -738,6 +738,16 @@ export default function ConstitutionPage() {
                 {label}
               </span>
             ))}
+          </div>
+          {/* Live Enforcement Dashboard link */}
+          <div className="flex justify-center pt-1">
+            <Link href="/constitution/compliance">
+              <button className="flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/8 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/15 hover:border-emerald-500/50 transition-colors">
+                <Activity className="w-3.5 h-3.5" />
+                Live Enforcement Dashboard
+                <span className="text-[10px] font-mono text-emerald-400/60">C-0001 · C-0002 · C-0005 · C-0006</span>
+              </button>
+            </Link>
           </div>
         </div>
 
