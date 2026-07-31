@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 
 const PAGES: { route: string; title: string; desc: string; keywords: string[] }[] = [
@@ -66,7 +66,18 @@ const PAGES: { route: string; title: string; desc: string; keywords: string[] }[
   { route: "/nexus-hardware-os", title: "Nexus Hardware OS", desc: "Hardware operating system layer — photonic chip interface, PHR-1, SNIC integration", keywords: ["hardware os","photonic","phr-1","snic","chip","hardware operating system","photonic chip","nexus hardware"] },
 ];
 
-type Msg = { from: "user" | "bot"; text: string; route?: string; title?: string };
+type Msg = {
+  from: "user" | "bot";
+  text: string;
+  /** keyword-match navigation: auto-navigate to this route */
+  route?: string;
+  title?: string;
+  /** AI-answer: optional "go deeper" chip */
+  deeperRoute?: string;
+  deeperTitle?: string;
+  /** loading indicator */
+  isThinking?: boolean;
+};
 
 function matchPage(input: string) {
   const q = input.toLowerCase();
@@ -98,53 +109,79 @@ const SUGGESTIONS = [
 ];
 
 export default function GuideBot() {
-  const [open, setOpen] = useState(false);
-  const [input, setInput] = useState("");
+  const [open, setOpen]         = useState(false);
+  const [input, setInput]       = useState("");
+  const [thinking, setThinking] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([
-    { from: "bot", text: "Hi! I'm the NexusOS guide. Ask me anything — I'll open the right page for you." },
+    { from: "bot", text: "Hi! I'm the NexusOS guide. Ask me anything about the physics, protocol, or features." },
   ]);
   const [, navigate] = useLocation();
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef  = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
+    if (open) setTimeout(() => inputRef.current?.focus(), 100);
   }, [open]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  function send(text?: string) {
+  const send = useCallback(async (text?: string) => {
     const q = (text ?? input).trim();
-    if (!q) return;
+    if (!q || thinking) return;
     setInput("");
+
     const userMsg: Msg = { from: "user", text: q };
     const page = matchPage(q);
-    let botMsg: Msg;
+
     if (page) {
-      botMsg = {
+      // Keyword match → navigate immediately
+      const botMsg: Msg = {
         from: "bot",
         text: `Opening **${page.title}** — ${page.desc}`,
         route: page.route,
         title: page.title,
       };
+      setMessages(m => [...m, userMsg, botMsg]);
       setTimeout(() => navigate(page.route), 400);
       setTimeout(() => setOpen(false), 900);
-    } else {
-      botMsg = {
-        from: "bot",
-        text: "I'm not sure which page that is. Try asking about Bitcoin, wallets, the VM, pipeline, compression, contracts, or governance — or pick a suggestion below.",
-      };
+      return;
     }
-    setMessages(m => [...m, userMsg, botMsg]);
-  }
+
+    // No keyword match → ask the AI knowledge base
+    const thinkingMsg: Msg = { from: "bot", text: "", isThinking: true };
+    setMessages(m => [...m, userMsg, thinkingMsg]);
+    setThinking(true);
+
+    try {
+      const resp = await fetch("/api/guide/ask", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ question: q }),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      const botMsg: Msg = {
+        from:        "bot",
+        text:        data.answer || "I couldn't find an answer for that.",
+        deeperRoute: data.route      ?? undefined,
+        deeperTitle: data.routeTitle ?? undefined,
+      };
+      setMessages(m => [...m.slice(0, -1), botMsg]);
+    } catch {
+      setMessages(m => [
+        ...m.slice(0, -1),
+        { from: "bot", text: "Guide temporarily unavailable — try a suggestion below or ask about a specific page." },
+      ]);
+    } finally {
+      setThinking(false);
+    }
+  }, [input, thinking, navigate]);
 
   return (
     <>
-      {/* Floating trigger button — bottom left */}
+      {/* Floating trigger — bottom left */}
       <button
         onClick={() => setOpen(o => !o)}
         title="NexusOS Guide"
@@ -163,7 +200,7 @@ export default function GuideBot() {
       {/* Chat panel */}
       {open && (
         <div
-          style={{ position: "fixed", bottom: "80px", left: "24px", zIndex: 9997, width: "min(380px, calc(100vw - 48px))" }}
+          style={{ position: "fixed", bottom: "80px", left: "24px", zIndex: 9997, width: "min(400px, calc(100vw - 48px))" }}
           className="rounded-2xl border border-violet-500/30 bg-[#0a0a12] shadow-2xl shadow-violet-900/40 flex flex-col overflow-hidden"
         >
           {/* Header */}
@@ -171,26 +208,45 @@ export default function GuideBot() {
             <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
             <div className="flex-1">
               <div className="text-xs font-mono font-bold text-white/80">NexusOS Guide</div>
-              <div className="text-[9px] font-mono text-white/30">Ask a question — I'll open the page</div>
+              <div className="text-[9px] font-mono text-white/30">Physics · Protocol · Features — ask anything</div>
             </div>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 max-h-64">
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 max-h-72">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[85%] rounded-xl px-3 py-2 text-[11px] leading-relaxed ${
+                <div className={`max-w-[88%] rounded-xl px-3 py-2 text-[11px] leading-relaxed ${
                   m.from === "user"
                     ? "bg-violet-600/30 border border-violet-500/30 text-white/80"
                     : "bg-white/5 border border-white/8 text-white/70"
                 }`}>
-                  {m.from === "bot" && m.route ? (
+                  {m.isThinking ? (
+                    /* Animated thinking dots */
+                    <span className="flex gap-1 items-center h-4">
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </span>
+                  ) : m.from === "bot" && m.route ? (
+                    /* Keyword-match navigation message */
                     <>
                       <span className="text-violet-300 font-bold">↗ {m.title}</span>
                       <div className="text-white/40 text-[10px] mt-0.5">Navigating now…</div>
                     </>
                   ) : (
-                    m.text
+                    /* Regular text + optional "go deeper" chip */
+                    <>
+                      <span>{m.text}</span>
+                      {m.deeperRoute && (
+                        <button
+                          onClick={() => { navigate(m.deeperRoute!); setOpen(false); }}
+                          className="mt-2 flex items-center gap-1 text-[10px] font-mono text-violet-300 border border-violet-500/30 rounded-full px-2.5 py-0.5 hover:bg-violet-500/20 transition-all"
+                        >
+                          ↗ {m.deeperTitle ?? "Go deeper"}
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -222,16 +278,19 @@ export default function GuideBot() {
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && send()}
+              onKeyDown={e => e.key === "Enter" && !thinking && send()}
               placeholder="Ask anything about NexusOS…"
-              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-violet-500/40"
+              disabled={thinking}
+              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder-white/20 focus:outline-none focus:border-violet-500/40 disabled:opacity-50"
               data-testid="input-guide-bot"
             />
-            <button onClick={() => send()}
-              disabled={!input.trim()}
+            <button
+              onClick={() => send()}
+              disabled={!input.trim() || thinking}
               className="px-3 py-2 rounded-lg bg-violet-600 text-white text-xs font-bold hover:bg-violet-500 transition-all disabled:opacity-30"
-              data-testid="button-guide-bot-send">
-              →
+              data-testid="button-guide-bot-send"
+            >
+              {thinking ? "…" : "→"}
             </button>
           </div>
         </div>

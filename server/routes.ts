@@ -1469,6 +1469,28 @@ export async function registerRoutes(
     }
   });
 
+  // ── GuideBot AI ───────────────────────────────────────────────────────────
+  // Public — no auth. Grounded entirely in the WNSP knowledge base; no LLM.
+  app.post("/api/guide/ask", async (req: Request, res: Response) => {
+    try {
+      const { findAnswer } = await import("./guide-knowledge.js");
+      const raw = req.body?.question;
+      if (typeof raw !== "string" || !raw.trim()) {
+        return res.status(400).json({ error: "question is required" });
+      }
+      const question = raw.trim().slice(0, 500);
+      const result   = findAnswer(question);
+      return res.json({
+        answer:     result.answer,
+        route:      result.route      ?? null,
+        routeTitle: result.routeTitle ?? null,
+        confidence: result.confidence,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: "Guide unavailable", detail: err.message });
+    }
+  });
+
   // ── Physics Profile ────────────────────────────────────────────────────────
   app.get("/api/physics/my", authenticate, async (req, res) => {
     try {
