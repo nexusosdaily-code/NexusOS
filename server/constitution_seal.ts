@@ -33,7 +33,7 @@ const CONSTITUTION_WDM           = 52;
 const CONSTITUTION_OAM           = 20;
 const CONSTITUTION_POL           = "H";
 const CONSTITUTION_WAVELENGTH_NM = 542.5;
-const CONSTITUTION_PSI           = "Ψ(52,20,H)";
+export const CONSTITUTION_PSI    = "Ψ(52,20,H)";
 const CONSTITUTION_BAND          = "SYSTEM";
 
 // Physics at 542.5 nm

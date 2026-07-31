@@ -48,6 +48,7 @@ import {
   computeConstitutionHash,
   mapAmendmentRows,
   getConstitutionSeal,
+  CONSTITUTION_PSI,
   type QueryablePool,
 } from "./constitution_seal";
 import { bootState, handleSealError, type BootState } from "./seal-boot-guard";
@@ -541,7 +542,7 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
       const [_p1, _p2, p3] = backfillParams as [string, string, string, string, string];
 
       // $3 — psi_channel: null in the DB row → must resolve to the canonical fallback
-      expect(p3).toBe("Ψ(52,20,H)");
+      expect(p3).toBe(CONSTITUTION_PSI);
     },
   );
 
