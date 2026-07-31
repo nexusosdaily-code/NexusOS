@@ -584,3 +584,162 @@ describe("Referer probe — 300-character handling: raw value (≤500) passed to
     expect(value).toContain("<xss>");
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Referer probe — threshold behaviour mirrors the UA probe
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Drive the middleware N times with a stable external referer, flushing the
+ * microtask queue after each hit so async callbacks complete.
+ *
+ * @param rotateUa - when true, appends the hit index to the UA string so each
+ *   hit uses a unique UA key. This prevents the UA probe from accumulating and
+ *   firing its own alert, isolating tests to referer-only behaviour.
+ *
+ * Returns the total sendProbeAlert call count after all hits.
+ */
+async function hitTimesWithReferer(
+  middleware: Middleware,
+  n: number,
+  referer = "https://external-scraper.example/",
+  ua = "ObscureTestBrowser/99.0",
+  { rotateUa = false }: { rotateUa?: boolean } = {},
+): Promise<number> {
+  for (let i = 0; i < n; i++) {
+    const effectiveUa = rotateUa ? `${ua}-hit${i}` : ua;
+    const req = makeReq(effectiveUa, referer);
+    const res = makeRes();
+    middleware(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+  }
+  return mockSendProbeAlert.mock.calls.length;
+}
+
+describe("referer probe — alert respects the same threshold as the UA probe", () => {
+  it("unknown external referer: no alert at threshold hits, alert fires at threshold+1", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "3";
+    const mw = await freshMiddleware();
+
+    // rotateUa gives every hit a unique UA key so the UA probe never
+    // accumulates above threshold=3, isolating this test to referer behaviour.
+
+    // Three hits — counter equals threshold, should NOT alert yet (> not >=)
+    expect(await hitTimesWithReferer(mw, 3, "https://external-scraper.example/", "ObscureTestBrowser/99.0", { rotateUa: true })).toBe(0);
+
+    // Fourth hit — counter exceeds threshold, alert must fire
+    expect(await hitTimesWithReferer(mw, 1, "https://external-scraper.example/", "ObscureTestBrowser/99.0", { rotateUa: true })).toBe(1);
+  });
+
+  it("referer alert sends field='referer' to sendProbeAlert", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mw = await freshMiddleware();
+
+    // rotateUa ensures each hit uses a unique UA key so the UA probe never
+    // accumulates above threshold=2; only the referer alert is under test.
+    const uniqueReferer = "https://unique-referer-probe.example/";
+    await hitTimesWithReferer(mw, 3, uniqueReferer, "ObscureTestBrowser/99.0", { rotateUa: true });
+
+    expect(mockSendProbeAlert).toHaveBeenCalled();
+    const refererCall = (mockSendProbeAlert.mock.calls as [string, string, number][])
+      .find(([field]) => field === "referer");
+    expect(refererCall).toBeDefined();
+    const [field, value] = refererCall!;
+    expect(field).toBe("referer");
+    expect(value).toContain(uniqueReferer.slice(0, 500).toLowerCase());
+  });
+
+  it("two different external referer keys each alert independently", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mw = await freshMiddleware();
+
+    const refA = "https://scraper-alpha.example/";
+    const refB = "https://scraper-beta.example/";
+
+    // rotateUa prevents the UA probe from accumulating so only referer
+    // alerts contribute to the count.
+
+    // refA exceeds threshold — one alert
+    await hitTimesWithReferer(mw, 3, refA, "ObscureTestBrowser/99.0", { rotateUa: true });
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+
+    // refB independently exceeds threshold — second alert
+    await hitTimesWithReferer(mw, 3, refB, "ObscureTestBrowser/99.0", { rotateUa: true });
+    expect(mockSendProbeAlert.mock.calls.length).toBe(2);
+  });
+
+  it("referer cooldown is respected: first alert fires, subsequent hits do not re-alert", async () => {
+    process.env.PROBE_ALERT_THRESHOLD    = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const mw = await freshMiddleware();
+
+    // rotateUa isolates this to the referer probe — UA keys are all unique.
+
+    // First alert fires at hit 3
+    await hitTimesWithReferer(mw, 3, "https://external-scraper.example/", "ObscureTestBrowser/99.0", { rotateUa: true });
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+
+    // 20 more hits — 1-hour cooldown suppresses re-alerts
+    await hitTimesWithReferer(mw, 20, "https://external-scraper.example/", "ObscureTestBrowser/99.0", { rotateUa: true });
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Referer probe — own-origin referers must never trigger the counter
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("referer probe — own-origin referers never trigger the counter", () => {
+  /**
+   * Hit the middleware many more times than the alert threshold with an
+   * own-origin referer and assert no alert ever fires.
+   */
+  async function assertNoAlertForOwnOriginReferer(referer: string) {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mw = await freshMiddleware();
+
+    // 10 hits — well above threshold — must produce zero alerts.
+    // rotateUa ensures each hit uses a unique UA key so the UA probe never
+    // accumulates above threshold; only the referer behaviour is under test.
+    expect(await hitTimesWithReferer(mw, 10, referer, "ObscureTestBrowser/99.0", { rotateUa: true })).toBe(0);
+  }
+
+  it("wnsp.io referer is never counted", async () => {
+    await assertNoAlertForOwnOriginReferer("https://wnsp.io/some-page");
+  });
+
+  it("subdomain of wnsp.io is never counted", async () => {
+    await assertNoAlertForOwnOriginReferer("https://app.wnsp.io/dashboard");
+  });
+
+  it("wnsp.tech referer is never counted", async () => {
+    await assertNoAlertForOwnOriginReferer("https://wnsp.tech/");
+  });
+
+  it("Replit dev domain referer is never counted", async () => {
+    // Simulate the REPLIT_DEV_DOMAIN env var being set (as it is in all
+    // Replit preview sessions) so isOwnOriginReferer() accepts it.
+    const prevDevDomain = process.env.REPLIT_DEV_DOMAIN;
+    process.env.REPLIT_DEV_DOMAIN = "my-repl.replit.dev";
+    try {
+      await assertNoAlertForOwnOriginReferer("https://my-repl.replit.dev/page");
+    } finally {
+      if (prevDevDomain === undefined) {
+        delete process.env.REPLIT_DEV_DOMAIN;
+      } else {
+        process.env.REPLIT_DEV_DOMAIN = prevDevDomain;
+      }
+    }
+  });
+
+  it("empty referer is never counted", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mw = await freshMiddleware();
+
+    // 10 hits with no referer — the branch condition `if (referer && …)` skips.
+    // rotateUa prevents the UA probe from accumulating so only referer
+    // behaviour is under test.
+    expect(await hitTimesWithReferer(mw, 10, "", "ObscureTestBrowser/99.0", { rotateUa: true })).toBe(0);
+  });
+});
