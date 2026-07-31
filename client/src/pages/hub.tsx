@@ -351,6 +351,47 @@ function BtcWalletPill() {
   );
 }
 
+// ── Constitutional compliance hook (exported for testing) ─────────────────────
+export function useConstitutionViolated(): boolean {
+  const { data } = useQuery<{
+    constitution: { articles: Record<string, { status: "COMPLIANT" | "VIOLATED" }> };
+  }>({
+    queryKey: ["/api/constitution/status"],
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  return !!(
+    data?.constitution?.articles &&
+    Object.values(data.constitution.articles).some(
+      (a) => a.status === "VIOLATED",
+    )
+  );
+}
+
+// ── Constitutional violation badge (exported for testing) ─────────────────────
+export function ConstitutionViolationBadge() {
+  const violated = useConstitutionViolated();
+  if (!violated) return null;
+  return (
+    <Link href="/constitution/compliance">
+      <div
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded cursor-pointer text-xs animate-pulse"
+        style={{
+          background: "rgba(239,68,68,0.18)",
+          color: "#f87171",
+          border: "1px solid rgba(239,68,68,0.45)",
+        }}
+        title="Constitutional violation detected — click to view compliance dashboard"
+        data-testid="badge-constitution-violation"
+      >
+        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+        <span className="hidden sm:inline font-semibold">Constitution Violated</span>
+        <span className="sm:hidden font-semibold">Violation</span>
+      </div>
+    </Link>
+  );
+}
+
 function IdentityRail({
   user, wallet, unread, avatarUrl,
 }: {
@@ -398,18 +439,7 @@ function IdentityRail({
   const pendingFriends = friendsData?.pendingRequests?.length ?? 0;
 
   // ── Constitutional compliance poll ─────────────────────────────────────
-  const { data: constitutionData } = useQuery<{
-    constitution: { articles: Record<string, { status: "COMPLIANT" | "VIOLATED" }> };
-  }>({
-    queryKey: ["/api/constitution/status"],
-    refetchInterval: 60_000,
-    staleTime: 30_000,
-  });
-  const constitutionViolated =
-    constitutionData?.constitution?.articles &&
-    Object.values(constitutionData.constitution.articles).some(
-      (a) => a.status === "VIOLATED"
-    );
+  const constitutionViolated = useConstitutionViolated();
 
   return (
     <div
@@ -459,24 +489,7 @@ function IdentityRail({
       <div className="flex-1" />
 
       {/* Constitutional violation alert */}
-      {constitutionViolated && (
-        <Link href="/constitution/compliance">
-          <div
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded cursor-pointer text-xs animate-pulse"
-            style={{
-              background: "rgba(239,68,68,0.18)",
-              color: "#f87171",
-              border: "1px solid rgba(239,68,68,0.45)",
-            }}
-            title="Constitutional violation detected — click to view compliance dashboard"
-            data-testid="badge-constitution-violation"
-          >
-            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="hidden sm:inline font-semibold">Constitution Violated</span>
-            <span className="sm:hidden font-semibold">Violation</span>
-          </div>
-        </Link>
-      )}
+      <ConstitutionViolationBadge />
 
       {/* Pending friend requests badge */}
       {pendingFriends > 0 && (

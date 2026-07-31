@@ -14,9 +14,10 @@ export default defineConfig({
     environment: "node",
     include:     ["server/**/*.test.ts", "scripts/**/*.test.ts", "client/**/*.test.tsx", "client/**/*.test.ts"],
     globals:     true,
+    setupFiles: ["client/src/test-setup.ts"],
     environmentMatchGlobs: [
-      ["client/**/*.test.tsx", "jsdom"],
-      ["client/**/*.test.ts",  "jsdom"],
+      ["client/**/*.test.tsx", "happy-dom"],
+      ["client/**/*.test.ts",  "happy-dom"],
     ],
   },
 });
