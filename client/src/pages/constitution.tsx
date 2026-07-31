@@ -326,6 +326,16 @@ function SealSection() {
           <p className="text-red-400/60 text-xs pl-8">
             Check server logs for <span className="font-mono">[CONSTITUTION] SEAL FAILED</span> entries and restart the server.
           </p>
+          <div className="pl-8">
+            <button
+              data-testid="btn-seal-retry"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/constitution/seal"] })}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 text-xs font-semibold hover:bg-red-500/20 hover:border-red-500/60 transition-colors"
+            >
+              <Loader2 className="w-3 h-3" />
+              Retry
+            </button>
+          </div>
         </div>
       </section>
     );
