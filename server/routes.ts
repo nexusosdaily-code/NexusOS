@@ -57,6 +57,9 @@ async function checkWithdrawalLimits(userId: string, username: string, amountSat
   return null;
 }
 
+// ── Amendment rate limit ──────────────────────────────────────────────────────
+import { checkAmendmentRateLimit, AMENDMENT_MAX_PER_DAY } from "./amendment-rate-limit.js";
+
 // ── Swap limits & circuit breaker ────────────────────────────────────────────
 // Speculators will notice the fixed rate (1 NXT = 1,000 sats). When BTC pumps
 // they buy cheap NXT externally and swap for sats here, draining the Lightning
@@ -5054,6 +5057,13 @@ export async function registerRoutes(
       if (!hasAuthority(channel.wdm, "KERNEL")) {
         return res.status(403).json({
           error: `SYSTEM or KERNEL band required to mine an amendment block. Your band: ${band}`,
+        });
+      }
+
+      // Per-user rate limit — max 5 amendments per 24 hours
+      if (!checkAmendmentRateLimit(user.id)) {
+        return res.status(429).json({
+          error: `Amendment rate limit exceeded. Maximum ${AMENDMENT_MAX_PER_DAY} amendments per 24 hours.`,
         });
       }
 

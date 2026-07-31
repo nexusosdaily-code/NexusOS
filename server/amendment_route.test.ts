@@ -23,6 +23,11 @@
  */
 
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
+import {
+  checkAmendmentRateLimit,
+  _resetAmendmentRateLimit,
+  AMENDMENT_MAX_PER_DAY,
+} from "./amendment-rate-limit";
 
 // ── Hoisted mock functions — defined before vi.mock factories run ─────────────
 // vi.mock() calls are hoisted to the top of the compiled output, so any
@@ -95,6 +100,14 @@ async function handlePostAmendment(req: any, res: any): Promise<void> {
     if (!mockHasAuthority(channel.wdm, "KERNEL")) {
       res.status(403).json({
         error: `SYSTEM or KERNEL band required to mine an amendment block. Your band: ${band}`,
+      });
+      return;
+    }
+
+    // Per-user rate limit — uses the REAL function from amendment-rate-limit.ts
+    if (!checkAmendmentRateLimit(user.id)) {
+      res.status(429).json({
+        error: `Amendment rate limit exceeded. Maximum ${AMENDMENT_MAX_PER_DAY} amendments per 24 hours.`,
       });
       return;
     }
@@ -227,6 +240,9 @@ const SYSTEM_CHANNEL = { wdm: 52, oam: 20, pol: "H" };
 beforeEach(() => {
   vi.clearAllMocks();
 
+  // Reset in-memory rate-limit state so each test starts with a clean slate
+  _resetAmendmentRateLimit();
+
   // Default physics behaviour — can be overridden per test
   mockDeriveChannel.mockReturnValue(SYSTEM_CHANNEL);
   mockGetBand.mockReturnValue("SYSTEM");
@@ -241,6 +257,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+  _resetAmendmentRateLimit();
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -578,5 +595,117 @@ describe("POST /api/constitution/amendments — DB error handling", () => {
     expect(status).toBe(500);
     expect(body.error).toBe("Failed to mine amendment block");
     expect(body.message).toBe("DB: connection lost");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 6. Rate limiting — excess amendments → 429
+//
+// These tests exercise the REAL checkAmendmentRateLimit function imported
+// from server/amendment-rate-limit.ts.  The in-memory state is reset in the
+// global beforeEach / afterEach so each test starts with a clean counter.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("POST /api/constitution/amendments — per-user rate limit", () => {
+
+  const KERNEL_USER = { username: "steward1", id: "k1", isActive: true };
+  const AUTH        = { authHeader: "Bearer kernel-token", user: KERNEL_USER };
+
+  beforeEach(() => {
+    // KERNEL band — passes the authority check
+    mockDeriveChannel.mockReturnValue({ wdm: 80, oam: 5, pol: "V" });
+    mockGetBand.mockReturnValue("KERNEL");
+    mockHasAuthority.mockReturnValue(true);
+  });
+
+  it("returns 201 for each of the first 5 requests (within quota)", async () => {
+    for (let i = 1; i <= AMENDMENT_MAX_PER_DAY; i++) {
+      const { status } = await runRequest({
+        ...AUTH,
+        body: { title: `Amendment #${i}`, body: "Valid body." },
+      });
+      expect(status).toBe(201);
+    }
+  });
+
+  it("returns 429 on the 6th request for the same user in the same window", async () => {
+    // Exhaust the quota
+    for (let i = 1; i <= AMENDMENT_MAX_PER_DAY; i++) {
+      await runRequest({
+        ...AUTH,
+        body: { title: `Amendment #${i}`, body: "Valid body." },
+      });
+    }
+
+    // 6th request must be rejected
+    const { status, body } = await runRequest({
+      ...AUTH,
+      body: { title: "Amendment #6 — over limit", body: "Should be rejected." },
+    });
+
+    expect(status).toBe(429);
+    expect(body.error).toMatch(/Amendment rate limit exceeded/);
+    expect(body.error).toMatch(/5/); // max per day is visible in the message
+  });
+
+  it("does not call mineAmendmentBlock when the quota is exhausted", async () => {
+    // Exhaust the quota
+    for (let i = 1; i <= AMENDMENT_MAX_PER_DAY; i++) {
+      await runRequest({
+        ...AUTH,
+        body: { title: `Amendment #${i}`, body: "Valid body." },
+      });
+    }
+    vi.clearAllMocks(); // clear the 5 successful mine calls
+
+    await runRequest({
+      ...AUTH,
+      body: { title: "Over limit", body: "Should be rejected." },
+    });
+
+    expect(mockMineAmendmentBlock).not.toHaveBeenCalled();
+  });
+
+  it("rate limit is per-user — a second user is not affected by the first user's quota", async () => {
+    const OTHER_USER = { username: "steward2", id: "k2", isActive: true };
+
+    // Exhaust quota for KERNEL_USER
+    for (let i = 1; i <= AMENDMENT_MAX_PER_DAY; i++) {
+      await runRequest({
+        ...AUTH,
+        body: { title: `Amendment #${i}`, body: "Valid body." },
+      });
+    }
+
+    // OTHER_USER should still be allowed
+    const { status } = await runRequest({
+      authHeader: "Bearer other-token",
+      user: OTHER_USER,
+      body: { title: "Different user amendment", body: "Valid body." },
+    });
+
+    expect(status).toBe(201);
+  });
+
+  it("rate limit check fires after band authority is confirmed (not before)", async () => {
+    // USER band — authority check should fire first and short-circuit
+    // even if the rate limit is also exhausted
+    for (let i = 1; i <= AMENDMENT_MAX_PER_DAY; i++) {
+      checkAmendmentRateLimit(KERNEL_USER.id); // exhaust via direct calls
+    }
+
+    mockDeriveChannel.mockReturnValue({ wdm: 150, oam: 5, pol: "V" });
+    mockGetBand.mockReturnValue("USER");
+    mockHasAuthority.mockReturnValue(false);
+
+    const { status } = await runRequest({
+      ...AUTH,
+      body: { title: "Article VII", body: "Body." },
+    });
+
+    // Must get 403, not 429 — authority check runs first.
+    // mineAmendmentBlock must also not have been called.
+    expect(status).toBe(403);
+    expect(mockMineAmendmentBlock).not.toHaveBeenCalled();
   });
 });
