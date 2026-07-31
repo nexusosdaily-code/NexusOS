@@ -3,7 +3,7 @@ import { usePageMeta } from "@/hooks/use-page-meta";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { useState } from "react";
-import { Shield, ArrowLeft, Lock, Globe, Cpu, Users, Scale, AlertTriangle, Clock, CheckCircle2, Loader2, FileEdit, PlusCircle, X, Send } from "lucide-react";
+import { Shield, ArrowLeft, Lock, Globe, Cpu, Users, Scale, AlertTriangle, Clock, CheckCircle2, Loader2, FileEdit, PlusCircle, X, Send, ChevronDown, ChevronUp } from "lucide-react";
 
 const SPECTRAL_BANDS = [
   {
@@ -173,6 +173,7 @@ interface SealAmendment {
   title: string;
   authoredBand: string;
   timestamp: string;
+  body?: string;
 }
 
 interface SealData {
@@ -230,6 +231,19 @@ function SealSection() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [expandedAmendments, setExpandedAmendments] = useState<Set<number>>(new Set());
+
+  function toggleAmendment(blockNumber: number) {
+    setExpandedAmendments(prev => {
+      const next = new Set(prev);
+      if (next.has(blockNumber)) {
+        next.delete(blockNumber);
+      } else {
+        next.add(blockNumber);
+      }
+      return next;
+    });
+  }
 
   const canPropose =
     user?.spectralBand === "SYSTEM" || user?.spectralBand === "KERNEL";
@@ -420,7 +434,7 @@ function SealSection() {
         </div>
 
         {data.amendments && data.amendments.length > 0 ? (
-          <div className="max-h-72 overflow-y-auto rounded-xl border border-amber-500/20 bg-amber-500/5 divide-y divide-amber-500/10">
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 divide-y divide-amber-500/10">
             {data.amendments.map((amendment, idx) => {
               const amendDate = amendment.timestamp
                 ? new Date(amendment.timestamp).toLocaleString("en-NZ", {
@@ -429,41 +443,69 @@ function SealSection() {
                     timeStyle: "short",
                   })
                 : "—";
+              const isExpanded = expandedAmendments.has(amendment.blockNumber);
+              const hasBody = !!amendment.body;
               return (
                 <div
                   key={amendment.blockNumber}
-                  className="flex items-start gap-4 px-4 py-3"
                   data-testid={`amendment-entry-${amendment.blockNumber}`}
                 >
-                  <div className="flex-shrink-0 flex flex-col items-center gap-1 mt-0.5">
-                    <div className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[9px] font-mono text-amber-400">
-                      {idx + 1}
+                  <div className="flex items-start gap-4 px-4 py-3">
+                    <div className="flex-shrink-0 flex flex-col items-center gap-1 mt-0.5">
+                      <div className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[9px] font-mono text-amber-400">
+                        {idx + 1}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="text-sm font-semibold text-white truncate" data-testid={`amendment-title-${amendment.blockNumber}`}>
-                      {amendment.title}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="text-sm font-semibold text-white" data-testid={`amendment-title-${amendment.blockNumber}`}>
+                        {amendment.title}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
+                          Block <span className="text-amber-400">#{amendment.blockNumber}</span>
+                        </span>
+                        <span
+                          className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                          style={{
+                            background: amendment.authoredBand === "SYSTEM" ? "rgba(139,0,255,0.15)" : "rgba(37,99,235,0.15)",
+                            color: amendment.authoredBand === "SYSTEM" ? "#a855f7" : "#60a5fa",
+                          }}
+                          data-testid={`amendment-band-${amendment.blockNumber}`}
+                        >
+                          {amendment.authoredBand}
+                        </span>
+                        <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                          <Clock className="w-2.5 h-2.5" />
+                          {amendDate}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
-                        Block <span className="text-amber-400">#{amendment.blockNumber}</span>
-                      </span>
-                      <span
-                        className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-                        style={{
-                          background: amendment.authoredBand === "SYSTEM" ? "rgba(139,0,255,0.15)" : "rgba(37,99,235,0.15)",
-                          color: amendment.authoredBand === "SYSTEM" ? "#a855f7" : "#60a5fa",
-                        }}
-                        data-testid={`amendment-band-${amendment.blockNumber}`}
+                    {hasBody && (
+                      <button
+                        data-testid={`amendment-toggle-${amendment.blockNumber}`}
+                        onClick={() => toggleAmendment(amendment.blockNumber)}
+                        className="flex-shrink-0 flex items-center gap-1 text-[10px] font-mono text-amber-400/70 hover:text-amber-400 transition-colors mt-0.5"
+                        aria-expanded={isExpanded}
                       >
-                        {amendment.authoredBand}
-                      </span>
-                      <span className="text-[10px] text-slate-500 flex items-center gap-1">
-                        <Clock className="w-2.5 h-2.5" />
-                        {amendDate}
-                      </span>
-                    </div>
+                        {isExpanded ? (
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        )}
+                        {isExpanded ? "hide" : "read"}
+                      </button>
+                    )}
                   </div>
+                  {hasBody && isExpanded && (
+                    <div className="px-4 pb-4" data-testid={`amendment-body-${amendment.blockNumber}`}>
+                      <pre
+                        className="font-mono text-[11px] leading-relaxed text-slate-300 whitespace-pre-wrap break-words px-4 py-3 rounded-xl border"
+                        style={{ borderColor: "rgba(245,158,11,0.20)", background: "rgba(0,0,0,0.35)" }}
+                      >
+                        {amendment.body}
+                      </pre>
+                    </div>
+                  )}
                 </div>
               );
             })}

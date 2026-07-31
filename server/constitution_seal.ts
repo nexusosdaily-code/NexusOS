@@ -469,6 +469,7 @@ export interface ConstitutionAmendment {
   title: string;
   authoredBand: string;
   timestamp: string;
+  body?: string;
 }
 
 /**
@@ -481,6 +482,9 @@ export function mapAmendmentRows(rows: any[]): ConstitutionAmendment[] {
   return rows.map((r: any) => {
     const titleMatch = r.content?.match(/^CONSTITUTION_AMENDMENT\[v\d+\]:\s*([^|]+)/);
     const title = titleMatch ? titleMatch[1].trim() : `Amendment block #${r.block_number}`;
+    // Extract body field: "body=<text> | t=" or "body=<text>" at end of string
+    const bodyMatch = r.content?.match(/\|\s*body=([^|]+?)(?:\s*\|\s*t=|$)/);
+    const body = bodyMatch ? bodyMatch[1].trim() : undefined;
     return {
       blockNumber:  parseInt(r.block_number, 10),
       title,
@@ -488,6 +492,7 @@ export function mapAmendmentRows(rows: any[]): ConstitutionAmendment[] {
       timestamp:    r.mined_at instanceof Date
         ? r.mined_at.toISOString()
         : typeof r.mined_at === "string" ? r.mined_at : "",
+      body,
     };
   });
 }
