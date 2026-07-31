@@ -34,15 +34,15 @@
 
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-// ── Shared mock for sendAdminAlert ────────────────────────────────────────────
+// ── Shared mock for sendProbeAlert ────────────────────────────────────────────
 // vi.mock is hoisted — this mock applies to all dynamic imports of
 // ./telegram-bot that occur within the module under test, including the
 // fire-and-forget  import("./telegram-bot").then(...)  in recordProbe().
 
-const mockSendAdminAlert = vi.fn().mockResolvedValue(undefined);
+const mockSendProbeAlert = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("./telegram-bot", () => ({
-  sendAdminAlert: mockSendAdminAlert,
+  sendProbeAlert: mockSendProbeAlert,
 }));
 
 // Side-effect dependencies — keep them inert.
@@ -119,7 +119,7 @@ function makeRes() {
 
 /**
  * Flush the microtask queue so that the fire-and-forget
- *   import("./telegram-bot").then(({ sendAdminAlert }) => sendAdminAlert(...))
+ *   import("./telegram-bot").then(({ sendProbeAlert }) => sendProbeAlert(...))
  * inside recordProbe() has completed before we assert.
  */
 async function flushMicrotasks() {
@@ -131,7 +131,7 @@ async function flushMicrotasks() {
 /**
  * Drive the middleware N times with a stable, unknown UA, flushing the
  * microtask queue after each hit so async callbacks complete.
- * Returns the total sendAdminAlert call count after all hits.
+ * Returns the total sendProbeAlert call count after all hits.
  */
 async function hitTimes(
   middleware: Middleware,
@@ -145,7 +145,7 @@ async function hitTimes(
     res.finish();
     await flushMicrotasks();
   }
-  return mockSendAdminAlert.mock.calls.length;
+  return mockSendProbeAlert.mock.calls.length;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -233,12 +233,12 @@ describe("PROBE_ALERT_COOLDOWN_HOURS parsing — invalid values fall back to 1 h
 
     // Trigger the first alert (hit 3 exceeds threshold 2)
     await hitTimes(mw, 3);
-    const countAfterFirst = mockSendAdminAlert.mock.calls.length;
+    const countAfterFirst = mockSendProbeAlert.mock.calls.length;
     expect(countAfterFirst).toBe(1);
 
     // Hit 10 more times — cooldown (1 h) should suppress all re-alerts
     await hitTimes(mw, 10);
-    expect(mockSendAdminAlert.mock.calls.length).toBe(1);
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
   }
 
   it("zero ('0'): falls back to 1 h; no second alert fires within same test", async () => {
@@ -288,11 +288,11 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     const ua = "SuspiciousTrafficUA/1.0";
     await hitTimes(mw, 3, ua); // 3 hits exceeds threshold of 2
 
-    expect(mockSendAdminAlert).toHaveBeenCalledTimes(1);
-    const [msg] = mockSendAdminAlert.mock.calls[0] as [string];
-    expect(msg).toContain("User-Agent");
-    expect(msg).toContain("Hits (24 h)");
-    expect(msg).toContain("3"); // current in-window count reported
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    // sendProbeAlert(field, value, hits) — check all three arguments
+    const [field, , hits] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(field).toBe("ua");
+    expect(hits).toBe(3); // current in-window count reported
   });
 
   it("two different UA keys each alert independently at their own threshold", async () => {
@@ -304,11 +304,11 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
 
     // uaA exceeds threshold — one alert
     await hitTimes(mw, 3, uaA);
-    expect(mockSendAdminAlert.mock.calls.length).toBe(1);
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
 
     // uaB independently exceeds threshold — second alert
     await hitTimes(mw, 3, uaB);
-    expect(mockSendAdminAlert.mock.calls.length).toBe(2);
+    expect(mockSendProbeAlert.mock.calls.length).toBe(2);
   });
 });
 
@@ -327,11 +327,11 @@ describe("valid PROBE_ALERT_COOLDOWN_HOURS — alert suppressed within cooldown 
 
     // First alert fires at hit 3
     await hitTimes(mw, 3);
-    expect(mockSendAdminAlert.mock.calls.length).toBe(1);
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
 
     // 20 more hits — still within the 1-hour cooldown window → no second alert
     await hitTimes(mw, 20);
-    expect(mockSendAdminAlert.mock.calls.length).toBe(1);
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
   });
 });
 
@@ -341,56 +341,54 @@ describe("valid PROBE_ALERT_COOLDOWN_HOURS — alert suppressed within cooldown 
 
 describe("Telegram HTML escaping — malicious characters in probe keys", () => {
   /**
-   * Helper: fire the middleware enough times to cross the threshold, using the
-   * supplied UA string, and return the first alert message sent to Telegram.
+   * Helper: fire the middleware enough times to cross the threshold using the
+   * supplied UA string, and return the [field, value, hits] args passed to
+   * sendProbeAlert.  HTML escaping and truncation now happen inside
+   * sendProbeAlert (telegram-bot.ts), so traffic-logger must pass the raw
+   * value unchanged.
    */
-  async function getAlertMsg(ua: string, threshold = 2): Promise<string> {
+  async function getProbeCall(ua: string, threshold = 2): Promise<[string, string, number]> {
     process.env.PROBE_ALERT_THRESHOLD = String(threshold);
     const mw = await freshMiddleware();
-    // threshold+1 hits so the alert fires
     await hitTimes(mw, threshold + 1, ua);
-    expect(mockSendAdminAlert).toHaveBeenCalledTimes(1);
-    return mockSendAdminAlert.mock.calls[0][0] as string;
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    return mockSendProbeAlert.mock.calls[0] as [string, string, number];
   }
 
   it("escapes '<' to '&lt;' in the alert message", async () => {
-    const msg = await getAlertMsg("EvilUA/<script>alert(1)</script>");
-    expect(msg).toContain("&lt;script&gt;");
-    expect(msg).not.toContain("<script>");
+    const rawUa = "EvilUA/<script>alert(1)</script>";
+    const [field, value] = await getProbeCall(rawUa);
+    // traffic-logger passes the raw string; sendProbeAlert handles escaping
+    expect(field).toBe("ua");
+    expect(value).toContain("<script>");
   });
 
   it("escapes '>' to '&gt;' in the alert message", async () => {
-    const msg = await getAlertMsg("EvilUA/foo>bar");
-    expect(msg).toContain("foo&gt;bar");
-    expect(msg).not.toMatch(/foo>bar/);
+    const rawUa = "EvilUA/foo>bar";
+    const [field, value] = await getProbeCall(rawUa);
+    expect(field).toBe("ua");
+    expect(value).toContain("foo>bar");
   });
 
   it("escapes '&' to '&amp;' in the alert message", async () => {
-    const msg = await getAlertMsg("EvilUA/foo&bar=1");
-    expect(msg).toContain("foo&amp;bar=1");
-    // raw & must not survive — check the code portion (not the surrounding HTML tags)
-    const codeContent = msg.match(/<code>(.*?)<\/code>/s)?.[1] ?? "";
-    expect(codeContent).not.toContain("foo&bar=1");
+    const rawUa = "EvilUA/foo&bar=1";
+    const [field, value] = await getProbeCall(rawUa);
+    expect(field).toBe("ua");
+    expect(value).toContain("foo&bar=1");
   });
 
   it("escapes all three special characters together", async () => {
-    // escapeTelegramHtml escapes &, < and > (not quotes — Telegram HTML is not
-    // attribute-safe, only tag-safe).
-    const msg = await getAlertMsg("UA/<b>click</b>&foo=1");
-    const codeContent = msg.match(/<code>(.*?)<\/code>/s)?.[1] ?? "";
-    expect(codeContent).toContain("&lt;b&gt;click&lt;/b&gt;");
-    expect(codeContent).toContain("&amp;foo=1");
-    expect(codeContent).not.toContain("<b>");
-    expect(codeContent).not.toMatch(/[^&]&foo/); // raw & must not survive
+    const rawUa = "UA/<b>click</b>&foo=1";
+    const [field, value] = await getProbeCall(rawUa);
+    expect(field).toBe("ua");
+    expect(value).toBe(rawUa); // raw value passed through unmodified
   });
 
   it("a plain UA with no special characters is not mangled", async () => {
-    // Use a UA that has no HTML-special chars and does not match any BOT_PATTERNS.
     const safeUa = "TotallyNormalBrowser/42.0 StableChannel Desktop";
-    const msg = await getAlertMsg(safeUa);
-    // The UA value should appear verbatim inside the <code> block
-    const codeContent = msg.match(/<code>(.*?)<\/code>/s)?.[1] ?? "";
-    expect(codeContent).toBe(safeUa);
+    const [field, value] = await getProbeCall(safeUa);
+    expect(field).toBe("ua");
+    expect(value).toBe(safeUa);
   });
 });
 
@@ -399,55 +397,53 @@ describe("Telegram HTML escaping — malicious characters in probe keys", () => 
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("300-character truncation of probe keys in alert message", () => {
+  // HTML truncation and escaping now happen inside sendProbeAlert (telegram-bot.ts).
+  // These tests verify that traffic-logger passes the raw (untruncated) value
+  // correctly — the 300-char cut happens in sendProbeAlert, not here.
+
   it("a key of exactly 300 characters is NOT truncated", async () => {
     process.env.PROBE_ALERT_THRESHOLD = "2";
     const mw = await freshMiddleware();
     const ua300 = "A".repeat(300);
     await hitTimes(mw, 3, ua300);
-    expect(mockSendAdminAlert).toHaveBeenCalledTimes(1);
-    const msg = mockSendAdminAlert.mock.calls[0][0] as string;
-    const codeContent = msg.match(/<code>(.*?)<\/code>/s)?.[1] ?? "";
-    expect(codeContent).toBe(ua300);
-    expect(codeContent.length).toBe(300);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    const [, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(value).toBe(ua300);
+    expect(value.length).toBe(300);
   });
 
-  it("a key longer than 300 characters is truncated to 300 chars in the alert", async () => {
+  it("a key longer than 300 characters is passed raw to sendProbeAlert (truncation is its responsibility)", async () => {
     process.env.PROBE_ALERT_THRESHOLD = "2";
     const mw = await freshMiddleware();
     const ua400 = "B".repeat(400);
     await hitTimes(mw, 3, ua400);
-    expect(mockSendAdminAlert).toHaveBeenCalledTimes(1);
-    const msg = mockSendAdminAlert.mock.calls[0][0] as string;
-    const codeContent = msg.match(/<code>(.*?)<\/code>/s)?.[1] ?? "";
-    expect(codeContent.length).toBe(300);
-    expect(codeContent).toBe("B".repeat(300));
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    const [, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    // traffic-logger stores up to 500 chars; sendProbeAlert slices to 300 internally
+    expect(value.length).toBe(400);
+    expect(value).toBe(ua400);
   });
 
-  it("special characters after position 300 are not present (truncation comes before escaping)", async () => {
+  it("special characters after position 300 are present in the raw value (sendProbeAlert truncates)", async () => {
     process.env.PROBE_ALERT_THRESHOLD = "2";
     const mw = await freshMiddleware();
-    // First 300 chars safe, then a '<' at position 300 that should be cut off
     const ua = "C".repeat(300) + "<evil>";
     await hitTimes(mw, 3, ua);
-    expect(mockSendAdminAlert).toHaveBeenCalledTimes(1);
-    const msg = mockSendAdminAlert.mock.calls[0][0] as string;
-    const codeContent = msg.match(/<code>(.*?)<\/code>/s)?.[1] ?? "";
-    // The truncated portion should only contain the 300 'C' chars
-    expect(codeContent).toBe("C".repeat(300));
-    expect(codeContent).not.toContain("evil");
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    const [, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    // Raw value includes the '<evil>' tail — sendProbeAlert will truncate it away
+    expect(value).toBe(ua);
+    expect(value).toContain("<evil>");
   });
 
-  it("special characters within the first 300 chars are still escaped after truncation", async () => {
+  it("special characters within the first 300 chars are passed raw to sendProbeAlert", async () => {
     process.env.PROBE_ALERT_THRESHOLD = "2";
     const mw = await freshMiddleware();
-    // Put the '<' at position 10 (well within the 300-char window)
     const ua = "D".repeat(10) + "<xss>" + "E".repeat(350);
     await hitTimes(mw, 3, ua);
-    expect(mockSendAdminAlert).toHaveBeenCalledTimes(1);
-    const msg = mockSendAdminAlert.mock.calls[0][0] as string;
-    const codeContent = msg.match(/<code>(.*?)<\/code>/s)?.[1] ?? "";
-    // Escaped form must be present, raw '<' must not appear inside the code block
-    expect(codeContent).toContain("&lt;xss&gt;");
-    expect(codeContent).not.toContain("<xss>");
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    const [, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    // Raw unescaped '<xss>' is passed through; sendProbeAlert escapes it
+    expect(value).toContain("<xss>");
   });
 });

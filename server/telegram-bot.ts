@@ -164,6 +164,60 @@ export async function sendAdminAlert(message: string): Promise<void> {
   } catch { /* silent */ }
 }
 
+// ── Probe alert with inline "🚫 Add to block list" button ─────────────────────
+// Pending entries survive until the button is pressed or 24 h elapses.
+// Keyed by a random 8-char ID that fits comfortably inside Telegram's 64-byte
+// callback_data limit (prefix "blk_" + 8 chars = 12 bytes).
+const pendingBlocks = new Map<string, { field: "referer" | "ua"; value: string }>();
+
+function _escapeTgHtml(raw: string): string {
+  return raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+export async function sendProbeAlert(
+  field: "referer" | "ua",
+  value: string,
+  hits: number,
+): Promise<void> {
+  const token   = process.env.TELEGRAM_BOT_TOKEN;
+  const adminId = process.env.TELEGRAM_ADMIN_ID;
+  if (!token || !adminId) return;
+
+  const id = Math.random().toString(36).slice(2, 10); // 8-char random key
+  pendingBlocks.set(id, { field, value });
+  // Auto-expire after 24 h so the map never grows unbounded.
+  setTimeout(() => pendingBlocks.delete(id), 24 * 60 * 60 * 1000).unref?.();
+
+  const fieldLabel = field === "referer" ? "Referer" : "User-Agent";
+  const safeVal    = _escapeTgHtml(value.slice(0, 300));
+  const msg = [
+    `⚠️ <b>Unknown probe alert</b>`,
+    ``,
+    `<b>Field:</b> ${fieldLabel}`,
+    `<b>Value:</b> <code>${safeVal}</code>`,
+    `<b>Hits (24 h):</b> ${hits}`,
+    ``,
+    `Not in any block list — use the button below to block it instantly.`,
+  ].join("\n");
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id:      adminId,
+        text:         msg,
+        parse_mode:   "HTML",
+        reply_markup: {
+          inline_keyboard: [[
+            { text: "🚫 Add to block list", callback_data: `blk_${id}` },
+          ]],
+        },
+      }),
+    });
+  } catch { /* silent */ }
+}
+
 // ── Public channel photo post ─────────────────────────────────────────────────
 export async function sendChannelPhoto(imagePath: string, caption: string): Promise<void> {
   const token     = process.env.TELEGRAM_BOT_TOKEN;
@@ -1378,6 +1432,52 @@ Thanks for your message — the team will follow up.
 /lesson 0 — the vision from first principles`,
       { parse_mode: "Markdown" }
     );
+  });
+
+  // ── 🚫 Block-list callback — handles inline button from probe alerts ──────────
+  bot.action(/^blk_(.+)$/, async (ctx) => {
+    // Authorization: only the configured admin may consume this callback.
+    // The alert is sent to TELEGRAM_ADMIN_ID, but the callback token could be
+    // replayed if the message is forwarded, so we verify the sender explicitly.
+    const adminId = process.env.TELEGRAM_ADMIN_ID;
+    const senderId = String(ctx.from?.id ?? "");
+    if (!adminId || senderId !== adminId) {
+      await ctx.answerCbQuery("⛔ Unauthorized.").catch(() => {});
+      return;
+    }
+
+    const id    = ctx.match[1];
+    const block = pendingBlocks.get(id);
+    if (!block) {
+      await ctx.answerCbQuery("⚠️ Already processed or expired.").catch(() => {});
+      return;
+    }
+    pendingBlocks.delete(id);
+    try {
+      const { db }            = await import("./db");
+      const { dynamicBlocks } = await import("../shared/schema");
+      await db.insert(dynamicBlocks).values({
+        field: block.field,
+        value: block.value,
+        label: `Dynamic-Block-${block.field}`,
+      });
+      // Immediately invalidate the in-process cache so the new block takes
+      // effect within seconds rather than waiting for the 5-min TTL.
+      import("./traffic-logger").then(({ invalidateDynamicBlockCache }) => {
+        invalidateDynamicBlockCache();
+      }).catch(() => {});
+      await ctx.answerCbQuery("✅ Blocked!").catch(() => {});
+      // Edit the original alert message to confirm the action.
+      const origText = (ctx.callbackQuery as any).message?.text ?? "";
+      await ctx.editMessageText(
+        origText + "\n\n✅ <b>Added to dynamic block list.</b>",
+        { parse_mode: "HTML" },
+      ).catch(() => {}); // Silently ignore if message is too old to edit (48-h Telegram limit).
+    } catch (e: any) {
+      await ctx.answerCbQuery(
+        "❌ Failed: " + (e?.message ?? "unknown error").slice(0, 50),
+      ).catch(() => {});
+    }
   });
 
   // Fix: clear any existing getUpdates lock before launching to prevent 409 on autoscale redeploy.

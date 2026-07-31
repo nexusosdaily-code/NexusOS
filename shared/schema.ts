@@ -1607,7 +1607,15 @@ export const insertLabNodeSchema = createInsertSchema(labNodes).omit({ id: true,
 export type InsertLabNode = z.infer<typeof insertLabNodeSchema>;
 export type LabNode = typeof labNodes.$inferSelect;
 
-// ── Build Catalogue — living record of every shipped feature/fix ──────────────
+export const dynamicBlocks = pgTable("dynamic_blocks", {
+  id:      serial("id").primaryKey(),
+  field:   text("field").notNull(),  // "referer" | "ua"
+  value:   text("value").notNull(),
+  label:   text("label").notNull().default("Dynamic-Block"),
+  addedAt: timestamp("added_at").notNull().defaultNow(),
+}, (t) => ({
+  fieldIdx: index("dynamic_blocks_field_idx").on(t.field),
+}));
 export const buildCatalogue = pgTable("build_catalogue", {
   id:          serial("id").primaryKey(),
   buildDate:   date("build_date").notNull(),
@@ -1628,3 +1636,5 @@ export const buildCatalogue = pgTable("build_catalogue", {
 export const insertBuildCatalogueSchema = createInsertSchema(buildCatalogue).omit({ id: true, createdAt: true });
 export type InsertBuildCatalogue = z.infer<typeof insertBuildCatalogueSchema>;
 export type BuildCatalogue = typeof buildCatalogue.$inferSelect;
+
+export type DynamicBlock = typeof dynamicBlocks.$inferSelect;

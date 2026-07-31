@@ -699,9 +699,24 @@ async function runStartupMigrations() {
       ALTER TABLE contract_executions ADD COLUMN IF NOT EXISTS contract_name     TEXT;
       ALTER TABLE contract_executions ADD COLUMN IF NOT EXISTS contract_slug     TEXT;
       CREATE INDEX IF NOT EXISTS idx_ce_slug ON contract_executions(contract_slug) WHERE contract_slug IS NOT NULL;
+
+      -- Dynamic blocks: one-click blocks added from Telegram probe alerts
+      CREATE TABLE IF NOT EXISTS dynamic_blocks (
+        id       SERIAL PRIMARY KEY,
+        field    TEXT NOT NULL,
+        value    TEXT NOT NULL,
+        label    TEXT NOT NULL DEFAULT 'Dynamic-Block',
+        added_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS dynamic_blocks_field_idx ON dynamic_blocks (field);
     `);
 
     console.log("[MIGRATION] Startup schema migrations complete.");
+    // Pre-populate the dynamic block snapshot so blocks saved before this
+    // restart are enforced immediately rather than waiting for the first hit.
+    import("./traffic-logger").then(({ invalidateDynamicBlockCache }) => {
+      invalidateDynamicBlockCache();
+    }).catch(() => {});
   } catch (err: any) {
     console.error("[MIGRATION] Startup migration error:", err.message);
   }

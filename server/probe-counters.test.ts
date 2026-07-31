@@ -27,14 +27,14 @@ import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 describe("probe-counters: restart persistence and atomic writes", () => {
   let mockExecute: ReturnType<typeof vi.fn>;
   let mockFrom:    ReturnType<typeof vi.fn>;
-  let mockSendAdminAlert: ReturnType<typeof vi.fn>;
+  let mockSendProbeAlert: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.resetModules();
 
     mockExecute        = vi.fn().mockResolvedValue({});
     mockFrom           = vi.fn().mockResolvedValue([]);
-    mockSendAdminAlert = vi.fn().mockResolvedValue(undefined);
+    mockSendProbeAlert = vi.fn().mockResolvedValue(undefined);
 
     vi.doMock("./db", () => ({
       db: {
@@ -49,7 +49,7 @@ describe("probe-counters: restart persistence and atomic writes", () => {
     }));
 
     vi.doMock("./telegram-bot", () => ({
-      sendAdminAlert: mockSendAdminAlert,
+      sendProbeAlert: mockSendProbeAlert,
     }));
 
     // Silence modules that traffic-logger imports at the top level.
@@ -112,10 +112,11 @@ describe("probe-counters: restart persistence and atomic writes", () => {
     // Allow the dynamic import of telegram-bot and its promise chain to flush.
     await new Promise((resolve) => setTimeout(resolve, 60));
 
-    expect(mockSendAdminAlert).toHaveBeenCalledOnce();
-    const alertMsg: string = mockSendAdminAlert.mock.calls[0][0];
-    expect(alertMsg).toContain("ScrapyBot/1.0");
-    expect(alertMsg).toContain("User-Agent");
+    expect(mockSendProbeAlert).toHaveBeenCalledOnce();
+    // sendProbeAlert(field, value, hits) — check field and value arguments
+    const [field, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(field).toBe("ua");
+    expect(value).toContain("ScrapyBot/1.0");
   });
 
   // ── Test 3: cooldown is restored — no duplicate alert after restart ─────────
@@ -148,7 +149,7 @@ describe("probe-counters: restart persistence and atomic writes", () => {
     await new Promise((resolve) => setTimeout(resolve, 60));
 
     // Alert must NOT fire because lastAlerted was restored from DB.
-    expect(mockSendAdminAlert).not.toHaveBeenCalled();
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
   });
 
   // ── Test 4: atomic SQL — no full-array overwrite ────────────────────────────

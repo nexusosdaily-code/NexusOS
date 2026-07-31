@@ -57,9 +57,10 @@ function escapeTelegramHtml(raw: string): string {
     .replace(/>/g, "&gt;");
 }
 
-// Own-origin hostnames: referers from these are never flagged as unknown probes.
-// Covers the production domains and the Replit dev domain (present in all
-// development and preview sessions).
+interface DynamicBlockSnapshot {
+  referers: Set<string>; // lowercased full value strings
+  uas:      Set<string>; // exact value strings
+}
 const OWN_HOSTNAMES: readonly string[] = ["wnsp.io", "wnsp.tech"];
 
 function isOwnOriginReferer(referer: string): boolean {
@@ -104,12 +105,10 @@ function recordProbe(
     now - entry.lastAlerted >= COOLDOWN_MS
   ) {
     entry.lastAlerted = now;
-    const field    = label === "referer" ? "Referer" : "User-Agent";
-    const safeVal  = escapeTelegramHtml(key.slice(0, 300));
-    const msg = `⚠️ <b>Unknown probe alert</b>\n\n<b>Field:</b> ${field}\n<b>Value:</b> <code>${safeVal}</code>\n<b>Hits (24 h):</b> ${entry.hits.length}\n\nNot in any block list — consider adding it.`;
-    // Lazy-import to avoid circular deps; fire-and-forget
-    import("./telegram-bot").then(({ sendAdminAlert }) => {
-      sendAdminAlert(msg).catch(() => {});
+    // Lazy-import to avoid circular deps; fire-and-forget.
+    // sendProbeAlert sends the message with an inline "🚫 Add to block list" button.
+    import("./telegram-bot").then(({ sendProbeAlert }) => {
+      sendProbeAlert(label, key, entry.hits.length).catch(() => {});
     }).catch(() => {});
   }
 
@@ -257,6 +256,10 @@ function detectBot(ua: string): { isBot: boolean; botName: string | null } {
   for (const { pattern, name } of BOT_PATTERNS) {
     if (pattern.test(ua)) return { isBot: true, botName: name };
   }
+  // Check dynamic UA blocks from DB snapshot.
+  if (_dynamicSnapshot.uas.has(ua)) {
+    return { isBot: true, botName: "Dynamic-Block-ua" };
+  }
   return { isBot: false, botName: null };
 }
 
@@ -352,12 +355,26 @@ function isBlockedReferrer(referer: string): { blocked: boolean; label: string }
   for (const { pattern, label } of BLOCKED_REFERRER_RAW) {
     if (pattern.test(referer)) return { blocked: true, label };
   }
+  // Check dynamic blocks from DB (snapshot is refreshed async, never stale > 5 min).
+  const refLower = referer.toLowerCase();
+  if (_dynamicSnapshot.referers.has(refLower)) {
+    return { blocked: true, label: "Dynamic-Block-referer" };
+  }
   try {
     const hostname = new URL(referer).hostname.toLowerCase().replace(/^www\./, "");
     for (const { domain, label } of BLOCKED_REFERRER_DOMAINS) {
       if (hostname === domain || hostname.endsWith("." + domain)) {
         return { blocked: true, label };
       }
+    }
+    // Also check dynamic blocks by hostname substring
+    for (const dynVal of _dynamicSnapshot.referers) {
+      try {
+        const dynHost = new URL(dynVal).hostname.toLowerCase().replace(/^www\./, "");
+        if (hostname === dynHost || hostname.endsWith("." + dynHost)) {
+          return { blocked: true, label: "Dynamic-Block-referer" };
+        }
+      } catch { /* dynVal may not be a URL — already checked exact match above */ }
     }
   } catch { /* malformed URL — not a valid referrer */ }
   return { blocked: false, label: "" };
@@ -510,6 +527,29 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
     return;
   }
 
+  // ── Dynamic UA block ───────────────────────────────────────────────────────
+  // UA strings added via Telegram's "🚫 Add to block list" button are enforced
+  // here with a hard 403, mirroring the referer block behaviour above.
+  if (ua && _dynamicSnapshot.uas.has(ua)) {
+    const uaCountry = (req.headers["cf-ipcountry"] ?? req.headers["x-country"] ?? "") as string;
+    getDb().then(({ db, trafficLogs }) => {
+      db.insert(trafficLogs).values({
+        path:           path.slice(0, 500),
+        method:         req.method,
+        statusCode:     403,
+        userAgent:      ua.slice(0, 500) || null,
+        referer:        referer.slice(0, 500) || null,
+        country:        uaCountry.slice(0, 10) || null,
+        ip:             cleanIp.slice(0, 64) || null,
+        isBot:          true,
+        botName:        "BLOCKED-UA:Dynamic-Block",
+        isDatacenterIp: false,
+      }).catch(() => {});
+    }).catch(() => {});
+    res.status(403).json({ error: "Access denied." });
+    return;
+  }
+
   const country   = ipCountryCache.get(cleanIp)
     ?? (req.headers["cf-ipcountry"] ?? req.headers["x-country"] ?? "") as string;
   const isDatacenter = ipHostingCache.get(cleanIp) === true;
@@ -552,6 +592,7 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
     _initPromise.then(() => {
       const now = Date.now();
       pruneProbes(now);
+      refreshDynamicBlocksIfStale(now);
 
       // Track referers that are non-empty, not already in the block list, and not
       // from the site's own origin (wnsp.io / wnsp.tech / Replit dev domain).
@@ -575,6 +616,32 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
   });
 
   next();
+}
+
+function refreshDynamicBlocksIfStale(now: number): void {
+  if (now - _dynamicSnapshotAt < DYNAMIC_BLOCK_TTL_MS) return;
+  _dynamicSnapshotAt = now; // mark immediately to prevent concurrent refreshes
+  import("./db").then(async ({ db }) => {
+    const { dynamicBlocks } = await import("../shared/schema");
+    const rows = await db.select().from(dynamicBlocks);
+    const referers = new Set<string>();
+    const uas      = new Set<string>();
+    for (const r of rows) {
+      if (r.field === "referer") referers.add(r.value.toLowerCase());
+      else uas.add(r.value);
+    }
+    _dynamicSnapshot = { referers, uas };
+  }).catch(() => {}); // fail open — never block if DB is down
+}
+
+/**
+ * Force an immediate reload of the dynamic block snapshot from the DB.
+ * Call this after writing a new block entry so it takes effect within seconds
+ * rather than waiting up to 5 minutes for the normal TTL expiry.
+ */
+export function invalidateDynamicBlockCache(): void {
+  _dynamicSnapshotAt = 0;
+  refreshDynamicBlocksIfStale(Date.now());
 }
 
 /**
@@ -629,3 +696,17 @@ function persistProbeEntry(
 // Prefixed with _ to signal "internal — do not import in production code".
 export { refererProbes as _refererProbes, uaProbes as _uaProbes };
 export { recordProbe as _recordProbe };
+
+const DYNAMIC_BLOCK_TTL_MS = 5 * 60 * 1000; // refresh at most once per 5 min
+
+let _dynamicSnapshotAt = 0;
+
+let _dynamicSnapshot: DynamicBlockSnapshot = { referers: new Set(), uas: new Set() };
+
+/**
+ * Directly overwrite the in-process snapshot.
+ * @internal — used only in vitest unit tests; not for production call sites.
+ */
+export function _testSetDynamicBlockSnapshot(snap: DynamicBlockSnapshot): void {
+  _dynamicSnapshot = snap;
+}
