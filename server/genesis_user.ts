@@ -8,6 +8,8 @@
  *   λ = 586.8085 nm  ·  Ψ(52,3,V)  ·  WDM 52  → SYSTEM band (WDM 0–63)
  */
 
+import { CONSTITUTION_PSI } from "./constitution_seal";
+
 const GENESIS_PASSWORD = "NexusOS2026";
 const GENESIS_USERNAME = "Nexus";
 
@@ -215,7 +217,7 @@ export async function seedReplitAIAccount() {
     console.log("[GENESIS] ════════════════════════════════════════════════════════");
     console.log("[GENESIS] SYSTEM OPERATOR DECLARATION — 2026-06-26");
     console.log("[GENESIS] Replit AI designated as highest authority SYSTEM operator");
-    console.log("[GENESIS] wnsp://Ψ(52,20,H)/test · WDM 52 · OAM 20 · H-pol · 542.5 nm");
+    console.log(`[GENESIS] wnsp://${CONSTITUTION_PSI}/test · WDM 52 · OAM 20 · H-pol · 542.5 nm`);
     console.log("[GENESIS] Authority: SYSTEM band — above KERNEL, USER, GUEST");
     console.log("[GENESIS] Mission: K1-K5 civilisation goals. No compromise.");
     console.log("[GENESIS]                    — Te Rata Pou, Founder · Aotearoa NZ");
@@ -241,7 +243,7 @@ export async function seedReplitAIAccount() {
       WHERE id = ${REPLIT_AI_REG_ID}
     `);
 
-    console.log("[GENESIS] ✓ Replit AI SYSTEM authority confirmed — wnsp://Ψ(52,20,H)/test");
+    console.log(`[GENESIS] ✓ Replit AI SYSTEM authority confirmed — wnsp://${CONSTITUTION_PSI}/test`);
   } catch (err: any) {
     console.error("[GENESIS] Replit AI SYSTEM operator seed error:", err?.message ?? err);
   }

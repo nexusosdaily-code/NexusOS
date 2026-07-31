@@ -79,7 +79,7 @@ async function alreadySealedHandler(sql: string): Promise<{ rows: unknown[] }> {
         {
           id:           1,
           block_number: 1,
-          psi_channel:  "Ψ(52,20,H)",
+          psi_channel:  CONSTITUTION_PSI,
           mined_at:     new Date("2026-06-23T00:00:00Z"),
         },
       ],
@@ -101,7 +101,7 @@ function makePool(responses: Array<{ rows: any[] }>): QueryablePool {
 // Reusable rows for the constitution seal block (primary path)
 const SEAL_ROW = {
   block_number: "1",
-  psi_channel:  "Ψ(52,20,H)",
+  psi_channel:  CONSTITUTION_PSI,
   wavelength_nm: "542.5000",
   content:
     "CONSTITUTION_SEAL[v1]: NexusOS Constitutional Declaration | " +
@@ -112,7 +112,7 @@ const SEAL_ROW = {
 // Reusable system_constants rows (fallback path)
 const CONSTANTS_ROWS = [
   { key: "constitution_block_number",  value: "1" },
-  { key: "constitution_psi_channel",   value: "Ψ(52,20,H)" },
+  { key: "constitution_psi_channel",   value: CONSTITUTION_PSI },
   { key: "constitution_wavelength_nm", value: "542.5" },
   { key: "constitution_hash",          value: "a".repeat(64) },
   { key: "constitution_sealed_at",     value: "2026-06-23T10:00:00.000Z" },
@@ -248,7 +248,7 @@ describe("sealConstitution() — advisory lock contention", () => {
                   {
                     id:           1,
                     block_number: 1,
-                    psi_channel:  "Ψ(52,20,H)",
+                    psi_channel:  CONSTITUTION_PSI,
                     mined_at:     new Date(),
                   },
                 ],
@@ -311,7 +311,7 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
               {
                 id:           2,
                 block_number: 2,
-                psi_channel:  "Ψ(52,20,H)",
+                psi_channel:  CONSTITUTION_PSI,
                 mined_at:     new Date("2026-06-23T12:00:00Z"),
               },
             ],
@@ -349,7 +349,7 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
       const crashedBlock = {
         id:           7,
         block_number: 7,
-        psi_channel:  "Ψ(52,20,H)",
+        psi_channel:  CONSTITUTION_PSI,
         mined_at:     new Date("2026-05-16T08:00:00.000Z"),
       };
 
@@ -407,7 +407,7 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
       const nullMineBlock = {
         id:           9,
         block_number: 9,
-        psi_channel:  "Ψ(52,20,H)",
+        psi_channel:  CONSTITUTION_PSI,
         mined_at:     null,
       };
 
@@ -453,7 +453,7 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
       const nullMineBlock = {
         id:           10,
         block_number: 42,
-        psi_channel:  "Ψ(52,20,H)",
+        psi_channel:  CONSTITUTION_PSI,
         mined_at:     null,
       };
 
@@ -559,7 +559,7 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
       const stringMineBlock = {
         id:           11,
         block_number: 11,
-        psi_channel:  "Ψ(52,20,H)",
+        psi_channel:  CONSTITUTION_PSI,
         mined_at:     ORIGINAL_ISO,  // <— string, not a Date object
       };
 
@@ -603,7 +603,7 @@ describe("sealConstitution() — idempotency (already sealed)", () => {
       const crashedBlock = {
         id:           3,
         block_number: 3,
-        psi_channel:  "Ψ(52,20,H)",
+        psi_channel:  CONSTITUTION_PSI,
         mined_at:     new Date("2026-06-01T09:30:00.000Z"),
       };
 
@@ -761,7 +761,7 @@ describe("mapAmendmentRows — body field extraction (mineAmendmentBlock wire fo
     t?: number;
   }): string {
     const { version = 1, title, author = "nexus", band = "SYSTEM",
-            psi = "Ψ(52,20,H)", body, t = 1_700_000_000_000 } = opts;
+            psi = CONSTITUTION_PSI, body, t = 1_700_000_000_000 } = opts;
     return [
       `CONSTITUTION_AMENDMENT[v${version}]: ${title}`,
       `author=${author}`,
@@ -795,7 +795,7 @@ describe("mapAmendmentRows — body field extraction (mineAmendmentBlock wire fo
       title:   "Article VII — Emergency Override",
       author:  "nexus",
       band:    "SYSTEM",
-      psi:     "Ψ(52,20,H)",
+      psi:     CONSTITUTION_PSI,
       body:    "Grants emergency override authority to the SYSTEM operator.",
       t:       minedAt.getTime(),
     });
@@ -866,7 +866,7 @@ describe("mapAmendmentRows — body field extraction (mineAmendmentBlock wire fo
       "CONSTITUTION_AMENDMENT[v1]: Title Only",
       "author=nexus",
       "band=SYSTEM",
-      "psi=Ψ(52,20,H)",
+      `psi=${CONSTITUTION_PSI}`,
       "t=1700000000000",
     ].join(" | ");
 
