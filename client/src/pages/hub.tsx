@@ -413,7 +413,7 @@ function IdentityRail({
   const lambdaKg = energyJ / (C_LIGHT * C_LIGHT);
   const balNum   = parseFloat(wallet?.balance ?? "0");
 
-  const { data: lnData } = useQuery<{ satsBalance: number }>({
+  const { data: lnData, isPending: lnPending } = useQuery<{ satsBalance: number }>({
     queryKey: ["/api/lightning/balance"],
     staleTime: 30_000,
     refetchInterval: 60_000,
@@ -519,7 +519,9 @@ function IdentityRail({
           style={{ background: "rgba(250,204,21,0.10)", color: "#facc15", border: "1px solid rgba(250,204,21,0.28)" }}>
           <div className="flex items-center gap-1">
             <Zap className="w-3 h-3" />
-            {fmtSatsNav(satsNum)} sats
+            {lnPending
+              ? <span className="inline-block w-10 h-3 rounded bg-yellow-400/20 animate-pulse" />
+              : <>{fmtSatsNav(satsNum)} sats</>}
           </div>
           <div className="text-[8px] opacity-50 tracking-wide">LIGHTNING</div>
         </div>

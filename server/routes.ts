@@ -59,6 +59,7 @@ async function checkWithdrawalLimits(userId: string, username: string, amountSat
 
 // ── Amendment rate limit ──────────────────────────────────────────────────────
 import { checkAmendmentRateLimit, AMENDMENT_MAX_PER_DAY } from "./amendment-rate-limit.js";
+import { amendmentHandler } from "./amendment-handler.js";
 
 // ── Swap limits & circuit breaker ────────────────────────────────────────────
 // Speculators will notice the fixed rate (1 NXT = 1,000 sats). When BTC pumps
