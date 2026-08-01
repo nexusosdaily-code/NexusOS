@@ -502,4 +502,35 @@ describe("GuideBot — suggestion chip click navigates and closes the panel", ()
 
     expect(mockNavigate).toHaveBeenCalledWith("/wallet");
   });
+
+  // ── Second-row chip (SUGGESTIONS.slice(4), index 5) ──────────────────────
+  //
+  // "What is the standing wave trap?" — the regex alternation matches the
+  // shorter "What is " branch first, leaving "the standing wave trap?".
+  it("clicking 'the standing wave trap?' chip (second row) calls navigate with /standing-wave-trap", () => {
+    renderGuideBot();
+    openPanel();
+
+    // "What is the standing wave trap?" → regex strips "What is " → renders "the standing wave trap?"
+    const chip = screen.getByText("the standing wave trap?");
+    fireEvent.click(chip);
+
+    vi.advanceTimersByTime(600);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/standing-wave-trap");
+  });
+
+  it("clicking a second-row chip closes the panel after navigation", () => {
+    renderGuideBot();
+    openPanel();
+
+    // Same second-row chip — "What is the standing wave trap?" → "the standing wave trap?"
+    const chip = screen.getByText("the standing wave trap?");
+    fireEvent.click(chip);
+
+    act(() => { vi.advanceTimersByTime(1000); });
+
+    // Panel closed — input is no longer in the document
+    expect(screen.queryByTestId("input-guide-bot")).not.toBeInTheDocument();
+  });
 });
