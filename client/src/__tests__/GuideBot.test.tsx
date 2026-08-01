@@ -78,8 +78,6 @@ describe("GuideBot — CONCEPTUAL_Q guard", () => {
     // Primary assertion: matchPage must return null (covers both scoring branches).
     const matched = matchPage(CONCEPTUAL_Q);
     if (matched !== null) {
-      // Diagnostic: identify exactly which page stole the question and why,
-      // so contributors can quickly pick a replacement CONCEPTUAL_Q.
       const q = CONCEPTUAL_Q.toLowerCase();
       const kwHits = matched.keywords.filter((kw) => q.includes(kw));
       const titleWordHits = matched.title
@@ -538,12 +536,12 @@ describe("GuideBot — suggestion chip click navigates and closes the panel", ()
     expect(screen.queryByTestId("input-guide-bot")).not.toBeInTheDocument();
   });
 
-  it("clicking 'the NXT wallet?' chip calls navigate with /wallet", () => {
+  it("clicking 'NXT wallet?' chip calls navigate with /wallet", () => {
     renderGuideBot();
     openPanel();
 
-    // "Where is the NXT wallet?" → regex strips "Where is " → renders "the NXT wallet?"
-    const chip = screen.getByText("the NXT wallet?");
+    // "Where is the NXT wallet?" → regex strips "Where is the " → renders "NXT wallet?"
+    const chip = screen.getByText("NXT wallet?");
     fireEvent.click(chip);
 
     vi.advanceTimersByTime(600);
@@ -551,16 +549,12 @@ describe("GuideBot — suggestion chip click navigates and closes the panel", ()
     expect(mockNavigate).toHaveBeenCalledWith("/wallet");
   });
 
-  // ── Second-row chip (SUGGESTIONS.slice(4), index 5) ──────────────────────
-  //
-  // "What is the standing wave trap?" — the regex alternation matches the
-  // shorter "What is " branch first, leaving "the standing wave trap?".
-  it("clicking 'the standing wave trap?' chip (second row) calls navigate with /standing-wave-trap", () => {
+  it("clicking 'standing wave trap?' chip (second row) calls navigate with /standing-wave-trap", () => {
     renderGuideBot();
     openPanel();
 
-    // "What is the standing wave trap?" → regex strips "What is " → renders "the standing wave trap?"
-    const chip = screen.getByText("the standing wave trap?");
+    // "What is the standing wave trap?" → regex strips "What is the " → renders "standing wave trap?"
+    const chip = screen.getByText("standing wave trap?");
     fireEvent.click(chip);
 
     vi.advanceTimersByTime(600);
@@ -572,8 +566,7 @@ describe("GuideBot — suggestion chip click navigates and closes the panel", ()
     renderGuideBot();
     openPanel();
 
-    // Same second-row chip — "What is the standing wave trap?" → "the standing wave trap?"
-    const chip = screen.getByText("the standing wave trap?");
+    const chip = screen.getByText("standing wave trap?");
     fireEvent.click(chip);
 
     act(() => { vi.advanceTimersByTime(1000); });
@@ -657,5 +650,67 @@ describe("GuideBot — suggestion chip with no keyword match takes the async AI 
     await waitFor(() => {
       expect(screen.getByText(ANSWER)).toBeInTheDocument();
     });
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 7. All chip labels — explicit text pinning
+//    Ensures the regex strips the correct prefix from every suggestion so a
+//    future reorder or regex edit cannot silently break chip labels.
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("GuideBot — all chip labels render correctly", () => {
+  /**
+   * Expected rendered text for each SUGGESTIONS entry after the prefix-strip
+   * regex is applied.  Order mirrors SUGGESTIONS array (rows 1 and 2 combined).
+   *
+   * Regex (longest-first alternation):
+   *   /^(How do I |Show me the |What is the |What is |Where is the |Where is |How does the |How does )/
+   */
+  const EXPECTED_LABELS: string[] = [
+    // Row 1 — SUGGESTIONS.slice(0, 4)
+    "deploy a BRC-20 token?",               // "How do I deploy a BRC-20 token?"
+    "WNSP Virtual Machine",                 // "Show me the WNSP Virtual Machine"
+    "Theory of Compression States?",        // "What is the Theory of Compression States?"
+    "CE-SE pipeline work?",                 // "How does the CE-SE pipeline work?"
+    // Row 2 — SUGGESTIONS.slice(4)
+    "NXT wallet?",                          // "Where is the NXT wallet?"
+    "standing wave trap?",                  // "What is the standing wave trap?"
+    "Constitution",                         // "Show me the Constitution"
+    "Bogoliubov transform?",                // "What is the Bogoliubov transform?"
+    "observer work?",                       // "How does the observer work?"
+    "Show me protocol compliance",          // no matched prefix — unchanged
+    "sign a contract with my wavelength?",  // "How do I sign a contract with my wavelength?"
+    "WavelengthScript?",                    // "What is WavelengthScript?"
+    "your pricing methodology?",            // "What is your pricing methodology?"
+  ];
+
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("every chip label is present in the rendered panel", () => {
+    renderGuideBot();
+    openPanel();
+
+    for (const label of EXPECTED_LABELS) {
+      expect(
+        screen.getByText(label),
+        `chip label "${label}" not found — check SUGGESTIONS and prefix-strip regex`,
+      ).toBeInTheDocument();
+    }
+  });
+
+  it("no chip label starts with a leading 'the ' (guards against prefix under-strip)", () => {
+    renderGuideBot();
+    openPanel();
+
+    // Query suggestion chip buttons by their shared font-mono class.
+    const buttons = Array.from(document.querySelectorAll("button.font-mono"));
+    for (const btn of buttons) {
+      expect(
+        btn.textContent,
+        `chip label "${btn.textContent}" starts with "the " — a prefix was under-stripped`,
+      ).not.toMatch(/^the /i);
+    }
   });
 });

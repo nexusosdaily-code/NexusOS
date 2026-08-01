@@ -304,7 +304,7 @@ export default function GuideBot() {
             {SUGGESTIONS.slice(0, 4).map(s => (
               <button key={s} onClick={() => send(s)}
                 className="shrink-0 text-[9px] font-mono px-2.5 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300/70 hover:bg-violet-500/20 hover:text-violet-300 transition-all whitespace-nowrap">
-                {s.replace(/^(How do I |Show me the |What is |Where is |How does |What is the )/, "")}
+                {s.replace(/^(How do I |Show me the |What is the |What is |Where is the |Where is |How does the |How does )/, "")}
               </button>
             ))}
           </div>
@@ -312,7 +312,7 @@ export default function GuideBot() {
             {SUGGESTIONS.slice(4).map(s => (
               <button key={s} onClick={() => send(s)}
                 className="shrink-0 text-[9px] font-mono px-2.5 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300/70 hover:bg-violet-500/20 hover:text-violet-300 transition-all whitespace-nowrap">
-                {s.replace(/^(How do I |Show me the |What is |Where is |How does |What is the )/, "")}
+                {s.replace(/^(How do I |Show me the |What is the |What is |Where is the |Where is |How does the |How does )/, "")}
               </button>
             ))}
           </div>
