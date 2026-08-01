@@ -1385,7 +1385,42 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(entry!.lastAlerted).toBe(lastAlerted);
   });
 
-  it("(E) initProbeCounters: a row with ALL-stale hits AND lastAlerted === 0 is pruned (not restored)", async () => {
+  it("(E) initProbeCounters: referer row with ALL-stale hits but an active cooldown is restored into _refererProbes (not _uaProbes)", async () => {
+    // Same edge case as (D) but for field_type='referer'.  A referer cooldown
+    // that is still active must survive a restart so it keeps suppressing alerts.
+    const now         = Date.now();
+    const staleHit1   = now - 25 * 3600_000; // 25 h ago — outside window
+    const staleHit2   = now - 30 * 3600_000; // 30 h ago — outside window
+    const lastAlerted = now - 30 * 60_000;   // 30 min ago — cooldown still active
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      {
+        fieldType:   "referer",
+        key:         "https://stale-cooldown-referer.example/",
+        hits:        [staleHit1, staleHit2],
+        lastAlerted: lastAlerted,
+      },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    // Must be in _refererProbes, NOT in _uaProbes.
+    const entry = mod._refererProbes.get("https://stale-cooldown-referer.example/");
+    expect(entry).toBeDefined();
+    // All hits were outside the window, so the restored hits array is empty.
+    expect(entry!.hits).toEqual([]);
+    // lastAlerted is preserved so the cooldown keeps suppressing alerts.
+    expect(entry!.lastAlerted).toBe(lastAlerted);
+    // Confirm it did not bleed into the UA map.
+    expect(mod._uaProbes.has("https://stale-cooldown-referer.example/")).toBe(false);
+  });
+
+  it("(F) initProbeCounters: a row with ALL-stale hits AND lastAlerted === 0 is pruned (not restored)", async () => {
     // Both conditions for pruning hold: no active hits and no cooldown to
     // preserve.  The key must not appear in either map after a restart.
     const now       = Date.now();
