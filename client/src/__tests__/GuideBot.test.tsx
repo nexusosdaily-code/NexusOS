@@ -454,3 +454,52 @@ describe("GuideBot — keyword match navigates without calling the API", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/wallet");
   });
 });
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 5. Suggestion chip click → navigates correctly and closes the panel
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("GuideBot — suggestion chip click navigates and closes the panel", () => {
+  // Suggestion chips trigger send(s) which may use setTimeout for navigation.
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("clicking 'deploy a BRC-20 token?' chip calls navigate with /wnsp-ordinals", () => {
+    renderGuideBot();
+    openPanel();
+
+    // The chip strips the "How do I " prefix — rendered text is "deploy a BRC-20 token?"
+    const chip = screen.getByText("deploy a BRC-20 token?");
+    fireEvent.click(chip);
+
+    vi.advanceTimersByTime(600);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/wnsp-ordinals");
+  });
+
+  it("clicking a suggestion chip closes the panel after navigation", () => {
+    renderGuideBot();
+    openPanel();
+
+    const chip = screen.getByText("deploy a BRC-20 token?");
+    fireEvent.click(chip);
+
+    act(() => { vi.advanceTimersByTime(1000); });
+
+    // Panel closed — input is no longer in the document
+    expect(screen.queryByTestId("input-guide-bot")).not.toBeInTheDocument();
+  });
+
+  it("clicking 'the NXT wallet?' chip calls navigate with /wallet", () => {
+    renderGuideBot();
+    openPanel();
+
+    // "Where is the NXT wallet?" → regex strips "Where is " → renders "the NXT wallet?"
+    const chip = screen.getByText("the NXT wallet?");
+    fireEvent.click(chip);
+
+    vi.advanceTimersByTime(600);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/wallet");
+  });
+});
