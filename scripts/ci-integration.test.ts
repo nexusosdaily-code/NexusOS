@@ -240,3 +240,29 @@ describe("vite.config.ts critical-chunk preload plugin guard", () => {
     expect(configBody!).toMatch(/criticalChunkPreloadPlugin\s*\(\s*\)/);
   });
 });
+
+// ─── CRITICAL_CHUNKS membership guard ────────────────────────────────────────
+
+import { CRITICAL_CHUNKS } from "./critical-chunks";
+
+describe("scripts/critical-chunks.ts membership guard", () => {
+  it("exports an array (not undefined or some other type)", () => {
+    expect(Array.isArray(CRITICAL_CHUNKS)).toBe(true);
+  });
+
+  it('the exported array contains "hub"', () => {
+    expect(CRITICAL_CHUNKS).toContain("hub");
+  });
+
+  it('the exported array contains "auth"', () => {
+    expect(CRITICAL_CHUNKS).toContain("auth");
+  });
+
+  it('the exported array contains "wallet"', () => {
+    expect(CRITICAL_CHUNKS).toContain("wallet");
+  });
+
+  it('the exported array contains "lightning-wallet"', () => {
+    expect(CRITICAL_CHUNKS).toContain("lightning-wallet");
+  });
+});
