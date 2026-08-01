@@ -254,6 +254,16 @@ describe("checkProbeEvictionGuard() unit logic", () => {
     expect(result.ok).toBe(true);
   });
 
+  // ── 3b-paren. Array-filter form with parenthesized parameter ────────────
+  it("returns ok:true when source uses the parenthesized array-filter form (filter((t) => t > cutoff))", async () => {
+    mockReadFile.mockResolvedValue(
+      `entry.hits = entry.hits.filter((t) => t > cutoff);\n`,
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
   // ── 3c. No recognised form ───────────────────────────────────────────────
   it("returns ok:false with a 'not found' reason when no recognised eviction expression is present", async () => {
     mockReadFile.mockResolvedValue(
@@ -282,6 +292,17 @@ describe("checkProbeEvictionGuard() unit logic", () => {
     // Simulate the regression: filter(t => t > cutoff) changed to filter(t => t >= cutoff)
     mockReadFile.mockResolvedValue(
       `entry.hits = entry.hits.filter(t => t >= cutoff);\n`,
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+  });
+
+  // ── 3e-paren. Parenthesized array-filter relaxed: (t) => t >= cutoff ─────
+  it("returns ok:false with a 'relaxed' reason when the parenthesized filter uses >= cutoff", async () => {
+    mockReadFile.mockResolvedValue(
+      `entry.hits = entry.hits.filter((t) => t >= cutoff);\n`,
     );
 
     const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
@@ -327,6 +348,12 @@ describe("checkProbeEvictionGuard() unit logic", () => {
     expect(REQUIRED_PATTERN.test("entry.hits.filter(t => t >= cutoff)")).toBe(false);
   });
 
+  // ── 3i-paren. REQUIRED_PATTERN — parenthesized array-filter form ─────────
+  it("REQUIRED_PATTERN matches the parenthesized array-filter correct form but not its relaxed form", () => {
+    expect(REQUIRED_PATTERN.test("entry.hits.filter((t) => t > cutoff)")).toBe(true);
+    expect(REQUIRED_PATTERN.test("entry.hits.filter((t) => t >= cutoff)")).toBe(false);
+  });
+
   // ── 3j. FORBIDDEN_PATTERN — while-loop ──────────────────────────────────
   it("FORBIDDEN_PATTERN matches the while-loop relaxed form but not the inclusive form", () => {
     expect(FORBIDDEN_PATTERN.test("entry.hits[lo] < cutoff")).toBe(true);
@@ -337,6 +364,12 @@ describe("checkProbeEvictionGuard() unit logic", () => {
   it("FORBIDDEN_PATTERN matches the filter relaxed form (>=) but not the correct form (>)", () => {
     expect(FORBIDDEN_PATTERN.test("entry.hits.filter(t => t >= cutoff)")).toBe(true);
     expect(FORBIDDEN_PATTERN.test("entry.hits.filter(t => t > cutoff)")).toBe(false);
+  });
+
+  // ── 3k-paren. FORBIDDEN_PATTERN — parenthesized array-filter ────────────
+  it("FORBIDDEN_PATTERN matches the parenthesized filter relaxed form (>=) but not the correct form (>)", () => {
+    expect(FORBIDDEN_PATTERN.test("entry.hits.filter((t) => t >= cutoff)")).toBe(true);
+    expect(FORBIDDEN_PATTERN.test("entry.hits.filter((t) => t > cutoff)")).toBe(false);
   });
 
   // ── 3l. Comment lines trigger FORBIDDEN_PATTERN (intentional strictness) ─

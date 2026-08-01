@@ -80,7 +80,7 @@ export const TARGET_FILE = path.resolve("server", "traffic-logger.ts");
  * If a new idiom is introduced, add it as a further alternation here.
  */
 export const REQUIRED_PATTERN =
-  /entry\.hits\[lo\]\s*<=\s*cutoff|entry\.hits\.filter\(\s*t\s*=>\s*t\s*>\s*cutoff\s*\)/;
+  /entry\.hits\[lo\]\s*<=\s*cutoff|entry\.hits\.filter\(\s*\(?\s*t\s*\)?\s*=>\s*t\s*>\s*cutoff\s*\)/;
 
 /**
  * Matches RELAXED (wrong) eviction expressions that silently keep the
@@ -92,7 +92,7 @@ export const REQUIRED_PATTERN =
  * If a new idiom is introduced, add its relaxed/wrong form here too.
  */
 export const FORBIDDEN_PATTERN =
-  /entry\.hits\[lo\]\s*<(?!=)\s*cutoff|entry\.hits\.filter\(\s*t\s*=>\s*t\s*>=\s*cutoff\s*\)/;
+  /entry\.hits\[lo\]\s*<(?!=)\s*cutoff|entry\.hits\.filter\(\s*\(?\s*t\s*\)?\s*=>\s*t\s*>=\s*cutoff\s*\)/;
 
 export interface CheckResult {
   ok: boolean;
