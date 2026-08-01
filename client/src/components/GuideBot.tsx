@@ -93,7 +93,7 @@ export function matchPage(input: string) {
   return best?.page ?? null;
 }
 
-const SUGGESTIONS = [
+export const SUGGESTIONS = [
   "How do I deploy a BRC-20 token?",
   "Show me the WNSP Virtual Machine",
   "What is the Theory of Compression States?",

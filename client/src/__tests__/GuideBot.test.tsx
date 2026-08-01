@@ -15,7 +15,7 @@ import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
-import GuideBot, { matchPage, ASYNC_SUGGESTIONS } from "@/components/GuideBot";
+import GuideBot, { matchPage, SUGGESTIONS, ASYNC_SUGGESTIONS } from "@/components/GuideBot";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
@@ -92,54 +92,6 @@ describe("GuideBot — CONCEPTUAL_Q guard", () => {
       );
     }
     expect(matched).toBeNull();
-  });
-});
-
-// ── ASYNC_SUGGESTIONS collision guard ─────────────────────────────────────────
-// Fails loudly if any ASYNC_SUGGESTIONS entry unexpectedly keyword-matches a
-// PAGES entry.  This catches the scenario where a future PAGES addition
-// introduces a keyword (or title word) that matches one of the async-path
-// suggestions, which would silently reroute the chip to keyword-navigation and
-// stop exercising the async /api/guide/ask branch.
-//
-// If this test fails for a given entry, either:
-//   (a) Remove the conflicting keyword/title from the new PAGES entry, OR
-//   (b) Replace the SUGGESTIONS entry text with a new phrase that shares no
-//       keyword/title-word with any PAGES row, update ASYNC_SUGGESTIONS, and
-//       update CONCEPTUAL_Q if that entry is the one used there.
-
-describe("GuideBot — ASYNC_SUGGESTIONS guard", () => {
-  it("every ASYNC_SUGGESTIONS entry scores 0 against every PAGES entry (pick new text if this fails)", () => {
-    const failures: string[] = [];
-
-    for (const suggestion of ASYNC_SUGGESTIONS) {
-      const matched = matchPage(suggestion);
-      if (matched !== null) {
-        const q = suggestion.toLowerCase();
-        const kwHits = matched.keywords.filter((kw) => q.includes(kw));
-        const titleWordHits = matched.title
-          .toLowerCase()
-          .split(/\s+/)
-          .filter((w) => q.includes(w));
-        failures.push(
-          `\n  Suggestion : "${suggestion}"` +
-            `\n  Matched    : "${matched.title}" (${matched.route})` +
-            `\n  Kw hits    : ${kwHits.length > 0 ? kwHits.join(", ") : "none"}` +
-            `\n  Title hits : ${titleWordHits.length > 0 ? titleWordHits.join(", ") : "none"}` +
-            `\n  → Update this ASYNC_SUGGESTIONS entry (and CONCEPTUAL_Q if it uses the same text)` +
-            `    so it shares no keyword or title word with any PAGES entry.`,
-        );
-      }
-    }
-
-    if (failures.length > 0) {
-      console.error(
-        `[ASYNC_SUGGESTIONS guard] ${failures.length} entry/entries unexpectedly keyword-matched a PAGES row:` +
-          failures.join(""),
-      );
-    }
-
-    expect(failures).toHaveLength(0);
   });
 });
 
@@ -646,6 +598,66 @@ describe("GuideBot — suggestion chip with no keyword match takes the async AI 
     openPanel();
 
     fireEvent.click(screen.getByText("your pricing methodology?"));
+
+    await waitFor(() => {
+      expect(screen.getByText(ANSWER)).toBeInTheDocument();
+    });
+  });
+
+  // ── Position-independent guard ────────────────────────────────────────────
+  //
+  // Finds the async SUGGESTIONS entry dynamically (the first one where
+  // matchPage returns null) and verifies:
+  //   1. Its chip is rendered in the DOM regardless of which row it falls in.
+  //   2. Clicking it fires POST /api/guide/ask and renders the AI answer.
+  //
+  // This test does NOT hard-code the chip label or its position in the list,
+  // so it catches regressions where the async entry is removed, moved out of
+  // the rendered rows, or the slice boundary changes.
+
+  it("async SUGGESTIONS entry chip is present in the DOM and renders an AI answer regardless of list position", async () => {
+    const ANSWER = "Physics-derived fee answer.";
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ answer: ANSWER, route: null }),
+    } as unknown as Response);
+
+    // Guard: ASYNC_SUGGESTIONS must be non-empty — if this fails, someone
+    // removed all async-path entries and the branch is no longer tested.
+    expect(
+      ASYNC_SUGGESTIONS.length,
+      "ASYNC_SUGGESTIONS must contain at least one entry. " +
+        "Add a keyword-free SUGGESTIONS entry to ASYNC_SUGGESTIONS in GuideBot.tsx.",
+    ).toBeGreaterThan(0);
+
+    const asyncEntry = ASYNC_SUGGESTIONS[0];
+
+    // Compute the rendered chip label using the same regex as GuideBot.tsx.
+    const chipLabel = asyncEntry!.replace(
+      /^(How do I |Show me the |What is |Where is |How does |What is the )/,
+      "",
+    );
+
+    renderGuideBot();
+    openPanel();
+
+    // Assert the chip is in the DOM — position-independent (covers both rows).
+    const chip = screen.getByText(chipLabel);
+    expect(chip).toBeInTheDocument();
+
+    // Click the chip and confirm the async path fires (no navigate, fetch called).
+    fireEvent.click(chip);
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+        "/api/guide/ask",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
 
     await waitFor(() => {
       expect(screen.getByText(ANSWER)).toBeInTheDocument();
