@@ -197,3 +197,46 @@ describe("script/build.ts calls viteBuild (which triggers the bundle-size plugin
     expect(content).toMatch(/await\s+viteBuild\s*\(\s*\)/);
   });
 });
+
+// ─── critical-chunk preload plugin guard ──────────────────────────────────────
+
+describe("vite.config.ts critical-chunk preload plugin guard", () => {
+  let cfg: string;
+
+  async function getViteConfig(): Promise<string> {
+    if (!cfg) {
+      cfg = await readFile(VITE_CONFIG, "utf-8");
+    }
+    return cfg;
+  }
+
+  it("defines a criticalChunkPreloadPlugin factory function", async () => {
+    const content = await getViteConfig();
+    expect(content).toMatch(/function\s+criticalChunkPreloadPlugin\s*\(/);
+  });
+
+  it("criticalChunkPreloadPlugin has a generateBundle hook", async () => {
+    const content = await getViteConfig();
+    const pluginBody = extractNamedFunctionBody(
+      content,
+      "criticalChunkPreloadPlugin",
+    );
+    expect(
+      pluginBody,
+      "criticalChunkPreloadPlugin function body not found in vite.config.ts",
+    ).not.toBeNull();
+    expect(pluginBody!).toMatch(/generateBundle\s*\(/);
+  });
+
+  it("criticalChunkPreloadPlugin() is invoked inside the defineConfig plugins array", async () => {
+    const content = await getViteConfig();
+    // Extract the defineConfig argument block.
+    const dcMatch = content.match(/defineConfig\s*\(\s*\{/);
+    expect(dcMatch, "defineConfig({ not found").not.toBeNull();
+    const openPos = content.indexOf("{", dcMatch!.index!);
+    const configBody = extractBalancedBlock(content, openPos);
+    expect(configBody, "defineConfig body not balanced").not.toBeNull();
+    // The plugins property must contain a criticalChunkPreloadPlugin() call.
+    expect(configBody!).toMatch(/criticalChunkPreloadPlugin\s*\(\s*\)/);
+  });
+});
