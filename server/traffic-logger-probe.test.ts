@@ -2070,6 +2070,116 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 
     expect(mockSendProbeAlert).not.toHaveBeenCalled();
   });
+
+  // ── B4 / B5: pruneProbes — >= cutoff boundary (mirrors B2/B3) ───────────────
+  //
+  // B2 and B3 confirm that initProbeCounters uses an inclusive >= boundary when
+  // loading hits from the DB on restart.  B4 and B5 confirm that pruneProbes
+  // uses the exact same inclusive boundary when it later evicts entries from the
+  // in-memory maps.
+  //
+  // A future change that tightens initProbeCounters to > (or loosens pruneProbes
+  // to >) would break the symmetry: a boundary hit loaded on restart would then
+  // be immediately evicted on the next prune cycle, silently losing a scraper
+  // that was near the alert threshold.  Together B2–B5 catch both sides of that
+  // mismatch.
+  //
+  // The hasActiveHits guard inside pruneProbes is:
+  //   entry.hits.length > 0 && entry.hits[last] >= cutoff
+  // where cutoff = pruneNow - WINDOW_MS.
+  //
+  // B4: hit timestamp === cutoff (>= true) → entry must SURVIVE
+  // B5: hit timestamp === cutoff - 1 (<  cutoff, >= false) → entry must be DELETED
+
+  it("(B4) pruneProbes: UA entry with a single hit at exactly pruneNow−WINDOW_MS (boundary) is NOT evicted", async () => {
+    // This is the pruneProbes mirror of B2.
+    //
+    // initProbeCounters loads a boundary hit (>= cutoff) on restart.  pruneProbes
+    // must honour the same >= boundary so the entry that survived the restart is
+    // not immediately deleted on the first prune cycle.
+    //
+    // A refactored pruner that uses > instead of >= would evaluate
+    //   hits[last] > cutoff  →  false  →  hasActiveHits = false
+    // and delete the entry despite it being a live in-window record.
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+54h — monotonically above all prior pruneProbes tests (last used 50h).
+    const T0       = Date.now() + 54 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1; // passes the 1-hour prune guard
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop actually ran ──────────────────
+    _uaProbes.set("B4StaleCompanionUA/1.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the boundary UA entry ────────────────────────────────────────────
+    // Single hit at exactly pruneNow - WINDOW_MS (= cutoff).
+    // >= cutoff evaluates to true → hasActiveHits = true → must SURVIVE.
+    _uaProbes.set("B4BoundaryUA/1.0", {
+      hits:        [pruneNow - WINDOW_MS],
+      lastAlerted: 0,
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → confirms the prune loop ran
+    expect(_uaProbes.has("B4StaleCompanionUA/1.0")).toBe(false);
+    // Boundary hit is still within the window (>= cutoff) → entry must SURVIVE
+    expect(_uaProbes.has("B4BoundaryUA/1.0")).toBe(true);
+    expect(_uaProbes.get("B4BoundaryUA/1.0")!.hits).toEqual([pruneNow - WINDOW_MS]);
+  });
+
+  it("(B5) pruneProbes: UA entry with a single hit 1 ms before the cutoff (pruneNow−WINDOW_MS−1) IS evicted", async () => {
+    // Symmetric outside-window counterpart to B4.
+    //
+    // A hit at pruneNow - WINDOW_MS - 1 is strictly less than cutoff, so
+    //   hits[last] >= cutoff  →  false  →  hasActiveHits = false.
+    // With no active cooldown the entry must be deleted.
+    //
+    // This mirrors B3's role for initProbeCounters: confirming that the filter
+    // does NOT retain hits that are genuinely outside the window.
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+56h — monotonically above B4.
+    const T0       = Date.now() + 56 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop actually ran ──────────────────
+    _uaProbes.set("B5StaleCompanionUA/1.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the outside-window UA entry ─────────────────────────────────────
+    // Single hit 1 ms before the cutoff: strictly < cutoff → hasActiveHits = false.
+    // No active cooldown → entry must be DELETED.
+    _uaProbes.set("B5OutsideWindowUA/1.0", {
+      hits:        [pruneNow - WINDOW_MS - 1],
+      lastAlerted: 0,
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → confirms the prune loop ran
+    expect(_uaProbes.has("B5StaleCompanionUA/1.0")).toBe(false);
+    // Hit is 1 ms outside the window → entry must be DELETED
+    expect(_uaProbes.has("B5OutsideWindowUA/1.0")).toBe(false);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
