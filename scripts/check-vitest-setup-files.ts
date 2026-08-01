@@ -78,9 +78,16 @@ async function findVitestConfigs(rootDir: string): Promise<string[]> {
 }
 
 /**
- * Return all *.ts files under `scanDir` whose basename contains "setup"
- * (case-insensitive) but whose path does NOT contain a `__tests__` directory
- * segment.
+ * Return all *.ts files under `scanDir` that look like Vitest setup modules
+ * but whose path does NOT contain a `__tests__` directory segment.
+ *
+ * A file is considered a setup-module candidate when ALL of the following hold:
+ *   1. It ends in `.ts` (but NOT `.test.ts` — those are test suites, not setup files).
+ *   2. Its path does not include a `__tests__` segment.
+ *   3. The word "setup" is the **first or last** hyphen/underscore-delimited segment
+ *      of the filename stem.  This matches names like `setup.ts`, `test-setup.ts`,
+ *      and `vitest-setup.ts` while excluding compound utility names such as
+ *      `check-vitest-setup-files.ts` (where "setup" is a middle segment).
  */
 async function findCandidateFiles(scanDir: string): Promise<string[]> {
   let allEntries: string[];
@@ -96,9 +103,12 @@ async function findCandidateFiles(scanDir: string): Promise<string[]> {
   return allEntries
     .filter((rel) => {
       if (!rel.endsWith(".ts")) return false;
+      if (rel.endsWith(".test.ts")) return false;
       if (rel.includes("__tests__")) return false;
-      const basename = path.basename(rel).toLowerCase();
-      return basename.includes("setup");
+      // Strip the .ts extension, then split on hyphens and underscores.
+      const stem = path.basename(rel, ".ts").toLowerCase();
+      const segments = stem.split(/[-_]/);
+      return segments[0] === "setup" || segments[segments.length - 1] === "setup";
     })
     .map((rel) => path.join(scanDir, rel));
 }
@@ -110,7 +120,7 @@ async function findCandidateFiles(scanDir: string): Promise<string[]> {
  *
  * @param rootDir   Project root (defaults to process.cwd())
  * @param scanDirs  Directory or directories to scan for orphaned setup files.
- *                  Defaults to `["<rootDir>/client/src", "<rootDir>/server"]`.
+ *                  Defaults to `["<rootDir>/client/src", "<rootDir>/server", "<rootDir>/scripts"]`.
  *                  Pass a single string to scan only one directory (backward-
  *                  compatible with the original API).
  */
@@ -123,10 +133,14 @@ export async function checkVitestSetupFiles(
 ): Promise<CheckResult> {
   const root = rootDir;
 
-  // Resolve the scan directories, defaulting to client/src + server
+  // Resolve the scan directories, defaulting to client/src + server + scripts
   const resolvedScanDirs: string[] =
     scanDirs === undefined
-      ? [path.join(root, "client", "src"), path.join(root, "server")]
+      ? [
+          path.join(root, "client", "src"),
+          path.join(root, "server"),
+          path.join(root, "scripts"),
+        ]
       : Array.isArray(scanDirs)
         ? scanDirs
         : [scanDirs];
