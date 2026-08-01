@@ -1146,6 +1146,45 @@ describe("dynamic UA block never increments the probe counter", () => {
   it("blocked UA with threshold=1 (alert on hit 2) still produces zero alerts", async () => {
     await assertDynamicUaNeverAlerts("DynamicBlockedBot/1.0", 1);
   });
+
+  it("removing a UA from the snapshot restores normal probe counting and triggers an alert", async () => {
+    const threshold = 2;
+    process.env.PROBE_ALERT_THRESHOLD = String(threshold);
+    const mod = await import("./traffic-logger");
+    const mw = mod.trafficLoggerMiddleware;
+
+    const blockedUa = "LiftedBlockBot/3.0";
+
+    // Phase 1: block the UA and confirm zero alerts for threshold+1 hits.
+    mod._testSetDynamicBlockSnapshot({ referers: new Set(), uas: new Set([blockedUa]) });
+
+    const countBlocked = threshold + 1;
+    for (let i = 0; i < countBlocked; i++) {
+      const req = makeReq(blockedUa);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+    }
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(0);
+
+    // Phase 2: remove the UA from the snapshot (empty uas set).
+    mod._testSetDynamicBlockSnapshot({ referers: new Set(), uas: new Set() });
+
+    // Send threshold+1 more requests — now unblocked, so the probe counter
+    // should accumulate and fire exactly one alert.
+    const countUnblocked = threshold + 1;
+    for (let i = 0; i < countUnblocked; i++) {
+      const req = makeReq(blockedUa);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+    }
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
