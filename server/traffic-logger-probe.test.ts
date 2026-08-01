@@ -2045,6 +2045,33 @@ describe("referer probe — mid-session cooldown suppression (no restart)", () =
     await hitRefererTimes(mw, 10);
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
   });
+
+  it("second alert fires exactly once after the cooldown expires", async () => {
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const mw = await freshMiddleware();
+
+    // Drive threshold+1 (= 3) hits — the first alert must fire exactly once.
+    await hitRefererTimes(mw, 3);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+
+    // Simulate the cooldown expiring by back-dating lastAlerted on the
+    // in-memory _refererProbes entry.  COOLDOWN_MS = 1 h = 3_600_000 ms;
+    // subtracting 3_600_001 ms places it just past the boundary so the guard lifts.
+    const mod   = await import("./traffic-logger");
+    const entry = mod._refererProbes.get(REFERER_KEY);
+    expect(entry).toBeDefined();
+    entry!.lastAlerted = Date.now() - 3_600_001;
+
+    // Drive threshold+1 more hits — the cooldown has expired so the guard
+    // must allow exactly one new alert.
+    await hitRefererTimes(mw, 3);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(2);
+
+    const secondCall = mockSendProbeAlert.mock.calls[1] as [string, string, number];
+    expect(secondCall[0]).toBe("referer");
+    expect(secondCall[1]).toBe(REFERER_KEY);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
