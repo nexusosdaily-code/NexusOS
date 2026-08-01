@@ -3241,4 +3241,178 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
     // hits === [] but lastAlerted is within COOLDOWN_MS → target must survive
     expect(_uaProbes.has("WarmCooldownDrainedUA/1.0")).toBe(true);
   });
+
+  // ── WINDOW_MS hit-timestamp boundary ────────────────────────────────────────
+  //
+  // The hasActiveHits guard is:
+  //   entry.hits.length > 0 && entry.hits[last] >= cutoff
+  // where cutoff = pruneNow - WINDOW_MS.
+  //
+  // A hit whose timestamp equals exactly pruneNow - WINDOW_MS sits on the
+  // inclusive boundary: >= cutoff is true → the entry is still active and must
+  // SURVIVE.  A refactored pruner using strictly-greater (>) instead of >= would
+  // treat this hit as expired and evict an otherwise-active entry.
+  //
+  // The symmetric test seeds a hit 1 ms before the cutoff (pruneNow - WINDOW_MS
+  // - 1), which is strictly outside the window (< cutoff), so the entry must be
+  // DELETED (assuming no active cooldown).
+
+  it("refererProbes WINDOW_MS boundary: hit at exactly pruneNow−WINDOW_MS is still active — entry SURVIVES", async () => {
+    // The hasActiveHits check uses >=, so a hit whose timestamp equals the
+    // cutoff exactly (now - WINDOW_MS) must keep the entry alive.
+    //
+    // A refactored pruner that uses > instead of >= would evaluate
+    //   hits[last] > cutoff  →  false  →  hasActiveHits = false
+    // and delete the entry, silently discarding an in-window scraper record.
+    // This test catches that off-by-one before it ships.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+44h — monotonically above the last test in this suite (42 h).
+    const T0       = Date.now() + 44 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1; // 1 h + 1 ms after T0 → prune guard passes
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion: no hits, no cooldown — must be DELETED ──────────────
+    // Its deletion proves the pruner actually ran the loop body.
+    _refererProbes.set("https://window-boundary-stale-companion-ref.example/", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the boundary entry: single hit at exactly pruneNow − WINDOW_MS ──
+    // cutoff = pruneNow - WINDOW_MS, so hits[0] === cutoff → >= is true → ACTIVE
+    _refererProbes.set("https://window-boundary-exact-ref.example/", {
+      hits:        [pruneNow - WINDOW_MS],
+      lastAlerted: 0,
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → prune loop actually ran
+    expect(_refererProbes.has("https://window-boundary-stale-companion-ref.example/")).toBe(false);
+    // Hit sits exactly on the inclusive boundary → entry must SURVIVE
+    expect(_refererProbes.has("https://window-boundary-exact-ref.example/")).toBe(true);
+  });
+
+  it("refererProbes WINDOW_MS boundary: hit at pruneNow−WINDOW_MS−1 is outside window — entry is DELETED", async () => {
+    // A hit 1 ms before the cutoff (pruneNow - WINDOW_MS - 1) is strictly less
+    // than cutoff, so >= cutoff evaluates to false → hasActiveHits = false.
+    // With no active cooldown the entry must be deleted.
+    //
+    // This is the symmetric outside-window counterpart to the test above.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+46h — monotonically above the boundary-exact test above.
+    const T0       = Date.now() + 46 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop ran ───────────────────────────
+    _refererProbes.set("https://window-outside-stale-companion-ref.example/", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the target: single hit 1 ms before the cutoff ───────────────────
+    // hits[0] = pruneNow - WINDOW_MS - 1  →  hits[0] < cutoff  →  hasActiveHits = false
+    _refererProbes.set("https://window-outside-ref.example/", {
+      hits:        [pruneNow - WINDOW_MS - 1],
+      lastAlerted: 0,
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → prune loop ran
+    expect(_refererProbes.has("https://window-outside-stale-companion-ref.example/")).toBe(false);
+    // Hit is outside the window AND no active cooldown → entry must be DELETED
+    expect(_refererProbes.has("https://window-outside-ref.example/")).toBe(false);
+  });
+
+  it("uaProbes WINDOW_MS boundary: hit at exactly pruneNow−WINDOW_MS is still active — entry SURVIVES", async () => {
+    // Symmetric counterpart of the refererProbes boundary-exact test, targeting
+    // _uaProbes in isolation.
+    //
+    // The hasActiveHits guard uses >= cutoff.  A hit whose timestamp equals the
+    // cutoff exactly must keep the UA entry alive.  A refactored pruner that
+    // uses strictly-greater (>) would wrongly evict it.
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+48h — monotonically above all prior tests.
+    const T0       = Date.now() + 48 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop ran ───────────────────────────
+    _uaProbes.set("WindowBoundaryStaleCompanionUA/1.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the boundary UA entry ────────────────────────────────────────────
+    _uaProbes.set("WindowBoundaryExactUA/1.0", {
+      hits:        [pruneNow - WINDOW_MS],
+      lastAlerted: 0,
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → prune loop actually ran
+    expect(_uaProbes.has("WindowBoundaryStaleCompanionUA/1.0")).toBe(false);
+    // Hit sits exactly on the inclusive boundary → entry must SURVIVE
+    expect(_uaProbes.has("WindowBoundaryExactUA/1.0")).toBe(true);
+  });
+
+  it("uaProbes WINDOW_MS boundary: hit at pruneNow−WINDOW_MS−1 is outside window — entry is DELETED", async () => {
+    // Symmetric counterpart of the refererProbes outside-window test, targeting
+    // _uaProbes in isolation.
+    //
+    // A hit at pruneNow - WINDOW_MS - 1 is strictly less than cutoff, so
+    // hasActiveHits = false.  With no active cooldown the entry must be deleted.
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+50h — monotonically above all prior tests.
+    const T0       = Date.now() + 50 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop ran ───────────────────────────
+    _uaProbes.set("WindowOutsideStaleCompanionUA/1.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the target UA entry: single hit 1 ms before the cutoff ──────────
+    _uaProbes.set("WindowOutsideUA/1.0", {
+      hits:        [pruneNow - WINDOW_MS - 1],
+      lastAlerted: 0,
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → prune loop ran
+    expect(_uaProbes.has("WindowOutsideStaleCompanionUA/1.0")).toBe(false);
+    // Hit is outside the window AND no active cooldown → entry must be DELETED
+    expect(_uaProbes.has("WindowOutsideUA/1.0")).toBe(false);
+  });
 });
