@@ -21,7 +21,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync, statSync } from "fs";
 import path from "path";
 
 // ── mock fs/promises BEFORE importing the module under test ──────────────────
@@ -84,7 +84,74 @@ describe("live server/traffic-logger.ts check", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 3. checkProbeEvictionGuard() unit logic (fs mocked)
+// 3. TARGET_FILE tracks the eviction logic location
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Recursively collect all *.ts files under `dir`.
+ */
+function walkTs(dir: string): string[] {
+  const results: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...walkTs(full));
+    } else if (entry.name.endsWith(".ts")) {
+      results.push(full);
+    }
+  }
+  return results;
+}
+
+describe("TARGET_FILE tracks the eviction logic location", () => {
+  it(
+    "REQUIRED_PATTERN is found in TARGET_FILE; if it moved, this test tells you where",
+    () => {
+      const serverDir = path.resolve("server");
+      const allServerFiles = walkTs(serverDir);
+
+      // Collect every server/*.ts file that contains the eviction pattern.
+      const filesWithPattern = allServerFiles.filter((f) => {
+        try {
+          return REQUIRED_PATTERN.test(readFileSync(f, "utf-8"));
+        } catch {
+          return false;
+        }
+      });
+
+      // The pattern must exist somewhere — if it's gone entirely that's a
+      // different (already-covered) failure, but we still want a clear message.
+      expect(
+        filesWithPattern.length,
+        `Eviction guard "entry.hits[lo] <= cutoff" was not found in any ` +
+          `server/**/*.ts file.\n` +
+          `Either the guard was deleted or its variable names were changed.\n` +
+          `Check server/traffic-logger.ts and update REQUIRED_PATTERN in ` +
+          `scripts/check-probe-eviction-guard.ts if the names changed.`,
+      ).toBeGreaterThan(0);
+
+      // The pattern must live in TARGET_FILE specifically.  If it has moved
+      // to a different file this assertion fires with the exact new location
+      // so the developer knows exactly what to update.
+      const relativeMatches = filesWithPattern.map((f) =>
+        path.relative(process.cwd(), f),
+      );
+      const inTargetFile = filesWithPattern.includes(TARGET_FILE);
+      expect(
+        inTargetFile,
+        `Eviction guard "entry.hits[lo] <= cutoff" was NOT found in ` +
+          `TARGET_FILE (${path.relative(process.cwd(), TARGET_FILE)}).\n` +
+          `It was found in: ${relativeMatches.join(", ")}.\n` +
+          `The eviction loop was likely extracted to a different module.\n` +
+          `→ Update TARGET_FILE in scripts/check-probe-eviction-guard.ts ` +
+          `to point to the new location (e.g. "${relativeMatches[0]}").`,
+      ).toBe(true);
+    },
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 4. checkProbeEvictionGuard() unit logic (fs mocked)
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("checkProbeEvictionGuard() unit logic", () => {
