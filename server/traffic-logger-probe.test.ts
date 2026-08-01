@@ -805,6 +805,13 @@ describe("constitutionally-blocked referer never increments the probe counter", 
     // never trigger an alert because probe recording is skipped entirely.
     await assertBlockedRefererNeverAlerts("https://binance.com/", 1);
   });
+
+  it("ghost-rider raw-pattern referer: threshold+1 requests produce zero alerts", async () => {
+    // "ghost-rider/recon" is a non-URL referer matched by BLOCKED_REFERRER_RAW.
+    // The middleware must return 403 before registering the res.on("finish")
+    // listener, so recordProbe() is never called and sendProbeAlert fires zero times.
+    await assertBlockedRefererNeverAlerts("ghost-rider/recon");
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
