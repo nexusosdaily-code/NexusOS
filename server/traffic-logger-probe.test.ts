@@ -815,6 +815,57 @@ describe("constitutionally-blocked referer never increments the probe counter", 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Constitutionally-blocked referer always returns HTTP 403
+//
+// The probe-counter tests above confirm that blocked referers never accumulate
+// hits, but they would still pass even if the res.status(403).json({...})
+// early-return were accidentally deleted (probe recording is skipped before
+// the status call, so the counter check is unchanged).  These tests close
+// that gap by asserting the HTTP status code directly.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("constitutionally-blocked referer always responds with HTTP 403", () => {
+  /**
+   * Send a single request with the given referer and return the res mock so
+   * callers can assert status / json invocations.
+   */
+  async function sendOneRequest(referer: string) {
+    const mw = await freshMiddleware();
+    const req = makeReq("ObscureTestBrowser/99.0", referer);
+    const res = makeRes();
+    mw(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+    return res;
+  }
+
+  it("domain block (binance.com): res.status is called with 403", async () => {
+    const res = await sendOneRequest("https://binance.com/");
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  it("domain block (jpmorgan.com): res.status is called with 403", async () => {
+    const res = await sendOneRequest("https://www.jpmorgan.com/");
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  it("raw-pattern block (ghost-rider): res.status is called with 403", async () => {
+    const res = await sendOneRequest("ghost-rider/1.0");
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  it("domain block also calls res.json with an error body", async () => {
+    const res = await sendOneRequest("https://binance.com/");
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.any(String) }));
+  });
+
+  it("raw-pattern block also calls res.json with an error body", async () => {
+    const res = await sendOneRequest("ghost-rider/probe");
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.any(String) }));
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Dynamic-block referer (Telegram-added) — must never increment the probe counter
 //
 // When a request carries a Referer header that matches an entry in the
