@@ -239,6 +239,23 @@ describe("vite.config.ts critical-chunk preload plugin guard", () => {
     // The plugins property must contain a criticalChunkPreloadPlugin() call.
     expect(configBody!).toMatch(/criticalChunkPreloadPlugin\s*\(\s*\)/);
   });
+
+  it("criticalChunkPreloadPlugin declares enforce: 'post' so it runs after all other plugins", async () => {
+    const content = await getViteConfig();
+    const pluginBody = extractNamedFunctionBody(
+      content,
+      "criticalChunkPreloadPlugin",
+    );
+    expect(
+      pluginBody,
+      "criticalChunkPreloadPlugin function body not found in vite.config.ts",
+    ).not.toBeNull();
+    // enforce:"post" (or enforce:'post') must be present inside the factory so
+    // the plugin always sees the fully-populated bundle.  Removing it causes
+    // the generateBundle hook to run before other plugins have emitted their
+    // chunks, which silently produces missing or wrong preload tags.
+    expect(pluginBody!).toMatch(/enforce\s*:\s*["']post["']/);
+  });
 });
 
 // ─── CRITICAL_CHUNKS membership guard ────────────────────────────────────────
