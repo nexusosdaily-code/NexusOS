@@ -1660,6 +1660,45 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(mockSendProbeAlert).not.toHaveBeenCalled();
   });
 
+  it("(G) initProbeCounters: referer row with active hits AND active cooldown restores both hits array and lastAlerted into _refererProbes (not _uaProbes)", async () => {
+    // This is the complementary case to (E): some hits are still within the
+    // 24-hour window AND lastAlerted is non-zero and within the past hour.
+    // Both the active hits and the active cooldown must survive the restart.
+    const now         = Date.now();
+    const recentHit1  = now - 5_000;           // 5 s ago  — inside window
+    const recentHit2  = now - 10_000;          // 10 s ago — inside window
+    const staleHit    = now - 25 * 3600_000;  // 25 h ago — outside window (pruned)
+    const lastAlerted = now - 30 * 60_000;    // 30 min ago — cooldown still active
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      {
+        fieldType:   "referer",
+        key:         "https://active-cooldown-referer.example/",
+        hits:        [staleHit, recentHit1, recentHit2],
+        lastAlerted: lastAlerted,
+      },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    // Must be in _refererProbes, NOT in _uaProbes.
+    const entry = mod._refererProbes.get("https://active-cooldown-referer.example/");
+    expect(entry).toBeDefined();
+    // Only the in-window hits survive; the stale one is pruned.
+    expect(entry!.hits).toContain(recentHit1);
+    expect(entry!.hits).toContain(recentHit2);
+    expect(entry!.hits).not.toContain(staleHit);
+    // lastAlerted is preserved so the cooldown keeps suppressing alerts.
+    expect(entry!.lastAlerted).toBe(lastAlerted);
+    // Must not bleed into the UA map.
+    expect(mod._uaProbes.has("https://active-cooldown-referer.example/")).toBe(false);
+  });
+
   it("(F) cooldown expired after restart: restored lastAlerted outside the window allows re-alert", async () => {
     // threshold=2 → alert fires on the 3rd hit.
     // cooldown=1 h → 2 hours ago is outside the cooldown window.
