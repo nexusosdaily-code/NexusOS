@@ -4028,3 +4028,135 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
     expect(hits).toBe(4); // reported count reflects the correctly-pruned window
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Concurrent burst — two distinct scraper keys at the same timestamp
+//
+// Verifies that two independent probe keys processed with the same `now`
+// value (simulating a concurrent burst) each maintain their own accurate
+// sliding-window count with no cross-contamination between them. When only
+// one key's post-prune count exceeds the threshold, exactly one alert fires.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("concurrent burst — two scraper keys at the same timestamp stay independent", () => {
+  it("each key prunes its own stale hits; only the key that crosses the threshold alerts", async () => {
+    // Threshold = 3: alert fires when hits.length > 3 (i.e. ≥ 4 in-window hits).
+    process.env.PROBE_ALERT_THRESHOLD = "3";
+
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    // Use a far-future base so these timestamps never collide with earlier tests.
+    const recordNow = Date.now() + 90 * 60 * 60 * 1000;
+    const cutoff    = recordNow - WINDOW_MS;
+
+    // ── keyA: 1 stale hit + 2 in-window hits ─────────────────────────────────
+    // After eviction and appending recordNow → 3 hits (= threshold, NOT > threshold)
+    // → NO alert should fire for keyA.
+    const keyA = "ConcurrentScraperA/1.0";
+    _uaProbes.set(keyA, {
+      hits:        [
+        cutoff - 500, // stale — will be evicted
+        cutoff + 100, // in-window
+        cutoff + 200, // in-window
+      ],
+      lastAlerted: 0,
+    });
+
+    // ── keyB: 1 stale hit + 3 in-window hits ─────────────────────────────────
+    // After eviction and appending recordNow → 4 hits (> threshold of 3)
+    // → alert SHOULD fire for keyB.
+    const keyB = "ConcurrentScraperB/2.0";
+    _uaProbes.set(keyB, {
+      hits:        [
+        cutoff - 500, // stale — will be evicted
+        cutoff + 100, // in-window
+        cutoff + 200, // in-window
+        cutoff + 300, // in-window
+      ],
+      lastAlerted: 0,
+    });
+
+    // Both keys processed at the exact same `now` — simulates a concurrent burst.
+    _recordProbe(_uaProbes, keyA, "ua", recordNow);
+    _recordProbe(_uaProbes, keyB, "ua", recordNow);
+
+    // Flush the fire-and-forget dynamic import + .then callback.
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+
+    // ── Assert keyA ───────────────────────────────────────────────────────────
+    const entryA = _uaProbes.get(keyA)!;
+    // Stale hit evicted; 2 in-window hits + new hit = 3 total.
+    expect(entryA.hits).toHaveLength(3);
+    expect(entryA.hits).toEqual([cutoff + 100, cutoff + 200, recordNow]);
+    expect(entryA.hits).not.toContain(cutoff - 500);
+
+    // ── Assert keyB ───────────────────────────────────────────────────────────
+    const entryB = _uaProbes.get(keyB)!;
+    // Stale hit evicted; 3 in-window hits + new hit = 4 total.
+    expect(entryB.hits).toHaveLength(4);
+    expect(entryB.hits).toEqual([cutoff + 100, cutoff + 200, cutoff + 300, recordNow]);
+    expect(entryB.hits).not.toContain(cutoff - 500);
+
+    // ── Assert alert fired exactly once (for keyB only) ───────────────────────
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    const [field, value, hitCount] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(field).toBe("ua");
+    expect(value).toBe(keyB);   // alert is for keyB — it crossed the threshold
+    expect(hitCount).toBe(4);   // accurate post-prune count for keyB
+
+    // Confirm no alert was recorded for keyA.
+    const alertedKeys = mockSendProbeAlert.mock.calls.map(
+      (c: [string, string, number]) => c[1],
+    );
+    expect(alertedKeys).not.toContain(keyA);
+  });
+
+  it("two keys with identical in-window histories at the same timestamp each accumulate counts independently", async () => {
+    // Both scrapers arrive simultaneously with the same number of prior hits.
+    // Each should end up with its own independent count — no shared state.
+    process.env.PROBE_ALERT_THRESHOLD = "3";
+
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const recordNow = Date.now() + 95 * 60 * 60 * 1000;
+    const cutoff    = recordNow - WINDOW_MS;
+
+    const keyC = "TwinScraperC/1.0";
+    const keyD = "TwinScraperD/1.0";
+
+    // Both start with the same 3 in-window hits (no stale ones).
+    const sharedHistory = [cutoff + 1000, cutoff + 2000, cutoff + 3000];
+
+    _uaProbes.set(keyC, { hits: [...sharedHistory], lastAlerted: 0 });
+    _uaProbes.set(keyD, { hits: [...sharedHistory], lastAlerted: 0 });
+
+    // Simultaneous hit for both keys.
+    _recordProbe(_uaProbes, keyC, "ua", recordNow);
+    _recordProbe(_uaProbes, keyD, "ua", recordNow);
+
+    // No flush needed here — all assertions below are on synchronous map state.
+
+    const entryC = _uaProbes.get(keyC)!;
+    const entryD = _uaProbes.get(keyD)!;
+
+    // Each key independently accumulates 4 hits (3 pre-existing + 1 new).
+    expect(entryC.hits).toHaveLength(4);
+    expect(entryD.hits).toHaveLength(4);
+
+    // The new hit is appended to each map entry separately — no aliasing.
+    expect(entryC.hits[3]).toBe(recordNow);
+    expect(entryD.hits[3]).toBe(recordNow);
+
+    // Both entries crossed the threshold, so recordProbe must have set
+    // lastAlerted on each independently (synchronous side-effect, no async
+    // needed).  This confirms the alert logic ran for both keys without
+    // cross-contamination from the shared history arrays.
+    expect(entryC.lastAlerted).toBe(recordNow);
+    expect(entryD.lastAlerted).toBe(recordNow);
+  });
+});
