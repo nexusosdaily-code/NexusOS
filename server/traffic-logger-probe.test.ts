@@ -2888,4 +2888,88 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
     expect(_refererProbes.has("https://both-stale-ref.example/")).toBe(false);
     expect(_uaProbes.has("BothStaleUA/1.0")).toBe(false);
   });
+
+  it("cooldown exact boundary (lastAlerted = pruneNow - COOLDOWN_MS + 1): entry SURVIVES (1 ms before expiry)", async () => {
+    // The hasActiveCooldown guard is:
+    //   entry.lastAlerted > 0 && now - entry.lastAlerted < COOLDOWN_MS
+    //
+    // When lastAlerted = pruneNow - COOLDOWN_MS + 1:
+    //   now - lastAlerted = COOLDOWN_MS - 1  →  COOLDOWN_MS - 1 < COOLDOWN_MS  →  true
+    //   → hasActiveCooldown = true → entry must SURVIVE
+    //
+    // A refactored pruner using >= instead of > would evaluate
+    //   COOLDOWN_MS - 1 >= COOLDOWN_MS  →  false  →  hasActiveCooldown = false  →  wrongly deleted.
+    // This test catches that off-by-one before it ships.
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000;
+
+    // Place T0 far enough in the future to avoid lastPrune collisions with
+    // earlier tests in this file.
+    const T0       = Date.now() + 23 * 60 * 60 * 1000; // 23 h into the future
+    const pruneNow = T0 + COOLDOWN_MS + 1;              // guaranteed to pass the 1 h prune guard
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Seed boundary entries: empty hits, lastAlerted 1 ms before expiry ────
+    _refererProbes.set("https://cooldown-boundary-minus1-ref.example/", {
+      hits:        [],
+      lastAlerted: pruneNow - COOLDOWN_MS + 1,
+    });
+    _uaProbes.set("CooldownBoundaryMinus1UA/1.0", {
+      hits:        [],
+      lastAlerted: pruneNow - COOLDOWN_MS + 1,
+    });
+
+    _pruneProbes(pruneNow);
+
+    // 1 ms inside the window — cooldown is still active → must SURVIVE
+    expect(_refererProbes.has("https://cooldown-boundary-minus1-ref.example/")).toBe(true);
+    expect(_uaProbes.has("CooldownBoundaryMinus1UA/1.0")).toBe(true);
+  });
+
+  it("cooldown exact boundary (lastAlerted = pruneNow - COOLDOWN_MS): entry is DELETED (cooldown has just expired)", async () => {
+    // The hasActiveCooldown guard is:
+    //   entry.lastAlerted > 0 && now - entry.lastAlerted < COOLDOWN_MS
+    //
+    // When lastAlerted = pruneNow - COOLDOWN_MS:
+    //   now - lastAlerted = COOLDOWN_MS  →  COOLDOWN_MS < COOLDOWN_MS  →  false
+    //   → hasActiveCooldown = false, no active hits → entry must be DELETED
+    //
+    // A refactored pruner using <= instead of < would evaluate
+    //   COOLDOWN_MS <= COOLDOWN_MS  →  true  →  hasActiveCooldown = true  →  wrongly kept.
+    // This test catches that off-by-one before it ships.
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000;
+
+    // Place T0 far enough in the future to avoid lastPrune collisions with
+    // earlier tests in this file.
+    const T0       = Date.now() + 25 * 60 * 60 * 1000; // 25 h into the future
+    const pruneNow = T0 + COOLDOWN_MS + 1;              // guaranteed to pass the 1 h prune guard
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Seed boundary entries: empty hits, lastAlerted exactly at expiry ──────
+    _refererProbes.set("https://cooldown-boundary-exact-ref.example/", {
+      hits:        [],
+      lastAlerted: pruneNow - COOLDOWN_MS,
+    });
+    _uaProbes.set("CooldownBoundaryExactUA/1.0", {
+      hits:        [],
+      lastAlerted: pruneNow - COOLDOWN_MS,
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Exactly at expiry — cooldown has elapsed → must be DELETED
+    expect(_refererProbes.has("https://cooldown-boundary-exact-ref.example/")).toBe(false);
+    expect(_uaProbes.has("CooldownBoundaryExactUA/1.0")).toBe(false);
+  });
 });
