@@ -38,14 +38,14 @@ function pruneProbes(now: number): void {
   lastPrune = now;
   const cutoff = now - WINDOW_MS;
   for (const [key, entry] of refererProbes) {
-    if (entry.hits.length === 0 || entry.hits[entry.hits.length - 1] < cutoff) {
-      refererProbes.delete(key);
-    }
+    const hasActiveHits = entry.hits.length > 0 && entry.hits[entry.hits.length - 1] >= cutoff;
+    const hasActiveCooldown = entry.lastAlerted > 0 && now - entry.lastAlerted < COOLDOWN_MS;
+    if (!hasActiveHits && !hasActiveCooldown) refererProbes.delete(key);
   }
   for (const [key, entry] of uaProbes) {
-    if (entry.hits.length === 0 || entry.hits[entry.hits.length - 1] < cutoff) {
-      uaProbes.delete(key);
-    }
+    const hasActiveHits = entry.hits.length > 0 && entry.hits[entry.hits.length - 1] >= cutoff;
+    const hasActiveCooldown = entry.lastAlerted > 0 && now - entry.lastAlerted < COOLDOWN_MS;
+    if (!hasActiveHits && !hasActiveCooldown) uaProbes.delete(key);
   }
 }
 

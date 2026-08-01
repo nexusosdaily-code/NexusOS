@@ -1875,6 +1875,64 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(refererCall![0]).toBe("referer");
     expect(refererCall![1]).toBe(REFERER_KEY);
   });
+
+  it("(I) referer row with ALL-stale hits AND active cooldown: middleware never alerts after restart", async () => {
+    // End-to-end complement to test (E).
+    // (E) confirms the entry is restored into _refererProbes with the correct
+    // lastAlerted. This test drives actual traffic through the middleware and
+    // confirms the active cooldown keeps suppressing alerts even when the hit
+    // count exceeds the threshold — i.e. lastAlerted is honoured at alert time,
+    // not just at restore time.
+    //
+    // threshold=2 → alert would fire on the 3rd hit if there were no cooldown.
+    // cooldown=1 h → lastAlerted 30 min ago means cooldown is still active.
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+
+    const now         = Date.now();
+    const REFERER_KEY = "https://stale-hits-active-cooldown-referer.example/";
+    const staleHit1   = now - 25 * 3600_000; // 25 h ago — outside window
+    const staleHit2   = now - 30 * 3600_000; // 30 h ago — outside window
+    const lastAlerted = now - 30 * 60_000;   // 30 min ago — cooldown still active
+
+    const fakeRows = [
+      {
+        fieldType:   "referer",
+        key:         REFERER_KEY,
+        hits:        [staleHit1, staleHit2],
+        lastAlerted: lastAlerted,
+      },
+    ];
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    // Simulate a restart: re-hydrate the in-memory maps from the fake DB rows.
+    await mod.initProbeCounters();
+
+    // Confirm the entry was restored: empty hits (all stale), lastAlerted preserved.
+    const entry = mod._refererProbes.get(REFERER_KEY);
+    expect(entry).toBeDefined();
+    expect(entry!.hits).toEqual([]);
+    expect(entry!.lastAlerted).toBe(lastAlerted);
+
+    // Drive threshold+1 hits using a bot UA so only the referer probe fires.
+    // The in-window hit count will exceed the threshold, but the active cooldown
+    // must keep sendProbeAlert from being called.
+    const BOT_UA = "Googlebot/2.1 (+http://www.google.com/bot.html)";
+    const mw     = mod.trafficLoggerMiddleware;
+    for (let i = 0; i < 3; i++) {
+      const req = makeReq(BOT_UA, REFERER_KEY);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+    }
+
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
