@@ -1014,6 +1014,82 @@ describe("dynamic-block referer never increments the probe counter", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Dynamic-block referer (Telegram-added) always returns HTTP 403
+//
+// The probe-counter tests above confirm that dynamically-blocked referers
+// never accumulate hits, but they would still pass even if the
+// res.status(403).json({...}) early-return were accidentally changed to call
+// next() instead (probe recording is skipped before the status call, so the
+// counter check is unchanged).  These tests close that gap by asserting the
+// HTTP status code directly.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("dynamic-block referer (Telegram-added) always responds with HTTP 403", () => {
+  /**
+   * Pre-populate the dynamic snapshot with `snapshotReferers`, send a single
+   * request carrying `requestReferer`, and return the res mock so callers can
+   * assert status / json invocations.
+   */
+  async function sendOneDynamicBlockRequest(
+    snapshotReferers: Set<string>,
+    requestReferer: string,
+  ) {
+    const mod = await import("./traffic-logger");
+    const mw = mod.trafficLoggerMiddleware;
+
+    mod._testSetDynamicBlockSnapshot({ referers: snapshotReferers, uas: new Set() });
+
+    const req = makeReq("ObscureTestBrowser/99.0", requestReferer);
+    const res = makeRes();
+    mw(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+    return res;
+  }
+
+  it("exact-match dynamic referer: res.status is called with 403", async () => {
+    const blocked = "https://dynamic-exact-block.example/";
+    const res = await sendOneDynamicBlockRequest(
+      new Set([blocked.toLowerCase()]),
+      blocked,
+    );
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  it("exact-match dynamic referer: res.json is called with an error body", async () => {
+    const blocked = "https://dynamic-exact-block.example/";
+    const res = await sendOneDynamicBlockRequest(
+      new Set([blocked.toLowerCase()]),
+      blocked,
+    );
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.any(String) }));
+  });
+
+  it("hostname-matched dynamic referer: res.status is called with 403", async () => {
+    // The snapshot stores the canonical URL; the request uses a different path
+    // on the same hostname — isBlockedReferrer must match by hostname and
+    // return 403 regardless of the path difference.
+    const snapshotEntry = "https://dynamic-hostname-block.example/";
+    const requestReferer = "https://dynamic-hostname-block.example/some/other/page?q=1";
+    const res = await sendOneDynamicBlockRequest(
+      new Set([snapshotEntry.toLowerCase()]),
+      requestReferer,
+    );
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  it("hostname-matched dynamic referer: res.json is called with an error body", async () => {
+    const snapshotEntry = "https://dynamic-hostname-block.example/";
+    const requestReferer = "https://dynamic-hostname-block.example/deep/path";
+    const res = await sendOneDynamicBlockRequest(
+      new Set([snapshotEntry.toLowerCase()]),
+      requestReferer,
+    );
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.any(String) }));
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Dynamic UA block — never increments the probe counter
 //
 // When a request carries a UA string that has been added to the dynamic block
