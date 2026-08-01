@@ -31,6 +31,21 @@
  *        r. checkProbeEvictionGuard returns ok:true for filter( ( t ) => t > cutoff )
  *        s. checkProbeEvictionGuard returns ok:false (relaxed) for filter( (t) => t >= cutoff )
  *        t. checkProbeEvictionGuard returns ok:false (relaxed) for filter( ( t ) => t >= cutoff )
+ *   4. Helper-extraction detection (fs mocked)
+ *        a. HELPER_DELEGATION_PATTERN matches a delegating call of the form evict*(entry, cutoff)
+ *        b. HELPER_REQUIRED_PATTERN matches correct while-loop comparison with arbitrary param names
+ *        c. HELPER_REQUIRED_PATTERN matches correct filter form with arbitrary param names
+ *        d. HELPER_FORBIDDEN_PATTERN matches relaxed while-loop with arbitrary param names
+ *        e. HELPER_FORBIDDEN_PATTERN matches relaxed filter form with arbitrary param names
+ *        f. Helper extracted with correct comparison in body → ok:true
+ *        g. Helper extracted with relaxed comparison in body → ok:false (relaxed message cites helper)
+ *        h. Helper extracted but correct pattern absent from body → ok:false (dedicated helper message)
+ *        i. Helper call present but definition not found in same file → ok:false (external-module message)
+ *        j. Helper with parenthesised arrow correct form → ok:true
+ *        k. Helper with parenthesised arrow relaxed form → ok:false
+ *        l. Inline required present but helper has relaxed comparison → ok:false
+ *        m. HELPER_REQUIRED_PATTERN matches parenthesised arrow correct form
+ *        n. HELPER_FORBIDDEN_PATTERN matches parenthesised arrow relaxed form
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -47,6 +62,9 @@ import {
   checkProbeEvictionGuard,
   REQUIRED_PATTERN,
   FORBIDDEN_PATTERN,
+  HELPER_DELEGATION_PATTERN,
+  HELPER_REQUIRED_PATTERN,
+  HELPER_FORBIDDEN_PATTERN,
   TARGET_FILE,
 } from "./check-probe-eviction-guard.js";
 
@@ -482,5 +500,591 @@ describe("checkProbeEvictionGuard() unit logic", () => {
     const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/relaxed eviction comparison/i);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 4. Helper-extraction detection (fs mocked)
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("helper-extraction detection", () => {
+  // ── 4a. HELPER_DELEGATION_PATTERN ────────────────────────────────────────
+  it("HELPER_DELEGATION_PATTERN matches a delegating call of the form evict*(entry, cutoff)", () => {
+    expect(HELPER_DELEGATION_PATTERN.test("evictStaleHits(entry, cutoff);")).toBe(true);
+    expect(HELPER_DELEGATION_PATTERN.test("evictHits(entry, cutoff);")).toBe(true);
+    expect(HELPER_DELEGATION_PATTERN.test("evictExpired(entry,cutoff);")).toBe(true);
+    // Must NOT match calls with different argument names (not a delegation pattern).
+    expect(HELPER_DELEGATION_PATTERN.test("evictStaleHits(e, c);")).toBe(false);
+    // Must NOT match unrelated function names.
+    expect(HELPER_DELEGATION_PATTERN.test("recordHit(entry, cutoff);")).toBe(false);
+  });
+
+  // ── 4b. HELPER_REQUIRED_PATTERN — while-loop form with arbitrary names ───
+  it("HELPER_REQUIRED_PATTERN matches a correct while-loop comparison with arbitrary parameter names", () => {
+    // Same semantics as `entry.hits[lo] <= cutoff` but with renamed params.
+    expect(HELPER_REQUIRED_PATTERN.test("e.hits[lo] <= c")).toBe(true);
+    expect(HELPER_REQUIRED_PATTERN.test("ent.hits[i] <= boundary")).toBe(true);
+    expect(HELPER_REQUIRED_PATTERN.test("entry.hits[lo] <= cutoff")).toBe(true);
+    // Relaxed forms must NOT match.
+    expect(HELPER_REQUIRED_PATTERN.test("e.hits[lo] < c")).toBe(false);
+  });
+
+  // ── 4c. HELPER_REQUIRED_PATTERN — filter form with arbitrary names ───────
+  it("HELPER_REQUIRED_PATTERN matches a correct filter form with arbitrary parameter names", () => {
+    expect(HELPER_REQUIRED_PATTERN.test("e.hits.filter(t => t > c)")).toBe(true);
+    expect(HELPER_REQUIRED_PATTERN.test("ent.hits.filter(x => x > boundary)")).toBe(true);
+    expect(HELPER_REQUIRED_PATTERN.test("entry.hits.filter(t => t > cutoff)")).toBe(true);
+    // Relaxed forms must NOT match.
+    expect(HELPER_REQUIRED_PATTERN.test("e.hits.filter(t => t >= c)")).toBe(false);
+  });
+
+  // ── 4d. HELPER_FORBIDDEN_PATTERN — while-loop relaxed with arbitrary names
+  it("HELPER_FORBIDDEN_PATTERN matches a relaxed while-loop comparison with arbitrary parameter names", () => {
+    expect(HELPER_FORBIDDEN_PATTERN.test("e.hits[lo] < c")).toBe(true);
+    expect(HELPER_FORBIDDEN_PATTERN.test("ent.hits[i] < boundary")).toBe(true);
+    // Correct form (<=) must NOT be flagged.
+    expect(HELPER_FORBIDDEN_PATTERN.test("e.hits[lo] <= c")).toBe(false);
+  });
+
+  // ── 4e. HELPER_FORBIDDEN_PATTERN — filter relaxed with arbitrary names ───
+  it("HELPER_FORBIDDEN_PATTERN matches a relaxed filter form with arbitrary parameter names", () => {
+    expect(HELPER_FORBIDDEN_PATTERN.test("e.hits.filter(t => t >= c)")).toBe(true);
+    expect(HELPER_FORBIDDEN_PATTERN.test("ent.hits.filter(x => x >= boundary)")).toBe(true);
+    // Correct form (>) must NOT be flagged.
+    expect(HELPER_FORBIDDEN_PATTERN.test("e.hits.filter(t => t > c)")).toBe(false);
+  });
+
+  // ── 4f. Helper extracted with correct comparison → ok:true ───────────────
+  it("returns ok:true when eviction is delegated to a helper whose body contains the correct comparison", async () => {
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  let lo = 0;`,
+        `  while (lo < e.hits.length && e.hits[lo] <= c) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 4g. Helper extracted with relaxed comparison → ok:false ─────────────
+  it("returns ok:false citing the helper when a delegated helper body contains the relaxed comparison", async () => {
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  let lo = 0;`,
+        `  while (lo < e.hits.length && e.hits[lo] < c) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toContain("evictStaleHits");
+  });
+
+  // ── 4h. Helper extracted but correct pattern absent from body ─────────────
+  it("returns ok:false with a dedicated helper-extraction message when the helper body has no recognised comparison", async () => {
+    // The helper exists but uses an unrecognised idiom (e.g., extracted
+    // further into another helper or uses a completely different mechanism).
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  // eviction delegated elsewhere`,
+        `  purgeOldHits(e, c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    // Must emit the dedicated helper-extraction message, not the generic one.
+    expect(result.reason).toMatch(/extracted into helper/i);
+    expect(result.reason).toContain("evictStaleHits");
+    expect(result.reason).toMatch(/update REQUIRED_PATTERN/i);
+  });
+
+  // ── 4i. Helper called but definition not found in same file ──────────────
+  it("returns ok:false with an external-module message when the helper is called but not defined in the file", async () => {
+    mockReadFile.mockResolvedValue(
+      [
+        `import { evictStaleHits } from "./eviction-helpers";`,
+        ``,
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/extracted into helper/i);
+    expect(result.reason).toContain("evictStaleHits");
+    // Should guide the developer to locate the helper in the external module.
+    expect(result.reason).toMatch(/update REQUIRED_PATTERN/i);
+  });
+
+  // ── 4j. Helper with parenthesised arrow correct form → ok:true ───────────
+  it("returns ok:true when the helper uses a parenthesised arrow filter with the correct comparison", async () => {
+    // e.hits.filter((t) => t > c) — parens around the callback param
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  e.hits = e.hits.filter((t) => t > c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 4k. Helper with parenthesised arrow relaxed form → ok:false ──────────
+  it("returns ok:false when the helper uses a parenthesised arrow filter with the relaxed comparison", async () => {
+    // e.hits.filter((t) => t >= c) — parens around the callback param, wrong >=
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  e.hits = e.hits.filter((t) => t >= c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toContain("evictStaleHits");
+  });
+
+  // ── 4l-missing. Inline required present but helper body has NO recognised comparison → ok:false
+  it("returns ok:false when an inline correct expression is present but the helper body contains no recognised comparison", async () => {
+    // The inline expression (in a comment) satisfies REQUIRED_PATTERN, but the
+    // active code path is the helper — which uses an unrecognised mechanism.
+    // The inline token must NOT mask the missing helper guard.
+    mockReadFile.mockResolvedValue(
+      [
+        `// Legacy form kept for reference: entry.hits[lo] <= cutoff`,
+        ``,
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  // eviction delegated to a third helper — no recognisable comparison here`,
+        `  purgeExpired(e, c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/extracted into helper/i);
+    expect(result.reason).toContain("evictStaleHits");
+    expect(result.reason).toMatch(/update REQUIRED_PATTERN/i);
+  });
+
+  // ── 4l. Inline required present but helper has relaxed comparison → ok:false
+  it("returns ok:false when an inline correct expression is present but the delegated helper body is relaxed", async () => {
+    // This is the critical regression: a leftover correct inline expression
+    // must NOT mask a wrong comparison inside the helper that is the actual
+    // live code path.
+    mockReadFile.mockResolvedValue(
+      [
+        `// Legacy inline form still present in source:`,
+        `// while (lo < entry.hits.length && entry.hits[lo] <= cutoff) lo++;`,
+        ``,
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);  // new delegated path`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  let lo = 0;`,
+        `  while (lo < e.hits.length && e.hits[lo] < c) lo++;  // WRONG: < instead of <=`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toContain("evictStaleHits");
+  });
+
+  // ── 4m. HELPER_REQUIRED_PATTERN — parenthesised arrow, arbitrary names ───
+  it("HELPER_REQUIRED_PATTERN matches the correct filter form with a parenthesised callback parameter", () => {
+    expect(HELPER_REQUIRED_PATTERN.test("e.hits.filter((t) => t > c)")).toBe(true);
+    expect(HELPER_REQUIRED_PATTERN.test("ent.hits.filter((x) => x > boundary)")).toBe(true);
+    // Relaxed parenthesised form must NOT match.
+    expect(HELPER_REQUIRED_PATTERN.test("e.hits.filter((t) => t >= c)")).toBe(false);
+  });
+
+  // ── 4n. HELPER_FORBIDDEN_PATTERN — parenthesised arrow, arbitrary names ──
+  it("HELPER_FORBIDDEN_PATTERN matches the relaxed filter form with a parenthesised callback parameter", () => {
+    expect(HELPER_FORBIDDEN_PATTERN.test("e.hits.filter((t) => t >= c)")).toBe(true);
+    expect(HELPER_FORBIDDEN_PATTERN.test("ent.hits.filter((x) => x >= boundary)")).toBe(true);
+    // Correct parenthesised form must NOT be flagged.
+    expect(HELPER_FORBIDDEN_PATTERN.test("e.hits.filter((t) => t > c)")).toBe(false);
+  });
+
+  // ── 4o. Second delegation has relaxed comparison; first is valid → ok:false
+  it("returns ok:false when a later delegation calls a helper whose body uses the relaxed comparison", async () => {
+    // The first delegation is valid; the second one uses < instead of <=.
+    // All delegations must be independently verified — the first pass must
+    // not mask the second failure.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictReferer(entry, cutoff);   // first — correct`,
+        `  evictUa(entry, cutoff);        // second — relaxed`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictReferer(e, c) {`,
+        `  let lo = 0;`,
+        `  while (lo < e.hits.length && e.hits[lo] <= c) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+        ``,
+        `function evictUa(e, c) {`,
+        `  let lo = 0;`,
+        `  while (lo < e.hits.length && e.hits[lo] < c) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toContain("evictUa");
+  });
+
+  // ── 4p. Helper body uses an unrelated identifier as the bound → ok:false ─
+  it("returns ok:false when the helper comparison bound is an unrelated identifier, not the cutoff parameter", async () => {
+    // e.hits[lo] <= someOtherValue satisfies HELPER_REQUIRED_PATTERN (generic)
+    // but NOT the param-specific pattern built from the helper's signature
+    // (which requires the second parameter, c, as the bound).
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  let lo = 0;`,
+        `  // BUG: uses 'someOtherValue' instead of the cutoff parameter 'c'`,
+        `  while (lo < e.hits.length && e.hits[lo] <= someOtherValue) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/extracted into helper/i);
+    expect(result.reason).toContain("evictStaleHits");
+    expect(result.reason).toMatch(/update REQUIRED_PATTERN/i);
+  });
+
+  // ── 4q. Entry-param suffix collision: "some" ends with "e" → ok:false ────
+  it("returns ok:false when an unrelated object whose name ends with the entry-param suffix is used", async () => {
+    // For evictStaleHits(e, c), "some.hits[lo] <= c" must NOT pass because
+    // "some" is not the entry parameter "e".  Without \b boundaries the regex
+    // `e\.hits` would match the trailing "e" in "some.hits".
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  let lo = 0;`,
+        `  // BUG: 'some' is not the entry param 'e'`,
+        `  while (lo < some.hits.length && some.hits[lo] <= c) lo++;`,
+        `  if (lo > 0) some.hits = some.hits.slice(lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/extracted into helper/i);
+    expect(result.reason).toContain("evictStaleHits");
+  });
+
+  // ── 4r. Cutoff-param prefix collision: "cOther" starts with "c" → ok:false
+  it("returns ok:false when the comparison bound starts with the cutoff-param name but is a longer identifier", async () => {
+    // For evictStaleHits(e, c), "e.hits[lo] <= cOther" must NOT pass because
+    // "cOther" is not the cutoff parameter "c".  Without \b boundaries the
+    // regex `c` would match the leading "c" in "cOther".
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  let lo = 0;`,
+        `  // BUG: 'cOther' is not the cutoff param 'c'`,
+        `  while (lo < e.hits.length && e.hits[lo] <= cOther) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/extracted into helper/i);
+    expect(result.reason).toContain("evictStaleHits");
+  });
+
+  // ── 4s. Filter form — cutoff-param prefix collision → ok:false ───────────
+  it("returns ok:false when the filter comparison uses an identifier that starts with the cutoff-param name", async () => {
+    // e.hits.filter(t => t > cBoundary) must NOT pass for param c.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  // BUG: 'cBoundary' is not the cutoff param 'c'`,
+        `  e.hits = e.hits.filter(t => t > cBoundary);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/extracted into helper/i);
+    expect(result.reason).toContain("evictStaleHits");
+  });
+
+  // ── 4t. Unused helper definition only (no call) → ok:false (generic) ─────
+  it("returns ok:false with the generic message when the file has a matching helper definition but no call site", async () => {
+    // `function evictStaleHits(entry, cutoff)` syntactically matches
+    // HELPER_DELEGATION_PATTERN, but it is a declaration, not a call.
+    // Without a real call site the phase-2 delegation list should be empty,
+    // so the check falls through to the generic "no guard found" failure.
+    // The helper uses renamed params (e, c) so REQUIRED_PATTERN ("entry.hits[lo] <= cutoff")
+    // does NOT match it during the inline scan.  The definition line is correctly
+    // excluded from the delegation list, leaving no call site detected and no
+    // inline match → the check must fall through to the generic failure.
+    mockReadFile.mockResolvedValue(
+      [
+        `// unused eviction helper — never called from recordProbe`,
+        `function evictStaleHits(e, c) {`,
+        `  let lo = 0;`,
+        `  while (lo < e.hits.length && e.hits[lo] <= c) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+        ``,
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  // eviction omitted — no call to evictStaleHits here`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    // Must NOT say "extracted into helper" — no call was detected.
+    expect(result.reason).not.toMatch(/extracted into helper/i);
+    expect(result.reason).toMatch(/no correct eviction guard found/i);
+  });
+
+  // ── 4u-typed. Helper with TypeScript-annotated params → ok:true ──────────
+  it("returns ok:true when the helper signature uses TypeScript type annotations", async () => {
+    // function evictStaleHits(e: ProbeEntry, c: number) — extractHelperParams
+    // must strip the `: Type` portion and capture just the names e and c.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e: ProbeEntry, c: number) {`,
+        `  let lo = 0;`,
+        `  while (lo < e.hits.length && e.hits[lo] <= c) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 4u-norecord. Unrecognised recordProbe form + unrelated delegation → ok:false
+  it("returns ok:false when recordProbe uses an unrecognised form and an unrelated function has a valid delegation", async () => {
+    // recordProbe is declared as a method on an object literal — the locator
+    // does not recognise this form, so delegationScopeLines stays empty.
+    // An evictDebug(entry, cutoff) call in a different function must NOT be
+    // accepted as recordProbe's delegation (no whole-file fallback).
+    mockReadFile.mockResolvedValue(
+      [
+        `const probeHandlers = {`,
+        `  recordProbe(map, key, label, now) {`,
+        `    let entry = map.get(key);`,
+        `    const cutoff = now - WINDOW_MS;`,
+        `    // eviction omitted entirely`,
+        `    entry.hits.push(now);`,
+        `  }`,
+        `};`,
+        ``,
+        `function debugHelper(map, key, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictDebug(entry, cutoff);  // only in unrelated function`,
+        `}`,
+        ``,
+        `function evictDebug(e, c) {`,
+        `  let lo = 0;`,
+        `  while (lo < e.hits.length && e.hits[lo] <= c) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    // Must fail — no inline guard, no delegation inside a recognised recordProbe body.
+    expect(result.reason).toMatch(/no correct eviction guard found/i);
+  });
+
+  // ── 4u-scope. Correct delegation outside recordProbe does not exempt it ──
+  it("returns ok:false when a correct delegation exists outside recordProbe but recordProbe itself has no eviction", async () => {
+    // evictDebug(entry, cutoff) is called from a debug helper, NOT from
+    // recordProbe.  Its correct body must not mask the missing guard in
+    // recordProbe, which has no eviction at all.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  // eviction removed — no call here`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function debugHelper(map, key, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictDebug(entry, cutoff);  // outside recordProbe`,
+        `}`,
+        ``,
+        `function evictDebug(e, c) {`,
+        `  let lo = 0;`,
+        `  while (lo < e.hits.length && e.hits[lo] <= c) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    // Should fail — no eviction guard in recordProbe
+    expect(result.reason).toMatch(/no correct eviction guard found/i);
+  });
+
+  // ── 4u. Two calls on the same line; second helper is relaxed → ok:false ──
+  it("returns ok:false when two delegation calls appear on the same line and the second helper is relaxed", async () => {
+    // Single-line: evictReferer(entry, cutoff); evictUa(entry, cutoff);
+    // matchAll must pick up both; the second helper uses < instead of <=.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictReferer(entry, cutoff); evictUa(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictReferer(e, c) {`,
+        `  let lo = 0;`,
+        `  while (lo < e.hits.length && e.hits[lo] <= c) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+        ``,
+        `function evictUa(e, c) {`,
+        `  let lo = 0;`,
+        `  while (lo < e.hits.length && e.hits[lo] < c) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toContain("evictUa");
   });
 });
