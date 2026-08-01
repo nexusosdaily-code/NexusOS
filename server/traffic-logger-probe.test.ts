@@ -867,6 +867,16 @@ describe("constitutionally-blocked referer always responds with HTTP 403", () =>
     const res = await sendOneRequest("ghost-rider/probe");
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.any(String) }));
   });
+
+  it("ghost-rider/recon raw-pattern block: res.status(403) and res.json({ error: 'Access denied.' })", async () => {
+    // This is the canonical end-to-end check for the BLOCKED_REFERRER_RAW early-exit path.
+    // "ghost-rider/recon" is not a valid URL so it cannot be caught by the domain-block
+    // branch — it must be caught by the raw-pattern branch and must return exactly 403
+    // with the standard error body before any probe recording occurs.
+    const res = await sendOneRequest("ghost-rider/recon");
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ error: "Access denied." });
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
