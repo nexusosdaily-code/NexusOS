@@ -2403,4 +2403,55 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
     expect(_refererProbes.has("https://prune-guard-ref.example/")).toBe(false);
     expect(_uaProbes.has("PruneGuardUA/1.0")).toBe(false);
   });
+
+  it("lastPrune is only updated when the prune body runs — a skipped call must not push out the next prune", async () => {
+    // Regression guard: if `lastPrune = now` were moved BEFORE the guard check
+    // (i.e., updated on every call including early returns) the sequence below
+    // would never delete stale entries after the first skip.
+    //
+    // Sequence:
+    //   T0          — first prune runs, lastPrune set to T0
+    //   T0 + 30 min — guard fires (too soon), returns early
+    //                  BUGGY CODE would set lastPrune = T0 + 30 min here
+    //   T0 + 1h + 1ms — correct: now − T0 = 1 h + 1 ms ≥ 1 h → prune runs
+    //                   buggy:   now − (T0+30 min) = 30 min < 1 h → guard fires again
+    //
+    // The test verifies that stale entries seeded between T0 and T0+1h+1ms ARE
+    // deleted on the third call, proving lastPrune was NOT advanced by the skip.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    // Place T0 far enough in the future to avoid collisions with lastPrune
+    // values left by earlier tests in this file.
+    const T0 = Date.now() + 4 * 60 * 60 * 1000; // 4 h into the future
+
+    // ── T0: first prune runs, advances lastPrune to T0 ──────────────────────
+    _pruneProbes(T0);
+
+    // ── Seed stale entries (no hits, expired cooldown) ───────────────────────
+    _refererProbes.set("https://lastprune-regression-ref.example/", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+    _uaProbes.set("LastPruneRegressionUA/1.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── T0 + 30 min: guard should fire, return early WITHOUT updating lastPrune
+    _pruneProbes(T0 + 30 * 60 * 1000);
+
+    // Entries must still be present — the guard blocked deletion.
+    expect(_refererProbes.has("https://lastprune-regression-ref.example/")).toBe(true);
+    expect(_uaProbes.has("LastPruneRegressionUA/1.0")).toBe(true);
+
+    // ── T0 + 1 h + 1 ms: exactly one hour after T0 — prune MUST run ─────────
+    // If lastPrune was incorrectly updated at T0 + 30 min, the guard would
+    // still block here (only 30 min since the last update) and entries would
+    // survive — that is the bug this test catches.
+    _pruneProbes(T0 + 60 * 60 * 1000 + 1);
+
+    expect(_refererProbes.has("https://lastprune-regression-ref.example/")).toBe(false);
+    expect(_uaProbes.has("LastPruneRegressionUA/1.0")).toBe(false);
+  });
 });
