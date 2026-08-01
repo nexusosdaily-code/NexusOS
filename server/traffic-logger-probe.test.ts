@@ -959,6 +959,48 @@ describe("dynamic-block referer never increments the probe counter", () => {
 
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(0);
   });
+
+  it("removing a referer from the snapshot restores normal probe counting and triggers an alert", async () => {
+    const threshold = 2;
+    process.env.PROBE_ALERT_THRESHOLD = String(threshold);
+    const mod = await import("./traffic-logger");
+    const mw = mod.trafficLoggerMiddleware;
+
+    const referer = "https://lifted-block.example/";
+
+    // Phase 1: block the referer and confirm zero alerts for threshold+1 hits.
+    mod._testSetDynamicBlockSnapshot({
+      referers: new Set([referer.toLowerCase()]),
+      uas: new Set(),
+    });
+
+    const countBlocked = threshold + 1;
+    for (let i = 0; i < countBlocked; i++) {
+      const req = makeReq(`ObscureTestBrowser/99.0-blocked${i}`, referer);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+    }
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(0);
+
+    // Phase 2: remove the referer from the snapshot (empty set).
+    mod._testSetDynamicBlockSnapshot({ referers: new Set(), uas: new Set() });
+
+    // Send threshold+1 more requests — now unblocked, so the probe counter
+    // should accumulate and fire exactly one alert.
+    const countUnblocked = threshold + 1;
+    for (let i = 0; i < countUnblocked; i++) {
+      const req = makeReq(`ObscureTestBrowser/99.0-unblocked${i}`, referer);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+    }
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
