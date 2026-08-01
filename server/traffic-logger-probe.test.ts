@@ -2575,4 +2575,59 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
     expect(_uaProbes.has("UaOnlyPruneRegressionA/1.0")).toBe(false);
     expect(_uaProbes.has("UaOnlyPruneRegressionB/2.0")).toBe(false);
   });
+
+  it("referer-only: a skipped call must not reset lastPrune — stale _refererProbes entries are deleted on the third call", async () => {
+    // Mirror of the UA-only test above, targeting _refererProbes in isolation.
+    //
+    // If pruneProbes were ever split into separate referer / UA pruners each
+    // with their own interval counter, a bug could be introduced where the
+    // referer pruner's counter is reset on a skipped call.  This test seeds
+    // ONLY _refererProbes entries (no _uaProbes) so that failure is
+    // unambiguous: any surviving entry after the third call means the referer
+    // pruner's interval counter was reset by the skipped call.
+    //
+    // Sequence:
+    //   T0           — first prune runs, lastPrune (referer) set to T0
+    //   T0 + 30 min  — guard fires (too soon), returns early
+    //                   BUGGY CODE would set lastPrune = T0 + 30 min here
+    //   T0 + 1h + 1ms — correct: now − T0 = 1h+1ms ≥ 1h → prune runs
+    //                    buggy:   now − (T0+30min) = 30min < 1h → guard fires again
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    // Place T0 far enough in the future to avoid lastPrune collisions with
+    // earlier tests in this file.
+    const T0 = Date.now() + 12 * 60 * 60 * 1000; // 12 h into the future
+
+    // ── T0: first prune runs, advances lastPrune to T0 ───────────────────────
+    _pruneProbes(T0);
+
+    // ── Seed stale referer-only entries (no hits, expired cooldown) ──────────
+    // No _uaProbes entries are added so any failure is unambiguously in the
+    // referer pruner path.
+    _refererProbes.set("https://referer-only-prune-regression-a.example/", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+    _refererProbes.set("https://referer-only-prune-regression-b.example/", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── T0 + 30 min: guard should fire, return early WITHOUT updating lastPrune
+    _pruneProbes(T0 + 30 * 60 * 1000);
+
+    // Entries must still be present — the guard blocked deletion.
+    expect(_refererProbes.has("https://referer-only-prune-regression-a.example/")).toBe(true);
+    expect(_refererProbes.has("https://referer-only-prune-regression-b.example/")).toBe(true);
+
+    // ── T0 + 1h + 1ms: exactly one hour after T0 — prune MUST run ────────────
+    // If lastPrune was incorrectly advanced at T0 + 30 min, the guard would
+    // still fire here (only 30 min elapsed since the bad update) and the stale
+    // referer entries would survive — that is the bug this test catches.
+    _pruneProbes(T0 + 60 * 60 * 1000 + 1);
+
+    expect(_refererProbes.has("https://referer-only-prune-regression-a.example/")).toBe(false);
+    expect(_refererProbes.has("https://referer-only-prune-regression-b.example/")).toBe(false);
+  });
 });
