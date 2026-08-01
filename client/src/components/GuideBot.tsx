@@ -111,6 +111,24 @@ const SUGGESTIONS = [
   "What is your pricing methodology?",
 ];
 
+/**
+ * Subset of SUGGESTIONS that must ALWAYS score 0 against every PAGES entry
+ * and therefore always take the async /api/guide/ask path.
+ *
+ * Exported so GuideBot.test.tsx can guard each entry with matchPage and fail
+ * loudly if a future PAGES addition accidentally introduces a keyword that
+ * matches one of these, which would silently reroute it to keyword-navigation
+ * and stop exercising the async chip branch.
+ *
+ * Rules for adding entries here:
+ *   • The string must share no keyword substring with any PAGES[*].keywords entry.
+ *   • The string must share no whitespace-delimited word with any PAGES[*].title.
+ *   • Verify with: matchPage("<your string>") === null  (run the guard test).
+ */
+export const ASYNC_SUGGESTIONS: readonly string[] = [
+  "What is your pricing methodology?",
+];
+
 const STORAGE_KEY = "nexusos-guidebot-history";
 const GREETING: Msg = { from: "bot", text: "Hi! I'm the NexusOS guide. Ask me anything about the physics, protocol, or features." };
 

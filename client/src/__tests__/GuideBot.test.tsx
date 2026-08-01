@@ -15,7 +15,7 @@ import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
-import GuideBot, { matchPage } from "@/components/GuideBot";
+import GuideBot, { matchPage, ASYNC_SUGGESTIONS } from "@/components/GuideBot";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
@@ -94,6 +94,54 @@ describe("GuideBot — CONCEPTUAL_Q guard", () => {
       );
     }
     expect(matched).toBeNull();
+  });
+});
+
+// ── ASYNC_SUGGESTIONS collision guard ─────────────────────────────────────────
+// Fails loudly if any ASYNC_SUGGESTIONS entry unexpectedly keyword-matches a
+// PAGES entry.  This catches the scenario where a future PAGES addition
+// introduces a keyword (or title word) that matches one of the async-path
+// suggestions, which would silently reroute the chip to keyword-navigation and
+// stop exercising the async /api/guide/ask branch.
+//
+// If this test fails for a given entry, either:
+//   (a) Remove the conflicting keyword/title from the new PAGES entry, OR
+//   (b) Replace the SUGGESTIONS entry text with a new phrase that shares no
+//       keyword/title-word with any PAGES row, update ASYNC_SUGGESTIONS, and
+//       update CONCEPTUAL_Q if that entry is the one used there.
+
+describe("GuideBot — ASYNC_SUGGESTIONS guard", () => {
+  it("every ASYNC_SUGGESTIONS entry scores 0 against every PAGES entry (pick new text if this fails)", () => {
+    const failures: string[] = [];
+
+    for (const suggestion of ASYNC_SUGGESTIONS) {
+      const matched = matchPage(suggestion);
+      if (matched !== null) {
+        const q = suggestion.toLowerCase();
+        const kwHits = matched.keywords.filter((kw) => q.includes(kw));
+        const titleWordHits = matched.title
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((w) => q.includes(w));
+        failures.push(
+          `\n  Suggestion : "${suggestion}"` +
+            `\n  Matched    : "${matched.title}" (${matched.route})` +
+            `\n  Kw hits    : ${kwHits.length > 0 ? kwHits.join(", ") : "none"}` +
+            `\n  Title hits : ${titleWordHits.length > 0 ? titleWordHits.join(", ") : "none"}` +
+            `\n  → Update this ASYNC_SUGGESTIONS entry (and CONCEPTUAL_Q if it uses the same text)` +
+            `    so it shares no keyword or title word with any PAGES entry.`,
+        );
+      }
+    }
+
+    if (failures.length > 0) {
+      console.error(
+        `[ASYNC_SUGGESTIONS guard] ${failures.length} entry/entries unexpectedly keyword-matched a PAGES row:` +
+          failures.join(""),
+      );
+    }
+
+    expect(failures).toHaveLength(0);
   });
 });
 
