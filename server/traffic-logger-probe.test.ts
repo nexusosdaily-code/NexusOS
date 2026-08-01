@@ -2630,4 +2630,84 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
     expect(_refererProbes.has("https://referer-only-prune-regression-a.example/")).toBe(false);
     expect(_refererProbes.has("https://referer-only-prune-regression-b.example/")).toBe(false);
   });
+
+  it("split-map: stale _refererProbes entries are pruned even when _uaProbes is empty", async () => {
+    // Guard against a split-pruner bug that short-circuits the referer loop
+    // when _uaProbes is empty, skipping deletion of stale referer entries.
+    //
+    // Only _refererProbes is populated so any failure is unambiguous: a
+    // surviving entry after the prune call means the referer loop was skipped
+    // because the other map was empty.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    // Place T0 far enough in the future to avoid lastPrune collisions with
+    // earlier tests in this file.
+    const T0 = Date.now() + 14 * 60 * 60 * 1000; // 14 h into the future
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Ensure _uaProbes has no entry for our keys ────────────────────────────
+    _uaProbes.delete("SplitMapRefOnlyUA/1.0"); // belt-and-suspenders
+
+    // ── Seed stale entries in _refererProbes only ─────────────────────────────
+    // No hits and no active cooldown → both must be deleted when prune runs.
+    _refererProbes.set("https://split-map-ref-only-a.example/", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+    _refererProbes.set("https://split-map-ref-only-b.example/", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Call past the 1 h threshold — prune must run ──────────────────────────
+    _pruneProbes(T0 + 60 * 60 * 1000 + 1);
+
+    // Stale referer entries must be gone even though _uaProbes was empty.
+    expect(_refererProbes.has("https://split-map-ref-only-a.example/")).toBe(false);
+    expect(_refererProbes.has("https://split-map-ref-only-b.example/")).toBe(false);
+  });
+
+  it("split-map: stale _uaProbes entries are pruned even when _refererProbes is empty", async () => {
+    // Mirror of the test above, targeting _uaProbes in isolation.
+    //
+    // Guard against a split-pruner bug that short-circuits the UA loop when
+    // _refererProbes is empty, skipping deletion of stale UA entries.
+    //
+    // Only _uaProbes is populated so any failure is unambiguous: a surviving
+    // entry after the prune call means the UA loop was skipped because the
+    // other map was empty.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    // Place T0 far enough in the future to avoid lastPrune collisions with
+    // earlier tests in this file.
+    const T0 = Date.now() + 16 * 60 * 60 * 1000; // 16 h into the future
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Ensure _refererProbes has no entry for our keys ───────────────────────
+    _refererProbes.delete("https://split-map-ua-only.example/"); // belt-and-suspenders
+
+    // ── Seed stale entries in _uaProbes only ──────────────────────────────────
+    // No hits and no active cooldown → both must be deleted when prune runs.
+    _uaProbes.set("SplitMapUaOnlyA/1.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+    _uaProbes.set("SplitMapUaOnlyB/2.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Call past the 1 h threshold — prune must run ──────────────────────────
+    _pruneProbes(T0 + 60 * 60 * 1000 + 1);
+
+    // Stale UA entries must be gone even though _refererProbes was empty.
+    expect(_uaProbes.has("SplitMapUaOnlyA/1.0")).toBe(false);
+    expect(_uaProbes.has("SplitMapUaOnlyB/2.0")).toBe(false);
+  });
 });
