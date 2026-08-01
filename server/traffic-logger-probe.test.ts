@@ -900,6 +900,65 @@ describe("dynamic-block referer never increments the probe counter", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Dynamic UA block — never increments the probe counter
+//
+// When a request carries a UA string that has been added to the dynamic block
+// list via Telegram the middleware returns 403 *before* registering the
+// res.on("finish") listener that drives recordProbe().  Consequently,
+// dynamically-blocked UAs must never accumulate hits and must never fire a
+// sendProbeAlert call, even when the request count far exceeds the threshold.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("dynamic UA block never increments the probe counter", () => {
+  /**
+   * Helper: pre-populate _dynamicSnapshot.uas with a blocked UA string, send
+   * `threshold+1` requests carrying that UA, and assert sendProbeAlert is
+   * never called.
+   */
+  async function assertDynamicUaNeverAlerts(
+    blockedUa: string,
+    threshold = 2,
+  ): Promise<void> {
+    process.env.PROBE_ALERT_THRESHOLD = String(threshold);
+    const mod = await import("./traffic-logger");
+    const mw = mod.trafficLoggerMiddleware;
+
+    // Inject the UA into the in-process dynamic snapshot so the middleware
+    // treats it as blocked without needing a live database.
+    mod._testSetDynamicBlockSnapshot({ referers: new Set(), uas: new Set([blockedUa]) });
+
+    const count = threshold + 1;
+    for (let i = 0; i < count; i++) {
+      const req = makeReq(blockedUa);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      // The middleware returns 403 without registering a finish listener, so
+      // this call is a no-op — but it future-proofs the test against any drift.
+      res.finish();
+      await flushMicrotasks();
+    }
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(0);
+  }
+
+  it("threshold+1 requests with a dynamically-blocked UA produce zero alerts", async () => {
+    await assertDynamicUaNeverAlerts("DynamicBlockedBot/1.0");
+  });
+
+  it("a different blocked UA string is also never counted", async () => {
+    await assertDynamicUaNeverAlerts("ScrapeBot/2.0 (crawler)");
+  });
+
+  it("blocked UA with a custom high threshold still produces zero alerts", async () => {
+    await assertDynamicUaNeverAlerts("DynamicBlockedBot/1.0", 10);
+  });
+
+  it("blocked UA with threshold=1 (alert on hit 2) still produces zero alerts", async () => {
+    await assertDynamicUaNeverAlerts("DynamicBlockedBot/1.0", 1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Double-counting guard — uaProbes and refererProbes are fully independent
 //
 // A single request that carries BOTH an unknown UA and an unknown referer
