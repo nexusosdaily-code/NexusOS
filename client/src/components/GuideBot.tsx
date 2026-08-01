@@ -108,13 +108,36 @@ const SUGGESTIONS = [
   "What is WavelengthScript?",
 ];
 
+const STORAGE_KEY = "nexusos-guidebot-history";
+const GREETING: Msg = { from: "bot", text: "Hi! I'm the NexusOS guide. Ask me anything about the physics, protocol, or features." };
+
+function loadMessages(): Msg[] {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return [GREETING];
+    const parsed = JSON.parse(raw) as Msg[];
+    if (!Array.isArray(parsed) || parsed.length === 0) return [GREETING];
+    // Drop any transient thinking indicators left over from an interrupted session
+    return parsed.filter(m => !m.isThinking);
+  } catch {
+    return [GREETING];
+  }
+}
+
+function saveMessages(msgs: Msg[]) {
+  try {
+    // Never persist thinking-indicator messages
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(msgs.filter(m => !m.isThinking)));
+  } catch {
+    // Storage quota exceeded or private-browsing restriction — silently skip
+  }
+}
+
 export default function GuideBot() {
   const [open, setOpen]         = useState(false);
   const [input, setInput]       = useState("");
   const [thinking, setThinking] = useState(false);
-  const [messages, setMessages] = useState<Msg[]>([
-    { from: "bot", text: "Hi! I'm the NexusOS guide. Ask me anything about the physics, protocol, or features." },
-  ]);
+  const [messages, setMessages] = useState<Msg[]>(loadMessages);
   const [, navigate] = useLocation();
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLInputElement>(null);
@@ -125,6 +148,7 @@ export default function GuideBot() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    saveMessages(messages);
   }, [messages]);
 
   const send = useCallback(async (text?: string) => {
