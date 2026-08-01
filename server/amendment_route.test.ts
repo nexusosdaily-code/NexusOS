@@ -650,6 +650,20 @@ describe("POST /api/constitution/amendments — per-user rate limit", () => {
 // Reads this file's own source and counts it() blocks so that accidentally
 // deleting a describe block or a test causes an immediate, explicit failure
 // rather than a silent pass with reduced coverage.
+//
+// Comment-safety guarantees:
+//   • Block comments (/* … */) are stripped before counting, so an it() call
+//     buried inside a block comment is never tallied.
+//   • Line comments (// it(…)) are excluded by the counting regex itself:
+//     /^\s+it\(/ requires the line to start with whitespace then `it(` — any
+//     leading `//` breaks that match.
+//
+// KNOWN LIMITATION: the guard counts it() call sites, not assertions inside
+// them.  A developer who comments out the *body* of a test (leaving the it()
+// signature intact) will fool this guard.  That edge case is intentionally
+// out of scope here — the guard is designed to catch wholesale test deletion,
+// not internal hollowing-out.  Code review and mutation testing are the
+// appropriate defences for the latter.
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("amendment_route.test.ts — coverage guard", () => {
@@ -657,11 +671,34 @@ describe("amendment_route.test.ts — coverage guard", () => {
     // import.meta.url points to the TypeScript source in Vitest's ESM runtime
     const filePath = new URL(import.meta.url).pathname;
     const src = readFileSync(filePath, "utf8");
+
+    // Strip block comments (/* … */) before counting so that an it() line
+    // inside a commented-out block is not tallied as an active test.
+    const withoutBlockComments = src.replace(/\/\*[\s\S]*?\*\//g, "");
+
     // Count lines that open an it() call.
-    // The regex matches this guard's own it() too, so the floor is 27
-    // (26 substantive tests + 1 guard) — removing any real test drops the
-    // count to 26 and triggers a failure.
-    const itCalls = (src.match(/^\s+it\(/gm) ?? []).length;
-    expect(itCalls).toBeGreaterThanOrEqual(27);
+    // The regex matches this guard's own two it() calls too, so the floor is
+    // 33 (31 substantive tests + 2 guard tests) — removing any real test
+    // drops the count to 32 and triggers a failure.
+    const itCalls = (withoutBlockComments.match(/^\s+it\(/gm) ?? []).length;
+    expect(itCalls).toBeGreaterThanOrEqual(33);
+  });
+
+  it("counting logic ignores both block-commented and line-commented it() calls", () => {
+    // Simulate source with active tests alongside commented-out ones.
+    const simulatedSrc = [
+      `  it("active test 1", () => { expect(1).toBe(1); });`,
+      `  it("active test 2", () => { expect(2).toBe(2); });`,
+      `  // it("line-commented — must NOT be counted", () => {});`,
+      `  /*`,
+      `    it("block-commented — must NOT be counted", () => {});`,
+      `  */`,
+    ].join("\n");
+
+    const withoutBlockComments = simulatedSrc.replace(/\/\*[\s\S]*?\*\//g, "");
+    const itCalls = (withoutBlockComments.match(/^\s+it\(/gm) ?? []).length;
+
+    // Only the 2 active tests must be counted; both comment forms are excluded.
+    expect(itCalls).toBe(2);
   });
 });
