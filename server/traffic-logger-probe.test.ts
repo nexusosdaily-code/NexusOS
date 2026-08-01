@@ -1401,4 +1401,101 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(mod._uaProbes.has("FullyStaleUA/1.0")).toBe(false);
     expect(mod._refererProbes.has("FullyStaleUA/1.0")).toBe(false);
   });
+
+  // ── Cooldown preservation across restart ──────────────────────────────────
+  // initProbeCounters restores lastAlerted from the DB so a probe that already
+  // fired an alert before a restart does not re-alert immediately afterwards.
+
+  it("(F) cooldown active after restart: restored lastAlerted within the window suppresses re-alerts", async () => {
+    // threshold=2 → alert fires when hits.length > 2 (i.e. on the 3rd hit).
+    // cooldown=1 h → 30 min ago is still within the cooldown window.
+    process.env.PROBE_ALERT_THRESHOLD    = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+
+    const now             = Date.now();
+    const COOLDOWN_UA     = "ObscureTestBrowser/99.0"; // same key hitTimes() uses
+    const lastAlertedRecent = now - 30 * 60 * 1000;   // 30 min ago — within 1-h cooldown
+
+    // Seed two in-window hits so the count (2) is already at the threshold;
+    // one more hit will exceed it, but the active cooldown must block the alert.
+    const fakeRows = [
+      {
+        fieldType:   "ua",
+        key:         COOLDOWN_UA,
+        hits:        [now - 2_000, now - 1_000],
+        lastAlerted: lastAlertedRecent,
+      },
+    ];
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    // Simulate a restart: re-hydrate the in-memory maps from the fake DB rows.
+    await mod.initProbeCounters();
+
+    // The entry must be present and carry the restored lastAlerted value.
+    const entry = mod._uaProbes.get(COOLDOWN_UA);
+    expect(entry).toBeDefined();
+    expect(entry!.lastAlerted).toBe(lastAlertedRecent);
+
+    // Drive 10 more hits beyond the threshold — cooldown must suppress every alert.
+    const mw = mod.trafficLoggerMiddleware;
+    for (let i = 0; i < 10; i++) {
+      const req = makeReq(COOLDOWN_UA);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+    }
+
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+  });
+
+  it("(F) cooldown expired after restart: restored lastAlerted outside the window allows re-alert", async () => {
+    // threshold=2 → alert fires on the 3rd hit.
+    // cooldown=1 h → 2 hours ago is outside the cooldown window.
+    process.env.PROBE_ALERT_THRESHOLD    = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+
+    const now              = Date.now();
+    const COOLDOWN_UA      = "ObscureTestBrowser/99.0";
+    const lastAlertedStale = now - 2 * 3600_000; // 2 h ago — cooldown has expired
+
+    // Seed two in-window hits; the count (2) equals the threshold.
+    // One more hit will exceed it and, since the cooldown is expired, the alert fires.
+    const fakeRows = [
+      {
+        fieldType:   "ua",
+        key:         COOLDOWN_UA,
+        hits:        [now - 2_000, now - 1_000],
+        lastAlerted: lastAlertedStale,
+      },
+    ];
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    // Simulate a restart.
+    await mod.initProbeCounters();
+
+    const entry = mod._uaProbes.get(COOLDOWN_UA);
+    expect(entry).toBeDefined();
+    expect(entry!.lastAlerted).toBe(lastAlertedStale);
+
+    // Drive one hit to push the count above the threshold; the expired cooldown
+    // must allow the alert to fire.
+    const mw  = mod.trafficLoggerMiddleware;
+    const req = makeReq(COOLDOWN_UA);
+    const res = makeRes();
+    mw(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    expect(mockSendProbeAlert).toHaveBeenCalledWith("ua", COOLDOWN_UA, expect.any(Number));
+  });
 });
