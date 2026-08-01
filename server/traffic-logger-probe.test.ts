@@ -1876,3 +1876,57 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(refererCall![1]).toBe(REFERER_KEY);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Referer cooldown — mid-session suppression (no restart)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * This describe block covers the mid-session cooldown path for the referer
+ * probe — distinct from the restart-hydration path tested in the DB block
+ * above.  If the lastAlerted guard were removed from the referer branch of
+ * recordProbe(), additional hits inside the cooldown window would fire a
+ * second alert; this test would catch that regression.
+ */
+describe("referer probe — mid-session cooldown suppression (no restart)", () => {
+  // Googlebot is treated as a known bot so its UA does not trigger a UA-probe
+  // alert; only the referer probe fires, keeping the assertion unambiguous.
+  const BOT_UA      = "Googlebot/2.1 (+http://www.google.com/bot.html)";
+  const REFERER_KEY = "https://mid-session-probe-test.example/scan";
+
+  /**
+   * Drive the middleware N times using BOT_UA + the fixed referer, flushing
+   * the microtask queue after each hit so async callbacks complete.
+   */
+  async function hitRefererTimes(
+    middleware: Middleware,
+    n: number,
+  ): Promise<void> {
+    for (let i = 0; i < n; i++) {
+      const req = makeReq(BOT_UA, REFERER_KEY);
+      const res = makeRes();
+      middleware(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+    }
+  }
+
+  it("alert fires once at threshold+1 then is suppressed for 10 more hits inside the cooldown window", async () => {
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const mw = await freshMiddleware();
+
+    // Drive threshold+1 (= 3) hits — the alert must fire exactly once.
+    await hitRefererTimes(mw, 3);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+
+    const firstCall = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(firstCall[0]).toBe("referer");
+    expect(firstCall[1]).toBe(REFERER_KEY);
+
+    // Drive 10 more hits — still within the 1-hour cooldown window.
+    // The lastAlerted guard must suppress every one of them.
+    await hitRefererTimes(mw, 10);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+  });
+});
