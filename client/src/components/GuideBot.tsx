@@ -79,7 +79,7 @@ type Msg = {
   isThinking?: boolean;
 };
 
-function matchPage(input: string) {
+export function matchPage(input: string) {
   const q = input.toLowerCase();
   let best: { page: typeof PAGES[0]; score: number } | null = null;
   for (const page of PAGES) {

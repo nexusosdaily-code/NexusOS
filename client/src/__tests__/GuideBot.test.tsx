@@ -15,7 +15,7 @@ import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
-import GuideBot from "@/components/GuideBot";
+import GuideBot, { matchPage } from "@/components/GuideBot";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
@@ -48,6 +48,17 @@ function submitQuestion(question: string) {
 // (verified with the full PAGES array — no kw or title-word substring match).
 // It always takes the async /api/guide/ask path and never keyword-navigates.
 const CONCEPTUAL_Q = "What is your pricing methodology?";
+
+// ── PAGES-collision guard ─────────────────────────────────────────────────────
+// Fails loudly if a future keyword addition makes CONCEPTUAL_Q keyword-navigate
+// instead of taking the async /api/guide/ask path (which would silently break
+// every test in the "conceptual question" suite).
+
+describe("GuideBot — CONCEPTUAL_Q guard", () => {
+  it("CONCEPTUAL_Q scores 0 against every PAGES entry (pick a new question if this fails)", () => {
+    expect(matchPage(CONCEPTUAL_Q)).toBeNull();
+  });
+});
 
 // ── Global setup / teardown ───────────────────────────────────────────────────
 
