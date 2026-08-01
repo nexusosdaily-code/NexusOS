@@ -156,7 +156,81 @@ describe("TARGET_FILE tracks the eviction logic location", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 4. checkProbeEvictionGuard() unit logic (fs mocked)
+// 4. Script / scan agreement smoke-test
+//      Confirms checkProbeEvictionGuard(TARGET_FILE) and the walkTs scan
+//      both locate the eviction pattern in the same file.  If the loop is
+//      extracted to a subdirectory this test fires before the script does,
+//      and the error message names the exact file to update TARGET_FILE to.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("script/scan agreement smoke-test", () => {
+  it(
+    "checkProbeEvictionGuard(TARGET_FILE) returns ok:true iff walkTs also finds the pattern in TARGET_FILE",
+    async () => {
+      const serverDir = path.resolve("server");
+      const allServerFiles = walkTs(serverDir);
+
+      // ── 1. Recursive scan: find every server/**/*.ts that has the guard ──
+      const filesWithPattern = allServerFiles.filter((f) => {
+        try {
+          return REQUIRED_PATTERN.test(readFileSync(f, "utf-8"));
+        } catch {
+          return false;
+        }
+      });
+
+      const relativeMatches = filesWithPattern.map((f) =>
+        path.relative(process.cwd(), f),
+      );
+
+      // ── 2. Feed real file content into the mock so the script reads live ──
+      const realContent = (() => {
+        try {
+          return readFileSync(TARGET_FILE, "utf-8");
+        } catch {
+          return null;
+        }
+      })();
+
+      mockReadFile.mockImplementation(async () => {
+        if (realContent === null) throw new Error("ENOENT: no such file");
+        return realContent;
+      });
+
+      const scriptResult = await checkProbeEvictionGuard(TARGET_FILE);
+
+      // Build a shared hint used in both assertions.
+      const inTargetFile = filesWithPattern.includes(TARGET_FILE);
+      const locationHint =
+        !inTargetFile && filesWithPattern.length > 0
+          ? `\nThe guard was found in: ${relativeMatches.join(", ")}.\n` +
+            `→ Update TARGET_FILE in scripts/check-probe-eviction-guard.ts ` +
+            `to point to "${relativeMatches[0]}".`
+          : "";
+
+      // ── 3. Script must pass when pointed at TARGET_FILE ──
+      expect(
+        scriptResult.ok,
+        `checkProbeEvictionGuard(TARGET_FILE) returned ok:false.\n` +
+          (scriptResult.reason ?? "") +
+          locationHint,
+      ).toBe(true);
+
+      // ── 4. walkTs must confirm the pattern lives in TARGET_FILE ──
+      expect(
+        inTargetFile,
+        `walkTs found the eviction guard but NOT in ` +
+          `TARGET_FILE (${path.relative(process.cwd(), TARGET_FILE)}).` +
+          locationHint +
+          `\ncheckProbeEvictionGuard() will silently return ok:false once ` +
+          `TARGET_FILE no longer holds the logic.`,
+      ).toBe(true);
+    },
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 5. checkProbeEvictionGuard() unit logic (fs mocked)
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("checkProbeEvictionGuard() unit logic", () => {
