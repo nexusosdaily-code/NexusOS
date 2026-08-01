@@ -169,6 +169,55 @@ describe("GuideBot — conceptual question (no keyword match)", () => {
     });
   });
 
+  it("clicking the 'go deeper' chip calls navigate with the correct route", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          answer: "Standing wave traps form stable matter.",
+          route: "/standing-wave-trap",
+          routeTitle: "Standing Wave Trap",
+        }),
+    } as unknown as Response);
+
+    renderGuideBot();
+    openPanel();
+    submitQuestion(CONCEPTUAL_Q);
+
+    // Wait for the chip to appear
+    const chip = await waitFor(() => screen.getByText(/↗ Standing Wave Trap/));
+
+    fireEvent.click(chip);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/standing-wave-trap");
+  });
+
+  it("clicking the 'go deeper' chip closes the panel", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          answer: "Standing wave traps form stable matter.",
+          route: "/standing-wave-trap",
+          routeTitle: "Standing Wave Trap",
+        }),
+    } as unknown as Response);
+
+    renderGuideBot();
+    openPanel();
+    submitQuestion(CONCEPTUAL_Q);
+
+    // Wait for the chip to appear
+    const chip = await waitFor(() => screen.getByText(/↗ Standing Wave Trap/));
+
+    fireEvent.click(chip);
+
+    // Panel should be closed — the input is no longer in the document
+    expect(screen.queryByTestId("input-guide-bot")).not.toBeInTheDocument();
+  });
+
   it("thinking dots disappear after the answer arrives", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
