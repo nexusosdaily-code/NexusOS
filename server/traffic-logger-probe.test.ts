@@ -2072,6 +2072,35 @@ describe("referer probe — mid-session cooldown suppression (no restart)", () =
     expect(secondCall[0]).toBe("referer");
     expect(secondCall[1]).toBe(REFERER_KEY);
   });
+
+  it("cooldown resets after second alert — threshold+1 additional hits do NOT trigger a third alert", async () => {
+    // This test catches a bug where lastAlerted is not updated on the second
+    // alert (or is updated to a stale value), which would let the cooldown
+    // expire again immediately and allow unlimited re-alerts.
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const mw = await freshMiddleware();
+
+    // Phase 1: drive threshold+1 hits → first alert fires.
+    await hitRefererTimes(mw, 3);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+
+    // Phase 2: expire the cooldown artificially and drive threshold+1 more
+    // hits → second alert fires.
+    const mod   = await import("./traffic-logger");
+    const entry = mod._refererProbes.get(REFERER_KEY);
+    expect(entry).toBeDefined();
+    entry!.lastAlerted = Date.now() - 3_600_001;
+
+    await hitRefererTimes(mw, 3);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(2);
+
+    // Phase 3: immediately drive threshold+1 more hits — the second alert
+    // must have reset lastAlerted to ~now, so the fresh cooldown window is
+    // fully active and NO third alert should fire.
+    await hitRefererTimes(mw, 3);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(2);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
