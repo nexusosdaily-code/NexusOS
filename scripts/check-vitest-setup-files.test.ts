@@ -2,13 +2,17 @@
  * Tests for checkVitestSetupFiles() and extractSetupFiles().
  *
  * Uses vi.mock to avoid touching the real filesystem so the suite is fast
- * and hermetic.  The four scenarios covered:
+ * and hermetic.  The scenarios covered:
  *
  *   1. Everything is healthy — no violations.
  *   2. A setupFiles entry points to a file that does not exist on disk.
  *   3. A file matching the setup-name pattern lives outside __tests__/ and
- *      is not referenced in any config → orphan.
+ *      is not referenced in any config → orphan (client/src/).
  *   4. extractSetupFiles() correctly parses single and multi-entry arrays.
+ *   5. An orphaned setup file under server/ is detected when both directories
+ *      are scanned (default behaviour).
+ *   6. Passing an explicit array of scan directories works correctly.
+ *   7. No false positives when server/ contains no setup-like files.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -176,5 +180,96 @@ describe("checkVitestSetupFiles()", () => {
     const kinds = result.violations.map((v) => v.kind);
     expect(kinds).toContain("dead-reference");
     expect(kinds).toContain("orphaned-file");
+  });
+});
+
+// ─── server/ orphan detection ─────────────────────────────────────────────────
+
+const SERVER_SCAN = path.join(ROOT, "server");
+
+describe("checkVitestSetupFiles() — server/ orphan detection", () => {
+  it("detects an orphaned setup file under server/ when both dirs are scanned (default)", async () => {
+    mockReaddir.mockImplementation((dir: string) => {
+      if (dir === ROOT) return Promise.resolve(["vitest.config.ts"]);
+      // client/src: only the legitimate referenced file inside __tests__
+      if (dir === SCAN) return Promise.resolve(["__tests__/setup.ts"]);
+      // server/: has an orphaned test-setup.ts outside __tests__
+      if (dir === SERVER_SCAN) return Promise.resolve(["test-setup.ts"]);
+      return Promise.resolve([]);
+    });
+
+    mockReadFile.mockResolvedValue(HEALTHY_CONFIG);
+    mockAccess.mockResolvedValue(undefined); // referenced file exists
+
+    // Default call — both dirs are scanned automatically
+    const result = await checkVitestSetupFiles(ROOT);
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0].kind).toBe("orphaned-file");
+    expect(result.violations[0].message).toContain("test-setup.ts");
+    expect(result.violations[0].message).toContain("server");
+  });
+
+  it("detects an orphaned setup file when server/ is passed as an explicit scan directory", async () => {
+    mockReaddir.mockImplementation((dir: string) => {
+      if (dir === ROOT) return Promise.resolve(["vitest.config.ts"]);
+      if (dir === SERVER_SCAN) return Promise.resolve(["test-setup.ts"]);
+      return Promise.resolve([]);
+    });
+
+    mockReadFile.mockResolvedValue(HEALTHY_CONFIG);
+    mockAccess.mockResolvedValue(undefined);
+
+    // Explicit array with only server/
+    const result = await checkVitestSetupFiles(ROOT, [SERVER_SCAN]);
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0].kind).toBe("orphaned-file");
+    expect(result.violations[0].message).toContain("test-setup.ts");
+  });
+
+  it("does not flag setup files inside server/__tests__/", async () => {
+    mockReaddir.mockImplementation((dir: string) => {
+      if (dir === ROOT) return Promise.resolve(["vitest.config.ts"]);
+      if (dir === SERVER_SCAN)
+        return Promise.resolve(["__tests__/setup.ts"]);
+      return Promise.resolve([]);
+    });
+
+    mockReadFile.mockResolvedValue(HEALTHY_CONFIG);
+    mockAccess.mockResolvedValue(undefined);
+
+    const result = await checkVitestSetupFiles(ROOT, [SERVER_SCAN]);
+    expect(result.violations).toHaveLength(0);
+  });
+
+  it("produces no false positives when server/ has no setup-like files", async () => {
+    mockReaddir.mockImplementation((dir: string) => {
+      if (dir === ROOT) return Promise.resolve(["vitest.config.ts"]);
+      if (dir === SCAN) return Promise.resolve(["__tests__/setup.ts"]);
+      if (dir === SERVER_SCAN)
+        return Promise.resolve(["routes.ts", "db.ts"]);
+      return Promise.resolve([]);
+    });
+
+    mockReadFile.mockResolvedValue(HEALTHY_CONFIG);
+    mockAccess.mockResolvedValue(undefined);
+
+    const result = await checkVitestSetupFiles(ROOT);
+    expect(result.violations).toHaveLength(0);
+  });
+
+  it("handles a missing server/ directory without error", async () => {
+    mockReaddir.mockImplementation((dir: string) => {
+      if (dir === ROOT) return Promise.resolve(["vitest.config.ts"]);
+      if (dir === SCAN) return Promise.resolve(["__tests__/setup.ts"]);
+      // server/ does not exist — readdir rejects
+      if (dir === SERVER_SCAN) return Promise.reject(new Error("ENOENT"));
+      return Promise.resolve([]);
+    });
+
+    mockReadFile.mockResolvedValue(HEALTHY_CONFIG);
+    mockAccess.mockResolvedValue(undefined);
+
+    const result = await checkVitestSetupFiles(ROOT);
+    expect(result.violations).toHaveLength(0);
   });
 });

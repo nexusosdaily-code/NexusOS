@@ -108,16 +108,31 @@ async function findCandidateFiles(scanDir: string): Promise<string[]> {
 /**
  * Run both guards and return a structured result.
  *
- * @param rootDir  Project root (defaults to process.cwd())
- * @param scanDir  Directory to scan for orphaned setup files
- *                 (defaults to `<rootDir>/client/src`)
+ * @param rootDir   Project root (defaults to process.cwd())
+ * @param scanDirs  Directory or directories to scan for orphaned setup files.
+ *                  Defaults to `["<rootDir>/client/src", "<rootDir>/server"]`.
+ *                  Pass a single string to scan only one directory (backward-
+ *                  compatible with the original API).
  */
 export async function checkVitestSetupFiles(
   rootDir: string = path.resolve("."),
-  scanDir: string = path.join(path.resolve("."), "client", "src"),
+  scanDirs:
+    | string
+    | string[]
+    | undefined = undefined,
 ): Promise<CheckResult> {
+  const root = rootDir;
+
+  // Resolve the scan directories, defaulting to client/src + server
+  const resolvedScanDirs: string[] =
+    scanDirs === undefined
+      ? [path.join(root, "client", "src"), path.join(root, "server")]
+      : Array.isArray(scanDirs)
+        ? scanDirs
+        : [scanDirs];
+
   // ── 1. Collect all setupFiles references from vitest configs ─────────────
-  const configPaths = await findVitestConfigs(rootDir);
+  const configPaths = await findVitestConfigs(root);
 
   const referencedSetupFiles: string[] = [];
 
@@ -135,7 +150,7 @@ export async function checkVitestSetupFiles(
 
   // ── 2. Dead-reference check ───────────────────────────────────────────────
   for (const setupPath of referencedSetupFiles) {
-    const abs = path.resolve(rootDir, setupPath);
+    const abs = path.resolve(root, setupPath);
     try {
       await access(abs);
     } catch {
@@ -148,17 +163,21 @@ export async function checkVitestSetupFiles(
     }
   }
 
-  // ── 3. Orphaned-file check ────────────────────────────────────────────────
-  const candidateFiles = await findCandidateFiles(scanDir);
+  // ── 3. Orphaned-file check (all scan directories) ─────────────────────────
+  const allCandidateFiles: string[] = [];
+  for (const dir of resolvedScanDirs) {
+    const found = await findCandidateFiles(dir);
+    allCandidateFiles.push(...found);
+  }
 
   // Normalise the referenced set to absolute paths for comparison
   const referencedAbs = new Set(
-    referencedSetupFiles.map((p) => path.resolve(rootDir, p)),
+    referencedSetupFiles.map((p) => path.resolve(root, p)),
   );
 
-  for (const candidateAbs of candidateFiles) {
+  for (const candidateAbs of allCandidateFiles) {
     if (!referencedAbs.has(candidateAbs)) {
-      const rel = path.relative(rootDir, candidateAbs);
+      const rel = path.relative(root, candidateAbs);
       violations.push({
         kind: "orphaned-file",
         message:
@@ -170,7 +189,7 @@ export async function checkVitestSetupFiles(
     }
   }
 
-  return { violations, referencedSetupFiles, candidateFiles };
+  return { violations, referencedSetupFiles, candidateFiles: allCandidateFiles };
 }
 
 // ─── Standalone entry (npm run check:vitest-setup) ───────────────────────────
