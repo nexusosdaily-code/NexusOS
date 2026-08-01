@@ -51,6 +51,18 @@ describe("package.json pipeline guard", () => {
     const testAll: string = pkg.scripts?.["test:all"] ?? "";
     expect(testAll).toContain("check:system-band");
   });
+
+  it('"check:system-band" script entry exists and invokes the correct file', () => {
+    const pkgPath = path.resolve("package.json");
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8")) as {
+      scripts?: Record<string, string>;
+    };
+
+    const script: string | undefined = pkg.scripts?.["check:system-band"];
+    expect(script).toBeDefined();
+    expect(script).toContain("tsx");
+    expect(script).toContain("check-system-band-literal");
+  });
 });
 
 // ── 2. checkSystemBandLiteral() logic tests ───────────────────────────────────
