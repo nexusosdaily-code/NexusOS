@@ -11,13 +11,18 @@
  *   2. Live file check — the real server/traffic-logger.ts currently contains
  *      the inclusive "<= cutoff" guard and does NOT contain the relaxed form
  *   3. checkProbeEvictionGuard() unit logic (fs mocked)
- *        a. Returns ok:true for source that contains the required pattern
- *        b. Returns ok:false (missing) for source without the pattern
- *        c. Returns ok:false (relaxed) for source using strictly-less-than
- *        d. Required pattern + forbidden pattern together → ok:false (forbidden wins)
- *        e. Returns ok:false with a reason when the file cannot be read
- *        f. REQUIRED_PATTERN does NOT match the relaxed "< cutoff" form
- *        g. FORBIDDEN_PATTERN does NOT match the inclusive "<= cutoff" form
+ *        a. Returns ok:true for the while-loop form (hits[lo] <= cutoff)
+ *        b. Returns ok:true for the array-filter form (filter(t => t > cutoff))
+ *        c. Returns ok:false (missing) for source without any recognised form
+ *        d. Returns ok:false (relaxed) for while-loop using strictly-less-than
+ *        e. Returns ok:false (relaxed) for filter using >= cutoff
+ *        f. Required pattern + forbidden pattern together → ok:false (forbidden wins)
+ *        g. Returns ok:false with a reason when the file cannot be read
+ *        h. REQUIRED_PATTERN matches while-loop form but not its relaxed form
+ *        i. REQUIRED_PATTERN matches filter form but not its relaxed form
+ *        j. FORBIDDEN_PATTERN matches while-loop relaxed form but not correct form
+ *        k. FORBIDDEN_PATTERN matches filter relaxed form but not correct form
+ *        l. FORBIDDEN_PATTERN on a comment line containing the relaxed form (documented behaviour)
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -155,7 +160,8 @@ describe("TARGET_FILE tracks the eviction logic location", () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("checkProbeEvictionGuard() unit logic", () => {
-  it("returns ok:true when source contains the inclusive <= cutoff guard", async () => {
+  // ── 3a. While-loop form (current implementation) ────────────────────────
+  it("returns ok:true when source contains the while-loop form (hits[lo] <= cutoff)", async () => {
     mockReadFile.mockResolvedValue(
       `while (lo < entry.hits.length && entry.hits[lo] <= cutoff) lo++;\n`,
     );
@@ -164,18 +170,29 @@ describe("checkProbeEvictionGuard() unit logic", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("returns ok:false with a 'not found' reason when the pattern is absent", async () => {
+  // ── 3b. Array-filter form ────────────────────────────────────────────────
+  it("returns ok:true when source uses the array-filter form (filter(t => t > cutoff))", async () => {
+    mockReadFile.mockResolvedValue(
+      `entry.hits = entry.hits.filter(t => t > cutoff);\n`,
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 3c. No recognised form ───────────────────────────────────────────────
+  it("returns ok:false with a 'not found' reason when no recognised eviction expression is present", async () => {
     mockReadFile.mockResolvedValue(
       `// eviction loop removed\nwhile (lo < entry.hits.length) lo++;\n`,
     );
 
     const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/inclusive eviction guard/i);
-    expect(result.reason).toMatch(/not found/i);
+    expect(result.reason).toMatch(/no correct eviction guard found/i);
   });
 
-  it("returns ok:false with a 'relaxed' reason when strictly-less-than is used", async () => {
+  // ── 3d. While-loop relaxed: < instead of <= ──────────────────────────────
+  it("returns ok:false with a 'relaxed' reason when the while-loop uses strictly-less-than", async () => {
     // Simulate the regression: <= changed to <
     mockReadFile.mockResolvedValue(
       `while (lo < entry.hits.length && entry.hits[lo] < cutoff) lo++;\n`,
@@ -184,9 +201,21 @@ describe("checkProbeEvictionGuard() unit logic", () => {
     const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/relaxed eviction comparison/i);
-    expect(result.reason).toMatch(/strictly-less-than/i);
   });
 
+  // ── 3e. Array-filter relaxed: >= instead of > ────────────────────────────
+  it("returns ok:false with a 'relaxed' reason when the filter uses >= cutoff", async () => {
+    // Simulate the regression: filter(t => t > cutoff) changed to filter(t => t >= cutoff)
+    mockReadFile.mockResolvedValue(
+      `entry.hits = entry.hits.filter(t => t >= cutoff);\n`,
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+  });
+
+  // ── 3f. Required + forbidden both present → forbidden wins ───────────────
   it("returns ok:false when both required and forbidden patterns are present (forbidden wins)", async () => {
     // Both forms present — the forbidden form must still be caught.
     mockReadFile.mockResolvedValue(
@@ -203,6 +232,7 @@ describe("checkProbeEvictionGuard() unit logic", () => {
     expect(result.reason).toMatch(/relaxed eviction comparison/i);
   });
 
+  // ── 3g. Unreadable file ──────────────────────────────────────────────────
   it("returns ok:false with a reason when the file cannot be read", async () => {
     mockReadFile.mockRejectedValue(new Error("ENOENT: no such file"));
 
@@ -211,21 +241,36 @@ describe("checkProbeEvictionGuard() unit logic", () => {
     expect(result.reason).toMatch(/Cannot read file/i);
   });
 
-  it("REQUIRED_PATTERN matches the inclusive form but not the relaxed form", () => {
+  // ── 3h. REQUIRED_PATTERN — while-loop form ───────────────────────────────
+  it("REQUIRED_PATTERN matches the while-loop inclusive form but not its relaxed form", () => {
     expect(REQUIRED_PATTERN.test("entry.hits[lo] <= cutoff")).toBe(true);
     expect(REQUIRED_PATTERN.test("entry.hits[lo] < cutoff")).toBe(false);
   });
 
-  it("FORBIDDEN_PATTERN matches the relaxed form but not the inclusive form", () => {
+  // ── 3i. REQUIRED_PATTERN — array-filter form ─────────────────────────────
+  it("REQUIRED_PATTERN matches the array-filter correct form but not its relaxed form", () => {
+    expect(REQUIRED_PATTERN.test("entry.hits.filter(t => t > cutoff)")).toBe(true);
+    expect(REQUIRED_PATTERN.test("entry.hits.filter(t => t >= cutoff)")).toBe(false);
+  });
+
+  // ── 3j. FORBIDDEN_PATTERN — while-loop ──────────────────────────────────
+  it("FORBIDDEN_PATTERN matches the while-loop relaxed form but not the inclusive form", () => {
     expect(FORBIDDEN_PATTERN.test("entry.hits[lo] < cutoff")).toBe(true);
     expect(FORBIDDEN_PATTERN.test("entry.hits[lo] <= cutoff")).toBe(false);
   });
 
-  it("FORBIDDEN_PATTERN does not trigger on a comment containing the relaxed form", () => {
+  // ── 3k. FORBIDDEN_PATTERN — array-filter ────────────────────────────────
+  it("FORBIDDEN_PATTERN matches the filter relaxed form (>=) but not the correct form (>)", () => {
+    expect(FORBIDDEN_PATTERN.test("entry.hits.filter(t => t >= cutoff)")).toBe(true);
+    expect(FORBIDDEN_PATTERN.test("entry.hits.filter(t => t > cutoff)")).toBe(false);
+  });
+
+  // ── 3l. Comment lines trigger FORBIDDEN_PATTERN (intentional strictness) ─
+  it("FORBIDDEN_PATTERN triggers on a comment line containing the relaxed form (documented behaviour)", () => {
     // Note: FORBIDDEN_PATTERN is a regex on raw lines; the check script
     // applies it without comment filtering — comment lines inside the source
     // would still trigger it, by design (the check is intentionally strict).
-    // This test just documents the current behaviour: the pattern IS a match,
+    // This test documents the current behaviour: the pattern IS a match,
     // which means commented-out relaxed forms will also be flagged.
     const commentLine = "// entry.hits[lo] < cutoff — old form";
     expect(FORBIDDEN_PATTERN.test(commentLine)).toBe(true);
