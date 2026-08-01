@@ -1137,6 +1137,84 @@ describe("dynamic-block referer (Telegram-added) always responds with HTTP 403",
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Dynamic UA block — always responds with HTTP 403
+//
+// When a UA string is present in the dynamic snapshot the middleware must
+// return a 403 response immediately.  When the snapshot is cleared (block
+// lifted) the same UA must pass through normally — next() is called and
+// res.status(403) is never invoked.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("dynamic UA block always responds with HTTP 403", () => {
+  /**
+   * Pre-populate the dynamic snapshot with `blockedUa`, send a single request
+   * carrying that UA, and return the res mock so callers can assert status /
+   * next invocations.
+   */
+  async function sendOneUaBlockRequest(
+    snapshotUas: Set<string>,
+    requestUa: string,
+  ) {
+    const mod = await import("./traffic-logger");
+    const mw = mod.trafficLoggerMiddleware;
+
+    mod._testSetDynamicBlockSnapshot({ referers: new Set(), uas: snapshotUas });
+
+    const req = makeReq(requestUa);
+    const res = makeRes();
+    // The next() stub simulates a downstream handler that sends a 200 — this
+    // lets phase-2 assert an explicit status(200) call rather than relying on
+    // the mock's default initialisation value.
+    const next = vi.fn().mockImplementation(() => {
+      res.status(200);
+    });
+    mw(req, res as any, next);
+    res.finish();
+    await flushMicrotasks();
+    return { res, next };
+  }
+
+  it("phase 1 — UA in snapshot: res.status is called with 403", async () => {
+    const blockedUa = "DynamicBlockedUABot/1.0";
+    const { res } = await sendOneUaBlockRequest(
+      new Set([blockedUa]),
+      blockedUa,
+    );
+    expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  it("phase 1 — UA in snapshot: next() is never called", async () => {
+    const blockedUa = "DynamicBlockedUABot/1.0";
+    const { next } = await sendOneUaBlockRequest(
+      new Set([blockedUa]),
+      blockedUa,
+    );
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("phase 2 — snapshot cleared: same UA receives HTTP 200 and next() is called", async () => {
+    const blockedUa = "DynamicBlockedUABot/1.0";
+    // Phase 1 sanity check — block is active.
+    const { res: resBlocked } = await sendOneUaBlockRequest(
+      new Set([blockedUa]),
+      blockedUa,
+    );
+    expect(resBlocked.status).toHaveBeenCalledWith(403);
+
+    // Phase 2: clear the snapshot and send the same UA again.
+    const { res: resLifted, next: nextLifted } = await sendOneUaBlockRequest(
+      new Set(),
+      blockedUa,
+    );
+    // The downstream handler (next stub) must have been called …
+    expect(nextLifted).toHaveBeenCalled();
+    // … and it must have explicitly set a 200 status — not a 403.
+    expect(resLifted.status).toHaveBeenCalledWith(200);
+    expect(resLifted.status).not.toHaveBeenCalledWith(403);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Dynamic UA block — never increments the probe counter
 //
 // When a request carries a UA string that has been added to the dynamic block
