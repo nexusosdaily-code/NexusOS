@@ -123,7 +123,41 @@ describe("_resetAmendmentRateLimit", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 4. Coverage guard — test count floor
+// 4. Static source guard — window-boundary operator
+//
+// Reads the implementation source and asserts that the filter expression
+// uses strict greater-than (`t > cutoff`), NOT lenient greater-than-or-equal
+// (`t >= cutoff`).  A timestamp exactly at the cutoff must be treated as
+// expired; flipping to `>=` would silently allow it to count toward the quota.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("amendment-rate-limit.ts — static source guard", () => {
+  it("filter uses strict `t > cutoff`, not lenient `t >= cutoff`", () => {
+    // Resolve the implementation file relative to this test file's location.
+    const dir      = new URL(".", import.meta.url).pathname;
+    const implPath = `${dir}amendment-rate-limit.ts`;
+    const src      = readFileSync(implPath, "utf8");
+
+    // The contract: a timestamp sitting exactly on the cutoff boundary is
+    // expired and must NOT be counted.  `t > cutoff` enforces this; `t >= cutoff`
+    // would incorrectly include it.  Fail loudly if anyone softens the operator.
+    expect(
+      src,
+      "amendment-rate-limit.ts must use `t > cutoff` (strict greater-than). " +
+      "Changing to `t >= cutoff` would incorrectly count timestamps sitting exactly " +
+      "on the 24-hour boundary as still within the window, breaking the boundary contract.",
+    ).toMatch(/\.filter\(\s*t\s*=>\s*t\s*>\s*cutoff\s*\)/);
+
+    expect(
+      src,
+      "amendment-rate-limit.ts must NOT use `t >= cutoff` (lenient greater-than-or-equal). " +
+      "A timestamp at exactly `now - AMENDMENT_WINDOW_MS` must be treated as expired.",
+    ).not.toMatch(/\.filter\(\s*t\s*=>\s*t\s*>=\s*cutoff\s*\)/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 5. Coverage guard — test count floor
 //
 // Reads this file's own source and counts it() blocks so that accidentally
 // deleting a describe block or a test causes an immediate, explicit failure
@@ -136,10 +170,10 @@ describe("amendment-rate-limit.test.ts — coverage guard", () => {
     const filePath = new URL(import.meta.url).pathname;
     const src = readFileSync(filePath, "utf8");
     // Count lines that open an it() call.
-    // The regex matches this guard's own it() too, so the floor is 9
-    // (8 substantive tests + 1 guard) — removing any real test drops the
-    // count to 8 and triggers a failure.
+    // The regex matches this guard's own it() too, so the floor is 10
+    // (9 substantive tests + 1 guard) — removing any real test drops the
+    // count to 9 and triggers a failure.
     const itCalls = (src.match(/^\s+it\(/gm) ?? []).length;
-    expect(itCalls).toBeGreaterThanOrEqual(9);
+    expect(itCalls).toBeGreaterThanOrEqual(10);
   });
 });
