@@ -157,7 +157,50 @@ describe("amendment-rate-limit.ts — static source guard", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 5. Coverage guard — test count floor
+// 5. Static source guard — AMENDMENT_WINDOW_MS unit (milliseconds)
+//
+// Asserts that the constant is defined as exactly 24 * 60 * 60 * 1000 in
+// source, and that its runtime value equals 86_400_000.  If someone
+// accidentally changes the expression to seconds (86_400) or minutes
+// (1_440) the source check catches it before it ships; the runtime check
+// provides a second safety net in case the constant is redefined elsewhere.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("amendment-rate-limit.ts — AMENDMENT_WINDOW_MS unit guard", () => {
+  it("runtime value equals exactly 86_400_000 (24 hours in milliseconds)", () => {
+    expect(
+      AMENDMENT_WINDOW_MS,
+      "AMENDMENT_WINDOW_MS must equal 86_400_000 (24 hours expressed in " +
+      "milliseconds). If this fails, the unit has been changed — seconds " +
+      "would be 86_400, minutes would be 1_440.  Fix the constant so it " +
+      "represents 24 * 60 * 60 * 1000.",
+    ).toBe(86_400_000);
+  });
+
+  it("source defines AMENDMENT_WINDOW_MS as `24 * 60 * 60 * 1000` (explicit millisecond expression)", () => {
+    const dir      = new URL(".", import.meta.url).pathname;
+    const implPath = `${dir}amendment-rate-limit.ts`;
+    const src      = readFileSync(implPath, "utf8");
+
+    // Accept the canonical expression form  24 * 60 * 60 * 1000
+    // or an equivalent numeric literal  86400000 / 86_400_000.
+    // This guards against silent unit flips (e.g. dropping `* 1000` turns
+    // the window into seconds, cutting the effective limit to ~86 seconds).
+    const canonicalExpression = /AMENDMENT_WINDOW_MS\s*=\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/;
+    const numericLiteral      = /AMENDMENT_WINDOW_MS\s*=\s*86[_]?400[_]?000/;
+
+    expect(
+      canonicalExpression.test(src) || numericLiteral.test(src),
+      "AMENDMENT_WINDOW_MS in amendment-rate-limit.ts must be defined as " +
+      "`24 * 60 * 60 * 1000` (or the equivalent literal 86_400_000). " +
+      "A value like 86_400 (seconds) or 1_440 (minutes) would silently " +
+      "break the 24-hour rate-limit window.",
+    ).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 6. Coverage guard — test count floor
 //
 // Reads this file's own source and counts it() blocks so that accidentally
 // deleting a describe block or a test causes an immediate, explicit failure
@@ -165,15 +208,15 @@ describe("amendment-rate-limit.ts — static source guard", () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("amendment-rate-limit.test.ts — coverage guard", () => {
-  it("contains at least 6 it() blocks (prevents silent coverage drop)", () => {
+  it("contains at least 12 it() blocks (prevents silent coverage drop)", () => {
     // import.meta.url points to the TypeScript source in Vitest's ESM runtime
     const filePath = new URL(import.meta.url).pathname;
     const src = readFileSync(filePath, "utf8");
     // Count lines that open an it() call.
-    // The regex matches this guard's own it() too, so the floor is 10
-    // (9 substantive tests + 1 guard) — removing any real test drops the
-    // count to 9 and triggers a failure.
+    // The regex matches this guard's own it() too, so the floor is 12
+    // (11 substantive tests + 1 guard) — removing any real test drops the
+    // count to 11 and triggers a failure.
     const itCalls = (src.match(/^\s+it\(/gm) ?? []).length;
-    expect(itCalls).toBeGreaterThanOrEqual(10);
+    expect(itCalls).toBeGreaterThanOrEqual(12);
   });
 });
