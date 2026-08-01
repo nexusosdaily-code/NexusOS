@@ -11,20 +11,21 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import multer from "multer";
-import { storage } from "./storage";
-import { authenticate, optionalAuth, logAction } from "./auth";
+import { storage } from "./storage"; // routes:not-a-handler
+import { authenticate, optionalAuth } from "./auth";
+import { logAction } from "./auth"; // routes:not-a-handler
 import { 
   loginSchema, registerSchema, spectralEncodeSchema, transferSchema,
   friendRequestSchema, friendActionSchema, sendMessageSchema, initiateCallSchema,
   createStreamSchema, updateStreamSettingsSchema
 } from "@shared/schema";
 import { z } from "zod";
-import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT, GENESIS_EXECUTION_ADDRESS } from "./physics";
-import { getEtchStatus } from "./wnsp-btc-rune-etcher";
-import { isValidMainnetBtcAddress } from "./btc-address-validate";
-import { latticeSign, latticeVerify, documentMessage, getPublicKey as latticeGetPublicKey } from "./lattice-identity";
-import { transpileToWLS, SUPPORTED_LANGS, type SupportedLang } from "./lang-transpiler";
-import { ledgerEvent } from "./spectral-ledger";
+import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT, GENESIS_EXECUTION_ADDRESS } from "./physics"; // routes:not-a-handler
+import { getEtchStatus } from "./wnsp-btc-rune-etcher"; // routes:not-a-handler
+import { isValidMainnetBtcAddress } from "./btc-address-validate"; // routes:not-a-handler
+import { latticeSign, latticeVerify, documentMessage, getPublicKey as latticeGetPublicKey } from "./lattice-identity"; // routes:not-a-handler
+import { transpileToWLS, SUPPORTED_LANGS, type SupportedLang } from "./lang-transpiler"; // routes:not-a-handler
+import { ledgerEvent } from "./spectral-ledger"; // routes:not-a-handler
 
 // WebSocket clients mapped by userId
 const connectedClients = new Map<string, WebSocket>();
@@ -58,7 +59,7 @@ async function checkWithdrawalLimits(userId: string, username: string, amountSat
 }
 
 // ── Amendment rate limit ──────────────────────────────────────────────────────
-import { checkAmendmentRateLimit, AMENDMENT_MAX_PER_DAY } from "./amendment-rate-limit.js";
+import { checkAmendmentRateLimit, AMENDMENT_MAX_PER_DAY } from "./amendment-rate-limit.js"; // routes:not-a-handler
 import { amendmentHandler } from "./amendment-handler.js";
 
 // ── Swap limits & circuit breaker ────────────────────────────────────────────
