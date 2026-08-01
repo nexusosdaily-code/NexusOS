@@ -18,10 +18,11 @@
     "check:preloads": "tsx scripts/check-preloads.ts",
     "check:system-band": "tsx scripts/check-system-band-literal.ts",
     "check:vitest-setup": "tsx scripts/check-vitest-setup-files.ts",
-    "check:unwired-handlers": "tsx scripts/check-unwired-handlers.ts",
     "test:constitution": "npx vitest run server/constitution_seal.test.ts",
     "check:types": "tsc --noEmit",
-    "test:all": "vitest run && npm run check:system-band && npm run check:vitest-setup && npm run check:unwired-handlers && npm run check:types",
+    "check:unwired-handlers": "tsx scripts/check-unwired-handlers.ts",
+    "check:unimported-handlers": "tsx scripts/check-unimported-handlers.ts",
+    "test:all": "vitest run && npm run check:system-band && npm run check:vitest-setup && npm run check:unwired-handlers && npm run check:unimported-handlers && npm run check:types",
     "test:client": "vitest run --config vitest.client.config.ts"
   },
   "dependencies": {
