@@ -31,6 +31,7 @@
 
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { isTransientDbError } from "./constitution_seal";
+import { sealConstitutionWithRetry } from "./seal-retry";
 
 // ── isTransientDbError ────────────────────────────────────────────────────────
 
@@ -207,5 +208,48 @@ describe("sealConstitutionWithRetry (contract)", () => {
     expect(result).toBe(true);
     expect(seal).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
+  });
+});
+
+// ── sealConstitutionWithRetry (production module) ─────────────────────────────
+// Tests that exercise the REAL exported function from seal-retry.ts so a
+// refactor that accidentally drops the `await` on the sleep cannot pass.
+
+describe("sealConstitutionWithRetry (production export — delay is real)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("promise is still pending while the retry delay has not elapsed", async () => {
+    vi.useFakeTimers();
+    const DELAY = 6_000;
+    const transientErr = new Error("Authentication timed out");
+    const sealFn = vi
+      .fn()
+      .mockRejectedValueOnce(transientErr)
+      .mockResolvedValue(true);
+
+    const promise = sealConstitutionWithRetry(sealFn, 5, DELAY);
+
+    // Advance by less than the configured delay — second attempt must NOT have
+    // been triggered yet; the promise must still be pending.
+    await vi.advanceTimersByTimeAsync(DELAY - 1);
+    expect(sealFn).toHaveBeenCalledTimes(1);
+
+    // Now let the full delay expire — second attempt fires and resolves.
+    await vi.advanceTimersByTimeAsync(1);
+    const result = await promise;
+    expect(result).toBe(true);
+    expect(sealFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("succeeds on first attempt without waiting for any timer", async () => {
+    vi.useFakeTimers();
+    const sealFn = vi.fn().mockResolvedValue(false);
+
+    // No timer advancement needed — resolves immediately.
+    const result = await sealConstitutionWithRetry(sealFn, 5, 6_000);
+    expect(result).toBe(false);
+    expect(sealFn).toHaveBeenCalledTimes(1);
   });
 });

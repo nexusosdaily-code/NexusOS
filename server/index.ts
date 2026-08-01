@@ -319,7 +319,7 @@ if (process.env.NODE_ENV !== "production") {
     const provided = (req.body?.key || "").trim();
     if (!DEV_KEY || provided === DEV_KEY) {
       res.cookie(COOKIE, DEV_KEY, { httpOnly: true, sameSite: "strict" });
-  const raw = (req as any).rawBody as Buffer | undefined;
+      const raw = req.query.next?.toString() ?? "";
       const safePath = /^\/[^/\\]/.test(raw) ? raw : "/";
       res.redirect(302, safePath);
     } else {
@@ -781,6 +781,33 @@ async function runStartupMigrations() {
     serveStatic(app);
   } else {
     const { setupVite } = await import("./vite");
+    await setupVite(httpServer, app);
+  }
+
+  // ── Step 3: Mark ready — full app now serving ─────────────────────────────
+  serverReady = true;
+  log(`serving on port ${port}`);
+
+  // ── Step 4: Staggered background agents (server already up, no rush) ──────
+  (async () => {
+    // Wave 1 — 2s: core chain/genesis
+    await delay(2_000);
+    seedGenesisUser().catch((e) => console.error("[GENESIS USER] Boot error:", e));
+    // sealConstitution runs AFTER seedGenesisBlock to avoid block-number races.
+    // Wrapped with retry logic for transient DB connectivity errors that are
+    // common on first boot in production (DNS not yet ready, pool cold-start).
+    seedGenesisBlock()
+      .then(() => sealConstitutionWithRetry())
+      .then((sealed) => {
+        if (sealed === true) {
+          console.log("[CONSTITUTION] Fresh seal written to chain — boot complete.");
+        }
+        // false = already existed, which is the normal path on restarts
+      })
+      .catch((e: any) => {
+        // Mark boot degraded + emit [FATAL] log (never silent)
+        handleSealError(e);
+        // Fire-and-forget Telegram alert so the founder is notified immediately
         const token = process.env.TELEGRAM_BOT_TOKEN;
         if (token) {
           const msg = e?.message ?? String(e);
