@@ -2270,6 +2270,97 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     // Hit is 1 ms outside the window → entry must be DELETED
     expect(_refererProbes.has("https://b7-outside-window-referer.example/scan")).toBe(false);
   });
+
+  // ── B8 / B9: pruneProbes — cooldown-survival path for the referer map ────
+  //
+  // The UA map is covered by the "pruneProbes — entries with active cooldown
+  // survive" describe block further below.  B8 and B9 add a symmetric test
+  // anchored inside *this* describe block so that a future split-loop refactor
+  // that accidentally drops the cooldown guard from the referer branch will be
+  // caught immediately, without relying on the separate describe block.
+
+  it("(B8) pruneProbes: referer entry with all-expired hits but an active cooldown SURVIVES the prune pass", async () => {
+    // All hits are outside the 24-h window so hasActiveHits = false.
+    // However lastAlerted is within the 1-h cooldown, so hasActiveCooldown =
+    // true and the entry must be kept alive.
+    //
+    // A future split-loop refactor that omits the cooldown check from the
+    // referer branch would delete this entry and fail this test.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+62h — monotonically above B7 (60h).
+    const T0       = Date.now() + 62 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop actually ran ──────────────────
+    _refererProbes.set("https://b8-stale-companion.example/scan", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the cooldown-active referer entry ────────────────────────────────
+    // All hits are well outside the window; lastAlerted is 30 min ago (< 1 h
+    // cooldown) → hasActiveCooldown = true → entry must SURVIVE.
+    _refererProbes.set("https://b8-warm-cooldown-referer.example/scan", {
+      hits:        [pruneNow - WINDOW_MS - 60_000], // 1 min past the cutoff
+      lastAlerted: pruneNow - 30 * 60_000,          // 30 min ago — cooldown active
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → confirms the prune loop ran
+    expect(_refererProbes.has("https://b8-stale-companion.example/scan")).toBe(false);
+    // Active cooldown guards the entry even though all hits are expired
+    expect(_refererProbes.has("https://b8-warm-cooldown-referer.example/scan")).toBe(true);
+  });
+
+  it("(B9) pruneProbes: referer entry with all-expired hits AND an expired cooldown IS deleted", async () => {
+    // Companion to B8: once the cooldown also expires the entry has nothing
+    // left to protect it and pruneProbes must delete it.
+    //
+    // This is the control case — without it, B8 passing could mean the entry
+    // was simply never visited rather than being actively kept alive.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+64h — monotonically above B8 (62h).
+    const T0       = Date.now() + 64 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop actually ran ──────────────────
+    _refererProbes.set("https://b9-stale-companion.example/scan", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the cooldown-expired referer entry ───────────────────────────────
+    // All hits are outside the window AND lastAlerted was 2 h ago (> 1 h
+    // cooldown) → hasActiveHits = false AND hasActiveCooldown = false → DELETE.
+    _refererProbes.set("https://b9-cold-cooldown-referer.example/scan", {
+      hits:        [pruneNow - WINDOW_MS - 60_000], // 1 min past the cutoff
+      lastAlerted: pruneNow - 2 * COOLDOWN_MS,      // 2 h ago — cooldown expired
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → confirms the prune loop ran
+    expect(_refererProbes.has("https://b9-stale-companion.example/scan")).toBe(false);
+    // Both guards fail → entry must be DELETED
+    expect(_refererProbes.has("https://b9-cold-cooldown-referer.example/scan")).toBe(false);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
