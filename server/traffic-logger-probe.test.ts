@@ -3135,4 +3135,110 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
     // The warm-cooldown referer entry must survive even though _uaProbes was empty.
     expect(_refererProbes.has("https://empty-peer-ref-warm.example/")).toBe(true);
   });
+
+  it("refererProbes: entry with active hits AND warm cooldown survives after its hits array is drained in-place", async () => {
+    // Symmetric scenario to the deletion tests above, but with a live cooldown.
+    //
+    // A refactored pruner that short-circuits on "no active hits found" without
+    // evaluating the cooldown branch would incorrectly delete an entry whose
+    // hits were drained but whose lastAlerted is still within COOLDOWN_MS.
+    //
+    // This test seeds an entry with BOTH active hits AND a warm cooldown, drains
+    // the hits array in-place, then calls _pruneProbes and asserts the entry is
+    // RETAINED because the cooldown guard must keep it alive.
+    //
+    // A stale companion entry (no hits, expired cooldown) is also seeded and
+    // asserted deleted — this proves _pruneProbes actually ran rather than
+    // returning early from the 1-hour guard.
+    //
+    // T0 MUST be monotonically higher than all earlier tests in this shared
+    // module.  The empty-peer tests immediately above advance lastPrune to
+    // roughly Date.now()+39h; using T0 = Date.now()+40h ensures pruneNow > lastPrune
+    // by more than the 1-hour threshold.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000; // default: 1 h
+
+    const T0       = Date.now() + 40 * 60 * 60 * 1000; // 40 h — above all prior T0+COOLDOWN steps
+    const pruneNow = T0 + COOLDOWN_MS + 1;              // 1 h + 1 ms after T0 → prune guard passes
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion: no hits, expired cooldown — must be DELETED ──────────
+    // Its deletion proves _pruneProbes actually ran the loop body.
+    _refererProbes.set("https://stale-companion-ref.example/", {
+      hits:        [],
+      lastAlerted: T0 - 2 * COOLDOWN_MS, // alerted 2 cooldown periods before T0 → expired
+    });
+
+    // ── Seed the target: active hits and a warm cooldown ─────────────────────
+    // lastAlerted is 30 min before pruneNow — well within the 1-hour COOLDOWN_MS.
+    const entry = {
+      hits:        [pruneNow - WINDOW_MS + 60_000], // one hit within the 24 h window
+      lastAlerted: pruneNow - 30 * 60_000,          // alerted 30 min ago → cooldown active
+    };
+    _refererProbes.set("https://warm-cooldown-drained-ref.example/", entry);
+
+    // ── Drain the hits array in-place ─────────────────────────────────────────
+    entry.hits.length = 0;
+
+    // ── Run the pruner — the warm cooldown must keep the target alive ─────────
+    _pruneProbes(pruneNow);
+
+    // Stale companion was deleted → proves the pruner actually ran
+    expect(_refererProbes.has("https://stale-companion-ref.example/")).toBe(false);
+    // hits === [] but lastAlerted is within COOLDOWN_MS → target must survive
+    expect(_refererProbes.has("https://warm-cooldown-drained-ref.example/")).toBe(true);
+  });
+
+  it("uaProbes: entry with active hits AND warm cooldown survives after its hits array is drained in-place", async () => {
+    // Symmetric counterpart of the refererProbes test above, targeting _uaProbes.
+    //
+    // A refactored pruner that short-circuits on "no active hits found" without
+    // checking the cooldown branch would delete a UA entry whose hits were
+    // drained in-place but whose cooldown is still live.
+    //
+    // A stale companion entry proves the prune loop actually ran.
+    //
+    // T0 = Date.now()+42h — monotonically above the referer drained-hits test above.
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000; // default: 1 h
+
+    const T0       = Date.now() + 42 * 60 * 60 * 1000; // 42 h — above all prior T0+COOLDOWN steps
+    const pruneNow = T0 + COOLDOWN_MS + 1;              // 1 h + 1 ms after T0 → prune guard passes
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion: no hits, expired cooldown — must be DELETED ──────────
+    _uaProbes.set("StaleCompanionUA/1.0", {
+      hits:        [],
+      lastAlerted: T0 - 2 * COOLDOWN_MS, // expired
+    });
+
+    // ── Seed the target UA entry with active hits and a warm cooldown ─────────
+    // lastAlerted is 30 min before pruneNow — well within the 1-hour COOLDOWN_MS.
+    const entry = {
+      hits:        [pruneNow - WINDOW_MS + 60_000], // one hit within the 24 h window
+      lastAlerted: pruneNow - 30 * 60_000,          // alerted 30 min ago → cooldown active
+    };
+    _uaProbes.set("WarmCooldownDrainedUA/1.0", entry);
+
+    // ── Drain the hits array in-place ─────────────────────────────────────────
+    entry.hits.length = 0;
+
+    // ── Run the pruner — the warm cooldown must keep the target alive ─────────
+    _pruneProbes(pruneNow);
+
+    // Stale companion was deleted → proves the pruner actually ran
+    expect(_uaProbes.has("StaleCompanionUA/1.0")).toBe(false);
+    // hits === [] but lastAlerted is within COOLDOWN_MS → target must survive
+    expect(_uaProbes.has("WarmCooldownDrainedUA/1.0")).toBe(true);
+  });
 });
