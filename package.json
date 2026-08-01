@@ -18,7 +18,8 @@
     "check:preloads": "tsx scripts/check-preloads.ts",
     "check:system-band": "tsx scripts/check-system-band-literal.ts",
     "test:constitution": "npx vitest run server/constitution_seal.test.ts",
-    "test:all": "vitest run && npm run check:system-band && npm run check",
+    "check:types": "tsc --noEmit",
+    "test:all": "vitest run && npm run check:system-band && npm run check:types",
     "test:client": "vitest run --config vitest.client.config.ts"
   },
   "dependencies": {
