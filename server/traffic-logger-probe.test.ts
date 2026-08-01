@@ -2180,6 +2180,96 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     // Hit is 1 ms outside the window → entry must be DELETED
     expect(_uaProbes.has("B5OutsideWindowUA/1.0")).toBe(false);
   });
+
+  // ── B6 / B7: pruneProbes — >= cutoff boundary for the referer map ────────
+  //
+  // B4/B5 confirm the UA map uses an inclusive >= boundary.  A future refactor
+  // that splits the two eviction loops could accidentally tighten the referer
+  // branch to strict > without any existing test catching it.  B6 and B7 are
+  // the referer-map mirrors of B4 and B5.
+
+  it("(B6) pruneProbes: referer entry with a single hit at exactly pruneNow−WINDOW_MS (boundary) is NOT evicted", async () => {
+    // Mirror of B4 for the _refererProbes map.
+    //
+    // A hit at exactly pruneNow - WINDOW_MS equals the cutoff, so
+    //   hits[last] >= cutoff  →  true  →  hasActiveHits = true.
+    // The entry must SURVIVE the prune pass.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+58h — monotonically above B5 (56h).
+    const T0       = Date.now() + 58 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop actually ran ──────────────────
+    _refererProbes.set("https://b6-stale-companion.example/scan", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the boundary referer entry ──────────────────────────────────────
+    // Single hit at exactly pruneNow - WINDOW_MS (= cutoff).
+    // >= cutoff evaluates to true → hasActiveHits = true → must SURVIVE.
+    _refererProbes.set("https://b6-boundary-referer.example/scan", {
+      hits:        [pruneNow - WINDOW_MS],
+      lastAlerted: 0,
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → confirms the prune loop ran
+    expect(_refererProbes.has("https://b6-stale-companion.example/scan")).toBe(false);
+    // Boundary hit is still within the window (>= cutoff) → entry must SURVIVE
+    expect(_refererProbes.has("https://b6-boundary-referer.example/scan")).toBe(true);
+    expect(_refererProbes.get("https://b6-boundary-referer.example/scan")!.hits).toEqual([pruneNow - WINDOW_MS]);
+  });
+
+  it("(B7) pruneProbes: referer entry with a single hit 1 ms before the cutoff (pruneNow−WINDOW_MS−1) IS evicted", async () => {
+    // Mirror of B5 for the _refererProbes map.
+    //
+    // A hit at pruneNow - WINDOW_MS - 1 is strictly less than cutoff, so
+    //   hits[last] >= cutoff  →  false  →  hasActiveHits = false.
+    // With no active cooldown the entry must be DELETED.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+60h — monotonically above B6 (58h).
+    const T0       = Date.now() + 60 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop actually ran ──────────────────
+    _refererProbes.set("https://b7-stale-companion.example/scan", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the outside-window referer entry ─────────────────────────────────
+    // Single hit 1 ms before the cutoff: strictly < cutoff → hasActiveHits = false.
+    // No active cooldown → entry must be DELETED.
+    _refererProbes.set("https://b7-outside-window-referer.example/scan", {
+      hits:        [pruneNow - WINDOW_MS - 1],
+      lastAlerted: 0,
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → confirms the prune loop ran
+    expect(_refererProbes.has("https://b7-stale-companion.example/scan")).toBe(false);
+    // Hit is 1 ms outside the window → entry must be DELETED
+    expect(_refererProbes.has("https://b7-outside-window-referer.example/scan")).toBe(false);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
