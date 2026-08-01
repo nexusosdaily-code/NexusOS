@@ -2972,4 +2972,84 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
     expect(_refererProbes.has("https://cooldown-boundary-exact-ref.example/")).toBe(false);
     expect(_uaProbes.has("CooldownBoundaryExactUA/1.0")).toBe(false);
   });
+
+  it("refererProbes: entry with lastAlerted === 0 that had active hits is deleted after its hits array is drained in-place", async () => {
+    // Regression guard: a refactored pruner might snapshot `hasActiveHits`
+    // eagerly (e.g. when the entry is first inserted or before the prune loop
+    // body runs) and cache the result.  If the hits array is then emptied
+    // in-place before _pruneProbes executes, the cached "has hits" flag would
+    // be stale and the pruner would retain the entry as a ghost.
+    //
+    // This test seeds an entry WITH active hits (lastAlerted = 0), drains the
+    // hits array before calling _pruneProbes, and asserts the entry is deleted
+    // because the pruner must re-evaluate the live array, not a cached snapshot.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+    // Place T0 far enough in the future to avoid lastPrune collisions with
+    // earlier tests in this file.
+    const T0       = Date.now() + 28 * 60 * 60 * 1000; // 28 h into the future
+    const pruneNow = T0 + 60 * 60 * 1000 + 1;          // 1 h + 1 ms after T0 → prune guard passes
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Seed an entry that currently has active hits and has never alerted ────
+    const entry = {
+      hits:        [pruneNow - WINDOW_MS + 60_000], // one hit well within the 24 h window
+      lastAlerted: 0,
+    };
+    _refererProbes.set("https://drained-hits-ref.example/", entry);
+
+    // ── Drain the hits array in-place (simulating an upstream eviction) ───────
+    // The entry object is mutated directly so any cached reference to it inside
+    // the module would also see the empty array — there is no way to "hide" this
+    // change from the pruner.
+    entry.hits.length = 0;
+
+    // ── Run the pruner — it must re-evaluate the live (now empty) hits array ──
+    _pruneProbes(pruneNow);
+
+    // lastAlerted === 0 and hits === [] → neither guard saves the entry
+    expect(_refererProbes.has("https://drained-hits-ref.example/")).toBe(false);
+  });
+
+  it("uaProbes: entry with lastAlerted === 0 that had active hits is deleted after its hits array is drained in-place", async () => {
+    // Symmetric counterpart of the refererProbes test above, targeting _uaProbes.
+    //
+    // A refactored pruner that caches `hasActiveHits` before the prune loop body
+    // executes would retain the UA entry as a ghost even after its hits array is
+    // emptied.  This test seeds a UA entry with active hits (lastAlerted = 0),
+    // drains the array before calling _pruneProbes, and asserts deletion.
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+    // Place T0 far enough in the future to avoid lastPrune collisions with
+    // earlier tests in this file.
+    const T0       = Date.now() + 30 * 60 * 60 * 1000; // 30 h into the future
+    const pruneNow = T0 + 60 * 60 * 1000 + 1;          // 1 h + 1 ms after T0 → prune guard passes
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Seed a UA entry that currently has active hits and has never alerted ──
+    const entry = {
+      hits:        [pruneNow - WINDOW_MS + 60_000], // one hit well within the 24 h window
+      lastAlerted: 0,
+    };
+    _uaProbes.set("DrainedHitsUA/1.0", entry);
+
+    // ── Drain the hits array in-place ─────────────────────────────────────────
+    entry.hits.length = 0;
+
+    // ── Run the pruner ────────────────────────────────────────────────────────
+    _pruneProbes(pruneNow);
+
+    // lastAlerted === 0 and hits === [] → neither guard saves the entry
+    expect(_uaProbes.has("DrainedHitsUA/1.0")).toBe(false);
+  });
 });
