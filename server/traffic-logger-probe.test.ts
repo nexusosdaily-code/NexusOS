@@ -4117,6 +4117,96 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
     expect(field).toBe("referer");
     expect(hits).toBe(4); // reported count reflects the correctly-pruned window
   });
+
+  it("paired-key symmetry: both _uaProbes and _refererProbes evict identically when seeded with the same burst", async () => {
+    // Scenario: seed BOTH maps with the same 5-hit burst (2 stale, 3 in-window)
+    // and call _recordProbe on each with the same recordNow.  The surviving
+    // timestamps in both maps must be identical (3 in-window hits + new hit).
+    //
+    // A future change that inverts the eviction direction on both maps
+    // simultaneously would leave each map with 6 hits (no eviction at all) or
+    // 2 hits (evicts in-window instead of stale) — both outcomes fail the exact
+    // equality assertion below, catching the symmetrical regression even though
+    // the two individual single-map tests would still pass relative to each other.
+
+    process.env.PROBE_ALERT_THRESHOLD = "3";
+
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _refererProbes, _recordProbe } = mod as any;
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    // Use a distinct far-future base to avoid timestamp collisions with earlier
+    // tests in this describe block.
+    const recordNow = Date.now() + 100 * 60 * 60 * 1000;
+    const cutoff    = recordNow - WINDOW_MS;
+
+    // Identical 5-hit burst for both maps.
+    const hitAtCutoffMinus1 = cutoff - 1; // strictly before cutoff → evicted (≤)
+    const hitAtCutoff       = cutoff;     // exactly on cutoff      → evicted (≤)
+    const hitInWindow1      = cutoff + 1;    // 1 ms inside   → kept
+    const hitInWindow2      = cutoff + 500;  // 500 ms inside → kept
+    const hitInWindow3      = cutoff + 1000; // 1 s inside    → kept
+
+    const expectedSurvivors = [hitInWindow1, hitInWindow2, hitInWindow3, recordNow];
+
+    const uaKey      = "PairedBurstUA/1.0";
+    const refererKey = "https://paired-burst-referer.example/probe";
+
+    _uaProbes.set(uaKey, {
+      hits:        [hitAtCutoffMinus1, hitAtCutoff, hitInWindow1, hitInWindow2, hitInWindow3],
+      lastAlerted: 0,
+    });
+    _refererProbes.set(refererKey, {
+      hits:        [hitAtCutoffMinus1, hitAtCutoff, hitInWindow1, hitInWindow2, hitInWindow3],
+      lastAlerted: 0,
+    });
+
+    // Call recordProbe on each map separately, flushing between them so each
+    // fire-and-forget import("./telegram-bot").then(...) chain fully resolves
+    // before the next call starts.  Batching both calls without an intervening
+    // drain can leave the second chain unresolved when assertions run.
+    _recordProbe(_uaProbes, uaKey, "ua", recordNow);
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+
+    _recordProbe(_refererProbes, refererKey, "referer", recordNow);
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+
+    const uaEntry      = _uaProbes.get(uaKey)!;
+    const refererEntry = _refererProbes.get(refererKey)!;
+
+    // ── UA map: exactly 4 hits survive ────────────────────────────────────────
+    expect(uaEntry.hits).toHaveLength(4);
+    expect(uaEntry.hits).toEqual(expectedSurvivors);
+    expect(uaEntry.hits).not.toContain(hitAtCutoffMinus1);
+    expect(uaEntry.hits).not.toContain(hitAtCutoff);
+
+    // ── Referer map: exactly the same 4 hits survive ──────────────────────────
+    expect(refererEntry.hits).toHaveLength(4);
+    expect(refererEntry.hits).toEqual(expectedSurvivors);
+    expect(refererEntry.hits).not.toContain(hitAtCutoffMinus1);
+    expect(refererEntry.hits).not.toContain(hitAtCutoff);
+
+    // ── Both maps produce identical surviving timestamps ───────────────────────
+    // This is the key assertion: if eviction were inverted on both maps at once
+    // each array would still have the same (wrong) length as the other, and the
+    // single-map tests would both pass — but this equality check against the
+    // *expected* survivors would fail.
+    expect(uaEntry.hits).toEqual(refererEntry.hits);
+
+    // Both maps exceeded threshold=3, so exactly 2 alerts must have fired.
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(2);
+
+    const calls = mockSendProbeAlert.mock.calls as [string, string, number][];
+    const fields = calls.map(([f]) => f).sort(); // sort for stable assertion order
+    expect(fields).toEqual(["referer", "ua"]);
+
+    // Each alert reports 4 hits — the correctly-pruned in-window count.
+    for (const [, , hitCount] of calls) {
+      expect(hitCount).toBe(4);
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
