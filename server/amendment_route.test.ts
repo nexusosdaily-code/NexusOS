@@ -20,6 +20,7 @@
  */
 
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
+import { readFileSync } from "fs";
 import {
   checkAmendmentRateLimit,
   _resetAmendmentRateLimit,
@@ -640,5 +641,27 @@ describe("POST /api/constitution/amendments — per-user rate limit", () => {
     // mineAmendmentBlock must also not have been called.
     expect(status).toBe(403);
     expect(mockMineAmendmentBlock).not.toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 7. Coverage guard — test count floor
+//
+// Reads this file's own source and counts it() blocks so that accidentally
+// deleting a describe block or a test causes an immediate, explicit failure
+// rather than a silent pass with reduced coverage.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("amendment_route.test.ts — coverage guard", () => {
+  it("contains at least 26 it() blocks (prevents silent coverage drop)", () => {
+    // import.meta.url points to the TypeScript source in Vitest's ESM runtime
+    const filePath = new URL(import.meta.url).pathname;
+    const src = readFileSync(filePath, "utf8");
+    // Count lines that open an it() call.
+    // The regex matches this guard's own it() too, so the floor is 27
+    // (26 substantive tests + 1 guard) — removing any real test drops the
+    // count to 26 and triggers a failure.
+    const itCalls = (src.match(/^\s+it\(/gm) ?? []).length;
+    expect(itCalls).toBeGreaterThanOrEqual(27);
   });
 });
