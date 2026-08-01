@@ -3527,3 +3527,206 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
     expect(_uaProbes.has("MixedHitsActiveLastUA/1.0")).toBe(true);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// recordProbe boundary semantics vs pruneProbes — eviction at exactly cutoff
+//
+// pruneProbes  keeps  an entry when its last hit timestamp >= cutoff  (inclusive).
+// recordProbe  evicts a hit timestamp when it is            <= cutoff (inclusive).
+//
+// Consequence: a hit at exactly (now − WINDOW_MS) is KEPT by pruneProbes but
+// EVICTED by the very next recordProbe call.  These tests pin that asymmetry so
+// a future refactor cannot silently change the boundary semantics in either
+// direction without a test failure demanding an explicit decision.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WINDOW_MS", () => {
+  it("pruneProbes KEEPS a UA entry whose sole hit is at exactly cutoff (>= is inclusive)", async () => {
+    // pruneProbes guard: hasActiveHits = hits[last] >= cutoff
+    // A hit at exactly pruneNow − WINDOW_MS satisfies >= cutoff → entry survives.
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // Use a far-future T0 to stay monotonically above all earlier tests.
+    const T0       = Date.now() + 60 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1; // 1 h + 1 ms after T0 → prune guard passes
+
+    // Advance lastPrune so the guard allows the second prune call.
+    _pruneProbes(T0);
+
+    const key = "BoundaryKeepUA/1.0";
+    // Single hit at exactly the cutoff for pruneNow.
+    _uaProbes.set(key, {
+      hits:        [pruneNow - WINDOW_MS],
+      lastAlerted: 0,
+    });
+
+    _pruneProbes(pruneNow);
+
+    // hits[last] === cutoff → >= is satisfied → entry must SURVIVE
+    expect(_uaProbes.has(key)).toBe(true);
+    // And the hit timestamp itself must be unchanged.
+    expect(_uaProbes.get(key)!.hits).toEqual([pruneNow - WINDOW_MS]);
+  });
+
+  it("recordProbe EVICTS a UA hit at exactly cutoff (<= is inclusive) and records the new hit", async () => {
+    // recordProbe eviction guard: entry.hits[lo] <= cutoff
+    // A hit at exactly (now − WINDOW_MS) satisfies <= cutoff → it is EVICTED.
+    // This is intentionally stricter than pruneProbes (which uses >=).
+    // The net result: after a recordProbe call the in-window count correctly
+    // reflects only hits that are strictly newer than the cutoff.
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+    // recordNow is sufficiently far in the future to avoid colliding with
+    // any timestamp used by other tests.
+    const recordNow = Date.now() + 62 * 60 * 60 * 1000;
+    const cutoff    = recordNow - WINDOW_MS;
+
+    const key = "BoundaryEvictUA/1.0";
+    // Pre-seed a single hit sitting exactly on the cutoff boundary.
+    // pruneProbes would KEEP this entry; recordProbe must EVICT that hit.
+    _uaProbes.set(key, {
+      hits:        [cutoff],
+      lastAlerted: 0,
+    });
+
+    // Call recordProbe with recordNow → cutoff === recordNow − WINDOW_MS.
+    // The eviction loop advances while hits[lo] <= cutoff; hits[0] === cutoff,
+    // so lo becomes 1, evicting the boundary hit.
+    _recordProbe(_uaProbes, key, "ua", recordNow);
+
+    // The boundary hit must have been evicted.
+    const entry = _uaProbes.get(key)!;
+    // Only the new hit (recordNow) should remain in the window.
+    expect(entry.hits).toEqual([recordNow]);
+    // The evicted boundary timestamp must not appear in the hits array.
+    expect(entry.hits).not.toContain(cutoff);
+  });
+
+  it("asymmetry documented: hit at cutoff is kept by pruneProbes but evicted by recordProbe", async () => {
+    // This test makes the asymmetry explicit in a single scenario so that any
+    // future attempt to unify the two comparisons (making both >= or both <=)
+    // must consciously decide what the correct semantics should be.
+    //
+    // Current intended behaviour:
+    //   pruneProbes  uses >=  → keeps hits AT the cutoff (conservative; avoids
+    //                            premature map-entry deletion between record calls)
+    //   recordProbe  uses <=  → evicts hits AT the cutoff (strict; ensures the
+    //                            in-window count never over-counts a timestamp that
+    //                            is exactly at the edge of the 24-hour window)
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes, _recordProbe } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // Use a distinct far-future anchor to stay clear of the other boundary tests.
+    const T0        = Date.now() + 64 * 60 * 60 * 1000;
+    const pruneNow  = T0 + COOLDOWN_MS + 1;
+    const recordNow = T0 + COOLDOWN_MS + 2; // 1 ms after pruneNow
+
+    // Advance lastPrune so pruneProbes will run at pruneNow.
+    _pruneProbes(T0);
+
+    const key = "AsymmetryUA/1.0";
+
+    // ── Phase 1: pruneProbes sees the boundary hit and keeps the entry ────────
+    _uaProbes.set(key, {
+      hits:        [pruneNow - WINDOW_MS],
+      lastAlerted: 0,
+    });
+    _pruneProbes(pruneNow);
+    expect(_uaProbes.has(key)).toBe(true); // pruneProbes: >= cutoff → KEPT
+
+    // ── Phase 2: recordProbe evicts the boundary hit ──────────────────────────
+    // recordNow is 1 ms after pruneNow, so cutoff = recordNow − WINDOW_MS is
+    // 1 ms after pruneNow − WINDOW_MS.  The seeded hit (pruneNow − WINDOW_MS)
+    // is therefore strictly less than recordNow's cutoff → still evicted.
+    // (Even if recordNow === pruneNow the seeded hit equals cutoff → <= evicts it.)
+    _recordProbe(_uaProbes, key, "ua", recordNow);
+
+    const entry = _uaProbes.get(key)!;
+    // The boundary hit from phase 1 must be gone; only the new hit survives.
+    expect(entry.hits).toEqual([recordNow]);
+    expect(entry.hits).not.toContain(pruneNow - WINDOW_MS);
+  });
+
+  it("refererProbes: recordProbe EVICTS a referer hit sitting exactly on the cutoff", async () => {
+    // Symmetric counterpart of the UA test — confirms the same boundary
+    // semantics apply to the referer probe map as well.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe } = mod as any;
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const recordNow = Date.now() + 66 * 60 * 60 * 1000;
+    const cutoff    = recordNow - WINDOW_MS;
+
+    const key = "https://boundary-evict-referer.example/";
+    _refererProbes.set(key, {
+      hits:        [cutoff],
+      lastAlerted: 0,
+    });
+
+    _recordProbe(_refererProbes, key, "referer", recordNow);
+
+    const entry = _refererProbes.get(key)!;
+    // Only the freshly-recorded hit must remain; the boundary hit is evicted.
+    expect(entry.hits).toEqual([recordNow]);
+    expect(entry.hits).not.toContain(cutoff);
+  });
+
+  it("hit 1 ms before cutoff (cutoff−1) is also evicted by recordProbe", async () => {
+    // A hit 1 ms before the cutoff is strictly less-than the cutoff, so it
+    // satisfies <= cutoff and must also be evicted.  This guards against a
+    // refactor that changes <= to < (which would incorrectly keep boundary hits).
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const recordNow = Date.now() + 68 * 60 * 60 * 1000;
+    const cutoff    = recordNow - WINDOW_MS;
+
+    const key = "OneMsBeforeCutoffUA/1.0";
+    _uaProbes.set(key, {
+      hits:        [cutoff - 1],
+      lastAlerted: 0,
+    });
+
+    _recordProbe(_uaProbes, key, "ua", recordNow);
+
+    const entry = _uaProbes.get(key)!;
+    expect(entry.hits).toEqual([recordNow]);
+    expect(entry.hits).not.toContain(cutoff - 1);
+  });
+
+  it("hit 1 ms after cutoff (cutoff+1) is inside the window and PRESERVED by recordProbe", async () => {
+    // A hit 1 ms after the cutoff is strictly greater-than the cutoff, so it
+    // fails the eviction condition (<= cutoff) and must be preserved.
+    // This is the mirror of the previous test: the first timestamp strictly
+    // inside the window must survive alongside the new hit.
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const recordNow = Date.now() + 70 * 60 * 60 * 1000;
+    const cutoff    = recordNow - WINDOW_MS;
+
+    const key = "OneMsAfterCutoffUA/1.0";
+    _uaProbes.set(key, {
+      hits:        [cutoff + 1],
+      lastAlerted: 0,
+    });
+
+    _recordProbe(_uaProbes, key, "ua", recordNow);
+
+    const entry = _uaProbes.get(key)!;
+    // Both the pre-existing in-window hit AND the new hit must be present.
+    expect(entry.hits).toEqual([cutoff + 1, recordNow]);
+  });
+});
