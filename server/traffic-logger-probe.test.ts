@@ -2454,4 +2454,73 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
     expect(_refererProbes.has("https://lastprune-regression-ref.example/")).toBe(false);
     expect(_uaProbes.has("LastPruneRegressionUA/1.0")).toBe(false);
   });
+
+  it("boundary (now - lastPrune === 1 h exactly) — prune runs (guard is strictly less-than)", async () => {
+    // The guard is `if (now - lastPrune < 60 * 60 * 1000) return;`
+    // When the difference equals exactly 1 h the condition is false, so the
+    // prune MUST execute.  This matters for low-traffic servers where calls
+    // arrive infrequently and the first call that clears the threshold is the
+    // only chance to prune within that window.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    // Place baseNow 8 h in the future to avoid colliding with lastPrune values
+    // left by earlier tests in this file.
+    const baseNow = Date.now() + 8 * 60 * 60 * 1000;
+
+    // ── Advance lastPrune to baseNow ─────────────────────────────────────────
+    _pruneProbes(baseNow);
+
+    // ── Seed stale entries (no hits, no active cooldown) ─────────────────────
+    _refererProbes.set("https://boundary-exact-ref.example/", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+    _uaProbes.set("BoundaryExactUA/1.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Call with now - lastPrune === exactly 1 h ─────────────────────────────
+    const exactBoundary = baseNow + 60 * 60 * 1000;
+    _pruneProbes(exactBoundary);
+
+    // Prune must have run — stale entries should be gone
+    expect(_refererProbes.has("https://boundary-exact-ref.example/")).toBe(false);
+    expect(_uaProbes.has("BoundaryExactUA/1.0")).toBe(false);
+  });
+
+  it("one millisecond before the boundary (now - lastPrune === 1 h - 1 ms) — prune is skipped", async () => {
+    // The guard is `if (now - lastPrune < 60 * 60 * 1000) return;`
+    // At 1 h - 1 ms the condition is true, so the prune must NOT run.
+    // This guards against an off-by-one that would cause premature pruning
+    // and could drop entries that are still within their cooldown window.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    // Place baseNow 10 h in the future to avoid colliding with lastPrune values
+    // left by earlier tests in this file.
+    const baseNow = Date.now() + 10 * 60 * 60 * 1000;
+
+    // ── Advance lastPrune to baseNow ─────────────────────────────────────────
+    _pruneProbes(baseNow);
+
+    // ── Seed stale entries (no hits, no active cooldown) ─────────────────────
+    _refererProbes.set("https://boundary-minus1-ref.example/", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+    _uaProbes.set("BoundaryMinus1UA/1.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Call with now - lastPrune === 1 h - 1 ms ──────────────────────────────
+    const justBefore = baseNow + 60 * 60 * 1000 - 1;
+    _pruneProbes(justBefore);
+
+    // Guard must have fired — entries must still be present
+    expect(_refererProbes.has("https://boundary-minus1-ref.example/")).toBe(true);
+    expect(_uaProbes.has("BoundaryMinus1UA/1.0")).toBe(true);
+  });
 });
