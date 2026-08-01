@@ -250,3 +250,59 @@ describe("SealSection — refetchInterval stops after data arrives", () => {
     10_000,
   );
 });
+
+describe("SealSection — no polling after a 503 error", () => {
+  let fetchSpy: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it(
+    "stops all polling after a 503 and makes exactly one fetch call",
+    async () => {
+      // ── Arrange ──────────────────────────────────────────────────────────────
+      // The server returns a 503 on every call.  sealRetryFn returns false for
+      // 503 so React Query will not retry.  sealRefetchIntervalFn also returns
+      // false once query.state.error is set, so no polling interval is started.
+      // Net result: exactly one fetch call, ever.
+      fetchSpy.mockResolvedValue({
+        ok:     false,
+        status: 503,
+        json:   async () => ({ message: "Seal failed on boot" }),
+      });
+
+      const client = makeClient();
+
+      render(
+        <QueryClientProvider client={client}>
+          <SealSection />
+        </QueryClientProvider>,
+      );
+
+      // ── Assert: error UI appears ──────────────────────────────────────────────
+      await waitFor(() => {
+        expect(
+          screen.queryByText(/seal failed on last boot/i),
+        ).toBeTruthy();
+      }, { timeout: 3_000 });
+
+      // Only one request was made (503 is not retried).
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      // ── Assert: no further polling ────────────────────────────────────────────
+      // Wait well beyond several clamped poll cycles (> 4 × 50 ms) and confirm
+      // the fetch count is still exactly 1.
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    },
+    10_000,
+  );
+});
