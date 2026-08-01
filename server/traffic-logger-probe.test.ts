@@ -3415,4 +3415,115 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
     // Hit is outside the window AND no active cooldown → entry must be DELETED
     expect(_uaProbes.has("WindowOutsideUA/1.0")).toBe(false);
   });
+
+  // ── Mixed stale/active hits array ────────────────────────────────────────────
+  //
+  // The current hasActiveHits guard checks only the LAST element of the hits
+  // array (hits[hits.length - 1] >= cutoff).  A refactored pruner that iterates
+  // the array, uses a different index, or computes "active" from an aggregate
+  // (e.g. the first element, or all elements) could incorrectly evict an entry
+  // whose last hit IS within the window just because earlier elements are stale.
+  //
+  // These tests seed a hits array of the form:
+  //   [stale, stale, stale, active]
+  // where "active" = pruneNow - WINDOW_MS + 60_000 (well inside the 24 h window)
+  // and every preceding timestamp is outside the window.  The entry must SURVIVE.
+
+  it("refererProbes: multi-element hits array with stale entries followed by one active hit — entry SURVIVES", async () => {
+    // Guard against a refactored pruner that reads hits[0], iterates all
+    // elements, or uses a reduce/every/some that would classify an entry as
+    // inactive just because its earlier hits are stale.
+    //
+    // The last element of the hits array is within the 24 h window, so the
+    // entry is still active and must not be evicted regardless of how many
+    // stale timestamps precede it.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+52h — monotonically above all prior tests (last used 50h).
+    const T0       = Date.now() + 52 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1; // 1 h + 1 ms after T0 → prune guard passes
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop actually ran ─────────────────
+    _refererProbes.set("https://mixed-hits-stale-companion-ref.example/", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the target: three stale hits followed by one active hit ─────────
+    // All timestamps are sorted ascending, as the ProbeEntry contract requires.
+    // The first three are outside the 24 h window; the last one is 1 minute
+    // inside the window (pruneNow - WINDOW_MS + 60_000).
+    _refererProbes.set("https://mixed-hits-active-last-ref.example/", {
+      hits: [
+        pruneNow - WINDOW_MS - 3 * 60 * 60 * 1000, // 3 h outside the window — stale
+        pruneNow - WINDOW_MS - 2 * 60 * 60 * 1000, // 2 h outside the window — stale
+        pruneNow - WINDOW_MS - 1 * 60 * 60 * 1000, // 1 h outside the window — stale
+        pruneNow - WINDOW_MS + 60_000,              // 1 min inside the window — ACTIVE
+      ],
+      lastAlerted: 0,
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → proves the prune loop ran
+    expect(_refererProbes.has("https://mixed-hits-stale-companion-ref.example/")).toBe(false);
+    // Last hit is within the window → entry must SURVIVE despite the stale prefix
+    expect(_refererProbes.has("https://mixed-hits-active-last-ref.example/")).toBe(true);
+  });
+
+  it("uaProbes: multi-element hits array with stale entries followed by one active hit — entry SURVIVES", async () => {
+    // Symmetric counterpart of the refererProbes test above, targeting _uaProbes.
+    //
+    // A refactored pruner that iterates the whole hits array or uses a
+    // different index to determine activity could incorrectly delete a UA entry
+    // whose last hit is within the window just because earlier hits are stale.
+    //
+    // The last element of the hits array sits 1 minute inside the 24 h window;
+    // the preceding elements are outside the window.  The entry must SURVIVE.
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+54h — monotonically above the referer mixed-hits test above.
+    const T0       = Date.now() + 54 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1; // 1 h + 1 ms after T0 → prune guard passes
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop actually ran ─────────────────
+    _uaProbes.set("MixedHitsStaleCompanionUA/1.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the target: three stale hits followed by one active hit ─────────
+    // All timestamps are sorted ascending.  The first three are outside the
+    // 24 h window; the last one is 1 minute inside the window.
+    _uaProbes.set("MixedHitsActiveLastUA/1.0", {
+      hits: [
+        pruneNow - WINDOW_MS - 3 * 60 * 60 * 1000, // 3 h outside the window — stale
+        pruneNow - WINDOW_MS - 2 * 60 * 60 * 1000, // 2 h outside the window — stale
+        pruneNow - WINDOW_MS - 1 * 60 * 60 * 1000, // 1 h outside the window — stale
+        pruneNow - WINDOW_MS + 60_000,              // 1 min inside the window — ACTIVE
+      ],
+      lastAlerted: 0,
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → proves the prune loop ran
+    expect(_uaProbes.has("MixedHitsStaleCompanionUA/1.0")).toBe(false);
+    // Last hit is within the window → entry must SURVIVE despite the stale prefix
+    expect(_uaProbes.has("MixedHitsActiveLastUA/1.0")).toBe(true);
+  });
 });
