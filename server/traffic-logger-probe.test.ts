@@ -2908,7 +2908,7 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
 
     // Place T0 far enough in the future to avoid lastPrune collisions with
     // earlier tests in this file.
-    const T0       = Date.now() + 23 * 60 * 60 * 1000; // 23 h into the future
+    const T0       = Date.now() + 26 * 60 * 60 * 1000; // 26 h into the future
     const pruneNow = T0 + COOLDOWN_MS + 1;              // guaranteed to pass the 1 h prune guard
 
     // ── Advance lastPrune to T0 ───────────────────────────────────────────────
@@ -2950,7 +2950,7 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
 
     // Place T0 far enough in the future to avoid lastPrune collisions with
     // earlier tests in this file.
-    const T0       = Date.now() + 25 * 60 * 60 * 1000; // 25 h into the future
+    const T0       = Date.now() + 28 * 60 * 60 * 1000; // 28 h into the future
     const pruneNow = T0 + COOLDOWN_MS + 1;              // guaranteed to pass the 1 h prune guard
 
     // ── Advance lastPrune to T0 ───────────────────────────────────────────────
@@ -2990,7 +2990,7 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
 
     // Place T0 far enough in the future to avoid lastPrune collisions with
     // earlier tests in this file.
-    const T0       = Date.now() + 28 * 60 * 60 * 1000; // 28 h into the future
+    const T0       = Date.now() + 32 * 60 * 60 * 1000; // 32 h into the future
     const pruneNow = T0 + 60 * 60 * 1000 + 1;          // 1 h + 1 ms after T0 → prune guard passes
 
     // ── Advance lastPrune to T0 ───────────────────────────────────────────────
@@ -3030,7 +3030,7 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
 
     // Place T0 far enough in the future to avoid lastPrune collisions with
     // earlier tests in this file.
-    const T0       = Date.now() + 30 * 60 * 60 * 1000; // 30 h into the future
+    const T0       = Date.now() + 34 * 60 * 60 * 1000; // 34 h into the future
     const pruneNow = T0 + 60 * 60 * 1000 + 1;          // 1 h + 1 ms after T0 → prune guard passes
 
     // ── Advance lastPrune to T0 ───────────────────────────────────────────────
@@ -3051,5 +3051,88 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
 
     // lastAlerted === 0 and hits === [] → neither guard saves the entry
     expect(_uaProbes.has("DrainedHitsUA/1.0")).toBe(false);
+  });
+
+  it("empty-peer warm-cooldown: a warm-cooldown _uaProbes entry survives when _refererProbes is completely empty", async () => {
+    // Guard against a refactored pruner that checks "are there any entries in
+    // _refererProbes?" and uses the answer as a short-circuit that skips or
+    // corrupts the _uaProbes loop.  With _refererProbes truly empty there is no
+    // stale entry to mask the bug — only the warm-cooldown UA entry is present,
+    // so any deletion is unambiguously wrong.
+    //
+    // Layout:
+    //   _uaProbes      — one entry with empty hits but lastAlerted 30 min before
+    //                    pruneNow (cooldown still active → must SURVIVE)
+    //   _refererProbes — completely empty
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000;
+
+    // Place T0 far enough in the future to avoid lastPrune collisions with
+    // earlier tests in this file.
+    const T0 = Date.now() + 36 * 60 * 60 * 1000; // 36 h into the future
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Ensure _refererProbes has no entry for our key ────────────────────────
+    _refererProbes.delete("https://empty-peer-ua-warm.example/"); // belt-and-suspenders
+
+    // ── Seed a warm-cooldown entry in _uaProbes ───────────────────────────────
+    // Empty hits, but lastAlerted is 30 min before pruneNow → cooldown active.
+    _uaProbes.set("EmptyPeerWarmCooldownUA/1.0", {
+      hits:        [],
+      lastAlerted: pruneNow - 30 * 60_000,
+    });
+
+    // ── Call past the 1 h threshold — prune must run ──────────────────────────
+    _pruneProbes(pruneNow);
+
+    // The warm-cooldown UA entry must survive even though _refererProbes was empty.
+    expect(_uaProbes.has("EmptyPeerWarmCooldownUA/1.0")).toBe(true);
+  });
+
+  it("empty-peer warm-cooldown: a warm-cooldown _refererProbes entry survives when _uaProbes is completely empty", async () => {
+    // Symmetric counterpart of the test above, targeting _refererProbes.
+    //
+    // Guard against a refactored pruner that checks "are there any entries in
+    // _uaProbes?" and uses the answer as a short-circuit that skips or corrupts
+    // the _refererProbes loop.  With _uaProbes truly empty there is no stale
+    // entry to mask the bug — only the warm-cooldown referer entry is present.
+    //
+    // Layout:
+    //   _refererProbes — one entry with empty hits but lastAlerted 30 min before
+    //                    pruneNow (cooldown still active → must SURVIVE)
+    //   _uaProbes      — completely empty
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000;
+
+    // Place T0 far enough in the future to avoid lastPrune collisions with
+    // earlier tests in this file.
+    const T0 = Date.now() + 38 * 60 * 60 * 1000; // 38 h into the future
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Ensure _uaProbes has no entry for our key ─────────────────────────────
+    _uaProbes.delete("EmptyPeerWarmCooldownRefUA/1.0"); // belt-and-suspenders
+
+    // ── Seed a warm-cooldown entry in _refererProbes ──────────────────────────
+    // Empty hits, but lastAlerted is 30 min before pruneNow → cooldown active.
+    _refererProbes.set("https://empty-peer-ref-warm.example/", {
+      hits:        [],
+      lastAlerted: pruneNow - 30 * 60_000,
+    });
+
+    // ── Call past the 1 h threshold — prune must run ──────────────────────────
+    _pruneProbes(pruneNow);
+
+    // The warm-cooldown referer entry must survive even though _uaProbes was empty.
+    expect(_refererProbes.has("https://empty-peer-ref-warm.example/")).toBe(true);
   });
 });
