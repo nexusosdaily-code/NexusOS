@@ -1298,4 +1298,65 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(mod._refererProbes.has("SomeKeyForUnknownType")).toBe(false);
     expect(mod._uaProbes.has("SomeKeyForUnknownType")).toBe(false);
   });
+
+  it("(D) initProbeCounters: a row with ALL-stale hits but an active cooldown is restored with an empty hits array and lastAlerted preserved", async () => {
+    // All hits are older than the 24-hour window, but lastAlerted is within
+    // the past hour — the cooldown is still active and must keep suppressing
+    // alerts after a restart.
+    const now         = Date.now();
+    const staleHit1   = now - 25 * 3600_000; // 25 h ago — outside window
+    const staleHit2   = now - 30 * 3600_000; // 30 h ago — outside window
+    const lastAlerted = now - 30 * 60_000;   // 30 min ago — cooldown still active
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      {
+        fieldType:   "ua",
+        key:         "StaleCooldownUA/1.0",
+        hits:        [staleHit1, staleHit2],
+        lastAlerted: lastAlerted,
+      },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    // The key must be present — the active cooldown must be restored.
+    const entry = mod._uaProbes.get("StaleCooldownUA/1.0");
+    expect(entry).toBeDefined();
+    // All hits were outside the window, so the restored hits array is empty.
+    expect(entry!.hits).toEqual([]);
+    // lastAlerted is preserved so the cooldown keeps suppressing alerts.
+    expect(entry!.lastAlerted).toBe(lastAlerted);
+  });
+
+  it("(E) initProbeCounters: a row with ALL-stale hits AND lastAlerted === 0 is pruned (not restored)", async () => {
+    // Both conditions for pruning hold: no active hits and no cooldown to
+    // preserve.  The key must not appear in either map after a restart.
+    const now       = Date.now();
+    const staleHit  = now - 25 * 3600_000; // 25 h ago — outside window
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      {
+        fieldType:   "ua",
+        key:         "FullyStaleUA/1.0",
+        hits:        [staleHit],
+        lastAlerted: 0,
+      },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    // Row has nothing to preserve — it must be skipped entirely.
+    expect(mod._uaProbes.has("FullyStaleUA/1.0")).toBe(false);
+    expect(mod._refererProbes.has("FullyStaleUA/1.0")).toBe(false);
+  });
 });
