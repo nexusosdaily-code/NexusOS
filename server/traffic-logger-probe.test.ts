@@ -2710,4 +2710,110 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
     expect(_uaProbes.has("SplitMapUaOnlyA/1.0")).toBe(false);
     expect(_uaProbes.has("SplitMapUaOnlyB/2.0")).toBe(false);
   });
+
+  it("split-map warm-cooldown: a warm-cooldown _refererProbes entry survives when _uaProbes contains only stale entries", async () => {
+    // Guard against a refactored pruner that short-circuits on the peer map's
+    // state: if the pruner sees that _uaProbes contains only stale entries and
+    // incorrectly carries that "nothing to keep" signal into the _refererProbes
+    // loop, it could delete a referer entry whose cooldown is still active.
+    //
+    // Layout:
+    //   _refererProbes — one entry with empty hits but lastAlerted 30 min before
+    //                    pruneNow (cooldown is still active → must SURVIVE)
+    //   _uaProbes      — one entry with empty hits and lastAlerted 2 h before
+    //                    pruneNow (cooldown expired → must be DELETED)
+    //
+    // Key: lastAlerted values are computed relative to pruneNow (the timestamp
+    // passed to _pruneProbes), NOT to T0.  The cooldown check is
+    // `pruneNow - lastAlerted < COOLDOWN_MS`, so only the distance from
+    // pruneNow matters.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000;
+
+    // Place T0 far enough in the future to avoid lastPrune collisions with
+    // earlier tests in this file.
+    const T0 = Date.now() + 18 * 60 * 60 * 1000; // 18 h into the future
+    // The actual now passed to the pruning call.
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Seed a warm-cooldown entry in _refererProbes ──────────────────────────
+    // Empty hits, but lastAlerted is 30 min before pruneNow → cooldown active.
+    _refererProbes.set("https://split-warm-cooldown-ref.example/", {
+      hits:        [],
+      lastAlerted: pruneNow - 30 * 60_000,
+    });
+
+    // ── Seed a stale entry in _uaProbes ──────────────────────────────────────
+    // Empty hits AND lastAlerted is 2 h before pruneNow → cooldown expired.
+    _uaProbes.set("SplitWarmCooldownStaleUA/1.0", {
+      hits:        [],
+      lastAlerted: pruneNow - 2 * COOLDOWN_MS,
+    });
+
+    // ── Call past the 1 h threshold — prune must run ──────────────────────────
+    _pruneProbes(pruneNow);
+
+    // The warm-cooldown referer entry must survive.
+    expect(_refererProbes.has("https://split-warm-cooldown-ref.example/")).toBe(true);
+    // The stale UA entry must be deleted.
+    expect(_uaProbes.has("SplitWarmCooldownStaleUA/1.0")).toBe(false);
+  });
+
+  it("split-map warm-cooldown: a warm-cooldown _uaProbes entry survives when _refererProbes contains only stale entries", async () => {
+    // Symmetric counterpart of the test above, targeting _uaProbes.
+    //
+    // Guard against a refactored pruner that short-circuits on the peer map's
+    // state: if the pruner sees that _refererProbes contains only stale entries
+    // and incorrectly carries that signal into the _uaProbes loop, it could
+    // delete a UA entry whose cooldown is still active.
+    //
+    // Layout:
+    //   _uaProbes      — one entry with empty hits but lastAlerted 30 min before
+    //                    pruneNow (cooldown is still active → must SURVIVE)
+    //   _refererProbes — one entry with empty hits and lastAlerted 2 h before
+    //                    pruneNow (cooldown expired → must be DELETED)
+    //
+    // Key: lastAlerted values are computed relative to pruneNow (the timestamp
+    // passed to _pruneProbes), NOT to T0.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000;
+
+    // Place T0 far enough in the future to avoid lastPrune collisions with
+    // earlier tests in this file.
+    const T0 = Date.now() + 20 * 60 * 60 * 1000; // 20 h into the future
+    // The actual now passed to the pruning call.
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Seed a warm-cooldown entry in _uaProbes ───────────────────────────────
+    // Empty hits, but lastAlerted is 30 min before pruneNow → cooldown active.
+    _uaProbes.set("SplitWarmCooldownUA/1.0", {
+      hits:        [],
+      lastAlerted: pruneNow - 30 * 60_000,
+    });
+
+    // ── Seed a stale entry in _refererProbes ─────────────────────────────────
+    // Empty hits AND lastAlerted is 2 h before pruneNow → cooldown expired.
+    _refererProbes.set("https://split-warm-cooldown-stale-ref.example/", {
+      hits:        [],
+      lastAlerted: pruneNow - 2 * COOLDOWN_MS,
+    });
+
+    // ── Call past the 1 h threshold — prune must run ──────────────────────────
+    _pruneProbes(pruneNow);
+
+    // The warm-cooldown UA entry must survive.
+    expect(_uaProbes.has("SplitWarmCooldownUA/1.0")).toBe(true);
+    // The stale referer entry must be deleted.
+    expect(_refererProbes.has("https://split-warm-cooldown-stale-ref.example/")).toBe(false);
+  });
 });
