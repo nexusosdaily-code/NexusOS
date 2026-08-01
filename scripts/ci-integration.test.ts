@@ -90,6 +90,40 @@ function extractNamedFunctionBody(
 }
 
 /**
+ * Walk `content` starting at `openPos` (which must point to an opening `[`)
+ * and return the text between that bracket and its matching closing bracket,
+ * handling arbitrary nesting of both `[` and `{`.  Returns null if unbalanced.
+ */
+function extractBalancedArray(content: string, openPos: number): string | null {
+  let squareDepth = 0;
+  let curlyDepth = 0;
+  for (let i = openPos; i < content.length; i++) {
+    if (content[i] === "[") squareDepth++;
+    else if (content[i] === "{") curlyDepth++;
+    else if (content[i] === "}") curlyDepth--;
+    else if (content[i] === "]") {
+      if (curlyDepth === 0) {
+        squareDepth--;
+        if (squareDepth === 0) return content.slice(openPos + 1, i);
+      }
+    }
+  }
+  return null; // unbalanced
+}
+
+/**
+ * Within a text block (e.g. the body of a defineConfig({…})), locate the
+ * `plugins:` property and return the text of its array value `[…]`.
+ * Returns null if the property or the array is not found.
+ */
+function extractPluginsArray(configBody: string): string | null {
+  const m = configBody.match(/\bplugins\s*:\s*\[/);
+  if (!m || m.index === undefined) return null;
+  const openPos = m.index + m[0].length - 1; // points to the `[`
+  return extractBalancedArray(configBody, openPos);
+}
+
+/**
  * Within a text block, find the first `closeBundle(…) {` method body.
  */
 function extractCloseBundleBody(block: string): string | null {
@@ -255,6 +289,36 @@ describe("vite.config.ts critical-chunk preload plugin guard", () => {
     // the generateBundle hook to run before other plugins have emitted their
     // chunks, which silently produces missing or wrong preload tags.
     expect(pluginBody!).toMatch(/enforce\s*:\s*["']post["']/);
+  });
+});
+
+// ─── metaImagesPlugin invocation guard (vite.config.ts) ──────────────────────
+
+describe("vite.config.ts metaImagesPlugin invocation guard", () => {
+  let cfg: string;
+
+  async function getViteConfig(): Promise<string> {
+    if (!cfg) {
+      cfg = await readFile(VITE_CONFIG, "utf-8");
+    }
+    return cfg;
+  }
+
+  it("metaImagesPlugin() is invoked inside the defineConfig plugins array", async () => {
+    const content = await getViteConfig();
+    // Extract the defineConfig argument block.
+    const dcMatch = content.match(/defineConfig\s*\(\s*\{/);
+    expect(dcMatch, "defineConfig({ not found").not.toBeNull();
+    const openPos = content.indexOf("{", dcMatch!.index!);
+    const configBody = extractBalancedBlock(content, openPos);
+    expect(configBody, "defineConfig body not balanced").not.toBeNull();
+    // Narrow to the plugins: [...] array specifically so the assertion
+    // cannot be satisfied by a call anywhere else in the config object.
+    const pluginsArray = extractPluginsArray(configBody!);
+    expect(pluginsArray, "plugins: [...] array not found in defineConfig body").not.toBeNull();
+    // The plugins array itself must contain a metaImagesPlugin() call.
+    // Removing this call silently disables OG-image injection from every build.
+    expect(pluginsArray!).toMatch(/metaImagesPlugin\s*\(\s*\)/);
   });
 });
 
