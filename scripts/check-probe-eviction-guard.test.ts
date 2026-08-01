@@ -23,6 +23,14 @@
  *        j. FORBIDDEN_PATTERN matches while-loop relaxed form but not correct form
  *        k. FORBIDDEN_PATTERN matches filter relaxed form but not correct form
  *        l. FORBIDDEN_PATTERN on a comment line containing the relaxed form (documented behaviour)
+ *        m. REQUIRED_PATTERN matches filter with extra inner whitespace: filter( (t) => t > cutoff )
+ *        n. REQUIRED_PATTERN matches filter with extra inner whitespace: filter( ( t ) => t > cutoff )
+ *        o. FORBIDDEN_PATTERN matches relaxed filter with extra whitespace: filter( (t) => t >= cutoff )
+ *        p. FORBIDDEN_PATTERN matches relaxed filter with extra whitespace: filter( ( t ) => t >= cutoff )
+ *        q. checkProbeEvictionGuard returns ok:true for filter( (t) => t > cutoff )
+ *        r. checkProbeEvictionGuard returns ok:true for filter( ( t ) => t > cutoff )
+ *        s. checkProbeEvictionGuard returns ok:false (relaxed) for filter( (t) => t >= cutoff )
+ *        t. checkProbeEvictionGuard returns ok:false (relaxed) for filter( ( t ) => t >= cutoff )
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -384,5 +392,95 @@ describe("checkProbeEvictionGuard() unit logic", () => {
     // This is intentional: if someone "comments out" the <= guard and
     // writes a comment showing the < form, the check will still fail and
     // force an explicit review of the change.
+  });
+
+  // ── 3m. REQUIRED_PATTERN — extra space inside outer parens ───────────────
+  it("REQUIRED_PATTERN matches filter with a space after '(' and before ')': filter( (t) => t > cutoff )", () => {
+    // A formatter might add a space after the opening paren and before the
+    // closing paren of .filter(), producing: filter( (t) => t > cutoff )
+    expect(
+      REQUIRED_PATTERN.test("entry.hits.filter( (t) => t > cutoff )"),
+    ).toBe(true);
+    // The relaxed variant with the same extra spacing must NOT match.
+    expect(
+      REQUIRED_PATTERN.test("entry.hits.filter( (t) => t >= cutoff )"),
+    ).toBe(false);
+  });
+
+  // ── 3n. REQUIRED_PATTERN — extra spaces inside both inner and outer parens ─
+  it("REQUIRED_PATTERN matches filter with spaces inside every paren pair: filter( ( t ) => t > cutoff )", () => {
+    // An aggressive formatter might also space out the inner parameter parens,
+    // producing: filter( ( t ) => t > cutoff )
+    expect(
+      REQUIRED_PATTERN.test("entry.hits.filter( ( t ) => t > cutoff )"),
+    ).toBe(true);
+    // The relaxed variant with the same extreme spacing must NOT match.
+    expect(
+      REQUIRED_PATTERN.test("entry.hits.filter( ( t ) => t >= cutoff )"),
+    ).toBe(false);
+  });
+
+  // ── 3o. FORBIDDEN_PATTERN — extra space, relaxed form ────────────────────
+  it("FORBIDDEN_PATTERN matches the relaxed filter with extra outer spacing: filter( (t) => t >= cutoff )", () => {
+    expect(
+      FORBIDDEN_PATTERN.test("entry.hits.filter( (t) => t >= cutoff )"),
+    ).toBe(true);
+    // The correct form with the same spacing must NOT match FORBIDDEN_PATTERN.
+    expect(
+      FORBIDDEN_PATTERN.test("entry.hits.filter( (t) => t > cutoff )"),
+    ).toBe(false);
+  });
+
+  // ── 3p. FORBIDDEN_PATTERN — extra inner spaces, relaxed form ─────────────
+  it("FORBIDDEN_PATTERN matches the relaxed filter with extreme inner spacing: filter( ( t ) => t >= cutoff )", () => {
+    expect(
+      FORBIDDEN_PATTERN.test("entry.hits.filter( ( t ) => t >= cutoff )"),
+    ).toBe(true);
+    // The correct form with the same spacing must NOT match FORBIDDEN_PATTERN.
+    expect(
+      FORBIDDEN_PATTERN.test("entry.hits.filter( ( t ) => t > cutoff )"),
+    ).toBe(false);
+  });
+
+  // ── 3q. checkProbeEvictionGuard — extra outer spacing, correct form ───────
+  it("returns ok:true when source uses filter( (t) => t > cutoff ) with spaces inside the outer parens", async () => {
+    mockReadFile.mockResolvedValue(
+      `entry.hits = entry.hits.filter( (t) => t > cutoff );\n`,
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 3r. checkProbeEvictionGuard — extreme inner spacing, correct form ─────
+  it("returns ok:true when source uses filter( ( t ) => t > cutoff ) with spaces inside every paren pair", async () => {
+    mockReadFile.mockResolvedValue(
+      `entry.hits = entry.hits.filter( ( t ) => t > cutoff );\n`,
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 3s. checkProbeEvictionGuard — extra outer spacing, relaxed form ───────
+  it("returns ok:false with a 'relaxed' reason for filter( (t) => t >= cutoff ) with spaces inside the outer parens", async () => {
+    mockReadFile.mockResolvedValue(
+      `entry.hits = entry.hits.filter( (t) => t >= cutoff );\n`,
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+  });
+
+  // ── 3t. checkProbeEvictionGuard — extreme inner spacing, relaxed form ─────
+  it("returns ok:false with a 'relaxed' reason for filter( ( t ) => t >= cutoff ) with spaces inside every paren pair", async () => {
+    mockReadFile.mockResolvedValue(
+      `entry.hits = entry.hits.filter( ( t ) => t >= cutoff );\n`,
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
   });
 });
