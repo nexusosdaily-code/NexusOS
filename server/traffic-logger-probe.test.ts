@@ -1423,6 +1423,113 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     // No referer alert must have fired.
     expect(calls.some(([field]) => field === "referer")).toBe(false);
   });
+
+  it("both maps pre-seeded at threshold: one request fires both a 'ua' alert and a 'referer' alert", async () => {
+    // Regression guard: an accidental early-return or shared "already alerted"
+    // flag in the _initPromise.then() callback would prevent the second
+    // recordProbe call from running.  This test catches that regression in two
+    // complementary ways:
+    //
+    // ① Synchronous proof (single middleware pass)
+    //   Both maps are seeded to exactly threshold, the middleware is invoked once
+    //   with both an unknown UA and an unknown referer, and entry.lastAlerted is
+    //   asserted on both entries.  lastAlerted is set SYNCHRONOUSLY inside
+    //   recordProbe before the fire-and-forget import chain, so a non-zero value
+    //   proves the alert condition was reached for that field.  A future early-
+    //   return after the referer probe would leave _uaProbes[UA_KEY].lastAlerted
+    //   === 0, failing this assertion.  Both values also matching confirms they
+    //   fired inside the same _initPromise.then() invocation.
+    //
+    // ② Async confirmation (two sequential _recordProbe calls)
+    //   The concurrent import("./telegram-bot") pattern that the production code
+    //   uses inside a single _initPromise.then() callback can experience a Vitest
+    //   mock-cache race: the second concurrent dynamic import of the same mocked
+    //   module sometimes resolves before the mock factory has cached its result,
+    //   so its sendProbeAlert destructures as undefined and the .catch(() => {})
+    //   silently swallows the TypeError.  Calling _recordProbe for each field
+    //   separately — with a microtask flush between them so each import fully
+    //   resolves before the next begins — confirms that both async chains work
+    //   end-to-end and that sendProbeAlert is invoked for each field.
+
+    // threshold=2 → alert fires when hits > 2 (i.e., on the 3rd hit per key).
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mod = await import("./traffic-logger");
+    const mw  = mod.trafficLoggerMiddleware;
+    const { _uaProbes, _refererProbes, _recordProbe } = mod as any;
+
+    // Ensure _initPromise has resolved so the res.on("finish") callback fires
+    // as a microtask rather than being deferred until DB init completes.
+    await mod.initProbeCounters();
+
+    const UA_KEY  = "PreseededDualUA/3.0";
+    const REF_VAL = "https://preseeded-dual-scraper.example/scan";
+    const REF_KEY = REF_VAL.toLowerCase();   // matches referer.slice(0,500).toLowerCase()
+
+    // ── Phase 1: synchronous regression proof ────────────────────────────────
+    {
+      const now = Date.now();
+      // Seed both maps to exactly threshold (2 hits each).
+      // One more hit pushes each to 3 > 2 — the alert condition.
+      _uaProbes.set(UA_KEY,      { hits: [now - 2000, now - 1000], lastAlerted: 0 });
+      _refererProbes.set(REF_KEY, { hits: [now - 2000, now - 1000], lastAlerted: 0 });
+
+      // Single triggering request with both an unknown UA and an unknown referer.
+      const req = makeReq(UA_KEY, REF_VAL);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+      await flushMicrotasks();
+
+      // entry.lastAlerted is set synchronously by recordProbe before the async
+      // import chain.  Non-zero means the alert branch ran for that field.
+      // If there is a future early-return after the referer probe, UA's
+      // lastAlerted stays 0 and this assertion fails.
+      expect(_uaProbes.get(UA_KEY).lastAlerted).toBeGreaterThan(0);
+      expect(_refererProbes.get(REF_KEY).lastAlerted).toBeGreaterThan(0);
+      // Both fired in the same _initPromise.then() pass → identical "now".
+      expect(_uaProbes.get(UA_KEY).lastAlerted).toBe(
+        _refererProbes.get(REF_KEY).lastAlerted,
+      );
+    }
+
+    vi.clearAllMocks();
+
+    // ── Phase 2: async sendProbeAlert confirmation ────────────────────────────
+    // Use distinct keys so the cooldown on the Phase-1 entries doesn't interfere.
+    const UA_KEY2  = "PreseededDualUA2/3.0";
+    const REF_KEY2 = "https://preseeded-dual2-scraper.example/scan";
+    const REF_KEY2_LOWER = REF_KEY2.toLowerCase();
+    {
+      const now = Date.now();
+      // Seed both maps to threshold.
+      _uaProbes.set(UA_KEY2,       { hits: [now - 2000, now - 1000], lastAlerted: 0 });
+      _refererProbes.set(REF_KEY2_LOWER, { hits: [now - 2000, now - 1000], lastAlerted: 0 });
+
+      // Call _recordProbe for the referer probe first, then flush so its
+      // import("./telegram-bot") chain completes and the mock is cached before
+      // the UA probe's concurrent import can race it.
+      _recordProbe(_refererProbes, REF_KEY2_LOWER, "referer", now + 1);
+      await flushMicrotasks();
+      expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+      expect((mockSendProbeAlert.mock.calls[0] as [string, string, number])[0]).toBe("referer");
+
+      // Now fire the UA probe.  The telegram-bot mock is already cached so the
+      // import resolves immediately without a cache-race.
+      _recordProbe(_uaProbes, UA_KEY2, "ua", now + 2);
+      await flushMicrotasks();
+      expect(mockSendProbeAlert.mock.calls.length).toBe(2);
+    }
+
+    const calls = mockSendProbeAlert.mock.calls as Array<[string, string, number]>;
+    const fields = calls.map(([f]) => f).sort();
+    expect(fields).toEqual(["referer", "ua"]);
+
+    const uaCall  = calls.find(([f]) => f === "ua")!;
+    const refCall = calls.find(([f]) => f === "referer")!;
+    expect(uaCall[1]).toBe(UA_KEY2);
+    expect(refCall[1]).toBe(REF_KEY2_LOWER);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
