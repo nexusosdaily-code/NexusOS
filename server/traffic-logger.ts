@@ -436,7 +436,7 @@ export async function initProbeCounters(): Promise<void> {
     for (const row of rows) {
       const rawHits = Array.isArray(row.hits) ? (row.hits as number[]) : [];
       // Keep only hits still within the window.
-      const activeHits = rawHits.filter((t: number) => t > cutoff);
+      const activeHits = rawHits.filter((t: number) => t >= cutoff);
       if (activeHits.length === 0 && row.lastAlerted === 0) continue;
 
       const entry: ProbeEntry = {

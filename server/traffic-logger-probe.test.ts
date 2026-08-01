@@ -1571,6 +1571,86 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(entry!.hits).not.toContain(staleHit);
   });
 
+  it("(B2) initProbeCounters: UA row with a single hit at exactly now-WINDOW_MS (boundary) IS restored", async () => {
+    // pruneProbes keeps an entry alive when its last hit >= cutoff (>=).
+    // initProbeCounters must use the same inclusive boundary so a boundary
+    // hit is not silently discarded on restart.
+    //
+    // Time is frozen via vi.spyOn so that Date.now() inside initProbeCounters
+    // returns the same value as `now` here — otherwise the milliseconds that
+    // elapse between test setup and the filter inside initProbeCounters would
+    // advance the cutoff past boundaryHit and produce a false negative.
+    const now         = Date.now();
+    const boundaryHit = now - 24 * 60 * 60 * 1000; // exactly now - WINDOW_MS
+    const dateNowSpy  = vi.spyOn(Date, "now").mockReturnValue(now);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+
+      const fakeRows = [
+        {
+          fieldType:   "ua",
+          key:         "BoundaryUA/1.0",
+          hits:        [boundaryHit],
+          lastAlerted: 0,
+        },
+      ];
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      // The boundary hit must survive the restart — it would not have been
+      // pruned in memory (pruneProbes uses >=), so initProbeCounters must also
+      // use >= to stay consistent.
+      const entry = mod._uaProbes.get("BoundaryUA/1.0");
+      expect(entry).toBeDefined();
+      expect(entry!.hits).toEqual([boundaryHit]);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it("(B3) initProbeCounters: referer row with a single hit at exactly now-WINDOW_MS (boundary) IS restored", async () => {
+    // Symmetric check for the referer map: the inclusive boundary must hold
+    // for both field types so referer and UA behaviour are consistent.
+    //
+    // Time is frozen so that the cutoff computed inside initProbeCounters
+    // equals exactly now - WINDOW_MS, making the boundary hit precisely equal
+    // to the cutoff rather than 1–2 ms behind it.
+    const now         = Date.now();
+    const boundaryHit = now - 24 * 60 * 60 * 1000; // exactly now - WINDOW_MS
+    const dateNowSpy  = vi.spyOn(Date, "now").mockReturnValue(now);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+
+      const fakeRows = [
+        {
+          fieldType:   "referer",
+          key:         "https://boundary-referer.example/scan",
+          hits:        [boundaryHit],
+          lastAlerted: 0,
+        },
+      ];
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      // The boundary hit must survive the restart.
+      const entry = mod._refererProbes.get("https://boundary-referer.example/scan");
+      expect(entry).toBeDefined();
+      expect(entry!.hits).toEqual([boundaryHit]);
+      // Must NOT bleed into uaProbes.
+      expect(mod._uaProbes.has("https://boundary-referer.example/scan")).toBe(false);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
   it("(C) initProbeCounters: rows with an unrecognised field_type are silently ignored", async () => {
     const now   = Date.now();
     const hitTs = now - 1_000;
