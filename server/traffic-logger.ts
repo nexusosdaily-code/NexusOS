@@ -696,6 +696,7 @@ function persistProbeEntry(
 // Prefixed with _ to signal "internal — do not import in production code".
 export { refererProbes as _refererProbes, uaProbes as _uaProbes };
 export { recordProbe as _recordProbe };
+export { pruneProbes as _pruneProbes };
 
 const DYNAMIC_BLOCK_TTL_MS = 5 * 60 * 1000; // refresh at most once per 5 min
 

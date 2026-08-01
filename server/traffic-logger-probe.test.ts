@@ -2174,3 +2174,109 @@ describe("cooldown boundary — suppression holds 1 ms before the window expires
     expect(mockSendProbeAlert).not.toHaveBeenCalled();
   });
 });
+
+// ── pruneProbes — direct unit tests ──────────────────────────────────────────
+//
+// These tests call _pruneProbes directly (bypassing the middleware) so that the
+// prune condition is exercised in isolation.  Three kinds of entry are seeded
+// into _refererProbes / _uaProbes before each call:
+//
+//   (a) active hits   — hits array contains a timestamp within the 24 h window
+//   (b) stale + warm  — hits array is empty, but lastAlerted is within the 1 h
+//                       cooldown → entry must SURVIVE (bug guard)
+//   (c) stale + cold  — hits array is empty AND lastAlerted is outside the 1 h
+//                       cooldown (or zero) → entry must be DELETED
+//
+describe("pruneProbes — entries with active cooldown survive; entries with no hits and expired cooldown are deleted", () => {
+  it("refererProbes: (a) active hits survive, (b) empty-hits+active-cooldown survives, (c) empty-hits+expired-cooldown is deleted", async () => {
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1"; // 1-hour cooldown
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    const now        = Date.now();
+    const WINDOW_MS  = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000;
+
+    // (a) active hits — most-recent hit is within the 24 h window
+    _refererProbes.set("https://active-hits.example/", {
+      hits:        [now - WINDOW_MS + 60_000], // 1 min before the cutoff
+      lastAlerted: 0,
+    });
+
+    // (b) empty hits + active cooldown — lastAlerted was 30 min ago
+    _refererProbes.set("https://stale-hits-warm-cooldown.example/", {
+      hits:        [],
+      lastAlerted: now - 30 * 60_000,
+    });
+
+    // (c) empty hits + expired cooldown — lastAlerted was 2 hours ago
+    _refererProbes.set("https://stale-hits-cold-cooldown.example/", {
+      hits:        [],
+      lastAlerted: now - 2 * COOLDOWN_MS,
+    });
+
+    _pruneProbes(now);
+
+    // (a) must survive
+    expect(_refererProbes.has("https://active-hits.example/")).toBe(true);
+    // (b) must survive — active cooldown guards it even with no recent hits
+    expect(_refererProbes.has("https://stale-hits-warm-cooldown.example/")).toBe(true);
+    // (c) must be deleted — neither active hits nor active cooldown
+    expect(_refererProbes.has("https://stale-hits-cold-cooldown.example/")).toBe(false);
+  });
+
+  it("uaProbes: (a) active hits survive, (b) empty-hits+active-cooldown survives, (c) empty-hits+expired-cooldown is deleted", async () => {
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    const now         = Date.now();
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000;
+
+    // (a) active hits
+    _uaProbes.set("ActiveHitsUA/1.0", {
+      hits:        [now - WINDOW_MS + 60_000],
+      lastAlerted: 0,
+    });
+
+    // (b) empty hits + active cooldown
+    _uaProbes.set("StaleHitsWarmCooldownUA/1.0", {
+      hits:        [],
+      lastAlerted: now - 30 * 60_000,
+    });
+
+    // (c) empty hits + expired cooldown
+    _uaProbes.set("StaleHitsColdCooldownUA/1.0", {
+      hits:        [],
+      lastAlerted: now - 2 * COOLDOWN_MS,
+    });
+
+    _pruneProbes(now);
+
+    expect(_uaProbes.has("ActiveHitsUA/1.0")).toBe(true);
+    expect(_uaProbes.has("StaleHitsWarmCooldownUA/1.0")).toBe(true);
+    expect(_uaProbes.has("StaleHitsColdCooldownUA/1.0")).toBe(false);
+  });
+
+  it("entry with lastAlerted === 0 and no hits is deleted (never alerted, nothing to protect)", async () => {
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const now = Date.now();
+
+    _refererProbes.set("https://never-alerted-stale-ref.example/", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+    _uaProbes.set("NeverAlertedStaleUA/1.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    _pruneProbes(now);
+
+    expect(_refererProbes.has("https://never-alerted-stale-ref.example/")).toBe(false);
+    expect(_uaProbes.has("NeverAlertedStaleUA/1.0")).toBe(false);
+  });
+});
