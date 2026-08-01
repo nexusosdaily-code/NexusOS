@@ -808,6 +808,98 @@ describe("constitutionally-blocked referer never increments the probe counter", 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Dynamic-block referer (Telegram-added) — must never increment the probe counter
+//
+// When a request carries a Referer header that matches an entry in the
+// dynamically-populated _dynamicSnapshot.referers set, the middleware returns
+// 403 *before* registering the res.on("finish") listener that drives
+// recordProbe(). Consequently, dynamically-blocked referers must never
+// accumulate hits and must never fire a sendProbeAlert call, even when the
+// request count far exceeds the configured threshold.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("dynamic-block referer never increments the probe counter", () => {
+  /**
+   * Helper: pre-populate the dynamic snapshot with a test referer, then send
+   * `count` requests carrying that referer (each with a unique UA so the UA
+   * probe never accumulates), and assert sendProbeAlert was never called.
+   */
+  async function assertDynamicBlockedRefererNeverAlerts(
+    referer: string,
+    threshold = 2,
+  ): Promise<void> {
+    process.env.PROBE_ALERT_THRESHOLD = String(threshold);
+    const mod = await import("./traffic-logger");
+    const mw = mod.trafficLoggerMiddleware;
+
+    // Pre-populate the dynamic snapshot so the referer is treated as blocked.
+    mod._testSetDynamicBlockSnapshot({
+      referers: new Set([referer.toLowerCase()]),
+      uas: new Set(),
+    });
+
+    // Send threshold+1 requests — enough to trigger an alert if the probe were
+    // recorded — and confirm sendProbeAlert is still called zero times.
+    const count = threshold + 1;
+    for (let i = 0; i < count; i++) {
+      const req = makeReq(`ObscureTestBrowser/99.0-dynhit${i}`, referer);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      // Trigger the finish event; for a blocked request no listener was
+      // registered, so this is a no-op — but calling it is correct and
+      // future-proofs the test against any listener-registration change.
+      res.finish();
+      await flushMicrotasks();
+    }
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(0);
+  }
+
+  it("exact-match dynamic referer: threshold+1 requests produce zero alerts", async () => {
+    await assertDynamicBlockedRefererNeverAlerts("https://scraper-test.example/");
+  });
+
+  it("dynamic referer with path suffix: threshold+1 requests produce zero alerts", async () => {
+    await assertDynamicBlockedRefererNeverAlerts("https://scraper-test.example/deep/path");
+  });
+
+  it("dynamic referer with a custom high threshold still produces zero alerts", async () => {
+    // Even with threshold=1 (alert on hit 2), a dynamically-blocked referer
+    // must never trigger an alert because probe recording is skipped entirely.
+    await assertDynamicBlockedRefererNeverAlerts("https://scraper-test.example/", 1);
+  });
+
+  it("multiple dynamic referers: each individually blocked and never alerts", async () => {
+    const threshold = 2;
+    process.env.PROBE_ALERT_THRESHOLD = String(threshold);
+    const mod = await import("./traffic-logger");
+    const mw = mod.trafficLoggerMiddleware;
+
+    const blocked1 = "https://first-scraper.example/";
+    const blocked2 = "https://second-scraper.example/";
+
+    // Pre-populate with two blocked referers.
+    mod._testSetDynamicBlockSnapshot({
+      referers: new Set([blocked1.toLowerCase(), blocked2.toLowerCase()]),
+      uas: new Set(),
+    });
+
+    const count = threshold + 1;
+    for (let i = 0; i < count; i++) {
+      for (const ref of [blocked1, blocked2]) {
+        const req = makeReq(`ObscureTestBrowser/99.0-multi${i}`, ref);
+        const res = makeRes();
+        mw(req, res as any, () => {});
+        res.finish();
+        await flushMicrotasks();
+      }
+    }
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(0);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Double-counting guard — uaProbes and refererProbes are fully independent
 //
 // A single request that carries BOTH an unknown UA and an unknown referer
