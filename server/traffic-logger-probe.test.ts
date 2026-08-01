@@ -4298,6 +4298,76 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
       expect(hitCount).toBe(4);
     }
   });
+
+  it("cutoff-formula symmetry: _refererProbes and _uaProbes evict the same timestamps across multiple offsets", async () => {
+    // This test catches a future change where one map's eviction loop uses a
+    // different cutoff formula (e.g. `now - WINDOW_MS * 2` or `now - WINDOW_MS + SOME_CONSTANT`)
+    // instead of `now - WINDOW_MS`.  Both maps receive an identical set of
+    // timestamps spanning both sides of the boundary at several offsets; after
+    // one _recordProbe call each the surviving hit arrays must be identical.
+    //
+    // If one branch used 2×WINDOW_MS as its cutoff, hits at (now − WINDOW_MS − 1)
+    // and (now − WINDOW_MS) would survive in that map but not the other, causing
+    // the assertion to fail.
+
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _refererProbes, _recordProbe } = mod as any;
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    // Advance `now` well past module-load time to avoid any cross-test state.
+    const recordNow = Date.now() + 200 * 60 * 60 * 1000;
+    const cutoff    = recordNow - WINDOW_MS;
+
+    // Five timestamps at distinct offsets around the boundary:
+    //   t1 — 1 ms before the cutoff (exactly stale)               → EVICTED
+    //   t2 — exactly at the cutoff  (borderline — <= evicts it)   → EVICTED
+    //   t3 — 1 ms after the cutoff  (barely in-window)            → KEPT
+    //   t4 — half a window ago      (well in-window)              → KEPT
+    //   t5 — 2 × WINDOW_MS ago      (way outside)                 → EVICTED
+    const t1 = cutoff - 1;
+    const t2 = cutoff;
+    const t3 = cutoff + 1;
+    const t4 = recordNow - Math.floor(WINDOW_MS / 2);
+    const t5 = recordNow - WINDOW_MS * 2;
+
+    const seedHits = [t5, t1, t2, t3, t4]; // unsorted intentionally; production code tolerates this
+
+    const uaKey      = "SymmetryTestUA/1.0";
+    const refererKey = "http://symmetry-test-referer.example/probe";
+
+    _uaProbes.set(uaKey,      { hits: [...seedHits], lastAlerted: 0 });
+    _refererProbes.set(refererKey, { hits: [...seedHits], lastAlerted: 0 });
+
+    _recordProbe(_uaProbes,      uaKey,      "ua",      recordNow);
+    _recordProbe(_refererProbes, refererKey, "referer", recordNow);
+
+    const uaEntry      = _uaProbes.get(uaKey)!;
+    const refererEntry = _refererProbes.get(refererKey)!;
+
+    // Both entries must survive (they each have in-window hits).
+    expect(uaEntry).toBeDefined();
+    expect(refererEntry).toBeDefined();
+
+    // The new hit `recordNow` was appended by each call.
+    expect(uaEntry.hits).toContain(recordNow);
+    expect(refererEntry.hits).toContain(recordNow);
+
+    // The stale timestamps (t1, t2, t5) must be absent from both maps.
+    for (const stale of [t1, t2, t5]) {
+      expect(uaEntry.hits).not.toContain(stale);
+      expect(refererEntry.hits).not.toContain(stale);
+    }
+
+    // The in-window timestamps (t3, t4) must be present in both maps.
+    for (const live of [t3, t4]) {
+      expect(uaEntry.hits).toContain(live);
+      expect(refererEntry.hits).toContain(live);
+    }
+
+    // The surviving hit sets must be identical between the two maps.
+    // Any divergence here means one branch used a different cutoff formula.
+    expect(uaEntry.hits).toEqual(refererEntry.hits);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
