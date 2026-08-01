@@ -880,6 +880,53 @@ describe("constitutionally-blocked referer always responds with HTTP 403", () =>
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// BLOCKED_REFERRER_RAW case-insensitive matching
+//
+// The /i flag on every BLOCKED_REFERRER_RAW pattern means mixed-case or
+// all-caps variants of a blocked referer string must be refused with the
+// same 403 / { error: "Access denied." } response as the lowercase form.
+// These tests verify the /i branch actually fires; without them a future
+// regex change that drops the flag would ship silently.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("BLOCKED_REFERRER_RAW /i flag — mixed-case variants still return 403", () => {
+  async function sendOneRequest(referer: string) {
+    const mw = await freshMiddleware();
+    const req = makeReq("ObscureTestBrowser/99.0", referer);
+    const res = makeRes();
+    mw(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+    return res;
+  }
+
+  it("all-caps 'GHOST-RIDER/recon': res.status(403) and res.json({ error: 'Access denied.' })", async () => {
+    const res = await sendOneRequest("GHOST-RIDER/recon");
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ error: "Access denied." });
+  });
+
+  it("title-case 'Ghost-Rider/1.0': res.status(403) and res.json({ error: 'Access denied.' })", async () => {
+    const res = await sendOneRequest("Ghost-Rider/1.0");
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ error: "Access denied." });
+  });
+
+  it("all-caps with space 'GHOST RIDER/1.0': res.status(403) and res.json({ error: 'Access denied.' })", async () => {
+    // The pattern is /ghost[\s-]?rider/i — both space and hyphen separators must match.
+    const res = await sendOneRequest("GHOST RIDER/1.0");
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ error: "Access denied." });
+  });
+
+  it("mixed-case with space 'Ghost Rider/probe': res.status(403) and res.json({ error: 'Access denied.' })", async () => {
+    const res = await sendOneRequest("Ghost Rider/probe");
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ error: "Access denied." });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Dynamic-block referer (Telegram-added) — must never increment the probe counter
 //
 // When a request carries a Referer header that matches an entry in the
