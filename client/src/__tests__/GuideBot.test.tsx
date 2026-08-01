@@ -50,13 +50,50 @@ function submitQuestion(question: string) {
 const CONCEPTUAL_Q = "What is your pricing methodology?";
 
 // ── PAGES-collision guard ─────────────────────────────────────────────────────
-// Fails loudly if a future keyword addition makes CONCEPTUAL_Q keyword-navigate
-// instead of taking the async /api/guide/ask path (which would silently break
-// every test in the "conceptual question" suite).
+// Fails loudly if a future keyword addition OR title-word addition makes
+// CONCEPTUAL_Q keyword-navigate instead of taking the async /api/guide/ask
+// path (which would silently break every test in the "conceptual question"
+// suite).
+//
+// HOW matchPage SCORES — two independent branches that can both trigger:
+//
+//   Branch A — keyword match (+N×10 per hit):
+//     If any string in page.keywords appears as a substring of the lowercased
+//     question, the page accumulates keyword-length × 10 points.  Any score > 0
+//     causes matchPage to return that page instead of null.
+//
+//   Branch B — title-word match (+5 per title word found in the question):
+//     Each whitespace-delimited word of page.title (lowercased) is checked as a
+//     substring of the question.  A match adds 5 points regardless of keyword
+//     hits.  This means a future page titled e.g. "Pricing Engine" would score
+//     +5 here because "pricing" appears in CONCEPTUAL_Q — silently stealing it
+//     from the async path.
+//
+// When this test fails, pick a new CONCEPTUAL_Q that contains no keyword
+// substring AND no title word from any PAGES entry.  Re-verify with:
+//   grep -oi '<word>' (against every PAGES[*].keywords and PAGES[*].title)
 
 describe("GuideBot — CONCEPTUAL_Q guard", () => {
   it("CONCEPTUAL_Q scores 0 against every PAGES entry (pick a new question if this fails)", () => {
-    expect(matchPage(CONCEPTUAL_Q)).toBeNull();
+    // Primary assertion: matchPage must return null (covers both scoring branches).
+    const matched = matchPage(CONCEPTUAL_Q);
+    if (matched !== null) {
+      // Diagnostic: identify exactly which page stole the question and why,
+      // so contributors can quickly pick a replacement CONCEPTUAL_Q.
+      const q = CONCEPTUAL_Q.toLowerCase();
+      const kwHits = matched.keywords.filter((kw) => q.includes(kw));
+      const titleWordHits = matched.title
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => q.includes(w));
+      console.error(
+        `[CONCEPTUAL_Q guard] matchPage returned "${matched.title}" (${matched.route})\n` +
+          `  Keyword hits   : ${kwHits.length > 0 ? kwHits.join(", ") : "none"}\n` +
+          `  Title-word hits: ${titleWordHits.length > 0 ? titleWordHits.join(", ") : "none"}\n` +
+          `  → Update CONCEPTUAL_Q so it shares no keyword or title word with any PAGES entry.`
+      );
+    }
+    expect(matched).toBeNull();
   });
 });
 
