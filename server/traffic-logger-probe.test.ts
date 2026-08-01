@@ -3863,4 +3863,58 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
     expect(field).toBe("ua");
     expect(hits).toBe(4); // reported count reflects the correctly-pruned window
   });
+
+  it("referer burst straddling cutoff: exactly 4 hits survive, field label is 'referer', alert fires at correct count", async () => {
+    // Scenario: 5 pre-existing referer hits, 2 at-or-before cutoff and 3
+    // strictly inside the window.  After recordProbe evicts and appends the
+    // new hit, exactly 4 hits must remain (3 in-window + 1 new).
+    // With threshold=3, a count of 4 exceeds the threshold → alert fires.
+    // A future change that inverts the eviction direction on only the referer
+    // map would either leave 6 hits (no eviction) or 2 hits (wrong direction)
+    // — both would fail these assertions.
+
+    process.env.PROBE_ALERT_THRESHOLD = "3";
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe } = mod as any;
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    // Far-future base avoids timestamp collisions with other tests.
+    const recordNow = Date.now() + 90 * 60 * 60 * 1000;
+    const cutoff    = recordNow - WINDOW_MS;
+
+    // Build 5 hits: 2 at-or-before the cutoff (evicted), 3 strictly inside (kept).
+    const hitAtCutoffMinus1 = cutoff - 1; // strictly before cutoff → evicted (≤ cutoff)
+    const hitAtCutoff       = cutoff;     // exactly on cutoff      → evicted (≤ cutoff)
+    const hitInWindow1      = cutoff + 1; // 1 ms inside            → kept
+    const hitInWindow2      = cutoff + 500; // 500 ms inside         → kept
+    const hitInWindow3      = cutoff + 1000; // 1 s inside           → kept
+
+    const key = "https://burst-referer.example/probe";
+    _refererProbes.set(key, {
+      hits:        [hitAtCutoffMinus1, hitAtCutoff, hitInWindow1, hitInWindow2, hitInWindow3],
+      lastAlerted: 0,
+    });
+
+    _recordProbe(_refererProbes, key, "referer", recordNow);
+
+    const entry = _refererProbes.get(key)!;
+
+    // Exactly 4 hits must survive: the 3 in-window ones plus the new hit.
+    expect(entry.hits).toHaveLength(4);
+    expect(entry.hits).toEqual([hitInWindow1, hitInWindow2, hitInWindow3, recordNow]);
+
+    // The two boundary/stale hits must have been evicted.
+    expect(entry.hits).not.toContain(hitAtCutoffMinus1);
+    expect(entry.hits).not.toContain(hitAtCutoff);
+
+    // Alert must fire: 4 hits > threshold of 3.
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    const [field, , hits] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(field).toBe("referer");
+    expect(hits).toBe(4); // reported count reflects the correctly-pruned window
+  });
 });
