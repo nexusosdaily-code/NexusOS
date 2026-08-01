@@ -104,8 +104,80 @@ function makeClient() {
 
 // Import after all mocks are hoisted so the component picks up the stubs.
 import { SealSection } from "./constitution";
+import { sealRefetchIntervalFn } from "@/lib/constitution-seal-query";
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
+
+describe("sealRefetchIntervalFn — unit", () => {
+  it("returns false when data is undefined (initial loading state — no polling yet)", () => {
+    const result = sealRefetchIntervalFn({ state: { data: undefined, error: null } });
+    expect(result).toBe(false);
+  });
+
+  it("returns a positive interval when data is null (seal pending — poll)", () => {
+    const result = sealRefetchIntervalFn({ state: { data: null, error: null } });
+    expect(typeof result === "number" && result > 0).toBe(true);
+  });
+
+  it("returns false when data is a seal object (seal loaded — stop polling)", () => {
+    const seal = { blockNumber: 1, psiChannel: "Ψ(52,20,H)", wavelengthNm: 542.5, hash: "a".repeat(64), timestamp: "2026-01-01T00:00:00.000Z", frequencyHz: 5.54e14, energyJoules: 3.67e-19, band: "SYSTEM", declaration: "test" };
+    const result = sealRefetchIntervalFn({ state: { data: seal, error: null } });
+    expect(result).toBe(false);
+  });
+
+  it("returns false when there is an error (stop polling)", () => {
+    const result = sealRefetchIntervalFn({ state: { data: null, error: new Error("503") } });
+    expect(result).toBe(false);
+  });
+});
+
+describe("SealSection — no polling during initial page load", () => {
+  let fetchSpy: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it(
+    "calls fetch exactly once and does not start a second request while the initial fetch is still in-flight",
+    async () => {
+      // fetch never resolves — simulates the initial loading state where
+      // data === undefined (React Query has not yet received any response).
+      // The refetchInterval callback must return false in this state so no
+      // second request is ever scheduled.
+      fetchSpy.mockImplementation(() => new Promise(() => { /* never resolves */ }));
+
+      const client = makeClient();
+
+      render(
+        <QueryClientProvider client={client}>
+          <SealSection />
+        </QueryClientProvider>,
+      );
+
+      // Component should show the loading spinner while the fetch is pending.
+      await waitFor(() => {
+        expect(screen.queryByText(/fetching seal from chain/i)).toBeTruthy();
+      });
+
+      // Exactly one fetch has been initiated (the initial query).
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      // Wait well beyond two poll cycles (the mock clamps real intervals to
+      // 50 ms so this is > 4 × 50 ms) and confirm no second request fired.
+      await new Promise(resolve => setTimeout(resolve, 250));
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    },
+    10_000,
+  );
+});
 
 describe("SealSection — refetchInterval stops after data arrives", () => {
   let fetchSpy: ReturnType<typeof vi.fn>;
