@@ -20,6 +20,23 @@
 
 import crypto from "crypto";
 
+// ── Transient DB error classifier ─────────────────────────────────────────────
+// Exported so server/index.ts can use it inside sealConstitutionWithRetry and
+// so tests can pin the full set of recognised cold-start strings.
+export function isTransientDbError(msg: string): boolean {
+  return (
+    msg.includes("ENOTFOUND") ||
+    msg.includes("ETIMEDOUT") ||
+    msg.includes("Connection terminated") ||
+    msg.includes("connection timeout") ||
+    msg.includes("connect ECONNREFUSED") ||
+    msg.includes("timeout exceeded") ||
+    msg.includes("Authentication timed out") ||
+    msg.includes("read ECONNRESET") ||
+    msg.includes("terminating connection due to administrator command")
+  );
+}
+
 // ── Advisory lock constants — must be unique across all boot locks ────────────
 // 0x636F6E73 = "cons" in hex — mnemonic for "constitution" (used by sealConstitution)
 const ADVISORY_LOCK_KEY = 0x636F6E73;

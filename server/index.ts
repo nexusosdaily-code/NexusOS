@@ -8,7 +8,7 @@ import { createServer } from "http";
 import { spawn, execSync, ChildProcess } from "child_process";
 import { seedGenesisBlock } from "./genesis";
 import { seedGenesisUser, seedReplitAIAccount, seedBlockedEntities } from "./genesis_user";
-import { sealConstitution } from "./constitution_seal";
+import { sealConstitution, isTransientDbError } from "./constitution_seal";
 import { bootState, handleSealError } from "./seal-boot-guard";
 import { startBlockchainAuditor } from "./blockchain_auditor";
 import { seedGenesisNode } from "./genesis_node";
@@ -804,17 +804,7 @@ async function runStartupMigrations() {
           return await sealConstitution();
         } catch (err: any) {
           const msg: string = err?.message ?? String(err);
-          const isTransient =
-            msg.includes("ENOTFOUND") ||
-            msg.includes("ETIMEDOUT") ||
-            msg.includes("Connection terminated") ||
-            msg.includes("connection timeout") ||
-            msg.includes("connect ECONNREFUSED") ||
-            msg.includes("timeout exceeded") ||
-            msg.includes("Authentication timed out") ||
-            msg.includes("read ECONNRESET") ||
-            msg.includes("terminating connection due to administrator command");
-          if (!isTransient || attempt === maxAttempts) throw err;
+          if (!isTransientDbError(msg) || attempt === maxAttempts) throw err;
           console.warn(
             `[CONSTITUTION] Seal attempt ${attempt}/${maxAttempts} failed (transient): ${msg.slice(0, 120)} — retrying in ${retryDelayMs / 1000}s`,
           );
