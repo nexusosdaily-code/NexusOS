@@ -51,9 +51,13 @@ vi.mock("./db", () => ({
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockResolvedValue(undefined),
     }),
+    execute: vi.fn().mockResolvedValue([]),
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue([]),
+    }),
   },
 }));
-vi.mock("../shared/schema", () => ({ trafficLogs: {} }));
+vi.mock("../shared/schema", () => ({ trafficLogs: {}, probeCounters: {} }));
 vi.mock("./honeypot",       () => ({ isHoneypotPath: vi.fn().mockReturnValue(false) }));
 vi.mock("./geoip-enricher", () => ({
   ipCountryCache: { get: vi.fn().mockReturnValue(undefined) },
@@ -1126,5 +1130,172 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(calls.some(([field]) => field === "ua")).toBe(true);
     // No referer alert must have fired.
     expect(calls.some(([field]) => field === "referer")).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DB field_type separation
+//
+// persistProbeEntry must write rows tagged with the correct field_type
+// column ("referer" or "ua").  initProbeCounters must read those rows back
+// into the correct in-memory map on restart so that referer and UA counts
+// are never merged.
+//
+// Scenarios
+// ─────────
+//  A. A referer hit persists with field_type="referer", a UA hit with
+//     field_type="ua" — verified by inspecting the SQL params passed to
+//     db.execute.
+//  B. initProbeCounters re-populates refererProbes only from "referer" rows
+//     and uaProbes only from "ua" rows (simulated restart).
+//  C. Rows with an unrecognised field_type value are silently ignored and
+//     neither map is touched.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("DB field_type separation — persistProbeEntry and initProbeCounters", () => {
+  /**
+   * Extract positional parameter values from a drizzle-orm SQL template
+   * object.  Inside a drizzle SQL object, `queryChunks` alternates between
+   * StringChunk nodes (plain objects: `{ value: string[] }`) and Param nodes
+   * (the raw interpolated scalar — a string, number, bigint, etc.).
+   * We identify Param nodes by the fact that they are NOT plain objects.
+   */
+  function extractSqlParams(sqlObj: unknown): unknown[] {
+    const chunks = (sqlObj as any)?.queryChunks ?? [];
+    // StringChunk nodes are plain objects; Param nodes are scalar primitives.
+    return chunks.filter((c: unknown) => typeof c !== "object" || c === null);
+  }
+
+  it("(A) persistProbeEntry tags the referer row with field_type='referer' and the UA row with field_type='ua'", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+
+    // Import a fresh middleware instance; getDb() is called during module
+    // initialisation so ./db is already in the module cache by the time we
+    // import it below.
+    const mw = await freshMiddleware();
+
+    // Grab the same mocked db object the module under test holds internally
+    // (module cache hit) and replace execute with a spy we can inspect.
+    const { db } = await import("./db");
+    const mockExecute = vi.fn().mockResolvedValue([]);
+    (db as any).execute = mockExecute;
+
+    // ── Referer-only hit (Googlebot UA → patternBot=true → UA probe skipped)
+    const BOT_UA   = "Googlebot/2.1 (+http://www.google.com/bot.html)";
+    const EXT_REF  = "https://field-type-test-scraper.example/";
+    {
+      const req = makeReq(BOT_UA, EXT_REF);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+    }
+
+    // ── UA-only hit (no referer → referer probe skipped)
+    const UNKNOWN_UA = "FieldTypeTestBrowser/1.0";
+    {
+      const req = makeReq(UNKNOWN_UA); // no referer
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+    }
+
+    // Collect INSERT INTO probe_counters calls — identified by their first
+    // positional parameter being "referer" or "ua".
+    const insertCalls = mockExecute.mock.calls
+      .map(([sqlObj]: [unknown]) => extractSqlParams(sqlObj))
+      .filter((params) => params[0] === "referer" || params[0] === "ua");
+
+    const refererInserts = insertCalls.filter((p) => p[0] === "referer");
+    const uaInserts      = insertCalls.filter((p) => p[0] === "ua");
+
+    // Both probes must have produced at least one INSERT.
+    expect(refererInserts.length).toBeGreaterThanOrEqual(1);
+    expect(uaInserts.length).toBeGreaterThanOrEqual(1);
+
+    // The second positional param is the key.
+    // Referer key is lowercased; UA key preserves original case.
+    expect(refererInserts[0][1]).toBe(EXT_REF.toLowerCase());
+    expect(uaInserts[0][1]).toBe(UNKNOWN_UA);
+  });
+
+  it("(B) initProbeCounters: field_type='referer' rows go into refererProbes, field_type='ua' rows into uaProbes — maps never bleed into each other", async () => {
+    const now    = Date.now();
+    const hitTs  = now - 1_000; // 1 second ago — within the 24-hour window
+
+    // Import the module (triggers module-level initProbeCounters which
+    // populates _db via getDb()).
+    const mod        = await import("./traffic-logger");
+    const { db }     = await import("./db");
+
+    // Override select so initProbeCounters reads our synthetic rows.
+    const fakeRows = [
+      { fieldType: "referer", key: "https://restart-test-scraper.example/", hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "ua",      key: "RestartTestUA/1.0",                     hits: [hitTs], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    // Simulate a restart by re-running initProbeCounters.
+    await mod.initProbeCounters();
+
+    // The referer key must be in refererProbes …
+    expect(mod._refererProbes.has("https://restart-test-scraper.example/")).toBe(true);
+    // … but NOT in uaProbes.
+    expect(mod._uaProbes.has("https://restart-test-scraper.example/")).toBe(false);
+
+    // The UA key must be in uaProbes …
+    expect(mod._uaProbes.has("RestartTestUA/1.0")).toBe(true);
+    // … but NOT in refererProbes.
+    expect(mod._refererProbes.has("RestartTestUA/1.0")).toBe(false);
+  });
+
+  it("(B) initProbeCounters: the restored hits array reflects only timestamps within the 24-hour window", async () => {
+    const now       = Date.now();
+    const recentHit = now - 1_000;           // inside window
+    const staleHit  = now - 25 * 3600_000;  // 25 hours ago — outside window
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      {
+        fieldType:   "ua",
+        key:         "StaleHitUA/1.0",
+        hits:        [staleHit, recentHit],
+        lastAlerted: 0,
+      },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const entry = mod._uaProbes.get("StaleHitUA/1.0");
+    expect(entry).toBeDefined();
+    // Only the recent hit should survive; the stale one is pruned.
+    expect(entry!.hits).toEqual([recentHit]);
+    expect(entry!.hits).not.toContain(staleHit);
+  });
+
+  it("(C) initProbeCounters: rows with an unrecognised field_type are silently ignored", async () => {
+    const now   = Date.now();
+    const hitTs = now - 1_000;
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      { fieldType: "unknown", key: "SomeKeyForUnknownType", hits: [hitTs], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    // Neither map should contain a key from an unknown field_type.
+    expect(mod._refererProbes.has("SomeKeyForUnknownType")).toBe(false);
+    expect(mod._uaProbes.has("SomeKeyForUnknownType")).toBe(false);
   });
 });
