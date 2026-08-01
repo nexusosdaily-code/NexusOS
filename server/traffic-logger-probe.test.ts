@@ -1947,6 +1947,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
  * second alert; this test would catch that regression.
  */
 describe("referer probe — mid-session cooldown suppression (no restart)", () => {
+
   // Googlebot is treated as a known bot so its UA does not trigger a UA-probe
   // alert; only the referer probe fires, keeping the assertion unambiguous.
   const BOT_UA      = "Googlebot/2.1 (+http://www.google.com/bot.html)";
@@ -1985,6 +1986,60 @@ describe("referer probe — mid-session cooldown suppression (no restart)", () =
     // Drive 10 more hits — still within the 1-hour cooldown window.
     // The lastAlerted guard must suppress every one of them.
     await hitRefererTimes(mw, 10);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UA probe — mid-session cooldown suppression (no restart)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Symmetric counterpart to the referer mid-session cooldown test above.
+ * Covers the lastAlerted guard in the UA branch of recordProbe().  If that
+ * guard were removed, additional hits inside the cooldown window would fire a
+ * second alert; this test would catch that regression.
+ *
+ * Requests carry no referer so only the UA probe fires, keeping the
+ * assertion unambiguous.
+ */
+describe("UA probe — mid-session cooldown suppression (no restart)", () => {
+  // An obscure UA that matches no known-bot pattern so the UA probe fires.
+  const UNKNOWN_UA = "MidSessionTestCrawler/3.7";
+
+  /**
+   * Drive the middleware N times using the unknown UA and no referer,
+   * flushing the microtask queue after each hit so async callbacks complete.
+   */
+  async function hitUATimes(
+    middleware: Middleware,
+    n: number,
+  ): Promise<void> {
+    for (let i = 0; i < n; i++) {
+      const req = makeReq(UNKNOWN_UA); // no referer argument → ""
+      const res = makeRes();
+      middleware(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+    }
+  }
+
+  it("alert fires once at threshold+1 then is suppressed for 10 more hits inside the cooldown window", async () => {
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const mw = await freshMiddleware();
+
+    // Drive threshold+1 (= 3) hits — the UA alert must fire exactly once.
+    await hitUATimes(mw, 3);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+
+    const firstCall = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(firstCall[0]).toBe("ua");
+    expect(firstCall[1]).toBe(UNKNOWN_UA);
+
+    // Drive 10 more hits — still within the 1-hour cooldown window.
+    // The lastAlerted guard in the UA branch must suppress every one of them.
+    await hitUATimes(mw, 10);
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
   });
 });
