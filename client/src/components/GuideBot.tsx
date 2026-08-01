@@ -106,6 +106,9 @@ const SUGGESTIONS = [
   "Show me protocol compliance",
   "How do I sign a contract with my wavelength?",
   "What is WavelengthScript?",
+  // This entry intentionally matches NO PAGES keyword — it always takes the async /api/guide/ask path.
+  // Keep it keyword-free so the async chip branch stays tested. See GuideBot.test.tsx CONCEPTUAL_Q guard.
+  "What is your pricing methodology?",
 ];
 
 const STORAGE_KEY = "nexusos-guidebot-history";

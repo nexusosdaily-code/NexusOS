@@ -534,3 +534,80 @@ describe("GuideBot — suggestion chip click navigates and closes the panel", ()
     expect(screen.queryByTestId("input-guide-bot")).not.toBeInTheDocument();
   });
 });
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 6. Suggestion chip with NO keyword match → async /api/guide/ask path
+// ═════════════════════════════════════════════════════════════════════════════
+//
+// "What is your pricing methodology?" is the SUGGESTIONS entry that scores 0
+// against every PAGES entry (confirmed by the CONCEPTUAL_Q guard above).
+// Clicking its chip must take the async /api/guide/ask path and render the
+// AI answer — NOT navigate immediately like keyword-matched chips do.
+//
+// Rendered chip label: regex strips "What is " → "your pricing methodology?"
+
+describe("GuideBot — suggestion chip with no keyword match takes the async AI path", () => {
+  // No fake timers: this branch relies on real async/await (fetch), not setTimeout.
+
+  it("the async chip is present in the suggestion row after opening the panel", () => {
+    renderGuideBot();
+    openPanel();
+
+    expect(screen.getByText("your pricing methodology?")).toBeInTheDocument();
+  });
+
+  it("clicking the async chip does NOT call navigate immediately", () => {
+    vi.mocked(fetch).mockReturnValue(new Promise(() => {})); // never resolves
+
+    renderGuideBot();
+    openPanel();
+
+    const chip = screen.getByText("your pricing methodology?");
+    fireEvent.click(chip);
+
+    // Navigate must NOT be called — this chip takes the async path
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("clicking the async chip fires POST /api/guide/ask", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ answer: "Pricing is physics-derived.", route: null }),
+    } as unknown as Response);
+
+    renderGuideBot();
+    openPanel();
+
+    fireEvent.click(screen.getByText("your pricing methodology?"));
+
+    await waitFor(() => {
+      expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+        "/api/guide/ask",
+        expect.objectContaining({
+          method: "POST",
+          body: expect.stringContaining("pricing methodology"),
+        }),
+      );
+    });
+  });
+
+  it("clicking the async chip renders the AI answer in the chat", async () => {
+    const ANSWER = "Pricing is determined by the physics fee formula — Λ=hf/c².";
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ answer: ANSWER, route: null }),
+    } as unknown as Response);
+
+    renderGuideBot();
+    openPanel();
+
+    fireEvent.click(screen.getByText("your pricing methodology?"));
+
+    await waitFor(() => {
+      expect(screen.getByText(ANSWER)).toBeInTheDocument();
+    });
+  });
+});
