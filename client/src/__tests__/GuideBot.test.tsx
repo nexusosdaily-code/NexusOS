@@ -206,6 +206,28 @@ describe("GuideBot — conceptual question (no keyword match)", () => {
     });
   });
 
+  it("does NOT render a 'go deeper' chip when the API returns route: null", async () => {
+    const ANSWER = "The compression field has no dedicated page yet.";
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ answer: ANSWER, route: null }),
+    } as unknown as Response);
+
+    renderGuideBot();
+    openPanel();
+    submitQuestion(CONCEPTUAL_Q);
+
+    // Wait for the answer to be rendered
+    await waitFor(() => {
+      expect(screen.getByText(ANSWER)).toBeInTheDocument();
+    });
+
+    // No ↗ chip should be present anywhere in the document
+    expect(screen.queryByText(/↗/)).not.toBeInTheDocument();
+  });
+
   it("clicking the 'go deeper' chip calls navigate with the correct route", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
