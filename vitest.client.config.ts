@@ -1,17 +1,11 @@
+/**
+ * Standalone client test config — used by `npm run test:client`.
+ *
+ * The client project definition is imported from vitest.shared.ts so it
+ * stays in sync with the projects[client] entry in vitest.config.ts.
+ * To change environment, include patterns, or setupFiles, edit vitest.shared.ts.
+ */
 import { defineConfig } from "vitest/config";
-import path from "path";
+import { clientProjectConfig } from "./vitest.shared";
 
-export default defineConfig({
-  resolve: {
-    alias: {
-      "@shared": path.resolve(__dirname, "shared"),
-      "@": path.resolve(__dirname, "client", "src"),
-    },
-  },
-  test: {
-    environment: "happy-dom",
-    include: ["client/**/*.test.tsx", "client/**/*.test.ts"],
-    globals: true,
-    setupFiles: ["client/src/test-setup.ts"],
-  },
-});
+export default defineConfig(clientProjectConfig);

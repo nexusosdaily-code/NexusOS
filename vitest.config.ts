@@ -1,11 +1,6 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import path from "path";
-
-const alias = {
-  "@shared": path.resolve(__dirname, "shared"),
-  "@":       path.resolve(__dirname, "client", "src"),
-};
+import { alias, clientProjectConfig } from "./vitest.shared";
 
 export default defineConfig({
   plugins: [react()],
@@ -34,20 +29,8 @@ export default defineConfig({
       // ── client (browser-like) ────────────────────────────────────────────
       // Any new *.test.ts / *.test.tsx file added under client/ automatically
       // runs in happy-dom; no inline `@vitest-environment` directive needed.
-      {
-        plugins: [react()],
-        resolve: { alias },
-        test: {
-          name: "client",
-          globals: true,
-          environment: "happy-dom",
-          include: [
-            "client/**/*.test.tsx",
-            "client/**/*.test.ts",
-          ],
-          setupFiles: ["client/src/__tests__/setup.ts"],
-        },
-      },
+      // Definition lives in vitest.shared.ts — shared with vitest.client.config.ts.
+      clientProjectConfig,
     ],
   },
 });
