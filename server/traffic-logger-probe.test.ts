@@ -2099,6 +2099,33 @@ describe("UA probe — mid-session cooldown suppression (no restart)", () => {
     await hitUATimes(mw, 10);
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
   });
+
+  it("second alert fires exactly once after the cooldown expires", async () => {
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const mw = await freshMiddleware();
+
+    // Drive threshold+1 (= 3) hits — the first alert must fire exactly once.
+    await hitUATimes(mw, 3);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+
+    // Simulate the cooldown expiring by back-dating lastAlerted on the
+    // in-memory entry.  COOLDOWN_MS = 1 h = 3_600_000 ms; subtracting
+    // 3_600_001 ms places it just past the boundary so the guard lifts.
+    const mod   = await import("./traffic-logger");
+    const entry = mod._uaProbes.get(UNKNOWN_UA);
+    expect(entry).toBeDefined();
+    entry!.lastAlerted = Date.now() - 3_600_001;
+
+    // Drive threshold+1 more hits — the cooldown has expired so the guard
+    // must allow exactly one new alert.
+    await hitUATimes(mw, 3);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(2);
+
+    const secondCall = mockSendProbeAlert.mock.calls[1] as [string, string, number];
+    expect(secondCall[0]).toBe("ua");
+    expect(secondCall[1]).toBe(UNKNOWN_UA);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2106,36 +2133,39 @@ describe("UA probe — mid-session cooldown suppression (no restart)", () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * These tests seed lastAlerted = now - (COOLDOWN_MS - 1) directly into the
- * exported probe maps, then drive one more hit above the threshold.
+ * These tests seed lastAlerted = now - (COOLDOWN_MS - 30_000) directly into
+ * the exported probe maps, then drive one more hit above the threshold.
  *
  * The guard in recordProbe() is:
  *   now - entry.lastAlerted >= COOLDOWN_MS
  *
- * With lastAlerted just 1 ms inside the window the condition evaluates to
- * false and no alert should fire.  If the guard were accidentally changed
- * from >= to > this edge case would silently break; these tests catch that.
+ * With lastAlerted 30 seconds inside the window the condition evaluates to
+ * false and no alert should fire.  The 30-second margin is large enough that
+ * real test-execution time cannot cross the boundary, making the tests
+ * deterministic across slow environments.
  */
-describe("cooldown boundary — suppression holds 1 ms before the window expires", () => {
+describe("cooldown boundary — suppression holds when lastAlerted is well inside the window", () => {
   /**
    * COOLDOWN_MS = PROBE_ALERT_COOLDOWN_HOURS * 3_600_000.
    * With PROBE_ALERT_COOLDOWN_HOURS = "1", COOLDOWN_MS = 3_600_000 ms.
+   * MARGIN = 30 s — safely inside the window regardless of execution speed.
    */
   const COOLDOWN_MS = 3_600_000; // mirrors the module IIFE for PROBE_ALERT_COOLDOWN_HOURS = "1"
+  const MARGIN_MS   = 30_000;    // 30 s inside the boundary — prevents timing drift failures
 
-  it("UA probe: lastAlerted set to COOLDOWN_MS − 1 ms ago suppresses the next alert", async () => {
+  it("UA probe: lastAlerted 30 s before cooldown expires suppresses the next alert", async () => {
     process.env.PROBE_ALERT_THRESHOLD      = "2";
     process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
     const mod = await import("./traffic-logger");
     const mw  = mod.trafficLoggerMiddleware;
 
     // Pre-seed the UA probe map: two hits already at threshold, lastAlerted
-    // set to exactly 1 ms before the cooldown would expire.
+    // set to 30 s before the cooldown would expire (still well within the window).
     const now = Date.now();
     const key = "BoundaryScraper/1.0";
     mod._uaProbes.set(key, {
       hits:        [now - 1000, now - 500], // two hits — at the threshold (threshold=2)
-      lastAlerted: now - (COOLDOWN_MS - 1), // 1 ms before cooldown expires → still active
+      lastAlerted: now - (COOLDOWN_MS - MARGIN_MS), // 30 s before cooldown expires → still active
     });
 
     // One more hit pushes hit count above the threshold.
@@ -2149,7 +2179,7 @@ describe("cooldown boundary — suppression holds 1 ms before the window expires
     expect(mockSendProbeAlert).not.toHaveBeenCalled();
   });
 
-  it("referer probe: lastAlerted set to COOLDOWN_MS − 1 ms ago suppresses the next alert", async () => {
+  it("referer probe: lastAlerted 30 s before cooldown expires suppresses the next alert", async () => {
     process.env.PROBE_ALERT_THRESHOLD      = "2";
     process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
     const mod = await import("./traffic-logger");
@@ -2160,7 +2190,7 @@ describe("cooldown boundary — suppression holds 1 ms before the window expires
     const key = "https://boundary-scraper.example/scan";
     mod._refererProbes.set(key, {
       hits:        [now - 1000, now - 500],
-      lastAlerted: now - (COOLDOWN_MS - 1),
+      lastAlerted: now - (COOLDOWN_MS - MARGIN_MS), // 30 s before cooldown expires → still active
     });
 
     // Use a unique UA per hit so the UA probe never accumulates above the
