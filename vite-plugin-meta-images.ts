@@ -9,6 +9,9 @@ import path from 'path';
 export function metaImagesPlugin(): Plugin {
   return {
     name: 'vite-plugin-meta-images',
+    // Must run after other plugins that may also transform index.html
+    // so that og:image / twitter:image are the final values in the page.
+    enforce: 'post',
     transformIndexHtml(html) {
       const baseUrl = getDeploymentUrl();
       if (!baseUrl) {

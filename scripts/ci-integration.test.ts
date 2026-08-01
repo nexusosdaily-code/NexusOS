@@ -258,6 +258,40 @@ describe("vite.config.ts critical-chunk preload plugin guard", () => {
   });
 });
 
+// ─── metaImagesPlugin enforce guard ──────────────────────────────────────────
+
+const META_IMAGES_PLUGIN = path.resolve("vite-plugin-meta-images.ts");
+
+describe("vite-plugin-meta-images.ts metaImagesPlugin enforce guard", () => {
+  let src: string;
+
+  async function getMetaImagesSrc(): Promise<string> {
+    if (!src) {
+      src = await readFile(META_IMAGES_PLUGIN, "utf-8");
+    }
+    return src;
+  }
+
+  it("defines a metaImagesPlugin factory function", async () => {
+    const content = await getMetaImagesSrc();
+    expect(content).toMatch(/function\s+metaImagesPlugin\s*\(/);
+  });
+
+  it("metaImagesPlugin declares enforce: 'post' so it runs after all other plugins", async () => {
+    const content = await getMetaImagesSrc();
+    const pluginBody = extractNamedFunctionBody(content, "metaImagesPlugin");
+    expect(
+      pluginBody,
+      "metaImagesPlugin function body not found in vite-plugin-meta-images.ts",
+    ).not.toBeNull();
+    // enforce:'post' (or enforce:"post") must be present inside the factory so
+    // the plugin's transformIndexHtml hook always runs after other plugins that
+    // may also rewrite index.html, ensuring og:image / twitter:image are final.
+    // Removing it allows another plugin to overwrite the injected URLs.
+    expect(pluginBody!).toMatch(/enforce\s*:\s*["']post["']/);
+  });
+});
+
 // ─── CRITICAL_CHUNKS membership guard ────────────────────────────────────────
 
 import { CRITICAL_CHUNKS } from "./critical-chunks";
