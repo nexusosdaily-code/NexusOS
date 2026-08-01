@@ -3809,4 +3809,58 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
     // Both the pre-existing in-window hit AND the new hit must be present.
     expect(entry.hits).toEqual([cutoff + 1, recordNow]);
   });
+
+  it("burst of hits straddling the cutoff: exactly the in-window hits + new hit survive, alert fires at correct count", async () => {
+    // Scenario: 5 pre-existing hits, 2 at-or-before cutoff and 3 strictly
+    // inside the window.  After recordProbe runs the eviction loop and appends
+    // the new hit, exactly 4 hits must remain (3 in-window + 1 new).
+    // With threshold=3, a count of 4 exceeds the threshold → alert fires.
+
+    // Set the threshold before importing so the IIFE picks it up.
+    process.env.PROBE_ALERT_THRESHOLD = "3";
+
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    // Use a far-future base to avoid timestamp collisions with earlier tests.
+    const recordNow = Date.now() + 80 * 60 * 60 * 1000;
+    const cutoff    = recordNow - WINDOW_MS;
+
+    // Build 5 hits: 2 at-or-before the cutoff (will be evicted), 3 strictly
+    // inside the window (will survive).
+    const hitAtCutoffMinus1 = cutoff - 1; // strictly before cutoff → evicted
+    const hitAtCutoff       = cutoff;     // exactly on cutoff    → evicted (<=)
+    const hitInWindow1      = cutoff + 1; // 1 ms inside          → kept
+    const hitInWindow2      = cutoff + 500; // 500 ms inside       → kept
+    const hitInWindow3      = cutoff + 1000; // 1 s inside         → kept
+
+    const key = "BurstBoundaryUA/1.0";
+    _uaProbes.set(key, {
+      hits:        [hitAtCutoffMinus1, hitAtCutoff, hitInWindow1, hitInWindow2, hitInWindow3],
+      lastAlerted: 0,
+    });
+
+    _recordProbe(_uaProbes, key, "ua", recordNow);
+
+    const entry = _uaProbes.get(key)!;
+
+    // Exactly 4 hits must survive: the 3 in-window ones plus the new hit.
+    expect(entry.hits).toHaveLength(4);
+    expect(entry.hits).toEqual([hitInWindow1, hitInWindow2, hitInWindow3, recordNow]);
+
+    // The two boundary/stale hits must have been evicted.
+    expect(entry.hits).not.toContain(hitAtCutoffMinus1);
+    expect(entry.hits).not.toContain(hitAtCutoff);
+
+    // Alert must fire: 4 hits > threshold of 3.
+    // The dynamic import inside recordProbe is fire-and-forget; flush the queue.
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    const [field, , hits] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(field).toBe("ua");
+    expect(hits).toBe(4); // reported count reflects the correctly-pruned window
+  });
 });
