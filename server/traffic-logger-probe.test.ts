@@ -2523,4 +2523,56 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
     expect(_refererProbes.has("https://boundary-minus1-ref.example/")).toBe(true);
     expect(_uaProbes.has("BoundaryMinus1UA/1.0")).toBe(true);
   });
+
+  it("UA-only: a skipped call must not reset lastPrune — stale uaProbes entries are deleted on the third call", async () => {
+    // Regression guard targeting uaProbes in isolation.
+    //
+    // If pruneProbes were ever split into separate referer / UA pruners each
+    // with their own lastPrune-style variable, a bug could be introduced for
+    // one map independently.  This test seeds ONLY uaProbes entries so that
+    // failure is unambiguous: any surviving entry after the third call means
+    // the UA pruner's interval counter was reset by the skipped call.
+    //
+    // Sequence:
+    //   T0           — first prune runs, lastPrune (UA) set to T0
+    //   T0 + 30 min  — guard fires (too soon), returns early
+    //                   BUGGY CODE would set lastPrune = T0 + 30 min here
+    //   T0 + 1h + 1ms — correct: now − T0 = 1h+1ms ≥ 1h → prune runs
+    //                    buggy:   now − (T0+30min) = 30min < 1h → guard fires again
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    // Place T0 far enough in the future to avoid lastPrune collisions with
+    // earlier tests in this file.
+    const T0 = Date.now() + 6 * 60 * 60 * 1000; // 6 h into the future
+
+    // ── T0: first prune runs, advances lastPrune to T0 ───────────────────────
+    _pruneProbes(T0);
+
+    // ── Seed stale UA-only entries (no hits, expired cooldown) ───────────────
+    _uaProbes.set("UaOnlyPruneRegressionA/1.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+    _uaProbes.set("UaOnlyPruneRegressionB/2.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── T0 + 30 min: guard should fire, return early WITHOUT updating lastPrune
+    _pruneProbes(T0 + 30 * 60 * 1000);
+
+    // Entries must still be present — the guard blocked deletion.
+    expect(_uaProbes.has("UaOnlyPruneRegressionA/1.0")).toBe(true);
+    expect(_uaProbes.has("UaOnlyPruneRegressionB/2.0")).toBe(true);
+
+    // ── T0 + 1h + 1ms: exactly one hour after T0 — prune MUST run ────────────
+    // If lastPrune was incorrectly advanced at T0 + 30 min, the guard would
+    // still fire here (only 30 min elapsed since the bad update) and the stale
+    // UA entries would survive — that is the bug this test catches.
+    _pruneProbes(T0 + 60 * 60 * 1000 + 1);
+
+    expect(_uaProbes.has("UaOnlyPruneRegressionA/1.0")).toBe(false);
+    expect(_uaProbes.has("UaOnlyPruneRegressionB/2.0")).toBe(false);
+  });
 });
