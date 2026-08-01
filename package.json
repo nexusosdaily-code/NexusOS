@@ -22,7 +22,8 @@
     "check:types": "tsc --noEmit",
     "check:unwired-handlers": "tsx scripts/check-unwired-handlers.ts",
     "check:unimported-handlers": "tsx scripts/check-unimported-handlers.ts",
-    "test:all": "vitest run && npm run check:system-band && npm run check:vitest-setup && npm run check:unwired-handlers && npm run check:unimported-handlers && npm run check:types",
+    "check:probe-eviction-guard": "tsx scripts/check-probe-eviction-guard.ts",
+    "test:all": "vitest run && npm run check:system-band && npm run check:vitest-setup && npm run check:unwired-handlers && npm run check:unimported-handlers && npm run check:probe-eviction-guard && npm run check:types",
     "test:client": "vitest run --config vitest.client.config.ts"
   },
   "dependencies": {
