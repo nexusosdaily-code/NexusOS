@@ -2309,4 +2309,42 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
     expect(_refererProbes.has("https://never-alerted-stale-ref.example/")).toBe(false);
     expect(_uaProbes.has("NeverAlertedStaleUA/1.0")).toBe(false);
   });
+
+  it("second call within the same hour is a no-op — stale entries seeded after first prune are not removed", async () => {
+    // Use a timestamp 2 hours in the future so the first _pruneProbes call is
+    // guaranteed to pass the guard (now - lastPrune >= 1h) regardless of what
+    // earlier tests in this file left in lastPrune.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const baseNow = Date.now() + 2 * 60 * 60 * 1000; // 2 h into the future
+
+    // ── First prune: runs, advances lastPrune to baseNow ────────────────────
+    _pruneProbes(baseNow);
+
+    // ── Seed entries that are stale (no hits, expired cooldown) ─────────────
+    // These entries WOULD be deleted if pruneProbes ran again with the same
+    // timestamp.  They are inserted AFTER the first prune so lastPrune === baseNow.
+    _refererProbes.set("https://prune-guard-ref.example/", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+    _uaProbes.set("PruneGuardUA/1.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Second call with the exact same timestamp: must be a no-op ───────────
+    _pruneProbes(baseNow); // baseNow - lastPrune === 0 < 1h  →  guard fires, returns early
+
+    // ── Entries must still be present — the guard blocked deletion ────────────
+    expect(_refererProbes.has("https://prune-guard-ref.example/")).toBe(true);
+    expect(_uaProbes.has("PruneGuardUA/1.0")).toBe(true);
+
+    // ── Sanity check: advancing by 1 h + 1 ms DOES let the prune run ─────────
+    _pruneProbes(baseNow + 60 * 60 * 1000 + 1);
+
+    expect(_refererProbes.has("https://prune-guard-ref.example/")).toBe(false);
+    expect(_uaProbes.has("PruneGuardUA/1.0")).toBe(false);
+  });
 });
