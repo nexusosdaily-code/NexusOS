@@ -16,9 +16,12 @@
  *   8. Literal in a nested subdirectory file (e.g. scripts/foo.ts) → flagged.
  *   9. Unreadable server/ directory → throws descriptive error.
  *  10. Non-.ts files are ignored entirely.
+ *  11. package.json test:all includes check:system-band → CI regression guard.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { readFileSync } from "fs";
+import path from "path";
 
 // ── mock fs/promises BEFORE importing the module under test ───────────────────
 vi.mock("fs/promises", () => ({
@@ -181,5 +184,20 @@ describe("checkSystemBandLiteral()", () => {
 
     const violations = await checkSystemBandLiteral("/fake/server");
     expect(violations).toHaveLength(0);
+  });
+});
+
+// ─── CI integration guard ─────────────────────────────────────────────────────
+
+describe("package.json CI integration", () => {
+  it("test:all script invokes check:system-band so the literal guard runs in CI", () => {
+    const pkgPath = path.resolve("package.json");
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8")) as {
+      scripts?: Record<string, string>;
+    };
+
+    const testAll = pkg.scripts?.["test:all"] ?? "";
+
+    expect(testAll).toContain("check:system-band");
   });
 });
