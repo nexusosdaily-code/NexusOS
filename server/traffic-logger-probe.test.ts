@@ -1822,4 +1822,57 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
     expect(mockSendProbeAlert).toHaveBeenCalledWith("ua", COOLDOWN_UA, expect.any(Number));
   });
+
+  it("(H) referer row with active hits AND expired cooldown re-alerts on the next hit past the threshold after restart", async () => {
+    // threshold=2 → alert fires when hits.length > 2 (i.e. on the 3rd hit).
+    // cooldown=1 h → 2 hours ago is outside the cooldown window, so it is expired.
+    // The referer probe must fire a fresh alert when one more hit pushes past the threshold.
+    process.env.PROBE_ALERT_THRESHOLD     = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+
+    const now               = Date.now();
+    const REFERER_KEY       = "https://expired-cooldown-referer.example/";
+    const lastAlertedExpired = now - 2 * 3600_000; // 2 h ago — cooldown has expired
+
+    // Seed two in-window hits so the count (2) equals the threshold.
+    // One more hit will exceed it and, since the cooldown is expired, the alert fires.
+    const fakeRows = [
+      {
+        fieldType:   "referer",
+        key:         REFERER_KEY,
+        hits:        [now - 2_000, now - 1_000],
+        lastAlerted: lastAlertedExpired,
+      },
+    ];
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    // Simulate a restart: re-hydrate the in-memory maps from the fake DB rows.
+    await mod.initProbeCounters();
+
+    // Confirm the entry was restored with active hits and the expired lastAlerted.
+    const entry = mod._refererProbes.get(REFERER_KEY);
+    expect(entry).toBeDefined();
+    expect(entry!.hits.length).toBe(2);
+    expect(entry!.lastAlerted).toBe(lastAlertedExpired);
+
+    // Drive one hit past the threshold using a bot UA so only the referer probe fires.
+    const BOT_UA = "Googlebot/2.1 (+http://www.google.com/bot.html)";
+    const mw     = mod.trafficLoggerMiddleware;
+    const req    = makeReq(BOT_UA, REFERER_KEY);
+    const res    = makeRes();
+    mw(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+
+    // The expired cooldown must allow the alert to fire for the referer key.
+    const refererCall = (mockSendProbeAlert.mock.calls as [string, string, number][])
+      .find(([field]) => field === "referer");
+    expect(refererCall).toBeDefined();
+    expect(refererCall![0]).toBe("referer");
+    expect(refererCall![1]).toBe(REFERER_KEY);
+  });
 });
