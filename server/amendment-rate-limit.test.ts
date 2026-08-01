@@ -52,6 +52,29 @@ describe("checkAmendmentRateLimit — within quota", () => {
     // All old entries are now expired; a fresh call at NOW must succeed
     expect(checkAmendmentRateLimit(USER_A, NOW)).toBe(true);
   });
+
+  it("treats a timestamp exactly equal to now - AMENDMENT_WINDOW_MS as expired (boundary is strict)", () => {
+    // A timestamp at exactly the cutoff (t === now - AMENDMENT_WINDOW_MS) must
+    // NOT be counted — the filter uses t > cutoff (strict greater-than).
+    const exactCutoff = NOW - AMENDMENT_WINDOW_MS;
+    for (let i = 0; i < AMENDMENT_MAX_PER_DAY; i++) {
+      checkAmendmentRateLimit(USER_A, exactCutoff);
+    }
+    // All entries sit exactly on the cutoff and are therefore expired;
+    // a fresh call at NOW must succeed.
+    expect(checkAmendmentRateLimit(USER_A, NOW)).toBe(true);
+  });
+
+  it("still counts a timestamp one millisecond inside the window (cutoff + 1)", () => {
+    // A timestamp at now - AMENDMENT_WINDOW_MS + 1 is one ms inside the
+    // window and must be counted toward the quota.
+    const justInside = NOW - AMENDMENT_WINDOW_MS + 1;
+    for (let i = 0; i < AMENDMENT_MAX_PER_DAY; i++) {
+      checkAmendmentRateLimit(USER_A, justInside);
+    }
+    // The quota is now full; a fresh call at NOW must be rejected.
+    expect(checkAmendmentRateLimit(USER_A, NOW)).toBe(false);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -113,10 +136,10 @@ describe("amendment-rate-limit.test.ts — coverage guard", () => {
     const filePath = new URL(import.meta.url).pathname;
     const src = readFileSync(filePath, "utf8");
     // Count lines that open an it() call.
-    // The regex matches this guard's own it() too, so the floor is 7
-    // (6 substantive tests + 1 guard) — removing any real test drops the
-    // count to 6 and triggers a failure.
+    // The regex matches this guard's own it() too, so the floor is 9
+    // (8 substantive tests + 1 guard) — removing any real test drops the
+    // count to 8 and triggers a failure.
     const itCalls = (src.match(/^\s+it\(/gm) ?? []).length;
-    expect(itCalls).toBeGreaterThanOrEqual(7);
+    expect(itCalls).toBeGreaterThanOrEqual(9);
   });
 });
