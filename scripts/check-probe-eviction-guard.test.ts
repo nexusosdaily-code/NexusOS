@@ -58,6 +58,10 @@
  *        b-index-neg. HELPER_REQUIRED_PATTERN does NOT match while-loop with relaxed index form (e.hits[i] < c)
  *        b-index-forbidden-ok.  HELPER_FORBIDDEN_PATTERN matches relaxed while-loop with a non-standard index (e.hits[i] < c)
  *        b-index-forbidden-neg. HELPER_FORBIDDEN_PATTERN does NOT match correct while-loop with a non-standard index (e.hits[i] <= c)
+ *        x-callback-required-ok.  HELPER_REQUIRED_PATTERN matches correct filter form with a non-standard callback name (x => x > c)
+ *        x-callback-required-neg. HELPER_REQUIRED_PATTERN does NOT match relaxed filter form with a non-standard callback name (x => x >= c)
+ *        x-callback-forbidden-ok.  HELPER_FORBIDDEN_PATTERN matches relaxed filter form with a non-standard callback name (x => x >= c)
+ *        x-callback-forbidden-neg. HELPER_FORBIDDEN_PATTERN does NOT match correct filter form with a non-standard callback name (x => x > c)
  *        o. Helper body with filter arrow split across lines (correct form) → ok:true
  *        p. Helper body with filter arrow split across lines (relaxed form) → ok:false
  *        v. Helper body splits 'e.hits\n  .filter((t) => t > c)' across lines → ok:true
@@ -1025,6 +1029,41 @@ describe("helper-extraction detection", () => {
     // The inclusive (<= ) form must never be treated as a forbidden expression,
     // regardless of what identifier is used as the bracket index.
     expect(HELPER_FORBIDDEN_PATTERN.test("e.hits[i] <= c")).toBe(false);
+  });
+
+  // ── 4x-callback-required-ok. HELPER_REQUIRED_PATTERN — non-standard callback name, correct form ─
+  it("HELPER_REQUIRED_PATTERN matches the correct filter form with a non-standard callback name (x => x > c)", () => {
+    // If the \w+ callback parameter in HELPER_REQUIRED_PATTERN's filter branch
+    // were tightened to a literal (e.g. \bt\b), it would silently stop
+    // recognising correct helpers written with any other callback name such as
+    // `x`.  This test pins the flexibility of that expression so that such a
+    // tightening is caught at the export-level unit test before it reaches
+    // the full-body logic.
+    expect(HELPER_REQUIRED_PATTERN.test("e.hits.filter(x => x > c)")).toBe(true);
+  });
+
+  // ── 4x-callback-required-neg. HELPER_REQUIRED_PATTERN — non-standard callback name, relaxed form not matched ─
+  it("HELPER_REQUIRED_PATTERN does NOT match the relaxed filter form with a non-standard callback name (x => x >= c)", () => {
+    // The relaxed form (>=) must never be accepted as correct, regardless of
+    // what identifier is used as the callback parameter.
+    expect(HELPER_REQUIRED_PATTERN.test("e.hits.filter(x => x >= c)")).toBe(false);
+  });
+
+  // ── 4x-callback-forbidden-ok. HELPER_FORBIDDEN_PATTERN — non-standard callback name, relaxed form flagged ─
+  it("HELPER_FORBIDDEN_PATTERN matches the relaxed filter form with a non-standard callback name (x => x >= c)", () => {
+    // If the \w+ callback parameter in HELPER_FORBIDDEN_PATTERN's filter branch
+    // were tightened to a literal (e.g. \bt\b), it would silently stop catching
+    // relaxed helpers written with any other callback name such as `x`.
+    // This test pins the flexibility on the forbidden side so that such a
+    // tightening is caught before it ships.
+    expect(HELPER_FORBIDDEN_PATTERN.test("e.hits.filter(x => x >= c)")).toBe(true);
+  });
+
+  // ── 4x-callback-forbidden-neg. HELPER_FORBIDDEN_PATTERN — non-standard callback name, correct form not flagged ─
+  it("HELPER_FORBIDDEN_PATTERN does NOT match the correct filter form with a non-standard callback name (x => x > c)", () => {
+    // The correct form (strict >) must never be treated as a forbidden
+    // expression, regardless of what identifier is used as the callback.
+    expect(HELPER_FORBIDDEN_PATTERN.test("e.hits.filter(x => x > c)")).toBe(false);
   });
 
   // ── 4o. Helper body: filter arrow split across lines (correct form) → ok:true
