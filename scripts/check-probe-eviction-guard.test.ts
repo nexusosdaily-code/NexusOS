@@ -1315,4 +1315,49 @@ describe("multi-line source strings (formatter-split arrow)", () => {
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/no correct eviction guard found/i);
   });
+
+  // ── 5f. While-loop two-part split: '<= cutoff' on its own line → ok:false ──
+  it("returns ok:false when the while-loop condition is split so that '<= cutoff' lands on the next line (symmetric two-part split)", async () => {
+    // The symmetric counterpart to test 5e.  A formatter may split:
+    //   while (lo < entry.hits.length && entry.hits[lo] <= cutoff) lo++;
+    // the other way, wrapping after `entry.hits[lo]` so that the operator and
+    // right-hand operand begin the next line:
+    //   while (lo < entry.hits.length &&
+    //     entry.hits[lo]
+    //     <= cutoff) lo++;
+    //
+    // This is the same single-line regex limitation documented in 5e:
+    // REQUIRED_PATTERN requires `entry.hits[lo] <= cutoff` to appear on one
+    // line.  In this symmetric split, line 1 ends with `entry.hits[lo]` (no
+    // `<=` or `cutoff`) and line 2 begins with `<= cutoff)` (no
+    // `entry.hits[lo]`), so neither line matches REQUIRED_PATTERN and the check
+    // falls through to the generic "no correct eviction guard found" failure.
+    //
+    // Cross-reference: test 5e covers the case where `entry.hits[lo] <=` ends
+    // one line and `cutoff` begins the next.  Both two-part splits defeat
+    // REQUIRED_PATTERN for the identical reason (single-line regex), and both
+    // must be caught.
+    //
+    // If REQUIRED_PATTERN is later extended to handle multi-line expressions,
+    // update this expectation to ok:true.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  while (lo < entry.hits.length &&`,
+        `    entry.hits[lo]`,
+        `    <= cutoff) lo++;`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // CURRENT BEHAVIOUR: ok:false — `entry.hits[lo]` is on one line and
+    // `<= cutoff` is on the next, so REQUIRED_PATTERN does not match either
+    // line.
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/no correct eviction guard found/i);
+  });
 });
