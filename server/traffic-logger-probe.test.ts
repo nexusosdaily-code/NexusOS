@@ -15627,6 +15627,116 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(entry!.hits).toContain(hit4);
     expect(entry!.hits).toContain(hit5);
   });
+
+  // ── B50 / B51: seven-row coverage ─────────────────────────────────────────
+  //
+  // B48/B49 confirmed that six duplicate rows all contribute their timestamps.
+  // A loop bug with index-based termination at N-2 would be caught by six rows
+  // but NOT by seven if the termination condition is `i < rows.length - 1`
+  // (which stops after row 5 when length = 6, but stops after row 6 when
+  // length = 7 — still dropping the 7th row).  Seven rows extend the safety
+  // net one level further: any off-by-one that drops the 7th-or-higher row
+  // is caught here even if B48/B49 (six rows) both pass.
+
+  it("(B50) initProbeCounters: seven duplicate UA rows for the same key all contribute their timestamps to the merged entry", async () => {
+    // Extends B48 by one additional row.  A loop bug that terminates at
+    // index N-2 would be caught by six rows (B48) but not seven if a different
+    // off-by-one applies (e.g. loop condition `i < rows.length - 1` with
+    // length = 7 stops at index 5, silently dropping row 6).  Seven distinct
+    // rows ensure the 7th timestamp is never silently dropped.
+    const now  = Date.now();
+    const hit0 = now - 1_000; // row 0 timestamp
+    const hit1 = now - 2_000; // row 1 timestamp
+    const hit2 = now - 3_000; // row 2 timestamp
+    const hit3 = now - 4_000; // row 3 timestamp
+    const hit4 = now - 5_000; // row 4 timestamp
+    const hit5 = now - 6_000; // row 5 timestamp
+    const hit6 = now - 7_000; // row 6 timestamp — must not be dropped
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const KEY = "SevenDupUA/1.0";
+
+    const fakeRows = [
+      { fieldType: "ua", key: KEY, hits: [hit0], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit1], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit2], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit3], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit4], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit5], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit6], lastAlerted: 0 },
+    ];
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue(fakeRows),
+    });
+
+    await mod.initProbeCounters();
+
+    const entry = mod._uaProbes.get(KEY);
+    expect(entry).toBeDefined();
+
+    // All seven distinct in-window timestamps must appear in the merged entry.
+    expect(entry!.hits).toHaveLength(7);
+    expect(entry!.hits).toContain(hit0);
+    expect(entry!.hits).toContain(hit1);
+    expect(entry!.hits).toContain(hit2);
+    expect(entry!.hits).toContain(hit3);
+    expect(entry!.hits).toContain(hit4);
+    expect(entry!.hits).toContain(hit5);
+    expect(entry!.hits).toContain(hit6);
+  });
+
+  it("(B51) initProbeCounters: seven duplicate referer rows for the same key all contribute their timestamps to the merged entry", async () => {
+    // Symmetric check for the referer map: the same index-based termination
+    // off-by-one would also affect referer keys.  Seven duplicate rows ensure
+    // that no timestamp from the 7th or higher row is silently dropped.
+    const now  = Date.now();
+    const hit0 = now - 1_000;
+    const hit1 = now - 2_000;
+    const hit2 = now - 3_000;
+    const hit3 = now - 4_000;
+    const hit4 = now - 5_000;
+    const hit5 = now - 6_000;
+    const hit6 = now - 7_000; // row 6 timestamp — must not be dropped
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const KEY = "https://seven-dup-referer.example/scan";
+
+    const fakeRows = [
+      { fieldType: "referer", key: KEY, hits: [hit0], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit1], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit2], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit3], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit4], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit5], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit6], lastAlerted: 0 },
+    ];
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue(fakeRows),
+    });
+
+    await mod.initProbeCounters();
+
+    const entry = mod._refererProbes.get(KEY);
+    expect(entry).toBeDefined();
+
+    // All seven distinct in-window timestamps must appear in the merged entry.
+    expect(entry!.hits).toHaveLength(7);
+    expect(entry!.hits).toContain(hit0);
+    expect(entry!.hits).toContain(hit1);
+    expect(entry!.hits).toContain(hit2);
+    expect(entry!.hits).toContain(hit3);
+    expect(entry!.hits).toContain(hit4);
+    expect(entry!.hits).toContain(hit5);
+    expect(entry!.hits).toContain(hit6);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
