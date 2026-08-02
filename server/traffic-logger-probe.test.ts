@@ -1814,6 +1814,128 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(mockSendProbeAlert).not.toHaveBeenCalled();
   });
 
+  it("referer alert fires first: UA alert is NOT swallowed on the same request (symmetric suppression guard)", async () => {
+    // Regression guard: a future refactor could insert an early-return immediately
+    // after the referer probe fires its alert, silently preventing the UA probe
+    // from being checked on the same request — e.g.:
+    //
+    //   if (referer && !refBlocked && !isOwnOriginReferer(referer)) {
+    //     recordProbe(refererProbes, refKey, "referer", now);
+    //     if (refererProbes.get(refKey)?.lastAlerted === now) return; // ← wrong
+    //   }
+    //   if (ua && !patternBot) {
+    //     recordProbe(uaProbes, uaKey, "ua", now); // ← unreachable
+    //   }
+    //
+    // In the production code, the referer branch (lines 600-603) runs BEFORE the
+    // UA branch (lines 611-614) inside the same _initPromise.then() callback.
+    // An early-return after the referer probe would leave the UA probe unchecked
+    // even when its counter has independently crossed the threshold.
+    //
+    // Both probes are seeded to exactly ALERT_THRESHOLD hits (next hit triggers
+    // each).  A single dual-field request crosses both thresholds on the same
+    // _initPromise.then() invocation.
+    //
+    // This test verifies in two complementary ways:
+    //
+    // Phase 1 — synchronous proof via lastAlerted
+    //   entry.lastAlerted is set synchronously inside recordProbe BEFORE the
+    //   fire-and-forget import chain.  A non-zero value for BOTH entries proves
+    //   both alert branches ran inside the same callback.  A future early-return
+    //   after the referer probe would leave _uaProbes[UA_KEY].lastAlerted === 0,
+    //   failing the assertion.
+    //
+    // Phase 2 — async sendProbeAlert confirmation via _recordProbe
+    //   The concurrent import("./telegram-bot") pattern inside a single
+    //   _initPromise.then() callback can experience a Vitest mock-cache race
+    //   (the second concurrent dynamic import sometimes resolves before the mock
+    //   factory has cached its result, so .catch(() => {}) swallows the error).
+    //   Calling _recordProbe for referer first, flushing microtasks so its chain
+    //   completes, then calling _recordProbe for UA confirms that both async
+    //   chains work end-to-end and that sendProbeAlert is invoked exactly twice.
+
+    // threshold=2 → alert fires when hits > 2 (i.e. on the 3rd hit per key).
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mod = await import("./traffic-logger");
+    const mw  = mod.trafficLoggerMiddleware;
+    const { _uaProbes, _refererProbes, _recordProbe } = mod as any;
+
+    // Ensure initProbeCounters has resolved so probe recording runs synchronously
+    // inside the res.on("finish") microtask rather than being deferred until DB
+    // init completes.
+    await mod.initProbeCounters();
+
+    const UA_KEY  = "SymmetricSuppressionGuardUA/1.0";
+    const REF_VAL = "https://symmetric-suppression-guard.example/probe";
+    const REF_KEY = REF_VAL.toLowerCase();
+
+    // ── Phase 1: synchronous regression proof ────────────────────────────────
+    {
+      const now = Date.now();
+
+      // Seed both maps to exactly threshold (2 hits each).
+      // One more hit pushes each to 3 > 2 — the alert condition.
+      _uaProbes.set(UA_KEY,       { hits: [now - 2000, now - 1000], lastAlerted: 0 });
+      _refererProbes.set(REF_KEY, { hits: [now - 2000, now - 1000], lastAlerted: 0 });
+
+      // Single dual-field request: carries both the referer-at-threshold and
+      // the UA-at-threshold.  The referer branch runs first in the code.
+      const req = makeReq(UA_KEY, REF_VAL);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+      await flushMicrotasks();
+
+      // entry.lastAlerted is set synchronously before the async import chain.
+      // Non-zero means the alert branch ran for that field.
+      // A future early-return after the referer probe would leave
+      // _uaProbes[UA_KEY].lastAlerted === 0, failing this assertion.
+      expect(_refererProbes.get(REF_KEY).lastAlerted).toBeGreaterThan(0);
+      expect(_uaProbes.get(UA_KEY).lastAlerted).toBeGreaterThan(0);
+      // Both fired in the same _initPromise.then() pass → same "now" value.
+      expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(
+        _uaProbes.get(UA_KEY).lastAlerted,
+      );
+    }
+
+    vi.clearAllMocks();
+
+    // ── Phase 2: async sendProbeAlert confirmation ────────────────────────────
+    // Use distinct keys so the Phase-1 cooldowns don't interfere.
+    const UA_KEY2       = "SymmetricSuppressionGuardUA2/1.0";
+    const REF_VAL2      = "https://symmetric-suppression-guard2.example/probe";
+    const REF_KEY2      = REF_VAL2.toLowerCase();
+    {
+      const now = Date.now();
+      _uaProbes.set(UA_KEY2,       { hits: [now - 2000, now - 1000], lastAlerted: 0 });
+      _refererProbes.set(REF_KEY2, { hits: [now - 2000, now - 1000], lastAlerted: 0 });
+
+      // Fire the referer probe first (matches code execution order) and flush so
+      // its import("./telegram-bot") chain completes and the mock is cached
+      // before the UA probe's import begins — avoiding the concurrent-import race.
+      _recordProbe(_refererProbes, REF_KEY2, "referer", now + 1);
+      await flushMicrotasks();
+      expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+      expect((mockSendProbeAlert.mock.calls[0] as [string, string, number])[0]).toBe("referer");
+
+      // Now fire the UA probe — must NOT be swallowed by the referer alert.
+      _recordProbe(_uaProbes, UA_KEY2, "ua", now + 2);
+      await flushMicrotasks();
+      expect(mockSendProbeAlert).toHaveBeenCalledTimes(2);
+    }
+
+    // Both alerts must have fired with the correct field labels.
+    const calls  = mockSendProbeAlert.mock.calls as Array<[string, string, number]>;
+    const fields = calls.map(([f]) => f).sort();
+    expect(fields).toEqual(["referer", "ua"]);
+
+    const refCall = calls.find(([f]) => f === "referer")!;
+    const uaCall  = calls.find(([f]) => f === "ua")!;
+    expect(refCall[1]).toBe(REF_KEY2);
+    expect(uaCall[1]).toBe(UA_KEY2);
+  });
+
   it("referer alert fires: UA probe still records a hit and referer probe still records a hit", async () => {
     // Regression guard: a future refactor could check whether the referer probe
     // just crossed the alert threshold and insert an early-return that prevents
