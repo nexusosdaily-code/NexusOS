@@ -82,6 +82,13 @@
  *        xp-split-fail. Helper body splits '(x) => x >= c' across two lines → ok:false
  *           The full-body fallback must catch the relaxed split even though neither individual line
  *           matches the forbidden pattern; reason must match /relaxed eviction comparison/i.
+ *        xp-3line-ok. Helper body: three-line combined split with parenthesised non-standard
+ *           callback (correct form) → ok:true.  Both the method chain (.filter on its own line)
+ *           and the arrow body (x > c on its own line) are split; the full-body fallback's two
+ *           \s* spans consume both newlines and recognise the correct form.
+ *        xp-3line-fail. Helper body: three-line combined split with parenthesised non-standard
+ *           callback (relaxed form) → ok:false.  The same two \s* spans in the forbidden pattern
+ *           detect the relaxed comparator (x >= c); reason must match /relaxed eviction comparison/i.
  *        o. Helper body with filter arrow split across lines (correct form) → ok:true
  *        p. Helper body with filter arrow split across lines (relaxed form) → ok:false
  *        v. Helper body splits 'e.hits\n  .filter((t) => t > c)' across lines → ok:true
@@ -1311,6 +1318,74 @@ describe("helper-extraction detection", () => {
         `function evictStaleHits(e, c) {`,
         `  e.hits = e.hits.filter((x) =>`,
         `    x >= c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toContain("evictStaleHits");
+  });
+
+  // ── 4xp-3line-ok. Helper body: three-line combined split with parenthesised non-standard callback (correct form) → ok:true ──
+  it("returns ok:true when the helper body uses a three-line combined split with a parenthesised non-standard callback ((x) => x > c)", async () => {
+    // A formatter with a strict line-length limit might split:
+    //   e.hits = e.hits.filter((x) => x > c);
+    // into the three-line combined form:
+    //   e.hits = e.hits
+    //     .filter((x) =>
+    //       x > c);
+    //
+    // This is the maximum-split stress case: the method chain is broken
+    // (`.filter` on its own line) AND the arrow body is broken (`x > c` on
+    // its own line) AND the callback name is non-standard AND the parameter
+    // is parenthesised.  Neither individual line matches the required pattern;
+    // the full-body fallback must join all three lines, where `\s*` before
+    // `.filter` consumes the first newline and `\s*` between `=>` and `\w+`
+    // consumes the second.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  e.hits = e.hits`,
+        `    .filter((x) =>`,
+        `      x > c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 4xp-3line-fail. Helper body: three-line combined split with parenthesised non-standard callback (relaxed form) → ok:false ──
+  it("returns ok:false with a relaxed-comparison reason when the helper body uses a three-line combined split with a parenthesised non-standard callback ((x) => x >= c)", async () => {
+    // Mirror of 4xp-3line-ok with >= instead of >.  The three-line combined
+    // form means no individual line matches the forbidden pattern, so the
+    // full-body fallback is the only layer that can catch this regression.
+    // A future change that hard-codes the callback variable, removes the
+    // `\s*` before `.filter`, or skips the full-body forbidden pass would
+    // silently miss this case.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  e.hits = e.hits`,
+        `    .filter((x) =>`,
+        `      x >= c);`,
         `}`,
       ].join("\n"),
     );
