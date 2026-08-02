@@ -4761,6 +4761,155 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       dateNowSpy.mockRestore();
     }
   });
+
+  // ── B22 / B23: multi-ms skew + active cooldown — zombie entry invariant ──────
+  //
+  // B20/B21 confirm that gap hits with lastAlerted=0 are all loaded by
+  // initProbeCounters then the entire entry is deleted by _pruneProbes(pruneNow)
+  // because no cooldown is active.  When lastAlerted is non-zero and still inside
+  // the cooldown window, pruneProbes cannot delete the entry (hasActiveCooldown
+  // fires).  The same skew that silently drops all active hits therefore produces
+  // a zombie entry — present in the map, but with a hits array that is entirely
+  // below the prune cutoff.
+  //
+  // Test design
+  // ───────────
+  // N = 10 gap hits (same pattern as B20/B21) plus lastAlerted set 1 ms inside
+  // the cooldown window as seen from pruneNow:
+  //   lastAlerted = pruneNow − COOLDOWN_MS + 1
+  //   → pruneNow − lastAlerted = COOLDOWN_MS − 1  <  COOLDOWN_MS  → cooldown active
+  //
+  // Step 1: init loads all N hits (each >= initNow − WINDOW_MS).
+  // Step 2: _pruneProbes(pruneNow) evaluates each entry:
+  //   hasActiveHits    = hits[last] >= pruneNow − WINDOW_MS → false (all hits < cutoff)
+  //   hasActiveCooldown = pruneNow − lastAlerted < COOLDOWN_MS → true
+  //   → entry is NOT deleted; hits array is left unchanged (pruneProbes never
+  //     trims individual hits — that happens in recordProbe's while-loop).
+  //
+  // The assertions document this zombie-entry behaviour so a future change that
+  // also removes the cooldown guard from pruneProbes is caught immediately.
+  //
+  // T0 = Date.now()+90h (B22) and +92h (B23) — monotonically above B21 (88h).
+
+  it("(B22) multi-ms skew + active cooldown UA: all gap hits stale after _pruneProbes(initNow+10) but entry kept by cooldown guard", async () => {
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000; // default 1 h
+
+    const SKEW = 10; // ms between initNow and pruneNow
+
+    // T0 = Date.now()+90h — monotonically above B21 (88h).
+    const initNow  = Date.now() + 90 * 60 * 60 * 1000;
+    const pruneNow = initNow + SKEW;
+
+    // N gap hits: each >= (initNow − WINDOW_MS) so init loads it, but
+    // < (pruneNow − WINDOW_MS) so it falls below the prune cutoff.
+    const initCutoff = initNow - WINDOW_MS;
+    const gapHits: number[] = Array.from({ length: SKEW }, (_, k) => initCutoff + k);
+
+    // lastAlerted is 1 ms inside the cooldown window as seen from pruneNow:
+    //   pruneNow − lastAlerted = COOLDOWN_MS − 1  <  COOLDOWN_MS  → hasActiveCooldown = true.
+    const lastAlerted = pruneNow - COOLDOWN_MS + 1;
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _uaProbes, _refererProbes, _pruneProbes } = mod as any;
+
+      // ── Step 1: init loads all gap hits ──────────────────────────────────────
+      const fakeRows = [
+        {
+          fieldType:   "ua",
+          key:         "B22MultiSkewCooldownUA/1.0",
+          hits:        gapHits,
+          lastAlerted,
+        },
+      ];
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      // All gapHits satisfy hit >= initNow − WINDOW_MS, so init must load them.
+      expect(_uaProbes.has("B22MultiSkewCooldownUA/1.0")).toBe(true);
+      expect(_uaProbes.get("B22MultiSkewCooldownUA/1.0")!.hits).toEqual(gapHits);
+      expect(_uaProbes.get("B22MultiSkewCooldownUA/1.0")!.lastAlerted).toBe(lastAlerted);
+      expect(_refererProbes.has("B22MultiSkewCooldownUA/1.0")).toBe(false);
+
+      // ── Step 2: _pruneProbes(pruneNow) keeps the zombie entry ────────────────
+      // prune cutoff = pruneNow − WINDOW_MS = initCutoff + SKEW.
+      // Every gapHit[k] = initCutoff + k < initCutoff + SKEW → hasActiveHits = false.
+      // pruneNow − lastAlerted = COOLDOWN_MS − 1 < COOLDOWN_MS → hasActiveCooldown = true.
+      // Because hasActiveCooldown is true, the entry must survive even though all
+      // hits are below the cutoff.  pruneProbes never trims individual hits, so
+      // the array is left intact (eviction happens in recordProbe's while-loop).
+      _pruneProbes(pruneNow);
+
+      expect(_uaProbes.has("B22MultiSkewCooldownUA/1.0")).toBe(true);
+      expect(_uaProbes.get("B22MultiSkewCooldownUA/1.0")!.hits).toEqual(gapHits);
+      expect(_uaProbes.get("B22MultiSkewCooldownUA/1.0")!.lastAlerted).toBe(lastAlerted);
+      expect(_refererProbes.has("B22MultiSkewCooldownUA/1.0")).toBe(false);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it("(B23) multi-ms skew + active cooldown referer: all gap hits stale after _pruneProbes(initNow+10) but entry kept by cooldown guard", async () => {
+    // Symmetric referer-map counterpart to B22.
+    //
+    // T0 = Date.now()+92h — monotonically above B22 (90h).
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+    const SKEW        = 10;
+
+    const initNow  = Date.now() + 92 * 60 * 60 * 1000;
+    const pruneNow = initNow + SKEW;
+
+    const initCutoff = initNow - WINDOW_MS;
+    const gapHits: number[] = Array.from({ length: SKEW }, (_, k) => initCutoff + k);
+
+    const lastAlerted = pruneNow - COOLDOWN_MS + 1;
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+      // ── Step 1: init loads all gap hits ──────────────────────────────────────
+      const fakeRows = [
+        {
+          fieldType:   "referer",
+          key:         "https://b23-multi-skew-cooldown-referer.example/scan",
+          hits:        gapHits,
+          lastAlerted,
+        },
+      ];
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      expect(_refererProbes.has("https://b23-multi-skew-cooldown-referer.example/scan")).toBe(true);
+      expect(_refererProbes.get("https://b23-multi-skew-cooldown-referer.example/scan")!.hits).toEqual(gapHits);
+      expect(_refererProbes.get("https://b23-multi-skew-cooldown-referer.example/scan")!.lastAlerted).toBe(lastAlerted);
+      expect(_uaProbes.has("https://b23-multi-skew-cooldown-referer.example/scan")).toBe(false);
+
+      // ── Step 2: _pruneProbes(pruneNow) keeps the zombie entry ────────────────
+      // Same reasoning as B22: hasActiveHits = false, hasActiveCooldown = true
+      // → entry survives; hits array left unchanged by pruneProbes.
+      _pruneProbes(pruneNow);
+
+      expect(_refererProbes.has("https://b23-multi-skew-cooldown-referer.example/scan")).toBe(true);
+      expect(_refererProbes.get("https://b23-multi-skew-cooldown-referer.example/scan")!.hits).toEqual(gapHits);
+      expect(_refererProbes.get("https://b23-multi-skew-cooldown-referer.example/scan")!.lastAlerted).toBe(lastAlerted);
+      expect(_uaProbes.has("https://b23-multi-skew-cooldown-referer.example/scan")).toBe(false);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
