@@ -62,6 +62,11 @@
  *           If the file also contains the single-line while-loop guard, the check
  *           passes even when the filter form has been split across lines; this
  *           confirms the while-loop idiom is still recognised as the fallback.
+ *        e. While-loop condition two-part split: identifier (`cutoff`) on its own line → ok:false
+ *           Same single-line regex limitation as 5c (documented in section 5 header),
+ *           but covering the two-part split specifically: `entry.hits[lo] <=` on one
+ *           line and `cutoff` wrapped to the next.  Neither resulting line satisfies
+ *           REQUIRED_PATTERN on its own.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -1269,5 +1274,45 @@ describe("multi-line source strings (formatter-split arrow)", () => {
     const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
     // The while-loop line matches REQUIRED_PATTERN → ok:true.
     expect(result.ok).toBe(true);
+  });
+
+  // ── 5e. While-loop two-part split: cutoff on its own line → ok:false ──────
+  it("returns ok:false when the while-loop condition is split so that 'cutoff' lands on the next line (two-part split)", async () => {
+    // A formatter enforcing a strict line-length limit might wrap:
+    //   while (lo < entry.hits.length && entry.hits[lo] <= cutoff) lo++;
+    // into a two-part split:
+    //   while (lo < entry.hits.length && entry.hits[lo] <=
+    //     cutoff) lo++;
+    //
+    // This is the same single-line regex limitation documented in section 5:
+    // REQUIRED_PATTERN requires `entry.hits[lo] <= cutoff` to appear on one
+    // line.  In the two-part split, line 1 ends with `entry.hits[lo] <=` (no
+    // `cutoff`) and line 2 begins with `cutoff)` (no `entry.hits[lo]`), so
+    // neither line matches REQUIRED_PATTERN and the check falls through to the
+    // generic "no correct eviction guard found" failure.
+    //
+    // The three-part split (5c) tests the case where both the operator and the
+    // identifier are on separate lines.  This test covers the two-part split
+    // where only the identifier `cutoff` is wrapped to the next line.
+    //
+    // If REQUIRED_PATTERN is later extended to handle multi-line expressions,
+    // update this expectation to ok:true.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  while (lo < entry.hits.length && entry.hits[lo] <=`,
+        `    cutoff) lo++;`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // CURRENT BEHAVIOUR: ok:false — `entry.hits[lo] <=` is on one line and
+    // `cutoff` is on the next, so REQUIRED_PATTERN does not match either line.
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/no correct eviction guard found/i);
   });
 });
