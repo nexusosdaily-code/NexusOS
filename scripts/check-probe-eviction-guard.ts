@@ -300,14 +300,19 @@ function buildHelperScanPatterns(
  */
 interface HelperScanResult {
   found: true;
+
   helperDefLine: number; // 1-based
+
   requiredFound: boolean;
+
   forbiddenLines: number[]; // 1-based
   /** true when the forbidden form was found in the full-body string but not
    *  on a single line (e.g. formatter split `e.hits\n  .filter((t) => t >= c)`).
    *  In this case forbiddenLines is empty and no precise line number is available. */
+
   forbiddenInFullBody: boolean;
   /** false when brace-counting OR parameter extraction failed */
+
   bodyParsed: boolean;
 }
 interface HelperNotFound {

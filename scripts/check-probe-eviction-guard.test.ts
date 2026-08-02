@@ -46,6 +46,8 @@
  *        l. Inline required present but helper has relaxed comparison → ok:false
  *        m. HELPER_REQUIRED_PATTERN matches parenthesised arrow correct form
  *        n. HELPER_FORBIDDEN_PATTERN matches parenthesised arrow relaxed form
+ *        o. Helper body with filter arrow split across lines (correct form) → ok:true
+ *        p. Helper body with filter arrow split across lines (relaxed form) → ok:false
  *        v. Helper body splits 'e.hits\n  .filter((t) => t > c)' across lines → ok:true
  *           buildHelperScanPatterns now includes \s* before \.filter; the full-body
  *           fallback pass joins the helper lines and recognises the split chain.
@@ -810,6 +812,64 @@ describe("helper-extraction detection", () => {
     expect(HELPER_FORBIDDEN_PATTERN.test("e.hits.filter((t) => t > c)")).toBe(false);
   });
 
+  // ── 4o. Helper body: filter arrow split across lines (correct form) → ok:true
+  it("returns ok:true when the helper body uses a filter arrow split across lines (correct form)", async () => {
+    // A formatter that enforces a short line-length limit might split:
+    //   e.hits = e.hits.filter((t) => t > c);
+    // into:
+    //   e.hits = e.hits.filter((t) =>
+    //     t > c);
+    //
+    // The per-line scan in scanHelperBody() matches neither individual line.
+    // The full-body fallback joins all body lines into a single string and
+    // re-tests, so \s* spanning the newline correctly recognises the form.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  e.hits = e.hits.filter((t) =>`,
+        `    t > c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 4p. Helper body: filter arrow split across lines (relaxed form) → ok:false
+  it("returns ok:false with the relaxed-form error when the helper body uses a split filter arrow with >= (relaxed)", async () => {
+    // Same formatter-split scenario as 4o, but with >= instead of >.
+    // The full-body forbidden check catches it even though neither line
+    // matches the forbidden pattern on its own.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  e.hits = e.hits.filter((t) =>`,
+        `    t >= c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toContain("evictStaleHits");
+  });
+
   // ── 4o. Second delegation has relaxed comparison; first is valid → ok:false
   it("returns ok:false when a later delegation calls a helper whose body uses the relaxed comparison", async () => {
     // The first delegation is valid; the second one uses < instead of <=.
@@ -1402,7 +1462,7 @@ describe("multi-line source strings (formatter-split arrow)", () => {
     expect(result.ok).toBe(true);
   });
 
-  // ── 5f. While-loop two-part split: '<= cutoff' on its own line → ok:true ───
+  // ── 5f. While-loop two-part split: 'entry.hits[lo]' on one line, '<= cutoff' on the next → ok:true
   it("returns ok:true when the while-loop condition is split so that '<= cutoff' lands on the next line (symmetric two-part split)", async () => {
     // The symmetric counterpart to test 5e.  A formatter may split:
     //   while (lo < entry.hits.length && entry.hits[lo] <= cutoff) lo++;
@@ -1412,14 +1472,14 @@ describe("multi-line source strings (formatter-split arrow)", () => {
     //     entry.hits[lo]
     //     <= cutoff) lo++;
     //
-    // The per-line scan does not match either partial line on its own.
-    // However, the full-source fallback pass applies REQUIRED_PATTERN to the
-    // entire source string.  REQUIRED_PATTERN uses \s* between tokens and
-    // JavaScript's \s includes \n, so `entry\.hits\[lo\]\s*<=\s*cutoff`
-    // matches across the line boundary:
-    //   `entry.hits[lo]` + `\n    ` (\s*) + `<=` + ` ` (\s*) + `cutoff`
+    // REQUIRED_PATTERN's while-loop branch is `entry\.hits\[lo\]\s*<=\s*cutoff`.
+    // \s* matches \n and any surrounding whitespace, so the full-source fallback
+    // pass recognises `entry.hits[lo]\n    <= cutoff` even though the two tokens
+    // straddle a line break.  The check therefore returns ok:true.
     //
-    // Both two-part splits (5e and 5f) therefore pass the full-source check.
+    // Cross-reference: test 5e covers the case where `entry.hits[lo] <=` ends
+    // one line and `cutoff` begins the next.  Both two-part splits are handled
+    // by the full-source pass for the same reason (\s* spans newlines).
     mockReadFile.mockResolvedValue(
       [
         `function recordProbe(map, key, label, now) {`,
@@ -1434,8 +1494,8 @@ describe("multi-line source strings (formatter-split arrow)", () => {
     );
 
     const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
-    // CURRENT BEHAVIOUR: ok:true — the full-source fallback pass recognises
-    // `entry.hits[lo]\n    <= cutoff` via REQUIRED_PATTERN's \s* tokens.
+    // The full-source fallback pass joins all lines and matches the split
+    // expression via \s* spanning the newline.
     expect(result.ok).toBe(true);
   });
 });
@@ -1467,25 +1527,20 @@ describe("multi-line source strings (formatter-split arrow)", () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("multi-line helper body (formatter-split condition inside extracted helper)", () => {
-  // ── 6a. Helper body has while-loop condition split across two lines → ok:false
-  it("returns ok:false when the helper body splits 'e.hits[lo] <= c' across two lines (single-line regex limitation on HELPER_REQUIRED_PATTERN)", async () => {
+  // ── 6a. Helper body has while-loop condition split across two lines → ok:true
+  it("returns ok:true when the helper body splits 'e.hits[lo] <= c' across two lines (full-body fallback in scanHelperBody)", async () => {
     // A formatter enforcing a strict line-length limit might wrap:
     //   while (lo < e.hits.length && e.hits[lo] <= c) lo++;
     // inside the helper body into a two-part split:
     //   while (lo < e.hits.length && e.hits[lo] <=
     //     c) lo++;
     //
-    // HELPER_REQUIRED_PATTERN requires `<param>.hits[<idx>] <= <cutoff>` to
-    // appear on a single line.  In the two-part split, line 1 ends with
-    // `e.hits[lo] <=` (no `c`) and line 2 begins with `c)` (no `e.hits[lo]`),
-    // so neither line matches HELPER_REQUIRED_PATTERN.  The check therefore
-    // returns ok:false with the helper-extraction "no correct eviction
-    // comparison found in that helper's body" message.
-    //
-    // This is intentional — the current line-by-line scanning approach cannot
-    // reconstruct the expression across line boundaries.  If HELPER_REQUIRED_PATTERN
-    // is later extended to match multi-line forms, update this expectation to
-    // ok:true and revise the reason assertion accordingly.
+    // The per-line scan inside scanHelperBody() does not match either partial
+    // line on its own.  However, the full-body fallback joins all extracted body
+    // lines into a single string and re-applies the param-specific required
+    // pattern.  The pattern uses \s* between tokens and \s matches \n, so
+    // `e\.hits\[\w+\]\s*<=\s*\bc\b` recognises `e.hits[lo] <=\n    c` across
+    // the line boundary.  The check therefore returns ok:true.
     mockReadFile.mockResolvedValue(
       [
         `function recordProbe(map, key, label, now) {`,
