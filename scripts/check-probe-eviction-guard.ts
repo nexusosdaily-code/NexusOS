@@ -396,13 +396,38 @@ export async function checkProbeEvictionGuard(
     if (FORBIDDEN_PATTERN.test(line)) forbiddenLines.push(i + 1);
   }
 
+  // ── Full-source fallback ───────────────────────────────────────────────────
+  //
+  // REQUIRED_PATTERN and FORBIDDEN_PATTERN use \s* between every token.
+  // JavaScript's \s class includes \n, so both patterns also match
+  // formatter-split expressions such as:
+  //
+  //   entry.hits = entry.hits.filter((t) =>
+  //     t > cutoff);
+  //
+  // The line-by-line scan above is retained so that single-line violations
+  // can still report exact line numbers.  These two full-source checks only
+  // fire when the per-line scan found nothing, making the two passes additive.
+  let forbiddenInFullSource = false;
+
+  if (!foundRequired && REQUIRED_PATTERN.test(source)) {
+    foundRequired = true;
+  }
+  if (forbiddenLines.length === 0 && FORBIDDEN_PATTERN.test(source)) {
+    forbiddenInFullSource = true;
+  }
+
   // Inline forbidden wins immediately — report before anything else.
-  if (forbiddenLines.length > 0) {
+  if (forbiddenLines.length > 0 || forbiddenInFullSource) {
+    const locationNote =
+      forbiddenLines.length > 0
+        ? `at line(s) ${forbiddenLines.join(", ")}`
+        : `(expression split across lines)`;
     return {
       ok: false,
       reason:
         `[check-probe-eviction-guard] Relaxed eviction comparison found ` +
-        `at line(s) ${forbiddenLines.join(", ")} in ${filePath}.\n` +
+        `${locationNote} in ${filePath}.\n` +
         `Relaxed forms that silently keep boundary hits:\n` +
         `  ✗  entry.hits[lo] < cutoff              (while-loop, strictly-less-than)\n` +
         `  ✗  entry.hits.filter(t => t >= cutoff)  (filter, inclusive >=)\n` +
