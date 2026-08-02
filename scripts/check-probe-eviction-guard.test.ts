@@ -108,6 +108,14 @@
  *        g. Helper body has BOTH splits as above but with the relaxed comparator
  *           (`t >= c`) — three-line form (relaxed) → ok:false.  Both `\s*` spans
  *           apply equally to the forbidden pattern, so the combined split is caught.
+ *        h. Helper body uses a bare (non-parenthesised) arrow `t =>` split across
+ *           lines (correct form) → ok:true.  buildHelperScanPatterns uses \(?
+ *           to make the callback-param parens optional; the full-body fallback's
+ *           \s* spans the newline and recognises the bare split form.
+ *        i. Helper body uses a bare (non-parenthesised) arrow `t =>` split across
+ *           lines (relaxed form) → ok:false.  The param-specific forbidden pattern
+ *           also uses \(? and \s*, so the full-body fallback detects the relaxed
+ *           bare-arrow split and emits the "relaxed eviction comparison" error.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -2181,6 +2189,91 @@ describe("multi-line helper body (formatter-split condition inside extracted hel
     // The condition line contains the full required token sequence, so
     // REQUIRED_PATTERN matches on the per-line scan → ok:true.
     expect(result.ok).toBe(true);
+  });
+
+  // ── 6h. Helper body uses a bare (non-parenthesised) arrow split across lines (correct form) → ok:true
+  it("returns ok:true when the helper body uses a bare arrow 't =>' split across lines with the correct comparator (full-body fallback recognises it)", async () => {
+    // A formatter may split the bare-parameter form:
+    //   e.hits = e.hits.filter(t => t > c);
+    // as:
+    //   e.hits = e.hits.filter(t =>
+    //     t > c);
+    //
+    // The per-line scan sees:
+    //   line 1:  "  e.hits = e.hits.filter(t =>"  — no 't > c'
+    //   line 2:  "    t > c);"                    — no 'e.hits.filter'
+    // so neither line matches the param-specific required pattern on its own.
+    //
+    // buildHelperScanPatterns() uses \(?\w+\)? for the callback parameter,
+    // which tolerates the bare (non-parenthesised) `t` just as well as `(t)`.
+    // When the full-body fallback joins all helper lines into a single string,
+    // the \s* between `=>` and `\w+` (the return token) spans the newline +
+    // indentation, so the joined text satisfies the required pattern → ok:true.
+    //
+    // If a future tightening accidentally makes the optional-parens group
+    // required (changing `\(?` to `\(`) this test surfaces the regression
+    // before it ships.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  // Formatter split the bare-arrow filter to its own line:`,
+        `  e.hits = e.hits.filter(t =>`,
+        `    t > c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // The \(? in the param-specific required pattern tolerates the bare `t`
+    // without enclosing parens, and the \s* between `=>` and the return token
+    // spans the newline → the full-body fallback recognises the form → ok:true.
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 6i. Helper body uses a bare (non-parenthesised) arrow split across lines (relaxed form) → ok:false
+  it("returns ok:false with the relaxed-form error when the helper body uses a bare arrow 't =>' split across lines with the relaxed comparator (>= instead of >)", async () => {
+    // The same formatter-split layout as 6h, but with >= instead of >:
+    //   e.hits = e.hits.filter(t =>
+    //     t >= c);
+    //
+    // The param-specific forbidden pattern built by buildHelperScanPatterns()
+    // uses \(?\w+\)? (bare or parenthesised) and \s* between `=>` and `\w+`,
+    // so it detects this relaxed split form when the full-body fallback applies
+    // the pattern to the joined helper-body string.
+    //
+    // If a future tightening of the optional-parens group accidentally excluded
+    // the bare form, the forbidden pattern would also miss it — returning
+    // ok:false for the wrong reason (no guard found rather than relaxed form).
+    // This test confirms the forbidden path also works correctly.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  // Relaxed bare-arrow form split across lines:`,
+        `  e.hits = e.hits.filter(t =>`,
+        `    t >= c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // The param-specific forbidden pattern's \(? and \s* together detect the
+    // relaxed bare-arrow split form → ok:false with "relaxed eviction comparison".
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
   });
 
   // ── 5g. Method-chain split: .filter() on its own line, correct form → ok:true
