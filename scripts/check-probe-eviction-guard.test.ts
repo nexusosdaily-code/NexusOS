@@ -101,6 +101,13 @@
  *           form) → ok:false.  The param-specific forbidden pattern also has \s*
  *           between `=>` and the callback token, so the full-body fallback detects
  *           the relaxed split form and emits the "relaxed eviction comparison" error.
+ *        f. Helper body has BOTH the method-chain split (`.filter` on its own line)
+ *           AND the arrow body split (`t > c` on its own line) — three-line form
+ *           (correct) → ok:true.  The `\s*` before `.filter` consumes the first
+ *           newline; the `\s*` between `=>` and `\w+` consumes the second.
+ *        g. Helper body has BOTH splits as above but with the relaxed comparator
+ *           (`t >= c`) — three-line form (relaxed) → ok:false.  Both `\s*` spans
+ *           apply equally to the forbidden pattern, so the combined split is caught.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -1664,6 +1671,14 @@ describe("multi-line source strings (formatter-split arrow)", () => {
 //      caught immediately when the guard starts failing.
 //   b. Anyone who updates HELPER_REQUIRED_PATTERN to handle multi-line forms
 //      has a clear baseline to test against.
+//
+//   6f — BOTH splits at once (correct):  e.hits = e.hits\n  .filter((t) =>\n    t > c);
+//        → ok:true.  The \s* before \.filter consumes the first newline and the
+//        \s* between => and \w+ consumes the second; the full-body fallback
+//        recognises the combined three-line form.
+//   6g — BOTH splits at once (relaxed):  e.hits = e.hits\n  .filter((t) =>\n    t >= c);
+//        → ok:false with "relaxed eviction comparison".  Both \s* spans apply
+//        equally to the forbidden pattern so the combined split is caught.
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("multi-line helper body (formatter-split condition inside extracted helper)", () => {
@@ -1904,6 +1919,100 @@ describe("multi-line helper body (formatter-split condition inside extracted hel
     // relaxed split form → ok:false with "relaxed eviction comparison" reason.
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/relaxed eviction comparison/i);
+  });
+
+  // ── 6f. Helper body has BOTH method-chain split AND arrow body split (correct form) → ok:true
+  it("returns ok:true when the helper body has both the method-chain split and the arrow body split (three-line correct form)", async () => {
+    // A formatter enforcing a very short line-length limit might produce both
+    // splits at once, yielding the three-line form:
+    //
+    //   e.hits = e.hits
+    //     .filter((t) =>
+    //       t > c);
+    //
+    // The per-line scan inside scanHelperBody() sees three lines, none of which
+    // matches the param-specific required pattern on its own:
+    //   line 1:  "  e.hits = e.hits"               — no '.filter'
+    //   line 2:  "    .filter((t) =>"               — no 't > c'
+    //   line 3:  "      t > c);"                    — no 'e.hits.filter'
+    //
+    // The full-body fallback pass joins all helper lines into a single string
+    // and applies the param-specific required pattern built by
+    // buildHelperScanPatterns().  For params (e, c) that pattern is:
+    //
+    //   \be\b\.hits\s*\.filter\(\s*\(?\w+\)?\s*=>\s*\w+\s*>\s*\bc\b\s*\)
+    //
+    // The `\s*` before `\.filter` consumes the first newline + indentation, and
+    // the `\s*` between `=>` and `\w+` consumes the second.  The joined body
+    // text therefore satisfies the pattern and the check returns ok:true.
+    //
+    // This test guards against a future refactor that breaks either of the two
+    // `\s*` expansions inside buildHelperScanPatterns — if either one is
+    // accidentally removed, this combined form would silently fail with the
+    // "no correct eviction comparison" message instead of passing.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  e.hits = e.hits`,
+        `    .filter((t) =>`,
+        `      t > c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // Both \s* spans in the param-specific required pattern consume the two
+    // newlines in the three-line form → full-body fallback recognises it → ok:true.
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 6g. Helper body has BOTH method-chain split AND arrow body split (relaxed form) → ok:false
+  it("returns ok:false with the relaxed-form error when the helper body has both splits but uses the relaxed comparator (>=)", async () => {
+    // The same three-line layout as 6f but with the relaxed comparator:
+    //
+    //   e.hits = e.hits
+    //     .filter((t) =>
+    //       t >= c);
+    //
+    // The param-specific forbidden pattern built by buildHelperScanPatterns()
+    // for params (e, c) is:
+    //
+    //   \be\b\.hits\s*\.filter\(\s*\(?\w+\)?\s*=>\s*\w+\s*>=\s*\bc\b\s*\)
+    //
+    // The same two `\s*` spans that recognise the correct combined split apply
+    // equally to the forbidden pattern, so the full-body fallback pass detects
+    // the relaxed three-line form and emits the "relaxed eviction comparison"
+    // error rather than the generic "no correct eviction comparison" message.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  e.hits = e.hits`,
+        `    .filter((t) =>`,
+        `      t >= c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // Both \s* spans in the param-specific forbidden pattern consume the two
+    // newlines → full-body fallback detects the relaxed combined split → ok:false.
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toContain("evictStaleHits");
   });
 
   // ── 5g. While-loop body split to the next line → ok:true ──────────────────
