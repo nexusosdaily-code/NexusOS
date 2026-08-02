@@ -1390,4 +1390,39 @@ describe("multi-line helper body (formatter-split condition inside extracted hel
     expect(result.reason).toContain("evictStaleHits");
     expect(result.reason).toMatch(/update REQUIRED_PATTERN/i);
   });
+
+  // ── 5g. While-loop body split to the next line → ok:true ──────────────────
+  it("returns ok:true when the while-loop condition is intact but the body 'lo++' is on the next line", async () => {
+    // A formatter enforcing a short line-length limit may keep the condition
+    // on one line but move the loop body to the next:
+    //   while (lo < entry.hits.length && entry.hits[lo] <= cutoff)
+    //     lo++;
+    //
+    // This is safe: REQUIRED_PATTERN matches `entry.hits[lo] <= cutoff`
+    // independently of the surrounding loop structure.  The condition line
+    // contains the full `entry\.hits\[lo\]\s*<=\s*cutoff` token sequence, so
+    // the per-line scan matches it without needing the full-source fallback.
+    //
+    // Cross-reference: tests 5c, 5e, and 5f cover splits of the while-loop
+    // *condition* across lines.  This test covers the orthogonal case where
+    // the condition itself is intact but the body is placed on a new line.
+    // Any future tightening of REQUIRED_PATTERN that accidentally requires the
+    // body to follow on the same line as the condition would be caught here.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  while (lo < entry.hits.length && entry.hits[lo] <= cutoff)`,
+        `    lo++;`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // The condition line contains the full required token sequence, so
+    // REQUIRED_PATTERN matches on the per-line scan → ok:true.
+    expect(result.ok).toBe(true);
+  });
 });
