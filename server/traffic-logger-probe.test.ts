@@ -736,6 +736,54 @@ describe("referer probe — alert respects the same threshold as the UA probe", 
     await hitTimesWithReferer(mw, 20, "https://external-scraper.example/", "ObscureTestBrowser/99.0", { rotateUa: true });
     expect(mockSendProbeAlert.mock.calls.length).toBe(1);
   });
+
+  // ── lastAlerted boundary: set only when hits EXCEED threshold ──────────────
+  // These two companion tests mirror the UA probe lastAlerted boundary tests
+  // and guard the strict > condition on the shared recordProbe() path.
+  // A refactor that changes > to >= would fire one hit early AND could skip
+  // the lastAlerted assignment; the second test (at-threshold) would catch that.
+
+  it("referer lastAlerted is set after hits exceed threshold (hits.length === threshold+1)", async () => {
+    // threshold=3 → alert fires on the 4th hit (hits.length becomes 4 > 3)
+    process.env.PROBE_ALERT_THRESHOLD = "3";
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe } = mod as any;
+
+    const KEY = "https://boundary-check-referer-a.example/";
+    const now = Date.now();
+
+    // Seed exactly threshold (3) hits — no alert should have fired yet.
+    _refererProbes.set(KEY, { hits: [now - 3000, now - 2000, now - 1000], lastAlerted: 0 });
+
+    // One more hit brings hits.length to 4, which exceeds threshold of 3.
+    _recordProbe(_refererProbes, KEY, "referer", now);
+    await flushMicrotasks();
+
+    // The alert must have fired and lastAlerted must be stamped.
+    expect(_refererProbes.get(KEY).lastAlerted).toBeGreaterThan(0);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+  });
+
+  it("referer lastAlerted remains 0 when hits only reach threshold (hits.length === threshold, not threshold+1)", async () => {
+    // threshold=3 → no alert at exactly 3 hits (hits.length === 3, not > 3)
+    process.env.PROBE_ALERT_THRESHOLD = "3";
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe } = mod as any;
+
+    const KEY = "https://boundary-check-referer-b.example/";
+    const now = Date.now();
+
+    // Seed threshold−1 (2) hits so one more brings hits.length to exactly 3.
+    _refererProbes.set(KEY, { hits: [now - 2000, now - 1000], lastAlerted: 0 });
+
+    // One more hit → hits.length === 3 === threshold, condition (> 3) is false.
+    _recordProbe(_refererProbes, KEY, "referer", now);
+    await flushMicrotasks();
+
+    // No alert — lastAlerted must stay 0.
+    expect(_refererProbes.get(KEY).lastAlerted).toBe(0);
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
