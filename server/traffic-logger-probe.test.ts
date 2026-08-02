@@ -6471,6 +6471,65 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(eUa1!.hits).toContain(hitUa1);
     expect(eUa2!.hits).toContain(hitUa2);
   });
+  it("(K7) initProbeCounters: each restored entry keeps its own lastAlerted value (no shared scalar aliasing across groups)", async () => {
+    // Guards against a refactor that accumulates a single `mergedLastAlerted`
+    // variable outside the Pass 2 loop and assigns it to every group in turn —
+    // so by the time the last group is written, all entries share the scalar
+    // from the last group processed.  That would cause a zero-lastAlerted entry
+    // to inherit another entry's active cooldown, silently suppressing alerts.
+    //
+    // Setup: 2 referer rows + 2 UA rows.
+    //   referer-1  → lastAlerted = ALERT_TS   (non-zero, active cooldown)
+    //   referer-2  → lastAlerted = 0          (never alerted)
+    //   ua-1       → lastAlerted = ALERT_TS   (non-zero, active cooldown)
+    //   ua-2       → lastAlerted = 0          (never alerted)
+    //
+    // If the bug is present, referer-2 and ua-2 end up with lastAlerted equal
+    // to ALERT_TS (borrowed from whichever group processed last).
+    const now      = Date.now();
+    const ALERT_TS = now - 5_000; // 5 s ago — still within the 1-hour cooldown
+
+    const REF_KEY_ALERTED  = "https://k7-lastAlerted-ref-alerted.example/";
+    const REF_KEY_ZERO     = "https://k7-lastAlerted-ref-zero.example/";
+    const UA_KEY_ALERTED   = "K7LastAlertedBotAlerted/1.0";
+    const UA_KEY_ZERO      = "K7LastAlertedBotZero/1.0";
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      { fieldType: "referer", key: REF_KEY_ALERTED, hits: [now - 2_000], lastAlerted: ALERT_TS },
+      { fieldType: "referer", key: REF_KEY_ZERO,    hits: [now - 3_000], lastAlerted: 0        },
+      { fieldType: "ua",      key: UA_KEY_ALERTED,  hits: [now - 2_000], lastAlerted: ALERT_TS },
+      { fieldType: "ua",      key: UA_KEY_ZERO,     hits: [now - 3_000], lastAlerted: 0        },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const eRefAlerted = mod._refererProbes.get(REF_KEY_ALERTED);
+    const eRefZero    = mod._refererProbes.get(REF_KEY_ZERO);
+    const eUaAlerted  = mod._uaProbes.get(UA_KEY_ALERTED);
+    const eUaZero     = mod._uaProbes.get(UA_KEY_ZERO);
+
+    // All four entries must have been restored.
+    expect(eRefAlerted).toBeDefined();
+    expect(eRefZero).toBeDefined();
+    expect(eUaAlerted).toBeDefined();
+    expect(eUaZero).toBeDefined();
+
+    // ── Each alerted entry retains its own non-zero lastAlerted ──────────────
+    expect(eRefAlerted!.lastAlerted).toBe(ALERT_TS);
+    expect(eUaAlerted!.lastAlerted).toBe(ALERT_TS);
+
+    // ── The zero-lastAlerted entries must NOT inherit ALERT_TS ───────────────
+    // This is the core regression: shared scalar aliasing would set both of
+    // these to ALERT_TS, silently suppressing future alerts for those entries.
+    expect(eRefZero!.lastAlerted).toBe(0);
+    expect(eUaZero!.lastAlerted).toBe(0);
+  });
+
   // ── B35 / B36: expired-cooldown re-alert count equals in-window hits only ─
   //
   // B24/B25 confirm that an alert fires after threshold+1 fresh hits on a
