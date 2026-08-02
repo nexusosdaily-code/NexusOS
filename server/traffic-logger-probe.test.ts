@@ -3262,6 +3262,124 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       dateNowSpy.mockRestore();
     }
   });
+
+  // ── B12 / B13: round-trip with a 1 ms clock skew between init and prune ──
+  //
+  // B10/B11 freeze Date.now() to the same value for both initProbeCounters and
+  // pruneProbes, so the two cutoffs are identical.  In practice there is always
+  // at least 1 ms between the restart-hydration pass and the first prune tick.
+  //
+  // B12/B13 model that 1 ms gap: Date.now() is frozen to (pruneNow - 1) for
+  // initProbeCounters and the prune call receives pruneNow explicitly.
+  //
+  //   init  cutoff = (pruneNow - 1) - WINDOW_MS  →  pruneNow - WINDOW_MS - 1
+  //   prune cutoff =  pruneNow      - WINDOW_MS  →  pruneNow - WINDOW_MS
+  //
+  // A boundary hit placed at exactly pruneNow - WINDOW_MS is 1 ms ABOVE the
+  // init cutoff (so it is loaded) and equals the prune cutoff exactly (so the
+  // >= check keeps it alive).  A future regression that shifts init to use a
+  // cutoff of (pruneNow - WINDOW_MS + 1) — or prune to strict > — would drop
+  // the entry and fail these tests.
+  //
+  // T0 = Date.now()+70h (B12) and +72h (B13) — monotonically above B11 (68h).
+  // lastPrune is 0 after vi.resetModules() so _pruneProbes(pruneNow) is the
+  // very first prune pass; no warm-up call is needed.
+
+  it("(B12) round-trip UA 1 ms skew: boundary hit loaded by initProbeCounters (initNow = pruneNow−1) is NOT evicted by _pruneProbes(pruneNow)", async () => {
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+    // pruneNow is 70 h in the future so its distance from all other T0 values
+    // is strictly larger than any window or cooldown constant.
+    const pruneNow    = Date.now() + 70 * 60 * 60 * 1000;
+    const initNow     = pruneNow - 1;               // 1 ms earlier than prune
+    const boundaryHit = pruneNow - WINDOW_MS;       // == prune cutoff exactly
+
+    // Freeze Date.now() to initNow so initProbeCounters uses the slightly
+    // earlier cutoff (initNow - WINDOW_MS = boundaryHit - 1).
+    // boundaryHit >= (initNow - WINDOW_MS)  →  true  →  hit is loaded.
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _uaProbes, _pruneProbes } = mod as any;
+
+      // ── Step 1: restore the boundary UA hit from the fake DB ────────────
+      const fakeRows = [
+        {
+          fieldType:   "ua",
+          key:         "B12BoundaryUA/1.0",
+          hits:        [boundaryHit],
+          lastAlerted: 0,
+        },
+      ];
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      // The entry must have been loaded despite the 1 ms earlier cutoff.
+      expect(_uaProbes.has("B12BoundaryUA/1.0")).toBe(true);
+
+      // ── Step 2: first prune pass (1 ms later) ───────────────────────────
+      // pruneNow - WINDOW_MS === boundaryHit, so hits[last] >= cutoff → true.
+      _pruneProbes(pruneNow);
+
+      // The boundary hit must survive the prune pass.
+      expect(_uaProbes.has("B12BoundaryUA/1.0")).toBe(true);
+      expect(_uaProbes.get("B12BoundaryUA/1.0")!.hits).toEqual([boundaryHit]);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it("(B13) round-trip referer 1 ms skew: boundary hit loaded by initProbeCounters (initNow = pruneNow−1) is NOT evicted by _pruneProbes(pruneNow)", async () => {
+    // Symmetric referer-map counterpart to B12.
+    //
+    // T0 = Date.now()+72h — monotonically above B12 (70h).
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+    const pruneNow    = Date.now() + 72 * 60 * 60 * 1000;
+    const initNow     = pruneNow - 1;
+    const boundaryHit = pruneNow - WINDOW_MS;
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+      // ── Step 1: restore the boundary referer hit from the fake DB ───────
+      const fakeRows = [
+        {
+          fieldType:   "referer",
+          key:         "https://b13-boundary-referer.example/scan",
+          hits:        [boundaryHit],
+          lastAlerted: 0,
+        },
+      ];
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      // Must land in the referer map, not the UA map.
+      expect(_refererProbes.has("https://b13-boundary-referer.example/scan")).toBe(true);
+      expect(_uaProbes.has("https://b13-boundary-referer.example/scan")).toBe(false);
+
+      // ── Step 2: first prune pass (1 ms later) ───────────────────────────
+      _pruneProbes(pruneNow);
+
+      // The boundary hit must survive the prune pass.
+      expect(_refererProbes.has("https://b13-boundary-referer.example/scan")).toBe(true);
+      expect(_refererProbes.get("https://b13-boundary-referer.example/scan")!.hits).toEqual([boundaryHit]);
+      // Must not have leaked into uaProbes.
+      expect(_uaProbes.has("https://b13-boundary-referer.example/scan")).toBe(false);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
