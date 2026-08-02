@@ -3533,6 +3533,14 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
           expect.stringContaining(`fieldType="${fieldType}"`),
         );
       }
+
+      // Each call must also include the row's key so operators can trace which
+      // DB row triggered the warning without additional DB queries.
+      for (const { key } of SKIPPED_VARIANTS) {
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining(`key="${key}"`),
+        );
+      }
     } finally {
       warnSpy.mockRestore();
     }
