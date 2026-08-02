@@ -95,6 +95,13 @@
  *           branch.  The helper splits the arrow body across lines; the full-body
  *           forbidden pass must still emit the "relaxed eviction comparison / split
  *           across lines" message attributed to the helper.
+ *        split-for-correct. Helper body: for-loop correct condition (`e.hits[i] <=\n    c`)
+ *           split across two lines → ok:false.  The negative lookahead (?!\s*;) in
+ *           HELPER_REQUIRED_PATTERN rejects the for-loop form even when the correct
+ *           <= comparator is used, because the cutoff token is followed by `;` (the
+ *           for-loop separator) after the newline is consumed.  The check is therefore
+ *           intentionally strict: only a while-loop or filter form qualifies as proof
+ *           of correct eviction.
  *   5. Multi-line source strings (formatter-split arrow)
  *        a. Filter arrow split to the next line (correct form) → ok:true
  *           REQUIRED_PATTERN uses \s* between tokens and \s matches \n; the
@@ -2175,6 +2182,52 @@ describe("helper-extraction detection", () => {
     const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toContain("evictStaleHits");
+  });
+
+  // ── 4split-for-correct. Helper body: for-loop correct condition split across two lines → ok:false
+  it("returns ok:false (helper-extraction message) when the helper body has a for-loop whose correct '<= c' condition is split across two lines", async () => {
+    // A formatter may wrap a long for-loop condition so that the cutoff
+    // operand ends up on the next line:
+    //
+    //   for (; i < e.hits.length && e.hits[i] <=
+    //       c; i++) {}
+    //
+    // This uses the CORRECT comparator (<=), so HELPER_FORBIDDEN_PATTERN does
+    // not fire.  However, after the newline is consumed by \s*, the joined
+    // text reads `e.hits[i] <= c;` — the cutoff token `c` is immediately
+    // followed by `;` (the for-loop separator).  The negative lookahead
+    // `(?!\s*;)` in HELPER_REQUIRED_PATTERN therefore rejects the match.
+    //
+    // This is intentional: a for-loop condition expresses the keep/discard
+    // threshold but the body must separately mutate e.hits.  The guard only
+    // accepts the while-loop or filter form as proof of correct eviction, so
+    // the result is ok:false with the helper-extraction "no correct eviction
+    // comparison" message — not a relaxed-comparison error.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  let i = 0;`,
+        `  for (; i < e.hits.length && e.hits[i] <=`,
+        `      c; i++) {}`,
+        `  e.hits = e.hits.slice(i);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    // The negative lookahead blocks the for-loop form even with the correct
+    // comparator — the check fails with the helper-extraction message, not
+    // the relaxed-comparison message.
+    expect(result.reason).toMatch(/no correct eviction comparison/i);
     expect(result.reason).toContain("evictStaleHits");
   });
 });
