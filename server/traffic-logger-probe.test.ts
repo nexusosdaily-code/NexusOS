@@ -9744,6 +9744,101 @@ describe("ProbeEntry object-aliasing guard (update path): hits arrays remain ind
 // objects that mutate independently.
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Object-aliasing guard — same-string edge case (middleware path)
+//
+// The middleware normalises refKey = referer.slice(0,500).toLowerCase() and
+// uaKey = ua.slice(0,500).  When req.headers.referer === req.headers["user-agent"]
+// AND the shared string is already lowercase, both keys resolve to the same
+// string value.  A future shortcut ("same key string → reuse the same object")
+// would alias the two entries.  This suite fires the middleware with exactly
+// that request and asserts the two ProbeEntry objects are independent.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("ProbeEntry object-aliasing guard (middleware path, identical referer and UA string): entries are independent objects when referer === user-agent", () => {
+  it("produces distinct ProbeEntry objects when referer and user-agent carry the same lowercase string", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "999"; // keep alerts out of the way
+    process.env.PROBE_COOLDOWN_HOURS  = "0";
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes } = mod as any;
+    const mw = mod.trafficLoggerMiddleware;
+
+    await mod.initProbeCounters();
+
+    // Use a single lowercase non-URL string for both headers so the normalised
+    // keys are identical.  A non-URL string is intentional: isOwnOriginReferer
+    // catches the URL parse error and returns false (so the referer branch
+    // records the probe), and it avoids any URL-pattern bot detection (so the
+    // UA branch also records the probe).  This is the scenario most likely to
+    // trigger a "same key → reuse the same object" shortcut in a future refactor.
+    const SHARED_STRING = "same-string-aliasing-guard-test-probe-v1";
+
+    // refKey = SHARED_STRING.slice(0,500).toLowerCase() === SHARED_STRING
+    // uaKey  = SHARED_STRING.slice(0,500)               === SHARED_STRING
+    const refKey = SHARED_STRING.slice(0, 500).toLowerCase();
+    const uaKey  = SHARED_STRING.slice(0, 500);
+
+    // Verify the test assumption: both normalised keys are the same string.
+    expect(refKey).toBe(uaKey);
+
+    // Remove any stale entries so we start from a clean slate.
+    _refererProbes.delete(refKey);
+    _uaProbes.delete(uaKey);
+
+    const req = {
+      path:    "/page",
+      method:  "GET",
+      headers: {
+        "user-agent": SHARED_STRING,
+        "referer":    SHARED_STRING,
+      },
+      socket: { remoteAddress: "10.0.0.3" },
+    } as any;
+
+    const listeners: Record<string, Array<() => void>> = {};
+    const res = {
+      statusCode: 200,
+      locals:     {},
+      status: vi.fn().mockReturnThis(),
+      json:   vi.fn().mockReturnThis(),
+      on(event: string, fn: () => void) {
+        (listeners[event] ??= []).push(fn);
+      },
+    } as any;
+
+    // Drive the middleware — registers the res.on("finish") handler.
+    mw(req, res, () => {});
+
+    // Fire the finish event so probe recording runs.
+    for (const fn of listeners["finish"] ?? []) fn();
+
+    // Allow any microtasks / promise chains inside the finish handler to settle.
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+
+    const refEntry = _refererProbes.get(refKey);
+    const uaEntry  = _uaProbes.get(uaKey);
+
+    // Both entries must have been created by the middleware.
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // ── Reference-inequality assertion ─────────────────────────────────────
+    // Even though the normalised key string is identical for both maps, the
+    // middleware must store separate ProbeEntry objects.  If it ever aliases
+    // the same object into both maps this assertion will fail.
+    expect(refEntry).not.toBe(uaEntry);
+
+    // ── Mutation-isolation assertion ───────────────────────────────────────
+    // Overwrite lastAlerted on the referer entry and confirm the UA entry is
+    // unaffected.  Aliased objects would mutate in lock-step.
+    const uaLastAlertedBefore = uaEntry.lastAlerted;
+    refEntry.lastAlerted = uaLastAlertedBefore + 88_888;
+
+    expect(_uaProbes.get(uaKey)!.lastAlerted).toBe(uaLastAlertedBefore);
+  });
+});
+
 describe("ProbeEntry object-aliasing guard (restart path): entries built by initProbeCounters are independent objects", () => {
   const refKey = "https://restart-aliasing-guard.example.com/probe";
   const uaKey  = "RestartAliasingGuardUA/1.0";
