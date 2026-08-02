@@ -31,6 +31,10 @@
  *        r. checkProbeEvictionGuard returns ok:true for filter( ( t ) => t > cutoff )
  *        s. checkProbeEvictionGuard returns ok:false (relaxed) for filter( (t) => t >= cutoff )
  *        t. checkProbeEvictionGuard returns ok:false (relaxed) for filter( ( t ) => t >= cutoff )
+ *        u. Inline for-loop condition contains `entry.hits[lo] <= cutoff` but never mutates hits → ok:false
+ *        v. Inline for-loop condition uses `entry.hits[lo] < cutoff` (strictly-less-than) →
+ *           ok:false with reason matching /relaxed eviction comparison/i.
+ *           FORBIDDEN_PATTERN catches the relaxed form even when followed by `;`.
  *   4. Helper-extraction detection (fs mocked)
  *        a. HELPER_DELEGATION_PATTERN matches a delegating call of the form evict*(entry, cutoff)
  *        b. HELPER_REQUIRED_PATTERN matches correct while-loop comparison with arbitrary param names
@@ -579,6 +583,36 @@ describe("checkProbeEvictionGuard() unit logic", () => {
   it("returns ok:false with a 'relaxed' reason for filter( ( t ) => t >= cutoff ) with spaces inside every paren pair", async () => {
     mockReadFile.mockResolvedValue(
       `entry.hits = entry.hits.filter( ( t ) => t >= cutoff );\n`,
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+  });
+
+  // ── 3v. Inline for-loop condition uses < instead of <= → ok:false (relaxed) ─
+  it("returns ok:false (relaxed eviction comparison) when an inline for-loop condition uses entry.hits[lo] < cutoff (strictly-less-than)", async () => {
+    // A future developer might write the eviction loop as a for-loop and
+    // accidentally use the relaxed operator:
+    //
+    //   for (; lo < entry.hits.length && entry.hits[lo] < cutoff; lo++) {}
+    //
+    // `entry.hits[lo] < cutoff` keeps a hit whose timestamp equals exactly
+    // (now − WINDOW_MS), silently inflating the in-window counter by 1.
+    //
+    // FORBIDDEN_PATTERN must catch the relaxed `< cutoff` form even when it
+    // is followed by `;` (the for-loop separator) rather than `)`.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  let lo = 0;`,
+        `  for (; lo < entry.hits.length && entry.hits[lo] < cutoff; lo++) {}`,
+        `  entry.hits = entry.hits.slice(lo);`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
     );
 
     const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
