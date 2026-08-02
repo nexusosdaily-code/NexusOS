@@ -54,6 +54,17 @@
  *        w. Helper body splits 'e.hits\n  .filter((t) => t >= c)' across lines → ok:false
  *           The param-specific forbidden pattern also has \s* before \.filter, so the
  *           full-body fallback detects the relaxed split form and emits the relaxed error.
+ *        x. Helper body uses a for-loop eviction (keep-condition e.hits[i] > c) →
+ *           ok:false with the helper-extraction message.  HELPER_REQUIRED_PATTERN only
+ *           recognises the while-loop and filter idioms, not a for-loop keep-condition.
+ *        y. Opt-in flag guard (ok:true): split-only correct form with full-length param
+ *           names (entry/cutoff) → ok:true.  The full-body fallback must run
+ *           unconditionally; if it were gated behind a flag that defaults to false this
+ *           test would fail with the helper-extraction "no correct eviction" message.
+ *        z. Opt-in flag guard (ok:false): split-only helper whose filter body uses a
+ *           wrong comparator (t !== cutoff) that matches neither required nor forbidden
+ *           → ok:false with the helper-extraction message.  Confirms the fallback is
+ *           selective and does not return a false-positive ok:true for arbitrary splits.
  *   5. Multi-line source strings (formatter-split arrow)
  *        a. Filter arrow split to the next line (correct form) → ok:true
  *           REQUIRED_PATTERN uses \s* between tokens and \s matches \n; the
@@ -1289,6 +1300,73 @@ describe("helper-extraction detection", () => {
     expect(result.reason).toMatch(/extracted into helper/i);
     expect(result.reason).toContain("evictStaleHits");
     expect(result.reason).toMatch(/update REQUIRED_PATTERN/i);
+  });
+
+  // ── 4y. Opt-in flag guard (ok:true): split correct form, full param names ─
+  it("returns ok:true when the helper body splits the correct filter form across lines using full-length param names (full-body fallback must be unconditional)", async () => {
+    // Guard against a future refactor that gates the full-body fallback behind
+    // an opt-in flag.  The helper body below has NO single-line form of the
+    // eviction comparison — the per-line scan finds nothing.  Only the
+    // full-body fallback (joining helperLines with "\n" and re-applying the
+    // param-specific required pattern) can detect the split chain:
+    //
+    //   entry.hits = entry.hits
+    //     .filter((t) => t > cutoff);
+    //
+    // If the fallback were gated behind a flag that defaults to false, this
+    // test would fail with the helper-extraction "no correct eviction" message.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictOldHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictOldHits(entry, cutoff) {`,
+        `  entry.hits = entry.hits`,
+        `    .filter((t) => t > cutoff);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 4z. Opt-in flag guard (ok:false): split form, wrong comparator ────────
+  it("returns ok:false with the helper-extraction message when the split filter body uses a wrong comparator (t !== cutoff) that matches neither required nor forbidden", async () => {
+    // Confirms the full-body fallback is SELECTIVE: it only promotes
+    // requiredFound=true when the param-specific required pattern actually
+    // matches the joined body text.  A helper that uses the wrong comparator
+    // must still produce ok:false, not a false-positive ok:true, regardless of
+    // whether the comparator appears on one line or is split across two.
+    //
+    // If the fallback were unconditionally returning ok:true for any split
+    // form, this test would catch that regression.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictOldHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictOldHits(entry, cutoff) {`,
+        `  // BUG: !== is neither the correct (>) nor the relaxed (>=) comparator`,
+        `  entry.hits = entry.hits`,
+        `    .filter((t) => t !== cutoff);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/extracted into helper/i);
+    expect(result.reason).toContain("evictOldHits");
+    expect(result.reason).toMatch(/no correct eviction comparison|update REQUIRED_PATTERN/i);
   });
 });
 
