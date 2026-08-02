@@ -1183,6 +1183,53 @@ describe("helper-extraction detection", () => {
     expect(result.reason).toMatch(/relaxed eviction comparison/i);
     expect(result.reason).toContain("evictUa");
   });
+
+  // ── 4x. Helper uses a for-loop with correct comparison → ok:false ─────────
+  it("returns ok:false with the helper-extraction message when the helper body uses a for-loop eviction", async () => {
+    // A developer might rewrite eviction as a for-loop that collects
+    // surviving hits into a new array, e.g.:
+    //
+    //   const kept = [];
+    //   for (let i = 0; i < e.hits.length; i++) {
+    //     if (e.hits[i] > c) kept.push(e.hits[i]);
+    //   }
+    //   e.hits = kept;
+    //
+    // This is semantically equivalent to e.hits.filter(t => t > c) and
+    // therefore correct — but HELPER_REQUIRED_PATTERN only recognises:
+    //   • the while-loop idiom:  <param>.hits[<idx>] <= <cutoff>
+    //   • the filter idiom:      <param>.hits.filter(... => ... > <cutoff>)
+    //
+    // The for-loop uses `e.hits[i] > c` as a keep-condition, not `<= c`,
+    // and does not call .filter(), so it matches neither branch of
+    // HELPER_REQUIRED_PATTERN.  The check must therefore fail with the
+    // "extracted into helper / update REQUIRED_PATTERN" message.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  const kept = [];`,
+        `  for (let i = 0; i < e.hits.length; i++) {`,
+        `    if (e.hits[i] > c) kept.push(e.hits[i]);`,
+        `  }`,
+        `  e.hits = kept;`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    // Must cite the helper and direct the developer to update REQUIRED_PATTERN.
+    expect(result.reason).toMatch(/extracted into helper/i);
+    expect(result.reason).toContain("evictStaleHits");
+    expect(result.reason).toMatch(/update REQUIRED_PATTERN/i);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
