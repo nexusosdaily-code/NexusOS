@@ -362,6 +362,36 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     expect(_uaProbes.get(KEY).lastAlerted).toBe(0);
     expect(mockSendProbeAlert).not.toHaveBeenCalled();
   });
+
+  it("UA lastAlerted stays unchanged when hits exceed threshold but cooldown is active", async () => {
+    // threshold=3, default cooldown=1h.  Seed a _uaProbes entry that has already
+    // alerted recently (lastAlerted within COOLDOWN_MS) and exactly threshold
+    // hits so the NEXT _recordProbe call pushes hits.length to threshold+1,
+    // satisfying the count condition — but the cooldown guard must block the
+    // alert and leave lastAlerted untouched.
+    process.env.PROBE_ALERT_THRESHOLD = "3";
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+
+    const KEY = "BoundaryCheckUA/cooldown-frozen";
+    const now = Date.now();
+
+    // lastAlerted is 30 seconds ago — well within the 1-hour default cooldown.
+    const recentAlert = now - 30_000;
+    // Seed exactly threshold (3) hits so the next call pushes hits.length to 4 > 3.
+    _uaProbes.set(KEY, {
+      hits: [now - 3000, now - 2000, now - 1000],
+      lastAlerted: recentAlert,
+    });
+
+    // One more hit — count condition (4 > 3) is satisfied but cooldown blocks it.
+    _recordProbe(_uaProbes, KEY, "ua", now);
+    await flushMicrotasks();
+
+    // Alert must NOT have fired — lastAlerted must remain the original value.
+    expect(_uaProbes.get(KEY).lastAlerted).toBe(recentAlert);
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
