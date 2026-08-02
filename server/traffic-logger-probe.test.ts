@@ -6312,3 +6312,141 @@ describe("probe map identity — _refererProbes and _uaProbes are distinct objec
     _uaProbes.delete(uaKey);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Task 392 — alert fires on the very first hit after a restart when the
+// scraper was already at the threshold before the restart
+//
+// If a scraper accumulated exactly ALERT_THRESHOLD hits before the server
+// restarted, the in-memory counter is rebuilt from the DB via
+// initProbeCounters.  The next recorded hit should push the in-window count
+// above the threshold and fire sendProbeAlert exactly once.
+//
+// A future change that:
+//   • off-by-ones the restored hit count (e.g. <= vs <)
+//   • skips loading hits entirely for rows whose lastAlerted === 0
+//   • resets the hits array instead of appending to it after restart
+// would suppress that alert and this test would catch it.
+//
+// Two cases are exercised — one per field type — so a regression in either
+// branch (refererProbes or uaProbes) is caught independently.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("alert fires on the first post-restart hit when the scraper was already at threshold", () => {
+  it("(K) UA probe: threshold hits restored from DB, one more hit fires sendProbeAlert exactly once", async () => {
+    // threshold=5 (default) → alert fires when hits.length > 5 (i.e. on the
+    // 6th hit).  We seed exactly 5 hits in the fake DB so the in-window count
+    // after initProbeCounters equals the threshold.  One more hit through the
+    // middleware must push the count to 6 and fire the alert.
+    // lastAlerted=0 means the scraper has never alerted and no cooldown is
+    // active, so the alert path is fully open.
+    process.env.PROBE_ALERT_THRESHOLD = "5";
+
+    const now    = Date.now();
+    const UA_KEY = "PostRestartScraperUA/1.0"; // not in BOT_PATTERNS
+
+    const fakeRows = [
+      {
+        fieldType:   "ua",
+        key:         UA_KEY,
+        hits:        [
+          now - 5_000,
+          now - 4_000,
+          now - 3_000,
+          now - 2_000,
+          now - 1_000,
+        ],
+        lastAlerted: 0,
+      },
+    ];
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    // Simulate a restart: re-hydrate the in-memory map from the fake DB rows.
+    await mod.initProbeCounters();
+
+    // Confirm exactly threshold hits were restored.
+    const entry = mod._uaProbes.get(UA_KEY);
+    expect(entry).toBeDefined();
+    expect(entry!.hits.length).toBe(5);
+    expect(entry!.lastAlerted).toBe(0);
+
+    // Drive one hit through the middleware — no referer so only the UA probe
+    // can fire.
+    const mw  = mod.trafficLoggerMiddleware;
+    const req = makeReq(UA_KEY); // UA_KEY is not in BOT_PATTERNS
+    const res = makeRes();
+    mw(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+
+    // The single post-restart hit must push hits.length to 6 > 5 and fire the
+    // alert exactly once.
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    const [field, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(field).toBe("ua");
+    expect(value).toBe(UA_KEY);
+  });
+
+  it("(L) referer probe: threshold hits restored from DB, one more hit fires sendProbeAlert exactly once", async () => {
+    // Mirror of (K) for the referer branch.  We use a Googlebot UA so that
+    // `patternBot === true` and the UA branch inside the middleware is skipped —
+    // only the referer probe can fire.  This keeps the assertion clean: a single
+    // sendProbeAlert call must be for the referer key, not a UA key.
+    process.env.PROBE_ALERT_THRESHOLD = "5";
+
+    const now         = Date.now();
+    const REFERER_KEY = "https://post-restart-scraper.example/scan"; // not own-origin, not blocked
+    const BOT_UA      = "Googlebot/2.1 (+http://www.google.com/bot.html)";
+
+    const fakeRows = [
+      {
+        fieldType:   "referer",
+        key:         REFERER_KEY,
+        hits:        [
+          now - 5_000,
+          now - 4_000,
+          now - 3_000,
+          now - 2_000,
+          now - 1_000,
+        ],
+        lastAlerted: 0,
+      },
+    ];
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    // Simulate a restart: re-hydrate the in-memory map from the fake DB rows.
+    await mod.initProbeCounters();
+
+    // Confirm exactly threshold hits were restored into the referer map.
+    const entry = mod._refererProbes.get(REFERER_KEY);
+    expect(entry).toBeDefined();
+    expect(entry!.hits.length).toBe(5);
+    expect(entry!.lastAlerted).toBe(0);
+    // Must not have bled into the UA map.
+    expect(mod._uaProbes.has(REFERER_KEY)).toBe(false);
+
+    // Drive one hit through the middleware using a bot UA so the UA probe is
+    // skipped (patternBot === true → the `if (ua && !patternBot)` guard fails).
+    const mw  = mod.trafficLoggerMiddleware;
+    const req = makeReq(BOT_UA, REFERER_KEY);
+    const res = makeRes();
+    mw(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+
+    // The single post-restart hit must push hits.length to 6 > 5 and fire the
+    // alert exactly once for the referer key.
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    const [field, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(field).toBe("referer");
+    expect(value).toBe(REFERER_KEY);
+  });
+});
