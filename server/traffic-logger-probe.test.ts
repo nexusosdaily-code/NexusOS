@@ -315,6 +315,53 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     await hitTimes(mw, 3, uaB);
     expect(mockSendProbeAlert.mock.calls.length).toBe(2);
   });
+
+  // ── lastAlerted boundary: set only when hits EXCEED threshold ────────────
+  // These two companion tests guard the strict > condition.
+  // A refactor that changes > to >= would fire one hit early AND could skip
+  // the lastAlerted assignment path; the second test would catch that.
+
+  it("lastAlerted is set after hits exceed threshold (hits.length === threshold+1)", async () => {
+    // threshold=3 → alert fires on the 4th hit (hits.length becomes 4 > 3)
+    process.env.PROBE_ALERT_THRESHOLD = "3";
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+
+    const KEY = "BoundaryCheckUA/1.0";
+    const now = Date.now();
+
+    // Seed exactly threshold (3) hits — no alert should have fired yet.
+    _uaProbes.set(KEY, { hits: [now - 3000, now - 2000, now - 1000], lastAlerted: 0 });
+
+    // One more hit brings hits.length to 4, which exceeds threshold of 3.
+    _recordProbe(_uaProbes, KEY, "ua", now);
+    await flushMicrotasks();
+
+    // The alert must have fired and lastAlerted must be stamped.
+    expect(_uaProbes.get(KEY).lastAlerted).toBeGreaterThan(0);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+  });
+
+  it("lastAlerted remains 0 when hits only reach threshold (hits.length === threshold, not threshold+1)", async () => {
+    // threshold=3 → no alert at exactly 3 hits (hits.length === 3, not > 3)
+    process.env.PROBE_ALERT_THRESHOLD = "3";
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+
+    const KEY = "BoundaryCheckUA/2.0";
+    const now = Date.now();
+
+    // Seed threshold−1 (2) hits so one more brings hits.length to exactly 3.
+    _uaProbes.set(KEY, { hits: [now - 2000, now - 1000], lastAlerted: 0 });
+
+    // One more hit → hits.length === 3 === threshold, condition (> 3) is false.
+    _recordProbe(_uaProbes, KEY, "ua", now);
+    await flushMicrotasks();
+
+    // No alert — lastAlerted must stay 0.
+    expect(_uaProbes.get(KEY).lastAlerted).toBe(0);
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
