@@ -3462,6 +3462,99 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       dateNowSpy.mockRestore();
     }
   });
+
+  // ── B14 / B15: pruneProbes — cooldown-survival path for the UA map ────────
+  //
+  // B8/B9 test the same invariant for the referer map.  B14/B15 add a
+  // symmetric pair anchored inside *this* describe block so that a future
+  // split-loop refactor that accidentally drops the cooldown guard from only
+  // the UA branch will be caught immediately, without relying on the
+  // separate "pruneProbes — entries with active cooldown survive" describe
+  // block (which tests both maps in a single it() and would still pass if
+  // only the referer assertion remained).
+
+  it("(B14) pruneProbes: UA entry with all-expired hits but an active cooldown SURVIVES the prune pass", async () => {
+    // All hits are outside the 24-h window so hasActiveHits = false.
+    // However lastAlerted is within the 1-h cooldown, so hasActiveCooldown =
+    // true and the entry must be kept alive.
+    //
+    // A future split-loop refactor that omits the cooldown check from the
+    // UA branch would delete this entry and fail this test.
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+74h — monotonically above B13 (72h).
+    const T0       = Date.now() + 74 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop actually ran ──────────────────
+    _uaProbes.set("B14StaleUA/1.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the cooldown-active UA entry ─────────────────────────────────────
+    // All hits are well outside the window; lastAlerted is 30 min ago (< 1 h
+    // cooldown) → hasActiveCooldown = true → entry must SURVIVE.
+    _uaProbes.set("B14WarmCooldownUA/1.0", {
+      hits:        [pruneNow - WINDOW_MS - 60_000], // 1 min past the cutoff
+      lastAlerted: pruneNow - 30 * 60_000,          // 30 min ago — cooldown active
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → confirms the prune loop ran
+    expect(_uaProbes.has("B14StaleUA/1.0")).toBe(false);
+    // Active cooldown guards the entry even though all hits are expired
+    expect(_uaProbes.has("B14WarmCooldownUA/1.0")).toBe(true);
+  });
+
+  it("(B15) pruneProbes: UA entry with all-expired hits AND an expired cooldown IS deleted", async () => {
+    // Companion to B14: once the cooldown also expires the entry has nothing
+    // left to protect it and pruneProbes must delete it.
+    //
+    // This is the control case — without it, B14 passing could mean the entry
+    // was simply never visited rather than being actively kept alive.
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+76h — monotonically above B14 (74h).
+    const T0       = Date.now() + 76 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop actually ran ──────────────────
+    _uaProbes.set("B15StaleUA/1.0", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the cooldown-expired UA entry ────────────────────────────────────
+    // All hits are outside the window AND lastAlerted was 2 h ago (> 1 h
+    // cooldown) → hasActiveHits = false AND hasActiveCooldown = false → DELETE.
+    _uaProbes.set("B15ColdCooldownUA/1.0", {
+      hits:        [pruneNow - WINDOW_MS - 60_000], // 1 min past the cutoff
+      lastAlerted: pruneNow - 2 * COOLDOWN_MS,      // 2 h ago — cooldown expired
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → confirms the prune loop ran
+    expect(_uaProbes.has("B15StaleUA/1.0")).toBe(false);
+    // Both guards fail → entry must be DELETED
+    expect(_uaProbes.has("B15ColdCooldownUA/1.0")).toBe(false);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
