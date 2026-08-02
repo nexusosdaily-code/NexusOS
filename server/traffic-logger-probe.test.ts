@@ -814,6 +814,39 @@ describe("referer probe — alert respects the same threshold as the UA probe", 
     expect(_refererProbes.get(KEY).lastAlerted).toBe(recentAlert);
     expect(mockSendProbeAlert).not.toHaveBeenCalled();
   });
+
+  it("referer lastAlerted stays frozen across 5 excess hits while cooldown is active", async () => {
+    // threshold=3, default cooldown=1h.
+    // Each of the 5 _recordProbe calls pushes hits.length further above
+    // threshold, satisfying the count condition every time.  The cooldown
+    // guard must block all 5 and leave lastAlerted at its original value
+    // throughout — not just on the first call.
+    process.env.PROBE_ALERT_THRESHOLD = "3";
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe } = mod as any;
+
+    const KEY = "https://boundary-check-referer-multi-excess.example/";
+    const now = Date.now();
+
+    // lastAlerted is 30 seconds ago — well within the 1-hour default cooldown.
+    const recentAlert = now - 30_000;
+    // Seed exactly threshold (3) hits so each subsequent call increases the
+    // excess count while the count condition (> 3) remains satisfied.
+    _refererProbes.set(KEY, {
+      hits: [now - 3000, now - 2000, now - 1000],
+      lastAlerted: recentAlert,
+    });
+
+    // Call _recordProbe 5 times in a row, asserting after each call that
+    // lastAlerted has not changed and no alert has fired.
+    for (let i = 1; i <= 5; i++) {
+      _recordProbe(_refererProbes, KEY, "referer", now + i);
+      await flushMicrotasks();
+
+      expect(_refererProbes.get(KEY).lastAlerted).toBe(recentAlert);
+      expect(mockSendProbeAlert).not.toHaveBeenCalled();
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
