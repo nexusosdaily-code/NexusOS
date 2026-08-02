@@ -2570,6 +2570,117 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
       mod._testOnly.extraProbeHook = null;
     }
   });
+
+  it("combined alert fires for both maps: each map's own cooldown independently suppresses follow-up alerts; clearing one does not expose the other", async () => {
+    // Regression guard: a future change might make the two in-memory probe maps
+    // share a cooldown object or cross-write lastAlerted — e.g.:
+    //
+    //   const sharedCooldown = { lastAlerted: 0 };
+    //   recordProbe(refererProbes, refKey, "referer", now, sharedCooldown);
+    //   recordProbe(uaProbes,      uaKey,  "ua",      now, sharedCooldown);
+    //
+    // Such a bug would cause:
+    //   • A follow-up referer hit to fire a second alert because the UA entry's
+    //     cooldown inadvertently reset the referer entry's lastAlerted — or
+    //     vice-versa.
+    //   • Clearing lastAlerted on one entry to also clear the other's cooldown,
+    //     causing a spurious re-alert on the un-cleared map.
+    //
+    // Scenario (three phases, all using _recordProbe directly to bypass the
+    // middleware and control "now" precisely):
+    //
+    //   Phase 1 — initial combined alert
+    //     Both maps are seeded to threshold (2 hits each) with different keys.
+    //     _recordProbe is called for the referer key then the UA key.
+    //     sendProbeAlert must be called exactly twice (once per field).
+    //     Each entry's lastAlerted must equal its own "now" value.
+    //
+    //   Phase 2 — follow-up hits during active cooldown
+    //     A second hit is delivered to both maps immediately (same "now" range,
+    //     well inside COOLDOWN_MS).
+    //     sendProbeAlert must NOT fire a third or fourth time — each map's own
+    //     cooldown suppresses it independently.
+    //
+    //   Phase 3 — clear one entry's cooldown, other stays suppressed
+    //     lastAlerted on the referer entry is reset to 0 (simulating expiry).
+    //     A hit is immediately delivered to BOTH maps.
+    //     Only the referer alert may re-fire (its cooldown was cleared).
+    //     The UA alert must remain suppressed (its own cooldown is still active).
+    //     sendProbeAlert must be called exactly once more (field = "referer").
+
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _refererProbes, _recordProbe } = mod as any;
+
+    await mod.initProbeCounters();
+
+    const now = Date.now();
+
+    const UA_KEY  = "IndependentCooldownGuardUA/1.0";
+    const REF_KEY = "independent-cooldown-guard-referer.example/probe";
+
+    // ── Phase 1: combined alert ───────────────────────────────────────────────
+    // Seed both maps to exactly threshold (2 hits) — one more hit on each
+    // triggers the alert branch.
+    _uaProbes.set(UA_KEY,   { hits: [now - 2000, now - 1000], lastAlerted: 0 });
+    _refererProbes.set(REF_KEY, { hits: [now - 2000, now - 1000], lastAlerted: 0 });
+
+    // Fire referer probe first, flush so its import chain completes and the
+    // telegram-bot mock is fully cached before the UA import runs.
+    _recordProbe(_refererProbes, REF_KEY, "referer", now);
+    await flushMicrotasks();
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+    expect((mockSendProbeAlert.mock.calls[0] as [string, string, number])[0]).toBe("referer");
+
+    _recordProbe(_uaProbes, UA_KEY, "ua", now);
+    await flushMicrotasks();
+    expect(mockSendProbeAlert.mock.calls.length).toBe(2);
+    expect((mockSendProbeAlert.mock.calls[1] as [string, string, number])[0]).toBe("ua");
+
+    // Each entry must carry its own alert timestamp, not the other's.
+    expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(now);
+    expect(_uaProbes.get(UA_KEY).lastAlerted).toBe(now);
+
+    vi.clearAllMocks();
+
+    // ── Phase 2: follow-up hits while both cooldowns are active ───────────────
+    // "now2" is well inside COOLDOWN_MS (10 ms after "now").
+    const now2 = now + 10;
+    _recordProbe(_refererProbes, REF_KEY, "referer", now2);
+    await flushMicrotasks();
+    _recordProbe(_uaProbes, UA_KEY, "ua", now2);
+    await flushMicrotasks();
+
+    // Neither map may re-alert — each suppresses via its own cooldown.
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+    // lastAlerted on each entry must remain at the Phase-1 "now", not bumped.
+    expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(now);
+    expect(_uaProbes.get(UA_KEY).lastAlerted).toBe(now);
+
+    vi.clearAllMocks();
+
+    // ── Phase 3: clear ONE entry's cooldown; the other stays suppressed ───────
+    // Reset only the referer entry — simulating its cooldown expiring.
+    _refererProbes.get(REF_KEY).lastAlerted = 0;
+
+    // Deliver a hit to both maps.
+    const now3 = now + 20;
+    _recordProbe(_refererProbes, REF_KEY, "referer", now3);
+    await flushMicrotasks();
+    _recordProbe(_uaProbes, UA_KEY, "ua", now3);
+    await flushMicrotasks();
+
+    // Only the referer alert must re-fire (its cooldown was cleared).
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+    expect((mockSendProbeAlert.mock.calls[0] as [string, string, number])[0]).toBe("referer");
+
+    // The UA entry must still be in cooldown — lastAlerted must NOT have been
+    // bumped to now3 (the alert branch must not have run for it).
+    expect(_uaProbes.get(UA_KEY).lastAlerted).toBe(now);
+
+    // The referer entry must now carry its new alert timestamp.
+    expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(now3);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
