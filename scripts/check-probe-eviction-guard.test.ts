@@ -93,6 +93,14 @@
  *           A formatter that wraps `e.hits[lo] <= c` across two lines leaves neither
  *           line matching HELPER_REQUIRED_PATTERN, so the check fails with the
  *           "extracted into helper … no correct eviction comparison" message.
+ *        d. Helper body splits filter arrow body `t > c` to its own line (correct
+ *           form) → ok:true.  buildHelperScanPatterns' required pattern has \s*
+ *           between `=>` and the callback token, so the full-body fallback pass
+ *           spans the newline and recognises the expression.
+ *        e. Helper body splits filter arrow body `t >= c` to its own line (relaxed
+ *           form) → ok:false.  The param-specific forbidden pattern also has \s*
+ *           between `=>` and the callback token, so the full-body fallback detects
+ *           the relaxed split form and emits the "relaxed eviction comparison" error.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -1751,6 +1759,91 @@ describe("multi-line helper body (formatter-split condition inside extracted hel
     expect(result.ok).toBe(true);
   });
 
+  // ── 6d. Helper body splits filter arrow body to its own line (correct form) → ok:true
+  it("returns ok:true when the helper body splits the filter arrow body 't > c' to its own line (full-body fallback recognises it)", async () => {
+    // A formatter enforcing a strict arrow-body line-length limit may rewrite:
+    //   e.hits = e.hits.filter((t) => t > c);
+    // inside the helper body as:
+    //   e.hits = e.hits.filter((t) =>
+    //     t > c);
+    //
+    // The per-line scan inside scanHelperBody() sees:
+    //   line 1:  "  e.hits = e.hits.filter((t) =>"  — no 't > c'
+    //   line 2:  "    t > c);"                       — no 'e.hits.filter'
+    // so neither line matches HELPER_REQUIRED_PATTERN on its own.
+    //
+    // The full-body fallback pass in scanHelperBody() joins the helper lines
+    // into a single string and applies the param-specific `required` pattern
+    // built by buildHelperScanPatterns().  For params (e, c) that pattern is:
+    //
+    //   \be\b\.hits\s*\.filter\(\s*\(?\w+\)?\s*=>\s*\w+\s*>\s*\bc\b\s*\)
+    //
+    // The `\s*` between `=>` and `\w+` (the callback return value) matches
+    // the newline + indentation, so the joined body text
+    //   "e.hits = e.hits.filter((t) =>\n    t > c);"
+    // satisfies the pattern.  The check therefore returns ok:true.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  // Formatter split the filter arrow body to its own line:`,
+        `  e.hits = e.hits.filter((t) =>`,
+        `    t > c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // The param-specific required pattern's \s* between `=>` and the callback
+    // token spans the newline, so the full-body fallback pass recognises the
+    // split form → ok:true.
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 6e. Helper body splits filter arrow body to its own line (relaxed form) → ok:false
+  it("returns ok:false with the relaxed-form error when the helper body splits the filter arrow body 't >= c' to its own line", async () => {
+    // The same formatter-split layout but with the relaxed comparator:
+    //   e.hits = e.hits.filter((t) =>
+    //     t >= c);
+    //
+    // The param-specific forbidden pattern built by buildHelperScanPatterns()
+    // for params (e, c) is:
+    //
+    //   \be\b\.hits\s*\.filter\(\s*\(?\w+\)?\s*=>\s*\w+\s*>=\s*\bc\b\s*\)
+    //
+    // The `\s*` between `=>` and `\w+` also matches the newline + indentation
+    // in the relaxed form, so the full-body fallback pass detects the wrong
+    // comparison and the check emits the "relaxed eviction comparison" error.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  // Relaxed form — formatter split the arrow body to its own line:`,
+        `  e.hits = e.hits.filter((t) =>`,
+        `    t >= c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // The param-specific forbidden pattern's \s* between `=>` and the callback
+    // token spans the newline, so the full-body fallback pass detects the
+    // relaxed split form → ok:false with "relaxed eviction comparison" reason.
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+  });
 
   // ── 5g. While-loop body split to the next line → ok:true ──────────────────
   it("returns ok:true when the while-loop condition is intact but the body 'lo++' is on the next line", async () => {
