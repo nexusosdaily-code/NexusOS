@@ -6679,6 +6679,84 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(eUaZero!.lastAlerted).toBe(0);
   });
 
+  it("(K8) initProbeCounters: combined guard — all 6 pairwise hits arrays are distinct AND each entry keeps its own lastAlerted (no shared allHits buffer OR shared lastAlerted scalar)", async () => {
+    // Guards against a compound refactor that lifts BOTH `allHits` and
+    // `mergedLastAlerted` outside the Pass 2 loop simultaneously.  If both
+    // variables were declared once before the loop and reused across groups:
+    //   • every entry's hits array would alias the same buffer (K6 regression)
+    //   • every entry's lastAlerted would inherit the last group's value (K7 regression)
+    //
+    // K6 and K7 each catch one half of the bug in isolation; K8 catches the
+    // compound form with a single seed that exercises both invariants together.
+    //
+    // Setup: 4 entries with DISTINCT hits timestamps AND DISTINCT lastAlerted values.
+    //   referer-1  hits=[hitRef1], lastAlerted=ALERT_TS  (non-zero)
+    //   referer-2  hits=[hitRef2], lastAlerted=0         (never alerted)
+    //   ua-1       hits=[hitUa1],  lastAlerted=ALERT_TS  (non-zero)
+    //   ua-2       hits=[hitUa2],  lastAlerted=0         (never alerted)
+    const now      = Date.now();
+    const ALERT_TS = now - 6_000; // 6 s ago — well within the 1-hour cooldown
+
+    const hitRef1 = now - 1_000;
+    const hitRef2 = now - 2_000;
+    const hitUa1  = now - 3_000;
+    const hitUa2  = now - 4_000;
+
+    const REF_KEY_ALERTED = "https://k8-combined-guard-ref-alerted.example/";
+    const REF_KEY_ZERO    = "https://k8-combined-guard-ref-zero.example/";
+    const UA_KEY_ALERTED  = "K8CombinedGuardBotAlerted/1.0";
+    const UA_KEY_ZERO     = "K8CombinedGuardBotZero/1.0";
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      { fieldType: "referer", key: REF_KEY_ALERTED, hits: [hitRef1], lastAlerted: ALERT_TS },
+      { fieldType: "referer", key: REF_KEY_ZERO,    hits: [hitRef2], lastAlerted: 0        },
+      { fieldType: "ua",      key: UA_KEY_ALERTED,  hits: [hitUa1],  lastAlerted: ALERT_TS },
+      { fieldType: "ua",      key: UA_KEY_ZERO,     hits: [hitUa2],  lastAlerted: 0        },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const eRefAlerted = mod._refererProbes.get(REF_KEY_ALERTED);
+    const eRefZero    = mod._refererProbes.get(REF_KEY_ZERO);
+    const eUaAlerted  = mod._uaProbes.get(UA_KEY_ALERTED);
+    const eUaZero     = mod._uaProbes.get(UA_KEY_ZERO);
+
+    // All four entries must have been restored.
+    expect(eRefAlerted).toBeDefined();
+    expect(eRefZero).toBeDefined();
+    expect(eUaAlerted).toBeDefined();
+    expect(eUaZero).toBeDefined();
+
+    // ── Part 1 (K6 coverage): all 6 pairwise hits-array references are distinct
+    // A shared allHits buffer would cause at least one of these to fail.
+    expect(eRefAlerted!.hits).not.toBe(eRefZero!.hits);   // referer-alerted vs referer-zero
+    expect(eRefAlerted!.hits).not.toBe(eUaAlerted!.hits); // referer-alerted vs ua-alerted
+    expect(eRefAlerted!.hits).not.toBe(eUaZero!.hits);    // referer-alerted vs ua-zero
+    expect(eRefZero!.hits).not.toBe(eUaAlerted!.hits);    // referer-zero    vs ua-alerted
+    expect(eRefZero!.hits).not.toBe(eUaZero!.hits);       // referer-zero    vs ua-zero
+    expect(eUaAlerted!.hits).not.toBe(eUaZero!.hits);     // ua-alerted      vs ua-zero
+
+    // ── Part 2 (K7 coverage): each entry retains exactly its own lastAlerted value
+    // A shared mergedLastAlerted scalar would cause the zero-lastAlerted entries
+    // to inherit ALERT_TS from the last non-zero group processed, silently
+    // suppressing future alerts for those entries.
+    expect(eRefAlerted!.lastAlerted).toBe(ALERT_TS);
+    expect(eUaAlerted!.lastAlerted).toBe(ALERT_TS);
+    expect(eRefZero!.lastAlerted).toBe(0);
+    expect(eUaZero!.lastAlerted).toBe(0);
+
+    // ── Part 3: sanity — each entry holds only its own seeded hit timestamp
+    expect(eRefAlerted!.hits).toContain(hitRef1);
+    expect(eRefZero!.hits).toContain(hitRef2);
+    expect(eUaAlerted!.hits).toContain(hitUa1);
+    expect(eUaZero!.hits).toContain(hitUa2);
+  });
+
   // ── B35 / B36: expired-cooldown re-alert count equals in-window hits only ─
   //
   // B24/B25 confirm that an alert fires after threshold+1 fresh hits on a
