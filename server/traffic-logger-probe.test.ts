@@ -6160,6 +6160,123 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(_uaProbes.has(KEY)).toBe(false);
   });
 
+  // ── B43 / B44: cross-map deletion guard ────────────────────────────────────
+  //
+  // _pruneProbes maintains two independent loops — one for refererProbes and
+  // one for uaProbes — each calling .delete() on its own map.  A future
+  // refactor that accidentally calls uaProbes.delete() inside the refererProbes
+  // loop (or vice versa) would silently leave stale entries in the correct map
+  // while deleting them from the wrong one.
+  //
+  // B43 seeds the SAME key string into BOTH maps, both fully evictable (stale
+  // hits, expired cooldown).  After _pruneProbes, both maps must be empty for
+  // that key.  If deletion targets the wrong map, one entry survives.
+  //
+  // B44 seeds the same key into both maps, but only the referer entry is stale;
+  // the UA entry holds a fresh hit.  After _pruneProbes, only the referer entry
+  // must be gone; the UA entry must survive.  Cross-map deletion would either
+  // remove the fresh UA entry or leave the stale referer entry.
+  //
+  // T0 = Date.now()+134h (B43) and +136h (B44) — monotonically above B42 (132h).
+
+  it("(B43) same key in both maps — both stale — _pruneProbes must evict each from its own map", async () => {
+    // If the refererProbes loop called uaProbes.delete(key) instead of
+    // refererProbes.delete(key) the referer entry would survive.
+    // If the uaProbes loop called refererProbes.delete(key) instead of
+    // uaProbes.delete(key) the UA entry would survive.
+    // Both assertions together catch either form of cross-map deletion.
+    //
+    // T0 = Date.now()+134h — monotonically above B42 (132h).
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    const T0       = Date.now() + 134 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // Advance lastPrune to T0.
+    _pruneProbes(T0);
+
+    // Shared key seeded into BOTH maps with all-stale state (both guards false).
+    const KEY = "https://b43-cross-map-evict.example/scan";
+    const staleEntry = {
+      hits:        [pruneNow - WINDOW_MS - 1],  // 1 ms outside the window
+      lastAlerted: pruneNow - COOLDOWN_MS - 1,  // cooldown expired
+    };
+    _refererProbes.set(KEY, { ...staleEntry });
+    _uaProbes.set(KEY,      { ...staleEntry });
+
+    // Stale companions to confirm both loops ran.
+    _refererProbes.set("https://b43-stale-companion-ref.example/scan", { hits: [], lastAlerted: 0 });
+    _uaProbes.set("B43-stale-companion-ua/1.0",                        { hits: [], lastAlerted: 0 });
+
+    _pruneProbes(pruneNow);
+
+    // Companion entries deleted → both loops ran.
+    expect(_refererProbes.has("https://b43-stale-companion-ref.example/scan")).toBe(false);
+    expect(_uaProbes.has("B43-stale-companion-ua/1.0")).toBe(false);
+
+    // Both maps must have evicted the shared key from their OWN store.
+    expect(_refererProbes.has(KEY)).toBe(false);
+    expect(_uaProbes.has(KEY)).toBe(false);
+  });
+
+  it("(B44) same key in both maps — stale referer, fresh UA — only referer is evicted", async () => {
+    // Seeds the same key string into both maps, but only the referer entry is
+    // fully stale.  The UA entry holds a fresh hit and must NOT be deleted.
+    //
+    // A pruner that accidentally calls refererProbes.delete() inside the
+    // uaProbes loop would remove the live UA entry (false eviction).
+    // A pruner that accidentally calls uaProbes.delete() inside the
+    // refererProbes loop would leave the stale referer entry in place.
+    // Either failure is caught by the pair of assertions below.
+    //
+    // T0 = Date.now()+136h — monotonically above B43 (134h).
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    const T0       = Date.now() + 136 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // Advance lastPrune to T0.
+    _pruneProbes(T0);
+
+    const KEY = "https://b44-cross-map-partial.example/scan";
+
+    // Referer entry: fully stale — both guards false → must be evicted.
+    _refererProbes.set(KEY, {
+      hits:        [pruneNow - WINDOW_MS - 1],  // stale
+      lastAlerted: pruneNow - COOLDOWN_MS - 1,  // cooldown expired
+    });
+
+    // UA entry: fresh hit — hasActiveHits guard is true → must survive.
+    _uaProbes.set(KEY, {
+      hits:        [pruneNow - WINDOW_MS + 1],  // 1 ms inside the window (fresh)
+      lastAlerted: 0,
+    });
+
+    // Stale companions to confirm both loops ran.
+    _refererProbes.set("https://b44-stale-companion-ref.example/scan", { hits: [], lastAlerted: 0 });
+    _uaProbes.set("B44-stale-companion-ua/1.0",                        { hits: [], lastAlerted: 0 });
+
+    _pruneProbes(pruneNow);
+
+    // Companion entries deleted → both loops ran.
+    expect(_refererProbes.has("https://b44-stale-companion-ref.example/scan")).toBe(false);
+    expect(_uaProbes.has("B44-stale-companion-ua/1.0")).toBe(false);
+
+    // Stale referer entry must be evicted from refererProbes.
+    expect(_refererProbes.has(KEY)).toBe(false);
+    // Fresh UA entry must survive in uaProbes.
+    expect(_uaProbes.has(KEY)).toBe(true);
+    expect(_uaProbes.get(KEY)!.hits).toHaveLength(1);
+  });
+
 
   it("(B34) two duplicate groups: stale-first-row and both-fresh group are both deduplicated; both entries survive prune", async () => {
     const WINDOW_MS = 24 * 60 * 60 * 1000;
