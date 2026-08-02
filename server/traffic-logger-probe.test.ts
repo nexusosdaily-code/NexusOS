@@ -5126,6 +5126,115 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       dateNowSpy.mockRestore();
     }
   });
+
+  // ── B24 / B25: zombie entry with EXPIRED cooldown — first new hit re-alerts ─
+  //
+  // B22/B23 prove that a zombie entry (all hits stale, cooldown still active)
+  // is kept by pruneProbes.  B24/B25 cover the follow-on moment: the cooldown
+  // has JUST expired (lastAlerted = now − COOLDOWN_MS, so the age equals
+  // COOLDOWN_MS exactly), and then new hits arrive.
+  //
+  // The recordProbe condition is:
+  //   hits.length > ALERT_THRESHOLD && now − entry.lastAlerted >= COOLDOWN_MS
+  //
+  // With lastAlerted = now − COOLDOWN_MS:
+  //   now − lastAlerted = COOLDOWN_MS  ≥  COOLDOWN_MS  →  true
+  //
+  // So on the (threshold+1)-th in-window hit, the alert must fire once and
+  // lastAlerted must be stamped to `now`.  A subsequent hit must NOT re-alert
+  // (the new cooldown is now active).
+  //
+  // T0 = Date.now()+94h (B24) and +96h (B25) — monotonically above B23 (92h).
+
+  it("(B24) zombie UA entry with expired cooldown: first new hit past threshold fires exactly one alert and updates lastAlerted", async () => {
+    // threshold=3 → alert fires when hits.length reaches 4.
+    // COOLDOWN_MS = 1 h (default).
+    process.env.PROBE_ALERT_THRESHOLD     = "3";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000;
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+94h — monotonically above B23 (92h).
+    const now = Date.now() + 94 * 60 * 60 * 1000;
+
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+
+    const KEY = "B24ZombieCooldownExpiredUA/1.0";
+
+    // Seed a zombie entry: stale hits (all below the current window cutoff)
+    // and lastAlerted set exactly at the cooldown boundary so it has just expired.
+    //   now − lastAlerted = COOLDOWN_MS  ≥  COOLDOWN_MS  →  cooldown NOT active
+    const staleHit    = now - WINDOW_MS - 1000; // well outside the 24 h window
+    const lastAlerted = now - COOLDOWN_MS;       // age === COOLDOWN_MS → just expired
+
+    _uaProbes.set(KEY, { hits: [staleHit], lastAlerted });
+
+    // Drive threshold+1 = 4 fresh hits.  recordProbe's while-loop evicts the
+    // stale hit on the first call, so each call adds exactly one in-window hit.
+    for (let i = 0; i < 4; i++) {
+      _recordProbe(_uaProbes, KEY, "ua", now);
+      await flushMicrotasks();
+    }
+
+    // The alert must have fired exactly once (on the 4th call).
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    expect(mockSendProbeAlert).toHaveBeenCalledWith("ua", KEY, 4);
+
+    // lastAlerted must be stamped to `now`, not left at the old value.
+    expect(_uaProbes.get(KEY)!.lastAlerted).toBe(now);
+
+    // One more hit must NOT re-alert (new cooldown is now active).
+    _recordProbe(_uaProbes, KEY, "ua", now);
+    await flushMicrotasks();
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+
+    // The referer map must be untouched.
+    const { _refererProbes } = mod as any;
+    expect(_refererProbes.has(KEY)).toBe(false);
+  });
+
+  it("(B25) zombie referer entry with expired cooldown: first new hit past threshold fires exactly one alert and updates lastAlerted", async () => {
+    // Symmetric referer-map counterpart to B24.
+    //
+    // T0 = Date.now()+96h — monotonically above B24 (94h).
+    process.env.PROBE_ALERT_THRESHOLD     = "3";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000;
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+
+    const now = Date.now() + 96 * 60 * 60 * 1000;
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe } = mod as any;
+
+    const KEY = "https://b25-zombie-cooldown-expired-referer.example/scan";
+
+    const staleHit    = now - WINDOW_MS - 1000;
+    const lastAlerted = now - COOLDOWN_MS;
+
+    _refererProbes.set(KEY, { hits: [staleHit], lastAlerted });
+
+    for (let i = 0; i < 4; i++) {
+      _recordProbe(_refererProbes, KEY, "referer", now);
+      await flushMicrotasks();
+    }
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    expect(mockSendProbeAlert).toHaveBeenCalledWith("referer", KEY, 4);
+    expect(_refererProbes.get(KEY)!.lastAlerted).toBe(now);
+
+    // One more hit must NOT re-alert.
+    _recordProbe(_refererProbes, KEY, "referer", now);
+    await flushMicrotasks();
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+
+    // The UA map must be untouched.
+    const { _uaProbes } = mod as any;
+    expect(_uaProbes.has(KEY)).toBe(false);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
