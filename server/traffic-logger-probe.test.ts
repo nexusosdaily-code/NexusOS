@@ -14142,6 +14142,99 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(entry!.hits).toContain(hit3);
     expect(entry!.hits).toContain(hit4);
   });
+
+  it("(B48) initProbeCounters: six duplicate UA rows for the same key all contribute their timestamps to the merged entry", async () => {
+    // Extends B46 by one additional row.  A loop bug that terminates at
+    // index N-1 would be caught by five rows (B46) but not six if a different
+    // off-by-one applies (e.g. loop condition `i < rows.length - 1`).  Six
+    // distinct rows ensure the 6th timestamp is never silently dropped.
+    const now  = Date.now();
+    const hit0 = now - 1_000; // row 0 timestamp
+    const hit1 = now - 2_000; // row 1 timestamp
+    const hit2 = now - 3_000; // row 2 timestamp
+    const hit3 = now - 4_000; // row 3 timestamp
+    const hit4 = now - 5_000; // row 4 timestamp
+    const hit5 = now - 6_000; // row 5 timestamp — must not be dropped
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const KEY = "SixDupUA/1.0";
+
+    const fakeRows = [
+      { fieldType: "ua", key: KEY, hits: [hit0], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit1], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit2], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit3], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit4], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit5], lastAlerted: 0 },
+    ];
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue(fakeRows),
+    });
+
+    await mod.initProbeCounters();
+
+    const entry = mod._uaProbes.get(KEY);
+    expect(entry).toBeDefined();
+
+    // All six distinct in-window timestamps must appear in the merged entry.
+    expect(entry!.hits).toHaveLength(6);
+    expect(entry!.hits).toContain(hit0);
+    expect(entry!.hits).toContain(hit1);
+    expect(entry!.hits).toContain(hit2);
+    expect(entry!.hits).toContain(hit3);
+    expect(entry!.hits).toContain(hit4);
+    expect(entry!.hits).toContain(hit5);
+  });
+
+  it("(B49) initProbeCounters: six duplicate referer rows for the same key all contribute their timestamps to the merged entry", async () => {
+    // Symmetric check for the referer map: the same index-based termination
+    // off-by-one would also affect referer keys.  Six duplicate rows ensure
+    // that no timestamp from the 6th or higher row is silently dropped.
+    const now  = Date.now();
+    const hit0 = now - 1_000;
+    const hit1 = now - 2_000;
+    const hit2 = now - 3_000;
+    const hit3 = now - 4_000;
+    const hit4 = now - 5_000;
+    const hit5 = now - 6_000; // row 5 timestamp — must not be dropped
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const KEY = "https://six-dup-referer.example/scan";
+
+    const fakeRows = [
+      { fieldType: "referer", key: KEY, hits: [hit0], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit1], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit2], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit3], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit4], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit5], lastAlerted: 0 },
+    ];
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue(fakeRows),
+    });
+
+    await mod.initProbeCounters();
+
+    const entry = mod._refererProbes.get(KEY);
+    expect(entry).toBeDefined();
+
+    // All six distinct in-window timestamps must appear in the merged entry.
+    expect(entry!.hits).toHaveLength(6);
+    expect(entry!.hits).toContain(hit0);
+    expect(entry!.hits).toContain(hit1);
+    expect(entry!.hits).toContain(hit2);
+    expect(entry!.hits).toContain(hit3);
+    expect(entry!.hits).toContain(hit4);
+    expect(entry!.hits).toContain(hit5);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
