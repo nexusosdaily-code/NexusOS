@@ -1498,6 +1498,47 @@ describe("multi-line helper body (formatter-split condition inside extracted hel
     expect(result.ok).toBe(true);
   });
 
+  // ── 5h. Brace-wrapped while-loop body → ok:true ────────────────────────────
+  it("returns ok:true when a brace-style formatter wraps the while-loop body in braces on a new line", async () => {
+    // A formatter enforcing a "braces required" style rule may rewrite:
+    //   while (lo < entry.hits.length && entry.hits[lo] <= cutoff) lo++;
+    // as:
+    //   while (lo < entry.hits.length && entry.hits[lo] <= cutoff) {
+    //     lo++;
+    //   }
+    //
+    // The condition itself (including `entry.hits[lo] <= cutoff`) is still
+    // fully present on the opening while-line.  REQUIRED_PATTERN matches
+    // `entry\.hits\[lo\]\s*<=\s*cutoff` independently of whatever follows
+    // the closing `)`, so the per-line scan on the condition line returns a
+    // match and the check passes without needing the full-source fallback.
+    //
+    // Cross-reference: test 5g covers the case where the body is placed on
+    // the next line *without* braces (`while (...) \n  lo++;`).  This test
+    // covers the orthogonal brace-wrapped variant.  Both are safe because
+    // REQUIRED_PATTERN only cares about the token sequence inside the
+    // condition — it does not require `lo++` to appear on the same line.
+    // A future tightening of REQUIRED_PATTERN that accidentally requires the
+    // body to be present on the condition line would be caught here.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  while (lo < entry.hits.length && entry.hits[lo] <= cutoff) {`,
+        `    lo++;`,
+        `  }`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // The condition line contains the full required token sequence, so
+    // REQUIRED_PATTERN matches on the per-line scan → ok:true.
+    expect(result.ok).toBe(true);
+  });
+
   // ── 5g. Method-chain split: .filter() on its own line, correct form → ok:true
   it("returns ok:true when an aggressive formatter moves .filter() onto its own line after entry.hits (correct form)", async () => {
     // An aggressive line-length formatter may rewrite:
