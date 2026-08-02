@@ -274,14 +274,20 @@ function buildHelperScanPatterns(
   // Wrap both parameter tokens in word-boundary assertions (\b…\b) so that
   // short names like "e" or "c" do not accidentally match as substrings of
   // longer identifiers ("some" ending in "e", "cOther" starting with "c").
+  // The \s* between \.hits and \.filter allows the full-body fallback scan to
+  // recognise formatter-split method chains such as:
+  //   e.hits = e.hits
+  //     .filter((t) => t > c);
+  // When the patterns are applied to the joined helper-body string, \s*
+  // consumes the newline + indentation between the two tokens.
   return {
     required: new RegExp(
       `\\b${ep}\\b\\.hits\\[\\w+\\]\\s*<=\\s*\\b${cp}\\b` +
-        `|\\b${ep}\\b\\.hits\\.filter\\(\\s*\\(?\\w+\\)?\\s*=>\\s*\\w+\\s*>\\s*\\b${cp}\\b\\s*\\)`,
+        `|\\b${ep}\\b\\.hits\\s*\\.filter\\(\\s*\\(?\\w+\\)?\\s*=>\\s*\\w+\\s*>\\s*\\b${cp}\\b\\s*\\)`,
     ),
     forbidden: new RegExp(
       `\\b${ep}\\b\\.hits\\[\\w+\\]\\s*<(?!=)\\s*\\b${cp}\\b` +
-        `|\\b${ep}\\b\\.hits\\.filter\\(\\s*\\(?\\w+\\)?\\s*=>\\s*\\w+\\s*>=\\s*\\b${cp}\\b\\s*\\)`,
+        `|\\b${ep}\\b\\.hits\\s*\\.filter\\(\\s*\\(?\\w+\\)?\\s*=>\\s*\\w+\\s*>=\\s*\\b${cp}\\b\\s*\\)`,
     ),
   };
 }
@@ -297,6 +303,10 @@ interface HelperScanResult {
   helperDefLine: number; // 1-based
   requiredFound: boolean;
   forbiddenLines: number[]; // 1-based
+  /** true when the forbidden form was found in the full-body string but not
+   *  on a single line (e.g. formatter split `e.hits\n  .filter((t) => t >= c)`).
+   *  In this case forbiddenLines is empty and no precise line number is available. */
+  forbiddenInFullBody: boolean;
   /** false when brace-counting OR parameter extraction failed */
   bodyParsed: boolean;
 }
@@ -330,6 +340,7 @@ function scanHelperBody(lines: string[], helperName: string): HelperLookup {
       helperDefLine: helperDefIndex + 1,
       requiredFound: false,
       forbiddenLines: [],
+      forbiddenInFullBody: false,
       bodyParsed: false, // signature unparseable
     };
   }
@@ -341,6 +352,7 @@ function scanHelperBody(lines: string[], helperName: string): HelperLookup {
       helperDefLine: helperDefIndex + 1,
       requiredFound: false,
       forbiddenLines: [],
+      forbiddenInFullBody: false,
       bodyParsed: false, // braces unparseable
     };
   }
@@ -357,11 +369,36 @@ function scanHelperBody(lines: string[], helperName: string): HelperLookup {
     if (forbidden.test(ln)) forbiddenLines.push(bodyRange.start + j + 1);
   }
 
+  // ── Full-body fallback ────────────────────────────────────────────────────
+  //
+  // The param-specific patterns include \s* between \.hits and \.filter so
+  // that a formatter-split method chain such as:
+  //
+  //   e.hits = e.hits
+  //     .filter((t) => t > c);
+  //
+  // is recognised when the joined body text is tested.  The line-by-line scan
+  // above is retained so that single-line violations can report exact line
+  // numbers; these two full-body checks only fire when the per-line scan found
+  // nothing, making the two passes additive.
+  let forbiddenInFullBody = false;
+
+  if (!requiredFound || forbiddenLines.length === 0) {
+    const bodyText = helperLines.join("\n");
+    if (!requiredFound && required.test(bodyText)) {
+      requiredFound = true;
+    }
+    if (forbiddenLines.length === 0 && forbidden.test(bodyText)) {
+      forbiddenInFullBody = true;
+    }
+  }
+
   return {
     found: true,
     helperDefLine: helperDefIndex + 1,
     requiredFound,
     forbiddenLines,
+    forbiddenInFullBody,
     bodyParsed: true,
   };
 }
@@ -546,14 +583,17 @@ export async function checkProbeEvictionGuard(
         };
       }
 
-      if (lookup.forbiddenLines.length > 0) {
+      if (lookup.forbiddenLines.length > 0 || lookup.forbiddenInFullBody) {
+        const locationNote =
+          lookup.forbiddenLines.length > 0
+            ? `at line(s) ${lookup.forbiddenLines.join(", ")} in ${filePath}`
+            : `inside helper "${helperName}" (expression split across lines)`;
         return {
           ok: false,
           reason:
             `[check-probe-eviction-guard] Relaxed eviction comparison found ` +
-            `inside helper "${helperName}" at line(s) ` +
-            `${lookup.forbiddenLines.join(", ")} in ${filePath}.\n` +
-            `The helper is called from line ${delegationLineNumber}.\n` +
+            `${locationNote}.\n` +
+            `The helper "${helperName}" is called from line ${delegationLineNumber}.\n` +
             `Relaxed forms that silently keep boundary hits:\n` +
             `  ✗  <param>.hits[<idx>] < <cutoff>              (while-loop, strictly-less-than)\n` +
             `  ✗  <param>.hits.filter(<t> => <t> >= <cutoff>) (filter, inclusive >=)\n` +

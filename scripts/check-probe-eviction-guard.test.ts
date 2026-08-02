@@ -46,6 +46,12 @@
  *        l. Inline required present but helper has relaxed comparison → ok:false
  *        m. HELPER_REQUIRED_PATTERN matches parenthesised arrow correct form
  *        n. HELPER_FORBIDDEN_PATTERN matches parenthesised arrow relaxed form
+ *        v. Helper body splits 'e.hits\n  .filter((t) => t > c)' across lines → ok:true
+ *           buildHelperScanPatterns now includes \s* before \.filter; the full-body
+ *           fallback pass joins the helper lines and recognises the split chain.
+ *        w. Helper body splits 'e.hits\n  .filter((t) => t >= c)' across lines → ok:false
+ *           The param-specific forbidden pattern also has \s* before \.filter, so the
+ *           full-body fallback detects the relaxed split form and emits the relaxed error.
  *   5. Multi-line source strings (formatter-split arrow)
  *        a. Filter arrow split to the next line (correct form) → ok:true
  *           REQUIRED_PATTERN uses \s* between tokens and \s matches \n; the
@@ -1080,6 +1086,68 @@ describe("helper-extraction detection", () => {
     expect(result.reason).toMatch(/no correct eviction guard found/i);
   });
 
+  // ── 4v. Helper has method-chain split: .filter() on its own line, correct ─
+  it("returns ok:true when the helper body splits 'e.hits\\n  .filter((t) => t > c)' across two lines (full-body fallback recognises it)", async () => {
+    // An aggressive line-length formatter may rewrite the helper body as:
+    //   e.hits = e.hits
+    //     .filter((t) => t > c);
+    //
+    // The per-line scan sees no single line matching the param-specific filter
+    // pattern (e.hits and .filter are on different lines).  The full-body
+    // fallback pass joins the helper's extracted lines and applies the
+    // param-specific required pattern — which now includes \s* between \.hits
+    // and \.filter — to the joined text, consuming the newline + indentation.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  e.hits = e.hits`,
+        `    .filter((t) => t > c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 4w. Helper has method-chain split: .filter() on its own line, relaxed ─
+  it("returns ok:false with the relaxed-form error when the helper body splits 'e.hits\\n  .filter((t) => t >= c)' across two lines", async () => {
+    // The same layout with the relaxed comparator must be caught:
+    //   e.hits = e.hits
+    //     .filter((t) => t >= c);
+    //
+    // The param-specific forbidden pattern also has \s* before \.filter, so
+    // the full-body fallback pass detects the split relaxed form and emits
+    // the "relaxed eviction comparison" error rather than the generic failure.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  e.hits = e.hits`,
+        `    .filter((t) => t >= c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toContain("evictStaleHits");
+  });
+
   // ── 4u. Two calls on the same line; second helper is relaxed → ok:false ──
   it("returns ok:false when two delegation calls appear on the same line and the second helper is relaxed", async () => {
     // Single-line: evictReferer(entry, cutoff); evictUa(entry, cutoff);
@@ -1388,16 +1456,11 @@ describe("multi-line helper body (formatter-split condition inside extracted hel
     );
 
     const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
-    // CURRENT BEHAVIOUR: ok:false — the split form is not recognised by
-    // HELPER_REQUIRED_PATTERN (single-line regex limitation).
-    // If HELPER_REQUIRED_PATTERN is extended to match across line boundaries,
-    // update this expectation to ok:true.
-    expect(result.ok).toBe(false);
-    // The failure must reference the helper by name so the developer knows
-    // which extracted function failed the check.
-    expect(result.reason).toMatch(/extracted into helper/i);
-    expect(result.reason).toContain("evictStaleHits");
-    expect(result.reason).toMatch(/update REQUIRED_PATTERN/i);
+    // The param-specific required pattern has \s* between `<=` and the cutoff
+    // parameter, so the full-body fallback pass (which joins the helper lines
+    // into a single string) recognises `e.hits[lo] <=\n    c` across the line
+    // boundary.  The check now returns ok:true for this layout.
+    expect(result.ok).toBe(true);
   });
 
   // ── 5g. While-loop body split to the next line → ok:true ──────────────────
