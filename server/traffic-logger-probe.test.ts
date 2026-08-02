@@ -6099,6 +6099,54 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(entryB!.hits).not.toContain(hitA);
   });
 
+  it("(K5) initProbeCounters: hits arrays of two restored UA entries with different keys are not aliased", async () => {
+    // Symmetric UA-map counterpart to K4.  Guards against a loop-reuse bug
+    // where the same `activeHits` reference is written to multiple map entries
+    // inside the restoration loop.  Both rows land in _uaProbes under different
+    // keys; if the array is reused, pushing onto one would silently mutate the
+    // other.
+    const now  = Date.now();
+    const hitA = now - 2_000; // 2 s ago — within window
+    const hitB = now - 3_000; // 3 s ago — within window
+
+    const KEY_A = "AliasGuardUA-Alpha/1.0";
+    const KEY_B = "AliasGuardUA-Beta/2.0";
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      { fieldType: "ua", key: KEY_A, hits: [hitA], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY_B, hits: [hitB], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const entryA = mod._uaProbes.get(KEY_A);
+    const entryB = mod._uaProbes.get(KEY_B);
+
+    // Both entries must have been restored.
+    expect(entryA).toBeDefined();
+    expect(entryB).toBeDefined();
+
+    // ── Reference-inequality assertion ──────────────────────────────────────
+    expect(entryA!.hits).not.toBe(entryB!.hits);
+
+    // ── Mutation-isolation assertion ─────────────────────────────────────────
+    // Push a sentinel onto entry A's hits; entry B must be unaffected.
+    const bLengthBefore = entryB!.hits.length;
+    entryA!.hits.push(now + 1_000);
+
+    expect(mod._uaProbes.get(KEY_B)!.hits.length).toBe(bLengthBefore);
+
+    // Sanity: each entry contains only its own original hit.
+    expect(entryA!.hits).toContain(hitA);
+    expect(entryB!.hits).toContain(hitB);
+    expect(entryB!.hits).not.toContain(hitA);
+  });
+
   // ── B35 / B36: expired-cooldown re-alert count equals in-window hits only ─
   //
   // B24/B25 confirm that an alert fires after threshold+1 fresh hits on a
