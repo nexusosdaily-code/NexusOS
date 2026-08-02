@@ -2006,6 +2006,123 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(_uaProbes.has(UA_KEY)).toBe(true);
     expect(_uaProbes.get(UA_KEY).hits).toHaveLength(1);
   });
+
+  it("only one probe crosses threshold: lastAlerted stays 0 on the non-alerting entry (no cross-contamination)", async () => {
+    // Regression guard: a future refactor might accidentally write the alerting
+    // probe's lastAlerted into BOTH probe map entries on the same request — e.g.:
+    //
+    //   entry.lastAlerted = now;
+    //   refererEntry.lastAlerted = now;   // ← wrong: written even when referer didn't alert
+    //
+    // or share a single mutable "alerted" timestamp object across both calls:
+    //
+    //   const alertState = { lastAlerted: 0 };
+    //   recordProbe(uaProbes,      uaKey,  "ua",      now, alertState);
+    //   recordProbe(refererProbes, refKey, "referer", now, alertState);
+    //
+    // This would silently impose a 1-hour cooldown on the non-alerting probe,
+    // suppressing its first real alert and letting traffic slip past detection.
+    //
+    // This test covers two scenarios:
+    //
+    // Scenario A — UA at threshold, referer well below:
+    //   Only the UA alert fires.  The referer entry's lastAlerted must remain 0.
+    //   Neither entry must share the other's lastAlerted value.
+    //
+    // Scenario B — Referer at threshold, UA well below (symmetric):
+    //   Only the referer alert fires.  The UA entry's lastAlerted must remain 0.
+    //   Neither entry must share the other's lastAlerted value.
+
+    // threshold=2 → alert fires when hits > 2 (i.e. on the 3rd hit per key).
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mod = await import("./traffic-logger");
+    const mw  = mod.trafficLoggerMiddleware;
+    const { _uaProbes, _refererProbes } = mod as any;
+
+    await mod.initProbeCounters();
+
+    // ── Scenario A: UA at threshold, referer has only 1 hit (well below) ─────
+    {
+      const now = Date.now();
+
+      const UA_KEY_A  = "CrossContamGuardUAOnly/1.0";
+      const REF_VAL_A = "https://cross-contam-guard-ua-only.example/probe";
+      const REF_KEY_A = REF_VAL_A.toLowerCase();
+
+      // UA map: exactly threshold (2 hits) — one more hit will cross and alert.
+      _uaProbes.set(UA_KEY_A, {
+        hits:        [now - 2000, now - 1000],
+        lastAlerted: 0,
+      });
+
+      // Referer map: only 1 hit — well below threshold, must NOT alert.
+      _refererProbes.set(REF_KEY_A, {
+        hits:        [now - 2000],
+        lastAlerted: 0,
+      });
+
+      const req = makeReq(UA_KEY_A, REF_VAL_A);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+      await flushMicrotasks();
+
+      // UA alert must have fired (crossed threshold).
+      const uaEntry_A = _uaProbes.get(UA_KEY_A);
+      expect(uaEntry_A.lastAlerted).toBeGreaterThan(0);
+
+      // Referer entry must NOT have been contaminated by the UA alert timestamp.
+      const refEntry_A = _refererProbes.get(REF_KEY_A);
+      expect(refEntry_A.lastAlerted).toBe(0);
+
+      // Neither entry carries the other's lastAlerted value.
+      // UA alerted (non-zero) and referer did not (0) — they must differ.
+      expect(uaEntry_A.lastAlerted).not.toBe(refEntry_A.lastAlerted);
+    }
+
+    vi.clearAllMocks();
+
+    // ── Scenario B: Referer at threshold, UA has only 1 hit (symmetric) ──────
+    {
+      const now = Date.now();
+
+      const UA_KEY_B  = "CrossContamGuardRefOnly/1.0";
+      const REF_VAL_B = "https://cross-contam-guard-ref-only.example/probe";
+      const REF_KEY_B = REF_VAL_B.toLowerCase();
+
+      // Referer map: exactly threshold (2 hits) — one more hit will cross and alert.
+      _refererProbes.set(REF_KEY_B, {
+        hits:        [now - 2000, now - 1000],
+        lastAlerted: 0,
+      });
+
+      // UA map: only 1 hit — well below threshold, must NOT alert.
+      _uaProbes.set(UA_KEY_B, {
+        hits:        [now - 2000],
+        lastAlerted: 0,
+      });
+
+      const req = makeReq(UA_KEY_B, REF_VAL_B);
+      const res = makeRes();
+      mw(req, res as any, () => {});
+      res.finish();
+      await flushMicrotasks();
+      await flushMicrotasks();
+
+      // Referer alert must have fired (crossed threshold).
+      const refEntry_B = _refererProbes.get(REF_KEY_B);
+      expect(refEntry_B.lastAlerted).toBeGreaterThan(0);
+
+      // UA entry must NOT have been contaminated by the referer alert timestamp.
+      const uaEntry_B = _uaProbes.get(UA_KEY_B);
+      expect(uaEntry_B.lastAlerted).toBe(0);
+
+      // Neither entry carries the other's lastAlerted value.
+      // Referer alerted (non-zero) and UA did not (0) — they must differ.
+      expect(refEntry_B.lastAlerted).not.toBe(uaEntry_B.lastAlerted);
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
