@@ -10601,24 +10601,108 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(_refererProbes.has(KEY_B)).toBe(false);
   });
 
-  it("(B34) two duplicate groups: stale-first-row and both-fresh group are both deduplicated; both entries survive prune", async () => 
-{
+  // ── B47 / B48: missing-loop guard ──────────────────────────────────────────
+  //
+  // B43/B44 confirm cross-map deletion is correct when a key exists in BOTH
+  // maps.  But a future refactor could silently remove the referer loop
+  // entirely (e.g. by only iterating uaProbes twice).  Because no existing
+  // test seeds a stale referer entry that has NO counterpart in uaProbes, such
+  // a regression would go undetected.
+  //
+  // B47 seeds a fully-stale referer entry with no matching key in uaProbes.
+  // After _pruneProbes the referer entry must be gone — a missing referer loop
+  // would leave it alive.
+  //
+  // B48 is the symmetric test: a fully-stale UA entry with no matching key in
+  // refererProbes must also be evicted — a missing UA loop would leave it alive.
+  //
+  // T0 = Date.now()+142h (B47) and +144h (B48) — monotonically above B46 (140h).
 
-    const WINDOW_MS = 24 * 60 * 60 * 1000
-;
+  it("(B47) stale referer entry with no UA counterpart — must be evicted (catches a skipped referer loop)", async () => {
+    // A future pruner that omits or skips the refererProbes loop entirely would
+    // leave this entry alive because no code iterates over refererProbes.
+    // The companion stale UA entry (different key) confirms the uaProbes loop
+    // still ran, which would mask the bug if we only checked map size.
+    //
+    // T0 = Date.now()+142h — monotonically above B46 (140h).
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
 
-    const SKEW      = 10
-;
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
 
+    const T0       = Date.now() + 142 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
 
-    const initNow    = Date.now() + 114 * 60 * 60 * 1000
-;
+    // Advance lastPrune to T0.
+    _pruneProbes(T0);
 
-    const pruneNow   = initNow + SKEW
-;
+    // Stale referer entry — no matching key in uaProbes.
+    const REF_KEY = "https://b47-referer-only-stale.example/scan";
+    _refererProbes.set(REF_KEY, {
+      hits:        [pruneNow - WINDOW_MS - 1],  // 1 ms outside the window
+      lastAlerted: pruneNow - COOLDOWN_MS - 1,  // cooldown expired
+    });
 
-    const initCutoff = initNow - WINDOW_MS
-;
+    // Stale UA entry with a DIFFERENT key — confirms the uaProbes loop ran
+    // without giving the referer entry a UA twin.
+    const UA_COMPANION = "B47-ua-companion/1.0";
+    _uaProbes.set(UA_COMPANION, { hits: [], lastAlerted: 0 });
+
+    _pruneProbes(pruneNow);
+
+    // UA companion deleted → uaProbes loop ran.
+    expect(_uaProbes.has(UA_COMPANION)).toBe(false);
+
+    // Stale referer entry must be evicted — a missing referer loop leaves it alive.
+    expect(_refererProbes.has(REF_KEY)).toBe(false);
+  });
+
+  it("(B48) stale UA entry with no referer counterpart — must be evicted (catches a skipped UA loop)", async () => {
+    // Symmetric to B47.  A future pruner that omits the uaProbes loop would
+    // leave this entry alive.  The companion stale referer entry confirms the
+    // refererProbes loop ran.
+    //
+    // T0 = Date.now()+144h — monotonically above B47 (142h).
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    const T0       = Date.now() + 144 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // Advance lastPrune to T0.
+    _pruneProbes(T0);
+
+    // Stale UA entry — no matching key in refererProbes.
+    const UA_KEY = "B48-ua-only-stale/1.0";
+    _uaProbes.set(UA_KEY, {
+      hits:        [pruneNow - WINDOW_MS - 1],  // 1 ms outside the window
+      lastAlerted: pruneNow - COOLDOWN_MS - 1,  // cooldown expired
+    });
+
+    // Stale referer entry with a DIFFERENT key — confirms the refererProbes loop ran.
+    const REF_COMPANION = "https://b48-referer-companion.example/scan";
+    _refererProbes.set(REF_COMPANION, { hits: [], lastAlerted: 0 });
+
+    _pruneProbes(pruneNow);
+
+    // Referer companion deleted → refererProbes loop ran.
+    expect(_refererProbes.has(REF_COMPANION)).toBe(false);
+
+    // Stale UA entry must be evicted — a missing UA loop leaves it alive.
+    expect(_uaProbes.has(UA_KEY)).toBe(false);
+  });
+
+  it("(B34) two duplicate groups: stale-first-row and both-fresh group are both deduplicated; both entries survive prune", async () => {
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const SKEW      = 10;
+
+    const initNow    = Date.now() + 114 * 60 * 60 * 1000;
+    const pruneNow   = initNow + SKEW;
+    const initCutoff = initNow - WINDOW_MS;
 
     const freshHitA  = initNow - WINDOW_MS / 2
 ;
