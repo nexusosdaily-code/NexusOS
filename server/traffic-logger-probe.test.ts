@@ -8715,3 +8715,131 @@ describe("cooldown boundary — re-alert fires at exactly COOLDOWN_MS, not one m
     expect(_refererProbes.get(KEY).lastAlerted).toBe(BASE_NOW);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Task 497 — cooldown resets correctly after a re-alert
+//
+// After the initial alert fires at BASE_NOW and the cooldown expires at
+// BASE_NOW + COOLDOWN_MS + 1, a re-alert fires (lastAlerted → NOW_RELALERT).
+// A hit delivered at NOW_RELALERT + 1 must be suppressed by the NEW cooldown
+// window — no second alert fires and lastAlerted stays at NOW_RELALERT.
+//
+// Regression the test guards against:
+//   • recordProbe writes BASE_NOW (or some other stale value) to lastAlerted
+//     on re-alert instead of the actual "now" at re-alert time
+//     (NOW_RELALERT).  With the wrong stamp, the very next hit passes the
+//     cooldown check (now - BASE_NOW >> COOLDOWN_MS) and fires a spurious
+//     second alert immediately.
+//
+// Strategy (run independently for referer and UA maps):
+//   Phase 0 — seed map to threshold; fire initial alert at BASE_NOW;
+//             assert lastAlerted === BASE_NOW.
+//   Phase 1 — advance to NOW_RELALERT = BASE_NOW + COOLDOWN_MS + 1;
+//             call _recordProbe → exactly 1 alert fires;
+//             assert lastAlerted === NOW_RELALERT.
+//   Phase 2 — call _recordProbe at NOW_RELALERT + 1 (inside new cooldown);
+//             assert 0 alerts fire and lastAlerted is still NOW_RELALERT.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("cooldown resets correctly after a re-alert — new window suppresses the next hit", () => {
+  it("referer map: hit at NOW_RELALERT+1 fires no alert and lastAlerted stays at NOW_RELALERT", async () => {
+    // threshold=2 → alert fires when hits.length > 2 (3rd hit triggers).
+    // cooldown=1 h → COOLDOWN_MS = 3_600_000 ms.
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000; // 3_600_000
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe } = mod as any;
+    await mod.initProbeCounters();
+
+    const BASE_NOW = 1_800_000_000_000; // fixed sentinel — not Date.now()
+    const KEY      = "https://cooldown-reset-referer-497.example/scan";
+
+    // ── Phase 0: seed to threshold, fire initial alert ─────────────────────
+    // 2 in-window hits = exactly threshold.  One _recordProbe call adds a 3rd
+    // hit (3 > 2) while lastAlerted === 0, so the initial alert fires.
+    _refererProbes.set(KEY, { hits: [BASE_NOW - 2000, BASE_NOW - 1000], lastAlerted: 0 });
+    _recordProbe(_refererProbes, KEY, "referer", BASE_NOW);
+    await flushMicrotasks();
+
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+    expect(_refererProbes.get(KEY).lastAlerted).toBe(BASE_NOW);
+
+    vi.clearAllMocks();
+
+    // ── Phase 1: cooldown expires → re-alert fires ─────────────────────────
+    // NOW_RELALERT - BASE_NOW = COOLDOWN_MS + 1 ≥ COOLDOWN_MS → allowed.
+    const NOW_RELALERT = BASE_NOW + COOLDOWN_MS + 1;
+    _recordProbe(_refererProbes, KEY, "referer", NOW_RELALERT);
+    await flushMicrotasks();
+
+    // Exactly one re-alert for "referer".
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+    expect((mockSendProbeAlert.mock.calls[0] as [string, string, number])[0]).toBe("referer");
+
+    // lastAlerted must be stamped to NOW_RELALERT — not BASE_NOW or any other value.
+    expect(_refererProbes.get(KEY).lastAlerted).toBe(NOW_RELALERT);
+
+    vi.clearAllMocks();
+
+    // ── Phase 2: new cooldown active — hit must be suppressed ──────────────
+    // NOW_RELALERT + 1 - NOW_RELALERT = 1 ms < COOLDOWN_MS → suppressed.
+    const NOW_AFTER = NOW_RELALERT + 1;
+    _recordProbe(_refererProbes, KEY, "referer", NOW_AFTER);
+    await flushMicrotasks();
+
+    // Zero alerts: the new cooldown window started at NOW_RELALERT and has
+    // not yet elapsed.  If lastAlerted was written as BASE_NOW instead of
+    // NOW_RELALERT, NOW_AFTER - BASE_NOW >> COOLDOWN_MS and a spurious alert
+    // would fire here — which is the regression this test catches.
+    expect(mockSendProbeAlert.mock.calls.length).toBe(0);
+
+    // lastAlerted must remain at NOW_RELALERT — the suppression path must not
+    // overwrite it.
+    expect(_refererProbes.get(KEY).lastAlerted).toBe(NOW_RELALERT);
+  });
+
+  it("UA map: hit at NOW_RELALERT+1 fires no alert and lastAlerted stays at NOW_RELALERT", async () => {
+    // Same logic exercised independently for the UA map.
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000; // 3_600_000
+
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+    await mod.initProbeCounters();
+
+    const BASE_NOW = 1_800_000_001_000; // distinct sentinel from the referer test
+    const KEY      = "CooldownResetUA497/1.0";
+
+    // ── Phase 0: seed to threshold, fire initial alert ─────────────────────
+    _uaProbes.set(KEY, { hits: [BASE_NOW - 2000, BASE_NOW - 1000], lastAlerted: 0 });
+    _recordProbe(_uaProbes, KEY, "ua", BASE_NOW);
+    await flushMicrotasks();
+
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+    expect(_uaProbes.get(KEY).lastAlerted).toBe(BASE_NOW);
+
+    vi.clearAllMocks();
+
+    // ── Phase 1: cooldown expires → re-alert fires ─────────────────────────
+    const NOW_RELALERT = BASE_NOW + COOLDOWN_MS + 1;
+    _recordProbe(_uaProbes, KEY, "ua", NOW_RELALERT);
+    await flushMicrotasks();
+
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+    expect((mockSendProbeAlert.mock.calls[0] as [string, string, number])[0]).toBe("ua");
+    expect(_uaProbes.get(KEY).lastAlerted).toBe(NOW_RELALERT);
+
+    vi.clearAllMocks();
+
+    // ── Phase 2: new cooldown active — hit must be suppressed ──────────────
+    const NOW_AFTER = NOW_RELALERT + 1;
+    _recordProbe(_uaProbes, KEY, "ua", NOW_AFTER);
+    await flushMicrotasks();
+
+    expect(mockSendProbeAlert.mock.calls.length).toBe(0);
+    expect(_uaProbes.get(KEY).lastAlerted).toBe(NOW_RELALERT);
+  });
+});
