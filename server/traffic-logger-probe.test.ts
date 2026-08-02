@@ -12078,6 +12078,54 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(_uaProbes.has(KEY)).toBe(false);
   });
 
+  // ── B49c: degenerate empty-hits case — two referer entries with hits: [] ──
+  //
+  // B49b confirmed that two distinct UA keys both holding hits: [] are both
+  // evicted by key.  This test covers the symmetric referer-map case.
+  //
+  // A pruner that deduplicates entries by serialised array contents
+  // (e.g. JSON.stringify([]) === JSON.stringify([])) would treat both empty
+  // arrays as the same sentinel and skip the second referer key.  Using two
+  // distinct referer keys with empty hit arrays and an expired cooldown
+  // (lastAlerted = 0) forces the pruner to visit both map entries
+  // independently.
+  //
+  // T0 = Date.now()+151h — monotonically above B49b (147h), fits in the gap
+  // between B51 (150h) and B52 (152h).
+
+  it("(B49c) two referer entries both holding hits: [] — both stale — _pruneProbes must evict both by key", async () => {
+    // A pruner that deduplicates entries by serialised array contents would
+    // treat JSON.stringify([]) === JSON.stringify([]) as a match and skip the
+    // second referer key.  Using two distinct referer keys with empty hit
+    // arrays and an expired cooldown (lastAlerted = 0) forces the pruner to
+    // visit both map entries independently.
+    //
+    // T0 = Date.now()+151h — monotonically above B49b (147h).
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000;
+
+    const T0       = Date.now() + 151 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // Advance lastPrune to T0.
+    _pruneProbes(T0);
+
+    const KEY_A = "https://b49c-empty-hits-a.example/scan";
+    const KEY_B = "https://b49c-empty-hits-b.example/scan";
+
+    // Both entries: empty hit array, lastAlerted = 0 (cooldown long-expired).
+    _refererProbes.set(KEY_A, { hits: [], lastAlerted: 0 });
+    _refererProbes.set(KEY_B, { hits: [], lastAlerted: 0 });
+
+    _pruneProbes(pruneNow);
+
+    // Both entries must be evicted — no array-content deduplication must occur.
+    expect(_refererProbes.has(KEY_A)).toBe(false);
+    expect(_refererProbes.has(KEY_B)).toBe(false);
+  });
+
   // ── B52 / B53: upper cooldown-survival boundary (age = COOLDOWN_MS − 1) ───
   //
   // B50/B51 pinned the LOWER survival boundary: age = 1 ms (the minimum
