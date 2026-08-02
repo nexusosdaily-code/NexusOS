@@ -1688,6 +1688,69 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(_refererProbes.get(REF_KEY).hits).toHaveLength(hitsBefore.referer + 1);
   });
 
+  it("UA probe in cooldown: referer probe still records a hit and UA probe still records a hit", async () => {
+    // Regression guard: a future refactor could check whether the UA probe's
+    // cooldown is active and, if so, skip the entire probe-recording block for
+    // both fields — e.g.:
+    //
+    //   if (ua && !patternBot) {
+    //     const entry = uaProbes.get(uaKey);
+    //     if (entry && now - entry.lastAlerted < COOLDOWN_MS) return; // ← wrong
+    //     recordProbe(uaProbes, uaKey, "ua", now);
+    //   }
+    //   // ← referer recordProbe unreachable when UA in cooldown
+    //
+    // Cooldown suppresses the ALERT for a key, not the hit RECORDING.
+    // Both maps must accumulate hits on every qualifying request regardless
+    // of either probe's cooldown state.
+
+    process.env.PROBE_ALERT_THRESHOLD = "99"; // keep threshold high — never alert
+    const mod = await import("./traffic-logger");
+    const mw  = mod.trafficLoggerMiddleware;
+    const { _uaProbes, _refererProbes } = mod as any;
+
+    // Ensure _initPromise has resolved so res.on("finish") fires synchronously
+    // in the microtask queue rather than waiting for DB init.
+    await mod.initProbeCounters();
+
+    const UA_COOLDOWN_KEY  = "UACooldownTestBrowser/1.0";
+    const DUAL_REF_VAL     = "https://ua-cooldown-dual-scraper.example/scan";
+    const DUAL_REF_KEY     = DUAL_REF_VAL.toLowerCase();
+
+    const now = Date.now();
+
+    // Seed _uaProbes with an active cooldown (lastAlerted = now).
+    // The cooldown suppresses future alerts for this key, but must NOT stop
+    // the hit from being recorded.
+    _uaProbes.set(UA_COOLDOWN_KEY, {
+      hits:        [now - 3000, now - 2000, now - 1000], // 3 prior hits
+      lastAlerted: now,                                   // cooldown freshly set
+    });
+
+    // Confirm the referer key is not pre-seeded.
+    expect(_refererProbes.has(DUAL_REF_KEY)).toBe(false);
+    const uaHitsBefore = _uaProbes.get(UA_COOLDOWN_KEY).hits.length;
+
+    // Single request carrying both the UA-in-cooldown and the unknown referer.
+    const req = makeReq(UA_COOLDOWN_KEY, DUAL_REF_VAL);
+    const res = makeRes();
+    mw(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+
+    // ── Referer probe: must have accumulated its first hit regardless of UA cooldown
+    expect(_refererProbes.has(DUAL_REF_KEY)).toBe(true);
+    expect(_refererProbes.get(DUAL_REF_KEY).hits).toHaveLength(1);
+
+    // ── UA probe: must have accumulated one more hit (cooldown only suppresses
+    // the alert, not the recording)
+    const uaEntry = _uaProbes.get(UA_COOLDOWN_KEY);
+    expect(uaEntry.hits).toHaveLength(uaHitsBefore + 1);
+
+    // ── No alert must have fired — threshold=99 keeps both probes below it
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+  });
+
   it("referer probe in cooldown: UA probe still records a hit and referer probe still records a hit", async () => {
     // Regression guard: a future refactor could check whether the referer probe's
     // cooldown is active and, if so, skip the entire probe-recording block for
