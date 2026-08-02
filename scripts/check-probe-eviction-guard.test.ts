@@ -754,6 +754,43 @@ describe("checkProbeEvictionGuard() unit logic", () => {
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/no correct eviction guard found/i);
   });
+
+  // ── 3y. Inline for-loop: relaxed < condition split across two lines → ok:false (relaxed) ─
+  it("returns ok:false (relaxed eviction comparison) when an inline for-loop splits 'entry.hits[lo] <\\n  cutoff;' across two lines", async () => {
+    // A future developer might write the eviction loop as a for-loop and let a
+    // formatter split the condition across lines using the relaxed operator:
+    //
+    //   for (; lo < entry.hits.length && entry.hits[lo] <
+    //     cutoff; lo++) {}
+    //
+    // The relaxed `<` comparator keeps a hit whose timestamp equals exactly
+    // (now − WINDOW_MS), silently inflating the in-window counter by 1.
+    //
+    // FORBIDDEN_PATTERN uses \s* between every token so it spans the newline
+    // between `<` and `cutoff`.  The full-source fallback in
+    // checkProbeEvictionGuard() therefore catches the relaxed form even though
+    // neither individual line contains `entry.hits[lo] < cutoff` on its own.
+    // The check must emit the "relaxed eviction comparison" message — not the
+    // generic "no correct eviction guard found" message — because the
+    // forbidden comparator is present (just split across lines).
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  let lo = 0;`,
+        `  for (; lo < entry.hits.length && entry.hits[lo] <`,
+        `    cutoff; lo++) {}`,
+        `  entry.hits = entry.hits.slice(lo);`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
