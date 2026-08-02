@@ -5404,3 +5404,79 @@ describe("_refererProbes.lastAlerted is set synchronously before the async impor
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
   });
 });
+
+// Task 415 — _uaProbes.lastAlerted is set BEFORE the async import fires
+//
+// Symmetric regression guard for the UA branch of recordProbe.
+// A future refactor that moves `entry.lastAlerted = now` to AFTER the
+// `import("./telegram-bot").then(...)` call (or removes it entirely) would
+// leave lastAlerted === 0, causing every subsequent hit past the threshold to
+// fire a fresh alert instead of being suppressed by the cooldown.
+//
+// Two assertions nail the contract:
+//   (a) lastAlerted is set to a value >= the timestamp captured just before
+//       the triggering request — proving the assignment happened synchronously
+//       inside recordProbe, not in a later async callback.
+//   (b) A second immediate request does NOT fire a second alert — the cooldown
+//       is active because lastAlerted was set correctly.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("_uaProbes.lastAlerted is set synchronously before the async import fires", () => {
+  it("lastAlerted is >= the pre-request timestamp and a second immediate request does not re-alert", async () => {
+    // Use threshold=2 so the alert fires on hit 3.
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+
+    // Ensure DB-init promise has resolved so recordProbe runs synchronously
+    // within the res.on("finish") callback without deferring to _initPromise.
+    await mod.initProbeCounters();
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const now       = Date.now();
+    const cutoff    = now - WINDOW_MS;
+
+    const uaKey = "task415-regression-scraper/1.0";
+
+    // ── Seed: exactly threshold (2) in-window hits ───────────────────────────
+    // One more hit will push hits.length to 3 > threshold, triggering the alert.
+    _uaProbes.set(uaKey, {
+      hits:        [cutoff + 1000, cutoff + 2000],
+      lastAlerted: 0,
+    });
+
+    // Capture the timestamp immediately before the triggering call.
+    const beforeTs = Date.now();
+
+    // ── Triggering call (threshold+1 hit) ────────────────────────────────────
+    _recordProbe(_uaProbes, uaKey, "ua", Date.now());
+
+    // ── (a) lastAlerted must be set synchronously — no flush needed ──────────
+    // If a future refactor moves the assignment inside .then(), this will be 0.
+    const entry = _uaProbes.get(uaKey)!;
+    expect(entry.lastAlerted).toBeGreaterThanOrEqual(beforeTs);
+
+    // Flush so the fire-and-forget import("./telegram-bot").then(...) completes.
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+
+    // sendProbeAlert must have been called exactly once by the triggering hit.
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    const [field, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(field).toBe("ua");
+    expect(value).toBe(uaKey);
+
+    // ── (b) Second immediate call must NOT fire a second alert ────────────────
+    // With lastAlerted correctly set, `now - entry.lastAlerted < COOLDOWN_MS`
+    // suppresses the re-alert.  If lastAlerted were left at 0 the cooldown
+    // check would pass and sendProbeAlert would be called a second time.
+    _recordProbe(_uaProbes, uaKey, "ua", Date.now());
+
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+
+    // Still exactly one alert — cooldown is active.
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+  });
+});
