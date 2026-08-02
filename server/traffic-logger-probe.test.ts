@@ -3546,6 +3546,38 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     }
   });
 
+  it("(C5) initProbeCounters: console.warn is never called when every DB row has fieldType 'referer' or 'ua'", async () => {
+    // The Pass-1 guard emits console.warn only for unrecognised fieldType values.
+    // A future change that adds an overly-broad warn path (e.g. logging every row
+    // it processes, or warning on a newly-introduced intermediate state) would
+    // spam production logs on every restart.  This test confirms that when all
+    // rows are valid — fieldType is exactly "referer" or "ua" — no warning is
+    // emitted at all.
+    const now   = Date.now();
+    const hitTs = now - 1_000; // well within the 24-hour window
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      { fieldType: "referer", key: "https://valid-referer-restart.example/", hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "ua",      key: "ValidRestartUA/1.0",                     hits: [hitTs], lastAlerted: 0 },
+    ];
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await mod.initProbeCounters();
+
+      // No warning must have been emitted for valid fieldType rows.
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("(D) initProbeCounters: a row with ALL-stale hits but an active cooldown is restored with an empty hits array and lastAlerted preserved", async () => {
     // All hits are older than the 24-hour window, but lastAlerted is within
     // the past hour — the cooldown is still active and must keep suppressing
