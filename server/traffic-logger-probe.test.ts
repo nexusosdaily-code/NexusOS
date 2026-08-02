@@ -8609,6 +8609,51 @@ describe("ProbeEntry object-aliasing guard: referer and UA entries are independe
 
     expect(_uaProbes.get(uaKey)!.lastAlerted).toBe(uaLastAlertedBefore);
   });
+
+  it("hits arrays are not aliased: pushing onto refEntry.hits does not change uaEntry.hits", async () => {
+    // A future refactor might assign the same array reference to both entries'
+    // `hits` field (e.g. `entry = { hits: sharedArray, lastAlerted: 0 }`).
+    // If that happened, a push to one hits array would silently mutate the
+    // other, causing double-counting across maps.  This test catches that.
+    process.env.PROBE_ALERT_THRESHOLD = "10"; // high threshold — no alert noise
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _recordProbe } = mod as any;
+
+    await mod.initProbeCounters();
+
+    const refKey = "hits-alias-guard-referer.example/path";
+    const uaKey  = "hits-alias-guard-ua-bot/2.0";
+
+    // Start clean so recordProbe creates brand-new ProbeEntry objects.
+    _refererProbes.delete(refKey);
+    _uaProbes.delete(uaKey);
+
+    const now = Date.now();
+
+    // One call per map — each must produce its own ProbeEntry with its own hits array.
+    _recordProbe(_refererProbes, refKey, "referer", now);
+    _recordProbe(_uaProbes,      uaKey,  "ua",      now);
+
+    const refEntry = _refererProbes.get(refKey);
+    const uaEntry  = _uaProbes.get(uaKey);
+
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // ── Array-reference inequality ─────────────────────────────────────────
+    // The two hits arrays must be distinct references.  If a future change
+    // assigns the same array to both entries this assertion fails immediately.
+    expect(refEntry.hits).not.toBe(uaEntry.hits);
+
+    // ── Mutation-isolation assertion ───────────────────────────────────────
+    // Push a sentinel timestamp onto the referer entry's hits array and
+    // confirm the UA entry's hits array is completely unaffected.
+    const uaHitsLengthBefore = uaEntry.hits.length;
+    refEntry.hits.push(now + 1);
+
+    expect(_uaProbes.get(uaKey)!.hits.length).toBe(uaHitsLengthBefore);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
