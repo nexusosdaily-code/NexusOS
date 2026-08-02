@@ -5595,6 +5595,87 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(mockSendProbeAlert).not.toHaveBeenCalled();
   });
 
+  it("(K) initProbeCounters: each key in the same map receives only its own hits — no allHits buffer aliasing across keys", async () => {
+    // Guard against a future merge-loop bug where the `allHits` array is
+    // reused or aliased across iterations so that Key1's merged hits bleed
+    // into Key2's entry.  The symptom would be Key2 containing Key1's
+    // timestamps in addition to (or instead of) its own.
+    //
+    // Two ua keys and two referer keys are seeded with non-overlapping
+    // timestamp bands.  After initProbeCounters, each entry must contain
+    // exactly the timestamps from its own band and none from the other band.
+    const now = Date.now();
+
+    // Non-overlapping bands — each 10 ms apart so sorting cannot hide aliasing.
+    const UA1_HITS  = [now - 4_000, now - 3_000]; // UA1 band: −4 s … −3 s
+    const UA2_HITS  = [now - 2_000, now - 1_000]; // UA2 band: −2 s … −1 s
+    const REF1_HITS = [now - 8_000, now - 7_000]; // REF1 band: −8 s … −7 s
+    const REF2_HITS = [now - 6_000, now - 5_000]; // REF2 band: −6 s … −5 s
+
+    const UA1_KEY   = "AliasTestBot-UA1/1.0";
+    const UA2_KEY   = "AliasTestBot-UA2/1.0";
+    const REF1_KEY  = "https://alias-test-referer-1.example/";
+    const REF2_KEY  = "https://alias-test-referer-2.example/";
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      { fieldType: "ua",      key: UA1_KEY,  hits: UA1_HITS,  lastAlerted: 0 },
+      { fieldType: "ua",      key: UA2_KEY,  hits: UA2_HITS,  lastAlerted: 0 },
+      { fieldType: "referer", key: REF1_KEY, hits: REF1_HITS, lastAlerted: 0 },
+      { fieldType: "referer", key: REF2_KEY, hits: REF2_HITS, lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    // ── UA1: must contain only its own band ──────────────────────────────────
+    const ua1 = mod._uaProbes.get(UA1_KEY);
+    expect(ua1).toBeDefined();
+    for (const ts of UA1_HITS) {
+      expect(ua1!.hits).toContain(ts);
+    }
+    // UA2 timestamps must not bleed into UA1.
+    for (const ts of UA2_HITS) {
+      expect(ua1!.hits).not.toContain(ts);
+    }
+
+    // ── UA2: must contain only its own band ──────────────────────────────────
+    const ua2 = mod._uaProbes.get(UA2_KEY);
+    expect(ua2).toBeDefined();
+    for (const ts of UA2_HITS) {
+      expect(ua2!.hits).toContain(ts);
+    }
+    // UA1 timestamps must not bleed into UA2.
+    for (const ts of UA1_HITS) {
+      expect(ua2!.hits).not.toContain(ts);
+    }
+
+    // ── REF1: must contain only its own band ─────────────────────────────────
+    const ref1 = mod._refererProbes.get(REF1_KEY);
+    expect(ref1).toBeDefined();
+    for (const ts of REF1_HITS) {
+      expect(ref1!.hits).toContain(ts);
+    }
+    // REF2 timestamps must not bleed into REF1.
+    for (const ts of REF2_HITS) {
+      expect(ref1!.hits).not.toContain(ts);
+    }
+
+    // ── REF2: must contain only its own band ─────────────────────────────────
+    const ref2 = mod._refererProbes.get(REF2_KEY);
+    expect(ref2).toBeDefined();
+    for (const ts of REF2_HITS) {
+      expect(ref2!.hits).toContain(ts);
+    }
+    // REF1 timestamps must not bleed into REF2.
+    for (const ts of REF1_HITS) {
+      expect(ref2!.hits).not.toContain(ts);
+    }
+  });
+
   // ── B4 / B5: pruneProbes — >= cutoff boundary (mirrors B2/B3) ───────────────
   //
   // B2 and B3 confirm that initProbeCounters uses an inclusive >= boundary when
