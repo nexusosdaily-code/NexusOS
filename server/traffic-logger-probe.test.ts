@@ -9479,3 +9479,94 @@ describe("ProbeEntry object-aliasing guard (middleware path): entries inserted v
     expect(_uaProbes.get(uaKey)!.lastAlerted).toBe(uaLastAlertedBefore);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Object-aliasing guard — restart / initProbeCounters path
+//
+// _recordProbe and the middleware finish path each create their own ProbeEntry
+// literal, so aliasing there is already covered.  A third surface exists:
+// initProbeCounters builds ProbeEntry objects from DB rows during restart.
+// A future refactor that builds one entry object and stores it into BOTH maps
+// (e.g. a branching bug that falls through to both branches, or a loop that
+// reuses the same variable) would silently alias the two entries.
+//
+// This suite seeds the DB mock with one "referer" row and one "ua" row, calls
+// initProbeCounters(), reads back each entry, and asserts they are distinct
+// objects that mutate independently.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("ProbeEntry object-aliasing guard (restart path): entries built by initProbeCounters are independent objects", () => {
+  const refKey = "https://restart-aliasing-guard.example.com/probe";
+  const uaKey  = "RestartAliasingGuardUA/1.0";
+
+  it("the referer entry and the UA entry are not the same object reference", async () => {
+    const now   = Date.now();
+    const hitTs = now - 1_000; // 1 second ago — well within the 24-hour window
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    // Remove any stale entries left by earlier tests so we start clean.
+    mod._refererProbes.delete(refKey);
+    mod._uaProbes.delete(uaKey);
+
+    // Seed the DB mock with one row per field type using the guard keys.
+    const fakeRows = [
+      { fieldType: "referer", key: refKey, hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "ua",      key: uaKey,  hits: [hitTs], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    // Simulate a restart.
+    await mod.initProbeCounters();
+
+    const refEntry = mod._refererProbes.get(refKey);
+    const uaEntry  = mod._uaProbes.get(uaKey);
+
+    // Both entries must have been restored from the DB rows.
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // ── Reference-inequality assertion ─────────────────────────────────────
+    // If initProbeCounters ever places the same ProbeEntry object into both
+    // maps (aliasing bug), this will fail and catch the regression.
+    expect(refEntry).not.toBe(uaEntry);
+  });
+
+  it("mutating lastAlerted on the referer entry does not affect the UA entry (no shared object reference)", async () => {
+    const now   = Date.now();
+    const hitTs = now - 2_000;
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._refererProbes.delete(refKey);
+    mod._uaProbes.delete(uaKey);
+
+    const fakeRows = [
+      { fieldType: "referer", key: refKey, hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "ua",      key: uaKey,  hits: [hitTs], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const refEntry = mod._refererProbes.get(refKey)!;
+    const uaEntry  = mod._uaProbes.get(uaKey)!;
+
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // Record the UA entry's lastAlerted before we touch the referer entry.
+    const uaLastAlertedBefore = uaEntry.lastAlerted;
+
+    // Overwrite lastAlerted on the referer entry directly.
+    refEntry.lastAlerted = uaLastAlertedBefore + 77_777;
+
+    // If the two entries share the same object, uaEntry.lastAlerted would
+    // have changed.  It must remain untouched.
+    expect(mod._uaProbes.get(uaKey)!.lastAlerted).toBe(uaLastAlertedBefore);
+  });
+});
