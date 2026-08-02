@@ -3855,6 +3855,54 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(_uaProbes.get("B15bBoundaryActiveHitsUA/1.0")!.hits).toEqual([pruneNow - WINDOW_MS]);
   });
 
+  it("(B15c) pruneProbes: referer entry with a boundary hit (pruneNow − WINDOW_MS) and lastAlerted=0 SURVIVES the prune pass", async () => {
+    // Symmetric twin of B15b for the referer map.
+    //
+    // hasActiveHits = true (hit is exactly at the inclusive >= cutoff).
+    // hasActiveCooldown = false (lastAlerted = 0 → cooldown never fired).
+    //
+    // The entry must survive because hasActiveHits alone is sufficient.
+    // A future refactor that removes or mis-gates the hasActiveHits check
+    // specifically in the referer branch would delete this entry and fail this
+    // test — B8/B9 would NOT catch it because those rely on the cooldown
+    // (hasActiveCooldown) path, and B15b only covers the UA map.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+77h31m — monotonically between B15b (77h) and B16 (78h).
+    const T0       = Date.now() + 77 * 60 * 60 * 1000 + 31 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop actually ran ──────────────────
+    _refererProbes.set("https://b15c-stale-companion.example/scan", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the boundary-hit referer entry with no cooldown ──────────────────
+    // Hit is exactly at pruneNow - WINDOW_MS (the inclusive >= cutoff).
+    // lastAlerted = 0 → cooldown is NOT active.
+    // hasActiveHits = true → entry must SURVIVE.
+    _refererProbes.set("https://b15c-boundary-active-hits.example/scan", {
+      hits:        [pruneNow - WINDOW_MS], // exactly at the cutoff — must be kept
+      lastAlerted: 0,                      // cooldown never fired — no cooldown guard
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → confirms the referer prune loop ran
+    expect(_refererProbes.has("https://b15c-stale-companion.example/scan")).toBe(false);
+    // Active hit at the boundary → hasActiveHits = true → entry must SURVIVE
+    expect(_refererProbes.has("https://b15c-boundary-active-hits.example/scan")).toBe(true);
+    expect(_refererProbes.get("https://b15c-boundary-active-hits.example/scan")!.hits).toEqual([pruneNow - WINDOW_MS]);
+  });
+
   // ── B16 / B17: pruneProbes — warm-cooldown survives even when the peer map is empty ─
   //
   // B8/B9 confirm the cooldown guard works in isolation for the referer map.
