@@ -12530,6 +12530,81 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(entryY!.hits).toHaveLength(2);
     expect(entryY!.hits).not.toContain(SENTINEL);
   });
+
+  it("(B42) initProbeCounters: three duplicate UA rows for the same key all contribute their timestamps to the merged entry", async () => {
+    // Regression guard: a future merge loop that only merges pairs (off-by-one
+    // on the group iteration) would silently drop the third row's timestamp.
+    // This test ensures the merge loop iterates over ALL rows in a group, not
+    // just the first two.
+    const now  = Date.now();
+    const hit0 = now - 1_000; // row 0 timestamp
+    const hit1 = now - 2_000; // row 1 timestamp
+    const hit2 = now - 3_000; // row 2 timestamp
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const KEY = "ThreeDupUA/1.0";
+
+    const fakeRows = [
+      { fieldType: "ua", key: KEY, hits: [hit0], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit1], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit2], lastAlerted: 0 },
+    ];
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue(fakeRows),
+    });
+
+    await mod.initProbeCounters();
+
+    const entry = mod._uaProbes.get(KEY);
+    expect(entry).toBeDefined();
+
+    // All three distinct in-window timestamps must appear in the merged entry.
+    expect(entry!.hits).toHaveLength(3);
+    expect(entry!.hits).toContain(hit0);
+    expect(entry!.hits).toContain(hit1);
+    expect(entry!.hits).toContain(hit2);
+  });
+
+  it("(B43) initProbeCounters: three duplicate referer rows for the same key all contribute their timestamps to the merged entry", async () => {
+    // Symmetric check for the referer map: the same off-by-one regression would
+    // also affect referer keys.  Three duplicate rows must all be merged so no
+    // timestamp is silently dropped.
+    const now  = Date.now();
+    const hit0 = now - 1_000;
+    const hit1 = now - 2_000;
+    const hit2 = now - 3_000;
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const KEY = "https://three-dup-referer.example/scan";
+
+    const fakeRows = [
+      { fieldType: "referer", key: KEY, hits: [hit0], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit1], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit2], lastAlerted: 0 },
+    ];
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue(fakeRows),
+    });
+
+    await mod.initProbeCounters();
+
+    const entry = mod._refererProbes.get(KEY);
+    expect(entry).toBeDefined();
+
+    // All three distinct in-window timestamps must appear in the merged entry.
+    expect(entry!.hits).toHaveLength(3);
+    expect(entry!.hits).toContain(hit0);
+    expect(entry!.hits).toContain(hit1);
+    expect(entry!.hits).toContain(hit2);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
