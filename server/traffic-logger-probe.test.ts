@@ -12617,7 +12617,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     }
   });
 
-  it("(K10) initProbeCounters: window-filter cutoff applied uniformly across all rows in a merged group — boundary hit kept, sub-boundary hit dropped", async () => {
+  it("(K10) initProbeCounters: window-filter cutoff applied uniformly across all rows in a merged group — boundary hit in later row kept, sub-boundary hit dropped", async () => {
     // Guards against a refactor that moves `cutoff = Date.now() - WINDOW_MS`
     // *inside* the per-row loop so the cutoff is recomputed for every row.
     // K9 already pins that the cutoff is constant across *groups*; K10 pins that
@@ -12625,8 +12625,14 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     //
     // ── Scenario ──────────────────────────────────────────────────────────────
     // One group (fieldType="ua", same key) has exactly two DB rows:
-    //   Row 0  hits = [hitAtBoundary]    where hitAtBoundary  = T − WINDOW_MS
-    //   Row 1  hits = [hitBeforeBoundary] where hitBeforeBoundary = T − WINDOW_MS − 1
+    //   Row 0  hits = [hitBeforeBoundary]  where hitBeforeBoundary = T − WINDOW_MS − 1
+    //   Row 1  hits = [hitAtBoundary]      where hitAtBoundary     = T − WINDOW_MS
+    //
+    // The boundary hit is intentionally in Row 1 (the later row).  With a
+    // correct per-run cutoff, Date.now() is called once before any row is
+    // processed, so Row 1 is evaluated against the same cutoff as Row 0.
+    // With a broken per-row design, Date.now() is called again for Row 1,
+    // picking up the drifted clock and raising the cutoff above hitAtBoundary.
     //
     // ── How the spy makes the regression detectable ────────────────────────────
     // Date.now() is spied:
@@ -12634,12 +12640,12 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     //   calls 2+→  T + 60_000    (60 s later; simulates clock drift)
     //
     //   Correct  (cutoff = T − WINDOW_MS, computed once before the loop):
-    //     hitAtBoundary  = T − WINDOW_MS ≥ T − WINDOW_MS  →  true   → KEPT  ✓
-    //     hitBeforeBoundary = T − WINDOW_MS − 1 < T − WINDOW_MS  →  false  → DROPPED ✓
+    //     Row 0: hitBeforeBoundary = T−WINDOW_MS−1 < cutoff  →  false  → DROPPED ✓
+    //     Row 1: hitAtBoundary     = T−WINDOW_MS   ≥ cutoff  →  true   → KEPT    ✓
     //
-    //   Broken   (per-row cutoff re-evaluated at drifted clock T + 60_000):
-    //     Row 0 cutoff = T + 60_000 − WINDOW_MS
-    //     hitAtBoundary < T + 60_000 − WINDOW_MS  →  false  → DROPPED ✗  (regression)
+    //   Broken   (per-row cutoff re-evaluated; Row 1 gets drifted T + 60_000):
+    //     Row 1 cutoff = (T+60_000) − WINDOW_MS = cutoff + 60_000
+    //     hitAtBoundary = T−WINDOW_MS < cutoff+60_000  →  false  → DROPPED ✗
     //
     // A frozen-clock approach (vi.useFakeTimers) would NOT catch this because
     // every Date.now() call returns the same T, keeping per-row recomputation
@@ -12664,12 +12670,13 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       const mod    = await import("./traffic-logger");
       const { db } = await import("./db");
 
-      // Two rows for the same group.  A per-row recomputation with a drifted
-      // clock would produce a higher cutoff for Row 0, causing hitAtBoundary
-      // to be silently filtered out.
+      // Row 0 holds the stale hit; Row 1 holds the boundary hit.
+      // Critical: the boundary hit is in Row 1 so that a broken per-row
+      // recomputation assigns it the drifted cutoff (T+60_000 − WINDOW_MS),
+      // raising the bar above hitAtBoundary and causing a false eviction.
       const fakeRows = [
-        { fieldType: "ua", key: UA_KEY, hits: [hitAtBoundary],     lastAlerted: 0 },
         { fieldType: "ua", key: UA_KEY, hits: [hitBeforeBoundary], lastAlerted: 0 },
+        { fieldType: "ua", key: UA_KEY, hits: [hitAtBoundary],     lastAlerted: 0 },
       ];
 
       (db as any).execute = vi.fn().mockResolvedValue([]);
