@@ -1813,6 +1813,77 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     // ── No alert must have fired — threshold=99 keeps both probes below it
     expect(mockSendProbeAlert).not.toHaveBeenCalled();
   });
+
+  it("referer alert fires: UA probe still records a hit and referer probe still records a hit", async () => {
+    // Regression guard: a future refactor could check whether the referer probe
+    // just crossed the alert threshold and insert an early-return that prevents
+    // the UA probe from being recorded on the same request — e.g.:
+    //
+    //   recordProbe(refererProbes, refKey, "referer", now);
+    //   if (refererProbes.get(refKey)?.lastAlerted === now) return; // ← wrong
+    //   if (ua && !patternBot) recordProbe(uaProbes, uaKey, "ua", now); // ← unreachable
+    //
+    // Alert firing must NEVER skip recording the other probe. Both maps must
+    // accumulate a hit on every qualifying request regardless of alert state.
+    //
+    // Setup:  _refererProbes seeded with exactly threshold hits (next hit
+    //         will cross the threshold and trigger an alert).
+    //         The UA key is absent from _uaProbes.
+    // Action: one dual-field request carrying both that referer and an unknown UA.
+    // Expected:
+    //   • sendProbeAlert fires exactly once, for field "referer"
+    //   • _refererProbes accumulates a hit (alert firing doesn't skip recording)
+    //   • _uaProbes accumulates a hit regardless of the referer alert
+
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mod = await import("./traffic-logger");
+    const mw  = mod.trafficLoggerMiddleware;
+    const { _uaProbes, _refererProbes } = mod as any;
+
+    // Ensure initProbeCounters has resolved so probe recording runs
+    // synchronously inside the res.on("finish") callback.
+    await mod.initProbeCounters();
+
+    const UA_KEY  = "RefererAlertFiringTestUA/3.0";
+    const REF_VAL = "https://referer-alert-while-ua-unknown.example/probe";
+    const REF_KEY = REF_VAL.toLowerCase();
+
+    const now = Date.now();
+
+    // Seed referer map with exactly threshold (2) hits so the next hit
+    // crosses the threshold and fires the alert.
+    _refererProbes.set(REF_KEY, {
+      hits:        [now - 2000, now - 1000],
+      lastAlerted: 0, // never alerted — no cooldown active
+    });
+    const refHitsBefore = _refererProbes.get(REF_KEY).hits.length; // 2
+
+    // Confirm the UA key is not yet tracked.
+    expect(_uaProbes.has(UA_KEY)).toBe(false);
+
+    // Single request carrying both the referer-at-threshold and the unknown UA.
+    const req = makeReq(UA_KEY, REF_VAL);
+    const res = makeRes();
+    mw(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+    await flushMicrotasks();
+
+    // ── Referer alert must have fired exactly once.
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    const [field, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(field).toBe("referer");
+    expect(value).toBe(REF_KEY);
+
+    // ── Referer probe: recording must have happened (hit count went up).
+    const refEntry = _refererProbes.get(REF_KEY);
+    expect(refEntry.hits).toHaveLength(refHitsBefore + 1);
+
+    // ── UA probe: must have accumulated its first hit regardless of the
+    // referer alert that fired on the same request.
+    expect(_uaProbes.has(UA_KEY)).toBe(true);
+    expect(_uaProbes.get(UA_KEY).hits).toHaveLength(1);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
