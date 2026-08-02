@@ -7230,6 +7230,66 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       dateNowSpy.mockRestore();
     }
   });
+
+  it("(B41c) initProbeCounters: allHits buffer is fresh per group — mutating one group's hits array does not affect another group's hits array", async () => {
+    // Regression guard for a shared-buffer bug: if allHits were declared
+    // *outside* the group loop (i.e. a single array reused across all groups),
+    // every group's merged entry would reference the same underlying buffer.
+    // Pushing a sentinel onto one group's entry.hits would then silently
+    // appear in every other group's entry, corrupting hit counts.
+    //
+    // Setup: two distinct (fieldType, key) groups — group A is a UA pair,
+    // group B is a referer pair — each with two duplicate DB rows.  After
+    // initProbeCounters we push a sentinel onto group A's merged hits array
+    // and assert group B's hits array is unaffected.
+    const now  = Date.now();
+    const hitA = now - 1_000; // group A hit timestamp
+    const hitB = now - 2_000; // group B hit timestamp
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+    const { _uaProbes, _refererProbes } = mod as any;
+
+    const KEY_A = "SharedBufferTestUA/1.0";
+    const KEY_B = "https://shared-buffer-test-referer.example/";
+
+    // Two duplicate UA rows for group A (same key, different rows).
+    const rowA0 = { fieldType: "ua",      key: KEY_A, hits: [hitA],       lastAlerted: 0 };
+    const rowA1 = { fieldType: "ua",      key: KEY_A, hits: [hitA - 1],   lastAlerted: 0 };
+    // Two duplicate referer rows for group B (same key, different rows).
+    const rowB0 = { fieldType: "referer", key: KEY_B, hits: [hitB],       lastAlerted: 0 };
+    const rowB1 = { fieldType: "referer", key: KEY_B, hits: [hitB - 1],   lastAlerted: 0 };
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue([rowA0, rowA1, rowB0, rowB1]),
+    });
+
+    await mod.initProbeCounters();
+
+    // Both groups must have been hydrated.
+    const entryA = _uaProbes.get(KEY_A);
+    const entryB = _refererProbes.get(KEY_B);
+    expect(entryA).toBeDefined();
+    expect(entryB).toBeDefined();
+    expect(entryA!.hits).toHaveLength(2);
+    expect(entryB!.hits).toHaveLength(2);
+
+    // ── Cross-group reference-independence assertion ───────────────────────
+    // Push a sentinel onto group A's hits array.  If allHits was shared
+    // between groups, the sentinel would appear in group B's hits too.
+    const SENTINEL = 888_888_888_888;
+    entryA!.hits.push(SENTINEL);
+
+    // Group A should now have 3 elements (2 original + sentinel).
+    expect(entryA!.hits).toHaveLength(3);
+    expect(entryA!.hits).toContain(SENTINEL);
+
+    // Group B must be completely unaffected — it must still have exactly 2 hits
+    // and must NOT contain the sentinel.
+    expect(entryB!.hits).toHaveLength(2);
+    expect(entryB!.hits).not.toContain(SENTINEL);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
