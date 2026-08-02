@@ -1530,6 +1530,65 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(uaCall[1]).toBe(UA_KEY2);
     expect(refCall[1]).toBe(REF_KEY2_LOWER);
   });
+
+  it("UA cooldown active + referer at threshold: only the referer alert fires, UA alert is suppressed", async () => {
+    // Regression guard: a future change that adds an early-return when the UA
+    // probe is in cooldown (e.g. `if (uaInCooldown) return`) — or that gates
+    // the referer recordProbe call on the UA cooldown state — would silently
+    // swallow the referer alert on the same request.
+    //
+    // Setup: _uaProbes has lastAlerted = now (cooldown freshly set, no re-alert
+    //        possible), and _refererProbes has exactly threshold hits so the
+    //        very next hit will cross the threshold and trigger an alert.
+    // The middleware is invoked once with both fields present.
+    // Expected: sendProbeAlert is called exactly once, with field "referer".
+
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mod = await import("./traffic-logger");
+    const mw  = mod.trafficLoggerMiddleware;
+    const { _uaProbes, _refererProbes } = mod as any;
+
+    // Ensure initProbeCounters has resolved so probe recording runs
+    // synchronously inside the res.on("finish") callback.
+    await mod.initProbeCounters();
+
+    const UA_KEY  = "CooldownActiveUA/7.0";
+    const REF_VAL = "https://referer-while-ua-cooldown.example/scan";
+    const REF_KEY = REF_VAL.toLowerCase();
+
+    const now = Date.now();
+
+    // UA map: hits don't matter — what matters is lastAlerted = now, meaning
+    // the cooldown is fully active and the UA branch must NOT re-alert.
+    _uaProbes.set(UA_KEY, {
+      hits:        [now - 3000, now - 2000, now - 1000], // 3 hits (already alerted)
+      lastAlerted: now,                                  // cooldown just set
+    });
+
+    // Referer map: exactly threshold (2) hits — one more will cross it.
+    _refererProbes.set(REF_KEY, {
+      hits:        [now - 2000, now - 1000],
+      lastAlerted: 0,                        // never alerted → no cooldown
+    });
+
+    // Single request carrying both the UA-in-cooldown and the referer-at-threshold.
+    const req = makeReq(UA_KEY, REF_VAL);
+    const res = makeRes();
+    mw(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+    await flushMicrotasks();
+
+    // The referer alert must have fired (referer probe is independent of the
+    // UA probe's cooldown state).
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    const [field, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(field).toBe("referer");
+    expect(value).toBe(REF_KEY);
+
+    // The UA entry must still be in cooldown — lastAlerted unchanged from `now`.
+    expect(_uaProbes.get(UA_KEY).lastAlerted).toBe(now);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
