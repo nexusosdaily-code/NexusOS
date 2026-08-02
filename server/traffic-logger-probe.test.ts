@@ -10716,6 +10716,154 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(_uaProbes.has(UA_KEY)).toBe(false);
   });
 
+  // ── B49: key-based deletion — two UA entries with identical hit arrays ────
+  //
+  // The UA-map counterpart to the referer-map dup-hits test.
+  // _pruneProbes must iterate the uaProbes map and delete entries by their Map
+  // key.  A future refactor that accidentally keyed deletions on the
+  // hits-array object reference (e.g. building a Set of array refs then
+  // calling Map.delete(arrayRef)) would silently skip the second UA entry when
+  // both hold structurally identical arrays, because only one reference would
+  // be present in the deletion Set.
+  //
+  // Two distinct UA-string keys each receive their own array allocation with
+  // the same stale timestamp and an expired cooldown.  After _pruneProbes both
+  // must be absent from _uaProbes.
+  //
+  // T0 = Date.now()+146h — monotonically above B48 (144h).
+
+  it("(B49) two UA entries with identical hit arrays — both stale — _pruneProbes must evict both by key", async () => {
+    // If the pruner keyed deletions on the hits-array object reference rather
+    // than the Map key, it would encounter two distinct array objects that are
+    // structurally equal.  With a value-keyed approach only one would be
+    // "found" in the deletion set, and the other would silently survive.
+    // Asserting that both keys are absent afterwards catches that regression.
+    //
+    // T0 = Date.now()+146h — monotonically above B48 (144h).
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    const T0       = Date.now() + 146 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // Advance lastPrune to T0.
+    _pruneProbes(T0);
+
+    // Two distinct UA-string keys, both with structurally identical (same
+    // value) hit timestamps and expired cooldowns — both must be evicted.
+    const SHARED_HIT_TS  = pruneNow - WINDOW_MS - 1;   // 1 ms outside window
+    const SHARED_ALERTED = pruneNow - COOLDOWN_MS - 1;  // cooldown expired
+
+    const KEY_A = "B49DupHitsA-UA/1.0";
+    const KEY_B = "B49DupHitsB-UA/1.0";
+
+    // Each entry gets its own array allocation — same contents, different refs.
+    _uaProbes.set(KEY_A, { hits: [SHARED_HIT_TS], lastAlerted: SHARED_ALERTED });
+    _uaProbes.set(KEY_B, { hits: [SHARED_HIT_TS], lastAlerted: SHARED_ALERTED });
+
+    _pruneProbes(pruneNow);
+
+    // Both entries must be evicted regardless of structural equality.
+    expect(_uaProbes.has(KEY_A)).toBe(false);
+    expect(_uaProbes.has(KEY_B)).toBe(false);
+  });
+
+  it("(B48) stale UA entry with no referer counterpart — must be evicted (catches a skipped UA loop)", async () => {
+    // Symmetric to B47.  A future pruner that omits the uaProbes loop would
+    // leave this entry alive.  The companion stale referer entry confirms the
+    // refererProbes loop ran.
+    //
+    // T0 = Date.now()+144h — monotonically above B47 (142h).
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    const T0       = Date.now() + 144 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // Advance lastPrune to T0.
+    _pruneProbes(T0);
+
+    // Stale UA entry — no matching key in refererProbes.
+    const UA_KEY = "B48-ua-only-stale/1.0";
+    _uaProbes.set(UA_KEY, {
+      hits:        [pruneNow - WINDOW_MS - 1],  // 1 ms outside the window
+      lastAlerted: pruneNow - COOLDOWN_MS - 1,  // cooldown expired
+    });
+
+    // Stale referer entry with a DIFFERENT key — confirms the refererProbes loop ran.
+    const REF_COMPANION = "https://b48-referer-companion.example/scan";
+    _refererProbes.set(REF_COMPANION, { hits: [], lastAlerted: 0 });
+
+    _pruneProbes(pruneNow);
+
+    // Referer companion deleted → refererProbes loop ran.
+    expect(_refererProbes.has(REF_COMPANION)).toBe(false);
+
+    // Stale UA entry must be evicted — a missing UA loop leaves it alive.
+    expect(_uaProbes.has(UA_KEY)).toBe(false);
+  });
+
+  // ── B49: key-based deletion — two UA entries with identical hit arrays ────
+  //
+  // The UA-map counterpart to the referer-map dup-hits test.
+  // _pruneProbes must iterate the uaProbes map and delete entries by their Map
+  // key.  A future refactor that accidentally keyed deletions on the
+  // hits-array object reference (e.g. building a Set of array refs then
+  // calling Map.delete(arrayRef)) would silently skip the second UA entry when
+  // both hold structurally identical arrays, because only one reference would
+  // be present in the deletion Set.
+  //
+  // Two distinct UA-string keys each receive their own array allocation with
+  // the same stale timestamp and an expired cooldown.  After _pruneProbes both
+  // must be absent from _uaProbes.
+  //
+  // T0 = Date.now()+146h — monotonically above B48 (144h), below B50 (148h).
+
+  it("(B49) two UA entries with identical hit arrays — both stale — _pruneProbes must evict both by key", async () => {
+    // If the pruner keyed deletions on the hits-array object reference rather
+    // than the Map key, it would encounter two distinct array objects that are
+    // structurally equal.  With a value-keyed approach only one would be
+    // "found" in the deletion set, and the other would silently survive.
+    // Asserting that both keys are absent afterwards catches that regression.
+    //
+    // T0 = Date.now()+146h — monotonically above B48 (144h), below B50 (148h).
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    const T0       = Date.now() + 146 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // Advance lastPrune to T0.
+    _pruneProbes(T0);
+
+    // Two distinct UA-string keys, both with structurally identical (same
+    // value) hit timestamps and expired cooldowns — both must be evicted.
+    const SHARED_HIT_TS  = pruneNow - WINDOW_MS - 1;   // 1 ms outside window
+    const SHARED_ALERTED = pruneNow - COOLDOWN_MS - 1;  // cooldown expired
+
+    const KEY_A = "B49DupHitsA-UA/1.0";
+    const KEY_B = "B49DupHitsB-UA/1.0";
+
+    // Each entry gets its own array allocation — same contents, different refs.
+    _uaProbes.set(KEY_A, { hits: [SHARED_HIT_TS], lastAlerted: SHARED_ALERTED });
+    _uaProbes.set(KEY_B, { hits: [SHARED_HIT_TS], lastAlerted: SHARED_ALERTED });
+
+    _pruneProbes(pruneNow);
+
+    // Both entries must be evicted regardless of structural equality.
+    expect(_uaProbes.has(KEY_A)).toBe(false);
+    expect(_uaProbes.has(KEY_B)).toBe(false);
+  });
+
   // ── B50 / B51: one-millisecond-inside cooldown boundary ──────────────────
   //
   // B45/B46 confirmed survival at the absolute youngest cooldown (age = 0).
@@ -10734,7 +10882,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   //   hits[last]  = pruneNow − WINDOW_MS − 1     → below cutoff   → hasActiveHits     = false
   //   ⇒ !hasActiveHits && !hasActiveCooldown is FALSE → SURVIVE
   //
-  // T0 = Date.now()+148h (B50) and +150h (B51) — monotonically above B48 (144h).
+  // T0 = Date.now()+148h (B50) and +150h (B51) — monotonically above B49 (146h).
 
   it("(B50) zombie UA entry with lastAlerted === pruneNow − 1 (age = 1 ms) and all stale hits SURVIVES the prune pass", async () => {
     const mod = await import("./traffic-logger");
@@ -10743,7 +10891,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const WINDOW_MS   = 24 * 60 * 60 * 1000;
     const COOLDOWN_MS =  1 * 60 * 60 * 1000;
 
-    // T0 = Date.now()+148h — monotonically above B48 (144h).
+    // T0 = Date.now()+148h — monotonically above B49 (146h).
     const T0       = Date.now() + 148 * 60 * 60 * 1000;
     const pruneNow = T0 + COOLDOWN_MS + 1;
 
