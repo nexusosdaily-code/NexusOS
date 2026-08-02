@@ -2199,6 +2199,87 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     // The referer entry must still be in cooldown — lastAlerted unchanged.
     expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(now);
   });
+
+  it("referer-only cooldown: UA probe gains its first hit and referer probe gains one hit on a dual-field request", async () => {
+    // Regression guard for a symmetric suppression path: a future refactor
+    // that checks whether the referer probe is in cooldown and skips ALL probe
+    // recording for that request — e.g.:
+    //
+    //   if (referer && !refBlocked && !isOwnOriginReferer(referer)) {
+    //     const entry = refererProbes.get(refKey);
+    //     if (entry && now - entry.lastAlerted < COOLDOWN_MS) return; // ← wrong
+    //     recordProbe(refererProbes, refKey, "referer", now);
+    //   }
+    //   if (ua && !patternBot) {
+    //     recordProbe(uaProbes, uaKey, "ua", now); // ← unreachable
+    //   }
+    //
+    // Specifically targets the case where:
+    //   • _refererProbes has lastAlerted = now (full cooldown active)
+    //   • _uaProbes has NO entry at all for the UA key (zero prior hits)
+    //
+    // The referer probe must still record a hit (cooldown only suppresses the
+    // alert, not the recording), and the UA probe must gain its very first hit
+    // — it must never be gated on the referer probe's cooldown state.
+    //
+    // A realistic threshold (2) is used rather than 99 so the test exercises
+    // the actual alert-path logic.  The referer probe must NOT re-alert
+    // (cooldown blocks it) and the UA probe must NOT alert (only 1 hit,
+    // below threshold).  Crucially, no alert suppression must also suppress
+    // hit recording in either map.
+
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mod = await import("./traffic-logger");
+    const mw  = mod.trafficLoggerMiddleware;
+    const { _uaProbes, _refererProbes } = mod as any;
+
+    // Ensure initProbeCounters has resolved so probe recording runs
+    // synchronously inside the res.on("finish") callback.
+    await mod.initProbeCounters();
+
+    const UA_KEY  = "RefOnlyCooldownFirstHitUA/1.0";
+    const REF_VAL = "https://referer-only-cooldown-first-hit.example/scan";
+    const REF_KEY = REF_VAL.toLowerCase();
+
+    const now = Date.now();
+
+    // Seed _refererProbes with lastAlerted = now (full cooldown freshly set)
+    // and a handful of existing hits to represent a probe that has already
+    // alerted and is now suppressed.
+    _refererProbes.set(REF_KEY, {
+      hits:        [now - 3000, now - 2000, now - 1000], // 3 hits (already alerted)
+      lastAlerted: now,                                   // cooldown just set — no re-alert
+    });
+    const refHitsBefore = _refererProbes.get(REF_KEY).hits.length; // 3
+
+    // Confirm the UA key has no prior entry — this is the first-ever hit.
+    expect(_uaProbes.has(UA_KEY)).toBe(false);
+
+    // Single request carrying both the referer-in-cooldown and the unknown UA.
+    const req = makeReq(UA_KEY, REF_VAL);
+    const res = makeRes();
+    mw(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+    await flushMicrotasks();
+
+    // ── No alert must fire:
+    //   • referer probe is in cooldown → suppressed
+    //   • UA probe has only 1 hit (below threshold of 2) → not triggered
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+
+    // ── UA probe: must have gained its first hit regardless of the referer
+    // cooldown state — the UA map is completely independent.
+    expect(_uaProbes.has(UA_KEY)).toBe(true);
+    expect(_uaProbes.get(UA_KEY).hits).toHaveLength(1);
+
+    // ── Referer probe: must have recorded one additional hit (cooldown suppresses
+    // the alert, not the recording itself).
+    expect(_refererProbes.get(REF_KEY).hits).toHaveLength(refHitsBefore + 1);
+
+    // ── Referer cooldown must still be intact — lastAlerted unchanged.
+    expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(now);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
