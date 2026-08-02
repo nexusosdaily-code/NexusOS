@@ -7440,3 +7440,68 @@ describe("middleware-level: shared header value recorded once per map, not doubl
     expect(uaEntry.hits).toHaveLength(1);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Task 467 — multi-request deduplication guard for identical referer+UA
+//
+// A future "optimisation" might skip the referer probe when referer and UA
+// are identical strings, on the theory that they are "the same probe".  That
+// would leave _refererProbes with 0 hits across multiple requests — exactly
+// the silent failure Task 448's single-hit check cannot catch if the skipping
+// only activates after the first request.
+//
+// This test fires 3 requests all sharing referer == ua == the same string and
+// then asserts:
+//   • _refererProbes has exactly 3 hits for that key  (not 0, not 6)
+//   • _uaProbes      has exactly 3 hits for that key  (not 0, not 6)
+//
+// "not 0"  catches a deduplicate-on-equality skip (one map stays permanently
+//          empty after repeated identical requests).
+// "not 6"  catches a double-count regression where both hits land in one map.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("middleware-level: referer probe not skipped across multiple requests when referer === ua", () => {
+  it("3 requests with referer == ua → _refererProbes has 3 hits and _uaProbes has 3 hits", async () => {
+    // High threshold so no alert fires; the test is purely about hit counting.
+    process.env.PROBE_ALERT_THRESHOLD = "100";
+
+    const mod = await import("./traffic-logger");
+    const { trafficLoggerMiddleware, _refererProbes, _uaProbes } = mod as any;
+
+    // Await startup hydration so the maps are ready before we record.
+    await mod.initProbeCounters();
+
+    // A lowercase non-URL string that:
+    //   • does not match any BOT_PATTERNS entry (so the UA probe fires)
+    //   • is not a valid URL (isOwnOriginReferer returns false, referer probe fires)
+    //   • is not in any constitutional block list
+    //   • is already lowercase so refKey (lowercased) === uaKey, making any
+    //     accidental same-map double-count or cross-map skip immediately visible
+    const sharedValue = "duplicate-probe-string/3.0";
+
+    // Fire 3 requests, each with identical referer and UA.
+    for (let i = 0; i < 3; i++) {
+      const req = makeReq(sharedValue, sharedValue);
+      const res = makeRes();
+      trafficLoggerMiddleware(req, res as any, () => {});
+      res.finish();
+      // Flush the _initPromise.then(…) microtask chain for each request.
+      await new Promise<void>((r) => setImmediate(r));
+      await new Promise<void>((r) => setImmediate(r));
+      await new Promise<void>((r) => setImmediate(r));
+    }
+
+    const refEntry = _refererProbes.get(sharedValue);
+    const uaEntry  = _uaProbes.get(sharedValue);
+
+    // Both maps must have an entry — a skip regression leaves one undefined.
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // Each map must record exactly 3 hits.
+    //   0 hits → referer probe was skipped when referer === ua (the regression)
+    //   6 hits → both probes landed in the same map (double-count regression)
+    expect(refEntry.hits).toHaveLength(3);
+    expect(uaEntry.hits).toHaveLength(3);
+  });
+});
