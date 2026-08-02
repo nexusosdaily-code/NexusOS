@@ -446,7 +446,12 @@ export async function initProbeCounters(): Promise<void> {
     type RawRow = { fieldType: string; key: string; hits: unknown; lastAlerted: number };
     const groups = new Map<string, RawRow[]>();
     for (const row of rows) {
-      if (row.fieldType !== "referer" && row.fieldType !== "ua") continue;
+      if (row.fieldType !== "referer" && row.fieldType !== "ua") {
+        console.warn(
+          `[initProbeCounters] skipping row with unrecognised fieldType="${row.fieldType}" key="${row.key}" — history lost`,
+        );
+        continue;
+      }
       const gk = row.fieldType + "\x00" + row.key;
       const g  = groups.get(gk);
       if (g) g.push(row);

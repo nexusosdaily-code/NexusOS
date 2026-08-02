@@ -3489,6 +3489,55 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(mod._uaProbes.size).toBe(0);
   });
 
+  it("(C4) initProbeCounters: emits a console.warn for each row skipped due to an unrecognised fieldType, including casing variants", async () => {
+    // When a DB row's fieldType does not match "referer" or "ua" (due to a
+    // casing mismatch, schema drift, or ORM change), initProbeCounters must
+    // emit a console.warn so the data-loss is visible in production logs rather
+    // than passing silently.
+    const now   = Date.now();
+    const hitTs = now - 1_000; // well within the 24-hour window
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const SKIPPED_VARIANTS = [
+      { fieldType: "Referer",  key: "https://warn-test-Referer.example/" },
+      { fieldType: "REFERER",  key: "https://warn-test-REFERER.example/" },
+      { fieldType: "UA",       key: "WarnTestUA/1.0" },
+      { fieldType: "uA",       key: "WarnTestUa/1.0" },
+      { fieldType: "unknown",  key: "WarnTestUnknown/1.0" },
+    ];
+
+    const fakeRows = SKIPPED_VARIANTS.map(({ fieldType, key }) => ({
+      fieldType,
+      key,
+      hits:        [hitTs],
+      lastAlerted: 0,
+    }));
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await mod.initProbeCounters();
+
+      // console.warn must have been called at least once per skipped row.
+      // (The module-level _initPromise may also fire with the same mocked rows,
+      // so the total call count can be a multiple of SKIPPED_VARIANTS.length.)
+      expect(warnSpy.mock.calls.length).toBeGreaterThanOrEqual(SKIPPED_VARIANTS.length);
+
+      // Each call must mention the offending fieldType so the log is actionable.
+      for (const { fieldType } of SKIPPED_VARIANTS) {
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining(`fieldType="${fieldType}"`),
+        );
+      }
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("(D) initProbeCounters: a row with ALL-stale hits but an active cooldown is restored with an empty hits array and lastAlerted preserved", async () => {
     // All hits are older than the 24-hour window, but lastAlerted is within
     // the past hour — the cooldown is still active and must keep suppressing
