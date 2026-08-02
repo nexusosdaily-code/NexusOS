@@ -13447,6 +13447,88 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(entry!.hits).toContain(hit1);
     expect(entry!.hits).toContain(hit2);
   });
+
+  it("(B44) initProbeCounters: four duplicate UA rows for the same key all contribute their timestamps to the merged entry", async () => {
+    // Regression guard for a deeper off-by-one: a future merge loop that
+    // processes rows up to index N-1 (stopping one short) would survive the
+    // three-row tests but silently drop the 4th row's timestamp.  This test
+    // catches that regression by seeding four distinct rows and asserting all
+    // four timestamps appear in the merged in-memory entry.
+    const now  = Date.now();
+    const hit0 = now - 1_000; // row 0 timestamp
+    const hit1 = now - 2_000; // row 1 timestamp
+    const hit2 = now - 3_000; // row 2 timestamp
+    const hit3 = now - 4_000; // row 3 timestamp — must not be dropped
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const KEY = "FourDupUA/1.0";
+
+    const fakeRows = [
+      { fieldType: "ua", key: KEY, hits: [hit0], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit1], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit2], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit3], lastAlerted: 0 },
+    ];
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue(fakeRows),
+    });
+
+    await mod.initProbeCounters();
+
+    const entry = mod._uaProbes.get(KEY);
+    expect(entry).toBeDefined();
+
+    // All four distinct in-window timestamps must appear in the merged entry.
+    expect(entry!.hits).toHaveLength(4);
+    expect(entry!.hits).toContain(hit0);
+    expect(entry!.hits).toContain(hit1);
+    expect(entry!.hits).toContain(hit2);
+    expect(entry!.hits).toContain(hit3);
+  });
+
+  it("(B45) initProbeCounters: four duplicate referer rows for the same key all contribute their timestamps to the merged entry", async () => {
+    // Symmetric check for the referer map: the same deeper off-by-one regression
+    // would also affect referer keys.  Four duplicate rows must all be merged so
+    // no timestamp is silently dropped from the 4th or higher row.
+    const now  = Date.now();
+    const hit0 = now - 1_000;
+    const hit1 = now - 2_000;
+    const hit2 = now - 3_000;
+    const hit3 = now - 4_000; // row 3 timestamp — must not be dropped
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const KEY = "https://four-dup-referer.example/scan";
+
+    const fakeRows = [
+      { fieldType: "referer", key: KEY, hits: [hit0], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit1], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit2], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit3], lastAlerted: 0 },
+    ];
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue(fakeRows),
+    });
+
+    await mod.initProbeCounters();
+
+    const entry = mod._refererProbes.get(KEY);
+    expect(entry).toBeDefined();
+
+    // All four distinct in-window timestamps must appear in the merged entry.
+    expect(entry!.hits).toHaveLength(4);
+    expect(entry!.hits).toContain(hit0);
+    expect(entry!.hits).toContain(hit1);
+    expect(entry!.hits).toContain(hit2);
+    expect(entry!.hits).toContain(hit3);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
