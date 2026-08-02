@@ -3105,6 +3105,68 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     }
   });
 
+  it("(B4b) initProbeCounters: _refererProbes.size === 4 and _uaProbes.size === 3 when rows arrive interleaved (referer, ua, referer, ua, …) — no cross-map contamination", async () => {
+    // The existing B4 test seeds all referer rows first, then all UA rows.
+    // A future bug might only manifest when rows arrive interleaved (as a real
+    // DB ORDER BY could produce them).  This variant interleaves 4 referer rows
+    // with 3 UA rows so the restoration loop must correctly dispatch each row by
+    // fieldType regardless of its position in the result set.
+    const now   = Date.now();
+    const hitTs = now - 1_000; // well within the 24-hour window
+
+    const REFERER_KEYS = [
+      "https://interleaved-scraper-1.example/",
+      "https://interleaved-scraper-2.example/",
+      "https://interleaved-scraper-3.example/",
+      "https://interleaved-scraper-4.example/",
+    ];
+    const UA_KEYS = [
+      "InterleavedBot/1.0",
+      "InterleavedBot/2.0",
+      "InterleavedBot/3.0",
+    ];
+
+    // Build the interleaved sequence: r, u, r, u, r, u, r
+    const fakeRows = [
+      { fieldType: "referer", key: REFERER_KEYS[0], hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "ua",      key: UA_KEYS[0],      hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "referer", key: REFERER_KEYS[1], hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "ua",      key: UA_KEYS[1],      hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "referer", key: REFERER_KEYS[2], hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "ua",      key: UA_KEYS[2],      hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "referer", key: REFERER_KEYS[3], hits: [hitTs], lastAlerted: 0 },
+    ];
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    // ── Size assertions: each map must contain exactly the rows for its type.
+    expect(mod._refererProbes.size).toBe(4);
+    expect(mod._uaProbes.size).toBe(3);
+
+    // ── Cross-map absence: no referer key must appear in uaProbes …
+    for (const key of REFERER_KEYS) {
+      expect(mod._uaProbes.has(key)).toBe(false);
+    }
+    // … and no UA key must appear in refererProbes.
+    for (const key of UA_KEYS) {
+      expect(mod._refererProbes.has(key)).toBe(false);
+    }
+
+    // ── Presence: every key must land in the correct map.
+    for (const key of REFERER_KEYS) {
+      expect(mod._refererProbes.has(key)).toBe(true);
+    }
+    for (const key of UA_KEYS) {
+      expect(mod._uaProbes.has(key)).toBe(true);
+    }
+  });
+
   it("(C) initProbeCounters: rows with an unrecognised field_type are silently ignored", async () => {
     const now   = Date.now();
     const hitTs = now - 1_000;
