@@ -14846,6 +14846,63 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     }
   });
 
+  it("(B41i) dedup merge takes the highest lastAlerted across three UA rows when the highest value is in the middle row", async () => {
+    // B41e and B41f only cover the two-row case, where a first-wins or
+    // last-wins implementation still happens to pick the maximum (because with
+    // two rows there are only two candidates).  A three-row seed where the
+    // highest lastAlerted sits in the MIDDLE row (low / HIGH / low) exposes
+    // both failure modes at once:
+    //   • first-wins: returns low (row 0) ✗
+    //   • last-wins:  returns low (row 2) ✗
+    //   • Math.max:   returns HIGH       ✓
+    //
+    // T0 = Date.now()+148h — monotonically above B41h (146h) to avoid any
+    // in-memory state left over from prior tests in the same describe block.
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const initNow   = Date.now() + 148 * 60 * 60 * 1000;
+    // All three hits are inside the window so the entry is not skipped.
+    const hit0 = initNow - Math.floor(WINDOW_MS / 3);
+    const hit1 = initNow - Math.floor(WINDOW_MS / 4);
+    const hit2 = initNow - Math.floor(WINDOW_MS / 5);
+
+    // row 0 and row 2 have a LOWER lastAlerted; row 1 (the middle) has the HIGHEST.
+    const lowerLastAlerted  = initNow - 60 * 60 * 1000; // 60 min ago
+    const highestLastAlerted = initNow - 5 * 60 * 1000; // 5 min ago — must win
+    const alsoLower         = initNow - 45 * 60 * 1000; // 45 min ago
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _uaProbes } = mod as any;
+
+      const KEY  = "B41iThreeRowMiddleHighUA/1.0";
+      const row0 = { fieldType: "ua", key: KEY, hits: [hit0], lastAlerted: lowerLastAlerted };
+      const row1 = { fieldType: "ua", key: KEY, hits: [hit1], lastAlerted: highestLastAlerted };
+      const row2 = { fieldType: "ua", key: KEY, hits: [hit2], lastAlerted: alsoLower };
+
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({
+        from: vi.fn().mockResolvedValue([row0, row1, row2]),
+      });
+
+      await mod.initProbeCounters();
+
+      const entry = _uaProbes.get(KEY);
+      expect(entry).toBeDefined();
+
+      // The merged lastAlerted must be the highest value across all three rows.
+      // A first-wins implementation would return lowerLastAlerted (row 0).
+      // A last-wins implementation would return alsoLower (row 2).
+      // Only Math.max over all rows returns highestLastAlerted (row 1).
+      expect(entry!.lastAlerted).toBe(highestLastAlerted);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
   it("(B5) initProbeCounters: merged hits for each group contain exactly the right timestamps — no cross-group timestamp contamination", async () => {
     // Check that the merged hits array for each (fieldType, key) group contains
     // exactly the timestamps that belong to its own rows, and none from the
