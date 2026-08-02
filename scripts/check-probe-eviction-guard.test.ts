@@ -1619,6 +1619,61 @@ describe("multi-line helper body (formatter-split condition inside extracted hel
     expect(result.ok).toBe(true);
   });
 
+  // ── 6c. Helper body has symmetric two-part split: '<= c' on its own line → ok:true
+  it("returns ok:true when the helper body splits 'e.hits[lo]' from '<= c) lo++' across two lines (symmetric split — full-body fallback recognises it)", async () => {
+    // The symmetric counterpart to test 6a.  A formatter enforcing a strict
+    // line-length limit might wrap:
+    //   while (lo < e.hits.length && e.hits[lo] <= c) lo++;
+    // the OTHER way — breaking after `e.hits[lo]` so that the operator and
+    // right-hand operand begin the next line:
+    //   while (lo < e.hits.length && e.hits[lo]
+    //     <= c) lo++;
+    //
+    // The per-line scan sees:
+    //   line 1:  "  while (lo < e.hits.length && e.hits[lo]"  — no '<= c'
+    //   line 2:  "    <= c) lo++;"                            — no 'e.hits[lo]'
+    // so neither line matches HELPER_REQUIRED_PATTERN on its own.
+    //
+    // The full-body fallback pass in scanHelperBody() joins the helper lines
+    // into a single string and applies the param-specific `required` pattern
+    // built by buildHelperScanPatterns().  That pattern is:
+    //   \be\b\.hits\[\w+\]\s*<=\s*\bc\b
+    //
+    // In the joined body string the relevant fragment is:
+    //   "e.hits[lo]\n    <= c"
+    //
+    // \s* matches \n + indentation, so the full-body pattern spans the line
+    // boundary and recognises the expression.  The check returns ok:true.
+    //
+    // This mirrors test 5f for the main source file, which showed that
+    // REQUIRED_PATTERN's \s* also handles the symmetric split inline.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  let lo = 0;`,
+        `  // Formatter split the while-loop condition: '<= c' on its own line:`,
+        `  while (lo < e.hits.length && e.hits[lo]`,
+        `    <= c) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // CURRENT BEHAVIOUR: ok:true — the full-body fallback pass in scanHelperBody()
+    // joins the helper lines and the param-specific required pattern's \s* consumes
+    // the newline between `e.hits[lo]` and `<= c`, recognising the expression.
+    expect(result.ok).toBe(true);
+  });
+
+
   // ── 5g. While-loop body split to the next line → ok:true ──────────────────
   it("returns ok:true when the while-loop condition is intact but the body 'lo++' is on the next line", async () => {
     // A formatter enforcing a short line-length limit may keep the condition
