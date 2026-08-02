@@ -5674,3 +5674,101 @@ describe("_uaProbes.lastAlerted is set synchronously before the async import fir
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Task 408 — pre-existing hits are preserved when cooldown is active
+//
+// Regression guard: a future change that truncates or clears the hits array
+// when the cooldown guard fires (e.g. `entry.hits = [now]` instead of
+// `entry.hits.push(now)`) would silently destroy the sliding-window history
+// while still appearing correct to callers that only check the alert count.
+//
+// This test verifies that every hit present BEFORE a cooldown-active call
+// survives untouched in addition to the newly appended hit.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("hits array is preserved in full when cooldown is active (no eviction of non-expired hits)", () => {
+  const WINDOW_MS = 24 * 60 * 60 * 1000; // mirrors the module constant
+
+  it("UA probe: all pre-existing in-window hits survive a cooldown-active recordProbe call", async () => {
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+
+    // Ensure the init promise has resolved so recordProbe runs synchronously.
+    await mod.initProbeCounters();
+
+    const now    = Date.now();
+    const cutoff = now - WINDOW_MS;
+
+    // Three distinct in-window timestamps — well within the 24-hour window.
+    const originalHits = [cutoff + 1000, cutoff + 2000, cutoff + 3000];
+    const key = "CooldownHitsPreservationUA/1.0";
+
+    // Seed the entry: cooldown is active (lastAlerted = now).
+    _uaProbes.set(key, {
+      hits:        [...originalHits],
+      lastAlerted: now, // cooldown fully active — alert will be suppressed
+    });
+
+    // One more hit arrives while cooldown is active.
+    const hitTs = now + 1;
+    _recordProbe(_uaProbes, key, "ua", hitTs);
+
+    const entry = _uaProbes.get(key)!;
+
+    // All three original hits must still be present.
+    expect(entry.hits).toContain(originalHits[0]);
+    expect(entry.hits).toContain(originalHits[1]);
+    expect(entry.hits).toContain(originalHits[2]);
+
+    // The new hit must have been appended.
+    expect(entry.hits).toContain(hitTs);
+
+    // Total: 3 original + 1 new = 4 hits (no truncation).
+    expect(entry.hits).toHaveLength(4);
+
+    // The cooldown must still be active — no second alert should have fired.
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+  });
+
+  it("referer probe: all pre-existing in-window hits survive a cooldown-active recordProbe call", async () => {
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe } = mod as any;
+
+    await mod.initProbeCounters();
+
+    const now    = Date.now();
+    const cutoff = now - WINDOW_MS;
+
+    const originalHits = [cutoff + 5000, cutoff + 6000, cutoff + 7000];
+    const key = "https://cooldown-hits-preservation-referer.example/scan";
+
+    _refererProbes.set(key, {
+      hits:        [...originalHits],
+      lastAlerted: now, // cooldown fully active
+    });
+
+    const hitTs = now + 1;
+    _recordProbe(_refererProbes, key, "referer", hitTs);
+
+    const entry = _refererProbes.get(key)!;
+
+    expect(entry.hits).toContain(originalHits[0]);
+    expect(entry.hits).toContain(originalHits[1]);
+    expect(entry.hits).toContain(originalHits[2]);
+    expect(entry.hits).toContain(hitTs);
+    expect(entry.hits).toHaveLength(4);
+
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+  });
+});
