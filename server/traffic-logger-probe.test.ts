@@ -12739,6 +12739,61 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     }
   });
 
+  it("(B41g) dedup merge takes the highest lastAlerted for referer rows — not just the first row's value", async () => {
+    // Referer-map counterpart to B41e.  A regression that reads
+    // groupRows[0].lastAlerted directly (skipping the Math.max loop) for the
+    // referer branch — but not for UA — would cause the cooldown to appear
+    // expired sooner than intended after a restart, triggering a spurious
+    // re-alert on the very next incoming hit.
+    //
+    // T0 = Date.now()+144h — monotonically above B41f (142h) to avoid any
+    // in-memory state left over from prior tests in the same describe block.
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const initNow   = Date.now() + 144 * 60 * 60 * 1000;
+    // Both hits are inside the window so the entry survives the cutoff filter.
+    const hit0 = initNow - Math.floor(WINDOW_MS / 3);
+    const hit1 = initNow - Math.floor(WINDOW_MS / 4);
+
+    // row 0 has the LOWER lastAlerted; row 1 has the HIGHER one.
+    const lowerLastAlerted  = initNow - 45 * 60 * 1000; // 45 min ago
+    const higherLastAlerted = initNow - 10 * 60 * 1000; // 10 min ago — must win
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _refererProbes } = mod as any;
+
+      const KEY  = "https://b41g-last-alerted-referer.example/scan";
+      const row0 = { fieldType: "referer", key: KEY, hits: [hit0], lastAlerted: lowerLastAlerted };
+      const row1 = { fieldType: "referer", key: KEY, hits: [hit1], lastAlerted: higherLastAlerted };
+
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({
+        from: vi.fn().mockResolvedValue([row0, row1]),
+      });
+
+      await mod.initProbeCounters();
+
+      const entry = _refererProbes.get(KEY);
+      expect(entry).toBeDefined();
+
+      // The merged lastAlerted must be the highest value across both rows.
+      // A merge that reads only groupRows[0].lastAlerted would return
+      // lowerLastAlerted and this assertion would fail, allowing a spurious
+      // post-restart alert to fire while the cooldown is still active.
+      expect(entry!.lastAlerted).toBe(higherLastAlerted);
+
+      // The UA map must be untouched.
+      const { _uaProbes } = mod as any;
+      expect(_uaProbes.has(KEY)).toBe(false);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
   it("(B5) initProbeCounters: merged hits for each group contain exactly the right timestamps — no cross-group timestamp contamination", async () => {
     // Check that the merged hits array for each (fieldType, key) group contains
     // exactly the timestamps that belong to its own rows, and none from the
