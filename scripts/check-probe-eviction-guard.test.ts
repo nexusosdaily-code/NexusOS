@@ -1764,6 +1764,55 @@ describe("helper-extraction detection", () => {
     expect(result.reason).toMatch(/no correct eviction comparison|update REQUIRED_PATTERN/i);
   });
 
+  // ── 4ae. Full-body fallback — non-standard index name AND wrong comparator together → ok:false ─
+  it("returns ok:false with the relaxed-comparison message when the helper's split while-loop uses BOTH a non-standard index name (idx) AND the wrong comparator (<)", async () => {
+    // Guards against a combined mutation that 4ac and 4ad test separately but
+    // not together:
+    //   • 4ac confirms "idx" with correct "<=" is accepted (ok:true)
+    //   • 4ab confirms "lo" with wrong "<" is rejected (ok:false)
+    //   • THIS test confirms "idx" with wrong "<" is also rejected (ok:false)
+    //
+    // The helper splits the condition across three lines so neither the global
+    // Phase 1 pattern nor the per-line helper scan fires:
+    //
+    //   while (idx < e.hits.length &&
+    //     e.hits[idx] <
+    //     c) idx++;
+    //
+    // The full-body forbidden pattern \be\b\.hits\[\w+\]\s*<(?!=)\s*\bc\b must
+    // match when \s* consumes the newline + indentation between "<" and "c".
+    // The \w+ wildcard must accept "idx" — if it were hard-coded to "lo" the
+    // pattern would miss the violation and return ok:true instead.
+    //
+    // Expected outcome: ok:false, reason contains "Relaxed eviction comparison"
+    // and "split across lines", attributed to helper "evictOldHits".
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictOldHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictOldHits(e, c) {`,
+        `  let idx = 0;`,
+        `  // BUG: wrong comparator < instead of <=`,
+        `  while (idx < e.hits.length &&`,
+        `    e.hits[idx] <`,
+        `    c) idx++;`,
+        `  e.hits.splice(0, idx);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toMatch(/split across lines/i);
+    expect(result.reason).toContain("evictOldHits");
+  });
+
   // ── 4z. Opt-in flag guard (ok:false): split form, wrong comparator ────────
   it("returns ok:false with the helper-extraction message when the split filter body uses a wrong comparator (t !== cutoff) that matches neither required nor forbidden", async () => {
     // Confirms the full-body fallback is SELECTIVE: it only promotes
