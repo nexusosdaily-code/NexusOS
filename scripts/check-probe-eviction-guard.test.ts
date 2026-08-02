@@ -86,6 +86,14 @@
  *        f. While-loop condition symmetric two-part split: `<= cutoff` on its own line → ok:true
  *           REQUIRED_PATTERN's \s* also spans the newline between `entry.hits[lo]`
  *           and `<= cutoff`, so the full-source fallback pass recognises this form too.
+ *        g. Inline bare-arrow split (correct form): `entry.hits.filter(t =>\n  t > cutoff)` → ok:true
+ *           REQUIRED_PATTERN uses \(? making the callback-param parens optional, and
+ *           \s* between `=>` and `t` spans the newline; the full-source fallback pass
+ *           therefore recognises the bare (non-parenthesised) arrow split form.
+ *        h. Inline bare-arrow split (relaxed form): `entry.hits.filter(t =>\n  t >= cutoff)` → ok:false
+ *           FORBIDDEN_PATTERN likewise uses \(? and \s*, so the full-source pass
+ *           catches the relaxed bare-arrow split and emits the "relaxed eviction comparison"
+ *           error rather than the generic failure.
  *   6. Multi-line helper body (formatter-split condition inside extracted helper)
  *        a. Delegation present; helper body has `e.hits[lo] <=` / `c` split across
  *           two lines → ok:false with helper-extraction message.
@@ -1744,6 +1752,72 @@ describe("multi-line source strings (formatter-split arrow)", () => {
     // The full-source fallback pass joins all lines and matches the split
     // expression via \s* spanning the newline.
     expect(result.ok).toBe(true);
+  });
+
+  // ── 5g. Inline bare-arrow split (correct form) → ok:true ──────────────────
+  it("returns ok:true when the inline filter uses a bare (non-parenthesised) arrow split across two lines (correct form)", async () => {
+    // A formatter may split `entry.hits.filter(t => t > cutoff)` — using the
+    // bare (non-parenthesised) callback parameter — across two lines:
+    //
+    //   entry.hits = entry.hits.filter(t =>
+    //     t > cutoff);
+    //
+    // REQUIRED_PATTERN's filter branch uses \(? making the opening paren for
+    // the callback parameter optional, and \s* between `=>` and `t` spans the
+    // newline.  The full-source fallback pass therefore recognises the bare
+    // arrow split form and returns ok:true.
+    //
+    // Cross-reference: tests 6h/6i cover the same bare-arrow split form inside
+    // an extracted helper body.  This test (5g) confirms the inline path is also
+    // covered so that a future change narrowing REQUIRED_PATTERN to require
+    // parentheses would be caught here before it ships.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  entry.hits = entry.hits.filter(t =>`,
+        `    t > cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 5h. Inline bare-arrow split (relaxed form) → ok:false (relaxed) ────────
+  it("returns ok:false with the relaxed-form error when the inline filter uses a bare arrow split with the relaxed comparator", async () => {
+    // The relaxed counterpart to test 5g.  A formatter may produce:
+    //
+    //   entry.hits = entry.hits.filter(t =>
+    //     t >= cutoff);
+    //
+    // FORBIDDEN_PATTERN likewise uses \(? and \s* between `=>` and `t`, so
+    // the full-source fallback pass detects the relaxed bare-arrow split and
+    // emits the "relaxed eviction comparison" error rather than the generic
+    // "no correct eviction guard found" message.
+    //
+    // Cross-reference: test 5b covers the same relaxed split using the
+    // parenthesised `(t) =>` form.  This test (5h) confirms the bare form
+    // is also caught so that a future narrowing of FORBIDDEN_PATTERN to require
+    // parentheses would be detected here.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  entry.hits = entry.hits.filter(t =>`,
+        `    t >= cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
   });
 });
 
