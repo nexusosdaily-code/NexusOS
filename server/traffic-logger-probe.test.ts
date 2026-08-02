@@ -5753,6 +5753,53 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       dateNowSpy.mockRestore();
     }
   });
+
+  it("(B5) initProbeCounters: referer entry and UA entry do not share the same hits array (no array-level aliasing via initProbeCounters)", async () => {
+    // Guard against a refactor that builds one hits array and assigns it to
+    // both the referer and UA entries.  If the same array reference were stored
+    // in both entries, a push onto one would silently corrupt the other.
+    //
+    // The test seeds one referer row and one UA row with the same timestamp,
+    // runs initProbeCounters(), then:
+    //   a) asserts that the two hits arrays are distinct object references, and
+    //   b) verifies that mutating the referer entry's array does not affect the
+    //      UA entry's array length (and vice-versa).
+    const now   = Date.now();
+    const hitTs = now - 1_000; // well within the 24-hour window
+
+    const REF_KEY = "https://alias-check-scraper.example/";
+    const UA_KEY  = "AliasCheckBot/1.0";
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      { fieldType: "referer", key: REF_KEY, hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "ua",      key: UA_KEY,  hits: [hitTs], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const refEntry = mod._refererProbes.get(REF_KEY);
+    const uaEntry  = mod._uaProbes.get(UA_KEY);
+
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // ── a) The two hits arrays must be distinct object references.
+    expect(refEntry!.hits).not.toBe(uaEntry!.hits);
+
+    // ── b) Mutating one array must not affect the other.
+    const uaLenBefore = uaEntry!.hits.length;
+    refEntry!.hits.push(now); // mutate referer array
+    expect(uaEntry!.hits.length).toBe(uaLenBefore); // UA array untouched
+
+    const refLenAfter = refEntry!.hits.length;
+    uaEntry!.hits.push(now - 500); // mutate UA array
+    expect(refEntry!.hits.length).toBe(refLenAfter); // referer array untouched
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
