@@ -8918,3 +8918,97 @@ describe("cooldown resets correctly after a re-alert — new window suppresses t
     expect(_uaProbes.get(KEY).lastAlerted).toBe(NOW_RELALERT);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Object-aliasing guard — middleware path
+//
+// The previous describe block seeds entries via _recordProbe directly, which
+// bypasses the middleware.  A refactor could still introduce aliasing inside
+// trafficLoggerMiddleware itself — e.g. constructing one ProbeEntry object
+// and passing it to both the referer and UA recordProbe calls.  This block
+// exercises the middleware path end-to-end so such a bug is caught before it
+// ships.
+//
+// The test:
+//   1. Fires trafficLoggerMiddleware once with a request that carries BOTH a
+//      non-own-origin referer AND a non-bot UA string.
+//   2. Reads _refererProbes.get(refKey) and _uaProbes.get(uaKey).
+//   3. Asserts the two retrieved objects are NOT the same reference (!==).
+//   4. Mutates lastAlerted on the referer entry and confirms the UA entry is
+//      unaffected — concrete proof that the objects do not share state.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("ProbeEntry object-aliasing guard (middleware path): entries inserted via middleware are independent objects", () => {
+  it("firing trafficLoggerMiddleware produces distinct ProbeEntry objects in each map", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "999"; // keep alerts out of the way
+    process.env.PROBE_COOLDOWN_HOURS  = "0";
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes } = mod as any;
+    const mw = mod.trafficLoggerMiddleware;
+
+    await mod.initProbeCounters();
+
+    // Choose keys that are distinct from each other and from any bot pattern.
+    const UA_STRING  = "MiddlewareAliasingGuard/1.0 CustomTestUA";
+    const REF_STRING = "https://middleware-aliasing-guard.example.com/probe";
+
+    // The middleware normalises refKey to lowercase and slices to 500 chars.
+    const refKey = REF_STRING.slice(0, 500).toLowerCase();
+    const uaKey  = UA_STRING.slice(0, 500);
+
+    // Remove any stale entries so we start from a clean slate.
+    _refererProbes.delete(refKey);
+    _uaProbes.delete(uaKey);
+
+    const req = {
+      path:    "/page",
+      method:  "GET",
+      headers: {
+        "user-agent": UA_STRING,
+        "referer":    REF_STRING,
+      },
+      socket: { remoteAddress: "10.0.0.2" },
+    } as any;
+
+    const listeners: Record<string, Array<() => void>> = {};
+    const res = {
+      statusCode: 200,
+      locals:     {},
+      status: vi.fn().mockReturnThis(),
+      json:   vi.fn().mockReturnThis(),
+      on(event: string, fn: () => void) {
+        (listeners[event] ??= []).push(fn);
+      },
+    } as any;
+
+    // Drive the middleware — this registers the res.on("finish") handler.
+    mw(req, res, () => {});
+
+    // Fire the finish event so probe recording runs.
+    for (const fn of listeners["finish"] ?? []) fn();
+
+    // Allow any microtasks / promise chains inside the finish handler to settle.
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+
+    const refEntry = _refererProbes.get(refKey);
+    const uaEntry  = _uaProbes.get(uaKey);
+
+    // Both entries must have been created by the middleware.
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // ── Reference-inequality assertion ─────────────────────────────────────
+    // If the middleware ever aliases the same ProbeEntry into both maps this
+    // assertion will fail, catching the bug before it ships.
+    expect(refEntry).not.toBe(uaEntry);
+
+    // ── Mutation-isolation assertion ───────────────────────────────────────
+    // Overwrite lastAlerted on the referer entry directly and confirm the UA
+    // entry remains unchanged.  Aliased objects would mutate in lock-step.
+    const uaLastAlertedBefore = uaEntry.lastAlerted;
+    refEntry.lastAlerted = uaLastAlertedBefore + 99_999;
+
+    expect(_uaProbes.get(uaKey)!.lastAlerted).toBe(uaLastAlertedBefore);
+  });
+});
