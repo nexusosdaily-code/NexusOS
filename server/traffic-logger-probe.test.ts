@@ -5235,6 +5235,139 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const { _uaProbes } = mod as any;
     expect(_uaProbes.has(KEY)).toBe(false);
   });
+
+  // ── B26 / B27: zombie entry receives new hits while cooldown is still active ─
+  //
+  // B22/B23 document that a zombie entry survives in the map with stale hits and
+  // lastAlerted still set inside the cooldown window.  B26/B27 confirm that when
+  // recordProbe receives new hits for that key:
+  //   • The while-loop evicts all stale zombie hits on the first call.
+  //   • Subsequent hits accumulate until hits.length > ALERT_THRESHOLD.
+  //   • The cooldown guard (now − lastAlerted < COOLDOWN_MS) still fires and
+  //     blocks the alert — lastAlerted must remain unchanged throughout.
+  //
+  // A future change that resets lastAlerted on entry re-use would clear the
+  // cooldown guard, causing a premature second alert; this test catches that.
+  //
+  // threshold=1 (minimum valid positive value) so two hits exceed it, making
+  // the cooldown guard the sole reason no alert fires.
+  //
+  // T0 = Date.now()+98h (B26) and +100h (B27) — monotonically above B25 (96h).
+
+  it("(B26) zombie UA entry: new hits while cooldown still active do not fire a duplicate alert", async () => {
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+    const SKEW        = 10; // ms gap used to build the zombie (mirrors B22)
+
+    // T0 = Date.now()+98h — monotonically above B25 (96h).
+    const initNow  = Date.now() + 98 * 60 * 60 * 1000;
+    const pruneNow = initNow + SKEW;
+
+    // Zombie hits: each >= initNow − WINDOW_MS (init loaded them) but
+    // < pruneNow − WINDOW_MS (below the prune cutoff).
+    const initCutoff = initNow - WINDOW_MS;
+    const zombieHits: number[] = Array.from({ length: SKEW }, (_, k) => initCutoff + k);
+
+    // lastAlerted 100 ms inside the cooldown window so both new hits remain
+    // inside it:
+    //   hit1 − lastAlerted = COOLDOWN_MS − 100 < COOLDOWN_MS  ✓
+    //   hit2 − lastAlerted = COOLDOWN_MS − 99  < COOLDOWN_MS  ✓
+    const lastAlerted = pruneNow - COOLDOWN_MS + 100;
+    const hit1 = pruneNow;       // first  new hit
+    const hit2 = pruneNow + 1;   // second new hit — still within cooldown
+
+    // threshold=1 is the minimum valid positive value; 2 in-window hits exceed it.
+    // ALERT_THRESHOLD is a module-level IIFE so the env var must be set before import.
+    process.env.PROBE_ALERT_THRESHOLD = "1";
+
+    try {
+      const mod = await import("./traffic-logger");
+      const { _uaProbes, _recordProbe } = mod as any;
+
+      // Seed the zombie entry (mirrors the state left by B22 after _pruneProbes).
+      const KEY = "B26ZombieActiveCooldwonUA/1.0";
+      _uaProbes.set(KEY, { hits: [...zombieHits], lastAlerted });
+
+      // ── First hit ────────────────────────────────────────────────────────────
+      // All zombie hits fall below (hit1 − WINDOW_MS) and are evicted.
+      // hits = [hit1], length = 1, 1 > 1 = false → threshold not yet crossed.
+      _recordProbe(_uaProbes, KEY, "ua", hit1);
+      await flushMicrotasks();
+
+      expect(_uaProbes.get(KEY)!.hits).toEqual([hit1]);
+      expect(_uaProbes.get(KEY)!.lastAlerted).toBe(lastAlerted);
+      expect(mockSendProbeAlert).not.toHaveBeenCalled();
+
+      // ── Second hit ───────────────────────────────────────────────────────────
+      // hit1 survives the window (WINDOW_MS >> 1 ms gap).
+      // hits = [hit1, hit2], length = 2, 2 > 1 = true → threshold crossed.
+      // Cooldown: hit2 − lastAlerted = COOLDOWN_MS − 99 < COOLDOWN_MS → blocked.
+      _recordProbe(_uaProbes, KEY, "ua", hit2);
+      await flushMicrotasks();
+
+      // hits contains both new hits (zombie hits were evicted on the first call).
+      expect(_uaProbes.get(KEY)!.hits).toEqual([hit1, hit2]);
+
+      // Cooldown guard must have preserved the original lastAlerted.
+      expect(_uaProbes.get(KEY)!.lastAlerted).toBe(lastAlerted);
+
+      // No Telegram alert must have been dispatched.
+      expect(mockSendProbeAlert).not.toHaveBeenCalled();
+    } finally {
+      delete process.env.PROBE_ALERT_THRESHOLD;
+    }
+  });
+
+  it("(B27) zombie referer entry: new hits while cooldown still active do not fire a duplicate alert", async () => {
+    // Symmetric referer-map counterpart to B26.
+    //
+    // T0 = Date.now()+100h — monotonically above B26 (98h).
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+    const SKEW        = 10;
+
+    const initNow  = Date.now() + 100 * 60 * 60 * 1000;
+    const pruneNow = initNow + SKEW;
+
+    const initCutoff = initNow - WINDOW_MS;
+    const zombieHits: number[] = Array.from({ length: SKEW }, (_, k) => initCutoff + k);
+
+    // lastAlerted 100 ms inside the cooldown window — same margin as B26.
+    const lastAlerted = pruneNow - COOLDOWN_MS + 100;
+    const hit1 = pruneNow;
+    const hit2 = pruneNow + 1;
+
+    process.env.PROBE_ALERT_THRESHOLD = "1";
+
+    try {
+      const mod = await import("./traffic-logger");
+      const { _refererProbes, _recordProbe } = mod as any;
+
+      // Seed the zombie entry (mirrors the state left by B23 after _pruneProbes).
+      const KEY = "https://b27-zombie-active-cooldown-referer.example/scan";
+      _refererProbes.set(KEY, { hits: [...zombieHits], lastAlerted });
+
+      // ── First hit ────────────────────────────────────────────────────────────
+      _recordProbe(_refererProbes, KEY, "referer", hit1);
+      await flushMicrotasks();
+
+      expect(_refererProbes.get(KEY)!.hits).toEqual([hit1]);
+      expect(_refererProbes.get(KEY)!.lastAlerted).toBe(lastAlerted);
+      expect(mockSendProbeAlert).not.toHaveBeenCalled();
+
+      // ── Second hit ───────────────────────────────────────────────────────────
+      // hits=[hit1,hit2], 2 > 1 = true, cooldown still active → blocked.
+      _recordProbe(_refererProbes, KEY, "referer", hit2);
+      await flushMicrotasks();
+
+      expect(_refererProbes.get(KEY)!.hits).toEqual([hit1, hit2]);
+      expect(_refererProbes.get(KEY)!.lastAlerted).toBe(lastAlerted);
+      expect(mockSendProbeAlert).not.toHaveBeenCalled();
+    } finally {
+      delete process.env.PROBE_ALERT_THRESHOLD;
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
