@@ -64,6 +64,13 @@
  *        e. While-loop condition two-part split: identifier (`cutoff`) on its own line → ok:true
  *           REQUIRED_PATTERN's \s* spans the newline between `<=` and `cutoff`,
  *           so the full-source fallback pass recognises this form too.
+ *   6. Multi-line helper body (formatter-split condition inside extracted helper)
+ *        a. Delegation present; helper body has `e.hits[lo] <=` / `c` split across
+ *           two lines → ok:false with helper-extraction message.
+ *           HELPER_REQUIRED_PATTERN is a single-line regex applied line-by-line.
+ *           A formatter that wraps `e.hits[lo] <= c` across two lines leaves neither
+ *           line matching HELPER_REQUIRED_PATTERN, so the check fails with the
+ *           "extracted into helper … no correct eviction comparison" message.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -1122,10 +1129,12 @@ describe("helper-extraction detection", () => {
 // per-line scan, which fixes the false-negative documented by the earlier
 // "known limitation" comment.
 //
-//   5a — split correct filter form   → ok:true  (full-source pass matches)
-//   5b — split relaxed filter form   → ok:false, "relaxed eviction comparison"
-//   5c — while-loop operator split   → ok:true  (full-source pass matches)
-//   5d — split filter + single-line while-loop → ok:true (unchanged)
+//   5a — split correct filter form         → ok:true  (full-source pass matches)
+//   5b — split relaxed filter form         → ok:false, "relaxed eviction comparison"
+//   5c — while-loop operator split         → ok:true  (full-source pass matches)
+//   5d — split filter + single-line while  → ok:true  (unchanged)
+//   5e — two-part split: `<=` ends line    → ok:true  (full-source \s* spans \n)
+//   5f — two-part split: `<=` starts line  → ok:true  (full-source \s* spans \n)
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("multi-line source strings (formatter-split arrow)", () => {
@@ -1266,8 +1275,8 @@ describe("multi-line source strings (formatter-split arrow)", () => {
     expect(result.ok).toBe(true);
   });
 
-  // ── 5f. While-loop two-part split: '<= cutoff' on its own line → ok:false ──
-  it("returns ok:false when the while-loop condition is split so that '<= cutoff' lands on the next line (symmetric two-part split)", async () => {
+  // ── 5f. While-loop two-part split: '<= cutoff' on its own line → ok:true ───
+  it("returns ok:true when the while-loop condition is split so that '<= cutoff' lands on the next line (symmetric two-part split)", async () => {
     // The symmetric counterpart to test 5e.  A formatter may split:
     //   while (lo < entry.hits.length && entry.hits[lo] <= cutoff) lo++;
     // the other way, wrapping after `entry.hits[lo]` so that the operator and
@@ -1276,20 +1285,14 @@ describe("multi-line source strings (formatter-split arrow)", () => {
     //     entry.hits[lo]
     //     <= cutoff) lo++;
     //
-    // This is the same single-line regex limitation documented in 5e:
-    // REQUIRED_PATTERN requires `entry.hits[lo] <= cutoff` to appear on one
-    // line.  In this symmetric split, line 1 ends with `entry.hits[lo]` (no
-    // `<=` or `cutoff`) and line 2 begins with `<= cutoff)` (no
-    // `entry.hits[lo]`), so neither line matches REQUIRED_PATTERN and the check
-    // falls through to the generic "no correct eviction guard found" failure.
+    // The per-line scan does not match either partial line on its own.
+    // However, the full-source fallback pass applies REQUIRED_PATTERN to the
+    // entire source string.  REQUIRED_PATTERN uses \s* between tokens and
+    // JavaScript's \s includes \n, so `entry\.hits\[lo\]\s*<=\s*cutoff`
+    // matches across the line boundary:
+    //   `entry.hits[lo]` + `\n    ` (\s*) + `<=` + ` ` (\s*) + `cutoff`
     //
-    // Cross-reference: test 5e covers the case where `entry.hits[lo] <=` ends
-    // one line and `cutoff` begins the next.  Both two-part splits defeat
-    // REQUIRED_PATTERN for the identical reason (single-line regex), and both
-    // must be caught.
-    //
-    // If REQUIRED_PATTERN is later extended to handle multi-line expressions,
-    // update this expectation to ok:true.
+    // Both two-part splits (5e and 5f) therefore pass the full-source check.
     mockReadFile.mockResolvedValue(
       [
         `function recordProbe(map, key, label, now) {`,
@@ -1304,10 +1307,87 @@ describe("multi-line source strings (formatter-split arrow)", () => {
     );
 
     const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
-    // CURRENT BEHAVIOUR: ok:false — `entry.hits[lo]` is on one line and
-    // `<= cutoff` is on the next, so REQUIRED_PATTERN does not match either
-    // line.
+    // CURRENT BEHAVIOUR: ok:true — the full-source fallback pass recognises
+    // `entry.hits[lo]\n    <= cutoff` via REQUIRED_PATTERN's \s* tokens.
+    expect(result.ok).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 6. Multi-line helper body (formatter-split condition inside extracted helper)
+//
+// HELPER_REQUIRED_PATTERN is a single-line regex applied line-by-line inside
+// the helper's extracted body, exactly as REQUIRED_PATTERN is applied to the
+// top-level source.  A formatter that enforces an aggressive line-length limit
+// may split `e.hits[lo] <= c` inside the helper body across two lines:
+//
+//   while (lo < e.hits.length && e.hits[lo] <=
+//     c) lo++;
+//
+// Each resulting line is individually too short to match HELPER_REQUIRED_PATTERN
+// (which requires the full `<param>.hits[<idx>] <= <cutoff>` expression on one
+// line).  The split form therefore falls through to the "extracted into helper …
+// no correct eviction comparison found" failure rather than being recognised as
+// correct.
+//
+// This is the same single-line regex limitation documented in section 5, but
+// applied to HELPER_REQUIRED_PATTERN instead of REQUIRED_PATTERN.  These tests
+// document the current behaviour so that:
+//   a. A future formatter change that produces this layout inside a helper is
+//      caught immediately when the guard starts failing.
+//   b. Anyone who updates HELPER_REQUIRED_PATTERN to handle multi-line forms
+//      has a clear baseline to test against.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("multi-line helper body (formatter-split condition inside extracted helper)", () => {
+  // ── 6a. Helper body has while-loop condition split across two lines → ok:false
+  it("returns ok:false when the helper body splits 'e.hits[lo] <= c' across two lines (single-line regex limitation on HELPER_REQUIRED_PATTERN)", async () => {
+    // A formatter enforcing a strict line-length limit might wrap:
+    //   while (lo < e.hits.length && e.hits[lo] <= c) lo++;
+    // inside the helper body into a two-part split:
+    //   while (lo < e.hits.length && e.hits[lo] <=
+    //     c) lo++;
+    //
+    // HELPER_REQUIRED_PATTERN requires `<param>.hits[<idx>] <= <cutoff>` to
+    // appear on a single line.  In the two-part split, line 1 ends with
+    // `e.hits[lo] <=` (no `c`) and line 2 begins with `c)` (no `e.hits[lo]`),
+    // so neither line matches HELPER_REQUIRED_PATTERN.  The check therefore
+    // returns ok:false with the helper-extraction "no correct eviction
+    // comparison found in that helper's body" message.
+    //
+    // This is intentional — the current line-by-line scanning approach cannot
+    // reconstruct the expression across line boundaries.  If HELPER_REQUIRED_PATTERN
+    // is later extended to match multi-line forms, update this expectation to
+    // ok:true and revise the reason assertion accordingly.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  let lo = 0;`,
+        `  // Formatter split the while-loop condition across two lines:`,
+        `  while (lo < e.hits.length && e.hits[lo] <=`,
+        `    c) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // CURRENT BEHAVIOUR: ok:false — the split form is not recognised by
+    // HELPER_REQUIRED_PATTERN (single-line regex limitation).
+    // If HELPER_REQUIRED_PATTERN is extended to match across line boundaries,
+    // update this expectation to ok:true.
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/no correct eviction guard found/i);
+    // The failure must reference the helper by name so the developer knows
+    // which extracted function failed the check.
+    expect(result.reason).toMatch(/extracted into helper/i);
+    expect(result.reason).toContain("evictStaleHits");
+    expect(result.reason).toMatch(/update REQUIRED_PATTERN/i);
   });
 });
