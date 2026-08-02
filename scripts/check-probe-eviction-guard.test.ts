@@ -62,6 +62,10 @@
  *        x-callback-required-neg. HELPER_REQUIRED_PATTERN does NOT match relaxed filter form with a non-standard callback name (x => x >= c)
  *        x-callback-forbidden-ok.  HELPER_FORBIDDEN_PATTERN matches relaxed filter form with a non-standard callback name (x => x >= c)
  *        x-callback-forbidden-neg. HELPER_FORBIDDEN_PATTERN does NOT match correct filter form with a non-standard callback name (x => x > c)
+ *        xp-callback-required-ok.  HELPER_REQUIRED_PATTERN matches correct parenthesised filter form with a non-standard callback name ((x) => x > c)
+ *        xp-callback-required-neg. HELPER_REQUIRED_PATTERN does NOT match relaxed parenthesised filter form with a non-standard callback name ((x) => x >= c)
+ *        xp-callback-forbidden-ok.  HELPER_FORBIDDEN_PATTERN matches relaxed parenthesised filter form with a non-standard callback name ((x) => x >= c)
+ *        xp-callback-forbidden-neg. HELPER_FORBIDDEN_PATTERN does NOT match correct parenthesised filter form with a non-standard callback name ((x) => x > c)
  *        o. Helper body with filter arrow split across lines (correct form) → ok:true
  *        p. Helper body with filter arrow split across lines (relaxed form) → ok:false
  *        v. Helper body splits 'e.hits\n  .filter((t) => t > c)' across lines → ok:true
@@ -1064,6 +1068,42 @@ describe("helper-extraction detection", () => {
     // The correct form (strict >) must never be treated as a forbidden
     // expression, regardless of what identifier is used as the callback.
     expect(HELPER_FORBIDDEN_PATTERN.test("e.hits.filter(x => x > c)")).toBe(false);
+  });
+
+  // ── 4xp-callback-required-ok. HELPER_REQUIRED_PATTERN — parenthesised non-standard callback name, correct form ─
+  it("HELPER_REQUIRED_PATTERN matches the correct parenthesised filter form with a non-standard callback name ((x) => x > c)", () => {
+    // The \(? optional-paren branch covers `(x) => x > c`.  A future
+    // tightening that hard-codes the callback variable only in the
+    // parenthesised branch (e.g. `\(t\)` instead of `\(\w+\)`) would break
+    // this case while leaving the bare-arrow tests passing.  This test pins
+    // the parenthesised path for non-standard names so that such a regression
+    // is caught at the export-level unit test before it reaches full-body logic.
+    expect(HELPER_REQUIRED_PATTERN.test("e.hits.filter((x) => x > c)")).toBe(true);
+  });
+
+  // ── 4xp-callback-required-neg. HELPER_REQUIRED_PATTERN — parenthesised non-standard callback name, relaxed form not matched ─
+  it("HELPER_REQUIRED_PATTERN does NOT match the relaxed parenthesised filter form with a non-standard callback name ((x) => x >= c)", () => {
+    // The relaxed form (>=) must never be accepted as correct, regardless of
+    // whether the callback parameter is parenthesised or what identifier is used.
+    expect(HELPER_REQUIRED_PATTERN.test("e.hits.filter((x) => x >= c)")).toBe(false);
+  });
+
+  // ── 4xp-callback-forbidden-ok. HELPER_FORBIDDEN_PATTERN — parenthesised non-standard callback name, relaxed form flagged ─
+  it("HELPER_FORBIDDEN_PATTERN matches the relaxed parenthesised filter form with a non-standard callback name ((x) => x >= c)", () => {
+    // A future tightening that hard-codes the callback variable only in the
+    // parenthesised branch of HELPER_FORBIDDEN_PATTERN (e.g. `\(t\)` instead
+    // of `\(\w+\)`) would silently stop flagging relaxed helpers that use any
+    // callback name other than `t` with parens.  This test pins the
+    // flexibility of the parenthesised path on the forbidden side.
+    expect(HELPER_FORBIDDEN_PATTERN.test("e.hits.filter((x) => x >= c)")).toBe(true);
+  });
+
+  // ── 4xp-callback-forbidden-neg. HELPER_FORBIDDEN_PATTERN — parenthesised non-standard callback name, correct form not flagged ─
+  it("HELPER_FORBIDDEN_PATTERN does NOT match the correct parenthesised filter form with a non-standard callback name ((x) => x > c)", () => {
+    // The correct form (strict >) must never be treated as a forbidden
+    // expression, regardless of whether the parameter is parenthesised or
+    // what identifier is used as the callback.
+    expect(HELPER_FORBIDDEN_PATTERN.test("e.hits.filter((x) => x > c)")).toBe(false);
   });
 
   // ── 4o. Helper body: filter arrow split across lines (correct form) → ok:true

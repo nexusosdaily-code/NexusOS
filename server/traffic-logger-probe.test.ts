@@ -180,76 +180,35 @@ type Middleware = Awaited<ReturnType<typeof freshMiddleware>>
  * Minimal Express-like request.  The UA must NOT match any entry in
  * BOT_PATTERNS so probe tracking is triggered.
  */
-function makeReq(ua: string, referer = "") 
-{
-
-  return 
-{
-
+function makeReq(ua: string, referer = "") {
+  return {
     path:    "/page",
     method:  "GET",
-    headers: 
-{
- "user-agent": ua, referer 
-}
-,
-    socket:  
-{
- remoteAddress: "10.0.0.1" 
-}
-,
-  
-}
- as any
-;
-
+    headers: { "user-agent": ua, referer },
+    socket:  { remoteAddress: "10.0.0.1" },
+  } as any;
 }
 
 
 /**
  * Minimal Express-like response whose "finish" event can be triggered manually.
  */
-function makeRes() 
-{
+function makeRes() {
+  const listeners: Record<string, Array<() => void>> = {};
 
-  const listeners: Record<string, Array<() => void>> = 
-{
-}
-;
-
-  return 
-{
-
+  return {
     statusCode: 200,
-    locals:     
-{
-}
-,
+    locals:     {},
     status:     vi.fn().mockReturnThis(),
     json:       vi.fn().mockReturnThis(),
-    on(event: string, fn: () => void) 
-{
-
-      (listeners[event] ??= []).push(fn)
-;
-
-    
-}
-,
+    on(event: string, fn: () => void) {
+      (listeners[event] ??= []).push(fn);
+    },
     /** Simulate the HTTP response completing (triggers probe recording). */
-    finish() 
-{
-
-      for (const fn of listeners["finish"] ?? []) fn()
-;
-
-    
-}
-,
-  
-}
-;
-
+    finish() {
+      for (const fn of listeners["finish"] ?? []) fn();
+    },
+  };
 }
 
 
@@ -727,9 +686,7 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
   // ── lastAlerted boundary: set only when hits EXCEED threshold ────────────
   // These two companion tests guard the strict > condition.
   // A refactor that changes > to >= would fire one hit early AND could skip
-  // the lastAlerted assignment path
-;
- the second test would catch that.
+  // the lastAlerted assignment path; the second test would catch that.
 
   it("lastAlerted is set after hits exceed threshold (hits.length === threshold+1)", async () => 
 {
@@ -1004,9 +961,7 @@ describe("Telegram HTML escaping — malicious characters in probe keys", () =>
     const [field, value] = await getProbeCall(rawUa)
 ;
 
-    // traffic-logger passes the raw string
-;
- sendProbeAlert handles escaping
+    // traffic-logger passes the raw string; sendProbeAlert handles escaping
     expect(field).toBe("ua")
 ;
 
@@ -1172,9 +1127,7 @@ describe("300-character truncation of probe keys in alert message", () =>
     const [, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number]
 ;
 
-    // traffic-logger stores up to 500 chars
-;
- sendProbeAlert slices to 300 internally
+    // traffic-logger stores up to 500 chars; sendProbeAlert slices to 300 internally
     expect(value.length).toBe(400)
 ;
 
@@ -1242,9 +1195,7 @@ describe("300-character truncation of probe keys in alert message", () =>
     const [, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number]
 ;
 
-    // Raw unescaped '<xss>' is passed through
-;
- sendProbeAlert escapes it
+    // Raw unescaped '<xss>' is passed through; sendProbeAlert escapes it
     expect(value).toContain("<xss>")
 ;
 
@@ -2230,14 +2181,8 @@ describe("dynamic UA block always responds with HTTP 403", () => {
     await flushMicrotasks()
 ;
 
-    return 
-{
- res, next 
-}
-;
-
-  
-}
+    return { res, next };
+  }
 
 
   it("phase 1 — UA in snapshot: res.status is called with 403", async () => 
@@ -2748,9 +2693,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
 
 
     // 20 hits with a stable external referer but a unique UA per hit.
-    // Only the referer probe accumulates
-;
- the UA probe never exceeds threshold.
+    // Only the referer probe accumulates; the UA probe never exceeds threshold.
     for (let i = 0
 ;
  i < 20
@@ -2808,9 +2751,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
 
 
     // 20 hits with a stable unknown UA and no referer header at all.
-    // Only the UA probe accumulates
-;
- the referer probe is never touched.
+    // Only the UA probe accumulates; the referer probe is never touched.
     for (let i = 0
 ;
  i < 20
@@ -2880,10 +2821,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     //   uses inside a single _initPromise.then() callback can experience a Vitest
     //   mock-cache race: the second concurrent dynamic import of the same mocked
     //   module sometimes resolves before the mock factory has cached its result,
-    //   so its sendProbeAlert destructures as undefined and the .catch(() => 
-{
-}
-)
+    //   so its sendProbeAlert destructures as undefined and the .catch(() => {})
     //   silently swallows the TypeError.  Calling _recordProbe for each field
     //   separately — with a microtask flush between them so each import fully
     //   resolves before the next begins — confirms that both async chains work
@@ -6058,9 +5996,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 
 
     // ── Seed the cooldown-active referer entry ────────────────────────────────
-    // All hits are well outside the window
-;
- lastAlerted is 30 min ago (< 1 h
+    // All hits are well outside the window; lastAlerted is 30 min ago (< 1 h
     // cooldown) → hasActiveCooldown = true → entry must SURVIVE.
     _refererProbes.set("https://b8-warm-cooldown-referer.example/scan", 
 {
@@ -6447,9 +6383,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   //
   // T0 = Date.now()+70h (B12) and +72h (B13) — monotonically above B11 (68h).
   // lastPrune is 0 after vi.resetModules() so _pruneProbes(pruneNow) is the
-  // very first prune pass
-;
- no warm-up call is needed.
+  // very first prune pass; no warm-up call is needed.
 
   it("(B12) round-trip UA 1 ms skew: boundary hit loaded by initProbeCounters (initNow = pruneNow−1) is NOT evicted by _pruneProbes(pruneNow)", async () => 
 {
@@ -6742,9 +6676,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 
 
     // ── Seed the cooldown-active UA entry ─────────────────────────────────────
-    // All hits are well outside the window
-;
- lastAlerted is 30 min ago (< 1 h
+    // All hits are well outside the window; lastAlerted is 30 min ago (< 1 h
     // cooldown) → hasActiveCooldown = true → entry must SURVIVE.
     _uaProbes.set("B14WarmCooldownUA/1.0", 
 {
@@ -7136,9 +7068,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     // However lastAlerted is within the 1-h cooldown, so hasActiveCooldown =
     // true and the entry must be kept alive.
     //
-    // B14 covers the same invariant for the UA map
-;
- this test pins it
+    // B14 covers the same invariant for the UA map; this test pins it
     // specifically for the referer branch so a future split-loop refactor
     // that omits the cooldown check from the referer branch would fail here.
     const mod = await import("./traffic-logger")
@@ -7283,9 +7213,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     // ── Seed the warm-cooldown UA entry with active hits ──────────────────────
     // Hit is 12 h ago (well within the 24-h window) → hasActiveHits = true.
     // lastAlerted is 30 min ago (within 1-h cooldown) → hasActiveCooldown = true.
-    // Both guards protect the entry
-;
- it must SURVIVE.
+    // Both guards protect the entry; it must SURVIVE.
     _uaProbes.set("B16WarmCooldownActiveHitsUA/1.0", 
 {
 
@@ -7381,9 +7309,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     // ── Seed the warm-cooldown referer entry with active hits ─────────────────
     // Hit is 12 h ago (well within the 24-h window) → hasActiveHits = true.
     // lastAlerted is 30 min ago (within 1-h cooldown) → hasActiveCooldown = true.
-    // Both guards protect the entry
-;
- it must SURVIVE.
+    // Both guards protect the entry; it must SURVIVE.
     _refererProbes.set("https://b17-warm-cooldown-active-hits.example/scan", 
 {
 
@@ -7536,14 +7462,10 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   // The DB row contains ONLY a stale hit (initNow − WINDOW_MS − 1).
   //
   // • Correct init  (cutoff = initNow − WINDOW_MS):
-  //     staleHit < cutoff → filtered out
-;
- lastAlerted = 0 → entry not created.
+  //     staleHit < cutoff → filtered out; lastAlerted = 0 → entry not created.
   //
   // • Regressed init (cutoff = initNow − WINDOW_MS − 1, too lenient):
-  //     staleHit == cutoff → loaded
-;
- entry IS created → the `.has()` assertion
+  //     staleHit == cutoff → loaded; entry IS created → the `.has()` assertion
   //     below fails, catching the regression immediately.
   //
   // A separate "demonstrate" step then manually injects the stale entry and
@@ -7564,9 +7486,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 ;
 
     // 1 ms below the correct init cutoff (initNow − WINDOW_MS).
-    // Correct init excludes it
-;
- a too-lenient init loads it.
+    // Correct init excludes it; a too-lenient init loads it.
     const staleHit = initNow - WINDOW_MS - 1
 ;
 
@@ -8105,9 +8025,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   // Step 2: _pruneProbes(pruneNow) evaluates each entry:
   //   hasActiveHits    = hits[last] >= pruneNow − WINDOW_MS → false (all hits < cutoff)
   //   hasActiveCooldown = pruneNow − lastAlerted < COOLDOWN_MS → true
-  //   → entry is NOT deleted
-;
- hits array is left unchanged (pruneProbes never
+  //   → entry is NOT deleted; hits array is left unchanged (pruneProbes never
   //     trims individual hits — that happens in recordProbe's while-loop).
   //
   // The assertions document this zombie-entry behaviour so a future change that
@@ -8309,9 +8227,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 
       // ── Step 2: _pruneProbes(pruneNow) keeps the zombie entry ────────────────
       // Same reasoning as B22: hasActiveHits = false, hasActiveCooldown = true
-      // → entry survives
-;
- hits array left unchanged by pruneProbes.
+      // → entry survives; hits array left unchanged by pruneProbes.
       _pruneProbes(pruneNow)
 ;
 
@@ -8821,9 +8737,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   // With age = COOLDOWN_MS − 1 the condition is false, so the alert must
   // be suppressed even though hits.length already exceeds the threshold.
   // A future off-by-one that changes `>=` to `>` would allow a re-alert
-  // 1 ms too early
-;
- this test catches that.
+  // 1 ms too early; this test catches that.
   //
   // T0 = Date.now()+102h (B28) and +104h (B29) — monotonically above B27 (100h).
 
@@ -9001,9 +8915,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 ;
 
 
-  // ── B30: duplicate-key rows trigger DB dedup
-;
- persistence still works after ──
+  // ── B30: duplicate-key rows trigger DB dedup; persistence still works after ──
   //
   // When initProbeCounters finds two rows for the same (field_type, key) it must:
   //   1. Merge them in memory (fresh hit preserved).
@@ -9409,9 +9321,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   // never populated, the dedup DELETE never ran, CREATE UNIQUE INDEX still
   // failed, and all subsequent persistProbeEntry calls silently failed.
   //
-  // After the two-pass fix, ALL rows are grouped first
-;
- duplicates are detected
+  // After the two-pass fix, ALL rows are grouped first; duplicates are detected
   // regardless of each row's staleness.  This test verifies:
   //   a. The fresh hit from the higher-id row is preserved in memory.
   //   b. db.execute is called for the dedup DELETE + UPDATE + both INDEX DDLs
@@ -10129,9 +10039,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 ;
 
   // the UA entry holds a fresh hit.  After _pruneProbes, only the referer entry
-  // must be gone
-;
- the UA entry must survive.  Cross-map deletion would either
+  // must be gone; the UA entry must survive.  Cross-map deletion would either
   // remove the fresh UA entry or leave the stale referer entry.
   //
   // T0 = Date.now()+134h (B43) and +136h (B44) — monotonically above B42 (132h).
@@ -10372,9 +10280,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   // Because hasActiveCooldown is true the entry must survive the prune pass even
   // though every hit is stale (hasActiveHits = false).  A future pruner refactor
   // that resets lastAlerted to 0, reads the wrong field, or inverts the
-  // comparison would accidentally evict this entry
-;
- these tests catch that.
+  // comparison would accidentally evict this entry; these tests catch that.
   //
   // Design (B45 — UA map):
   //   lastAlerted = pruneNow (age = 0)         → 0 < COOLDOWN_MS → hasActiveCooldown = true
@@ -11090,9 +10996,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(entryA!.hits).not.toBe(entryB!.hits);
 
     // ── Mutation-isolation assertion ─────────────────────────────────────────
-    // Push a sentinel onto entry A's hits
-;
- entry B must be unaffected.
+    // Push a sentinel onto entry A's hits; entry B must be unaffected.
     const bLengthBefore = entryB!.hits.length
 ;
 
@@ -11126,9 +11030,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     // Symmetric UA-map counterpart to K4.  Guards against a loop-reuse bug
     // where the same `activeHits` reference is written to multiple map entries
     // inside the restoration loop.  Both rows land in _uaProbes under different
-    // keys
-;
- if the array is reused, pushing onto one would silently mutate the
+    // keys; if the array is reused, pushing onto one would silently mutate the
     // other.
     const now  = Date.now()
 ;
@@ -11358,9 +11260,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 ;
    // ua-1     vs ua-2
 
-    // ── b) Mutation-isolation: push onto ref-1
-;
- the other three must be unaffected.
+    // ── b) Mutation-isolation: push onto ref-1; the other three must be unaffected.
     const lenRef2Before = eRef2!.hits.length
 ;
 
@@ -11471,9 +11371,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     //   • every entry's hits array would alias the same buffer (K6 regression)
     //   • every entry's lastAlerted would inherit the last group's value (K7 regression)
     //
-    // K6 and K7 each catch one half of the bug in isolation
-;
- K8 catches the
+    // K6 and K7 each catch one half of the bug in isolation K8 catches the
     // compound form with a single seed that exercises both invariants together.
     //
     // Setup: 4 entries with DISTINCT hits timestamps AND DISTINCT lastAlerted values.
@@ -11658,9 +11556,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   //
   // A future change that evicts stale hits AFTER recording the new hit (or not
   // at all) and then passes entry.hits.length to sendProbeAlert would report an
-  // inflated count and mislead the admin
-;
- these tests catch that regression.
+  // inflated count and mislead the admin; these tests catch that regression.
   //
   // threshold=3 → alert fires when hits.length reaches 4.
   // Stale-hit count = 5 → an uninflated call receives 4, an inflated one 9.
@@ -14278,9 +14174,7 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
     const entry = _uaProbes.get(key)!
 ;
 
-    // The boundary hit from phase 1 must be gone
-;
- only the new hit survives.
+    // The boundary hit from phase 1 must be gone; only the new hit survives.
     expect(entry.hits).toEqual([recordNow])
 ;
 
@@ -14340,9 +14234,7 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
     const entry = _refererProbes.get(key)!
 ;
 
-    // Only the freshly-recorded hit must remain
-;
- the boundary hit is evicted.
+    // Only the freshly-recorded hit must remain; the boundary hit is evicted.
     expect(entry.hits).toEqual([recordNow])
 ;
 
@@ -14566,9 +14458,7 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
 
 
     // Alert must fire: 4 hits > threshold of 3.
-    // The dynamic import inside recordProbe is fire-and-forget
-;
- flush the queue.
+    // The dynamic import inside recordProbe is fire-and-forget; flush the queue.
     await new Promise<void>((r) => setImmediate(r))
 ;
 
@@ -15078,9 +14968,7 @@ describe("concurrent burst — two scraper keys at the same timestamp stay indep
     const entryA = _uaProbes.get(keyA)!
 ;
 
-    // Stale hit evicted
-;
- 2 in-window hits + new hit = 3 total.
+    // Stale hit evicted; 2 in-window hits + new hit = 3 total.
     expect(entryA.hits).toHaveLength(3)
 ;
 
@@ -15095,9 +14983,7 @@ describe("concurrent burst — two scraper keys at the same timestamp stay indep
     const entryB = _uaProbes.get(keyB)!
 ;
 
-    // Stale hit evicted
-;
- 3 in-window hits + new hit = 4 total.
+    // Stale hit evicted; 3 in-window hits + new hit = 4 total.
     expect(entryB.hits).toHaveLength(4)
 ;
 
@@ -15833,9 +15719,7 @@ describe("PROBE_WINDOW_HOURS — eviction loop respects WINDOW_MS, not a hard-co
     const entry = _uaProbes.get("task398-ua-a")!
 ;
 
-    // twoHoursAgo must have been evicted
-;
- thirtyMinAgo + now must survive.
+    // twoHoursAgo must have been evicted; thirtyMinAgo + now must survive.
     expect(entry.hits).toHaveLength(2)
 ;
 
@@ -16597,9 +16481,7 @@ describe("cross-map independence — same string in both _refererProbes and _uaP
 
 
     // ── Async flush — at least one sendProbeAlert call confirms the telegram
-    // path is exercised (both dynamic imports are in-flight
-;
- Vitest's mock
+    // path is exercised (both dynamic imports are in-flight Vitest's mock
     // resolution order is not guaranteed to drain both in the same tick).
     await new Promise<void>((r) => setImmediate(r));
     await new Promise<void>((r) => setImmediate(r));
@@ -16800,9 +16682,7 @@ describe("middleware-level: referer probe not skipped across multiple requests w
   it("3 requests with referer == ua → _refererProbes has 3 hits and _uaProbes has 3 hits", async () => 
 {
 
-    // High threshold so no alert fires
-;
- the test is purely about hit counting.
+    // High threshold so no alert fires; the test is purely about hit counting.
     process.env.PROBE_ALERT_THRESHOLD = "100"
 ;
 
@@ -16950,9 +16830,7 @@ describe("middleware-level: referer probe not skipped across multiple requests w
 
 //             call _recordProbe for referer → exactly one "referer" alert.
 //   Phase 2 — advance "now" by COOLDOWN_MS+2 for the UA map (different
-//             value)
-;
- call _recordProbe for ua → exactly one "ua" alert.
+//             value); call _recordProbe for ua → exactly one "ua" alert.
 //   Phase 3 — assert the two re-alert timestamps are distinct.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -17193,9 +17071,7 @@ describe("ProbeEntry object-aliasing guard: referer and UA entries are independe
 ;
 
 
-    // recordProbe creates a new entry when the key is missing
-;
- calling it
+    // recordProbe creates a new entry when the key is missing; calling it
     // twice — once per map — must yield two separate objects.
     _recordProbe(_refererProbes, refKey, "referer", now)
 ;
