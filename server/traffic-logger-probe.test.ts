@@ -6390,6 +6390,79 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(entryB!.hits).not.toContain(hitA);
   });
 
+  it("(K6) initProbeCounters: all 6 pairwise hits-array combinations across 2 referer + 2 UA entries are distinct (no shared allHits buffer aliasing)", async () => {
+    // Guards against a refactor that reuses a single `allHits` buffer across
+    // multiple groups inside the Pass 2 loop.  If the same intermediate array
+    // were assigned to every restored entry, every entry would end up pointing
+    // at the last group's result — mutating one would silently corrupt all others.
+    //
+    // The test seeds 4 entries (2 referer, 2 UA) each with a unique hit
+    // timestamp, then:
+    //   a) asserts all 6 pairwise array references are distinct (!==), and
+    //   b) asserts that pushing a sentinel onto one entry's hits array does not
+    //      change the length of any of the other three entries' hits arrays.
+    const now = Date.now();
+    const hitRef1 = now - 1_000; // referer-1 hit
+    const hitRef2 = now - 2_000; // referer-2 hit
+    const hitUa1  = now - 3_000; // ua-1 hit
+    const hitUa2  = now - 4_000; // ua-2 hit
+
+    const REF_KEY_1 = "https://k6-alias-guard-ref1.example/";
+    const REF_KEY_2 = "https://k6-alias-guard-ref2.example/";
+    const UA_KEY_1  = "K6AliasGuardBot1/1.0";
+    const UA_KEY_2  = "K6AliasGuardBot2/1.0";
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      { fieldType: "referer", key: REF_KEY_1, hits: [hitRef1], lastAlerted: 0 },
+      { fieldType: "referer", key: REF_KEY_2, hits: [hitRef2], lastAlerted: 0 },
+      { fieldType: "ua",      key: UA_KEY_1,  hits: [hitUa1],  lastAlerted: 0 },
+      { fieldType: "ua",      key: UA_KEY_2,  hits: [hitUa2],  lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const eRef1 = mod._refererProbes.get(REF_KEY_1);
+    const eRef2 = mod._refererProbes.get(REF_KEY_2);
+    const eUa1  = mod._uaProbes.get(UA_KEY_1);
+    const eUa2  = mod._uaProbes.get(UA_KEY_2);
+
+    // All four entries must have been restored.
+    expect(eRef1).toBeDefined();
+    expect(eRef2).toBeDefined();
+    expect(eUa1).toBeDefined();
+    expect(eUa2).toBeDefined();
+
+    // ── a) All 6 pairwise reference-inequality assertions ───────────────────
+    // Any shared allHits buffer would cause at least one of these to fail.
+    expect(eRef1!.hits).not.toBe(eRef2!.hits); // referer-1 vs referer-2
+    expect(eRef1!.hits).not.toBe(eUa1!.hits);  // referer-1 vs ua-1
+    expect(eRef1!.hits).not.toBe(eUa2!.hits);  // referer-1 vs ua-2
+    expect(eRef2!.hits).not.toBe(eUa1!.hits);  // referer-2 vs ua-1
+    expect(eRef2!.hits).not.toBe(eUa2!.hits);  // referer-2 vs ua-2
+    expect(eUa1!.hits).not.toBe(eUa2!.hits);   // ua-1     vs ua-2
+
+    // ── b) Mutation-isolation: push onto ref-1; the other three must be unaffected.
+    const lenRef2Before = eRef2!.hits.length;
+    const lenUa1Before  = eUa1!.hits.length;
+    const lenUa2Before  = eUa2!.hits.length;
+
+    eRef1!.hits.push(now + 1_000); // sentinel push onto referer-1
+
+    expect(mod._refererProbes.get(REF_KEY_2)!.hits.length).toBe(lenRef2Before);
+    expect(mod._uaProbes.get(UA_KEY_1)!.hits.length).toBe(lenUa1Before);
+    expect(mod._uaProbes.get(UA_KEY_2)!.hits.length).toBe(lenUa2Before);
+
+    // Sanity: each entry retains only its own original hit timestamp.
+    expect(eRef1!.hits).toContain(hitRef1);
+    expect(eRef2!.hits).toContain(hitRef2);
+    expect(eUa1!.hits).toContain(hitUa1);
+    expect(eUa2!.hits).toContain(hitUa2);
+  });
   // ── B35 / B36: expired-cooldown re-alert count equals in-window hits only ─
   //
   // B24/B25 confirm that an alert fires after threshold+1 fresh hits on a
