@@ -616,6 +616,32 @@ describe("checkProbeEvictionGuard() unit logic", () => {
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/no correct eviction guard found/i);
   });
+
+  // ── 3v. While-loop with trailing spaces before closing paren → ok:true ───
+  it("returns ok:true for while-loop where cutoff is followed by two spaces before the closing paren", async () => {
+    // A formatter may add trailing spaces inside the while-condition, producing:
+    //   while (lo < entry.hits.length && entry.hits[lo] <= cutoff  )
+    // The negative lookahead (?!\s*;) only rejects a `;` after cutoff, not
+    // spaces followed by `)`, so this whitespace variation must still pass.
+    mockReadFile.mockResolvedValue(
+      `while (lo < entry.hits.length && entry.hits[lo] <= cutoff  ) lo++;\n`,
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 3w. While-loop with a tab before closing paren → ok:true ─────────────
+  it("returns ok:true for while-loop where cutoff is followed by a tab character before the closing paren", async () => {
+    // A tab character between cutoff and `)` must also be accepted — it is
+    // neither `;` nor any lookahead-blocking sequence.
+    mockReadFile.mockResolvedValue(
+      "while (lo < entry.hits.length && entry.hits[lo] <= cutoff\t) lo++;\n",
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
