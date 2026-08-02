@@ -7009,6 +7009,55 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       dateNowSpy.mockRestore();
     }
   });
+
+  it("(B41b) dedup merge includes hits from BOTH rows — not just the first row's hits", async () => {
+    // Guard against a regression where the merge loop only spreads
+    // groupRows[0].hits and silently ignores groupRows[1].hits.  That bug
+    // produces hits.length === 1 (not 2) without aliasing either raw row,
+    // so B41's aliasing check would still pass even though half the history
+    // is lost.
+    //
+    // T0 = Date.now()+134h — monotonically above B41 (130h) to avoid any
+    // in-memory state left over from prior tests in the same describe block.
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const initNow   = Date.now() + 134 * 60 * 60 * 1000;
+    // Both timestamps are distinct and inside the window.
+    const hit0      = initNow - Math.floor(WINDOW_MS / 3); // from row 0
+    const hit1      = initNow - Math.floor(WINDOW_MS / 5); // from row 1 — different timestamp
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _uaProbes } = mod as any;
+
+      // Two duplicate UA rows for the same (fieldType, key) pair, each
+      // carrying a distinct timestamp.
+      const row0 = { fieldType: "ua", key: "B41bBothRowsUA/1.0", hits: [hit0], lastAlerted: 0 };
+      const row1 = { fieldType: "ua", key: "B41bBothRowsUA/1.0", hits: [hit1], lastAlerted: 0 };
+
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({
+        from: vi.fn().mockResolvedValue([row0, row1]),
+      });
+
+      await mod.initProbeCounters();
+
+      const entry = _uaProbes.get("B41bBothRowsUA/1.0");
+      expect(entry).toBeDefined();
+
+      // Both distinct timestamps must be present in the merged entry.
+      // A merge that only spreads row0.hits would produce length === 1 and
+      // miss hit1; a merge that only spreads row1.hits would miss hit0.
+      expect(entry!.hits).toHaveLength(2);
+      expect(entry!.hits).toContain(hit0);
+      expect(entry!.hits).toContain(hit1);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
