@@ -10766,3 +10766,95 @@ describe("ProbeEntry object-aliasing guard (restart path): entries built by init
     expect(mod._uaProbes.get(uaKey)!.lastAlerted).toBe(uaLastAlertedBefore);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Object-aliasing guard — same-string edge case (restart path)
+//
+// When both a "referer" DB row and a "ua" DB row carry the same lowercase
+// key string, initProbeCounters routes them into different maps
+// (refererProbes vs uaProbes) via the fieldType branch.  A future shortcut
+// that detects "same key string → reuse the same ProbeEntry object" would
+// alias the two entries across the maps.  This suite seeds the DB mock with
+// exactly that scenario and asserts the retrieved entries are independent.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("ProbeEntry object-aliasing guard (restart path, identical key string): entries are independent objects when referer and UA rows share the same key", () => {
+  // Both rows intentionally use the same lowercase string value so that
+  // any "same key → reuse entry" optimisation in initProbeCounters would
+  // alias the two ProbeEntry objects.
+  const SHARED_KEY = "same-string-restart-aliasing-guard-probe-v1";
+
+  it("_refererProbes.get(key) and _uaProbes.get(key) are not the same object reference after initProbeCounters", async () => {
+    const now   = Date.now();
+    const hitTs = now - 1_000; // 1 second ago — well within the 24-hour window
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    // Start from a clean slate.
+    mod._refererProbes.delete(SHARED_KEY);
+    mod._uaProbes.delete(SHARED_KEY);
+
+    // Seed the DB mock with one "referer" row and one "ua" row that share
+    // the same key string value — this is the edge case under test.
+    const fakeRows = [
+      { fieldType: "referer", key: SHARED_KEY, hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "ua",      key: SHARED_KEY, hits: [hitTs], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    // Simulate a restart.
+    await mod.initProbeCounters();
+
+    const refEntry = mod._refererProbes.get(SHARED_KEY);
+    const uaEntry  = mod._uaProbes.get(SHARED_KEY);
+
+    // Both entries must have been hydrated from their respective DB rows.
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // ── Reference-inequality assertion ─────────────────────────────────────
+    // Even though both rows share the same key string, initProbeCounters
+    // must create separate ProbeEntry objects — one in refererProbes and one
+    // in uaProbes.  If a future change detects "same key string → reuse the
+    // same object" this assertion will fail and catch the regression.
+    expect(refEntry).not.toBe(uaEntry);
+  });
+
+  it("mutating lastAlerted on the referer entry does not affect the UA entry when both rows share the same key", async () => {
+    const now   = Date.now();
+    const hitTs = now - 2_000;
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._refererProbes.delete(SHARED_KEY);
+    mod._uaProbes.delete(SHARED_KEY);
+
+    const fakeRows = [
+      { fieldType: "referer", key: SHARED_KEY, hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "ua",      key: SHARED_KEY, hits: [hitTs], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const refEntry = mod._refererProbes.get(SHARED_KEY)!;
+    const uaEntry  = mod._uaProbes.get(SHARED_KEY)!;
+
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // Record the UA entry's lastAlerted before we touch the referer entry.
+    const uaLastAlertedBefore = uaEntry.lastAlerted;
+
+    // Overwrite lastAlerted on the referer entry directly.
+    refEntry.lastAlerted = uaLastAlertedBefore + 66_666;
+
+    // If both entries share the same object, uaEntry.lastAlerted would have
+    // changed too.  It must remain untouched.
+    expect(mod._uaProbes.get(SHARED_KEY)!.lastAlerted).toBe(uaLastAlertedBefore);
+  });
+});
