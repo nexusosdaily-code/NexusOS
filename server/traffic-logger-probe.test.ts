@@ -10916,6 +10916,99 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(_uaProbes.has(KEY)).toBe(false);
   });
 
+  // ── B54 / B55: one step inside the upper cooldown-survival boundary (age = COOLDOWN_MS − 2) ──
+  //
+  // B52/B53 pin the UPPER survival boundary at age = COOLDOWN_MS − 1.  A future
+  // refactor that tightens the cooldown guard to `< COOLDOWN_MS − 1` (or uses
+  // `<= COOLDOWN_MS − 2`) would evict an entry at age = COOLDOWN_MS − 2 while
+  // still passing B52/B53 (which only test age = COOLDOWN_MS − 1 exactly).
+  //
+  // These tests add one step further inside the window to close that gap:
+  //   lastAlerted = pruneNow − (COOLDOWN_MS − 2)  →  age = COOLDOWN_MS − 2
+  //   now − entry.lastAlerted = COOLDOWN_MS − 2  <  COOLDOWN_MS  →  hasActiveCooldown = true
+  //
+  // The entry must SURVIVE because age = COOLDOWN_MS − 2 is strictly less than COOLDOWN_MS.
+  //
+  // T0 = Date.now()+156h (B54) and +158h (B55) — monotonically above B53 (154h).
+
+  it("(B54) zombie UA entry with lastAlerted === pruneNow − (COOLDOWN_MS − 2) (age = COOLDOWN_MS−2) and all stale hits SURVIVES the prune pass", async () => {
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _refererProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+156h — monotonically above B53 (154h).
+    const T0       = Date.now() + 156 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // Advance lastPrune to T0 so the next call at pruneNow triggers the loop.
+    _pruneProbes(T0);
+
+    // Stale companion — confirms the prune loop ran before checking the target.
+    _uaProbes.set("B54-stale-companion-ua/1.0", { hits: [], lastAlerted: 0 });
+
+    // Zombie UA entry two milliseconds before cooldown expiry (one step inside upper boundary):
+    //   hits: single timestamp 1 ms past the window cutoff (stale → hasActiveHits false)
+    //   lastAlerted: pruneNow − (COOLDOWN_MS − 2) → age = COOLDOWN_MS−2 → hasActiveCooldown true
+    const KEY = "B54ZombieInsideUpperCooldownBoundaryUA/1.0";
+    _uaProbes.set(KEY, {
+      hits:        [pruneNow - WINDOW_MS - 1],          // 1 ms outside the window (stale)
+      lastAlerted: pruneNow - (COOLDOWN_MS - 2),        // age = COOLDOWN_MS−2, still inside cooldown
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → prune loop ran.
+    expect(_uaProbes.has("B54-stale-companion-ua/1.0")).toBe(false);
+
+    // hasActiveCooldown is true (age = COOLDOWN_MS−2 < COOLDOWN_MS) → zombie must SURVIVE.
+    expect(_uaProbes.has(KEY)).toBe(true);
+
+    // Referer map must be untouched.
+    expect(_refererProbes.has(KEY)).toBe(false);
+  });
+
+  it("(B55) zombie referer entry with lastAlerted === pruneNow − (COOLDOWN_MS − 2) (age = COOLDOWN_MS−2) and all stale hits SURVIVES the prune pass", async () => {
+    // Symmetric referer-map counterpart to B54.
+    //
+    // T0 = Date.now()+158h — monotonically above B54 (156h).
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    const T0       = Date.now() + 158 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // Advance lastPrune to T0.
+    _pruneProbes(T0);
+
+    // Stale companion — confirms the prune loop ran.
+    _refererProbes.set("https://b55-stale-companion.example/scan", { hits: [], lastAlerted: 0 });
+
+    // Zombie referer entry two milliseconds before cooldown expiry (one step inside upper boundary):
+    //   hits: single timestamp 1 ms past the window cutoff (stale → hasActiveHits false)
+    //   lastAlerted: pruneNow − (COOLDOWN_MS − 2) → age = COOLDOWN_MS−2 → hasActiveCooldown true
+    const KEY = "https://b55-zombie-inside-upper-cooldown-boundary.example/scan";
+    _refererProbes.set(KEY, {
+      hits:        [pruneNow - WINDOW_MS - 1],          // 1 ms outside the window (stale)
+      lastAlerted: pruneNow - (COOLDOWN_MS - 2),        // age = COOLDOWN_MS−2, still inside cooldown
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → prune loop ran.
+    expect(_refererProbes.has("https://b55-stale-companion.example/scan")).toBe(false);
+
+    // hasActiveCooldown is true (age = COOLDOWN_MS−2 < COOLDOWN_MS) → zombie must SURVIVE.
+    expect(_refererProbes.has(KEY)).toBe(true);
+
+    // UA map must be untouched.
+    expect(_uaProbes.has(KEY)).toBe(false);
+  });
+
   it("(B34) two duplicate groups: stale-first-row and both-fresh group are both deduplicated; both entries survive prune", async () => {
     const WINDOW_MS = 24 * 60 * 60 * 1000;
     const SKEW      = 10;
