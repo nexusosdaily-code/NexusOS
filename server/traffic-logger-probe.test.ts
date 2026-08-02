@@ -3450,6 +3450,45 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(mod._uaProbes.size).toBe(0);
   });
 
+  it("(C3) initProbeCounters: rows whose fieldType is null, undefined, 0, or empty string are silently ignored — neither map receives any entry and no exception is thrown", async () => {
+    // The Pass-1 guard uses strict inequality: row.fieldType !== "referer" &&
+    // row.fieldType !== "ua".  A future ORM upgrade that makes the field_type
+    // column nullable, or a schema migration that forgets to set a default,
+    // could return null, undefined, 0, or "" for fieldType.  All four values
+    // fail the strict equality checks, so the guard already skips them — but
+    // without a test, a future refactor could accidentally route them into a
+    // map (e.g. by coercing with String() before comparing) or crash when
+    // performing string operations on a non-string value.
+    const now   = Date.now();
+    const hitTs = now - 1_000; // well within the 24-hour window
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const NULL_VARIANT_ROWS = [
+      { fieldType: null,      key: "null-fieldtype-key",      hits: [hitTs], lastAlerted: 0 },
+      { fieldType: undefined, key: "undefined-fieldtype-key", hits: [hitTs], lastAlerted: 0 },
+      { fieldType: 0,         key: "zero-fieldtype-key",      hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "",        key: "empty-fieldtype-key",     hits: [hitTs], lastAlerted: 0 },
+    ];
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(NULL_VARIANT_ROWS) });
+
+    // Must not throw even though fieldType values are non-string / nullish.
+    await expect(mod.initProbeCounters()).resolves.not.toThrow();
+
+    // Neither map must contain any key from a null-fieldType row.
+    for (const { key } of NULL_VARIANT_ROWS) {
+      expect(mod._refererProbes.has(key)).toBe(false);
+      expect(mod._uaProbes.has(key)).toBe(false);
+    }
+
+    // The maps must remain completely empty.
+    expect(mod._refererProbes.size).toBe(0);
+    expect(mod._uaProbes.size).toBe(0);
+  });
+
   it("(D) initProbeCounters: a row with ALL-stale hits but an active cooldown is restored with an empty hits array and lastAlerted preserved", async () => {
     // All hits are older than the 24-hour window, but lastAlerted is within
     // the past hour — the cooldown is still active and must keep suppressing
