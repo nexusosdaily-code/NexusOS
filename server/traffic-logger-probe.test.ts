@@ -13854,6 +13854,94 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     }
   });
 
+  it("(K10b) initProbeCounters: window-filter cutoff applied uniformly across all rows — boundary hit in first row kept, sub-boundary hit in later row dropped", async () => {
+    // Symmetric companion to K10.  K10 places the boundary hit in Row 1 so a
+    // broken per-row cutoff (using a drifted clock for the second row) evicts
+    // it.  K10b places the boundary hit in Row 0 and the stale hit in Row 1,
+    // confirming the boundary hit is safe regardless of which row it arrives in.
+    //
+    // ── Scenario ──────────────────────────────────────────────────────────────
+    // One group (fieldType="ua", same key) has exactly two DB rows:
+    //   Row 0  hits = [hitAtBoundary]      where hitAtBoundary     = T − WINDOW_MS
+    //   Row 1  hits = [hitBeforeBoundary]  where hitBeforeBoundary = T − WINDOW_MS − 1
+    //
+    // The boundary hit is in Row 0 (the first row).  A correct implementation
+    // captures Date.now() once before any row is processed, so Row 0 is
+    // evaluated against cutoff = T − WINDOW_MS and the boundary hit is kept.
+    //
+    // ── How the spy makes the regression detectable ────────────────────────────
+    // Date.now() is spied:
+    //   call 1  →  T              (intended per-run snapshot used for `cutoff`)
+    //   calls 2+→  T + 60_000    (60 s later; simulates clock drift)
+    //
+    //   Correct  (cutoff = T − WINDOW_MS, computed once before the loop):
+    //     Row 0: hitAtBoundary     = T−WINDOW_MS   ≥ cutoff  →  true   → KEPT    ✓
+    //     Row 1: hitBeforeBoundary = T−WINDOW_MS−1 < cutoff  →  false  → DROPPED ✓
+    //
+    //   Broken   (per-row cutoff; Row 0 gets the pre-loop T but a separate
+    //             in-loop Date.now() call for Row 0 fetches T+60_000):
+    //     Row 0 cutoff = (T+60_000) − WINDOW_MS = cutoff + 60_000
+    //     hitAtBoundary = T−WINDOW_MS < cutoff+60_000  →  false  → DROPPED ✗
+    //
+    // Together K10 + K10b confirm the cutoff is stable for every row position.
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const T         = 1_700_200_000_000;   // fixed epoch ms — distinct from K10's T
+
+    let callCount = 0;
+    const nowSpy  = vi.spyOn(Date, "now").mockImplementation(() => {
+      callCount += 1;
+      return callCount === 1 ? T : T + 60_000;
+    });
+
+    try {
+      const cutoff            = T - WINDOW_MS;
+      const hitAtBoundary     = cutoff;       // exactly on the boundary → must be KEPT
+      const hitBeforeBoundary = cutoff - 1;   // 1 ms before → must be DROPPED
+
+      const UA_KEY = "K10bPerRowCutoffUA/1.0";
+
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+
+      // Row 0 holds the boundary hit; Row 1 holds the stale hit.
+      // A broken per-row recomputation that calls Date.now() for Row 0 inside
+      // the loop gets T+60_000 (call 2+), raising the cutoff above hitAtBoundary
+      // and causing a false eviction.
+      const fakeRows = [
+        { fieldType: "ua", key: UA_KEY, hits: [hitAtBoundary],     lastAlerted: 0 },
+        { fieldType: "ua", key: UA_KEY, hits: [hitBeforeBoundary], lastAlerted: 0 },
+      ];
+
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      const entry = mod._uaProbes.get(UA_KEY);
+
+      // The group must be present — it has one active hit at the boundary.
+      expect(entry, "UA entry missing — hitAtBoundary was incorrectly evicted").toBeDefined();
+
+      // The boundary hit must survive the filter regardless of row position.
+      expect(
+        entry!.hits,
+        "hitAtBoundary was dropped — cutoff may have been recomputed per row with a drifted clock",
+      ).toContain(hitAtBoundary);
+
+      // The sub-boundary hit must be evicted.
+      expect(
+        entry!.hits,
+        "hitBeforeBoundary was kept — window filter did not apply correctly",
+      ).not.toContain(hitBeforeBoundary);
+
+      // Exactly one active hit (the boundary hit).
+      expect(entry!.hits, "unexpected hit count after merge and filter").toHaveLength(1);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
 
   it("(K11) initProbeCounters: allHits buffer is not reused across two distinct UA keys when each key has exactly two DB rows", async () => {
     // Guards against a future refactor that declares `allHits` outside the
