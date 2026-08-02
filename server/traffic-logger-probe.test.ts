@@ -4189,6 +4189,51 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(_uaProbes.has("B15dExpiredHitsNoAlertUA/1.0")).toBe(false);
   });
 
+  it("(B15e) pruneProbes: referer entry with all-expired hits but an active cooldown SURVIVES the prune pass", async () => {
+    // Symmetric twin of B14 for the referer map.
+    //
+    // All hits are outside the 24-h window so hasActiveHits = false.
+    // However lastAlerted is within the 1-h cooldown, so hasActiveCooldown =
+    // true and the entry must be kept alive.
+    //
+    // B14 covers the same invariant for the UA map; this test pins it
+    // specifically for the referer branch so a future split-loop refactor
+    // that omits the cooldown check from the referer branch would fail here.
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+77h46m — monotonically between B15d (77h30m) and B16 (78h).
+    const T0       = Date.now() + 77 * 60 * 60 * 1000 + 46 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // ── Advance lastPrune to T0 ───────────────────────────────────────────────
+    _pruneProbes(T0);
+
+    // ── Stale companion to prove the prune loop actually ran ──────────────────
+    _refererProbes.set("https://b15e-stale-companion.example/scan", {
+      hits:        [],
+      lastAlerted: 0,
+    });
+
+    // ── Seed the cooldown-active referer entry ────────────────────────────────
+    // Hit is 1 ms past the window cutoff → hasActiveHits = false.
+    // lastAlerted is 30 min ago (< 1 h cooldown) → hasActiveCooldown = true
+    // → entry must SURVIVE.
+    _refererProbes.set("https://b15e-warm-cooldown.example/scan", {
+      hits:        [pruneNow - WINDOW_MS - 1], // 1 ms past the cutoff
+      lastAlerted: pruneNow - 30 * 60_000,     // 30 min ago — cooldown active
+    });
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → confirms the referer prune loop ran
+    expect(_refererProbes.has("https://b15e-stale-companion.example/scan")).toBe(false);
+    // Active cooldown guards the entry even though all hits are expired
+    expect(_refererProbes.has("https://b15e-warm-cooldown.example/scan")).toBe(true);
+  });
   // ── B16 / B17: pruneProbes — warm-cooldown survives even when the peer map is empty ─
   //
   // B8/B9 confirm the cooldown guard works in isolation for the referer map.
