@@ -2956,6 +2956,53 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     }
   });
 
+  it("(B4) initProbeCounters: _refererProbes.size === N and _uaProbes.size === M when N referer rows and M ua rows are loaded — no cross-map contamination", async () => {
+    // This test guards against a regression where the if/else branch inside
+    // the restoration loop is removed so that every row lands in a single map.
+    // Even if individual key-presence assertions pass, a size check will catch
+    // entries that were duplicated into the wrong map.
+    const now    = Date.now();
+    const hitTs  = now - 1_000; // well within the 24-hour window
+
+    const REFERER_KEYS = [
+      "https://size-test-scraper-1.example/",
+      "https://size-test-scraper-2.example/",
+      "https://size-test-scraper-3.example/",
+    ];
+    const UA_KEYS = [
+      "SizeTestBot/1.0",
+      "SizeTestBot/2.0",
+    ];
+
+    const N = REFERER_KEYS.length; // 3
+    const M = UA_KEYS.length;      // 2
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      ...REFERER_KEYS.map((key) => ({ fieldType: "referer", key, hits: [hitTs], lastAlerted: 0 })),
+      ...UA_KEYS.map((key)      => ({ fieldType: "ua",      key, hits: [hitTs], lastAlerted: 0 })),
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    // ── Size assertions: each map must contain exactly the rows for its type.
+    expect(mod._refererProbes.size).toBe(N);
+    expect(mod._uaProbes.size).toBe(M);
+
+    // ── Cross-map absence: no referer key must appear in uaProbes …
+    for (const key of REFERER_KEYS) {
+      expect(mod._uaProbes.has(key)).toBe(false);
+    }
+    // … and no UA key must appear in refererProbes.
+    for (const key of UA_KEYS) {
+      expect(mod._refererProbes.has(key)).toBe(false);
+    }
+  });
+
   it("(C) initProbeCounters: rows with an unrecognised field_type are silently ignored", async () => {
     const now   = Date.now();
     const hitTs = now - 1_000;
