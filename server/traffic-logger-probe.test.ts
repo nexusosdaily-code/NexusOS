@@ -4532,6 +4532,133 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       dateNowSpy.mockRestore();
     }
   });
+
+  // ── B20 / B21: multi-ms init cutoff skew — bulk eviction invariant ────────
+  //
+  // B18/B19 confirm a 1 ms skew (pruneNow = initNow + 1) causes the single
+  // boundary hit to be evicted.  A larger skew (N = 10 ms) drops N hits — all
+  // loaded by init (each hit >= initNow − WINDOW_MS) and all silently removed
+  // on the first prune tick (each hit < pruneNow − WINDOW_MS).
+  //
+  // Test design
+  // ───────────
+  // N = 10 hits are placed at timestamps:
+  //   initNow − WINDOW_MS + k   for k = 0 … 9
+  //
+  // These satisfy:
+  //   hit >= initNow − WINDOW_MS          →  init loads each hit  ✓
+  //   hit <  pruneNow − WINDOW_MS         →  prune evicts each hit (when
+  //                                          pruneNow = initNow + 10)        ✓
+  //
+  // Step 1 confirms all N hits ARE loaded into the map by initProbeCounters.
+  // Step 2 calls _pruneProbes(pruneNow) and asserts the entry is deleted,
+  // documenting the "load then immediately drop" failure mode for a future
+  // init cutoff that is 2+ ms ahead of prune.
+  //
+  // T0 = Date.now()+86h (B20) and +88h (B21) — monotonically above B19 (84h).
+
+  it("(B20) multi-ms skew UA: N=10 hits loaded by initProbeCounters are all evicted by _pruneProbes(initNow+10)", async () => {
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const SKEW      = 10; // ms between initNow and pruneNow
+
+    // T0 = Date.now()+86h — monotonically above B19 (84h).
+    const initNow  = Date.now() + 86 * 60 * 60 * 1000;
+    const pruneNow = initNow + SKEW;
+
+    // N hits spanning the gap between the two cutoffs.
+    // Each hit is >= (initNow − WINDOW_MS) so init loads it, but
+    // < (pruneNow − WINDOW_MS) so prune evicts it.
+    const initCutoff  = initNow - WINDOW_MS;
+    const gapHits: number[] = Array.from({ length: SKEW }, (_, k) => initCutoff + k);
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _uaProbes, _refererProbes, _pruneProbes } = mod as any;
+
+      // ── Step 1: init loads all gap hits ────────────────────────────────────
+      const fakeRows = [
+        {
+          fieldType:   "ua",
+          key:         "B20MultiSkewUA/1.0",
+          hits:        gapHits,
+          lastAlerted: 0,
+        },
+      ];
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      // All gapHits are >= (initNow − WINDOW_MS), so the entry must be created
+      // with all N hits intact.  A future regression that uses a tighter init
+      // cutoff would load fewer hits (or none), breaking the assertion below.
+      expect(_uaProbes.has("B20MultiSkewUA/1.0")).toBe(true);
+      expect(_uaProbes.get("B20MultiSkewUA/1.0")!.hits).toEqual(gapHits);
+      expect(_refererProbes.has("B20MultiSkewUA/1.0")).toBe(false);
+
+      // ── Step 2: _pruneProbes(pruneNow) evicts all gap hits ─────────────────
+      // prune cutoff = pruneNow − WINDOW_MS = initCutoff + SKEW.
+      // Every gapHit[k] = initCutoff + k < initCutoff + SKEW → evicted.
+      // lastAlerted = 0 → no active cooldown → entry is deleted entirely.
+      _pruneProbes(pruneNow);
+
+      expect(_uaProbes.has("B20MultiSkewUA/1.0")).toBe(false);
+      expect(_refererProbes.has("B20MultiSkewUA/1.0")).toBe(false);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it("(B21) multi-ms skew referer: N=10 hits loaded by initProbeCounters are all evicted by _pruneProbes(initNow+10)", async () => {
+    // Symmetric referer-map counterpart to B20.
+    //
+    // T0 = Date.now()+88h — monotonically above B20 (86h).
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const SKEW      = 10;
+
+    const initNow  = Date.now() + 88 * 60 * 60 * 1000;
+    const pruneNow = initNow + SKEW;
+
+    const initCutoff  = initNow - WINDOW_MS;
+    const gapHits: number[] = Array.from({ length: SKEW }, (_, k) => initCutoff + k);
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+      // ── Step 1: init loads all gap hits ────────────────────────────────────
+      const fakeRows = [
+        {
+          fieldType:   "referer",
+          key:         "https://b21-multi-skew-referer.example/scan",
+          hits:        gapHits,
+          lastAlerted: 0,
+        },
+      ];
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      expect(_refererProbes.has("https://b21-multi-skew-referer.example/scan")).toBe(true);
+      expect(_refererProbes.get("https://b21-multi-skew-referer.example/scan")!.hits).toEqual(gapHits);
+      expect(_uaProbes.has("https://b21-multi-skew-referer.example/scan")).toBe(false);
+
+      // ── Step 2: _pruneProbes(pruneNow) evicts all gap hits ─────────────────
+      _pruneProbes(pruneNow);
+
+      expect(_refererProbes.has("https://b21-multi-skew-referer.example/scan")).toBe(false);
+      expect(_uaProbes.has("https://b21-multi-skew-referer.example/scan")).toBe(false);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
