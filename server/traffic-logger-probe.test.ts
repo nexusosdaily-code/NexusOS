@@ -18739,6 +18739,140 @@ describe("ProbeEntry hits-array aliasing guard (restart path, two UA rows with t
   });
 });
 
+// Cross-key allHits buffer reuse guard — two distinct referer keys (restart path)
+//
+// Task 598 guards against allHits aliasing between two rows sharing the *same*
+// referer key.  A subtler variant is a merge loop that reuses the same allHits
+// buffer across *different* referer keys in sequence — for example, by
+// declaring allHits outside the per-group loop and forgetting to reset it.
+// In that case the second key's entry would contain hits belonging to the first.
+//
+// These tests seed initProbeCounters with two "referer" rows carrying
+// *different* key strings, each with distinct timestamps, and assert that each
+// merged entry's hits array contains only its own timestamps and none from the
+// other.  This is the symmetric counterpart to the UA cross-key guard below.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("ProbeEntry cross-key allHits buffer reuse guard (restart path, two distinct referer keys): each entry's hits contains only its own timestamps", () => {
+  const KEY_A = "cross-key-referer-allhits-guard-key-a-probe-v1";
+  const KEY_B = "cross-key-referer-allhits-guard-key-b-probe-v1";
+
+  it("entry for KEY_A contains only KEY_A's timestamps and entry for KEY_B contains only KEY_B's timestamps", async () => {
+    const now   = Date.now();
+    const hitA  = now - 1_000; // 1 s ago — within window, belongs to KEY_A
+    const hitB  = now - 2_000; // 2 s ago — within window, belongs to KEY_B
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._refererProbes.delete(KEY_A);
+    mod._refererProbes.delete(KEY_B);
+    mod._uaProbes.delete(KEY_A);
+    mod._uaProbes.delete(KEY_B);
+
+    // Two "referer" rows with *different* keys — simulates two scrapers present
+    // in the DB at restart time.
+    const fakeRows = [
+      { fieldType: "referer", key: KEY_A, hits: [hitA], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY_B, hits: [hitB], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const entryA = mod._refererProbes.get(KEY_A);
+    const entryB = mod._refererProbes.get(KEY_B);
+
+    expect(entryA).toBeDefined();
+    expect(entryB).toBeDefined();
+
+    // Each entry must contain its own hit.
+    expect(entryA!.hits).toContain(hitA);
+    expect(entryB!.hits).toContain(hitB);
+
+    // KEY_A's entry must NOT contain KEY_B's timestamp.
+    // A future loop that fails to reset allHits between groups would cause
+    // KEY_B's entry to absorb hitA, or KEY_A's entry to carry stale data from
+    // an earlier iteration — both are caught here.
+    expect(entryA!.hits).not.toContain(hitB);
+    expect(entryB!.hits).not.toContain(hitA);
+  });
+
+  it("entry for KEY_A's hits array is not the same reference as entry for KEY_B's hits array", async () => {
+    const now  = Date.now();
+    const hitA = now - 5_000;
+    const hitB = now - 6_000;
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._refererProbes.delete(KEY_A);
+    mod._refererProbes.delete(KEY_B);
+    mod._uaProbes.delete(KEY_A);
+    mod._uaProbes.delete(KEY_B);
+
+    const fakeRows = [
+      { fieldType: "referer", key: KEY_A, hits: [hitA], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY_B, hits: [hitB], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const entryA = mod._refererProbes.get(KEY_A)!;
+    const entryB = mod._refererProbes.get(KEY_B)!;
+
+    expect(entryA).toBeDefined();
+    expect(entryB).toBeDefined();
+
+    // If allHits were reused and stored directly into both entries they would
+    // share the same array reference.
+    expect(entryA.hits).not.toBe(entryB.hits);
+  });
+
+  it("pushing a sentinel onto KEY_A's hits does not contaminate KEY_B's hits", async () => {
+    const now  = Date.now();
+    const hitA = now - 7_000;
+    const hitB = now - 8_000;
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._refererProbes.delete(KEY_A);
+    mod._refererProbes.delete(KEY_B);
+    mod._uaProbes.delete(KEY_A);
+    mod._uaProbes.delete(KEY_B);
+
+    const fakeRows = [
+      { fieldType: "referer", key: KEY_A, hits: [hitA], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY_B, hits: [hitB], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const entryA = mod._refererProbes.get(KEY_A)!;
+    const entryB = mod._refererProbes.get(KEY_B)!;
+
+    expect(entryA).toBeDefined();
+    expect(entryB).toBeDefined();
+
+    const lenBBefore = entryB.hits.length;
+
+    // Mutate KEY_A's entry.
+    const sentinel = now + 99_999_999;
+    entryA.hits.push(sentinel);
+
+    // KEY_B's hits must be completely unaffected.
+    expect(entryB.hits.length).toBe(lenBBefore);
+    expect(entryB.hits).not.toContain(sentinel);
+    expect(entryB.hits).not.toContain(hitA);
+  });
+});
+
 // Cross-key allHits buffer reuse guard — two distinct UA keys (restart path)
 //
 // Task 598 guards against allHits aliasing between two rows sharing the *same*
