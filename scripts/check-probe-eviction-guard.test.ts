@@ -46,6 +46,22 @@
  *        l. Inline required present but helper has relaxed comparison → ok:false
  *        m. HELPER_REQUIRED_PATTERN matches parenthesised arrow correct form
  *        n. HELPER_FORBIDDEN_PATTERN matches parenthesised arrow relaxed form
+ *   5. Multi-line source strings (formatter-split arrow)
+ *        a. Filter arrow split to the next line (correct form) → ok:false
+ *           REQUIRED_PATTERN and FORBIDDEN_PATTERN are single-line regexes; the
+ *           expression is not recognised as correct or forbidden, so the check
+ *           falls through to the generic "no correct eviction guard found" failure.
+ *        b. Filter arrow split to the next line (relaxed form) → ok:false
+ *           The relaxed comparison (>=) is isolated on its own line and no longer
+ *           matches FORBIDDEN_PATTERN, so the check also falls through to the
+ *           generic failure rather than the relaxed-form error.
+ *        c. While-loop condition split to the next line (correct form) → ok:false
+ *           Same limitation: REQUIRED_PATTERN requires the whole expression on
+ *           one line, so a line-split form is not recognised as correct.
+ *        d. Filter arrow split to the next line with same-file while-loop guard → ok:true
+ *           If the file also contains the single-line while-loop guard, the check
+ *           passes even when the filter form has been split across lines; this
+ *           confirms the while-loop idiom is still recognised as the fallback.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -1086,5 +1102,172 @@ describe("helper-extraction detection", () => {
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/relaxed eviction comparison/i);
     expect(result.reason).toContain("evictUa");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 5. Multi-line source strings (formatter-split arrow)
+//
+// REQUIRED_PATTERN and FORBIDDEN_PATTERN are single-line regexes applied
+// line-by-line.  A formatter that enforces an aggressive line-length limit
+// may split `entry.hits.filter((t) => t > cutoff)` across two lines:
+//
+//   entry.hits = entry.hits.filter((t) =>
+//     t > cutoff);
+//
+// Each resulting line is individually too short to match REQUIRED_PATTERN
+// (which requires the full `.filter(… => … > cutoff)` expression on one
+// line).  The split form therefore falls through to the "no correct eviction
+// guard found" failure rather than being recognised as correct.
+//
+// This is a KNOWN LIMITATION of the current line-by-line scanning approach.
+// These tests document the current behaviour so that:
+//   a. A future formatter change that produces this layout is caught
+//      immediately when the guard starts failing.
+//   b. Anyone who updates the patterns to handle multi-line forms has a
+//      clear baseline to test against.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("multi-line source strings (formatter-split arrow)", () => {
+  // ── 5a. Correct filter form split across two lines → ok:false ─────────────
+  it("returns ok:false when the correct filter arrow is split onto the next line (single-line regex limitation)", async () => {
+    // A formatter that enforces a short line-length limit might split:
+    //   entry.hits = entry.hits.filter((t) => t > cutoff);
+    // into:
+    //   entry.hits = entry.hits.filter((t) =>
+    //     t > cutoff);
+    //
+    // REQUIRED_PATTERN requires the entire expression on one line, so neither
+    // of the two resulting lines matches it.  The check therefore returns
+    // ok:false with the generic "no correct eviction guard found" message.
+    //
+    // This is a false negative: the code is semantically correct but the guard
+    // cannot verify it.  The test pins this behaviour so that if the pattern is
+    // later updated to handle multi-line forms, this test must be revised
+    // (and the result should then be ok:true).
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  entry.hits = entry.hits.filter((t) =>`,
+        `    t > cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // CURRENT BEHAVIOUR: ok:false — the split form is not recognised.
+    // If REQUIRED_PATTERN is extended to match across line boundaries,
+    // update this expectation to ok:true.
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/no correct eviction guard found/i);
+  });
+
+  // ── 5b. Relaxed filter form split across two lines → ok:false (generic) ───
+  it("returns ok:false (generic, not relaxed-form) when the relaxed filter arrow is split onto the next line", async () => {
+    // When `entry.hits.filter((t) => t >= cutoff)` is split as:
+    //   entry.hits = entry.hits.filter((t) =>
+    //     t >= cutoff);
+    //
+    // The `>=` comparator is isolated on line 2.  FORBIDDEN_PATTERN requires
+    // the entire `.filter(… => … >= cutoff)` expression on one line, so the
+    // pattern does NOT match and the check falls through to the generic failure
+    // rather than the targeted "relaxed eviction comparison" error.
+    //
+    // This means the split relaxed form also produces ok:false, but the
+    // diagnostics message is less specific.  The test documents this so that
+    // any future pattern change that adds multi-line support must also ensure
+    // the relaxed form is still caught with the correct error message.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  entry.hits = entry.hits.filter((t) =>`,
+        `    t >= cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // CURRENT BEHAVIOUR: ok:false with the generic message — FORBIDDEN_PATTERN
+    // does not fire because the split puts >= on a separate line.
+    // If FORBIDDEN_PATTERN is extended to match across line boundaries, the
+    // reason should then match /relaxed eviction comparison/i instead.
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/no correct eviction guard found/i);
+    // Confirm the relaxed-form error is NOT emitted for the split case.
+    expect(result.reason).not.toMatch(/relaxed eviction comparison/i);
+  });
+
+  // ── 5c. While-loop condition split across lines → ok:false ────────────────
+  it("returns ok:false when the while-loop eviction condition is split onto the next line", async () => {
+    // A formatter may also split:
+    //   while (lo < entry.hits.length && entry.hits[lo] <= cutoff) lo++;
+    // into something like:
+    //   while (
+    //     lo < entry.hits.length && entry.hits[lo] <= cutoff
+    //   ) lo++;
+    //
+    // REQUIRED_PATTERN matches `entry.hits[lo] <= cutoff` independently of
+    // surrounding context, so it DOES match line 2 of this split.  However,
+    // to be explicit about the fully-split case where the comparison itself
+    // is further broken up, we test the pathological split where the
+    // comparison operator is separated from its operands:
+    //   while (lo < entry.hits.length &&
+    //     entry.hits[lo] <=
+    //     cutoff) lo++;
+    //
+    // REQUIRED_PATTERN requires `entry.hits[lo] <= cutoff` on a single line,
+    // so the three-line split is not recognised.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  while (lo < entry.hits.length &&`,
+        `    entry.hits[lo] <=`,
+        `    cutoff) lo++;`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // CURRENT BEHAVIOUR: ok:false — the operator and operand are on separate
+    // lines so REQUIRED_PATTERN does not match.  If the pattern is extended
+    // for multi-line, update this expectation accordingly.
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/no correct eviction guard found/i);
+  });
+
+  // ── 5d. Split filter + single-line while-loop → ok:true ───────────────────
+  it("returns ok:true when a split-line filter form coexists with a single-line while-loop guard", async () => {
+    // If the file uses the while-loop idiom on one line AND also has a split
+    // filter form (e.g., left over from an incomplete refactor), the while-loop
+    // line still matches REQUIRED_PATTERN, so the check passes.
+    // This confirms that the while-loop guard is a reliable fallback when the
+    // filter form cannot be scanned across line boundaries.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  // while-loop guard (single-line — always recognised):`,
+        `  while (lo < entry.hits.length && entry.hits[lo] <= cutoff) lo++;`,
+        `  // filter form split by formatter (not recognised on its own):`,
+        `  entry.hits = entry.hits.filter((t) =>`,
+        `    t > cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // The while-loop line matches REQUIRED_PATTERN → ok:true.
+    expect(result.ok).toBe(true);
   });
 });
