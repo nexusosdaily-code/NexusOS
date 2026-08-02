@@ -13133,6 +13133,64 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     }
   });
 
+  it("(B41h) dedup merge takes the highest lastAlerted for referer rows even when the higher value is in row 0", async () => {
+    // Symmetric counterpart to B41g for the referer path, and the referer
+    // mirror of B41f (UA).  B41g seeds the higher lastAlerted in row 1 — a
+    // regression that hard-codes
+    //   mergedLastAlerted = groupRows[groupRows.length - 1].lastAlerted
+    // in the referer branch would pass B41g (last row IS the higher one) but
+    // return the wrong (lower) value when row 0 holds the higher timestamp.
+    // This test closes that gap by placing the higher lastAlerted in row 0 for
+    // a fieldType: "referer" group.
+    //
+    // T0 = Date.now()+146h — monotonically above B41g (144h) to avoid any
+    // in-memory state left over from prior tests in the same describe block.
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const initNow   = Date.now() + 146 * 60 * 60 * 1000;
+    // Both hits are inside the window so the entry is not skipped.
+    const hit0 = initNow - Math.floor(WINDOW_MS / 3);
+    const hit1 = initNow - Math.floor(WINDOW_MS / 4);
+
+    // row 0 has the HIGHER lastAlerted; row 1 has the LOWER one.
+    const higherLastAlerted = initNow - 10 * 60 * 1000; // 10 min ago — must win
+    const lowerLastAlerted  = initNow - 45 * 60 * 1000; // 45 min ago
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _refererProbes } = mod as any;
+
+      const KEY  = "https://b41h-last-alerted-row0-referer.example/scan";
+      const row0 = { fieldType: "referer", key: KEY, hits: [hit0], lastAlerted: higherLastAlerted };
+      const row1 = { fieldType: "referer", key: KEY, hits: [hit1], lastAlerted: lowerLastAlerted };
+
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({
+        from: vi.fn().mockResolvedValue([row0, row1]),
+      });
+
+      await mod.initProbeCounters();
+
+      const entry = _refererProbes.get(KEY);
+      expect(entry).toBeDefined();
+
+      // The merged lastAlerted must be the highest value across both rows.
+      // A regression that reads groupRows[groupRows.length - 1].lastAlerted
+      // in the referer branch would return lowerLastAlerted (from row 1) and
+      // this assertion would fail — catching the bug independently of B41g.
+      expect(entry!.lastAlerted).toBe(higherLastAlerted);
+
+      // The UA map must be untouched.
+      const { _uaProbes } = mod as any;
+      expect(_uaProbes.has(KEY)).toBe(false);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
   it("(B5) initProbeCounters: merged hits for each group contain exactly the right timestamps — no cross-group timestamp contamination", async () => {
     // Check that the merged hits array for each (fieldType, key) group contains
     // exactly the timestamps that belong to its own rows, and none from the
