@@ -10548,6 +10548,58 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 )
 ;
 
+  // ── B47: key-based deletion — two referer entries with identical hit arrays ──
+  //
+  // _pruneProbes must delete entries by their Map key, not by any reference
+  // derived from their value (e.g. the hits array object).  A refactor that
+  // accidentally built a Set of hits-array references and called .delete() on
+  // those would silently skip the second entry when both entries hold arrays
+  // that are structurally identical (same timestamps), because only one
+  // reference would be in the Set.
+  //
+  // This test seeds two referer entries under distinct keys but with identical
+  // hit timestamps (both fully stale).  After _pruneProbes both must be gone.
+  //
+  // T0 = Date.now()+142h — monotonically above B46 (140h).
+
+  it("(B47) two referer entries with identical hit arrays — both stale — _pruneProbes must evict both by key", async () => {
+    // If the pruner keyed deletions on the hits-array object reference rather
+    // than the Map key, it would encounter two distinct array objects that are
+    // structurally equal.  With a value-keyed approach only one would be
+    // "found" in the deletion set, and the other would silently survive.
+    // Asserting that both keys are absent afterwards catches that regression.
+    //
+    // T0 = Date.now()+142h — monotonically above B46 (140h).
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    const T0       = Date.now() + 142 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // Advance lastPrune to T0.
+    _pruneProbes(T0);
+
+    // Two distinct keys, both with structurally identical (same value) hit
+    // timestamps and expired cooldowns — both must be evicted.
+    const SHARED_HIT_TS  = pruneNow - WINDOW_MS - 1;  // 1 ms outside window
+    const SHARED_ALERTED = pruneNow - COOLDOWN_MS - 1; // cooldown expired
+
+    const KEY_A = "https://b47-dup-hits-a.example/scan";
+    const KEY_B = "https://b47-dup-hits-b.example/scan";
+
+    // Each entry gets its own array allocation — same contents, different refs.
+    _refererProbes.set(KEY_A, { hits: [SHARED_HIT_TS], lastAlerted: SHARED_ALERTED });
+    _refererProbes.set(KEY_B, { hits: [SHARED_HIT_TS], lastAlerted: SHARED_ALERTED });
+
+    _pruneProbes(pruneNow);
+
+    // Both entries must be evicted regardless of structural equality.
+    expect(_refererProbes.has(KEY_A)).toBe(false);
+    expect(_refererProbes.has(KEY_B)).toBe(false);
+  });
 
   it("(B34) two duplicate groups: stale-first-row and both-fresh group are both deduplicated; both entries survive prune", async () => 
 {
