@@ -2281,6 +2281,65 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     // ── Referer cooldown must still be intact — lastAlerted unchanged.
     expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(now);
   });
+
+  it("both probes cross threshold at different 'now' values: each lastAlerted equals its own recordProbe 'now', not the other's (no shared alert-state object)", async () => {
+    // Regression guard: a future refactor might pass a single shared mutable
+    // "alert state" object into both recordProbe calls, so that whichever
+    // probe fires last overwrites the firstprobe's lastAlerted with its own
+    // timestamp — even though both probes fired independently:
+    //
+    //   const alertState = { lastAlerted: 0 };
+    //   recordProbe(refererProbes, refKey, "referer", nowA, alertState);
+    //   recordProbe(uaProbes,      uaKey,  "ua",      nowB, alertState);
+    //   // alertState.lastAlerted is now nowB — refererProbes[refKey].lastAlerted
+    //   // incorrectly reads nowB instead of nowA.
+    //
+    // This silently mis-stamps the cooldown for the first-fired probe,
+    // causing slightly wrong suppression calculations downstream.
+    //
+    // Scenario: both probes are seeded at threshold (2 hits each).
+    //   _recordProbe is called for referer with nowA, then for UA with nowB
+    //   (nowB = nowA + 5 000 ms — a clearly distinct value).
+    // Expected: refererEntry.lastAlerted === nowA, uaEntry.lastAlerted === nowB.
+    //   Neither entry may carry the other's timestamp.
+
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _refererProbes, _recordProbe } = mod as any;
+
+    await mod.initProbeCounters();
+
+    const nowA = Date.now();
+    const nowB = nowA + 5_000; // 5 seconds later — clearly distinct
+
+    const UA_KEY  = "SharedAlertStateGuardUA/1.0";
+    const REF_KEY = "shared-alert-state-guard-referer.example/probe";
+
+    // Seed both probes at exactly threshold (2 hits) — one more hit on each
+    // will push them over and trigger their alert branch.
+    _uaProbes.set(UA_KEY,  { hits: [nowA - 2000, nowA - 1000], lastAlerted: 0 });
+    _refererProbes.set(REF_KEY, { hits: [nowA - 2000, nowA - 1000], lastAlerted: 0 });
+
+    // Fire the referer probe first at nowA, then the UA probe at nowB.
+    // If both probes share the same alert-state object, the referer entry
+    // will end up with lastAlerted === nowB after the UA call overwrites it.
+    _recordProbe(_refererProbes, REF_KEY, "referer", nowA);
+    await flushMicrotasks();
+
+    _recordProbe(_uaProbes, UA_KEY, "ua", nowB);
+    await flushMicrotasks();
+
+    const refEntry = _refererProbes.get(REF_KEY);
+    const uaEntry  = _uaProbes.get(UA_KEY);
+
+    // Each entry must carry its own "now" — not the other probe's timestamp.
+    expect(refEntry.lastAlerted).toBe(nowA);
+    expect(uaEntry.lastAlerted).toBe(nowB);
+
+    // Cross-check: the two timestamps must differ (sanity guard on the test
+    // setup itself — if nowA === nowB the test proves nothing).
+    expect(refEntry.lastAlerted).not.toBe(uaEntry.lastAlerted);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
