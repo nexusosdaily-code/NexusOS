@@ -70,6 +70,9 @@
  *        e. While-loop condition two-part split: identifier (`cutoff`) on its own line → ok:true
  *           REQUIRED_PATTERN's \s* spans the newline between `<=` and `cutoff`,
  *           so the full-source fallback pass recognises this form too.
+ *        f. While-loop condition symmetric two-part split: `<= cutoff` on its own line → ok:true
+ *           REQUIRED_PATTERN's \s* also spans the newline between `entry.hits[lo]`
+ *           and `<= cutoff`, so the full-source fallback pass recognises this form too.
  *   6. Multi-line helper body (formatter-split condition inside extracted helper)
  *        a. Delegation present; helper body has `e.hits[lo] <=` / `c` split across
  *           two lines → ok:false with helper-extraction message.
