@@ -11175,3 +11175,97 @@ describe("ProbeEntry object-aliasing guard (restart path, identical key string):
     expect(mod._uaProbes.get(SHARED_KEY)!.lastAlerted).toBe(uaLastAlertedBefore);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Hits-array aliasing guard — same-string edge case (restart path)
+//
+// A subtler aliasing bug than sharing the same ProbeEntry object: two entries
+// could be distinct wrapper objects yet share the *same inner hits array*
+// (e.g. both built from the same allHits buffer without a defensive copy).
+// The object-reference check (refEntry !== uaEntry) would pass, but pushing
+// onto one entry's hits would silently grow the other's.
+//
+// These tests seed initProbeCounters with two DB rows that share the same key
+// string (one "referer", one "ua") and assert that the resulting hits arrays
+// are independent at the reference level and at the mutation level.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("ProbeEntry hits-array aliasing guard (restart path, identical key string): hits arrays are independent even when referer and UA rows share the same key", () => {
+  // Both rows intentionally carry the same key so that any shortcut in
+  // initProbeCounters that reuses a shared allHits buffer would expose the bug.
+  const SHARED_KEY = "same-string-hits-array-aliasing-guard-probe-v1";
+
+  it("refEntry.hits and uaEntry.hits are not the same array reference after initProbeCounters", async () => {
+    const now   = Date.now();
+    const hitTs = now - 1_000; // 1 second ago — well within the 24-hour window
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    // Start from a clean slate.
+    mod._refererProbes.delete(SHARED_KEY);
+    mod._uaProbes.delete(SHARED_KEY);
+
+    // Both rows carry the same key string — the scenario under test.
+    const fakeRows = [
+      { fieldType: "referer", key: SHARED_KEY, hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "ua",      key: SHARED_KEY, hits: [hitTs], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const refEntry = mod._refererProbes.get(SHARED_KEY);
+    const uaEntry  = mod._uaProbes.get(SHARED_KEY);
+
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // ── Array-reference-inequality assertion ───────────────────────────────
+    // Even if the two ProbeEntry wrapper objects are distinct, they must not
+    // share the same inner hits array.  A future change that passes the same
+    // allHits buffer into both entries would be caught here.
+    expect(refEntry!.hits).not.toBe(uaEntry!.hits);
+  });
+
+  it("pushing a sentinel timestamp onto refEntry.hits does not change uaEntry.hits.length", async () => {
+    const now   = Date.now();
+    const hitTs = now - 2_000;
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._refererProbes.delete(SHARED_KEY);
+    mod._uaProbes.delete(SHARED_KEY);
+
+    const fakeRows = [
+      { fieldType: "referer", key: SHARED_KEY, hits: [hitTs], lastAlerted: 0 },
+      { fieldType: "ua",      key: SHARED_KEY, hits: [hitTs], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const refEntry = mod._refererProbes.get(SHARED_KEY)!;
+    const uaEntry  = mod._uaProbes.get(SHARED_KEY)!;
+
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // Snapshot the UA entry's hits length before we mutate the referer entry.
+    const uaHitsLengthBefore = uaEntry.hits.length;
+
+    // Push a sentinel onto the referer entry's hits array.
+    const sentinel = now + 99_999_999;
+    refEntry.hits.push(sentinel);
+
+    // If both entries share the same array, uaEntry.hits.length would have
+    // grown by one.  It must remain unchanged.
+    expect(mod._uaProbes.get(SHARED_KEY)!.hits.length).toBe(uaHitsLengthBefore);
+
+    // And the sentinel must not appear in the UA entry's hits array at all.
+    expect(mod._uaProbes.get(SHARED_KEY)!.hits).not.toContain(sentinel);
+  });
+});
