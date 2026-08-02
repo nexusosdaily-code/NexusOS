@@ -5878,6 +5878,104 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(_uaProbes.has(KEY)).toBe(false);
   });
 
+  // ── B37 / B38: zombie entry gains one fresh hit — must NOT be evicted ─────────
+  //
+  // B35/B36 confirm eviction when BOTH guards are false (all hits stale, cooldown
+  // expired).  The complementary invariant is: if a zombie entry receives even one
+  // fresh hit before the prune pass, hasActiveHits flips to true and the entry
+  // must survive regardless of cooldown state.
+  //
+  // A future change that re-orders or removes the hasActiveHits check could
+  // silently evict entries that have just accumulated a fresh hit.
+  //
+  // Test design
+  // ───────────
+  // 1. Seed a zombie UA entry: single stale hit (outside WINDOW_MS), cooldown
+  //    expired (lastAlerted = pruneNow − COOLDOWN_MS exactly).
+  // 2. Push one fresh hit (pruneNow − WINDOW_MS, i.e. exactly at the cutoff, so
+  //    hits[last] >= cutoff → hasActiveHits = true).
+  // 3. Call _pruneProbes(pruneNow).
+  // 4. Assert the entry is still present (hasActiveHits = true overrides the
+  //    expired-cooldown guard).
+  //
+  // T0 = Date.now()+120h (B37) and +122h (B38) — monotonically above B36 (118h).
+
+  it("(B37) zombie UA entry that gains one fresh hit before _pruneProbes is NOT evicted", async () => {
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _refererProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+120h — monotonically above B36 (118h).
+    const T0       = Date.now() + 120 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // Advance lastPrune to T0 so the next call at pruneNow triggers the loop.
+    _pruneProbes(T0);
+
+    // Stale companion — confirms the prune loop actually ran.
+    _uaProbes.set("B37-stale-companion-ua/1.0", { hits: [], lastAlerted: 0 });
+
+    // Zombie UA entry: all hits stale, cooldown just expired.
+    const KEY = "B37ZombieFreshHitUA/1.0";
+    _uaProbes.set(KEY, {
+      hits:        [pruneNow - WINDOW_MS - 1],   // 1 ms outside the window → stale
+      lastAlerted: pruneNow - COOLDOWN_MS,        // age = COOLDOWN_MS → just expired
+    });
+
+    // Inject one fresh hit: exactly at the cutoff (hits[last] >= cutoff → true).
+    _uaProbes.get(KEY)!.hits.push(pruneNow - WINDOW_MS);
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → prune loop ran.
+    expect(_uaProbes.has("B37-stale-companion-ua/1.0")).toBe(false);
+    // hasActiveHits = true (fresh hit at cutoff) → entry must SURVIVE.
+    expect(_uaProbes.has(KEY)).toBe(true);
+    // Referer map must be untouched.
+    expect(_refererProbes.has(KEY)).toBe(false);
+  });
+
+  it("(B38) zombie referer entry that gains one fresh hit before _pruneProbes is NOT evicted", async () => {
+    // Symmetric referer-map counterpart to B37.
+    //
+    // T0 = Date.now()+122h — monotonically above B37 (120h).
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    const T0       = Date.now() + 122 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // Advance lastPrune to T0.
+    _pruneProbes(T0);
+
+    // Stale companion — confirms the prune loop ran.
+    _refererProbes.set("https://b38-stale-companion.example/scan", { hits: [], lastAlerted: 0 });
+
+    // Zombie referer entry: all hits stale, cooldown just expired.
+    const KEY = "https://b38-zombie-fresh-hit.example/scan";
+    _refererProbes.set(KEY, {
+      hits:        [pruneNow - WINDOW_MS - 1],   // 1 ms outside the window → stale
+      lastAlerted: pruneNow - COOLDOWN_MS,        // age = COOLDOWN_MS → just expired
+    });
+
+    // Inject one fresh hit: exactly at the cutoff (hits[last] >= cutoff → true).
+    _refererProbes.get(KEY)!.hits.push(pruneNow - WINDOW_MS);
+
+    _pruneProbes(pruneNow);
+
+    // Stale companion deleted → prune loop ran.
+    expect(_refererProbes.has("https://b38-stale-companion.example/scan")).toBe(false);
+    // hasActiveHits = true (fresh hit at cutoff) → entry must SURVIVE.
+    expect(_refererProbes.has(KEY)).toBe(true);
+    // UA map must be untouched.
+    expect(_uaProbes.has(KEY)).toBe(false);
+  });
+
   it("(B34) two duplicate groups: stale-first-row and both-fresh group are both deduplicated; both entries survive prune", async () => {
     const WINDOW_MS = 24 * 60 * 60 * 1000;
     const SKEW      = 10;
