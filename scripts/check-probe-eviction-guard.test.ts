@@ -1283,6 +1283,68 @@ describe("helper-extraction detection", () => {
     expect(result.reason).toContain("evictStaleHits");
   });
 
+  // ── 4v2 + 4w2. OR-guard isolation pair ──────────────────────────────────
+  //
+  // The outer condition that gates the full-body fallback block is:
+  //
+  //   if (!requiredFound || forbiddenLines.length === 0) { … }
+  //
+  // A future refactor might tighten this to AND (&&), meaning the block only
+  // runs when BOTH per-line scans found nothing.  This would silently skip the
+  // full-body forbidden check whenever the per-line pass had already set
+  // requiredFound=true, even though a split forbidden form is still lurking in
+  // the joined body text.
+  //
+  // 4v2 catches that regression for the forbidden branch: the helper's correct
+  // form is visible per-line (requiredFound=true), while the forbidden form is
+  // split across two lines so the per-line scan misses it (forbiddenLines=[]).
+  // With the OR guard the full-body forbidden branch fires and the check
+  // returns ok:false.  With AND the branch is skipped and the check silently
+  // returns ok:true — 4v2 catches that.
+  //
+  // ── 4v2. Helper: correct form on one line, forbidden split → ok:false ────
+  it("returns ok:false when the helper body has the correct form on one line but the forbidden split form also present (full-body forbidden branch must fire despite requiredFound=true)", async () => {
+    // The per-line scan sees the while-loop correct form on its own line and
+    // sets requiredFound=true.  It does NOT see the relaxed filter form because
+    // that is split across two lines:
+    //
+    //   e.hits = e.hits
+    //     .filter((t) => t >= c);
+    //
+    // The outer guard is `if (!requiredFound || forbiddenLines.length === 0)`.
+    // Because forbiddenLines is still empty the OR fires and the full-body
+    // forbidden branch runs, joining the helper's lines and matching the split
+    // relaxed pattern → forbiddenInFullBody=true → ok:false with the relaxed-
+    // eviction error message.
+    //
+    // If the guard were narrowed to AND the branch would be skipped
+    // (!requiredFound is false) and the split forbidden form would go undetected,
+    // making the check return ok:true — a silent miss that this test catches.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  let lo = 0;`,
+        `  while (lo < e.hits.length && e.hits[lo] <= c) lo++;`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `  e.hits = e.hits`,
+        `    .filter((t) => t >= c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toContain("evictStaleHits");
+  });
+
   // ── 4u. Two calls on the same line; second helper is relaxed → ok:false ──
   it("returns ok:false when two delegation calls appear on the same line and the second helper is relaxed", async () => {
     // Single-line: evictReferer(entry, cutoff); evictUa(entry, cutoff);
