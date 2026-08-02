@@ -1550,6 +1550,90 @@ describe("helper-extraction detection", () => {
     expect(result.reason).toMatch(/inside helper.*evictOldHits/i);
   });
 
+  // ── 4ac. Full-body fallback — split while-loop with non-standard index name → ok:true ─
+  it("returns ok:true when the helper's split while-loop uses a non-standard index variable name (e.g. 'idx' instead of 'lo')", async () => {
+    // Guards against a future refactor that only accepts a specific index
+    // variable name (e.g. hard-coded "lo") in the helper full-body fallback.
+    // The pattern uses \w+ for the index position, so any identifier must be
+    // accepted.
+    //
+    // The helper uses a non-standard index name ("idx") and splits the
+    // while-loop condition across three lines so neither the global Phase 1
+    // pattern nor the per-line helper scan can match:
+    //
+    //   while (idx < e.hits.length &&
+    //     e.hits[idx] <=
+    //     c) idx++;
+    //
+    // Only the helper full-body fallback (\be\b\.hits\[\w+\]\s*<=\s*\bc\b,
+    // with \s* spanning the newline) must promote requiredFound=true.
+    //
+    // If the implementation hard-coded "lo" (or any single name), this test
+    // would fail with the helper-extraction "no correct eviction" message.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictOldHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictOldHits(e, c) {`,
+        `  let idx = 0;`,
+        `  while (idx < e.hits.length &&`,
+        `    e.hits[idx] <=`,
+        `    c) idx++;`,
+        `  e.hits.splice(0, idx);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 4ad. Full-body fallback — split while-loop against unrelated array → ok:false ─
+  it("returns ok:false with the helper-extraction message when the split while-loop in the helper scans an unrelated array (not .hits)", async () => {
+    // Confirms the full-body fallback is SELECTIVE: it only promotes
+    // requiredFound=true when the joined body text matches the param-specific
+    // required pattern, which requires the entry parameter followed by ".hits".
+    //
+    // A helper that splits its while-loop condition across lines but iterates
+    // over an unrelated array (e.data instead of e.hits) must still produce
+    // ok:false — the pattern \be\b\.hits\[\w+\]\s*<=\s*\bc\b will not match
+    // "e.data[idx]".
+    //
+    // This closes the gap where a creative but incorrect refactor could slip
+    // past the full-body fallback by splitting a condition that looks
+    // superficially similar but touches the wrong array.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictOldHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictOldHits(e, c) {`,
+        `  let idx = 0;`,
+        `  // BUG: iterates e.data instead of e.hits`,
+        `  while (idx < e.data.length &&`,
+        `    e.data[idx] <=`,
+        `    c) idx++;`,
+        `  e.hits.splice(0, idx);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/extracted into helper/i);
+    expect(result.reason).toContain("evictOldHits");
+    expect(result.reason).toMatch(/no correct eviction comparison|update REQUIRED_PATTERN/i);
+  });
+
   // ── 4z. Opt-in flag guard (ok:false): split form, wrong comparator ────────
   it("returns ok:false with the helper-extraction message when the split filter body uses a wrong comparator (t !== cutoff) that matches neither required nor forbidden", async () => {
     // Confirms the full-body fallback is SELECTIVE: it only promotes
