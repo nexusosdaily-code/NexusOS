@@ -3572,6 +3572,34 @@ describe("UA probe — mid-session cooldown suppression (no restart)", () => {
     expect(secondCall[0]).toBe("ua");
     expect(secondCall[1]).toBe(UNKNOWN_UA);
   });
+
+  it("lastAlerted is updated on the second alert so a third alert is suppressed immediately after", async () => {
+    // Regression guard: if entry.lastAlerted = now is removed from the UA branch
+    // after the second alert fires, the cooldown clock is never reset and every
+    // subsequent hit above threshold immediately fires another alert.
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const mw  = await freshMiddleware();
+    const mod = await import("./traffic-logger");
+
+    // ── Phase 1: drive threshold+1 hits → first alert fires ─────────────────
+    await hitUATimes(mw, 3);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+
+    // ── Phase 2: expire the cooldown and drive threshold+1 more → second alert
+    const entry = mod._uaProbes.get(UNKNOWN_UA);
+    expect(entry).toBeDefined();
+    entry!.lastAlerted = Date.now() - 3_600_001; // just past the 1-hour boundary
+
+    await hitUATimes(mw, 3);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(2);
+
+    // ── Phase 3: drive threshold+1 more hits immediately ────────────────────
+    // The second alert must have refreshed lastAlerted to ~now, so the new
+    // cooldown is active and no third alert should fire.
+    await hitUATimes(mw, 3);
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(2);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
