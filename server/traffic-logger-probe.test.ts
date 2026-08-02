@@ -3241,6 +3241,56 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     }
   });
 
+  it("(B4c) initProbeCounters: map sizes exclude rows whose hits are all outside the window and lastAlerted===0", async () => {
+    // Guard against a regression that counts skipped rows toward the map size.
+    // Seed 3 referer rows: 2 with a recent hit, 1 with only a stale hit and
+    // lastAlerted=0 (the skip condition).  Seed 2 UA rows all with recent hits.
+    // After init, _refererProbes.size must be 2 (not 3) and _uaProbes.size 2.
+    const now       = Date.now();
+    const recentHit = now - 1_000;                // well within the 24-h window
+    const staleHit  = now - 25 * 3600_000;        // 25 h ago — outside window
+
+    const REFERER_IN_WINDOW = [
+      "https://mixed-window-scraper-1.example/",
+      "https://mixed-window-scraper-2.example/",
+    ];
+    const REFERER_STALE = "https://mixed-window-stale.example/";
+    const UA_KEYS = [
+      "MixedWindowBot/1.0",
+      "MixedWindowBot/2.0",
+    ];
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      ...REFERER_IN_WINDOW.map((key) => ({
+        fieldType: "referer", key, hits: [recentHit], lastAlerted: 0,
+      })),
+      // This row must be skipped: all hits stale, no cooldown to preserve.
+      { fieldType: "referer", key: REFERER_STALE, hits: [staleHit], lastAlerted: 0 },
+      ...UA_KEYS.map((key) => ({
+        fieldType: "ua", key, hits: [recentHit], lastAlerted: 0,
+      })),
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    // The stale referer row must not inflate the map.
+    expect(mod._refererProbes.size).toBe(2);
+    expect(mod._uaProbes.size).toBe(2);
+
+    // In-window referer rows must be present.
+    for (const key of REFERER_IN_WINDOW) {
+      expect(mod._refererProbes.has(key)).toBe(true);
+    }
+    // Stale row must be absent from both maps.
+    expect(mod._refererProbes.has(REFERER_STALE)).toBe(false);
+    expect(mod._uaProbes.has(REFERER_STALE)).toBe(false);
+  });
+
   it("(C) initProbeCounters: rows with an unrecognised field_type are silently ignored", async () => {
     const now   = Date.now();
     const hitTs = now - 1_000;
