@@ -1919,6 +1919,45 @@ describe("helper-extraction detection", () => {
     expect(result.reason).toMatch(/no correct eviction comparison|update REQUIRED_PATTERN/i);
   });
 
+  // ── 4inline-for-relaxed. Helper body: inline for-loop uses relaxed < operator → ok:false
+  it("returns ok:false (relaxed eviction comparison) when the helper body contains an inline for-loop whose condition uses e.hits[i] < c (strictly-less-than)", async () => {
+    // A developer might write the eviction loop inside a helper as a for-loop
+    // and accidentally use the relaxed operator:
+    //
+    //   for (; i < e.hits.length && e.hits[i] < c; i++) {}
+    //   e.hits = e.hits.slice(i);
+    //
+    // `e.hits[i] < c` keeps a hit whose timestamp equals exactly (now − WINDOW_MS),
+    // silently inflating the in-window counter by 1.
+    //
+    // HELPER_FORBIDDEN_PATTERN must catch `e.hits[i] < c` even when it is
+    // followed by `;` (the for-loop separator) rather than `)`.  The pattern
+    // `\w+\.hits\[\w+\]\s*<(?!=)\s*\w+` has no lookahead that would let a
+    // trailing `;` suppress the match — the relaxed operator is flagged
+    // regardless of what follows the cutoff operand.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  let i = 0;`,
+        `  for (; i < e.hits.length && e.hits[i] < c; i++) {}`,
+        `  e.hits = e.hits.slice(i);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toContain("evictStaleHits");
+  });
+
   // ── 4aa. Helper body: for-loop condition contains e.hits[i] <= c but body never mutates hits → ok:false
   it("returns ok:false when the helper body has a for-loop with e.hits[i] <= c in the condition but never mutates the hits array", async () => {
     // A for-loop written as:
