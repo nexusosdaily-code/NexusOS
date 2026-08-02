@@ -1589,6 +1589,50 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     // The UA entry must still be in cooldown — lastAlerted unchanged from `now`.
     expect(_uaProbes.get(UA_KEY).lastAlerted).toBe(now);
   });
+
+  it("single dual-field request: _uaProbes and _refererProbes each record exactly one hit for their key", async () => {
+    // Regression guard for a future refactor that adds an early return after
+    // recording the referer probe — e.g.
+    //   if (referer) { recordProbe(refererProbes, ...); return; }
+    // Such a change would silently prevent _uaProbes from ever accumulating
+    // hits when a referer is also present on the same request.
+    //
+    // This test directly inspects both in-memory maps after one middleware
+    // pass so neither sendProbeAlert nor threshold crossing is required to
+    // catch the regression.
+
+    process.env.PROBE_ALERT_THRESHOLD = "99"; // keep threshold high — never alert
+    const mod = await import("./traffic-logger");
+    const mw  = mod.trafficLoggerMiddleware;
+    const { _uaProbes, _refererProbes } = mod as any;
+
+    // Ensure _initPromise has resolved so res.on("finish") fires synchronously
+    // in the microtask queue rather than waiting for DB init.
+    await mod.initProbeCounters();
+
+    const DUAL_UA  = "DualFieldProbeCheck/1.0";
+    const DUAL_REF = "https://dual-probe-map-check.example/scan";
+    const DUAL_REF_KEY = DUAL_REF.toLowerCase(); // matches referer.slice(0,500).toLowerCase()
+
+    // Confirm neither key is pre-seeded.
+    expect(_uaProbes.has(DUAL_UA)).toBe(false);
+    expect(_refererProbes.has(DUAL_REF_KEY)).toBe(false);
+
+    // Single request carrying both an unknown UA and an unknown external referer.
+    const req = makeReq(DUAL_UA, DUAL_REF);
+    const res = makeRes();
+    mw(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+
+    // Both maps must contain their respective key after the request.
+    expect(_uaProbes.has(DUAL_UA)).toBe(true);
+    expect(_refererProbes.has(DUAL_REF_KEY)).toBe(true);
+
+    // Each map entry must have exactly one hit recorded.
+    expect(_uaProbes.get(DUAL_UA).hits).toHaveLength(1);
+    expect(_refererProbes.get(DUAL_REF_KEY).hits).toHaveLength(1);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
