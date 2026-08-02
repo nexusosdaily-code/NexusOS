@@ -12335,6 +12335,55 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       dateNowSpy.mockRestore();
     }
   });
+
+  it("(B41e) dedup merge takes the highest lastAlerted — not just the first row's value", async () => {
+    // Guard against a regression where mergedLastAlerted is assigned directly
+    // from groupRows[0].lastAlerted (skipping the Math.max loop), so a higher
+    // lastAlerted stored in a later row is silently dropped.  That bug would
+    // cause the cooldown to expire earlier than intended, allowing a re-alert
+    // sooner than expected after a restart.
+    //
+    // T0 = Date.now()+140h — monotonically above B41d (136h) to avoid any
+    // in-memory state left over from prior tests in the same describe block.
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const initNow   = Date.now() + 140 * 60 * 60 * 1000;
+    // Both hits are inside the window so the entry is not skipped.
+    const hit0 = initNow - Math.floor(WINDOW_MS / 3);
+    const hit1 = initNow - Math.floor(WINDOW_MS / 4);
+
+    // row 0 has the LOWER lastAlerted; row 1 has the HIGHER one.
+    const lowerLastAlerted  = initNow - 45 * 60 * 1000; // 45 min ago
+    const higherLastAlerted = initNow - 10 * 60 * 1000; // 10 min ago — must win
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _uaProbes } = mod as any;
+
+      const row0 = { fieldType: "ua", key: "B41eLastAlertedUA/1.0", hits: [hit0], lastAlerted: lowerLastAlerted };
+      const row1 = { fieldType: "ua", key: "B41eLastAlertedUA/1.0", hits: [hit1], lastAlerted: higherLastAlerted };
+
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({
+        from: vi.fn().mockResolvedValue([row0, row1]),
+      });
+
+      await mod.initProbeCounters();
+
+      const entry = _uaProbes.get("B41eLastAlertedUA/1.0");
+      expect(entry).toBeDefined();
+
+      // The merged lastAlerted must be the highest value across both rows.
+      // A merge that reads only groupRows[0].lastAlerted would return
+      // lowerLastAlerted and this assertion would fail.
+      expect(entry!.lastAlerted).toBe(higherLastAlerted);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
