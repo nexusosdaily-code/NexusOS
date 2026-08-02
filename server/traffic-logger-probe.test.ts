@@ -784,6 +784,36 @@ describe("referer probe — alert respects the same threshold as the UA probe", 
     expect(_refererProbes.get(KEY).lastAlerted).toBe(0);
     expect(mockSendProbeAlert).not.toHaveBeenCalled();
   });
+
+  it("referer lastAlerted stays unchanged when hits exceed threshold but cooldown is active", async () => {
+    // threshold=3, default cooldown=1h.  Seed an entry that has already
+    // alerted recently (lastAlerted within COOLDOWN_MS) and exactly threshold
+    // hits so the NEXT _recordProbe call pushes hits.length to threshold+1,
+    // satisfying the count condition — but the cooldown guard must block the
+    // alert and leave lastAlerted untouched.
+    process.env.PROBE_ALERT_THRESHOLD = "3";
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe } = mod as any;
+
+    const KEY = "https://boundary-check-referer-cooldown.example/";
+    const now = Date.now();
+
+    // lastAlerted is 30 seconds ago — well within the 1-hour default cooldown.
+    const recentAlert = now - 30_000;
+    // Seed exactly threshold (3) hits so the next call pushes hits.length to 4 > 3.
+    _refererProbes.set(KEY, {
+      hits: [now - 3000, now - 2000, now - 1000],
+      lastAlerted: recentAlert,
+    });
+
+    // One more hit — count condition (4 > 3) is satisfied but cooldown blocks it.
+    _recordProbe(_refererProbes, KEY, "referer", now);
+    await flushMicrotasks();
+
+    // Alert must NOT have fired — lastAlerted must remain the original value.
+    expect(_refererProbes.get(KEY).lastAlerted).toBe(recentAlert);
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
