@@ -8424,3 +8424,108 @@ describe("ProbeEntry object-aliasing guard: referer and UA entries are independe
     expect(_uaProbes.get(uaKey)!.lastAlerted).toBe(uaLastAlertedBefore);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Re-alert cooldown boundary — fires at exactly COOLDOWN_MS, not one ms late
+//
+// The production condition is  now - entry.lastAlerted >= COOLDOWN_MS  (≥).
+// A future tightening to  >  would suppress the first eligible re-alert at
+// the exact boundary.  This test pins the boundary behaviour with two cases:
+//
+//   Case A — elapsed == COOLDOWN_MS exactly → alert MUST fire.
+//   Case B — elapsed == COOLDOWN_MS - 1     → alert MUST NOT fire.
+//
+// Strategy:
+//   Seed a referer entry past threshold; deliver the hit at BASE_NOW to fire
+//   the initial alert (lastAlerted = BASE_NOW).  Clear mocks.
+//
+//   Case A: deliver one more hit at BASE_NOW + COOLDOWN_MS.
+//           elapsed = COOLDOWN_MS ≥ COOLDOWN_MS → alert fires, lastAlerted
+//           updated to BASE_NOW + COOLDOWN_MS.
+//
+//   Case B: start a fresh entry, fire initial alert at BASE_NOW.
+//           deliver one more hit at BASE_NOW + COOLDOWN_MS - 1.
+//           elapsed = COOLDOWN_MS - 1 < COOLDOWN_MS → no alert.
+//           lastAlerted must remain at BASE_NOW (unchanged).
+//
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("cooldown boundary — re-alert fires at exactly COOLDOWN_MS, not one millisecond late", () => {
+  it("Case A: hit delivered at elapsed == COOLDOWN_MS fires exactly one alert and stamps lastAlerted", async () => {
+    // threshold=2 so 3 hits exceed it; cooldown=1 h = 3_600_000 ms.
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000; // 3_600_000
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe } = mod as any;
+    await mod.initProbeCounters();
+
+    const BASE_NOW = 1_710_000_000_000; // fixed sentinel
+    const KEY = "cooldown-boundary-exact.example/scan";
+
+    // Seed two hits so the next call brings hits.length to 3 (> threshold 2).
+    _refererProbes.set(KEY, { hits: [BASE_NOW - 2000, BASE_NOW - 1000], lastAlerted: 0 });
+
+    // Fire initial alert at BASE_NOW.
+    _recordProbe(_refererProbes, KEY, "referer", BASE_NOW);
+    await flushMicrotasks();
+
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+    expect(_refererProbes.get(KEY).lastAlerted).toBe(BASE_NOW);
+
+    vi.clearAllMocks();
+
+    // ── Case A: hit at BASE_NOW + COOLDOWN_MS (elapsed == COOLDOWN_MS) ───────
+    // elapsed = COOLDOWN_MS ≥ COOLDOWN_MS → condition is true → alert fires.
+    const NOW_EXACT = BASE_NOW + COOLDOWN_MS;
+    _recordProbe(_refererProbes, KEY, "referer", NOW_EXACT);
+    await flushMicrotasks();
+
+    // Exactly one alert must fire — not zero (suppressed) and not two (double-fire).
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+    const [label] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(label).toBe("referer");
+
+    // lastAlerted must advance to the new timestamp.
+    expect(_refererProbes.get(KEY).lastAlerted).toBe(NOW_EXACT);
+  });
+
+  it("Case B: hit delivered at elapsed == COOLDOWN_MS - 1 is suppressed and lastAlerted is unchanged", async () => {
+    // Same config as Case A.
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000; // 3_600_000
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe } = mod as any;
+    await mod.initProbeCounters();
+
+    const BASE_NOW = 1_710_000_100_000; // distinct sentinel from Case A
+    const KEY = "cooldown-boundary-early.example/scan";
+
+    // Seed two hits and fire the initial alert.
+    _refererProbes.set(KEY, { hits: [BASE_NOW - 2000, BASE_NOW - 1000], lastAlerted: 0 });
+
+    _recordProbe(_refererProbes, KEY, "referer", BASE_NOW);
+    await flushMicrotasks();
+
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+    expect(_refererProbes.get(KEY).lastAlerted).toBe(BASE_NOW);
+
+    vi.clearAllMocks();
+
+    // ── Case B: hit at BASE_NOW + COOLDOWN_MS - 1 (one ms before boundary) ──
+    // elapsed = COOLDOWN_MS - 1 < COOLDOWN_MS → condition is false → suppressed.
+    const NOW_EARLY = BASE_NOW + COOLDOWN_MS - 1;
+    _recordProbe(_refererProbes, KEY, "referer", NOW_EARLY);
+    await flushMicrotasks();
+
+    // No alert must have fired.
+    expect(mockSendProbeAlert.mock.calls.length).toBe(0);
+
+    // lastAlerted must remain at BASE_NOW — it must not be reset or advanced.
+    expect(_refererProbes.get(KEY).lastAlerted).toBe(BASE_NOW);
+  });
+});
