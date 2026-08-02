@@ -6110,3 +6110,42 @@ describe("PROBE_WINDOW_HOURS — eviction loop respects WINDOW_MS, not a hard-co
     expect(entry.hits[entry.hits.length - 1]).toBe(now);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Map identity — refererProbes and uaProbes must be distinct objects
+// ═══════════════════════════════════════════════════════════════════════════
+// A copy-paste error in an initialisation path could assign both maps to the
+// same Map instance, causing every hit to be double-counted and keys from
+// both fields to collide. This test guards against that regression.
+
+describe("probe map identity — _refererProbes and _uaProbes are distinct objects", () => {
+  it("the two exported map references are not the same object", async () => {
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes } = mod as any;
+
+    // Strict reference inequality — they must be separate Map instances.
+    expect(_refererProbes).not.toBe(_uaProbes);
+  });
+
+  it("a key seeded into _refererProbes does not appear in _uaProbes", async () => {
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes } = mod as any;
+
+    const refKey = "task386-referer-only-key";
+    const uaKey  = "task386-ua-only-key";
+
+    _refererProbes.set(refKey, { hits: [Date.now()], lastAlerted: 0 });
+    _uaProbes.set(uaKey,      { hits: [Date.now()], lastAlerted: 0 });
+
+    // Each key must exist only in the map it was seeded into.
+    expect(_refererProbes.has(refKey)).toBe(true);
+    expect(_uaProbes.has(refKey)).toBe(false);
+
+    expect(_uaProbes.has(uaKey)).toBe(true);
+    expect(_refererProbes.has(uaKey)).toBe(false);
+
+    // Clean up so we don't pollute other tests sharing the module instance.
+    _refererProbes.delete(refKey);
+    _uaProbes.delete(uaKey);
+  });
+});
