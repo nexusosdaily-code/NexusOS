@@ -3718,6 +3718,63 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(_refererProbes.has("https://b17-warm-cooldown-active-hits.example/scan")).toBe(true);
     expect(_refererProbes.get("https://b17-warm-cooldown-active-hits.example/scan")!.hits.length).toBe(1);
   });
+
+  it("(K) initProbeCounters: UA row's lastAlerted does not bleed into the referer map entry for the same key after restart", async () => {
+    // Regression guard: a future bug in the restoration loop could load rows in
+    // the wrong order or without checking field_type before assigning lastAlerted,
+    // accidentally imposing the UA alert cooldown on the referer map entry (or
+    // vice versa) for the same key string.
+    //
+    // Scenario:
+    //   - "ua"      row for key "restart-bleed-test.example/" has lastAlerted = now
+    //     (cooldown fully active — it alerted moments before the restart).
+    //   - "referer" row for the same key has lastAlerted = 0
+    //     (it has never alerted).
+    //
+    // After initProbeCounters():
+    //   _uaProbes.get(KEY).lastAlerted      must be `now`  (restored correctly)
+    //   _refererProbes.get(KEY).lastAlerted  must be 0     (not contaminated by UA row)
+    const now       = Date.now();
+    const hitTs     = now - 1_000; // 1 s ago — well within the 24-hour window
+    const SHARED_KEY = "restart-bleed-test.example/";
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      // UA row: lastAlerted is `now` — cooldown is fully active.
+      {
+        fieldType:   "ua",
+        key:         SHARED_KEY,
+        hits:        [hitTs],
+        lastAlerted: now,
+      },
+      // Referer row for the SAME key string: never alerted (lastAlerted = 0).
+      {
+        fieldType:   "referer",
+        key:         SHARED_KEY,
+        hits:        [hitTs],
+        lastAlerted: 0,
+      },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    // UA entry must carry the restored lastAlerted (cooldown preserved).
+    const uaEntry = mod._uaProbes.get(SHARED_KEY);
+    expect(uaEntry).toBeDefined();
+    expect(uaEntry!.lastAlerted).toBe(now);
+
+    // Referer entry must NOT have been contaminated by the UA row's lastAlerted.
+    const refEntry = mod._refererProbes.get(SHARED_KEY);
+    expect(refEntry).toBeDefined();
+    expect(refEntry!.lastAlerted).toBe(0);
+
+    // The two values must differ — if they were swapped or shared the bug is present.
+    expect(uaEntry!.lastAlerted).not.toBe(refEntry!.lastAlerted);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
