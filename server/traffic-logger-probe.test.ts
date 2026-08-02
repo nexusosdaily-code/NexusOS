@@ -12384,6 +12384,90 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     }
   });
 
+  it("(K10) initProbeCounters: window-filter cutoff applied uniformly across all rows in a merged group — boundary hit kept, sub-boundary hit dropped", async () => {
+    // Guards against a refactor that moves `cutoff = Date.now() - WINDOW_MS`
+    // *inside* the per-row loop so the cutoff is recomputed for every row.
+    // K9 already pins that the cutoff is constant across *groups*; K10 pins that
+    // it is also constant across the *rows* merged into a single group.
+    //
+    // ── Scenario ──────────────────────────────────────────────────────────────
+    // One group (fieldType="ua", same key) has exactly two DB rows:
+    //   Row 0  hits = [hitAtBoundary]    where hitAtBoundary  = T − WINDOW_MS
+    //   Row 1  hits = [hitBeforeBoundary] where hitBeforeBoundary = T − WINDOW_MS − 1
+    //
+    // ── How the spy makes the regression detectable ────────────────────────────
+    // Date.now() is spied:
+    //   call 1  →  T              (intended per-run snapshot used for `cutoff`)
+    //   calls 2+→  T + 60_000    (60 s later; simulates clock drift)
+    //
+    //   Correct  (cutoff = T − WINDOW_MS, computed once before the loop):
+    //     hitAtBoundary  = T − WINDOW_MS ≥ T − WINDOW_MS  →  true   → KEPT  ✓
+    //     hitBeforeBoundary = T − WINDOW_MS − 1 < T − WINDOW_MS  →  false  → DROPPED ✓
+    //
+    //   Broken   (per-row cutoff re-evaluated at drifted clock T + 60_000):
+    //     Row 0 cutoff = T + 60_000 − WINDOW_MS
+    //     hitAtBoundary < T + 60_000 − WINDOW_MS  →  false  → DROPPED ✗  (regression)
+    //
+    // A frozen-clock approach (vi.useFakeTimers) would NOT catch this because
+    // every Date.now() call returns the same T, keeping per-row recomputation
+    // indistinguishable from the correct per-run snapshot.
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const T         = 1_700_100_000_000;   // fixed epoch ms — no wall-clock dependency
+
+    let callCount = 0;
+    const nowSpy  = vi.spyOn(Date, "now").mockImplementation(() => {
+      callCount += 1;
+      return callCount === 1 ? T : T + 60_000;
+    });
+
+    try {
+      const cutoff            = T - WINDOW_MS;
+      const hitAtBoundary     = cutoff;       // exactly on the boundary → must be KEPT
+      const hitBeforeBoundary = cutoff - 1;   // 1 ms before → must be DROPPED
+
+      const UA_KEY = "K10PerRowCutoffUA/1.0";
+
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+
+      // Two rows for the same group.  A per-row recomputation with a drifted
+      // clock would produce a higher cutoff for Row 0, causing hitAtBoundary
+      // to be silently filtered out.
+      const fakeRows = [
+        { fieldType: "ua", key: UA_KEY, hits: [hitAtBoundary],     lastAlerted: 0 },
+        { fieldType: "ua", key: UA_KEY, hits: [hitBeforeBoundary], lastAlerted: 0 },
+      ];
+
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      const entry = mod._uaProbes.get(UA_KEY);
+
+      // The group must be present — it has one active hit at the boundary.
+      expect(entry, "UA entry missing — hitAtBoundary was incorrectly evicted").toBeDefined();
+
+      // The boundary hit must survive the filter regardless of clock drift.
+      expect(
+        entry!.hits,
+        "hitAtBoundary was dropped — cutoff may have been recomputed per row with a drifted clock",
+      ).toContain(hitAtBoundary);
+
+      // The sub-boundary hit must be evicted.
+      expect(
+        entry!.hits,
+        "hitBeforeBoundary was kept — window filter did not apply correctly",
+      ).not.toContain(hitBeforeBoundary);
+
+      // Exactly one active hit (the boundary hit).
+      expect(entry!.hits, "unexpected hit count after merge and filter").toHaveLength(1);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
 
   // ── B35 / B36: expired-cooldown re-alert count equals in-window hits only ─
   //
