@@ -10864,6 +10864,53 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(_uaProbes.has(KEY_B)).toBe(false);
   });
 
+  // ── B49b: degenerate empty-hits case — two UA entries with hits: [] ───────
+  //
+  // B49 confirmed that two entries with structurally identical single-element
+  // hit arrays are both evicted by key.  This test covers the degenerate case:
+  // two distinct UA keys both holding hits: [] (zero elements, cooldown expired,
+  // lastAlerted = 0).
+  //
+  // A pruner that deduplicates by comparing array contents
+  // (e.g. JSON.stringify([]) === JSON.stringify([])) would treat both empty
+  // arrays as the same sentinel and skip the second entry.  Asserting both
+  // keys are absent afterwards catches that regression.
+  //
+  // T0 = Date.now()+147h — monotonically above B49 (146h), below B50 (148h).
+
+  it("(B49b) two UA entries both holding hits: [] — both stale — _pruneProbes must evict both by key", async () => {
+    // A pruner that deduplicates entries by serialised array contents would
+    // treat JSON.stringify([]) === JSON.stringify([]) as a match and skip the
+    // second key.  Using two distinct keys with empty hit arrays and an expired
+    // cooldown (lastAlerted = 0) forces the pruner to visit both map entries
+    // independently.
+    //
+    // T0 = Date.now()+147h — monotonically above B49 (146h), below B50 (148h).
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _pruneProbes } = mod as any;
+
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000;
+
+    const T0       = Date.now() + 147 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // Advance lastPrune to T0.
+    _pruneProbes(T0);
+
+    const KEY_A = "B49bEmptyHitsA-UA/1.0";
+    const KEY_B = "B49bEmptyHitsB-UA/1.0";
+
+    // Both entries: empty hit array, lastAlerted = 0 (cooldown long-expired).
+    _uaProbes.set(KEY_A, { hits: [], lastAlerted: 0 });
+    _uaProbes.set(KEY_B, { hits: [], lastAlerted: 0 });
+
+    _pruneProbes(pruneNow);
+
+    // Both entries must be evicted — no array-content deduplication must occur.
+    expect(_uaProbes.has(KEY_A)).toBe(false);
+    expect(_uaProbes.has(KEY_B)).toBe(false);
+  });
+
   // ── B50 / B51: one-millisecond-inside cooldown boundary ──────────────────
   //
   // B45/B46 confirmed survival at the absolute youngest cooldown (age = 0).
