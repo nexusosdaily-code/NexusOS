@@ -50,6 +50,8 @@
  *        n-bare-neg. HELPER_FORBIDDEN_PATTERN does NOT match bare-arrow correct form (t => t > c)
  *        c-bare-ok.  HELPER_REQUIRED_PATTERN matches bare-arrow correct form (t => t > c)
  *        c-bare-neg. HELPER_REQUIRED_PATTERN does NOT match bare-arrow relaxed form (t => t >= c)
+ *        b-index-ok.  HELPER_REQUIRED_PATTERN matches while-loop with a single-letter index (e.hits[i] <= c)
+ *        b-index-neg. HELPER_REQUIRED_PATTERN does NOT match while-loop with relaxed index form (e.hits[i] < c)
  *        o. Helper body with filter arrow split across lines (correct form) → ok:true
  *        p. Helper body with filter arrow split across lines (relaxed form) → ok:false
  *        v. Helper body splits 'e.hits\n  .filter((t) => t > c)' across lines → ok:true
@@ -947,6 +949,23 @@ describe("helper-extraction detection", () => {
   it("HELPER_REQUIRED_PATTERN does NOT match the relaxed filter form with a bare (non-parenthesised) callback parameter", () => {
     // The bare-arrow relaxed form (>=) must never be accepted as correct.
     expect(HELPER_REQUIRED_PATTERN.test("e.hits.filter(t => t >= c)")).toBe(false);
+  });
+
+  // ── 4b-index-ok. HELPER_REQUIRED_PATTERN — while-loop index flexibility ───
+  it("HELPER_REQUIRED_PATTERN matches the while-loop correct form with a single-letter index variable (e.hits[i] <= c)", () => {
+    // If the \w+ bracket expression were tightened to a literal form (e.g. \[lo\]),
+    // it would silently stop accepting helpers that use a differently-named index
+    // variable such as `i`.  This test pins the flexibility of the bracket
+    // expression in the while-loop arm so that such a tightening is caught before
+    // it ships.
+    expect(HELPER_REQUIRED_PATTERN.test("e.hits[i] <= c")).toBe(true);
+  });
+
+  // ── 4b-index-neg. HELPER_REQUIRED_PATTERN — while-loop relaxed index form ─
+  it("HELPER_REQUIRED_PATTERN does NOT match the while-loop relaxed form with a single-letter index variable (e.hits[i] < c)", () => {
+    // The strictly-less-than form must never be accepted as correct, regardless
+    // of what identifier is used as the bracket index.
+    expect(HELPER_REQUIRED_PATTERN.test("e.hits[i] < c")).toBe(false);
   });
 
   // ── 4o. Helper body: filter arrow split across lines (correct form) → ok:true
