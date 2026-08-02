@@ -3404,6 +3404,52 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(mod._uaProbes.has("SomeKeyForUnknownType")).toBe(false);
   });
 
+  it("(C2) initProbeCounters: rows whose fieldType is a capitalisation variant of 'referer' or 'ua' are silently ignored — neither map receives any entry", async () => {
+    // The guard at Pass 1 uses strict equality: row.fieldType !== "referer" &&
+    // row.fieldType !== "ua".  A future ORM upgrade or DB migration that returns
+    // "Referer", "UA", "REFERER", or "uA" would cause all rows to be skipped,
+    // losing scraper history on every restart.  This test confirms that such
+    // values are already correctly treated as unrecognised — i.e. skipped —
+    // and that the guard itself is not accidentally relaxed to a case-insensitive
+    // comparison that would route them into the wrong map.
+    const now   = Date.now();
+    const hitTs = now - 1_000; // well within the 24-hour window
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const CASING_VARIANTS = [
+      // Capitalisation variants of "referer"
+      { fieldType: "Referer",  key: "https://casing-test-Referer.example/" },
+      { fieldType: "REFERER",  key: "https://casing-test-REFERER.example/" },
+      // Capitalisation variants of "ua"
+      { fieldType: "UA",       key: "CasingTestUA/1.0" },
+      { fieldType: "uA",       key: "CasingTestUa/1.0" },
+    ];
+
+    const fakeRows = CASING_VARIANTS.map(({ fieldType, key }) => ({
+      fieldType,
+      key,
+      hits:        [hitTs],
+      lastAlerted: 0,
+    }));
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    // Neither map must contain any key from a casing-variant fieldType row.
+    for (const { key } of CASING_VARIANTS) {
+      expect(mod._refererProbes.has(key)).toBe(false);
+      expect(mod._uaProbes.has(key)).toBe(false);
+    }
+
+    // The maps must remain completely empty — no casing-variant row may sneak in.
+    expect(mod._refererProbes.size).toBe(0);
+    expect(mod._uaProbes.size).toBe(0);
+  });
+
   it("(D) initProbeCounters: a row with ALL-stale hits but an active cooldown is restored with an empty hits array and lastAlerted preserved", async () => {
     // All hits are older than the 24-hour window, but lastAlerted is within
     // the past hour — the cooldown is still active and must keep suppressing
