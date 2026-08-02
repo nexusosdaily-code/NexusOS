@@ -581,6 +581,39 @@ describe("checkProbeEvictionGuard() unit logic", () => {
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/relaxed eviction comparison/i);
   });
+
+  // ── 3u. Inline for-loop condition contains entry.hits[lo] <= cutoff but never mutates hits → ok:false
+  it("returns ok:false when an inline for-loop condition contains entry.hits[lo] <= cutoff but the body never mutates hits", async () => {
+    // A developer might write eviction as a for-loop directly inside recordProbe:
+    //
+    //   for (; lo < entry.hits.length && entry.hits[lo] <= cutoff; lo++) {}
+    //
+    // The substring `entry.hits[lo] <= cutoff` superficially satisfies the
+    // while-loop branch of REQUIRED_PATTERN, but the for-loop body is empty —
+    // `entry.hits` is never sliced or reassigned — so no eviction occurs.
+    //
+    // In the for-loop the cutoff token is immediately followed by `;` (the
+    // for-loop separator).  REQUIRED_PATTERN now includes a negative lookahead
+    // `(?!\s*;)` after the cutoff operand so that this form is rejected.
+    // In the canonical while-loop the token after cutoff is `)`, not `;`, so
+    // correct code is unaffected.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  let lo = 0;`,
+        `  for (; lo < entry.hits.length && entry.hits[lo] <= cutoff; lo++) {}`,
+        `  // hits array never reassigned — eviction is absent`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/no correct eviction guard found/i);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

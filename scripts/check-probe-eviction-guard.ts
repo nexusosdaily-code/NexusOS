@@ -113,9 +113,19 @@ export const TARGET_FILE = path.resolve("server", "traffic-logger.ts");
  *
  * Both forms evict the boundary hit, which is the required behaviour.
  * If a new idiom is introduced, add it as a further alternation here.
+ *
+ * NOTE: the while-loop branch includes a negative lookahead `(?!\s*;)` after
+ * the cutoff operand.  In a for-loop condition such as
+ *   for (; lo < entry.hits.length && entry.hits[lo] <= cutoff; lo++) {}
+ * the cutoff token is immediately followed by `;` (the for-loop separator).
+ * The lookahead rejects that form so that a for-loop whose condition happens to
+ * contain `entry.hits[lo] <= cutoff` — but whose body never mutates
+ * `entry.hits` — is not falsely accepted.  In the canonical while-loop form
+ * the token after cutoff is `)`, not `;`, so the lookahead does not affect
+ * correct code.
  */
 export const REQUIRED_PATTERN =
-  /entry\.hits\[lo\]\s*<=\s*cutoff|entry\.hits\s*\.filter\(\s*\(?\s*t\s*\)?\s*=>\s*t\s*>\s*cutoff\s*\)/;
+  /entry\.hits\[lo\]\s*<=\s*cutoff(?!\s*;)|entry\.hits\s*\.filter\(\s*\(?\s*t\s*\)?\s*=>\s*t\s*>\s*cutoff\s*\)/;
 
 /**
  * Matches RELAXED (wrong) eviction expressions that silently keep the
