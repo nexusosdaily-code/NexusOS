@@ -7998,3 +7998,69 @@ describe("middleware-level: referer key lands in _refererProbes, UA key lands in
     expect(_uaProbes.get(refKey)).toBeUndefined();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Object-aliasing guard: two map entries must be distinct ProbeEntry objects
+//
+// A future refactor might create one ProbeEntry and insert it into both
+// _refererProbes and _uaProbes under different keys (object aliasing).  If
+// that happens, setting lastAlerted on one entry silently mutates the other,
+// breaking independent alert suppression.
+//
+// This test:
+//   1. Seeds each map with its own entry (via _recordProbe, which creates a
+//      fresh {hits,lastAlerted} object each time the key is absent).
+//   2. Asserts the two retrieved references are NOT the same object (===).
+//   3. Mutates lastAlerted on the referer entry directly and confirms the UA
+//      entry's lastAlerted is unchanged — a concrete proof that the two
+//      objects do not share state.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("ProbeEntry object-aliasing guard: referer and UA entries are independent objects", () => {
+  it("_refererProbes and _uaProbes hold distinct ProbeEntry references for their respective keys", async () => {
+    // Use a threshold of 1 so the first hit triggers an alert, which causes
+    // recordProbe to write lastAlerted — exercising the mutation path.
+    process.env.PROBE_ALERT_THRESHOLD = "1";
+    process.env.PROBE_COOLDOWN_HOURS  = "0";
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _recordProbe } = mod as any;
+
+    await mod.initProbeCounters();
+
+    const refKey = "aliasing-guard-referer.example/path";
+    const uaKey  = "aliasing-guard-ua-bot/1.0";
+
+    // Ensure the keys are absent before we start so recordProbe creates
+    // brand-new entries rather than reusing whatever was left from a prior run.
+    _refererProbes.delete(refKey);
+    _uaProbes.delete(uaKey);
+
+    const now = Date.now();
+
+    // recordProbe creates a new entry when the key is missing; calling it
+    // twice — once per map — must yield two separate objects.
+    _recordProbe(_refererProbes, refKey, "referer", now);
+    _recordProbe(_uaProbes,      uaKey,  "ua",      now);
+
+    const refEntry = _refererProbes.get(refKey);
+    const uaEntry  = _uaProbes.get(uaKey);
+
+    // Both entries must exist.
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // ── Reference-inequality assertion ─────────────────────────────────────
+    // If a future refactor aliases the same object into both maps this will
+    // fail, surfacing the bug before it ships.
+    expect(refEntry).not.toBe(uaEntry);
+
+    // ── Mutation-isolation assertion ───────────────────────────────────────
+    // Directly overwrite lastAlerted on the referer entry and confirm the UA
+    // entry is unaffected.  With aliased objects both would change together.
+    const uaLastAlertedBefore = uaEntry.lastAlerted;
+    refEntry.lastAlerted = uaLastAlertedBefore + 99_999;
+
+    expect(_uaProbes.get(uaKey)!.lastAlerted).toBe(uaLastAlertedBefore);
+  });
+});
