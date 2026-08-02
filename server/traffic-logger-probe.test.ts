@@ -9611,6 +9611,125 @@ describe("ProbeEntry object-aliasing guard (middleware path): entries inserted v
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Object-aliasing guard — update path (existing entries)
+//
+// The creation-path guard above proves that _recordProbe creates independent
+// ProbeEntry objects when the key is absent.  But the update/eviction path
+// (the `entry.hits = entry.hits.slice(lo)` branch at lines ~96-99) runs only
+// when the key ALREADY EXISTS.  A future refactor such as:
+//
+//   entry.hits = sharedWindow.slice(lo);   // oops — same slice assigned to both
+//
+// would alias the hits arrays on *existing* entries without touching the
+// creation path, evading the guard above.
+//
+// This suite:
+//   1. Pre-seeds both maps with distinct ProbeEntry objects that each have one
+//      stale hit (below the window cutoff) so the eviction branch fires.
+//   2. Calls _recordProbe on each key — triggering the update path, not the
+//      creation path.
+//   3. Asserts that refEntry.hits !== uaEntry.hits (array reference inequality
+//      after the eviction/slice has run).
+//   4. Confirms mutation isolation: pushing a sentinel onto the referer hits
+//      array must not change the UA hits array length.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("ProbeEntry object-aliasing guard (update path): hits arrays remain independent after eviction on existing entries", () => {
+  it("hits arrays are not aliased after _recordProbe runs the eviction branch on pre-existing entries", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "999"; // keep alerts out of the way
+    process.env.PROBE_WINDOW_HOURS    = "24";
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _recordProbe } = mod as any;
+
+    await mod.initProbeCounters();
+
+    const refKey = "update-alias-guard-referer.example/path";
+    const uaKey  = "update-alias-guard-ua-bot/3.0";
+
+    const now    = Date.now();
+    // A hit far enough in the past to fall outside the 24-hour window so the
+    // eviction branch (lo > 0 → entry.hits = entry.hits.slice(lo)) fires.
+    const staleHit = now - 25 * 60 * 60 * 1000; // 25 hours ago
+
+    // ── Pre-seed both maps with existing entries ───────────────────────────
+    // Use the stale hit array directly; intentionally the *same* array
+    // reference in both entries' initial state.  That way a buggy eviction
+    // that doesn't copy (e.g. `entry.hits = entry.hits.slice(0)` on a shared
+    // object) would immediately leak into both.
+    const sharedInitialHits = [staleHit];
+    _refererProbes.set(refKey, { hits: [...sharedInitialHits], lastAlerted: 0 });
+    _uaProbes.set(uaKey,       { hits: [...sharedInitialHits], lastAlerted: 0 });
+
+    // ── Trigger the update / eviction path ────────────────────────────────
+    // Both keys exist — recordProbe takes the else branch (no new entry
+    // creation) and runs the eviction slice on the existing hits arrays.
+    _recordProbe(_refererProbes, refKey, "referer", now);
+    _recordProbe(_uaProbes,      uaKey,  "ua",      now);
+
+    const refEntry = _refererProbes.get(refKey);
+    const uaEntry  = _uaProbes.get(uaKey);
+
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // ── Array-reference inequality after eviction ──────────────────────────
+    // If a future change assigns the same sliced array to both entries this
+    // assertion will fail, catching the bug before it ships.
+    expect(refEntry.hits).not.toBe(uaEntry.hits);
+
+    // ── Mutation-isolation assertion ───────────────────────────────────────
+    // Each entry should now have exactly one in-window hit (the `now`
+    // timestamp that recordProbe just pushed).  Push a sentinel onto the
+    // referer hits array and confirm the UA hits array is unaffected.
+    const uaHitsLengthBefore = uaEntry.hits.length;
+    refEntry.hits.push(now + 1);
+
+    expect(_uaProbes.get(uaKey)!.hits.length).toBe(uaHitsLengthBefore);
+  });
+
+  it("lastAlerted remains independent on pre-existing entries after _recordProbe updates them", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "999";
+    process.env.PROBE_WINDOW_HOURS    = "24";
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _recordProbe } = mod as any;
+
+    await mod.initProbeCounters();
+
+    const refKey = "update-alias-guard-referer2.example/path";
+    const uaKey  = "update-alias-guard-ua-bot2/3.0";
+
+    const now     = Date.now();
+    const staleHit = now - 25 * 60 * 60 * 1000;
+
+    // Pre-seed with separate ProbeEntry objects so we start from a known state.
+    _refererProbes.set(refKey, { hits: [staleHit], lastAlerted: 0 });
+    _uaProbes.set(uaKey,       { hits: [staleHit], lastAlerted: 0 });
+
+    // Trigger the update path for both maps.
+    _recordProbe(_refererProbes, refKey, "referer", now);
+    _recordProbe(_uaProbes,      uaKey,  "ua",      now);
+
+    const refEntry = _refererProbes.get(refKey)!;
+    const uaEntry  = _uaProbes.get(uaKey)!;
+
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // ── Object-reference inequality ────────────────────────────────────────
+    expect(refEntry).not.toBe(uaEntry);
+
+    // ── lastAlerted mutation isolation ────────────────────────────────────
+    const uaLastAlertedBefore = uaEntry.lastAlerted;
+    refEntry.lastAlerted = uaLastAlertedBefore + 55_555;
+
+    expect(_uaProbes.get(uaKey)!.lastAlerted).toBe(uaLastAlertedBefore);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//
 // Object-aliasing guard — restart / initProbeCounters path
 //
 // _recordProbe and the middleware finish path each create their own ProbeEntry
