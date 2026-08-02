@@ -34,15 +34,20 @@ export const TRANSIENT_ERROR_SUBSTRINGS: readonly string[] = [
  * Calls sealConstitution() with automatic retries for transient DB errors.
  *
  * @param sealFn       - The seal function to call (injectable for tests; defaults to sealConstitution)
- * @param maxAttempts  - Maximum number of attempts before giving up (default 5)
- * @param retryDelayMs - Milliseconds to wait between attempts (default 6 000)
+ * @param maxAttempts  - Maximum number of attempts before giving up (default 10)
+ * @param retryDelayMs - Milliseconds to wait between attempts (default 8 000)
  * @returns            - true if freshly sealed, false if already sealed
  * @throws             - Non-transient errors on first occurrence; transient errors after maxAttempts
+ *
+ * Default window: 10 × 8 s = 80 s.  Replit's deployed-environment PostgreSQL
+ * host ("helium") can take >30 s to become reachable on a cold boot; the
+ * previous default of 5 × 6 s = 30 s was not enough, causing spurious BOOT
+ * ALERT Telegram messages even though the DB came up shortly afterwards.
  */
 export async function sealConstitutionWithRetry(
   sealFn: () => Promise<boolean> = sealConstitution,
-  maxAttempts = 5,
-  retryDelayMs = 6_000,
+  maxAttempts = 10,
+  retryDelayMs = 8_000,
 ): Promise<boolean> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
