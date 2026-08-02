@@ -35,6 +35,12 @@
  *        v. Inline for-loop condition uses `entry.hits[lo] < cutoff` (strictly-less-than) →
  *           ok:false with reason matching /relaxed eviction comparison/i.
  *           FORBIDDEN_PATTERN catches the relaxed form even when followed by `;`.
+ *        x. Inline for-loop: correct `<=` condition split across two lines
+ *           (`entry.hits[lo] <=\n  cutoff; lo++`) → ok:false with reason
+ *           matching /no correct eviction guard found/i.  REQUIRED_PATTERN's
+ *           negative lookahead `(?!\s*;)` rejects the form even though `<=` is
+ *           correct, because `\s*` spans the newline and the cutoff token is
+ *           then immediately followed by `;` (the for-loop separator).
  *   4. Helper-extraction detection (fs mocked)
  *        a. HELPER_DELEGATION_PATTERN matches a delegating call of the form evict*(entry, cutoff)
  *        b. HELPER_REQUIRED_PATTERN matches correct while-loop comparison with arbitrary param names
@@ -704,6 +710,43 @@ describe("checkProbeEvictionGuard() unit logic", () => {
 
     const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
     expect(result.ok).toBe(true);
+  });
+
+  // ── 3x. Inline for-loop: correct <= condition split across two lines → ok:false ─
+  it("returns ok:false (no correct eviction guard) when an inline for-loop splits 'entry.hits[lo] <=\\n  cutoff;' across two lines", async () => {
+    // A future developer might write the eviction loop as a for-loop directly
+    // inside recordProbe() and let a formatter split the condition across lines:
+    //
+    //   for (; lo < entry.hits.length && entry.hits[lo] <=
+    //     cutoff; lo++) {}
+    //
+    // The correct `<=` comparator is present, but the cutoff token is followed
+    // by `;` (the for-loop separator) on the same line after the newline is
+    // consumed by `\s*`.  REQUIRED_PATTERN's negative lookahead `(?!\s*;)`
+    // therefore rejects this form: the full-source fallback matches
+    // `entry.hits[lo] <=\n  cutoff` but then sees `;` immediately after, so
+    // the lookahead fires and the match fails.
+    //
+    // The check must emit the "no correct eviction guard found" message — not
+    // the "relaxed eviction comparison" message — because the operator itself
+    // is correct; it is only the split+for-loop form that disqualifies it.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  let lo = 0;`,
+        `  for (; lo < entry.hits.length && entry.hits[lo] <=`,
+        `    cutoff; lo++) {}`,
+        `  entry.hits = entry.hits.slice(lo);`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/no correct eviction guard found/i);
   });
 });
 
