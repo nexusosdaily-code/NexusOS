@@ -2182,7 +2182,9 @@ describe("dynamic UA block always responds with HTTP 403", () => {
 ;
 
     return { res, next };
-  }
+
+  
+}
 
 
   it("phase 1 — UA in snapshot: res.status is called with 403", async () => 
@@ -3333,9 +3335,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     // cooldown is active and, if so, skip the entire probe-recording block for
     // both fields — e.g.:
     //
-    //   if (ua && !patternBot) 
-{
-
+    //   if (ua && !patternBot) {
     //     const entry = uaProbes.get(uaKey)
 ;
 
@@ -3345,9 +3345,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     //     recordProbe(uaProbes, uaKey, "ua", now)
 ;
 
-    //   
-}
-
+    //   }
     //   // ← referer recordProbe unreachable when UA in cooldown
     //
     // Cooldown suppresses the ALERT for a key, not the hit RECORDING.
@@ -3406,9 +3404,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     // cooldown is active and, if so, skip the entire probe-recording block for
     // both fields — e.g.:
     //
-    //   if (referer && !refBlocked && !isOwnOriginReferer(referer)) 
-{
-
+    //   if (referer && !refBlocked && !isOwnOriginReferer(referer)) {
     //     const entry = refererProbes.get(refKey)
 ;
 
@@ -3418,9 +3414,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     //     recordProbe(refererProbes, refKey, "referer", now)
 ;
 
-    //   
-}
-
+    //   }
     //   recordProbe(uaProbes, uaKey, "ua", now)
 ;
   // ← unreachable when referer in cooldown
@@ -4076,9 +4070,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     // that checks whether the referer probe is in cooldown and skips ALL probe
     // recording for that request — e.g.:
     //
-    //   if (referer && !refBlocked && !isOwnOriginReferer(referer)) 
-{
-
+    //   if (referer && !refBlocked && !isOwnOriginReferer(referer)) {
     //     const entry = refererProbes.get(refKey)
 ;
 
@@ -4088,18 +4080,12 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     //     recordProbe(refererProbes, refKey, "referer", now)
 ;
 
-    //   
-}
-
-    //   if (ua && !patternBot) 
-{
-
+    //   }
+    //   if (ua && !patternBot) {
     //     recordProbe(uaProbes, uaKey, "ua", now)
 ;
  // ← unreachable
-    //   
-}
-
+    //   }
     //
     // Specifically targets the case where:
     //   • _refererProbes has lastAlerted = now (full cooldown active)
@@ -10269,6 +10255,53 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 ;
 
 
+  // ── B45-pre: both-loop deletion guard (distinct keys) ────────────────────────
+  //
+  // B43/B44 confirm cross-map safety when the SAME key is in both maps.
+  // This test uses DISTINCT keys — one stale referer, one stale UA — and
+  // asserts that a single _pruneProbes call deletes BOTH.
+  //
+  // If a future refactor deletes or comments out the referer loop the UA entry
+  // is still evicted but the referer entry survives, failing the first expect.
+  // If the UA loop is dropped the reverse happens, failing the second expect.
+  //
+  // T0 = Date.now()+137h — monotonically above B44 (136h).
+
+  it("(B45-pre) distinct stale referer AND stale UA — both evicted by a single _pruneProbes call", async () => {
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000;
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    const T0       = Date.now() + 137 * 60 * 60 * 1000;
+    const pruneNow = T0 + COOLDOWN_MS + 1;
+
+    // Advance lastPrune to T0 so the real prune fires at pruneNow.
+    _pruneProbes(T0);
+
+    const staleEntry = {
+      hits:        [pruneNow - WINDOW_MS - 1],  // 1 ms outside the window
+      lastAlerted: pruneNow - COOLDOWN_MS - 1,  // cooldown expired
+    };
+
+    const REF_KEY = "https://b45pre-stale-referer.example/scan";
+    const UA_KEY  = "B45pre-StaleUA/1.0";
+
+    _refererProbes.set(REF_KEY, { ...staleEntry });
+    _uaProbes.set(UA_KEY,      { ...staleEntry });
+
+    _pruneProbes(pruneNow);
+
+    // If the referer loop was removed, REF_KEY survives — this assertion catches it.
+    expect(_refererProbes.has(REF_KEY)).toBe(false);
+
+    // If the UA loop was removed, UA_KEY survives — this assertion catches it.
+    expect(_uaProbes.has(UA_KEY)).toBe(false);
+
+  });
+
   // ── B45 / B46: youngest-possible cooldown (lastAlerted === pruneNow, age = 0) ─
   //
   // B41/B42 confirmed that a zombie IS evicted when both guards are 1 ms past
@@ -11469,7 +11502,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     //   • every entry's hits array would alias the same buffer (K6 regression)
     //   • every entry's lastAlerted would inherit the last group's value (K7 regression)
     //
-    // K6 and K7 each catch one half of the bug in isolation K8 catches the
+    // K6 and K7 each catch one half of the bug in isolation; K8 catches the
     // compound form with a single seed that exercises both invariants together.
     //
     // Setup: 4 entries with DISTINCT hits timestamps AND DISTINCT lastAlerted values.
@@ -16698,7 +16731,7 @@ describe("cross-map independence — same string in both _refererProbes and _uaP
 
 
     // ── Async flush — at least one sendProbeAlert call confirms the telegram
-    // path is exercised (both dynamic imports are in-flight Vitest's mock
+    // path is exercised (both dynamic imports are in-flight; Vitest's mock
     // resolution order is not guaranteed to drain both in the same tick).
     await new Promise<void>((r) => setImmediate(r));
     await new Promise<void>((r) => setImmediate(r));
