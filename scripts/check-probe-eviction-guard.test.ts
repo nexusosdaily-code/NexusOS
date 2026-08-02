@@ -1466,6 +1466,57 @@ describe("multi-line helper body (formatter-split condition inside extracted hel
     expect(result.ok).toBe(true);
   });
 
+  // ── 6b. Brace-wrapped while-loop body inside extracted helper → ok:true ─────
+  it("returns ok:true when a brace-style formatter wraps the while-loop body in braces on a new line inside the extracted helper", async () => {
+    // A formatter enforcing a "braces required" style rule may rewrite the
+    // helper body from:
+    //   while (lo < e.hits.length && e.hits[lo] <= c) lo++;
+    // to:
+    //   while (lo < e.hits.length && e.hits[lo] <= c) {
+    //     lo++;
+    //   }
+    //
+    // The condition line (including `e.hits[lo] <= c`) is still fully present
+    // on the opening while-line.  HELPER_REQUIRED_PATTERN matches
+    // `\w+\.hits\[\w+\]\s*<=\s*\w+` independently of whatever follows the
+    // closing `)`, so the per-line scan on the condition line returns a match
+    // and the check passes without needing any fallback.
+    //
+    // Cross-reference: test 5h covers the same brace-wrapped layout at the
+    // top-level recordProbe function where REQUIRED_PATTERN is used.  This
+    // test covers the orthogonal case where the eviction logic has been
+    // extracted into a helper and HELPER_REQUIRED_PATTERN is applied instead.
+    // Both are safe because the patterns only inspect the token sequence inside
+    // the condition — they do not require `lo++` to appear on the same line.
+    // Any future tightening of HELPER_REQUIRED_PATTERN that accidentally
+    // requires the loop body to follow on the condition line would be caught
+    // here.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  let lo = 0;`,
+        `  while (lo < e.hits.length && e.hits[lo] <= c) {`,
+        `    lo++;`,
+        `  }`,
+        `  if (lo > 0) e.hits = e.hits.slice(lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    // The condition line `while (lo < e.hits.length && e.hits[lo] <= c) {`
+    // contains the full token sequence `e.hits[lo] <= c`, so
+    // HELPER_REQUIRED_PATTERN matches on the per-line scan → ok:true.
+    expect(result.ok).toBe(true);
+  });
+
   // ── 5g. While-loop body split to the next line → ok:true ──────────────────
   it("returns ok:true when the while-loop condition is intact but the body 'lo++' is on the next line", async () => {
     // A formatter enforcing a short line-length limit may keep the condition
