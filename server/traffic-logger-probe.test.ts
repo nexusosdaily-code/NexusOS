@@ -6516,6 +6516,65 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       delete process.env.PROBE_ALERT_COOLDOWN_HOURS;
     }
   });
+
+  it("(B41) dedup merge builds an independent hits buffer — pushing onto the in-memory entry does not mutate either raw DB row", async () => {
+    // Guard against a future refactor that skips the spread (allHits.push(...rh))
+    // and directly assigns groupRows[0].hits to the in-memory entry.  That alias
+    // means any later push onto entry.hits silently mutates the parsed DB row
+    // object still held by the mock/closure, causing double-counting or
+    // corrupted state if the same reference is ever reused.
+    //
+    // T0 = Date.now()+130h — monotonically above B40 (128h) to avoid map
+    // state left by prior tests.
+
+    const WINDOW_MS  = 24 * 60 * 60 * 1000;
+    const initNow    = Date.now() + 130 * 60 * 60 * 1000;
+    const hit0       = initNow - Math.floor(WINDOW_MS / 3); // first row's hit — inside window
+    const hit1       = initNow - Math.floor(WINDOW_MS / 4); // second row's hit — inside window
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _uaProbes } = mod as any;
+
+      // Two duplicate UA rows for the same (fieldType, key) pair — simulates
+      // a pre-dedup DB state where two concurrent inserts landed before the
+      // UNIQUE index was created.
+      const row0 = { fieldType: "ua", key: "B41DedupMergeUA/1.0", hits: [hit0], lastAlerted: 0 };
+      const row1 = { fieldType: "ua", key: "B41DedupMergeUA/1.0", hits: [hit1], lastAlerted: 0 };
+
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({
+        from: vi.fn().mockResolvedValue([row0, row1]),
+      });
+
+      await mod.initProbeCounters();
+
+      // The merge must have produced an entry that contains both hits.
+      const entry = _uaProbes.get("B41DedupMergeUA/1.0");
+      expect(entry).toBeDefined();
+      expect(entry!.hits).toHaveLength(2);
+
+      // ── Reference-independence assertion ───────────────────────────────────
+      // Push a sentinel timestamp onto the merged entry's hits array to detect
+      // aliasing: if entry.hits is the same array as row0.hits or row1.hits,
+      // the sentinel will appear in the raw row — exposing the reference bug.
+      const SENTINEL = 999_999_999_999;
+      entry!.hits.push(SENTINEL);
+
+      // Neither raw input row must contain the sentinel.
+      expect(row0.hits).not.toContain(SENTINEL);
+      expect(row1.hits).not.toContain(SENTINEL);
+
+      // The original rows must still hold exactly their own single hits.
+      expect(row0.hits).toHaveLength(1);
+      expect(row1.hits).toHaveLength(1);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
