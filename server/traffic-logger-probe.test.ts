@@ -15378,6 +15378,68 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(entryQ!.hits).not.toContain(SENTINEL);
   });
 
+  it("(B41j) initProbeCounters: allHits buffer is independent between two distinct referer keys when each key has exactly one DB row and both carry an active cooldown (non-zero lastAlerted)", async () => {
+    // Referer-map counterpart to B41i, adding the active-cooldown dimension.
+    // B41i seeds both rows with lastAlerted=0.  A merge loop that correctly
+    // resets allHits for the zero-lastAlerted path might still forget to reset
+    // it when lastAlerted > 0 — for example by only reinitialising the buffer
+    // inside an `if (lastAlerted === 0)` branch.  This test exercises that
+    // path: both referer rows carry a non-zero lastAlerted (alerted 5 and 10
+    // minutes ago, well within the 1-hour default cooldown).
+    //
+    // Setup: two distinct referer keys — KEY_P and KEY_Q — each backed by
+    // exactly ONE DB row with a different hit timestamp and a different
+    // non-zero lastAlerted.  After initProbeCounters we push a sentinel onto
+    // KEY_P's hits array and assert KEY_Q's hits array is completely
+    // unaffected and still has the correct length.
+    const now          = Date.now();
+    const hitP         = now - 1_000; // KEY_P single-row timestamp
+    const hitQ         = now - 2_000; // KEY_Q single-row timestamp
+    const lastAlertedP = now - 5  * 60_000; // alerted 5 min ago — active cooldown
+    const lastAlertedQ = now - 10 * 60_000; // alerted 10 min ago — active cooldown
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+    const { _refererProbes } = mod as any;
+
+    const KEY_P = "https://fresh-import-single-row-ref-cooldown-p.example.com/";
+    const KEY_Q = "https://fresh-import-single-row-ref-cooldown-q.example.com/";
+
+    // One row each — no duplicates — both with active lastAlerted values.
+    const rowP = { fieldType: "referer", key: KEY_P, hits: [hitP], lastAlerted: lastAlertedP };
+    const rowQ = { fieldType: "referer", key: KEY_Q, hits: [hitQ], lastAlerted: lastAlertedQ };
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue([rowP, rowQ]),
+    });
+
+    await mod.initProbeCounters();
+
+    // Both referer keys must have been hydrated with exactly 1 hit each.
+    const entryP = _refererProbes.get(KEY_P);
+    const entryQ = _refererProbes.get(KEY_Q);
+    expect(entryP).toBeDefined();
+    expect(entryQ).toBeDefined();
+    expect(entryP!.hits).toHaveLength(1);
+    expect(entryQ!.hits).toHaveLength(1);
+
+    // ── Reference-independence assertion ──────────────────────────────────
+    // Push a sentinel onto KEY_P's hits array.  If allHits was declared
+    // outside the group loop and only reset on the zero-lastAlerted path,
+    // the sentinel would silently appear in KEY_Q's hits array too.
+    const SENTINEL = 999_333_999_333;
+    entryP!.hits.push(SENTINEL);
+
+    // KEY_P should now have 2 elements (1 original + sentinel).
+    expect(entryP!.hits).toHaveLength(2);
+    expect(entryP!.hits).toContain(SENTINEL);
+
+    // KEY_Q must be completely unaffected — still exactly 1 hit, no sentinel.
+    expect(entryQ!.hits).toHaveLength(1);
+    expect(entryQ!.hits).not.toContain(SENTINEL);
+  });
+
   it("(B42) initProbeCounters: three duplicate UA rows for the same key all contribute their timestamps to the merged entry", async () => {
     // Regression guard: a future merge loop that only merges pairs (off-by-one
     // on the group iteration) would silently drop the third row's timestamp.
