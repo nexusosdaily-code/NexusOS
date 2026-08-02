@@ -1633,6 +1633,60 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(_uaProbes.get(DUAL_UA).hits).toHaveLength(1);
     expect(_refererProbes.get(DUAL_REF_KEY).hits).toHaveLength(1);
   });
+
+  it("both maps in full cooldown: dual-field request still records a hit in each map", async () => {
+    // Regression guard: a future optimisation that short-circuits probe recording
+    // when cooldown is active (e.g. `if (entry.lastAlerted > 0 && inCooldown) return`)
+    // would silently prevent new hits from accumulating in the sliding-window
+    // arrays.  Hits must always be recorded regardless of alert suppression — the
+    // cooldown only prevents the Telegram alert from firing, not the hit itself.
+
+    process.env.PROBE_ALERT_THRESHOLD = "99"; // very high — alert never fires
+    const mod = await import("./traffic-logger");
+    const mw  = mod.trafficLoggerMiddleware;
+    const { _uaProbes, _refererProbes } = mod as any;
+
+    // Ensure _initPromise has resolved so probe recording runs inside the
+    // res.on("finish") callback rather than being deferred until DB init.
+    await mod.initProbeCounters();
+
+    const UA_KEY  = "BothCooldownActiveUA/5.0";
+    const REF_VAL = "https://both-cooldown-active-scraper.example/scan";
+    const REF_KEY = REF_VAL.toLowerCase();
+
+    const now = Date.now();
+
+    // Seed both maps with lastAlerted = now (full cooldown active) and some
+    // existing hits so the entries are already present in the maps.
+    _uaProbes.set(UA_KEY, {
+      hits:        [now - 3000, now - 2000, now - 1000],
+      lastAlerted: now,   // cooldown freshly set — alert must NOT fire
+    });
+    _refererProbes.set(REF_KEY, {
+      hits:        [now - 3000, now - 2000, now - 1000],
+      lastAlerted: now,   // cooldown freshly set — alert must NOT fire
+    });
+
+    const hitsBefore = {
+      ua:      _uaProbes.get(UA_KEY).hits.length,
+      referer: _refererProbes.get(REF_KEY).hits.length,
+    };
+
+    // Send a single dual-field request.
+    const req = makeReq(UA_KEY, REF_VAL);
+    const res = makeRes();
+    mw(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+    await flushMicrotasks();
+
+    // Neither map should have alerted — both were in cooldown.
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+
+    // Despite no alert firing, each map must have grown by exactly one hit.
+    expect(_uaProbes.get(UA_KEY).hits).toHaveLength(hitsBefore.ua + 1);
+    expect(_refererProbes.get(REF_KEY).hits).toHaveLength(hitsBefore.referer + 1);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
