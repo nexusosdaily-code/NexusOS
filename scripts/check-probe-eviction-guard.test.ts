@@ -1362,6 +1362,98 @@ describe("helper-extraction detection", () => {
     expect(result.ok).toBe(true);
   });
 
+  // ── 4aa. Full-body fallback — split while-loop condition → ok:true ──────────
+  it("returns ok:true when the helper body splits the while-loop condition so that '<= c' lands on its own line (helper full-body fallback must activate)", async () => {
+    // Guard against a future refactor that activates the helper full-body
+    // fallback only for the filter form but forgets the while-loop branch.
+    //
+    // The helper uses short parameter names (e, c) so that the global Phase 1
+    // REQUIRED_PATTERN ("entry.hits[lo] <= cutoff") cannot match — Phase 1 is
+    // entirely bypassed.  The while-loop comparison is then split across two
+    // lines so the per-line helper scan also finds nothing:
+    //
+    //   while (lo < e.hits.length &&
+    //     e.hits[lo] <=
+    //     c) lo++;
+    //
+    // No single line contains both "e.hits[lo] <=" AND "c", so requiredFound
+    // stays false after the per-line pass.  Only the helper full-body fallback
+    // (joining helperLines with "\n" and testing the param-specific required
+    // pattern "\be\b\.hits\[\w+\]\s*<=\s*\bc\b", whose \s* spans the newline)
+    // can return requiredFound=true and ultimately ok:true.
+    //
+    // If the fallback were restricted to the filter form only, this test would
+    // fail with the helper-extraction "no correct eviction" message.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictOldHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictOldHits(e, c) {`,
+        `  let lo = 0;`,
+        `  while (lo < e.hits.length &&`,
+        `    e.hits[lo] <=`,
+        `    c) lo++;`,
+        `  e.hits.splice(0, lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 4ab. Full-body fallback — split while-loop, wrong comparator → ok:false ─
+  it("returns ok:false when the split while-loop in the helper uses strictly-less-than (< c instead of <= c), detected by the helper forbidden full-body fallback", async () => {
+    // Confirms the helper full-body fallback is SELECTIVE for the while-loop
+    // branch: it only promotes requiredFound=true when the param-specific
+    // required pattern (which requires <=) matches the joined body text.
+    //
+    // The helper again uses short param names (e, c) so Phase 1 cannot match.
+    // The split condition uses < instead of <=:
+    //
+    //   while (lo < e.hits.length &&
+    //     e.hits[lo] <
+    //     c) lo++;
+    //
+    // The per-line scan finds nothing.  The helper forbidden full-body fallback
+    // ("\be\b\.hits\[\w+\]\s*<(?!=)\s*\bc\b", \s* spanning the newline) sets
+    // forbiddenInFullBody=true, producing ok:false with the relaxed-comparison
+    // message attributed to the helper (not the global pattern).
+    //
+    // If the fallback unconditionally returned ok:true for any split while-loop
+    // form, this test would catch that regression.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictOldHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictOldHits(e, c) {`,
+        `  let lo = 0;`,
+        `  // BUG: < instead of <= causes the hit at exactly cutoff to survive`,
+        `  while (lo < e.hits.length &&`,
+        `    e.hits[lo] <`,
+        `    c) lo++;`,
+        `  e.hits.splice(0, lo);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    // forbiddenInFullBody=true → location note says "inside helper" (no line number)
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toMatch(/inside helper.*evictOldHits/i);
+  });
+
   // ── 4z. Opt-in flag guard (ok:false): split form, wrong comparator ────────
   it("returns ok:false with the helper-extraction message when the split filter body uses a wrong comparator (t !== cutoff) that matches neither required nor forbidden", async () => {
     // Confirms the full-body fallback is SELECTIVE: it only promotes
