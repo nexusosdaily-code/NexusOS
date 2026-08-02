@@ -5846,6 +5846,123 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     uaEntry!.hits.push(now - 500); // mutate UA array
     expect(refEntry!.hits.length).toBe(refLenAfter); // referer array untouched
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //
+  // Task 519 — hits-array reference isolation across restored entries
+  //
+  // A future refactor of initProbeCounters might reuse the same `activeHits`
+  // array reference across multiple restored entries — for example by building
+  // one array and assigning it to both the referer entry for key A and the
+  // referer entry for key B (or to both the referer and UA entry for the same
+  // key).  If that happened, a push onto one entry's hits array would silently
+  // mutate every other entry that shares the same reference, causing spurious
+  // double-counting and false alerts.
+  //
+  // This test:
+  //   1. Seeds two independent DB rows (one referer, one UA) each with the
+  //      same raw hits array object in the mock so a deserialization-cache-style
+  //      bug has every opportunity to alias.
+  //   2. Runs initProbeCounters so both rows are restored into their respective
+  //      maps.
+  //   3. Asserts the two restored entries' hits arrays are NOT the same reference.
+  //   4. Pushes a sentinel onto the referer entry's hits array and confirms the
+  //      UA entry's hits array is completely unaffected.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  it("(K3) initProbeCounters: hits arrays of two separately restored entries are not aliased — push onto one does not mutate the other", async () => {
+    const now    = Date.now();
+    const hitTs  = now - 1_000; // 1 second ago — well within the 24-hour window
+
+    const REFERER_KEY = "https://alias-guard-referer.example/path";
+    const UA_KEY      = "AliasGuardBot/1.0";
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    // Use the SAME array object for both rows' `hits` field.  A buggy
+    // implementation that passes raw DB values through without copying
+    // (or that reuses a shared `activeHits` buffer across groups) would
+    // leave both restored entries pointing at the same array.
+    const sharedHitsRef = [hitTs];
+    const fakeRows = [
+      { fieldType: "referer", key: REFERER_KEY, hits: sharedHitsRef, lastAlerted: 0 },
+      { fieldType: "ua",      key: UA_KEY,      hits: sharedHitsRef, lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const refEntry = mod._refererProbes.get(REFERER_KEY);
+    const uaEntry  = mod._uaProbes.get(UA_KEY);
+
+    // Both entries must have been restored.
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // ── Reference-inequality assertion ──────────────────────────────────────
+    // The two hits arrays must be distinct objects.  If initProbeCounters
+    // assigns the same array reference to both entries this fails immediately,
+    // exposing the aliasing bug before it ships.
+    expect(refEntry!.hits).not.toBe(uaEntry!.hits);
+
+    // ── Mutation-isolation assertion ─────────────────────────────────────────
+    // Push a sentinel onto the referer entry's hits array.  With aliased arrays
+    // this would silently lengthen the UA entry's hits array too.
+    const uaHitsLengthBefore = uaEntry!.hits.length;
+    refEntry!.hits.push(now + 1_000);
+
+    expect(mod._uaProbes.get(UA_KEY)!.hits.length).toBe(uaHitsLengthBefore);
+  });
+
+  it("(K4) initProbeCounters: hits arrays of two restored referer entries with different keys are not aliased", async () => {
+    // Guards against a subtler aliasing pattern: a shared `allHits` buffer that
+    // is reused across groups inside the restoration loop.  Both rows land in
+    // the same map (_refererProbes) but under different keys; if the loop
+    // reuses the same intermediate array, both entries' activeHits would point
+    // at the last group's result.
+    const now    = Date.now();
+    const hitA   = now - 2_000; // 2 s ago — within window
+    const hitB   = now - 3_000; // 3 s ago — within window
+
+    const KEY_A = "https://alias-guard-referer-a.example/";
+    const KEY_B = "https://alias-guard-referer-b.example/";
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const fakeRows = [
+      { fieldType: "referer", key: KEY_A, hits: [hitA], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY_B, hits: [hitB], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const entryA = mod._refererProbes.get(KEY_A);
+    const entryB = mod._refererProbes.get(KEY_B);
+
+    // Both entries must have been restored.
+    expect(entryA).toBeDefined();
+    expect(entryB).toBeDefined();
+
+    // ── Reference-inequality assertion ──────────────────────────────────────
+    expect(entryA!.hits).not.toBe(entryB!.hits);
+
+    // ── Mutation-isolation assertion ─────────────────────────────────────────
+    // Push a sentinel onto entry A's hits; entry B must be unaffected.
+    const bLengthBefore = entryB!.hits.length;
+    entryA!.hits.push(now + 1_000);
+
+    expect(mod._refererProbes.get(KEY_B)!.hits.length).toBe(bLengthBefore);
+
+    // Sanity: each entry contains only its own original hit.
+    expect(entryA!.hits).toContain(hitA);
+    expect(entryB!.hits).toContain(hitB);
+    expect(entryB!.hits).not.toContain(hitA);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
