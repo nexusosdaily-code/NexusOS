@@ -1168,6 +1168,18 @@ describe("helper-extraction detection", () => {
     expect(result.reason).toMatch(/no correct eviction guard found/i);
   });
 
+  // ── 4v + 4w. Branch-isolation pair ──────────────────────────────────────
+  //
+  // scanHelperBody() contains TWO independent full-body fallback branches:
+  //
+  //   if (!requiredFound && required.test(bodyText))  requiredFound = true;
+  //   if (forbiddenLines.length === 0 && forbidden.test(bodyText))  forbiddenInFullBody = true;
+  //
+  // A future refactor might keep only one of the two (e.g. running only
+  // `forbidden.test(bodyText)` and deleting the `required.test` check).
+  // 4v catches that for the required branch, 4w catches it for the forbidden
+  // branch; together they mean both branches must remain active.
+  //
   // ── 4v. Helper has method-chain split: .filter() on its own line, correct ─
   it("returns ok:true when the helper body splits 'e.hits\\n  .filter((t) => t > c)' across two lines (full-body fallback recognises it)", async () => {
     // An aggressive line-length formatter may rewrite the helper body as:
