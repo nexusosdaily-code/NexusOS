@@ -48,6 +48,8 @@
  *        n. HELPER_FORBIDDEN_PATTERN matches parenthesised arrow relaxed form
  *        n-bare-ok.  HELPER_FORBIDDEN_PATTERN matches bare-arrow relaxed form (t => t >= c)
  *        n-bare-neg. HELPER_FORBIDDEN_PATTERN does NOT match bare-arrow correct form (t => t > c)
+ *        c-bare-ok.  HELPER_REQUIRED_PATTERN matches bare-arrow correct form (t => t > c)
+ *        c-bare-neg. HELPER_REQUIRED_PATTERN does NOT match bare-arrow relaxed form (t => t >= c)
  *        o. Helper body with filter arrow split across lines (correct form) → ok:true
  *        p. Helper body with filter arrow split across lines (relaxed form) → ok:false
  *        v. Helper body splits 'e.hits\n  .filter((t) => t > c)' across lines → ok:true
@@ -903,6 +905,22 @@ describe("helper-extraction detection", () => {
   it("HELPER_FORBIDDEN_PATTERN does NOT match the correct filter form with a bare (non-parenthesised) callback parameter", () => {
     // The correct bare-arrow form (strict >) must never be flagged as relaxed.
     expect(HELPER_FORBIDDEN_PATTERN.test("e.hits.filter(t => t > c)")).toBe(false);
+  });
+
+  // ── 4c-bare-ok. HELPER_REQUIRED_PATTERN — bare-arrow correct form matches ─
+  it("HELPER_REQUIRED_PATTERN matches the correct filter form with a bare (non-parenthesised) callback parameter", () => {
+    // If HELPER_REQUIRED_PATTERN were tightened to require parens around the
+    // callback parameter (e.g. \(\w+\) instead of \(?\w+\)?), it would silently
+    // stop recognising bare-arrow correct forms such as `e.hits.filter(t => t > c)`.
+    // This test pins the bare-arrow correct form so that such a tightening is
+    // caught at the export-level unit test before it reaches the full-body logic.
+    expect(HELPER_REQUIRED_PATTERN.test("e.hits.filter(t => t > c)")).toBe(true);
+  });
+
+  // ── 4c-bare-neg. HELPER_REQUIRED_PATTERN — bare-arrow relaxed form not matched
+  it("HELPER_REQUIRED_PATTERN does NOT match the relaxed filter form with a bare (non-parenthesised) callback parameter", () => {
+    // The bare-arrow relaxed form (>=) must never be accepted as correct.
+    expect(HELPER_REQUIRED_PATTERN.test("e.hits.filter(t => t >= c)")).toBe(false);
   });
 
   // ── 4o. Helper body: filter arrow split across lines (correct form) → ok:true
