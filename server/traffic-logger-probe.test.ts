@@ -12436,6 +12436,67 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       dateNowSpy.mockRestore();
     }
   });
+
+  it("(B41f) initProbeCounters: allHits buffer is independent between two distinct UA keys in the same map", async () => {
+    // Regression guard for the same shared-buffer bug as B41c, but for the
+    // intra-map case: two distinct UA keys (both field_type="ua") whose
+    // allHits arrays could be aliased if the buffer were declared outside
+    // the inner per-row loop.
+    //
+    // Setup: two distinct UA keys — KEY_X and KEY_Y — each with two duplicate
+    // DB rows carrying different hit timestamps.  After initProbeCounters we
+    // push a sentinel onto KEY_X's merged hits array and assert KEY_Y's hits
+    // array is completely unaffected and has the correct length.
+    const now   = Date.now();
+    const hitX0 = now - 1_000; // KEY_X first row timestamp
+    const hitX1 = now - 2_000; // KEY_X second row timestamp
+    const hitY0 = now - 3_000; // KEY_Y first row timestamp
+    const hitY1 = now - 4_000; // KEY_Y second row timestamp
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+    const { _uaProbes } = mod as any;
+
+    const KEY_X = "SameMapBufferTestUA-X/1.0";
+    const KEY_Y = "SameMapBufferTestUA-Y/1.0";
+
+    // Two duplicate UA rows for KEY_X.
+    const rowX0 = { fieldType: "ua", key: KEY_X, hits: [hitX0], lastAlerted: 0 };
+    const rowX1 = { fieldType: "ua", key: KEY_X, hits: [hitX1], lastAlerted: 0 };
+    // Two duplicate UA rows for KEY_Y.
+    const rowY0 = { fieldType: "ua", key: KEY_Y, hits: [hitY0], lastAlerted: 0 };
+    const rowY1 = { fieldType: "ua", key: KEY_Y, hits: [hitY1], lastAlerted: 0 };
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue([rowX0, rowX1, rowY0, rowY1]),
+    });
+
+    await mod.initProbeCounters();
+
+    // Both UA keys must have been hydrated with exactly 2 hits each.
+    const entryX = _uaProbes.get(KEY_X);
+    const entryY = _uaProbes.get(KEY_Y);
+    expect(entryX).toBeDefined();
+    expect(entryY).toBeDefined();
+    expect(entryX!.hits).toHaveLength(2);
+    expect(entryY!.hits).toHaveLength(2);
+
+    // ── Intra-map reference-independence assertion ─────────────────────────
+    // Push a sentinel onto KEY_X's hits array.  If allHits was reused across
+    // groups in the same map, the sentinel would silently appear in KEY_Y's
+    // hits array too, and KEY_Y would wrongly report 3 hits.
+    const SENTINEL = 777_777_777_777;
+    entryX!.hits.push(SENTINEL);
+
+    // KEY_X should now have 3 elements (2 original + sentinel).
+    expect(entryX!.hits).toHaveLength(3);
+    expect(entryX!.hits).toContain(SENTINEL);
+
+    // KEY_Y must be completely unaffected — still exactly 2 hits, no sentinel.
+    expect(entryY!.hits).toHaveLength(2);
+    expect(entryY!.hits).not.toContain(SENTINEL);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
