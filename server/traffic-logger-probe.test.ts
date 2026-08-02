@@ -6858,3 +6858,101 @@ describe("cross-map independence — same string in both _refererProbes and _uaP
     expect(mockSendProbeAlert.mock.calls.length).toBeGreaterThanOrEqual(1);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Task 422 — both probe branches set lastAlerted in the same recordProbe path
+//
+// A future refactor might extract recordProbe into a single shared helper and
+// accidentally omit the `entry.lastAlerted = now` assignment, breaking both
+// the referer branch and the UA branch simultaneously.  Two separate per-branch
+// tests (Tasks 413, 415) would still catch a per-branch regression, but would
+// NOT catch a single edit that removes the assignment from a shared helper used
+// by both branches.
+//
+// This integration-level test exercises both maps in one it() block:
+//   1. Seeds _refererProbes and _uaProbes each to exactly threshold.
+//   2. Triggers one alert on each map.
+//   3. Asserts that both entries carry a fresh lastAlerted (>= beforeTs).
+//   4. Confirms sendProbeAlert was called exactly twice — once per map.
+//
+// If the shared helper loses the assignment, both lastAlerted values stay at 0
+// and the call count drops to 0 (cooldown never activates → subsequent hits
+// keep alerting, but lastAlerted never advances), making the regression
+// immediately visible.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("lastAlerted is set on both referer and UA branches in a single recordProbe path", () => {
+  it("fires one alert per map and both entries have lastAlerted >= beforeTs", async () => {
+    // threshold=2 → alert fires when hits.length exceeds 2 (i.e. on hit 3).
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _uaProbes, _recordProbe } = mod as any;
+
+    // Ensure the DB-init promise has resolved so recordProbe runs synchronously.
+    await mod.initProbeCounters();
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const now       = Date.now();
+    const cutoff    = now - WINDOW_MS;
+
+    const refKey = "https://task422-regression-scraper.example/probe";
+    const uaKey  = "task422-regression-bot/1.0";
+
+    // ── Seed both maps to exactly threshold (2) in-window hits ───────────────
+    // The next recordProbe call on each will push hits.length to 3 > threshold
+    // and trigger the alert (lastAlerted === 0 → cooldown has not started yet).
+    _refererProbes.set(refKey, {
+      hits:        [cutoff + 1000, cutoff + 2000],
+      lastAlerted: 0,
+    });
+    _uaProbes.set(uaKey, {
+      hits:        [cutoff + 1000, cutoff + 2000],
+      lastAlerted: 0,
+    });
+
+    // Capture a lower-bound timestamp before either triggering call.
+    const beforeTs = Date.now();
+
+    // ── Trigger one alert on the referer map ─────────────────────────────────
+    _recordProbe(_refererProbes, refKey, "referer", Date.now());
+
+    // ── (a-referer) lastAlerted must be set synchronously — no flush needed ──
+    // If the assignment was moved into .then() or removed entirely, this will
+    // still be 0, failing the >=beforeTs check.
+    const refEntry = _refererProbes.get(refKey)!;
+    expect(refEntry.lastAlerted).toBeGreaterThanOrEqual(beforeTs);
+
+    // Flush the fire-and-forget import("./telegram-bot").then(...) for the
+    // referer call.  Two setImmediate rounds: one for the dynamic import
+    // Promise to resolve, one for the .then() callback to run.
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+
+    // ── Trigger one alert on the UA map ──────────────────────────────────────
+    _recordProbe(_uaProbes, uaKey, "ua", Date.now());
+
+    // ── (a-ua) lastAlerted must be set synchronously on the UA branch too ────
+    const uaEntry = _uaProbes.get(uaKey)!;
+    expect(uaEntry.lastAlerted).toBeGreaterThanOrEqual(beforeTs);
+
+    // Flush the fire-and-forget import("./telegram-bot").then(...) for the
+    // UA call.
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+
+    // ── (b) sendProbeAlert must have been called exactly twice ────────────────
+    // One call for the referer branch, one for the UA branch.
+    // If lastAlerted is missing from the shared helper, the cooldown never
+    // engages and subsequent hits keep alerting — the count would diverge.
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(2);
+
+    const calls = mockSendProbeAlert.mock.calls as [string, string, number][];
+    const fields = calls.map(([f]) => f).sort();
+    expect(fields).toEqual(["referer", "ua"]);
+
+    const values = calls.map(([, v]) => v);
+    expect(values).toContain(refKey);
+    expect(values).toContain(uaKey);
+  });
+});
