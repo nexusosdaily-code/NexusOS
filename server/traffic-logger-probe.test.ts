@@ -12280,6 +12280,64 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       dateNowSpy.mockRestore();
     }
   });
+
+  it("(B5) initProbeCounters: merged hits for each group contain exactly the right timestamps — no cross-group timestamp contamination", async () => {
+    // Check that the merged hits array for each (fieldType, key) group contains
+    // exactly the timestamps that belong to its own rows, and none from the
+    // other group's rows.  A subtle aliasing bug could produce correct array
+    // *lengths* while still mixing timestamps between groups; this test would
+    // catch that even when size-only assertions (like B4) still pass.
+    //
+    // Group A (ua, "KeyA") carries timestamps all in the 10xx band (1000–1099).
+    // Group B (referer, "KeyB") carries timestamps all in the 20xx band (2000–2099).
+    //
+    // Date.now() is frozen at 86_400_500 so that cutoff = 500, which is below
+    // all seeded timestamps — both bands survive the window filter unchanged.
+    const FROZEN_NOW = 86_400_500; // cutoff = FROZEN_NOW − WINDOW_MS = 500
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(FROZEN_NOW);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+
+      const GROUP_A_HITS = [1000, 1010, 1020]; // all in 10xx band
+      const GROUP_B_HITS = [2000, 2010, 2020]; // all in 20xx band
+
+      const fakeRows = [
+        { fieldType: "ua",      key: "KeyA", hits: GROUP_A_HITS, lastAlerted: 0 },
+        { fieldType: "referer", key: "KeyB", hits: GROUP_B_HITS, lastAlerted: 0 },
+      ];
+
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({
+        from: vi.fn().mockResolvedValue(fakeRows),
+      });
+
+      await mod.initProbeCounters();
+
+      const entryA = mod._uaProbes.get("KeyA");
+      const entryB = mod._refererProbes.get("KeyB");
+
+      expect(entryA).toBeDefined();
+      expect(entryB).toBeDefined();
+
+      // Group A must contain exactly the 10xx timestamps — no 20xx values.
+      expect(entryA!.hits).toHaveLength(GROUP_A_HITS.length);
+      expect(entryA!.hits).toEqual(expect.arrayContaining(GROUP_A_HITS));
+      for (const ts of GROUP_B_HITS) {
+        expect(entryA!.hits).not.toContain(ts);
+      }
+
+      // Group B must contain exactly the 20xx timestamps — no 10xx values.
+      expect(entryB!.hits).toHaveLength(GROUP_B_HITS.length);
+      expect(entryB!.hits).toEqual(expect.arrayContaining(GROUP_B_HITS));
+      for (const ts of GROUP_A_HITS) {
+        expect(entryB!.hits).not.toContain(ts);
+      }
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
