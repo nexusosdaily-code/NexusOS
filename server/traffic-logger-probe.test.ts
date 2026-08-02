@@ -1532,6 +1532,42 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(refCall[1]).toBe(REF_KEY2_LOWER);
   });
 
+  it("alert fires: lastAlerted is set to the exact 'now' timestamp, not 0 or any other value", async () => {
+    // Regression guard: a future refactor that writes `entry.lastAlerted = 0`
+    // (or any constant) instead of `entry.lastAlerted = now` would cause every
+    // subsequent hit to re-alert (because 0 is always outside the cooldown
+    // window), flooding Telegram.  The existing tests only assert
+    // lastAlerted > 0; this test pins the value to the exact timestamp passed
+    // into _recordProbe so that any incorrect assignment fails immediately.
+
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _refererProbes, _recordProbe } = mod as any;
+
+    await mod.initProbeCounters();
+
+    const EXACT_NOW   = 1_700_000_000_000; // fixed sentinel — not Date.now()
+    const UA_KEY      = "ExactTimestampUA/1.0";
+    const REF_KEY     = "https://exact-timestamp-scraper.example/scan";
+
+    // Seed both maps to exactly threshold (2 hits) so the very next hit
+    // (pushed inside _recordProbe) pushes count to 3 > 2 and triggers the alert.
+    _uaProbes.set(UA_KEY,  { hits: [EXACT_NOW - 2000, EXACT_NOW - 1000], lastAlerted: 0 });
+    _refererProbes.set(REF_KEY, { hits: [EXACT_NOW - 2000, EXACT_NOW - 1000], lastAlerted: 0 });
+
+    // Fire both probes with the known sentinel timestamp.
+    _recordProbe(_refererProbes, REF_KEY, "referer", EXACT_NOW);
+    _recordProbe(_uaProbes,      UA_KEY,  "ua",      EXACT_NOW);
+
+    await flushMicrotasks();
+
+    // lastAlerted must equal EXACT_NOW — not 0, not Date.now(), not any other
+    // constant.  A regression to `entry.lastAlerted = 0` would fail here
+    // because 0 !== 1_700_000_000_000.
+    expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(EXACT_NOW);
+    expect(_uaProbes.get(UA_KEY).lastAlerted).toBe(EXACT_NOW);
+  });
+
   it("UA cooldown active + referer at threshold: only the referer alert fires, UA alert is suppressed", async () => {
     // Regression guard: a future change that adds an early-return when the UA
     // probe is in cooldown (e.g. `if (uaInCooldown) return`) — or that gates
