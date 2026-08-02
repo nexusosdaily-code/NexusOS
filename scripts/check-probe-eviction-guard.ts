@@ -163,9 +163,18 @@ export const HELPER_DELEGATION_PATTERN =
  *
  * This intentionally accepts any single-word identifier so that renaming
  * parameters does not defeat the check.
+ *
+ * NOTE: the while-loop branch includes a negative lookahead `(?!\s*;)` after
+ * the cutoff operand.  In a for-loop condition such as
+ *   for (; i < e.hits.length && e.hits[i] <= c; i++) {}
+ * the cutoff token `c` is immediately followed by `;` (the for-loop separator).
+ * The lookahead rejects that form so that a for-loop whose condition happens to
+ * contain `e.hits[i] <= c` — but whose body never mutates `e.hits` — is not
+ * falsely accepted.  In the canonical while-loop form the token after the
+ * cutoff is `)`, not `;`, so the lookahead does not affect correct code.
  */
 export const HELPER_REQUIRED_PATTERN =
-  /\w+\.hits\[\w+\]\s*<=\s*\w+|\w+\.hits\.filter\(\s*\(?\w+\)?\s*=>\s*\w+\s*>\s*\w+\s*\)/;
+  /\w+\.hits\[\w+\]\s*<=\s*\w+(?!\s*;)|\w+\.hits\.filter\(\s*\(?\w+\)?\s*=>\s*\w+\s*>\s*\w+\s*\)/;
 
 /**
  * Matches RELAXED (wrong) eviction expressions inside a helper body,
@@ -282,7 +291,11 @@ function buildHelperScanPatterns(
   // consumes the newline + indentation between the two tokens.
   return {
     required: new RegExp(
-      `\\b${ep}\\b\\.hits\\[\\w+\\]\\s*<=\\s*\\b${cp}\\b` +
+      // The negative lookahead (?!\\s*;) rejects the for-loop-condition form
+      // `e.hits[i] <= c;` (cutoff followed by the for-loop separator `;`).
+      // In the canonical while-loop form the token after the cutoff is `)`,
+      // not `;`, so the lookahead does not affect correct code.
+      `\\b${ep}\\b\\.hits\\[\\w+\\]\\s*<=\\s*\\b${cp}\\b(?!\\s*;)` +
         `|\\b${ep}\\b\\.hits\\s*\\.filter\\(\\s*\\(?\\w+\\)?\\s*=>\\s*\\w+\\s*>\\s*\\b${cp}\\b\\s*\\)`,
     ),
     forbidden: new RegExp(

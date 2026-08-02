@@ -1376,6 +1376,48 @@ describe("helper-extraction detection", () => {
     expect(result.reason).toContain("evictOldHits");
     expect(result.reason).toMatch(/no correct eviction comparison|update REQUIRED_PATTERN/i);
   });
+
+  // ── 4aa. Helper body: for-loop condition contains e.hits[i] <= c but body never mutates hits → ok:false
+  it("returns ok:false when the helper body has a for-loop with e.hits[i] <= c in the condition but never mutates the hits array", async () => {
+    // A for-loop written as:
+    //   for (; i < e.hits.length && e.hits[i] <= c; i++) {}
+    // contains the substring `e.hits[i] <= c`, which superficially matches the
+    // while-loop branch of HELPER_REQUIRED_PATTERN.  However, the loop body is
+    // empty — `e.hits` is never sliced or reassigned — so no eviction actually
+    // occurs.
+    //
+    // The culprit is that HELPER_REQUIRED_PATTERN previously matched
+    // `\w+\.hits\[\w+\]\s*<=\s*\w+` without regard to syntactic context.  In
+    // the for-loop the cutoff operand is immediately followed by `;` (the
+    // for-loop separator), whereas in the canonical while-loop form it is
+    // followed by `)`.  HELPER_REQUIRED_PATTERN now includes a negative
+    // lookahead `(?!\s*;)` after the cutoff token, which rejects the for-loop-
+    // condition form and ensures that the presence of the comparison substring
+    // alone is insufficient to pass the guard.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  let i = 0;`,
+        `  for (; i < e.hits.length && e.hits[i] <= c; i++) {}`,
+        `  // hits array never reassigned — eviction is absent`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    // Must cite the helper and direct the developer to update REQUIRED_PATTERN.
+    expect(result.reason).toMatch(/extracted into helper/i);
+    expect(result.reason).toContain("evictStaleHits");
+    expect(result.reason).toMatch(/update REQUIRED_PATTERN/i);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
