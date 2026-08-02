@@ -69,6 +69,29 @@ describe("package.json pipeline guards", () => {
     expect(script).toContain("tsx");
     expect(script).toContain("check-probe-eviction-guard-test-file-meta");
   });
+
+  it('"check:probe-eviction-guard-test-file-meta" tsx argument points to a file that exists on disk', () => {
+    const pkg = JSON.parse(
+      readFileSync(path.resolve("package.json"), "utf-8"),
+    ) as { scripts?: Record<string, string> };
+
+    const script: string =
+      pkg.scripts?.["check:probe-eviction-guard-test-file-meta"] ?? "";
+
+    // Extract the filename token that follows "tsx"
+    const tokens = script.trim().split(/\s+/);
+    const tsxIndex = tokens.indexOf("tsx");
+    expect(tsxIndex).toBeGreaterThanOrEqual(0);
+    const filePath = tokens[tsxIndex + 1];
+    expect(filePath).toBeTruthy();
+
+    expect(
+      () => readFileSync(path.resolve(filePath), "utf-8"),
+      `Expected "${filePath}" to exist on disk. ` +
+        `If the meta-guard script was renamed, update the ` +
+        `"check:probe-eviction-guard-test-file-meta" entry in package.json to match.`,
+    ).not.toThrow();
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
