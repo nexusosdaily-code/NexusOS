@@ -8053,6 +8053,115 @@ describe("middleware-level: referer probe not skipped across multiple requests w
 // assertions fail simultaneously.
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Task 480 — natural cooldown expiry: each map re-alerts exactly once
+//
+// After both maps fire their initial alert at BASE_NOW their lastAlerted is
+// set to BASE_NOW.  COOLDOWN_MS must elapse independently per map before the
+// next alert is allowed.
+//
+// Regression the test guards against:
+//   • A shared counter or flag that prevents either map from re-alerting
+//     even after its own cooldown has elapsed (zero-alert regression).
+//   • A shared reset that lets BOTH maps re-alert from a single expiry
+//     event (double-alert regression).
+//   • A shared "now" written to both maps simultaneously, which would make
+//     the two re-alert timestamps identical (they must differ because they
+//     are fired at distinct synthetic timestamps).
+//
+// Strategy:
+//   Phase 0 — seed both maps to threshold, fire initial combined alert.
+//   Phase 1 — advance "now" by COOLDOWN_MS+1 for the REFERER map only;
+//             call _recordProbe for referer → exactly one "referer" alert.
+//   Phase 2 — advance "now" by COOLDOWN_MS+2 for the UA map (different
+//             value); call _recordProbe for ua → exactly one "ua" alert.
+//   Phase 3 — assert the two re-alert timestamps are distinct.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("natural cooldown expiry — each map re-alerts exactly once after its own cooldown elapses", () => {
+  it("referer and UA each re-alert exactly once when their respective cooldowns expire, with distinct timestamps", async () => {
+    // threshold=2 → alert fires when hits.length > 2 (i.e. on the 3rd hit).
+    // cooldown=1 h → re-alert requires COOLDOWN_MS = 3_600_000 ms to have elapsed.
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000; // 3_600_000
+
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _refererProbes, _recordProbe } = mod as any;
+    await mod.initProbeCounters();
+
+    const BASE_NOW = 1_700_000_000_000; // fixed sentinel — not Date.now()
+
+    const UA_KEY  = "ReAlertNaturalUA/1.0";
+    const REF_KEY = "https://re-alert-natural-scraper.example/scan";
+
+    // ── Phase 0: seed both maps to exactly threshold, then fire initial alert ─
+    // 2 existing hits per map = threshold.  One _recordProbe call adds a 3rd
+    // (3 > 2) and triggers the initial alert for each map.
+    _uaProbes.set(UA_KEY,   { hits: [BASE_NOW - 2000, BASE_NOW - 1000], lastAlerted: 0 });
+    _refererProbes.set(REF_KEY, { hits: [BASE_NOW - 2000, BASE_NOW - 1000], lastAlerted: 0 });
+
+    // Fire referer probe first, flush so its import chain resolves before the
+    // UA probe's concurrent import might race the mock cache.
+    _recordProbe(_refererProbes, REF_KEY, "referer", BASE_NOW);
+    await flushMicrotasks();
+    _recordProbe(_uaProbes,      UA_KEY,  "ua",      BASE_NOW);
+    await flushMicrotasks();
+
+    // Both initial alerts must have fired and lastAlerted stamped to BASE_NOW.
+    expect(mockSendProbeAlert.mock.calls.length).toBe(2);
+    expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(BASE_NOW);
+    expect(_uaProbes.get(UA_KEY).lastAlerted).toBe(BASE_NOW);
+
+    vi.clearAllMocks();
+
+    // ── Phase 1: referer cooldown expires naturally; one hit → exactly 1 alert ─
+    // elapsed = COOLDOWN_MS + 1 ≥ COOLDOWN_MS → cooldown is over for referer.
+    const NOW_REF = BASE_NOW + COOLDOWN_MS + 1;
+    _recordProbe(_refererProbes, REF_KEY, "referer", NOW_REF);
+    await flushMicrotasks();
+
+    // Exactly one alert must have fired — and it must be for "referer".
+    // Zero alerts → cooldown erroneously suppressed the re-alert.
+    // Two+ alerts → double-fire regression.
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+    const [refField] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(refField).toBe("referer");
+
+    // lastAlerted must be updated to the new "now" — not left at BASE_NOW.
+    expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(NOW_REF);
+
+    vi.clearAllMocks();
+
+    // ── Phase 2: UA cooldown also expires; one hit → exactly 1 alert ──────────
+    // Use NOW_UA = BASE_NOW + COOLDOWN_MS + 2 so the timestamp is distinct from
+    // NOW_REF.  A regression that shares one "now" across both maps would make
+    // both re-alert timestamps identical, caught by Phase 3.
+    const NOW_UA = BASE_NOW + COOLDOWN_MS + 2;
+    _recordProbe(_uaProbes, UA_KEY, "ua", NOW_UA);
+    await flushMicrotasks();
+
+    // Exactly one alert — for "ua".
+    expect(mockSendProbeAlert.mock.calls.length).toBe(1);
+    const [uaField] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(uaField).toBe("ua");
+
+    // lastAlerted must be updated to NOW_UA.
+    expect(_uaProbes.get(UA_KEY).lastAlerted).toBe(NOW_UA);
+
+    // ── Phase 3: the two re-alert timestamps must be distinct ─────────────────
+    // A shared "now" variable written to both maps simultaneously would produce
+    // equal values; the 1 ms difference proves each map used its own timestamp.
+    expect(_refererProbes.get(REF_KEY).lastAlerted).not.toBe(
+      _uaProbes.get(UA_KEY).lastAlerted,
+    );
+    expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(NOW_REF);
+    expect(_uaProbes.get(UA_KEY).lastAlerted).toBe(NOW_UA);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+
 describe("middleware-level: referer key lands in _refererProbes, UA key lands in _uaProbes (swap guard)", () => {
   it("distinct referer and UA each end up in their own map — not in the other", async () => {
     // High threshold so no alert fires; the test focuses purely on which map
