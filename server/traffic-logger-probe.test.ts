@@ -15081,6 +15081,69 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     }
   });
 
+  it("(B41j) dedup merge picks the highest lastAlerted when three referer rows share the same key and the highest value sits in the middle row", async () => {
+    // B41g and B41h each seed two rows and place the higher lastAlerted at
+    // index 1 or index 0 respectively.  A regression that uses first-wins
+    //   mergedLastAlerted = groupRows[0].lastAlerted
+    // or last-wins
+    //   mergedLastAlerted = groupRows[groupRows.length - 1].lastAlerted
+    // could still pass both tests if the highest value happens to sit at the
+    // correct index for each two-row arrangement.  This three-row seed (low /
+    // HIGH / low) catches both strategies independently: the highest value is
+    // never at index 0 or at the last index, so neither first-wins nor
+    // last-wins can return it.
+    //
+    // T0 = Date.now()+150h — monotonically above B41i (148h) to avoid any
+    // in-memory state left over from prior tests in the same describe block.
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const initNow   = Date.now() + 150 * 60 * 60 * 1000;
+    // All three hits are inside the window so the entry survives the cutoff filter.
+    const hit0 = initNow - Math.floor(WINDOW_MS / 5);
+    const hit1 = initNow - Math.floor(WINDOW_MS / 6);
+    const hit2 = initNow - Math.floor(WINDOW_MS / 7);
+
+    // Arrange: low / HIGH / low — the highest lastAlerted is in the middle row.
+    const lowLastAlerted0  = initNow - 60 * 60 * 1000; // 60 min ago
+    const highLastAlerted  = initNow -  5 * 60 * 1000; //  5 min ago — must win
+    const lowLastAlerted2  = initNow - 45 * 60 * 1000; // 45 min ago
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _refererProbes } = mod as any;
+
+      const KEY  = "https://b41j-last-alerted-middle-referer.example/scan";
+      const row0 = { fieldType: "referer", key: KEY, hits: [hit0], lastAlerted: lowLastAlerted0 };
+      const row1 = { fieldType: "referer", key: KEY, hits: [hit1], lastAlerted: highLastAlerted };
+      const row2 = { fieldType: "referer", key: KEY, hits: [hit2], lastAlerted: lowLastAlerted2 };
+
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({
+        from: vi.fn().mockResolvedValue([row0, row1, row2]),
+      });
+
+      await mod.initProbeCounters();
+
+      const entry = _refererProbes.get(KEY);
+      expect(entry).toBeDefined();
+
+      // The merged lastAlerted must be the highest value across all three rows.
+      // A first-wins strategy would return lowLastAlerted0 (row 0).
+      // A last-wins strategy would return lowLastAlerted2 (row 2).
+      // Only Math.max over all rows returns highLastAlerted (row 1).
+      expect(entry!.lastAlerted).toBe(highLastAlerted);
+
+      // The UA map must be untouched.
+      const { _uaProbes } = mod as any;
+      expect(_uaProbes.has(KEY)).toBe(false);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
   it("(B5) initProbeCounters: merged hits for each group contain exactly the right timestamps — no cross-group timestamp contamination", async () => {
     // Check that the merged hits array for each (fieldType, key) group contains
     // exactly the timestamps that belong to its own rows, and none from the
