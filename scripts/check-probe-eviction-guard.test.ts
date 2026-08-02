@@ -41,6 +41,11 @@
  *           negative lookahead `(?!\s*;)` rejects the form even though `<=` is
  *           correct, because `\s*` spans the newline and the cutoff token is
  *           then immediately followed by `;` (the for-loop separator).
+ *        z. Inline for-loop: relaxed `<` condition split across THREE lines
+ *           (`entry.hits[lo]\n  <\n  cutoff; lo++`) → ok:false with reason
+ *           matching /relaxed eviction comparison/i.  FORBIDDEN_PATTERN uses
+ *           \s* between every token; \s matches \n, so the full-source fallback
+ *           spans both newlines and catches the three-line form.
  *   4. Helper-extraction detection (fs mocked)
  *        a. HELPER_DELEGATION_PATTERN matches a delegating call of the form evict*(entry, cutoff)
  *        b. HELPER_REQUIRED_PATTERN matches correct while-loop comparison with arbitrary param names
@@ -787,6 +792,44 @@ describe("checkProbeEvictionGuard() unit logic", () => {
         `  const cutoff = now - WINDOW_MS;`,
         `  let lo = 0;`,
         `  for (; lo < entry.hits.length && entry.hits[lo] <`,
+        `    cutoff; lo++) {}`,
+        `  entry.hits = entry.hits.slice(lo);`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+  });
+
+  // ── 3z. Inline for-loop: relaxed < condition split across THREE lines → ok:false (relaxed) ─
+  it("returns ok:false (relaxed eviction comparison) when an inline for-loop splits 'entry.hits[lo]\\n  <\\n  cutoff;' across three lines", async () => {
+    // A formatter or aggressive line-wrapper could split the condition into
+    // three separate lines:
+    //
+    //   for (; lo < entry.hits.length && entry.hits[lo]
+    //     <
+    //     cutoff; lo++) {}
+    //
+    // No single line contains the full `entry.hits[lo] < cutoff` expression,
+    // so the per-line scan misses it.  However, FORBIDDEN_PATTERN uses \s*
+    // between every token and JavaScript's \s class includes \n, so the
+    // full-source fallback in checkProbeEvictionGuard() spans both newlines
+    // and matches the three-line form.
+    //
+    // The check must emit the "relaxed eviction comparison" message — not the
+    // generic "no correct eviction guard found" message — because the forbidden
+    // `<` comparator is present (just split across three lines).
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  let lo = 0;`,
+        `  for (; lo < entry.hits.length && entry.hits[lo]`,
+        `    <`,
         `    cutoff; lo++) {}`,
         `  entry.hits = entry.hits.slice(lo);`,
         `  entry.hits.push(now);`,
