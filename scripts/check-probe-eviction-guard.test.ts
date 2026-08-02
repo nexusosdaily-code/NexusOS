@@ -1135,6 +1135,15 @@ describe("helper-extraction detection", () => {
 //   5d — split filter + single-line while  → ok:true  (unchanged)
 //   5e — two-part split: `<=` ends line    → ok:true  (full-source \s* spans \n)
 //   5f — two-part split: `<=` starts line  → ok:true  (full-source \s* spans \n)
+//   5g — method-chain split: .filter() on its own line, correct form → ok:true
+//        An aggressive line-length formatter may produce:
+//          entry.hits = entry.hits
+//            .filter((t) => t > cutoff);
+//        REQUIRED_PATTERN now includes \s* between entry.hits and .filter so
+//        the full-source fallback pass recognises this layout.
+//   5h — method-chain split: .filter() on its own line, relaxed form → ok:false
+//        The same layout with >= cutoff must be caught by FORBIDDEN_PATTERN
+//        (which also has \s* before .filter).
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("multi-line source strings (formatter-split arrow)", () => {
@@ -1424,5 +1433,60 @@ describe("multi-line helper body (formatter-split condition inside extracted hel
     // The condition line contains the full required token sequence, so
     // REQUIRED_PATTERN matches on the per-line scan → ok:true.
     expect(result.ok).toBe(true);
+  });
+
+  // ── 5g. Method-chain split: .filter() on its own line, correct form → ok:true
+  it("returns ok:true when an aggressive formatter moves .filter() onto its own line after entry.hits (correct form)", async () => {
+    // An aggressive line-length formatter may rewrite:
+    //   entry.hits = entry.hits.filter((t) => t > cutoff);
+    // as a method-chain split where the call itself starts on a new line:
+    //   entry.hits = entry.hits
+    //     .filter((t) => t > cutoff);
+    //
+    // The per-line scan sees neither "entry.hits.filter" (it is split across
+    // two lines) nor a matching single line.  The full-source fallback pass
+    // applies REQUIRED_PATTERN to the joined source string, which now contains
+    // \s* between entry.hits and .filter, allowing \n + indentation to be
+    // consumed between the two tokens.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  entry.hits = entry.hits`,
+        `    .filter((t) => t > cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 5h. Method-chain split: .filter() on its own line, relaxed form → ok:false
+  it("returns ok:false with the relaxed-form error when .filter() is on its own line and uses >= cutoff", async () => {
+    // The same method-chain split layout with the relaxed comparator:
+    //   entry.hits = entry.hits
+    //     .filter((t) => t >= cutoff);
+    //
+    // FORBIDDEN_PATTERN also has \s* between entry.hits and .filter, so the
+    // full-source fallback pass recognises the relaxed form and emits the
+    // "relaxed eviction comparison" error rather than the generic failure.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  entry.hits = entry.hits`,
+        `    .filter((t) => t >= cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
   });
 });
