@@ -6956,3 +6956,71 @@ describe("lastAlerted is set on both referer and UA branches in a single recordP
     expect(values).toContain(uaKey);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Task 448 — middleware-level shared-value double-count guard
+//
+// A future refactor that collapses the two recordProbe() calls in the
+// res.on("finish") handler into one call — or accidentally passes the same
+// map for both invocations — would count the shared string twice against one
+// map and zero times against the other.  No existing test exercises this
+// through the full middleware path.
+//
+// This test fires a single HTTP request whose Referer and User-Agent headers
+// carry identical string values, then reads _refererProbes and _uaProbes
+// directly to confirm:
+//   • _refererProbes has exactly 1 hit for that key  (not 2, not 0)
+//   • _uaProbes      has exactly 1 hit for that key  (not 2, not 0)
+//
+// The threshold is set high (100) so no alert fires and the assertion stays
+// focused purely on per-map hit counting.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("middleware-level: shared header value recorded once per map, not double-counted", () => {
+  it("referer == ua == same string → each map gets exactly 1 hit after one request", async () => {
+    // Use a high threshold so no alert fires and the test stays focused on
+    // counting rather than alert behaviour.
+    process.env.PROBE_ALERT_THRESHOLD = "100";
+
+    const mod = await import("./traffic-logger");
+    const { trafficLoggerMiddleware, _refererProbes, _uaProbes } = mod as any;
+
+    // Await startup hydration so the maps are ready before we record.
+    await mod.initProbeCounters();
+
+    // A plain non-URL string that:
+    //   • does not match any BOT_PATTERNS entry (so the UA probe fires)
+    //   • is not a valid URL (isOwnOriginReferer returns false, so the
+    //     referer probe fires)
+    //   • is not in any constitutional block list
+    //   • is already lowercase (so the lowercased refKey === uaKey, making
+    //     any accidental same-map double-count immediately visible)
+    const sharedValue = "same-shared-string/1.0";
+
+    const req = makeReq(sharedValue, sharedValue);
+    const res = makeRes();
+
+    trafficLoggerMiddleware(req, res as any, () => {});
+    res.finish();
+
+    // Flush the _initPromise.then(…) microtask chain that contains the
+    // recordProbe calls, plus one extra round to be safe.
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+
+    const refEntry = _refererProbes.get(sharedValue);
+    const uaEntry  = _uaProbes.get(sharedValue);
+
+    // Both maps must have an entry for the shared key.
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // Each map must record exactly 1 hit — not 2 (double-count) and not 0
+    // (missed).  A collapsed-call or wrong-map-argument regression causes
+    // one map to show 2 and the other to show 0 (or undefined), so this
+    // assertion catches both failure modes simultaneously.
+    expect(refEntry.hits).toHaveLength(1);
+    expect(uaEntry.hits).toHaveLength(1);
+  });
+});
