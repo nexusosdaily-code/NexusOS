@@ -11435,3 +11435,97 @@ describe("ProbeEntry hits-array aliasing guard (restart path, identical key stri
     expect(mod._uaProbes.get(SHARED_KEY)!.hits).not.toContain(sentinel);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Object-aliasing guard — same-string edge case (restart path, active cooldown)
+//
+// Task 572: A tighter variant of the task-550 guard.  When both a "referer"
+// DB row and a "ua" DB row share the same lowercase key AND both have an
+// active cooldown (lastAlerted > 0), a future "same-key + cooldown present →
+// reuse the existing ProbeEntry object" shortcut would alias the two entries.
+// Because the aliasing path now requires comparing lastAlerted (non-zero),
+// the zero-lastAlerted tests above would not catch it.  This suite seeds the
+// DB mock with lastAlerted set to a recent timestamp so the aliasing shortcut
+// would be reachable.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("ProbeEntry object-aliasing guard (restart path, identical key string, active cooldown): entries are independent objects when both rows share the same key AND have an active cooldown", () => {
+  // Both rows intentionally share the same key string AND carry a non-zero
+  // lastAlerted so that any "same key + active cooldown → reuse entry"
+  // shortcut in initProbeCounters would alias the two ProbeEntry objects.
+  const SHARED_KEY = "same-string-cooldown-restart-aliasing-guard-probe-v1";
+
+  it("_refererProbes.get(key) and _uaProbes.get(key) are not the same object reference after initProbeCounters when both rows have an active cooldown", async () => {
+    const now          = Date.now();
+    const hitTs        = now - 1_000;                   // 1 s ago — within window
+    const lastAlerted  = now - 5 * 60_000;              // 5 min ago — cooldown active
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    // Start from a clean slate.
+    mod._refererProbes.delete(SHARED_KEY);
+    mod._uaProbes.delete(SHARED_KEY);
+
+    // Both rows share the same key string AND have an active cooldown.
+    const fakeRows = [
+      { fieldType: "referer", key: SHARED_KEY, hits: [hitTs], lastAlerted },
+      { fieldType: "ua",      key: SHARED_KEY, hits: [hitTs], lastAlerted },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    // Simulate a restart.
+    await mod.initProbeCounters();
+
+    const refEntry = mod._refererProbes.get(SHARED_KEY);
+    const uaEntry  = mod._uaProbes.get(SHARED_KEY);
+
+    // Both entries must have been hydrated from their respective DB rows.
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // Even though both rows share the same key string and both have a
+    // non-zero lastAlerted, initProbeCounters must create separate
+    // ProbeEntry objects.  A future shortcut triggered by the active-cooldown
+    // comparison would be caught here.
+    expect(refEntry).not.toBe(uaEntry);
+  });
+
+  it("mutating lastAlerted on the referer entry does not affect the UA entry when both rows share the same key and have an active cooldown", async () => {
+    const now          = Date.now();
+    const hitTs        = now - 2_000;
+    const lastAlerted  = now - 10 * 60_000;             // 10 min ago — cooldown active
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._refererProbes.delete(SHARED_KEY);
+    mod._uaProbes.delete(SHARED_KEY);
+
+    const fakeRows = [
+      { fieldType: "referer", key: SHARED_KEY, hits: [hitTs], lastAlerted },
+      { fieldType: "ua",      key: SHARED_KEY, hits: [hitTs], lastAlerted },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const refEntry = mod._refererProbes.get(SHARED_KEY)!;
+    const uaEntry  = mod._uaProbes.get(SHARED_KEY)!;
+
+    expect(refEntry).toBeDefined();
+    expect(uaEntry).toBeDefined();
+
+    // Record the UA entry's lastAlerted before we touch the referer entry.
+    const uaLastAlertedBefore = uaEntry.lastAlerted;
+
+    // Overwrite lastAlerted on the referer entry directly.
+    refEntry.lastAlerted = uaLastAlertedBefore + 99_999;
+
+    // If the active-cooldown path aliased both entries to the same object,
+    // uaEntry.lastAlerted would have changed too.  It must remain untouched.
+    expect(mod._uaProbes.get(SHARED_KEY)!.lastAlerted).toBe(uaLastAlertedBefore);
+  });
+});
