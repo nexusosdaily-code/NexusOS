@@ -18400,3 +18400,91 @@ describe("ProbeEntry hits-array aliasing guard (restart path, two referer rows w
     expect(row1Hits).not.toContain(sentinel);
   });
 });
+
+// Hits-array aliasing guard — two UA rows sharing the same key (restart path)
+//
+// The symmetric counterpart to the two-referer-rows guard above.  When
+// initProbeCounters merges duplicate DB rows for the same (fieldType, key)
+// group it builds an allHits buffer, filters it into activeHits, and stores
+// the result in _uaProbes.  A future refactor could store the allHits buffer
+// directly (or alias activeHits back to it) so that mutating the stored entry
+// also mutates the source row's hits array.  These tests catch that regression
+// specifically for two "ua" rows.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("ProbeEntry hits-array aliasing guard (restart path, two UA rows with the same key): merged hits array is a fresh copy independent of both source rows", () => {
+  const SHARED_KEY = "two-ua-rows-hits-array-aliasing-guard-probe-v1";
+
+  it("merged UA entry's hits array is not the same reference as either source row's hits array", async () => {
+    const now  = Date.now();
+    const hit0 = now - 1_000; // 1 s ago — within window
+    const hit1 = now - 2_000; // 2 s ago — within window
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._uaProbes.delete(SHARED_KEY);
+    mod._refererProbes.delete(SHARED_KEY);
+
+    // Two "ua" rows with the same key — simulates duplicate DB rows.
+    const row0Hits = [hit0];
+    const row1Hits = [hit1];
+    const fakeRows = [
+      { fieldType: "ua", key: SHARED_KEY, hits: row0Hits, lastAlerted: 0 },
+      { fieldType: "ua", key: SHARED_KEY, hits: row1Hits, lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const merged = mod._uaProbes.get(SHARED_KEY);
+    expect(merged).toBeDefined();
+
+    // The merged hits array must not be the same reference as either source row.
+    // A future shortcut that passes allHits (or row0Hits / row1Hits) directly
+    // into the entry instead of producing a filtered copy would fail here.
+    expect(merged!.hits).not.toBe(row0Hits);
+    expect(merged!.hits).not.toBe(row1Hits);
+  });
+
+  it("pushing a sentinel onto the merged UA entry's hits does not change either source row's hits array", async () => {
+    const now  = Date.now();
+    const hit0 = now - 3_000;
+    const hit1 = now - 4_000;
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._uaProbes.delete(SHARED_KEY);
+    mod._refererProbes.delete(SHARED_KEY);
+
+    const row0Hits = [hit0];
+    const row1Hits = [hit1];
+    const fakeRows = [
+      { fieldType: "ua", key: SHARED_KEY, hits: row0Hits, lastAlerted: 0 },
+      { fieldType: "ua", key: SHARED_KEY, hits: row1Hits, lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const merged = mod._uaProbes.get(SHARED_KEY)!;
+    expect(merged).toBeDefined();
+
+    const row0LenBefore = row0Hits.length;
+    const row1LenBefore = row1Hits.length;
+
+    // Mutate the merged entry.
+    const sentinel = now + 99_999_999;
+    merged.hits.push(sentinel);
+
+    // Neither source row's hits array should have grown — they must be
+    // independent of the merged entry's hits array.
+    expect(row0Hits.length).toBe(row0LenBefore);
+    expect(row1Hits.length).toBe(row1LenBefore);
+    expect(row0Hits).not.toContain(sentinel);
+    expect(row1Hits).not.toContain(sentinel);
+  });
+});
