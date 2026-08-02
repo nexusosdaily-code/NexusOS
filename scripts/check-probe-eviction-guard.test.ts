@@ -66,6 +66,10 @@
  *        xp-callback-required-neg. HELPER_REQUIRED_PATTERN does NOT match relaxed parenthesised filter form with a non-standard callback name ((x) => x >= c)
  *        xp-callback-forbidden-ok.  HELPER_FORBIDDEN_PATTERN matches relaxed parenthesised filter form with a non-standard callback name ((x) => x >= c)
  *        xp-callback-forbidden-neg. HELPER_FORBIDDEN_PATTERN does NOT match correct parenthesised filter form with a non-standard callback name ((x) => x > c)
+ *        xp-callback-integration-ok. checkProbeEvictionGuard returns ok:true for helper body using (x) => x > c
+ *           (parenthesised non-standard callback, correct comparison — full end-to-end integration)
+ *        xp-callback-integration-fail. checkProbeEvictionGuard returns ok:false (relaxed) for helper body using (x) => x >= c
+ *           (parenthesised non-standard callback, relaxed comparison — reason must match /relaxed eviction comparison/i)
  *        o. Helper body with filter arrow split across lines (correct form) → ok:true
  *        p. Helper body with filter arrow split across lines (relaxed form) → ok:false
  *        v. Helper body splits 'e.hits\n  .filter((t) => t > c)' across lines → ok:true
@@ -1104,6 +1108,61 @@ describe("helper-extraction detection", () => {
     // expression, regardless of whether the parameter is parenthesised or
     // what identifier is used as the callback.
     expect(HELPER_FORBIDDEN_PATTERN.test("e.hits.filter((x) => x > c)")).toBe(false);
+  });
+
+  // ── 4xp-callback-integration-ok. Full integration: helper uses (x) => x > c → ok:true ──
+  it("returns ok:true when the helper body uses a parenthesised non-standard callback with the correct comparison ((x) => x > c)", async () => {
+    // This integration test exercises checkProbeEvictionGuard() end-to-end with
+    // the combined case that pattern tests alone cannot catch: a parenthesised
+    // callback parameter AND a non-standard callback name together.  A future
+    // tightening of buildHelperScanPatterns that hard-codes the callback variable
+    // only inside the parenthesised branch (e.g. `\(t\)` instead of `\(\w+\)`)
+    // would pass the export-level pattern tests for `(t) => t > c` but silently
+    // fail this case.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  e.hits = e.hits.filter((x) => x > c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 4xp-callback-integration-fail. Full integration: helper uses (x) => x >= c → ok:false ──
+  it("returns ok:false with a relaxed-comparison reason when the helper body uses a parenthesised non-standard callback with the relaxed comparison ((x) => x >= c)", async () => {
+    // Mirror of the previous test with >= instead of >.  A future tightening
+    // that hard-codes the callback variable only in the parenthesised forbidden
+    // branch would silently stop catching this regression when the callback name
+    // is not `t`.  Reason must cite the helper name and match /relaxed eviction comparison/i.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictStaleHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictStaleHits(e, c) {`,
+        `  e.hits = e.hits.filter((x) => x >= c);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toContain("evictStaleHits");
   });
 
   // ── 4o. Helper body: filter arrow split across lines (correct form) → ok:true
