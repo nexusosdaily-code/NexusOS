@@ -13811,6 +13811,94 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(entry!.hits).toContain(hit2);
     expect(entry!.hits).toContain(hit3);
   });
+
+  it("(B46) initProbeCounters: five duplicate UA rows for the same key all contribute their timestamps to the merged entry", async () => {
+    // Regression guard for an index-based termination off-by-one: a future
+    // merge loop that stops at row index N-1 would survive the three- and
+    // four-row tests but silently drop the 5th (and any higher) row's
+    // timestamps.  Five distinct rows are seeded so the test catches any
+    // loop boundary that terminates before the last element.
+    const now  = Date.now();
+    const hit0 = now - 1_000; // row 0 timestamp
+    const hit1 = now - 2_000; // row 1 timestamp
+    const hit2 = now - 3_000; // row 2 timestamp
+    const hit3 = now - 4_000; // row 3 timestamp
+    const hit4 = now - 5_000; // row 4 timestamp — must not be dropped
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const KEY = "FiveDupUA/1.0";
+
+    const fakeRows = [
+      { fieldType: "ua", key: KEY, hits: [hit0], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit1], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit2], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit3], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY, hits: [hit4], lastAlerted: 0 },
+    ];
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue(fakeRows),
+    });
+
+    await mod.initProbeCounters();
+
+    const entry = mod._uaProbes.get(KEY);
+    expect(entry).toBeDefined();
+
+    // All five distinct in-window timestamps must appear in the merged entry.
+    expect(entry!.hits).toHaveLength(5);
+    expect(entry!.hits).toContain(hit0);
+    expect(entry!.hits).toContain(hit1);
+    expect(entry!.hits).toContain(hit2);
+    expect(entry!.hits).toContain(hit3);
+    expect(entry!.hits).toContain(hit4);
+  });
+
+  it("(B47) initProbeCounters: five duplicate referer rows for the same key all contribute their timestamps to the merged entry", async () => {
+    // Symmetric check for the referer map: the same index-based termination
+    // off-by-one would also affect referer keys.  Five duplicate rows must all
+    // be merged so no timestamp from the 5th or higher row is silently dropped.
+    const now  = Date.now();
+    const hit0 = now - 1_000;
+    const hit1 = now - 2_000;
+    const hit2 = now - 3_000;
+    const hit3 = now - 4_000;
+    const hit4 = now - 5_000; // row 4 timestamp — must not be dropped
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    const KEY = "https://five-dup-referer.example/scan";
+
+    const fakeRows = [
+      { fieldType: "referer", key: KEY, hits: [hit0], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit1], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit2], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit3], lastAlerted: 0 },
+      { fieldType: "referer", key: KEY, hits: [hit4], lastAlerted: 0 },
+    ];
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({
+      from: vi.fn().mockResolvedValue(fakeRows),
+    });
+
+    await mod.initProbeCounters();
+
+    const entry = mod._refererProbes.get(KEY);
+    expect(entry).toBeDefined();
+
+    // All five distinct in-window timestamps must appear in the merged entry.
+    expect(entry!.hits).toHaveLength(5);
+    expect(entry!.hits).toContain(hit0);
+    expect(entry!.hits).toContain(hit1);
+    expect(entry!.hits).toContain(hit2);
+    expect(entry!.hits).toContain(hit3);
+    expect(entry!.hits).toContain(hit4);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
