@@ -4063,6 +4063,144 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     // The two values must differ — if they were swapped or shared the bug is present.
     expect(uaEntry!.lastAlerted).not.toBe(refEntry!.lastAlerted);
   });
+
+  // ── B18 / B19: off-by-one on the init side — consistency invariant ────────
+  //
+  // B12/B13 confirm that a boundary hit placed at the PRUNE cutoff survives
+  // both initProbeCounters (whose cutoff is 1 ms earlier, so the hit passes)
+  // and pruneProbes (it is exactly at the boundary, so >= keeps it).
+  //
+  // The symmetric danger is the opposite off-by-one: a future initProbeCounters
+  // bug uses a cutoff 1 ms TOO LENIENT (e.g. `Date.now() − WINDOW_MS − 1`),
+  // loading a hit that is already 1 ms OUTSIDE the prune window.  That entry
+  // appears in the in-memory maps right after restart and vanishes on the very
+  // next prune tick — silently wiping a scraper's recent history.
+  //
+  // Test design
+  // ───────────
+  // The DB row contains ONLY a stale hit (initNow − WINDOW_MS − 1).
+  //
+  // • Correct init  (cutoff = initNow − WINDOW_MS):
+  //     staleHit < cutoff → filtered out; lastAlerted = 0 → entry not created.
+  //
+  // • Regressed init (cutoff = initNow − WINDOW_MS − 1, too lenient):
+  //     staleHit == cutoff → loaded; entry IS created → the `.has()` assertion
+  //     below fails, catching the regression immediately.
+  //
+  // A separate "demonstrate" step then manually injects the stale entry and
+  // calls _pruneProbes(initNow) to confirm it is deleted, showing what the
+  // "load then immediately drop" failure mode looks like end-to-end.
+  //
+  // T0 = Date.now()+82h (B18) and +84h (B19) — monotonically above B17 (80h).
+
+  it("(B18) off-by-one init UA: stale hit 1 ms outside the window is NOT loaded by initProbeCounters; _pruneProbes(initNow) deletes it when injected", async () => {
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+82h — monotonically above B17 (80h).
+    const initNow  = Date.now() + 82 * 60 * 60 * 1000;
+    // 1 ms below the correct init cutoff (initNow − WINDOW_MS).
+    // Correct init excludes it; a too-lenient init loads it.
+    const staleHit = initNow - WINDOW_MS - 1;
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _uaProbes, _refererProbes, _pruneProbes } = mod as any;
+
+      // ── Step 1: init with a DB row that holds only the stale hit ─────────
+      const fakeRows = [
+        {
+          fieldType:   "ua",
+          key:         "B18StaleUA/1.0",
+          hits:        [staleHit],
+          lastAlerted: 0,
+        },
+      ];
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      // ── Consistency invariant ─────────────────────────────────────────────
+      // staleHit (initNow − WINDOW_MS − 1) < correct cutoff (initNow − WINDOW_MS),
+      // so it must be filtered out.  With lastAlerted = 0 and no active hits
+      // the entry is never created.
+      //
+      // A future regression that computes `cutoff = Date.now() − WINDOW_MS − 1`
+      // (too lenient by 1 ms) would load staleHit, create the entry, and cause
+      // `.has()` to return true — making this assertion fail and catching the bug.
+      expect(_uaProbes.has("B18StaleUA/1.0")).toBe(false);
+      expect(_refererProbes.has("B18StaleUA/1.0")).toBe(false);
+
+      // ── Step 2: demonstrate the "load → immediate drop" failure mode ──────
+      // Inject the stale entry directly, as a too-lenient init would have done.
+      _uaProbes.set("B18StaleUA/1.0", { hits: [staleHit], lastAlerted: 0 });
+
+      // pruneProbes(initNow): cutoff = initNow − WINDOW_MS.
+      // staleHit (initNow − WINDOW_MS − 1) < cutoff → hasActiveHits = false.
+      // lastAlerted = 0 → hasActiveCooldown = false.
+      // → entry is deleted on the very first prune tick after restart.
+      _pruneProbes(initNow);
+
+      expect(_uaProbes.has("B18StaleUA/1.0")).toBe(false);
+      expect(_refererProbes.has("B18StaleUA/1.0")).toBe(false);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it("(B19) off-by-one init referer: stale hit 1 ms outside the window is NOT loaded by initProbeCounters; _pruneProbes(initNow) deletes it when injected", async () => {
+    // Symmetric referer-map counterpart to B18.
+    //
+    // T0 = Date.now()+84h — monotonically above B18 (82h).
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+    const initNow  = Date.now() + 84 * 60 * 60 * 1000;
+    const staleHit = initNow - WINDOW_MS - 1;
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+      // ── Step 1: init with a DB row that holds only the stale hit ─────────
+      const fakeRows = [
+        {
+          fieldType:   "referer",
+          key:         "https://b19-stale-referer.example/scan",
+          hits:        [staleHit],
+          lastAlerted: 0,
+        },
+      ];
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      // ── Consistency invariant ─────────────────────────────────────────────
+      // Correct init excludes staleHit (< cutoff) and skips the entry entirely
+      // (no active hits, lastAlerted = 0).  A too-lenient init would create the
+      // entry and break the `.toBe(false)` assertion, catching the regression.
+      expect(_refererProbes.has("https://b19-stale-referer.example/scan")).toBe(false);
+      expect(_uaProbes.has("https://b19-stale-referer.example/scan")).toBe(false);
+
+      // ── Step 2: demonstrate the "load → immediate drop" failure mode ──────
+      _refererProbes.set("https://b19-stale-referer.example/scan", { hits: [staleHit], lastAlerted: 0 });
+
+      // pruneProbes(initNow): staleHit < cutoff → hasActiveHits = false;
+      // lastAlerted = 0 → hasActiveCooldown = false → entry deleted.
+      _pruneProbes(initNow);
+
+      expect(_refererProbes.has("https://b19-stale-referer.example/scan")).toBe(false);
+      expect(_uaProbes.has("https://b19-stale-referer.example/scan")).toBe(false);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
