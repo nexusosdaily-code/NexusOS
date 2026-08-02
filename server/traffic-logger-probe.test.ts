@@ -5330,6 +5330,103 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     }
   });
 
+  // ── B28 / B29: cooldown active by exactly 1 ms — alert must NOT fire ────
+  //
+  // B24/B25 prove the boundary where lastAlerted = now − COOLDOWN_MS (age
+  // equals COOLDOWN_MS exactly) — the cooldown has just expired and the alert
+  // fires.  B28/B29 test the complementary boundary 1 ms earlier:
+  //
+  //   lastAlerted = now − COOLDOWN_MS + 1
+  //   now − lastAlerted = COOLDOWN_MS − 1  <  COOLDOWN_MS  →  still active
+  //
+  // The recordProbe cooldown guard is:
+  //   now − entry.lastAlerted >= COOLDOWN_MS
+  //
+  // With age = COOLDOWN_MS − 1 the condition is false, so the alert must
+  // be suppressed even though hits.length already exceeds the threshold.
+  // A future off-by-one that changes `>=` to `>` would allow a re-alert
+  // 1 ms too early; this test catches that.
+  //
+  // T0 = Date.now()+102h (B28) and +104h (B29) — monotonically above B27 (100h).
+
+  it("(B28) UA entry: cooldown still active by 1 ms (lastAlerted = now−COOLDOWN_MS+1) does not fire alert", async () => {
+    process.env.PROBE_ALERT_THRESHOLD     = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+102h — monotonically above B27 (100h).
+    const now = Date.now() + 102 * 60 * 60 * 1000;
+
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+
+    const KEY = "B28CooldownActive1msUA/1.0";
+
+    // lastAlerted is 1 ms before the cooldown expires.
+    //   now − lastAlerted = COOLDOWN_MS − 1  <  COOLDOWN_MS  →  still active
+    const lastAlerted = now - COOLDOWN_MS + 1;
+
+    // Seed with enough existing in-window hits to already exceed the threshold
+    // so the only thing blocking an alert is the cooldown guard.
+    _uaProbes.set(KEY, {
+      hits: [now - 3000, now - 2000],
+      lastAlerted,
+    });
+
+    // Drive threshold+1 = 3 total in-window hits (one more call).
+    _recordProbe(_uaProbes, KEY, "ua", now);
+    await flushMicrotasks();
+
+    // Cooldown still active by 1 ms — alert must NOT fire.
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+
+    // lastAlerted must remain the original seeded value — not overwritten.
+    expect(_uaProbes.get(KEY)!.lastAlerted).toBe(lastAlerted);
+
+    // The referer map must be untouched.
+    const { _refererProbes } = mod as any;
+    expect(_refererProbes.has(KEY)).toBe(false);
+  });
+
+  it("(B29) referer entry: cooldown still active by 1 ms (lastAlerted = now−COOLDOWN_MS+1) does not fire alert", async () => {
+    // Symmetric referer-map counterpart to B28.
+    //
+    // T0 = Date.now()+104h — monotonically above B28 (102h).
+    process.env.PROBE_ALERT_THRESHOLD     = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000;
+
+    const now = Date.now() + 104 * 60 * 60 * 1000;
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe } = mod as any;
+
+    const KEY = "https://b29-cooldown-active-1ms-referer.example/scan";
+
+    const lastAlerted = now - COOLDOWN_MS + 1;
+
+    _refererProbes.set(KEY, {
+      hits: [now - 3000, now - 2000],
+      lastAlerted,
+    });
+
+    // Drive threshold+1 = 3 total in-window hits.
+    _recordProbe(_refererProbes, KEY, "referer", now);
+    await flushMicrotasks();
+
+    // Cooldown still active by 1 ms — alert must NOT fire.
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+
+    // lastAlerted must remain unchanged.
+    expect(_refererProbes.get(KEY)!.lastAlerted).toBe(lastAlerted);
+
+    // The UA map must be untouched.
+    const { _uaProbes } = mod as any;
+    expect(_uaProbes.has(KEY)).toBe(false);
+  });
+
   // ── B30: duplicate-key rows trigger DB dedup; persistence still works after ──
   //
   // When initProbeCounters finds two rows for the same (field_type, key) it must:
