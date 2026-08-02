@@ -7550,3 +7550,74 @@ describe("middleware-level: referer probe not skipped across multiple requests w
     expect(uaEntry.hits).toHaveLength(3);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Task 466 — map-argument swap guard in the finish handler
+//
+// The finish handler calls:
+//   recordProbe(refererProbes, refKey, "referer", now)
+//   recordProbe(uaProbes,      uaKey,  "ua",      now)
+//
+// A future refactor that swaps the map arguments — passing uaProbes where
+// refererProbes is expected and vice versa — would cause each header value
+// to land in the wrong map.  The Task 448 test above uses an identical
+// string for both headers, so a swap is invisible (both maps end up with the
+// same key either way).
+//
+// This test uses DISTINCT values for referer and UA so that the wrong-map
+// result is immediately detectable:
+//   • After one request, _refererProbes must contain the referer key and
+//     must NOT contain the UA key.
+//   • _uaProbes must contain the UA key and must NOT contain the referer
+//     key.
+// A swapped-argument regression causes exactly the opposite, so both
+// assertions fail simultaneously.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("middleware-level: referer key lands in _refererProbes, UA key lands in _uaProbes (swap guard)", () => {
+  it("distinct referer and UA each end up in their own map — not in the other", async () => {
+    // High threshold so no alert fires; the test focuses purely on which map
+    // each key lands in.
+    process.env.PROBE_ALERT_THRESHOLD = "100";
+
+    const mod = await import("./traffic-logger");
+    const { trafficLoggerMiddleware, _refererProbes, _uaProbes } = mod as any;
+
+    // Await startup hydration so the maps are initialised before we record.
+    await mod.initProbeCounters();
+
+    // Unique, non-overlapping values — the referer is a URL that passes the
+    // "not own-origin" and "not blocked" checks; the UA does not match any
+    // BOT_PATTERNS entry so the UA probe fires.
+    const refererValue = "http://referer-only-tracker.example/path";
+    const uaValue      = "ua-only-tracker-bot/1.0";
+
+    // The referer key stored by the middleware is lowercased + sliced.
+    const refKey = refererValue.toLowerCase();
+    // The UA key is stored as-is (sliced to 500 chars).
+    const uaKey  = uaValue;
+
+    const req = makeReq(uaValue, refererValue);
+    const res = makeRes();
+
+    trafficLoggerMiddleware(req, res as any, () => {});
+    res.finish();
+
+    // Flush the _initPromise.then(…) microtask chain that contains the
+    // recordProbe calls, plus one extra round to be safe.
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+    await new Promise<void>((r) => setImmediate(r));
+
+    // ── Positive assertions: each key must be in its own map ─────────────
+    expect(_refererProbes.get(refKey)).toBeDefined();
+    expect(_uaProbes.get(uaKey)).toBeDefined();
+
+    // ── Negative assertions: each key must NOT appear in the other map ───
+    // A swapped-arguments bug causes the UA key to land in _refererProbes
+    // and the referer key to land in _uaProbes, so these two lines are the
+    // primary regression detectors.
+    expect(_refererProbes.get(uaKey)).toBeUndefined();
+    expect(_uaProbes.get(refKey)).toBeUndefined();
+  });
+});
