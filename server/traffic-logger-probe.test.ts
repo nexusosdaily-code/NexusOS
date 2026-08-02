@@ -11953,6 +11953,104 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 ;
 
 
+  it("(K9) initProbeCounters: window-filter cutoff is a single per-run constant — all groups see the same boundary", async () => {
+    // Guards against a refactor that computes `cutoff = Date.now() - WINDOW_MS`
+    // separately inside every Pass 2 group iteration rather than once before the
+    // loop.  If the cutoff drifted with the clock between groups, a hit that sits
+    // exactly on the initial boundary could be kept for the first group but
+    // silently dropped for every later group, under-counting active hits on restart.
+    //
+    // ── How the spy makes the regression detectable ────────────────────────────
+    // Date.now() is spied to return two distinct values:
+    //   call 1  →  T              (intended per-run snapshot; used for cutoff)
+    //   calls 2+→  T + 60_000    (60 s later; simulates clock drift between groups)
+    //
+    // hitInside = T - WINDOW_MS  (exactly at the initial boundary).
+    //
+    //   Correct  (per-run cutoff = T - WINDOW_MS):
+    //     hitInside >= T - WINDOW_MS  →  true   →  KEPT for every group  ✓
+    //
+    //   Broken   (per-group cutoff re-evaluated with drifted clock):
+    //     hitInside >= (T + 60_000) - WINDOW_MS
+    //     ⟺  T - WINDOW_MS  >=  T + 60_000 - WINDOW_MS
+    //     ⟺  0  >=  60_000  →  false  →  DROPPED for groups 2-4  ✗
+    //
+    // A frozen-clock approach (vi.useFakeTimers) would NOT catch this because
+    // every Date.now() call returns the same T, making per-group recomputation
+    // produce the same cutoff as the per-run snapshot.
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const T         = 1_700_000_000_000;   // fixed epoch ms — no wall-clock dependency
+
+    // Spy: first call returns T (per-run snapshot), all later calls return T+60_000
+    // (clock-drift simulation).  Restored in the finally block.
+    let callCount   = 0;
+    const nowSpy    = vi.spyOn(Date, "now").mockImplementation(() => {
+      callCount += 1;
+      return callCount === 1 ? T : T + 60_000;
+    });
+
+    try {
+      const cutoff     = T - WINDOW_MS;    // what the correct per-run cutoff must be
+      const hitInside  = cutoff;            // exactly on the boundary — must survive
+      const hitOutside = cutoff - 1;        // 1 ms before the boundary — must be dropped
+
+      const UA_KEY_1  = "K9WindowCutoffUA1/1.0";
+      const UA_KEY_2  = "K9WindowCutoffUA2/1.0";
+      const REF_KEY_1 = "https://k9-cutoff-ref1.example/";
+      const REF_KEY_2 = "https://k9-cutoff-ref2.example/";
+
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+
+      // 4 groups: if cutoff drifts per-group, groups 2-4 drop hitInside.
+      const fakeRows = [
+        { fieldType: "ua",      key: UA_KEY_1,  hits: [hitInside, hitOutside], lastAlerted: 0 },
+        { fieldType: "ua",      key: UA_KEY_2,  hits: [hitInside, hitOutside], lastAlerted: 0 },
+        { fieldType: "referer", key: REF_KEY_1, hits: [hitInside, hitOutside], lastAlerted: 0 },
+        { fieldType: "referer", key: REF_KEY_2, hits: [hitInside, hitOutside], lastAlerted: 0 },
+      ];
+
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      const eUa1  = mod._uaProbes.get(UA_KEY_1);
+      const eUa2  = mod._uaProbes.get(UA_KEY_2);
+      const eRef1 = mod._refererProbes.get(REF_KEY_1);
+      const eRef2 = mod._refererProbes.get(REF_KEY_2);
+
+      // All four entries must be present (each has one active boundary hit).
+      expect(eUa1,  "UA entry 1 missing — hitInside was not kept").toBeDefined();
+      expect(eUa2,  "UA entry 2 missing — hitInside was not kept").toBeDefined();
+      expect(eRef1, "referer entry 1 missing — hitInside was not kept").toBeDefined();
+      expect(eRef2, "referer entry 2 missing — hitInside was not kept").toBeDefined();
+
+      // Every entry must retain the boundary hit.
+      // Per-group drift would drop hitInside for groups 2-4 (0 >= 60_000 → false).
+      expect(eUa1!.hits,  "UA1 dropped hitInside — cutoff was not a per-run constant").toContain(hitInside);
+      expect(eUa2!.hits,  "UA2 dropped hitInside — cutoff was not a per-run constant").toContain(hitInside);
+      expect(eRef1!.hits, "Ref1 dropped hitInside — cutoff was not a per-run constant").toContain(hitInside);
+      expect(eRef2!.hits, "Ref2 dropped hitInside — cutoff was not a per-run constant").toContain(hitInside);
+
+      // Every entry must have evicted the out-of-window hit.
+      expect(eUa1!.hits,  "UA1 kept hitOutside").not.toContain(hitOutside);
+      expect(eUa2!.hits,  "UA2 kept hitOutside").not.toContain(hitOutside);
+      expect(eRef1!.hits, "Ref1 kept hitOutside").not.toContain(hitOutside);
+      expect(eRef2!.hits, "Ref2 kept hitOutside").not.toContain(hitOutside);
+
+      // Sanity: exactly one active hit per entry (the boundary hit).
+      expect(eUa1!.hits).toHaveLength(1);
+      expect(eUa2!.hits).toHaveLength(1);
+      expect(eRef1!.hits).toHaveLength(1);
+      expect(eRef2!.hits).toHaveLength(1);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+
   // ── B35 / B36: expired-cooldown re-alert count equals in-window hits only ─
   //
   // B24/B25 confirm that an alert fires after threshold+1 fresh hits on a
