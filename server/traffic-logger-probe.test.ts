@@ -13855,6 +13855,96 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   });
 
 
+  it("(K11) initProbeCounters: allHits buffer is not reused across two distinct UA keys when each key has exactly two DB rows", async () => {
+    // Guards against a future refactor that declares `allHits` outside the
+    // outer Pass 2 group loop and forgets to reset it between groups.  When
+    // each group has two rows, the inner merge loop runs twice per group, so
+    // the un-reset buffer accumulates hits from the first group into the
+    // second group's entry.
+    //
+    // K8 covers the shared-buffer bug for single-row groups; K11 covers the
+    // two-rows-per-group variant, which exercises the inner merge loop twice.
+    //
+    // ── Scenario ──────────────────────────────────────────────────────────────
+    // GROUP_A  (fieldType="ua", key=KEY_A):
+    //   Row A0: hits = [hitA0]
+    //   Row A1: hits = [hitA1]
+    //
+    // GROUP_B  (fieldType="ua", key=KEY_B):
+    //   Row B0: hits = [hitB0]
+    //   Row B1: hits = [hitB1]
+    //
+    // All four timestamps are distinct and well within the 24 h window.
+    //
+    // Correct behaviour:  allHits is freshly declared inside the per-group
+    //   iteration, so _uaProbes.get(KEY_A).hits === [hitA0, hitA1] and
+    //   _uaProbes.get(KEY_B).hits === [hitB0, hitB1].
+    //
+    // Broken behaviour:  allHits is declared once before the loop.  After
+    //   GROUP_A is processed allHits = [hitA0, hitA1].  GROUP_B's inner loop
+    //   pushes hitB0 and hitB1 onto the un-reset buffer, producing
+    //   allHits = [hitA0, hitA1, hitB0, hitB1], which is then stored into
+    //   KEY_B's entry — contaminating it with KEY_A's timestamps.
+
+    const now  = Date.now();
+    const hitA0 = now - 1_000;   // 1 s ago — KEY_A row 0
+    const hitA1 = now - 2_000;   // 2 s ago — KEY_A row 1
+    const hitB0 = now - 3_000;   // 3 s ago — KEY_B row 0
+    const hitB1 = now - 4_000;   // 4 s ago — KEY_B row 1
+
+    const KEY_A = "K11TwoRowsPerGroupUA-keyA/1.0";
+    const KEY_B = "K11TwoRowsPerGroupUA-keyB/1.0";
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._uaProbes.delete(KEY_A);
+    mod._uaProbes.delete(KEY_B);
+    mod._refererProbes.delete(KEY_A);
+    mod._refererProbes.delete(KEY_B);
+
+    // Each key gets exactly two rows, exercising the inner merge loop twice
+    // per group.  Rows are interleaved so a naïve grouping pass cannot rely
+    // on them being adjacent.
+    const fakeRows = [
+      { fieldType: "ua", key: KEY_A, hits: [hitA0], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY_B, hits: [hitB0], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY_A, hits: [hitA1], lastAlerted: 0 },
+      { fieldType: "ua", key: KEY_B, hits: [hitB1], lastAlerted: 0 },
+    ];
+
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const entryA = mod._uaProbes.get(KEY_A);
+    const entryB = mod._uaProbes.get(KEY_B);
+
+    expect(entryA, "KEY_A entry missing").toBeDefined();
+    expect(entryB, "KEY_B entry missing").toBeDefined();
+
+    // Each entry must contain exactly its own two hits.
+    expect(entryA!.hits).toContain(hitA0);
+    expect(entryA!.hits).toContain(hitA1);
+    expect(entryB!.hits).toContain(hitB0);
+    expect(entryB!.hits).toContain(hitB1);
+
+    // Cross-contamination checks: KEY_A must not carry KEY_B's timestamps and
+    // vice versa.  A broken allHits-reuse would cause KEY_B's entry to include
+    // hitA0 and hitA1 (accumulated from the first group iteration).
+    expect(entryA!.hits).not.toContain(hitB0);
+    expect(entryA!.hits).not.toContain(hitB1);
+    expect(entryB!.hits).not.toContain(hitA0);
+    expect(entryB!.hits).not.toContain(hitA1);
+
+    // Hit counts must also be exact: 2 per key, not 4 (which would indicate
+    // the un-reset buffer was carried over from the previous group).
+    expect(entryA!.hits).toHaveLength(2);
+    expect(entryB!.hits).toHaveLength(2);
+  });
+
+
   // ── B35 / B36: expired-cooldown re-alert count equals in-window hits only ─
   //
   // B24/B25 confirm that an alert fires after threshold+1 fresh hits on a
