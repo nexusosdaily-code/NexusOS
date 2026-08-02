@@ -12197,6 +12197,60 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(entryB!.hits).toHaveLength(2);
     expect(entryB!.hits).not.toContain(SENTINEL);
   });
+
+  it("(B41d) dedup merge preserves hits from BOTH referer rows — not just the first row's hits", async () => {
+    // Referer-map counterpart to B41b.  A regression that only spreads
+    // groupRows[0].hits for the referer path (but correctly merges the ua
+    // path) would leave hits.length === 1 and silently drop the second row's
+    // timestamp.  B41b would still pass because it only exercises the ua
+    // branch; this test pins the referer branch independently.
+    //
+    // T0 = Date.now()+136h — monotonically above B41b (134h) to avoid any
+    // in-memory state left over from prior tests in the same describe block.
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const initNow   = Date.now() + 136 * 60 * 60 * 1000;
+    // Both timestamps are distinct and inside the window.
+    const hit0      = initNow - Math.floor(WINDOW_MS / 3); // from row 0
+    const hit1      = initNow - Math.floor(WINDOW_MS / 5); // from row 1 — different timestamp
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _refererProbes } = mod as any;
+
+      // Two duplicate referer rows for the same (fieldType, key) pair, each
+      // carrying a distinct in-window timestamp.
+      const KEY  = "https://b41c-both-rows-referer.example/scan";
+      const row0 = { fieldType: "referer", key: KEY, hits: [hit0], lastAlerted: 0 };
+      const row1 = { fieldType: "referer", key: KEY, hits: [hit1], lastAlerted: 0 };
+
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({
+        from: vi.fn().mockResolvedValue([row0, row1]),
+      });
+
+      await mod.initProbeCounters();
+
+      const entry = _refererProbes.get(KEY);
+      expect(entry).toBeDefined();
+
+      // Both distinct timestamps must be present in the merged entry.
+      // A merge that only spreads row0.hits would produce length === 1 and
+      // miss hit1; a merge that only spreads row1.hits would miss hit0.
+      expect(entry!.hits).toHaveLength(2);
+      expect(entry!.hits).toContain(hit0);
+      expect(entry!.hits).toContain(hit1);
+
+      // The ua map must be untouched.
+      const { _uaProbes } = mod as any;
+      expect(_uaProbes.has(KEY)).toBe(false);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
