@@ -597,6 +597,14 @@ export function trafficLoggerMiddleware(req: Request, res: Response, next: NextF
       pruneProbes(now);
       refreshDynamicBlocksIfStale(now);
 
+      // ── Test-only hook — always null in production ───────────────────────
+      // Tests set _testOnly.extraProbeHook to simulate a future third probe
+      // branch (e.g. IP-based alerting) running here — before the referer and
+      // UA branches — so regression tests can confirm that neither referer nor
+      // UA recording is skipped if the third probe fires or enters cooldown.
+      // This hook MUST NOT be set in non-test code.
+      if (_testOnly.extraProbeHook) _testOnly.extraProbeHook(now);
+
       // Track referers that are non-empty, not already in the block list, and not
       // from the site's own origin (wnsp.io / wnsp.tech / Replit dev domain).
       // Internal navigation referers from our own pages are never unknown probes.
@@ -701,6 +709,22 @@ export { refererProbes as _refererProbes, uaProbes as _uaProbes };
 export { recordProbe as _recordProbe };
 export { pruneProbes as _pruneProbes };
 export { WINDOW_MS as _WINDOW_MS };
+
+/**
+ * Test-only mutable container.  Exporting a bare `let` binding is read-only
+ * from outside an ES module, so tests mutate a property on this object
+ * instead.  In production the callback property is always null.
+ *
+ * _testOnly.extraProbeHook — invoked at the start of _initPromise.then(),
+ * before the referer and UA probe branches.  Tests set this to simulate a
+ * future third probe type (e.g. IP-based alerting) so they can verify that
+ * neither referer nor UA recording is skipped if the third probe fires or
+ * enters cooldown on the same request.
+ * MUST NOT be set in non-test code.
+ */
+export const _testOnly = {
+  extraProbeHook: null as ((now: number) => void) | null,
+};
 
 const DYNAMIC_BLOCK_TTL_MS = 5 * 60 * 1000; // refresh at most once per 5 min
 
