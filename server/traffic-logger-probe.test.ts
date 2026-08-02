@@ -14033,6 +14033,63 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   });
 
 
+  it("(K12) initProbeCounters: window filter uses >= cutoff (inclusive) so a boundary hit is kept, not evicted by a < cutoff operator", async () => {
+    // Guards against a refactor that inverts the comparison operator in the
+    // Pass 2 `.filter((t) => t >= cutoff)` call — e.g. changes it to
+    // `.filter((t) => t < cutoff)` or `.filter((t) => t > cutoff)`.
+    //
+    // ── Scenario ──────────────────────────────────────────────────────────────
+    // One single-row group (fieldType="ua") whose only hit is exactly at
+    // cutoff = T − WINDOW_MS.  The clock never drifts between the cutoff
+    // computation and the filter evaluation (unlike K10), so the only thing
+    // that can make the test fail is using the wrong comparison operator.
+    //
+    //   Correct  (t >= cutoff):  T−WINDOW_MS >= T−WINDOW_MS  → true  → KEPT   ✓
+    //   Broken   (t  < cutoff):  T−WINDOW_MS <  T−WINDOW_MS  → false → DROPPED ✗
+    //   Broken   (t  > cutoff):  T−WINDOW_MS >  T−WINDOW_MS  → false → DROPPED ✗
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const T         = 1_700_200_000_000;   // fixed epoch ms — no wall-clock dependency
+
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(T);
+
+    try {
+      const cutoff       = T - WINDOW_MS;
+      const hitAtBoundary = cutoff;   // exactly on the inclusive boundary → must be KEPT
+
+      const UA_KEY = "K12BoundaryOperatorUA/1.0";
+
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+
+      const fakeRows = [
+        { fieldType: "ua", key: UA_KEY, hits: [hitAtBoundary], lastAlerted: 0 },
+      ];
+
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      const entry = mod._uaProbes.get(UA_KEY);
+
+      // Entry must survive — the boundary hit satisfies >= cutoff.
+      expect(entry, "UA entry missing — boundary hit was evicted (wrong operator in Pass 2 filter)").toBeDefined();
+
+      // The boundary hit itself must be present in the in-memory hits array.
+      expect(
+        entry!.hits,
+        "hitAtBoundary was dropped — Pass 2 filter may be using < cutoff or > cutoff instead of >= cutoff",
+      ).toContain(hitAtBoundary);
+
+      // Exactly one hit (no phantom extras).
+      expect(entry!.hits, "unexpected hit count — expected exactly the boundary hit").toHaveLength(1);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+
   // ── B35 / B36: expired-cooldown re-alert count equals in-window hits only ─
   //
   // B24/B25 confirm that an alert fires after threshold+1 fresh hits on a
