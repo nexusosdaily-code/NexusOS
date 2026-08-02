@@ -5134,28 +5134,15 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   // has JUST expired (lastAlerted = now − COOLDOWN_MS, so the age equals
   // COOLDOWN_MS exactly), and then new hits arrive.
   //
-  // The recordProbe condition is:
-  //   hits.length > ALERT_THRESHOLD && now − entry.lastAlerted >= COOLDOWN_MS
-  //
-  // With lastAlerted = now − COOLDOWN_MS:
-  //   now − lastAlerted = COOLDOWN_MS  ≥  COOLDOWN_MS  →  true
-  //
-  // So on the (threshold+1)-th in-window hit, the alert must fire once and
-  // lastAlerted must be stamped to `now`.  A subsequent hit must NOT re-alert
-  // (the new cooldown is now active).
-  //
   // T0 = Date.now()+94h (B24) and +96h (B25) — monotonically above B23 (92h).
 
   it("(B24) zombie UA entry with expired cooldown: first new hit past threshold fires exactly one alert and updates lastAlerted", async () => {
-    // threshold=3 → alert fires when hits.length reaches 4.
-    // COOLDOWN_MS = 1 h (default).
     process.env.PROBE_ALERT_THRESHOLD     = "3";
     process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
 
     const COOLDOWN_MS = 1 * 60 * 60 * 1000;
     const WINDOW_MS   = 24 * 60 * 60 * 1000;
 
-    // T0 = Date.now()+94h — monotonically above B23 (92h).
     const now = Date.now() + 94 * 60 * 60 * 1000;
 
     const mod = await import("./traffic-logger");
@@ -5163,42 +5150,29 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 
     const KEY = "B24ZombieCooldownExpiredUA/1.0";
 
-    // Seed a zombie entry: stale hits (all below the current window cutoff)
-    // and lastAlerted set exactly at the cooldown boundary so it has just expired.
-    //   now − lastAlerted = COOLDOWN_MS  ≥  COOLDOWN_MS  →  cooldown NOT active
-    const staleHit    = now - WINDOW_MS - 1000; // well outside the 24 h window
-    const lastAlerted = now - COOLDOWN_MS;       // age === COOLDOWN_MS → just expired
+    const staleHit    = now - WINDOW_MS - 1000;
+    const lastAlerted = now - COOLDOWN_MS;
 
     _uaProbes.set(KEY, { hits: [staleHit], lastAlerted });
 
-    // Drive threshold+1 = 4 fresh hits.  recordProbe's while-loop evicts the
-    // stale hit on the first call, so each call adds exactly one in-window hit.
     for (let i = 0; i < 4; i++) {
       _recordProbe(_uaProbes, KEY, "ua", now);
       await flushMicrotasks();
     }
 
-    // The alert must have fired exactly once (on the 4th call).
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
     expect(mockSendProbeAlert).toHaveBeenCalledWith("ua", KEY, 4);
-
-    // lastAlerted must be stamped to `now`, not left at the old value.
     expect(_uaProbes.get(KEY)!.lastAlerted).toBe(now);
 
-    // One more hit must NOT re-alert (new cooldown is now active).
     _recordProbe(_uaProbes, KEY, "ua", now);
     await flushMicrotasks();
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
 
-    // The referer map must be untouched.
     const { _refererProbes } = mod as any;
     expect(_refererProbes.has(KEY)).toBe(false);
   });
 
   it("(B25) zombie referer entry with expired cooldown: first new hit past threshold fires exactly one alert and updates lastAlerted", async () => {
-    // Symmetric referer-map counterpart to B24.
-    //
-    // T0 = Date.now()+96h — monotonically above B24 (94h).
     process.env.PROBE_ALERT_THRESHOLD     = "3";
     process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
 
@@ -5226,71 +5200,43 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(mockSendProbeAlert).toHaveBeenCalledWith("referer", KEY, 4);
     expect(_refererProbes.get(KEY)!.lastAlerted).toBe(now);
 
-    // One more hit must NOT re-alert.
     _recordProbe(_refererProbes, KEY, "referer", now);
     await flushMicrotasks();
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
 
-    // The UA map must be untouched.
     const { _uaProbes } = mod as any;
     expect(_uaProbes.has(KEY)).toBe(false);
   });
 
+
   // ── B26 / B27: zombie entry receives new hits while cooldown is still active ─
-  //
-  // B22/B23 document that a zombie entry survives in the map with stale hits and
-  // lastAlerted still set inside the cooldown window.  B26/B27 confirm that when
-  // recordProbe receives new hits for that key:
-  //   • The while-loop evicts all stale zombie hits on the first call.
-  //   • Subsequent hits accumulate until hits.length > ALERT_THRESHOLD.
-  //   • The cooldown guard (now − lastAlerted < COOLDOWN_MS) still fires and
-  //     blocks the alert — lastAlerted must remain unchanged throughout.
-  //
-  // A future change that resets lastAlerted on entry re-use would clear the
-  // cooldown guard, causing a premature second alert; this test catches that.
-  //
-  // threshold=1 (minimum valid positive value) so two hits exceed it, making
-  // the cooldown guard the sole reason no alert fires.
   //
   // T0 = Date.now()+98h (B26) and +100h (B27) — monotonically above B25 (96h).
 
   it("(B26) zombie UA entry: new hits while cooldown still active do not fire a duplicate alert", async () => {
     const WINDOW_MS   = 24 * 60 * 60 * 1000;
     const COOLDOWN_MS =  1 * 60 * 60 * 1000;
-    const SKEW        = 10; // ms gap used to build the zombie (mirrors B22)
+    const SKEW        = 10;
 
-    // T0 = Date.now()+98h — monotonically above B25 (96h).
     const initNow  = Date.now() + 98 * 60 * 60 * 1000;
     const pruneNow = initNow + SKEW;
 
-    // Zombie hits: each >= initNow − WINDOW_MS (init loaded them) but
-    // < pruneNow − WINDOW_MS (below the prune cutoff).
     const initCutoff = initNow - WINDOW_MS;
     const zombieHits: number[] = Array.from({ length: SKEW }, (_, k) => initCutoff + k);
 
-    // lastAlerted 100 ms inside the cooldown window so both new hits remain
-    // inside it:
-    //   hit1 − lastAlerted = COOLDOWN_MS − 100 < COOLDOWN_MS  ✓
-    //   hit2 − lastAlerted = COOLDOWN_MS − 99  < COOLDOWN_MS  ✓
     const lastAlerted = pruneNow - COOLDOWN_MS + 100;
-    const hit1 = pruneNow;       // first  new hit
-    const hit2 = pruneNow + 1;   // second new hit — still within cooldown
+    const hit1 = pruneNow;
+    const hit2 = pruneNow + 1;
 
-    // threshold=1 is the minimum valid positive value; 2 in-window hits exceed it.
-    // ALERT_THRESHOLD is a module-level IIFE so the env var must be set before import.
     process.env.PROBE_ALERT_THRESHOLD = "1";
 
     try {
       const mod = await import("./traffic-logger");
       const { _uaProbes, _recordProbe } = mod as any;
 
-      // Seed the zombie entry (mirrors the state left by B22 after _pruneProbes).
       const KEY = "B26ZombieActiveCooldwonUA/1.0";
       _uaProbes.set(KEY, { hits: [...zombieHits], lastAlerted });
 
-      // ── First hit ────────────────────────────────────────────────────────────
-      // All zombie hits fall below (hit1 − WINDOW_MS) and are evicted.
-      // hits = [hit1], length = 1, 1 > 1 = false → threshold not yet crossed.
       _recordProbe(_uaProbes, KEY, "ua", hit1);
       await flushMicrotasks();
 
@@ -5298,20 +5244,11 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       expect(_uaProbes.get(KEY)!.lastAlerted).toBe(lastAlerted);
       expect(mockSendProbeAlert).not.toHaveBeenCalled();
 
-      // ── Second hit ───────────────────────────────────────────────────────────
-      // hit1 survives the window (WINDOW_MS >> 1 ms gap).
-      // hits = [hit1, hit2], length = 2, 2 > 1 = true → threshold crossed.
-      // Cooldown: hit2 − lastAlerted = COOLDOWN_MS − 99 < COOLDOWN_MS → blocked.
       _recordProbe(_uaProbes, KEY, "ua", hit2);
       await flushMicrotasks();
 
-      // hits contains both new hits (zombie hits were evicted on the first call).
       expect(_uaProbes.get(KEY)!.hits).toEqual([hit1, hit2]);
-
-      // Cooldown guard must have preserved the original lastAlerted.
       expect(_uaProbes.get(KEY)!.lastAlerted).toBe(lastAlerted);
-
-      // No Telegram alert must have been dispatched.
       expect(mockSendProbeAlert).not.toHaveBeenCalled();
     } finally {
       delete process.env.PROBE_ALERT_THRESHOLD;
@@ -5319,10 +5256,6 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   });
 
   it("(B27) zombie referer entry: new hits while cooldown still active do not fire a duplicate alert", async () => {
-    // Symmetric referer-map counterpart to B26.
-    //
-    // T0 = Date.now()+100h — monotonically above B26 (98h).
-
     const WINDOW_MS   = 24 * 60 * 60 * 1000;
     const COOLDOWN_MS =  1 * 60 * 60 * 1000;
     const SKEW        = 10;
@@ -5333,7 +5266,6 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const initCutoff = initNow - WINDOW_MS;
     const zombieHits: number[] = Array.from({ length: SKEW }, (_, k) => initCutoff + k);
 
-    // lastAlerted 100 ms inside the cooldown window — same margin as B26.
     const lastAlerted = pruneNow - COOLDOWN_MS + 100;
     const hit1 = pruneNow;
     const hit2 = pruneNow + 1;
@@ -5344,11 +5276,9 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       const mod = await import("./traffic-logger");
       const { _refererProbes, _recordProbe } = mod as any;
 
-      // Seed the zombie entry (mirrors the state left by B23 after _pruneProbes).
       const KEY = "https://b27-zombie-active-cooldown-referer.example/scan";
       _refererProbes.set(KEY, { hits: [...zombieHits], lastAlerted });
 
-      // ── First hit ────────────────────────────────────────────────────────────
       _recordProbe(_refererProbes, KEY, "referer", hit1);
       await flushMicrotasks();
 
@@ -5356,8 +5286,6 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       expect(_refererProbes.get(KEY)!.lastAlerted).toBe(lastAlerted);
       expect(mockSendProbeAlert).not.toHaveBeenCalled();
 
-      // ── Second hit ───────────────────────────────────────────────────────────
-      // hits=[hit1,hit2], 2 > 1 = true, cooldown still active → blocked.
       _recordProbe(_refererProbes, KEY, "referer", hit2);
       await flushMicrotasks();
 
@@ -5366,6 +5294,303 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       expect(mockSendProbeAlert).not.toHaveBeenCalled();
     } finally {
       delete process.env.PROBE_ALERT_THRESHOLD;
+    }
+  });
+
+  // ── B30: duplicate-key rows trigger DB dedup; persistence still works after ──
+  //
+  // When initProbeCounters finds two rows for the same (field_type, key) it must:
+  //   1. Merge them in memory (fresh hit preserved).
+  //   2. DELETE the redundant row in the DB.
+  //   3. UPDATE the surviving row to the merged state.
+  //   4. CREATE the unique index (now possible because duplicates are gone).
+  //
+  // Step 4 is critical: persistProbeEntry uses ON CONFLICT (field_type, key),
+  // which requires the unique constraint.  Without DB dedup, CREATE UNIQUE INDEX
+  // fails, the constraint is never created, and every persistProbeEntry call
+  // silently fails — hits accumulated in memory are lost on the next restart.
+  //
+  // T0 = Date.now()+106h — monotonically above B27 (100h).
+
+  it("(B30) duplicate-key rows: init deduplicates DB rows, creates the unique index, and persistence works afterwards", async () => {
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const SKEW      = 10;
+
+    const initNow    = Date.now() + 106 * 60 * 60 * 1000;
+    const initCutoff = initNow - WINDOW_MS;
+    const freshHit   = initNow - WINDOW_MS / 2;
+    const gapHits: number[] = Array.from({ length: SKEW }, (_, k) => initCutoff + k);
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _uaProbes, _refererProbes, _recordProbe } = mod as any;
+
+      // Two rows for the same UA key — simulates a DB with duplicate entries.
+      const fakeRows = [
+        { fieldType: "ua", key: "B30DupDeduplicatedUA/1.0", hits: [freshHit], lastAlerted: 0 },
+        { fieldType: "ua", key: "B30DupDeduplicatedUA/1.0", hits: gapHits,    lastAlerted: 0 },
+      ];
+
+      const executeMock = vi.fn().mockResolvedValue([]);
+      (db as any).execute = executeMock;
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+      const callsAfterInit = executeMock.mock.calls.length;
+
+      // a. In-memory: fresh hit preserved.
+      expect(_uaProbes.has("B30DupDeduplicatedUA/1.0")).toBe(true);
+      expect(_uaProbes.get("B30DupDeduplicatedUA/1.0")!.hits).toContain(freshHit);
+      expect(_refererProbes.has("B30DupDeduplicatedUA/1.0")).toBe(false);
+
+      // b. At least 5 db.execute calls during init:
+      //    CREATE TABLE, DELETE (dedup), UPDATE (merged state), CREATE UNIQUE INDEX,
+      //    CREATE INDEX updated_at.
+      expect(callsAfterInit).toBeGreaterThanOrEqual(5);
+
+      // c. A new hit after init triggers an INSERT ON CONFLICT (persistence works).
+      _recordProbe(_uaProbes, "B30DupDeduplicatedUA/1.0", "ua", initNow);
+      await flushMicrotasks();
+      expect(executeMock.mock.calls.length).toBeGreaterThan(callsAfterInit);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  // ── B31 / B32: duplicate-key rows — gap-hit row must not overwrite fresh row ─
+  //
+  // T0 = Date.now()+108h (B31) and +110h (B32) — monotonically above B30 (106h).
+
+  it("(B31) duplicate-key UA: gap-hit second row does not overwrite the fresh-hit first row; _pruneProbes keeps the fresh hit", async () => {
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const SKEW      = 10;
+
+    const initNow  = Date.now() + 108 * 60 * 60 * 1000;
+    const pruneNow = initNow + SKEW;
+
+    const initCutoff = initNow - WINDOW_MS;
+    const freshHit   = initNow - WINDOW_MS / 2;
+    const gapHits: number[] = Array.from({ length: SKEW }, (_, k) => initCutoff + k);
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _uaProbes, _refererProbes, _pruneProbes } = mod as any;
+
+      const fakeRows = [
+        { fieldType: "ua", key: "B31DupKeyUA/1.0", hits: [freshHit], lastAlerted: 0 },
+        { fieldType: "ua", key: "B31DupKeyUA/1.0", hits: gapHits,    lastAlerted: 0 },
+      ];
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      expect(_uaProbes.has("B31DupKeyUA/1.0")).toBe(true);
+      expect(_uaProbes.get("B31DupKeyUA/1.0")!.hits).toContain(freshHit);
+      expect(_refererProbes.has("B31DupKeyUA/1.0")).toBe(false);
+
+      _pruneProbes(pruneNow);
+
+      expect(_uaProbes.has("B31DupKeyUA/1.0")).toBe(true);
+      expect(_uaProbes.get("B31DupKeyUA/1.0")!.hits).toContain(freshHit);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  it("(B32) duplicate-key referer: gap-hit second row does not overwrite the fresh-hit first row; _pruneProbes keeps the fresh hit", async () => {
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const SKEW      = 10;
+
+    const initNow  = Date.now() + 110 * 60 * 60 * 1000;
+    const pruneNow = initNow + SKEW;
+
+    const initCutoff = initNow - WINDOW_MS;
+    const freshHit   = initNow - WINDOW_MS / 2;
+    const gapHits: number[] = Array.from({ length: SKEW }, (_, k) => initCutoff + k);
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _refererProbes, _uaProbes, _pruneProbes } = mod as any;
+
+      const fakeRows = [
+        { fieldType: "referer", key: "https://b32-dup-key-referer.example/scan", hits: [freshHit], lastAlerted: 0 },
+        { fieldType: "referer", key: "https://b32-dup-key-referer.example/scan", hits: gapHits,    lastAlerted: 0 },
+      ];
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      expect(_refererProbes.has("https://b32-dup-key-referer.example/scan")).toBe(true);
+      expect(_refererProbes.get("https://b32-dup-key-referer.example/scan")!.hits).toContain(freshHit);
+      expect(_uaProbes.has("https://b32-dup-key-referer.example/scan")).toBe(false);
+
+      _pruneProbes(pruneNow);
+
+      expect(_refererProbes.has("https://b32-dup-key-referer.example/scan")).toBe(true);
+      expect(_refererProbes.get("https://b32-dup-key-referer.example/scan")!.hits).toContain(freshHit);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  // ── B33: stale-first-row duplicate — the lower-id row is entirely stale ─────
+  //
+  // The single-pass approach only marked a key as a duplicate when the SECOND
+  // row was encountered after the first had already been loaded into the map.
+  // When the lower-id row is stale (all hits expired, lastAlerted=0), the old
+  // code skipped it with `continue` BEFORE the duplicate check — so dupKeys was
+  // never populated, the dedup DELETE never ran, CREATE UNIQUE INDEX still
+  // failed, and all subsequent persistProbeEntry calls silently failed.
+  //
+  // After the two-pass fix, ALL rows are grouped first; duplicates are detected
+  // regardless of each row's staleness.  This test verifies:
+  //   a. The fresh hit from the higher-id row is preserved in memory.
+  //   b. db.execute is called for the dedup DELETE + UPDATE + both INDEX DDLs
+  //      (i.e., the unique index CAN be created).
+  //   c. A new hit after init triggers a persistence call (ON CONFLICT works).
+  //
+  // T0 = Date.now()+112h — monotonically above B32 (110h).
+
+  it("(B33) stale-first-row duplicate: fresh hit from second row is preserved and the unique index is created", async () => {
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const SKEW      = 10;
+
+    const initNow    = Date.now() + 112 * 60 * 60 * 1000;
+    const initCutoff = initNow - WINDOW_MS;
+    const freshHit   = initNow - WINDOW_MS / 2;
+    // Stale hits: ALL below cutoff (so the first row passes neither the
+    // activeHits nor lastAlerted guard in the old single-pass code).
+    const staleHits: number[] = Array.from({ length: SKEW }, (_, k) => initCutoff - SKEW + k);
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _uaProbes, _refererProbes, _recordProbe } = mod as any;
+
+      // Row 1 (lower id): entirely stale — would be skipped by the old code's
+      //   `if (activeHits.length === 0 && row.lastAlerted === 0) continue`
+      // Row 2 (higher id): fresh hit.
+      const fakeRows = [
+        { fieldType: "ua", key: "B33StaleFirstRowUA/1.0", hits: staleHits, lastAlerted: 0 },
+        { fieldType: "ua", key: "B33StaleFirstRowUA/1.0", hits: [freshHit], lastAlerted: 0 },
+      ];
+
+      const executeMock = vi.fn().mockResolvedValue([]);
+      (db as any).execute = executeMock;
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+      const callsAfterInit = executeMock.mock.calls.length;
+
+      // a. Fresh hit preserved in memory.
+      expect(_uaProbes.has("B33StaleFirstRowUA/1.0")).toBe(true);
+      expect(_uaProbes.get("B33StaleFirstRowUA/1.0")!.hits).toContain(freshHit);
+      expect(_refererProbes.has("B33StaleFirstRowUA/1.0")).toBe(false);
+
+      // b. Dedup calls were issued: CREATE TABLE + DELETE + UPDATE +
+      //    CREATE UNIQUE INDEX + CREATE INDEX = at least 5 calls.
+      //    (The exact count does not matter — what matters is that init did NOT
+      //    short-circuit at 3 calls, which would mean the dedup block was skipped.)
+      expect(callsAfterInit).toBeGreaterThanOrEqual(5);
+
+      // c. Persistence works after init (the unique index exists → ON CONFLICT).
+      _recordProbe(_uaProbes, "B33StaleFirstRowUA/1.0", "ua", initNow);
+      await flushMicrotasks();
+      expect(executeMock.mock.calls.length).toBeGreaterThan(callsAfterInit);
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+  });
+
+  // ── B34: two duplicate groups together — one stale-first, one both-fresh ─────
+  //
+  // When two distinct keys each have duplicate DB rows, the dedup loop must
+  // reconcile both groups independently.  If the loop processed only keys
+  // tracked through the map (single-pass), it would miss the stale-first group
+  // AND the global-DELETE-then-UPDATE approach would silently delete the live
+  // row for the untracked group while leaving the stale row behind.
+  //
+  // This test seeds:
+  //   Key A (UA): row A1=stale (lower id), row A2=fresh (higher id).
+  //   Key B (UA): row B1=fresh, row B2=gap-only (both rows have recognisable
+  //               state, so a single-pass approach WOULD track key B — but key A
+  //               is still missed).
+  //
+  // After init:
+  //   a. Both keys are in _uaProbes with their fresh hits.
+  //   b. _pruneProbes keeps both entries (fresh hits survive the prune cutoff).
+  //   c. At least 7 db.execute calls: CREATE TABLE + (DELETE+UPDATE) × 2 +
+  //      CREATE UNIQUE INDEX + CREATE INDEX.
+  //
+  // T0 = Date.now()+114h — monotonically above B33 (112h).
+
+  it("(B34) two duplicate groups: stale-first-row and both-fresh group are both deduplicated; both entries survive prune", async () => {
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const SKEW      = 10;
+
+    const initNow    = Date.now() + 114 * 60 * 60 * 1000;
+    const pruneNow   = initNow + SKEW;
+    const initCutoff = initNow - WINDOW_MS;
+    const freshHitA  = initNow - WINDOW_MS / 2;
+    const freshHitB  = initNow - WINDOW_MS / 3;
+    const staleHits: number[] = Array.from({ length: SKEW }, (_, k) => initCutoff - SKEW + k);
+    const gapHitsB:  number[] = Array.from({ length: SKEW }, (_, k) => initCutoff + k);
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _uaProbes, _refererProbes, _pruneProbes } = mod as any;
+
+      const fakeRows = [
+        // Key A: stale first row + fresh second row.
+        { fieldType: "ua", key: "B34DupGroupA-UA/1.0", hits: staleHits,   lastAlerted: 0 },
+        { fieldType: "ua", key: "B34DupGroupA-UA/1.0", hits: [freshHitA], lastAlerted: 0 },
+        // Key B: fresh first row + gap-only second row (both hydrated in old code).
+        { fieldType: "ua", key: "B34DupGroupB-UA/1.0", hits: [freshHitB], lastAlerted: 0 },
+        { fieldType: "ua", key: "B34DupGroupB-UA/1.0", hits: gapHitsB,    lastAlerted: 0 },
+      ];
+
+      const executeMock = vi.fn().mockResolvedValue([]);
+      (db as any).execute = executeMock;
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+      const callsAfterInit = executeMock.mock.calls.length;
+
+      // a. Both keys hydrated with their fresh hits.
+      expect(_uaProbes.has("B34DupGroupA-UA/1.0")).toBe(true);
+      expect(_uaProbes.get("B34DupGroupA-UA/1.0")!.hits).toContain(freshHitA);
+      expect(_uaProbes.has("B34DupGroupB-UA/1.0")).toBe(true);
+      expect(_uaProbes.get("B34DupGroupB-UA/1.0")!.hits).toContain(freshHitB);
+      expect(_refererProbes.has("B34DupGroupA-UA/1.0")).toBe(false);
+      expect(_refererProbes.has("B34DupGroupB-UA/1.0")).toBe(false);
+
+      // b. At least 7 db.execute calls: CREATE TABLE + (DELETE+UPDATE)×2 + INDEX×2.
+      expect(callsAfterInit).toBeGreaterThanOrEqual(7);
+
+      // c. Both entries survive the prune cutoff (fresh hits are inside the window).
+      _pruneProbes(pruneNow);
+      expect(_uaProbes.has("B34DupGroupA-UA/1.0")).toBe(true);
+      expect(_uaProbes.get("B34DupGroupA-UA/1.0")!.hits).toContain(freshHitA);
+      expect(_uaProbes.has("B34DupGroupB-UA/1.0")).toBe(true);
+      expect(_uaProbes.get("B34DupGroupB-UA/1.0")!.hits).toContain(freshHitB);
+    } finally {
+      dateNowSpy.mockRestore();
     }
   });
 });

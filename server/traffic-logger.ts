@@ -420,37 +420,137 @@ export async function initProbeCounters(): Promise<void> {
         updated_at   TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
-    await db.execute(sql`
-      CREATE UNIQUE INDEX IF NOT EXISTS probe_counters_field_key_idx
-        ON probe_counters (field_type, key)
-    `);
-    await db.execute(sql`
-      CREATE INDEX IF NOT EXISTS probe_counters_updated_at_idx
-        ON probe_counters (updated_at)
-    `);
 
+    // Load all rows BEFORE enforcing the unique index.  If a previous deploy
+    // left duplicate (field_type, key) rows the CREATE UNIQUE INDEX below
+    // would throw and — without this ordering — the outer catch would absorb
+    // the error and skip all hydration.  By loading first, restart-hydration
+    // always completes even when the DB still contains duplicates.
     const cutoff = Date.now() - WINDOW_MS;
 
-    // Load all rows; skip those whose newest hit is already outside the window
-    // and whose cooldown is also expired (nothing useful to restore).
     const rows: Array<{ fieldType: string; key: string; hits: unknown; lastAlerted: number }> =
       await db.select().from(probeCounters);
 
+    // ── Pass 1: group every recognised row by (fieldType, key) ───────────────
+    //
+    // We collect ALL rows — including stale ones — before applying the
+    // active-hit / cooldown filter.  This guarantees that duplicate pairs are
+    // detected even when one row happens to be entirely stale (all hits
+    // outside the window, lastAlerted=0).  A single-pass approach that
+    // filters first and only marks duplicates on the second encounter misses
+    // the stale-first-row case, leaving the unique index un-creatable and
+    // every subsequent persistProbeEntry call silently broken.
+    //
+    // Composite key uses \x00 as separator — fieldType is always "referer"|"ua"
+    // and never contains the null byte, so there is no collision risk.
+    type RawRow = { fieldType: string; key: string; hits: unknown; lastAlerted: number };
+    const groups = new Map<string, RawRow[]>();
     for (const row of rows) {
-      const rawHits = Array.isArray(row.hits) ? (row.hits as number[]) : [];
-      // Keep only hits still within the window.
-      const activeHits = rawHits.filter((t: number) => t >= cutoff);
-      if (activeHits.length === 0 && row.lastAlerted === 0) continue;
+      if (row.fieldType !== "referer" && row.fieldType !== "ua") continue;
+      const gk = row.fieldType + "\x00" + row.key;
+      const g  = groups.get(gk);
+      if (g) g.push(row);
+      else groups.set(gk, [row]);
+    }
 
-      const entry: ProbeEntry = {
-        hits:        activeHits,
-        lastAlerted: row.lastAlerted ?? 0,
-      };
-      if (row.fieldType === "referer") {
-        refererProbes.set(row.key, entry);
-      } else if (row.fieldType === "ua") {
-        uaProbes.set(row.key, entry);
+    // ── Pass 2: hydrate in-memory maps from the merged groups ─────────────────
+    for (const groupRows of groups.values()) {
+      const { fieldType, key } = groupRows[0];
+      const map = fieldType === "referer" ? refererProbes : uaProbes;
+
+      // Merge all rows in the group: union raw hits, take the highest lastAlerted.
+      let mergedLastAlerted = 0;
+      const allHits: number[] = [];
+      for (const row of groupRows) {
+        const rh = Array.isArray(row.hits) ? (row.hits as number[]) : [];
+        allHits.push(...rh);
+        mergedLastAlerted = Math.max(mergedLastAlerted, row.lastAlerted ?? 0);
       }
+      // Apply the window filter only when building the in-memory entry.
+      const activeHits = Array.from(new Set(allHits))
+        .filter((t: number) => t >= cutoff)
+        .sort((a, b) => a - b);
+
+      if (activeHits.length === 0 && mergedLastAlerted === 0) continue;
+      map.set(key, { hits: activeHits, lastAlerted: mergedLastAlerted });
+    }
+
+    // ── Dedup DB rows and create unique index ─────────────────────────────────
+    //
+    // If any (fieldType, key) group had >1 DB row, we must remove the extras
+    // before CREATE UNIQUE INDEX can succeed — and before persistProbeEntry's
+    // ON CONFLICT (field_type, key) clause can be used.
+    //
+    // We use targeted per-group DELETE + UPDATE (one pair per duplicate group)
+    // rather than a single global DELETE.  A global DELETE is unsafe: if a
+    // future code path inserts a row after our SELECT but before the DELETE,
+    // or if only some groups are successfully reconciled, partial state could
+    // delete live rows without updating the survivors.
+    //
+    // All operations below are wrapped in a nested try-catch so that any DB
+    // error (e.g. the table is still locked) is non-fatal: hydration above
+    // already completed successfully.
+    try {
+      const dupGroups: Array<{ fieldType: "referer" | "ua"; key: string }> = [];
+      for (const [, groupRows] of groups) {
+        if (groupRows.length > 1) {
+          dupGroups.push({
+            fieldType: groupRows[0].fieldType as "referer" | "ua",
+            key:       groupRows[0].key,
+          });
+        }
+      }
+
+      for (const { fieldType, key } of dupGroups) {
+        // Keep only the lowest-id row for this (fieldType, key) pair.
+        await db.execute(sql`
+          DELETE FROM probe_counters
+          WHERE field_type = ${fieldType}
+            AND key        = ${key}
+            AND id NOT IN (
+              SELECT MIN(id) FROM probe_counters
+              WHERE field_type = ${fieldType} AND key = ${key}
+            )
+        `);
+
+        // Overwrite the surviving row with the merged in-memory state so that
+        // the next restart hydrates the correct unified entry.
+        const entryMap = fieldType === "referer" ? refererProbes : uaProbes;
+        const entry    = entryMap.get(key);
+        if (entry) {
+          await db.execute(sql`
+            UPDATE probe_counters
+            SET hits         = ${JSON.stringify(entry.hits)}::jsonb,
+                last_alerted = ${entry.lastAlerted},
+                updated_at   = NOW()
+            WHERE field_type = ${fieldType}
+              AND key        = ${key}
+          `);
+        } else {
+          // Both rows were stale (skipped hydration) — clear the surviving row
+          // to a known-empty state so the next restart can index it cleanly.
+          await db.execute(sql`
+            UPDATE probe_counters
+            SET hits         = '[]'::jsonb,
+                last_alerted = 0,
+                updated_at   = NOW()
+            WHERE field_type = ${fieldType}
+              AND key        = ${key}
+          `);
+        }
+      }
+
+      await db.execute(sql`
+        CREATE UNIQUE INDEX IF NOT EXISTS probe_counters_field_key_idx
+          ON probe_counters (field_type, key)
+      `);
+      await db.execute(sql`
+        CREATE INDEX IF NOT EXISTS probe_counters_updated_at_idx
+          ON probe_counters (updated_at)
+      `);
+    } catch {
+      // Non-fatal — DB error during dedup/index creation.
+      // Hydration completed successfully above.
     }
   } catch (err) {
     // Non-fatal: if DB is unavailable at boot, in-memory mode stays active.
