@@ -6507,3 +6507,105 @@ describe("alert fires on the first post-restart hit when the scraper was already
     expect(value).toBe(REFERER_KEY);
   });
 });
+
+// Task 414 — middleware-level: _refererProbes.lastAlerted is set before async .then() fires
+//
+// Task 413 calls _recordProbe directly.  This test drives the full middleware
+// call path and exploits microtask ordering to observe the state BETWEEN
+// _initPromise.then(recordCallback) running and the fire-and-forget
+// import("./telegram-bot").then(sendAlertCb) callback firing.
+//
+// Why the ordering guarantee holds
+// ─────────────────────────────────
+// res.finish() is called while _initPromise is already resolved (we awaited
+// initProbeCounters() above).  The finish listener calls
+//   _initPromise.then(recordCallback)
+// which queues recordCallback as a microtask immediately.  When we then do
+//   await Promise.resolve()
+// the test continuation is queued as a second microtask.  Microtasks are
+// drained FIFO, so the queue at that point is:
+//   [recordCallback, testContinuation]
+// recordCallback fires first:
+//   • sets entry.lastAlerted = now  (synchronous in current code)
+//   • calls import("./telegram-bot"), whose .then(sendAlertCb) is queued
+//     as a NEW microtask AFTER testContinuation
+// Queue becomes: [testContinuation, sendAlertCb]
+// testContinuation (our await resumes) runs next — BEFORE sendAlertCb.
+//
+// Regression behaviour
+// ─────────────────────
+// If a future change moves `entry.lastAlerted = now` into sendAlertCb, then
+// after recordCallback runs lastAlerted is still 0.  Assertion (a) fails,
+// catching the regression before any flush.
+//
+// Assertion (b) issues the second request in this same window (after
+// recordCallback, before sendAlertCb) and flushes everything:
+//   • sendAlertCb fires — with regression: lastAlerted finally set here
+//   • recordCallback2 fires — with regression: lastAlerted was 0 when
+//     res2.finish() was called, so the cooldown check passes again and
+//     a second alert fires → toHaveBeenCalledTimes(1) fails.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("middleware-level: _refererProbes.lastAlerted is set before async .then() fires", () => {
+  it("lastAlerted is set before sendAlertCb; a second request issued in that window is suppressed", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes } = mod as any;
+
+    // Resolve _initPromise so the finish-listener callback is queued as a
+    // microtask immediately (not deferred by an unresolved init promise).
+    await mod.initProbeCounters();
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+    const now       = Date.now();
+    const cutoff    = now - WINDOW_MS;
+
+    // The middleware lowercases the referer before using it as a map key.
+    const referer = "https://task414-middleware-scraper.example/probe";
+    const refKey  = referer.toLowerCase();
+
+    // Seed: exactly threshold (2) in-window hits — one more crosses it.
+    _refererProbes.set(refKey, {
+      hits:        [cutoff + 1000, cutoff + 2000],
+      lastAlerted: 0,
+    });
+
+    const req = makeReq("ObscureTask414Browser/1.0", referer);
+    const res = makeRes();
+    mod.trafficLoggerMiddleware(req, res as any, () => {});
+
+    const beforeTs = Date.now();
+    res.finish();
+    // recordCallback is now queued as a microtask (ahead of our continuation).
+
+    // One microtask yield: recordCallback runs (sets lastAlerted synchronously
+    // and queues sendAlertCb), then our continuation resumes.  sendAlertCb is
+    // still pending — it was queued AFTER our continuation.
+    await Promise.resolve();
+
+    // ── (a) lastAlerted must already be set ───────────────────────────────
+    // recordProbe has run.  sendAlertCb has NOT yet fired.  If a future change
+    // moves `entry.lastAlerted = now` into sendAlertCb, it is still 0 here.
+    const entry = _refererProbes.get(refKey)!;
+    expect(entry.lastAlerted).toBeGreaterThanOrEqual(beforeTs);
+
+    // ── (b) second request in the same window must be suppressed ──────────
+    // We are between recordCallback and sendAlertCb.  If lastAlerted is 0
+    // (regression), the cooldown check in recordCallback2 passes and a second
+    // alert fires after the full flush.
+    const req2 = makeReq("ObscureTask414Browser/1.0", referer);
+    const res2 = makeRes();
+    mod.trafficLoggerMiddleware(req2, res2 as any, () => {});
+    res2.finish();
+
+    // Drain all remaining microtasks (sendAlertCb + recordCallback2).
+    await flushMicrotasks();
+
+    // Exactly one alert total — cooldown suppressed the second request.
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    const [field, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number];
+    expect(field).toBe("referer");
+    expect(value).toBe(refKey);
+  });
+});
