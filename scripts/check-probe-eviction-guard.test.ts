@@ -1595,6 +1595,19 @@ describe("helper-extraction detection", () => {
 //   5h — method-chain split: .filter() on its own line, relaxed form → ok:false
 //        The same layout with >= cutoff must be caught by FORBIDDEN_PATTERN
 //        (which also has \s* before .filter).
+//   5i — three-line combined split at the inline level (correct form) → ok:true
+//        A formatter that applies BOTH the method-chain split AND the arrow-body
+//        split at the same time produces:
+//          entry.hits = entry.hits
+//            .filter((t) =>
+//              t > cutoff);
+//        REQUIRED_PATTERN has \s* before \.filter AND \s* between => and \w+,
+//        so the full-source fallback pass consumes both newlines and recognises
+//        the three-line form.
+//   5j — three-line combined split at the inline level (relaxed form) → ok:false
+//        The same three-line layout with >= cutoff must be caught by
+//        FORBIDDEN_PATTERN, which has the same \s* spans and therefore detects
+//        the relaxed comparator across line boundaries.
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("multi-line source strings (formatter-split arrow)", () => {
@@ -2413,6 +2426,69 @@ describe("multi-line helper body (formatter-split condition inside extracted hel
         `  const cutoff = now - WINDOW_MS;`,
         `  entry.hits = entry.hits`,
         `    .filter((t) => t >= cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+  });
+
+  // ── 5i. Three-line combined split at inline level (correct form) → ok:true ─
+  it("returns ok:true when the formatter applies both the method-chain split and the arrow-body split at the inline level (three-line correct form)", async () => {
+    // A formatter applying both an aggressive method-chain rule AND a short
+    // callback-body rule at the same time may rewrite:
+    //   entry.hits = entry.hits.filter((t) => t > cutoff);
+    // into the three-line combined split:
+    //   entry.hits = entry.hits
+    //     .filter((t) =>
+    //       t > cutoff);
+    //
+    // This form combines the two splits tested in isolation by tests 5g and 5a:
+    //   • 5g: method-chain split — entry.hits\n  .filter(…)
+    //   • 5a: arrow-body split  — .filter((t) =>\n    t > cutoff)
+    //
+    // REQUIRED_PATTERN has \s* between entry\.hits and \.filter (consuming the
+    // first newline) AND \s* between => and \w+ (consuming the second), so the
+    // full-source fallback pass recognises the three-line form as correct.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  entry.hits = entry.hits`,
+        `    .filter((t) =>`,
+        `      t > cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(true);
+  });
+
+  // ── 5j. Three-line combined split at inline level (relaxed form) → ok:false ─
+  it("returns ok:false with the relaxed-form error when the three-line combined split uses >= cutoff at the inline level", async () => {
+    // The same three-line combined split with the relaxed comparator:
+    //   entry.hits = entry.hits
+    //     .filter((t) =>
+    //       t >= cutoff);
+    //
+    // FORBIDDEN_PATTERN has the same \s* spans before \.filter and between =>
+    // and \w+, so the full-source fallback pass detects the relaxed form across
+    // both line breaks and emits the "relaxed eviction comparison" error rather
+    // than the generic "no correct eviction guard found" failure.
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  entry.hits = entry.hits`,
+        `    .filter((t) =>`,
+        `      t >= cutoff);`,
         `  entry.hits.push(now);`,
         `}`,
       ].join("\n"),
