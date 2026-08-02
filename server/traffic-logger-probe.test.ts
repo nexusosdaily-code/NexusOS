@@ -26,6 +26,8 @@
  *  11. Non-numeric ("inf")     → fallback to default 1 h
  *  12. Env var absent          → default 1 h
 ;
+
+
  single alert per key per window
  *
  * Alert fires at correct hit count
@@ -36,8 +38,12 @@
 
 import 
 {
+
+
  vi, describe, it, expect, beforeEach 
 }
+
+
  from "vitest"
 ;
 
@@ -54,8 +60,11 @@ const mockSendProbeAlert = vi.fn().mockResolvedValue(undefined)
 vi.mock("./telegram-bot", () => (
 {
 
+
   sendProbeAlert: mockSendProbeAlert,
 }
+
+
 ))
 ;
 
@@ -64,65 +73,106 @@ vi.mock("./telegram-bot", () => (
 vi.mock("./db", () => (
 {
 
+
   db: 
 {
+
 
     insert: vi.fn().mockReturnValue(
 {
 
+
       values: vi.fn().mockResolvedValue(undefined),
     
 }
+
+
 ),
     execute: vi.fn().mockResolvedValue([]),
     select: vi.fn().mockReturnValue(
 {
 
+
       from: vi.fn().mockResolvedValue([]),
     
 }
+
+
 ),
   
 }
+
+
 ,
 }
+
+
 ))
 ;
+
 
 vi.mock("../shared/schema", () => (
 {
+
+
  trafficLogs: 
 {
+
+
 }
+
+
 , probeCounters: 
 {
+
+
 }
- 
+
+
 }
+
+
 ))
 ;
 
+
 vi.mock("./honeypot",       () => (
 {
+
+
  isHoneypotPath: vi.fn().mockReturnValue(false) 
 }
+
+
 ))
 ;
+
 
 vi.mock("./geoip-enricher", () => (
 {
 
+
   ipCountryCache: 
 {
+
+
  get: vi.fn().mockReturnValue(undefined) 
 }
+
+
 ,
   ipHostingCache: 
 {
+
+
  get: vi.fn().mockReturnValue(false) 
 }
+
+
 ,
 }
+
+
 ))
 ;
 
@@ -132,24 +182,32 @@ vi.mock("./geoip-enricher", () => (
 beforeEach(() => 
 {
 
+
   // Clear the module cache so each test re-evaluates the IIFEs with whatever
   // env vars have been set for that particular test.
   vi.resetModules()
 ;
 
+
   vi.clearAllMocks()
 ;
+
 
   delete process.env.PROBE_ALERT_THRESHOLD
 ;
 
+
   delete process.env.PROBE_ALERT_COOLDOWN_HOURS
 ;
+
 
   delete process.env.PROBE_WINDOW_HOURS
 ;
 
+
 }
+
+
 )
 ;
 
@@ -163,11 +221,14 @@ beforeEach(() =>
 async function freshMiddleware() 
 {
 
+
   const mod = await import("./traffic-logger")
 ;
 
+
   return mod.trafficLoggerMiddleware
 ;
+
 
 }
 
@@ -193,22 +254,59 @@ function makeReq(ua: string, referer = "") {
 /**
  * Minimal Express-like response whose "finish" event can be triggered manually.
  */
-function makeRes() {
-  const listeners: Record<string, Array<() => void>> = {};
+function makeRes() 
+{
+
+
+  const listeners: Record<string, Array<() => void>> = 
+{
+
+}
+
+;
+
 
   return {
+
+
     statusCode: 200,
-    locals:     {},
+    locals:     
+{
+
+}
+
+,
     status:     vi.fn().mockReturnThis(),
     json:       vi.fn().mockReturnThis(),
-    on(event: string, fn: () => void) {
-      (listeners[event] ??= []).push(fn);
-    },
+    on(event: string, fn: () => void) 
+{
+
+
+      (listeners[event] ??= []).push(fn)
+;
+
+
+}
+
+,
     /** Simulate the HTTP response completing (triggers probe recording). */
-    finish() {
-      for (const fn of listeners["finish"] ?? []) fn();
-    },
-  };
+    finish() 
+{
+
+
+      for (const fn of listeners["finish"] ?? []) fn()
+;
+
+
+}
+
+,
+  
+}
+
+;
+
+
 }
 
 
@@ -216,20 +314,27 @@ function makeRes() {
  * Flush the microtask queue so that the fire-and-forget
  *   import("./telegram-bot").then((
 {
+
+
  sendProbeAlert 
 }
+
+
 ) => sendProbeAlert(...))
  * inside recordProbe() has completed before we assert.
  */
 async function flushMicrotasks() 
 {
 
+
   // Two rounds: one for the dynamic import promise, one for the .then callback.
   await new Promise<void>((r) => setImmediate(r))
 ;
 
+
   await new Promise<void>((r) => setImmediate(r))
 ;
+
 
 }
 
@@ -246,36 +351,44 @@ async function hitTimes(
 ): Promise<number> 
 {
 
-  for (let i = 0
-;
- i < n
-;
- i++) 
+
+  for (let i = 0; i < n; i++) 
 {
+
 
     const req = makeReq(ua)
 ;
 
+
     const res = makeRes()
 ;
 
+
     middleware(req, res as any, () => 
 {
+
+
 }
+
+
 )
 ;
+
 
     res.finish()
 ;
 
+
     await flushMicrotasks()
 ;
 
-  
+
 }
+
 
   return mockSendProbeAlert.mock.calls.length
 ;
+
 
 }
 
@@ -287,11 +400,14 @@ async function hitTimes(
 describe("PROBE_ALERT_THRESHOLD parsing", () => 
 {
 
+
   it("valid positive integer: alert fires after threshold+1 hits", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "3"
 ;
+
 
     const mw = await freshMiddleware()
 ;
@@ -306,8 +422,10 @@ describe("PROBE_ALERT_THRESHOLD parsing", () =>
     expect(await hitTimes(mw, 1)).toBe(1)
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -315,8 +433,10 @@ describe("PROBE_ALERT_THRESHOLD parsing", () =>
   it("float string ('2.7'): parseInt truncates to 2; alert fires on hit 3", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "2.7"
 ;
+
 
     const mw = await freshMiddleware()
 ;
@@ -324,12 +444,18 @@ describe("PROBE_ALERT_THRESHOLD parsing", () =>
 
     expect(await hitTimes(mw, 2)).toBe(0)
 ;
+
+
  // at threshold, no alert
     expect(await hitTimes(mw, 1)).toBe(1)
 ;
+
+
  // exceeds → alert
   
 }
+
+
 )
 ;
 
@@ -337,8 +463,10 @@ describe("PROBE_ALERT_THRESHOLD parsing", () =>
   it("zero ('0'): falls back to default 5; alert fires on hit 6 not hit 1", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "0"
 ;
+
 
     const mw = await freshMiddleware()
 ;
@@ -347,12 +475,18 @@ describe("PROBE_ALERT_THRESHOLD parsing", () =>
     // If zero were accepted the alert would fire by hit 2 — it must not
     expect(await hitTimes(mw, 5)).toBe(0)
 ;
+
+
  // at default threshold, no alert
     expect(await hitTimes(mw, 1)).toBe(1)
 ;
+
+
  // 6th hit exceeds default 5
   
 }
+
+
 )
 ;
 
@@ -360,8 +494,10 @@ describe("PROBE_ALERT_THRESHOLD parsing", () =>
   it("negative value ('-3'): falls back to default 5; alert fires on hit 6", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "-3"
 ;
+
 
     const mw = await freshMiddleware()
 ;
@@ -370,11 +506,14 @@ describe("PROBE_ALERT_THRESHOLD parsing", () =>
     expect(await hitTimes(mw, 5)).toBe(0)
 ;
 
+
     expect(await hitTimes(mw, 1)).toBe(1)
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -382,8 +521,10 @@ describe("PROBE_ALERT_THRESHOLD parsing", () =>
   it("non-numeric string ('abc'): falls back to default 5; alert fires on hit 6", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "abc"
 ;
+
 
     const mw = await freshMiddleware()
 ;
@@ -392,11 +533,14 @@ describe("PROBE_ALERT_THRESHOLD parsing", () =>
     expect(await hitTimes(mw, 5)).toBe(0)
 ;
 
+
     expect(await hitTimes(mw, 1)).toBe(1)
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -404,8 +548,10 @@ describe("PROBE_ALERT_THRESHOLD parsing", () =>
   it("empty string (''): falls back to default 5; alert fires on hit 6", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = ""
 ;
+
 
     const mw = await freshMiddleware()
 ;
@@ -414,17 +560,21 @@ describe("PROBE_ALERT_THRESHOLD parsing", () =>
     expect(await hitTimes(mw, 5)).toBe(0)
 ;
 
+
     expect(await hitTimes(mw, 1)).toBe(1)
 ;
 
-  
+
 }
+
+
 )
 ;
 
 
   it("env var absent: falls back to default 5; alert fires on hit 6", async () => 
 {
+
 
     // Env var already deleted in beforeEach
     const mw = await freshMiddleware()
@@ -434,15 +584,21 @@ describe("PROBE_ALERT_THRESHOLD parsing", () =>
     expect(await hitTimes(mw, 5)).toBe(0)
 ;
 
+
     expect(await hitTimes(mw, 1)).toBe(1)
 ;
 
-  
+
 }
+
+
 )
 ;
 
+
 }
+
+
 )
 ;
 
@@ -454,6 +610,7 @@ describe("PROBE_ALERT_THRESHOLD parsing", () =>
 describe("PROBE_ALERT_COOLDOWN_HOURS parsing — invalid values fall back to 1 h", () => 
 {
 
+
   /**
    * For each invalid cooldown value: set threshold=2 so an alert fires after
    * 3 hits, then hit many more times and confirm the alert fires only ONCE
@@ -462,17 +619,21 @@ describe("PROBE_ALERT_COOLDOWN_HOURS parsing — invalid values fall back to 1 h
   async function assertSingleAlertWithBadCooldown(badValue: string | undefined) 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "2"
 ;
+
 
     if (badValue !== undefined) 
 {
 
+
       process.env.PROBE_ALERT_COOLDOWN_HOURS = badValue
 ;
 
-    
+
 }
+
 
     const mw = await freshMiddleware()
 ;
@@ -482,8 +643,10 @@ describe("PROBE_ALERT_COOLDOWN_HOURS parsing — invalid values fall back to 1 h
     await hitTimes(mw, 3)
 ;
 
+
     const countAfterFirst = mockSendProbeAlert.mock.calls.length
 ;
+
 
     expect(countAfterFirst).toBe(1)
 ;
@@ -493,21 +656,25 @@ describe("PROBE_ALERT_COOLDOWN_HOURS parsing — invalid values fall back to 1 h
     await hitTimes(mw, 10)
 ;
 
+
     expect(mockSendProbeAlert.mock.calls.length).toBe(1)
 ;
 
-  
+
 }
 
 
   it("zero ('0'): falls back to 1 h; no second alert fires within same test", async () => 
 {
 
+
     await assertSingleAlertWithBadCooldown("0")
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -515,11 +682,14 @@ describe("PROBE_ALERT_COOLDOWN_HOURS parsing — invalid values fall back to 1 h
   it("negative ('-1'): falls back to 1 h; no second alert fires within same test", async () => 
 {
 
+
     await assertSingleAlertWithBadCooldown("-1")
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -527,11 +697,14 @@ describe("PROBE_ALERT_COOLDOWN_HOURS parsing — invalid values fall back to 1 h
   it("non-numeric ('inf'): falls back to 1 h; no second alert fires within same test", async () => 
 {
 
+
     await assertSingleAlertWithBadCooldown("inf")
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -539,15 +712,21 @@ describe("PROBE_ALERT_COOLDOWN_HOURS parsing — invalid values fall back to 1 h
   it("env var absent: defaults to 1 h; no second alert fires within same test", async () => 
 {
 
+
     await assertSingleAlertWithBadCooldown(undefined)
 ;
 
-  
+
 }
+
+
 )
 ;
 
+
 }
+
+
 )
 ;
 
@@ -559,11 +738,14 @@ describe("PROBE_ALERT_COOLDOWN_HOURS parsing — invalid values fall back to 1 h
 describe("alert fires at exactly threshold+1 hits — boundary verification", () => 
 {
 
+
   it("threshold=3: no alert at hits 1–3, alert fires at hit 4", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "3"
 ;
+
 
     const mw = await freshMiddleware()
 ;
@@ -571,18 +753,28 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
 
     expect(await hitTimes(mw, 1)).toBe(0)
 ;
+
+
  // 1 hit — no alert
     expect(await hitTimes(mw, 1)).toBe(0)
 ;
+
+
  // 2 hits — no alert
     expect(await hitTimes(mw, 1)).toBe(0)
 ;
+
+
  // 3 hits — at threshold, still no alert
     expect(await hitTimes(mw, 1)).toBe(1)
 ;
+
+
  // 4 hits — exceeds threshold → alert
   
 }
+
+
 )
 ;
 
@@ -590,8 +782,10 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
   it("threshold=10: no alert at hits 1–10, alert fires at hit 11", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "10"
 ;
+
 
     const mw = await freshMiddleware()
 ;
@@ -599,12 +793,18 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
 
     expect(await hitTimes(mw, 10)).toBe(0)
 ;
+
+
  // 10 hits — at threshold, no alert
     expect(await hitTimes(mw, 1)).toBe(1)
 ;
+
+
   // 11th hit — exceeds → alert
   
 }
+
+
 )
 ;
 
@@ -612,8 +812,10 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
   it("alert message includes the hit count and field label", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "2"
 ;
+
 
     const mw = await freshMiddleware()
 ;
@@ -622,25 +824,35 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     const ua = "SuspiciousTrafficUA/1.0"
 ;
 
+
     await hitTimes(mw, 3, ua)
 ;
+
+
  // 3 hits exceeds threshold of 2
 
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1)
 ;
 
+
     // sendProbeAlert(field, value, hits) — check all three arguments
     const [field, , hits] = mockSendProbeAlert.mock.calls[0] as [string, string, number]
 ;
 
+
     expect(field).toBe("ua")
 ;
 
+
     expect(hits).toBe(3)
 ;
+
+
  // current in-window count reported
   
 }
+
+
 )
 ;
 
@@ -648,8 +860,10 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
   it("two different UA keys each alert independently at their own threshold", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "2"
 ;
+
 
     const mw = await freshMiddleware()
 ;
@@ -657,6 +871,7 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
 
     const uaA = "UnknownBotTypeA/1.0"
 ;
+
 
     const uaB = "UnknownBotTypeB/2.0"
 ;
@@ -666,6 +881,7 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     await hitTimes(mw, 3, uaA)
 ;
 
+
     expect(mockSendProbeAlert.mock.calls.length).toBe(1)
 ;
 
@@ -674,11 +890,14 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     await hitTimes(mw, 3, uaB)
 ;
 
+
     expect(mockSendProbeAlert.mock.calls.length).toBe(2)
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -691,23 +910,31 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
   it("lastAlerted is set after hits exceed threshold (hits.length === threshold+1)", async () => 
 {
 
+
     // threshold=3 → alert fires on the 4th hit (hits.length becomes 4 > 3)
     process.env.PROBE_ALERT_THRESHOLD = "3"
 ;
 
+
     const mod = await import("./traffic-logger")
 ;
 
+
     const 
 {
+
+
  _uaProbes, _recordProbe 
 }
+
+
  = mod as any
 ;
 
 
     const KEY = "BoundaryCheckUA/1.0"
 ;
+
 
     const now = Date.now()
 ;
@@ -716,8 +943,12 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     // Seed exactly threshold (3) hits — no alert should have fired yet.
     _uaProbes.set(KEY, 
 {
+
+
  hits: [now - 3000, now - 2000, now - 1000], lastAlerted: 0 
 }
+
+
 )
 ;
 
@@ -725,6 +956,7 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     // One more hit brings hits.length to 4, which exceeds threshold of 3.
     _recordProbe(_uaProbes, KEY, "ua", now)
 ;
+
 
     await flushMicrotasks()
 ;
@@ -734,11 +966,14 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     expect(_uaProbes.get(KEY).lastAlerted).toBeGreaterThan(0)
 ;
 
+
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1)
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -746,23 +981,31 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
   it("lastAlerted remains 0 when hits only reach threshold (hits.length === threshold, not threshold+1)", async () => 
 {
 
+
     // threshold=3 → no alert at exactly 3 hits (hits.length === 3, not > 3)
     process.env.PROBE_ALERT_THRESHOLD = "3"
 ;
 
+
     const mod = await import("./traffic-logger")
 ;
 
+
     const 
 {
+
+
  _uaProbes, _recordProbe 
 }
+
+
  = mod as any
 ;
 
 
     const KEY = "BoundaryCheckUA/2.0"
 ;
+
 
     const now = Date.now()
 ;
@@ -771,8 +1014,12 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     // Seed threshold−1 (2) hits so one more brings hits.length to exactly 3.
     _uaProbes.set(KEY, 
 {
+
+
  hits: [now - 2000, now - 1000], lastAlerted: 0 
 }
+
+
 )
 ;
 
@@ -780,6 +1027,7 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     // One more hit → hits.length === 3 === threshold, condition (> 3) is false.
     _recordProbe(_uaProbes, KEY, "ua", now)
 ;
+
 
     await flushMicrotasks()
 ;
@@ -789,17 +1037,21 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     expect(_uaProbes.get(KEY).lastAlerted).toBe(0)
 ;
 
+
     expect(mockSendProbeAlert).not.toHaveBeenCalled()
 ;
 
-  
+
 }
+
+
 )
 ;
 
 
   it("UA lastAlerted stays unchanged when hits exceed threshold but cooldown is active", async () => 
 {
+
 
     // threshold=3, default cooldown=1h.  Seed a _uaProbes entry that has already
     // alerted recently (lastAlerted within COOLDOWN_MS) and exactly threshold
@@ -809,19 +1061,26 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     process.env.PROBE_ALERT_THRESHOLD = "3"
 ;
 
+
     const mod = await import("./traffic-logger")
 ;
 
+
     const 
 {
+
+
  _uaProbes, _recordProbe 
 }
+
+
  = mod as any
 ;
 
 
     const KEY = "BoundaryCheckUA/cooldown-frozen"
 ;
+
 
     const now = Date.now()
 ;
@@ -831,14 +1090,18 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     const recentAlert = now - 30_000
 ;
 
+
     // Seed exactly threshold (3) hits so the next call pushes hits.length to 4 > 3.
     _uaProbes.set(KEY, 
 {
+
 
       hits: [now - 3000, now - 2000, now - 1000],
       lastAlerted: recentAlert,
     
 }
+
+
 )
 ;
 
@@ -846,6 +1109,7 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     // One more hit — count condition (4 > 3) is satisfied but cooldown blocks it.
     _recordProbe(_uaProbes, KEY, "ua", now)
 ;
+
 
     await flushMicrotasks()
 ;
@@ -855,15 +1119,21 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
     expect(_uaProbes.get(KEY).lastAlerted).toBe(recentAlert)
 ;
 
+
     expect(mockSendProbeAlert).not.toHaveBeenCalled()
 ;
 
-  
+
 }
+
+
 )
 ;
 
+
 }
+
+
 )
 ;
 
@@ -875,8 +1145,10 @@ describe("alert fires at exactly threshold+1 hits — boundary verification", ()
 describe("valid PROBE_ALERT_COOLDOWN_HOURS — alert suppressed within cooldown window", () => 
 {
 
+
   it("a valid cooldown: first alert fires, subsequent hits in the same window do not re-alert", async () => 
 {
+
 
     // Use threshold=2 and a meaningful cooldown (1 hour default behaviour).
     // We cannot fast-forward time in this test, so we simply verify that
@@ -884,8 +1156,10 @@ describe("valid PROBE_ALERT_COOLDOWN_HOURS — alert suppressed within cooldown 
     process.env.PROBE_ALERT_THRESHOLD    = "2"
 ;
 
+
     process.env.PROBE_ALERT_COOLDOWN_HOURS = "1"
 ;
+
 
     const mw = await freshMiddleware()
 ;
@@ -895,6 +1169,7 @@ describe("valid PROBE_ALERT_COOLDOWN_HOURS — alert suppressed within cooldown 
     await hitTimes(mw, 3)
 ;
 
+
     expect(mockSendProbeAlert.mock.calls.length).toBe(1)
 ;
 
@@ -903,15 +1178,21 @@ describe("valid PROBE_ALERT_COOLDOWN_HOURS — alert suppressed within cooldown 
     await hitTimes(mw, 20)
 ;
 
+
     expect(mockSendProbeAlert.mock.calls.length).toBe(1)
 ;
 
-  
+
 }
+
+
 )
 ;
 
+
 }
+
+
 )
 ;
 
@@ -923,6 +1204,7 @@ describe("valid PROBE_ALERT_COOLDOWN_HOURS — alert suppressed within cooldown 
 describe("Telegram HTML escaping — malicious characters in probe keys", () => 
 {
 
+
   /**
    * Helper: fire the middleware enough times to cross the threshold using the
    * supplied UA string, and return the [field, value, hits] args passed to
@@ -933,43 +1215,54 @@ describe("Telegram HTML escaping — malicious characters in probe keys", () =>
   async function getProbeCall(ua: string, threshold = 2): Promise<[string, string, number]> 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = String(threshold)
 ;
+
 
     const mw = await freshMiddleware()
 ;
 
+
     await hitTimes(mw, threshold + 1, ua)
 ;
+
 
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1)
 ;
 
+
     return mockSendProbeAlert.mock.calls[0] as [string, string, number]
 ;
 
-  
+
 }
 
 
   it("escapes '<' to '&lt;' in the alert message", async () => 
 {
 
+
     const rawUa = "EvilUA/<script>alert(1)</script>"
 ;
 
+
     const [field, value] = await getProbeCall(rawUa)
 ;
+
 
     // traffic-logger passes the raw string; sendProbeAlert handles escaping
     expect(field).toBe("ua")
 ;
 
+
     expect(value).toContain("<script>")
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -977,20 +1270,26 @@ describe("Telegram HTML escaping — malicious characters in probe keys", () =>
   it("escapes '>' to '&gt;' in the alert message", async () => 
 {
 
+
     const rawUa = "EvilUA/foo>bar"
 ;
+
 
     const [field, value] = await getProbeCall(rawUa)
 ;
 
+
     expect(field).toBe("ua")
 ;
+
 
     expect(value).toContain("foo>bar")
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -998,20 +1297,26 @@ describe("Telegram HTML escaping — malicious characters in probe keys", () =>
   it("escapes '&' to '&amp;' in the alert message", async () => 
 {
 
+
     const rawUa = "EvilUA/foo&bar=1"
 ;
+
 
     const [field, value] = await getProbeCall(rawUa)
 ;
 
+
     expect(field).toBe("ua")
 ;
+
 
     expect(value).toContain("foo&bar=1")
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -1019,20 +1324,28 @@ describe("Telegram HTML escaping — malicious characters in probe keys", () =>
   it("escapes all three special characters together", async () => 
 {
 
+
     const rawUa = "UA/<b>click</b>&foo=1"
 ;
+
 
     const [field, value] = await getProbeCall(rawUa)
 ;
 
+
     expect(field).toBe("ua")
 ;
 
+
     expect(value).toBe(rawUa)
 ;
+
+
  // raw value passed through unmodified
   
 }
+
+
 )
 ;
 
@@ -1040,24 +1353,33 @@ describe("Telegram HTML escaping — malicious characters in probe keys", () =>
   it("a plain UA with no special characters is not mangled", async () => 
 {
 
+
     const safeUa = "TotallyNormalBrowser/42.0 StableChannel Desktop"
 ;
+
 
     const [field, value] = await getProbeCall(safeUa)
 ;
 
+
     expect(field).toBe("ua")
 ;
+
 
     expect(value).toBe(safeUa)
 ;
 
-  
+
 }
+
+
 )
 ;
 
+
 }
+
+
 )
 ;
 
@@ -1069,6 +1391,7 @@ describe("Telegram HTML escaping — malicious characters in probe keys", () =>
 describe("300-character truncation of probe keys in alert message", () => 
 {
 
+
   // HTML truncation and escaping now happen inside sendProbeAlert (telegram-bot.ts).
   // These tests verify that traffic-logger passes the raw (untruncated) value
   // correctly — the 300-char cut happens in sendProbeAlert, not here.
@@ -1076,32 +1399,42 @@ describe("300-character truncation of probe keys in alert message", () =>
   it("a key of exactly 300 characters is NOT truncated", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "2"
 ;
+
 
     const mw = await freshMiddleware()
 ;
 
+
     const ua300 = "A".repeat(300)
 ;
+
 
     await hitTimes(mw, 3, ua300)
 ;
 
+
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1)
 ;
+
 
     const [, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number]
 ;
 
+
     expect(value).toBe(ua300)
 ;
+
 
     expect(value.length).toBe(300)
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -1109,33 +1442,43 @@ describe("300-character truncation of probe keys in alert message", () =>
   it("a key longer than 300 characters is passed raw to sendProbeAlert (truncation is its responsibility)", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "2"
 ;
+
 
     const mw = await freshMiddleware()
 ;
 
+
     const ua400 = "B".repeat(400)
 ;
+
 
     await hitTimes(mw, 3, ua400)
 ;
 
+
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1)
 ;
 
+
     const [, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number]
 ;
+
 
     // traffic-logger stores up to 500 chars; sendProbeAlert slices to 300 internally
     expect(value.length).toBe(400)
 ;
 
+
     expect(value).toBe(ua400)
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -1143,33 +1486,43 @@ describe("300-character truncation of probe keys in alert message", () =>
   it("special characters after position 300 are present in the raw value (sendProbeAlert truncates)", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "2"
 ;
+
 
     const mw = await freshMiddleware()
 ;
 
+
     const ua = "C".repeat(300) + "<evil>"
 ;
+
 
     await hitTimes(mw, 3, ua)
 ;
 
+
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1)
 ;
 
+
     const [, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number]
 ;
+
 
     // Raw value includes the '<evil>' tail — sendProbeAlert will truncate it away
     expect(value).toBe(ua)
 ;
 
+
     expect(value).toContain("<evil>")
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -1177,34 +1530,46 @@ describe("300-character truncation of probe keys in alert message", () =>
   it("special characters within the first 300 chars are passed raw to sendProbeAlert", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "2"
 ;
+
 
     const mw = await freshMiddleware()
 ;
 
+
     const ua = "D".repeat(10) + "<xss>" + "E".repeat(350)
 ;
+
 
     await hitTimes(mw, 3, ua)
 ;
 
+
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1)
 ;
 
+
     const [, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number]
 ;
+
 
     // Raw unescaped '<xss>' is passed through; sendProbeAlert escapes it
     expect(value).toContain("<xss>")
 ;
 
-  
+
 }
+
+
 )
 ;
 
+
 }
+
+
 )
 ;
 
@@ -1219,6 +1584,7 @@ describe("300-character truncation of probe keys in alert message", () =>
 
 describe("Referer probe — HTML escaping: raw value passed through to sendProbeAlert", () => 
 {
+
 
   const BOT_UA = "Googlebot/2.1 (+http://www.google.com/bot.html)"
 ;
@@ -1235,61 +1601,83 @@ describe("Referer probe — HTML escaping: raw value passed through to sendProbe
   ): Promise<[string, string, number]> 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = String(threshold)
 ;
+
 
     const mw = await freshMiddleware()
 ;
 
+
     for (let i = 0
 ;
+
+
  i < threshold + 1
 ;
+
+
  i++) 
 {
+
 
       const req = makeReq(BOT_UA, referer)
 ;
 
+
       const res = makeRes()
 ;
 
+
       mw(req, res as any, () => 
 {
+
+
 }
+
+
 )
 ;
+
 
       res.finish()
 ;
 
+
       await flushMicrotasks()
 ;
 
-    
+
 }
+
 
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1)
 ;
 
+
     return mockSendProbeAlert.mock.calls[0] as [string, string, number]
 ;
 
-  
+
 }
 
 
   it("field label is 'referer' for referer probe alerts", async () => 
 {
 
+
     const [field] = await getRefererProbeCall("http://example-scanner.com/probe")
 ;
+
 
     expect(field).toBe("referer")
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -1297,24 +1685,31 @@ describe("Referer probe — HTML escaping: raw value passed through to sendProbe
   it("referer containing '<' is passed raw — sendProbeAlert handles escaping", async () => 
 {
 
+
     const rawRef = "http://evil.com/<script>alert(1)</script>"
 ;
+
 
     const [field, value] = await getRefererProbeCall(rawRef)
 ;
 
+
     expect(field).toBe("referer")
 ;
+
 
     // traffic-logger lowercases the key but does NOT escape HTML
     expect(value).toContain("<script>")
 ;
 
+
     expect(value).toContain("</script>")
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -1322,20 +1717,26 @@ describe("Referer probe — HTML escaping: raw value passed through to sendProbe
   it("referer containing '>' is passed raw — sendProbeAlert handles escaping", async () => 
 {
 
+
     const rawRef = "http://evil.com/foo>bar"
 ;
+
 
     const [field, value] = await getRefererProbeCall(rawRef)
 ;
 
+
     expect(field).toBe("referer")
 ;
+
 
     expect(value).toContain("foo>bar")
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -1343,20 +1744,26 @@ describe("Referer probe — HTML escaping: raw value passed through to sendProbe
   it("referer containing '&' is passed raw — sendProbeAlert handles escaping", async () => 
 {
 
+
     const rawRef = "http://evil.com/page?a=1&b=2"
 ;
+
 
     const [field, value] = await getRefererProbeCall(rawRef)
 ;
 
+
     expect(field).toBe("referer")
 ;
+
 
     expect(value).toContain("&")
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -1364,30 +1771,39 @@ describe("Referer probe — HTML escaping: raw value passed through to sendProbe
   it("referer with all three HTML specials (<, >, &) is passed as lowercased raw string", async () => 
 {
 
+
     const rawRef = "http://bad.com/<b>Click</b>&foo=1"
 ;
+
 
     const [field, value] = await getRefererProbeCall(rawRef)
 ;
 
+
     expect(field).toBe("referer")
 ;
+
 
     // The key is lowercased before storage and forwarding
     expect(value).toBe(rawRef.toLowerCase())
 ;
 
+
     expect(value).toContain("<b>")
 ;
+
 
     expect(value).toContain("</b>")
 ;
 
+
     expect(value).toContain("&foo=1")
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -1395,24 +1811,33 @@ describe("Referer probe — HTML escaping: raw value passed through to sendProbe
   it("a plain referer with no HTML specials is not mangled", async () => 
 {
 
+
     const safeRef = "http://ordinarysite.com/page"
 ;
+
 
     const [field, value] = await getRefererProbeCall(safeRef)
 ;
 
+
     expect(field).toBe("referer")
 ;
+
 
     expect(value).toBe(safeRef.toLowerCase())
 ;
 
-  
+
 }
+
+
 )
 ;
 
+
 }
+
+
 )
 ;
 
@@ -2164,50 +2589,73 @@ describe("dynamic UA block always responds with HTTP 403", () => {
     const next = vi.fn().mockImplementation(() => 
 {
 
+
       res.status(200)
 ;
 
-    
+
 }
+
+
 )
 ;
+
 
     mw(req, res as any, next)
 ;
 
+
     res.finish()
 ;
+
 
     await flushMicrotasks()
 ;
 
-    return { res, next };
 
-  
+    return {
+
+
+ res, next 
+}
+
+
+;
+
+
 }
 
 
   it("phase 1 — UA in snapshot: res.status is called with 403", async () => 
 {
 
+
     const blockedUa = "DynamicBlockedUABot/1.0"
 ;
 
+
     const 
 {
+
+
  res 
 }
+
+
  = await sendOneUaBlockRequest(
       new Set([blockedUa]),
       blockedUa,
     )
 ;
 
+
     expect(res.status).toHaveBeenCalledWith(403)
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -2215,24 +2663,33 @@ describe("dynamic UA block always responds with HTTP 403", () => {
   it("phase 1 — UA in snapshot: next() is never called", async () => 
 {
 
+
     const blockedUa = "DynamicBlockedUABot/1.0"
 ;
 
+
     const 
 {
+
+
  next 
 }
+
+
  = await sendOneUaBlockRequest(
       new Set([blockedUa]),
       blockedUa,
     )
 ;
 
+
     expect(next).not.toHaveBeenCalled()
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -2240,19 +2697,26 @@ describe("dynamic UA block always responds with HTTP 403", () => {
   it("phase 2 — snapshot cleared: same UA receives HTTP 200 and next() is called", async () => 
 {
 
+
     const blockedUa = "DynamicBlockedUABot/1.0"
 ;
+
 
     // Phase 1 sanity check — block is active.
     const 
 {
+
+
  res: resBlocked 
 }
+
+
  = await sendOneUaBlockRequest(
       new Set([blockedUa]),
       blockedUa,
     )
 ;
+
 
     expect(resBlocked.status).toHaveBeenCalledWith(403)
 ;
@@ -2261,31 +2725,43 @@ describe("dynamic UA block always responds with HTTP 403", () => {
     // Phase 2: clear the snapshot and send the same UA again.
     const 
 {
+
+
  res: resLifted, next: nextLifted 
 }
+
+
  = await sendOneUaBlockRequest(
       new Set(),
       blockedUa,
     )
 ;
 
+
     // The downstream handler (next stub) must have been called …
     expect(nextLifted).toHaveBeenCalled()
 ;
+
 
     // … and it must have explicitly set a 200 status — not a 403.
     expect(resLifted.status).toHaveBeenCalledWith(200)
 ;
 
+
     expect(resLifted.status).not.toHaveBeenCalledWith(403)
 ;
 
-  
+
 }
+
+
 )
 ;
 
+
 }
+
+
 )
 ;
 
@@ -2303,6 +2779,7 @@ describe("dynamic UA block always responds with HTTP 403", () => {
 describe("dynamic UA block never increments the probe counter", () => 
 {
 
+
   /**
    * Helper: pre-populate _dynamicSnapshot.uas with a blocked UA string, send
    * `threshold+1` requests carrying that UA, and assert sendProbeAlert is
@@ -2314,11 +2791,14 @@ describe("dynamic UA block never increments the probe counter", () =>
   ): Promise<void> 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = String(threshold)
 ;
 
+
     const mod = await import("./traffic-logger")
 ;
+
 
     const mw = mod.trafficLoggerMiddleware
 ;
@@ -2328,8 +2808,12 @@ describe("dynamic UA block never increments the probe counter", () =>
     // treats it as blocked without needing a live database.
     mod._testSetDynamicBlockSnapshot(
 {
+
+
  referers: new Set(), uas: new Set([blockedUa]) 
 }
+
+
 )
 ;
 
@@ -2337,52 +2821,61 @@ describe("dynamic UA block never increments the probe counter", () =>
     const count = threshold + 1
 ;
 
-    for (let i = 0
-;
- i < count
-;
- i++) 
+
+    for (let i = 0; i < count; i++) 
 {
+
 
       const req = makeReq(blockedUa)
 ;
 
+
       const res = makeRes()
 ;
 
+
       mw(req, res as any, () => 
 {
+
+
 }
+
+
 )
 ;
+
 
       // The middleware returns 403 without registering a finish listener, so
       // this call is a no-op — but it future-proofs the test against any drift.
       res.finish()
 ;
 
+
       await flushMicrotasks()
 ;
 
-    
+
 }
 
 
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(0)
 ;
 
-  
+
 }
 
 
   it("threshold+1 requests with a dynamically-blocked UA produce zero alerts", async () => 
 {
 
+
     await assertDynamicUaNeverAlerts("DynamicBlockedBot/1.0")
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -2390,11 +2883,14 @@ describe("dynamic UA block never increments the probe counter", () =>
   it("a different blocked UA string is also never counted", async () => 
 {
 
+
     await assertDynamicUaNeverAlerts("ScrapeBot/2.0 (crawler)")
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -2402,11 +2898,14 @@ describe("dynamic UA block never increments the probe counter", () =>
   it("blocked UA with a custom high threshold still produces zero alerts", async () => 
 {
 
+
     await assertDynamicUaNeverAlerts("DynamicBlockedBot/1.0", 10)
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -2414,11 +2913,14 @@ describe("dynamic UA block never increments the probe counter", () =>
   it("blocked UA with threshold=1 (alert on hit 2) still produces zero alerts", async () => 
 {
 
+
     await assertDynamicUaNeverAlerts("DynamicBlockedBot/1.0", 1)
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -2426,14 +2928,18 @@ describe("dynamic UA block never increments the probe counter", () =>
   it("removing a UA from the snapshot restores normal probe counting and triggers an alert", async () => 
 {
 
+
     const threshold = 2
 ;
+
 
     process.env.PROBE_ALERT_THRESHOLD = String(threshold)
 ;
 
+
     const mod = await import("./traffic-logger")
 ;
+
 
     const mw = mod.trafficLoggerMiddleware
 ;
@@ -2446,8 +2952,12 @@ describe("dynamic UA block never increments the probe counter", () =>
     // Phase 1: block the UA and confirm zero alerts for threshold+1 hits.
     mod._testSetDynamicBlockSnapshot(
 {
+
+
  referers: new Set(), uas: new Set([blockedUa]) 
 }
+
+
 )
 ;
 
@@ -2455,32 +2965,38 @@ describe("dynamic UA block never increments the probe counter", () =>
     const countBlocked = threshold + 1
 ;
 
-    for (let i = 0
-;
- i < countBlocked
-;
- i++) 
+
+    for (let i = 0; i < countBlocked; i++) 
 {
+
 
       const req = makeReq(blockedUa)
 ;
 
+
       const res = makeRes()
 ;
 
+
       mw(req, res as any, () => 
 {
+
+
 }
+
+
 )
 ;
+
 
       res.finish()
 ;
 
+
       await flushMicrotasks()
 ;
 
-    
+
 }
 
 
@@ -2491,8 +3007,12 @@ describe("dynamic UA block never increments the probe counter", () =>
     // Phase 2: remove the UA from the snapshot (empty uas set).
     mod._testSetDynamicBlockSnapshot(
 {
+
+
  referers: new Set(), uas: new Set() 
 }
+
+
 )
 ;
 
@@ -2502,44 +3022,55 @@ describe("dynamic UA block never increments the probe counter", () =>
     const countUnblocked = threshold + 1
 ;
 
-    for (let i = 0
-;
- i < countUnblocked
-;
- i++) 
+
+    for (let i = 0; i < countUnblocked; i++) 
 {
+
 
       const req = makeReq(blockedUa)
 ;
 
+
       const res = makeRes()
 ;
 
+
       mw(req, res as any, () => 
 {
+
+
 }
+
+
 )
 ;
+
 
       res.finish()
 ;
 
+
       await flushMicrotasks()
 ;
 
-    
+
 }
 
 
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1)
 ;
 
-  
+
 }
+
+
 )
 ;
 
+
 }
+
+
 )
 ;
 
@@ -2555,6 +3086,7 @@ describe("dynamic UA block never increments the probe counter", () =>
 describe("double-counting guard — uaProbes and refererProbes are independent", () => 
 {
 
+
   /**
    * Send `n` requests each carrying BOTH an unknown UA and an external referer.
    * Returns the full list of [field, value, hits] triples passed to sendProbeAlert.
@@ -2567,27 +3099,33 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
   ): Promise<Array<[string, string, number]>> 
 {
 
-    for (let i = 0
-;
- i < n
-;
- i++) 
+
+    for (let i = 0; i < n; i++) 
 {
+
 
       const req = makeReq(ua, ref)
 ;
 
+
       const res = makeRes()
 ;
 
+
       middleware(req, res as any, () => 
 {
+
+
 }
+
+
 )
 ;
 
+
       res.finish()
 ;
+
 
       // Two probes may alert on the same hit — each fires its own
       // import("./telegram-bot").then(cb) chain concurrently.
@@ -2595,25 +3133,29 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
       await flushMicrotasks()
 ;
 
+
       await flushMicrotasks()
 ;
 
-    
+
 }
+
 
     return mockSendProbeAlert.mock.calls as Array<[string, string, number]>
 ;
 
-  
+
 }
 
 
   it("threshold+1 hits with both fields set: sendProbeAlert is called exactly twice, once per field", async () => 
 {
 
+
     // Threshold = 3 (alert fires when hits > 3, i.e. at hit 4+).
     process.env.PROBE_ALERT_THRESHOLD = "3"
 ;
+
 
     const mw = await freshMiddleware()
 ;
@@ -2629,20 +3171,29 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     const prewarm = makeReq("DualFieldTestBrowser/1.0")
 ;
 
+
     const prewarmRes = makeRes()
 ;
 
+
     mw(prewarm, prewarmRes as any, () => 
 {
+
+
 }
+
+
 )
 ;
+
 
     prewarmRes.finish()
 ;
 
+
     await flushMicrotasks()
 ;
+
 
     expect(mockSendProbeAlert.mock.calls.length).toBe(0)
 ;
@@ -2655,8 +3206,10 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     let calls = await hitBothFields(mw, 3)
 ;
 
+
     expect(calls.length).toBe(1)
 ;
+
 
     expect(calls[0][0]).toBe("ua")
 ;
@@ -2667,6 +3220,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     calls = await hitBothFields(mw, 1)
 ;
 
+
     expect(calls.length).toBe(2)
 ;
 
@@ -2675,11 +3229,14 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     const fields = calls.map(([field]) => field).sort()
 ;
 
+
     expect(fields).toEqual(["referer", "ua"])
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -2687,8 +3244,10 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
   it("hitting only with referer (rotating UA) does not trigger a UA alert", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "2"
 ;
+
 
     const mw = await freshMiddleware()
 ;
@@ -2696,48 +3255,57 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
 
     // 20 hits with a stable external referer but a unique UA per hit.
     // Only the referer probe accumulates; the UA probe never exceeds threshold.
-    for (let i = 0
-;
- i < 20
-;
- i++) 
+    for (let i = 0; i < 20; i++) 
 {
+
 
       const req = makeReq(`UniqueUA-${i}/1.0`, "https://referer-only-test.example/")
 ;
 
+
       const res = makeRes()
 ;
 
+
       mw(req, res as any, () => 
 {
+
+
 }
+
+
 )
 ;
+
 
       res.finish()
 ;
 
+
       await flushMicrotasks()
 ;
 
-    
+
 }
 
 
     const calls = mockSendProbeAlert.mock.calls as Array<[string, string, number]>
 ;
 
+
     // At least one referer alert must have fired.
     expect(calls.some(([field]) => field === "referer")).toBe(true)
 ;
+
 
     // No UA alert must have fired — each UA key only appears once.
     expect(calls.some(([field]) => field === "ua")).toBe(false)
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -2745,8 +3313,10 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
   it("hitting only with UA (no referer) does not trigger a referer alert", async () => 
 {
 
+
     process.env.PROBE_ALERT_THRESHOLD = "2"
 ;
+
 
     const mw = await freshMiddleware()
 ;
@@ -2754,54 +3324,65 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
 
     // 20 hits with a stable unknown UA and no referer header at all.
     // Only the UA probe accumulates; the referer probe is never touched.
-    for (let i = 0
-;
- i < 20
-;
- i++) 
+    for (let i = 0; i < 20; i++) 
 {
+
 
       const req = makeReq("StableNoRefererUA/1.0")
 ;
+
+
  // no referer arg → ""
       const res = makeRes()
 ;
 
+
       mw(req, res as any, () => 
 {
+
+
 }
+
+
 )
 ;
+
 
       res.finish()
 ;
 
+
       await flushMicrotasks()
 ;
 
-    
+
 }
 
 
     const calls = mockSendProbeAlert.mock.calls as Array<[string, string, number]>
 ;
 
+
     // At least one UA alert must have fired.
     expect(calls.some(([field]) => field === "ua")).toBe(true)
 ;
+
 
     // No referer alert must have fired.
     expect(calls.some(([field]) => field === "referer")).toBe(false)
 ;
 
-  
+
 }
+
+
 )
 ;
 
 
   it("both maps pre-seeded at threshold: one request fires both a 'ua' alert and a 'referer' alert", async () => 
 {
+
 
     // Regression guard: an accidental early-return or shared "already alerted"
     // flag in the _initPromise.then() callback would prevent the second
@@ -2833,16 +3414,23 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     process.env.PROBE_ALERT_THRESHOLD = "2"
 ;
 
+
     const mod = await import("./traffic-logger")
 ;
+
 
     const mw  = mod.trafficLoggerMiddleware
 ;
 
+
     const 
 {
+
+
  _uaProbes, _refererProbes, _recordProbe 
 }
+
+
  = mod as any
 ;
 
@@ -2856,33 +3444,48 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     const UA_KEY  = "PreseededDualUA/3.0"
 ;
 
+
     const REF_VAL = "https://preseeded-dual-scraper.example/scan"
 ;
 
+
     const REF_KEY = REF_VAL.toLowerCase()
 ;
+
+
    // matches referer.slice(0,500).toLowerCase()
 
     // ── Phase 1: synchronous regression proof ────────────────────────────────
     
 {
 
+
       const now = Date.now()
 ;
+
 
       // Seed both maps to exactly threshold (2 hits each).
       // One more hit pushes each to 3 > 2 — the alert condition.
       _uaProbes.set(UA_KEY,      
 {
+
+
  hits: [now - 2000, now - 1000], lastAlerted: 0 
 }
+
+
 )
 ;
 
+
       _refererProbes.set(REF_KEY, 
 {
+
+
  hits: [now - 2000, now - 1000], lastAlerted: 0 
 }
+
+
 )
 ;
 
@@ -2891,20 +3494,29 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
       const req = makeReq(UA_KEY, REF_VAL)
 ;
 
+
       const res = makeRes()
 ;
 
+
       mw(req, res as any, () => 
 {
+
+
 }
+
+
 )
 ;
+
 
       res.finish()
 ;
 
+
       await flushMicrotasks()
 ;
+
 
       await flushMicrotasks()
 ;
@@ -2929,30 +3541,43 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     const UA_KEY2  = "PreseededDualUA2/3.0"
 ;
 
+
     const REF_KEY2 = "https://preseeded-dual2-scraper.example/scan"
 ;
+
 
     const REF_KEY2_LOWER = REF_KEY2.toLowerCase()
 ;
 
-    
+
 {
+
 
       const now = Date.now()
 ;
 
+
       // Seed both maps to threshold.
       _uaProbes.set(UA_KEY2,       
 {
+
+
  hits: [now - 2000, now - 1000], lastAlerted: 0 
 }
+
+
 )
 ;
 
+
       _refererProbes.set(REF_KEY2_LOWER, 
 {
+
+
  hits: [now - 2000, now - 1000], lastAlerted: 0 
 }
+
+
 )
 ;
 
@@ -3178,10 +3803,13 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     _uaProbes.set(UA_KEY, 
 {
 
+
       hits:        [now - 3000, now - 2000, now - 1000], // 3 hits (already alerted)
       lastAlerted: now,                                  // cooldown just set
     
 }
+
+
 )
 ;
 
@@ -3190,10 +3818,13 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     _refererProbes.set(REF_KEY, 
 {
 
+
       hits:        [now - 2000, now - 1000],
       lastAlerted: 0,                        // never alerted → no cooldown
     
 }
+
+
 )
 ;
 
@@ -3202,20 +3833,29 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     const req = makeReq(UA_KEY, REF_VAL)
 ;
 
+
     const res = makeRes()
 ;
 
+
     mw(req, res as any, () => 
 {
+
+
 }
+
+
 )
 ;
+
 
     res.finish()
 ;
 
+
     await flushMicrotasks()
 ;
+
 
     await flushMicrotasks()
 ;
@@ -3335,17 +3975,27 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     // cooldown is active and, if so, skip the entire probe-recording block for
     // both fields — e.g.:
     //
-    //   if (ua && !patternBot) {
+    //   if (ua && !patternBot) 
+{
+
+
     //     const entry = uaProbes.get(uaKey)
 ;
 
+
     //     if (entry && now - entry.lastAlerted < COOLDOWN_MS) return
 ;
+
+
  // ← wrong
     //     recordProbe(uaProbes, uaKey, "ua", now)
 ;
 
-    //   }
+
+    //   
+}
+
+
     //   // ← referer recordProbe unreachable when UA in cooldown
     //
     // Cooldown suppresses the ALERT for a key, not the hit RECORDING.
@@ -3404,19 +4054,31 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     // cooldown is active and, if so, skip the entire probe-recording block for
     // both fields — e.g.:
     //
-    //   if (referer && !refBlocked && !isOwnOriginReferer(referer)) {
+    //   if (referer && !refBlocked && !isOwnOriginReferer(referer)) 
+{
+
+
     //     const entry = refererProbes.get(refKey)
 ;
 
+
     //     if (entry && now - entry.lastAlerted < COOLDOWN_MS) return
 ;
+
+
  // ← wrong
     //     recordProbe(refererProbes, refKey, "referer", now)
 ;
 
-    //   }
+
+    //   
+}
+
+
     //   recordProbe(uaProbes, uaKey, "ua", now)
 ;
+
+
   // ← unreachable when referer in cooldown
     //
     // Cooldown suppresses the ALERT for a key, not the hit RECORDING.
@@ -3562,29 +4224,42 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     const UA_KEY2       = "SymmetricSuppressionGuardUA2/1.0"
 ;
 
+
     const REF_VAL2      = "https://symmetric-suppression-guard2.example/probe"
 ;
+
 
     const REF_KEY2      = REF_VAL2.toLowerCase()
 ;
 
-    
+
 {
+
 
       const now = Date.now()
 ;
 
+
       _uaProbes.set(UA_KEY2,       
 {
+
+
  hits: [now - 2000, now - 1000], lastAlerted: 0 
 }
+
+
 )
 ;
 
+
       _refererProbes.set(REF_KEY2, 
 {
+
+
  hits: [now - 2000, now - 1000], lastAlerted: 0 
 }
+
+
 )
 ;
 
@@ -3638,16 +4313,23 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     process.env.PROBE_ALERT_THRESHOLD = "2"
 ;
 
+
     const mod = await import("./traffic-logger")
 ;
+
 
     const mw  = mod.trafficLoggerMiddleware
 ;
 
+
     const 
 {
+
+
  _uaProbes, _refererProbes 
 }
+
+
  = mod as any
 ;
 
@@ -3661,8 +4343,10 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     const UA_KEY  = "RefererAlertFiringTestUA/3.0"
 ;
 
+
     const REF_VAL = "https://referer-alert-while-ua-unknown.example/probe"
 ;
+
 
     const REF_KEY = REF_VAL.toLowerCase()
 ;
@@ -3677,15 +4361,21 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     _refererProbes.set(REF_KEY, 
 {
 
+
       hits:        [now - 2000, now - 1000],
       lastAlerted: 0, // never alerted — no cooldown active
     
 }
+
+
 )
 ;
 
+
     const refHitsBefore = _refererProbes.get(REF_KEY).hits.length
 ;
+
+
  // 2
 
     // Confirm the UA key is not yet tracked.
@@ -3697,20 +4387,29 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     const req = makeReq(UA_KEY, REF_VAL)
 ;
 
+
     const res = makeRes()
 ;
 
+
     mw(req, res as any, () => 
 {
+
+
 }
+
+
 )
 ;
+
 
     res.finish()
 ;
 
+
     await flushMicrotasks()
 ;
+
 
     await flushMicrotasks()
 ;
@@ -3720,11 +4419,14 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1)
 ;
 
+
     const [field, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number]
 ;
 
+
     expect(field).toBe("referer")
 ;
+
 
     expect(value).toBe(REF_KEY)
 ;
@@ -3733,6 +4435,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     // ── Referer probe: recording must have happened (hit count went up).
     const refEntry = _refererProbes.get(REF_KEY)
 ;
+
 
     expect(refEntry.hits).toHaveLength(refHitsBefore + 1)
 ;
@@ -3743,17 +4446,21 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(_uaProbes.has(UA_KEY)).toBe(true)
 ;
 
+
     expect(_uaProbes.get(UA_KEY).hits).toHaveLength(1)
 ;
 
-  
+
 }
+
+
 )
 ;
 
 
   it("only one probe crosses threshold: lastAlerted stays 0 on the non-alerting entry (no cross-contamination)", async () => 
 {
+
 
     // Regression guard: a future refactor might accidentally write the alerting
     // probe's lastAlerted into BOTH probe map entries on the same request — e.g.:
@@ -3765,15 +4472,22 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     //
     //   const alertState = 
 {
+
+
  lastAlerted: 0 
 }
+
+
 ;
+
 
     //   recordProbe(uaProbes,      uaKey,  "ua",      now, alertState)
 ;
 
+
     //   recordProbe(refererProbes, refKey, "referer", now, alertState)
 ;
+
 
     //
     // This would silently impose a 1-hour cooldown on the non-alerting probe,
@@ -3793,16 +4507,23 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     process.env.PROBE_ALERT_THRESHOLD = "2"
 ;
 
+
     const mod = await import("./traffic-logger")
 ;
+
 
     const mw  = mod.trafficLoggerMiddleware
 ;
 
+
     const 
 {
+
+
  _uaProbes, _refererProbes 
 }
+
+
  = mod as any
 ;
 
@@ -3815,6 +4536,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     
 {
 
+
       const now = Date.now()
 ;
 
@@ -3822,8 +4544,10 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
       const UA_KEY_A  = "CrossContamGuardUAOnly/1.0"
 ;
 
+
       const REF_VAL_A = "https://cross-contam-guard-ua-only.example/probe"
 ;
+
 
       const REF_KEY_A = REF_VAL_A.toLowerCase()
 ;
@@ -3833,10 +4557,13 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
       _uaProbes.set(UA_KEY_A, 
 {
 
+
         hits:        [now - 2000, now - 1000],
         lastAlerted: 0,
       
 }
+
+
 )
 ;
 
@@ -3845,10 +4572,13 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
       _refererProbes.set(REF_KEY_A, 
 {
 
+
         hits:        [now - 2000],
         lastAlerted: 0,
       
 }
+
+
 )
 ;
 
@@ -3856,20 +4586,29 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
       const req = makeReq(UA_KEY_A, REF_VAL_A)
 ;
 
+
       const res = makeRes()
 ;
 
+
       mw(req, res as any, () => 
 {
+
+
 }
+
+
 )
 ;
+
 
       res.finish()
 ;
 
+
       await flushMicrotasks()
 ;
+
 
       await flushMicrotasks()
 ;
@@ -3879,6 +4618,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
       const uaEntry_A = _uaProbes.get(UA_KEY_A)
 ;
 
+
       expect(uaEntry_A.lastAlerted).toBeGreaterThan(0)
 ;
 
@@ -3886,6 +4626,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
       // Referer entry must NOT have been contaminated by the UA alert timestamp.
       const refEntry_A = _refererProbes.get(REF_KEY_A)
 ;
+
 
       expect(refEntry_A.lastAlerted).toBe(0)
 ;
@@ -3938,17 +4679,20 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
       expect(refEntry_B.lastAlerted).not.toBe(uaEntry_B.lastAlerted)
 ;
 
-    
+
 }
 
-  
+
 }
+
+
 )
 ;
 
 
   it("referer cooldown active + UA at threshold: only the UA alert fires, referer alert is suppressed", async () => 
 {
+
 
     // Regression guard: a future change that short-circuits on the referer
     // probe's cooldown state — e.g.:
@@ -3965,6 +4709,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     //   if (!refererAlerted) recordProbe(uaProbes, uaKey, "ua", now)
 ;
 
+
     //
     // Both patterns would silently suppress the UA alert when the referer map
     // happens to be in cooldown on the same request.
@@ -3979,16 +4724,23 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     process.env.PROBE_ALERT_THRESHOLD = "2"
 ;
 
+
     const mod = await import("./traffic-logger")
 ;
+
 
     const mw  = mod.trafficLoggerMiddleware
 ;
 
+
     const 
 {
+
+
  _uaProbes, _refererProbes 
 }
+
+
  = mod as any
 ;
 
@@ -4003,8 +4755,10 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     const UA_KEY  = "RefCooldownUAThresholdBrowser/1.0"
 ;
 
+
     const REF_VAL = "https://ref-cooldown-ua-threshold.example/scan"
 ;
+
 
     const REF_KEY = REF_VAL.toLowerCase()
 ;
@@ -4043,11 +4797,14 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(mockSendProbeAlert).toHaveBeenCalledTimes(1)
 ;
 
+
     const [field, value] = mockSendProbeAlert.mock.calls[0] as [string, string, number]
 ;
 
+
     expect(field).toBe("ua")
 ;
+
 
     expect(value).toBe(UA_KEY)
 ;
@@ -4057,8 +4814,10 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(now)
 ;
 
-  
+
 }
+
+
 )
 ;
 
@@ -4066,26 +4825,45 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
   it("referer-only cooldown: UA probe gains its first hit and referer probe gains one hit on a dual-field request", async () => 
 {
 
+
     // Regression guard for a symmetric suppression path: a future refactor
     // that checks whether the referer probe is in cooldown and skips ALL probe
     // recording for that request — e.g.:
     //
-    //   if (referer && !refBlocked && !isOwnOriginReferer(referer)) {
+    //   if (referer && !refBlocked && !isOwnOriginReferer(referer)) 
+{
+
+
     //     const entry = refererProbes.get(refKey)
 ;
 
+
     //     if (entry && now - entry.lastAlerted < COOLDOWN_MS) return
 ;
+
+
  // ← wrong
     //     recordProbe(refererProbes, refKey, "referer", now)
 ;
 
-    //   }
-    //   if (ua && !patternBot) {
+
+    //   
+}
+
+
+    //   if (ua && !patternBot) 
+{
+
+
     //     recordProbe(uaProbes, uaKey, "ua", now)
 ;
+
+
  // ← unreachable
-    //   }
+    //   
+}
+
+
     //
     // Specifically targets the case where:
     //   • _refererProbes has lastAlerted = now (full cooldown active)
@@ -4477,6 +5255,7 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(now)
 ;
 
+
     expect(_uaProbes.get(UA_KEY).lastAlerted).toBe(now)
 ;
 
@@ -4490,14 +5269,18 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     const now2 = now + 10
 ;
 
+
     _recordProbe(_refererProbes, REF_KEY, "referer", now2)
 ;
+
 
     await flushMicrotasks()
 ;
 
+
     _recordProbe(_uaProbes, UA_KEY, "ua", now2)
 ;
+
 
     await flushMicrotasks()
 ;
@@ -4507,9 +5290,11 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(mockSendProbeAlert).not.toHaveBeenCalled()
 ;
 
+
     // lastAlerted on each entry must remain at the Phase-1 "now", not bumped.
     expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(now)
 ;
+
 
     expect(_uaProbes.get(UA_KEY).lastAlerted).toBe(now)
 ;
@@ -5041,17 +5826,25 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const now   = Date.now()
 ;
 
+
     const hitTs = now - 1_000
 ;
+
+
  // well within the 24-hour window
 
     const mod    = await import("./traffic-logger")
 ;
 
+
     const 
 {
+
+
  db 
 }
+
+
  = await import("./db")
 ;
 
@@ -5059,28 +5852,48 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const SKIPPED_VARIANTS = [
       
 {
+
+
  fieldType: "Referer",  key: "https://warn-test-Referer.example/" 
 }
+
+
 ,
       
 {
+
+
  fieldType: "REFERER",  key: "https://warn-test-REFERER.example/" 
 }
+
+
 ,
       
 {
+
+
  fieldType: "UA",       key: "WarnTestUA/1.0" 
 }
+
+
 ,
       
 {
+
+
  fieldType: "uA",       key: "WarnTestUa/1.0" 
 }
+
+
 ,
       
 {
+
+
  fieldType: "unknown",  key: "WarnTestUnknown/1.0" 
 }
+
+
 ,
     ]
 ;
@@ -5088,10 +5901,15 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 
     const fakeRows = SKIPPED_VARIANTS.map((
 {
+
+
  fieldType, key 
 }
+
+
 ) => (
 {
+
 
       fieldType,
       key,
@@ -5099,6 +5917,8 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       lastAlerted: 0,
     
 }
+
+
 ))
 ;
 
@@ -5106,22 +5926,33 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     (db as any).execute = vi.fn().mockResolvedValue([])
 ;
 
+
     (db as any).select  = vi.fn().mockReturnValue(
 {
+
+
  from: vi.fn().mockResolvedValue(fakeRows) 
 }
+
+
 )
 ;
 
 
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => 
 {
+
+
 }
+
+
 )
 ;
 
+
     try 
 {
+
 
       await mod.initProbeCounters()
 ;
@@ -5137,17 +5968,22 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
       // Each call must mention the offending fieldType so the log is actionable.
       for (const 
 {
+
+
  fieldType 
 }
+
+
  of SKIPPED_VARIANTS) 
 {
+
 
         expect(warnSpy).toHaveBeenCalledWith(
           expect.stringContaining(`fieldType="${fieldType}"`),
         )
 ;
 
-      
+
 }
 
 
@@ -5604,77 +6440,258 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     // Two ua keys and two referer keys are seeded with non-overlapping
     // timestamp bands.  After initProbeCounters, each entry must contain
     // exactly the timestamps from its own band and none from the other band.
-    const now = Date.now();
+    const now = Date.now()
+;
+
 
     // Non-overlapping bands — each 10 ms apart so sorting cannot hide aliasing.
-    const UA1_HITS  = [now - 4_000, now - 3_000]; // UA1 band: −4 s … −3 s
-    const UA2_HITS  = [now - 2_000, now - 1_000]; // UA2 band: −2 s … −1 s
-    const REF1_HITS = [now - 8_000, now - 7_000]; // REF1 band: −8 s … −7 s
-    const REF2_HITS = [now - 6_000, now - 5_000]; // REF2 band: −6 s … −5 s
+    const UA1_HITS  = [now - 4_000, now - 3_000]
+;
 
-    const UA1_KEY   = "AliasTestBot-UA1/1.0";
-    const UA2_KEY   = "AliasTestBot-UA2/1.0";
-    const REF1_KEY  = "https://alias-test-referer-1.example/";
-    const REF2_KEY  = "https://alias-test-referer-2.example/";
 
-    const mod    = await import("./traffic-logger");
-    const { db } = await import("./db");
+ // UA1 band: −4 s … −3 s
+    const UA2_HITS  = [now - 2_000, now - 1_000]
+;
+
+
+ // UA2 band: −2 s … −1 s
+    const REF1_HITS = [now - 8_000, now - 7_000]
+;
+
+
+ // REF1 band: −8 s … −7 s
+    const REF2_HITS = [now - 6_000, now - 5_000]
+;
+
+ // REF2 band: −6 s … −5 s
+
+    const UA1_KEY   = "AliasTestBot-UA1/1.0"
+;
+
+
+    const UA2_KEY   = "AliasTestBot-UA2/1.0"
+;
+
+
+    const REF1_KEY  = "https://alias-test-referer-1.example/"
+;
+
+
+    const REF2_KEY  = "https://alias-test-referer-2.example/"
+;
+
+
+    const mod    = await import("./traffic-logger")
+;
+
+
+    const 
+{
+
+
+ db 
+}
+
+
+ = await import("./db")
+;
+
 
     const fakeRows = [
-      { fieldType: "ua",      key: UA1_KEY,  hits: UA1_HITS,  lastAlerted: 0 },
-      { fieldType: "ua",      key: UA2_KEY,  hits: UA2_HITS,  lastAlerted: 0 },
-      { fieldType: "referer", key: REF1_KEY, hits: REF1_HITS, lastAlerted: 0 },
-      { fieldType: "referer", key: REF2_KEY, hits: REF2_HITS, lastAlerted: 0 },
-    ];
-    (db as any).execute = vi.fn().mockResolvedValue([]);
-    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+      
+{
 
-    await mod.initProbeCounters();
+
+ fieldType: "ua",      key: UA1_KEY,  hits: UA1_HITS,  lastAlerted: 0 
+}
+
+
+,
+      
+{
+
+
+ fieldType: "ua",      key: UA2_KEY,  hits: UA2_HITS,  lastAlerted: 0 
+}
+
+
+,
+      
+{
+
+
+ fieldType: "referer", key: REF1_KEY, hits: REF1_HITS, lastAlerted: 0 
+}
+
+
+,
+      
+{
+
+
+ fieldType: "referer", key: REF2_KEY, hits: REF2_HITS, lastAlerted: 0 
+}
+
+
+,
+    ]
+;
+
+
+    (db as any).execute = vi.fn().mockResolvedValue([])
+;
+
+
+    (db as any).select  = vi.fn().mockReturnValue(
+{
+
+
+ from: vi.fn().mockResolvedValue(fakeRows) 
+}
+
+
+)
+;
+
+
+    await mod.initProbeCounters()
+;
+
 
     // ── UA1: must contain only its own band ──────────────────────────────────
-    const ua1 = mod._uaProbes.get(UA1_KEY);
-    expect(ua1).toBeDefined();
-    for (const ts of UA1_HITS) {
-      expect(ua1!.hits).toContain(ts);
-    }
+    const ua1 = mod._uaProbes.get(UA1_KEY)
+;
+
+
+    expect(ua1).toBeDefined()
+;
+
+
+    for (const ts of UA1_HITS) 
+{
+
+
+      expect(ua1!.hits).toContain(ts)
+;
+
+
+}
+
+
     // UA2 timestamps must not bleed into UA1.
-    for (const ts of UA2_HITS) {
-      expect(ua1!.hits).not.toContain(ts);
-    }
+    for (const ts of UA2_HITS) 
+{
+
+
+      expect(ua1!.hits).not.toContain(ts)
+;
+
+
+}
+
 
     // ── UA2: must contain only its own band ──────────────────────────────────
-    const ua2 = mod._uaProbes.get(UA2_KEY);
-    expect(ua2).toBeDefined();
-    for (const ts of UA2_HITS) {
-      expect(ua2!.hits).toContain(ts);
-    }
+    const ua2 = mod._uaProbes.get(UA2_KEY)
+;
+
+
+    expect(ua2).toBeDefined()
+;
+
+
+    for (const ts of UA2_HITS) 
+{
+
+
+      expect(ua2!.hits).toContain(ts)
+;
+
+
+}
+
+
     // UA1 timestamps must not bleed into UA2.
-    for (const ts of UA1_HITS) {
-      expect(ua2!.hits).not.toContain(ts);
-    }
+    for (const ts of UA1_HITS) 
+{
+
+
+      expect(ua2!.hits).not.toContain(ts)
+;
+
+
+}
+
 
     // ── REF1: must contain only its own band ─────────────────────────────────
-    const ref1 = mod._refererProbes.get(REF1_KEY);
-    expect(ref1).toBeDefined();
-    for (const ts of REF1_HITS) {
-      expect(ref1!.hits).toContain(ts);
-    }
+    const ref1 = mod._refererProbes.get(REF1_KEY)
+;
+
+
+    expect(ref1).toBeDefined()
+;
+
+
+    for (const ts of REF1_HITS) 
+{
+
+
+      expect(ref1!.hits).toContain(ts)
+;
+
+
+}
+
+
     // REF2 timestamps must not bleed into REF1.
-    for (const ts of REF2_HITS) {
-      expect(ref1!.hits).not.toContain(ts);
-    }
+    for (const ts of REF2_HITS) 
+{
+
+
+      expect(ref1!.hits).not.toContain(ts)
+;
+
+
+}
+
 
     // ── REF2: must contain only its own band ─────────────────────────────────
-    const ref2 = mod._refererProbes.get(REF2_KEY);
-    expect(ref2).toBeDefined();
-    for (const ts of REF2_HITS) {
-      expect(ref2!.hits).toContain(ts);
-    }
+    const ref2 = mod._refererProbes.get(REF2_KEY)
+;
+
+
+    expect(ref2).toBeDefined()
+;
+
+
+    for (const ts of REF2_HITS) 
+{
+
+
+      expect(ref2!.hits).toContain(ts)
+;
+
+
+}
+
+
     // REF1 timestamps must not bleed into REF2.
-    for (const ts of REF1_HITS) {
-      expect(ref2!.hits).not.toContain(ts);
-    }
-  });
+    for (const ts of REF1_HITS) 
+{
+
+
+      expect(ref2!.hits).not.toContain(ts)
+;
+
+
+}
+
+
+}
+
+
+)
+;
+
 
   // ── B4 / B5: pruneProbes — >= cutoff boundary (mirrors B2/B3) ───────────────
   //
@@ -5696,7 +6713,10 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   // B4: hit timestamp === cutoff (>= true) → entry must SURVIVE
   // B5: hit timestamp === cutoff - 1 (<  cutoff, >= false) → entry must be DELETED
 
-  it("(B4) pruneProbes: UA entry with a single hit at exactly pruneNow−WINDOW_MS (boundary) is NOT evicted", async () => {
+  it("(B4) pruneProbes: UA entry with a single hit at exactly pruneNow−WINDOW_MS (boundary) is NOT evicted", async () => 
+{
+
+
     // This is the pruneProbes mirror of B2.
     //
     // initProbeCounters loads a boundary hit (>= cutoff) on restart.  pruneProbes
@@ -5706,43 +6726,106 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     // A refactored pruner that uses > instead of >= would evaluate
     //   hits[last] > cutoff  →  false  →  hasActiveHits = false
     // and delete the entry despite it being a live in-window record.
-    const mod = await import("./traffic-logger");
-    const { _uaProbes, _pruneProbes } = mod as any;
+    const mod = await import("./traffic-logger")
+;
 
-    const WINDOW_MS   = 24 * 60 * 60 * 1000;
-    const COOLDOWN_MS =  1 * 60 * 60 * 1000;
+
+    const 
+{
+
+
+ _uaProbes, _pruneProbes 
+}
+
+
+ = mod as any
+;
+
+
+    const WINDOW_MS   = 24 * 60 * 60 * 1000
+;
+
+
+    const COOLDOWN_MS =  1 * 60 * 60 * 1000
+;
+
 
     // T0 = Date.now()+54h — monotonically above all prior pruneProbes tests (last used 50h).
-    const T0       = Date.now() + 54 * 60 * 60 * 1000;
-    const pruneNow = T0 + COOLDOWN_MS + 1; // passes the 1-hour prune guard
+    const T0       = Date.now() + 54 * 60 * 60 * 1000
+;
+
+
+    const pruneNow = T0 + COOLDOWN_MS + 1
+;
+
+ // passes the 1-hour prune guard
 
     // ── Advance lastPrune to T0 ───────────────────────────────────────────────
-    _pruneProbes(T0);
+    _pruneProbes(T0)
+;
+
 
     // ── Stale companion to prove the prune loop actually ran ──────────────────
-    _uaProbes.set("B4StaleCompanionUA/1.0", {
+    _uaProbes.set("B4StaleCompanionUA/1.0", 
+{
+
+
       hits:        [],
       lastAlerted: 0,
-    });
+    
+}
+
+
+)
+;
+
 
     // ── Seed the boundary UA entry ────────────────────────────────────────────
     // Single hit at exactly pruneNow - WINDOW_MS (= cutoff).
     // >= cutoff evaluates to true → hasActiveHits = true → must SURVIVE.
-    _uaProbes.set("B4BoundaryUA/1.0", {
+    _uaProbes.set("B4BoundaryUA/1.0", 
+{
+
+
       hits:        [pruneNow - WINDOW_MS],
       lastAlerted: 0,
-    });
+    
+}
 
-    _pruneProbes(pruneNow);
+
+)
+;
+
+
+    _pruneProbes(pruneNow)
+;
+
 
     // Stale companion deleted → confirms the prune loop ran
-    expect(_uaProbes.has("B4StaleCompanionUA/1.0")).toBe(false);
-    // Boundary hit is still within the window (>= cutoff) → entry must SURVIVE
-    expect(_uaProbes.has("B4BoundaryUA/1.0")).toBe(true);
-    expect(_uaProbes.get("B4BoundaryUA/1.0")!.hits).toEqual([pruneNow - WINDOW_MS]);
-  });
+    expect(_uaProbes.has("B4StaleCompanionUA/1.0")).toBe(false)
+;
 
-  it("(B5) pruneProbes: UA entry with a single hit 1 ms before the cutoff (pruneNow−WINDOW_MS−1) IS evicted", async () => {
+
+    // Boundary hit is still within the window (>= cutoff) → entry must SURVIVE
+    expect(_uaProbes.has("B4BoundaryUA/1.0")).toBe(true)
+;
+
+
+    expect(_uaProbes.get("B4BoundaryUA/1.0")!.hits).toEqual([pruneNow - WINDOW_MS])
+;
+
+
+}
+
+
+)
+;
+
+
+  it("(B5) pruneProbes: UA entry with a single hit 1 ms before the cutoff (pruneNow−WINDOW_MS−1) IS evicted", async () => 
+{
+
+
     // Symmetric outside-window counterpart to B4.
     //
     // A hit at pruneNow - WINDOW_MS - 1 is strictly less than cutoff, so
@@ -6467,9 +7550,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const initNow     = pruneNow - 1
 ;
                // 1 ms earlier than prune
-    const boundaryHit = pruneNow - WINDOW_MS
-;
-       // == prune cutoff exactly
+    const boundaryHit = pruneNow - WINDOW_MS;       // == prune cutoff exactly
 
     // Freeze Date.now() to initNow so initProbeCounters uses the slightly
     // earlier cutoff (initNow - WINDOW_MS = boundaryHit - 1).
@@ -7433,9 +8514,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const now       = Date.now()
 ;
 
-    const hitTs     = now - 1_000
-;
- // 1 s ago — well within the 24-hour window
+    const hitTs     = now - 1_000; // 1 s ago — well within the 24-hour window
     const SHARED_KEY = "restart-bleed-test.example/"
 ;
 
@@ -7541,7 +8620,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   //
   // T0 = Date.now()+82h (B18) and +84h (B19) — monotonically above B17 (80h).
 
-  it("(B18) off-by-one init UA: stale hit 1 ms outside the window is NOT loaded by initProbeCounters; _pruneProbes(initNow) deletes it when injected", async () => 
+  it("(B18) off-by-one init UA: stale hit 1 ms outside the window is NOT loaded by initProbeCounters; _pruneProbes(initNow) deletes it when injected", async () =>
 {
 
     const WINDOW_MS = 24 * 60 * 60 * 1000
@@ -7669,7 +8748,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 ;
 
 
-  it("(B19) off-by-one init referer: stale hit 1 ms outside the window is NOT loaded by initProbeCounters; _pruneProbes(initNow) deletes it when injected", async () => 
+  it("(B19) off-by-one init referer: stale hit 1 ms outside the window is NOT loaded by initProbeCounters; _pruneProbes(initNow) deletes it when injected", async () =>
 {
 
     // Symmetric referer-map counterpart to B18.
@@ -7822,9 +8901,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const WINDOW_MS = 24 * 60 * 60 * 1000
 ;
 
-    const SKEW      = 10
-;
- // ms between initNow and pruneNow
+    const SKEW      = 10; // ms between initNow and pruneNow
 
     // T0 = Date.now()+86h — monotonically above B19 (84h).
     const initNow  = Date.now() + 86 * 60 * 60 * 1000
@@ -8388,11 +9465,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 ;
 
 
-    for (let i = 0
-;
- i < 4
-;
- i++) 
+    for (let i = 0; i < 4; i++) 
 {
 
       _recordProbe(_uaProbes, KEY, "ua", now)
@@ -8492,11 +9565,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 ;
 
 
-    for (let i = 0
-;
- i < 4
-;
- i++) 
+    for (let i = 0; i < 4; i++) 
 {
 
       _recordProbe(_refererProbes, KEY, "referer", now)
@@ -9135,7 +10204,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
   //
   // T0 = Date.now()+108h (B31) and +110h (B32) — monotonically above B30 (106h).
 
-  it("(B31) duplicate-key UA: gap-hit second row does not overwrite the fresh-hit first row; _pruneProbes keeps the fresh hit", async () => 
+  it("(B31) duplicate-key UA: gap-hit second row does not overwrite the fresh-hit first row; _pruneProbes keeps the fresh hit", async () =>
 {
 
     const WINDOW_MS = 24 * 60 * 60 * 1000
@@ -9257,7 +10326,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 ;
 
 
-  it("(B32) duplicate-key referer: gap-hit second row does not overwrite the fresh-hit first row; _pruneProbes keeps the fresh hit", async () => 
+  it("(B32) duplicate-key referer: gap-hit second row does not overwrite the fresh-hit first row; _pruneProbes keeps the fresh hit", async () =>
 {
 
     const WINDOW_MS = 24 * 60 * 60 * 1000
@@ -11751,9 +12820,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const now   = Date.now()
 ;
 
-    const hitTs = now - 1_000
-;
- // well within the 24-hour window
+    const hitTs = now - 1_000; // well within the 24-hour window
 
     const REF_KEY = "https://alias-check-scraper.example/"
 ;
@@ -11838,9 +12905,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     uaEntry!.hits.push(now - 500)
 ;
  // mutate UA array
-    expect(refEntry!.hits.length).toBe(refLenAfter)
-;
- // referer array untouched
+    expect(refEntry!.hits.length).toBe(refLenAfter); // referer array untouched
   
 }
 )
@@ -11876,9 +12941,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const now    = Date.now()
 ;
 
-    const hitTs  = now - 1_000
-;
- // 1 second ago — well within the 24-hour window
+    const hitTs  = now - 1_000; // 1 second ago — well within the 24-hour window
 
     const REFERER_KEY = "https://alias-guard-referer.example/path"
 ;
@@ -12012,9 +13075,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const hitA = now - 2_000
 ;
  // 2 s ago — within window
-    const hitB = now - 3_000
-;
- // 3 s ago — within window
+    const hitB = now - 3_000; // 3 s ago — within window
 
     const KEY_A = "AliasGuardUA-Alpha/1.0"
 ;
@@ -12119,9 +13180,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const hitUa1  = now - 3_000
 ;
  // ua-1 hit
-    const hitUa2  = now - 4_000
-;
- // ua-2 hit
+    const hitUa2  = now - 4_000; // ua-2 hit
 
     const REF_KEY_1 = "https://k6-alias-guard-ref1.example/"
 ;
@@ -12245,9 +13304,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 ;
 
 
-    eRef1!.hits.push(now + 1_000)
-;
- // sentinel push onto referer-1
+    eRef1!.hits.push(now + 1_000); // sentinel push onto referer-1
 
     expect(mod._refererProbes.get(REF_KEY_2)!.hits.length).toBe(lenRef2Before)
 ;
@@ -12356,9 +13413,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const now      = Date.now()
 ;
 
-    const ALERT_TS = now - 6_000
-;
- // 6 s ago — well within the 1-hour cooldown
+    const ALERT_TS = now - 6_000; // 6 s ago — well within the 1-hour cooldown
 
     const hitRef1 = now - 1_000
 ;
@@ -12480,9 +13535,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     expect(eRefZero!.hits).not.toBe(eUaZero!.hits)
 ;
        // referer-zero    vs ua-zero
-    expect(eUaAlerted!.hits).not.toBe(eUaZero!.hits)
-;
-     // ua-alerted      vs ua-zero
+    expect(eUaAlerted!.hits).not.toBe(eUaZero!.hits);     // ua-alerted      vs ua-zero
 
     // ── Part 2 (K7 coverage): each entry retains exactly its own lastAlerted value
     // A shared mergedLastAlerted scalar would cause the zero-lastAlerted entries
@@ -12748,9 +13801,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const THRESHOLD     = 3
 ;
 
-    const FRESH_HITS    = THRESHOLD + 1
-;
- // 4
+    const FRESH_HITS    = THRESHOLD + 1; // 4
 
     // T0 = Date.now()+116h — monotonically above B34 (114h).
     const now = Date.now() + 116 * 60 * 60 * 1000
@@ -12784,9 +13835,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 , (_, k) => staleBase + k)
 ;
 
-    const lastAlerted = now - COOLDOWN_MS
-;
-         // age === COOLDOWN_MS → just expired
+    const lastAlerted = now - COOLDOWN_MS;         // age === COOLDOWN_MS → just expired
 
     _uaProbes.set(KEY, 
 {
@@ -12798,11 +13847,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 
     // Drive threshold+1 = 4 fresh hits.  The while-loop must evict all 5 stale
     // hits on the first call, so hits.length after 4 calls equals 4.
-    for (let i = 0
-;
- i < FRESH_HITS
-;
- i++) 
+    for (let i = 0; i < FRESH_HITS; i++) 
 {
 
       _recordProbe(_uaProbes, KEY, "ua", now)
@@ -12887,9 +13932,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const THRESHOLD     = 3
 ;
 
-    const FRESH_HITS    = THRESHOLD + 1
-;
- // 4
+    const FRESH_HITS    = THRESHOLD + 1; // 4
 
     const now = Date.now() + 118 * 60 * 60 * 1000
 ;
@@ -12932,11 +13975,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
 ;
 
 
-    for (let i = 0
-;
- i < FRESH_HITS
-;
- i++) 
+    for (let i = 0; i < FRESH_HITS; i++) 
 {
 
       _recordProbe(_refererProbes, KEY, "referer", now)
@@ -13158,9 +14197,7 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const WINDOW_MS  = 24 * 60 * 60 * 1000;
     const initNow    = Date.now() + 130 * 60 * 60 * 1000;
     const hit0       = initNow - Math.floor(WINDOW_MS / 3); // first row's hit — inside window
-    const hit1       = initNow - Math.floor(WINDOW_MS / 4)
-;
- // second row's hit — inside window
+    const hit1       = initNow - Math.floor(WINDOW_MS / 4); // second row's hit — inside window
 
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
 
@@ -13242,46 +14279,154 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     // T0 = Date.now()+134h — monotonically above B41 (130h) to avoid any
     // in-memory state left over from prior tests in the same describe block.
 
-    const WINDOW_MS = 24 * 60 * 60 * 1000;
-    const initNow   = Date.now() + 134 * 60 * 60 * 1000;
+    const WINDOW_MS = 24 * 60 * 60 * 1000
+;
+
+
+    const initNow   = Date.now() + 134 * 60 * 60 * 1000
+;
+
+
     // Both timestamps are distinct and inside the window.
-    const hit0      = initNow - Math.floor(WINDOW_MS / 3); // from row 0
-    const hit1      = initNow - Math.floor(WINDOW_MS / 5); // from row 1 — different timestamp
+    const hit0      = initNow - Math.floor(WINDOW_MS / 3)
+;
 
-    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
 
-    try {
-      const mod    = await import("./traffic-logger");
-      const { db } = await import("./db");
-      const { _uaProbes } = mod as any;
+ // from row 0
+    const hit1      = initNow - Math.floor(WINDOW_MS / 5)
+;
+
+ // from row 1 — different timestamp
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow)
+;
+
+
+    try 
+{
+
+
+      const mod    = await import("./traffic-logger")
+;
+
+
+      const 
+{
+
+
+ db 
+}
+
+
+ = await import("./db")
+;
+
+
+      const 
+{
+
+
+ _uaProbes 
+}
+
+
+ = mod as any
+;
+
 
       // Two duplicate UA rows for the same (fieldType, key) pair, each
       // carrying a distinct timestamp.
-      const row0 = { fieldType: "ua", key: "B41bBothRowsUA/1.0", hits: [hit0], lastAlerted: 0 };
-      const row1 = { fieldType: "ua", key: "B41bBothRowsUA/1.0", hits: [hit1], lastAlerted: 0 };
+      const row0 = 
+{
 
-      (db as any).execute = vi.fn().mockResolvedValue([]);
-      (db as any).select  = vi.fn().mockReturnValue({
+
+ fieldType: "ua", key: "B41bBothRowsUA/1.0", hits: [hit0], lastAlerted: 0 
+}
+
+
+;
+
+
+      const row1 = 
+{
+
+
+ fieldType: "ua", key: "B41bBothRowsUA/1.0", hits: [hit1], lastAlerted: 0 
+}
+
+
+;
+
+
+      (db as any).execute = vi.fn().mockResolvedValue([])
+;
+
+
+      (db as any).select  = vi.fn().mockReturnValue(
+{
+
+
         from: vi.fn().mockResolvedValue([row0, row1]),
-      });
+      
+}
 
-      await mod.initProbeCounters();
 
-      const entry = _uaProbes.get("B41bBothRowsUA/1.0");
-      expect(entry).toBeDefined();
+)
+;
+
+
+      await mod.initProbeCounters()
+;
+
+
+      const entry = _uaProbes.get("B41bBothRowsUA/1.0")
+;
+
+
+      expect(entry).toBeDefined()
+;
+
 
       // Both distinct timestamps must be present in the merged entry.
       // A merge that only spreads row0.hits would produce length === 1 and
       // miss hit1; a merge that only spreads row1.hits would miss hit0.
-      expect(entry!.hits).toHaveLength(2);
-      expect(entry!.hits).toContain(hit0);
-      expect(entry!.hits).toContain(hit1);
-    } finally {
-      dateNowSpy.mockRestore();
-    }
-  });
+      expect(entry!.hits).toHaveLength(2)
+;
 
-  it("(B41c) initProbeCounters: allHits buffer is fresh per group — mutating one group's hits array does not affect another group's hits array", async () => {
+
+      expect(entry!.hits).toContain(hit0)
+;
+
+
+      expect(entry!.hits).toContain(hit1)
+;
+
+
+}
+
+
+ finally 
+{
+
+
+      dateNowSpy.mockRestore()
+;
+
+
+}
+
+
+}
+
+
+)
+;
+
+
+  it("(B41c) initProbeCounters: allHits buffer is fresh per group — mutating one group's hits array does not affect another group's hits array", async () => 
+{
+
+
     // Regression guard for a shared-buffer bug: if allHits were declared
     // *outside* the group loop (i.e. a single array reused across all groups),
     // every group's merged entry would reference the same underlying buffer.
@@ -14832,9 +15977,7 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
 
     // Place T0 far enough in the future to avoid lastPrune collisions with
     // earlier tests in this file.
-    const T0 = Date.now() + 6 * 60 * 60 * 1000
-;
- // 6 h into the future
+    const T0 = Date.now() + 6 * 60 * 60 * 1000; // 6 h into the future
 
     // ── T0: first prune runs, advances lastPrune to T0 ───────────────────────
     _pruneProbes(T0)
@@ -14927,9 +16070,7 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
 
     // Place T0 far enough in the future to avoid lastPrune collisions with
     // earlier tests in this file.
-    const T0 = Date.now() + 12 * 60 * 60 * 1000
-;
- // 12 h into the future
+    const T0 = Date.now() + 12 * 60 * 60 * 1000; // 12 h into the future
 
     // ── T0: first prune runs, advances lastPrune to T0 ───────────────────────
     _pruneProbes(T0)
@@ -15015,9 +16156,7 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
 
     // Place T0 far enough in the future to avoid lastPrune collisions with
     // earlier tests in this file.
-    const T0 = Date.now() + 14 * 60 * 60 * 1000
-;
- // 14 h into the future
+    const T0 = Date.now() + 14 * 60 * 60 * 1000; // 14 h into the future
 
     // ── Advance lastPrune to T0 ───────────────────────────────────────────────
     _pruneProbes(T0)
@@ -15025,9 +16164,7 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
 
 
     // ── Ensure _uaProbes has no entry for our keys ────────────────────────────
-    _uaProbes.delete("SplitMapRefOnlyUA/1.0")
-;
- // belt-and-suspenders
+    _uaProbes.delete("SplitMapRefOnlyUA/1.0"); // belt-and-suspenders
 
     // ── Seed stale entries in _refererProbes only ─────────────────────────────
     // No hits and no active cooldown → both must be deleted when prune runs.
@@ -15094,9 +16231,7 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
 
     // Place T0 far enough in the future to avoid lastPrune collisions with
     // earlier tests in this file.
-    const T0 = Date.now() + 16 * 60 * 60 * 1000
-;
- // 16 h into the future
+    const T0 = Date.now() + 16 * 60 * 60 * 1000; // 16 h into the future
 
     // ── Advance lastPrune to T0 ───────────────────────────────────────────────
     _pruneProbes(T0)
@@ -15104,9 +16239,7 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
 
 
     // ── Ensure _refererProbes has no entry for our keys ───────────────────────
-    _refererProbes.delete("https://split-map-ua-only.example/")
-;
- // belt-and-suspenders
+    _refererProbes.delete("https://split-map-ua-only.example/"); // belt-and-suspenders
 
     // ── Seed stale entries in _uaProbes only ──────────────────────────────────
     // No hits and no active cooldown → both must be deleted when prune runs.
@@ -15237,9 +16370,7 @@ describe("pruneProbes — entries with active cooldown survive; entries with no 
 
     // Place T0 far enough in the future to avoid lastPrune collisions with
     // earlier tests in this file.
-    const T0 = Date.now() + 20 * 60 * 60 * 1000
-;
- // 20 h into the future
+    const T0 = Date.now() + 20 * 60 * 60 * 1000; // 20 h into the future
     // The actual now passed to the pruning call.
     const pruneNow = T0 + COOLDOWN_MS + 1
 ;
@@ -16377,9 +17508,7 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
     const hitInWindow2      = cutoff + 500
 ;
  // 500 ms inside       → kept
-    const hitInWindow3      = cutoff + 1000
-;
- // 1 s inside         → kept
+    const hitInWindow3      = cutoff + 1000; // 1 s inside         → kept
 
     const key = "BurstBoundaryUA/1.0"
 ;
@@ -16437,9 +17566,7 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
     expect(field).toBe("ua")
 ;
 
-    expect(hits).toBe(4)
-;
- // reported count reflects the correctly-pruned window
+    expect(hits).toBe(4); // reported count reflects the correctly-pruned window
   
 }
 )
@@ -16496,9 +17623,7 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
     const hitInWindow2      = cutoff + 500
 ;
  // 500 ms inside         → kept
-    const hitInWindow3      = cutoff + 1000
-;
- // 1 s inside           → kept
+    const hitInWindow3      = cutoff + 1000; // 1 s inside           → kept
 
     const key = "https://burst-referer.example/probe"
 ;
@@ -16555,9 +17680,7 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
     expect(field).toBe("referer")
 ;
 
-    expect(hits).toBe(4)
-;
- // reported count reflects the correctly-pruned window
+    expect(hits).toBe(4); // reported count reflects the correctly-pruned window
   
 }
 )
@@ -16617,9 +17740,7 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
     const hitInWindow2      = cutoff + 500
 ;
   // 500 ms inside → kept
-    const hitInWindow3      = cutoff + 1000
-;
- // 1 s inside    → kept
+    const hitInWindow3      = cutoff + 1000; // 1 s inside    → kept
 
     const expectedSurvivors = [hitInWindow1, hitInWindow2, hitInWindow3, recordNow]
 ;
@@ -16729,9 +17850,7 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
     const calls = mockSendProbeAlert.mock.calls as [string, string, number][]
 ;
 
-    const fields = calls.map(([f]) => f).sort()
-;
- // sort for stable assertion order
+    const fields = calls.map(([f]) => f).sort(); // sort for stable assertion order
     expect(fields).toEqual(["referer", "ua"])
 ;
 
@@ -16837,7 +17956,7 @@ describe("recordProbe vs pruneProbes — boundary semantics at exactly now−WIN
 describe("concurrent burst — two scraper keys at the same timestamp stay independent", () => 
 {
 
-  it("each key prunes its own stale hits; only the key that crosses the threshold alerts", async () => 
+  it("each key prunes its own stale hits; only the key that crosses the threshold alerts", async () =>
 {
 
     // Threshold = 3: alert fires when hits.length > 3 (i.e. ≥ 4 in-window hits).
@@ -16969,9 +18088,7 @@ describe("concurrent burst — two scraper keys at the same timestamp stay indep
     expect(value).toBe(keyB)
 ;
    // alert is for keyB — it crossed the threshold
-    expect(hitCount).toBe(4)
-;
-   // accurate post-prune count for keyB
+    expect(hitCount).toBe(4);   // accurate post-prune count for keyB
 
     // Confirm no alert was recorded for keyA.
     const alertedKeys = mockSendProbeAlert.mock.calls.map(
@@ -17397,9 +18514,7 @@ describe("_uaProbes.lastAlerted is set synchronously before the async import fir
 describe("hits array is preserved in full when cooldown is active (no eviction of non-expired hits)", () => 
 {
 
-  const WINDOW_MS = 24 * 60 * 60 * 1000
-;
- // mirrors the module constant
+  const WINDOW_MS = 24 * 60 * 60 * 1000; // mirrors the module constant
 
   it("UA probe: all pre-existing in-window hits survive a cooldown-active recordProbe call", async () => 
 {
@@ -17628,15 +18743,13 @@ describe("hits array is preserved in full when cooldown is active (no eviction o
 describe("PROBE_WINDOW_HOURS — eviction loop respects WINDOW_MS, not a hard-coded constant", () => 
 {
 
-  it("(A) with PROBE_WINDOW_HOURS=1: hit 2 h old is evicted; hit 30 min old survives in UA map", async () => 
+  it("(A) with PROBE_WINDOW_HOURS=1: hit 2 h old is evicted; hit 30 min old survives in UA map", async () =>
 {
 
     process.env.PROBE_ALERT_THRESHOLD = "2"
 ;
 
-    process.env.PROBE_WINDOW_HOURS    = "1"
-;
- // WINDOW_MS = 3 600 000 ms
+    process.env.PROBE_WINDOW_HOURS    = "1"; // WINDOW_MS = 3 600 000 ms
     const mod = await import("./traffic-logger")
 ;
 
@@ -17659,9 +18772,7 @@ describe("PROBE_WINDOW_HOURS — eviction loop respects WINDOW_MS, not a hard-co
     const twoHoursAgo = now - 2 * 60 * 60 * 1000
 ;
   // outside 1-h window
-    const thirtyMinAgo = now - 30 * 60 * 1000
-;
-      // inside  1-h window
+    const thirtyMinAgo = now - 30 * 60 * 1000;      // inside  1-h window
 
     _uaProbes.set("task398-ua-a", 
 {
@@ -17700,7 +18811,7 @@ describe("PROBE_WINDOW_HOURS — eviction loop respects WINDOW_MS, not a hard-co
 ;
 
 
-  it("(B) with PROBE_WINDOW_HOURS=1: hit 2 h old is evicted; hit 30 min old survives in referer map", async () => 
+  it("(B) with PROBE_WINDOW_HOURS=1: hit 2 h old is evicted; hit 30 min old survives in referer map", async () =>
 {
 
     process.env.PROBE_ALERT_THRESHOLD = "2"
@@ -18676,11 +19787,7 @@ describe("middleware-level: referer probe not skipped across multiple requests w
 
 
     // Fire 3 requests, each with identical referer and UA.
-    for (let i = 0
-;
- i < 3
-;
- i++) 
+    for (let i = 0; i < 3; i++) 
 {
 
       const req = makeReq(sharedValue, sharedValue)
@@ -18810,9 +19917,7 @@ describe("natural cooldown expiry — each map re-alerts exactly once after its 
     process.env.PROBE_ALERT_COOLDOWN_HOURS = "1"
 ;
 
-    const COOLDOWN_MS = 1 * 60 * 60 * 1000
-;
- // 3_600_000
+    const COOLDOWN_MS = 1 * 60 * 60 * 1000; // 3_600_000
 
     const mod = await import("./traffic-logger")
 ;
@@ -18828,9 +19933,7 @@ describe("natural cooldown expiry — each map re-alerts exactly once after its 
 ;
 
 
-    const BASE_NOW = 1_700_000_000_000
-;
- // fixed sentinel — not Date.now()
+    const BASE_NOW = 1_700_000_000_000; // fixed sentinel — not Date.now()
 
     const UA_KEY  = "ReAlertNaturalUA/1.0"
 ;
@@ -19803,9 +20906,7 @@ describe("ProbeEntry object-aliasing guard (restart path, identical key string):
     const now   = Date.now()
 ;
 
-    const hitTs = now - 1_000
-;
- // 1 second ago — well within the 24-hour window
+    const hitTs = now - 1_000; // 1 second ago — well within the 24-hour window
 
     const mod    = await import("./traffic-logger")
 ;
@@ -20107,9 +21208,7 @@ describe("ProbeEntry object-aliasing guard (restart path, identical key string, 
     const hitTs        = now - 1_000
 ;
                    // 1 s ago — within window
-    const lastAlerted  = now - 5 * 60_000
-;
-              // 5 min ago — cooldown active
+    const lastAlerted  = now - 5 * 60_000;              // 5 min ago — cooldown active
 
     const mod    = await import("./traffic-logger")
 ;
@@ -20198,9 +21297,7 @@ describe("ProbeEntry object-aliasing guard (restart path, identical key string, 
     const hitTs        = now - 2_000
 ;
 
-    const lastAlerted  = now - 10 * 60_000
-;
-             // 10 min ago — cooldown active
+    const lastAlerted  = now - 10 * 60_000;             // 10 min ago — cooldown active
 
     const mod    = await import("./traffic-logger")
 ;
@@ -20575,8 +21672,13 @@ describe("ProbeEntry cross-key allHits buffer reuse guard (restart path, two dis
     const lenBBefore = entryB.hits.length;
 
     // Mutate KEY_A's entry.
-    const sentinel = now + 99_999_999;
-    entryA.hits.push(sentinel);
+    const sentinel = now + 99_999_999
+;
+
+
+    entryA.hits.push(sentinel)
+;
+
 
     // KEY_B's hits must be completely unaffected.
     expect(entryB.hits.length).toBe(lenBBefore);
@@ -20853,8 +21955,13 @@ describe("ProbeEntry cross-key allHits buffer reuse guard (restart path, two dis
     const lenBBefore = entryB.hits.length;
 
     // Mutate KEY_A's entry.
-    const sentinel = now + 99_999_999;
-    entryA.hits.push(sentinel);
+    const sentinel = now + 99_999_999
+;
+
+
+    entryA.hits.push(sentinel)
+;
+
 
     // KEY_B's hits must be completely unaffected.
     expect(entryB.hits.length).toBe(lenBBefore);
@@ -20880,133 +21987,414 @@ describe("ProbeEntry cross-key allHits buffer reuse guard (restart path, two dis
 // timestamps and none from the other.
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe("ProbeEntry cross-key allHits buffer reuse guard (restart path, two distinct UA keys with active cooldown): each entry's hits contains only its own timestamps", () => {
-  const KEY_A = "cross-key-ua-allhits-cooldown-guard-key-a-probe-v1";
-  const KEY_B = "cross-key-ua-allhits-cooldown-guard-key-b-probe-v1";
+describe("ProbeEntry cross-key allHits buffer reuse guard (restart path, two distinct UA keys with active cooldown): each entry's hits contains only its own timestamps", () => 
+{
 
-  it("entry for KEY_A contains only KEY_A's timestamps and entry for KEY_B contains only KEY_B's timestamps", async () => {
-    const now          = Date.now();
-    const hitA         = now - 1_000; // 1 s ago — within window, belongs to KEY_A
-    const hitB         = now - 2_000; // 2 s ago — within window, belongs to KEY_B
+
+  const KEY_A = "cross-key-ua-allhits-cooldown-guard-key-a-probe-v1"
+;
+
+
+  const KEY_B = "cross-key-ua-allhits-cooldown-guard-key-b-probe-v1"
+;
+
+
+  it("entry for KEY_A contains only KEY_A's timestamps and entry for KEY_B contains only KEY_B's timestamps", async () => 
+{
+
+
+    const now          = Date.now()
+;
+
+
+    const hitA         = now - 1_000
+;
+
+ // 1 s ago — within window, belongs to KEY_A
+    const hitB         = now - 2_000
+;
+
+ // 2 s ago — within window, belongs to KEY_B
     // Both rows have distinct active cooldowns (alerted 5 and 10 minutes ago).
-    const lastAlertedA = now - 5 * 60_000;
-    const lastAlertedB = now - 10 * 60_000;
+    const lastAlertedA = now - 5 * 60_000
+;
 
-    const mod    = await import("./traffic-logger");
-    const { db } = await import("./db");
 
-    mod._uaProbes.delete(KEY_A);
-    mod._uaProbes.delete(KEY_B);
-    mod._refererProbes.delete(KEY_A);
-    mod._refererProbes.delete(KEY_B);
+    const lastAlertedB = now - 10 * 60_000
+;
+
+
+    const mod    = await import("./traffic-logger")
+;
+
+
+    const 
+{
+
+ db 
+}
+
+ = await import("./db")
+;
+
+
+    mod._uaProbes.delete(KEY_A)
+;
+
+
+    mod._uaProbes.delete(KEY_B)
+;
+
+
+    mod._refererProbes.delete(KEY_A)
+;
+
+
+    mod._refererProbes.delete(KEY_B)
+;
+
 
     // Two "ua" rows with *different* keys and *active* lastAlerted values —
     // simulates two scrapers that were previously alerted and are present in
     // the DB at restart time.
     const fakeRows = [
-      { fieldType: "ua", key: KEY_A, hits: [hitA], lastAlerted: lastAlertedA },
-      { fieldType: "ua", key: KEY_B, hits: [hitB], lastAlerted: lastAlertedB },
-    ];
-    (db as any).execute = vi.fn().mockResolvedValue([]);
-    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+      
+{
 
-    await mod.initProbeCounters();
+ fieldType: "ua", key: KEY_A, hits: [hitA], lastAlerted: lastAlertedA 
+}
 
-    const entryA = mod._uaProbes.get(KEY_A);
-    const entryB = mod._uaProbes.get(KEY_B);
+,
+      
+{
 
-    expect(entryA).toBeDefined();
-    expect(entryB).toBeDefined();
+ fieldType: "ua", key: KEY_B, hits: [hitB], lastAlerted: lastAlertedB 
+}
+
+,
+    ]
+;
+
+
+    (db as any).execute = vi.fn().mockResolvedValue([])
+;
+
+
+    (db as any).select  = vi.fn().mockReturnValue(
+{
+
+ from: vi.fn().mockResolvedValue(fakeRows) 
+}
+
+)
+;
+
+
+    await mod.initProbeCounters()
+;
+
+
+    const entryA = mod._uaProbes.get(KEY_A)
+;
+
+
+    const entryB = mod._uaProbes.get(KEY_B)
+;
+
+
+    expect(entryA).toBeDefined()
+;
+
+
+    expect(entryB).toBeDefined()
+;
+
 
     // Each entry must contain its own hit.
-    expect(entryA!.hits).toContain(hitA);
-    expect(entryB!.hits).toContain(hitB);
+    expect(entryA!.hits).toContain(hitA)
+;
+
+
+    expect(entryB!.hits).toContain(hitB)
+;
+
 
     // KEY_A's entry must NOT contain KEY_B's timestamp and vice-versa.
     // A future loop that fails to reset allHits between groups when both
     // rows have an active cooldown would cause KEY_B's entry to absorb hitA,
     // or KEY_A's entry to carry stale data from an earlier iteration.
-    expect(entryA!.hits).not.toContain(hitB);
-    expect(entryB!.hits).not.toContain(hitA);
-  });
+    expect(entryA!.hits).not.toContain(hitB)
+;
 
-  it("entry for KEY_A's hits array is not the same reference as entry for KEY_B's hits array", async () => {
-    const now          = Date.now();
-    const hitA         = now - 5_000;
-    const hitB         = now - 6_000;
-    const lastAlertedA = now - 5 * 60_000;
-    const lastAlertedB = now - 10 * 60_000;
 
-    const mod    = await import("./traffic-logger");
-    const { db } = await import("./db");
+    expect(entryB!.hits).not.toContain(hitA)
+;
 
-    mod._uaProbes.delete(KEY_A);
-    mod._uaProbes.delete(KEY_B);
-    mod._refererProbes.delete(KEY_A);
-    mod._refererProbes.delete(KEY_B);
+
+}
+
+)
+;
+
+
+  it("entry for KEY_A's hits array is not the same reference as entry for KEY_B's hits array", async () => 
+{
+
+
+    const now          = Date.now()
+;
+
+
+    const hitA         = now - 5_000
+;
+
+
+    const hitB         = now - 6_000
+;
+
+
+    const lastAlertedA = now - 5 * 60_000
+;
+
+
+    const lastAlertedB = now - 10 * 60_000
+;
+
+
+    const mod    = await import("./traffic-logger")
+;
+
+
+    const 
+{
+
+ db 
+}
+
+ = await import("./db")
+;
+
+
+    mod._uaProbes.delete(KEY_A)
+;
+
+
+    mod._uaProbes.delete(KEY_B)
+;
+
+
+    mod._refererProbes.delete(KEY_A)
+;
+
+
+    mod._refererProbes.delete(KEY_B)
+;
+
 
     const fakeRows = [
-      { fieldType: "ua", key: KEY_A, hits: [hitA], lastAlerted: lastAlertedA },
-      { fieldType: "ua", key: KEY_B, hits: [hitB], lastAlerted: lastAlertedB },
-    ];
-    (db as any).execute = vi.fn().mockResolvedValue([]);
-    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+      
+{
 
-    await mod.initProbeCounters();
+ fieldType: "ua", key: KEY_A, hits: [hitA], lastAlerted: lastAlertedA 
+}
 
-    const entryA = mod._uaProbes.get(KEY_A)!;
-    const entryB = mod._uaProbes.get(KEY_B)!;
+,
+      
+{
 
-    expect(entryA).toBeDefined();
-    expect(entryB).toBeDefined();
+ fieldType: "ua", key: KEY_B, hits: [hitB], lastAlerted: lastAlertedB 
+}
+
+,
+    ]
+;
+
+
+    (db as any).execute = vi.fn().mockResolvedValue([])
+;
+
+
+    (db as any).select  = vi.fn().mockReturnValue(
+{
+
+ from: vi.fn().mockResolvedValue(fakeRows) 
+}
+
+)
+;
+
+
+    await mod.initProbeCounters()
+;
+
+
+    const entryA = mod._uaProbes.get(KEY_A)!
+;
+
+
+    const entryB = mod._uaProbes.get(KEY_B)!
+;
+
+
+    expect(entryA).toBeDefined()
+;
+
+
+    expect(entryB).toBeDefined()
+;
+
 
     // If allHits were reused and stored directly into both entries they would
     // share the same array reference.
-    expect(entryA.hits).not.toBe(entryB.hits);
-  });
+    expect(entryA.hits).not.toBe(entryB.hits)
+;
 
-  it("pushing a sentinel onto KEY_A's hits does not contaminate KEY_B's hits", async () => {
-    const now          = Date.now();
-    const hitA         = now - 7_000;
-    const hitB         = now - 8_000;
-    const lastAlertedA = now - 5 * 60_000;
-    const lastAlertedB = now - 10 * 60_000;
 
-    const mod    = await import("./traffic-logger");
-    const { db } = await import("./db");
+}
 
-    mod._uaProbes.delete(KEY_A);
-    mod._uaProbes.delete(KEY_B);
-    mod._refererProbes.delete(KEY_A);
-    mod._refererProbes.delete(KEY_B);
+)
+;
+
+
+  it("pushing a sentinel onto KEY_A's hits does not contaminate KEY_B's hits", async () => 
+{
+
+
+    const now          = Date.now()
+;
+
+
+    const hitA         = now - 7_000
+;
+
+
+    const hitB         = now - 8_000
+;
+
+
+    const lastAlertedA = now - 5 * 60_000
+;
+
+
+    const lastAlertedB = now - 10 * 60_000
+;
+
+
+    const mod    = await import("./traffic-logger")
+;
+
+
+    const 
+{
+
+ db 
+}
+
+ = await import("./db")
+;
+
+
+    mod._uaProbes.delete(KEY_A)
+;
+
+
+    mod._uaProbes.delete(KEY_B)
+;
+
+
+    mod._refererProbes.delete(KEY_A)
+;
+
+
+    mod._refererProbes.delete(KEY_B)
+;
+
 
     const fakeRows = [
-      { fieldType: "ua", key: KEY_A, hits: [hitA], lastAlerted: lastAlertedA },
-      { fieldType: "ua", key: KEY_B, hits: [hitB], lastAlerted: lastAlertedB },
-    ];
-    (db as any).execute = vi.fn().mockResolvedValue([]);
-    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+      
+{
 
-    await mod.initProbeCounters();
+ fieldType: "ua", key: KEY_A, hits: [hitA], lastAlerted: lastAlertedA 
+}
 
-    const entryA = mod._uaProbes.get(KEY_A)!;
-    const entryB = mod._uaProbes.get(KEY_B)!;
+,
+      
+{
 
-    expect(entryA).toBeDefined();
-    expect(entryB).toBeDefined();
+ fieldType: "ua", key: KEY_B, hits: [hitB], lastAlerted: lastAlertedB 
+}
 
-    const lenBBefore = entryB.hits.length;
+,
+    ]
+;
+
+
+    (db as any).execute = vi.fn().mockResolvedValue([])
+;
+
+
+    (db as any).select  = vi.fn().mockReturnValue(
+{
+
+ from: vi.fn().mockResolvedValue(fakeRows) 
+}
+
+)
+;
+
+
+    await mod.initProbeCounters()
+;
+
+
+    const entryA = mod._uaProbes.get(KEY_A)!
+;
+
+
+    const entryB = mod._uaProbes.get(KEY_B)!
+;
+
+
+    expect(entryA).toBeDefined()
+;
+
+
+    expect(entryB).toBeDefined()
+;
+
+
+    const lenBBefore = entryB.hits.length
+;
+
 
     // Mutate KEY_A's entry.
     const sentinel = now + 99_999_999;
     entryA.hits.push(sentinel);
 
     // KEY_B's hits must be completely unaffected.
-    expect(entryB.hits.length).toBe(lenBBefore);
-    expect(entryB.hits).not.toContain(sentinel);
-    expect(entryB.hits).not.toContain(hitA);
-  });
-});
+    expect(entryB.hits.length).toBe(lenBBefore)
+;
+
+
+    expect(entryB.hits).not.toContain(sentinel)
+;
+
+
+    expect(entryB.hits).not.toContain(hitA)
+;
+
+
+}
+
+)
+;
+
+
+}
+
+)
+;
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Cross-key allHits buffer reuse guard — two distinct UA keys, both with
@@ -21171,5 +22559,327 @@ describe("ProbeEntry cross-key allHits buffer reuse guard (restart path, two dis
     expect(entryB.hits).not.toContain(sentinel);
     expect(entryB.hits).not.toContain(hitA1);
     expect(entryB.hits).not.toContain(hitA2);
+  });
+});
+
+// Post-restart alert independence — UA keys
+//
+// initProbeCounters merges rows from the DB into the in-memory uaProbes map.
+// A subtle aliasing bug could produce a *shared* hits array reference for two
+// distinct keys — recording a new hit for UA1 would silently extend UA2's
+// array and trigger a spurious alert for UA2.
+//
+// These tests seed two UA keys at the alert threshold, drive only one of them
+// past the threshold via the middleware, and confirm that sendProbeAlert fires
+// exactly once (for the driven key only).
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("post-restart alert independence — each UA key alerts independently after initProbeCounters loads multiple keys", () => 
+{
+
+  const UA1 = "post-restart-alert-independence-ua1-probe-v1"
+;
+
+  const UA2 = "post-restart-alert-independence-ua2-probe-v1"
+;
+
+
+  it("only UA1 alerts when UA1 is driven past the threshold; UA2 never alerts", async () =>
+{
+
+    // threshold=2 → alert fires when in-window hits > 2, i.e. on the 3rd hit
+    process.env.PROBE_ALERT_THRESHOLD = "2"
+;
+
+
+    const mod    = await import("./traffic-logger")
+;
+
+    const 
+{
+ db 
+}
+ = await import("./db")
+;
+
+
+    mod._uaProbes.delete(UA1)
+;
+
+    mod._uaProbes.delete(UA2)
+;
+
+    mod._refererProbes.delete(UA1)
+;
+
+    mod._refererProbes.delete(UA2)
+;
+
+
+    const now = Date.now()
+;
+
+    // Seed both keys with exactly 2 hits — at the threshold but not yet exceeding it.
+    const fakeRows = [
+      
+{
+ fieldType: "ua", key: UA1, hits: [now - 2_000, now - 1_000], lastAlerted: 0 
+}
+,
+      
+{
+ fieldType: "ua", key: UA2, hits: [now - 2_000, now - 1_000], lastAlerted: 0 
+}
+,
+    ]
+;
+
+    (db as any).execute = vi.fn().mockResolvedValue([])
+;
+
+    (db as any).select  = vi.fn().mockReturnValue(
+{
+ from: vi.fn().mockResolvedValue(fakeRows) 
+}
+)
+;
+
+
+    await mod.initProbeCounters()
+;
+
+
+    // Verify both keys were loaded with 2 hits each.
+    expect(mod._uaProbes.get(UA1)?.hits.length).toBe(2)
+;
+
+    expect(mod._uaProbes.get(UA2)?.hits.length).toBe(2)
+;
+
+
+    // Drive one additional hit for UA1 only — this exceeds the threshold.
+    const req = makeReq(UA1)
+;
+
+    const res = makeRes()
+;
+
+    mod.trafficLoggerMiddleware(req, res as any, () => 
+{
+}
+)
+;
+
+    res.finish()
+;
+
+    await flushMicrotasks()
+;
+
+
+    // sendProbeAlert must have fired exactly once.
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1)
+;
+
+    // It must have been called for UA1 …
+    expect(mockSendProbeAlert).toHaveBeenCalledWith("ua", UA1, expect.any(Number))
+;
+
+    // … and must NOT have been called for UA2.
+    expect(mockSendProbeAlert).not.toHaveBeenCalledWith("ua", UA2, expect.any(Number))
+;
+
+  
+}
+)
+;
+
+
+  it("only UA2 alerts when UA2 is driven past the threshold; UA1 never alerts (symmetric)", async () =>
+{
+
+    process.env.PROBE_ALERT_THRESHOLD = "2"
+;
+
+
+    const mod    = await import("./traffic-logger")
+;
+
+    const 
+{
+ db 
+}
+ = await import("./db")
+;
+
+
+    mod._uaProbes.delete(UA1)
+;
+
+    mod._uaProbes.delete(UA2)
+;
+
+    mod._refererProbes.delete(UA1)
+;
+
+    mod._refererProbes.delete(UA2)
+;
+
+
+    const now = Date.now()
+;
+
+    const fakeRows = [
+      
+{
+ fieldType: "ua", key: UA1, hits: [now - 2_000, now - 1_000], lastAlerted: 0 
+}
+,
+      
+{
+ fieldType: "ua", key: UA2, hits: [now - 2_000, now - 1_000], lastAlerted: 0 
+}
+,
+    ]
+;
+
+    (db as any).execute = vi.fn().mockResolvedValue([])
+;
+
+    (db as any).select  = vi.fn().mockReturnValue(
+{
+ from: vi.fn().mockResolvedValue(fakeRows) 
+}
+)
+;
+
+
+    await mod.initProbeCounters()
+;
+
+
+    // Drive one additional hit for UA2 only.
+    const req = makeReq(UA2)
+;
+
+    const res = makeRes()
+;
+
+    mod.trafficLoggerMiddleware(req, res as any, () => 
+{
+}
+)
+;
+
+    res.finish()
+;
+
+    await flushMicrotasks()
+;
+
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1)
+;
+
+    expect(mockSendProbeAlert).toHaveBeenCalledWith("ua", UA2, expect.any(Number))
+;
+
+    expect(mockSendProbeAlert).not.toHaveBeenCalledWith("ua", UA1, expect.any(Number))
+;
+
+  
+}
+)
+;
+
+}
+)
+;
+
+
+// Post-restart alert independence — referer keys
+//
+// The symmetric counterpart for refererProbes.  A bot UA (Googlebot) is used
+// so that the UA probe branch is skipped by the middleware's patternBot check,
+// isolating the referer alert path.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("post-restart alert independence — each referer key alerts independently after initProbeCounters loads multiple keys", () => {
+  const REF1 = "https://post-restart-referer-independence-ref1.example/probe-v1";
+  const REF2 = "https://post-restart-referer-independence-ref2.example/probe-v1";
+  // Googlebot matches BOT_PATTERNS → patternBot=true → UA probe is skipped,
+  // leaving only the referer probe branch active.
+  const BOT_UA = "Googlebot/2.1 (+http://www.google.com/bot.html)";
+
+  it("only REF1 alerts when REF1 is driven past the threshold; REF2 never alerts", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._refererProbes.delete(REF1.toLowerCase());
+    mod._refererProbes.delete(REF2.toLowerCase());
+    mod._uaProbes.delete(REF1);
+    mod._uaProbes.delete(REF2);
+
+    const now = Date.now();
+    // Seed both referer keys with exactly 2 hits — at the threshold.
+    // Referer keys are stored lowercased (see trafficLoggerMiddleware line:
+    //   const refKey = referer.slice(0, 500).toLowerCase()).
+    const fakeRows = [
+      { fieldType: "referer", key: REF1.toLowerCase(), hits: [now - 2_000, now - 1_000], lastAlerted: 0 },
+      { fieldType: "referer", key: REF2.toLowerCase(), hits: [now - 2_000, now - 1_000], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    expect(mod._refererProbes.get(REF1.toLowerCase())?.hits.length).toBe(2);
+    expect(mod._refererProbes.get(REF2.toLowerCase())?.hits.length).toBe(2);
+
+    // Drive one additional hit for REF1 only (bot UA suppresses the UA probe).
+    const req = makeReq(BOT_UA, REF1);
+    const res = makeRes();
+    mod.trafficLoggerMiddleware(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    expect(mockSendProbeAlert).toHaveBeenCalledWith("referer", REF1.toLowerCase(), expect.any(Number));
+    expect(mockSendProbeAlert).not.toHaveBeenCalledWith("referer", REF2.toLowerCase(), expect.any(Number));
+  });
+
+  it("only REF2 alerts when REF2 is driven past the threshold; REF1 never alerts (symmetric)", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._refererProbes.delete(REF1.toLowerCase());
+    mod._refererProbes.delete(REF2.toLowerCase());
+    mod._uaProbes.delete(REF1);
+    mod._uaProbes.delete(REF2);
+
+    const now = Date.now();
+    const fakeRows = [
+      { fieldType: "referer", key: REF1.toLowerCase(), hits: [now - 2_000, now - 1_000], lastAlerted: 0 },
+      { fieldType: "referer", key: REF2.toLowerCase(), hits: [now - 2_000, now - 1_000], lastAlerted: 0 },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    // Drive one additional hit for REF2 only.
+    const req = makeReq(BOT_UA, REF2);
+    const res = makeRes();
+    mod.trafficLoggerMiddleware(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+
+    expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+    expect(mockSendProbeAlert).toHaveBeenCalledWith("referer", REF2.toLowerCase(), expect.any(Number));
+    expect(mockSendProbeAlert).not.toHaveBeenCalledWith("referer", REF1.toLowerCase(), expect.any(Number));
   });
 });
