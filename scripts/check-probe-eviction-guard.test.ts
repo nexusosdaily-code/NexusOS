@@ -1782,6 +1782,13 @@ describe("multi-line helper body (formatter-split condition inside extracted hel
     // the newline + indentation, so the joined body text
     //   "e.hits = e.hits.filter((t) =>\n    t > c);"
     // satisfies the pattern.  The check therefore returns ok:true.
+    //
+    // Cross-reference: tests 5h and 6b cover brace-wrapped while-loop bodies
+    // where the condition line is still intact.  This test covers the
+    // orthogonal case where the FILTER form's arrow body is split to a new
+    // line.  Any future tightening of HELPER_REQUIRED_PATTERN that accidentally
+    // requires the comparator (`t > c`) to follow the arrow on the same line
+    // would break this test and surface the regression before it ships.
     mockReadFile.mockResolvedValue(
       [
         `function recordProbe(map, key, label, now) {`,
