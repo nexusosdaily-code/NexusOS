@@ -1717,6 +1717,80 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(_uaProbes.get(UA_KEY_CD).lastAlerted).toBe(PRE_ALERTED);
   });
 
+  it("lastAlerted stays frozen when cooldown suppresses the alert through the full middleware path", async () => {
+    // Complementary regression guard to the direct-_recordProbe cooldown test
+    // above.  A future middleware-level change — e.g. an early-return inside
+    // the res.on("finish") handler, or a restructured cooldown guard that only
+    // applies when _recordProbe is called directly — could bypass the cooldown
+    // check when requests arrive through the HTTP layer.  This test catches
+    // that class of regression by driving the request through
+    // trafficLoggerMiddleware rather than _recordProbe.
+    //
+    // Setup:
+    //   • threshold = 2  (alert fires when hits.length > 2)
+    //   • cooldown  = 1 hour
+    //   • Both maps pre-seeded with 3 hits (already above threshold) AND
+    //     lastAlerted = now − 1 ms (1 ms ago → well inside the 1-hour
+    //     cooldown → alert must be suppressed on the next request)
+    //
+    // After one middleware request the hit count rises to 4 (still > 2), but
+    // the cooldown guard must prevent the alert branch from executing, so
+    // lastAlerted must remain at the pre-seeded value and sendProbeAlert must
+    // never be called.
+
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const mod = await import("./traffic-logger");
+    const mw  = mod.trafficLoggerMiddleware;
+    const { _refererProbes, _uaProbes } = mod as any;
+
+    await mod.initProbeCounters();
+
+    const now         = Date.now();
+    const PRE_ALERTED = now - 1;   // 1 ms ago — cooldown still fully active
+
+    // UA key is ua.slice(0,500) — no lowercasing.
+    const UA_VAL  = "CooldownMiddlewareUA/4.0";
+    const UA_KEY  = UA_VAL;
+
+    // Referer key is referer.slice(0,500).toLowerCase().
+    const REF_VAL = "https://cooldown-middleware-scraper.example/scan";
+    const REF_KEY = REF_VAL.toLowerCase();
+
+    // Seed both maps: 3 hits (above threshold=2) + lastAlerted 1 ms ago.
+    _uaProbes.set(UA_KEY, {
+      hits:        [now - 3000, now - 2000, now - 1000],
+      lastAlerted: PRE_ALERTED,
+    });
+    _refererProbes.set(REF_KEY, {
+      hits:        [now - 3000, now - 2000, now - 1000],
+      lastAlerted: PRE_ALERTED,
+    });
+
+    // Drive one request through the full middleware path.
+    const req = makeReq(UA_VAL, REF_VAL);
+    const res = makeRes();
+    mw(req, res as any, () => {});
+    res.finish();
+    await flushMicrotasks();
+    await flushMicrotasks();
+
+    // ── Establish that the request was actually processed ──────────────────
+    // If probe recording was silently skipped (e.g. an early-return regression)
+    // the hit arrays would still have 3 entries.  Both must have grown to 4,
+    // which proves the request reached recordProbe and the cooldown guard was
+    // what suppressed the alert — not a missing res.on("finish") hook.
+    expect(_uaProbes.get(UA_KEY).hits).toHaveLength(4);
+    expect(_refererProbes.get(REF_KEY).hits).toHaveLength(4);
+
+    // The alert must NOT have fired through the middleware path.
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+
+    // lastAlerted must remain at the pre-seeded value — NOT advanced to `now`.
+    expect(_uaProbes.get(UA_KEY).lastAlerted).toBe(PRE_ALERTED);
+    expect(_refererProbes.get(REF_KEY).lastAlerted).toBe(PRE_ALERTED);
+  });
+
   it("UA cooldown active + referer at threshold: only the referer alert fires, UA alert is suppressed", async () => {
     // Regression guard: a future change that adds an early-return when the UA
     // probe is in cooldown (e.g. `if (uaInCooldown) return`) — or that gates
