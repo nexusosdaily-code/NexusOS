@@ -13,7 +13,10 @@ const ALERT_THRESHOLD = (() => {
   const v = parseInt(process.env.PROBE_ALERT_THRESHOLD ?? "", 10);
   return Number.isFinite(v) && v > 0 ? v : 5;
 })();                                          // alert fires when hits EXCEED this value (default 5; override via PROBE_ALERT_THRESHOLD)
-const WINDOW_MS       = 24 * 60 * 60 * 1000; // 24-hour sliding window
+const WINDOW_MS       = (() => {
+  const v = parseFloat(process.env.PROBE_WINDOW_HOURS ?? "");
+  return Number.isFinite(v) && v > 0 ? v * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+})();                                          // sliding window duration (default 24 h; override via PROBE_WINDOW_HOURS)
 const COOLDOWN_MS     = (() => {
   const v = parseFloat(process.env.PROBE_ALERT_COOLDOWN_HOURS ?? "");
   return Number.isFinite(v) && v > 0 ? v * 60 * 60 * 1000 : 1 * 60 * 60 * 1000;
@@ -697,6 +700,7 @@ function persistProbeEntry(
 export { refererProbes as _refererProbes, uaProbes as _uaProbes };
 export { recordProbe as _recordProbe };
 export { pruneProbes as _pruneProbes };
+export { WINDOW_MS as _WINDOW_MS };
 
 const DYNAMIC_BLOCK_TTL_MS = 5 * 60 * 1000; // refresh at most once per 5 min
 

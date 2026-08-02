@@ -73,6 +73,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   delete process.env.PROBE_ALERT_THRESHOLD;
   delete process.env.PROBE_ALERT_COOLDOWN_HOURS;
+  delete process.env.PROBE_WINDOW_HOURS;
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -5879,5 +5880,140 @@ describe("hits array is preserved in full when cooldown is active (no eviction o
     await new Promise<void>((r) => setImmediate(r));
     await new Promise<void>((r) => setImmediate(r));
     expect(mockSendProbeAlert).not.toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PROBE_WINDOW_HOURS — eviction loop uses WINDOW_MS, not a hard-coded constant
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Guard: a future change that replaces `now - WINDOW_MS` with a hard-coded
+// millisecond literal (e.g. `now - 86400000`) would silently break when
+// WINDOW_MS is reconfigured.
+//
+// Strategy
+// ────────
+// 1. Load the module with PROBE_WINDOW_HOURS=1 (window = 1 hour).
+// 2. Seed both _uaProbes and _refererProbes with two hits each:
+//      • one hit 2 hours old  → outside the 1-hour window, must be evicted
+//      • one hit 30 min old   → inside the 1-hour window, must survive
+// 3. Call _recordProbe(map, key, label, now) which triggers the eviction loop.
+// 4. Assert the 2-hour-old hit was evicted (entry.hits.length === 2:
+//    the surviving 30-min hit + the new `now` hit).
+// 5. To prove the evicted set differs from the default 24-hour case, repeat
+//    with PROBE_WINDOW_HOURS unset: the 2-hour-old hit must SURVIVE (still
+//    inside the 24-hour default window), so entry.hits.length === 3.
+//
+// If the eviction loop were changed to `now - 86400000` (hard-coded 24 h):
+//   • In step 4 the cutoff would be now-86400000, which is earlier than the
+//     2-hour-old hit (now-7200000), so the hit would NOT be evicted and
+//     entry.hits.length would be 3 instead of 2 → test fails.
+
+describe("PROBE_WINDOW_HOURS — eviction loop respects WINDOW_MS, not a hard-coded constant", () => {
+  it("(A) with PROBE_WINDOW_HOURS=1: hit 2 h old is evicted; hit 30 min old survives in UA map", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    process.env.PROBE_WINDOW_HOURS    = "1"; // WINDOW_MS = 3 600 000 ms
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe, _WINDOW_MS } = mod as any;
+
+    // Sanity-check: the module read the override correctly.
+    expect(_WINDOW_MS).toBe(1 * 60 * 60 * 1000);
+
+    const now         = Date.now();
+    const twoHoursAgo = now - 2 * 60 * 60 * 1000;  // outside 1-h window
+    const thirtyMinAgo = now - 30 * 60 * 1000;      // inside  1-h window
+
+    _uaProbes.set("task398-ua-a", {
+      hits:        [twoHoursAgo, thirtyMinAgo],
+      lastAlerted: 0,
+    });
+
+    _recordProbe(_uaProbes, "task398-ua-a", "ua", now);
+
+    const entry = _uaProbes.get("task398-ua-a")!;
+    // twoHoursAgo must have been evicted; thirtyMinAgo + now must survive.
+    expect(entry.hits).toHaveLength(2);
+    expect(entry.hits).not.toContain(twoHoursAgo);
+    expect(entry.hits).toContain(thirtyMinAgo);
+    expect(entry.hits[entry.hits.length - 1]).toBe(now);
+  });
+
+  it("(B) with PROBE_WINDOW_HOURS=1: hit 2 h old is evicted; hit 30 min old survives in referer map", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    process.env.PROBE_WINDOW_HOURS    = "1";
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe, _WINDOW_MS } = mod as any;
+
+    expect(_WINDOW_MS).toBe(1 * 60 * 60 * 1000);
+
+    const now          = Date.now();
+    const twoHoursAgo  = now - 2 * 60 * 60 * 1000;
+    const thirtyMinAgo = now - 30 * 60 * 1000;
+
+    _refererProbes.set("task398-ref-b", {
+      hits:        [twoHoursAgo, thirtyMinAgo],
+      lastAlerted: 0,
+    });
+
+    _recordProbe(_refererProbes, "task398-ref-b", "referer", now);
+
+    const entry = _refererProbes.get("task398-ref-b")!;
+    expect(entry.hits).toHaveLength(2);
+    expect(entry.hits).not.toContain(twoHoursAgo);
+    expect(entry.hits).toContain(thirtyMinAgo);
+    expect(entry.hits[entry.hits.length - 1]).toBe(now);
+  });
+
+  it("(C) default window (PROBE_WINDOW_HOURS unset): same 2-h-old hit survives in UA map, proving the evicted set differs", async () => {
+    // PROBE_WINDOW_HOURS is absent (deleted in beforeEach) → WINDOW_MS = 24 h.
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe, _WINDOW_MS } = mod as any;
+
+    expect(_WINDOW_MS).toBe(24 * 60 * 60 * 1000);
+
+    const now          = Date.now();
+    const twoHoursAgo  = now - 2 * 60 * 60 * 1000;
+    const thirtyMinAgo = now - 30 * 60 * 1000;
+
+    _uaProbes.set("task398-ua-c", {
+      hits:        [twoHoursAgo, thirtyMinAgo],
+      lastAlerted: 0,
+    });
+
+    _recordProbe(_uaProbes, "task398-ua-c", "ua", now);
+
+    const entry = _uaProbes.get("task398-ua-c")!;
+    // With a 24-h window the 2-h-old hit is well within the window and must NOT
+    // be evicted.  All three timestamps (twoHoursAgo, thirtyMinAgo, now) survive.
+    expect(entry.hits).toHaveLength(3);
+    expect(entry.hits).toContain(twoHoursAgo);
+    expect(entry.hits).toContain(thirtyMinAgo);
+    expect(entry.hits[entry.hits.length - 1]).toBe(now);
+  });
+
+  it("(D) default window (PROBE_WINDOW_HOURS unset): same 2-h-old hit survives in referer map", async () => {
+    process.env.PROBE_ALERT_THRESHOLD = "2";
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe, _WINDOW_MS } = mod as any;
+
+    expect(_WINDOW_MS).toBe(24 * 60 * 60 * 1000);
+
+    const now          = Date.now();
+    const twoHoursAgo  = now - 2 * 60 * 60 * 1000;
+    const thirtyMinAgo = now - 30 * 60 * 1000;
+
+    _refererProbes.set("task398-ref-d", {
+      hits:        [twoHoursAgo, thirtyMinAgo],
+      lastAlerted: 0,
+    });
+
+    _recordProbe(_refererProbes, "task398-ref-d", "referer", now);
+
+    const entry = _refererProbes.get("task398-ref-d")!;
+    expect(entry.hits).toHaveLength(3);
+    expect(entry.hits).toContain(twoHoursAgo);
+    expect(entry.hits).toContain(thirtyMinAgo);
+    expect(entry.hits[entry.hits.length - 1]).toBe(now);
   });
 });
