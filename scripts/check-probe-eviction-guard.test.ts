@@ -56,6 +56,8 @@
  *        c-bare-neg. HELPER_REQUIRED_PATTERN does NOT match bare-arrow relaxed form (t => t >= c)
  *        b-index-ok.  HELPER_REQUIRED_PATTERN matches while-loop with a single-letter index (e.hits[i] <= c)
  *        b-index-neg. HELPER_REQUIRED_PATTERN does NOT match while-loop with relaxed index form (e.hits[i] < c)
+ *        b-index-forbidden-ok.  HELPER_FORBIDDEN_PATTERN matches relaxed while-loop with a non-standard index (e.hits[i] < c)
+ *        b-index-forbidden-neg. HELPER_FORBIDDEN_PATTERN does NOT match correct while-loop with a non-standard index (e.hits[i] <= c)
  *        o. Helper body with filter arrow split across lines (correct form) → ok:true
  *        p. Helper body with filter arrow split across lines (relaxed form) → ok:false
  *        v. Helper body splits 'e.hits\n  .filter((t) => t > c)' across lines → ok:true
@@ -1006,6 +1008,23 @@ describe("helper-extraction detection", () => {
     // The strictly-less-than form must never be accepted as correct, regardless
     // of what identifier is used as the bracket index.
     expect(HELPER_REQUIRED_PATTERN.test("e.hits[i] < c")).toBe(false);
+  });
+
+  // ── 4b-index-forbidden-ok. HELPER_FORBIDDEN_PATTERN — non-standard index, relaxed form ─
+  it("HELPER_FORBIDDEN_PATTERN matches the relaxed while-loop with a non-standard index variable (e.hits[i] < c)", () => {
+    // If the \[\w+\] bracket expression in HELPER_FORBIDDEN_PATTERN were
+    // tightened to a literal (e.g. \[lo\]), it would silently stop catching
+    // relaxed while-loops written with any other index name (e.g. `i`).
+    // This test pins the flexibility of the bracket expression on the
+    // forbidden side so that such a tightening is caught before it ships.
+    expect(HELPER_FORBIDDEN_PATTERN.test("e.hits[i] < c")).toBe(true);
+  });
+
+  // ── 4b-index-forbidden-neg. HELPER_FORBIDDEN_PATTERN — non-standard index, correct form ─
+  it("HELPER_FORBIDDEN_PATTERN does NOT match the correct while-loop with a non-standard index variable (e.hits[i] <= c)", () => {
+    // The inclusive (<= ) form must never be treated as a forbidden expression,
+    // regardless of what identifier is used as the bracket index.
+    expect(HELPER_FORBIDDEN_PATTERN.test("e.hits[i] <= c")).toBe(false);
   });
 
   // ── 4o. Helper body: filter arrow split across lines (correct form) → ok:true
