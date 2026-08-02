@@ -467,7 +467,10 @@ export async function initProbeCounters(): Promise<void> {
         mergedLastAlerted = Math.max(mergedLastAlerted, row.lastAlerted ?? 0);
       }
       // Apply the window filter only when building the in-memory entry.
-      const activeHits = Array.from(new Set(allHits))
+      // Do NOT deduplicate via Set: two concurrent requests can legitimately
+      // share the same millisecond timestamp, and removing one would
+      // under-count hits and potentially suppress a threshold alert after restart.
+      const activeHits = allHits
         .filter((t: number) => t >= cutoff)
         .sort((a, b) => a - b);
 

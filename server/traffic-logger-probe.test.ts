@@ -6178,6 +6178,159 @@ describe("DB field_type separation — persistProbeEntry and initProbeCounters",
     const { _uaProbes } = mod as any;
     expect(_uaProbes.has(KEY)).toBe(false);
   });
+
+  // ── B38 / B39: zombie entry reused — stale-hit eviction loop must run ────────
+  //
+  // A future refactor might short-circuit the while-loop so it only runs when a
+  // brand-new entry is created (i.e. guarded by `if (!entry)` or equivalent).
+  // If skipped for existing entries, the zombie's stale hits would survive
+  // reuse, inflating hits.length and potentially triggering a false alert on
+  // the very next call.
+  //
+  // B38/B39 pin the invariant: after _recordProbe is called once on a zombie
+  // entry whose hits array holds N > ALERT_THRESHOLD stale timestamps, only
+  // the single new hit must remain — hits.length === 1.
+  //
+  // T0 = Date.now()+124h (B38) and +126h (B39) — monotonically above B37 (122h).
+
+  it("(B38) zombie UA entry with many stale hits: after one _recordProbe call only the new hit remains", async () => {
+    process.env.PROBE_ALERT_THRESHOLD     = "3";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+    // T0 = Date.now()+124h — monotonically above B37 (122h).
+    const now = Date.now() + 124 * 60 * 60 * 1000;
+
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _recordProbe } = mod as any;
+
+    const KEY = "B38ZombieStaleEvictionUA/1.0";
+
+    // Seed a zombie entry: 10 stale hits — all well outside the 24-hour window
+    // and well above ALERT_THRESHOLD (3).  lastAlerted=0 so the cooldown guard
+    // will not block an alert if the while-loop is incorrectly skipped.
+    const staleBase = now - WINDOW_MS - 10_000;
+    const staleHits = Array.from({ length: 10 }, (_, k) => staleBase + k);
+    _uaProbes.set(KEY, { hits: [...staleHits], lastAlerted: 0 });
+
+    // Call _recordProbe exactly once.
+    _recordProbe(_uaProbes, KEY, "ua", now);
+    await flushMicrotasks();
+
+    // The while-loop must have evicted every stale hit; only the new hit survives.
+    expect(_uaProbes.get(KEY)!.hits).toHaveLength(1);
+    expect(_uaProbes.get(KEY)!.hits[0]).toBe(now);
+
+    // No alert must have fired — a single in-window hit does not exceed threshold=3.
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+
+    // The referer map must be untouched.
+    const { _refererProbes } = mod as any;
+    expect(_refererProbes.has(KEY)).toBe(false);
+
+    delete process.env.PROBE_ALERT_THRESHOLD;
+    delete process.env.PROBE_ALERT_COOLDOWN_HOURS;
+  });
+
+  it("(B39) zombie referer entry with many stale hits: after one _recordProbe call only the new hit remains", async () => {
+    // Symmetric referer-map counterpart to B38.
+    //
+    // T0 = Date.now()+126h — monotonically above B38 (124h).
+    process.env.PROBE_ALERT_THRESHOLD     = "3";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+    const now = Date.now() + 126 * 60 * 60 * 1000;
+
+    const mod = await import("./traffic-logger");
+    const { _refererProbes, _recordProbe } = mod as any;
+
+    const KEY = "https://b39-zombie-stale-eviction-referer.example/scan";
+
+    // 10 stale hits, all outside the window, well above threshold=3.
+    const staleBase = now - WINDOW_MS - 10_000;
+    const staleHits = Array.from({ length: 10 }, (_, k) => staleBase + k);
+    _refererProbes.set(KEY, { hits: [...staleHits], lastAlerted: 0 });
+
+    // Call _recordProbe exactly once.
+    _recordProbe(_refererProbes, KEY, "referer", now);
+    await flushMicrotasks();
+
+    // Only the new hit must remain after stale eviction.
+    expect(_refererProbes.get(KEY)!.hits).toHaveLength(1);
+    expect(_refererProbes.get(KEY)!.hits[0]).toBe(now);
+
+    // No alert must have fired.
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+
+    // The UA map must be untouched.
+    const { _uaProbes } = mod as any;
+    expect(_uaProbes.has(KEY)).toBe(false);
+
+    delete process.env.PROBE_ALERT_THRESHOLD;
+    delete process.env.PROBE_ALERT_COOLDOWN_HOURS;
+  });
+
+  // ── B40: same-millisecond timestamps across duplicate rows — multiplicity ─────
+  //
+  // Concurrent requests can legitimately share the same millisecond timestamp.
+  // When two duplicate DB rows both contain the identical fresh timestamp,
+  // initProbeCounters must preserve BOTH occurrences (hits.length === 2), not
+  // deduplicate them via Set (which would give hits.length === 1).
+  //
+  // Deduplication under-counts hits and can suppress a threshold alert after
+  // restart.  For example, with ALERT_THRESHOLD=1: two identical fresh hits
+  // should satisfy hits.length > 1, but dedup collapses them to 1 hit
+  // (hits.length === 1, 1 > 1 = false) — the alert never fires on the next
+  // incoming hit.
+  //
+  // T0 = Date.now()+128h — monotonically above B39 (126h).
+
+  it("(B40) duplicate rows with identical timestamps: both occurrences are preserved in memory (no Set deduplication)", async () => {
+    process.env.PROBE_ALERT_THRESHOLD     = "1";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+
+    const WINDOW_MS = 24 * 60 * 60 * 1000;
+
+    const initNow   = Date.now() + 128 * 60 * 60 * 1000;
+    const sharedHit = initNow - WINDOW_MS / 2; // single timestamp shared by both rows
+
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(initNow);
+
+    try {
+      const mod    = await import("./traffic-logger");
+      const { db } = await import("./db");
+      const { _uaProbes, _recordProbe } = mod as any;
+
+      // Two duplicate UA rows, each carrying the exact same timestamp.
+      const fakeRows = [
+        { fieldType: "ua", key: "B40SameMsTimestampUA/1.0", hits: [sharedHit], lastAlerted: 0 },
+        { fieldType: "ua", key: "B40SameMsTimestampUA/1.0", hits: [sharedHit], lastAlerted: 0 },
+      ];
+      (db as any).execute = vi.fn().mockResolvedValue([]);
+      (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+      await mod.initProbeCounters();
+
+      // Both identical hits must be present — hits.length === 2, not 1.
+      expect(_uaProbes.has("B40SameMsTimestampUA/1.0")).toBe(true);
+      expect(_uaProbes.get("B40SameMsTimestampUA/1.0")!.hits).toHaveLength(2);
+      expect(_uaProbes.get("B40SameMsTimestampUA/1.0")!.hits).toEqual([sharedHit, sharedHit]);
+
+      // With threshold=1 and hits.length already 2 > 1, the next _recordProbe
+      // call should fire an alert (cooldown has not been set).
+      _recordProbe(_uaProbes, "B40SameMsTimestampUA/1.0", "ua", initNow);
+      await flushMicrotasks();
+      expect(mockSendProbeAlert).toHaveBeenCalledTimes(1);
+      expect(mockSendProbeAlert).toHaveBeenCalledWith("ua", "B40SameMsTimestampUA/1.0", 3);
+    } finally {
+      dateNowSpy.mockRestore();
+      delete process.env.PROBE_ALERT_THRESHOLD;
+      delete process.env.PROBE_ALERT_COOLDOWN_HOURS;
+    }
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
