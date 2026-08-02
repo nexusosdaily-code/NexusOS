@@ -1663,6 +1663,60 @@ describe("double-counting guard — uaProbes and refererProbes are independent",
     expect(_uaProbes.get(UA_KEY).lastAlerted).toBe(EXACT_NOW);
   });
 
+  it("lastAlerted is not advanced when the alert is suppressed by cooldown", async () => {
+    // Regression guard: a future change that moves `entry.lastAlerted = now`
+    // outside the cooldown guard — stamping it on every hit regardless of
+    // whether the alert actually fired — would silently extend every cooldown
+    // window on every subsequent request, making alerts permanently unavailable.
+    //
+    // Setup:
+    //   • threshold = 2  (alert fires when hits.length > 2)
+    //   • EXACT_NOW sentinel used throughout so assertions are deterministic
+    //   • Both maps pre-seeded with 3 hits (above threshold) AND
+    //     lastAlerted = EXACT_NOW - 1  (1 ms ago → well inside the 1-hour
+    //     cooldown → alert is suppressed on this call)
+    //
+    // After one more _recordProbe call the hit count climbs to 4, which is
+    // still above threshold, but the cooldown guard must prevent the alert
+    // branch from running — so lastAlerted must remain at EXACT_NOW - 1.
+
+    process.env.PROBE_ALERT_THRESHOLD      = "2";
+    process.env.PROBE_ALERT_COOLDOWN_HOURS = "1";
+    const mod = await import("./traffic-logger");
+    const { _uaProbes, _refererProbes, _recordProbe } = mod as any;
+
+    await mod.initProbeCounters();
+
+    const EXACT_NOW    = 1_700_000_005_000; // fixed sentinel — not Date.now()
+    const PRE_ALERTED  = EXACT_NOW - 1;     // 1 ms ago → cooldown still active
+    const UA_KEY_CD    = "CooldownSuppressUA/3.0";
+    const REF_KEY_CD   = "https://cooldown-suppress-scraper.example/scan";
+
+    // Seed both maps: 3 hits (above threshold=2) + lastAlerted 1 ms ago.
+    _uaProbes.set(UA_KEY_CD,  {
+      hits:        [EXACT_NOW - 3000, EXACT_NOW - 2000, EXACT_NOW - 1000],
+      lastAlerted: PRE_ALERTED,
+    });
+    _refererProbes.set(REF_KEY_CD, {
+      hits:        [EXACT_NOW - 3000, EXACT_NOW - 2000, EXACT_NOW - 1000],
+      lastAlerted: PRE_ALERTED,
+    });
+
+    // Fire one more probe call for each map.  Hit count rises to 4 (> 2) but
+    // the cooldown guard must suppress the alert, leaving lastAlerted unchanged.
+    _recordProbe(_refererProbes, REF_KEY_CD, "referer", EXACT_NOW);
+    _recordProbe(_uaProbes,      UA_KEY_CD,  "ua",      EXACT_NOW);
+
+    await flushMicrotasks();
+
+    // The alert must NOT have fired.
+    expect(mockSendProbeAlert).not.toHaveBeenCalled();
+
+    // lastAlerted must remain at the pre-seeded value — NOT advanced to EXACT_NOW.
+    expect(_refererProbes.get(REF_KEY_CD).lastAlerted).toBe(PRE_ALERTED);
+    expect(_uaProbes.get(UA_KEY_CD).lastAlerted).toBe(PRE_ALERTED);
+  });
+
   it("UA cooldown active + referer at threshold: only the referer alert fires, UA alert is suppressed", async () => {
     // Regression guard: a future change that adds an early-return when the UA
     // probe is in cooldown (e.g. `if (uaInCooldown) return`) — or that gates
