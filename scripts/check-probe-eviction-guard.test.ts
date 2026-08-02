@@ -75,6 +75,12 @@
  *           wrong comparator (t !== cutoff) that matches neither required nor forbidden
  *           → ok:false with the helper-extraction message.  Confirms the fallback is
  *           selective and does not return a false-positive ok:true for arbitrary splits.
+ *        af. Full-body fallback — filter with non-standard callback name AND wrong
+ *           comparator together → ok:false.  Guards against a future change that
+ *           hard-codes the callback variable in HELPER_FORBIDDEN_PATTERN's filter
+ *           branch.  The helper splits the arrow body across lines; the full-body
+ *           forbidden pass must still emit the "relaxed eviction comparison / split
+ *           across lines" message attributed to the helper.
  *   5. Multi-line source strings (formatter-split arrow)
  *        a. Filter arrow split to the next line (correct form) → ok:true
  *           REQUIRED_PATTERN uses \s* between tokens and \s matches \n; the
@@ -1802,6 +1808,53 @@ describe("helper-extraction detection", () => {
         `    e.hits[idx] <`,
         `    c) idx++;`,
         `  e.hits.splice(0, idx);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const result = await checkProbeEvictionGuard("/fake/traffic-logger.ts");
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/relaxed eviction comparison/i);
+    expect(result.reason).toMatch(/split across lines/i);
+    expect(result.reason).toContain("evictOldHits");
+  });
+
+  // ── 4af. Full-body fallback — filter with non-standard callback name AND wrong comparator → ok:false ─
+  it("returns ok:false with the relaxed-comparison message when the helper's filter uses BOTH a non-standard callback name (x) AND the wrong comparator (>=)", async () => {
+    // Guards against a combined mutation that existing filter tests do not cover:
+    //   • 4e confirms HELPER_FORBIDDEN_PATTERN rejects any param name at pattern level
+    //   • 4p confirms the relaxed split filter form is caught at integration level
+    //   • THIS test confirms that non-standard callback "x" WITH wrong ">=" is also
+    //     rejected at integration level (ok:false) even when split across lines.
+    //
+    // A future refactor that hard-codes the callback variable name (e.g. "t") inside
+    // HELPER_FORBIDDEN_PATTERN's filter branch would pass 4p (which uses "t") but
+    // silently miss this combined mutation, returning ok:true instead of ok:false.
+    //
+    // The helper splits the arrow body across two lines so neither line alone
+    // triggers the per-line scan:
+    //
+    //   e.hits = e.hits.filter((x) =>
+    //     x >= c);
+    //
+    // The full-body forbidden pattern must match when \s* consumes the newline
+    // between "(x) =>" and "x >= c", and \w+ must accept "x" as the callback.
+    //
+    // Expected outcome: ok:false, reason contains "Relaxed eviction comparison",
+    // "split across lines", and is attributed to helper "evictOldHits".
+    mockReadFile.mockResolvedValue(
+      [
+        `function recordProbe(map, key, label, now) {`,
+        `  let entry = map.get(key);`,
+        `  const cutoff = now - WINDOW_MS;`,
+        `  evictOldHits(entry, cutoff);`,
+        `  entry.hits.push(now);`,
+        `}`,
+        ``,
+        `function evictOldHits(e, c) {`,
+        `  // BUG: non-standard callback name 'x' with wrong '>=' comparator`,
+        `  e.hits = e.hits.filter((x) =>`,
+        `    x >= c);`,
         `}`,
       ].join("\n"),
     );
