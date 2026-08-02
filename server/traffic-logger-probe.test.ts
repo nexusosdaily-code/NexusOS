@@ -20814,3 +20814,169 @@ describe("ProbeEntry cross-key allHits buffer reuse guard (restart path, two dis
     expect(entryB.hits).not.toContain(hitA);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Cross-key allHits buffer reuse guard — two distinct UA keys, both with
+// an active cooldown AND multiple (duplicate) rows per key (restart path)
+//
+// Task 628 catches the single-row-per-key case.  A subtler regression could
+// appear when each key has two or more duplicate rows: the merge loop
+// processes multiple rows per group before moving on.  A bug that resets
+// allHits between groups but NOT between rows-within-a-group, combined with
+// the cooldown branch, would slip through Task 628 entirely.
+//
+// These tests seed initProbeCounters with two "ua" groups (KEY_A, KEY_B),
+// each with two duplicate rows, all four rows carrying active lastAlerted
+// values.  They assert:
+//   • each merged entry's hits contains only its own timestamps
+//   • neither entry's hits contains any timestamp from the other key
+//   • the two entries' hits arrays are not the same object reference
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("ProbeEntry cross-key allHits buffer reuse guard (restart path, two distinct UA keys with active cooldown AND multiple rows per key): each entry's hits contains only its own timestamps", () => {
+  const KEY_A = "cross-key-ua-allhits-multirow-cooldown-guard-key-a-probe-v1";
+  const KEY_B = "cross-key-ua-allhits-multirow-cooldown-guard-key-b-probe-v1";
+
+  it("entry for KEY_A contains only KEY_A's timestamps and entry for KEY_B contains only KEY_B's timestamps", async () => {
+    const now           = Date.now();
+    // Two distinct timestamps for KEY_A and two for KEY_B.
+    const hitA1         = now - 1_000; // 1 s ago — within window, belongs to KEY_A
+    const hitA2         = now - 2_000; // 2 s ago — within window, belongs to KEY_A
+    const hitB1         = now - 3_000; // 3 s ago — within window, belongs to KEY_B
+    const hitB2         = now - 4_000; // 4 s ago — within window, belongs to KEY_B
+    // Both keys have distinct active cooldowns (alerted 5 and 10 minutes ago).
+    const lastAlertedA  = now - 5 * 60_000;
+    const lastAlertedB  = now - 10 * 60_000;
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._uaProbes.delete(KEY_A);
+    mod._uaProbes.delete(KEY_B);
+    mod._refererProbes.delete(KEY_A);
+    mod._refererProbes.delete(KEY_B);
+
+    // Four rows — two per key — each with an active lastAlerted value.
+    // This simulates duplicate DB rows that accumulate when the same scraper
+    // UA is recorded more than once before a restart.
+    const fakeRows = [
+      { fieldType: "ua", key: KEY_A, hits: [hitA1], lastAlerted: lastAlertedA },
+      { fieldType: "ua", key: KEY_A, hits: [hitA2], lastAlerted: lastAlertedA },
+      { fieldType: "ua", key: KEY_B, hits: [hitB1], lastAlerted: lastAlertedB },
+      { fieldType: "ua", key: KEY_B, hits: [hitB2], lastAlerted: lastAlertedB },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const entryA = mod._uaProbes.get(KEY_A);
+    const entryB = mod._uaProbes.get(KEY_B);
+
+    expect(entryA).toBeDefined();
+    expect(entryB).toBeDefined();
+
+    // Each entry must contain its own hits.
+    expect(entryA!.hits).toContain(hitA1);
+    expect(entryA!.hits).toContain(hitA2);
+    expect(entryB!.hits).toContain(hitB1);
+    expect(entryB!.hits).toContain(hitB2);
+
+    // Cross-contamination checks: KEY_A must not absorb KEY_B's timestamps
+    // and vice-versa.  A bug that fails to reset allHits between groups when
+    // both groups carry an active cooldown — or resets it only between groups
+    // but not between the two rows within a group — would cause one entry to
+    // accumulate the other's timestamps.
+    expect(entryA!.hits).not.toContain(hitB1);
+    expect(entryA!.hits).not.toContain(hitB2);
+    expect(entryB!.hits).not.toContain(hitA1);
+    expect(entryB!.hits).not.toContain(hitA2);
+  });
+
+  it("entry for KEY_A's hits array is not the same reference as entry for KEY_B's hits array", async () => {
+    const now           = Date.now();
+    const hitA1         = now - 5_000;
+    const hitA2         = now - 6_000;
+    const hitB1         = now - 7_000;
+    const hitB2         = now - 8_000;
+    const lastAlertedA  = now - 5 * 60_000;
+    const lastAlertedB  = now - 10 * 60_000;
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._uaProbes.delete(KEY_A);
+    mod._uaProbes.delete(KEY_B);
+    mod._refererProbes.delete(KEY_A);
+    mod._refererProbes.delete(KEY_B);
+
+    const fakeRows = [
+      { fieldType: "ua", key: KEY_A, hits: [hitA1], lastAlerted: lastAlertedA },
+      { fieldType: "ua", key: KEY_A, hits: [hitA2], lastAlerted: lastAlertedA },
+      { fieldType: "ua", key: KEY_B, hits: [hitB1], lastAlerted: lastAlertedB },
+      { fieldType: "ua", key: KEY_B, hits: [hitB2], lastAlerted: lastAlertedB },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const entryA = mod._uaProbes.get(KEY_A)!;
+    const entryB = mod._uaProbes.get(KEY_B)!;
+
+    expect(entryA).toBeDefined();
+    expect(entryB).toBeDefined();
+
+    // If allHits were reused across groups and stored directly into both
+    // entries they would share the same array reference.
+    expect(entryA.hits).not.toBe(entryB.hits);
+  });
+
+  it("pushing a sentinel onto KEY_A's hits does not contaminate KEY_B's hits", async () => {
+    const now           = Date.now();
+    const hitA1         = now - 9_000;
+    const hitA2         = now - 10_000;
+    const hitB1         = now - 11_000;
+    const hitB2         = now - 12_000;
+    const lastAlertedA  = now - 5 * 60_000;
+    const lastAlertedB  = now - 10 * 60_000;
+
+    const mod    = await import("./traffic-logger");
+    const { db } = await import("./db");
+
+    mod._uaProbes.delete(KEY_A);
+    mod._uaProbes.delete(KEY_B);
+    mod._refererProbes.delete(KEY_A);
+    mod._refererProbes.delete(KEY_B);
+
+    const fakeRows = [
+      { fieldType: "ua", key: KEY_A, hits: [hitA1], lastAlerted: lastAlertedA },
+      { fieldType: "ua", key: KEY_A, hits: [hitA2], lastAlerted: lastAlertedA },
+      { fieldType: "ua", key: KEY_B, hits: [hitB1], lastAlerted: lastAlertedB },
+      { fieldType: "ua", key: KEY_B, hits: [hitB2], lastAlerted: lastAlertedB },
+    ];
+    (db as any).execute = vi.fn().mockResolvedValue([]);
+    (db as any).select  = vi.fn().mockReturnValue({ from: vi.fn().mockResolvedValue(fakeRows) });
+
+    await mod.initProbeCounters();
+
+    const entryA = mod._uaProbes.get(KEY_A)!;
+    const entryB = mod._uaProbes.get(KEY_B)!;
+
+    expect(entryA).toBeDefined();
+    expect(entryB).toBeDefined();
+
+    const lenBBefore = entryB.hits.length;
+
+    // Mutate KEY_A's entry.
+    const sentinel = now + 99_999_999;
+    entryA.hits.push(sentinel);
+
+    // KEY_B's hits must be completely unaffected — proves the arrays are
+    // not aliased even after the row-within-group merge loop.
+    expect(entryB.hits.length).toBe(lenBBefore);
+    expect(entryB.hits).not.toContain(sentinel);
+    expect(entryB.hits).not.toContain(hitA1);
+    expect(entryB.hits).not.toContain(hitA2);
+  });
+});
