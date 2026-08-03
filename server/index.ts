@@ -807,20 +807,62 @@ async function runStartupMigrations() {
       .catch((e: any) => {
         // Mark boot degraded + emit [FATAL] log (never silent)
         handleSealError(e);
-        // Fire-and-forget Telegram alert so the founder is notified immediately
-        const token = process.env.TELEGRAM_BOT_TOKEN;
-        if (token) {
-          const msg = e?.message ?? String(e);
-          fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              chat_id: "-1002572762871",
-              parse_mode: "HTML",
-              text: `🚨 <b>NexusOS BOOT ALERT</b>\n<b>sealConstitution() FATAL failure</b>\n\nServer is running DEGRADED — constitution block was NOT written.\n/health returns <code>degraded: true</code> until fixed.\n\n<b>Error:</b> ${msg.slice(0, 300)}`,
-            }),
-          }).catch(() => {});
-        }
+
+        // Background recovery — the DB may still be warming up after the fast
+        // retry window (10 × 8 s = 80 s).  Try every 30 s for up to 5 minutes
+        // before alerting the founder.  This prevents spurious BOOT ALERT
+        // messages when the Replit internal PostgreSQL host ("helium") takes
+        // longer than 80 s to become reachable on a cold boot.
+        const BACKGROUND_ATTEMPTS  = 10;  // 10 × 30 s = 5 min
+        const BACKGROUND_DELAY_MS  = 30_000;
+
+        (async () => {
+          let recovered = false;
+          for (let attempt = 1; attempt <= BACKGROUND_ATTEMPTS; attempt++) {
+            await new Promise<void>((r) => setTimeout(r, BACKGROUND_DELAY_MS));
+            try {
+              await sealConstitution();
+              // Healed — clear the degraded flag so /health goes green
+              bootState.degraded  = false;
+              bootState.sealError = null;
+              console.log(
+                `[CONSTITUTION] 🟢 Background recovery succeeded (attempt ${attempt}/${BACKGROUND_ATTEMPTS}) — server healthy.`,
+              );
+              recovered = true;
+              break;
+            } catch (bgErr: any) {
+              const bgMsg: string = bgErr?.message ?? String(bgErr);
+              if (!isTransientDbError(bgMsg)) {
+                // Permanent error (schema missing, etc.) — no point retrying
+                console.error(
+                  `[CONSTITUTION] Background recovery hit a permanent error — aborting: ${bgMsg.slice(0, 200)}`,
+                );
+                break;
+              }
+              console.warn(
+                `[CONSTITUTION] Background recovery attempt ${attempt}/${BACKGROUND_ATTEMPTS} failed (transient): ${bgMsg.slice(0, 120)}`,
+              );
+            }
+          }
+
+          if (!recovered) {
+            // Still degraded after 5 minutes — this is a genuine outage.
+            // Alert the founder now.
+            const token = process.env.TELEGRAM_BOT_TOKEN;
+            if (token) {
+              const msg = e?.message ?? String(e);
+              fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  chat_id: "-1002572762871",
+                  parse_mode: "HTML",
+                  text: `🚨 <b>NexusOS BOOT ALERT</b>\n<b>sealConstitution() FATAL failure</b>\n\nServer is running DEGRADED — constitution block was NOT written.\n/health returns <code>degraded: true</code> until fixed.\n\n<b>Error:</b> ${msg.slice(0, 300)}`,
+                }),
+              }).catch(() => {});
+            }
+          }
+        })();
       });
     seedGenesisNode().catch((e) => console.error("[GENESIS NODE] Error:", e));
     seedReplitAIAccount().catch((e) => console.error("[GENESIS] Replit AI seed error:", e));
