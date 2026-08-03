@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { colorText400 } from "@/lib/color-classes";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -444,7 +445,7 @@ export default function ResearchPage() {
                         const frequency = (particle.mass * SPEED_OF_LIGHT ** 2) / PLANCK_CONSTANT;
                         return (
                           <tr key={idx} className="border-b border-gray-800" data-testid={`particle-${particle.name.toLowerCase()}`}>
-                            <td className={`p-2 text-${particle.color}-400`}>{particle.name}</td>
+                            <td className={`p-2 ${colorText400[particle.color]}`}>{particle.name}</td>
                             <td className="p-2 text-gray-300 font-mono text-right">{particle.mass.toExponential(2)}</td>
                             <td className="p-2 text-gray-300 font-mono text-right">{frequency.toExponential(2)}</td>
                           </tr>
