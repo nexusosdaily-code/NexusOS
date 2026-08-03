@@ -386,7 +386,7 @@ const BLOCKED_ENTITIES = [
     handle: "ubs",
     name:   "UBS AG",
     org:    "UBS",
-    reason: "Guilty plea — wire fraud / LIBOR benchmark rate rigging (2015). $545M criminal fine. Repeat offender across FX and LIBOR manipulation schemes.",
+    reason: "Guilty plea — wire fraud / LIBOR benchmark rate rigging (2015). $545M criminal fine. Repeat offender: $125M AML fine (FinCEN + SEC + FINRA + CFTC, Aug 2026) for Bank Secrecy Act recidivism.",
   },
   {
     handle: "rbs",

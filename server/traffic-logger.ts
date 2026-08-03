@@ -335,7 +335,7 @@ const BLOCKED_REFERRER_DOMAINS: { domain: string; label: string }[] = [
   // ── Credit Suisse — tax conspiracy guilty plea (2014) ─────────────────
   { domain: "credit-suisse.com",label: "Credit-Suisse" },
   { domain: "creditsuisse.com", label: "Credit-Suisse" },
-  // ── UBS — LIBOR wire fraud guilty plea (2015) ─────────────────────────
+  // ── UBS — LIBOR wire fraud guilty plea (2015); $125M AML recidivism fine (Aug 2026) ──
   { domain: "ubs.com",          label: "UBS" },
   // ── Royal Bank of Scotland / NatWest — FX rigging guilty plea (2015) ──
   { domain: "rbs.com",          label: "RBS" },
