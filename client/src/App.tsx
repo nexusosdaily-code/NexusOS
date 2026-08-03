@@ -250,7 +250,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, EBState> {
 // DYNAMIC_PROTECTED_PREFIXES — paths with dynamic segments where ANY child is valid.
 // ---------------------------------------------------------------------------
 const EXACT_PROTECTED_PATHS = new Set<string>([
-  "/", "/hub", "/apps",
+  "/hub", "/apps",
   "/v10", "/v9", "/v8", "/v7", "/v6",
   "/encoding-lab",
   "/workspace/encoding", "/workspace/analytics", "/workspace/transmission",
@@ -594,6 +594,8 @@ function Router() {
       <Route path="/nexus-hardware-os" component={NexusHardwareOsPage} />
       <Route path="/orbital-treasury" component={OrbitalTreasuryPage} />
       <Route path="/spectral-library" component={SpectralLibraryPage} />
+      {/* Homepage — public; HubPage renders a landing view for guests */}
+      <Route path="/" component={HubPage} />
       {/* Catch-all: shows 404 for unknown paths, auth guard for known protected ones */}
       <Route component={ProtectedOrNotFound} />
     </Switch>

@@ -1309,31 +1309,170 @@ function CanonicalAddressPanel({ username }: { username: string }) {
   );
 }
 
+// ── Public landing hero (shown to unauthenticated visitors) ───────────
+function PublicHero() {
+  return (
+    <div className="min-h-screen" style={{ background: "hsl(222 47% 5%)", color: "white" }}>
+      {/* Top bar */}
+      <div
+        className="sticky top-0 z-50 flex items-center justify-between px-6 py-3"
+        style={{ borderBottom: "1px solid rgba(34,211,238,0.15)", background: "hsl(222 47% 6%)" }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-xl font-bold text-white tracking-widest">Λ</span>
+          <span className="text-sm font-semibold text-white/70">NexusOS</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link href="/auth">
+            <button
+              className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
+              style={{ background: "rgba(34,211,238,0.15)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.35)" }}
+            >
+              Sign in
+            </button>
+          </Link>
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 py-12 space-y-12">
+        {/* Hero */}
+        <div className="text-center space-y-6 py-8">
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono"
+            style={{ background: "rgba(34,211,238,0.08)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.25)" }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse inline-block" />
+            Wavelength Namespace Protocol · v7
+          </div>
+
+          <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight">
+            The Operating System<br />
+            <span style={{ color: "#22d3ee" }}>for the Photonic Age</span>
+          </h1>
+
+          <p className="text-lg text-white/50 max-w-2xl mx-auto leading-relaxed">
+            NexusOS maps every electromagnetic frequency to a unique address.
+            Built on the physics of light — Maxwell, Planck, Einstein, Tesla, Shannon.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link href="/auth">
+              <button
+                className="px-6 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-105"
+                style={{ background: "rgba(34,211,238,0.18)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.45)" }}
+              >
+                Get started →
+              </button>
+            </Link>
+            <Link href="/wnsp">
+              <button
+                className="px-6 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-105"
+                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.12)" }}
+              >
+                Learn the protocol
+              </button>
+            </Link>
+            <Link href="/campaign">
+              <button
+                className="px-6 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-105"
+                style={{ background: "rgba(249,115,22,0.12)", color: "#fb923c", border: "1px solid rgba(249,115,22,0.30)" }}
+              >
+                Back the campaign
+              </button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Key stats row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "Prior Art Claims", value: "35+", color: "#22d3ee" },
+            { label: "Physics Constants", value: "4",   color: "#a78bfa" },
+            { label: "Spectral Channels", value: "16M+", color: "#f472b6" },
+            { label: "Ecosystem Domains", value: "19",  color: "#fbbf24" },
+          ].map(({ label, value, color }) => (
+            <div
+              key={label}
+              className="rounded-xl p-4 text-center"
+              style={{ background: `${color}0a`, border: `1px solid ${color}25` }}
+            >
+              <div className="text-2xl font-bold" style={{ color }}>{value}</div>
+              <div className="text-xs text-white/40 mt-1">{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Ecosystem domains */}
+        <EcosystemDomains />
+
+        {/* Campaign videos */}
+        <CampaignVideos />
+
+        {/* Bottom CTA */}
+        <div
+          className="rounded-2xl p-8 text-center space-y-4"
+          style={{ background: "hsl(222 47% 7%)", border: "1px solid rgba(34,211,238,0.18)" }}
+        >
+          <div className="text-xl font-bold text-white">Ready to claim your spectral address?</div>
+          <p className="text-sm text-white/40 max-w-md mx-auto">
+            Every NexusOS account receives a unique Ψ(WDM,OAM,Pol) coordinate in the electromagnetic spectrum.
+          </p>
+          <Link href="/auth">
+            <button
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-sm transition-all hover:scale-105"
+              style={{ background: "rgba(34,211,238,0.18)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.45)" }}
+            >
+              Create your account →
+            </button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Hub Page ──────────────────────────────────────────────────────
 export default function HubPage() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [filter, setFilter] = useState<FeedType>("all");
 
   const { data: walletData } = useQuery<{ wallet: { address: string; balance: string } }>({
     queryKey: ["/api/wallet"],
     refetchInterval: 30_000,
+    enabled: !!user,
   });
 
   const { data: unreadData } = useQuery<{ count: number }>({
     queryKey: ["/api/messages/unread-count"],
     refetchInterval: 15_000,
+    enabled: !!user,
   });
 
-  const { data: feedData, isLoading } = useQuery<{ feed: FeedItem[]; total: number }>({
+  const { data: feedData, isLoading: feedLoading } = useQuery<{ feed: FeedItem[]; total: number }>({
     queryKey: ["/api/feed"],
     refetchInterval: 20_000,
+    enabled: !!user,
   });
 
   const { data: profileData } = useQuery<{ profile: { avatarUrl: string | null; bio: string | null; country: string | null; stateRegion: string | null } }>({
     queryKey: ["/api/settings/profile"],
+    enabled: !!user,
   });
 
-  if (!user) return null;
+  // While auth is still resolving, show a neutral loader
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "hsl(222 47% 5%)" }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="text-5xl font-light text-white tracking-widest animate-pulse">Λ</div>
+          <p className="text-gray-500 text-sm">Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show public landing for unauthenticated visitors (auth check resolved)
+  if (!user) return <PublicHero />;
 
   const allItems: FeedItem[] = feedData?.feed ?? [];
   const filtered = filter === "all"
@@ -1432,7 +1571,7 @@ export default function HubPage() {
             </TabsList>
           </Tabs>
 
-          {isLoading ? (
+          {feedLoading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="h-20 rounded-xl animate-pulse"
