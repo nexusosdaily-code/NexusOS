@@ -451,6 +451,31 @@ const BLOCKED_ENTITIES = [
     org:    "Goldman Sachs Malaysia",
     reason: "Convicted at trial — conspiracy to launder money, violate FCPA (2022). Former Goldman Sachs managing director. Central to $4.5B 1MDB theft.",
   },
+  // ── Australian criminal convictions (ASIC / Commonwealth DPP) ────────
+  {
+    handle: "tony_iervasi",
+    name:   "Tony Iervasi",
+    org:    "Courtenay House",
+    reason: "Convicted — 11 years prison (min. 7 non-parole), NSW Supreme Court (Sept 2024). Ran Australia's largest Ponzi scheme via Courtenay House. $180M forex fraud defrauding hundreds of victims.",
+  },
+  {
+    handle: "courtenay_house",
+    name:   "Courtenay House / Courtenay Trading",
+    org:    "Courtenay House",
+    reason: "Criminal enterprise. Vehicle for Tony Iervasi's $180M Ponzi scheme. Director sentenced to 11 years. Wound up under ASIC and Commonwealth DPP action.",
+  },
+  {
+    handle: "anthony_torre",
+    name:   "Anthony Paul Torre",
+    org:    "Torre Financial",
+    reason: "Convicted — 6 years prison, WA District Court (Jan 2026). Subiaco financial adviser who stole $1.03M from clients' superannuation accounts. ASIC prosecution.",
+  },
+  {
+    handle: "rodney_forrest",
+    name:   "Rodney Forrest",
+    org:    "Platinum Asset Management",
+    reason: "Convicted — 5 years 3 months prison (re-sentenced on appeal, 2026). Fund manager found guilty of insider trading in Platinum Asset Management shares. Federal Court / ASIC criminal prosecution.",
+  },
 ];
 
 export async function seedBlockedEntities() {
