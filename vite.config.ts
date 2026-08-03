@@ -45,6 +45,23 @@ function criticalChunkPreloadPlugin(): Plugin {
         }
       }
 
+      // Preload the main CSS bundle so the browser fetches it in parallel with
+      // the JS modules instead of discovering it only after the entry chunk
+      // executes.  The main CSS is the hashed "index-*.css" asset — page-split
+      // CSS chunks (e.g. "secure-docx-*.css") are skipped because they are only
+      // needed when those pages are visited.
+      for (const [fileName, asset] of Object.entries(bundle)) {
+        if (
+          asset.type === "asset" &&
+          fileName.endsWith(".css") &&
+          /^assets\/index-/.test(fileName)
+        ) {
+          preloadTags.unshift(
+            `    <link rel="preload" as="style" href="/${fileName}">`
+          );
+        }
+      }
+
       if (preloadTags.length === 0) return;
 
       const htmlAsset = bundle["index.html"];

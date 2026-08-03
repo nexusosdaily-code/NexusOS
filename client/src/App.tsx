@@ -676,11 +676,14 @@ function App() {
             <AuthProvider>
               <Toaster />
               <FriendRequestNotifier />
-              <AuthLoading>
-                <Suspense fallback={<PageLoader />}>
-                  <Router />
-                </Suspense>
-              </AuthLoading>
+              {/* AuthLoading is intentionally NOT wrapping Router here.
+                  Public routes (constitution, docs, crowdfund, etc.) must
+                  paint immediately without waiting for /api/auth/me.
+                  Protected routes are individually guarded by <ProtectedRoute>
+                  which shows its own "Authenticating…" state while isLoading. */}
+              <Suspense fallback={<PageLoader />}>
+                <Router />
+              </Suspense>
               <TelegramFloat />
               <Suspense fallback={null}><GuideBot /></Suspense>
             </AuthProvider>
