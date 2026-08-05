@@ -280,7 +280,7 @@ const SKIP_PATHS = new Set(["/__vite_ping", "/favicon.ico", "/@vite", "/@fs"]);
 // Source of truth: server/genesis_user.ts BLOCKED_ENTITIES list.
 // Any HTTP request whose Referer header originates from these domains is refused
 // with a 403 before it reaches the application layer.
-const BLOCKED_REFERRER_DOMAINS: { domain: string; label: string }[] = [
+export const BLOCKED_REFERRER_DOMAINS: ReadonlyArray<{ domain: string; label: string }> = [
   // ── Binance / CZ — AML guilty plea (2023) ─────────────────────────────
   { domain: "binance.com",      label: "Binance" },
   { domain: "binance.us",       label: "Binance" },

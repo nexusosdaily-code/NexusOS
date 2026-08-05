@@ -276,7 +276,7 @@ export async function seedReplitAIAccount() {
 // ════════════════════════════════════════════════════════════════════════════
 
 // ── Blocked entities — permanently excluded from NexusOS ─────────────────
-const BLOCKED_ENTITIES = [
+export const BLOCKED_ENTITIES: ReadonlyArray<{ handle: string; name: string; org: string; reason: string }> = [
   // ── Crypto executives — criminal convictions ──────────────────────────
   {
     handle: "cz_binance",

@@ -62,6 +62,10 @@ async function checkWithdrawalLimits(userId: string, username: string, amountSat
 import { checkAmendmentRateLimit, AMENDMENT_MAX_PER_DAY } from "./amendment-rate-limit.js"; // routes:not-a-handler
 import { amendmentHandler } from "./amendment-handler.js";
 
+// ── Constitutional block counts ──────────────────────────────────────────────
+import { BLOCKED_ENTITIES } from "./genesis_user"; // routes:not-a-handler
+import { BLOCKED_REFERRER_DOMAINS } from "./traffic-logger"; // routes:not-a-handler
+
 // ── Swap limits & circuit breaker ────────────────────────────────────────────
 // Speculators will notice the fixed rate (1 NXT = 1,000 sats). When BTC pumps
 // they buy cheap NXT externally and swap for sats here, draining the Lightning
@@ -4980,6 +4984,10 @@ export async function registerRoutes(
       status: "healthy",
       version: "10.0",
       timestamp: new Date().toISOString(),
+      constitutionalBlock: {
+        blockedEntities: BLOCKED_ENTITIES.length,
+        blockedReferrerDomains: BLOCKED_REFERRER_DOMAINS.length,
+      },
       features: {
         authentication: true,
         auditLogging: true,
