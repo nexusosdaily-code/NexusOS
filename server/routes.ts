@@ -2450,7 +2450,7 @@ export async function registerRoutes(
           "WNSP•BTC":           { runeId: (etch as any).rune_id ?? "952733:1958", status: etch.status },
           "NEXUS•WAVELENGTH":   { runeId: "952596:379",  status: "etched" },
         },
-        channels:  25600,
+        channels:  51200,
         timestamp: new Date().toISOString(),
       });
     } catch (err: any) {
@@ -6894,7 +6894,7 @@ export async function registerRoutes(
       d_energy_per_joule: parseFloat(dEnergy.toFixed(2)),
       r_sym:             rSym,
       m,
-      hilbert_note:      `This WDM band contributes ${subChannels} of the 25,600 Hilbert channels (${N_OAM} OAM × ${N_POL} Pol).`,
+      hilbert_note:      `This WDM band contributes ${subChannels} of the 51,200 Hilbert channels (${N_OAM} OAM × ${N_POL} Pol).`,
       compression_note:  `Higher λ = lower compression state = lower energy per photon = higher symbols/joule.`,
     };
   }
@@ -8650,7 +8650,7 @@ export async function registerRoutes(
     { band: "EVENT",   nm: [590,625], color: "#f97316", runeName: "NEXUSOS•EVENT•BAND",   symbol: "Ε", supply: "21000000000", desc: "Orange band — governance & triggers" },
     { band: "STORAGE", nm: [625,780], color: "#f87171", runeName: "NEXUSOS•STORAGE•BAND", symbol: "Δ", supply: "21000000000", desc: "Red band — persistent state & files" },
     { band: "NXT",     nm: [380,780], color: "#a78bfa", runeName: "NEXUSOS•NXT•TOKEN",    symbol: "N", supply: "21000000000", desc: "Full-spectrum — NexusOS native currency" },
-    { band: "WNSP",    nm: [380,780], color: "#fb923c", runeName: "NEXUSOS•WNSP•PROTOCOL",symbol: "Ψ", supply: "25600",       desc: "25,600 orthogonal Ψ channels — Hilbert space density" },
+    { band: "WNSP",    nm: [380,780], color: "#fb923c", runeName: "NEXUSOS•WNSP•PROTOCOL",symbol: "Ψ", supply: "51200",       desc: "51,200 orthogonal Ψ channels — Hilbert space density" },
   ];
 
   app.get("/api/btc-bridge/runes", authenticate, async (req: Request, res: Response) => {
@@ -8714,7 +8714,7 @@ export async function registerRoutes(
     EVENT:   { nm:[590,625], color:"#f97316", symbol:"Ε", runeName:"NEXUSOS•EVENT•BAND",   desc:"Orange band — governance & triggers" },
     STORAGE: { nm:[625,780], color:"#f87171", symbol:"Δ", runeName:"NEXUSOS•STORAGE•BAND", desc:"Red band — persistent state & files" },
     NXT:     { nm:[380,780], color:"#a78bfa", symbol:"N", runeName:"NEXUSOS•NXT•TOKEN",    desc:"Full-spectrum — NexusOS native currency" },
-    WNSP:    { nm:[380,780], color:"#fb923c", symbol:"Ψ", runeName:"NEXUSOS•WNSP•PROTOCOL",desc:"25,600 orthogonal Ψ channels — Hilbert space" },
+    WNSP:    { nm:[380,780], color:"#fb923c", symbol:"Ψ", runeName:"NEXUSOS•WNSP•PROTOCOL",desc:"51,200 orthogonal Ψ channels — Hilbert space" },
   };
 
   function xmlEsc(s: string) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -8807,7 +8807,7 @@ export async function registerRoutes(
   <text x="340" y="316" fill="#ffffff40" font-size="10" font-family="monospace">License</text>
   <text x="420" y="316" fill="#ffffff80" font-size="10" font-family="monospace">AGPL-3.0</text>
   <text x="340" y="334" fill="#ffffff40" font-size="10" font-family="monospace">Channels</text>
-  <text x="420" y="334" fill="#ffffff80" font-size="10" font-family="monospace">25,600 &#936; (Hilbert)</text>
+  <text x="420" y="334" fill="#ffffff80" font-size="10" font-family="monospace">51,200 &#936; (Hilbert)</text>
 
   <!-- Desc -->
   <text x="300" y="374" fill="#ffffff30" font-size="10" font-family="monospace" text-anchor="middle">${xmlEsc(b.desc)}</text>
@@ -15074,7 +15074,7 @@ export async function registerRoutes(
 
 WHAT WE BUILT (live now):
 • WNSP physics engine — replaces cryptographic hashing with Maxwell equation validation
-• 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations)
+• 51,200 orthogonal Ψ channels (256 WDM × 50 OAM × 2 pol × 2 N_Dir)
 • WavelengthScript compiler + WNSP Virtual Machine (browser-native)
 • NXT token wallet, P2P media, Lightning payments, governance
 • NEXUS•WAVELENGTH (NXWV) — Bitcoin Rune 952596:379, 21 trillion supply, 1,000/1,000 mints sealed, zero premine
@@ -15166,7 +15166,7 @@ WHAT IS LIVE RIGHT NOW?
 Every line of code is public. You can verify everything listed below yourself at wnsp.io or on GitHub.
 
 ✅ WNSP Physics Engine — Maxwell equation validation on every transaction
-✅ 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations)
+✅ 51,200 orthogonal Ψ channels (256 WDM × 50 OAM × 2 pol × 2 N_Dir)
 ✅ NXT Token Wallet — 8-decimal precision, 21 billion supply, fee = E=hf
 ✅ WavelengthScript compiler + WNSP Virtual Machine (runs in your browser)
 ✅ CE→SE Character Encoding — every character mapped to a unique wavelength
@@ -15420,7 +15420,7 @@ wnsp.io | t.me/troglodytememe`,
                     `Step 3 → Inspect spectral analysis: wavelength distribution, energy E=hf, NXT fee\n` +
                     `Step 4 → Transmit → Spectral Receipt (permanent on-chain ordinal: λ, Ψ, content hash)\n` +
                     `Step 5 → Retrieve at wnsp.io/spectral-workspace — tune to your wavelength\n\n` +
-                    `25,600 orthogonal channels. Physics addressing. No account required to read.\n` +
+                    `51,200 orthogonal channels. Physics addressing. No account required to read.\n` +
                     `Runs on silicon today. Migrates to photonic hardware ~2032. Zero rewrite.\n\n` +
                     `👉 wnsp.io/transmission`,
           hashtags: ["NexusOS", "P2P", "WNSP", "Photonics", "Transmission", "Bitcoin"],

@@ -6,7 +6,7 @@
  *  - CE formula uses % 128 to match canonical encoder (nexusos-ce-encoder)
  *  - txId is deterministic — derived from spectral fingerprint, not Math.random()
  *  - WDM channel = floor((λ_nm - 380) / 3.125) clamped 0–255
- *  - OAM = sum(charCodes) % 50  (per 25,600-channel Hilbert space spec)
+ *  - OAM = sum(charCodes) % 50  (per 51,200-channel Hilbert space spec)
  *  - previousWavelengthHash derived from prior block's fingerprint, not a string template
  *  - verifyHardwareAnchor uses consistent nm units throughout
  *  - commitBlock performs real chain coherence validation before stamping isValidated

@@ -19,7 +19,7 @@ NexusOS did not emerge from software. It emerged from physics. Every equation in
 | **Max Planck** | 1900 | E = hf — energy is quantised. The entire NXT fee system, compression mass Λ = hf/c², and the CE_TABLE band energies are direct applications of Planck's quantum hypothesis. |
 | **Albert Einstein** | 1905/1915 | E = mc² — mass-energy equivalence. Λ = hf/c² is Planck substituted into Einstein. Special relativity gives photons their equivalent mass. General relativity informs the ZERO-G state and gravitational de-correlation. |
 | **Nikola Tesla** | 1890s | Resonance, bifilar coil geometry, field theory. The PHR-1 resonator is a 144-turn bifilar coil — a direct descendant of Tesla's resonator work. The CZC catch basin and impedance matching at 377Ω (free-space impedance) carry Tesla's resonance philosophy forward. |
-| **Niels Bohr / Heisenberg / Schrödinger** | 1920s | Quantum mechanics formalism — Hilbert space, orthogonality, ⟨Ψᵢ|Ψⱼ⟩ = δᵢⱼ. The 25,600 orthogonal Ψ channels are only possible because quantum mechanics guarantees orthogonality for distinct WDM/OAM/polarisation modes. |
+| **Niels Bohr / Heisenberg / Schrödinger** | 1920s | Quantum mechanics formalism — Hilbert space, orthogonality, ⟨Ψᵢ|Ψⱼ⟩ = δᵢⱼ. The 51,200 orthogonal Ψ channels are only possible because quantum mechanics guarantees orthogonality for distinct WDM/OAM/polarisation modes. |
 | **Claude Shannon** | 1948 | Information theory — channel capacity, entropy. The WNSP density equation D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M is a Hilbert-space extension of Shannon's channel model. Spectral search uses Shannon channel coherence scoring. |
 
 ## The direct derivation chain
@@ -40,7 +40,7 @@ Tesla (resonance, bifilar coil, 1890s)
 
 Quantum mechanics (Hilbert space, 1920s)
   └─ ⟨Ψᵢ|Ψⱼ⟩ = 0 orthogonality
-       └─ 25,600 independent channels (256 WDM × 50 OAM × 2 Pol)
+       └─ 51,200 independent channels (256 WDM × 50 OAM × 2 Pol)
             └─ DNS-free addressing, spectral relay mesh
 ```
 

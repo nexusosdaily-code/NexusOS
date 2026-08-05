@@ -247,10 +247,10 @@ export const KNOWLEDGE: KnowledgeEntry[] = [
   {
     id: "51200-channels",
     answer:
-      "The WNSP Hilbert space has 51,200 orthogonal channels: 256 WDM bands × 50 OAM modes × 2 polarisations × 2 propagation directions. The factor of 2 for directions (N_Dir = 2) was added in 2026 when it was recognised that forward (+k̂) and backward (−k̂) modes are orthogonal by time-reversal symmetry — ⟨+k̂|−k̂⟩ = 0 — doubling the channel count from 25,600. Each channel has a unique Ψ(WDM, OAM, Pol) address.",
+      "The WNSP Hilbert space has 51,200 orthogonal channels: 256 WDM bands × 50 OAM modes × 2 polarisations × 2 propagation directions. The factor of 2 for directions (N_Dir = 2) was added in 2026 when it was recognised that forward (+k̂) and backward (−k̂) modes are orthogonal by time-reversal symmetry — ⟨+k̂|−k̂⟩ = 0 — doubling the channel count from 51,200. Each channel has a unique Ψ(WDM, OAM, Pol) address.",
     route: "/universal-address",
     routeTitle: "Universal Address",
-    tags: ["51200","51,200","channels","hilbert space","channel count","wdm oam","256 wdm","50 oam","25600","n_dir","directions","orthogonal channels"],
+    tags: ["51200","51,200","channels","hilbert space","channel count","wdm oam","256 wdm","50 oam","51200","n_dir","directions","orthogonal channels"],
   },
 
   {

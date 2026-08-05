@@ -361,7 +361,7 @@ if (curr.previousWavelengthHash !== expectedHash) {
             <ImplRef label="Developer Docs" href="/docs" file="docs.tsx" />
           </div>
           <PriorArt text={`Spectral Relay Mesh v1 — WNSP-addressed photonic relay across TCP/IP overlay and all-optical phases — first specified ${SPEC_DATE}`} />
-          <PriorArt text={`Bidirectional channel dimension N_Dir=2 — forward (+k̂) and backward (−k̂) propagating modes as orthogonal Hilbert sub-space; phase conjugation reversal; 25,600 → 51,200 channel expansion — first specified 2026-07-02`} />
+          <PriorArt text={`Bidirectional channel dimension N_Dir=2 — forward (+k̂) and backward (−k̂) propagating modes as orthogonal Hilbert sub-space; phase conjugation reversal; 51,200 → 51,200 channel expansion — first specified 2026-07-02`} />
         </Section>
 
         {/* ── Compiler α ── */}

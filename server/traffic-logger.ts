@@ -344,6 +344,20 @@ const BLOCKED_REFERRER_DOMAINS: { domain: string; label: string }[] = [
   { domain: "rbsgroup.com",     label: "RBS" },
   // ── Data scrapers / recon tools — active probing observed ─────────────
   { domain: "dataindex.pro",    label: "DataIndex-Scraper" },
+  // ── Archegos Capital Management — market manipulation (18yr sentence, Nov 2024) ──
+  { domain: "archegos.com",     label: "Archegos-Capital" },
+  // ── Solo Capital / Sanjay Shah — cum-ex tax fraud £996M (12yr, Dec 2024) ─────
+  { domain: "solocapital.com",  label: "Solo-Capital" },
+  { domain: "solocap.com",      label: "Solo-Capital" },
+  // ── GTV Media / Himalaya Exchange — Guo Wengui $1B fraud (30yr, Jun 2026) ─────
+  { domain: "gtv.org",          label: "GTV-Media" },
+  { domain: "himalayaexchange.com", label: "Himalaya-Exchange" },
+  { domain: "himalaya.exchange",    label: "Himalaya-Exchange" },
+  // ── Tornado Cash — unlicensed money transmitting, $1B+ laundered (Aug 2025) ───
+  { domain: "tornado.cash",     label: "Tornado-Cash" },
+  // ── BitShine Exchange — Taiwan crypto fraud $39M (22yr, Jul 2026) ─────────────
+  { domain: "bitshine.io",      label: "BitShine" },
+  { domain: "bitshine.com",     label: "BitShine" },
 ];
 
 // Raw-string patterns for non-URL referers (e.g. "ghost-rider/" — a custom
