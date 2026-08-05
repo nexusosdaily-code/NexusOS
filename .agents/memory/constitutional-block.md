@@ -11,8 +11,8 @@ reaching any application code. Logged to `traffic_logs` with `botName = "BLOCKED
 ## Source of truth
 `server/genesis_user.ts` → `BLOCKED_ENTITIES` list. The domain list must mirror this exactly.
 
-## Entities and domain counts (as of July 2026)
-43 domains across 14 criminal organisations:
+## Entities and domain counts (as of August 2026)
+51 domains across 28 criminal organisations (14 new added Aug 2026):
 - Binance/CZ (AML 2023): 8 domains
 - FTX/SBF (7 counts 2023): 4 domains
 - Terraform/Do Kwon (guilty plea 2025): 4 domains

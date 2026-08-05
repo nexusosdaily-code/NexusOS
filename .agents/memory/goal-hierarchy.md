@@ -17,7 +17,7 @@ description: Short / medium / long-term goals — NexusOS is the vehicle, photon
 
 ## Long-term (~2032)
 - Photonic computing ASICs arrive; NexusOS runs natively — no rewrite needed, it was already written in the language of photonic hardware (wavelengths, Ψ channels, Hilbert space)
-- 51,200 orthogonal Ψ channels (256 WDM × 50 OAM × 2 pol) map directly to physical waveguide lanes — ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics, not software policy
+- 51,200 orthogonal Ψ channels (256 WDM × 50 OAM × 2 pol × 2 N_Dir) map directly to physical waveguide lanes — ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics, not software policy
 - Kardashev Type I civilisation OS: physics-based communication and compute at civilisation scale
 
 ## Post-hardware R&D (after photonic ASICs)
