@@ -8,6 +8,8 @@ Preferred communication style: Simple, everyday language. Always refer to the pr
 
 **Primary domain: wnsp.io** — All canonical URLs, OG tags, Twitter cards, JSON-LD schemas, sitemap entries, and robots.txt must point to wnsp.io. wnsp.tech is a secondary domain that redirects to wnsp.io. Never switch canonical references to wnsp.tech.
 
+**Follow-up task policy (set Aug 2026):** Do NOT propose guard-style follow-up tasks ("Catch a future…", "Confirm…") unless that specific regression has actually occurred at least once. No guards-of-guards (meta check scripts that verify other check scripts exist). Prefer follow-ups that ship user-visible value. The founder reviews every proposed task personally — respect that time.
+
 # PROTECTED FEATURES — DO NOT REMOVE OR OVERWRITE
 
 The following pages and routes are core to the NexusOS mission. Any agent or developer working on this project MUST preserve them. Never delete, rename, or overwrite these files without explicit user approval.
