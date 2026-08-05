@@ -28,7 +28,8 @@
     "check:probe-eviction-guard-test-file-meta-meta": "tsx scripts/check-probe-eviction-guard-test-file-meta-meta.ts",
     "check:probe-eviction-guard-test-file-meta-meta-meta": "tsx scripts/check-probe-eviction-guard-test-file-meta-meta-meta.ts",
     "check:probe-eviction-guard-test-file-meta-meta-meta-meta": "tsx scripts/check-probe-eviction-guard-test-file-meta-meta-meta-meta.ts",
-    "test:all": "vitest run && npm run check:system-band && npm run check:vitest-setup && npm run check:unwired-handlers && npm run check:unimported-handlers && npm run check:probe-eviction-guard && npm run check:probe-eviction-guard-test-file && npm run check:probe-eviction-guard-test-file-meta && npm run check:probe-eviction-guard-test-file-meta-meta && npm run check:probe-eviction-guard-test-file-meta-meta-meta && npm run check:probe-eviction-guard-test-file-meta-meta-meta-meta && npm run check:types",
+    "check:channel-count": "tsx scripts/check-channel-count.ts",
+    "test:all": "vitest run && npm run check:system-band && npm run check:vitest-setup && npm run check:unwired-handlers && npm run check:unimported-handlers && npm run check:probe-eviction-guard && npm run check:probe-eviction-guard-test-file && npm run check:probe-eviction-guard-test-file-meta && npm run check:probe-eviction-guard-test-file-meta-meta && npm run check:probe-eviction-guard-test-file-meta-meta-meta && npm run check:probe-eviction-guard-test-file-meta-meta-meta-meta && npm run check:channel-count && npm run check:types",
     "test:client": "vitest run --config vitest.client.config.ts"
   },
   "dependencies": {
