@@ -912,7 +912,14 @@ async function runStartupMigrations() {
     _safe("SocialBroadcast",  () => startSocialBroadcastAgent());
     if (process.env.NODE_ENV === "production") _safe("TelegramBot", () => startTelegramBot());
     _safe("NostrDmBot",       () => startNostrDmBot());
-    _safe("NxtCampaign",      () => startNxtCampaignAgent());
+    // ── PUBLIC DISCLOSURE FREEZE (founder directive, Aug 2026) ─────────────
+    // The NXT campaign auto-poster is disabled: no new technical content is to
+    // be broadcast to Telegram/Nostr. Set CAMPAIGN_ENABLED=true to re-enable.
+    if (process.env.CAMPAIGN_ENABLED === "true") {
+      _safe("NxtCampaign",    () => startNxtCampaignAgent());
+    } else {
+      console.log("[NxtCampaign] ⏸ Frozen — public disclosure freeze active (set CAMPAIGN_ENABLED=true to resume)");
+    }
     _safe("PostScheduler",    () => startPostScheduler());
     _safe("TgNostrBridge",    () => startTgNostrBridge());
     _safe("WnspBtcEtcher",    () => startWnspBtcEtcher());
