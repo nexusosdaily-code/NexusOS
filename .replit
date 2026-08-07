@@ -86,7 +86,7 @@ WNSP_LATTICE_SECRET = "fWxrBDfoMkIR61fTlaF6pplp2bNuruSio3mmKuzqAj0NAFnLxpFRnzOqv
 [deployment]
 run = ["node", "dist/index.cjs"]
 build = ["tsx", "script/build.ts"]
-deploymentTarget = "cloudrun"
+deploymentTarget = "vm"
 
 [postMerge]
 path = "scripts/post-merge.sh"
