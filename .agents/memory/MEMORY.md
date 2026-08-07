@@ -27,4 +27,5 @@
 - [Constitutional referrer block](constitutional-block.md) — 43 domains/14 orgs hard-blocked at HTTP layer; isBlockedReferrer returns object not boolean; must mirror genesis_user.ts
 - [SEO work](seo-work.md) — Tasks 117–118 done; wnsp.io is canonical; ogType valid in seo-meta.ts server only, not in usePageMeta hook
 - [Vite React 19 manualChunks](vite-react19-manual-chunks.md) — array form silently empties vendor-react; always use function(id) form
+- [Bogoliubov R&D module](bogoliubov-module.md) — private module + doc under disclosure freeze; legacy public /the-bogoliubov-transform page exists, leave as-is
 - [Prior art claims](prior-art-claims.md) — Claims 1–25 in CHANGELOG.md, timestamped to GitHub; covers ghost nodes, ZPE, Λ=hf/c², CE/SE/URI, WLS, VM, WASCII, Berry phase, OAM, Fl-114
