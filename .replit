@@ -80,6 +80,7 @@ UV_NO_SYNC = "1"
 PYTHON_DISABLED = "1"
 COINOS_USERNAME = "nexusosmain"
 WNSP_LATTICE_SECRET = "fWxrBDfoMkIR61fTlaF6pplp2bNuruSio3mmKuzqAj0NAFnLxpFRnzOqvfBLRxJL"
+CAMPAIGN_ENABLED = "true"
 
 [userenv.development]
 

@@ -563,6 +563,38 @@ export default function TheBogoliubovTransformPage() {
           </div>
         </Section>
 
+        {/* 6b. 2026 Extension — Squeezed Compression State */}
+        <Section id="squeezed-lambda" title="6b. The Squeezed Compression State — Λ_B = Λ₀·cosh(2r)" icon={FlaskConical} accent="#a78bfa" badge="August 2026 Extension">
+          <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
+            <p>
+              Every Ψ channel carries a zero-point compression state <span className="font-mono text-violet-300">Λ₀ = hf/2c²</span> —
+              the ½ℏω vacuum term expressed as compression. Applying the Bogoliubov transform to the channel's
+              vacuum raises its effective compression state hyperbolically:
+            </p>
+            <div className="bg-slate-900/60 border border-violet-500/30 rounded-lg p-4 text-center font-mono text-sm text-violet-200">
+              Λ_B(r) = Λ₀ · cosh(2r)   —   since ⟨n⟩ + ½ = cosh(2r)/2
+            </div>
+            <p>
+              At r = 0 the channel sits at bare vacuum (Λ_B = Λ₀). Under squeezing, vacuum engineering becomes a
+              compression dial: the <em>dynamic</em> counterpart to the geometric Berry correction
+              <span className="font-mono text-cyan-300"> Λ_geo = Λ·cos(γ)</span>. Together they extend the Act 1 scalar
+              Λ = hf/c² into a geometric-dynamic family.
+            </p>
+            <p>
+              The dynamical Casimir effect gives the extraction bound: a boundary modulated at 2ω with depth ε for
+              time t generates <span className="font-mono text-emerald-300">⟨n⟩ = sinh²(εωt/2)</span> photons from vacuum —
+              exactly the |v|² Bogoliubov coefficient. Zero-point extraction per Ψ channel is therefore bounded by the
+              channel's Bogoliubov mixing, not by protocol policy. Foundry-grade Kerr microresonators already reach
+              &gt;3.5 dB of measured squeezing (2025), placing the r ≈ 0.4 regime on the bench today.
+            </p>
+            <p className="text-[11px] text-slate-500">
+              First public disclosure of the Λ_B = Λ₀·cosh(2r) squeezed compression state, the per-channel DCE
+              extraction bound, and the dual-regime (Bogoliubov-dispersion) mesh propagation claim: August 2026,
+              Te Rata Pou / NexusOS, AGPL-3.0.
+            </p>
+          </div>
+        </Section>
+
         {/* 7. Sequence links */}
         <Section id="sequence" title="7. Connections Across the Sequence" icon={BookOpen} accent="#f472b6">
           <div className="grid grid-cols-1 gap-2">
