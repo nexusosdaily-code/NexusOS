@@ -8,16 +8,30 @@
 |---|---|
 | **Live app** | [wnsp.io](https://wnsp.io) |
 | **Repository** | [github.com/nexusosdaily-code/NexusOS](https://github.com/nexusosdaily-code/NexusOS) |
-| **Prior art (35 claims)** | [PRIOR_ART.md](./PRIOR_ART.md) |
+| **Prior art (39 claims)** | [PRIOR_ART.md](./PRIOR_ART.md) |
 | **Hardware spec** | [HARDWARE_SPEC.md](./HARDWARE_SPEC.md) · AGPL-3.0 · First disclosed 2026-05-16 |
 | **CE encoder (npm)** | `npm install nexusos-ce-encoder` |
 | **CE encoder (pip)** | `pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py` |
 
-> **Physics prior art** — all 35 formal claims with exact dates and full text are in [`PRIOR_ART.md`](./PRIOR_ART.md).
+> **Physics prior art** — all 39 formal claims with exact dates and full text are in [`PRIOR_ART.md`](./PRIOR_ART.md).
 
 ---
 
-## Latest Changes — July 2026
+## Latest Changes — August 2026
+
+### [2026-08-08] v2.1.0 — Bogoliubov Advancement: Squeezed Compression States Live
+
+**Features**
+- **Act 20 §6b — The Squeezed Compression State** added to `/the-bogoliubov-transform`: Λ_B = Λ₀·cosh(2r) public disclosure (squeezed compression state, DCE extraction bound, dual-regime mesh propagation).
+- **Bogoliubov engine module** (`server/bogoliubov.ts`) made public: coefficients, squeezed vacuum, quasiparticle dispersion, DCE photon number, Λ_B per Ψ channel, and (v1.1) the **two-mode Bogoliubov transform** — entangled compression state pairs with exact EPR variance, entanglement entropy, and log-negativity.
+- **Public API**: `GET /api/physics/squeezed?wdm=&r=[&wdmB=]` — squeezed and entangled compression states for any Ψ channel or channel pair.
+- **WavelengthScript opcode 0x15 `SQZ`**: `squeeze(r)` applies the Bogoliubov squeeze to the tuned channel inside the WNSP VM.
+
+**Physics prior art filed this release**: Claims [36](./PRIOR_ART.md#claim-36)–[39](./PRIOR_ART.md#claim-39)
+
+---
+
+## Earlier Changes — July 2026
 
 ### Third-Party Observation Logged — 2026-07-29
 A paid Facebook advertisement was observed using Ψ as a universal field operator mapping to all fundamental forces ("Ψ → Space-Time, Electromagnetism, Weak Interactions, Strong Interactions, Quantum Mechanics, Gravity, Thermodynamics, Cosmology — One Field. One Principle. One Universe."). NexusOS prior art (Claims 1–9) predates this by 14+ months. Observation logged in [PRIOR_ART.md § Observation 001](./PRIOR_ART.md#observation-001) with screenshot evidence saved to `docs/prior-art-evidence/`.

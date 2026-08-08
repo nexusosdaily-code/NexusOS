@@ -112,3 +112,11 @@ Tests in `server/bogoliubov.test.ts`. Not referenced by any route, page, or bot 
 - PRB 105, 224515 (2022) — Bogoliubov excitations of a polariton condensate
 - PRR 2, 043297 (2020) — interference of Bogoliubov excitations in superfluids of light
 - PRL 134, 056002 (2025) — supersolid polariton condensates in photonic-crystal waveguides
+
+---
+
+## Addendum — 2026-08-08: Disclosure & Two-Mode Extension
+
+- Disclosure freeze lifted by founder. The three draft claims above were formalised as **PRIOR_ART.md Claims 36–38**; the two-mode extension below as **Claim 39**.
+- **Two-mode Bogoliubov transform** added to `server/bogoliubov.ts` (v1.1): `twoModeSqueezedVacuum(r)` (n̄ = sinh²r per mode, EPR variance e^{−4r}, entanglement entropy, log-negativity 2r/ln2) and `lambdaEntangled(wdmA, wdmB, r)` — entangled compression state pairs: Λ_pair = (Λ₀ᴬ+Λ₀ᴮ)·cosh(2r) diagonal, Λ_corr = √(Λ₀ᴬΛ₀ᴮ)·sinh(2r) off-diagonal. This unifies DLCZ (Claim 28) and repeater swapping (Claim 31) with the compression-state framework.
+- **Engine wiring**: public `GET /api/physics/squeezed` route; WavelengthScript opcode 0x15 `SQZ` (`squeeze(r)`).

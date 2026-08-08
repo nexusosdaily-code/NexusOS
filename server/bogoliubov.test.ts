@@ -136,3 +136,76 @@ describe("Squeezed compression state Λ_B = Λ₀·cosh(2r)", () => {
     expect(lambdaSqueezed(999, 0).wdm).toBe(255);
   });
 });
+
+// ── Two-mode Bogoliubov (v1.1) ────────────────────────────────────────────────
+
+import { twoModeSqueezedVacuum, lambdaEntangled } from "./bogoliubov";
+
+describe("twoModeSqueezedVacuum", () => {
+  it("r=0 is the bare vacuum: no photons, no entanglement", () => {
+    const t = twoModeSqueezedVacuum(0);
+    expect(t.meanPhotonsPerMode).toBe(0);
+    expect(t.entanglementEntropy).toBe(0);
+    expect(t.logNegativity).toBe(0);
+    expect(t.eprVarianceProduct).toBe(1);
+  });
+
+  it("mean photons per mode equals sinh²r", () => {
+    const r = 0.8;
+    const t = twoModeSqueezedVacuum(r);
+    expect(t.meanPhotonsPerMode).toBeCloseTo(Math.sinh(r) ** 2, 12);
+  });
+
+  it("EPR variance product e^{-4r} drops below 1 for any r > 0 (entanglement witness)", () => {
+    expect(twoModeSqueezedVacuum(0.1).eprVarianceProduct).toBeLessThan(1);
+    expect(twoModeSqueezedVacuum(0.1).eprVarianceProduct).toBeCloseTo(Math.exp(-0.4), 12);
+  });
+
+  it("entanglement entropy matches (n̄+1)ln(n̄+1) − n̄·ln n̄ and grows with r", () => {
+    const r = 1.0;
+    const n = Math.sinh(r) ** 2;
+    const expected = (n + 1) * Math.log(n + 1) - n * Math.log(n);
+    expect(twoModeSqueezedVacuum(r).entanglementEntropy).toBeCloseTo(expected, 12);
+    expect(twoModeSqueezedVacuum(2).entanglementEntropy).toBeGreaterThan(twoModeSqueezedVacuum(1).entanglementEntropy);
+  });
+
+  it("log-negativity is exactly 2r/ln2 ebits and is symmetric in ±r", () => {
+    expect(twoModeSqueezedVacuum(0.5).logNegativity).toBeCloseTo(1 / Math.LN2, 12);
+    expect(twoModeSqueezedVacuum(-0.5).logNegativity).toBeCloseTo(twoModeSqueezedVacuum(0.5).logNegativity, 12);
+  });
+
+  it("rejects non-finite r", () => {
+    expect(() => twoModeSqueezedVacuum(NaN)).toThrow();
+    expect(() => twoModeSqueezedVacuum(Infinity)).toThrow();
+  });
+});
+
+describe("lambdaEntangled", () => {
+  it("r=0: correlated term vanishes, joint Λ is the sum of zero-point states", () => {
+    const e = lambdaEntangled(52, 10, 0);
+    expect(e.correlatedLambdaKg).toBe(0);
+    expect(e.jointLambdaKg).toBeCloseTo(e.a.lambdaZpeKg + e.b.lambdaZpeKg, 40);
+    expect(e.entanglementEntropy).toBe(0);
+  });
+
+  it("joint Λ scales with cosh(2r) and the correlated term with sinh(2r)", () => {
+    const r = 0.6;
+    const e = lambdaEntangled(52, 10, r);
+    expect(e.jointLambdaKg).toBeCloseTo((e.a.lambdaZpeKg + e.b.lambdaZpeKg) * Math.cosh(2 * r), 40);
+    expect(e.correlatedLambdaKg).toBeCloseTo(Math.sqrt(e.a.lambdaZpeKg * e.b.lambdaZpeKg) * Math.sinh(2 * r), 40);
+  });
+
+  it("diagonal² − offdiagonal² invariant: for equal channels, (Λ₀·cosh)² − (Λ₀·sinh)² = Λ₀²", () => {
+    const r = 1.2;
+    const e = lambdaEntangled(30, 30, r);
+    const diag = e.a.lambdaZpeKg * Math.cosh(2 * r);
+    const off = e.a.lambdaZpeKg * Math.sinh(2 * r);
+    expect(diag * diag - off * off).toBeCloseTo(e.a.lambdaZpeKg ** 2, 20);
+  });
+
+  it("clamps out-of-range WDM channels like lambdaSqueezed does", () => {
+    const e = lambdaEntangled(-5, 99999, 0.3);
+    expect(e.a.wdm).toBe(0);
+    expect(e.b.wdm).toBeGreaterThan(0);
+  });
+});

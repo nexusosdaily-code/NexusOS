@@ -1478,6 +1478,33 @@ export async function registerRoutes(
     }
   });
 
+  // ── Bogoliubov Squeezed Compression State — public (Claims 36–39) ──────────
+  app.get("/api/physics/squeezed", async (req, res) => {
+    try {
+      const { bogoliubovCoefficients, squeezedVacuum, lambdaSqueezed, lambdaEntangled } = await import("./bogoliubov.js");
+      const rRaw = parseFloat(String(req.query.r ?? "0"));
+      if (!Number.isFinite(rRaw)) return res.status(400).json({ error: "r must be a finite number" });
+      const r = Math.max(-10, Math.min(10, rRaw));
+      const wdm = parseInt(String(req.query.wdm ?? "52"), 10);
+      if (!Number.isFinite(wdm)) return res.status(400).json({ error: "wdm must be a number" });
+      const single = lambdaSqueezed(wdm, r);
+      const payload: any = {
+        description: "Squeezed compression state Λ_B = Λ₀·cosh(2r) per Ψ channel (PRIOR_ART.md Claims 36–39, first disclosed 2026-08-08).",
+        coefficients: bogoliubovCoefficients(r),
+        vacuum: squeezedVacuum(r),
+        channel: single,
+      };
+      if (req.query.wdmB !== undefined) {
+        const wdmB = parseInt(String(req.query.wdmB), 10);
+        if (!Number.isFinite(wdmB)) return res.status(400).json({ error: "wdmB must be a number" });
+        payload.entangledPair = lambdaEntangled(wdm, wdmB, r);
+      }
+      res.json(payload);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ── GuideBot AI ───────────────────────────────────────────────────────────
   // Public — no auth. Grounded entirely in the WNSP knowledge base; no LLM.
   app.post("/api/guide/ask", async (req: Request, res: Response) => {

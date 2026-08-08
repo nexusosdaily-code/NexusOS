@@ -1,16 +1,18 @@
 /**
- * NexusOS Bogoliubov Module v1.0 — PRIVATE R&D (disclosure freeze)
+ * NexusOS Bogoliubov Module v1.1 — PUBLIC (disclosure freeze lifted 2026-08-08)
  * ════════════════════════════════════════════════════════════════════════════
  * Bogoliubov transformation mathematics for the WNSP formalism.
  *   b = u·a + v·a†,  u = cosh r, v = sinh r,  |u|² − |v|² = 1  (bosonic)
  *
  * Covers: squeezed vacuum (Kerr microresonator regime — PHR-1 relevant),
  * quasiparticle dispersion (superfluids of light), dynamical Casimir effect
- * (operator-level ZPE formalism), and the squeezed compression state
- * Λ_B(r) = Λ₀ · cosh(2r) per Ψ channel.
+ * (operator-level ZPE formalism), the squeezed compression state
+ * Λ_B(r) = Λ₀ · cosh(2r) per Ψ channel, and (v1.1) the two-mode Bogoliubov
+ * transform: entangled compression state pairs across two Ψ channels.
  *
- * NOT imported by any route, page, bot, or public surface. Research only.
- * See docs/research/BOGOLIUBOV_WNSP.md for the working document.
+ * Publicly disclosed: Act 20 §6b (/the-bogoliubov-transform), PRIOR_ART.md
+ * Claims 36–39. Exposed via GET /api/physics/squeezed and the WLS `squeeze()`
+ * opcode. See docs/research/BOGOLIUBOV_WNSP.md for the working document.
  * ════════════════════════════════════════════════════════════════════════════
  */
 
@@ -149,5 +151,74 @@ export function lambdaSqueezed(wdm: number, r: number): LambdaSqueezed {
     lambdaZpeKg,
     lambdaSqueezedKg: lambdaZpeKg * gainFactor,
     gainFactor,
+  };
+}
+
+// ── Two-mode Bogoliubov transform (v1.1) ──────────────────────────────────────
+// S₂(r) = exp(r(â·b̂ − â†·b̂†)) — the entanglement generator. Its output is the
+// two-mode squeezed vacuum: pairwise-correlated photons across two modes.
+
+export interface TwoModeSqueezedVacuum {
+  r: number;
+  meanPhotonsPerMode: number;   // ⟨n_a⟩ = ⟨n_b⟩ = sinh² r
+  photonNumberCorrelation: number; // ⟨n_a·n_b⟩ − ⟨n_a⟩⟨n_b⟩ = sinh²r·cosh²r (perfect pairing)
+  eprVarianceProduct: number;   // Δ(X_a−X_b)²·Δ(P_a+P_b)² normalised — e^{−4r}; <1 ⇒ EPR-entangled
+  entanglementEntropy: number;  // S = (n̄+1)ln(n̄+1) − n̄·ln n̄  (nats) — 0 iff r = 0
+  logNegativity: number;        // E_N = 2r/ln 2 (ebits) — exact for TMSV
+}
+
+/**
+ * Two-mode squeezed vacuum |TMSV⟩ = S₂(r)|0,0⟩ — the canonical EPR-entangled
+ * Gaussian state. Each mode alone looks thermal (n̄ = sinh²r); jointly the
+ * modes are perfectly photon-number-correlated. Entanglement measures are
+ * exact closed forms for this state.
+ */
+export function twoModeSqueezedVacuum(r: number): TwoModeSqueezedVacuum {
+  if (!Number.isFinite(r)) throw new Error("twoModeSqueezedVacuum: r must be a finite number");
+  const ra = Math.abs(r);
+  const s = Math.sinh(ra);
+  const c = Math.cosh(ra);
+  const nBar = s * s;
+  const entropy = nBar === 0 ? 0 : (nBar + 1) * Math.log(nBar + 1) - nBar * Math.log(nBar);
+  return {
+    r,
+    meanPhotonsPerMode: nBar,
+    photonNumberCorrelation: s * s * c * c,
+    eprVarianceProduct: Math.exp(-4 * ra),
+    entanglementEntropy: entropy,
+    logNegativity: (2 * ra) / Math.LN2,
+  };
+}
+
+export interface LambdaEntangled {
+  r: number;
+  a: LambdaSqueezed;            // channel A squeezed compression state
+  b: LambdaSqueezed;            // channel B squeezed compression state
+  jointLambdaKg: number;        // Λ_pair = (Λ₀ᴬ + Λ₀ᴮ)·cosh(2r) — joint compression state
+  correlatedLambdaKg: number;   // Λ_corr = √(Λ₀ᴬ·Λ₀ᴮ)·sinh(2r) — the off-diagonal (entangling) term
+  entanglementEntropy: number;  // nats, per twoModeSqueezedVacuum
+  logNegativity: number;        // ebits
+}
+
+/**
+ * Entangled compression state pair across two Ψ channels.
+ * Two-mode squeezing raises both channels' compression states together
+ * (diagonal, cosh(2r)) and creates a shared correlated term (off-diagonal,
+ * sinh(2r)) that belongs to neither channel alone — the compression-state
+ * expression of entanglement. At r = 0 the correlated term vanishes and the
+ * channels revert to independent zero-point states.
+ */
+export function lambdaEntangled(wdmA: number, wdmB: number, r: number): LambdaEntangled {
+  const a = lambdaSqueezed(wdmA, r);
+  const b = lambdaSqueezed(wdmB, r);
+  const tmsv = twoModeSqueezedVacuum(r);
+  return {
+    r,
+    a,
+    b,
+    jointLambdaKg: (a.lambdaZpeKg + b.lambdaZpeKg) * Math.cosh(2 * r),
+    correlatedLambdaKg: Math.sqrt(a.lambdaZpeKg * b.lambdaZpeKg) * Math.sinh(2 * Math.abs(r)),
+    entanglementEntropy: tmsv.entanglementEntropy,
+    logNegativity: tmsv.logNegativity,
   };
 }

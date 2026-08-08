@@ -32,6 +32,7 @@ export interface Ins {
   gateThreshold?: number; gateHigh?: number; gateLow?: number;
   storeKey?: string; storeVal?: string;
   xferAmount?: string;
+  squeezeR?: number;
 }
 
 // ── Side effects ─────────────────────────────────────────────────────────────
@@ -177,6 +178,14 @@ export function compileWLS(src: string): Ins[] {
       continue;
     }
 
+    // 0x15 SQZ — Bogoliubov squeeze of the tuned channel: Λ_B = Λ₀·cosh(2r)
+    const mSqz = line.match(/^squeeze\((-?\d+\.?\d*)\)/);
+    if (mSqz) {
+      const r = parseFloat(mSqz[1]);
+      add(0x15, "SQZ", `r=${r}`, `Bogoliubov squeeze — Λ_B = Λ₀·cosh(${(2 * r).toFixed(2)})`, undefined, undefined, { squeezeR: r });
+      continue;
+    }
+
     // 0x14 CALL — invoke sub-contract by slug
     const mCall = line.match(/^call\("([^"]+)"\)/);
     if (mCall) { add(0x14, "CALL", `"${mCall[1]}"`, `call sub-contract "${mCall[1]}"`); continue; }
@@ -313,6 +322,20 @@ export function stepVM(
       const slug = i.args.replace(/"/g, "");
       s.output.push({ text: `CALL  "${slug}"  → loading sub-contract…`, type: "call" });
       effect = { type: "SUBCALL", slug };
+      break;
+    }
+
+    case 0x15: {
+      // SQZ — Bogoliubov squeeze of the tuned channel (Claim 36)
+      const r = Math.max(-10, Math.min(10, i.squeezeR ?? 0));
+      const H = 6.62607015e-34, C = 299792458;
+      const f = C / (s.tuned * 1e-9);
+      const lambda0 = (H * f) / (2 * C * C);
+      const gain = Math.cosh(2 * r);
+      s.output.push({
+        text: `SQZ   r=${r}  λ=${s.tuned}nm  Λ₀=${lambda0.toExponential(3)}kg → Λ_B=${(lambda0 * gain).toExponential(3)}kg  (gain cosh(2r)=${gain.toFixed(4)})`,
+        type: "sys",
+      });
       break;
     }
 
