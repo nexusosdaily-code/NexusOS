@@ -8,6 +8,8 @@ import { createServer } from "http";
 import { spawn, execSync, ChildProcess } from "child_process";
 import { seedGenesisBlock } from "./genesis";
 import { seedGenesisUser, seedReplitAIAccount, seedBlockedEntities } from "./genesis_user";
+import { sealConstitution, isTransientDbError } from "./constitution_seal";
+import { bootState, handleSealError } from "./seal-boot-guard";
 import { startBlockchainAuditor } from "./blockchain_auditor";
 import { seedGenesisNode } from "./genesis_node";
 import { startKernelAgents } from "./kernel_agents";
@@ -18,6 +20,7 @@ import { startNxtCampaignAgent } from "./nxt-campaign-agent";
 import { startPostScheduler } from "./post-scheduler";
 import { startTgNostrBridge } from "./telegram-nostr-bridge";
 import { startWnspBtcEtcher } from "./wnsp-btc-rune-etcher";
+import { sealConstitutionWithRetry } from "./seal-retry";
 
 const app = express();
 const httpServer = createServer(app);
@@ -262,7 +265,13 @@ app.get("/.well-known/apple-app-site-association", (_req, res) => {
 // that the uptime monitor records as outages on every deploy.
 // Fix: answer / with 200 during the startup window, then hand off to static.
 let serverReady = false;
-app.get("/health", (_req, res) => res.json({ status: "ok", ready: serverReady, ts: Date.now() }));
+app.get("/health", (_req, res) => res.json({
+  status:   bootState.degraded ? "degraded" : "ok",
+  ready:    serverReady,
+  degraded: bootState.degraded,
+  ...(bootState.sealError ? { sealError: bootState.sealError } : {}),
+  ts: Date.now(),
+}));
 app.get("/", (req, res, next) => {
   if (!serverReady) return res.status(200).send("ok");
   next();
@@ -310,7 +319,9 @@ if (process.env.NODE_ENV !== "production") {
     const provided = (req.body?.key || "").trim();
     if (!DEV_KEY || provided === DEV_KEY) {
       res.cookie(COOKIE, DEV_KEY, { httpOnly: true, sameSite: "strict" });
-      res.redirect(302, req.query.next?.toString() || "/");
+      const raw = req.query.next?.toString() ?? "";
+      const safePath = /^\/[^/\\]/.test(raw) ? raw : "/";
+      res.redirect(302, safePath);
     } else {
       res.status(401).send(lockScreen("Invalid access key."));
     }
@@ -689,9 +700,24 @@ async function runStartupMigrations() {
       ALTER TABLE contract_executions ADD COLUMN IF NOT EXISTS contract_name     TEXT;
       ALTER TABLE contract_executions ADD COLUMN IF NOT EXISTS contract_slug     TEXT;
       CREATE INDEX IF NOT EXISTS idx_ce_slug ON contract_executions(contract_slug) WHERE contract_slug IS NOT NULL;
+
+      -- Dynamic blocks: one-click blocks added from Telegram probe alerts
+      CREATE TABLE IF NOT EXISTS dynamic_blocks (
+        id       SERIAL PRIMARY KEY,
+        field    TEXT NOT NULL,
+        value    TEXT NOT NULL,
+        label    TEXT NOT NULL DEFAULT 'Dynamic-Block',
+        added_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS dynamic_blocks_field_idx ON dynamic_blocks (field);
     `);
 
     console.log("[MIGRATION] Startup schema migrations complete.");
+    // Pre-populate the dynamic block snapshot so blocks saved before this
+    // restart are enforced immediately rather than waiting for the first hit.
+    import("./traffic-logger").then(({ invalidateDynamicBlockCache }) => {
+      invalidateDynamicBlockCache();
+    }).catch(() => {});
   } catch (err: any) {
     console.error("[MIGRATION] Startup migration error:", err.message);
   }
@@ -767,7 +793,77 @@ async function runStartupMigrations() {
     // Wave 1 — 2s: core chain/genesis
     await delay(2_000);
     seedGenesisUser().catch((e) => console.error("[GENESIS USER] Boot error:", e));
-    seedGenesisBlock().catch(() => {});
+    // sealConstitution runs AFTER seedGenesisBlock to avoid block-number races.
+    // Wrapped with retry logic for transient DB connectivity errors that are
+    // common on first boot in production (DNS not yet ready, pool cold-start).
+    seedGenesisBlock()
+      .then(() => sealConstitutionWithRetry())
+      .then((sealed) => {
+        if (sealed === true) {
+          console.log("[CONSTITUTION] Fresh seal written to chain — boot complete.");
+        }
+        // false = already existed, which is the normal path on restarts
+      })
+      .catch((e: any) => {
+        // Mark boot degraded + emit [FATAL] log (never silent)
+        handleSealError(e);
+
+        // Background recovery — the DB may still be warming up after the fast
+        // retry window (10 × 8 s = 80 s).  Try every 30 s for up to 5 minutes
+        // before alerting the founder.  This prevents spurious BOOT ALERT
+        // messages when the Replit internal PostgreSQL host ("helium") takes
+        // longer than 80 s to become reachable on a cold boot.
+        const BACKGROUND_ATTEMPTS  = 10;  // 10 × 30 s = 5 min
+        const BACKGROUND_DELAY_MS  = 30_000;
+
+        (async () => {
+          let recovered = false;
+          for (let attempt = 1; attempt <= BACKGROUND_ATTEMPTS; attempt++) {
+            await new Promise<void>((r) => setTimeout(r, BACKGROUND_DELAY_MS));
+            try {
+              await sealConstitution();
+              // Healed — clear the degraded flag so /health goes green
+              bootState.degraded  = false;
+              bootState.sealError = null;
+              console.log(
+                `[CONSTITUTION] 🟢 Background recovery succeeded (attempt ${attempt}/${BACKGROUND_ATTEMPTS}) — server healthy.`,
+              );
+              recovered = true;
+              break;
+            } catch (bgErr: any) {
+              const bgMsg: string = bgErr?.message ?? String(bgErr);
+              if (!isTransientDbError(bgMsg)) {
+                // Permanent error (schema missing, etc.) — no point retrying
+                console.error(
+                  `[CONSTITUTION] Background recovery hit a permanent error — aborting: ${bgMsg.slice(0, 200)}`,
+                );
+                break;
+              }
+              console.warn(
+                `[CONSTITUTION] Background recovery attempt ${attempt}/${BACKGROUND_ATTEMPTS} failed (transient): ${bgMsg.slice(0, 120)}`,
+              );
+            }
+          }
+
+          if (!recovered) {
+            // Still degraded after 5 minutes — this is a genuine outage.
+            // Alert the founder now.
+            const token = process.env.TELEGRAM_BOT_TOKEN;
+            if (token) {
+              const msg = e?.message ?? String(e);
+              fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  chat_id: "-1002572762871",
+                  parse_mode: "HTML",
+                  text: `🚨 <b>NexusOS BOOT ALERT</b>\n<b>sealConstitution() FATAL failure</b>\n\nServer is running DEGRADED — constitution block was NOT written.\n/health returns <code>degraded: true</code> until fixed.\n\n<b>Error:</b> ${msg.slice(0, 300)}`,
+                }),
+              }).catch(() => {});
+            }
+          }
+        })();
+      });
     seedGenesisNode().catch((e) => console.error("[GENESIS NODE] Error:", e));
     seedReplitAIAccount().catch((e) => console.error("[GENESIS] Replit AI seed error:", e));
     seedBlockedEntities().catch((e) => console.error("[GENESIS] Blocked entities error:", e));
@@ -816,7 +912,14 @@ async function runStartupMigrations() {
     _safe("SocialBroadcast",  () => startSocialBroadcastAgent());
     if (process.env.NODE_ENV === "production") _safe("TelegramBot", () => startTelegramBot());
     _safe("NostrDmBot",       () => startNostrDmBot());
-    _safe("NxtCampaign",      () => startNxtCampaignAgent());
+    // ── PUBLIC DISCLOSURE FREEZE (founder directive, Aug 2026) ─────────────
+    // The NXT campaign auto-poster is disabled: no new technical content is to
+    // be broadcast to Telegram/Nostr. Set CAMPAIGN_ENABLED=true to re-enable.
+    if (process.env.CAMPAIGN_ENABLED === "true") {
+      _safe("NxtCampaign",    () => startNxtCampaignAgent());
+    } else {
+      console.log("[NxtCampaign] ⏸ Frozen — public disclosure freeze active (set CAMPAIGN_ENABLED=true to resume)");
+    }
     _safe("PostScheduler",    () => startPostScheduler());
     _safe("TgNostrBridge",    () => startTgNostrBridge());
     _safe("WnspBtcEtcher",    () => startWnspBtcEtcher());

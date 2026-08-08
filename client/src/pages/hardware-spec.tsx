@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import {
   ArrowLeft, Shield, Cpu, Zap, Radio, Code2, Lock,
-  GitBranch, Network, Layers, ExternalLink, Atom
+  GitBranch, Network, Layers, ExternalLink, Atom, CheckCircle2, FlaskConical
 } from "lucide-react";
 
 const SPEC_DATE = "2026-05-16";
@@ -361,7 +361,7 @@ if (curr.previousWavelengthHash !== expectedHash) {
             <ImplRef label="Developer Docs" href="/docs" file="docs.tsx" />
           </div>
           <PriorArt text={`Spectral Relay Mesh v1 — WNSP-addressed photonic relay across TCP/IP overlay and all-optical phases — first specified ${SPEC_DATE}`} />
-          <PriorArt text={`Bidirectional channel dimension N_Dir=2 — forward (+k̂) and backward (−k̂) propagating modes as orthogonal Hilbert sub-space; phase conjugation reversal; 25,600 → 51,200 channel expansion — first specified 2026-07-02`} />
+          <PriorArt text={`Bidirectional channel dimension N_Dir=2 — forward (+k̂) and backward (−k̂) propagating modes as orthogonal Hilbert sub-space; phase conjugation reversal; 51,200 → 51,200 channel expansion — first specified 2026-07-02`} />
         </Section>
 
         {/* ── Compiler α ── */}
@@ -594,6 +594,117 @@ PHR-1          → verifyHardwareAnchor()       lambda-state.ts
 Relay Mesh     → P2PSyncEngine                p2p-sync-engine.ts
 Compiler α     → compileTransaction()         lambda-state.ts
 Genesis anchor → blockWavelengthAnchor=380nm  lambda-state.ts`}</CodeBlock>
+        </Section>
+
+        {/* ── First Physical Prototype ── */}
+        <Section id="proto001" title="First Physical Prototype — PROTO-001" icon={FlaskConical} accent="#a3e635" badge="2026-07-27">
+
+          {/* Milestone banner */}
+          <div className="bg-emerald-950/40 border border-emerald-700/50 rounded-xl px-5 py-4 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <p className="text-emerald-300 font-bold text-xs">
+                First physical NexusOS hardware build — manufactured and tested 2026-07-27
+              </p>
+            </div>
+            <p className="text-slate-400 text-[11px] leading-relaxed pl-6">
+              Three PHR-1 bifilar toroid prototypes manufactured by Coiltek (Salisbury South SA, Australia),
+              100% electrically tested against the WNSP hardware specification. This is the first
+              external manufacturing engagement in NexusOS history — the point where the physics stack
+              crossed from software into the physical world.
+            </p>
+          </div>
+
+          {/* Part record */}
+          <div className="space-y-2.5">
+            <Field label="Part number">NEX-0589-PROTO-001</Field>
+            <Field label="Component">PHR-1 Bifilar Toroid — T200-2 iron powder core, 72 bifilar turns (144 individual turns), clockwise direction</Field>
+            <Field label="Wire">0.5 mm PUR1 · Conductor A = Red · Conductor B = Copper · 3.7 m per conductor · 100 mm leads</Field>
+            <Field label="Drawing">REV A · Drawn Tim Short (TS) · 2026-07-16 · Coiltek R&D Dept</Field>
+            <Field label="Test report">ETR NEX-0589 PROTO-001 · Issue 1.0 · P.O Ref S17406</Field>
+            <Field label="Manufacturer">Coiltek Pty Ltd · 5 Mengel Court, Salisbury South SA 5106 · ctmenquiry@coiltek.com.au</Field>
+            <Field label="Test condition">1 kHz / 1.0 V · GW Instek LCR-6100 · 15.6 °C · 61% RH</Field>
+            <Field label="Quantity">3 units · 100% tested · All pass</Field>
+          </div>
+
+          {/* Test results table */}
+          <div className="space-y-2">
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">
+              Electrical test results — all units within specification
+            </p>
+            <div className="border border-slate-800 rounded-lg overflow-hidden text-[11px]">
+              <div className="grid grid-cols-5 bg-slate-900 px-3 py-2 text-slate-500 font-semibold uppercase text-[10px] tracking-widest">
+                <span>Unit</span>
+                <span>L_A (μH)</span>
+                <span>L_B (μH)</span>
+                <span>DCR_A (mΩ)</span>
+                <span>DCR_B (mΩ)</span>
+              </div>
+              {[
+                { sn: "SN001.001", la: "61.99", lb: "62.05", da: "291.8", db: "297.4" },
+                { sn: "SN001.002", la: "62.17", lb: "62.05", da: "291.9", db: "296.9" },
+                { sn: "SN001.003", la: "62.44", lb: "62.36", da: "292.4", db: "300.2" },
+              ].map(r => (
+                <div key={r.sn} className="grid grid-cols-5 px-3 py-1.5 border-t border-slate-800/60 font-mono text-slate-300">
+                  <span className="text-slate-400">{r.sn}</span>
+                  <span className="text-lime-400">{r.la}</span>
+                  <span className="text-lime-400">{r.lb}</span>
+                  <span className="text-cyan-400">{r.da}</span>
+                  <span className="text-cyan-400">{r.db}</span>
+                </div>
+              ))}
+              <div className="grid grid-cols-5 px-3 py-1.5 border-t border-slate-700 bg-slate-900/60 font-mono text-[10px]">
+                <span className="text-slate-500 uppercase font-bold tracking-widest">Avg</span>
+                <span className="text-lime-600">62.200</span>
+                <span className="text-lime-600">62.153</span>
+                <span className="text-cyan-700">292.033</span>
+                <span className="text-cyan-700">298.167</span>
+              </div>
+              <div className="grid grid-cols-5 px-3 py-1.5 border-t border-slate-800/40 font-mono text-[10px]">
+                <span className="text-slate-600 uppercase tracking-widest">Spec</span>
+                <span className="text-slate-500">62 ±10%</span>
+                <span className="text-slate-500">62 ±10%</span>
+                <span className="text-slate-500">295 ±2%</span>
+                <span className="text-slate-500">295 ±2%</span>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-600">
+              Inductance σ = 0.185 μH (Conductor A) · 0.146 μH (Conductor B) — tight uniformity across all three units confirms winding specification is sound.
+            </p>
+          </div>
+
+          {/* Physics connection */}
+          <div className="bg-slate-900/60 border border-slate-800 rounded-lg p-4 space-y-3 text-xs">
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">
+              Connection to PHR-1 specification
+            </p>
+            <div className="space-y-2 text-slate-400 leading-relaxed">
+              <p>
+                The bifilar winding creates two magnetically identical, phase-inverted conductors —
+                a physical implementation of <span className="text-purple-400 font-mono">Ψ(+k̂) ⊗ Ψ(−k̂)</span>,
+                the standing wave pair described in Act 7. Equal-magnitude opposing currents cancel
+                far-field EMI while preserving the controlled near-field envelope used to couple into
+                the SNIC micro-ring.
+              </p>
+              <p>
+                At 62 μH on the T200-2 iron powder core, this component operates at HF/RF frequencies.
+                It demonstrates the electromagnetic coupling principle at radio wavelengths — the
+                direct stepping stone toward photonic waveguide implementation on silicon nitride substrate (~2032).
+              </p>
+            </div>
+            <CodeBlock>{`// PHR-1 winding derivation — T200-2 core, AL ≈ 120 nH/100T²
+// L = N² × AL = 72² × (120 nH / 10000) = 5184 × 12 nH = 62,208 nH ≈ 62 μH
+//
+// Bifilar coupling principle:
+//   Conductor A: I_A = +I  →  B_A = +B  (H-polarisation)
+//   Conductor B: I_B = −I  →  B_B = −B  (V-polarisation)
+//   Far-field: B_net = 0   (zero EMI)
+//   Near-field: controlled envelope → evanescent coupling to SNIC ring
+//
+// This is Ψ(+k̂) ⊗ Ψ(−k̂) in physical hardware.`}</CodeBlock>
+          </div>
+
+          <PriorArt text="NEX-0589-PROTO-001 · First physical PHR-1 prototype · Manufactured and tested 2026-07-27 · Coiltek, Salisbury South SA · ETR Issue 1.0 · P.O Ref S17406 · Three units, 100% pass" />
         </Section>
 
         {/* ── Live pages ── */}

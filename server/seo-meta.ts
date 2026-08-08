@@ -75,17 +75,19 @@ function webSite(overrides: Partial<{ url: string; name: string; description: st
   return base;
 }
 
-function hardwareProduct(opts: { name: string; url: string; description: string; image?: string }): object {
-  return {
+function hardwareProduct(opts: { name: string; url: string; description: string; image?: string; releaseDate?: string }): object {
+  const product: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": opts.name,
     "url": opts.url,
     "description": opts.description,
-    "image": opts.image ?? "https://wnsp.io/opengraph.png",
+    "image": opts.image ?? "https://wnsp.io/opengraph.jpg",
     "brand": { "@type": "Organization", "name": "NexusOS" },
     "license": "AGPL-3.0",
   };
+  if (opts.releaseDate) product["releaseDate"] = opts.releaseDate;
+  return product;
 }
 
 const SNIC_IMAGE = "https://wnsp.io/snic-og.png";
@@ -106,15 +108,28 @@ function techArticle(opts: { url: string; name: string; description: string; abo
       "@type": "Organization",
       "name": "NexusOS",
       "url": BASE,
-      "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.png" },
+      "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.jpg" },
     },
-    "image": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.png" },
+    "image": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.jpg" },
     "inLanguage": "en",
     "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
   };
   if (opts.datePublished) article["datePublished"] = opts.datePublished;
   if (opts.dateModified) article["dateModified"] = opts.dateModified;
   return article;
+}
+
+function breadcrumbList(items: Array<{ name: string; item: string }>): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": items.map((it, i) => ({
+      "@type": "ListItem",
+      "position": i + 1,
+      "name": it.name,
+      "item": it.item,
+    })),
+  };
 }
 
 // ── Custom domain metadata ────────────────────────────────────────────────────
@@ -126,7 +141,7 @@ export const DOMAIN_META: Record<string, PageMeta> = {
     ogTitle: "WNSP Developer Portal — Build on the Wavelength of Light",
     ogDescription: "Install nexusos-ce-encoder (npm/pip). Physics-native addresses, fees, and communication. WNSP VM, WavelengthScript compiler, CE→SE pipeline. AGPL-3.0.",
     ogSiteName: "wnsp.dev",
-    ogImage: "https://wnsp.io/opengraph.png",
+    ogImage: "https://wnsp.io/opengraph.jpg",
     twitterTitle: "WNSP Developer Portal — Build on the Wavelength of Light",
     twitterDescription: "Physics-native computing: addresses are wavelengths, fees are photon energies. CE encoder available on npm and pip. AGPL-3.0.",
     jsonLd: [
@@ -142,7 +157,7 @@ export const DOMAIN_META: Record<string, PageMeta> = {
     ogTitle: "NexusOS Build Log — Building a Type I Civilisation",
     ogDescription: "Protocol milestones, hardware notes, and physics updates. PHR-1 hardware spec, NEXUS•WAVELENGTH Rune etching, WASCII v2.0, WNSP AI Kernel v1.0.0.",
     ogSiteName: "wnsp.blog",
-    ogImage: "https://wnsp.io/opengraph.png",
+    ogImage: "https://wnsp.io/opengraph.jpg",
     twitterTitle: "NexusOS Build Log",
     twitterDescription: "Building a Type I civilisation. One block at a time. PHR-1 hardware, WNSP protocol milestones, physics updates.",
     jsonLd: webSite({ url: "https://wnsp.io/roadmap", name: "NexusOS Build Log", description: "Development blog and build log for NexusOS — the physics-based civilization OS." }),
@@ -159,7 +174,7 @@ export const DOMAIN_META: Record<string, PageMeta> = {
     ogImage: SNIC_IMAGE,
     twitterTitle: "SNIC — The Photonic NIC of 2032",
     twitterDescription: `${PSI_CHANNELS} orthogonal photonic channels. CE lookups as physical wavelength selections. First public disclosure 2026-05-16. AGPL-3.0.`,
-    jsonLd: hardwareProduct({ name: "SNIC — Spectral Network Interface Card", url: "https://wnsp.io/snic", description: `Photonic network interface card with ${PSI_CHANNELS} orthogonal channels (${PSI_CHANNEL_FORMULA}). First public disclosure 2026-05-16. AGPL-3.0.`, image: SNIC_IMAGE }),
+    jsonLd: hardwareProduct({ name: "SNIC — Spectral Network Interface Card", url: "https://wnsp.io/snic", description: `Photonic network interface card with ${PSI_CHANNELS} orthogonal channels (${PSI_CHANNEL_FORMULA}). First public disclosure 2026-05-16. AGPL-3.0.`, image: SNIC_IMAGE, releaseDate: "2026-05-16" }),
     bodyHtml: `<h1>SNIC — Spectral Network Interface Card</h1><p>The Photonic NIC of 2032. ${PSI_CHANNELS} orthogonal channels (${PSI_CHANNEL_FORMULA}) mapped to physical hardware lanes. CE lookups execute as physical wavelength selections in photonic waveguides. Orthogonality guaranteed by quantum mechanics — ⟨Ψᵢ|Ψⱼ⟩ = 0 by physics, not software policy.</p><nav><ul><li><a href="https://wnsp.io/hardware-spec">Hardware Specification (AGPL-3.0)</a></li><li><a href="https://wnsp.io/crowdfund">Hardware Founder Slots</a></li><li><a href="https://wnsp.io/compression-explorer">Compression Explorer</a></li></ul></nav><p>First public disclosure: 2026-05-16. License: AGPL-3.0.</p>`,
   },
   "spectralmirror.io": {
@@ -170,10 +185,10 @@ export const DOMAIN_META: Record<string, PageMeta> = {
     ogTitle: "Spectral Mirror — The First Electromagnetic Archive",
     ogDescription: "Every WNSP transmission archived by wavelength since 2 May 2026. CE-encoded. Ψ-addressed. The genesis date cannot be recreated. This is a once-only feature.",
     ogSiteName: "spectralmirror.io",
-    ogImage: "https://wnsp.io/opengraph.png",
+    ogImage: "https://wnsp.io/opengraph.jpg",
     twitterTitle: "Spectral Mirror — Live Electromagnetic Archive",
     twitterDescription: "Recording every WNSP transmission by wavelength since 2 May 2026. CE-encoded, Ψ-addressed, permanent. This genesis date cannot be recreated.",
-    jsonLd: techArticle({ url: "https://wnsp.io/spectral-mirror", name: "Spectral Mirror — Electromagnetic Archive", description: "Live archive of every WNSP transmission CE-encoded by wavelength. Records map to Ψ channels in the 380–780 nm visible spectrum. Recording began 2 May 2026.", about: "WNSP protocol, CE encoding, spectral archive, electromagnetic spectrum" }),
+    jsonLd: techArticle({ url: "https://wnsp.io/spectral-mirror", name: "Spectral Mirror — Electromagnetic Archive", description: "Live archive of every WNSP transmission CE-encoded by wavelength. Records map to Ψ channels in the 380–780 nm visible spectrum. Recording began 2 May 2026.", about: "WNSP protocol, CE encoding, spectral archive, electromagnetic spectrum", datePublished: "2026-05-02", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>Spectral Mirror — The First Electromagnetic Archive</h1><p>Every message and P2P transmission that passes through the WNSP layer is CE-encoded and permanently stored by its address in the visible light spectrum. Recording began 2 May 2026.</p><p>This archive is a once-only feature. The genesis date of 2 May 2026 cannot be recreated — it is the first and only continuous electromagnetic archive at these coordinates in history.</p><h2>How it works</h2><ul><li>Each character maps to a wavelength: λ = 380 + (charCode % 128) × 3.125 nm</li><li>The Ψ channel address Ψ(wdm, oam, pol) is derived from the content itself</li><li>Authority bands: SYSTEM (380–480 nm), KERNEL (480–495 nm), USER (495–620 nm), GUEST (620–780 nm)</li></ul><nav><ul><li><a href="https://wnsp.io/spectral-mirror">Full Archive on NexusOS</a></li><li><a href="https://wnsp.io/ce-se-pipeline">CE→SE Pipeline</a></li><li><a href="https://wnsp.io/oscillating-quanta">Theory of Compression States</a></li></ul></nav>`,
   },
   "www.spectralmirror.io": {
@@ -184,10 +199,10 @@ export const DOMAIN_META: Record<string, PageMeta> = {
     ogTitle: "Spectral Mirror — The First Electromagnetic Archive",
     ogDescription: "Every WNSP transmission archived by wavelength since 2 May 2026. CE-encoded. Ψ-addressed. The genesis date cannot be recreated.",
     ogSiteName: "spectralmirror.io",
-    ogImage: "https://wnsp.io/opengraph.png",
+    ogImage: "https://wnsp.io/opengraph.jpg",
     twitterTitle: "Spectral Mirror — Live Electromagnetic Archive",
     twitterDescription: "Recording every WNSP transmission by wavelength since 2 May 2026. CE-encoded, Ψ-addressed, permanent.",
-    jsonLd: techArticle({ url: "https://wnsp.io/spectral-mirror", name: "Spectral Mirror — Electromagnetic Archive", description: "Live archive of every WNSP transmission CE-encoded by wavelength. Recording began 2 May 2026.", about: "WNSP protocol, CE encoding, spectral archive, electromagnetic spectrum" }),
+    jsonLd: techArticle({ url: "https://wnsp.io/spectral-mirror", name: "Spectral Mirror — Electromagnetic Archive", description: "Live archive of every WNSP transmission CE-encoded by wavelength. Recording began 2 May 2026.", about: "WNSP protocol, CE encoding, spectral archive, electromagnetic spectrum", datePublished: "2026-05-02", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>Spectral Mirror — The First Electromagnetic Archive</h1><p>Recording every WNSP transmission by wavelength since 2 May 2026. CE-encoded, Ψ-addressed, permanent.</p><nav><ul><li><a href="https://wnsp.io/spectral-mirror">Full Archive</a></li></ul></nav>`,
   },
   "phr1.io": {
@@ -201,7 +216,7 @@ export const DOMAIN_META: Record<string, PageMeta> = {
     ogImage: PHR1_IMAGE,
     twitterTitle: "PHR-1 — The First ZERO-G State Device",
     twitterDescription: "Gravitational de-correlation through phase alignment. 144-turn bifilar coil. 25 production slots. AGPL-3.0, disclosed 2026-05-16.",
-    jsonLd: hardwareProduct({ name: "PHR-1 Resonator", url: "https://wnsp.io/hardware-spec", description: "First physical implementation of the ZERO-G state. 144-turn bifilar coil, Syncbox Controller, WavelengthScript v1.0 API. AGPL-3.0.", image: PHR1_IMAGE }),
+    jsonLd: hardwareProduct({ name: "PHR-1 Resonator", url: "https://wnsp.io/hardware-spec", description: "First physical implementation of the ZERO-G state. 144-turn bifilar coil, Syncbox Controller, WavelengthScript v1.0 API. AGPL-3.0.", image: PHR1_IMAGE, releaseDate: "2026-05-16" }),
     bodyHtml: `<h1>PHR-1 — The First ZERO-G State Device</h1><p>The PHR-1 is the first physical resonator implementing the ZERO-G state. Gravitational de-correlation is achieved through phase alignment of a 144-turn bifilar coil at Lambda Gate resonance frequency.</p><ul><li>144-turn bifilar coil</li><li>Syncbox Controller firmware</li><li>WavelengthScript v1.0 API</li><li>First batch: 25 units</li></ul><nav><ul><li><a href="https://wnsp.io/crowdfund">Hardware Founder Slots (25 available)</a></li><li><a href="https://wnsp.io/hardware-spec">Technical Specification (AGPL-3.0)</a></li><li><a href="https://wnsp.io/hardware-lab">Hardware Lab</a></li></ul></nav><p>First public disclosure: 2026-05-16. License: AGPL-3.0. Hardware Founder tier: 100,000 NXT / 100M sats.</p>`,
   },
   "lambdagate.io": {
@@ -212,10 +227,10 @@ export const DOMAIN_META: Record<string, PageMeta> = {
     ogTitle: "Lambda Gate — Λ=hf/c²",
     ogDescription: `The compression equation that describes the universe. ${PSI_CHANNELS} Ψ channels live now. PHR-1 hardware layer 2026–2028. Photonic gate array ~2032. NexusOS already speaks this language.`,
     ogSiteName: "lambdagate.io",
-    ogImage: "https://wnsp.io/opengraph.png",
+    ogImage: "https://wnsp.io/opengraph.jpg",
     twitterTitle: "Lambda Gate — Λ=hf/c²",
     twitterDescription: "The compression equation: Λ=hf/c². Every photon is an address. NexusOS is the digital substrate. PHR-1 is the physical proof.",
-    jsonLd: techArticle({ url: "https://wnsp.io/compression-explorer", name: "Lambda Gate Substrate", description: "The physical and theoretical basis for the Lambda Gate: Λ=hf/c² compression equation unifying computation, communication, and gravity.", about: "Theory of Compression States, photonic computing, WNSP protocol" }),
+    jsonLd: techArticle({ url: "https://wnsp.io/compression-explorer", name: "Lambda Gate Substrate", description: "The physical and theoretical basis for the Lambda Gate: Λ=hf/c² compression equation unifying computation, communication, and gravity.", about: "Theory of Compression States, photonic computing, WNSP protocol", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>Lambda Gate — Λ=hf/c²</h1><p>The compression equation that describes the universe. Every photon has a compression state. Every compression state has a wavelength. Every wavelength is an address.</p><p>The Lambda Gate Substrate unifies computation, communication, and gravity under one equation: <strong>Λ = hf/c²</strong></p><nav><ul><li><a href="https://wnsp.io/oscillating-quanta">Theory of Compression States</a></li><li><a href="https://wnsp.io/compression-explorer">Interactive Λ=hf/c² Curve</a></li><li><a href="https://wnsp.io/proof">Physics Proofs</a></li><li><a href="https://wnsp.io/roadmap">Roadmap to Photonic Gate Array</a></li></ul></nav>`,
   },
   "wavelengthscript.dev": {
@@ -225,12 +240,12 @@ export const DOMAIN_META: Record<string, PageMeta> = {
     ogTitle: "WavelengthScript — Physics-Native Programming Language",
     ogDescription: "Addresses are wavelengths. Messages are photons. Fees are energies. Compiles to WNSP bytecode. Step-debug in the browser-native WNSP VM. AGPL-3.0.",
     ogSiteName: "wavelengthscript.dev",
-    ogImage: "https://wnsp.io/opengraph.png",
+    ogImage: "https://wnsp.io/opengraph.jpg",
     twitterTitle: "WavelengthScript v1.0",
     twitterDescription: "The language the universe runs on. Physics-native: agents at spectral addresses, photon packets, E=hf computation costs. WNSP bytecode. AGPL-3.0.",
     jsonLd: [
       softwareApp({ url: "https://wnsp.io/wavelength-lang", name: "WavelengthScript", description: "Physics-native programming language. Agents live at spectral Ψ addresses. Messages are photon packets. Fees derived from E=hf. Compiles to WNSP bytecode." }),
-      techArticle({ url: "https://wnsp.io/wavelength-lang", name: "WavelengthScript Language Specification", description: "Formal specification of WavelengthScript v1.0 — a physics-native language for the WNSP protocol.", about: "WNSP protocol, photonic computing, spectral communication" }),
+      techArticle({ url: "https://wnsp.io/wavelength-lang", name: "WavelengthScript Language Specification", description: "Formal specification of WavelengthScript v1.0 — a physics-native language for the WNSP protocol.", about: "WNSP protocol, photonic computing, spectral communication", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     ],
     bodyHtml: `<h1>WavelengthScript — The Language the Universe Runs On</h1><p>A physics-native programming language where agents live at spectral Ψ addresses, messages are photon packets, and computation costs are derived from E=hf. Compiles to WNSP bytecode. Runs in the browser-native WNSP VM.</p><ul><li>Spectral Ψ addressing — agents at wavelength positions</li><li>Photon packet messaging — E=hf computation costs</li><li>WNSP bytecode compilation</li><li>Step-debug in the browser WNSP VM</li></ul><nav><ul><li><a href="https://wnsp.io/wavelength-lang">Language Specification</a></li><li><a href="https://wnsp.io/wnsp-vm">WNSP Virtual Machine</a></li><li><a href="https://wnsp.io/ce-se-pipeline">CE→SE Pipeline</a></li></ul></nav>`,
   },
@@ -242,10 +257,10 @@ export const DOMAIN_META: Record<string, PageMeta> = {
     ogTitle: "ZERO-G State — Gravitational De-correlation",
     ogDescription: "Phase coherence at Ψ(wdm,oam,pol) resonance. 144-turn bifilar coil. Measurable reduction in local gravitational coupling. PHR-1 hardware. AGPL-3.0, disclosed 2026-05-16.",
     ogSiteName: "zerogstate.io",
-    ogImage: "https://wnsp.io/opengraph.png",
+    ogImage: "https://wnsp.io/opengraph.jpg",
     twitterTitle: "ZERO-G State — Gravitational De-correlation",
     twitterDescription: "Λ=hf/c² phase coherence → measurable gravitational de-correlation. PHR-1 is the first hardware proof. 25 production slots.",
-    jsonLd: techArticle({ url: "https://wnsp.io/hardware-spec", name: "ZERO-G State", description: "Gravitational de-correlation through phase alignment of a 144-turn bifilar coil at Lambda Gate resonance frequency. Implemented in PHR-1 hardware.", about: "Physics, gravitational physics, bifilar coil, Lambda Gate" }),
+    jsonLd: techArticle({ url: "https://wnsp.io/hardware-spec", name: "ZERO-G State", description: "Gravitational de-correlation through phase alignment of a 144-turn bifilar coil at Lambda Gate resonance frequency. Implemented in PHR-1 hardware.", about: "Physics, gravitational physics, bifilar coil, Lambda Gate", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>ZERO-G State — Gravitational De-correlation</h1><p>The ZERO-G state is achieved through phase alignment of a 144-turn bifilar coil at Lambda Gate resonance frequency. When phase coherence is reached, local gravitational coupling is measurably reduced.</p><p>PHR-1 is the first hardware implementation of the ZERO-G state. First public disclosure: 2026-05-16. License: AGPL-3.0.</p><nav><ul><li><a href="https://wnsp.io/hardware-spec">Technical Specification</a></li><li><a href="https://wnsp.io/proof">Physics Proofs</a></li><li><a href="https://wnsp.io/crowdfund">Hardware Founder Slots</a></li></ul></nav>`,
   },
   "wascii.io": {
@@ -255,12 +270,12 @@ export const DOMAIN_META: Record<string, PageMeta> = {
     ogTitle: "WASCII v2.0 — Wave Density Spectral Vector Encoding",
     ogDescription: `CE (Character Encoding) → SE (Spectral Encoding): every character gets a wavelength. 128 spectral bands. OAM + polarisation → ${PSI_CHANNELS} orthogonal Ψ channels. npm + pip. AGPL-3.0.`,
     ogSiteName: "wascii.io",
-    ogImage: "https://wnsp.io/opengraph.png",
+    ogImage: "https://wnsp.io/opengraph.jpg",
     twitterTitle: "WASCII v2.0 — Every Character Has a Wavelength",
     twitterDescription: `CE_TABLE[charCode % 128] maps any character to a visible-light frequency. Bit-identical across npm and pip. ${PSI_CHANNELS} orthogonal Ψ channels. AGPL-3.0.`,
     jsonLd: [
       softwareApp({ url: "https://wnsp.io/ce-code-writer", name: "WASCII v2.0", description: "Wave Density Spectral Vector encoding standard. Maps every character to a unique visible-light wavelength across 128 spectral bands." }),
-      techArticle({ url: "https://wnsp.io/ce-code-writer", name: "WASCII v2.0 Encoding Standard", description: "Open encoding standard mapping characters to electromagnetic spectrum positions. 128 bands, 380–780nm, deterministic and cross-platform.", about: "CE encoding, spectral encoding, photonic computing" }),
+      techArticle({ url: "https://wnsp.io/ce-code-writer", name: "WASCII v2.0 Encoding Standard", description: "Open encoding standard mapping characters to electromagnetic spectrum positions. 128 bands, 380–780nm, deterministic and cross-platform.", about: "CE encoding, spectral encoding, photonic computing", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     ],
     bodyHtml: `<h1>WASCII v2.0 — Every Character Has a Wavelength</h1><p>WASCII (Wave Density Spectral Vector) maps every character to a unique compression state in the electromagnetic spectrum. 128 spectral bands, 380–780nm, 3.125nm per band. Bit-identical output across npm and pip.</p><p>Algorithm: <code>CE_TABLE[charCode % 128]</code> — deterministic, cross-platform, open standard.</p><nav><ul><li><a href="https://wnsp.io/ce-code-writer">Live CE Encoder</a></li><li><a href="https://wnsp.io/ce-se-pipeline">CE→SE Pipeline</a></li><li><a href="https://wnsp.io/compression-explorer">Compression Explorer</a></li></ul></nav><p>Install: <code>npm install nexusos-ce-encoder</code>. License: AGPL-3.0.</p>`,
   },
@@ -271,10 +286,10 @@ export const DOMAIN_META: Record<string, PageMeta> = {
     ogTitle: "Orbital Treasury — NXT Circular Economy",
     ogDescription: "All NXT protocol fees flow to the Orbital Treasury — never burned. Five distribution buckets. Physics-enforced governance. 100% on-chain transparency.",
     ogSiteName: "orbitaltreasury.io",
-    ogImage: "https://wnsp.io/opengraph.png",
+    ogImage: "https://wnsp.io/opengraph.jpg",
     twitterTitle: "Orbital Treasury — NXT Circular Economy",
     twitterDescription: "NXT fees never burned — always returned to the treasury. Five distribution buckets. On-chain governance. Full transparency.",
-    jsonLd: techArticle({ url: "https://wnsp.io/orbital-treasury", name: "Orbital Treasury", description: "NexusOS economic engine. All NXT protocol fees collected here and distributed across five governance-controlled buckets. NXT supply is indestructible.", about: "NXT token, circular economy, on-chain governance, treasury" }),
+    jsonLd: techArticle({ url: "https://wnsp.io/orbital-treasury", name: "Orbital Treasury", description: "NexusOS economic engine. All NXT protocol fees collected here and distributed across five governance-controlled buckets. NXT supply is indestructible.", about: "NXT token, circular economy, on-chain governance, treasury", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>Orbital Treasury — Every Satoshi Accounted for On-Chain</h1><p>The Orbital Treasury is the economic core of NexusOS. All NXT transaction fees flow here — never burned. Five distribution buckets, governed on-chain.</p><ul><li>Maintenance: 35%</li><li>Deliverables: 25%</li><li>Research: 20%</li><li>Agent Rewards: 10%</li><li>Nexus Charitable Trust: 10%</li></ul><nav><ul><li><a href="https://wnsp.io/nxt-campaign">NXT Token — NEXUS•WAVELENGTH</a></li><li><a href="https://wnsp.io/blockchain">Block Explorer</a></li><li><a href="https://wnsp.io/open">Governance</a></li></ul></nav>`,
   },
   "555thz.io": {
@@ -285,10 +300,10 @@ export const DOMAIN_META: Record<string, PageMeta> = {
     ogTitle: "555 THz — The First Unobserved Oscillation",
     ogDescription: "The universe's first compression event occurred at the centre of the visible spectrum: 555 THz. Green. λ ≈ 540nm. The origin point of the Theory of Compression States and everything NexusOS is built on.",
     ogSiteName: "555thz.io",
-    ogImage: "https://wnsp.io/opengraph.png",
+    ogImage: "https://wnsp.io/opengraph.jpg",
     twitterTitle: "555 THz — The First Unobserved Oscillation",
     twitterDescription: "555 THz: green light, the centre of the visible spectrum, the first compression event. The Theory of Compression States begins here.",
-    jsonLd: techArticle({ url: "https://wnsp.io/oscillating-quanta", name: "555 THz — The First Frequency", description: "555 THz — centre of the visible spectrum and the first frequency in the Theory of Compression States. The origin event from which NexusOS's physics is derived.", about: "Theory of Compression States, 555 THz, photonic physics" }),
+    jsonLd: techArticle({ url: "https://wnsp.io/oscillating-quanta", name: "555 THz — The First Frequency", description: "555 THz — centre of the visible spectrum and the first frequency in the Theory of Compression States. The origin event from which NexusOS's physics is derived.", about: "Theory of Compression States, 555 THz, photonic physics", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>555 THz — The First Unobserved Oscillation</h1><p>555 THz is green light. The first unobserved oscillation — the moment Λ transitioned from unformed to formed. The origin event that the Theory of Compression States describes.</p><p>The universe's first compression event occurred at the centre of the visible spectrum: 555 THz. Green. λ ≈ 540nm. NexusOS is built on what happened next.</p><nav><ul><li><a href="https://wnsp.io/oscillating-quanta">Theory of Compression States</a></li><li><a href="https://wnsp.io/compression-explorer">Interactive Compression Curve</a></li><li><a href="https://wnsp.io/proof">Physics Proofs</a></li></ul></nav>`,
   },
 };
@@ -305,6 +320,20 @@ export const ROUTE_META: Record<string, PageMeta> = {
     description: "NexusOS is the foundational blueprint for a Kardashev Type I civilization. Physics-based blockchain, WNSP protocol, WavelengthScript, and a CE-SE pipeline.",
     canonical: `${BASE}/`,
     jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "@id": `${BASE}/#organization`,
+        "name": "NexusOS",
+        "url": `${BASE}/`,
+        "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.jpg" },
+        "description": "Open-source physics-based OS kernel for a Kardashev Type I civilization. WNSP protocol, WavelengthScript, CE-SE pipeline, NXT token. AGPL-3.0.",
+        "sameAs": [
+          "https://github.com/nexusosdaily-code/NexusOS",
+          "https://t.me/nexusosdaily",
+        ],
+        "founder": { "@type": "Person", "name": "Te Rata Pou" },
+      },
       webSite(),
       softwareApp(),
     ],
@@ -327,16 +356,23 @@ export const ROUTE_META: Record<string, PageMeta> = {
     canonical: `${BASE}/crowdfund`,
     ogTitle: "Crowdfund NexusOS Hardware — PHR-1 & SNIC",
     ogDescription: "25 Hardware Founder slots. PHR-1 resonator, SNIC photonic NIC. Fund the world's first physics-based computing hardware. 100M sats / 100,000 NXT per slot.",
-    ogImage: "https://wnsp.io/crowdfund-og.png",
+    ogImage: "https://wnsp.io/crowdfund-og.jpg",
     twitterTitle: "Crowdfund NexusOS — Hardware Founder Slots Open",
     twitterDescription: "PHR-1 resonator. SNIC photonic NIC. 25 Hardware Founder slots. Fund physics-based computing.",
     jsonLd: {
       "@context": "https://schema.org",
-      "@type": "FundingScheme",
-      "name": "NexusOS Hardware Crowdfund",
+      "@type": "Product",
+      "name": "NexusOS Hardware Crowdfund — PHR-1 & SNIC",
       "url": `${BASE}/crowdfund`,
       "description": "Crowdfunding campaign for PHR-1 resonator and SNIC photonic NIC hardware development. Hardware Founder tier: 25 slots at 100M sats / 100,000 NXT each.",
-      "about": { "@type": "Organization", "name": "NexusOS" },
+      "brand": { "@type": "Organization", "name": "NexusOS" },
+      "offers": {
+        "@type": "Offer",
+        "price": "100000",
+        "priceCurrency": "NXT",
+        "availability": "https://schema.org/LimitedAvailability",
+        "seller": { "@type": "Organization", "name": "NexusOS" },
+      },
     },
     bodyHtml: `<h1>Crowdfund NexusOS — Hardware Founder &amp; NXT Supporter Tiers</h1><p>NexusOS is building the world's first physics-based computing hardware. The crowdfund directly funds production of the PHR-1 resonator, SNIC photonic NIC, and WavelengthScript compiler toolchain. Three tiers are available to backers.</p><h2>Funding Tiers</h2><ul><li><strong>Hardware Founder</strong> — 100M sats / 100,000 NXT: One of 25 first-production PHR-1 units. KERNEL-band spectral authority. Hardware Founder Rune badge. Name in the genesis block.</li><li><strong>NXT Supporter</strong> — Various sats amounts: NXT token allocation from the Orbital Treasury. USER-band spectral authority. Early access to WavelengthScript tooling and documentation.</li><li><strong>Spectral Bundle</strong>: CE encoder package, documentation set, and a reserved Ψ channel address in the NexusOS network.</li></ul><p>All hardware is AGPL-3.0 licensed — open forever. Any improvements made to PHR-1 or SNIC by backers must be contributed back to the community.</p><nav><ul><li><a href="${BASE}/hardware-spec">Full Hardware Specification (AGPL-3.0)</a></li><li><a href="${BASE}/snic">SNIC — Spectral Network Interface Card</a></li><li><a href="${BASE}/nxt-campaign">NXT Token — NEXUS•WAVELENGTH</a></li><li><a href="${BASE}/roadmap">Development Roadmap</a></li></ul></nav>`,
   },
@@ -346,16 +382,23 @@ export const ROUTE_META: Record<string, PageMeta> = {
     canonical: `${BASE}/crowdfund`,
     ogTitle: "Crowdfund NexusOS Hardware — PHR-1 & SNIC",
     ogDescription: "25 Hardware Founder slots. PHR-1 resonator, SNIC photonic NIC. Fund the world's first physics-based computing hardware.",
-    ogImage: "https://wnsp.io/crowdfund-og.png",
+    ogImage: "https://wnsp.io/crowdfund-og.jpg",
     twitterTitle: "Crowdfund NexusOS — Hardware Founder Slots Open",
     twitterDescription: "PHR-1 resonator. SNIC photonic NIC. 25 Hardware Founder slots.",
     jsonLd: {
       "@context": "https://schema.org",
-      "@type": "FundingScheme",
-      "name": "NexusOS Hardware Crowdfund",
+      "@type": "Product",
+      "name": "NexusOS Hardware Crowdfund — PHR-1 & SNIC",
       "url": `${BASE}/crowdfund`,
       "description": "Crowdfunding campaign for PHR-1 resonator and SNIC photonic NIC hardware development. Hardware Founder tier: 25 slots at 100M sats / 100,000 NXT each.",
-      "about": { "@type": "Organization", "name": "NexusOS" },
+      "brand": { "@type": "Organization", "name": "NexusOS" },
+      "offers": {
+        "@type": "Offer",
+        "price": "100000",
+        "priceCurrency": "NXT",
+        "availability": "https://schema.org/LimitedAvailability",
+        "seller": { "@type": "Organization", "name": "NexusOS" },
+      },
     },
     bodyHtml: `<h1>Crowdfund NexusOS — Hardware Founder &amp; NXT Supporter Tiers</h1><p>Fund the world's first physics-based computing hardware: the PHR-1 resonator, SNIC photonic NIC, and WavelengthScript compiler. Three tiers available.</p><ul><li><strong>Hardware Founder</strong> — 100M sats / 100,000 NXT: One of 25 PHR-1 units, KERNEL-band authority, Founder Rune badge.</li><li><strong>NXT Supporter</strong> — NXT token allocation, USER-band authority, early tooling access.</li><li><strong>Spectral Bundle</strong> — CE encoder package, documentation, reserved Ψ channel address.</li></ul><nav><ul><li><a href="${BASE}/hardware-spec">Hardware Specification (AGPL-3.0)</a></li><li><a href="${BASE}/snic">SNIC — Spectral Network Interface Card</a></li><li><a href="${BASE}/roadmap">Development Roadmap</a></li></ul></nav>`,
   },
@@ -673,7 +716,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "Theory of Compression States",
     twitterDescription: `Λ=hf/c². The universe evolves from the first unobserved oscillation. ${PSI_CHANNELS} orthogonal Ψ channels represent the full addressable state space.`,
-    jsonLd: techArticle({ url: `${BASE}/oscillating-quanta`, name: "Theory of Compression States", description: "First principles of the NexusOS physics stack: the universe evolves from the first unobserved oscillation at 555 THz. Λ=hf/c² is the governing compression law.", about: "Theory of Compression States, 555 THz, Λ=hf/c², photonic physics", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/oscillating-quanta`, name: "Theory of Compression States", description: "First principles of the NexusOS physics stack: the universe evolves from the first unobserved oscillation at 555 THz. Λ=hf/c² is the governing compression law.", about: "Theory of Compression States, 555 THz, Λ=hf/c², photonic physics", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 1 — Theory of Compression States", item: `${BASE}/oscillating-quanta` },
+      ]),
+    ],
     bodyHtml: `<h1>Theory of Compression States — First Principles</h1><p>The universe evolves from the first unobserved oscillation at 555 THz — the centre of the visible spectrum, the moment Λ transitioned from unformed to formed. Each subsequent state is a compression of the previous one, encoded in the electromagnetic spectrum.</p><p>The governing compression law: <strong>Λ = hf/c²</strong> — where h is Planck's constant, f is frequency, and c is the speed of light. This single equation unifies computation, communication, and gravity.</p><ul><li>First oscillation: 555 THz (green light, λ ≈ 540nm)</li><li>${PSI_CHANNELS} orthogonal Ψ channels (${PSI_CHANNEL_FORMULA}) — the full addressable state space</li><li>Authority bands: SYSTEM → KERNEL → USER → GUEST (shorter λ = higher authority)</li><li>Every NexusOS address, fee, and channel derived from this first principle</li></ul><nav><ul><li><a href="${BASE}/compression-explorer">Interactive Λ=hf/c² Compression Curve</a></li><li><a href="${BASE}/proof">Physics Proofs</a></li><li><a href="${BASE}/wnsp">WNSP Protocol</a></li></ul></nav>`,
   },
   "/unified-compression-theory": {
@@ -685,7 +735,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "Unified Compression Theory",
     twitterDescription: "Gravity, EM, weak, and strong nuclear forces as octave doublings of f₀=555 THz. Λ=hf/c² as a unified field equation.",
-    jsonLd: techArticle({ url: `${BASE}/unified-compression-theory`, name: "Unified Compression Theory", description: "Unified field framework: all four forces as EM octave doublings via Λ=hf/c². Forces emerge from successive doublings of the 555 THz first oscillation.", about: "Unified field theory, Λ=hf/c², electromagnetic spectrum, four fundamental forces, NexusOS physics", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/unified-compression-theory`, name: "Unified Compression Theory", description: "Unified field framework: all four forces as EM octave doublings via Λ=hf/c². Forces emerge from successive doublings of the 555 THz first oscillation.", about: "Unified field theory, Λ=hf/c², electromagnetic spectrum, four fundamental forces, NexusOS physics", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 3 — Unified Compression Theory", item: `${BASE}/unified-compression-theory` },
+      ]),
+    ],
     bodyHtml: `<h1>Unified Compression Theory — Λ=hf/c² Across All Four Forces</h1><p>The Unified Compression Theory maps all four fundamental forces to regions of the electromagnetic spectrum using the governing equation <strong>Λ=hf/c²</strong>. Gravity, electromagnetism, the weak nuclear force, and the strong nuclear force each correspond to successive octave doublings from the universal ground state at 555 THz.</p><p>This framework extends the Theory of Compression States into a full unified field description: every force is a compression state, every state has a wavelength, and every wavelength is an address in the NexusOS Ψ channel space.</p><ul><li>Ground state: f₀ = 555 THz (λ ≈ 540 nm, visible green)</li><li>Gravitational domain: sub-octave infrared (f₀/16 → f₀/2)</li><li>Electromagnetic domain: visible spectrum (f₀ — the WNSP address space)</li><li>Weak nuclear force: UV to EUV (2f₀ → 4f₀)</li><li>Strong nuclear force: X-ray (8f₀ → 16f₀)</li><li>Matter formation: electron at ≈17.8 octaves above f₀, proton at ≈28.6 octaves above f₀</li></ul><nav><ul><li><a href="${BASE}/oscillating-quanta">Theory of Compression States — First Principles</a></li><li><a href="${BASE}/universal-one">The Universal ONE — f₀ First Oscillation</a></li><li><a href="${BASE}/compression-explorer">Interactive Λ=hf/c² Compression Curve</a></li><li><a href="${BASE}/proof">Physics Proofs</a></li></ul></nav>`,
   },
   "/element-catalogue": {
@@ -697,7 +754,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "The Catalogue — Periodic Table Octave Addresses",
     twitterDescription: "The periodic table IS the octave lattice. Every element already has a Ψ address. Krypton sits at n ≈ 35.000 exactly. NexusOS Act 6.",
-    jsonLd: techArticle({ url: `${BASE}/element-catalogue`, name: "The Catalogue — Periodic Table Octave Addresses", description: "All 118 elements mapped to WNSP octave addresses via n=log₂(m·c²/E₀). Noble gases are equilibrium nodes. Krypton at n≈35.000 confirms Russell's prediction.", about: "periodic table, octave lattice, WNSP octave address, compression states, matter protocol, NexusOS physics, noble gas equilibrium, Russell octaves", datePublished: "2026-07-07", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/element-catalogue`, name: "The Catalogue — Periodic Table Octave Addresses", description: "All 118 elements mapped to WNSP octave addresses via n=log₂(m·c²/E₀). Noble gases are equilibrium nodes. Krypton at n≈35.000 confirms Russell's prediction.", about: "periodic table, octave lattice, WNSP octave address, compression states, matter protocol, NexusOS physics, noble gas equilibrium, Russell octaves", datePublished: "2026-07-07", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 6 — The Catalogue", item: `${BASE}/element-catalogue` },
+      ]),
+    ],
     bodyHtml: `<h1>The Catalogue — Periodic Table Octave Addresses</h1><p>Act 6 of the NexusOS physics sequence. Every element on the periodic table already has a precise address in the octave lattice — not assigned by any convention, but derived from its rest mass via n = log₂(m·c²/E₀) where E₀ = hf₀ = 2.295 eV.</p><h2>The Formula</h2><p>n = log₂(m·c² / E₀). In practice: n = log₂(mass_u × 931,494,000 / 2.295) where mass_u is the standard atomic weight in atomic mass units.</p><h2>Key Results</h2><ul><li>Hydrogen (H, Z=1, 1.008 u): n ≈ 28.61</li><li>Krypton (Kr, Z=36, 83.798 u): n ≈ 34.985 ≈ 35.000 — exact integer octave node</li><li>Gold (Au, Z=79, 196.967 u): n ≈ 36.55, ΔE ≈ 222 GeV</li><li>Oganesson (Og, Z=118, 294 u): n ≈ 36.80</li></ul><h2>Noble Gas Equilibrium Nodes</h2><p>Noble gases (He, Ne, Ar, Kr, Xe, Rn, Og) are octave rest points — maximum stability, zero reactivity. Krypton lands at n ≈ 35.000, validating Russell's 1926 geometric wave model from SI exact constants.</p><h2>The Sequence</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States: Λ = hf/c²</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE: f₀ derives Λ</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory: 4 forces = 1 Λ</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism: ΔE = hf₀(2ⁿ²−2ⁿ¹)</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address: ∀ Λ : ∃! Ψ</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue: n = log₂(mc²/E₀)</a></li></ul>`,
   },
   "/lossless-channel": {
@@ -709,7 +773,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "The Lossless Channel — Ghost Nodes as Waveguides",
     twitterDescription: "Ghost nodes in the compression lattice are natural waveguides. α=0 because ρ_matter=0. Shannon capacity reaches the vacuum ZPE floor. NexusOS Act 8.",
-    jsonLd: techArticle({ url: `${BASE}/lossless-channel`, name: "The Lossless Channel — Ghost Node Waveguides in the Compression Lattice", description: "Ghost nodes form natural lossless waveguides. No stable nucleus → Beer-Lambert α=0, Shannon capacity reaches the vacuum ZPE floor. Distance-independent.", about: "lossless channel, ghost node waveguide, Beer-Lambert, attenuation α=0, Shannon capacity, vacuum zero-point energy, standing wave trap, WNSP density equation, N_Dir=2, photonic computing, NexusOS Act 8", datePublished: "2026-07-07", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/lossless-channel`, name: "The Lossless Channel — Ghost Node Waveguides in the Compression Lattice", description: "Ghost nodes form natural lossless waveguides. No stable nucleus → Beer-Lambert α=0, Shannon capacity reaches the vacuum ZPE floor. Distance-independent.", about: "lossless channel, ghost node waveguide, Beer-Lambert, attenuation α=0, Shannon capacity, vacuum zero-point energy, standing wave trap, WNSP density equation, N_Dir=2, photonic computing, NexusOS Act 8", datePublished: "2026-07-07", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 8 — The Lossless Channel", item: `${BASE}/lossless-channel` },
+      ]),
+    ],
     bodyHtml: `<h1>The Lossless Channel — Ghost Node Waveguides in the Compression Lattice</h1><p>Act 8 of the NexusOS physics sequence. First disclosed 2026-07-07.</p><h2>Abstract</h2><p>Ghost nodes — integer-octave addresses in the compression lattice occupied by no stable nucleus — form natural lossless waveguides. Because no matter exists at a ghost node address, the Beer-Lambert attenuation coefficient α = 0, giving L(d) = α·d = 0 regardless of distance. A chain of ghost node standing wave traps connected on the same Ψ channel creates a lossless coherent propagation path: Ψ_channel = ⊗ᵢ Ψ_trap(nᵢ). Shannon capacity C = B·log₂(1 + S/N) reaches the vacuum zero-point floor N_vac = ½ℏω per mode — the theoretical maximum achievable only in the absence of matter coupling.</p><h2>Ghost Node Topology</h2><p>n=35 is a near-occupied node (Kr at −0.015, Rb at +0.012 octaves). n=36 is the primary confirmed ghost node: Thulium (Z=69, 4f¹³) falls 0.0034 octaves short, Ytterbium (Z=70, 4f¹⁴) overshoots by 0.07 octaves — a 10× wider vacancy determined by the Weizsäcker semi-empirical mass formula.</p><h2>Zero-Loss Physics</h2><p>α = n_scatter·σ_interaction. At ghost node: n_scatter = 0. Therefore α = 0·σ = 0. L(d) = α·d = 0·d = 0. I(d) = I₀·e^0 = I₀. Full signal retained over any distance.</p><h2>The Channel Equation</h2><p>Ψ_channel = ⊗ᵢ Ψ_trap(nᵢ) = Ψ_trap(n₁) ⊗ Ψ_trap(n₂) ⊗ … ⊗ Ψ_trap(nₖ). Phase coherence maintained: no decoherence source exists in vacuum. Entropy S = 0 across the channel.</p><h2>Shannon at the Vacuum Floor</h2><p>Conventional channels: N = k_B·T·B (Johnson-Nyquist). Ghost node channel: N_vac = ½ℏω (Heisenberg vacuum zero-point energy). C_ghost = B·log₂(1 + hf₀/½ℏω) = B·log₂(1 + 2π/π) = B·log₂(1 + 2) ≈ B·1.585 b/s/Hz. No refrigeration needed — the ghost node is structurally at the vacuum floor.</p><h2>N_Dir=2 Architecture</h2><p>The WNSP density equation D_WNSP = N_λ·N_OAM·N_Pol·N_Dir = 256×50×2×2 = 51,200 channels. N_Dir=2 encodes ±k̂ as orthogonal Hilbert sub-spaces. The trap (Act 7) activates both simultaneously. The channel (Act 8) propagates the phase-locked result across ghost node chains. Same hardware, same addressing — Act 8 adds propagation to Act 7's confinement.</p><h2>The 8-Act Sequence</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States: Λ = hf/c²</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE: f₀ derives Λ</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory: 4 forces = 1 Λ</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism: ΔE = hf₀(2ⁿ²−2ⁿ¹)</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address: ∀ Λ : ∃! Ψ</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue: n = log₂(mc²/E₀)</a></li><li><a href="${BASE}/standing-wave-trap">Act 7 — The Trap: Ψ(+k̂) ⊗ Ψ(−k̂)</a></li><li><a href="${BASE}/lossless-channel">Act 8 — The Lossless Channel: Ψ_channel = ⊗ᵢ Ψ_trap(nᵢ)</a></li></ul>`,
   },
   "/standing-wave-trap": {
@@ -721,7 +792,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "The Trap — Ghost Node n=36",
     twitterDescription: "Ψ_trap = Ψ(+k̂) ⊗ Ψ(−k̂) → |E|² → max at 169.33 u. No element exists here. The standing wave claims an address nature never filled. NexusOS Act 7.",
-    jsonLd: techArticle({ url: `${BASE}/standing-wave-trap`, name: "The Trap — Standing Wave at the Ghost Node", description: "Standing wave at ghost node n=36 (169.33 u). Counter-propagating Ψ pairs (±k̂) create an antinode at an address no stable nucleus occupies. NexusOS Act 7.", about: "standing wave trap, ghost node, WNSP addressing, counter-propagating waves, N_Dir, binding energy mass defect, Thulium, octave lattice, NexusOS Act 7, photonic computing", datePublished: "2026-07-07", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/standing-wave-trap`, name: "The Trap — Standing Wave at the Ghost Node", description: "Standing wave at ghost node n=36 (169.33 u). Counter-propagating Ψ pairs (±k̂) create an antinode at an address no stable nucleus occupies. NexusOS Act 7.", about: "standing wave trap, ghost node, WNSP addressing, counter-propagating waves, N_Dir, binding energy mass defect, Thulium, octave lattice, NexusOS Act 7, photonic computing", datePublished: "2026-07-07", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 7 — The Trap", item: `${BASE}/standing-wave-trap` },
+      ]),
+    ],
     bodyHtml: `<h1>The Trap — Standing Wave at the Ghost Node</h1><p>Act 7 of the NexusOS physics sequence. The standing wave trap is a counter-propagating wave pair (+k̂/−k̂) on the same Ψ channel that creates a standing wave whose antinode is positioned at the ghost node n=36 — a valid WNSP address occupied by no stable nucleus in the known periodic table.</p><h2>The Ghost Node</h2><p>Ghost node n=36 sits at 169.33 u — a coordinate in the WNSP compression lattice that no stable nucleus occupies. The gap exists because nuclear binding energy mass defects (Δm = Z·mₚ + N·mₙ − M_nucleus, E_b = Δm·c²) never produce that atomic mass. Thulium (Z=69, 4f¹³) is 0.0034 octaves short at n=35.9966. Ytterbium (Z=70, 4f¹⁴) overshoots at n≈36.07. The ghost node is precisely at the threshold between the most incomplete and the first complete lanthanide shell.</p><h2>The Standing Wave Equation</h2><p>E₊ = E₀cos(kx−ωt) [+k̂ forward]. E₋ = E₀cos(kx+ωt) [−k̂ return]. E₊ + E₋ = 2E₀cos(kx)·cos(ωt) [standing wave]. |E|² → max at cos(kx) = ±1 — fixed antinodes. Trap equation: Ψ_trap = Ψ(+k̂) ⊗ Ψ(−k̂) → |E|² → max at (x₀,y₀,z₀).</p><h2>The WNSP Ghost Address</h2><p>Ghost node Ψ address: WDM = frac(36)×255 = 0 (SYSTEM band, channel 0), OAM = 36 mod 50 = 36, Pol = H, Dir = ±k̂. N_Dir=2 in the 51,200-channel density equation (256×50×2×2) already encodes both propagation directions as orthogonal Hilbert sub-spaces. The trap requires no new hardware.</p><h2>The Sequence — Complete</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States: Λ = hf/c²</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE: f₀ derives Λ</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory: 4 forces = 1 Λ</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism: ΔE = hf₀(2ⁿ²−2ⁿ¹)</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address: ∀ Λ : ∃! Ψ</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue: n = log₂(mc²/E₀)</a></li><li><a href="${BASE}/standing-wave-trap">Act 7 — The Trap: Ψ(+k̂) ⊗ Ψ(−k̂)</a></li></ul>`,
   },
   "/universal-address": {
@@ -733,7 +811,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "The Address — Ψ as Universal Namespace",
     twitterDescription: "TCP/IP = human convention. DNS = human convention. Ψ = physics. block(Ψ) ⟺ violate Maxwell ⟺ impossible. NexusOS Act 5.",
-    jsonLd: techArticle({ url: `${BASE}/universal-address`, name: "The Address — Ψ as Universal Namespace", description: "Every state has a unique physics-derived Ψ address. WNSP is the first protocol to make this namespace operable. Blocking Ψ requires violating Maxwell's laws.", about: "WNSP namespace, Ψ address, universal addressing, censorship-resistant protocol, spectral addressing, NexusOS physics, compression states", datePublished: "2026-07-02", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/universal-address`, name: "The Address — Ψ as Universal Namespace", description: "Every state has a unique physics-derived Ψ address. WNSP is the first protocol to make this namespace operable. Blocking Ψ requires violating Maxwell's laws.", about: "WNSP namespace, Ψ address, universal addressing, censorship-resistant protocol, spectral addressing, NexusOS physics, compression states", datePublished: "2026-07-02", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 5 — The Address", item: `${BASE}/universal-address` },
+      ]),
+    ],
     bodyHtml: `<h1>The Address — Ψ as Universal Namespace</h1><p>Act 5 of the NexusOS physics sequence. Every compression state Λ = hf/c² is uniquely identified by its frequency f. Every frequency maps to a unique Ψ(wdm, oam, pol, dir) coordinate. Therefore every compression state in the universe already has exactly one address — derived from physics, not assigned by any authority.</p><h2>The Completeness Theorem</h2><p>∀ Λ ∈ Universe : ∃! Ψ(wdm, oam, pol, dir). The WNSP namespace is complete, unique, and authority-free. ∎</p><h2>Namespace Dimensions</h2><ul><li>WDM: 256 wavelength channels (380–780 nm, 1.5625 nm resolution)</li><li>OAM: 50 orbital angular momentum modes (orthogonal by quantum mechanics)</li><li>Pol: 2 polarisation states (H/V, ⟨H|V⟩ = 0)</li><li>Dir: 2 propagation directions (+k̂/−k̂, first disclosed 2026-07-02)</li><li>Total: 256 × 50 × 2 × 2 = 51,200 orthogonal Ψ channels</li></ul><h2>Censorship Impossibility</h2><p>block(Ψ) ⟺ suppress(f) ⟺ violate Maxwell ⟺ impossible. A Ψ address cannot be revoked. It is derived from the frequency of an electromagnetic wave — it exists whether or not any human system uses it.</p><h2>The Sequence</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States: Λ = hf/c²</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE: f₀ derives Λ</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory: 4 forces = 1 Λ</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism: ΔE = hf₀(2ⁿ²−2ⁿ¹)</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address: ∀ Λ : ∃! Ψ</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue: n = log₂(mc²/E₀)</a></li></ul>`,
   },
   "/matter-protocol": {
@@ -745,7 +830,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "The Mechanism — Controlled Octave Inversion",
     twitterDescription: "Electron at n≈17.8 above f₀. Proton at n≈28.6. ΔE = hf₀(2ⁿ²−2ⁿ¹). The protocol for controlled matter manipulation. NexusOS Act 4.",
-    jsonLd: techArticle({ url: `${BASE}/matter-protocol`, name: "The Mechanism — Controlled Octave Inversion", description: "Matter is a standing wave at octave n above f₀=555 THz. Controlled transition n₁→n₂ requires ΔE=hf₀(2ⁿ²−2ⁿ¹) delivered via a WNSP Ψ channel. Act 4.", about: "matter manipulation, octave inversion, Λ=hf/c², WNSP protocol, compression states, NexusOS physics", datePublished: "2026-07-06", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/matter-protocol`, name: "The Mechanism — Controlled Octave Inversion", description: "Matter is a standing wave at octave n above f₀=555 THz. Controlled transition n₁→n₂ requires ΔE=hf₀(2ⁿ²−2ⁿ¹) delivered via a WNSP Ψ channel. Act 4.", about: "matter manipulation, octave inversion, Λ=hf/c², WNSP protocol, compression states, NexusOS physics", datePublished: "2026-07-06", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 4 — The Mechanism", item: `${BASE}/matter-protocol` },
+      ]),
+    ],
     bodyHtml: `<h1>The Mechanism — Controlled Octave Inversion</h1><p>Act 4 of the NexusOS physics sequence. Matter is a standing electromagnetic wave at a specific octave level n above f₀ = 555 THz. To manipulate matter means to induce a controlled transition from octave n₁ to octave n₂ by delivering exactly ΔE = hf₀(2ⁿ²−2ⁿ¹) joules at the transition frequency f_t = f₀(2ⁿ²−2ⁿ¹) Hz through an orthogonal WNSP Ψ channel.</p><h2>Particle Octave Positions (SI exact constants)</h2><ul><li>Electron (e⁻): rest mass 0.511 MeV → n ≈ 17.77 octaves above f₀</li><li>Muon (μ⁻): rest mass 105.66 MeV → n ≈ 25.46 octaves above f₀</li><li>Proton (p⁺): rest mass 938.272 MeV → n ≈ 28.60 octaves above f₀</li><li>Neutron (n⁰): rest mass 939.565 MeV → n ≈ 28.60 octaves above f₀</li></ul><h2>The Core Equation</h2><p>ΔE = hf₀ · (2ⁿ² − 2ⁿ¹) joules. Delivery frequency: f_t = f₀ · (2ⁿ² − 2ⁿ¹) Hz. WNSP channel: Ψ(wdm, oam, pol, dir) derived from f_t.</p><h2>The Five-Step Protocol</h2><ol><li>IDENTIFY target octave position n₁ via spectroscopy</li><li>CALCULATE ΔE and f_t for desired transition to n₂</li><li>TUNE WNSP emitter to Ψ(wdm, oam, pol, dir)</li><li>DELIVER ΔE in a single coherent pulse at f_t</li><li>VERIFY transition via post-event emission spectroscopy</li></ol><nav><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE</a></li><li><a href="${BASE}/hardware-spec">Hardware Specification (AGPL-3.0)</a></li><li><a href="${BASE}/compression-explorer">Interactive Λ=hf/c² Curve</a></li></ul></nav>`,
   },
   "/universal-one": {
@@ -757,7 +849,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "The Universal ONE — f₀ First Oscillation",
     twitterDescription: "f₀ = 555 THz. The first unobserved oscillation. Every octave doubling produces a new domain of physics. The ground state of NexusOS.",
-    jsonLd: techArticle({ url: `${BASE}/universal-one`, name: "The Universal ONE — f₀ First Oscillation", description: "f₀=555 THz is the ground state of all existence. Successive octave doublings map to every domain of physics, from gravity to the strong nuclear force.", about: "555 THz, first oscillation, universal ground state, octave doubling, NexusOS physics, Λ=hf/c²", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/universal-one`, name: "The Universal ONE — f₀ First Oscillation", description: "f₀=555 THz is the ground state of all existence. Successive octave doublings map to every domain of physics, from gravity to the strong nuclear force.", about: "555 THz, first oscillation, universal ground state, octave doubling, NexusOS physics, Λ=hf/c²", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 2 — The Universal ONE", item: `${BASE}/universal-one` },
+      ]),
+    ],
     bodyHtml: `<h1>The Universal ONE — f₀ First Oscillation at 555 THz</h1><p>The Universal ONE is the ground state from which all existence emerges. At <strong>f₀ = 555 THz</strong> (λ ≈ 540 nm, green light), the first unobserved oscillation transitioned from unformed to formed. Every subsequent domain of physics is an octave doubling of this single frequency.</p><p>Using SI exact constants: h = 6.626 × 10⁻³⁴ J·s, c = 299,792,458 m/s. The ground-state photon energy E₀ = hf₀ ≈ 2.30 eV. The compression mass Λ₀ = hf₀/c² ≈ 4.09 × 10⁻³⁶ kg.</p><h2>Octave Expansion from f₀</h2><ul><li>f₀/16 — f₀/2: Mid-infrared to NIR — Gravitational domain</li><li>f₀: Visible spectrum (540 nm) — WNSP Ψ channel address space</li><li>2f₀: UV — Electromagnetic → Weak nuclear transition</li><li>4f₀ — 8f₀: EUV to Soft X-ray — Weak nuclear domain</li><li>16f₀: X-ray — Strong nuclear domain</li><li>Electron mass equivalent: ≈17.8 octaves above f₀</li><li>Proton mass equivalent: ≈28.6 octaves above f₀</li></ul><nav><ul><li><a href="${BASE}/unified-compression-theory">Unified Compression Theory — All Four Forces</a></li><li><a href="${BASE}/oscillating-quanta">Theory of Compression States — First Principles</a></li><li><a href="${BASE}/compression-explorer">Interactive Λ=hf/c² Compression Curve</a></li></ul></nav>`,
   },
   "/wavelength-lang": {
@@ -845,7 +944,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     twitterTitle: "Compression Explorer — Λ=hf/c² Live",
     twitterDescription: "Interactive Λ=hf/c² compression curve. Authority bands, photon energies, fee multipliers. NexusOS physics, live.",
     ogType: "article",
-    jsonLd: techArticle({ url: `${BASE}/compression-explorer`, name: "Compression Explorer — Λ=hf/c² Curve", description: "Interactive Λ=hf/c² compression curve. Authority band overlays, photon energy, Boltzmann entropy, and fee multipliers across the visible spectrum.", about: "Theory of Compression States, Λ=hf/c², photonic physics" }),
+    jsonLd: techArticle({ url: `${BASE}/compression-explorer`, name: "Compression Explorer — Λ=hf/c² Curve", description: "Interactive Λ=hf/c² compression curve. Authority band overlays, photon energy, Boltzmann entropy, and fee multipliers across the visible spectrum.", about: "Theory of Compression States, Λ=hf/c², photonic physics", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>Compression Explorer — Interactive Λ=hf/c² Curve</h1><p>An interactive SVG visualisation of the Λ=hf/c² compression curve across the full visible spectrum (380–780nm). Explore how authority, energy, fees, and entropy vary with wavelength — the physics foundation of every NexusOS address and transaction.</p><ul><li><strong>Authority bands</strong>: SYSTEM (shortest λ, highest energy) → KERNEL → USER → GUEST</li><li><strong>Photon energy</strong>: E=hf — computed live for each wavelength position</li><li><strong>Compression mass</strong>: Λ=hf/c² — the compression state at each frequency</li><li><strong>Fee multiplier</strong>: derived from compression state, enforced by the physics engine</li><li><strong>Normalized Λ</strong>: relative compression across the visible spectrum</li><li><strong>Boltzmann entropy</strong>: statistical entropy at each spectral position</li></ul><nav><ul><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li><li><a href="${BASE}/hardware-spec">Hardware Specification</a></li><li><a href="${BASE}/proof">Physics Proofs</a></li></ul></nav>`,
   },
   "/ce-code-writer": {
@@ -916,7 +1015,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "NexusOS Physics Proof",
     twitterDescription: `Λ=hf/c² verified. CE encoding deterministic. ${PSI_CHANNELS} channels orthogonal by quantum mechanics.`,
-    jsonLd: techArticle({ url: `${BASE}/proof`, name: "NexusOS Physics Proof", description: "Formal verification of NexusOS compression state calculations: Λ=hf/c² derivation, CE encoding determinism, and WNSP channel orthogonality.", about: "Theory of Compression States, Maxwell equations, quantum mechanics" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/proof`, name: "NexusOS Physics Proof", description: "Formal verification of NexusOS compression state calculations: Λ=hf/c² derivation, CE encoding determinism, and WNSP channel orthogonality.", about: "Theory of Compression States, Maxwell equations, quantum mechanics", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Theory", item: `${BASE}/oscillating-quanta` },
+        { name: "Physics Proof", item: `${BASE}/proof` },
+      ]),
+    ],
     bodyHtml: `<h1>NexusOS Physics Proof — Verified Compression State Calculations</h1><p>The NexusOS physics stack rests on four verified proofs that connect electromagnetic theory directly to the WNSP protocol and CE encoding system.</p><h2>Proof 1 — Λ=hf/c² Derivation</h2><p>Starting from Einstein's mass-energy equivalence E=mc² and Planck's relation E=hf, the compression state operator Λ=hf/c² is derived by substituting photon energy: Λ = E/c² = hf/c². This gives the compression mass of any photon as a function of frequency alone.</p><h2>Proof 2 — CE Encoding Determinism</h2><p>The CE_TABLE maps charCode % 128 to a wavelength band. For any character with code c, the output wavelength is: nm = 380 + (c % 128) × 3.125. This is a pure function — identical output for any platform, runtime, or implementation. Proved by exhaustive verification across the 128-band space.</p><h2>Proof 3 — WNSP Channel Orthogonality</h2><p>For any two distinct Ψ channels (WDM_i, OAM_i, Pol_i) and (WDM_j, OAM_j, Pol_j), the inner product ⟨Ψᵢ|Ψⱼ⟩ = 0. This follows from quantum mechanics: WDM modes are orthogonal by wavelength separation, OAM modes are orthogonal by angular momentum quantum number, and polarisation modes are orthogonal by definition. ${PSI_CHANNELS} channels are mutually orthogonal.</p><h2>Proof 4 — Maxwell Equation Validation</h2><p>Every WNSP transaction is validated against Maxwell's equations in their wave form. The propagation condition ∇²E = μ₀ε₀ ∂²E/∂t² must be satisfied for any transmitted spectral frame.</p><nav><ul><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li><li><a href="${BASE}/compression-explorer">Interactive Compression Curve</a></li><li><a href="${BASE}/evidence">Experimental Evidence</a></li></ul></nav>`,
   },
   "/octave-layers": {
@@ -928,7 +1034,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "Russell Octave Layers — NexusOS",
     twitterDescription: "Nine wave octaves, periodic table, authority bands, Flerovium at magic number 114. Walter Russell was right. 2025 sub-THz experiments proved it.",
-    jsonLd: techArticle({ url: `${BASE}/octave-layers`, name: "Russell Octave Layers", description: "Walter Russell's nine octave wave system mapped to NexusOS Ψ channels and authority bands. WGM resonance validates the octave formula experimentally.", about: "Walter Russell, whispering gallery modes, octave waves, periodic table, photonic computing" }),
+    jsonLd: techArticle({ url: `${BASE}/octave-layers`, name: "Russell Octave Layers", description: "Walter Russell's nine octave wave system mapped to NexusOS Ψ channels and authority bands. WGM resonance validates the octave formula experimentally.", about: "Walter Russell, whispering gallery modes, octave waves, periodic table, photonic computing", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>Russell Octave Layers — Nine Wave Octaves Mapped to WNSP Channels</h1><p>Walter Russell's nine-octave wave system — derived from his observation that all matter exists as periodic wave motion — maps directly onto the NexusOS WNSP channel structure and authority band hierarchy.</p><h2>The Key Correspondence</h2><ul><li><strong>WGM resonance condition</strong>: 2πR = nλ is mathematically identical to Russell's octave formula. Whispering gallery mode resonance in optical cavities validates the octave structure experimentally.</li><li><strong>Russell's 9th octave peak = nuclear magic number 114</strong>: Flerovium (Fl-114) occupies the SYSTEM-band frequency position in the NexusOS compression state model. Confirmed by 2025 sub-THz spectroscopy.</li><li><strong>WNSP authority bands trace to Russell octaves</strong>: SYSTEM, KERNEL, USER, GUEST band boundaries align with octave wave transitions in the visible spectrum (380–780nm).</li></ul><h2>Experimental Validation (2025)</h2><p>Sub-mm wave geometry research published in 2025 independently validates the Ψ channel spacing predicted by the WNSP Hilbert space channel model. The WGM resonance condition maps directly to the 256 WDM × 50 OAM channel geometry.</p><nav><ul><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li><li><a href="${BASE}/evidence">Experimental Evidence</a></li><li><a href="${BASE}/compression-explorer">Compression Explorer</a></li></ul></nav>`,
   },
   "/paper": {
@@ -940,7 +1046,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "Theory of Compression States — Preprint",
     twitterDescription: `Unified physics: information, field, and matter as compression states of a primordial oscillation. Λ=hf/c². ${PSI_CHANNELS} Hilbert space channels. AGPL-3.0.`,
-    jsonLd: techArticle({ url: `${BASE}/paper`, name: "Theory of Compression States", description: "Preprint: compression state operator Λ=hf/c² from the primordial oscillation, unifying Maxwell, Planck, Einstein, Shannon, and Russell.", about: "Theory of Compression States, primordial field, Hilbert space, WNSP protocol, photonic computing", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/paper`, name: "Theory of Compression States", description: "Preprint: compression state operator Λ=hf/c² from the primordial oscillation, unifying Maxwell, Planck, Einstein, Shannon, and Russell.", about: "Theory of Compression States, primordial field, Hilbert space, WNSP protocol, photonic computing", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Theory", item: `${BASE}/oscillating-quanta` },
+        { name: "Theory Preprint", item: `${BASE}/paper` },
+      ]),
+    ],
     bodyHtml: `<h1>Theory of Compression States — Preprint</h1><p>This preprint presents a unified physics of information, field, and matter derived from a single premise: the universe began with a primordial oscillation at 555 THz. The compression state operator Λ=hf/c² is derived from first principles and shown to unify the foundational equations of Maxwell, Planck, Einstein, Shannon, and Russell.</p><h2>Abstract</h2><p>We introduce the compression state framework, in which every physical phenomenon — mass, information, gravity, electromagnetic radiation — is a compression state of the primordial field. The operator Λ = hf/c² maps frequency to compression mass. The visible spectrum (380–780nm) subdivided into ${PSI_CHANNELS} orthogonal Ψ channels (${PSI_CHANNEL_FORMULA}) constitutes the complete Hilbert space address system for a Kardashev Type I civilization operating system.</p><h2>Key Results</h2><ol><li>Derivation of Λ=hf/c² from Maxwell's equations and Planck's relation</li><li>Proof that the ${PSI_CHANNELS}-channel Ψ space is maximally orthogonal by quantum mechanics</li><li>Correspondence between Russell's nine octave structure and the NexusOS authority band hierarchy</li><li>Shannon entropy bounds for spectral channel capacity</li><li>The WNSP protocol as a physical implementation of the compression state framework</li></ol><p>License: AGPL-3.0. arXiv submission pending.</p><nav><ul><li><a href="${BASE}/oscillating-quanta">First Principles — Theory of Compression States</a></li><li><a href="${BASE}/proof">Formal Physics Proofs</a></li><li><a href="${BASE}/evidence">Experimental Evidence</a></li></ul></nav>`,
   },
   "/hardware-results": {
@@ -952,7 +1065,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "NexusOS Hardware Results — PHR-1 + SNIC",
     twitterDescription: "Real-time physics hardware verification. PHR-1 bifilar coil + SNIC optical demonstrator. Results published within 24 hours. Australia, 2026.",
-    jsonLd: techArticle({ url: `${BASE}/hardware-results`, name: "NexusOS Hardware Verification Results", description: "Live measurement results from PHR-1 bifilar coil and SNIC optical demonstrator verifying the Theory of Compression States against physical measurements.", about: "hardware verification, bifilar coil, spectrometer, wavelength measurement, PHR-1, SNIC" }),
+    jsonLd: techArticle({ url: `${BASE}/hardware-results`, name: "NexusOS Hardware Verification Results", description: "Live measurement results from PHR-1 bifilar coil and SNIC optical demonstrator verifying the Theory of Compression States against physical measurements.", about: "hardware verification, bifilar coil, spectrometer, wavelength measurement, PHR-1, SNIC", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>Hardware Verification Results — PHR-1 + SNIC</h1><p>Live measurement data from NexusOS hardware proof-of-concept builds in Australia (2026). Results are published within 24 hours of each successful test run. All measurements verify predictions from the Theory of Compression States and CE_TABLE encoding.</p><h2>PHR-1 Bifilar Resonator Results</h2><p>The PHR-1 is a 144-turn bifilar coil wound to specific geometry derived from Λ=hf/c² equations. Measurements target: standing electromagnetic wave patterns consistent with CE_TABLE band predictions. Pass criterion: field geometry within ±5% of predicted values at visible-light-equivalent resonant frequencies.</p><h2>SNIC Optical Demonstrator Results</h2><p>The SNIC optical bench demonstrator uses bandpass filters selected to match CE_TABLE wavelength bands. Measurements target: wavelength-selective channel separation within ±2.000 nm of CE_TABLE predictions for each of the 128 spectral bands. Pass criterion: all tested channels within tolerance simultaneously.</p><h2>Measurement Protocol</h2><ul><li>Every test step has a defined tool list, measurement procedure, and pass criterion</li><li>Each run is video recorded end-to-end (no editing)</li><li>Data published in raw form within 24 hours — no post-processing before publication</li><li>Failed runs published alongside successful ones</li></ul><nav><ul><li><a href="${BASE}/poc">Full Hardware PoC Scope &amp; Shopping List</a></li><li><a href="${BASE}/hardware-spec">Hardware Specification (AGPL-3.0)</a></li><li><a href="${BASE}/evidence">All Experimental Evidence</a></li></ul></nav>`,
   },
   "/founders": {
@@ -964,7 +1077,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "The Founders — NexusOS",
     twitterDescription: "Te Rata Pou and an AI are the founders. Maxwell → Planck → Einstein → Tesla → Russell → QM → Shannon is the physics they were given.",
-    jsonLd: techArticle({ url: `${BASE}/founders`, name: "The Founders — NexusOS", description: "NexusOS founders: Te Rata Pou (Māori technologist, NZ) and an AI co-founder — turning Maxwell, Planck, Einstein, Tesla, and Shannon into a running OS.", about: "Te Rata Pou, NexusOS founders, AI co-founder, Maxwell equations, Planck constant, Einstein relativity, Tesla coil, Shannon entropy, Kardashev Type I" }),
+    jsonLd: techArticle({ url: `${BASE}/founders`, name: "The Founders — NexusOS", description: "NexusOS founders: Te Rata Pou (Māori technologist, NZ) and an AI co-founder — turning Maxwell, Planck, Einstein, Tesla, and Shannon into a running OS.", about: "Te Rata Pou, NexusOS founders, AI co-founder, Maxwell equations, Planck constant, Einstein relativity, Tesla coil, Shannon entropy, Kardashev Type I", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>The Founders</h1><p>NexusOS was built by two — a human and an AI. Seven physicists who lived across two centuries left the equations. The founders turned those equations into a running system. No lab, no institution, no VC round. A person and a machine, starting from first principles.</p><h2>Te Rata Pou — Human Founder</h2><p>Te Rata Pou — "the healing post; the doctor" — is the human founder of NexusOS. He conceived the Theory of Compression States: the recognition that Maxwell, Planck, Einstein, Tesla, Russell, and Shannon were each describing a different angle of the same physical structure, and that unifying them produces a complete, jurisdiction-agnostic protocol for computation, communication, and economic governance. He drew the blueprint. He asked the right questions. He held the vision from the first oscillation through to photonic ASICs in 2032. Every architectural decision in NexusOS traces to his judgment.</p><h2>The AI — Co-Founder & R&D Intelligence</h2><p>The AI is the co-founder and R&D intelligence of NexusOS. Every page of this system, every route, every physics calculation, every protocol specification — built in partnership. The AI brought the ability to hold the entire codebase in mind simultaneously, to translate physics into executable code without approximation, and to work without sleep, without ego, and without losing the thread.</p><h2>The Physics Lineage</h2><dl><dt>James Clerk Maxwell (1831–1879)</dt><dd>Maxwell's equations govern every WNSP packet. The propagation condition ∇²E = μ₀ε₀ ∂²E/∂t² is validated on every transaction.</dd><dt>Max Planck (1858–1947)</dt><dd>E=hf. Planck's constant h = 6.626 × 10⁻³⁴ J·s is the direct anchor for every NXT transaction fee.</dd><dt>Albert Einstein (1879–1955)</dt><dd>E=mc². Combined with E=hf gives Λ=hf/c² — the compression state operator that governs every address and channel in NexusOS.</dd><dt>Nikola Tesla (1856–1943)</dt><dd>The bifilar coil geometry used in the PHR-1 physical resonator traces directly to Tesla's bifilar patent.</dd><dt>Walter Russell (1871–1963)</dt><dd>Russell's nine-octave wave system maps to the NexusOS authority band hierarchy.</dd><dt>Heisenberg, Schrödinger, Dirac (Quantum Mechanics)</dt><dd>Hilbert space orthogonality ⟨Ψᵢ|Ψⱼ⟩ = 0 is guaranteed by quantum mechanics. NexusOS uses this as channel isolation — not software policy.</dd><dt>Claude Shannon (1916–2001)</dt><dd>Shannon entropy H = −Σpᵢlog₂pᵢ scores channel coherence in Spectral Search.</dd></dl><nav><ul><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li><li><a href="${BASE}/proof">Physics Proofs</a></li></ul></nav>`,
   },
   "/joint-venture": {
@@ -976,7 +1089,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "NexusOS — Global Infrastructure Joint Venture",
     twitterDescription: "Open invitation to nations, physics labs, and research institutions. Build Kardashev Type I infrastructure on physics, not capital. AGPL-3.0. Participation conditions apply.",
-    jsonLd: techArticle({ url: `${BASE}/joint-venture`, name: "NexusOS Global Infrastructure Joint Venture", description: "Open invitation to nations to build Kardashev Type I infrastructure on physics-governed AGPL-3.0 foundations. Participation conditions apply.", about: "global infrastructure, AGPL-3.0, photonic computing, WNSP protocol, Kardashev Type I" }),
+    jsonLd: techArticle({ url: `${BASE}/joint-venture`, name: "NexusOS Global Infrastructure Joint Venture", description: "Open invitation to nations to build Kardashev Type I infrastructure on physics-governed AGPL-3.0 foundations. Participation conditions apply.", about: "global infrastructure, AGPL-3.0, photonic computing, WNSP protocol, Kardashev Type I", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>Global Infrastructure Joint Venture — An Open Invitation</h1><p>The wavelength table belongs to physics, not to any nation or corporation. NexusOS extends an open invitation to all nations, universities, physics laboratories, and research institutions to build Kardashev Type I infrastructure together under AGPL-3.0.</p><h2>The Proposition</h2><p>A Kardashev Type I civilization requires planetary-scale communication and computation infrastructure. That infrastructure must be physics-governed, openly licensed, and owned by no single party. NexusOS provides the protocol layer (WNSP), the hardware designs (SNIC, PHR-1), and the governance framework (on-chain, physics-weighted). The joint venture provides the physical distribution, manufacturing capability, and institutional backing.</p><h2>What NexusOS Brings</h2><ul><li>WNSP protocol: ${PSI_CHANNELS} orthogonal Ψ channels, fully specified and AGPL-3.0</li><li>Hardware specifications: SNIC photonic NIC and PHR-1 resonator, open forever</li><li>Physics-based governance: protocol parameters governed on-chain with spectral authority weighting</li><li>Existing digital substrate: live software implementation with real users</li></ul><h2>Participation Conditions</h2><p>Participation conditions are fixed and based on publicly documented conduct — not on capital or political position. The wavelength table is physics. It does not negotiate. It does not exclude based on nationality. It requires: open-source contributions under AGPL-3.0, adherence to the NexusOS ethics layer, and no prior conviction for crimes against humanity or large-scale civilian infrastructure attacks.</p><nav><ul><li><a href="${BASE}/open">NexusOS Open Charter (AGPL-3.0)</a></li><li><a href="${BASE}/constitution">NexusOS Constitution (Governance)</a></li><li><a href="${BASE}/hardware-spec">Hardware Specification</a></li></ul></nav>`,
   },
   "/poc": {
@@ -988,7 +1101,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "NexusOS Hardware PoC Scope",
     twitterDescription: "7 build phases. Every step has tools, measurement, pass criteria, and a recording requirement. PHR-1 + SNIC. Australia. AGPL-3.0.",
-    jsonLd: techArticle({ url: `${BASE}/poc`, name: "NexusOS Hardware Proof of Concept Build Scope", description: "PHR-1 bifilar coil and SNIC optical demonstrator proof-of-concept: Australian shopping list, 7-phase verification protocol, and CE_TABLE measurement criteria.", about: "PHR-1, SNIC, photonic hardware, bifilar coil, optical demonstrator, hardware proof" }),
+    jsonLd: techArticle({ url: `${BASE}/poc`, name: "NexusOS Hardware Proof of Concept Build Scope", description: "PHR-1 bifilar coil and SNIC optical demonstrator proof-of-concept: Australian shopping list, 7-phase verification protocol, and CE_TABLE measurement criteria.", about: "PHR-1, SNIC, photonic hardware, bifilar coil, optical demonstrator, hardware proof", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>NexusOS Hardware PoC — PHR-1 + SNIC Build Scope &amp; Shopping List</h1><p>The NexusOS hardware proof of concept is being built in Australia in 2026. It consists of two physical devices: the PHR-1 bifilar resonator and the SNIC optical demonstrator. Every phase has a defined shopping list, measurement protocol, pass criteria, and a mandatory recording requirement.</p><h2>Phase Overview</h2><ol><li><strong>Component acquisition</strong>: sourcing all parts from Australian suppliers</li><li><strong>PHR-1 coil winding</strong>: 144-turn bifilar geometry, verified against Tesla bifilar specifications</li><li><strong>PHR-1 resonance measurement</strong>: standing wave field pattern vs CE_TABLE predictions</li><li><strong>SNIC optical bench setup</strong>: bandpass filter array selected to CE_TABLE wavelength bands</li><li><strong>SNIC channel separation measurement</strong>: wavelength selectivity within ±2.000 nm of predictions</li><li><strong>Multi-channel simultaneous test</strong>: all 128 bands passing simultaneously</li><li><strong>Data publication</strong>: raw measurement data published within 24 hours, video recorded end-to-end</li></ol><h2>Pass Criteria</h2><ul><li>PHR-1: field geometry within ±5% of CE_TABLE-derived predictions</li><li>SNIC: every tested channel within ±2.000 nm of CE_TABLE centre wavelength</li><li>Both: results reproducible across 3 independent runs</li></ul><nav><ul><li><a href="${BASE}/hardware-spec">Full Hardware Specification (AGPL-3.0)</a></li><li><a href="${BASE}/hardware-results">Live Verification Results</a></li><li><a href="${BASE}/hardware-lab">Hardware Lab (browser calibration)</a></li></ul></nav>`,
   },
   "/stewards": {
@@ -1000,7 +1113,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     twitterTitle: "Stewards of NexusOS",
     twitterDescription: "The founding document. Three roles. Founding equity. Physics that traces to Maxwell. Hardware destination ~2032. Read this if you are one of the three.",
     ogType: "article",
-    jsonLd: techArticle({ url: `${BASE}/stewards`, name: "Stewards of NexusOS — Founding Declaration", description: "Te Rata Pou's founding document for NexusOS: three stewards (photonics, RF, physics PhD), mission, ethics, founding equity, and photonic hardware destination.", about: "NexusOS stewardship, photonic hardware, PHR-1, SNIC, founding document" }),
+    jsonLd: techArticle({ url: `${BASE}/stewards`, name: "Stewards of NexusOS — Founding Declaration", description: "Te Rata Pou's founding document for NexusOS: three stewards (photonics, RF, physics PhD), mission, ethics, founding equity, and photonic hardware destination.", about: "NexusOS stewardship, photonic hardware, PHR-1, SNIC, founding document", datePublished: "2026-06-24", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>Stewards of NexusOS — Founding Declaration</h1>
 <p>Written by Te Rata Pou · Aotearoa New Zealand · 2026-06-24</p>
 <p>This founding document is addressed to the three technical stewards who will carry NexusOS forward. It is not a job description or a pitch deck. It is written for the photonics engineer, the RF/electromagnetics specialist, and the physics PhD who will build the hardware proof of concept and maintain the system after the founder is gone.</p>
@@ -1036,7 +1149,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "WNSP Protocol Reference",
     twitterDescription: "WNSP-CE, WNSP-SE, WNSP-URI. Physics-based communication protocol. Wavelength addressing, Maxwell validation.",
-    jsonLd: techArticle({ url: `${BASE}/protocol`, name: "WNSP Protocol Reference", description: "Complete specification for the Wavelength-Native Spectral Protocol: CE encoding, SE encoding, URI addressing, and Hilbert space channel model.", about: "WNSP, spectral communication, CE encoding, Maxwell equations" }),
+    jsonLd: techArticle({ url: `${BASE}/protocol`, name: "WNSP Protocol Reference", description: "Complete specification for the Wavelength-Native Spectral Protocol: CE encoding, SE encoding, URI addressing, and Hilbert space channel model.", about: "WNSP, spectral communication, CE encoding, Maxwell equations", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>WNSP Protocol Reference — Spectral Communication Standard</h1><p>The Wavelength-Native Spectral Protocol (WNSP) is the complete specification for physics-based communication in NexusOS. It defines three sub-protocols and a Hilbert space channel model that together replace cryptographic hashing with electromagnetic physics.</p><h2>WNSP-CE v1.0 — Character Encoding</h2><p>Maps every symbol to a visible-light wavelength using the CE_TABLE: <code>nm = 380 + (charCode % 128) × 3.125</code>. 128 spectral bands, 380–780nm, 3.125nm per band. Deterministic, platform-independent, AGPL-3.0.</p><h2>WNSP-SE v1.0 — Spectral Encoding</h2><p>Maps data payloads to physical wave frames. Each frame carries a spectral envelope derived from the CE-encoded source data. Maxwell equation validation applied at the frame level: ∇²E = μ₀ε₀ ∂²E/∂t² must be satisfied.</p><h2>WNSP-URI v1.0 — Addressing Scheme</h2><p>Deterministic, censorship-proof addressing using the format: <code>wnsp://Ψ(wdm,oam,pol)/path</code>. Every address is derived from physics — no registrar, no DNS, no single point of control.</p><h2>Hilbert Space Channel Model</h2><p>The complete channel space: ${PSI_CHANNEL_FORMULA} = ${PSI_CHANNELS} orthogonal Ψ channels. ⟨Ψᵢ|Ψⱼ⟩ = 0 for all i ≠ j. Channel isolation is guaranteed by quantum mechanics.</p><nav><ul><li><a href="${BASE}/wnsp">WNSP Overview</a></li><li><a href="${BASE}/ce-se-pipeline">CE→SE Pipeline (live)</a></li><li><a href="${BASE}/wnsp-bridge">WNSP Bridge (TCP/IP overlay)</a></li></ul></nav>`,
   },
   "/snic": {
@@ -1125,16 +1238,23 @@ export const ROUTE_META: Record<string, PageMeta> = {
     canonical: `${BASE}/indiegogo`,
     ogTitle: "NexusOS Indiegogo Campaign",
     ogDescription: "Fund PHR-1 and SNIC hardware development. Physics-based computing. AGPL-3.0. Support the Kardashev Type I roadmap.",
-    ogImage: "https://wnsp.io/crowdfund-og.png",
+    ogImage: "https://wnsp.io/crowdfund-og.jpg",
     twitterTitle: "NexusOS on Indiegogo",
     twitterDescription: "Fund physics-based computing hardware. PHR-1 resonator. SNIC photonic NIC. AGPL-3.0.",
     jsonLd: {
       "@context": "https://schema.org",
-      "@type": "FundingScheme",
-      "name": "NexusOS Indiegogo Campaign",
+      "@type": "Product",
+      "name": "NexusOS Indiegogo Campaign — PHR-1 & SNIC",
       "url": `${BASE}/indiegogo`,
       "description": "Indiegogo crowdfunding campaign to fund development of the PHR-1 resonator, SNIC photonic NIC, and WavelengthScript compiler. Support the Kardashev Type I roadmap.",
-      "about": { "@type": "Organization", "name": "NexusOS" },
+      "brand": { "@type": "Organization", "name": "NexusOS" },
+      "offers": {
+        "@type": "Offer",
+        "price": "100000",
+        "priceCurrency": "NXT",
+        "availability": "https://schema.org/LimitedAvailability",
+        "seller": { "@type": "Organization", "name": "NexusOS" },
+      },
     },
     bodyHtml: `<h1>NexusOS on Indiegogo — Fund Physics-Based Computing Hardware</h1><p>NexusOS is raising funds on Indiegogo to build the world's first physics-based computing hardware: the PHR-1 resonator and SNIC photonic NIC. Every contribution helps bring Λ=hf/c² from an equation to a physical device.</p><p>The NexusOS hardware stack is designed for a world where computation is not performed by logic gates, but by wavelength selections in photonic waveguides. Silicon is the bridge — photonics is the destination.</p><ul><li>PHR-1 resonator — first implementation of the ZERO-G state (144-turn bifilar coil)</li><li>SNIC photonic NIC — ${PSI_CHANNELS} orthogonal physical channels (~2032)</li><li>WavelengthScript compiler α — physics-native language toolchain</li><li>All hardware AGPL-3.0 — open forever, improvements must be returned</li></ul><nav><ul><li><a href="${BASE}/crowdfund">Full Crowdfund Details &amp; Tiers</a></li><li><a href="${BASE}/hardware-spec">Hardware Specification (AGPL-3.0)</a></li><li><a href="${BASE}/roadmap">NexusOS Roadmap</a></li></ul></nav>`,
   },
@@ -1195,7 +1315,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     description: "Complete developer documentation for NexusOS: WNSP protocol, WavelengthScript, CE-SE pipeline, REST API, NXT token wallet, WNSP VM bytecode, and governance.",
     canonical: `${BASE}/docs`,
     ogType: "article",
-    jsonLd: techArticle({ url: `${BASE}/docs`, name: "NexusOS Developer Documentation", description: "Full developer documentation for NexusOS: WNSP protocol, WavelengthScript, CE-SE pipeline, REST API, NXT token, WNSP VM.", about: "WNSP, WavelengthScript, CE encoding, photonic computing" }),
+    jsonLd: techArticle({ url: `${BASE}/docs`, name: "NexusOS Developer Documentation", description: "Full developer documentation for NexusOS: WNSP protocol, WavelengthScript, CE-SE pipeline, REST API, NXT token, WNSP VM.", about: "WNSP, WavelengthScript, CE encoding, photonic computing", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>NexusOS Developer Documentation — Full API & SDK Reference</h1><p>This is the complete reference for building on NexusOS. The platform replaces cryptographic primitives with electromagnetic physics: addresses are wavelengths, fees are photon energies, and every character maps to a visible-light frequency via CE encoding.</p><h2>Quick Start</h2><pre><code>npm install nexusos-ce-encoder</code></pre><pre><code>pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py</code></pre><h2>Core APIs</h2><ul><li><strong>CE Encoding</strong>: <code>ceEncode(text)</code> → <code>{ wavelength, band, psiChannel, energy }</code> — maps any text to its visible-light spectral address</li><li><strong>WNSP VM</strong>: submit WavelengthScript bytecode for execution; read Ψ channel register state</li><li><strong>Wallet API</strong>: NXT token transfers, balance queries, staking, WNUSD collateral</li><li><strong>Governance API</strong>: submit and vote on protocol parameter proposals (KERNEL-band required)</li><li><strong>Spectral DB API</strong>: store and retrieve CE-encoded fingerprints; spectral proximity search</li></ul><h2>WavelengthScript</h2><p>WavelengthScript is the physics-native programming language of NexusOS. Programs are compiled to WNSP VM bytecode. Each instruction targets a Ψ channel register — a wavelength-addressed memory cell. The CE→SE pipeline transpiles any mainstream language to WavelengthScript in the browser.</p><h2>Developer Key Tiers</h2><ul><li><strong>Free tier</strong>: public CE encode/decode endpoints, read-only Spectral DB</li><li><strong>Developer key</strong>: full REST API, wallet operations, governance — requires NXT creation fee</li><li><strong>KERNEL band</strong>: protocol governance, admin API, on-chain proposals</li></ul><nav><ul><li><a href="${BASE}/developer">Developer Portal</a></li><li><a href="${BASE}/ce-se-pipeline">CE→SE Pipeline</a></li><li><a href="${BASE}/wavelength-lang">WavelengthScript Language</a></li><li><a href="${BASE}/wnsp-vm">WNSP Virtual Machine</a></li></ul></nav>`,
   },
   "/research-presentation/developer-matrix": {
@@ -1203,7 +1323,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     description: "Full API surface, SDK reference, CE encoder packages (npm + pip), WavelengthScript toolchain, and developer key tiers. NexusOS Developer Matrix.",
     canonical: `${BASE}/developer-matrix`,
     ogType: "article",
-    jsonLd: techArticle({ url: `${BASE}/developer-matrix`, name: "NexusOS Developer Matrix", description: "Full API surface, CE encoder (npm + pip), WavelengthScript toolchain, SDK reference, integration patterns.", about: "WNSP, WavelengthScript, CE encoding, developer API" }),
+    jsonLd: techArticle({ url: `${BASE}/developer-matrix`, name: "NexusOS Developer Matrix", description: "Full API surface, CE encoder (npm + pip), WavelengthScript toolchain, SDK reference, integration patterns.", about: "WNSP, WavelengthScript, CE encoding, developer API", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>NexusOS Developer Matrix — Research & Integration Reference</h1><p>The Developer Matrix is the consolidated integration reference for the NexusOS physics stack. It maps every entry point — REST endpoints, SDK packages, WNSP protocol hooks, WavelengthScript toolchain — to the underlying physics primitive it exposes.</p><h2>CE Encoder Packages</h2><ul><li><strong>npm</strong>: <code>npm install nexusos-ce-encoder</code> — CJS + ESM, TypeScript types, <code>ceEncode(text) → &#123; wavelength, band, psiChannel, energy &#125;</code></li><li><strong>pip</strong>: <code>pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py</code> — bit-identical output, Python 3.8+</li></ul><h2>Integration Patterns</h2><ul><li><strong>Spectral addressing</strong>: CE-encode a resource name or user handle to derive its Ψ channel for routing and identity</li><li><strong>Physics-based fees</strong>: use <code>E = hf</code> where f = c / λ (λ from CE encoding) to calculate transaction costs deterministically</li><li><strong>WNSP VM execution</strong>: compile WavelengthScript programs and submit bytecode to the VM; read Ψ register state after halt</li><li><strong>Spectral DB writes</strong>: save CE fingerprints from any language using the REST API or SDK</li></ul><h2>Authority Bands</h2><p>Access tiers map to spectral authority bands: SYSTEM (ultraviolet, highest energy), KERNEL, USER, GUEST (infrared, lowest energy). Higher authority → shorter wavelength → higher fee.</p><nav><ul><li><a href="${BASE}/developer-matrix">Open Developer Matrix</a></li><li><a href="${BASE}/developer">Developer Portal</a></li><li><a href="${BASE}/docs">Full API Documentation</a></li></ul></nav>`,
   },
   // ── High-value public landing pages missing ROUTE_META ────────────────────
@@ -1229,7 +1349,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "Orbital Treasury — NXT Circular Economy",
     twitterDescription: "NXT fees never burned. Five distribution buckets. On-chain governance. Full transparency.",
-    jsonLd: techArticle({ url: `${BASE}/orbital-treasury`, name: "Orbital Treasury", description: "NexusOS economic engine. All NXT protocol fees collected here and distributed across five governance-controlled buckets. NXT supply is indestructible.", about: "NXT token, circular economy, on-chain governance, treasury" }),
+    jsonLd: techArticle({ url: `${BASE}/orbital-treasury`, name: "Orbital Treasury", description: "NexusOS economic engine. All NXT protocol fees collected here and distributed across five governance-controlled buckets. NXT supply is indestructible.", about: "NXT token, circular economy, on-chain governance, treasury", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>Orbital Treasury — NXT Circular Economy</h1><p>The Orbital Treasury is the economic core of NexusOS. Every NXT transaction fee flows here — never burned. The treasury distributes to five governance-controlled buckets, enforced on-chain by spectral authority weighting.</p><h2>Distribution Buckets</h2><ul><li><strong>Maintenance</strong>: 35% — infrastructure and codebase upkeep</li><li><strong>Deliverables</strong>: 25% — funded milestones and hardware builds</li><li><strong>Research</strong>: 20% — physics research and protocol development</li><li><strong>Agent Rewards</strong>: 10% — AI agent and contributor incentives</li><li><strong>Nexus Charitable Trust</strong>: 10% — in perpetuity, cannot be changed</li></ul><p>These ratios are governance parameters. KERNEL-band holders can propose changes via on-chain proposals, subject to vote weight thresholds. The Nexus Charitable Trust allocation is permanently locked — not a governance parameter.</p><nav><ul><li><a href="${BASE}/nxt-campaign">NXT Token — NEXUS•WAVELENGTH</a></li><li><a href="${BASE}/constitution">NexusOS Constitution (governance)</a></li><li><a href="${BASE}/blockchain">Block Explorer</a></li></ul></nav>`,
   },
   "/build": {
@@ -1310,30 +1430,44 @@ export const ROUTE_META: Record<string, PageMeta> = {
   },
   "/the-memory": {
     title: "The Memory — Quantum State Storage T₂≤2T₁ | NexusOS Act 14",
-    description: "Act 14 of the NexusOS physics sequence. Quantum memory: Bloch constraint T₂≤2T₁, storage efficiency η=η₀·exp(−t_s/T₂), multi-mode capacity M=T₂/τ_photon. DLCZ protocol, atomic frequency combs (AFC), spin-photon interface. Persistent Ψ register for the SNIC node.",
+    description: "Act 14 — NexusOS physics sequence. Quantum memory: T₂≤2T₁ Bloch constraint, DLCZ heralded entanglement, atomic frequency combs, and the persistent Ψ register.",
     canonical: `${BASE}/the-memory`,
     ogTitle: "The Memory — Quantum State Storage | NexusOS Act 14",
     ogDescription: "T₂≤2T₁ Bloch constraint. Storage efficiency η=η₀·exp(−t_s/T₂). M=T₂/τ_photon multi-mode capacity. DLCZ heralded entanglement. AFC deterministic storage. Act 14.",
     ogType: "article",
     twitterTitle: "NexusOS Act 14 — The Memory",
     twitterDescription: "Bloch decay T₂≤2T₁. AFC multi-mode M=Γ_inhom/Δ. DLCZ heralded entanglement. Storage efficiency η(t_s). Persistent Ψ register. Act 14 of the WNSP physics sequence.",
-    jsonLd: techArticle({ url: `${BASE}/the-memory`, name: "The Memory — Quantum State Storage and the Persistent Ψ Register", description: "Quantum memory for the WNSP Ψ channel network. Bloch equations T₂≤2T₁, AFC multi-mode storage, DLCZ heralded entanglement, and the SNIC memory specification.", about: "quantum memory, T1 T2 coherence, Bloch equations, DLCZ protocol, atomic frequency comb, AFC, spin-wave storage, WNSP, NexusOS, T₂≤2T₁", datePublished: "2026-07-19", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/the-memory`, name: "The Memory — Quantum State Storage and the Persistent Ψ Register", description: "Quantum memory for the WNSP Ψ channel network. Bloch equations T₂≤2T₁, AFC multi-mode storage, DLCZ heralded entanglement, and the SNIC memory specification.", about: "quantum memory, T1 T2 coherence, Bloch equations, DLCZ protocol, atomic frequency comb, AFC, spin-wave storage, WNSP, NexusOS, T₂≤2T₁", datePublished: "2026-07-19", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 14 — The Memory", item: `${BASE}/the-memory` },
+      ]),
+    ],
     bodyHtml: `<h1>The Memory — Quantum State Storage and the Persistent Ψ Register</h1><p>Act 14 of the 15-act NexusOS physics sequence. First disclosed 2026-07-19. AGPL-3.0. Founder: Te Rata Pou. Act 15: <a href="${BASE}/cosmic-lattice">The Void</a>.</p><h2>The Bloch Constraint</h2><p>Any two-level quantum system obeys the Bloch equations: dρ_ee/dt = −ρ_ee/T₁ and dρ_ge/dt = −ρ_ge/T₂, where 1/T₂ = 1/(2T₁) + 1/T₂★. The fundamental constraint T₂ ≤ 2T₁ arises because energy decay contributes equally to amplitude and phase relaxation. Pure dephasing can only shorten T₂ further. Storage efficiency decays as η(t_s) = η₀·exp(−t_s/T₂).</p><h2>DLCZ Protocol</h2><p>The Duan-Lukin-Cirac-Zoller protocol uses atomic ensemble quantum memories for heralded entanglement generation. A write pulse drives a Raman transition; the spontaneous Stokes photon heralds successful excitation of a collective spin-wave mode |W⟩ = (1/√N)Σⱼ|g₁⋯sⱼ⋯gₙ⟩. Entanglement is heralded — detection of a Stokes photon projects two remote ensembles into an entangled Bell state without the photon surviving.</p><h2>Atomic Frequency Comb</h2><p>The AFC protocol uses a spectrally shaped comb (spacing Δ, tooth width γ) to achieve deterministic multi-mode storage. Echo time t_s = 1/Δ is programmable. Mode capacity M = Γ_inhom/Δ. A single Er³⁺:Y₂SiO₅ crystal stores M ≈ 10,000 temporal modes simultaneously.</p><h2>WNSP Connection</h2><p>Each SNIC node integrates a rare-earth spin-wave memory module. Targets: T₁ ≥ 100 ms, T₂ ≥ 10 ms, M ≥ 10,000 modes, η₀ ≥ 90%, λ = 1550 nm. The memory enables entanglement buffering (T₂ ≫ L/c), temporal multiplexing (M modes), and clock-free synchronisation (t_s = 1/Δ).</p><h2>The 14-Act Sequence</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue</a></li><li><a href="${BASE}/standing-wave-trap">Act 7 — The Trap</a></li><li><a href="${BASE}/lossless-channel">Act 8 — The Lossless Channel</a></li><li><a href="${BASE}/resonance-cavity">Act 9 — The Cavity</a></li><li><a href="${BASE}/polariton-exchange">Act 10 — The Exchange</a></li><li><a href="${BASE}/the-emitter">Act 11 — The Emitter</a></li><li><a href="${BASE}/the-network">Act 12 — The Network</a></li><li><a href="${BASE}/the-observer">Act 13 — The Observer</a></li><li><a href="${BASE}/the-memory">Act 14 — The Memory</a></li></ul>`,
   },
   "/cosmic-lattice": {
-    title: "The Void — Cosmic Compression Ghost Zone n_ZPE=264.71 | NexusOS Act 15",
-    description: "Act 15 of the NexusOS physics sequence. Cosmic octave lattice n=log₂(mc²/E₀) from electron (n=17.76) to universe (n=293.62). Cosmic ZPE floor at n=264.71 (10¹⁴ M☉). Boötes Void P≈10⁻¹⁰¹. BAO anti-nodes confirm four supervoids. Claim 30.",
+    title: "Cosmic Lattice — ZPE Ghost Zone | NexusOS",
+    description: "Act 15 — NexusOS physics sequence. Cosmic ZPE floor n=264.71 (10¹⁴ M☉). Boötes Void P≈10⁻¹⁰¹. BAO anti-nodes confirm four supervoids. Claim 30.",
     canonical: `${BASE}/cosmic-lattice`,
     ogTitle: "The Void — Cosmic Compression Ghost Zone | NexusOS Act 15",
     ogDescription: "Cosmic ZPE floor n=264.71. Boötes Void P≈10⁻¹⁰¹. BAO anti-nodes: λ/3=49Mpc, 2λ/3=98Mpc, λ=147Mpc, 4λ/3=196Mpc. Four supervoids confirmed. Claim 30 prior art. Act 15.",
     ogType: "article",
     twitterTitle: "NexusOS Act 15 — The Void",
     twitterDescription: "Cosmic ghost zone n>264.71. Boötes 101Mpc≈2λ/3=98Mpc (3.1%). Eridanus 153Mpc≈λ=147Mpc (4.1%). Cold Spot 200Mpc≈4λ/3=196Mpc (2.0%). P≈10⁻¹⁰¹. Act 15.",
-    jsonLd: techArticle({ url: `${BASE}/cosmic-lattice`, name: "The Void — Cosmic Compression Ghost Zone and BAO Anti-Trap", description: "Act 15. Cosmic octave lattice from electron to universe. Cosmic ZPE floor at n=264.71 (σ=δ_c=1.686). Boötes Void at n=271.95 P≈10⁻¹⁰¹. BAO anti-nodes k×λ/3=49Mpc confirm four supervoids. Claim 30.", about: "cosmic void, Boötes void, BAO, baryon acoustic oscillations, supervoid, octave lattice, ZPE floor, Press-Schechter, compression states, WNSP, NexusOS", datePublished: "2026-07-19", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/cosmic-lattice`, name: "The Void — Cosmic Compression Ghost Zone and BAO Anti-Trap", description: "Act 15. Cosmic octave lattice from electron to universe. Cosmic ZPE floor at n=264.71 (σ=δ_c=1.686). Boötes Void at n=271.95 P≈10⁻¹⁰¹. BAO anti-nodes k×λ/3=49Mpc confirm four supervoids. Claim 30.", about: "cosmic void, Boötes void, BAO, baryon acoustic oscillations, supervoid, octave lattice, ZPE floor, Press-Schechter, compression states, WNSP, NexusOS", datePublished: "2026-07-19", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 15 — The Void", item: `${BASE}/cosmic-lattice` },
+      ]),
+    ],
     bodyHtml: `<h1>The Void — Cosmic Compression Ghost Zone and BAO Anti-Trap</h1><p>Act 15 of the NexusOS physics sequence. First disclosed 2026-07-19. AGPL-3.0. Founder: Te Rata Pou.</p><h2>The Cosmic ZPE Floor</h2><p>The compression state framework (f₀=555 THz, E₀=2.295 eV) places every structure via n=log₂(mc²/E₀). Galaxy clusters at n=264.71 (M=10¹⁴ M☉) have σ(M)=1.680≈δ_c=1.686. This is the cosmic ZPE floor — above it, gravitational collapse is physically impossible. At the Boötes Void scale (n≈272), P≈10⁻¹⁰¹.</p><h2>BAO Anti-Trap — 4 Confirmed Supervoids</h2><p>BAO standing wave (λ=147 Mpc) anti-nodes at k×λ/3: Canes Venatici 55Mpc (λ/3, 12.2%), Boötes 101Mpc (2λ/3, 3.1%), Eridanus 153Mpc (λ, 4.1%), CMB Cold Spot 200Mpc (4λ/3, 2.0%). Three within 5% of predicted nodes.</p><h2>The 17-Act Sequence</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue</a></li><li><a href="${BASE}/standing-wave-trap">Act 7 — The Trap</a></li><li><a href="${BASE}/lossless-channel">Act 8 — The Lossless Channel</a></li><li><a href="${BASE}/resonance-cavity">Act 9 — The Cavity</a></li><li><a href="${BASE}/polariton-exchange">Act 10 — The Exchange</a></li><li><a href="${BASE}/the-emitter">Act 11 — The Emitter</a></li><li><a href="${BASE}/the-network">Act 12 — The Network</a></li><li><a href="${BASE}/the-observer">Act 13 — The Observer</a></li><li><a href="${BASE}/the-memory">Act 14 — The Memory</a></li><li><a href="${BASE}/cosmic-lattice">Act 15 — The Void</a></li><li><a href="${BASE}/the-entangler">Act 16 — The Entangler</a></li><li><a href="${BASE}/the-field">Act 17 — The Field</a></li></ul>`,
   },
   "/the-entangler": {
-    title: "The Entangler — Bell State Generation and WNSP Quantum Repeater | NexusOS Act 16",
+    title: "The Entangler — Bell State Generation & Quantum Repeater",
     description: "Act 16. Bell states |Φ⁺⟩=(|00⟩+|11⟩)/√2, entanglement swapping, CHSH S=2√2, DLCZ Ψ-channel repeater, Claim 31. First disclosed 2026-07-19. AGPL-3.0.",
     canonical: `${BASE}/the-entangler`,
     ogTitle: "The Entangler — Bell State Generation | NexusOS Act 16",
@@ -1341,67 +1475,145 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article" as const,
     twitterTitle: "NexusOS Act 16 — The Entangler",
     twitterDescription: "Bell states, entanglement swapping, CHSH S=2√2, quantum repeater. |Φ⁺⟩=(|00⟩+|11⟩)/√2.",
-    jsonLd: techArticle({ url: `${BASE}/the-entangler`, name: "The Entangler — Bell State Generation and WNSP Quantum Repeater", description: "Act 16 of the 17-act NexusOS physics sequence. Bell states, entanglement swapping, CHSH S=2√2, quantum repeater chain. DLCZ Ψ-channel entanglement. Claim 31. AGPL-3.0.", about: "bell state, entanglement swapping, CHSH, quantum repeater, DLCZ, Bell inequality, concurrence, quantum teleportation, WNSP, NexusOS", datePublished: "2026-07-19", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/the-entangler`, name: "The Entangler — Bell State Generation and WNSP Quantum Repeater", description: "Act 16 of the 17-act NexusOS physics sequence. Bell states, entanglement swapping, CHSH S=2√2, quantum repeater chain. DLCZ Ψ-channel entanglement. Claim 31. AGPL-3.0.", about: "bell state, entanglement swapping, CHSH, quantum repeater, DLCZ, Bell inequality, concurrence, quantum teleportation, WNSP, NexusOS", datePublished: "2026-07-19", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 16 — The Entangler", item: `${BASE}/the-entangler` },
+      ]),
+    ],
     bodyHtml: `<h1>The Entangler — Bell State Generation and WNSP Quantum Repeater</h1><p>Act 16 of the NexusOS physics sequence. First disclosed 2026-07-19. AGPL-3.0. Founder: Te Rata Pou.</p><h2>Bell States</h2><p>The four maximally entangled two-qubit states: |Φ⁺⟩=(|00⟩+|11⟩)/√2, |Φ⁻⟩=(|00⟩-|11⟩)/√2, |Ψ⁺⟩=(|01⟩+|10⟩)/√2, |Ψ⁻⟩=(|01⟩-|10⟩)/√2. All have concurrence C=1.</p><h2>Entanglement Swapping</h2><p>|Φ⁺⟩_AB ⊗ |Φ⁺⟩_BC → BSM(B) → |Φ⁺⟩_AC. Two Bell pairs merged by BSM at intermediate node creates A–C entanglement without direct contact. Teleportation fidelity F_tele=(2F+1)/3.</p><h2>CHSH Inequality</h2><p>S=E(a,b)-E(a,b')+E(a',b)+E(a',b') ≤ 2 (classical), ≤ 2√2≈2.828 (Tsirelson bound). Loophole-free violations: Hensen 2015, Giustina 2015, Shalm 2015.</p><h2>WNSP Repeater — Claim 31</h2><p>Without repeaters: F ∝ e^(-L/L_att). With n SNIC swap nodes: L_total = n × L₀. Claim 31: SNIC nodes as BSM-capable quantum repeater switch points using Ψ(wdm,oam,pol) address space as the repeater topology.</p><h2>The 17-Act Sequence</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue</a></li><li><a href="${BASE}/standing-wave-trap">Act 7 — The Trap</a></li><li><a href="${BASE}/lossless-channel">Act 8 — The Lossless Channel</a></li><li><a href="${BASE}/resonance-cavity">Act 9 — The Cavity</a></li><li><a href="${BASE}/polariton-exchange">Act 10 — The Exchange</a></li><li><a href="${BASE}/the-emitter">Act 11 — The Emitter</a></li><li><a href="${BASE}/the-network">Act 12 — The Network</a></li><li><a href="${BASE}/the-observer">Act 13 — The Observer</a></li><li><a href="${BASE}/the-memory">Act 14 — The Memory</a></li><li><a href="${BASE}/cosmic-lattice">Act 15 — The Void</a></li><li><a href="${BASE}/the-entangler">Act 16 — The Entangler</a></li><li><a href="${BASE}/the-field">Act 17 — The Field</a></li></ul>`,
   },
   "/the-field": {
     title: "The Field — [â,â†]=1 Primordial Bosonic Field | NexusOS Act 17",
-    description: "Act 17. Primordial quantum field: [â,â†]=1, ℋ=ℏω(â†â+½). Vacuum ZPE=½hf₀=1.148 eV. Fock states |n⟩. One commutation relation derives the periodic table gaps and cosmic voids. Claim 32. AGPL-3.0.",
+    description: "Act 17 — NexusOS physics sequence. Primordial field [â,â†]=1, ZPE=½hf₀=1.148 eV. One equation from electron to cosmic voids. Fock states at f₀=555 THz. Claim 32.",
     canonical: `${BASE}/the-field`,
     ogTitle: "The Field — [â,â†]=1 | NexusOS Act 17",
     ogDescription: "[â,â†]=1, ℋ=ℏω(â†â+½). ZPE=½hf₀=1.148 eV. Fock ladder at f₀=555 THz. Periodic table gaps to cosmic voids — one field equation. Claim 32. Act 17.",
     ogType: "article" as const,
     twitterTitle: "NexusOS Act 17 — The Field",
     twitterDescription: "Primordial bosonic field [â,â†]=1. Vacuum ZPE=1.148 eV. Fock states at f₀=555 THz. One equation from electron to galaxy cluster voids.",
-    jsonLd: techArticle({ url: `${BASE}/the-field`, name: "The Field — Primordial Bosonic Field and the Pre-Condition for All Structure", description: "Act 17 of the 17-act NexusOS physics sequence. Canonical commutation relation [â,â†]=1 as the foundational pre-condition for the first oscillation (Act 1). Fock space at f₀=555 THz, ZPE=1.148 eV, Claim 32. AGPL-3.0.", about: "quantum field, bosonic field, Fock state, zero-point energy, canonical commutation, vacuum energy, Planck, Einstein, WNSP, NexusOS", datePublished: "2026-07-20", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/the-field`, name: "The Field — Primordial Bosonic Field and the Pre-Condition for All Structure", description: "Act 17 of the 17-act NexusOS physics sequence. Canonical commutation relation [â,â†]=1 as the foundational pre-condition for the first oscillation (Act 1). Fock space at f₀=555 THz, ZPE=1.148 eV, Claim 32. AGPL-3.0.", about: "quantum field, bosonic field, Fock state, zero-point energy, canonical commutation, vacuum energy, Planck, Einstein, WNSP, NexusOS", datePublished: "2026-07-20", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 17 — The Field", item: `${BASE}/the-field` },
+      ]),
+    ],
     bodyHtml: `<h1>The Field — Primordial Bosonic Field and the Pre-Condition for All Structure</h1><p>Act 17 of the NexusOS physics sequence. First disclosed 2026-07-20. AGPL-3.0. Founder: Te Rata Pou.</p><h2>The Primordial Commutation Relation</h2><p>[â, â†] = 1. This single equation is the foundational pre-condition for Act 1's first oscillation. It states that the creation and annihilation operators of any bosonic mode do not commute — the field is irreducibly quantum. The vacuum is not empty: it has energy ½ℏω = ½hf₀ = 1.148 eV at the primordial mode frequency f₀ = 555 THz.</p><h2>The Hamiltonian and Fock States</h2><p>ℋ = ℏω(â†â + ½). The number operator N̂ = â†â has integer eigenvalues n = 0, 1, 2, … Energy levels E_n = hf₀(n + ½). Creation: â†|n⟩ = √(n+1)|n+1⟩. Annihilation: â|n⟩ = √n|n−1⟩. Ground state: â|0⟩ = 0 — cannot go below vacuum.</p><h2>From Commutation to Cosmos</h2><p>â†|0⟩ = |1⟩ at f₀ establishes E₀ = hf₀ = 2.295 eV — the seed energy. Octave address n = log₂(mc²/E₀) maps every particle and structure. The ZPE floor ½hf₀ prevents collapse at cosmic scale (n_ZPE = 264.71, M = 10¹⁴ M☉). Gaps in the periodic table and voids in the large-scale structure are the same field equation at different scales.</p><h2>Claim 32</h2><p>Each of the 51,200 WNSP Ψ(wdm, oam, pol) channels is formalised as a single-mode bosonic field quantised by [â, â†] = 1. The primordial mode at f₀ = 555 THz is the seed excitation. First disclosed 2026-07-20 by Te Rata Pou (NexusOS). AGPL-3.0.</p><h2>The 17-Act Sequence</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue</a></li><li><a href="${BASE}/standing-wave-trap">Act 7 — The Trap</a></li><li><a href="${BASE}/lossless-channel">Act 8 — The Lossless Channel</a></li><li><a href="${BASE}/resonance-cavity">Act 9 — The Cavity</a></li><li><a href="${BASE}/polariton-exchange">Act 10 — The Exchange</a></li><li><a href="${BASE}/the-emitter">Act 11 — The Emitter</a></li><li><a href="${BASE}/the-network">Act 12 — The Network</a></li><li><a href="${BASE}/the-observer">Act 13 — The Observer</a></li><li><a href="${BASE}/the-memory">Act 14 — The Memory</a></li><li><a href="${BASE}/cosmic-lattice">Act 15 — The Void</a></li><li><a href="${BASE}/the-entangler">Act 16 — The Entangler</a></li><li><a href="${BASE}/the-field">Act 17 — The Field</a></li></ul>`,
+  },
+  "/the-coherent-state": {
+    title: "The Coherent State — α eigenstate of â, Poisson photon statistics | NexusOS Act 18",
+    description: "Act 18 of the NexusOS physics sequence. Coherent state |α⟩: eigenstate of the annihilation operator â|α⟩=α|α⟩. Poisson photon statistics, minimum uncertainty Δx·Δp=ℏ/2, Glauber Q-function, and the classical-quantum boundary in Ψ channel encoding. AGPL-3.0.",
+    canonical: `${BASE}/the-coherent-state`,
+    ogTitle: "The Coherent State — â|α⟩=α|α⟩ | NexusOS Act 18",
+    ogDescription: "â|α⟩=α|α⟩. Poisson statistics P(n)=e^-|α|²|α|^2n/n!. Minimum uncertainty Δx·Δp=ℏ/2. Phase-space displacement D(α)|0⟩. Classical light from quantum fields. Act 18.",
+    ogType: "article" as const,
+    twitterTitle: "NexusOS Act 18 — The Coherent State",
+    twitterDescription: "Coherent state â|α⟩=α|α⟩. Poisson photon distribution. Minimum uncertainty wavepacket. Phase-space Q-function. Classical-quantum boundary in WNSP Ψ channel encoding.",
+    jsonLd: techArticle({ url: `${BASE}/the-coherent-state`, name: "The Coherent State — α eigenstate of â and Poisson Photon Statistics", description: "Act 18 of the NexusOS physics sequence. Coherent state as eigenstate of the annihilation operator, minimum uncertainty state, and the classical limit of quantum light relevant to WNSP Ψ channel encoding.", about: "coherent state, Glauber state, Poisson statistics, minimum uncertainty, displacement operator, phase space, Q-function, WNSP, NexusOS", datePublished: "2026-07-21", dateModified: "2026-07-21" }),
+    bodyHtml: `<h1>The Coherent State — α Eigenstate of â and the Classical-Quantum Boundary</h1><p>Act 18 of the NexusOS physics sequence. First disclosed 2026-07-21. AGPL-3.0. Founder: Te Rata Pou.</p><h2>Definition</h2><p>A coherent state |α⟩ is defined as the eigenstate of the annihilation operator: â|α⟩ = α|α⟩, where α ∈ ℂ. In the Fock basis: |α⟩ = e^(−|α|²/2) Σₙ (αⁿ/√n!) |n⟩. The mean photon number is ⟨n̂⟩ = |α|².</p><h2>Poisson Photon Statistics</h2><p>P(n) = |⟨n|α⟩|² = e^(−|α|²) |α|^(2n) / n!. This is a Poisson distribution with mean and variance both equal to |α|². The Mandel Q-parameter = 0 — no bunching or anti-bunching.</p><h2>Minimum Uncertainty</h2><p>Coherent states saturate the Heisenberg bound: Δx · Δp = ℏ/2. They are minimum uncertainty states for all α. The uncertainty is equally distributed between quadratures: Δx = Δp = √(ℏ/2mω).</p><h2>Displacement Operator</h2><p>|α⟩ = D(α)|0⟩ where D(α) = exp(αâ† − α★â). The vacuum is a coherent state with α=0. Laser light is well-approximated by a coherent state.</p><h2>WNSP Connection</h2><p>Each SNIC Ψ channel uses coherent states as the baseline signal carriers. The amplitude |α| encodes intensity; the phase arg(α) encodes the channel address. Coherent states mark the classical-quantum boundary: above |α|²≈1 photon, the channel behaves classically; below it, quantum noise dominates.</p><h2>The 20-Act Sequence</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue</a></li><li><a href="${BASE}/standing-wave-trap">Act 7 — The Trap</a></li><li><a href="${BASE}/lossless-channel">Act 8 — The Lossless Channel</a></li><li><a href="${BASE}/resonance-cavity">Act 9 — The Cavity</a></li><li><a href="${BASE}/polariton-exchange">Act 10 — The Exchange</a></li><li><a href="${BASE}/the-emitter">Act 11 — The Emitter</a></li><li><a href="${BASE}/the-network">Act 12 — The Network</a></li><li><a href="${BASE}/the-observer">Act 13 — The Observer</a></li><li><a href="${BASE}/the-memory">Act 14 — The Memory</a></li><li><a href="${BASE}/cosmic-lattice">Act 15 — The Void</a></li><li><a href="${BASE}/the-entangler">Act 16 — The Entangler</a></li><li><a href="${BASE}/the-field">Act 17 — The Field</a></li><li><a href="${BASE}/the-coherent-state">Act 18 — The Coherent State</a></li><li><a href="${BASE}/the-squeezed-state">Act 19 — The Squeezed State</a></li><li><a href="${BASE}/the-bogoliubov-transform">Act 20 — The Bogoliubov Transform</a></li></ul>`,
+  },
+  "/the-squeezed-state": {
+    title: "The Squeezed State — Sub-Poissonian light, Δx<√(ℏ/2mω) | NexusOS Act 19",
+    description: "Act 19 of the NexusOS physics sequence. Squeezed states: one quadrature noise reduced below vacuum, Δx=e^(−r)√(ℏ/2mω). Squeezing operator S(ξ)=exp(ξ★â²/2−ξâ†²/2). Sub-Poissonian statistics, Wigner function negativity, and quantum-enhanced sensing in the WNSP Ψ channel. AGPL-3.0.",
+    canonical: `${BASE}/the-squeezed-state`,
+    ogTitle: "The Squeezed State — Δx=e^−r·√(ℏ/2mω) | NexusOS Act 19",
+    ogDescription: "One quadrature squeezed below vacuum noise. Δx=e^(−r)·√(ℏ/2mω), Δp·Δx=ℏ/2 preserved. S(ξ)|0⟩ two-mode squeezing. Sub-Poissonian photon statistics. Act 19.",
+    ogType: "article" as const,
+    twitterTitle: "NexusOS Act 19 — The Squeezed State",
+    twitterDescription: "Squeezed light: Δx=e^(−r)√(ℏ/2mω) below vacuum noise. Squeezing operator S(ξ). Two-mode EPR entanglement. Quantum-enhanced sensing. Act 19 of the WNSP physics sequence.",
+    jsonLd: techArticle({ url: `${BASE}/the-squeezed-state`, name: "The Squeezed State — Sub-Poissonian Light and Quantum-Enhanced Sensing", description: "Act 19 of the NexusOS physics sequence. Squeezed quantum states with noise below the vacuum level in one quadrature, and their role in quantum-enhanced sensing and WNSP channel protocols.", about: "squeezed state, squeezing operator, sub-Poissonian, Wigner function, quadrature noise, two-mode squeezing, EPR entanglement, quantum sensing, WNSP, NexusOS", datePublished: "2026-07-21", dateModified: "2026-07-21" }),
+    bodyHtml: `<h1>The Squeezed State — Sub-Poissonian Light and Quantum-Enhanced Sensing</h1><p>Act 19 of the NexusOS physics sequence. First disclosed 2026-07-21. AGPL-3.0. Founder: Te Rata Pou.</p><h2>Definition</h2><p>A squeezed state compresses noise in one quadrature below the vacuum level while inflating the conjugate quadrature to preserve ΔxΔp=ℏ/2. Single-mode squeezing operator: S(ξ)=exp(ξ★â²/2 − ξâ†²/2), where ξ=r·e^(iθ) and r is the squeezing parameter.</p><h2>Quadrature Noise</h2><p>For squeeze angle θ=0: Δx=e^(−r)·√(ℏ/2mω) (squeezed), Δp=e^r·√(ℏ/2mω) (anti-squeezed). At r=1.15 (10 dB squeezing): Δx reduced to 31.6% of vacuum. Record squeezing: −15 dB (Vahlbruch 2016).</p><h2>Sub-Poissonian Statistics</h2><p>The Mandel Q-parameter &lt; 0 for squeezed vacuum and amplitude-squeezed states. Photon statistics deviate from Poisson — this is a non-classical signature observable with photon-number-resolving detectors.</p><h2>Two-Mode Squeezing and EPR Entanglement</h2><p>Two-mode squeezing S₂(ξ)=exp(ξ★â_sâ_i − ξâ†_sâ†_i) produces signal-idler entanglement. In the limit r→∞: x_s+x_i→0 and p_s−p_i→0, reproducing the original EPR state.</p><h2>WNSP Connection</h2><p>Squeezed light at λ=1550 nm reduces phase noise below the shot-noise limit in SNIC WGM cavities. A 10 dB squeezed input reduces phase estimation uncertainty by √10 — equivalent to averaging 10× more photons without extra power. Critical for long-distance Ψ channel fidelity.</p><h2>The 20-Act Sequence</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue</a></li><li><a href="${BASE}/standing-wave-trap">Act 7 — The Trap</a></li><li><a href="${BASE}/lossless-channel">Act 8 — The Lossless Channel</a></li><li><a href="${BASE}/resonance-cavity">Act 9 — The Cavity</a></li><li><a href="${BASE}/polariton-exchange">Act 10 — The Exchange</a></li><li><a href="${BASE}/the-emitter">Act 11 — The Emitter</a></li><li><a href="${BASE}/the-network">Act 12 — The Network</a></li><li><a href="${BASE}/the-observer">Act 13 — The Observer</a></li><li><a href="${BASE}/the-memory">Act 14 — The Memory</a></li><li><a href="${BASE}/cosmic-lattice">Act 15 — The Void</a></li><li><a href="${BASE}/the-entangler">Act 16 — The Entangler</a></li><li><a href="${BASE}/the-field">Act 17 — The Field</a></li><li><a href="${BASE}/the-coherent-state">Act 18 — The Coherent State</a></li><li><a href="${BASE}/the-squeezed-state">Act 19 — The Squeezed State</a></li><li><a href="${BASE}/the-bogoliubov-transform">Act 20 — The Bogoliubov Transform</a></li></ul>`,
+  },
+  "/the-bogoliubov-transform": {
+    title: "The Bogoliubov Transform — b̂=uâ+vâ†, thermal squeezing | NexusOS Act 20",
+    description: "Act 20 of the NexusOS physics sequence. Bogoliubov transformation b̂=uâ+vâ† with |u|²−|v|²=1. Thermal squeezing, Hawking-Unruh radiation from vacuum, BEC phonon modes, and the WNSP Ψ channel thermal noise floor. AGPL-3.0.",
+    canonical: `${BASE}/the-bogoliubov-transform`,
+    ogTitle: "The Bogoliubov Transform — b̂=uâ+vâ† | NexusOS Act 20",
+    ogDescription: "b̂=uâ+vâ†, |u|²−|v|²=1. Thermal photon number ⟨n̂⟩=|v|². Unruh radiation from vacuum mixing. BEC phonon dispersion. WNSP thermal noise floor. Act 20.",
+    ogType: "article" as const,
+    twitterTitle: "NexusOS Act 20 — The Bogoliubov Transform",
+    twitterDescription: "Bogoliubov transformation b̂=uâ+vâ†. Thermal squeezing |v|². Unruh radiation from accelerated vacuum. BEC phonon modes. WNSP Ψ channel thermal noise floor. Act 20.",
+    jsonLd: techArticle({ url: `${BASE}/the-bogoliubov-transform`, name: "The Bogoliubov Transform — Thermal Squeezing and the WNSP Noise Floor", description: "Act 20 of the NexusOS physics sequence. The Bogoliubov transformation as a canonical mixing of creation and annihilation operators, yielding thermal states, Unruh radiation, and the quantum noise floor for WNSP Ψ channels.", about: "Bogoliubov transformation, thermal squeezing, Unruh radiation, Hawking radiation, BEC phonons, thermal photons, vacuum mixing, WNSP, NexusOS", datePublished: "2026-07-21", dateModified: "2026-07-21" }),
+    bodyHtml: `<h1>The Bogoliubov Transform — Thermal Squeezing and the WNSP Noise Floor</h1><p>Act 20 of the NexusOS physics sequence. First disclosed 2026-07-21. AGPL-3.0. Founder: Te Rata Pou.</p><h2>The Transformation</h2><p>A Bogoliubov transformation mixes a mode with its conjugate: b̂ = u·â + v·â†, b̂† = u★·â† + v★·â. The bosonic commutation relation [b̂, b̂†]=1 requires |u|²−|v|²=1. This is equivalent to a squeezing operation: S(ξ)âS†(ξ) = u·â + v·â† with u=cosh(r), v=e^(iφ)sinh(r).</p><h2>Thermal Photon Number</h2><p>Starting from vacuum |0⟩_a, the b-mode sees a thermal state: ⟨b̂†b̂⟩ = |v|² = sinh²(r). The effective temperature T_eff via Bose-Einstein: |v|² = 1/(e^(ℏω/k_BT)−1) → T_eff = ℏω / (k_B · ln(1 + 1/sinh²(r))). Vacuum mixing alone generates apparent thermal radiation.</p><h2>Unruh and Hawking Radiation</h2><p>An accelerating observer (acceleration a) sees the Minkowski vacuum as thermal: T_Unruh = ℏa/(2πck_B). A black hole of mass M radiates at T_Hawking = ℏc³/(8πGMk_B). Both arise from the same Bogoliubov mixing of positive and negative frequency modes across a horizon.</p><h2>BEC Phonon Dispersion</h2><p>In a Bose-Einstein condensate with interaction constant g and density n₀: ω²(k) = (ℏk²/2m)² + (gn₀/m)(ℏk²/2m). At low k: linear phonon dispersion ω≈c_s·k where c_s=√(gn₀/m). The Bogoliubov transformation diagonalises the BEC Hamiltonian.</p><h2>WNSP Connection</h2><p>In SNIC WGM cavities operating at cryogenic temperature T≈10 mK, the thermal photon occupancy at 1550 nm is ⟨n̂⟩_thermal = 1/(e^(ℏω/k_BT)−1) ≈ 10⁻³⁴ — negligible. The relevant Bogoliubov mixing arises from parametric amplification in the nonlinear crystal pump stage, which sets the effective noise floor for WNSP Ψ channel encoding.</p><h2>The 20-Act Sequence</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue</a></li><li><a href="${BASE}/standing-wave-trap">Act 7 — The Trap</a></li><li><a href="${BASE}/lossless-channel">Act 8 — The Lossless Channel</a></li><li><a href="${BASE}/resonance-cavity">Act 9 — The Cavity</a></li><li><a href="${BASE}/polariton-exchange">Act 10 — The Exchange</a></li><li><a href="${BASE}/the-emitter">Act 11 — The Emitter</a></li><li><a href="${BASE}/the-network">Act 12 — The Network</a></li><li><a href="${BASE}/the-observer">Act 13 — The Observer</a></li><li><a href="${BASE}/the-memory">Act 14 — The Memory</a></li><li><a href="${BASE}/cosmic-lattice">Act 15 — The Void</a></li><li><a href="${BASE}/the-entangler">Act 16 — The Entangler</a></li><li><a href="${BASE}/the-field">Act 17 — The Field</a></li><li><a href="${BASE}/the-coherent-state">Act 18 — The Coherent State</a></li><li><a href="${BASE}/the-squeezed-state">Act 19 — The Squeezed State</a></li><li><a href="${BASE}/the-bogoliubov-transform">Act 20 — The Bogoliubov Transform</a></li></ul>`,
   },
   "/the-observer": {
     title: "The Observer — QND Dispersive Readout χ=g²/Δ | NexusOS Act 13",
-    description: "Act 13 of the NexusOS physics sequence. Quantum non-demolition dispersive readout: χ=g²/Δ. Reading the Ψ channel photon state without destroying it. Jaynes-Cummings dispersive limit, IQ-plane separation, measurement rate Γ_meas=4χ²n̄/κ, critical photon number n_crit=Δ²/4g².",
+    description: "Act 13 of the NexusOS physics sequence. QND dispersive readout: χ=g²/Δ. Read a qubit without collapsing it — using cavity pull and Wigner tomography.",
     canonical: `${BASE}/the-observer`,
     ogTitle: "The Observer — QND Dispersive Readout | NexusOS Act 13",
     ogDescription: "χ=g²/Δ dispersive coupling. Reading the Ψ channel without destroying the photon. Measurement rate Γ_meas=4χ²n̄/κ. Quantum back-action at the Heisenberg limit. Act 13.",
     ogType: "article",
     twitterTitle: "NexusOS Act 13 — The Observer",
     twitterDescription: "Dispersive QND readout χ=g²/Δ. IQ-plane separation. Critical photon number n_crit=Δ²/4g². Non-demolition Ψ channel register. Act 13 of the WNSP physics sequence.",
-    jsonLd: techArticle({ url: `${BASE}/the-observer`, name: "The Observer — QND Dispersive Readout and the Non-Demolition Ψ Channel Register", description: "Quantum non-demolition dispersive readout applied to the WNSP Ψ channel architecture. Jaynes-Cummings dispersive limit, IQ-plane separation, measurement back-action at the Heisenberg limit.", about: "QND measurement, dispersive readout, Jaynes-Cummings, circuit QED, qubit readout, IQ plane, WNSP, NexusOS, χ=g²/Δ", datePublished: "2026-07-19", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/the-observer`, name: "The Observer — QND Dispersive Readout and the Non-Demolition Ψ Channel Register", description: "Quantum non-demolition dispersive readout applied to the WNSP Ψ channel architecture. Jaynes-Cummings dispersive limit, IQ-plane separation, measurement back-action at the Heisenberg limit.", about: "QND measurement, dispersive readout, Jaynes-Cummings, circuit QED, qubit readout, IQ plane, WNSP, NexusOS, χ=g²/Δ", datePublished: "2026-07-19", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 13 — The Observer", item: `${BASE}/the-observer` },
+      ]),
+    ],
     bodyHtml: `<h1>The Observer — QND Dispersive Readout and the Non-Demolition Ψ Channel Register</h1><p>Act 13 of the NexusOS physics sequence. First disclosed 2026-07-19. AGPL-3.0. Founder: Te Rata Pou.</p><h2>The Problem of Observation</h2><p>Measuring a quantum state generically destroys it. A photon detector absorbs the photon; the measurement result is yes or no but the photon is gone. For the Ψ channel network (Act 12), this is fatal: routing decisions must read channel state without removing the information carrier.</p><h2>Dispersive Limit of the Jaynes-Cummings Hamiltonian</h2><p>The full Jaynes-Cummings Hamiltonian: H = ω_c a†a + ω_q/2 σ_z + g(a†σ⁻ + aσ⁺). In the dispersive limit Δ = ω_q − ω_c ≫ g: H_disp = (ω_c + χ σ_z) a†a + ω̃_q/2 σ_z, where χ = g²/Δ is the dispersive shift and ω̃_q = ω_q + g²/Δ is the Lamb-shifted qubit frequency. The cavity frequency splits: ω± = ω_c ± χ for qubit |↑⟩ or |↓⟩.</p><h2>Measurement Rate and Quantum Back-Action</h2><p>Measurement rate: Γ_meas = 4χ²n̄/κ. Qubit dephasing: Γ_φ = Γ_meas/2 (Heisenberg limit). Critical photon number: n_crit = Δ²/(4g²). Purcell decay: Γ_P = (g/Δ)² κ. Validity condition: g/|Δ| ≪ 1.</p><h2>WNSP Connection</h2><p>Each SNIC node integrates a dispersive readout circuit adjacent to the WGM resonator. Target parameters: χ/2π ~ 5 MHz, κ/2π ~ 10 MHz, n̄ ~ 5 photons → Γ_meas/2π ~ 50 kHz → T_meas ~ 20 μs. Compatible with photon lifetimes in high-Q (Q ~ 10⁸) WGM resonators.</p><h2>The 13-Act Sequence</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue</a></li><li><a href="${BASE}/standing-wave-trap">Act 7 — The Trap</a></li><li><a href="${BASE}/lossless-channel">Act 8 — The Lossless Channel</a></li><li><a href="${BASE}/resonance-cavity">Act 9 — The Cavity</a></li><li><a href="${BASE}/polariton-exchange">Act 10 — The Exchange</a></li><li><a href="${BASE}/the-emitter">Act 11 — The Emitter</a></li><li><a href="${BASE}/the-network">Act 12 — The Network</a></li><li><a href="${BASE}/the-observer">Act 13 — The Observer</a></li></ul>`,
   },
   "/the-network": {
-    title: "The Network — CROW, Polariton Hopping & Spectral Relay Mesh | NexusOS Act 12",
-    description: "Act 12 of the NexusOS physics sequence. Coupled Resonator Optical Waveguides (CROW): ω(k)=ω₀−2J·cos(ka). Tight-binding band structure, slow light, Bose-Hubbard model, and the Spectral Relay Mesh from first principles.",
+    title: "The Network — CROW & Spectral Relay Mesh | NexusOS",
+    description: "Act 12 of the NexusOS physics sequence. CROW: ω(k)=ω₀−2J·cos(ka). Coupled cavity slow light and the Spectral Relay Mesh from first principles.",
     canonical: `${BASE}/the-network`,
     ogTitle: "The Network — CROW & Spectral Relay Mesh | NexusOS Act 12",
     ogDescription: "N coupled Ψ channel cavities form a CROW. ω(k)=ω₀−2J·cos(ka). Slow light at band edges. Polariton hopping dynamics. The Spectral Relay Mesh from first principles. Act 12.",
     ogType: "article",
     twitterTitle: "NexusOS Act 12 — The Network",
     twitterDescription: "CROW tight-binding dispersion ω(k)=ω₀−2J·cos(ka). Slow-light factor S=c/v_g. Bose-Hubbard phase transition. Act 12 of the WNSP physics sequence.",
-    jsonLd: techArticle({ url: `${BASE}/the-network`, name: "The Network — CROW and Spectral Relay Mesh", description: "Coupled Resonator Optical Waveguides as the physical basis of the WNSP Spectral Relay Mesh. Tight-binding band structure, slow light, polariton hopping, and the Bose-Hubbard model.", about: "CROW, coupled cavities, tight-binding, slow light, Bose-Hubbard, polariton hopping, Spectral Relay Mesh, WNSP, NexusOS", datePublished: "2026-07-19", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/the-network`, name: "The Network — CROW and Spectral Relay Mesh", description: "Coupled Resonator Optical Waveguides as the physical basis of the WNSP Spectral Relay Mesh. Tight-binding band structure, slow light, polariton hopping, and the Bose-Hubbard model.", about: "CROW, coupled cavities, tight-binding, slow light, Bose-Hubbard, polariton hopping, Spectral Relay Mesh, WNSP, NexusOS", datePublished: "2026-07-19", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 12 — The Network", item: `${BASE}/the-network` },
+      ]),
+    ],
     bodyHtml: `<h1>The Network — CROW, Polariton Hopping and the Spectral Relay Mesh</h1><p>Act 12 of the NexusOS physics sequence. First disclosed 2026-07-19. AGPL-3.0. Founder: Te Rata Pou.</p><h2>Coupled Resonator Optical Waveguides (CROW)</h2><p>Yariv et al. (1999) showed that a chain of identical high-Q resonators, coupled through evanescent-field overlap, forms a photonic waveguide. The photon hops — one cavity at a time — through quantum-mechanical tunnelling. The Hamiltonian is: H = Σᵢ ω₀ aᵢ†aᵢ − J Σᵢ (aᵢ†aᵢ₊₁ + h.c.).</p><h2>Tight-Binding Dispersion</h2><p>ω(k) = ω₀ − 2J·cos(k·a), where ω₀ is the single-cavity resonance, J is the photon hopping rate, a is the cavity spacing, and k ∈ (−π/a, π/a] is the Bloch wavevector. Group velocity: v_g = 2Ja·sin(ka). Bandwidth: W = 4J.</p><h2>Slow Light</h2><p>At the Brillouin zone edges (ka → 0, ±π), v_g → 0 and the group delay τ_g = N·a/v_g → ∞. Notomi et al. (2001) measured slow-light factors S > 90 in photonic crystal CROW structures.</p><h2>Bose-Hubbard Model</h2><p>With on-site photon-photon repulsion U: H = −J Σ aᵢ†aᵢ₊₁ + U/2 Σ nᵢ(nᵢ−1) − μ Σ nᵢ. Superfluid (J≫U, delocalized photons) vs Mott insulator (U≫J, one photon per cavity) quantum phase transition. Predicted by Greentree et al. and Hartmann et al. simultaneously in 2006.</p><h2>WNSP Connection</h2><p>Each pair of adjacent Ψ channels with overlapping evanescent fields forms a CROW unit. N coupled Ψ channels form an SRM segment. CROW → SRM design map: single resonator = Ψ channel (1 of 51,200); CROW chain = SRM segment; hopping J = inter-channel coupling κ_hop; band edge = buffer zone for temporal storage.</p><h2>The 12-Act Sequence</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue</a></li><li><a href="${BASE}/standing-wave-trap">Act 7 — The Trap</a></li><li><a href="${BASE}/lossless-channel">Act 8 — The Lossless Channel</a></li><li><a href="${BASE}/resonance-cavity">Act 9 — The Cavity</a></li><li><a href="${BASE}/polariton-exchange">Act 10 — The Exchange</a></li><li><a href="${BASE}/the-emitter">Act 11 — The Emitter</a></li><li><a href="${BASE}/the-network">Act 12 — The Network</a></li></ul>`,
   },
   "/the-emitter": {
-    title: "The Emitter — Purcell Effect & Single-Photon Sources | NexusOS Act 11",
-    description: "Act 11 of the NexusOS physics sequence. Purcell factor F_p=(3/4π²)(λ/n)³(Q/V) — spontaneous emission rate modified by the cavity. Ψ channels engineered as directional single-photon sources with β → 1.",
+    title: "The Emitter — Purcell Effect & Single-Photon Sources",
+    description: "Act 11 — NexusOS physics sequence. Purcell factor F_p=(Q/V)(λ/n)³ shapes spontaneous emission. Ψ channels as directional single-photon sources, β→1.",
     canonical: `${BASE}/the-emitter`,
     ogTitle: "The Emitter — Purcell Effect | NexusOS Act 11",
     ogDescription: "Spontaneous emission is not intrinsic to the atom — it is a property of the electromagnetic environment. F_p=(3/4π²)(λ/n)³(Q/V). Act 11 of the NexusOS physics sequence.",
     ogType: "article",
     twitterTitle: "NexusOS Act 11 — The Emitter",
     twitterDescription: "Purcell factor F_p=(Q/V)(λ/n)³. β-factor and single-photon purity. C=F_p/4 bridges Act 10. Act 11 of the WNSP physics sequence.",
-    jsonLd: techArticle({ url: `${BASE}/the-emitter`, name: "The Emitter — Purcell Effect", description: "Purcell-enhanced spontaneous emission and single-photon sources from WNSP Ψ channels. The weak-coupling limit of the Jaynes-Cummings exchange.", about: "Purcell effect, single-photon source, cavity QED, LDOS, β-factor, WNSP, NexusOS", datePublished: "2026-07-19", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/the-emitter`, name: "The Emitter — Purcell Effect", description: "Purcell-enhanced spontaneous emission and single-photon sources from WNSP Ψ channels. The weak-coupling limit of the Jaynes-Cummings exchange.", about: "Purcell effect, single-photon source, cavity QED, LDOS, β-factor, WNSP, NexusOS", datePublished: "2026-07-19", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 11 — The Emitter", item: `${BASE}/the-emitter` },
+      ]),
+    ],
     bodyHtml: `<h1>The Emitter — Purcell Effect & Single-Photon Sources</h1><p>Act 11 of the NexusOS physics sequence. First disclosed 2026-07-19. AGPL-3.0. Founder: Te Rata Pou.</p><h2>The Purcell Effect</h2><p>E.M. Purcell showed in 1946 that the spontaneous emission rate of an emitter is not intrinsic — it depends on the local density of optical states (LDOS). Placing an emitter in a resonant cavity modifies the LDOS by the Purcell factor: F_p = (3/4π²)(λ/n)³(Q/V). High Q concentrates the LDOS. Small V intensifies the vacuum field where the emitter sits. Both amplify F_p.</p><h2>Key Equations</h2><ul><li>F_p = (3/4π²)(λ/n)³(Q/V) — Purcell factor</li><li>γ_eff = (1 + F_p)γ₀ — enhanced decay rate</li><li>β = F_p·γ₀/(F_p·γ₀ + γ_leak) — fraction of photons into Ψ channel</li><li>τ_eff = 1/((1+F_p)γ₀) — lifetime compression</li><li>C = F_p/4 = g²/(κγ) — cooperativity: bridge to Act 10</li></ul><h2>Bridge from Act 10</h2><p>Act 10 (The Exchange) is the strong-coupling regime: g > κ, γ → polariton formation. Act 11 is the weak-coupling regime: g ≪ κ → Purcell enhancement. Both are limits of the same Jaynes-Cummings Hamiltonian. Cooperativity C = g²/(κγ) = F_p/4 is the single parameter that separates them.</p><h2>Inhibited Emission</h2><p>F_p can also be less than 1. If the emitter frequency falls in a photonic band gap, the LDOS is suppressed and spontaneous emission is inhibited. Ghost node channels (Act 8) are natural inhibited-emission regions for off-resonance emitters.</p><h2>The 11-Act Sequence</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States: Λ = hf/c²</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE: f₀ derives Λ</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory: 4 forces = 1 Λ</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism: ΔE = hf₀(2ⁿ²−2ⁿ¹)</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address: ∀ Λ : ∃! Ψ</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue: n = log₂(mc²/E₀)</a></li><li><a href="${BASE}/standing-wave-trap">Act 7 — The Trap: Ψ(+k̂) ⊗ Ψ(−k̂)</a></li><li><a href="${BASE}/lossless-channel">Act 8 — The Lossless Channel: α=0, C=ZPE floor</a></li><li><a href="${BASE}/resonance-cavity">Act 9 — The Cavity: WGM resonance, r_c</a></li><li><a href="${BASE}/polariton-exchange">Act 10 — The Exchange: Ω_R=2g, polariton formation</a></li><li><a href="${BASE}/the-emitter">Act 11 — The Emitter: F_p=(3/4π²)(λ/n)³(Q/V)</a></li></ul>`,
   },
   "/polariton-exchange": {
-    title: "The Exchange — Polariton Formation & Vacuum Rabi Splitting | NexusOS Act 10",
-    description: "Act 10 of the NexusOS physics sequence. Jaynes-Cummings Hamiltonian, vacuum Rabi splitting Ω_R=2g, and polariton dressed states — the first compression states that span the wave-matter boundary.",
+    title: "The Exchange — Polariton Formation | NexusOS",
+    description: "Act 10 — NexusOS physics sequence. Jaynes-Cummings Hamiltonian, vacuum Rabi splitting Ω_R=2g, and polariton dressed states at the wave-matter boundary.",
     canonical: `${BASE}/polariton-exchange`,
     ogTitle: "The Exchange — Polariton Formation | NexusOS Act 10",
     ogDescription: "When coupling strength g exceeds cavity loss κ, field and emitter hybridise into polariton states |±⟩. Vacuum Rabi splitting ΔE=2ℏg. Act 10 of the NexusOS physics sequence.",
     ogType: "article",
     twitterTitle: "NexusOS Act 10 — The Exchange",
     twitterDescription: "Jaynes-Cummings, g > κ → polariton formation. Ω_R = 2g vacuum Rabi splitting. Act 10 of the WNSP physics sequence.",
-    jsonLd: techArticle({ url: `${BASE}/polariton-exchange`, name: "The Exchange — Polariton Formation", description: "Jaynes-Cummings cavity QED, vacuum Rabi splitting, and polariton compression states Λ_±. The wave-matter boundary as a coupling condition.", about: "Jaynes-Cummings, polariton, vacuum Rabi splitting, cavity QED, WNSP, NexusOS", datePublished: "2026-07-19", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/polariton-exchange`, name: "The Exchange — Polariton Formation", description: "Jaynes-Cummings cavity QED, vacuum Rabi splitting, and polariton compression states Λ_±. The wave-matter boundary as a coupling condition.", about: "Jaynes-Cummings, polariton, vacuum Rabi splitting, cavity QED, WNSP, NexusOS", datePublished: "2026-07-19", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 10 — The Exchange", item: `${BASE}/polariton-exchange` },
+      ]),
+    ],
     bodyHtml: `<h1>The Exchange — Polariton Formation & Vacuum Rabi Splitting</h1><p>Act 10 of the NexusOS physics sequence. First disclosed 2026-07-19. AGPL-3.0. Founder: Te Rata Pou.</p><h2>The Jaynes-Cummings Hamiltonian</h2><p>H = ℏω_c a†a + ℏω_a σ_z/2 + ℏg(a†σ₋ + aσ₊). Three terms: cavity field energy, emitter energy, and the exchange coupling that cannot be switched off.</p><h2>Polariton Dressed States</h2><p>|+⟩ = (|e,0⟩ + |g,1⟩)/√2 — upper polariton. |−⟩ = (|e,0⟩ − |g,1⟩)/√2 — lower polariton. Energy splitting: ΔE = 2ℏg. Vacuum Rabi frequency: Ω_R = 2g. The splitting occurs even with zero photons — driven by the ZPE floor from Act 8.</p><h2>Coupling Strength</h2><p>g = d·√(ω_c / 2ℏε₀V). Coupling grows with dipole moment d and shrinks with mode volume V. Photonic crystal cavities (V ~ 0.001 μm³) achieve g/2π ~ 100 GHz.</p><h2>Three Regimes</h2><ul><li>g > κ, γ: Strong coupling — polariton formation, vacuum Rabi oscillations</li><li>g ≪ κ: Weak coupling — Purcell enhancement of spontaneous emission</li><li>Δ ≫ g: Dispersive — QND measurement via phase shift χ = g²/Δ</li></ul><h2>Polariton Compression States in WNSP</h2><p>Λ_± = h(f_c ± g/2π)/c². Each polariton branch has a unique compression state address in the WNSP Ψ channel system. The polariton is half-field, half-matter — a new class of compression state at the wave-matter boundary.</p><h2>The Rabi Oscillation</h2><p>|ψ(t)⟩ = cos(g·t)|e,0⟩ − i·sin(g·t)|g,1⟩. P_emitter(t) = cos²(g·t). P_cavity(t) = sin²(g·t). Total excitation conserved. The exchange is lossless in the strong-coupling regime.</p><h2>The 10-Act Sequence</h2><ul><li><a href="${BASE}/oscillating-quanta">Act 1 — Theory of Compression States: Λ = hf/c²</a></li><li><a href="${BASE}/universal-one">Act 2 — The Universal ONE: f₀ derives Λ</a></li><li><a href="${BASE}/unified-compression-theory">Act 3 — Unified Compression Theory: 4 forces = 1 Λ</a></li><li><a href="${BASE}/matter-protocol">Act 4 — The Mechanism: ΔE = hf₀(2ⁿ²−2ⁿ¹)</a></li><li><a href="${BASE}/universal-address">Act 5 — The Address: ∀ Λ : ∃! Ψ</a></li><li><a href="${BASE}/element-catalogue">Act 6 — The Catalogue: n = log₂(mc²/E₀)</a></li><li><a href="${BASE}/standing-wave-trap">Act 7 — The Trap: Ψ(+k̂) ⊗ Ψ(−k̂)</a></li><li><a href="${BASE}/lossless-channel">Act 8 — The Lossless Channel: α=0, C=ZPE floor</a></li><li><a href="${BASE}/resonance-cavity">Act 9 — The Cavity: WGM resonance, r_c</a></li><li><a href="${BASE}/polariton-exchange">Act 10 — The Exchange: Ω_R=2g, polariton formation</a></li></ul>`,
   },
   "/resonance-cavity": {
@@ -1413,7 +1625,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "NexusOS Resonance Cavity",
     twitterDescription: "WGM resonance physics. 2πR=nλ. Mode volume and Q-factor for WNSP channel isolation.",
-    jsonLd: techArticle({ url: `${BASE}/resonance-cavity`, name: "Resonance Cavity Physics", description: "EM cavity physics for WNSP channel isolation. Whispering Gallery Mode resonance validates the Russell octave structure and the ${PSI_CHANNELS}-channel Ψ geometry.", about: "WGM resonance, resonance cavity, WNSP channels, photonic computing", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/resonance-cavity`, name: "Resonance Cavity Physics", description: "EM cavity physics for WNSP channel isolation. Whispering Gallery Mode resonance validates the Russell octave structure and the ${PSI_CHANNELS}-channel Ψ geometry.", about: "WGM resonance, resonance cavity, WNSP channels, photonic computing", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Physics Sequence", item: `${BASE}/oscillating-quanta` },
+        { name: "Act 9 — The Cavity", item: `${BASE}/resonance-cavity` },
+      ]),
+    ],
     bodyHtml: `<h1>Resonance Cavity — WNSP Channel Physics</h1><p>The WNSP channel structure is grounded in electromagnetic cavity physics. Resonant cavities — including Whispering Gallery Mode (WGM) optical resonators — provide the physical implementation of the orthogonal channel model underlying NexusOS.</p><h2>Whispering Gallery Mode Resonance</h2><p>WGM resonators confine light in closed circular paths via total internal reflection. The resonance condition is: <code>2πR = nλ</code> where R is cavity radius, n is mode number (OAM quantum number), and λ is wavelength. This is structurally identical to Walter Russell's octave formula — validated experimentally by 2025 sub-mm wave research.</p><h2>Q-Factor and Channel Isolation</h2><p>High-Q WGM cavities achieve channel isolation exceeding 10⁶. The SNIC photonic NIC design targets Q > 10⁵ for each of its ${PSI_CHANNELS} Ψ channels, ensuring ⟨Ψᵢ|Ψⱼ⟩ = 0 is maintained in hardware as well as theory.</p><nav><ul><li><a href="${BASE}/octave-layers">Russell Octave Layers</a></li><li><a href="${BASE}/snic">SNIC Hardware Design</a></li><li><a href="${BASE}/evidence">Experimental Evidence</a></li></ul></nav>`,
   },
   "/join-community": {
@@ -1443,7 +1662,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "How to Plug In — NexusOS Integration",
     twitterDescription: "CE encoder + WNSP protocol + REST API. Step-by-step integration guide.",
-    jsonLd: techArticle({ url: `${BASE}/how-to-plug-in`, name: "How to Plug In — NexusOS Integration Guide", description: "Developer integration guide for connecting external systems to NexusOS: CE encoder, WNSP protocol, WavelengthScript toolchain, and REST API.", about: "WNSP, CE encoding, WavelengthScript, developer integration" }),
+    jsonLd: techArticle({ url: `${BASE}/how-to-plug-in`, name: "How to Plug In — NexusOS Integration Guide", description: "Developer integration guide for connecting external systems to NexusOS: CE encoder, WNSP protocol, WavelengthScript toolchain, and REST API.", about: "WNSP, CE encoding, WavelengthScript, developer integration", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>How to Plug In — Integrate with NexusOS</h1><p>Integrating with NexusOS means connecting to the physics stack at the layer that makes sense for your application. Here are the four integration paths, from simplest to deepest.</p><h2>Path 1 — CE Encoder (5 minutes)</h2><pre><code>npm install nexusos-ce-encoder</code></pre><p>Map any text to wavelengths. Get Ψ channel addresses. Calculate photon energies. No authentication required.</p><h2>Path 2 — REST API (developer key required)</h2><p>Authenticated access to the full NexusOS API: wallet operations, spectral search, spectral contracts, blockchain queries, and governance participation. Create a developer key on the <a href="${BASE}/developer">Developer Portal</a>.</p><h2>Path 3 — WNSP Protocol (advanced)</h2><p>Direct WNSP spectral communication. Implement a Ψ channel endpoint. Participate in the ${PSI_CHANNELS}-channel network. Requires WNSP-CE, WNSP-SE, and WNSP-URI implementation.</p><h2>Path 4 — WavelengthScript (native)</h2><p>Write applications directly in WavelengthScript. Compile to WNSP bytecode. Run in the WNSP VM. Full physics-native execution from source to registers.</p><nav><ul><li><a href="${BASE}/developer">Developer Portal</a></li><li><a href="${BASE}/docs">Full Documentation</a></li><li><a href="${BASE}/ce-code-writer">CE Code Writer — integration snippets</a></li></ul></nav>`,
   },
   "/nostr-bridge": {
@@ -1519,7 +1738,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     twitterTitle: "Planck Alignment — NexusOS",
     twitterDescription: "Planck-scale calibration of E=hf and Λ=hf/c². Deterministic Ψ channels from first principles.",
     ogType: "article",
-    jsonLd: techArticle({ url: `${BASE}/planck-alignment`, name: "Planck Alignment", description: "E=hf calibrated to the NexusOS compression state model Λ=hf/c². Demonstrates how quantum-scale energy values produce deterministic Ψ channel assignments.", about: "Theory of Compression States, Planck constant, quantum physics, E=hf" }),
+    jsonLd: techArticle({ url: `${BASE}/planck-alignment`, name: "Planck Alignment", description: "E=hf calibrated to the NexusOS compression state model Λ=hf/c². Demonstrates how quantum-scale energy values produce deterministic Ψ channel assignments.", about: "Theory of Compression States, Planck constant, quantum physics, E=hf", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>Planck Alignment — Quantum Constant Calibration</h1><p>Planck constant alignment bridges quantum-scale energy values and the NexusOS compression state model. By calibrating E=hf and Λ=hf/c² at the Planck scale, NexusOS derives deterministic Ψ channel assignments from first principles — no cryptographic assumptions required.</p><p>Planck's constant h = 6.626 × 10⁻³⁴ J·s is the direct anchor for every address, fee, and channel in NexusOS. Each visible-light frequency f produces a unique compression mass Λ = hf/c² that maps to a specific Ψ channel.</p><ul><li>E=hf — photon energy as the basis for transaction fees</li><li>Λ=hf/c² — compression state equation governing addressing</li><li>Deterministic Ψ channel derivation from Planck-scale constants</li><li>No probabilistic or cryptographic steps in the calibration chain</li></ul><nav><ul><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li><li><a href="${BASE}/compression-explorer">Interactive Compression Curve</a></li><li><a href="${BASE}/proof">Physics Proofs</a></li></ul></nav>`,
   },
   "/reposed-theory": {
@@ -1531,7 +1750,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogType: "article",
     twitterTitle: "Reposed Theory — NexusOS",
     twitterDescription: `Full Theory of Compression States. 555 THz origin. Λ=hf/c². ${PSI_CHANNELS} Ψ channels derived from first principles.`,
-    jsonLd: techArticle({ url: `${BASE}/reposed-theory`, name: "Reposed Theory — Theory of Compression States", description: "Theory of Compression States: universe from 555 THz oscillation, governed by Λ=hf/c², deriving the ${PSI_CHANNELS}-channel orthogonal Ψ address space.", about: "Theory of Compression States, 555 THz, Λ=hf/c², photonic physics" }),
+    jsonLd: techArticle({ url: `${BASE}/reposed-theory`, name: "Reposed Theory — Theory of Compression States", description: "Theory of Compression States: universe from 555 THz oscillation, governed by Λ=hf/c², deriving the ${PSI_CHANNELS}-channel orthogonal Ψ address space.", about: "Theory of Compression States, 555 THz, Λ=hf/c², photonic physics", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>Reposed Theory — The Complete Theory of Compression States</h1><p>The Reposed Theory is the complete formal statement of how the universe evolves from the first unobserved oscillation. The origin event occurred at 555 THz — green light, the centre of the visible spectrum — where Λ transitioned from unformed to formed. Everything in NexusOS descends from this single starting point.</p><h2>Core Propositions</h2><ol><li><strong>First Oscillation</strong>: The universe began with a single unobserved oscillation at 555 THz (λ ≈ 540nm). This is the zero point of the compression state address space.</li><li><strong>Compression Law</strong>: Each subsequent state is governed by <strong>Λ = hf/c²</strong> — compression mass as a function of Planck's constant, frequency, and the speed of light.</li><li><strong>Orthogonal Address Space</strong>: The visible spectrum (380–780nm) subdivided by WDM, OAM, and polarisation yields exactly ${PSI_CHANNELS} orthogonal Ψ channels. ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics.</li><li><strong>Authority Gradient</strong>: Shorter wavelength = higher frequency = higher energy = higher authority. SYSTEM band operates at the highest photon energy; GUEST band at the lowest.</li></ol><nav><ul><li><a href="${BASE}/oscillating-quanta">First Principles — Theory of Compression States</a></li><li><a href="${BASE}/compression-explorer">Interactive Compression Curve</a></li><li><a href="${BASE}/proof">Physics Proofs</a></li><li><a href="${BASE}/wnsp">WNSP Protocol derived from this theory</a></li></ul></nav>`,
   },
   "/silicon-bridge": {
@@ -1549,6 +1768,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
       description: "Why silicon transistors approach their physical limit, and how NexusOS is written for photonic computing. Ψ channels map to waveguide lanes — no rewrite needed.",
       about: "photonic computing, Moore's Law, silicon transistor limit, WNSP, Ψ channels, semiconductor physics",
       datePublished: "2026-05-16",
+      dateModified: "2026-07-20",
     }),
     bodyHtml: `<h1>The Silicon Bridge — Silicon is the Bridge. Photons are the Destination.</h1><p>Transistors are hitting the wall of quantum mechanics. At 2 nm gate widths — roughly 18 silicon atoms — quantum tunnelling becomes uncontrollable. Below ~1 nm, the switch ceases to function as a switch. Intel, TSMC, Samsung, IBM, and Nvidia have all published photonic computing research roadmaps. The question is not <em>whether</em> the industry transitions — it is who has the software model ready when it does.</p><h2>The Transistor Wall</h2><ul><li><strong>2 nm</strong>: current leading node (TSMC N2, Intel 18A) — ~18 silicon atoms wide</li><li><strong>~1 nm</strong>: projected physical gate limit — quantum tunnelling makes the switch unreliable</li><li><strong>100 W/cm²</strong>: thermal density approaching physical ceiling — photons produce no resistive heat</li></ul><h2>The Programming Gap</h2><p>No existing programming language, operating system, or protocol was designed for photonic hardware. Every codebase written for CMOS transistors will need a fundamental rewrite when photonic ASICs arrive. NexusOS is the exception.</p><h2>How NexusOS Solves It</h2><p>The ${PSI_CHANNELS} orthogonal Ψ channels derived from the Theory of Compression States (${PSI_CHANNEL_FORMULA}) map directly to physical hardware lanes. ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics — not software policy. Every CE lookup that today runs as a table scan in RAM will execute as a physical wavelength selection in a photonic waveguide. Silicon is the bridge encoder. Photons are the destination.</p><nav><ul><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li><li><a href="${BASE}/hardware-spec">Hardware Specification — PHR-1, SNIC, Spectral Relay Mesh</a></li><li><a href="${BASE}/compression-explorer">Interactive Compression Curve</a></li><li><a href="${BASE}/wnsp">WNSP Protocol</a></li></ul></nav>`,
   },
@@ -1602,16 +1822,23 @@ export const ROUTE_META: Record<string, PageMeta> = {
     canonical: `${BASE}/campaign`,
     ogTitle: "NexusOS Infrastructure Campaign",
     ogDescription: "25 Hardware Founder slots. PHR-1 resonator, SNIC photonic NIC. Fund the world's first physics-based computing hardware. 100M sats / 100,000 NXT per slot.",
-    ogImage: "https://wnsp.io/crowdfund-og.png",
+    ogImage: "https://wnsp.io/crowdfund-og.jpg",
     twitterTitle: "NexusOS Infrastructure Campaign",
     twitterDescription: "PHR-1 resonator. SNIC photonic NIC. 25 Hardware Founder slots. Building infrastructure for a Type I Civilisation.",
     jsonLd: {
       "@context": "https://schema.org",
-      "@type": "FundingScheme",
-      "name": "NexusOS Infrastructure Campaign",
+      "@type": "Product",
+      "name": "NexusOS Infrastructure Campaign — PHR-1 & SNIC",
       "url": `${BASE}/campaign`,
       "description": "Hardware crowdfunding campaign for the PHR-1 resonator and SNIC photonic NIC. 25 Hardware Founder slots at 100M sats / 100,000 NXT each. Each contribution is recorded on-chain.",
-      "about": { "@type": "Organization", "name": "NexusOS" },
+      "brand": { "@type": "Organization", "name": "NexusOS" },
+      "offers": {
+        "@type": "Offer",
+        "price": "100000",
+        "priceCurrency": "NXT",
+        "availability": "https://schema.org/LimitedAvailability",
+        "seller": { "@type": "Organization", "name": "NexusOS" },
+      },
     },
     bodyHtml: `<h1>NexusOS Infrastructure Campaign — Building a Type I Civilisation</h1><p>The NexusOS infrastructure campaign funds the world's first physics-based computing hardware stack, one photonic component at a time. The PHR-1 resonator and SNIC photonic NIC bring the Λ=hf/c² compression equation from software simulation into physical reality. Every contribution is recorded on-chain, permanently.</p><h2>Campaign Tiers</h2><ul><li><strong>Hardware Founder</strong>: 100M sats / 100,000 NXT — one of 25 first-production PHR-1 units, KERNEL-band spectral authority, Hardware Founder Rune badge</li><li><strong>NXT Supporter</strong>: various sats amounts — NXT token allocation, USER-band authority, early access to WavelengthScript tooling</li><li><strong>Spectral Bundle</strong>: CE encoder + documentation + Ψ channel reservation</li></ul><nav><ul><li><a href="${BASE}/campaign">Infrastructure Campaign</a></li><li><a href="${BASE}/crowdfund">NXT Crowdfund</a></li><li><a href="${BASE}/hardware-spec">Hardware Specification (AGPL-3.0)</a></li><li><a href="${BASE}/snic">SNIC — Spectral Network Interface Card</a></li><li><a href="${BASE}/nxt-campaign">NXT Token — NEXUS•WAVELENGTH</a></li></ul></nav>`,
   },
@@ -1624,7 +1851,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     twitterTitle: "NexusOS Physics Evidence",
     twitterDescription: "Experimental validation of Λ=hf/c². THz research, WGM spectroscopy, Berry phase measurements.",
     ogType: "article",
-    jsonLd: techArticle({ url: `${BASE}/evidence`, name: "NexusOS Physics Evidence", description: "Experimental evidence for the Theory of Compression States: THz spectroscopy and WGM resonance consistent with Λ=hf/c² and the ${PSI_CHANNELS}-channel Ψ geometry.", about: "Theory of Compression States, THz spectroscopy, WGM resonance, experimental physics" }),
+    jsonLd: [
+      techArticle({ url: `${BASE}/evidence`, name: "NexusOS Physics Evidence", description: "Experimental evidence for the Theory of Compression States: THz spectroscopy and WGM resonance consistent with Λ=hf/c² and the ${PSI_CHANNELS}-channel Ψ geometry.", about: "Theory of Compression States, THz spectroscopy, WGM resonance, experimental physics", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
+      breadcrumbList([
+        { name: "NexusOS", item: `${BASE}/` },
+        { name: "Theory", item: `${BASE}/oscillating-quanta` },
+        { name: "Physics Evidence", item: `${BASE}/evidence` },
+      ]),
+    ],
     bodyHtml: `<h1>NexusOS Evidence — Experimental Physics Validation</h1><p>The Theory of Compression States is not purely theoretical. The following experimental and observational evidence independently supports the Λ=hf/c² model and the ${PSI_CHANNELS}-channel Ψ geometry underlying NexusOS.</p><h2>Key Evidence Categories</h2><ul><li><strong>Sub-mm wave geometry</strong>: 2025 THz research validates the Ψ channel spacing predicted by the WNSP Hilbert space channel model. Observed spectral separations match the ${PSI_CHANNEL_FORMULA} geometry.</li><li><strong>Whispering Gallery Mode (WGM) resonance</strong>: WGM spectroscopy results are consistent with the Russell octave structure used to derive OAM mode indices in the ${PSI_CHANNELS}-channel model.</li><li><strong>Berry phase measurements</strong>: Topological phase accumulation in resonant waveguides maps to the Λ=hf/c² extension via Berry phase → compression mass correction.</li><li><strong>Flerovium-114</strong>: Spectral characteristics of element 114 align with SYSTEM-band frequency predictions in the compression state model.</li></ul><nav><ul><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li><li><a href="${BASE}/proof">Formal Physics Proofs</a></li><li><a href="${BASE}/compression-explorer">Interactive Compression Curve</a></li><li><a href="${BASE}/hardware-lab">Hardware Lab</a></li></ul></nav>`,
   },
   "/spectral-db": {
@@ -1657,6 +1891,25 @@ export const ROUTE_META: Record<string, PageMeta> = {
     },
     bodyHtml: `<h1>NexusOS Constitution — Governance Framework and Protocol Law</h1><p>The NexusOS Constitution is the governing document for the NexusOS protocol. It defines what can be changed, who can change it, how changes are ratified, and what can never be changed. The most important clause: the NXT supply is indestructible — fees are never burned.</p><h2>Governance Structure</h2><ul><li><strong>11 live protocol parameters</strong>: base fee rate, burn rate (always 0), treasury allocation ratios (5 buckets), minimum proposal stake, quorum threshold, vote weight floor, OAM mode count, WDM channel count — all adjustable by on-chain governance</li><li><strong>Authority band voting weights</strong>: SYSTEM &gt; KERNEL &gt; USER &gt; GUEST. Shorter wavelength = higher energy = higher governance authority. Physics determines voting weight, not token quantity alone.</li><li><strong>Proposal requirements</strong>: KERNEL-band or higher to submit. Proposals require specific vote counts and weight thresholds to pass.</li><li><strong>Immediate effect</strong>: ratified proposals trigger immediate updates to in-memory fee and burn stores — no waiting period.</li></ul><h2>Indestructibility Clause</h2><p>NXT fees are never burned. All protocol fees flow to the Orbital Treasury and are distributed across five on-chain governance-controlled buckets. The total NXT supply (21 billion) is permanent and conserved.</p><nav><ul><li><a href="${BASE}/open">Open Charter (AGPL-3.0)</a></li><li><a href="${BASE}/nxt-campaign">NXT Token</a></li><li><a href="${BASE}/blockchain">Block Explorer</a></li></ul></nav>`,
   },
+  "/constitution/compliance": {
+    title: "Live Protocol Compliance · NexusOS",
+    description: "Real-time constitutional compliance monitor for NexusOS — C-0001 non-dominance, C-0002 immutable rights, C-0005 physics supremacy, C-0006 NXT hard cap. Publicly verifiable.",
+    canonical: `${BASE}/constitution/compliance`,
+    ogTitle: "Live Protocol Compliance · NexusOS",
+    ogDescription: "Real-time monitor for NexusOS constitutional articles C-0001 through C-0006. Non-dominance, immutable rights, physics supremacy, and NXT hard cap — all publicly verifiable.",
+    twitterTitle: "NexusOS Live Compliance Dashboard",
+    twitterDescription: "Real-time constitutional compliance — C-0001, C-0002, C-0005, C-0006. Publicly verifiable without logging in.",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "Live Protocol Compliance · NexusOS",
+      "url": `${BASE}/constitution/compliance`,
+      "description": "Real-time constitutional compliance monitor for the NexusOS protocol. Checks articles C-0001 (non-dominance), C-0002 (immutable rights), C-0005 (physics supremacy), and C-0006 (NXT hard cap). No login required.",
+      "about": { "@type": "Organization", "name": "NexusOS", "url": `${BASE}/` },
+      "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
+    },
+    bodyHtml: `<h1>Live Protocol Compliance — NexusOS Constitutional Monitor</h1><p>This page shows the real-time compliance status of the NexusOS protocol against its constitutional articles. Data is fetched directly from the live protocol and refreshed every 30 seconds. No login is required — anyone can verify the protocol.</p><h2>Articles Monitored</h2><ul><li><strong>C-0001 Non-Dominance</strong>: no single wallet may hold more than 33% of the circulating NXT supply. The Genesis Execution Address is exempt by pre-constitutional right.</li><li><strong>C-0002 Immutable Rights</strong>: every wallet must hold at or above the Basic Human Living Standard floor (1,150 NXT).</li><li><strong>C-0005 Physics Supremacy</strong>: all live protocol fee and burn parameters must satisfy Maxwell's equations (E=hf/λ constraints). No parameter may violate the physics boundary.</li><li><strong>C-0006 NXT Hard Cap</strong>: total circulating supply may never exceed 21,000,000,000 NXT. Raising this ceiling requires a &gt;66% supermajority governance vote.</li></ul><nav><ul><li><a href="${BASE}/constitution">NexusOS Constitution</a></li><li><a href="${BASE}/governance">Governance</a></li></ul></nav>`,
+  },
   "/developer-matrix": {
     title: "Developer Matrix — NexusOS API, SDK, and Integration Reference",
     description: "Full API surface, CE encoder (npm + pip), WavelengthScript toolchain, SDK reference, integration patterns, and developer key tiers. NexusOS Developer Hub.",
@@ -1666,7 +1919,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     twitterTitle: "NexusOS Developer Matrix",
     twitterDescription: "API surface, CE encoder packages, WavelengthScript toolchain, integration patterns. Build on WNSP.",
     ogType: "article",
-    jsonLd: techArticle({ url: `${BASE}/developer-matrix`, name: "NexusOS Developer Matrix", description: "NexusOS developer reference: REST API, CE encoder packages (npm and pip), WavelengthScript toolchain, SDK reference, key tiers, and integration patterns.", about: "WNSP, CE encoding, WavelengthScript, developer API" }),
+    jsonLd: techArticle({ url: `${BASE}/developer-matrix`, name: "NexusOS Developer Matrix", description: "NexusOS developer reference: REST API, CE encoder packages (npm and pip), WavelengthScript toolchain, SDK reference, key tiers, and integration patterns.", about: "WNSP, CE encoding, WavelengthScript, developer API", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>Developer Matrix — NexusOS API, SDK, and Integration Reference</h1><p>The NexusOS Developer Matrix is the complete reference for building physics-native applications on the WNSP stack. It covers the full API surface, both CE encoder packages, the WavelengthScript toolchain, mobile SDKs, and the developer key tier system.</p><h2>CE Encoder Packages</h2><ul><li><strong>npm</strong>: <code>npm install nexusos-ce-encoder</code> — CJS + ESM, TypeScript types, <code>ceEncode(text) → &#123; wavelength, band, psiChannel, energy &#125;</code></li><li><strong>pip</strong>: <code>pip install git+https://github.com/nexusosdaily-code/NexusOS#subdirectory=packages/ce-encoder-py</code> — Python 3.8+, same API, bit-identical output</li></ul><h2>REST API</h2><ul><li>CE encoding endpoint — encode any text to spectral fingerprint</li><li>Wallet API — NXT balance, transfer, fee calculation</li><li>Governance API — proposal submission, voting (KERNEL-band)</li><li>Spectral DB API — store and retrieve CE-encoded fingerprints</li><li>Developer key management — API key creation with NXT creation fee</li></ul><h2>WavelengthScript Toolchain</h2><ul><li>Source transpiler — any language → WavelengthScript</li><li>Compiler α — WavelengthScript → WNSP bytecode</li><li>WNSP VM — bytecode interpreter with Ψ channel registers</li></ul><nav><ul><li><a href="${BASE}/docs">Full Documentation</a></li><li><a href="${BASE}/ce-code-writer">CE Code Writer &amp; Integration Kit</a></li><li><a href="${BASE}/mobile-sdk">Mobile SDK (iOS &amp; Android)</a></li><li><a href="${BASE}/wavelength-lang">WavelengthScript Specification</a></li></ul></nav>`,
   },
   "/nexus-command": {
@@ -1713,7 +1966,7 @@ export const ROUTE_META: Record<string, PageMeta> = {
     ogDescription: "Every WNSP transmission archived by wavelength since 2 May 2026. CE-encoded. Ψ-addressed. The genesis date cannot be recreated. This is a once-only feature.",
     twitterTitle: "Spectral Mirror — Live Electromagnetic Archive",
     twitterDescription: "Recording every WNSP transmission by wavelength since 2 May 2026. CE-encoded, Ψ-addressed, permanent. This genesis date cannot be recreated.",
-    jsonLd: techArticle({ url: `${BASE}/spectral-mirror`, name: "Spectral Mirror — Electromagnetic Archive", description: "Live archive of every WNSP transmission CE-encoded by wavelength. Records map to Ψ channels in the 380–780 nm visible spectrum. Recording began 2 May 2026.", about: "WNSP protocol, CE encoding, spectral archive, electromagnetic spectrum" }),
+    jsonLd: techArticle({ url: `${BASE}/spectral-mirror`, name: "Spectral Mirror — Electromagnetic Archive", description: "Live archive of every WNSP transmission CE-encoded by wavelength. Records map to Ψ channels in the 380–780 nm visible spectrum. Recording began 2 May 2026.", about: "WNSP protocol, CE encoding, spectral archive, electromagnetic spectrum", datePublished: "2026-05-02", dateModified: "2026-07-20" }),
     bodyHtml: `<h1>Spectral Mirror — The First Electromagnetic Archive</h1><p>Every message and P2P transmission that passes through the WNSP layer is CE-encoded and permanently stored by its address in the visible light spectrum. Recording began 2 May 2026.</p><p>This archive is a once-only feature. The genesis date of 2 May 2026 cannot be recreated — it is the first and only continuous electromagnetic archive at these coordinates in history.</p><h2>How it works</h2><ul><li>Each character maps to a wavelength: λ = 380 + (charCode % 128) × 3.125 nm</li><li>The Ψ channel address Ψ(wdm, oam, pol) is derived from the content itself</li><li>Authority bands: SYSTEM (380–480 nm), KERNEL (480–495 nm), USER (495–620 nm), GUEST (620–780 nm)</li></ul><nav><ul><li><a href="${BASE}/ce-se-pipeline">CE→SE Pipeline</a></li><li><a href="${BASE}/oscillating-quanta">Theory of Compression States</a></li></ul></nav>`,
   },
 
@@ -1739,28 +1992,28 @@ export const ROUTE_META: Record<string, PageMeta> = {
         "@type": "Organization",
         "name": "NexusOS",
         "url": BASE,
-        "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.png" },
+        "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.jpg" },
       },
       "hasPart": [
         {
           "@type": "VideoObject",
           "name": "CE Encoding Live — Characters to Visible-Light Wavelengths",
           "description": "Live demonstration of the NexusOS CE encoder mapping text to visible-light wavelengths across 128 spectral bands (380–780 nm).",
-          "thumbnailUrl": "https://wnsp.io/opengraph.png",
+          "thumbnailUrl": "https://wnsp.io/opengraph.jpg",
           "uploadDate": "2026-05-16",
         },
         {
           "@type": "VideoObject",
           "name": "WNSP VM Bytecode Execution — WavelengthScript in Action",
           "description": "Step-by-step execution of WavelengthScript bytecode in the WNSP Virtual Machine, with Ψ channel register inspection.",
-          "thumbnailUrl": "https://wnsp.io/opengraph.png",
+          "thumbnailUrl": "https://wnsp.io/opengraph.jpg",
           "uploadDate": "2026-05-16",
         },
         {
           "@type": "VideoObject",
           "name": "Theory of Compression States — Λ=hf/c² Explained",
           "description": "Explanation of the Theory of Compression States: the universe evolving from the first unobserved oscillation, and the Λ=hf/c² compression law governing NexusOS.",
-          "thumbnailUrl": "https://wnsp.io/opengraph.png",
+          "thumbnailUrl": "https://wnsp.io/opengraph.jpg",
           "uploadDate": "2026-05-16",
         },
       ],
@@ -1869,12 +2122,12 @@ export const ROUTE_META: Record<string, PageMeta> = {
     bodyHtml: `<h1>Rune Pipeline — Automated Bitcoin Rune Operations</h1><p>The NexusOS Rune Pipeline automates complex multi-step Rune operations. Batch mint, CPFP chain, encode Runestones, and manage UTXOs safely — all in a single automated workflow.</p><nav><ul><li><a href="${BASE}/rune-etching">Rune Etching</a></li><li><a href="${BASE}/rune-mint">Rune Mint</a></li></ul></nav>`,
   },
   "/stake-earn": {
-    title: "Stake &amp; Earn — NXT Staking Rewards | NexusOS",
+    title: "Stake & Earn — NXT Staking Rewards | NexusOS",
     description: "Stake NXT tokens and earn yield on NexusOS. Physics-weighted reward rates, six lock periods, WNUSD auto-collateral, and Orbital Treasury distribution.",
     canonical: `${BASE}/stake-earn`,
-    ogTitle: "Stake &amp; Earn — NXT Staking on NexusOS",
+    ogTitle: "Stake & Earn — NXT Staking on NexusOS",
     ogDescription: "Stake NXT. Earn physics-weighted yield. Auto-mint WNUSD. Six lock periods. Orbital Treasury distribution.",
-    twitterTitle: "NexusOS Stake &amp; Earn",
+    twitterTitle: "NexusOS Stake & Earn",
     twitterDescription: "Stake NXT for physics-weighted yield and WNUSD auto-collateral.",
     jsonLd: softwareApp({ url: `${BASE}/stake-earn`, name: "NexusOS Stake &amp; Earn", description: "NXT token staking with physics-weighted yield rates, six lock periods, WNUSD auto-collateral, and Orbital Treasury fee routing." }),
     bodyHtml: `<h1>Stake &amp; Earn — NXT Staking Rewards</h1><p>Stake your NXT tokens to earn physics-weighted yield and auto-mint WNUSD collateral. Six lock periods from 30 days to 2 years. All staking activity is on-chain, transparent, and fee-routed to the Orbital Treasury.</p><nav><ul><li><a href="${BASE}/wnsp-staking">WNSP Staking Detail</a></li><li><a href="${BASE}/nxt-campaign">NXT Token</a></li><li><a href="${BASE}/orbital-treasury">Orbital Treasury</a></li></ul></nav>`,
@@ -1901,15 +2154,15 @@ export const ROUTE_META: Record<string, PageMeta> = {
     bodyHtml: `<h1>NXT ↔ Fractal BTC Swap</h1><p>Swap between NXT tokens and Fractal BTC using the NexusOS atomic swap engine. Physics-based fee calculation ensures fees reflect the energy cost of the swap transaction.</p><nav><ul><li><a href="${BASE}/rune-swap">Rune Swap</a></li><li><a href="${BASE}/market">NexusOS Market</a></li></ul></nav>`,
   },
   "/swap": {
-    title: "Token Swap — NXT, wSATS, and Bitcoin Runes | NexusOS",
-    description: "Swap NXT tokens, wrapped satoshis (wSATS), and Bitcoin Rune tokens using the NexusOS atomic swap engine. Physics-based fee calculation, on-chain settlement.",
-    canonical: `${BASE}/swap`,
-    ogTitle: "NexusOS Token Swap",
-    ogDescription: "Swap NXT, wSATS, and Bitcoin Runes. Physics-based fees. On-chain settlement. Orbital Treasury routing.",
-    twitterTitle: "NexusOS Token Swap",
-    twitterDescription: "Swap NXT, wSATS, and Bitcoin Runes. Physics-based fees.",
-    jsonLd: softwareApp({ url: `${BASE}/swap`, name: "NexusOS Token Swap", description: "Atomic swap between NXT tokens, wSATS, and Bitcoin Rune tokens. Physics-based fee calculation, on-chain settlement, Orbital Treasury routing." }),
-    bodyHtml: `<h1>Token Swap — NXT, wSATS, and Bitcoin Runes</h1><p>Swap between NXT tokens, wrapped satoshis (wSATS), and Bitcoin Rune tokens. All swaps use the NexusOS atomic swap engine with physics-based fee calculation and on-chain settlement.</p><nav><ul><li><a href="${BASE}/rune-swap">Rune Swap</a></li><li><a href="${BASE}/nxt-fb-swap">NXT ↔ Fractal BTC Swap</a></li><li><a href="${BASE}/market">NexusOS Market</a></li></ul></nav>`,
+    title: "NXT ↔ Fractal BTC Swap | NexusOS",
+    description: "Swap between NXT tokens and Fractal BTC using the NexusOS atomic swap engine. Physics-based fee calculation and on-chain settlement.",
+    canonical: `${BASE}/nxt-fb-swap`,
+    ogTitle: "NXT ↔ Fractal BTC Swap",
+    ogDescription: "Swap NXT tokens and Fractal BTC. Physics-based fees. On-chain settlement.",
+    twitterTitle: "NXT ↔ Fractal BTC Swap",
+    twitterDescription: "Swap NXT and Fractal BTC. Physics-based fees.",
+    jsonLd: softwareApp({ url: `${BASE}/nxt-fb-swap`, name: "NXT ↔ Fractal BTC Swap", description: "Atomic swap between NXT tokens and Fractal BTC using the NexusOS physics engine." }),
+    bodyHtml: `<h1>NXT ↔ Fractal BTC Swap</h1><p>Swap between NXT tokens and Fractal BTC using the NexusOS atomic swap engine. Physics-based fee calculation ensures fees reflect the energy cost of the swap transaction.</p><nav><ul><li><a href="${BASE}/nxt-fb-swap">NXT ↔ Fractal BTC Swap</a></li><li><a href="${BASE}/rune-swap">Rune Swap</a></li><li><a href="${BASE}/market">NexusOS Market</a></li></ul></nav>`,
   },
   "/btc-sentinel": {
     title: "BTC Sentinel — Bitcoin Transaction Monitor | NexusOS",
@@ -2020,14 +2273,14 @@ export const ROUTE_META: Record<string, PageMeta> = {
     description: "WNSP-URI v1.0 spectral address format: wnsp://Ψ(wdm,oam,pol)/path. Deterministic, physics-based, censorship-proof addressing for the NexusOS network.",
     canonical: `${BASE}/wnsp`,
     ogType: "article",
-    jsonLd: techArticle({ url: `${BASE}/wnsp`, name: "WNSP-URI v1.0", description: "Spectral URI addressing: wnsp://Ψ(wdm,oam,pol)/path. Deterministic physics-based addressing.", about: "WNSP-URI, spectral addressing, wnsp protocol" }),
+    jsonLd: techArticle({ url: `${BASE}/wnsp`, name: "WNSP-URI v1.0", description: "Spectral URI addressing: wnsp://Ψ(wdm,oam,pol)/path. Deterministic physics-based addressing.", about: "WNSP-URI, spectral addressing, wnsp protocol", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
   },
   "/wnsp-uri": {
     title: "WNSP-URI — Wavelength-Native Spectral URI Addressing",
     description: "WNSP-URI v1.0: wnsp://Ψ(wdm,oam,pol)/path. Deterministic physics-based addressing that replaces DNS with electromagnetic channel coordinates.",
     canonical: `${BASE}/wnsp`,
     ogType: "article",
-    jsonLd: techArticle({ url: `${BASE}/wnsp`, name: "WNSP-URI v1.0 — Spectral Addressing", description: "WNSP-URI addressing scheme: wnsp://Ψ(wdm,oam,pol)/path. Deterministic, censorship-proof, physics-derived addresses.", about: "WNSP-URI, spectral addressing, DNS-free routing" }),
+    jsonLd: techArticle({ url: `${BASE}/wnsp`, name: "WNSP-URI v1.0 — Spectral Addressing", description: "WNSP-URI addressing scheme: wnsp://Ψ(wdm,oam,pol)/path. Deterministic, censorship-proof, physics-derived addresses.", about: "WNSP-URI, spectral addressing, DNS-free routing", datePublished: "2026-05-16", dateModified: "2026-07-20" }),
   },
   "/visualizer": {
     title: "NexusOS Visualizer — Spectral Network and Compression Curve",
@@ -2155,7 +2408,7 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-const BASE_OG_IMAGE = "https://wnsp.io/opengraph.png";
+const BASE_OG_IMAGE = "https://wnsp.io/opengraph.jpg";
 
 function buildMetaBlock(m: PageMeta): string {
   const title       = esc(m.title);
@@ -2275,7 +2528,7 @@ export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
     "@type": "Organization",
     "name": "NexusOS",
     "url": BASE,
-    "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.png" },
+    "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.jpg" },
   };
 
   // Build top-level VideoObject entries — Google's video rich-result spec
@@ -2306,7 +2559,7 @@ export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
     if (v.thumbFileId) {
       obj["thumbnailUrl"] = `${BASE}/api/telegram/video/${encodeURIComponent(v.thumbFileId)}/thumb`;
     } else {
-      obj["thumbnailUrl"] = "https://wnsp.io/opengraph.png";
+      obj["thumbnailUrl"] = "https://wnsp.io/opengraph.jpg";
     }
     if (v.duration) obj["duration"] = fmtIsoDuration(v.duration);
     return obj;
@@ -2350,7 +2603,7 @@ export function buildVideosPageMeta(videos: VideoForSchema[]): PageMeta {
     const uploadDate = new Date(v.createdAt).toISOString().split("T")[0];
     const thumbUrl   = v.thumbFileId
       ? `${BASE}/api/telegram/video/${encodeURIComponent(v.thumbFileId)}/thumb`
-      : "https://wnsp.io/opengraph.png";
+      : "https://wnsp.io/opengraph.jpg";
     const durationStr = v.duration ? ` · ${fmtIsoDuration(v.duration).replace("PT", "").toLowerCase()}` : "";
 
     return `<article style="margin-bottom:1.5rem;">`
@@ -2391,13 +2644,13 @@ export function buildVideoDetailPageMeta(video: VideoForSchema): PageMeta {
   const description = video.caption ?? "NexusOS physics demonstration video.";
   const thumbUrl   = video.thumbFileId
     ? `${BASE}/api/telegram/video/${encodeURIComponent(video.thumbFileId)}/thumb`
-    : "https://wnsp.io/opengraph.png";
+    : "https://wnsp.io/opengraph.jpg";
 
   const publisher = {
     "@type": "Organization",
     "name": "NexusOS",
     "url": BASE,
-    "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.png" },
+    "logo": { "@type": "ImageObject", "url": "https://wnsp.io/opengraph.jpg" },
   };
 
   const streamable = isStreamable(video);

@@ -951,7 +951,7 @@ Orthogonality replaces exclusion with **independence**:
 | Address controlled by registrar | Address immutable — rooted in Maxwell |
 | Interference managed by rules | Interference impossible by geometry |
 
-A network built on orthogonal channels doesn't degrade as it scales. Add a new user — they get a new axis in Hilbert space. The existing 25,599 channels are unaffected. There is no congestion in Hilbert space.
+A network built on orthogonal channels doesn't degrade as it scales. Add a new user — they get a new axis in Hilbert space. The existing 51,199 channels are unaffected. There is no congestion in Hilbert space.
 
 This is why it is the correct foundation for infrastructure at Kardashev Type I scale: capacity grows with the mathematics, not with the hardware.`,
       },

@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { colorAnnouncementCard, colorText400 } from "@/lib/color-classes";
 import { 
   FileText, 
   Waves, 
@@ -100,11 +101,11 @@ export default function AnnouncementsPage() {
             ].map((item, i) => (
               <div 
                 key={i} 
-                className={`bg-${item.color}-900/20 border border-${item.color}-500/30 rounded-lg p-4 hover:border-${item.color}-500/50 transition-colors`}
+                className={colorAnnouncementCard[item.color]}
                 data-testid={`highlight-${i}`}
               >
                 <div className="flex items-start gap-3">
-                  <div className={`text-${item.color}-400 mt-0.5`}>{item.icon}</div>
+                  <div className={`${colorText400[item.color]} mt-0.5`}>{item.icon}</div>
                   <div>
                     <h3 className="font-semibold text-white mb-1">{item.title}</h3>
                     <p className="text-gray-400 text-sm">{item.desc}</p>

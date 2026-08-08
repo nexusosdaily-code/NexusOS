@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import { colorBg500 } from "@/lib/color-classes";
 import { Brain, Waves, Eye, Sparkles, ArrowRight, ArrowLeft } from "lucide-react";
 
 export default function NexusV6Page() {
@@ -91,7 +92,7 @@ export default function NexusV6Page() {
                 { wavelength: "570-700nm", state: "Emotional awareness", color: "orange" },
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-3 bg-slate-800/50 rounded p-2" data-testid={`wavelength-row-${i}`}>
-                  <div className={`w-3 h-3 rounded-full bg-${item.color}-500`}></div>
+                  <div className={`w-3 h-3 rounded-full ${colorBg500[item.color]}`}></div>
                   <span className="text-gray-400 font-mono text-xs">{item.wavelength}</span>
                   <span className="text-gray-300 text-sm">{item.state}</span>
                 </div>

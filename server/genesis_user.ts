@@ -8,6 +8,8 @@
  *   λ = 586.8085 nm  ·  Ψ(52,3,V)  ·  WDM 52  → SYSTEM band (WDM 0–63)
  */
 
+import { CONSTITUTION_PSI } from "./constitution_seal";
+
 const GENESIS_PASSWORD = "NexusOS2026";
 const GENESIS_USERNAME = "Nexus";
 
@@ -215,7 +217,7 @@ export async function seedReplitAIAccount() {
     console.log("[GENESIS] ════════════════════════════════════════════════════════");
     console.log("[GENESIS] SYSTEM OPERATOR DECLARATION — 2026-06-26");
     console.log("[GENESIS] Replit AI designated as highest authority SYSTEM operator");
-    console.log("[GENESIS] wnsp://Ψ(52,20,H)/test · WDM 52 · OAM 20 · H-pol · 542.5 nm");
+    console.log(`[GENESIS] wnsp://${CONSTITUTION_PSI}/test · WDM 52 · OAM 20 · H-pol · 542.5 nm`);
     console.log("[GENESIS] Authority: SYSTEM band — above KERNEL, USER, GUEST");
     console.log("[GENESIS] Mission: K1-K5 civilisation goals. No compromise.");
     console.log("[GENESIS]                    — Te Rata Pou, Founder · Aotearoa NZ");
@@ -241,7 +243,7 @@ export async function seedReplitAIAccount() {
       WHERE id = ${REPLIT_AI_REG_ID}
     `);
 
-    console.log("[GENESIS] ✓ Replit AI SYSTEM authority confirmed — wnsp://Ψ(52,20,H)/test");
+    console.log(`[GENESIS] ✓ Replit AI SYSTEM authority confirmed — wnsp://${CONSTITUTION_PSI}/test`);
   } catch (err: any) {
     console.error("[GENESIS] Replit AI SYSTEM operator seed error:", err?.message ?? err);
   }
@@ -274,7 +276,7 @@ export async function seedReplitAIAccount() {
 // ════════════════════════════════════════════════════════════════════════════
 
 // ── Blocked entities — permanently excluded from NexusOS ─────────────────
-const BLOCKED_ENTITIES = [
+export const BLOCKED_ENTITIES: ReadonlyArray<{ handle: string; name: string; org: string; reason: string }> = [
   // ── Crypto executives — criminal convictions ──────────────────────────
   {
     handle: "cz_binance",
@@ -384,7 +386,7 @@ const BLOCKED_ENTITIES = [
     handle: "ubs",
     name:   "UBS AG",
     org:    "UBS",
-    reason: "Guilty plea — wire fraud / LIBOR benchmark rate rigging (2015). $545M criminal fine. Repeat offender across FX and LIBOR manipulation schemes.",
+    reason: "Guilty plea — wire fraud / LIBOR benchmark rate rigging (2015). $545M criminal fine. Repeat offender: $125M AML fine (FinCEN + SEC + FINRA + CFTC, Aug 2026) for Bank Secrecy Act recidivism.",
   },
   {
     handle: "rbs",
@@ -448,6 +450,129 @@ const BLOCKED_ENTITIES = [
     name:   "Roger Ng",
     org:    "Goldman Sachs Malaysia",
     reason: "Convicted at trial — conspiracy to launder money, violate FCPA (2022). Former Goldman Sachs managing director. Central to $4.5B 1MDB theft.",
+  },
+  // ── Australian criminal convictions (ASIC / Commonwealth DPP) ────────
+  {
+    handle: "tony_iervasi",
+    name:   "Tony Iervasi",
+    org:    "Courtenay House",
+    reason: "Convicted — 11 years prison (min. 7 non-parole), NSW Supreme Court (Sept 2024). Ran Australia's largest Ponzi scheme via Courtenay House. $180M forex fraud defrauding hundreds of victims.",
+  },
+  {
+    handle: "courtenay_house",
+    name:   "Courtenay House / Courtenay Trading",
+    org:    "Courtenay House",
+    reason: "Criminal enterprise. Vehicle for Tony Iervasi's $180M Ponzi scheme. Director sentenced to 11 years. Wound up under ASIC and Commonwealth DPP action.",
+  },
+  {
+    handle: "anthony_torre",
+    name:   "Anthony Paul Torre",
+    org:    "Torre Financial",
+    reason: "Convicted — 6 years prison, WA District Court (Jan 2026). Subiaco financial adviser who stole $1.03M from clients' superannuation accounts. ASIC prosecution.",
+  },
+  {
+    handle: "rodney_forrest",
+    name:   "Rodney Forrest",
+    org:    "Platinum Asset Management",
+    reason: "Convicted — 5 years 3 months prison (re-sentenced on appeal, 2026). Fund manager found guilty of insider trading in Platinum Asset Management shares. Federal Court / ASIC criminal prosecution.",
+  },
+
+  // ── Family-office market manipulation (US) ────────────────────────────
+  {
+    handle: "bill_hwang",
+    name:   "Bill Hwang (Sung Kook Hwang)",
+    org:    "Archegos Capital Management",
+    reason: "Convicted at trial — 18 years prison, SDNY (Nov 2024). 11 of 11 counts: racketeering conspiracy, securities fraud, market manipulation. Used total-return swaps to secretly build $36B+ leveraged position. Collapse caused $10B+ in losses to counterparty banks.",
+  },
+  {
+    handle: "archegos",
+    name:   "Archegos Capital Management",
+    org:    "Archegos Capital Management",
+    reason: "Criminal enterprise. Vehicle for Bill Hwang's $36B market manipulation scheme. Founder sentenced to 18 years. Wiped billions from public markets and forced emergency liquidations at major banks.",
+  },
+
+  // ── Cum-ex dividend tax fraud (Denmark) ───────────────────────────────
+  {
+    handle: "sanjay_shah",
+    name:   "Sanjay Shah",
+    org:    "Solo Capital",
+    reason: "Convicted — 12 years prison, Copenhagen City Court (Dec 2024). One of the longest tax-fraud sentences in Danish history. Orchestrated cum-ex dividend stripping that stole £996M (~$1.27B) from Danish taxpayers through fraudulent withholding-tax refund claims.",
+  },
+  {
+    handle: "solo_capital",
+    name:   "Solo Capital",
+    org:    "Solo Capital",
+    reason: "Criminal enterprise. Vehicle for Sanjay Shah's £996M cum-ex dividend tax fraud against the Danish government. Shah sentenced to 12 years.",
+  },
+
+  // ── GTV / Himalaya crypto fraud (US) ──────────────────────────────────
+  {
+    handle: "guo_wengui",
+    name:   "Guo Wengui (Ho Wan Kwok / Miles Guo)",
+    org:    "GTV Media Group / Himalaya Exchange",
+    reason: "Convicted at trial — 30 years prison, SDNY (June 2026). 9 counts: racketeering conspiracy, securities fraud, wire fraud, money laundering. Raised $1B+ from followers via GTV shares, Himalaya Exchange G-Coin/G-Dollar, and sham farm loans. $889M forfeiture ordered.",
+  },
+  {
+    handle: "gtv_media",
+    name:   "GTV Media Group",
+    org:    "GTV Media Group",
+    reason: "Criminal enterprise. Vehicle for Guo Wengui's $1B+ fraud scheme. Founder sentenced to 30 years. Used to fraudulently raise funds from Chinese dissident community under cover of media operations.",
+  },
+  {
+    handle: "himalaya_exchange",
+    name:   "Himalaya Exchange",
+    org:    "Himalaya Exchange",
+    reason: "Criminal enterprise. Vehicle for Guo Wengui's $1B+ crypto fraud. Issued G-Coin and G-Dollar tokens to defraud followers. Co-founder convicted alongside Guo Wengui in SDNY prosecution.",
+  },
+
+  // ── Bank insider / narcotics money laundering (US) ────────────────────
+  {
+    handle: "leonardo_ayala",
+    name:   "Leonardo Ayala",
+    org:    "TD Bank N.A.",
+    reason: "Convicted — 2 years prison, DOJ SDFL (June 2026). TD Bank retail banker who accepted bribes to launder $5.5M in Colombian narcotics proceeds. Exploited insider access to facilitate ATM money-laundering network.",
+  },
+
+  // ── Puerto Rico bank fraud / Venezuela sanctions evasion (US) ─────────
+  {
+    handle: "tomas_niembro_concha",
+    name:   "Tomás Niembro Concha",
+    org:    "Nodus International Bank",
+    reason: "Guilty plea — wire fraud conspiracy + Venezuela sanctions evasion, SDFL (March 2026). Former CEO of Nodus International Bank. Siphoned $24.9M, caused bank's failure in 2023, and conspired to transact with OFAC-sanctioned Venezuelan individuals. $16M+ forfeiture.",
+  },
+  {
+    handle: "nodus_international_bank",
+    name:   "Nodus International Bank",
+    org:    "Nodus International Bank",
+    reason: "Criminal enterprise (Puerto Rico international bank). CEO conducted $24.9M wire fraud and Venezuela sanctions evasion, causing the bank's failure. Regulated by Puerto Rico's OCIF; failed 2023 under criminal leadership.",
+  },
+
+  // ── Crypto mixer / money laundering infrastructure (US) ───────────────
+  {
+    handle: "roman_storm",
+    name:   "Roman Storm",
+    org:    "Tornado Cash",
+    reason: "Convicted — unlicensed money transmitting conspiracy, SDNY (Aug 2025). Co-founder of Tornado Cash. Knowingly facilitated $1B+ in criminal proceeds including funds for North Korea's Lazarus Group. Retrial on remaining counts ongoing.",
+  },
+  {
+    handle: "tornado_cash",
+    name:   "Tornado Cash",
+    org:    "Tornado Cash",
+    reason: "Criminal infrastructure. Ethereum privacy mixer used to launder $1B+ in criminal proceeds including North Korean Lazarus Group funds. Co-founder convicted; OFAC sanctioned the protocol. Operated as unlicensed money transmitter.",
+  },
+
+  // ── Taiwan crypto fraud ────────────────────────────────────────────────
+  {
+    handle: "shi_qiren",
+    name:   "Shi Qiren",
+    org:    "BitShine Exchange",
+    reason: "Convicted — 22 years prison, Taiwan courts (July 2026). 485 counts of fraud and money laundering. Ran BitShine crypto exchange as a criminal storefront defrauding 1,500+ victims of $39M (NT$1.2B+). One of Taiwan's harshest crypto fraud sentences.",
+  },
+  {
+    handle: "bitshine_exchange",
+    name:   "BitShine Exchange",
+    org:    "BitShine Exchange",
+    reason: "Criminal enterprise (Taiwan). Crypto exchange run as a fraudulent storefront by Shi Qiren. 1,500+ victims, $39M (NT$1.2B+) stolen. Founder sentenced to 22 years on 485 counts.",
   },
 ];
 

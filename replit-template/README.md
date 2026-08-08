@@ -4,7 +4,7 @@ Every character in your code has a wavelength. Every wavelength is an address. T
 
 ## What this does
 
-The NexusOS CE (Character Encoding) system maps every character to a unique position in the visible light spectrum (380–780nm). Paste any code — Python, JavaScript, Rust, SQL — and get its spectral fingerprint: a wavelength, a photon energy, and a Ψ channel address in 25,600-dimensional Hilbert space.
+The NexusOS CE (Character Encoding) system maps every character to a unique position in the visible light spectrum (380–780nm). Paste any code — Python, JavaScript, Rust, SQL — and get its spectral fingerprint: a wavelength, a photon energy, and a Ψ channel address in 51,200-dimensional Hilbert space.
 
 This is the foundation of WavelengthScript — a physics-native language where computation costs are derived from E=hf instead of arbitrary gas fees.
 

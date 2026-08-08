@@ -26,8 +26,10 @@ export const H_PLANCK = 6.626_070_15e-34;   // J·s
 export const C_LIGHT  = 299_792_458;         // m/s
 export const NM_MIN   = 380;                 // nm — shortest visible (SYSTEM band)
 export const NM_MAX   = 780;                 // nm — longest visible (GUEST band)
-export const WDM_CHANNELS = 256;
-export const OAM_MODES    = 50;
+export const WDM_CHANNELS   = 256;
+export const OAM_MODES      = 50;
+export const N_DIR          = 2;   // forward +k̂ and backward −k̂ are orthogonal (time-reversal symmetry)
+export const TOTAL_CHANNELS = WDM_CHANNELS * OAM_MODES * 2 * N_DIR; // 51,200 — Claim 32
 
 // Reference wavelength (green — midpoint of authority spectrum)
 const REF_NM = 560;

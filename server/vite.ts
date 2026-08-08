@@ -65,12 +65,19 @@ export async function setupVite(server: Server, app: Express) {
         }
       } else if (videoDetailMatch) {
         try {
-          const video = await storage.getTelegramVideo(Number(videoDetailMatch[1]));
-          page = video
-            ? injectCustomMeta(transformed, buildVideoDetailPageMeta(video))
-            : injectMeta(transformed, host, pathname);
+          const video = await storage.getPublishedTelegramVideo(Number(videoDetailMatch[1]));
+          if (video) {
+            page = injectCustomMeta(transformed, buildVideoDetailPageMeta(video));
+          } else {
+            res.status(404).set({ "Content-Type": "text/html" }).end(injectMeta(transformed, host, pathname));
+            return;
+          }
         } catch {
-          page = injectMeta(transformed, host, pathname);
+          res.status(503)
+            .set("Retry-After", "30")
+            .set("Content-Type", "text/html")
+            .end("<!doctype html><html><head><title>Service Unavailable</title></head><body><p>Temporarily unavailable. Please try again shortly.</p></body></html>");
+          return;
         }
       } else {
         page = injectMeta(transformed, host, pathname);

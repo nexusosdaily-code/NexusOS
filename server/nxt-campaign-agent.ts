@@ -184,7 +184,7 @@ NexusOS uses <b>Maxwell's equations.</b>
 
 ⚡ Every address is a wavelength (380–780nm)
 📡 Every transaction validates against electromagnetic wave physics
-🌈 25,600 orthogonal WNSP channels — orthogonal by quantum mechanics, not software policy
+🌈 51,200 orthogonal WNSP channels — orthogonal by quantum mechanics, not software policy
 💫 Fee formula: E = hf (Planck's equation — real photon energy)
 
 This isn't a gimmick. When photonic ASICs arrive (~2032), NexusOS nodes run on actual light — not transistors.
@@ -201,7 +201,7 @@ NexusOS: Maxwell's equations
 
 Every address = a wavelength (380–780nm)
 Every transaction validates against electromagnetic wave physics
-25,600 orthogonal WNSP channels (quantum mechanics, not software)
+51,200 orthogonal WNSP channels (quantum mechanics, not software)
 Fee = E=hf (real photon energy)
 
 When photonic ASICs arrive (~2032), NexusOS nodes run on actual light.
@@ -258,7 +258,7 @@ Kardashev Type I: a civilisation that harnesses the full energy output of its ho
 NexusOS is the operating system for that transition.
 
 🌐 WNSP Protocol — wavelength-based addressing (no DNS, no IP)
-🔆 25,600 photonic channels — ready for optical hardware
+🔆 51,200 photonic channels — ready for optical hardware
 💰 NXT token — physics-priced, sats-settled
 💎 WNUSD — stablecoin funding the hardware stack
 🪙 Two live Bitcoin Runes: NEXUS•WAVELENGTH (952596:379) + WNSP•BTC (952733:1958)
@@ -278,7 +278,7 @@ Kardashev Type I: full planetary energy harnessing.
 NexusOS is the OS for that transition:
 
 • WNSP — wavelength-based addressing (no DNS/IP)
-• 25,600 photonic channels
+• 51,200 photonic channels
 • NXT — physics-priced, sats-settled
 • WNUSD — stablecoin → hardware funding
 • Bitcoin Runes: NEXUS•WAVELENGTH + WNSP•BTC (mainnet)
@@ -302,7 +302,7 @@ NexusOS has inscribed its core specifications onto the Bitcoin base layer via Or
 
 📜 <b>WNSP Protocol spec</b> — wavelength-based addressing
 🔮 <b>WavelengthScript Compiler α</b> — the language of photonic hardware
-🌈 <b>25,600 Ψ channel map</b> — the Hilbert space routing table
+🌈 <b>51,200 Ψ channel map</b> — the Hilbert space routing table
 🔬 <b>Compression State Theory</b> — the physics underpinning it all
 
 <b>Why Ordinals?</b> The physics spec must outlast any server. Inscribed on Bitcoin it cannot be censored, altered, or deleted — guaranteed by proof-of-work.
@@ -319,7 +319,7 @@ Every Ordinal is immutable data, secured by proof-of-work forever.
 Inscribed:
 • WNSP Protocol spec — wavelength-based addressing
 • WavelengthScript Compiler α
-• 25,600 Ψ channel map (Hilbert space routing)
+• 51,200 Ψ channel map (Hilbert space routing)
 • Compression State Theory
 
 Why inscribe? Physics specs must outlast any server. Bitcoin makes them uncensorable, unalterable, permanent.
@@ -457,7 +457,7 @@ Step 3 → Inspect the spectral analysis: wavelength distribution, total energy 
 Step 4 → Click Transmit. Your data propagates as photons. On completion: Spectral Receipt — permanent on-chain ordinal with your λ, Ψ, and content hash.
 Step 5 → Retrieve at wnsp.io/spectral-workspace — tune to your wavelength.
 
-25,600 orthogonal channels. Physics addressing. No account required to read.
+51,200 orthogonal channels. Physics addressing. No account required to read.
 
 This architecture runs on silicon today. Migrates to photonic hardware ~2032. Zero rewrite.
 
@@ -646,13 +646,13 @@ wnsp.io/developer #NexusOS #WNSP #API #Developer #Physics`,
 
 Every NexusOS address looks like this: <code>Ψ(wdm, oam, pol)</code>
 
-This isn't random. It's a coordinate in a 25,600-channel Hilbert space.
+This isn't random. It's a coordinate in a 51,200-channel Hilbert space.
 
 🔵 <b>WDM (wavelength-division multiplexing)</b> — which colour of light: 1–128 bands, 380–780nm
 🔁 <b>OAM (orbital angular momentum)</b> — which spin mode: 1–100 twists
 ↕️ <b>Pol (polarisation)</b> — which orientation: H (horizontal) or V (vertical)
 
-<b>Total channels: 128 × 100 × 2 = 25,600</b>
+<b>Total channels: 256 × 50 × 2 × 2 = 51,200</b>
 
 Why does this matter?
 ⟨Ψᵢ|Ψⱼ⟩ = 0 — every channel is <b>orthogonal by quantum mechanics</b>. Not by software. Two transmissions on different channels cannot interfere — guaranteed by physics, not policy.
@@ -675,7 +675,7 @@ WDM  = wavelength-division: which colour of light (1–128, 380–780nm)
 OAM  = orbital angular momentum: which spin mode (1–100)
 Pol  = polarisation: H (horizontal) or V (vertical)
 
-Total channels: 128 × 100 × 2 = 25,600
+Total channels: 256 × 50 × 2 × 2 = 51,200
 
 ⟨Ψᵢ|Ψⱼ⟩ = 0
 Every channel is orthogonal by quantum mechanics — not software.

@@ -43,6 +43,7 @@ const DeveloperKeysPage = lazy(() => import("@/pages/developer-keys"));
 const DeveloperPage = lazy(() => import("@/pages/developer"));
 const GovernancePage = lazy(() => import("@/pages/governance"));
 const ConstitutionPage = lazy(() => import("@/pages/constitution"));
+const ConstitutionCompliancePage = lazy(() => import("@/pages/constitution-compliance"));
 const DocsPage = lazy(() => import("@/pages/docs"));
 const WNSPCoordinator = lazy(() => import("@/pages/wnsp-coordinator"));
 const KernelPage = lazy(() => import("@/pages/kernel"));
@@ -249,7 +250,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, EBState> {
 // DYNAMIC_PROTECTED_PREFIXES — paths with dynamic segments where ANY child is valid.
 // ---------------------------------------------------------------------------
 const EXACT_PROTECTED_PATHS = new Set<string>([
-  "/", "/hub", "/apps",
+  "/hub", "/apps",
   "/v10", "/v9", "/v8", "/v7", "/v6",
   "/encoding-lab",
   "/workspace/encoding", "/workspace/analytics", "/workspace/transmission",
@@ -294,14 +295,11 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/ce-se-pipeline", "/ce-code-writer", "/wnsp-vm",
   "/spectral-router", "/spectral-search", "/spectral-contracts",
   "/divergence-test", "/hardware-spec", "/hardware-lab",
-  "/campaign", "/constitution", "/mobile-sdk", "/shareholders",
+  "/campaign", "/mobile-sdk", "/shareholders",
   "/psi-board", "/unified-compression-theory", "/universal-one", "/matter-protocol", "/universal-address", "/element-catalogue", "/standing-wave-trap", "/lossless-channel",
   "/cosmic-lattice",
   "/the-entangler",
   "/the-field",
-  "/the-coherent-state",
-  "/the-squeezed-state",
-  "/the-bogoliubov-transform",
 ]);
 
 // Only paths where ANY child segment is a valid protected route (dynamic).
@@ -375,7 +373,6 @@ function ProtectedRoutes() {
         <Route path="/developer-matrix/docs" component={DocsPage} />
         <Route path="/developer/keys" component={DeveloperKeysPage} />
         <Route path="/governance" component={GovernancePage} />
-        <Route path="/constitution" component={ConstitutionPage} />
         <Route path="/workspace/matrix" component={DeveloperMatrixPage} />
         {/* /docs and /docs/:section are public — handled in Router() above */}
         <Route path="/wnsp/coordinator" component={WNSPCoordinator} />
@@ -503,7 +500,6 @@ function Router() {
       <Route path="/fractal-btc" component={FractalBtcBridgePage} />
       <Route path="/fractal-bitcoin" component={FractalBtcBridgePage} />
       <Route path="/nxt-fb-swap" component={NxtFbSwapPage} />
-      <Route path="/swap" component={NxtFbSwapPage} />
       <Route path="/btc-sentinel" component={BtcSentinelPage} />
       <Route path="/btc-assets-sentinel" component={BtcAssetsSentinelPage} />
       <Route path="/mempool" component={MempoolMonitorPage} />
@@ -586,6 +582,7 @@ function Router() {
       <Route path="/hardware-treasury" component={HardwareTreasuryPage} />
       <Route path="/campaign" component={CampaignPage} />
       <Route path="/constitution" component={ConstitutionPage} />
+      <Route path="/constitution/compliance" component={ConstitutionCompliancePage} />
       <Route path="/mobile-sdk" component={MobileSDKPage} />
       <Route path="/shareholders" component={ShareholdersPage} />
       <Route path="/contact" component={ContactPage} />
@@ -597,6 +594,8 @@ function Router() {
       <Route path="/nexus-hardware-os" component={NexusHardwareOsPage} />
       <Route path="/orbital-treasury" component={OrbitalTreasuryPage} />
       <Route path="/spectral-library" component={SpectralLibraryPage} />
+      {/* Homepage — public; HubPage renders a landing view for guests */}
+      <Route path="/" component={HubPage} />
       {/* Catch-all: shows 404 for unknown paths, auth guard for known protected ones */}
       <Route component={ProtectedOrNotFound} />
     </Switch>
@@ -679,11 +678,14 @@ function App() {
             <AuthProvider>
               <Toaster />
               <FriendRequestNotifier />
-              <AuthLoading>
-                <Suspense fallback={<PageLoader />}>
-                  <Router />
-                </Suspense>
-              </AuthLoading>
+              {/* AuthLoading is intentionally NOT wrapping Router here.
+                  Public routes (constitution, docs, crowdfund, etc.) must
+                  paint immediately without waiting for /api/auth/me.
+                  Protected routes are individually guarded by <ProtectedRoute>
+                  which shows its own "Authenticating…" state while isLoading. */}
+              <Suspense fallback={<PageLoader />}>
+                <Router />
+              </Suspense>
               <TelegramFloat />
               <Suspense fallback={null}><GuideBot /></Suspense>
             </AuthProvider>

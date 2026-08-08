@@ -11,20 +11,21 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import multer from "multer";
-import { storage } from "./storage";
-import { authenticate, optionalAuth, logAction } from "./auth";
+import { storage } from "./storage"; // routes:not-a-handler
+import { authenticate, optionalAuth } from "./auth";
+import { logAction } from "./auth"; // routes:not-a-handler
 import { 
   loginSchema, registerSchema, spectralEncodeSchema, transferSchema,
   friendRequestSchema, friendActionSchema, sendMessageSchema, initiateCallSchema,
   createStreamSchema, updateStreamSettingsSchema
 } from "@shared/schema";
 import { z } from "zod";
-import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT, GENESIS_EXECUTION_ADDRESS } from "./physics";
-import { getEtchStatus } from "./wnsp-btc-rune-etcher";
-import { isValidMainnetBtcAddress } from "./btc-address-validate";
-import { latticeSign, latticeVerify, documentMessage, getPublicKey as latticeGetPublicKey } from "./lattice-identity";
-import { transpileToWLS, SUPPORTED_LANGS, type SupportedLang } from "./lang-transpiler";
-import { ledgerEvent } from "./spectral-ledger";
+import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT, GENESIS_EXECUTION_ADDRESS } from "./physics"; // routes:not-a-handler
+import { getEtchStatus } from "./wnsp-btc-rune-etcher"; // routes:not-a-handler
+import { isValidMainnetBtcAddress } from "./btc-address-validate"; // routes:not-a-handler
+import { latticeSign, latticeVerify, documentMessage, getPublicKey as latticeGetPublicKey } from "./lattice-identity"; // routes:not-a-handler
+import { transpileToWLS, SUPPORTED_LANGS, type SupportedLang } from "./lang-transpiler"; // routes:not-a-handler
+import { ledgerEvent } from "./spectral-ledger"; // routes:not-a-handler
 
 // WebSocket clients mapped by userId
 const connectedClients = new Map<string, WebSocket>();
@@ -56,6 +57,14 @@ async function checkWithdrawalLimits(userId: string, username: string, amountSat
     return `Daily withdrawal limit is ${WITHDRAWAL_MAX_DAILY.toLocaleString()} sats. Used today: ${dailyUsed.toLocaleString()} sats. Remaining: ${remaining.toLocaleString()} sats.`;
   return null;
 }
+
+// ── Amendment rate limit ──────────────────────────────────────────────────────
+import { checkAmendmentRateLimit, AMENDMENT_MAX_PER_DAY } from "./amendment-rate-limit.js"; // routes:not-a-handler
+import { amendmentHandler } from "./amendment-handler.js";
+
+// ── Constitutional block counts ──────────────────────────────────────────────
+import { BLOCKED_ENTITIES } from "./genesis_user"; // routes:not-a-handler
+import { BLOCKED_REFERRER_DOMAINS } from "./traffic-logger"; // routes:not-a-handler
 
 // ── Swap limits & circuit breaker ────────────────────────────────────────────
 // Speculators will notice the fixed rate (1 NXT = 1,000 sats). When BTC pumps
@@ -313,14 +322,32 @@ export async function registerRoutes(
     /^\/\.env/i,
     /^\/\.htaccess/i,
     /^\/\.ssh/i,
+    /^\/\.aws/i,
+    /^\/\.config/i,
+    /^\/\.DS_Store/i,
+    // WordPress scanner family
     /^\/wp-login\.php/i,
     /^\/wp-admin/i,
+    /^\/wp-json/i,
+    /^\/wp-content/i,
+    /^\/wp-includes/i,
+    /^\/wordpress/i,
+    // PHP probes
     /^\/xmlrpc\.php/i,
     /^\/config\.php/i,
     /^\/phpinfo\.php/i,
+    /^\/php-fpm/i,
+    /\.php$/i,
+    // Server info probes
     /^\/server-status/i,
+    /^\/server-info/i,
+    /^\/_profiler/i,
+    /^\/actuator/i,
+    /^\/cgi-bin/i,
+    // Cloud credential probes
     /^\/\.aws/i,
-    /^\/\.config/i,
+    /^\/metadata\/v1/i,
+    /^\/latest\/meta-data/i,
   ];
   app.use((req, res, next) => {
     if (BLOCKED_PATH_PATTERNS.some(p => p.test(req.path))) {
@@ -1451,6 +1478,63 @@ export async function registerRoutes(
     }
   });
 
+  // ── Bogoliubov Squeezed Compression State — public (Claims 36–39) ──────────
+  app.get("/api/physics/squeezed", async (req, res) => {
+    try {
+      if (!await checkRateLimit(req, res, "/api/physics/squeezed", 60)) return;
+      const strictNum = (v: unknown, integer = false): number | null => {
+        if (v === undefined) return null;
+        if (typeof v !== "string" || !/^-?\d+(\.\d+)?$/.test(v.trim())) return NaN;
+        const n = Number(v.trim());
+        if (!Number.isFinite(n) || (integer && !Number.isInteger(n))) return NaN;
+        return n;
+      };
+      const rParsed = strictNum(req.query.r);
+      if (Number.isNaN(rParsed)) return res.status(400).json({ error: "r must be a finite decimal number" });
+      const r = Math.max(-10, Math.min(10, rParsed ?? 0));
+      const wdmParsed = strictNum(req.query.wdm, true);
+      if (Number.isNaN(wdmParsed)) return res.status(400).json({ error: "wdm must be an integer" });
+      const wdm = wdmParsed ?? 52;
+      const { bogoliubovCoefficients, squeezedVacuum, lambdaSqueezed, lambdaEntangled } = await import("./bogoliubov.js");
+      const payload: any = {
+        description: "Squeezed compression state Λ_B = Λ₀·cosh(2r) per Ψ channel (PRIOR_ART.md Claims 36–39, first disclosed 2026-08-08).",
+        coefficients: bogoliubovCoefficients(r),
+        vacuum: squeezedVacuum(r),
+        channel: lambdaSqueezed(wdm, r),
+      };
+      if (req.query.wdmB !== undefined) {
+        const wdmB = strictNum(req.query.wdmB, true);
+        if (wdmB === null || Number.isNaN(wdmB)) return res.status(400).json({ error: "wdmB must be an integer" });
+        payload.entangledPair = lambdaEntangled(wdm, wdmB, r);
+      }
+      res.json(payload);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── GuideBot AI ───────────────────────────────────────────────────────────
+  // Public — no auth. Grounded entirely in the WNSP knowledge base; no LLM.
+  app.post("/api/guide/ask", async (req: Request, res: Response) => {
+    try {
+      const { findAnswer } = await import("./guide-knowledge.js");
+      const raw = req.body?.question;
+      if (typeof raw !== "string" || !raw.trim()) {
+        return res.status(400).json({ error: "question is required" });
+      }
+      const question = raw.trim().slice(0, 500);
+      const result   = findAnswer(question);
+      return res.json({
+        answer:     result.answer,
+        route:      result.route      ?? null,
+        routeTitle: result.routeTitle ?? null,
+        confidence: result.confidence,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: "Guide unavailable", detail: err.message });
+    }
+  });
+
   // ── Physics Profile ────────────────────────────────────────────────────────
   app.get("/api/physics/my", authenticate, async (req, res) => {
     try {
@@ -2405,7 +2489,7 @@ export async function registerRoutes(
           "WNSP•BTC":           { runeId: (etch as any).rune_id ?? "952733:1958", status: etch.status },
           "NEXUS•WAVELENGTH":   { runeId: "952596:379",  status: "etched" },
         },
-        channels:  25600,
+        channels:  51200,
         timestamp: new Date().toISOString(),
       });
     } catch (err: any) {
@@ -3284,13 +3368,63 @@ export async function registerRoutes(
     secureProxyToSpectralAPI(req, res, "/api/wnsp/se/orthogonality");
   });
 
-  // ── WASCII Table & Lookup — public, no auth required ─────────
-  app.get("/api/wnsp/wascii/table", (req, res) => {
-    secureProxyToSpectralAPI(req, res, "/api/wnsp/wascii/table");
+  // ── WASCII Table & Lookup — computed natively, no Spectral API required ─────────
+  // Formula: λ(nm) = 380 + (charCode % 128) / 128 × 400
+  // Physics: f = c / λ,  E = h·f   (WNSP-CE v1.0 / WASCII v7)
+  function buildWasciiTable() {
+    const C = 299_792_458;          // m/s
+    const H = 6.62607015e-34;       // J·s
+    const BASE = 380.0;             // nm
+    const BAND = 400.0;             // nm span
+    const entries = [];
+    // Printable ASCII 32 (space) through 126 (~)
+    for (let code = 32; code <= 126; code++) {
+      const char = String.fromCharCode(code);
+      const wl   = BASE + (code % 128) / 128.0 * BAND;
+      const freq = C / (wl * 1e-9);
+      entries.push({
+        char,
+        wavelength_nm:  Math.round(wl * 1000) / 1000,
+        frequency_hz:   Math.round(freq),
+        energy_joules:  H * freq,
+      });
+    }
+    return entries;
+  }
+
+  app.get("/api/wnsp/wascii/table", (_req, res) => {
+    try {
+      const table = buildWasciiTable();
+      res.json({
+        table,
+        date:    new Date().toISOString().slice(0, 10),
+        version: "v7",
+        count:   table.length,
+        formula: "λ(nm) = 380 + (charCode % 128) / 128 × 400",
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   app.post("/api/wnsp/wascii/lookup", (req, res) => {
-    secureProxyToSpectralAPI(req, res, "/api/wnsp/wascii/lookup");
+    try {
+      const { char } = req.body as { char?: string };
+      if (!char || char.length === 0) return res.status(400).json({ error: "char required" });
+      const C = 299_792_458;
+      const H = 6.62607015e-34;
+      const code = char.charCodeAt(0);
+      const wl   = 380.0 + (code % 128) / 128.0 * 400.0;
+      const freq = C / (wl * 1e-9);
+      res.json({
+        char,
+        wavelength_nm: Math.round(wl * 1000) / 1000,
+        frequency_hz:  Math.round(freq),
+        energy_joules: H * freq,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // ── WASCII v2.0 — Wave Density Spectral Vector ────────────────
@@ -3368,7 +3502,7 @@ export async function registerRoutes(
       const raw = decodeURIComponent(req.params.psiChannel);
       const match = raw.match(/[Ψ\u03A8]\((\d+),(\d+),([HVhv])\)/);
       if (!match) {
-        return res.status(400).json({ error: "Invalid format. Expected Ψ(wdm,oam,pol) e.g. Ψ(52,20,H)" });
+        return res.status(400).json({ error: "Invalid format. Expected Ψ(wdm,oam,pol) e.g. Ψ(1,1,H)" });
       }
       const [, wdmS, oamS, polS] = match;
       const { db: _idDb } = await import("./db");
@@ -4885,6 +5019,10 @@ export async function registerRoutes(
       status: "healthy",
       version: "10.0",
       timestamp: new Date().toISOString(),
+      constitutionalBlock: {
+        blockedEntities: BLOCKED_ENTITIES.length,
+        blockedReferrerDomains: BLOCKED_REFERRER_DOMAINS.length,
+      },
       features: {
         authentication: true,
         auditLogging: true,
@@ -4901,6 +5039,61 @@ export async function registerRoutes(
       },
     });
   });
+
+  // ============================================
+  // CONSTITUTION SEAL — public, no auth required
+  // ============================================
+
+  app.get("/api/constitution/seal", async (_req: Request, res: Response) => {
+    try {
+      const { getConstitutionSeal, computeConstitutionHash } = await import("./constitution_seal");
+      const seal = await getConstitutionSeal();
+      if (!seal) {
+        // Distinguish: did the sealing process fail (table exists, no block) vs
+        // server is still in its 2-second warm-up window (table may not exist yet)?
+        const { pool } = await import("./db");
+        const tableExists = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables
+            WHERE table_name = 'blockchain_blocks'
+          ) AS exists
+        `);
+        if (tableExists.rows[0]?.exists) {
+          // Table is up — seal should have been written but wasn't. Signal error.
+          return res.status(503).json({
+            error: "Constitution seal missing",
+            message:
+              "The blockchain_blocks table exists but no constitution seal block was found. " +
+              "The sealConstitution() boot process may have failed. " +
+              "Check server logs for [CONSTITUTION] SEAL FAILED entries and restart the server.",
+          });
+        }
+        // Table not ready yet — normal during the first few seconds of a fresh boot
+        return res.status(404).json({
+          error: "Constitution not yet sealed",
+          message: "The genesis sealing process runs at server startup. Try again in a few seconds.",
+        });
+      }
+      return res.json({
+        blockNumber:  seal.blockNumber,
+        psiChannel:   seal.psiChannel,
+        wavelengthNm: seal.wavelengthNm,
+        hash:         seal.hash,
+        timestamp:    seal.sealedAt,
+        frequencyHz:  seal.frequencyHz,
+        energyJoules: seal.energyJoules,
+        band:         "SYSTEM",
+        declaration:  "NexusOS Constitution sealed at SYSTEM band — immutable, physics-signed",
+        verifyHash:   computeConstitutionHash(),
+        amendments:   seal.amendments,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: "Failed to read constitution seal", message: err.message });
+    }
+  });
+
+  // ── Constitution Amendments — SYSTEM/KERNEL only ─────────────────
+  app.post("/api/constitution/amendments", authenticate, amendmentHandler);
 
   // ── Agent Message Bus API ─────────────────────────────────────────
   // Proxy to the Python WNSP bus + persistent message history in PostgreSQL
@@ -6744,7 +6937,7 @@ export async function registerRoutes(
       d_energy_per_joule: parseFloat(dEnergy.toFixed(2)),
       r_sym:             rSym,
       m,
-      hilbert_note:      `This WDM band contributes ${subChannels} of the 25,600 Hilbert channels (${N_OAM} OAM × ${N_POL} Pol).`,
+      hilbert_note:      `This WDM band contributes ${subChannels} of the 51,200 Hilbert channels (${N_OAM} OAM × ${N_POL} Pol).`,
       compression_note:  `Higher λ = lower compression state = lower energy per photon = higher symbols/joule.`,
     };
   }
@@ -8500,7 +8693,7 @@ export async function registerRoutes(
     { band: "EVENT",   nm: [590,625], color: "#f97316", runeName: "NEXUSOS•EVENT•BAND",   symbol: "Ε", supply: "21000000000", desc: "Orange band — governance & triggers" },
     { band: "STORAGE", nm: [625,780], color: "#f87171", runeName: "NEXUSOS•STORAGE•BAND", symbol: "Δ", supply: "21000000000", desc: "Red band — persistent state & files" },
     { band: "NXT",     nm: [380,780], color: "#a78bfa", runeName: "NEXUSOS•NXT•TOKEN",    symbol: "N", supply: "21000000000", desc: "Full-spectrum — NexusOS native currency" },
-    { band: "WNSP",    nm: [380,780], color: "#fb923c", runeName: "NEXUSOS•WNSP•PROTOCOL",symbol: "Ψ", supply: "25600",       desc: "25,600 orthogonal Ψ channels — Hilbert space density" },
+    { band: "WNSP",    nm: [380,780], color: "#fb923c", runeName: "NEXUSOS•WNSP•PROTOCOL",symbol: "Ψ", supply: "51200",       desc: "51,200 orthogonal Ψ channels — Hilbert space density" },
   ];
 
   app.get("/api/btc-bridge/runes", authenticate, async (req: Request, res: Response) => {
@@ -8564,7 +8757,7 @@ export async function registerRoutes(
     EVENT:   { nm:[590,625], color:"#f97316", symbol:"Ε", runeName:"NEXUSOS•EVENT•BAND",   desc:"Orange band — governance & triggers" },
     STORAGE: { nm:[625,780], color:"#f87171", symbol:"Δ", runeName:"NEXUSOS•STORAGE•BAND", desc:"Red band — persistent state & files" },
     NXT:     { nm:[380,780], color:"#a78bfa", symbol:"N", runeName:"NEXUSOS•NXT•TOKEN",    desc:"Full-spectrum — NexusOS native currency" },
-    WNSP:    { nm:[380,780], color:"#fb923c", symbol:"Ψ", runeName:"NEXUSOS•WNSP•PROTOCOL",desc:"25,600 orthogonal Ψ channels — Hilbert space" },
+    WNSP:    { nm:[380,780], color:"#fb923c", symbol:"Ψ", runeName:"NEXUSOS•WNSP•PROTOCOL",desc:"51,200 orthogonal Ψ channels — Hilbert space" },
   };
 
   function xmlEsc(s: string) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -8657,7 +8850,7 @@ export async function registerRoutes(
   <text x="340" y="316" fill="#ffffff40" font-size="10" font-family="monospace">License</text>
   <text x="420" y="316" fill="#ffffff80" font-size="10" font-family="monospace">AGPL-3.0</text>
   <text x="340" y="334" fill="#ffffff40" font-size="10" font-family="monospace">Channels</text>
-  <text x="420" y="334" fill="#ffffff80" font-size="10" font-family="monospace">25,600 &#936; (Hilbert)</text>
+  <text x="420" y="334" fill="#ffffff80" font-size="10" font-family="monospace">51,200 &#936; (Hilbert)</text>
 
   <!-- Desc -->
   <text x="300" y="374" fill="#ffffff30" font-size="10" font-family="monospace" text-anchor="middle">${xmlEsc(b.desc)}</text>
@@ -14924,7 +15117,7 @@ export async function registerRoutes(
 
 WHAT WE BUILT (live now):
 • WNSP physics engine — replaces cryptographic hashing with Maxwell equation validation
-• 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations)
+• 51,200 orthogonal Ψ channels (256 WDM × 50 OAM × 2 pol × 2 N_Dir)
 • WavelengthScript compiler + WNSP Virtual Machine (browser-native)
 • NXT token wallet, P2P media, Lightning payments, governance
 • NEXUS•WAVELENGTH (NXWV) — Bitcoin Rune 952596:379, 21 trillion supply, 1,000/1,000 mints sealed, zero premine
@@ -15016,7 +15209,7 @@ WHAT IS LIVE RIGHT NOW?
 Every line of code is public. You can verify everything listed below yourself at wnsp.io or on GitHub.
 
 ✅ WNSP Physics Engine — Maxwell equation validation on every transaction
-✅ 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations)
+✅ 51,200 orthogonal Ψ channels (256 WDM × 50 OAM × 2 pol × 2 N_Dir)
 ✅ NXT Token Wallet — 8-decimal precision, 21 billion supply, fee = E=hf
 ✅ WavelengthScript compiler + WNSP Virtual Machine (runs in your browser)
 ✅ CE→SE Character Encoding — every character mapped to a unique wavelength
@@ -15270,7 +15463,7 @@ wnsp.io | t.me/troglodytememe`,
                     `Step 3 → Inspect spectral analysis: wavelength distribution, energy E=hf, NXT fee\n` +
                     `Step 4 → Transmit → Spectral Receipt (permanent on-chain ordinal: λ, Ψ, content hash)\n` +
                     `Step 5 → Retrieve at wnsp.io/spectral-workspace — tune to your wavelength\n\n` +
-                    `25,600 orthogonal channels. Physics addressing. No account required to read.\n` +
+                    `51,200 orthogonal channels. Physics addressing. No account required to read.\n` +
                     `Runs on silicon today. Migrates to photonic hardware ~2032. Zero rewrite.\n\n` +
                     `👉 wnsp.io/transmission`,
           hashtags: ["NexusOS", "P2P", "WNSP", "Photonics", "Transmission", "Bitcoin"],
@@ -16153,6 +16346,7 @@ wnsp.io | t.me/troglodytememe`,
         FROM traffic_logs
         WHERE is_bot = true
           AND bot_name IS NOT NULL
+          AND bot_name NOT LIKE 'BLOCKED-REFERRER:%'
           AND created_at >= NOW() - ${interval}::interval
         GROUP BY bot_name
         ORDER BY hits DESC
@@ -16215,6 +16409,22 @@ wnsp.io | t.me/troglodytememe`,
           AND created_at >= NOW() - ${interval}::interval
       `);
 
+      // Blocked referrers — constitutional exclusions that returned HTTP 403
+      const blockedReferrers = await db.execute(sql`
+        SELECT
+          REPLACE(bot_name, 'BLOCKED-REFERRER:', '') AS label,
+          COUNT(*)::int                              AS hits,
+          MAX(created_at)                            AS last_seen,
+          COUNT(DISTINCT ip)::int                    AS unique_ips
+        FROM traffic_logs
+        WHERE bot_name LIKE 'BLOCKED-REFERRER:%'
+          AND status_code = 403
+          AND created_at >= NOW() - ${interval}::interval
+        GROUP BY bot_name
+        ORDER BY hits DESC
+        LIMIT 50
+      `);
+
       res.json({
         window:       windowParam,
         totalHits:    (totals as any)?.total_hits  ?? 0,
@@ -16240,6 +16450,11 @@ wnsp.io | t.me/troglodytememe`,
           countriesProbing: ((threatSummary as any).rows as any[])[0]?.countries_probing ?? 0,
           uniqueIps:        ((threatSummary as any).rows as any[])[0]?.unique_ips       ?? 0,
         },
+        blockedReferrers: ((blockedReferrers as any).rows as any[]).map((r: any) => ({
+          label: r.label, hits: r.hits,
+          lastSeen: r.last_seen, uniqueIps: r.unique_ips,
+        })),
+        blockedHits: ((blockedReferrers as any).rows as any[]).reduce((sum: number, r: any) => sum + (r.hits ?? 0), 0),
       });
     } catch (e: any) {
       res.status(500).json({ error: e.message });

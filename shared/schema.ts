@@ -1567,6 +1567,23 @@ export const trafficLogs = pgTable("traffic_logs", {
 }));
 export type TrafficLog = typeof trafficLogs.$inferSelect;
 
+// ── Probe Counters — persisted sliding-window state for unknown-probe alerting ─
+// Survives server restarts so a scraper that hit threshold-4 can't escape the
+// alert by cycling the process. One row per (field_type, key) combination.
+export const probeCounters = pgTable("probe_counters", {
+  id:          serial("id").primaryKey(),
+  fieldType:   text("field_type").notNull(),          // 'referer' | 'ua'
+  key:         text("key").notNull(),                 // the raw referer/UA string (≤500 chars)
+  hits:        jsonb("hits").notNull().default("[]"), // number[] — epoch-ms timestamps within window
+  lastAlerted: bigint("last_alerted", { mode: "number" }).notNull().default(0), // epoch ms, 0=never
+  updatedAt:   timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  fieldKeyIdx: uniqueIndex("probe_counters_field_key_idx").on(t.fieldType, t.key),
+  updatedAtIdx: index("probe_counters_updated_at_idx").on(t.updatedAt),
+}));
+
+export type ProbeCounter = typeof probeCounters.$inferSelect;
+
 // ── Lab Nodes — Engineering labs joining the WNSP network ────────────────────
 // No capital — capabilities only. AGPL-3.0 is the authority.
 export const labNodes = pgTable("lab_nodes", {
@@ -1590,7 +1607,15 @@ export const insertLabNodeSchema = createInsertSchema(labNodes).omit({ id: true,
 export type InsertLabNode = z.infer<typeof insertLabNodeSchema>;
 export type LabNode = typeof labNodes.$inferSelect;
 
-// ── Build Catalogue — living record of every shipped feature/fix ──────────────
+export const dynamicBlocks = pgTable("dynamic_blocks", {
+  id:      serial("id").primaryKey(),
+  field:   text("field").notNull(),  // "referer" | "ua"
+  value:   text("value").notNull(),
+  label:   text("label").notNull().default("Dynamic-Block"),
+  addedAt: timestamp("added_at").notNull().defaultNow(),
+}, (t) => ({
+  fieldIdx: index("dynamic_blocks_field_idx").on(t.field),
+}));
 export const buildCatalogue = pgTable("build_catalogue", {
   id:          serial("id").primaryKey(),
   buildDate:   date("build_date").notNull(),
@@ -1611,3 +1636,5 @@ export const buildCatalogue = pgTable("build_catalogue", {
 export const insertBuildCatalogueSchema = createInsertSchema(buildCatalogue).omit({ id: true, createdAt: true });
 export type InsertBuildCatalogue = z.infer<typeof insertBuildCatalogueSchema>;
 export type BuildCatalogue = typeof buildCatalogue.$inferSelect;
+
+export type DynamicBlock = typeof dynamicBlocks.$inferSelect;

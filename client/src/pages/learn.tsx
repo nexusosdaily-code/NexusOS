@@ -51,62 +51,285 @@ function ceEncode(name: string): { nm: number; psi: string; band: string } {
   return { nm, psi: `Ψ(${wdm},${oam},${pol})`, band: nmToBand(nm) };
 }
 
+// ── Shared line processor — all languages feed through here ───────────────────
+function processWLSLine(raw: string, lang: string, out: string[]): void {
+  const line = raw.trim();
+  if (!line) { out.push(""); return; }
+
+  if (line.startsWith("#") || line.startsWith("//") || line.startsWith("--") || line.startsWith("/*") || line.startsWith("*") || line.startsWith(";;")) {
+    out.push(`// ${line.replace(/^[#/*;\-]+\s*/, "")}`); return;
+  }
+
+  // ── Language-specific patterns ────────────────────────────────────────────
+
+  if (lang === "typescript" || lang === "solidity") {
+    const ifaceMatch = line.match(/^(?:export\s+)?interface\s+(\w+)/);
+    if (ifaceMatch) {
+      const enc = ceEncode(ifaceMatch[1]);
+      out.push(`@channel(${enc.psi}) // ${enc.nm}nm · ${enc.band}`);
+      out.push(`type ${ifaceMatch[1]} : SpectralInterface {`); return;
+    }
+  }
+
+  if (lang === "typescript") {
+    const enumMatch = line.match(/^(?:export\s+)?(?:const\s+)?enum\s+(\w+)/);
+    if (enumMatch) {
+      const enc = ceEncode(enumMatch[1]);
+      out.push(`@band(${enc.band}) enum ${enumMatch[1]} {  // ${enc.nm}nm · ${enc.psi}`); return;
+    }
+    if (line.match(/^@\w+/) && !line.match(/^@\d/)) {
+      out.push(`// decorator: ${line}`); return;
+    }
+  }
+
+  if (lang === "kotlin") {
+    const dataClassMatch = line.match(/^data\s+class\s+(\w+)/);
+    if (dataClassMatch) {
+      const enc = ceEncode(dataClassMatch[1]);
+      out.push(`@channel(${enc.psi}) // ${enc.nm}nm · ${enc.band} · data`);
+      out.push(`type ${dataClassMatch[1]} : SpectralRecord {`); return;
+    }
+    const objectMatch = line.match(/^(?:companion\s+)?object\s+(\w+)/);
+    if (objectMatch) {
+      const enc = ceEncode(objectMatch[1]);
+      out.push(`@singleton(${enc.psi}) object ${objectMatch[1]} {  // ${enc.nm}nm`); return;
+    }
+    if (line === "companion object" || line === "companion object {") {
+      out.push(`@singleton(Ψ(128,50,H)) companion object {`); return;
+    }
+  }
+
+  if (lang === "swift") {
+    const protocolMatch = line.match(/^protocol\s+(\w+)/);
+    if (protocolMatch) {
+      const enc = ceEncode(protocolMatch[1]);
+      out.push(`@channel(${enc.psi}) // ${enc.nm}nm · ${enc.band} · protocol`);
+      out.push(`type ${protocolMatch[1]} : SpectralProtocol {`); return;
+    }
+    const extensionMatch = line.match(/^extension\s+(\w+)/);
+    if (extensionMatch) {
+      const enc = ceEncode(extensionMatch[1]);
+      out.push(`@channel(${enc.psi}) // ${enc.nm}nm · extension`);
+      out.push(`type ${extensionMatch[1]}Ext : SpectralNode {`); return;
+    }
+    if (line.match(/^guard\s+/)) {
+      out.push(`  ?λ ${line.replace(/^guard\s+/, "")}:`); return;
+    }
+    if (line.match(/^@\w+/) && !line.match(/^@\d/)) {
+      out.push(`// property-wrapper: ${line}`); return;
+    }
+  }
+
+  if (lang === "csharp") {
+    const nsMatch = line.match(/^namespace\s+(\S+)/);
+    if (nsMatch) {
+      const enc = ceEncode(nsMatch[1].replace(/[^a-zA-Z]/g, "") || "ns");
+      out.push(`tune(${enc.nm}nm)  // namespace ${nsMatch[1]} → ${enc.psi}`); return;
+    }
+    if (line.match(/^using\s+\w/)) {
+      const modName = (line.match(/using\s+(\S+?);?$/) ?? [])[1] ?? "ns";
+      const enc = ceEncode(modName.replace(/[^a-zA-Z]/g, "") || "mod");
+      out.push(`tune(${enc.nm}nm)  // ${modName} → ${enc.psi}`); return;
+    }
+    const accessorMatch = line.match(/^(?:public|private|protected|internal|static|abstract|sealed|override|virtual)\s+(.+)/);
+    if (accessorMatch) {
+      const inner = accessorMatch[1].trim();
+      const classMatch2 = inner.match(/^(?:class|struct|enum|record)\s+(\w+)/);
+      if (classMatch2) {
+        const enc = ceEncode(classMatch2[1]);
+        out.push(`@channel(${enc.psi}) // ${enc.nm}nm · ${enc.band}`);
+        out.push(`type ${classMatch2[1]} : SpectralNode {`); return;
+      }
+      const methodMatch = inner.match(/^(?:\w+\s+)?(\w+)\s*\(([^)]*)\)/);
+      if (methodMatch) {
+        const enc = ceEncode(methodMatch[1]);
+        const paramList = methodMatch[2].split(",").map(p => p.trim()).filter(Boolean)
+          .map(p => { const pe = ceEncode(p.replace(/[^a-zA-Z]/g, "") || "x"); return `@${pe.nm}nm ${p}`; }).join(", ");
+        out.push(`@emit(${enc.nm}nm, ${enc.psi}) // λ=${enc.nm}nm · ${enc.band}`);
+        out.push(`fn ${methodMatch[1]}(${paramList}) {`); return;
+      }
+    }
+  }
+
+  if (lang === "php") {
+    if (line.startsWith("<?php") || line.startsWith("?>")) {
+      out.push(`// PHP: ${line}`); return;
+    }
+    const phpVarMatch = line.match(/^\$(\w+)\s*=\s*(.+)/);
+    if (phpVarMatch) {
+      const enc = ceEncode(phpVarMatch[1]);
+      out.push(`@${enc.nm}nm let ${phpVarMatch[1]} := ${phpVarMatch[2].replace(/;$/, "")}  // ${enc.psi}`); return;
+    }
+    if (line.match(/^echo\s+/)) {
+      out.push(`  broadcast(${line.slice(5).trim()})  // STREAM`); return;
+    }
+  }
+
+  if (lang === "ruby") {
+    const moduleMatch = line.match(/^module\s+(\w+)/);
+    if (moduleMatch) {
+      const enc = ceEncode(moduleMatch[1]);
+      out.push(`@channel(${enc.psi}) // ${enc.nm}nm · ${enc.band} · module`);
+      out.push(`type ${moduleMatch[1]} : SpectralModule {`); return;
+    }
+    const attrMatch = line.match(/^attr_(?:accessor|reader|writer)\s+:(\w+)/);
+    if (attrMatch) {
+      const enc = ceEncode(attrMatch[1]);
+      out.push(`@${enc.nm}nm let ${attrMatch[1]} := SpectralField  // ${enc.psi}`); return;
+    }
+    if (line.match(/^puts\s+/)) {
+      out.push(`  broadcast(${line.slice(5).trim()})  // STREAM`); return;
+    }
+    if (line === "end") { out.push("}"); return; }
+  }
+
+  if (lang === "sql") {
+    if (line.match(/^SELECT\b/i)) {
+      const enc = ceEncode("query");
+      out.push(`  emit QUERY(@${enc.nm}nm, ${enc.psi})  // SQL SELECT → spectral`); return;
+    }
+    const createMatch = line.match(/^CREATE\s+TABLE\s+(\w+)/i);
+    if (createMatch) {
+      const enc = ceEncode(createMatch[1]);
+      out.push(`@channel(${enc.psi}) type ${createMatch[1]} : SpectralTable {  // ${enc.nm}nm`); return;
+    }
+    const insertMatch = line.match(/^INSERT\s+INTO\s+(\w+)/i);
+    if (insertMatch) {
+      const enc = ceEncode(insertMatch[1]);
+      out.push(`  tune(${enc.nm}nm)  // INSERT → ${enc.psi}`); return;
+    }
+    if (line.match(/^(?:FROM|WHERE|JOIN|GROUP BY|ORDER BY|HAVING|LIMIT|ON|VALUES)\b/i)) {
+      const kw = line.split(/\s/)[0];
+      const enc = ceEncode(kw);
+      out.push(`  /* @${enc.nm}nm */ ${line}`); return;
+    }
+    if (line.match(/^(?:UPDATE|DELETE|ALTER|DROP|CREATE INDEX)\b/i)) {
+      const enc = ceEncode(line.split(/\s/)[0]);
+      out.push(`  tune(${enc.nm}nm)  // SQL ${line.split(/\s/)[0].toUpperCase()}`); return;
+    }
+  }
+
+  if (lang === "solidity") {
+    const contractMatch = line.match(/^contract\s+(\w+)/);
+    if (contractMatch) {
+      const enc = ceEncode(contractMatch[1]);
+      out.push(`@channel(${enc.psi}) // ${enc.nm}nm · ${enc.band} · contract`);
+      out.push(`type ${contractMatch[1]} : SpectralContract {`); return;
+    }
+    const eventMatch = line.match(/^event\s+(\w+)/);
+    if (eventMatch) {
+      const enc = ceEncode(eventMatch[1]);
+      out.push(`@emit(${enc.nm}nm, ${enc.psi}) // event · ${enc.band}`); return;
+    }
+    const modifierMatch = line.match(/^modifier\s+(\w+)/);
+    if (modifierMatch) {
+      const enc = ceEncode(modifierMatch[1]);
+      out.push(`@emit(${enc.nm}nm, ${enc.psi}) // modifier`);
+      out.push(`fn ${modifierMatch[1]}(_) {`); return;
+    }
+    if (line.match(/^mapping\s*\(/)) {
+      const enc = ceEncode("mapping");
+      out.push(`@${enc.nm}nm let mapping := SpectralMap  // ${enc.psi}`); return;
+    }
+    if (line.match(/^emit\s+\w+/)) {
+      out.push(`  broadcast(${line.slice(5).trim()})  // STREAM`); return;
+    }
+    if (line.match(/^pragma\b/)) {
+      out.push(`// pragma: ${line}`); return;
+    }
+  }
+
+  if (lang === "haskell") {
+    const moduleMatch = line.match(/^module\s+(\S+)\s+where/);
+    if (moduleMatch) {
+      const enc = ceEncode(moduleMatch[1].replace(/\./g, "") || "mod");
+      out.push(`tune(${enc.nm}nm)  // module ${moduleMatch[1]} → ${enc.psi}`); return;
+    }
+    const dataMatch = line.match(/^data\s+(\w+)/);
+    if (dataMatch) {
+      const enc = ceEncode(dataMatch[1]);
+      out.push(`@channel(${enc.psi}) type ${dataMatch[1]} : SpectralADT {  // ${enc.nm}nm`); return;
+    }
+    const typeAliasMatch = line.match(/^type\s+(\w+)\s+=/);
+    if (typeAliasMatch) {
+      const enc = ceEncode(typeAliasMatch[1]);
+      out.push(`@${enc.nm}nm let ${typeAliasMatch[1]} := SpectralAlias  // ${enc.psi}`); return;
+    }
+    if (line.match(/^import\s+/)) {
+      const modName = (line.match(/import\s+(?:qualified\s+)?(\S+)/) ?? [])[1] ?? "hs";
+      const enc = ceEncode(modName.replace(/[^a-zA-Z]/g, "") || "mod");
+      out.push(`tune(${enc.nm}nm)  // ${modName} → ${enc.psi}`); return;
+    }
+    if (line === "where" || line === "where {") { out.push("where {"); return; }
+    const doMatch = line.match(/^(\w+)\s*<-\s*(.+)/);
+    if (doMatch) {
+      const enc = ceEncode(doMatch[1]);
+      out.push(`@${enc.nm}nm let ${doMatch[1]} := ${doMatch[2]}  // ${enc.psi}`); return;
+    }
+  }
+
+  // ── Generic patterns (all languages) ─────────────────────────────────────
+
+  const fnMatch = line.match(/^(?:def|function|fn|func|fun|void|int|string|bool|float|double|async\s+function|export\s+(?:async\s+)?function)\s+(\w+)\s*\(([^)]*)\)/);
+  if (fnMatch) {
+    const [, name, params] = fnMatch;
+    const enc = ceEncode(name);
+    const paramList = params.split(",").map(p => p.trim()).filter(Boolean)
+      .map(p => { const pe = ceEncode(p.replace(/[^a-zA-Z]/g, "") || "x"); return `@${pe.nm}nm ${p.trim()}`; }).join(", ");
+    out.push(`@emit(${enc.nm}nm, ${enc.psi}) // λ=${enc.nm}nm · ${enc.band}`);
+    out.push(`fn ${name}(${paramList}) {`); return;
+  }
+
+  const classMatch = line.match(/^(?:class|struct|type)\s+(\w+)/);
+  if (classMatch) {
+    const enc = ceEncode(classMatch[1]);
+    out.push(`@channel(${enc.psi}) // ${enc.nm}nm · ${enc.band}`);
+    out.push(`type ${classMatch[1]} : SpectralNode {`); return;
+  }
+
+  const varMatch = line.match(/^(?:let|const|var|val|auto)?\s*(\w+)\s*[:=]+\s*(.+)/);
+  if (varMatch && !varMatch[1].match(/^(?:if|else|for|while|return|import|from|use|fn|def|class|struct|type|func|fun|contract|event|module|data|interface|enum|protocol|extension|namespace|guard|pragma)$/)) {
+    const [, vname, val] = varMatch;
+    const enc = ceEncode(vname);
+    out.push(`@${enc.nm}nm let ${vname} := ${val.replace(/;$/, "")}  // ${enc.psi}`); return;
+  }
+
+  if (line.startsWith("return")) { out.push(`  emit ${line.slice(6).trim()}  // → spectral output`); return; }
+
+  if (line.match(/^(?:import|from|use|require|include|using)\b/)) {
+    const modMatch = line.match(/["']([^"']+)["']/) || line.match(/\s+(\S+)\s*$/);
+    const modName = modMatch ? modMatch[1] : "module";
+    const enc = ceEncode(modName.replace(/[^a-zA-Z]/g, "") || "mod");
+    out.push(`tune(${enc.nm}nm)  // ${modName} → ${enc.psi}`); return;
+  }
+
+  if (line.match(/^(?:print|console\.log|println!|printf|fmt\.Print(?:ln)?|System\.out\.print(?:ln)?|echo|puts)\b/)) {
+    out.push(`  broadcast(${line.replace(/^[^(]+/, "")})  // STREAM`); return;
+  }
+
+  if (line.startsWith("if ") || line === "else" || line.startsWith("else if") || line.startsWith("else {")) {
+    out.push(`  ?λ ${line.replace(/^else\s*/, "// else ")}:`); return;
+  }
+
+  if (line.match(/^(?:for|while|loop|forEach|each)\b/)) {
+    out.push(`  oscillate(${line.replace(/^(?:for|while|loop|forEach|each)\s+/, "")}) {`); return;
+  }
+
+  if (line === "}" || line === "})" || line.match(/^end(\s|$)/)) { out.push("}"); return; }
+
+  const enc = ceEncode(line.split(/\s/)[0].replace(/[^a-zA-Z]/g, "") || "op");
+  out.push(`  /* @${enc.nm}nm */ ${line}`);
+}
+
 // ── Transpiler ─────────────────────────────────────────────────────────────────
-function transpile(src: string, lang: "python" | "javascript" | "rust" | "java" | "go" | "cpp"): string {
+function transpile(src: string, lang: string): string {
   if (!src.trim()) return "";
-  const lines = src.split("\n");
   const out: string[] = [
     `// WavelengthScript v1.0 · NexusOS · AGPL-3.0`,
     `// ${lang.toUpperCase()} → WLS · ${new Date().toISOString().slice(0, 19)}Z`,
     ``,
   ];
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line) { out.push(""); continue; }
-    if (line.startsWith("#") || line.startsWith("//") || line.startsWith("--")) {
-      out.push(`// ${line.replace(/^[#/\-]+\s*/, "")}`); continue;
-    }
-    const fnMatch = line.match(/^(?:def|function|fn|func|fun|void|int|string|bool|float|double)\s+(\w+)\s*\(([^)]*)\)/);
-    if (fnMatch) {
-      const [, name, params] = fnMatch;
-      const enc = ceEncode(name);
-      const paramList = params.split(",").map(p => p.trim()).filter(Boolean)
-        .map(p => { const pe = ceEncode(p.replace(/[^a-zA-Z]/g, "") || "x"); return `@${pe.nm}nm ${p.trim()}`; }).join(", ");
-      out.push(`@emit(${enc.nm}nm, ${enc.psi}) // λ=${enc.nm}nm · ${enc.band}`);
-      out.push(`fn ${name}(${paramList}) {`); continue;
-    }
-    const classMatch = line.match(/^(?:class|struct|interface|type)\s+(\w+)/);
-    if (classMatch) {
-      const enc = ceEncode(classMatch[1]);
-      out.push(`@channel(${enc.psi}) // ${enc.nm}nm · ${enc.band}`);
-      out.push(`type ${classMatch[1]} : SpectralNode {`); continue;
-    }
-    const varMatch = line.match(/^(?:let|const|var|val|auto)?\s*(\w+)\s*[:=]+\s*(.+)/);
-    if (varMatch && !varMatch[1].match(/^(?:if|else|for|while|return|import|from|use|fn|def|class|struct|type|func|fun)$/)) {
-      const [, vname, val] = varMatch;
-      const enc = ceEncode(vname);
-      out.push(`@${enc.nm}nm let ${vname} := ${val.replace(/;$/, "")}  // ${enc.psi}`); continue;
-    }
-    if (line.startsWith("return")) { out.push(`  emit ${line.slice(6).trim()}  // → spectral output`); continue; }
-    if (line.match(/^(?:import|from|use|require|include|using)/)) {
-      const modMatch = line.match(/["']([^"']+)["']/) || line.match(/\s+(\w+)\s*$/);
-      const modName = modMatch ? modMatch[1] : "module";
-      const enc = ceEncode(modName.replace(/[^a-zA-Z]/g, "") || "mod");
-      out.push(`tune(${enc.nm}nm)  // ${modName} → ${enc.psi}`); continue;
-    }
-    if (line.match(/^(?:print|console\.log|println!|printf|fmt\.Print|System\.out|echo|puts)\b/)) {
-      out.push(`  broadcast(${line.replace(/^[^(]+/, "")})  // STREAM`); continue;
-    }
-    if (line.startsWith("if ") || line === "else" || line.startsWith("else")) {
-      out.push(`  ?λ ${line.replace(/^else\s*/, "// else ")}:`); continue;
-    }
-    if (line.match(/^(?:for|while|loop)\b/)) {
-      out.push(`  oscillate(${line.replace(/^(?:for|while|loop)\s+/, "")}) {`); continue;
-    }
-    if (line === "}" || line.match(/^end(\s|$)/)) { out.push("}"); continue; }
-    const enc = ceEncode(line.split(/\s/)[0].replace(/[^a-zA-Z]/g, "") || "op");
-    out.push(`  /* @${enc.nm}nm */ ${line}`);
-  }
+  for (const raw of src.split("\n")) processWLSLine(raw, lang, out);
   out.push("");
   out.push("// ── Spectral manifest ───────────────────────────");
   const identifiers = Array.from(new Set(src.match(/\b[a-zA-Z_][a-zA-Z0-9_]{2,}\b/g) ?? [])).slice(0, 8);
@@ -120,7 +343,7 @@ function transpile(src: string, lang: "python" | "javascript" | "rust" | "java" 
 // ── Async chunked transpiler — yields between chunks so UI stays alive ─────────
 async function transpileAsync(
   src: string,
-  lang: "python" | "javascript" | "rust" | "java" | "go" | "cpp",
+  lang: string,
   onProgress: (done: number, total: number, nm: number) => void,
   signal: { cancelled: boolean }
 ): Promise<string[]> {
@@ -131,62 +354,14 @@ async function transpileAsync(
     `// ${lang.toUpperCase()} → WLS · ${new Date().toISOString().slice(0, 19)}Z`,
     ``,
   ];
-  const processLine = (raw: string) => {
-    const line = raw.trim();
-    if (!line) { out.push(""); return; }
-    if (line.startsWith("#") || line.startsWith("//") || line.startsWith("--")) {
-      out.push(`// ${line.replace(/^[#/\-]+\s*/, "")}`); return;
-    }
-    const fnMatch = line.match(/^(?:def|function|fn|func|fun|void|int|string|bool|float|double)\s+(\w+)\s*\(([^)]*)\)/);
-    if (fnMatch) {
-      const [, name, params] = fnMatch;
-      const enc = ceEncode(name);
-      const paramList = params.split(",").map(p => p.trim()).filter(Boolean)
-        .map(p => { const pe = ceEncode(p.replace(/[^a-zA-Z]/g, "") || "x"); return `@${pe.nm}nm ${p.trim()}`; }).join(", ");
-      out.push(`@emit(${enc.nm}nm, ${enc.psi}) // λ=${enc.nm}nm · ${enc.band}`);
-      out.push(`fn ${name}(${paramList}) {`); return;
-    }
-    const classMatch = line.match(/^(?:class|struct|interface|type)\s+(\w+)/);
-    if (classMatch) {
-      const enc = ceEncode(classMatch[1]);
-      out.push(`@channel(${enc.psi}) // ${enc.nm}nm · ${enc.band}`);
-      out.push(`type ${classMatch[1]} : SpectralNode {`); return;
-    }
-    const varMatch = line.match(/^(?:let|const|var|val|auto)?\s*(\w+)\s*[:=]+\s*(.+)/);
-    if (varMatch && !varMatch[1].match(/^(?:if|else|for|while|return|import|from|use|fn|def|class|struct|type|func|fun)$/)) {
-      const [, vname, val] = varMatch;
-      const enc = ceEncode(vname);
-      out.push(`@${enc.nm}nm let ${vname} := ${val.replace(/;$/, "")}  // ${enc.psi}`); return;
-    }
-    if (line.startsWith("return")) { out.push(`  emit ${line.slice(6).trim()}  // → spectral output`); return; }
-    if (line.match(/^(?:import|from|use|require|include|using)/)) {
-      const modMatch = line.match(/["']([^"']+)["']/) || line.match(/\s+(\w+)\s*$/);
-      const modName = modMatch ? modMatch[1] : "module";
-      const enc = ceEncode(modName.replace(/[^a-zA-Z]/g, "") || "mod");
-      out.push(`tune(${enc.nm}nm)  // ${modName} → ${enc.psi}`); return;
-    }
-    if (line.match(/^(?:print|console\.log|println!|printf|fmt\.Print|System\.out|echo|puts)\b/)) {
-      out.push(`  broadcast(${line.replace(/^[^(]+/, "")})  // STREAM`); return;
-    }
-    if (line.startsWith("if ") || line === "else" || line.startsWith("else")) {
-      out.push(`  ?λ ${line.replace(/^else\s*/, "// else ")}:`); return;
-    }
-    if (line.match(/^(?:for|while|loop)\b/)) {
-      out.push(`  oscillate(${line.replace(/^(?:for|while|loop)\s+/, "")}) {`); return;
-    }
-    if (line === "}" || line.match(/^end(\s|$)/)) { out.push("}"); return; }
-    const enc = ceEncode(line.split(/\s/)[0].replace(/[^a-zA-Z]/g, "") || "op");
-    out.push(`  /* @${enc.nm}nm */ ${line}`);
-  };
 
   for (let i = 0; i < total; i += CHUNK_SIZE) {
     if (signal.cancelled) return [];
-    const chunk = lines.slice(i, i + CHUNK_SIZE);
-    chunk.forEach(processLine);
+    lines.slice(i, i + CHUNK_SIZE).forEach(raw => processWLSLine(raw, lang, out));
     const pct = Math.min(i + CHUNK_SIZE, total) / total;
     const nm = parseFloat((380 + pct * 400).toFixed(1));
     onProgress(Math.min(i + CHUNK_SIZE, total), total, nm);
-    await yieldFrame(); // yield without setTimeout throttling
+    await yieldFrame();
   }
 
   out.push("");
@@ -557,6 +732,26 @@ function add(a, b) {
 
 greet("World")
 add(3, 4)`,
+  typescript: `interface SpectralNode {
+  wavelength: number
+  channel: string
+  energy: number
+}
+
+enum Band {
+  SYSTEM = "violet",
+  LOGIC  = "green",
+  STREAM = "cyan",
+}
+
+async function encodeSpectral(node: SpectralNode): Promise<string> {
+  const { wavelength, channel } = node
+  console.log(\`Encoding \${channel} at \${wavelength}nm\`)
+  return channel
+}
+
+const node: SpectralNode = { wavelength: 520, channel: "Ψ(70,20,H)", energy: 2.38 }
+encodeSpectral(node)`,
   rust: `fn greet(name: &str) -> String {
     let message = format!("Hello, {}", name);
     println!("{}", message);
@@ -566,6 +761,84 @@ add(3, 4)`,
 fn add(a: i32, b: i32) -> i32 {
     let result = a + b;
     return result;
+}`,
+  go: `func greet(name string) string {
+    message := "Hello, " + name
+    fmt.Println(message)
+    return message
+}
+
+func add(a int, b int) int {
+    result := a + b
+    return result
+}`,
+  kotlin: `data class SpectralNode(
+    val wavelength: Double,
+    val channel: String,
+    val energy: Double
+)
+
+object SpectrumRegistry {
+    val nodes = mutableListOf<SpectralNode>()
+
+    fun register(node: SpectralNode) {
+        nodes.add(node)
+        println("Registered: \${node.channel}")
+    }
+}
+
+fun main() {
+    val node = SpectralNode(520.0, "Ψ(70,20,H)", 2.38)
+    SpectrumRegistry.register(node)
+}`,
+  swift: `protocol SpectralTransmitter {
+    var wavelength: Double { get }
+    func transmit() -> String
+}
+
+struct PhotonNode: SpectralTransmitter {
+    var wavelength: Double
+    var channel: String
+
+    func transmit() -> String {
+        guard wavelength > 380 else { return "out of range" }
+        print("Transmitting at \\(wavelength)nm")
+        return channel
+    }
+}
+
+extension PhotonNode {
+    func energyEV() -> Double {
+        return 1240.0 / wavelength
+    }
+}
+
+let node = PhotonNode(wavelength: 520.0, channel: "Ψ(70,20,H)")
+node.transmit()`,
+  csharp: `using System
+using NexusOS.Spectral
+
+namespace WavelengthRuntime {
+
+public class SpectralNode {
+    public double Wavelength { get; set; }
+    public string Channel { get; set; }
+
+    public string Transmit() {
+        Console.WriteLine($"Encoding {Channel} at {Wavelength}nm")
+        return Channel
+    }
+}
+
+public class Program {
+    public static void Main(string[] args) {
+        var node = new SpectralNode {
+            Wavelength = 520.0,
+            Channel = "Ψ(70,20,H)"
+        }
+        node.Transmit()
+    }
+}
 }`,
   java: `public class Main {
     public static String greet(String name) {
@@ -579,16 +852,6 @@ fn add(a: i32, b: i32) -> i32 {
         return result;
     }
 }`,
-  go: `func greet(name string) string {
-    message := "Hello, " + name
-    fmt.Println(message)
-    return message
-}
-
-func add(a int, b int) int {
-    result := a + b
-    return result
-}`,
   cpp: `std::string greet(std::string name) {
     std::string message = "Hello, " + name;
     std::cout << message << std::endl;
@@ -599,15 +862,136 @@ int add(int a, int b) {
     int result = a + b;
     return result;
 }`,
+  php: `<?php
+
+function greet($name) {
+    $message = "Hello, " . $name;
+    echo $message;
+    return $message;
+}
+
+function addSpectral($wavelength, $energy) {
+    $result = $wavelength * $energy;
+    return $result;
+}
+
+$node = "Ψ(70,20,H)";
+$wavelength = 520.0;
+greet($node);
+addSpectral($wavelength, 2.38);`,
+  ruby: `module SpectralEncoding
+  def encode(name)
+    wavelength = name.chars.map(&:ord).sum % 400 + 380
+    "Ψ(#{(wavelength - 380) / 4 + 1},20,H)"
+  end
+end
+
+class PhotonNode
+  include SpectralEncoding
+  attr_accessor :wavelength, :channel
+
+  def initialize(wavelength, channel)
+    @wavelength = wavelength
+    @channel = channel
+  end
+
+  def transmit
+    puts "Transmitting #{@channel} at #{@wavelength}nm"
+    encode(@channel)
+  end
+end
+
+node = PhotonNode.new(520.0, "Ψ(70,20,H)")
+node.transmit`,
+  sql: `CREATE TABLE spectral_nodes (
+    id          SERIAL PRIMARY KEY,
+    wavelength  DECIMAL(8,2) NOT NULL,
+    channel     VARCHAR(32)  NOT NULL,
+    band        VARCHAR(16)  NOT NULL,
+    energy_ev   DECIMAL(10,6)
+)
+
+INSERT INTO spectral_nodes (wavelength, channel, band, energy_ev)
+VALUES (520.0, 'Ψ(70,20,H)', 'LOGIC', 2.38)
+
+SELECT id, wavelength, channel, band, energy_ev
+FROM spectral_nodes
+WHERE band = 'LOGIC'
+  AND wavelength BETWEEN 495 AND 565
+ORDER BY wavelength ASC`,
+  solidity: `// SPDX-License-Identifier: AGPL-3.0
+pragma solidity ^0.8.0
+
+interface ISpectralNode {
+    function transmit(uint256 wavelength) external returns (string memory)
+}
+
+contract SpectralRegistry is ISpectralNode {
+    event NodeRegistered(address indexed owner, uint256 wavelength, string channel)
+
+    mapping(address => uint256) public wavelengths
+    mapping(address => string)  public channels
+
+    modifier onlyValidWavelength(uint256 wl) {
+        require(wl >= 380 && wl <= 780, "Out of visible range")
+        _
+    }
+
+    function register(uint256 wavelength, string calldata channel)
+        external onlyValidWavelength(wavelength) {
+        wavelengths[msg.sender] = wavelength
+        channels[msg.sender]   = channel
+        emit NodeRegistered(msg.sender, wavelength, channel)
+    }
+
+    function transmit(uint256 wavelength) external returns (string memory) {
+        return channels[msg.sender]
+    }
+}`,
+  haskell: `module SpectralEngine where
+
+import Data.List (sortBy)
+
+data SpectralNode = SpectralNode
+  { wavelength :: Double
+  , channel    :: String
+  , band       :: String
+  } deriving (Show, Eq)
+
+type Registry = [SpectralNode]
+
+encodeNode :: String -> SpectralNode
+encodeNode name =
+  let charSum  = fromIntegral (sum (map fromEnum name))
+      wl       = 380.0 + fromIntegral (charSum \`mod\` 400)
+      ch       = "Ψ(70,20,H)"
+  in SpectralNode { wavelength = wl, channel = ch, band = "LOGIC" }
+
+transmit :: SpectralNode -> String
+transmit node = "Transmitting " ++ channel node ++ " at " ++ show (wavelength node) ++ "nm"
+
+main :: IO ()
+main = do
+  let node = encodeNode "NexusOS"
+  putStrLn (transmit node)`,
 };
 
 const LANGS = [
   { id: "python",     label: "Python"     },
-  { id: "javascript", label: "JavaScript" },
+  { id: "javascript", label: "JS"         },
+  { id: "typescript", label: "TS"         },
   { id: "rust",       label: "Rust"       },
-  { id: "java",       label: "Java"       },
   { id: "go",         label: "Go"         },
+  { id: "kotlin",     label: "Kotlin"     },
+  { id: "swift",      label: "Swift"      },
+  { id: "csharp",     label: "C#"         },
+  { id: "java",       label: "Java"       },
   { id: "cpp",        label: "C++"        },
+  { id: "php",        label: "PHP"        },
+  { id: "ruby",       label: "Ruby"       },
+  { id: "sql",        label: "SQL"        },
+  { id: "solidity",   label: "Solidity"   },
+  { id: "haskell",    label: "Haskell"    },
 ];
 
 // ── Copy button ────────────────────────────────────────────────────────────────
@@ -696,7 +1080,7 @@ export default function LearnPage() {
       if (isLarge) {
         const t1 = performance.now();
         const lines = await transpileAsync(
-          code, lang as any,
+          code, lang,
           (done, total, nm) => { if (!signal.cancelled) setLoadProgress({ done, total, nm }); },
           signal
         );
@@ -709,7 +1093,7 @@ export default function LearnPage() {
         setInstructions([]); setCompiled(false); setExecuted(false);
         setDisplayedIns([]); setActiveIdx(-1); setHitBands({});
         const t1 = performance.now();
-        const result = transpile(code, lang as any);
+        const result = transpile(code, lang);
         const t2 = performance.now();
         setWlsLines(result.split("\n"));
         setTiming({ translate: parseFloat((t2 - t1).toFixed(2)), compile: 0, execute: 0 });
@@ -785,13 +1169,68 @@ export default function LearnPage() {
         const band = BANDS.find(b => ins.nm! >= b.min && ins.nm! < b.max);
         if (band) { bands[band.label] = (bands[band.label] ?? 0) + 1; setHitBands({ ...bands }); }
       }
-      // auto-scroll
       if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
       idx++;
       animTimer.current = setTimeout(step, delay);
     }
     step();
   }, [instructions]);
+
+  const doRunAll = useCallback(async () => {
+    if (!wls.trim() || transpiling || running || compiling) return;
+    clearTimeout(animTimer.current);
+    setInstructions([]); setCompiled(false); setExecuted(false); setRunning(false);
+    setDisplayedIns([]); setActiveIdx(-1); setHitBands({});
+    setTiming(prev => ({ ...prev, compile: 0, execute: 0 }));
+
+    const lineCount = wlsLines.length;
+    const isLarge = lineCount >= LARGE_FILE_THRESHOLD;
+    let ins: Ins[];
+
+    if (isLarge) {
+      setCompiling(true);
+      setLoadProgress({ done: 0, total: lineCount, nm: 380 });
+      const signal = { cancelled: false };
+      const t1 = performance.now();
+      ins = await compileWLSAsync(wls, (done, total, nm) => setLoadProgress({ done, total, nm }), signal);
+      const t2 = performance.now();
+      setCompiling(false);
+      setTiming(prev => ({ ...prev, compile: parseFloat((t2 - t1).toFixed(2)), execute: 0 }));
+    } else {
+      const t1 = performance.now();
+      ins = compileWLS(wls);
+      const t2 = performance.now();
+      setTiming(prev => ({ ...prev, compile: parseFloat((t2 - t1).toFixed(2)), execute: 0 }));
+    }
+
+    setInstructions(ins); setCompiled(true);
+
+    const real = ins.filter(i => i.op !== 0x00 && i.mnem && !i.mnem.startsWith("."));
+    if (!real.length) return;
+    const t0 = performance.now();
+    const delay = Math.max(30, Math.min(120, 800 / real.length));
+    setRunning(true); setExecuted(false); setDisplayedIns([]); setActiveIdx(-1); setHitBands({});
+    let idx = 0;
+    const bands2: Record<string, number> = {};
+    function step2() {
+      if (idx >= real.length) {
+        setRunning(false); setExecuted(true); setActiveIdx(-1);
+        setTiming(prev => ({ ...prev, execute: parseFloat((performance.now() - t0).toFixed(2)) }));
+        return;
+      }
+      const i = real[idx];
+      setDisplayedIns(prev => [...prev, i]);
+      setActiveIdx(idx);
+      if (i.nm) {
+        const b = BANDS.find(b => i.nm! >= b.min && i.nm! < b.max);
+        if (b) { bands2[b.label] = (bands2[b.label] ?? 0) + 1; setHitBands({ ...bands2 }); }
+      }
+      if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+      idx++;
+      animTimer.current = setTimeout(step2, delay);
+    }
+    step2();
+  }, [wls, wlsLines.length, transpiling, running, compiling]);
 
   const realIns = instructions.filter(i => i.op !== 0x00 && i.mnem && !i.mnem.startsWith("."));
   const totalMs = timing.translate + timing.compile + timing.execute;
@@ -826,46 +1265,31 @@ export default function LearnPage() {
       </div>
 
       {/* Language selector bar */}
-      <div className="border-b border-white/10 px-4 py-2 flex items-center gap-2 flex-shrink-0 bg-black/20">
-        <h2 className="text-[10px] text-gray-600 uppercase tracking-wider mr-1">Source language</h2>
-        {/* Desktop: pill buttons */}
-        <div className="hidden sm:flex gap-1">
-          {LANGS.map(l => (
-            <button
-              key={l.id}
-              data-testid={`lang-${l.id}`}
-              onClick={() => handleLang(l.id)}
-              className={`px-3 py-1 rounded text-xs font-medium transition-all ${
-                lang === l.id
-                  ? "bg-violet-600 text-white"
-                  : "text-gray-500 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {l.label}
-            </button>
-          ))}
-        </div>
-        {/* Mobile: dropdown */}
-        <div className="relative sm:hidden">
-          <button
-            onClick={() => setShowDropdown(!showDropdown)}
-            className="flex items-center gap-1.5 px-3 py-1 rounded bg-violet-600 text-xs font-medium"
-          >
-            {langLabel} <ChevronDown size={12} />
-          </button>
-          {showDropdown && (
-            <div className="absolute top-full left-0 mt-1 bg-[#111] border border-white/10 rounded-lg overflow-hidden z-20 shadow-xl">
-              {LANGS.map(l => (
-                <button key={l.id} onClick={() => handleLang(l.id)}
-                  className="block w-full px-4 py-2 text-left text-xs hover:bg-white/10 transition-colors">
-                  {l.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="ml-auto text-[10px] text-gray-600">
-          {code.length.toLocaleString()} chars
+      <div className="border-b border-white/10 px-4 py-2 flex-shrink-0 bg-black/20">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="text-[10px] text-gray-600 uppercase tracking-wider shrink-0">
+            Source · <span className="text-violet-500">{LANGS.length} languages</span>
+          </h2>
+          {/* Pill buttons — wraps on smaller screens */}
+          <div className="flex flex-wrap gap-1 flex-1">
+            {LANGS.map(l => (
+              <button
+                key={l.id}
+                data-testid={`lang-${l.id}`}
+                onClick={() => handleLang(l.id)}
+                className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-all ${
+                  lang === l.id
+                    ? "bg-violet-600 text-white"
+                    : "text-gray-500 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+          <div className="text-[10px] text-gray-600 shrink-0">
+            {code.length.toLocaleString()} chars
+          </div>
         </div>
       </div>
 
@@ -880,9 +1304,10 @@ export default function LearnPage() {
           </div>
           <textarea
             data-testid="code-input"
+            aria-label="Source code input"
             value={code}
             onChange={e => setCode(e.target.value)}
-            className="flex-1 w-full bg-transparent p-4 font-mono text-sm text-green-300 resize-none focus:outline-none leading-relaxed"
+            className="flex-1 w-full bg-transparent p-4 font-mono text-sm text-green-300 resize-none focus:outline-none focus:ring-1 focus:ring-violet-500 leading-relaxed"
             spellCheck={false}
             placeholder="Paste or type any code here..."
           />
@@ -926,43 +1351,64 @@ export default function LearnPage() {
       </div>
 
       {/* Bottom action bar */}
-      <div className="border-t border-white/10 px-4 py-3 flex items-center gap-3 flex-shrink-0 bg-black/30 flex-wrap">
-        {/* Step 1 already done (live translation) — show step 2 button */}
+      <div className="border-t border-white/10 px-4 py-3 flex items-center gap-2 flex-shrink-0 bg-black/30 flex-wrap">
+
+        {/* ▶ Run All — primary one-click */}
+        <button
+          data-testid="btn-run-all"
+          onClick={doRunAll}
+          disabled={!wls || transpiling || compiling || running}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+            executed
+              ? "bg-violet-900/60 border border-violet-500/30 text-violet-300"
+              : (compiling || running)
+              ? "bg-violet-800/60 border border-violet-500/20 text-violet-300 cursor-wait"
+              : "bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-30 disabled:cursor-not-allowed"
+          }`}
+        >
+          {(compiling || running)
+            ? <><span className="w-3 h-3 rounded-full border-2 border-violet-300 border-t-transparent animate-spin" /> {compiling ? "Compiling…" : "Running…"}</>
+            : <><Zap size={14} /> {executed ? "Run All ✓" : "Run All"}</>
+          }
+        </button>
+
+        <div className="w-px h-5 bg-white/10 mx-1 hidden sm:block" />
+
+        {/* Step-by-step: Compile */}
         <button
           data-testid="btn-compile"
           onClick={doCompile}
-          disabled={!wls || transpiling || compiling}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+          disabled={!wls || transpiling || compiling || running}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
             compiled
               ? "bg-cyan-900/60 border border-cyan-500/30 text-cyan-400"
-              : "bg-cyan-700 hover:bg-cyan-600 text-white disabled:opacity-30 disabled:cursor-not-allowed"
+              : "text-gray-400 hover:text-white hover:bg-white/5 border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
           }`}
         >
           {compiling
             ? <><span className="w-3 h-3 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" /> Compiling…</>
-            : <><Binary size={14} /> {compiled ? "Bytecode ready" : "Compile to Bytecode"}</>
+            : <><Binary size={12} /> {compiled ? "Bytecode ready" : "Compile"}</>
           }
         </button>
 
-        {/* Arrow */}
-        <span className="text-gray-700 text-xs hidden sm:block">→</span>
+        <span className="text-gray-700 text-xs">→</span>
 
-        {/* Step 3 — Execute */}
+        {/* Step-by-step: Execute */}
         <button
           data-testid="btn-execute"
           onClick={doExecute}
           disabled={!compiled || running}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
             executed
               ? "bg-green-900/60 border border-green-500/30 text-green-400"
               : running
               ? "bg-green-800/60 border border-green-500/20 text-green-300 cursor-wait"
-              : "bg-green-700 hover:bg-green-600 text-white disabled:opacity-30 disabled:cursor-not-allowed"
+              : "text-gray-400 hover:text-white hover:bg-white/5 border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
           }`}
         >
           {running
             ? <><span className="w-3 h-3 rounded-full border-2 border-green-400 border-t-transparent animate-spin" /> Running…</>
-            : <><Play size={14} /> {executed ? "Executed ✓" : "Execute in VM"}</>
+            : <><Play size={12} /> {executed ? "Executed ✓" : "Execute"}</>
           }
         </button>
 

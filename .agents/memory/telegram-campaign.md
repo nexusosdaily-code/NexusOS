@@ -18,6 +18,7 @@ Any one-shot fire scripts must also use this numeric ID — NOT the env var.
 - 15 rotating slots (ids 0–15, skipping 9) covering: BTC dip, staking, WNUSD, physics intro,
   Nostr bot, K1 mission, Ordinals, Runes, Dev API, P2P, blockchain ownership,
   WavelengthScript, curl API, Ψ channel explainer, CE→SE→bytecode pipeline
+- Channel count in all slots is 51,200 (256 WDM × 50 OAM × 2 pol × 2 N_Dir) — updated Aug 2026
 - Slot pointer was always resetting to 0 on restart — fixed: `resumeSlotIndex()` reads
   last-sent slot from `campaign_log` table on boot and advances by one
 

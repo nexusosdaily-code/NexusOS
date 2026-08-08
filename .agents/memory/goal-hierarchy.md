@@ -17,12 +17,12 @@ description: Short / medium / long-term goals — NexusOS is the vehicle, photon
 
 ## Long-term (~2032)
 - Photonic computing ASICs arrive; NexusOS runs natively — no rewrite needed, it was already written in the language of photonic hardware (wavelengths, Ψ channels, Hilbert space)
-- 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 pol) map directly to physical waveguide lanes — ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics, not software policy
+- 51,200 orthogonal Ψ channels (256 WDM × 50 OAM × 2 pol × 2 N_Dir) map directly to physical waveguide lanes — ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics, not software policy
 - Kardashev Type I civilisation OS: physics-based communication and compute at civilisation scale
 
 ## Post-hardware R&D (after photonic ASICs)
 - Frequency-mass tuning: Λ=hf/c² means a controlled change in f is a controlled change in compression mass — the SNIC becomes a mass-state modulator, not just a data router
-- Mass displacement mechanics: coherent phase control across 25,600 orthogonal channels extends radiation pressure (proven: solar sails, optical tweezers) into engineered mechanical output
+- Mass displacement mechanics: coherent phase control across 51,200 orthogonal channels extends radiation pressure (proven: solar sails, optical tweezers) into engineered mechanical output
 - The software layer (NexusOS / WavelengthScript / WNSP) is the description language for this physics — it must exist before the hardware experiments can be specified and run
 - No one has built this because the wave-native description layer didn't exist; NexusOS is building that first
 

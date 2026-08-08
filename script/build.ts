@@ -1,6 +1,8 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
 import { rm, readFile } from "fs/promises";
+import { execSync } from "child_process";
+import { checkPreloads } from "../scripts/check-preloads.js";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
@@ -33,10 +35,16 @@ const allowlist = [
 ];
 
 async function buildAll() {
+  console.log("running all server tests...");
+  execSync("npx vitest run", { stdio: "inherit" });
+
   await rm("dist", { recursive: true, force: true });
 
   console.log("building client...");
-  await viteBuild();
+  await viteBuild(); // bundle-size check fires inside Vite's closeBundle plugin hook
+
+  console.log("checking critical modulepreloads...");
+  await checkPreloads();
 
   console.log("building server...");
   const pkg = JSON.parse(await readFile("package.json", "utf-8"));

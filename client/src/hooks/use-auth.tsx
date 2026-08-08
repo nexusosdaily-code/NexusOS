@@ -9,6 +9,11 @@ interface User {
   isAdmin?: boolean;
   walletAddress?: string;
   balanceUnits?: string;
+  spectralBand?: string;
+  spectralWdm?: number;
+  spectralOam?: number;
+  spectralPol?: string;
+  spectralNm?: number;
 }
 
 interface AuthContextType {

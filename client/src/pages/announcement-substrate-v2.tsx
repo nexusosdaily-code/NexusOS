@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { colorText400 } from "@/lib/color-classes";
 import { 
   Zap, 
   Waves, 
@@ -127,7 +128,7 @@ export default function AnnouncementSubstrateV2Page() {
                   { band: "TELECOM", harmonics: 14, color: "green" }
                 ].map((item, i) => (
                   <div key={i} className="bg-slate-800/50 rounded-lg p-3 text-center" data-testid={`band-${item.band}`}>
-                    <div className={`text-${item.color}-400 text-xs mb-1`}>{item.band}</div>
+                    <div className={`${colorText400[item.color]} text-xs mb-1`}>{item.band}</div>
                     <div className="text-white font-bold text-xl">{item.harmonics}</div>
                     <div className="text-gray-500 text-xs">harmonics</div>
                   </div>

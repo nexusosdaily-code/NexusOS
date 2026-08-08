@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "wouter";
+import { colorBadge, colorHistoryRow } from "@/lib/color-classes";
 import { Rocket, Zap, Atom, FlaskConical, History, BarChart3, AlertTriangle, ArrowLeft } from "lucide-react";
 
 export default function ResonancePropulsionPage() {
@@ -429,7 +430,7 @@ export default function ResonancePropulsionPage() {
                         <td className="p-3 text-gray-300 font-mono">{sys.thrust}</td>
                         <td className="p-3 text-gray-300 font-mono">{sys.isp}</td>
                         <td className="p-3">
-                          <Badge className={`bg-${sys.color}-500/20 text-${sys.color}-400 border-${sys.color}-500/30`}>
+                          <Badge className={colorBadge[sys.color]}>
                             {sys.status}
                           </Badge>
                         </td>
@@ -523,11 +524,11 @@ export default function ResonancePropulsionPage() {
                     color: "red"
                   }
                 ].map((exp, i) => (
-                  <div key={i} className={`bg-${exp.color}-900/10 border border-${exp.color}-500/30 rounded-lg p-4`} data-testid={`history-${i}`}>
+                  <div key={i} className={colorHistoryRow[exp.color]} data-testid={`history-${i}`}>
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
                       <div className="flex items-center gap-3">
                         <span className="font-bold text-white">{exp.experiment}</span>
-                        <Badge className={`bg-${exp.color}-500/20 text-${exp.color}-400 border-${exp.color}-500/30`}>
+                        <Badge className={colorBadge[exp.color]}>
                           {exp.status}
                         </Badge>
                       </div>

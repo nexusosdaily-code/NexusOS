@@ -111,7 +111,7 @@ const SNIPPETS: Record<string, Record<string, string>> = {
 // ── Quiz ──────────────────────────────────────────────────────────────────────
 const QUIZ = [
   { q:"CE formula for wavelength?", opts:["arbitrary","380+(charCode%128×3.125)nm","charCode×6.2nm","lookup table"], ans:1, exp:"λ=380+(charCode%128×3.125)nm — 128 bands across 400nm of visible spectrum." },
-  { q:"How many orthogonal WNSP channels?", opts:["1,024","4,096","25,600","65,536"], ans:2, exp:"256 WDM × 50 OAM × 2 pol = 25,600. Orthogonal by quantum mechanics." },
+  { q:"How many orthogonal WNSP channels?", opts:["1,024","4,096","51,200","65,536"], ans:2, exp:"256 WDM × 50 OAM × 2 pol × 2 N_Dir = 51,200. Orthogonal by quantum mechanics." },
   { q:"What does oscillate() do in WLS?", opts:["plays sound","main loop","encodes char","opens DB"], ans:1, exp:"oscillate() is the WLS loop — runs at a specified frequency on a Ψ channel." },
   { q:"Character at 412nm → which band?", opts:["GUEST","USER","KERNEL","SYSTEM"], ans:3, exp:"SYSTEM: 380–450nm (violet). Highest energy = highest authority." },
   { q:"What is ?λ(condition){} in WLS?", opts:["measure λ","conditional block","broadcast","register node"], ans:1, exp:"?λ is the spectral conditional — WLS's if-block." },
@@ -125,7 +125,7 @@ const LESSONS: Record<number,{title:string;body:string}> = {
   0: { title:"Module 0 — What Is a Wave?", body:`Foundation of everything.\n\nWave properties:\n• Wavelength (λ) — distance between peaks, nm\n• Frequency (f) — peaks/second, Hz\n• Energy (E) — E=hf (Planck)\n\nVisible light: 380nm (violet) → 780nm (red)\n\nNexusOS uses this as an addressing system.\n\nNext: /lesson 1` },
   1: { title:"Module 1 — The Reposed State", body:`Before the universe, quantum mechanics says: nothing can be perfectly still.\n\nHeisenberg: ΔE·Δt ≥ ℏ/2\nThe vacuum must fluctuate. The first oscillation was mandatory.\n\nNexusOS calls this: the Reposed State (Λ₀).\n\nFirst compression state transition:\nΛ = hf/c²\n\nh=Planck · f=frequency · c=light speed\n\nNext: /lesson 2` },
   2: { title:"Module 2 — Character Encoding", body:`ASCII: 'A' → 65 (arbitrary)\nCE:    'A' → 480.6nm (physics)\n\nAlgorithm:\n  band = charCode % 128\n  λ    = 380 + (band × 3.125) nm\n  E    = hc/λ\n\nTry: /encode YOURNAME\nCompare: /compare A\n\nNext: /lesson 3` },
-  3: { title:"Module 3 — WNSP Protocol", body:`WNSP = Waveform Node Spectral Protocol\n\nAddress: Ψ(wdm, oam, pol)\n• WDM: 0–255\n• OAM: 0–49\n• Pol: H or V\n\n256×50×2 = 25,600 channels\n⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics\n\nURI: wnsp://Ψ(228,45,H)/path\n\nNext: /lesson 4` },
+  3: { title:"Module 3 — WNSP Protocol", body:`WNSP = Waveform Node Spectral Protocol\n\nAddress: Ψ(wdm, oam, pol)\n• WDM: 0–255\n• OAM: 0–49\n• Pol: H or V\n• N_Dir: ±k̂ (2 directions)\n\n256×50×2×2 = 51,200 channels\n⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanics\n\nURI: wnsp://Ψ(228,45,H)/path\n\nNext: /lesson 4` },
   4: { title:"Module 4 — WavelengthScript", body:`Every instruction has a physical frequency.\n\n/wls hello   — Hello World\n/wls agent   — define a node\n/wls loop    — oscillation\n/wls transfer— token transfer\n/wls full    — complete program\n/wls syntax  — reference\n\nRun it: /wnsp-vm page on NexusOS\n\nNext: /lesson 5` },
   5: { title:"Module 5 — Physics Economy", body:`fee = base_fee × (E_sender / E_reference)\nE = hf = hc/λ\n\nBands:\n🟣 SYSTEM  380–450nm  highest fee\n🔵 KERNEL  450–520nm\n🟢 USER    520–625nm\n🔴 GUEST   625–780nm  lowest fee\n\nNXT: 21B supply · 8 decimals\nAll costs from Λ=hf/c²\n\nNext: /lesson 6` },
   6: { title:"Module 6 — Photonic Computing", body:`Moore's Law ends — physics won.\n\nAt 2nm: quantum tunneling. Electrons pass through transistor gates probabilistically.\nTSMC: 3nm today. Silicon atom: 0.2nm.\n\nSolution: photonic processors (~2032). Light doesn't tunnel.\n\nNexusOS today: CE = RAM table scan.\nNexusOS 2032: CE = physical wavelength selection in waveguide.\n\nNo rewrite needed.\n\nNext: /lesson 7` },
@@ -160,6 +160,60 @@ export async function sendAdminAlert(message: string): Promise<void> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: adminId, text: message, parse_mode: "HTML" }),
+    });
+  } catch { /* silent */ }
+}
+
+// ── Probe alert with inline "🚫 Add to block list" button ─────────────────────
+// Pending entries survive until the button is pressed or 24 h elapses.
+// Keyed by a random 8-char ID that fits comfortably inside Telegram's 64-byte
+// callback_data limit (prefix "blk_" + 8 chars = 12 bytes).
+const pendingBlocks = new Map<string, { field: "referer" | "ua"; value: string }>();
+
+function _escapeTgHtml(raw: string): string {
+  return raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+export async function sendProbeAlert(
+  field: "referer" | "ua",
+  value: string,
+  hits: number,
+): Promise<void> {
+  const token   = process.env.TELEGRAM_BOT_TOKEN;
+  const adminId = process.env.TELEGRAM_ADMIN_ID;
+  if (!token || !adminId) return;
+
+  const id = Math.random().toString(36).slice(2, 10); // 8-char random key
+  pendingBlocks.set(id, { field, value });
+  // Auto-expire after 24 h so the map never grows unbounded.
+  setTimeout(() => pendingBlocks.delete(id), 24 * 60 * 60 * 1000).unref?.();
+
+  const fieldLabel = field === "referer" ? "Referer" : "User-Agent";
+  const safeVal    = _escapeTgHtml(value.slice(0, 300));
+  const msg = [
+    `⚠️ <b>Unknown probe alert</b>`,
+    ``,
+    `<b>Field:</b> ${fieldLabel}`,
+    `<b>Value:</b> <code>${safeVal}</code>`,
+    `<b>Hits (24 h):</b> ${hits}`,
+    ``,
+    `Not in any block list — use the button below to block it instantly.`,
+  ].join("\n");
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id:      adminId,
+        text:         msg,
+        parse_mode:   "HTML",
+        reply_markup: {
+          inline_keyboard: [[
+            { text: "🚫 Add to block list", callback_data: `blk_${id}` },
+          ]],
+        },
+      }),
     });
   } catch { /* silent */ }
 }
@@ -627,7 +681,7 @@ At:   ${new Date(r.createdAt).toUTCString()}`
     }
 
     if (question.includes("channel") || question.includes("ψ") || question.includes("psi")) {
-      return ctx.reply(`🔭 WNSP Channels\n\n25,600 orthogonal channels:\n256 WDM × 50 OAM × 2 polarisations\n\nOrthogonality: ⟨Ψᵢ|Ψⱼ⟩ = 0\nGuaranteed by quantum mechanics, not software.\n\nLook up a channel: /channel 128 10 H`);
+      return ctx.reply(`🔭 WNSP Channels\n\n51,200 orthogonal channels:\n256 WDM × 50 OAM × 2 pol × 2 N_Dir\n\nOrthogonality: ⟨Ψᵢ|Ψⱼ⟩ = 0\nGuaranteed by quantum mechanics, not software.\nForward (+k̂) and backward (−k̂) modes orthogonal by time-reversal symmetry.\n\nLook up a channel: /channel 128 10 H`);
     }
 
     if (question.includes("fee") || question.includes("cost") || question.includes("transfer")) {
@@ -771,7 +825,7 @@ COMMUNITY
   Reddit:        u/NEXUSOS-WNSP-CE-SE
 
 PROTOCOL
-  Channels:      25,600 orthogonal Ψ channels
+  Channels:      51,200 orthogonal Ψ channels
   Trials:        4 completed · all pass
   CE packages:   npm + PyPI (GitHub source)
 
@@ -974,7 +1028,7 @@ Trial 4 (30 Apr 2026) — two independent runtimes, same word:
   TypeScript ceEncode() → 571.490nm
   Delta: < 0.001nm
 
-The system (WNSP) uses 25,600 orthogonal channels:
+The system (WNSP) uses 51,200 orthogonal channels:
 256 WDM × 50 OAM × 2 polarisations
 ⟨Ψᵢ|Ψⱼ⟩ = 0 — by quantum mechanics, not software.
 
@@ -1001,7 +1055,7 @@ Just verified across two independent runtimes:
   TypeScript:          571.490nm
   Delta:               < 0.001nm
 
-The full system uses 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 pol).
+The full system uses 51,200 orthogonal Ψ channels (256 WDM × 50 OAM × 2 pol).
 ⟨Ψᵢ|Ψⱼ⟩ = 0 — orthogonality by quantum mechanics.
 
 Why: Moore's Law ends at ~2nm (tunneling). Photonic processors use light.
@@ -1022,7 +1076,7 @@ Photonic processors (~2032) use light. No tunneling. No resistive heat.
 NexusOS is built for that hardware today:
 • 'A' = 480.6nm (not 65) — derived from E=hf
 • Every instruction has a physical frequency
-• 25,600 orthogonal channels via WDM × OAM × polarisation
+• 51,200 orthogonal channels via WDM × OAM × polarisation
 • Transaction costs from Λ=hf/c² — not arbitrary gas fees
 
 Trial 4 verified (30 Apr 2026): same encoding in two runtimes → delta < 0.001nm.
@@ -1063,7 +1117,7 @@ Each photon carries wavelength, amplitude, phase, polarisation, and orbital angu
 
 One project (NexusOS) is already writing software in the language of that hardware:
 • Characters map to wavelengths ('A' → 480.6nm, not 65) via E=hf
-• 25,600 orthogonal communication channels (WDM × OAM × polarisation)
+• 51,200 orthogonal communication channels (WDM × OAM × polarisation)
 • Transaction costs from Λ=hf/c² — not arbitrary fees
 • Verified: same formula in two runtimes → < 0.001nm delta (Trial 4, Apr 2026)
 
@@ -1091,7 +1145,7 @@ WavelengthScript VM: 571.489nm
 TypeScript:          571.490nm
 Delta: < 0.001nm. Two runtimes. One physics.
 
-The system (WNSP) uses 25,600 orthogonal channels via WDM × OAM × polarisation.
+The system (WNSP) uses 51,200 orthogonal channels via WDM × OAM × polarisation.
 Each orthogonal by quantum mechanics — not software policy.
 
 Try it yourself (no setup):
@@ -1105,7 +1159,7 @@ TIMESTAMPS:
 2:30  The physics formula (E=hf)
 5:00  Live encoding demo
 8:00  The VM verification (Trial 4)
-12:00 25,600 orthogonal channels
+12:00 51,200 orthogonal channels
 15:00 What this means for photonic computing`,
     },
     arxiv: {
@@ -1122,7 +1176,7 @@ CROSS-LIST: quant-ph, cs.CR
 ABSTRACT:
 We present WNSP (Waveform Node Spectral Protocol), a communication protocol whose channel space, addressing scheme, security model, and transaction cost function are derived from electromagnetic physics rather than software convention.
 
-The protocol defines a three-dimensional Hilbert space of orthogonal communication channels Ψ(wdm, oam, pol) comprising 256 Wavelength Division Multiplexing indices, 50 Orbital Angular Momentum modes, and 2 polarisation states — yielding 25,600 mutually orthogonal channels satisfying ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanical law.
+The protocol defines a three-dimensional Hilbert space of orthogonal communication channels Ψ(wdm, oam, pol) comprising 256 Wavelength Division Multiplexing indices, 50 Orbital Angular Momentum modes, and 2 polarisation states — yielding 51,200 mutually orthogonal channels satisfying ⟨Ψᵢ|Ψⱼ⟩ = 0 by quantum mechanical law.
 
 Character Encoding (WNSP-CE) maps each Unicode code point c to a deterministic spectral position:
   λ = 380 + ((ord(c) mod 128) × 3.125) nm
@@ -1207,7 +1261,7 @@ Thank you for reaching out. Your message has been received and will be reviewed 
 NexusOS is not a blockchain — it's a physics engine. We're building the OS for the hardware that doesn't exist yet: photonic computing.
 
 • *WavelengthScript* — the native language of photonic processors
-• *WNSP Protocol* — 25,600 orthogonal channels from Maxwell's equations
+• *WNSP Protocol* — 51,200 orthogonal channels from Maxwell's equations
 • *NXWV Rune* — live on Bitcoin (ID: 952596:379 · 21T supply · 1,000/1,000 mints sealed)
 • *Physics engine* — every fee, address, and transaction derived from E=hf
 
@@ -1258,7 +1312,7 @@ Silicon transistors hit their physics limit at ~2nm (quantum tunnelling). The ne
 *NexusOS is already written in the language of that hardware:*
 
 🔬 Characters map to wavelengths — 'A' → 480.6nm (E=hf, not arbitrary)
-📡 25,600 orthogonal channels (WDM × OAM × polarisation)
+📡 51,200 orthogonal channels (WDM × OAM × polarisation)
 ⚡ Transaction fees from Λ=hf/c² — photon compression mass
 🧑‍💻 WavelengthScript — runs today in software, runs natively on photonic ASICs in 2032
 
@@ -1378,6 +1432,52 @@ Thanks for your message — the team will follow up.
 /lesson 0 — the vision from first principles`,
       { parse_mode: "Markdown" }
     );
+  });
+
+  // ── 🚫 Block-list callback — handles inline button from probe alerts ──────────
+  bot.action(/^blk_(.+)$/, async (ctx) => {
+    // Authorization: only the configured admin may consume this callback.
+    // The alert is sent to TELEGRAM_ADMIN_ID, but the callback token could be
+    // replayed if the message is forwarded, so we verify the sender explicitly.
+    const adminId = process.env.TELEGRAM_ADMIN_ID;
+    const senderId = String(ctx.from?.id ?? "");
+    if (!adminId || senderId !== adminId) {
+      await ctx.answerCbQuery("⛔ Unauthorized.").catch(() => {});
+      return;
+    }
+
+    const id    = ctx.match[1];
+    const block = pendingBlocks.get(id);
+    if (!block) {
+      await ctx.answerCbQuery("⚠️ Already processed or expired.").catch(() => {});
+      return;
+    }
+    pendingBlocks.delete(id);
+    try {
+      const { db }            = await import("./db");
+      const { dynamicBlocks } = await import("../shared/schema");
+      await db.insert(dynamicBlocks).values({
+        field: block.field,
+        value: block.value,
+        label: `Dynamic-Block-${block.field}`,
+      });
+      // Immediately invalidate the in-process cache so the new block takes
+      // effect within seconds rather than waiting for the 5-min TTL.
+      import("./traffic-logger").then(({ invalidateDynamicBlockCache }) => {
+        invalidateDynamicBlockCache();
+      }).catch(() => {});
+      await ctx.answerCbQuery("✅ Blocked!").catch(() => {});
+      // Edit the original alert message to confirm the action.
+      const origText = (ctx.callbackQuery as any).message?.text ?? "";
+      await ctx.editMessageText(
+        origText + "\n\n✅ <b>Added to dynamic block list.</b>",
+        { parse_mode: "HTML" },
+      ).catch(() => {}); // Silently ignore if message is too old to edit (48-h Telegram limit).
+    } catch (e: any) {
+      await ctx.answerCbQuery(
+        "❌ Failed: " + (e?.message ?? "unknown error").slice(0, 50),
+      ).catch(() => {});
+    }
   });
 
   // Fix: clear any existing getUpdates lock before launching to prevent 409 on autoscale redeploy.

@@ -6,8 +6,8 @@ import {
   Zap, FlaskConical, Camera, FileText, AlertCircle, CheckSquare
 } from "lucide-react";
 
-const VERSION  = "v1.0";
-const DATE     = "2026-06-24";
+const VERSION  = "v1.1";
+const DATE     = "2026-07-27";
 const LOCATION = "Australia";
 
 interface Item  { qty: string; name: string; spec: string; supplier: string; est: string }
@@ -54,10 +54,10 @@ const PHASES: Phase[] = [
     objective: "All components purchased, checked against the parts list, and each instrument self-tested before any assembly begins.",
     steps: [
       {
-        id: "P0-1", action: "Order all PHR-1 components from Element14, Jaycar, Core Electronics",
-        tools: "Shopping list above", measure: "Every line item received and ticked off",
-        pass: "100% of items in hand before winding begins",
-        record: "Photo of all PHR-1 components laid out and labelled on the bench",
+        id: "P0-1", action: "Engage professional manufacturer for PHR-1 bifilar toroid — Coiltek Pty Ltd, Salisbury South SA 5106. Drawing REV A approved by Tim Short 2026-07-16. P.O Ref S17406.",
+        tools: "Engineering drawing, purchase order", measure: "Drawing signed off, P.O. confirmed, ETR issued",
+        pass: "3 units manufactured, 100% electrically tested, all PASS — 2026-07-27",
+        record: "ETR Issue 1.0 · GW Instek LCR-6100 · 1 kHz / 1.0 V · 15.6 °C · 61% RH",
       },
       {
         id: "P0-2", action: "Order all SNIC optical components from Thorlabs AU and Ocean Insight AU",
@@ -74,8 +74,8 @@ const PHASES: Phase[] = [
     ],
   },
   {
-    id: "P1", title: "PHR-1 — Bifilar Coil Winding", icon: Radio, accent: "#f59e0b",
-    objective: "Hand-wind a 144-turn bifilar coil on the toroid core with both windings electrically isolated and matched.",
+    id: "P1", title: "PHR-1 — Bifilar Coil Winding", icon: Radio, accent: "#10b981",
+    objective: "✅ COMPLETE — NEX-0589-PROTO-001. 72 bifilar turns (144 individual) on T200-2 toroid, 0.5 mm PUR1 wire. Manufactured by Coiltek Pty Ltd. 3 units, 100% tested, all PASS. L_avg = 62.2 μH · DCR_avg ≈ 295 mΩ · Test date: 2026-07-27.",
     steps: [
       {
         id: "P1-1", action: "Measure toroid core dimensions; calculate theoretical inductance at target frequency",

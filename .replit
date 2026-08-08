@@ -32,6 +32,47 @@ author = "agent"
 task = "workflow.run"
 args = "Start application"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "check:preloads"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "test:all"
+
+[[workflows.workflow]]
+name = "check:preloads"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run check:preloads"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "test:constitution"
+author = "agent"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run test:constitution"
+
+[[workflows.workflow]]
+name = "test:all"
+author = "agent"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run test:all"
+
 [userenv]
 
 [userenv.shared]
@@ -39,13 +80,14 @@ UV_NO_SYNC = "1"
 PYTHON_DISABLED = "1"
 COINOS_USERNAME = "nexusosmain"
 WNSP_LATTICE_SECRET = "fWxrBDfoMkIR61fTlaF6pplp2bNuruSio3mmKuzqAj0NAFnLxpFRnzOqvfBLRxJL"
+CAMPAIGN_ENABLED = "true"
 
 [userenv.development]
 
 [deployment]
 run = ["node", "dist/index.cjs"]
 build = ["tsx", "script/build.ts"]
-deploymentTarget = "cloudrun"
+deploymentTarget = "vm"
 
 [postMerge]
 path = "scripts/post-merge.sh"
@@ -53,7 +95,7 @@ timeoutMs = 120000
 
 [[ports]]
 localPort = 5000
-externalPort = 5000
+externalPort = 80
 
 [[ports]]
 localPort = 5001
@@ -62,4 +104,3 @@ externalPort = 3000
 [[ports]]
 localPort = 24678
 externalPort = 3001
-
