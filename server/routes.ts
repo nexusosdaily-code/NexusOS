@@ -1481,22 +1481,30 @@ export async function registerRoutes(
   // ── Bogoliubov Squeezed Compression State — public (Claims 36–39) ──────────
   app.get("/api/physics/squeezed", async (req, res) => {
     try {
+      if (!await checkRateLimit(req, res, "/api/physics/squeezed", 60)) return;
+      const strictNum = (v: unknown, integer = false): number | null => {
+        if (v === undefined) return null;
+        if (typeof v !== "string" || !/^-?\d+(\.\d+)?$/.test(v.trim())) return NaN;
+        const n = Number(v.trim());
+        if (!Number.isFinite(n) || (integer && !Number.isInteger(n))) return NaN;
+        return n;
+      };
+      const rParsed = strictNum(req.query.r);
+      if (Number.isNaN(rParsed)) return res.status(400).json({ error: "r must be a finite decimal number" });
+      const r = Math.max(-10, Math.min(10, rParsed ?? 0));
+      const wdmParsed = strictNum(req.query.wdm, true);
+      if (Number.isNaN(wdmParsed)) return res.status(400).json({ error: "wdm must be an integer" });
+      const wdm = wdmParsed ?? 52;
       const { bogoliubovCoefficients, squeezedVacuum, lambdaSqueezed, lambdaEntangled } = await import("./bogoliubov.js");
-      const rRaw = parseFloat(String(req.query.r ?? "0"));
-      if (!Number.isFinite(rRaw)) return res.status(400).json({ error: "r must be a finite number" });
-      const r = Math.max(-10, Math.min(10, rRaw));
-      const wdm = parseInt(String(req.query.wdm ?? "52"), 10);
-      if (!Number.isFinite(wdm)) return res.status(400).json({ error: "wdm must be a number" });
-      const single = lambdaSqueezed(wdm, r);
       const payload: any = {
         description: "Squeezed compression state Λ_B = Λ₀·cosh(2r) per Ψ channel (PRIOR_ART.md Claims 36–39, first disclosed 2026-08-08).",
         coefficients: bogoliubovCoefficients(r),
         vacuum: squeezedVacuum(r),
-        channel: single,
+        channel: lambdaSqueezed(wdm, r),
       };
       if (req.query.wdmB !== undefined) {
-        const wdmB = parseInt(String(req.query.wdmB), 10);
-        if (!Number.isFinite(wdmB)) return res.status(400).json({ error: "wdmB must be a number" });
+        const wdmB = strictNum(req.query.wdmB, true);
+        if (wdmB === null || Number.isNaN(wdmB)) return res.status(400).json({ error: "wdmB must be an integer" });
         payload.entangledPair = lambdaEntangled(wdm, wdmB, r);
       }
       res.json(payload);

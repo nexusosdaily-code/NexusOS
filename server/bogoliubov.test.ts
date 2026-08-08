@@ -209,3 +209,38 @@ describe("lambdaEntangled", () => {
     expect(e.b.wdm).toBeGreaterThan(0);
   });
 });
+
+// ── WLS SQZ opcode (0x15) ─────────────────────────────────────────────────────
+
+import { compileWLS, runToHalt } from "./wnsp_vm";
+
+describe("WLS squeeze() opcode", () => {
+  it("compiles squeeze(r) to opcode 0x15 with the parsed r", () => {
+    const ins = compileWLS("squeeze(0.35)");
+    expect(ins[0].op).toBe(0x15);
+    expect(ins[0].mnem).toBe("SQZ");
+    expect(ins[0].squeezeR).toBeCloseTo(0.35, 12);
+  });
+
+  it("executes after TUNE and reports Λ_B with cosh(2r) gain for the tuned λ", () => {
+    const res = runToHalt("tune(542.5nm)\nsqueeze(0.35)", 0);
+    const line = res.output.find(o => o.text.startsWith("SQZ"));
+    expect(line).toBeDefined();
+    expect(line!.text).toContain("λ=542.5nm");
+    expect(line!.text).toContain(`cosh(2r)=${Math.cosh(0.7).toFixed(4)}`);
+    expect(res.halted).toBe(true);
+  });
+
+  it("clamps r to [-10, 10] at execution and accepts negative r", () => {
+    const res = runToHalt("squeeze(-9999)", 0);
+    const line = res.output.find(o => o.text.startsWith("SQZ"))!;
+    expect(line.text).toContain(`cosh(2r)=${Math.cosh(20).toFixed(4)}`); // clamped to -10 → cosh(-20)=cosh(20)
+  });
+
+  it("does not mutate registers, agents, or persistent state", () => {
+    const res = runToHalt("@store k := v\nsqueeze(1)\nsqueeze(2)", 0);
+    expect(res.stateDelta).toEqual({ k: "v" });
+    expect(res.registers).toEqual([]);
+    expect(res.agents).toEqual([]);
+  });
+});
