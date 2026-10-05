@@ -170,6 +170,9 @@
     "bufferutil": "^4.0.8"
   },
   "overrides": {
+    "jsdom": {
+      "undici": "^7.30.0"
+    },
     "esbuild": "^0.28.1",
     "shell-quote": "^1.10.0",
     "body-parser": "^1.20.6",
