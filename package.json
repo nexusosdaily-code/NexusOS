@@ -83,7 +83,7 @@
     "bcrypt": "^6.0.0",
     "bitcoinjs-lib": "^7.0.1",
     "body-parser": "^1.20.6",
-    "brace-expansion": "^5.0.9",
+    "brace-expansion": "^5.0.12",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -106,7 +106,6 @@
     "memorystore": "^1.6.7",
     "multer": "^2.4.0",
     "next-themes": "^0.4.6",
-    "nodemon": "^3.1.14",
     "nostr-tools": "^2.23.5",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
@@ -164,7 +163,8 @@
     "tailwindcss": "^4.1.14",
     "tsx": "^4.20.5",
     "typescript": "5.6.3",
-    "vite": "^7.3.2"
+    "vite": "^7.3.2",
+    "minimatch": "^10.2.6"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
@@ -186,8 +186,8 @@
     "browserslist": "^4.28.7",
     "launch-editor": "^2.14.1",
     "ws": "^8.21.0",
-    "minimatch": "10.2.6",
-    "brace-expansion": "^5.0.9",
+    "minimatch": "$minimatch",
+    "brace-expansion": "^5.0.12",
     "valibot": "^1.4.2",
     "socket.io-parser": "^4.2.7",
     "postcss": {
