@@ -174,7 +174,7 @@
       "undici": "^7.30.0"
     },
     "esbuild": "^0.28.1",
-    "shell-quote": "^1.10.0",
+    "shell-quote": "$shell-quote",
     "body-parser": "^1.20.6",
     "uuid": "^11.1.1",
     "gaxios": "^7.0.0",
