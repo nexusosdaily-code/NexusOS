@@ -1,5 +1,11 @@
 # NexusOS — Prior Art & Formal Disclosure Record
 
+> **Current editorial context:** The numbered disclosures and historical author
+> labels below are preserved, not independently certified. Read
+> [research status, AI contributions and corrections](./docs/RESEARCH_STATUS.md)
+> before interpreting scientific, novelty or licensing assertions. Publication
+> does not establish experimental validation or a legal determination of rights.
+
 > **License**: AGPL-3.0 — All derivative works, implementations, hardware realisations, AI training pipelines,
 > photonic hardware simulators, and SaaS services implementing any claim below must remain open-source under
 > the same licence.
