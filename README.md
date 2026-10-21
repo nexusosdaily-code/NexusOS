@@ -1,6 +1,22 @@
 # NexusOS — Wavelength Operating System
 
-**AGPL-3.0 project · Spectral software and photonic-hardware research**
+**AGPL-3.0 project · WavelengthScript language technology and blockchain development**
+
+## The direction has not changed
+
+**WavelengthScript and the blockchain have always been the project's primary
+focus.** WavelengthScript is the vehicle for developing the blockchain, supported
+by WNSP's spectral-coordinate encoding and protocol work. This is a clarification
+of the longstanding direction, not a new pivot.
+
+The wider NexusOS vision is a century-long project looking toward 2126, for
+future generations to continue building. Photonic hardware and other additions
+are future development, not today's delivered capabilities or prerequisites
+for progressing the language and blockchain. They can add credibility as they
+are implemented, tested and supported by reproducible evidence and independent
+review—not merely because they are proposed.
+
+[Read the project direction and present/future scope](./docs/PROJECT_DIRECTION.md).
 
 [![npm](https://img.shields.io/npm/v/nexusos-ce-encoder?label=nexusos-ce-encoder&color=5c3eec)](https://www.npmjs.com/package/nexusos-ce-encoder)
 [![Disclosures](https://img.shields.io/badge/research-numbered%20disclosures-blueviolet)](./PRIOR_ART.md)
@@ -29,9 +45,9 @@
 
 ## What distinguishes WavelengthScript/WNSP?
 
-> **WavelengthScript/WNSP is a spectral-coordinate software framework linking
-> supported character encodings with language operations, addressing and
-> communication models, with photonic integration as a research objective.**
+> **WavelengthScript is the core language technology driving NexusOS blockchain development,
+> alongside WNSP spectral-coordinate encoding. The current focus is working software
+> on conventional computers; wider developments belong to a century-long vision.**
 
 WavelengthScript is the programming-language component; WNSP is the associated
 encoding, addressing and protocol research. The design philosophy assigns
@@ -61,7 +77,7 @@ authentication or configuration.
 
 | Page | What it does |
 |---|---|
-| [Campaign](https://wnsp.io/campaign) | Lab funding tiers — support the hardware build |
+| [Campaign status](https://wnsp.io/campaign) | Hardware fundraising and promotions on hold; not a current solicitation |
 | [Crowdfund](https://wnsp.io/crowdfund) | Project funding information; this README does not establish investment or ownership rights |
 | [Videos](https://wnsp.io/videos) | Auto-published Telegram video feed |
 | [WNSP Paper](https://wnsp.io/wnsp-paper) | Formal WNSP protocol specification (AGPL-3.0) |
@@ -566,9 +582,14 @@ validated business valuation or independently confirmed commercial rights.
 
 ---
 
-## The goal
+## Core goal and long-term vision
 
-**Kardashev Type I** — a civilisation that harnesses all energy available on its home planet.
+The core development goal has always been **WavelengthScript and the blockchain**.
+The wider proposals below are work for future generations; they do not replace
+that priority or establish what is available today.
+
+**Long-term aspiration: Kardashev Type I** — a civilisation that harnesses all
+energy available on its home planet.
 
 The project's long-term proposals include:
 - A planetary communications mesh (WNSP Spectral Relay Mesh)

@@ -5,6 +5,18 @@ certificate of hardware performance or an independent scientific review.
 It separates implementation, calculation, reported measurement and hypothesis.
 Historical disclosures remain available and have not been silently rewritten.
 
+## The longstanding priority: language and blockchain
+
+WavelengthScript and the blockchain have always been the project's primary
+focus. WavelengthScript is the vehicle for blockchain development, supported by
+WNSP encoding and protocol work. This corrects earlier hardware-first framing;
+it does not announce a change of direction.
+
+Other additions belong to a century-long vision for future generations. They
+can add credibility when implementation, testing and reproducible evidence
+support them, not merely when they are announced. See the
+[project direction and present/future scope](./PROJECT_DIRECTION.md).
+
 ## Explicit hardware correction
 
 Earlier descriptions, including AI-assisted explanations, overstated the hardware
@@ -34,9 +46,9 @@ Passing software tests is not a physical experiment.
 
 ## What distinguishes the approach
 
-WavelengthScript/WNSP is a spectral-coordinate software framework linking
-supported character encodings with language operations, addressing and
-communication models, with photonic integration as a research objective.
+WavelengthScript is the core language technology driving NexusOS blockchain development,
+alongside WNSP spectral-coordinate encoding. The current focus is working software
+on conventional computers; wider developments belong to a century-long vision.
 WavelengthScript is the programming-language component; WNSP is the associated
 encoding, addressing and protocol research.
 
@@ -274,10 +286,13 @@ When updating a research claim:
 
 ## Long-term direction
 
-The programme aims to connect spectral software with experimentally validated
-photonic hardware and, ultimately, integrated system operation with human-life
-safeguards. Its century-scale vision towards 2126 is an ambition, not a
-delivery guarantee or demonstrated civilisation-scale capability.
+WavelengthScript and blockchain development remain the longstanding core.
+Connecting that software with experimentally validated photonic hardware and
+wider integrated systems is a possible future addition, not today's primary
+deliverable or a prerequisite for software progress. The century-scale vision
+towards 2126 is for future generations to continue building; it is not a
+delivery guarantee or demonstrated civilisation-scale capability. Each addition
+must earn credibility through its own implementation, tests and evidence.
 
 A proposed safeguard is not automatically enacted policy or globally
 enforceable law. Governance protections require their own implementation,
