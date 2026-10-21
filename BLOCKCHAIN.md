@@ -1,6 +1,15 @@
 # NexusOS Blockchain — MVP Reference
 
-> **Status: Experimental v0.1** — the physics substrate is live and functional; the consensus layer is single-node proof-of-spectral. Cryptographic multi-party consensus is a roadmap item.
+> **Project direction:** WavelengthScript and the blockchain have always been
+> the core priority. WavelengthScript is the vehicle for blockchain development;
+> hardware and wider physics proposals are future work for later generations,
+> not prerequisites for software progress. See [project direction](./docs/PROJECT_DIRECTION.md).
+>
+> **Status: Experimental software reference.** The documented single-node
+> proof-of-spectral model is not independently validated multi-party consensus.
+> Spectral coordinates below are software representations, not a demonstrated
+> physical substrate. Coordinate consistency alone does not establish
+> cryptographic security or replace authentication, integrity or consensus.
 
 ---
 

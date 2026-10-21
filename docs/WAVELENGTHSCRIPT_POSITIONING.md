@@ -1,10 +1,19 @@
 # WavelengthScript/WNSP: positioning and related work
 
+## Longstanding project direction
+
+WavelengthScript and the blockchain have always been the primary focus;
+WavelengthScript is the vehicle for blockchain development, with WNSP encoding
+and protocol work. Wider additions are century-long development for future
+generations, not a replacement for that direction. Their credibility depends
+on demonstrated results, not inclusion in a proposal. See
+[project direction](./PROJECT_DIRECTION.md).
+
 ## Recommended description
 
-> WavelengthScript/WNSP is a spectral-coordinate software framework linking
-> supported character encodings with language operations, addressing and
-> communication models, with photonic integration as a research objective.
+> WavelengthScript is the core language technology driving NexusOS blockchain development,
+> alongside WNSP spectral-coordinate encoding. The current focus is working software
+> on conventional computers; wider developments belong to a century-long vision.
 
 WavelengthScript is the programming-language component; WNSP is the associated
 encoding, addressing and protocol research. NexusOS hosts these software tools

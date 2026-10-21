@@ -1,4 +1,15 @@
 # NexusOS Photonic Hardware Specification v1.0
+
+> **Scope clarification — 22 October 2026:** This is a retained historical
+> hardware research proposal, not today's primary product or a validated
+> complete system. WavelengthScript and the blockchain have always been the
+> core direction. Hardware and other additions belong to a century-long vision
+> for future generations and must earn credibility through demonstrated evidence.
+> Read the [project direction](./docs/PROJECT_DIRECTION.md) and
+> [hardware evidence correction](./docs/HARDWARE_EVIDENCE.md).
+> This note does not release the fundraising or promotion hold. The historical
+> disclosure text below is preserved, not presented as proof of its claims.
+
 **WNSP Physics Stack — Reference Architecture**
 
 Copyright (C) 2026 NexusOS / nexusosdaily-code  
