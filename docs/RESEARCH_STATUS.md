@@ -19,6 +19,26 @@ No current evidence linked below establishes an integrated, general-purpose
 NexusOS photonic computer, force unification or gravitational control.
 Passing software tests is not a physical experiment.
 
+## What distinguishes the approach
+
+WavelengthScript/WNSP is a spectral-coordinate software framework linking
+supported character encodings with language operations, addressing and
+communication models, with photonic integration as a research objective.
+WavelengthScript is the programming-language component; WNSP is the associated
+encoding, addressing and protocol research.
+
+The design philosophy assigns supported human-readable characters to agreed
+spectral coordinates. The contribution being investigated is the particular
+combination of these rules, not the invention of colour alphabets, optical symbol
+encoding, photonic programming or interoperability individually.
+
+See [the sourced differentiation and related-work comparison](./WAVELENGTHSCRIPT_POSITIONING.md).
+It distinguishes the actual character table from account derivation, name
+fingerprints and proposed optical bins, and gateway-mediated interoperability
+from native photonic execution or direct optical exchange. This is an initial
+comparison, not an exhaustive prior-art search, a priority determination or
+independent experimental validation.
+
 ## How the work developed
 
 The available project records show these overlapping stages. This is a

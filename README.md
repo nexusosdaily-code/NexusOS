@@ -15,6 +15,32 @@
 
 ---
 
+## What distinguishes WavelengthScript/WNSP?
+
+> **WavelengthScript/WNSP is a spectral-coordinate software framework linking
+> supported character encodings with language operations, addressing and
+> communication models, with photonic integration as a research objective.**
+
+WavelengthScript is the programming-language component; WNSP is the associated
+encoding, addressing and protocol research. The design philosophy assigns
+supported human-readable characters to agreed spectral coordinates. The
+contribution being investigated is the particular combination of these rules,
+not the invention of colour alphabets, optical symbol encoding, photonic
+programming or interoperability individually.
+
+Earlier colour alphabets, wavelength-shift keying, Blackbird/Strawberry Fields,
+Perceval interoperability and ITU optical grids overlap with different parts.
+They are not automatically exact equivalents; their existence also means that
+broad "first language for light" or "first assignment of letters to light"
+claims are not substantiated here.
+
+Read the [sourced differentiation and comparison](./docs/WAVELENGTHSCRIPT_POSITIONING.md)
+for actual mapping examples, differences from earlier work and the tests still
+needed. This initial comparison does not establish historical priority,
+patentability, native photonic execution or universal interoperability.
+The [website transparency record](https://wnsp.io/research-transparency)
+is intended to use the same positioning; website changes require publication separately.
+
 ## Live now
 
 Public project pages are listed below. Availability of an application page is
