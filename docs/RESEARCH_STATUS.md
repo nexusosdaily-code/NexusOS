@@ -5,6 +5,19 @@ certificate of hardware performance or an independent scientific review.
 It separates implementation, calculation, reported measurement and hypothesis.
 Historical disclosures remain available and have not been silently rewritten.
 
+## Explicit hardware correction
+
+Earlier descriptions, including AI-assisted explanations, overstated the hardware
+evidence. Reported electrical measurements on three bifilar coils are not evidence
+of photonic computation, a complete SNIC/PHR-1 system, quantum memory, zero-loss
+operation or gravity control. The present end-to-end reference architecture is a
+draft for independent engineering review, not a validated complete hardware design.
+
+The [hardware evidence and correction record](./HARDWARE_EVIDENCE.md) separates
+reported measurements, software, design targets and missing physical evidence.
+Hardware fundraising and promotion remain subject to the founder's engineering
+hold; a documentation change does not prove the live deployment has applied it.
+
 ## Read the evidence by category
 
 | Category | What it establishes | What it does not establish |
