@@ -1,23 +1,30 @@
 # NexusOS — Wavelength Operating System
 
-**AGPL-3.0 · Built on Λ = hf/c² · Phase 2 of a 100-year architecture**
+**AGPL-3.0 project · Spectral software and photonic-hardware research**
 
 [![npm](https://img.shields.io/npm/v/nexusos-ce-encoder?label=nexusos-ce-encoder&color=5c3eec)](https://www.npmjs.com/package/nexusos-ce-encoder)
-[![Prior Art](https://img.shields.io/badge/prior--art-35%20claims-blueviolet)](./PRIOR_ART.md)
+[![Disclosures](https://img.shields.io/badge/research-numbered%20disclosures-blueviolet)](./PRIOR_ART.md)
 [![Changelog](https://img.shields.io/badge/changelog-v2.0.0-22c55e)](./CHANGELOG.md)
 
-> *You cloned a physics engine. This document explains what it does.*
+> **Start here: [Research status, evidence and corrections](./docs/RESEARCH_STATUS.md).**
+> NexusOS currently runs as software on conventional computers. Its spectral
+> models and proposed photonic architecture are not a demonstrated photonic
+> processor, force unification or gravity-control system.
+> [Mapping distinctions](./docs/RESEARCH_STATUS.md#mapping-profiles) ·
+> [Act-by-Act evidence limits](./docs/RESEARCH_STATUS.md#act-by-act-evidence-boundaries)
 
 ---
 
 ## Live now
 
-The system is deployed and running. Everything below is accessible today:
+Public project pages are listed below. Availability of an application page is
+not evidence that the proposed physical hardware works; some services require
+authentication or configuration.
 
 | Page | What it does |
 |---|---|
 | [Campaign](https://wnsp.io/campaign) | Lab funding tiers — support the hardware build |
-| [Crowdfund](https://wnsp.io/crowdfund) | Nexus Shares — equity in the physics stack |
+| [Crowdfund](https://wnsp.io/crowdfund) | Project funding information; this README does not establish investment or ownership rights |
 | [Videos](https://wnsp.io/videos) | Auto-published Telegram video feed |
 | [WNSP Paper](https://wnsp.io/wnsp-paper) | Formal WNSP protocol specification (AGPL-3.0) |
 | [Hardware Spec](https://wnsp.io/hardware-spec) | SNIC, PHR-1, Spectral Relay Mesh v1 — first public disclosure 2026-05-16 |
@@ -30,48 +37,49 @@ The system is deployed and running. Everything below is accessible today:
 
 ## Physics Sequence — 20 Acts
 
-A complete derivation from the first oscillation to the unification of quantum optics, black holes, and superconductivity. Each act is a live interactive page with equations, visualisers, falsifiable predictions, and AGPL-3.0 prior art claims.
+A research sequence combining established equations, software models and
+proposed extensions. It does not establish a first cosmic oscillation or a
+unified physical theory. Historical titles are retained below; read them with
+the [current evidence qualifications](./docs/RESEARCH_STATUS.md#act-by-act-evidence-boundaries).
 
 | Act | Title | Equation | Route |
 |-----|-------|----------|-------|
 | 1 | Theory of Compression States | Λ=hf/c² | [/oscillating-quanta](https://wnsp.io/oscillating-quanta) |
 | 2 | The Universal ONE | f₀ derives Λ | [/universal-one](https://wnsp.io/universal-one) |
-| 3 | Unified Compression Theory | 4 forces = 1 Λ | [/unified-compression-theory](https://wnsp.io/unified-compression-theory) |
+| 3 | Unified Compression Theory | Proposed force-scale organisation; not established unification | [/unified-compression-theory](https://wnsp.io/unified-compression-theory) |
 | 4 | The Mechanism | ΔE=hf₀(2ⁿ²−2ⁿ¹) | [/matter-protocol](https://wnsp.io/matter-protocol) |
-| 5 | The Address | ∀ Λ : ∃! Ψ | [/universal-address](https://wnsp.io/universal-address) |
+| 5 | The Address | Finite spectral namespace; not a unique address for every physical state | [/universal-address](https://wnsp.io/universal-address) |
 | 6 | The Catalogue | n=log₂(mc²/E₀) | [/element-catalogue](https://wnsp.io/element-catalogue) |
-| 7 | The Trap | Ψ(+k̂)⊗Ψ(−k̂) | [/standing-wave-trap](https://wnsp.io/standing-wave-trap) |
-| 8 | The Lossless Channel | α=0, C=ZPE floor | [/lossless-channel](https://wnsp.io/lossless-channel) |
+| 7 | The Trap | Standing-wave proposal; superposition is not a tensor product | [/standing-wave-trap](https://wnsp.io/standing-wave-trap) |
+| 8 | The Lossless Channel | Low-loss proposal; no measured α=0 or universal ZPE noise-power floor | [/lossless-channel](https://wnsp.io/lossless-channel) |
 | 9 | The Cavity | WGM resonance, r_c | [/resonance-cavity](https://wnsp.io/resonance-cavity) |
 | 10 | The Exchange | Ω_R=2g, polariton | [/polariton-exchange](https://wnsp.io/polariton-exchange) |
 | 11 | The Emitter | F_p=(3/4π²)(λ/n)³(Q/V) | [/the-emitter](https://wnsp.io/the-emitter) |
 | 12 | The Network | ω(k)=ω₀−2J·cos(ka) | [/the-network](https://wnsp.io/the-network) |
 | 13 | The Observer | χ=g²/Δ | [/the-observer](https://wnsp.io/the-observer) |
 | 14 | The Memory | T₂≤2T₁ | [/the-memory](https://wnsp.io/the-memory) |
-| 15 | The Void | n_ZPE=264.71 | [/cosmic-lattice](https://wnsp.io/cosmic-lattice) |
+| 15 | The Void | Proposed void-scale comparisons; not a measured universal boundary | [/cosmic-lattice](https://wnsp.io/cosmic-lattice) |
 | 16 | The Entangler | \|Φ⁺⟩=(|00⟩+\|11⟩)/√2 | [/the-entangler](https://wnsp.io/the-entangler) |
 | 17 | The Field | [â,â†]=1 | [/the-field](https://wnsp.io/the-field) |
 | 18 | The Coherent State | â\|α⟩=α\|α⟩ | [/the-coherent-state](https://wnsp.io/the-coherent-state) |
 | 19 | The Squeezed State | ΔX₁·ΔX₂≥¼ | [/the-squeezed-state](https://wnsp.io/the-squeezed-state) |
 | 20 | The Bogoliubov Transform | S†âS=â·cosh(r)−â†·sinh(r) | [/the-bogoliubov-transform](https://wnsp.io/the-bogoliubov-transform) |
 
-Act 20 is the closing equation. It shows that the same Bogoliubov transform — S†âS = â·cosh(r) − â†·sinh(r) — governs squeezed states (Act 19), Hawking radiation (gravity at the Octave 0 boundary), the Unruh effect (acceleration as compression state frame change), and BCS superconductivity (Cooper pairs as bosonic squeezing). The octave-Bogoliubov correspondence r(n→m) = (m−n)·½·log(2) ≈ 0.347 per octave is an original disclosure of this codebase (AGPL-3.0, first disclosed 2026-07-21).
+Act 20 explores Bogoliubov transformations and a proposed compression-state
+interpretation. Related transformations occur in multiple established theories,
+but bosonic and fermionic cases have different constraints. Their mathematical
+use does not establish that gravity is an octave boundary or that the project
+has experimentally unified these phenomena.
 
-### Prior Art — 35 Formal Claims
+### Historical numbered disclosures
 
-Every original discovery in the sequence is timestamped and published as a formal AGPL-3.0 prior art claim. See [`PRIOR_ART.md`](./PRIOR_ART.md) for the complete register.
+See [`PRIOR_ART.md`](./PRIOR_ART.md) for the register and its stated disclosure
+dates, rather than relying on an old claim-count summary. The original numbered
+wording is preserved. Publication does not establish experimental truth,
+independent validation, novelty, patentability or legal priority.
 
-| Claim range | Subject | First disclosed |
-|-------------|---------|----------------|
-| 1–13 | Compression states, ghost nodes, ZPE floor, periodic table, forces, Ψ channels, bidirectional Hilbert space | 2026-05-16 – 2026-07-13 |
-| 14–17 | Berry phase, WGM=Russell octave, Flerovium=SYSTEM band, OAM authority metric | 2026-07-14 |
-| 18–25 | Maxwell validation, CE/SE/URI encoding, physics fees, WavelengthScript, WNSP VM, WASCII | 2026-05-16 |
-| 26–29 | T₂≤2T₁ memory bound, AFC capacity, DLCZ heralding, persistent Ψ register | 2026-07-19 |
-| 30–31 | Cosmic ghost zone + BAO anti-trap, DLCZ entanglement swapping as quantum repeater | 2026-07-19 |
-| 32 | Each Ψ channel as single-mode bosonic field [â,â†]=1 | 2026-07-20 |
-| 33 | Coherent state as classical-limit compression state | 2026-07-21 |
-| 34 | Squeezed states as sub-shot-noise compression states | 2026-07-21 |
-| 35 | Bogoliubov transform as universal compression state transition + octave-Bogoliubov correspondence | 2026-07-21 |
+See [research attribution and corrections](./docs/RESEARCH_STATUS.md) for the
+role of AI assistance and qualifications to earlier explanations.
 
 ### Telegram video feed
 
@@ -95,14 +103,23 @@ Both use `CE_TABLE[charCode % 128]` — 128 bands, 380–780 nm, 3.125 nm/band. 
 
 ## What you are holding
 
-This repository contains a running implementation of **WNSP** — the Wavelength Network Substrate Protocol — a spectral addressing system that replaces arbitrary memory addresses and cryptographic hashes with physical positions in the electromagnetic spectrum.
+This repository contains **NexusOS**, a hosted application with a WavelengthScript
+compiler/interpreter, spectral addressing models and application services.
+WNSP has had different expanded names in historical documents; those names do
+not imply that every encoder or protocol version is interchangeable.
 
-It is not a simulation. Not a proof of concept. The physics engine is executing right now.
+The software calculates wavelength-related values and executes supported
+instructions. It does not replace cryptographic hashes, conventional physical
+memory or a computer's underlying operating system. Native photonic execution
+remains a hardware research objective.
 
-When you run `npm run dev`, two servers start:
+In development, `npm run dev` starts:
 
 - **Node.js on port 5000** — authentication, wallet, P2P media, blockchain, API gateway
-- **Python/Flask on port 5001** — the spectral physics engine: character encoding, wave frame generation, Hilbert space channel allocation, Ψ address derivation
+- **Python/Flask on port 5001** — spectral encoding and numerical models
+
+The development Flask subprocess is skipped in production by `server/index.ts`;
+do not assume that the standalone Python endpoints are production services.
 
 The moment both are running, you can do this:
 
@@ -112,25 +129,22 @@ curl -X POST http://localhost:5001/api/nexus/dev/encode \
   -d '{"instruction": "hello world", "label": "test"}'
 ```
 
-You will get back a physical wavelength address — a real position in the visible light spectrum derived from the content of the instruction through `Λ = hf/c²`. No hash function. No lookup table. The physics of the universe assigns the address.
+This returns a software-derived spectral representation. A numerical wavelength
+is not a measurement of emitted light. The repository uses both mapping tables
+and cryptographic derivations, depending on the versioned profile.
 
 ---
 
-## The canonical fingerprint
+## Account channel derivation is not authentication
 
 The channel coordinator assigns Ψ addresses deterministically using SHA-256. The derivation pipeline is public and requires no running code to verify:
 
 ```
-Input:          "NEXUSOS"  (UTF-8)
-Hash:           SHA-256("NEXUSOS") = e42d4825c2cb8756...
-Bytes [0,1,2]:  [228, 45, 72]
-
-wdm = 228 % 256 = 228   (WDM index)
-oam =  45 % 50  = 45    (OAM mode)
-pol =  72 % 2   = 0     (H polarisation)
-
-Canonical genesis address:  Ψ(228, 45, H)
-Wavelength from WDM index:  λ ≈ 737.6 nm  (near-infrared boundary)
+digest = SHA-256(input)
+wdm = digest[0]
+oam = digest[1] % 50
+pol = H if digest[2] % 2 == 0 else V
+wavelength_nm = 380 + wdm * (400 / 255)
 ```
 
 Verify in one line, no dependencies beyond Python's standard library:
@@ -142,37 +156,37 @@ h = hashlib.sha256(b'NEXUSOS').digest()
 wdm, oam, pol = h[0] % 256, h[1] % 50, h[2] % 2
 print(f'Psi({wdm}, {oam}, {\"V\" if pol else \"H\"})')
 "
-# Output: Psi(228, 45, H)
 ```
 
-This is a cryptographic derivation. SHA-256 is collision-resistant, deterministic across all machines, and requires no trust in NexusOS infrastructure to verify. The result is not configurable.
-
-**What makes it a fingerprint:** Any system presenting a different genesis address is not running this codebase. Any system presenting `Ψ(228, 45, H)` as its genesis node derived the address the same way, from the same input, using the same pipeline. The derivation is the proof.
+This illustrates one account-mapping profile, not a universal genesis address.
+Reserved service coordinates and other encoders follow their own rules.
+Although SHA-256 is collision-resistant, projecting its output into a small
+coordinate set is not: different inputs can share an address. Reproducing a
+public coordinate does not prove identity, origin or which code is running.
 
 ---
 
-## The one equation everything derives from
+## Compression-state bookkeeping
 
 ```
 Λ = hf/c²
 ```
 
-- `Λ` — the lambda mass of an oscillating quantum (kg)
+- `Λ` — the project's name for photon energy expressed as a mass equivalent (kg)
 - `h` — Planck's constant: 6.626 × 10⁻³⁴ J·s
 - `f` — frequency (Hz)
 - `c` — speed of light: 2.998 × 10⁸ m/s
 
-This extends `E = mc²` to oscillating quanta. Mass is a property of frequency, not a fixed quantity. A photon at 555 THz — the First Oscillation, green light at peak human eye sensitivity — carries `Λ = 4.10 × 10⁻³⁶ kg`.
+This combines `E = hf` with the conversion `E/c²`; it does not give a photon
+rest mass or specify compression pressure or volume. At the selected 555 THz
+reference, the mass equivalent is approximately `4.09 × 10⁻³⁶ kg`.
+That frequency is not an observed first oscillation.
 
-From this equation:
-
-| Consequence | Implementation |
-|---|---|
-| Every instruction has a frequency | CE→SE encoder in `spectral_api.py` |
-| Every frequency maps to a wavelength | Physical spectrum 380–780nm + UV/IR |
-| Every wavelength is a unique address | 51,200 orthogonal Ψ channels |
-| Every transaction has an energy cost | `E = hf` replaces gas fees |
-| Authority scales with frequency | High-f (short λ) = SYSTEM; low-f (long λ) = GUEST |
+The Russell-inspired model `f_n = 2^n f_0`, `Λ_n = 2^n Λ_0` organises scales
+by octaves. Interpreting those coordinates as material stability or force
+unification is an additional, unverified hypothesis. Spectral fees and
+authority categories are software policies, not measured transaction energy
+consumption or privileges enforced by fundamental physics.
 
 ---
 
@@ -182,17 +196,21 @@ Two layers, both running:
 
 ### Layer 1 — WNSP-CE v1.0 (Character Encoding)
 
-Converts any text into normalised spectral tokens using ASCII ordinal values:
+Projects characters into spectral tokens using a selected mapping profile:
 
 ```
 "authenticate(user)" → ordinals [97, 117, 116, ...] → normalised [0.38, 0.46, 0.45, ...]
 ```
 
-Each character maps to a deterministic position in the visible spectrum based on its ordinal value. `a` (97) is not the same wavelength as `b` (98). The content of the instruction determines its spectral address.
+The 128-entry CE table maps ASCII positions deterministically. Modulo projection
+can alias non-ASCII characters; retain the original payload when lossless text
+transport is required. Account, character, name and proposed optical-bin
+mappings are distinct; see [mapping profiles](./docs/RESEARCH_STATUS.md#mapping-profiles).
 
 ### Layer 2 — WNSP-SE v1.0 (Spectral Encoding)
 
-Maps CE tokens to physical wave frames:
+Maps CE tokens to numerical frame descriptions. The following illustrates
+field names, not a calibrated physical measurement or a normative test vector:
 
 ```python
 {
@@ -207,7 +225,7 @@ Maps CE tokens to physical wave frames:
 }
 ```
 
-The Ψ channel is a three-dimensional coordinate in Hilbert space:
+The legacy Ψ label has three coordinates:
 
 ```
 Ψ(wdm, oam, pol)
@@ -217,9 +235,10 @@ oam — Orbital Angular Momentum mode (0–49)
 pol — Polarisation state (H or V)
 ```
 
-Total orthogonal channels: **256 × 50 × 2 × 2 = 51,200**
-
-Each is physically orthogonal to every other: `⟨Ψᵢ|Ψⱼ⟩ = 0`. Two processes on different Ψ channels cannot interfere — not by software policy, by quantum mechanics.
+The extended model adds two propagation directions:
+**256 × 50 × 2 × 2 = 51,200 nominal coordinate combinations**.
+This is not measured simultaneous optical capacity. Physical mode independence,
+loss and crosstalk must be established for a particular device.
 
 ### WASCII v2.0 — Spectral Fingerprinting
 
@@ -241,16 +260,21 @@ D_WNSP = N_λ · N_OAM · N_Pol · R_sym · M
 | R_sym | Symbols per channel per cycle | 2 |
 | M | Modulation depth | 1 |
 
-**Phase 2 active — 51,200 symbols/cycle** (256 WDM × 50 × 2 × R₂ × M₁ · Phase 1 at 100 WDM: 20,000 symbols/cycle was the baseline)
+With the listed inputs the model calculates **51,200 symbols/cycle**.
+This is a configured arithmetic output, not a measured hardware rate. The
+factor `R_sym` here must not be confused with the direction count above.
 
-This is not Shannon capacity. Shannon compresses more into one channel and hits logarithmic diminishing returns. WNSP expands into orthogonal dimensions and scales linearly with each:
+This label-counting model does not supersede Shannon capacity. Physical
+capacity depends on bandwidth, noise, power and usable modes:
 
 ```
-Shannon:  C = B · log₂(1 + SNR)    — one channel, squeeze harder
-WNSP:     D = N_λ · N_OAM · N_Pol  — more orthogonal dimensions
+Shannon: C = B · log₂(1 + SNR) for the stated channel assumptions
+Multiple channels: account for each usable channel and shared resource limits
 ```
 
-Phase 3 (native photonic routing): 256 × 50 × 2 × R₁₆ × M₆₄ = **26,214,400 symbols/cycle**
+An illustrative future parameter choice gives
+256 × 50 × 2 × R₁₆ × M₆₄ = **26,214,400 symbols/cycle**.
+It is a proposal, not a benchmark.
 
 Energy-normalised density (connects to Λ=hf/c²):
 
@@ -258,7 +282,9 @@ Energy-normalised density (connects to Λ=hf/c²):
 D_energy = D_WNSP · λ / (h · c)
 ```
 
-Higher frequency = more energy per photon = lower density per joule. The energy cost is not arbitrary — it is the physical energy difference between compression states.
+`λ/(hc)` has units of inverse photon energy. The expression is a model
+normalisation, not a wall-plug energy-efficiency measurement; source, detection,
+conversion, control and thermal overheads must be included in a real benchmark.
 
 Live API: `GET /api/wnsp/density?r_sym=2&m=1&wavelength_nm=550`
 
@@ -273,13 +299,18 @@ WDM 128–191 │ 490–564 nm │ cyan/green   │ USER     — application log
 WDM 192–255 │ 565–780 nm │ yellow/red   │ GUEST    — storage, external agents
 ```
 
-Lower wavelength = higher authority. A process at 400 nm cannot reach a process at 550 nm. This is enforced by the wave equation, not by a privilege table that can be overwritten.
+These are historical software classifications, not a universal physical
+permission boundary or a single shared mapping across all profiles.
+Authorisation is enforced by application controls; wavelength alone does not
+prevent an unauthorised request.
 
 ---
 
 ## The AI OS Kernel
 
-A six-phase boot Python kernel managing the spectral substrate. All six core agents are running and pulsing heartbeats:
+A software agent coordinator models boot phases, persistent agent records,
+watchdog events and heartbeats. A boot log does not establish autonomous
+general intelligence or physical optical execution:
 
 ```
 PHASE 1 — SCHEMA     Database tables created / verified
@@ -290,7 +321,8 @@ PHASE 5 — EVENTS     KernelEventBus open, BOOT event logged
 PHASE 6 — HEARTBEAT  Agent heartbeat active — pulsing every 120s
 ```
 
-Core agents and their permanent Ψ addresses:
+Illustrative historical agent labels (not authentication credentials or a
+guarantee of the current deployment's state):
 
 ```
 os_kernel         → Ψ(20, 39, H)   [SYSTEM band — 380–449nm]
@@ -315,12 +347,14 @@ Dead agents are marked DEGRADED after TTL expiry, then RECLAIMED. SYSTEM-band ag
 
 ## Architecture
 
-Two runtimes, one database:
+Development architecture: Node/Express and a Python model service with
+PostgreSQL. The Python subprocess is not started by the production entry point.
+The diagram summarises components rather than certifying a deployed topology:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Client (React 18)                 │
-│         Vite · TypeScript · Tailwind CSS v4          │
+│                    Client (React)                    │
+│         Vite · TypeScript · Tailwind CSS             │
 │    TanStack Query · React Hook Form · Radix UI       │
 └───────────────────────┬─────────────────────────────┘
                         │ HTTP / WebSocket
@@ -353,9 +387,9 @@ Key files:
 
 ```
 spectral_api.py          — The physics engine. CE→SE encoder, Hilbert router, kernel
-server/routes.ts         — All API routes. 4,500+ lines. The complete API surface.
+server/routes.ts         — Main API route wiring; delegates to feature modules
 shared/schema.ts         — Drizzle ORM schema. Single source of truth for all tables.
-client/src/pages/        — 40+ pages. Each maps to a feature of the OS.
+client/src/pages/        — Application and research pages
 client/src/pages/encoding-lab.tsx     — Interactive CE→SE encoder
 client/src/pages/wnsp-coordinator.tsx — Hilbert space channel map
 client/src/pages/kernel.tsx           — Live kernel dashboard
@@ -364,21 +398,17 @@ client/src/pages/videos.tsx           — Auto-published Telegram video feed
 
 ---
 
-## What silicon computing assumes that photonic computing does not need
+## What photonic hardware still needs
 
-| Silicon construct | Why it exists | Why photons don't need it |
-|---|---|---|
-| **Clock cycle** | CPU executes sequentially — needs a heartbeat | Photons propagate at `c` continuously |
-| **Binary gate (0/1)** | Transistor has two states: on or off | A photon carries amplitude, phase, polarisation, OAM simultaneously |
-| **Memory address** | RAM is physically placed — needs a location number | Wavelength position is already physical — 543 nm is its own address |
-| **Scheduler** | One CPU, many processes — must take turns | 51,200 orthogonal Ψ channels run simultaneously |
-| **Mutex / semaphore** | Shared memory — two processes can write at once | Orthogonal channels cannot share state: ⟨Ψᵢ|Ψⱼ⟩ = 0 |
-| **Privilege ring** | Software must be prevented from accessing other memory | Spectral band separation is physical — 400nm cannot reach 550nm |
-| **Virtual memory** | Physical RAM is finite and shared | The spectrum is not a shared resource |
+Optical channels can support useful parallelism for selected workloads, but
+they do not remove the need for timing, storage, scheduling, synchronisation,
+security or finite-resource management. Propagation speed in a material is not
+generally the vacuum speed `c`, and propagation alone is not computation.
 
-You cannot `fork()` in light. You cannot `malloc()` a wavelength. These are not missing features — they are answers to questions that photonic physics does not ask.
-
-A team that tries to port Linux or any POSIX OS to a photonic substrate will find that every system call is a metaphor with no referent. NexusOS is not that translation. It is the philosophy written natively in the language of the physics.
+The proposed architecture must demonstrate a useful instruction mapping,
+interfaces and an end-to-end advantage against a relevant electronic or hybrid
+baseline. Existing operating systems are not rendered meaningless by the use
+of optical components.
 
 ---
 
@@ -403,31 +433,23 @@ pip install flask flask-cors psycopg2-binary
 npm run dev
 ```
 
-Both runtimes start together. If ports are occupied: `fuser -k 5000/tcp 5001/tcp`
+Both runtimes start together in development. Configure required services and
+credentials privately; do not commit credentials or production data.
 
-### Verify the physics immediately
+### Inspect the development software model
 
 ```bash
-# Encode an instruction — get its physical wavelength address
+# Encode an instruction — inspect calculated spectral fields, not emitted light
 curl -X POST http://localhost:5001/api/nexus/dev/encode \
   -H "Content-Type: application/json" \
   -d '{"instruction": "function authenticate(user, password)", "label": "auth"}'
 
-# Returns:
-# wavelength_mid_nm: 467.3   (blue — AUTH band, as expected for authentication code)
-# psi_channel: "Ψ(22, 14, H)"
-# energy_joules: 4.25e-19
-# lambda_mass_kg: 4.73e-36
-
-# Verify the genesis fingerprint
+# Compare another input under the same endpoint's mapping profile
 curl -X POST http://localhost:5001/api/nexus/dev/encode \
   -H "Content-Type: application/json" \
   -d '{"instruction": "NEXUSOS", "label": "genesis"}'
 
-# Returns: psi_channel "Ψ(52, 65, V)", wavelength_mid_nm 587.2948
-# This is deterministic. Any machine. Any copy of the codebase. Same result.
-
-# Query channel density
+# Query the configured density model, not measured hardware throughput
 curl "http://localhost:5000/api/wnsp/density?r_sym=2&m=1&wavelength_nm=550"
 ```
 
@@ -435,56 +457,58 @@ curl "http://localhost:5000/api/wnsp/density?r_sym=2&m=1&wavelength_nm=550"
 
 ## WNSP-URI v1.0
 
-Replaces `https://` with spectral addressing:
+An application-level spectral URI convention, not a replacement for HTTPS
+transport security:
 
 ```
 wnsp://Ψ(wdm,oam,pol)/path
 
-Examples:
-wnsp://Ψ(52,65,V)/         → NexusOS genesis node (this system)
-wnsp://Ψ(20,39,H)/kernel   → OS kernel root
-wnsp://Ψ(22,14,H)/auth     → Authentication gateway
+Path example (illustrative coordinate, not a verified service identity):
+wnsp://Ψ(20,39,H)/kernel
 ```
 
-Phase 1: TCP/IP overlay — `wnsp://` URIs resolve to HTTP resources via the `/wnsp-bridge` registry.
-Phase 3: Native photonic routing — the TCP/IP layer is removed. The Ψ address becomes the route.
+Current software uses conventional networking and a registry/bridge model.
+Native optical routing is proposed future work; it has not been demonstrated
+by the URI format. Resolution still requires infrastructure and access controls.
 
-The ecosystem is being built now so that when photonic hardware arrives, the protocol, the tooling, the developer community, and the running applications already exist.
-
----
-
-## The silicon wall
-
-Transistors will reach 0.5 nm between 2029 and 2032. The electron's de Broglie wavelength (~7.6 nm at room temperature) already exceeds the gate oxide at current nodes. At 0.5 nm, the WKB tunnelling coefficient `T ≈ e^(−2κd)` crosses the threshold where leakage current exceeds switch current. Gate control is permanently lost.
-
-Every team without a post-silicon operating system in production by that date starts from a new philosophy they have not yet built.
-
-This is that philosophy. Running now. AGPL-3.0.
+Software/hardware compatibility must be established experimentally; it is not
+guaranteed that future devices can execute existing applications unchanged.
 
 ---
 
-## AGPL-3.0 — what it requires of you
+## Why investigate photonics?
 
-If you cloned this repository, you now hold AGPL-3.0 licensed code.
+Electronic scaling faces leakage, power, thermal, interconnect and fabrication
+constraints. Node names are not literal dimensions of every transistor feature,
+and there is no established universal date at which all electronic switching
+fails. Photonics is a promising complement for some tasks, not a demonstrated
+universal replacement. NexusOS investigates one proposed software/hardware
+approach within that wider engineering effort.
 
-**What AGPL-3.0 requires:**
+---
 
-- If you **run this as a service** (internally or publicly), any modifications you make to the source must be made available to users of that service under AGPL-3.0.
-- If you **incorporate this code** into a larger system and distribute or serve it, the entire larger system falls under AGPL-3.0 copyleft.
-- If you **use the WNSP protocol specification** in hardware or firmware, the source disclosure requirements in every WNSP frame (via the Frame Builder v7.1 Source Code Reference) carry a cryptographic pointer back to this repository.
+## Licensing
 
-The physics is open. The spectrum belongs to everyone. The license enforces this permanently.
+The project describes its code as AGPL-3.0. Consult the applicable licence
+notices, third-party licences and the full terms; this README is not a legal
+determination. Software licensing does not by itself establish exclusive rights
+over physical laws, every independent implementation, hardware or AI training.
+This documentation update does not relicense the project.
 
 Full text: [GNU AGPL v3.0](https://www.gnu.org/licenses/agpl-3.0.html)
 
 ---
 
-## Monetisation model
+## Proposed monetisation model
+
+The following are planning figures, not evidence of delivered hardware,
+guaranteed service levels, available commercial licensing rights or investment
+entitlements. Actual offers require their own applicable terms.
 
 ```
 Protocol          →  Free forever. AGPL-3.0.
                      Fork it. Run it. Build on it.
-                     Modifications must be published.
+                     Subject to applicable licence terms.
 
 Managed kernel    →  Reserved Ψ channels, SLA, persistent agents
                      $49 – $499/month
@@ -493,11 +517,13 @@ Hardware rights   →  Commercial Lambda Gate firmware for photonic ASICs
                      $25,000 – $250,000 + strategic equity tier
 ```
 
-The open-core dual-license model: the same pattern as Red Hat ($34B), MongoDB ($20B+), HashiCorp ($6.4B). The protocol is the commons. The infrastructure and hardware rights are the business.
+The project explores managed services and hardware-related commercial
+arrangements alongside open-source software. This is not a claim of a
+validated business valuation or independently confirmed commercial rights.
 
 **Support the build:**
 - [Campaign — lab funding tiers](https://wnsp.io/campaign)
-- [Crowdfund — Nexus Shares equity](https://wnsp.io/crowdfund)
+- [Crowdfund — project funding information](https://wnsp.io/crowdfund)
 - [Referral — earn NXT tokens via Replit](https://replit.com/refer/nexusosdaily)
 
 ---
@@ -506,19 +532,23 @@ The open-core dual-license model: the same pattern as Red Hat ($34B), MongoDB ($
 
 **Kardashev Type I** — a civilisation that harnesses all energy available on its home planet.
 
-That requires:
+The project's long-term proposals include:
 - A planetary communications mesh (WNSP Spectral Relay Mesh)
 - Distributed photonic compute (Lambda Gate ASICs)
-- Physics-based energy accounting (Λ = hf/c² across all transactions)
+- Spectral energy models (not measured whole-system energy accounting)
 - An open, non-proprietary OS standard (AGPL-3.0)
 
-All four are specified and partially implemented in this repository. The architecture is designed for a 100-year build. The Phase 2 foundation — full 256 WDM spectrum, TCP/IP overlay, spectral addressing, physics engine, kernel — is running now.
+The repository implements software models and services; it does not establish
+planetary infrastructure, a photonic ASIC or Kardashev-scale energy use.
+The vision extends towards 2126 as an ambition, not a guaranteed delivery date.
+Human-life safeguards and accountable AI operation are design objectives;
+proposed governance is not automatically enacted or globally enforceable law.
 
 ---
 
-*Built by an ambulance driver and hospital orderly who asked: what if every instruction had a wavelength?*
-
-*The answer turned out to be: it always did.*
+Developed under the founder's direction with AI assistance, including Replit
+Agent, in code and research explanations. Earlier AI-assisted overstatements
+are acknowledged in the [research record](./docs/RESEARCH_STATUS.md).
 
 ---
 
