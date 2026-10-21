@@ -6,6 +6,18 @@
 [![Disclosures](https://img.shields.io/badge/research-numbered%20disclosures-blueviolet)](./PRIOR_ART.md)
 [![Changelog](https://img.shields.io/badge/changelog-v2.0.0-22c55e)](./CHANGELOG.md)
 
+> **Hardware fundraising and promotional broadcasts are on hold.**
+> [Engineering review and complete reference-system requirements](./docs/HARDWARE_ENGINEERING_REVIEW.md)
+> distinguish current conventional-host software from unvalidated photonic concepts.
+> Independent engineering review, a costed BOM, physical tests and explicit founder
+> approval are required before release. Documentation is not hardware validation.
+> This is a founder directive; live runtime enforcement must be deployed and verified.
+>
+> **Hardware correction:** Earlier descriptions, including AI-assisted explanations,
+> overstated what the hardware evidence established. Reported electrical coil tests
+> are not proof of photonic computation or a complete SNIC/PHR-1 system.
+> See the [hardware evidence and correction record](./docs/HARDWARE_EVIDENCE.md).
+
 > **Start here: [Research status, evidence and corrections](./docs/RESEARCH_STATUS.md).**
 > NexusOS currently runs as software on conventional computers. Its spectral
 > models and proposed photonic architecture are not a demonstrated photonic
@@ -53,7 +65,7 @@ authentication or configuration.
 | [Crowdfund](https://wnsp.io/crowdfund) | Project funding information; this README does not establish investment or ownership rights |
 | [Videos](https://wnsp.io/videos) | Auto-published Telegram video feed |
 | [WNSP Paper](https://wnsp.io/wnsp-paper) | Formal WNSP protocol specification (AGPL-3.0) |
-| [Hardware Spec](https://wnsp.io/hardware-spec) | SNIC, PHR-1, Spectral Relay Mesh v1 — first public disclosure 2026-05-16 |
+| [Hardware requirements](https://wnsp.io/hardware-spec) | Engineering hold, draft conventional-host architecture, missing evidence and archived unvalidated concepts |
 | [CE-SE Pipeline](https://wnsp.io/ce-se-pipeline) | Paste any language → transpile → compile → execute in WNSP VM |
 | [WNSP VM](https://wnsp.io/wnsp-vm) | Browser-native bytecode interpreter, step/run execution |
 | [Compression Explorer](https://wnsp.io/compression-explorer) | Interactive Λ=hf/c² compression curve visualisation |
