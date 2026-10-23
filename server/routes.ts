@@ -187,7 +187,7 @@ function validateRequest<T>(schema: z.ZodSchema<T>) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({
           error: "Validation failed",
-          details: error.errors.map(e => ({
+          details: error.issues.map(e => ({
             field: e.path.join("."),
             message: e.message,
           })),
