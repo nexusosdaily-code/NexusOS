@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^7.18.0",
-    "@hookform/resolvers": "^3.10.0",
+    "@hookform/resolvers": "^5.9.2",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@noble/hashes": "^2.2.0",
     "@noble/post-quantum": "^0.6.1",
@@ -94,7 +94,7 @@
     "date-fns": "^3.6.0",
     "docx": "^9.7.1",
     "drizzle-orm": "^0.45.2",
-    "drizzle-zod": "^0.7.0",
+    "drizzle-zod": "^0.8.3",
     "ecpair": "^3.0.1",
     "embla-carousel-react": "^8.6.0",
     "express": "^4.22.3",
@@ -132,8 +132,8 @@
     "vitest": "^4.1.12",
     "wouter": "^3.3.5",
     "ws": "^8.21.0",
-    "zod": "^3.25.76",
-    "zod-validation-error": "^3.4.0"
+    "zod": "^4.6.6",
+    "zod-validation-error": "^5.0.0"
   },
   "devDependencies": {
     "@replit/vite-plugin-cartographer": "^0.4.4",
