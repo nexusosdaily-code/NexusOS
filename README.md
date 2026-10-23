@@ -69,7 +69,38 @@ patentability, native photonic execution or universal interoperability.
 The [website transparency record](https://wnsp.io/research-transparency)
 is intended to use the same positioning; website changes require publication separately.
 
-## Live now
+## Current software scope and multilingual transparency
+
+The development workspace now includes **23 curated language/script presets**
+and a reversible, versioned Unicode-to-coordinate profile. Modern examples
+include Hindi, Japanese, Korean, Tamil, Thai and Amharic; historical examples
+include Egyptian hieroglyphs, Sumerian/Akkadian cuneiform, Ancient Greek,
+Old Persian, Runic, Ogham and Linear B.
+
+The merged workspace catalogue uses **Unicode 17.0.0** properties to browse
+assigned characters, look up code points, search official character names and
+typed aliases, and append selected characters into a text sequence.
+These are **encoding and software tools**, not human-language translation,
+ancient-script decipherment, a new Unicode standard or evidence of native
+photonic execution. The same script may serve several languages.
+
+The executable source-language path is a **defined Python subset** translated
+to WavelengthScript and run in the VM. Unsupported syntax and libraries remain
+unsupported; other source-language encoding previews must not be described as
+complete compilers or runtimes.
+
+**Release boundary:** These statements describe implemented and tested
+development-workspace capabilities. This documentation update does not sync
+their complete implementation source to GitHub, publish packages, deploy the
+website or establish that the public website contains the latest changes.
+Existing legacy coordinates, account identities and ledger addresses are not
+reassigned by the opt-in Unicode profile.
+
+Read the [multilingual software status and verification boundaries](./docs/MULTILINGUAL_TRANSPARENCY.md)
+for the mapping, complete preset list, catalogue scope, test evidence,
+unfinished work and the unresolved security-scanner discrepancy.
+
+## Public project pages
 
 Public project pages are listed below. Availability of an application page is
 not evidence that the proposed physical hardware works; some services require
@@ -82,7 +113,7 @@ authentication or configuration.
 | [Videos](https://wnsp.io/videos) | Auto-published Telegram video feed |
 | [WNSP Paper](https://wnsp.io/wnsp-paper) | Formal WNSP protocol specification (AGPL-3.0) |
 | [Hardware requirements](https://wnsp.io/hardware-spec) | Engineering hold, draft conventional-host architecture, missing evidence and archived unvalidated concepts |
-| [CE-SE Pipeline](https://wnsp.io/ce-se-pipeline) | Paste any language → transpile → compile → execute in WNSP VM |
+| [CE-SE Pipeline](https://wnsp.io/ce-se-pipeline) | Source-encoding and VM demonstrations; executable language support is bounded, not “any language” |
 | [WNSP VM](https://wnsp.io/wnsp-vm) | Browser-native bytecode interpreter, step/run execution |
 | [Compression Explorer](https://wnsp.io/compression-explorer) | Interactive Λ=hf/c² compression curve visualisation |
 | [Physics Sequence](https://wnsp.io/oscillating-quanta) | 20-act sequence — one equation to the Bogoliubov transform |
