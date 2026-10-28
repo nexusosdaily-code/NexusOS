@@ -1,5 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
+import { isFounderAccount, isFounderBtcSession } from "./founder-access";
+import { enforceWalletOutgoingLock } from "./founder-wallet-lock";
+import { notifySessionRevoked } from "./session-lifecycle";
 import type { User, Session, ApiKey } from "@shared/schema";
 
 declare global {
@@ -38,9 +41,14 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
         return res.status(401).json({ error: "User not found or inactive" });
       }
 
+      if (isFounderAccount(user) && !isFounderBtcSession(session.token)) {
+        await storage.deleteSession(session.id);
+        return res.status(401).json({ error: "Founder session retired. Sign in again with your BTC secret." });
+      }
+
       req.user = user;
       req.session = session;
-      return next();
+      return enforceWalletOutgoingLock(req, res, next);
     }
 
     if (authHeader?.startsWith("ApiKey ")) {
@@ -70,8 +78,12 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
         return res.status(401).json({ error: "User not found or inactive" });
       }
 
+      if (isFounderAccount(user)) {
+        return res.status(403).json({ error: "The founder account uses BTC-secret sign-in only; API-key access is disabled." });
+      }
+
       req.user = user;
-      return next();
+      return enforceWalletOutgoingLock(req, res, next);
     }
 
     return res.status(401).json({ error: "Invalid authorization format" });
@@ -90,6 +102,24 @@ export function optionalAuth(req: Request, res: Response, next: NextFunction) {
   }
 
   return authenticate(req, res, next);
+}
+
+/** Used after authentication; revoke on the server before reporting success. */
+export async function logoutSessionHandler(req: Request, res: Response) {
+  try {
+    if (req.session) {
+      await storage.deleteSession(req.session.id);
+      notifySessionRevoked(req.session.id);
+    }
+    await logAction(req, "user_logout", "auth", req.user?.id);
+    res.clearCookie("auth_token", {
+      path: "/", httpOnly: true, sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+    res.json({ message: "Logged out successfully" });
+  } catch {
+    res.status(500).json({ error: "Logout failed" });
+  }
 }
 
 export function requireRole(...roles: string[]) {
@@ -145,7 +175,7 @@ async function logAuthFailure(req: Request, reason: string) {
     await storage.createAuditLog({
       action: "auth_failure",
       resource: "authentication",
-      details: { reason, path: req.path, method: req.method },
+      details: { reason, path: req.originalUrl?.startsWith("/api/private-trusts") ? "/api/private-trusts" : req.path, method: req.method },
       ipAddress: req.ip,
       userAgent: req.headers["user-agent"],
       status: "failed",

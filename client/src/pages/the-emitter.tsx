@@ -156,7 +156,7 @@ export default function TheEmitterPage() {
           {/* Back arrow + title */}
           <div className="flex items-start gap-3">
             <Link href="/polariton-exchange">
-              <button className="text-gray-500 hover:text-white transition-colors mt-1">
+              <button className="text-gray-500 hover:text-white transition-colors mt-1" aria-label="Back to The Exchange">
                 <ArrowLeft className="w-5 h-5" />
               </button>
             </Link>

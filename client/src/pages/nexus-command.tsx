@@ -263,12 +263,10 @@ function QuickCompose() {
 
       // Step 2: route on bus (requires auth — graceful if not logged in)
       try {
-        const token = localStorage.getItem("auth_token");
         const busRes = await fetch("/api/agent-bus/send", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
             src: "os_kernel", dst: "bus_router",

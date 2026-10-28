@@ -12,6 +12,7 @@ import {
   ArrowLeft, Zap, Lock, TrendingUp, Coins, Layers,
   Clock, CheckCircle2, AlertCircle, ArrowRight, Plus, Minus,
 } from "lucide-react";
+import { amountBucket, trackEvent } from "@/lib/analytics";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function fmt(n: number) { return n.toLocaleString(); }
@@ -74,14 +75,16 @@ function StakeTab({ walletData }: { walletData: any }) {
   const wnusdMinted = ((amountNum * SAT_USD) / 1.5).toFixed(2);
 
   const stakeMut = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/lightning/stake", { amountSats: amountNum, lockDays }),
-    onSuccess: () => {
-      toast({ title: "Stake confirmed", description: `${fmtSats(amountNum)} locked · WNUSD auto-minted` });
+    mutationFn: (variables: { amountSats: number; lockDays: number }) =>
+      apiRequest("POST", "/api/lightning/stake", variables),
+    onSuccess: (_, variables) => {
+      trackEvent("stake_result", { surface: "stake_earn", action: "stake", outcome: "success", lock_period_days: variables.lockDays, amount_bucket: amountBucket(variables.amountSats) });
+      toast({ title: "Stake confirmed", description: `${fmtSats(variables.amountSats)} locked · WNUSD auto-minted` });
       setAmount("");
       qc.invalidateQueries({ queryKey: ["/api/lightning/stakes"] });
       qc.invalidateQueries({ queryKey: ["/api/lightning/wallet"] });
     },
-    onError: (e: any) => toast({ title: "Stake failed", description: e.message, variant: "destructive" }),
+    onError: (e: any, variables) => { trackEvent("stake_result", { surface: "stake_earn", action: "stake", outcome: "failure", lock_period_days: variables.lockDays, amount_bucket: amountBucket(variables.amountSats) }); toast({ title: "Stake failed", description: e.message, variant: "destructive" }); },
   });
 
   return (
@@ -170,7 +173,7 @@ function StakeTab({ walletData }: { walletData: any }) {
       )}
 
       <button
-        onClick={() => stakeMut.mutate()}
+         onClick={() => stakeMut.mutate({ amountSats: amountNum, lockDays })}
         disabled={amountNum < 1000 || amountNum > satsBalance || stakeMut.isPending}
         data-testid="button-stake-confirm"
         className="w-full py-3 rounded-xl bg-purple-500 hover:bg-purple-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
@@ -195,13 +198,15 @@ function PositionsTab() {
   const stakes = data?.stakes ?? [];
 
   const unstakeMut = useMutation({
-    mutationFn: (id: number) => apiRequest("POST", `/api/lightning/unstake/${id}`, {}),
-    onSuccess: (_, id) => {
+    mutationFn: (variables: { id: number; lockDays: number; amountSats: number }) =>
+      apiRequest("POST", `/api/lightning/unstake/${variables.id}`, {}),
+    onSuccess: (_, variables) => {
+      trackEvent("stake_result", { surface: "stake_earn", action: "unstake", outcome: "success", lock_period_days: variables.lockDays, amount_bucket: amountBucket(variables.amountSats) });
       toast({ title: "Unstaked", description: "Sats returned to wallet" });
       qc.invalidateQueries({ queryKey: ["/api/lightning/stakes"] });
       qc.invalidateQueries({ queryKey: ["/api/lightning/wallet"] });
     },
-    onError: (e: any) => toast({ title: "Unstake failed", description: e.message, variant: "destructive" }),
+    onError: (e: any, variables) => { trackEvent("stake_result", { surface: "stake_earn", action: "unstake", outcome: "failure", lock_period_days: variables.lockDays, amount_bucket: amountBucket(variables.amountSats) }); toast({ title: "Unstake failed", description: e.message, variant: "destructive" }); },
   });
 
   if (isLoading) return <div className="text-center text-white/30 py-10 text-sm">Loading positions…</div>;
@@ -249,7 +254,7 @@ function PositionsTab() {
             </div>
 
             <button
-              onClick={() => unstakeMut.mutate(s.id)}
+               onClick={() => unstakeMut.mutate({ id: s.id, lockDays: s.lockDays, amountSats: s.amountSats })}
               disabled={unstakeMut.isPending}
               data-testid={`button-unstake-${s.id}`}
               className={`w-full py-2 rounded-lg text-xs font-semibold transition-colors ${

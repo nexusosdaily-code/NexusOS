@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, ExternalLink } from "lucide-react";
 
-const DATE   = "2026-06-25";
+const DATE   = "2026-07-27";
 const REPO   = "https://github.com/nexusosdaily-code/NexusOS";
 
 type Status = "pending" | "in-progress" | "pass" | "fail";
@@ -21,29 +21,38 @@ const PHASES: PhaseResult[] = [
   {
     id: "P0",
     title: "Procurement & Bench Verification",
-    objective: "All components ordered and received. Instruments self-test passed.",
-    status: "in-progress",
-    passCriteria: "All items on AU shopping list received. Oscilloscope, function generator, bench PSU all self-test green.",
+    objective: "All components ordered and received. Professional manufacture engaged.",
+    status: "pass",
+    passCriteria: "All items on AU shopping list received. Manufacturer engaged and drawing approved.",
     measurements: [
-      { label: "PHR-1 components ordered", expected: "All items confirmed", measured: null, pass: null },
-      { label: "SNIC optical components ordered", expected: "All items confirmed", measured: null, pass: null },
-      { label: "Oscilloscope self-test", expected: "PASS", measured: null, pass: null },
-      { label: "Function generator self-test", expected: "PASS", measured: null, pass: null },
+      { label: "PHR-1 components — manufacturer engaged", expected: "Confirmed", measured: "Coiltek Pty Ltd, Salisbury South SA", pass: true },
+      { label: "Drawing REV A approved", expected: "Signed off", measured: "Tim Short (TS) · 2026-07-16", pass: true },
+      { label: "P.O. reference confirmed", expected: "P.O. issued", measured: "S17406", pass: true },
+      { label: "SNIC optical components", expected: "In progress", measured: "Pending Phase 2", pass: null },
     ],
-    notes: "Bifilar coil winding inquiry sent to Etsy AU custom winder. Coil spec: T200-2 toroid, AWG 24, 144 turns bifilar, 4 labelled leads.",
+    notes: "Professional manufacture route selected — Coiltek Pty Ltd (5 Mengel Court, Salisbury South SA 5106) engaged for PHR-1 bifilar toroid. Drawing REV A completed by Tim Short 2026-07-16.",
   },
   {
     id: "P1",
     title: "PHR-1 — Bifilar Coil Winding",
-    objective: "144-turn bifilar toroidal coil wound and inductance verified on both windings.",
-    status: "pending",
-    passCriteria: "Both windings measure within 5% of calculated inductance. DC resistance symmetric to within 2%.",
+    objective: "72-turn bifilar toroidal coil (144 individual turns) manufactured and 100% electrically tested. NEX-0589-PROTO-001.",
+    status: "pass",
+    passCriteria: "Both windings measure within ±10% of 62 μH. DC resistance within ±2% of 295 mΩ. 3 units, 100% tested.",
     measurements: [
-      { label: "Winding A inductance", expected: "Calculated target ±5%", measured: null, pass: null },
-      { label: "Winding B inductance", expected: "Calculated target ±5%", measured: null, pass: null },
-      { label: "DC resistance A", expected: "Symmetric ±2%", measured: null, pass: null },
-      { label: "DC resistance B", expected: "Symmetric ±2%", measured: null, pass: null },
+      { label: "SN001.001 — Winding A inductance", expected: "62 μH ±10%", measured: "61.99 μH", pass: true },
+      { label: "SN001.001 — Winding B inductance", expected: "62 μH ±10%", measured: "62.05 μH", pass: true },
+      { label: "SN001.001 — DCR A", expected: "295 mΩ ±2%", measured: "291.8 mΩ", pass: true },
+      { label: "SN001.001 — DCR B", expected: "295 mΩ ±2%", measured: "297.4 mΩ", pass: true },
+      { label: "SN001.002 — Winding A inductance", expected: "62 μH ±10%", measured: "62.17 μH", pass: true },
+      { label: "SN001.002 — Winding B inductance", expected: "62 μH ±10%", measured: "62.05 μH", pass: true },
+      { label: "SN001.002 — DCR A", expected: "295 mΩ ±2%", measured: "291.9 mΩ", pass: true },
+      { label: "SN001.002 — DCR B", expected: "295 mΩ ±2%", measured: "296.9 mΩ", pass: true },
+      { label: "SN001.003 — Winding A inductance", expected: "62 μH ±10%", measured: "62.44 μH", pass: true },
+      { label: "SN001.003 — Winding B inductance", expected: "62 μH ±10%", measured: "62.36 μH", pass: true },
+      { label: "SN001.003 — DCR A", expected: "295 mΩ ±2%", measured: "292.4 mΩ", pass: true },
+      { label: "SN001.003 — DCR B", expected: "295 mΩ ±2%", measured: "300.2 mΩ", pass: true },
     ],
+    notes: "NEX-0589-PROTO-001 · Manufacturer: Coiltek Pty Ltd · ETR Issue 1.0 · P.O Ref S17406 · Test date: 2026-07-27 · Instrument: GW Instek LCR-6100 · Condition: 1 kHz / 1.0 V · 15.6 °C · 61% RH · Tested & QA checked: Tim Short (TS). Avg L_A = 62.200 μH · Avg L_B = 62.153 μH · Avg DCR_A = 292.0 mΩ · Avg DCR_B = 298.2 mΩ.",
   },
   {
     id: "P2",
@@ -164,8 +173,8 @@ export default function HardwareResultsPage() {
         {/* ── Header ── */}
         <div className="space-y-4">
           <div className="inline-flex items-center gap-2 text-[10px] font-mono px-3 py-1 rounded-full border"
-            style={{ color: "#f59e0b", borderColor: "#f59e0b44", background: "#f59e0b10" }}>
-            <AlertCircle className="w-3 h-3" /> HARDWARE PoC · IN PROGRESS · AUSTRALIA · {DATE}
+            style={{ color: "#10b981", borderColor: "#10b98144", background: "#10b98110" }}>
+            <CheckCircle className="w-3 h-3" /> PROTO-001 TESTED · COILTEK SA · {DATE} · 3 UNITS · 100% PASS
           </div>
           <h1 className="text-2xl font-bold text-white">Hardware Verification Results</h1>
           <p className="text-sm text-slate-400 leading-7">

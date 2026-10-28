@@ -3,6 +3,9 @@ import { usePageMeta } from "@/hooks/use-page-meta";
 import { Link } from "wouter";
 import { ArrowLeft, Cpu, Play, StepForward, RotateCcw, Zap, Radio, Database, Activity, FlaskConical } from "lucide-react";
 import { RhythmGrid } from "@/components/spectral-visuals";
+import { encodeVMName } from "@shared/wnsp-model";
+import { useToast } from "@/hooks/use-toast";
+import { assertVmSource, assertBrowserInstructions, VM_MAX_CYCLES } from "@shared/vm-security";
 
 function nmToColor(nm: number): string {
   if (nm < 450) return "#8b00ff";
@@ -23,19 +26,13 @@ function nmToBand(nm: number): string {
   return "STORAGE";
 }
 function ceEncode(name: string): { nm: number; psi: string; band: string } {
-  const codes = name.toUpperCase().split("").map(c => c.charCodeAt(0)).filter(c => c >= 32 && c <= 126);
-  if (!codes.length) codes.push(77);
-  const avg = codes.reduce((a, b) => a + b, 0) / codes.length;
-  const nm = parseFloat((380 + ((avg - 32) / 94) * 400).toFixed(2));
-  const wdm = Math.floor((nm - 380) / 4) + 1;
-  const oam = codes.reduce((a, b) => a + b, 0) % 50;
-  const pol = codes.length % 2 === 0 ? "H" : "V";
-  return { nm, psi: `Ψ(${wdm},${oam},${pol})`, band: nmToBand(nm) };
+  return encodeVMName(name);
 }
 
 interface Ins { off: number; op: number; mnem: string; args: string; nm?: number; ch?: string; cmt: string; gateThreshold?: number; gateHigh?: number; gateLow?: number; qSym?: string; }
 
 function compileWLS(src: string): Ins[] {
+  assertVmSource(src);
   if (!src.trim()) return [];
   const ins: Ins[] = [];
   let off = 0;
@@ -100,6 +97,7 @@ function compileWLS(src: string): Ins[] {
     add(0x0B, "EXEC", `@${e.nm}nm`, line.slice(0, 60), e.nm);
   }
   add(0xFF, "HALT", "", "wavefunction terminated");
+  assertBrowserInstructions(ins);
   return ins;
 }
 
@@ -119,6 +117,7 @@ function freshState(): VMState {
 }
 
 function stepVM(state: VMState, ins: Ins[], channelLoad: number): VMState {
+  if (state.cycleCount >= VM_MAX_CYCLES) return { ...state, halted: true };
   if (state.halted || state.pc >= ins.length) return { ...state, halted: true };
   const i = ins[state.pc];
   const s = { ...state, pc: state.pc + 1, cycleCount: state.cycleCount + 1 };
@@ -373,6 +372,7 @@ collapse(fee)` },
 ];
 
 export default function WnspVMPage() {
+  const { toast } = useToast();
   usePageMeta({
     title: "WNSP Virtual Machine — Browser-Native Bytecode Interpreter",
     description: "The WNSP VM is a browser-native bytecode interpreter for WavelengthScript. Execute instructions step-by-step with each Ψ channel acting as a spectral register. No installation required.",
@@ -393,7 +393,15 @@ export default function WnspVMPage() {
   const isProof = src === COMPUTATION_PROOF_SRC;
 
   function loadProgram() {
-    const ins = compileWLS(src);
+    runRef.current = false;
+    setRunning(false);
+    let ins: Ins[];
+    try { ins = compileWLS(src); }
+    catch (error) {
+      setLoaded(false);
+      toast({ title: "Compilation stopped", description: (error as Error).message, variant: "destructive" });
+      return;
+    }
     setInstructions(ins);
     setVm(freshState());
     setLoaded(true);

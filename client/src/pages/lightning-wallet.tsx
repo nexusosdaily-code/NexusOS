@@ -61,10 +61,12 @@ function StatusBadge({ status }: { status: string }) {
     return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]"><XCircle className="w-3 h-3 mr-1" />Failed</Badge>;
   if (status === "refunded")
     return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px]"><ArrowDownToLine className="w-3 h-3 mr-1" />Refunded</Badge>;
-  if (status === "queued")
+  if (status === "unknown" || status === "processing")
+    return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]">Reserved — awaiting confirmation</Badge>;
+  if (status === "partially_refunded")
+    return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px]">Partially refunded</Badge>;
+  if (status === "queued" || status === "queued_btc")
     return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px]"><Clock className="w-3 h-3 mr-1" />Queued</Badge>;
-  if (status === "processing")
-    return <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[10px]"><Activity className="w-3 h-3 mr-1" />Processing</Badge>;
   if (status === "pending")
     return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
   return <Badge className="bg-slate-500/20 text-slate-400 border-slate-500/30 text-[10px]">{status}</Badge>;
@@ -95,6 +97,10 @@ function QueueProgress({ txId }: { txId: number }) {
   const allDone = paid >= total && total > 0;
   const failedItems = items.filter((i: any) => i.status === "failed");
   const hasFailed = failedItems.length > 0;
+  const needsReview = items.some((i: any) => ["unknown", "processing", "failed"].includes(i.status));
+  const canProcess = items.some((i: any) => i.status === "queued");
+  const refundCount = items.filter((i: any) => i.status === "refunded").length;
+  const terminalBatch = items.length > 0 && items.every((i: any) => ["paid", "refunded"].includes(i.status));
 
   return (
     <div className="bg-blue-900/15 border border-blue-500/25 rounded p-2 space-y-1.5">
@@ -102,9 +108,11 @@ function QueueProgress({ txId }: { txId: number }) {
         <div className="text-[10px] text-blue-300 font-semibold">
           {allDone
             ? `✓ All ${total} invoice${total > 1 ? "s" : ""} paid`
-            : `Auto-paying: ${paid}/${total} invoice${total > 1 ? "s" : ""}${total > 1 ? ` · ${satsDisplay(paidSats)}/${satsDisplay(totalSats)} sats` : ""}`}
+            : terminalBatch ? `Batch settled: ${paid} paid, ${refundCount} refunded`
+            : needsReview ? `Awaiting provider confirmation: ${paid}/${total} invoices paid. Unconfirmed funds remain reserved.`
+            : `Queued payments: ${paid}/${total} invoice${total > 1 ? "s" : ""}${total > 1 ? ` · ${satsDisplay(paidSats)}/${satsDisplay(totalSats)} sats` : ""}`}
         </div>
-        {!allDone && (
+        {!allDone && canProcess && (
           <Button size="sm" variant="outline" className="h-5 px-2 text-[9px] border-blue-500/40 text-blue-300"
             onClick={() => retry.mutate()} disabled={retry.isPending}>
             {retry.isPending ? "…" : "↺ Retry"}
@@ -848,7 +856,7 @@ export default function ChannelDashboard() {
       setScannedBolt11(null);
       refetchBal();
       qc.invalidateQueries({ queryKey: ["/api/lightning/transactions"] });
-      toast({ title: "⚡ Transmission sent", description: `${data.amountSats} sats transmitted.` });
+      toast({ title: "Payment reserved", description: `${data.amountSats} sats queued. Settlement is not yet confirmed; check the Log tab.` });
     },
     onError: (e: any) => toast({ title: "Transmission failed", description: e.message, variant: "destructive" }),
   });
@@ -2848,7 +2856,7 @@ export default function ChannelDashboard() {
             {lnTxs.length > 0 && (() => {
               const confirmed = lnTxs.filter((t: any) => ["completed","confirmed","paid"].includes(t.status)).length;
               const failed    = lnTxs.filter((t: any) => t.status === "failed").length;
-              const pending   = lnTxs.filter((t: any) => ["pending","queued","processing"].includes(t.status)).length;
+              const pending   = lnTxs.filter((t: any) => ["pending","queued","queued_btc","processing","unknown"].includes(t.status)).length;
               const refunded  = lnTxs.filter((t: any) => t.status === "refunded").length;
               return (
                 <div className="grid grid-cols-4 gap-2">
@@ -2878,7 +2886,7 @@ export default function ChannelDashboard() {
                     const isFailed   = tx.status === "failed";
                     const isPending  = tx.status === "pending";
                     const isRefunded = tx.status === "refunded";
-                    const isQueued   = tx.status === "queued" || tx.status === "processing";
+                    const isQueued   = ["queued", "queued_btc", "processing", "unknown"].includes(tx.status);
                     const sats = Number(tx.amount_sats ?? tx.amountSats ?? 0);
 
                     const TX_LABELS: Record<string, string> = {

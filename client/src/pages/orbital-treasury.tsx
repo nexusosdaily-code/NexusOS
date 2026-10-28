@@ -88,8 +88,8 @@ export default function OrbitalTreasury() {
       <div className="border-b border-white/10 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/spectral-audit">
-              <button className="text-white/30 hover:text-white/60 transition-colors" aria-label="Back to Spectral Audit">
+            <Link href="/wnsp">
+              <button className="text-white/30 hover:text-white/60 transition-colors" aria-label="Back to WNSP">
                 <ArrowLeft size={16} />
               </button>
             </Link>
@@ -421,9 +421,9 @@ export default function OrbitalTreasury() {
                 Every ordinal is public. Every proof is verifiable. Every treasury deposit is on-chain.
               </div>
               <div className="flex justify-center gap-4 mt-4">
-                <Link href="/spectral-audit">
+                <Link href="/wnsp">
                   <button className="px-3 py-1.5 rounded text-xs border border-white/10 text-white/40 hover:text-white/60 transition-all">
-                    Audit Ledger
+                    WNSP Protocol
                   </button>
                 </Link>
                 <Link href="/spectral-library">

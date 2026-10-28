@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { colorBg500, colorText400 } from "@/lib/color-classes";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -294,7 +295,7 @@ export default function AnalyticsPage() {
                       </div>
                       <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full bg-${mode.color}-500`}
+                          className={`h-full rounded-full ${colorBg500[mode.color]}`}
                           style={{ width: `${mode.percentage}%` }}
                         />
                       </div>
@@ -383,7 +384,7 @@ export default function AnalyticsPage() {
                     { type: "Transmit", count: 257, color: "purple" }
                   ].map((item, idx) => (
                     <div key={idx} className="flex items-center gap-3">
-                      <CircleDot className={`w-4 h-4 text-${item.color}-400`} />
+                      <CircleDot className={`w-4 h-4 ${colorText400[item.color]}`} />
                       <span className="text-gray-300 flex-1">{item.type}</span>
                       <span className="text-white font-mono">{item.count}</span>
                     </div>

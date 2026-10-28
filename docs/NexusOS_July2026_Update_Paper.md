@@ -50,7 +50,7 @@ NexusOS is grounded in the *Theory of Compression States*, which derives from a 
 
 where `Λ` is the compression mass, `h` is Planck's constant, `f` is the oscillation frequency, and `c` is the speed of light. This equation unifies electromagnetic wave physics with mass formation, identifying mass as localised wave energy. The NexusOS architecture is the software expression of this equation.
 
-Previous work (disclosed 2026-05-16) established the foundational protocol: the 25,600-channel WNSP addressing space, the WNSP-CE/SE/URI encoding standards, the WavelengthScript language specification, the WNSP Virtual Machine, and the hardware specification documents for SNIC, PHR-1, and Spectral Relay Mesh v1.
+Previous work (disclosed 2026-05-16) established the foundational protocol: the 51,200-channel WNSP addressing space, the WNSP-CE/SE/URI encoding standards, the WavelengthScript language specification, the WNSP Virtual Machine, and the hardware specification documents for SNIC, PHR-1, and Spectral Relay Mesh v1.
 
 This update documents all significant advances since that initial disclosure.
 
@@ -79,7 +79,7 @@ Where:
 
 Adding N_Dir = 2 is not an engineering choice — it is a physical recognition. Forward (+k̂) and backward (−k̂) propagating waves are orthogonal in Hilbert space: ⟨Ψ(+k̂)|Ψ(−k̂)⟩ = 0. They occupy distinct communication channels that cannot interfere by quantum mechanics, not by protocol design. This doubles the total orthogonal channel count:
 
-**25,600 → 51,200 orthogonal Ψ channels**
+**51,200 → 51,200 orthogonal Ψ channels**
 
 Previous channel-model references across the platform have been updated accordingly.
 

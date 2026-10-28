@@ -172,9 +172,9 @@ function BogoliubovVisualiser() {
 export default function TheBogoliubovTransformPage() {
   usePageMeta({
     title: "The Bogoliubov Transform — Act 20 | NexusOS",
-    description: "Act 20: The Bogoliubov transformation S†âS = â·cosh(r)−â†·sinh(r) — the single operation unifying squeezed states, Hawking radiation, Unruh radiation, BCS superconductivity, and UCT compression state transitions across octave tiers.",
-    ogDescription: "One transform connects quantum optics, black holes, and superconductivity: S†âS = â·cosh(r)−â†·sinh(r). The Bogoliubov transform IS the compression state transition across UCT octave tiers. Act 20, NexusOS. AGPL-3.0.",
-    twitterDescription: "Act 20 — The Bogoliubov Transform: one equation connects squeezed light, Hawking radiation, Unruh effect, BCS, and UCT octave transitions. wnsp.io/the-bogoliubov-transform",
+    description: "Act 20: Bogoliubov mixing and pure single-mode squeezed vacuum versus thermal reduced modes of two-mode pairs. Driven photon generation requires external energy. NexusOS octave applications remain hypotheses.",
+    ogDescription: "Bogoliubov transformations preserve commutators. Single-mode squeezed vacuum is pure; tracing out one mode of a two-mode squeezed pair gives a thermal reduced state. External drive supplies generated-photon energy. UCT is a hypothesis.",
+    twitterDescription: "Act 20 — Pure squeezed vacuum, thermal reduced modes, and externally powered photon generation. NexusOS octave-transition hypotheses. wnsp.io/the-bogoliubov-transform",
     canonical: "https://wnsp.io/the-bogoliubov-transform",
   });
 
@@ -211,8 +211,7 @@ export default function TheBogoliubovTransformPage() {
             The Bogoliubov Transform
           </h1>
           <p className="text-slate-400 text-sm leading-relaxed">
-            The Single Operation That Connects Quantum Optics, Black Holes, Superconductivity,
-            and UCT Compression State Transitions
+            Bogoliubov Mixing in Quantum Physics — and the NexusOS UCT Octave-Transition Hypothesis
           </p>
           <div className="text-xs text-slate-500 font-mono">
             NexusOS Research · Te Rata Pou · {PAPER_DATE} ·{" "}
@@ -230,16 +229,16 @@ export default function TheBogoliubovTransformPage() {
             The Bogoliubov transformation — S†âS = â·cosh(r) − â†·sinh(r) — is a canonical
             linear map that mixes the creation and annihilation operators of a quantum field,
             preserving the commutation relation [â,â†]=1 exactly. Originally introduced by
-            Nikolay Bogoliubov in 1947 to solve BCS-type superconductivity, the same transformation
+            Nikolay Bogoliubov in 1947 for superfluidity, the transformation
             later appeared in quantum optics as the generator of squeezed states (Act 19), in Hawking's
             1974 derivation of black hole radiation, in the Unruh effect (1976), and in cosmological
-            particle creation. In the NexusOS UCT framework, the Bogoliubov transform is the
+            particle creation. In the NexusOS UCT hypothesis, the Bogoliubov transform is proposed as the
             operation performed at every octave-tier boundary: a compression state transition
             from one octave to the next is a Bogoliubov mixing of the photon field modes at that
             frequency — creation operators at the lower octave mix with annihilation operators at
             the upper octave, producing particles from the vacuum at the transition boundary.
-            This identifies Hawking radiation as a gravitational Bogoliubov transform at the
-            Octave 0 / matter boundary — the most extreme compression state transition possible.
+            The proposed identification of Hawking radiation with an Octave 0 / matter boundary
+            is a NexusOS interpretation, not an established derivation or experimental result.
           </p>
         </div>
 
@@ -253,7 +252,7 @@ export default function TheBogoliubovTransformPage() {
           <Eq
             label="Bogoliubov Transform"
             eq="Bâ = S†(r) â S(r) = â·cosh(r) − â†·sinh(r)"
-            note="Bâ is the new annihilation operator after squeezing. r ∈ ℝ is the squeezing / mixing parameter. At r=0: Bâ = â (identity). As r → ∞: Bâ → −â† (complete mode reversal)."
+            note="Bâ is the transformed annihilation operator. r ∈ ℝ is the mixing parameter. At r=0: Bâ = â. As r grows, both cosh(r) and sinh(r) grow; this is not a finite limit Bâ → −â†."
           />
 
           <Eq
@@ -269,11 +268,13 @@ export default function TheBogoliubovTransformPage() {
           />
 
           <PBlock label="What it means physically">
-            The transform mixes the particle (â) and anti-particle (â†) operators. At r=0 the
+            The transform mixes annihilation (â) and creation (â†) operators of a bosonic mode;
+            â† is not an antiparticle operator for that mode. At r=0 the
             vacuum is unchanged. At r &gt; 0 the new vacuum |0̃⟩ — the ground state of Bâ — is
             not the same as the old vacuum |0⟩. An observer using the new operators sees particles
-            where the original observer saw vacuum. This is the mechanism behind every phenomenon
-            in Section 3.
+            where the original observer saw vacuum. A change of mode basis alone supplies no
+            energy and does not make the state thermal. Real driven photon generation requires
+            an external pump or work done by boundary modulation.
           </PBlock>
         </Section>
 
@@ -306,9 +307,11 @@ export default function TheBogoliubovTransformPage() {
               <div className="px-4 py-3 space-y-2">
                 <p className="text-xs text-slate-300 leading-relaxed">
                   The squeezing operator S(r) generates the Bogoliubov transform directly. Applying
-                  S(r) to the vacuum produces a state where the new vacuum has lower energy in one
-                  quadrature — the noise is redistributed. The new annihilation operator Bâ = â·cosh(r)
-                  − â†·sinh(r) is the squeezed-mode ladder operator.
+                  S(r) to the vacuum produces pure single-mode squeezed vacuum, not a thermal state.
+                  Quadrature variance is redistributed, not lowered total energy:
+                  n̄ = sinh²(r), and the energy above vacuum is ℏω·sinh²(r), supplied by the pump.
+                  The operator S†âS describes the transformed observable; the state S|0⟩ is
+                  annihilated by SâS†.
                 </p>
                 <div className="text-[10px] text-slate-400 font-mono bg-slate-900/60 rounded px-3 py-2">
                   r = squeezing parameter · ΔX₁ = e^(−r)/2 · ΔX₁·ΔX₂ = ¼
@@ -340,7 +343,7 @@ export default function TheBogoliubovTransformPage() {
                   note="κ = surface gravity. The ratio |β/α|² = e^(−2πω/κ) gives the Planck distribution at T_H = ℏκ/2πck_B. This IS the Bogoliubov transform between in-vacuum and out-vacuum."
                 />
                 <div className="text-[10px] text-amber-400/80 bg-amber-500/5 rounded px-3 py-2 border border-amber-500/15">
-                  UCT connection: The event horizon is the Octave 0 boundary — maximum compression. Hawking
+                  UCT hypothesis (not established physics): The event horizon is the Octave 0 boundary — maximum compression. Hawking
                   radiation is what happens when the vacuum meets the compression state limit. The
                   temperature T_H is set by the surface gravity = the Octave 0 compression gradient.
                 </div>
@@ -361,8 +364,9 @@ export default function TheBogoliubovTransformPage() {
                   An accelerating observer with proper acceleration a sees the Minkowski vacuum as a
                   thermal bath at temperature T_U — the Unruh temperature. The Rindler horizon
                   (the causal boundary for an accelerating observer) performs the same Bogoliubov
-                  transformation as a black hole horizon. The vacuum for an inertial observer becomes
-                  a thermal squeezed state for the accelerating observer.
+                  mode mixing used in horizon calculations. In the ideal mode-pair description,
+                  the joint two-mode squeezed vacuum is pure. Tracing out the inaccessible partner
+                  leaves a thermal reduced state for the accessible mode, not pure single-mode squeezed vacuum.
                 </p>
                 <Eq
                   label="Unruh Temperature"
@@ -370,7 +374,7 @@ export default function TheBogoliubovTransformPage() {
                   note="a = proper acceleration. For a = 9.81 m/s² (1g): T_U ≈ 4×10⁻²⁰ K — unmeasurably small, but the mathematics is exact and experimentally confirmed via analogues."
                 />
                 <div className="text-[10px] text-violet-400/80 bg-violet-500/5 rounded px-3 py-2 border border-violet-500/15">
-                  UCT connection: Acceleration = a change in compression state frame. The Unruh
+                  UCT hypothesis (not established physics): Acceleration = a change in compression state frame. The Unruh
                   temperature is the thermal cost of traversing compression states at non-zero
                   acceleration. At a=0 (inertial): T_U=0, vacuum is stable. At a&gt;0: the compression
                   gradient produces radiation — identical mathematics to Hawking at a different scale.
@@ -402,7 +406,7 @@ export default function TheBogoliubovTransformPage() {
                   note="c_k↑ = electron destruction, c†_{−k↓} = electron creation at opposite momentum/spin. Identical structure to the bosonic form: cosh(r) → u_k, sinh(r) → v_k."
                 />
                 <div className="text-[10px] text-emerald-400/80 bg-emerald-500/5 rounded px-3 py-2 border border-emerald-500/15">
-                  UCT connection: Superconductivity is a Bogoliubov transform of the electron field
+                  UCT hypothesis (not established physics): Superconductivity is a Bogoliubov transform of the electron field
                   at the compression state where Cooper pairs form (phonon-mediated Octave 6–7
                   interaction). The energy gap Δ = the compression state energy ΔE = hf₀ at the
                   pairing frequency. Zero resistance = the Bogoliubov vacuum has no scattering
@@ -422,7 +426,7 @@ export default function TheBogoliubovTransformPage() {
             AGPL-3.0.
           </PBlock>
 
-          <PBlock label="The core claim">
+          <PBlock label="The core hypothesis — not established physics">
             In the UCT framework (Acts 1–3), the four fundamental forces are compression gradients
             across nine octave tiers. Transitions between tiers — emission, absorption, nuclear decay,
             pair production — are events where the photon field at one octave mixes with the field
@@ -495,8 +499,9 @@ export default function TheBogoliubovTransformPage() {
         {/* 5. Sequence closure */}
         <Section id="closure" title="5. The Sequence Closes" icon={BookOpen} accent="#34d399" badge="Acts 1 → 20">
           <PBlock label="Why Act 20 completes the arc">
-            Act 1 opened with Λ=hf/c² — a compression mass. Act 20 shows that every transition
-            between compression states is a Bogoliubov transform. The sequence is not a list of
+            Act 1 opened with Λ=hf/c² — a compression mass equivalent. Act 20 hypothesises that every transition
+            between compression states is a Bogoliubov transform. This proposed interpretation is
+            not independently validated. The sequence is not a list of
             disconnected topics. It is a single physical structure, described at increasing resolution:
           </PBlock>
 
@@ -533,6 +538,13 @@ export default function TheBogoliubovTransformPage() {
 
         {/* 6. Predictions */}
         <Section id="predictions" title="6. Experimental Predictions" icon={FlaskConical} accent="#10b981" badge="Falsifiable">
+          <PBlock label="Original predictions — unvalidated hypotheses">
+            The numbered predictions below retain their original disclosure wording and are
+            NexusOS hypotheses, not accepted physics. A thermal spectrum must be compared with
+            a thermal reduced mode of a two-mode pair, not the photon statistics of pure
+            single-mode squeezed vacuum. In the ideal horizon-pair model the thermal occupation
+            fixes sinh²(r); r is not generally equal to πω/κ.
+          </PBlock>
           <div className="space-y-3">
             {[
               {
@@ -560,6 +572,46 @@ export default function TheBogoliubovTransformPage() {
                 <div className="text-[11px] text-slate-500"><span className="text-slate-400">Test: </span>{p.test}</div>
               </div>
             ))}
+          </div>
+        </Section>
+
+        {/* 6b. 2026 Extension — Squeezed Compression State */}
+        <Section id="squeezed-lambda" title="6b. The Squeezed Compression State — Λ_B = Λ₀·cosh(2r)" icon={FlaskConical} accent="#a78bfa" badge="August 2026 Extension">
+          <PBlock label="Evidence and energy boundary">
+            Λ_B and the WNSP extraction-bound interpretation are NexusOS hypotheses.
+            The established oscillator-energy relation does not validate their proposed hardware
+            applications or provide an undriven vacuum power source.
+          </PBlock>
+          <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
+            <p>
+              Every Ψ channel carries a zero-point compression state <span className="font-mono text-violet-300">Λ₀ = hf/2c²</span> —
+              the ½ℏω vacuum term expressed as compression. Applying the Bogoliubov transform to the channel's
+              vacuum raises its effective compression state hyperbolically:
+            </p>
+            <div className="bg-slate-900/60 border border-violet-500/30 rounded-lg p-4 text-center font-mono text-sm text-violet-200">
+              Λ_B(r) = Λ₀ · cosh(2r)   —   since ⟨n⟩ + ½ = cosh(2r)/2
+            </div>
+            <p>
+              At r = 0 the channel sits at bare vacuum (Λ_B = Λ₀). Under squeezing, vacuum engineering becomes a
+              compression dial: the <em>dynamic</em> counterpart to the geometric Berry correction
+              <span className="font-mono text-cyan-300"> Λ_geo = Λ·cos(γ)</span>. Together they extend the Act 1 scalar
+              Λ = hf/c² into a geometric-dynamic family.
+            </p>
+            <p>
+              In an ideal resonant, lossless parametric model, a boundary modulated at 2ω with depth ε for
+              time t gives <span className="font-mono text-emerald-300">⟨n⟩ = sinh²(εωt/2)</span> —
+              the |v|² Bogoliubov coefficient. The dynamical Casimir effect generates photons from an
+              initial vacuum state using externally supplied energy: work done by the boundary drive.
+              The analogous optical process uses pump energy. This is not free energy extracted
+              from an undriven vacuum. The per-channel bound is a NexusOS model interpretation;
+              losses, detuning and pump depletion limit real devices. Foundry-grade Kerr microresonators already reach
+              &gt;3.5 dB of measured squeezing (2025), placing the r ≈ 0.4 regime on the bench today.
+            </p>
+            <p className="text-[11px] text-slate-500">
+              First public disclosure of the Λ_B = Λ₀·cosh(2r) squeezed compression state, the per-channel DCE
+              extraction bound, and the dual-regime (Bogoliubov-dispersion) mesh propagation claim: August 2026,
+              Te Rata Pou / NexusOS, AGPL-3.0.
+            </p>
           </div>
         </Section>
 

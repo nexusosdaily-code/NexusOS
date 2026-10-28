@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { researchPageMeta } from "@shared/research-page-meta";
 
 interface PageMetaOptions {
   title: string;
@@ -39,6 +40,11 @@ function setMeta(selector: string, attr: string, value: string) {
  * ensures correctness for JS-rendered visits.
  */
 export function usePageMeta(opts: PageMetaOptions) {
+  const meta = researchPageMeta(opts.canonical ?? window.location.pathname);
+  if (meta) {
+    const { title, description } = meta;
+    opts = { ...opts, title, description, ogTitle: title, ogDescription: description, twitterTitle: title, twitterDescription: description };
+  }
   useEffect(() => {
     const prev = {
       title: document.title,

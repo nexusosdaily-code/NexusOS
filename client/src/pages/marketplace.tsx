@@ -525,7 +525,8 @@ export default function MarketplacePage() {
             <ShoppingBag className="w-6 h-6 text-cyan-400" />
             <div>
               <h1 className="text-xl font-bold text-white">NexusOS Marketplace</h1>
-              <p className="text-xs text-slate-400">Trade BRC-20 · Runes · Ordinals with NXT</p>
+              <p className="text-xs text-slate-400">BRC-20 · Runes · Ordinals · legacy NXT checkout disabled</p>
+              <Link href="/p2p" className="text-xs text-cyan-300 underline">Public/private P2P, live streams and sats-held listings</Link>
             </div>
           </div>
           <div className="flex-1" />

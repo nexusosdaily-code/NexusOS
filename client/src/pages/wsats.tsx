@@ -1,3 +1,4 @@
+import { walletRequest } from "@/lib/wallet-request";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -11,8 +12,7 @@ import {
 } from "lucide-react";
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("auth_token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return {};
 };
 
 function satsFmt(n: number) {
@@ -65,7 +65,7 @@ export default function WSatsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mintMut = (useMutation as any)({
     mutationFn: (satAmount: number) =>
-      fetch("/api/wsats/mint", {
+      walletRequest("/api/wsats/mint", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() } as Record<string, string>,

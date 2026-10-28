@@ -15,11 +15,10 @@ import { useAuth } from "@/hooks/use-auth";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function authFetch(url: string, opts: RequestInit = {}) {
-  const token = localStorage.getItem("auth_token");
   return fetch(url, {
     ...opts,
     credentials: "include",
-    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(opts.headers ?? {}) },
+    headers: opts.headers,
   });
 }
 
@@ -276,18 +275,23 @@ function ThreadPanel({
       });
   }, [data?.messages, myUserId]);
 
+  const sendRetry = useRef<{ recipientId: string; content: string; key: string } | null>(null);
   const sendMut = useMutation({
     mutationFn: async (content: string) => {
+      const recipientId = contact.userId;
+      if (sendRetry.current?.recipientId !== recipientId || sendRetry.current.content !== content)
+        sendRetry.current = { recipientId, content, key: crypto.randomUUID() };
       const res = await authFetch("/api/messages/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipientId: contact.userId, content }),
+        body: JSON.stringify({ recipientId, content, idempotencyKey: sendRetry.current.key }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Send failed");
       return d;
     },
     onSuccess: () => {
+      sendRetry.current = null;
       setText("");
       qc.invalidateQueries({ queryKey: threadKey });
     },
@@ -438,7 +442,6 @@ export default function InboxPage() {
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const qc = useQueryClient();
   const { user, isLoading: authLoading } = useAuth();
-  const token = localStorage.getItem("auth_token");
 
   // Decode my user ID from auth endpoint (fallback if hook doesn't have it)
   const { data: meData } = useQuery<{ user: { id: string; username: string } }>({
@@ -470,9 +473,9 @@ export default function InboxPage() {
   // WebSocket: live alerts for new messages + friend requests
   const { toast } = useToast();
   useEffect(() => {
-    if (!user && !token) return;
+    if (!user) return;
     const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${wsProto}//${location.host}/ws/signaling?token=${token}`);
+    const ws = new WebSocket(`${wsProto}//${location.host}/ws/signaling`);
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data);
@@ -490,7 +493,7 @@ export default function InboxPage() {
       } catch {}
     };
     return () => ws.close();
-  }, [token, qc, toast]);
+  }, [user, qc, toast]);
 
   if (authLoading) {
     return (

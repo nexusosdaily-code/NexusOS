@@ -2,10 +2,15 @@ import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, timestamp, integer, bigint, boolean, decimal, jsonb, index, real, serial, uniqueIndex, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { defineCommunityElectionTables } from "./community-election-db-schema";
+import { defineWalletWaveTables } from "./wallet-wave-db-schema";
+import { defineP2PCommerceTables } from "./p2p-commerce-db-schema";
+import { defineWaveVaultTables } from "./wave-vault-db-schema";
 
 // ============================================
 // USERS TABLE - Core authentication with hashed passwords
 // ============================================
+import { definePrivateTrustTables } from "./private-trust-db-schema";
 export const users = pgTable("users", {
   id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
@@ -15,6 +20,7 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("user"),
   isVerified: boolean("is_verified").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
+  p2pBroadcastMuted: boolean("p2p_broadcast_muted").notNull().default(false),
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -66,9 +72,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
-// ============================================
-// SESSIONS TABLE - Secure session management
-// ============================================
+export const { privateTrustWorkspaces, privateTrustMembers, privateTrustRecords, privateTrustReviews, privateTrustAudit, privateTrustRequestWindows } = definePrivateTrustTables(users);
 export const sessions = pgTable("sessions", {
   id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -436,6 +440,7 @@ export const sendMessageSchema = z.object({
   content: z.string().min(1).max(10000),
   intensity: z.number().min(1).max(100).optional(),
   cycles: z.number().min(1).max(10).optional(),
+  idempotencyKey: z.string().uuid().optional(),
 });
 
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
@@ -551,6 +556,9 @@ export type Stream = typeof streams.$inferSelect;
 // ============================================
 // STREAM VIEWERS TABLE - Track stream viewers
 // ============================================
+export const { p2pListings, p2pListingRecipients, p2pOrders, p2pOrderEvents, p2pTips, p2pStreamGuests } = defineP2PCommerceTables(users, streams);
+export const { waveVaultFiles, waveVaultGrants } = defineWaveVaultTables(users);
+
 export const streamViewers = pgTable("stream_viewers", {
   id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   streamId: varchar("stream_id", { length: 36 }).notNull().references(() => streams.id, { onDelete: "cascade" }),
@@ -1056,7 +1064,7 @@ export const btcInscriptions = pgTable("btc_inscriptions", {
   satoshi:       text("satoshi"),                              // specific sat number
   inscribedAt:   timestamp("inscribed_at"),
   verifiedAt:    timestamp("verified_at"),
-  ordinalsCom:   text("ordinals_com_url"),
+  ordinalsCom:   text("ordinals_com"),
   notes:         text("notes"),
   createdAt:     timestamp("created_at").notNull().defaultNow(),
 });
@@ -1455,12 +1463,12 @@ export const runeSwaps = pgTable("rune_swaps", {
   username:    text("username").notNull(),
   direction:   text("direction").notNull(),   // "nxt_to_rune" | "rune_to_nxt"
   nxtAmount:   decimal("nxt_amount", { precision: 20, scale: 8 }).notNull(),
-  runeAmount:  integer("rune_amount").notNull(),   // NEXUS•WAVELENGTH units (integer, no decimals)
+  runeAmount:  bigint("rune_amount", { mode: "number" }).notNull(), // up to 21 trillion integer units
   btcAddress:  text("btc_address"),               // user's BTC address for rune_to_nxt detection / nxt_to_rune delivery
   btcTxid:     text("btc_txid"),                  // incoming Rune TXID (rune_to_nxt)
   status:      text("status").notNull().default("pending"),
   // pending | detected | credited | queued | delivered | failed
-  rate:        decimal("rate", { precision: 10, scale: 4 }).notNull().default("1.0000"), // 1 NXWV = 1 NXT
+  rate:        decimal("rate", { precision: 20, scale: 4 }).notNull().default("1.0000"), // also records 1,000,000 NXWV per sat
   note:        text("note"),
   createdAt:   timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
@@ -1567,6 +1575,23 @@ export const trafficLogs = pgTable("traffic_logs", {
 }));
 export type TrafficLog = typeof trafficLogs.$inferSelect;
 
+// ── Probe Counters — persisted sliding-window state for unknown-probe alerting ─
+// Survives server restarts so a scraper that hit threshold-4 can't escape the
+// alert by cycling the process. One row per (field_type, key) combination.
+export const probeCounters = pgTable("probe_counters", {
+  id:          serial("id").primaryKey(),
+  fieldType:   text("field_type").notNull(),          // 'referer' | 'ua'
+  key:         text("key").notNull(),                 // the raw referer/UA string (≤500 chars)
+  hits:        jsonb("hits").notNull().default("[]"), // number[] — epoch-ms timestamps within window
+  lastAlerted: bigint("last_alerted", { mode: "number" }).notNull().default(0), // epoch ms, 0=never
+  updatedAt:   timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  fieldKeyIdx: uniqueIndex("probe_counters_field_key_idx").on(t.fieldType, t.key),
+  updatedAtIdx: index("probe_counters_updated_at_idx").on(t.updatedAt),
+}));
+
+export type ProbeCounter = typeof probeCounters.$inferSelect;
+
 // ── Lab Nodes — Engineering labs joining the WNSP network ────────────────────
 // No capital — capabilities only. AGPL-3.0 is the authority.
 export const labNodes = pgTable("lab_nodes", {
@@ -1590,7 +1615,15 @@ export const insertLabNodeSchema = createInsertSchema(labNodes).omit({ id: true,
 export type InsertLabNode = z.infer<typeof insertLabNodeSchema>;
 export type LabNode = typeof labNodes.$inferSelect;
 
-// ── Build Catalogue — living record of every shipped feature/fix ──────────────
+export const dynamicBlocks = pgTable("dynamic_blocks", {
+  id:      serial("id").primaryKey(),
+  field:   text("field").notNull(),  // "referer" | "ua"
+  value:   text("value").notNull(),
+  label:   text("label").notNull().default("Dynamic-Block"),
+  addedAt: timestamp("added_at").notNull().defaultNow(),
+}, (t) => ({
+  fieldIdx: index("dynamic_blocks_field_idx").on(t.field),
+}));
 export const buildCatalogue = pgTable("build_catalogue", {
   id:          serial("id").primaryKey(),
   buildDate:   date("build_date").notNull(),
@@ -1611,3 +1644,14 @@ export const buildCatalogue = pgTable("build_catalogue", {
 export const insertBuildCatalogueSchema = createInsertSchema(buildCatalogue).omit({ id: true, createdAt: true });
 export type InsertBuildCatalogue = z.infer<typeof insertBuildCatalogueSchema>;
 export type BuildCatalogue = typeof buildCatalogue.$inferSelect;
+
+export type DynamicBlock = typeof dynamicBlocks.$inferSelect;
+
+export const {
+  communityPersons, communityNominations, communityElections, communityBallots, communityElectionAudit,
+  communityContinuityRequests, communityContinuitySubmitters, communityElectionLinks,
+  communityNominationSuccessions, communityContinuityEvents,
+} = defineCommunityElectionTables(users);
+
+export const { waveCommunications, waveReceipts, waveConsents, waveSubscriptions } =
+  defineWalletWaveTables(users, lambdaMessages, communityElections, blockchainBlocks);

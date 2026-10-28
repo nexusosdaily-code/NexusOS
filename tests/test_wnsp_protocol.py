@@ -6,9 +6,9 @@ Unit tests for:
   - WNSP-CE v1.0  Character Encoding Standard (CE layer)
   - WNSP-SE v1.0  Spectral Encoding Standard  (SE layer)
   - CE → SE handoff correctness
-  - Energy / mass conservation (E = hf, Λ = hf/c²)
+  - Software energy / equivalent-mass bookkeeping (E = hf, Λ = hf/c²)
   - AI/OS Coordination Layer channel allocation
-  - SE Simulation orthogonality proof
+  - Uniqueness of simulated coordinate labels (not physical orthogonality)
   - WNSPCoordinator class (register, route, schedule, dispatch, monitor)
 
 Author: Te Rata Pou
@@ -175,8 +175,10 @@ def test_ce_se_handoff_frame_count():
     text = "Hi"
     ce_out = ce.encode_text(text)
     se_out = se.encode_token_stream(ce_out)
-    assert se_out["frame_count"] == 1, "2 chars must pack into 1 dual-wavelength frame"
-    print("✓  CE→SE handoff: 2 chars → 1 frame (dual-wavelength)")
+    assert se_out["frame_count"] == len(se_out["spectral_frames"]) == 2
+    assert len(se_out["frames"]) == 1, "Legacy output still packs two characters"
+    assert se_out["frames"][0]["ce_symbols"] == ["H", "i"]
+    print("✓  CE→SE handoff: 2 canonical frames and 1 legacy paired frame")
 
 
 def test_ce_se_handoff_odd_length_padding():
@@ -185,8 +187,10 @@ def test_ce_se_handoff_odd_length_padding():
     text   = "Hi!"
     ce_out = ce.encode_text(text)
     se_out = se.encode_token_stream(ce_out)
-    assert se_out["frame_count"] == 2, "3 chars (padded to 4) → 2 frames"
-    print("✓  CE→SE handoff: odd-length text padded correctly")
+    assert se_out["frame_count"] == len(se_out["spectral_frames"]) == 3
+    assert len(se_out["frames"]) == 2
+    assert [f["ce_symbols"] for f in se_out["frames"]] == [["H", "i"], ["!", " "]]
+    print("✓  CE→SE handoff: only the legacy representation contains padding")
 
 
 def test_ce_se_frame_has_both_wavelengths():
@@ -198,7 +202,8 @@ def test_ce_se_frame_has_both_wavelengths():
     frame  = se_out["frames"][0]
     assert "wavelength_start_nm" in frame
     assert "wavelength_end_nm"   in frame
-    assert frame["wavelength_start_nm"] != frame["wavelength_end_nm"] or True  # may be equal for same char
+    assert frame["ce_symbols"] == ["A", "B"]
+    assert frame["wavelength_start_nm"] != frame["wavelength_end_nm"]
     assert VISIBLE_MIN_NM <= frame["wavelength_start_nm"] <= VISIBLE_MAX_NM
     assert VISIBLE_MIN_NM <= frame["wavelength_end_nm"]   <= VISIBLE_MAX_NM
     print("✓  CE→SE frame contains dual wavelengths in visible range")
@@ -221,46 +226,45 @@ def test_full_stack_transmit():
 # ─────────────────────────────────────────────────────────────────
 
 def _channel_to_coords(index: int):
-    pol_k = index % HILBERT_DIM_POL
-    rem   = index // HILBERT_DIM_POL
+    direction = index % HILBERT_DIM_DIR
+    rem   = index // HILBERT_DIM_DIR
+    pol_k = rem % HILBERT_DIM_POL
+    rem   = rem // HILBERT_DIM_POL
     oam_j = rem % HILBERT_DIM_OAM
     wdm_i = rem // HILBERT_DIM_OAM
-    return wdm_i, oam_j, pol_k
+    return wdm_i, oam_j, pol_k, direction
 
 
-def _coords_to_channel(wdm_i: int, oam_j: int, pol_k: int) -> int:
-    return (wdm_i * HILBERT_DIM_OAM + oam_j) * HILBERT_DIM_POL + pol_k
+def _coords_to_channel(wdm_i: int, oam_j: int, pol_k: int, direction: int) -> int:
+    return ((wdm_i * HILBERT_DIM_OAM + oam_j) * HILBERT_DIM_POL + pol_k) * HILBERT_DIM_DIR + direction
 
 
 def test_channel_coordinate_roundtrip():
     """Flat index → coords → flat index must be identity."""
-    for idx in [0, 1, 100, 1000, 12800, 25599]:
-        w, o, p = _channel_to_coords(idx)
-        recovered = _coords_to_channel(w, o, p)
+    for idx in range(HILBERT_DIM_TOTAL):
+        recovered = _coords_to_channel(*_channel_to_coords(idx))
         assert recovered == idx, f"Roundtrip failed at index {idx}"
     print("✓  Channel index ↔ coords roundtrip")
 
 
 def test_all_channels_unique_triplets():
-    """Every flat index must produce a unique (wdm, oam, pol) triplet."""
+    """Every flat index produces a unique (wdm, oam, pol, direction) label."""
     seen = set()
     for idx in range(HILBERT_DIM_TOTAL):
         triplet = _channel_to_coords(idx)
         assert triplet not in seen, f"Duplicate triplet at index {idx}: {triplet}"
         seen.add(triplet)
     assert len(seen) == HILBERT_DIM_TOTAL
-    print(f"✓  All {HILBERT_DIM_TOTAL} channels have unique triplets — orthogonality holds")
+    print(f"✓  All {HILBERT_DIM_TOTAL} simulated coordinate labels are unique")
 
 
 def test_channel_coords_within_bounds():
-    import random
-    random.seed(7)
-    sample = random.sample(range(HILBERT_DIM_TOTAL), 500)
-    for idx in sample:
-        w, o, p = _channel_to_coords(idx)
+    for idx in range(HILBERT_DIM_TOTAL):
+        w, o, p, direction = _channel_to_coords(idx)
         assert 0 <= w < HILBERT_DIM_WDM
         assert 0 <= o < HILBERT_DIM_OAM
         assert 0 <= p < HILBERT_DIM_POL
+        assert 0 <= direction < HILBERT_DIM_DIR
     print("✓  Channel coords within sub-space bounds")
 
 
@@ -271,15 +275,22 @@ def test_channel_coords_within_bounds():
 def test_packing_efficiency_even():
     ce   = WNSPCharacterEncoder()
     se   = WNSPSpectralEncoder()
-    text = "NexusOS"  # 7 chars → 4 frames (padded to 8)
+    text = "NexusOS"  # 7 canonical frames; 4 legacy paired frames
     out  = ce.encode_text(text)
     result = se.encode_token_stream(out)
-    n_frames = result["frame_count"]
+    n_frames = len(result["frames"])
     n_chars  = len(text)
-    packing  = result["chars_per_frame"]
-    # packing = tokens / frames (may be padded)
-    assert packing <= 2.0
-    assert packing >= 1.0
+    packing  = result["chars_per_dual_frame"]
+    assert result["frame_count"] == n_chars
+    assert n_frames == math.ceil(n_chars / 2)
+    assert packing == n_chars / n_frames
+    even = se.encode_token_stream(ce.encode_text("Nexus!"))
+    assert len(even["frames"]) == 3
+    assert even["chars_per_dual_frame"] == 2.0
+    empty = se.encode_token_stream(ce.encode_text(""))
+    assert empty["frame_count"] == 0
+    assert empty["frames"] == empty["spectral_frames"] == []
+    assert empty["chars_per_dual_frame"] == 0
     print(f"✓  Packing efficiency: {n_chars} chars → {n_frames} frames ({packing:.2f} chars/frame)")
 
 
@@ -297,9 +308,10 @@ def test_frame_energy_positive():
 def test_total_energy_sum():
     ce  = WNSPCharacterEncoder()
     se  = WNSPSpectralEncoder()
-    out = ce.encode_text("Test")
+    out = ce.encode_text("Tests")  # Odd length: padding is not canonical energy
     result = se.encode_token_stream(out)
-    computed = sum(f["energy_joules"] for f in result["frames"])
+    assert len(result["spectral_frames"]) == len("Tests")
+    computed = sum(f["energy_joules"] for f in result["spectral_frames"])
     assert abs(computed - result["total_energy_joules"]) < 1e-60
     print("✓  Total energy sum matches frame aggregate")
 
@@ -307,9 +319,10 @@ def test_total_energy_sum():
 def test_total_mass_sum():
     ce  = WNSPCharacterEncoder()
     se  = WNSPSpectralEncoder()
-    out = ce.encode_text("Test")
+    out = ce.encode_text("Tests")  # Odd length: padding is not canonical mass
     result = se.encode_token_stream(out)
-    computed = sum(f["lambda_mass_kg"] for f in result["frames"])
+    assert len(result["spectral_frames"]) == len("Tests")
+    computed = sum(f["lambda_mass_kg"] for f in result["spectral_frames"])
     assert abs(computed - result["total_lambda_mass_kg"]) < 1e-70
     print("✓  Total Λ mass sum matches frame aggregate")
 

@@ -54,9 +54,9 @@ const ZPE_J     = 0.5 * H_BAR * (2 * Math.PI * F0);   // ℏω/2 at f₀
 const ZPE_EV    = ZPE_J / EV;
 
 // ── Shannon capacity (per Hz per channel) ─────────────────────────────────────
-// C = B · log₂(1 + S/N).  At ghost node N = ZPE noise floor (T→0).
-// We express S/N at F0 with unit signal power: S = E0 = hf₀
-const SNR_VACUUM = E0 / ZPE_J;     // hf₀ / (ℏω/2) = 2π/π = 2
+// Illustrative dimensionless POWER ratio only, not a measured quantum noise floor.
+// Dividing photon energy by vacuum energy cannot establish Shannon noise power.
+const SNR_VACUUM = 2;
 const C_PER_HZ   = Math.log2(1 + SNR_VACUUM);
 
 const BASE      = "https://wnsp.io";
@@ -426,17 +426,13 @@ export default function LosslessChannel() {
               ABSTRACT
             </p>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Act 7 established that ghost node n=36 is a vacuum address in the
-              compression lattice — cold, coherent, zero entropy, no matter coupling.
-              Act 8 asks what happens when you move the energy. A single ghost node is a
-              cavity. A chain of ghost node traps connected on the same Ψ channel is a{" "}
-              <strong className="text-white">lossless waveguide</strong>. Because no
-              matter occupies the path, the attenuation coefficient α = 0. The
-              Beer-Lambert law L(d) = α·d → 0 regardless of distance. Shannon capacity
-              C = B·log₂(1 + S/N) reaches its theoretical maximum when N collapses to
-              the vacuum zero-point floor: ½ℏω per mode. The periodic table did not just
-              produce 118 elements — it produced a geometry of filled sites and voids.
-              The voids are the waveguide. The trap is the coupler.
+              Act 8 explores a proposed ghost-node low-loss architecture. A numerical
+              vacancy in the elemental mass catalogue is not physical vacuum or proof
+              of zero entropy, zero attenuation or a working waveguide. Beer–Lambert
+              attenuation can be modelled with α = 0 as an ideal assumption, but real
+              coupling, scattering, diffraction, detection and phase noise must be measured.
+              Shannon capacity requires signal and noise powers over a defined bandwidth;
+              vacuum energy per mode cannot be substituted directly for noise power.
               First disclosed 2026-07-07.
             </p>
           </div>
@@ -445,13 +441,13 @@ export default function LosslessChannel() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               { label: "Attenuation",   value: "α = 0",          color: "#10b981",
-                sub: "No matter coupling" },
+                sub: "Ideal model assumption, not measured" },
               { label: "Loss over d",   value: "L(d) = 0",       color: "#22d3ee",
-                sub: "Beer-Lambert → 0" },
+                sub: "Ideal attenuation model only" },
               { label: "ZPE per mode",  value: `${(ZPE_EV * 1e3).toFixed(3)} meV`, color: "#a855f7",
-                sub: "½ℏω vacuum floor" },
+                sub: "½ℏω energy, not noise power" },
               { label: "Shannon C/Hz",  value: `${C_PER_HZ.toFixed(4)} b/s/Hz`, color: "#f59e0b",
-                sub: "At ZPE floor, S=hf₀" },
+                sub: "Example power SNR=2, not a capacity claim" },
             ].map(({ label, value, color, sub }) => (
               <div key={label}
                    className="rounded-lg border bg-slate-900/60 p-4 text-center space-y-1"
@@ -688,8 +684,8 @@ export default function LosslessChannel() {
         </Section>
 
         {/* ── §5: Shannon Capacity ────────────────────────────────────────── */}
-        <Section id="shannon" title="5. Shannon Capacity at the Vacuum Floor"
-                 icon={Radio} color="#f59e0b" badge="C → maximum">
+        <Section id="shannon" title="5. Shannon Capacity — Consistent Power Units"
+                 icon={Radio} color="#f59e0b" badge="Illustrative SNR only">
           <p className="text-sm text-slate-300 leading-relaxed">
             Shannon's channel capacity theorem [3] gives the maximum information rate
             for a channel with bandwidth B and signal-to-noise ratio S/N:
@@ -699,10 +695,9 @@ export default function LosslessChannel() {
             In a conventional channel, N is thermal noise: N = k_B · T · B
             (Johnson-Nyquist). At room temperature (T=293 K) this is
             approximately −174 dBm/Hz. Even at T=4 K (superconducting quantum
-            computers), thermal noise persists. The ghost node channel eliminates
-            thermal noise by design — there is no matter to thermalize. The only
-            remaining noise source is the quantum vacuum zero-point energy:
-            N_vac = ½ℏω per mode.
+            computers), thermal noise persists. No NexusOS measurement establishes elimination
+            of thermal noise. Quantum receiver noise depends on the measurement model;
+            energy per mode is not a noise power without a rate or bandwidth convention.
           </p>
           <div className="space-y-3">
             {[
@@ -721,9 +716,9 @@ export default function LosslessChannel() {
                 color: "#fbbf24",
               },
               {
-                regime: "Ghost node channel (T → 0)",
+                regime: "Illustrative power-ratio example (not measured)",
                 N: `½ℏω = ${(ZPE_EV * 1000).toFixed(3)} meV per mode at f₀`,
-                SNR: `S/N_vac = hf₀ / (½ℏω) = ${SNR_VACUUM.toFixed(4)}`,
+                SNR: `Assumed signal/noise POWER ratio = ${SNR_VACUUM.toFixed(4)}`,
                 C: `C = B · log₂(1 + ${SNR_VACUUM.toFixed(4)}) = B · ${C_PER_HZ.toFixed(4)} b/s/Hz`,
                 color: "#10b981",
               },
@@ -739,14 +734,13 @@ export default function LosslessChannel() {
             ))}
           </div>
           <p className="text-sm text-slate-400 leading-relaxed">
-            The vacuum floor is not zero — it is ½ℏω, the irreducible quantum
-            noise from Heisenberg uncertainty. The ghost node channel operates
-            at this floor. No engineering improvement can reduce noise further;
-            the ghost node already achieves it structurally, without refrigeration,
-            without shielding, without active noise cancellation.
+            The oscillator vacuum term ½ℏω is an energy. It does not define a universal
+            Shannon noise power or certify a ghost-node device. Squeezing can redistribute
+            quadrature noise; achievable capacity depends on the actual source, channel,
+            receiver, bandwidth and energy constraints.
           </p>
           <Eq>
-            {`C_ghost = B · log₂(1 + hf₀/½ℏω) = B · log₂(1 + ${SNR_VACUUM.toFixed(4)}) = B · ${C_PER_HZ.toFixed(4)} b/s/Hz`}
+            {`Example only: S/N = ${SNR_VACUUM.toFixed(4)} → C/B = ${C_PER_HZ.toFixed(4)} b/s/Hz`}
           </Eq>
         </Section>
 

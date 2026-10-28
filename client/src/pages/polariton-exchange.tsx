@@ -5,6 +5,7 @@ import {
   RefreshCw, Cpu, Layers, Radio,
 } from "lucide-react";
 import { ActSequenceNav } from "@/components/act-sequence-nav";
+import { colorMetricCard, colorText400 } from "@/lib/color-classes";
 
 // ── Physics constants ─────────────────────────────────────────────────────────
 const C_LIGHT  = 2.998e8;     // m/s
@@ -200,7 +201,7 @@ export default function PolaritonExchangePage() {
           {/* Back arrow + title */}
           <div className="flex items-start gap-3">
             <Link href="/resonance-cavity">
-              <button className="text-gray-500 hover:text-white transition-colors mt-1">
+              <button className="text-gray-500 hover:text-white transition-colors mt-1" aria-label="Back to The Cavity">
                 <ArrowLeft className="w-5 h-5" />
               </button>
             </Link>
@@ -263,10 +264,10 @@ export default function PolaritonExchangePage() {
             { label: "Splitting ΔE",  value: `${deltaE_eV.toExponential(2)} eV`, sub: "polariton energy gap", icon: Layers, color: "emerald" },
             { label: "Regime",        value: regime.charAt(0).toUpperCase() + regime.slice(1), sub: regime === "strong" ? "polaritons active" : "adjust g vs κ", icon: Activity, color: regime === "strong" ? "emerald" : regime === "ultrastrong" ? "amber" : "slate" },
           ].map(({ label, value, sub, icon: Icon, color }) => (
-            <div key={label} className={`rounded-xl border border-${color}-700/30 bg-${color}-950/20 p-4`}>
+            <div key={label} className={colorMetricCard[color]}>
               <div className="flex items-center gap-2 mb-2">
-                <Icon className={`w-4 h-4 text-${color}-400`} />
-                <span className={`text-xs text-${color}-400`}>{label}</span>
+                <Icon className={`w-4 h-4 ${colorText400[color]}`} />
+                <span className={`text-xs ${colorText400[color]}`}>{label}</span>
               </div>
               <div className="text-xl font-bold font-mono text-white">{value}</div>
               <div className="text-[10px] text-gray-500 mt-0.5">{sub}</div>

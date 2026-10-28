@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { ProjectDirection } from "@/components/project-direction";
 import { Link } from "wouter";
 import { ArrowLeft, Code2, Zap, Globe, Cpu, Radio, Database, Play, Copy, ChevronRight, Atom, BookOpen, Layers } from "lucide-react";
 
@@ -22,16 +23,10 @@ function nmToBand(nm: number): string {
   if (nm < 625) return "EVENT";
   return "STORAGE";
 }
-function ceEncode(name: string): { nm: number; thz: number; psi: string; band: string } {
-  const codes = name.toUpperCase().split("").map(c => c.charCodeAt(0)).filter(c => c >= 32 && c <= 126);
-  if (!codes.length) codes.push(77);
-  const avg = codes.reduce((a, b) => a + b, 0) / codes.length;
-  const nm = parseFloat((380 + ((avg - 32) / 94) * 400).toFixed(2));
-  const thz = parseFloat((299792458 / (nm * 1e-9) / 1e12).toFixed(2));
-  const wdm = Math.floor((nm - 380) / 4) + 1;
-  const oam = codes.reduce((a, b) => a + b, 0) % 100;
-  const pol = codes.length % 2 === 0 ? "H" : "V";
-  return { nm, thz, psi: `Ψ(${wdm},${oam},${pol})`, band: nmToBand(nm) };
+import { encodeVMName } from "@shared/wnsp-model";
+function ceEncode(name: string) {
+  const result = encodeVMName(name);
+  return { ...result, thz: Number((299792458 / (result.nm * 1e-9) / 1e12).toFixed(2)) };
 }
 
 // ── WavelengthScript transpiler ───────────────────────────────────────────────
@@ -43,7 +38,7 @@ function transpile(src: string, srcLang: "python" | "javascript" | "rust"): stri
     `∿ ── WavelengthScript v2.0 · AGPL-3.0 · NexusOS ────────────────`,
     `∿ Source: ${srcLang.toUpperCase()} → WLS transpilation`,
     `∿ Generated: ${new Date().toISOString()}`,
-    `∿ Every symbol has a physical wavelength address in light.`,
+    `∿ Supported symbols receive software spectral labels; native photonic execution is not demonstrated.`,
     ``,
   ];
 
@@ -169,7 +164,7 @@ function compileWLS(src: string): { assembly: string; hex: string; manifest: Arr
 
   add(0x00, ".WNSP",  "v1.0",              "NexusOS WNSP Bytecode · AGPL-3.0");
   add(0x00, ".ARCH",  "WDM256·OAM50·POL2·DIR2", "51,200 orthogonal Ψ channels");
-  add(0x00, ".MODEL", "Λ=hf/c² SPECTRAL",  "Einstein first-principle execution");
+  add(0x00, ".MODEL", "Λ=hf/c² SPECTRAL",  "Energy-equivalent software model, not physical execution");
   add(0x00, "", "", "");
   off = 0;
 
@@ -625,11 +620,11 @@ class SpectralNode:
 
 export default function WavelengthLangPage() {
   usePageMeta({
-    title: "WavelengthScript — Physics-Native Programming Language",
-    description: "WavelengthScript is a programming language where agents live at spectral Ψ addresses, messages are photon packets, and computation costs are derived from E=hf. Compiles to WNSP bytecode. Step-debug in the WNSP VM.",
+    title: "WavelengthScript — spectral-coordinate software language",
+    description: "WavelengthScript is the programming-language component of a spectral-coordinate framework. Its compiler and VM run on conventional computers; native photonic execution and historical priority are not established.",
     canonical: "https://wnsp.io/wavelength-lang",
-    ogTitle: "WavelengthScript — The Language the Universe Runs On",
-    ogDescription: "Physics-native language: spectral addresses, photon packets, E=hf fees. Compiles to WNSP bytecode. Browser-native WNSP VM. CE→SE pipeline. AGPL-3.0.",
+    ogTitle: "WavelengthScript — spectral-coordinate software language",
+    ogDescription: "A spectral-coordinate language associated with WNSP encoding, addressing and protocol research. Software execution is distinct from unproven native photonic execution or historical priority.",
     twitterTitle: "WavelengthScript v1.0",
     twitterDescription: "The language the universe runs on. Agents at spectral addresses. Photon packets. E=hf computation costs. WNSP bytecode.",
   });
@@ -716,12 +711,13 @@ export default function WavelengthLangPage() {
             <div>
               <div className="text-violet-400/50 text-[9px] uppercase tracking-widest mb-2">WavelengthScript</div>
               <h1 className="text-2xl font-bold text-white mb-3 leading-tight">
-                The first language where every symbol has a physical address in light.
+                A language for spectral-coordinate software.
               </h1>
               <p className="text-white/40 text-sm leading-relaxed mb-4">
-                Variables live at wavelengths. Functions emit on Ψ channels. AI agents tune to frequencies.
-                Code doesn't run on a CPU — it propagates as a wave. Write in Python, JS, or Rust and
-                let the transpiler map your logic onto the electromagnetic spectrum.
+                WavelengthScript connects supported symbols and operations with spectral-coordinate labels.
+                WNSP supplies associated encoding, addressing and communication models. The compiler and VM
+                run on conventional computers; photonic execution and cross-system compatibility need testing.
+                Earlier colour alphabets, optical encodings and photonic languages are distinct related work.
               </p>
               <div className="flex flex-wrap gap-2">
                 {["Transpiles from Python/JS/Rust", "AI agents on Ψ channels", "AGPL-3.0 open spec", "CE→SE type system"].map(t => (
@@ -730,7 +726,7 @@ export default function WavelengthLangPage() {
               </div>
             </div>
             <div className="border border-white/5 rounded-xl p-4" style={{ background: "rgba(139,0,255,0.04)" }}>
-              <div className="text-white/20 text-[9px] mb-3 uppercase tracking-widest">Quick encode — any word → its wavelength address</div>
+              <div className="text-white/20 text-[9px] mb-3 uppercase tracking-widest">Quick encode — name → lossy spectral fingerprint</div>
               <input
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none placeholder-white/15 focus:border-violet-400/30"
                 placeholder="Type anything: 'function', 'AI', 'reasoning', 'model'…"
@@ -755,17 +751,19 @@ export default function WavelengthLangPage() {
                     ))}
                   </div>
                   <div className="text-[9px] text-white/20">
-                    In WLS: <span className="text-violet-400">@{liveResult.nm}nm</span> is the type prefix for "{liveEncode}" — every instance lives at this wavelength.
+                    In WLS: <span className="text-violet-400">@{liveResult.nm}nm</span> is a software label for "{liveEncode}", not a measured optical storage location. Different names can collide.
                   </div>
                 </div>
               ) : (
                 <div className="mt-4 text-center text-white/15 text-[10px] py-4">
-                  CE→SE encodes any word into a physical wavelength of light. That wavelength becomes the address.
+                  This name encoder produces a lossy spectral-coordinate fingerprint, not reversible text or measured light emission.
                 </div>
               )}
             </div>
           </div>
         </div>
+
+        <ProjectDirection />
 
         {/* Tab bar */}
         <div className="flex flex-wrap gap-2">
@@ -861,9 +859,10 @@ export default function WavelengthLangPage() {
                 <Atom size={9} /> AGPL-3.0 Open Specification · Free for Every Developer on Earth
               </div>
               <div className="text-white/25 text-[11px] leading-relaxed max-w-2xl mx-auto">
-                WavelengthScript is a free, open standard. Any company that implements a WLS runtime must publish their code under AGPL-3.0.
-                The CE→SE encoding standard — which underpins the entire type system — is free developer infrastructure.
-                No patent. No licence fee. The address space of light belongs to everyone.
+                This project publishes software and specifications under AGPL-3.0.
+                Obligations depend on the licence, the code used and how it is modified or provided.
+                An independent implementation is not automatically subject to every obligation of this codebase.
+                Publication is not proof of novelty, patent freedom or ownership of physical wavelengths.
               </div>
             </div>
           </div>
@@ -1098,10 +1097,10 @@ literal      ::= INT | FLOAT | STRING | "|" INT "⟩"   ∿ Fock state literal`}
                 <Atom size={11} /> Type System — Fock Space
               </h2>
               <p className="text-white/25 text-[11px] leading-relaxed mb-4">
-                WLS v2.0 is grounded in quantum field theory, not traditional type theory.
-                Every value is an occupation number in a Hilbert space channel. The type annotation
-                <code className="text-violet-300 mx-1">@540nm</code> doesn't just name a type —
-                it specifies the physical wavelength where that data lives.
+                WLS v2.0 uses quantum-optics-inspired software notation.
+                A type annotation such as
+                <code className="text-violet-300 mx-1">@540nm</code> supplies a spectral label;
+                it does not establish a physical occupation number or an optical storage location.
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
@@ -1222,8 +1221,9 @@ literal      ::= INT | FLOAT | STRING | "|" INT "⟩"   ∿ Fock state literal`}
         {activeTab === "transpiler" && (
           <div className="space-y-4">
             <div className="text-white/25 text-[11px] leading-relaxed">
-              Paste any Python, JavaScript, or Rust code. The transpiler maps every symbol through CE→SE encoding
-              to assign it a physical wavelength address, then rewrites the code in WavelengthScript syntax.
+              Try supported Python, JavaScript, or Rust examples. The experimental transpiler rewrites supported
+              constructs into WavelengthScript syntax with spectral labels. This is not arbitrary-language
+              equivalence or verified native photonic execution.
             </div>
 
             <div className="grid grid-cols-2 gap-4">

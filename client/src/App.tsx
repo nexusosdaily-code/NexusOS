@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/use-auth";
 import { Switch, Route, useLocation } from "wouter";
 import { lazy, Suspense, Component, type ReactNode, type ErrorInfo, useEffect } from "react";
 const GuideBot = lazy(() => import("@/components/GuideBot"));
@@ -10,8 +11,12 @@ import { UniSatProvider } from "@/hooks/use-unisat";
 import { CUSTOM_DOMAIN_HOSTS } from "@/lib/domain-keys";
 const DomainRouter = lazy(() => import("@/components/DomainRouter"));
 import { useToast } from "@/hooks/use-toast";
+import { ResearchDisclosure } from "@/components/research-disclosure";
+import { usePageMeta } from "@/hooks/use-page-meta";
+import { researchPageMeta } from "@shared/research-page-meta";
 
 const AuthPage = lazy(() => import("@/pages/auth"));
+const ResearchTransparencyPage = lazy(() => import("@/pages/research-transparency"));
 
 // All other pages lazy-loaded — browser only downloads the code when you visit that page
 const HubPage = lazy(() => import("@/pages/hub"));
@@ -38,11 +43,14 @@ const K1OrchestrationPage = lazy(() => import("@/pages/k1-orchestration"));
 const SecureDocxPage = lazy(() => import("@/pages/secure-docx"));
 const ResearchPresentationPage = lazy(() => import("@/pages/research-presentation"));
 const StreamingPage = lazy(() => import("@/pages/streaming"));
+const LiveGuidePage = lazy(() => import("@/pages/live-guide"));
 const DeveloperMatrixPage = lazy(() => import("@/pages/developer-matrix"));
 const DeveloperKeysPage = lazy(() => import("@/pages/developer-keys"));
 const DeveloperPage = lazy(() => import("@/pages/developer"));
 const GovernancePage = lazy(() => import("@/pages/governance"));
+const CommunityElectionsPage = lazy(() => import("@/pages/community-elections"));
 const ConstitutionPage = lazy(() => import("@/pages/constitution"));
+const ConstitutionCompliancePage = lazy(() => import("@/pages/constitution-compliance"));
 const DocsPage = lazy(() => import("@/pages/docs"));
 const WNSPCoordinator = lazy(() => import("@/pages/wnsp-coordinator"));
 const KernelPage = lazy(() => import("@/pages/kernel"));
@@ -127,6 +135,8 @@ const NxtCampaignPage = lazy(() => import("@/pages/nxt-campaign"));
 const CommunityMintPage = lazy(() => import("@/pages/community-mint"));
 const WnspStakingPage = lazy(() => import("@/pages/wnsp-staking"));
 const MarketplacePage = lazy(() => import("@/pages/marketplace"));
+const P2PPage = lazy(() => import("@/pages/p2p"));
+const WaveVaultPage = lazy(() => import("@/pages/wave-vault"));
 const RuneEtchingPage = lazy(() => import("@/pages/rune-etching"));
 const SpectralIDEPage = lazy(() => import("@/pages/spectral-ide"));
 const NexusExplorerPage = lazy(() => import("@/pages/nexus-explorer"));
@@ -249,7 +259,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, EBState> {
 // DYNAMIC_PROTECTED_PREFIXES — paths with dynamic segments where ANY child is valid.
 // ---------------------------------------------------------------------------
 const EXACT_PROTECTED_PATHS = new Set<string>([
-  "/", "/hub", "/apps",
+  "/hub", "/apps",
   "/v10", "/v9", "/v8", "/v7", "/v6",
   "/encoding-lab",
   "/workspace/encoding", "/workspace/analytics", "/workspace/transmission",
@@ -282,7 +292,7 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/communication", "/comms", "/network", "/wavelength-lang",
   "/evidence", "/transmission", "/wnsp-bridge", "/wnsp/bridge",
   "/directory", "/ledger", "/github", "/settings",
-  "/sop", "/protocol", "/photonic-ledger", "/p2p-terminal",
+  "/sop", "/protocol", "/photonic-ledger", "/p2p-terminal", "/wave-vault",
   "/learn", "/pipeline", "/spectral-mirror", "/community",
   "/media-library", "/quora", "/reddit", "/telegram-hub",
   "/wnsp-paper", "/start", "/social-broadcast",
@@ -294,14 +304,11 @@ const EXACT_PROTECTED_PATHS = new Set<string>([
   "/ce-se-pipeline", "/ce-code-writer", "/wnsp-vm",
   "/spectral-router", "/spectral-search", "/spectral-contracts",
   "/divergence-test", "/hardware-spec", "/hardware-lab",
-  "/campaign", "/constitution", "/mobile-sdk", "/shareholders",
+  "/campaign", "/mobile-sdk", "/shareholders",
   "/psi-board", "/unified-compression-theory", "/universal-one", "/matter-protocol", "/universal-address", "/element-catalogue", "/standing-wave-trap", "/lossless-channel",
   "/cosmic-lattice",
   "/the-entangler",
   "/the-field",
-  "/the-coherent-state",
-  "/the-squeezed-state",
-  "/the-bogoliubov-transform",
 ]);
 
 // Only paths where ANY child segment is a valid protected route (dynamic).
@@ -375,7 +382,6 @@ function ProtectedRoutes() {
         <Route path="/developer-matrix/docs" component={DocsPage} />
         <Route path="/developer/keys" component={DeveloperKeysPage} />
         <Route path="/governance" component={GovernancePage} />
-        <Route path="/constitution" component={ConstitutionPage} />
         <Route path="/workspace/matrix" component={DeveloperMatrixPage} />
         {/* /docs and /docs/:section are public — handled in Router() above */}
         <Route path="/wnsp/coordinator" component={WNSPCoordinator} />
@@ -434,6 +440,7 @@ function ProtectedRoutes() {
         <Route path="/photonic-ledger" component={PhotonicLedgerPage} />
         <Route path="/hardware-spec" component={HardwareSpecPage} />
         <Route path="/p2p-terminal" component={P2PTerminalPage} />
+        <Route path="/wave-vault" component={WaveVaultPage} />
         <Route path="/learn" component={LearnPage} />
         <Route path="/pipeline" component={PipelinePage} />
         <Route path="/planck-alignment" component={PlanckAlignmentPage} />
@@ -462,6 +469,8 @@ function Router() {
     <Switch>
       <Route path="/auth" component={AuthPage} />
       {/* Public routes - no login required */}
+      <Route path="/live-guide" component={LiveGuidePage} />
+      <Route path="/community-elections" component={CommunityElectionsPage} />
       <Route path="/crowdfund" component={CrowdfundPage} />
       <Route path="/fund" component={CrowdfundPage} />
       <Route path="/videos" component={VideosPage} />
@@ -483,6 +492,7 @@ function Router() {
       <Route path="/wnsp-uri">{() => { window.location.replace("/wnsp"); return null; }}</Route>
       <Route path="/visualizer">{() => { window.location.replace("/compression-explorer"); return null; }}</Route>
       {/* Public showcase & proof pages */}
+      <Route path="/research-transparency" component={ResearchTransparencyPage} />
       <Route path="/wnsp" component={WnspLandingPage} />
       <Route path="/wnsp/ordinals" component={WnspOrdinalsPage} />
       <Route path="/bitcoin-ordinals" component={WnspOrdinalsPage} />
@@ -494,6 +504,7 @@ function Router() {
       <Route path="/community-mint" component={CommunityMintPage} />
       <Route path="/wnsp-staking" component={WnspStakingPage} />
       <Route path="/marketplace" component={MarketplacePage} />
+      <Route path="/p2p" component={P2PPage} />
       <Route path="/market"     component={MarketPage} />
       <Route path="/rune-etching" component={RuneEtchingPage} />
       <Route path="/rune-mint" component={RuneMintPage} />
@@ -503,7 +514,6 @@ function Router() {
       <Route path="/fractal-btc" component={FractalBtcBridgePage} />
       <Route path="/fractal-bitcoin" component={FractalBtcBridgePage} />
       <Route path="/nxt-fb-swap" component={NxtFbSwapPage} />
-      <Route path="/swap" component={NxtFbSwapPage} />
       <Route path="/btc-sentinel" component={BtcSentinelPage} />
       <Route path="/btc-assets-sentinel" component={BtcAssetsSentinelPage} />
       <Route path="/mempool" component={MempoolMonitorPage} />
@@ -586,6 +596,7 @@ function Router() {
       <Route path="/hardware-treasury" component={HardwareTreasuryPage} />
       <Route path="/campaign" component={CampaignPage} />
       <Route path="/constitution" component={ConstitutionPage} />
+      <Route path="/constitution/compliance" component={ConstitutionCompliancePage} />
       <Route path="/mobile-sdk" component={MobileSDKPage} />
       <Route path="/shareholders" component={ShareholdersPage} />
       <Route path="/contact" component={ContactPage} />
@@ -597,6 +608,8 @@ function Router() {
       <Route path="/nexus-hardware-os" component={NexusHardwareOsPage} />
       <Route path="/orbital-treasury" component={OrbitalTreasuryPage} />
       <Route path="/spectral-library" component={SpectralLibraryPage} />
+      {/* Homepage — public; HubPage renders a landing view for guests */}
+      <Route path="/" component={HubPage} />
       {/* Catch-all: shows 404 for unknown paths, auth guard for known protected ones */}
       <Route component={ProtectedOrNotFound} />
     </Switch>
@@ -605,13 +618,13 @@ function Router() {
 
 // ── Global friend-request alert — fires on any page ────────────────────────
 function FriendRequestNotifier() {
+  const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
   useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) return;
+    if (!isAuthenticated) return;
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${proto}//${location.host}/ws/signaling?token=${token}`);
+    const ws = new WebSocket(`${proto}//${location.host}/ws/signaling`);
     ws.onmessage = (ev) => {
       try {
         const msg = JSON.parse(ev.data);
@@ -626,7 +639,7 @@ function FriendRequestNotifier() {
       } catch {}
     };
     return () => ws.close();
-  }, [toast, qc]);
+  }, [toast, qc, isAuthenticated]);
   return null;
 }
 
@@ -648,6 +661,20 @@ function TelegramFloat() {
       <span className="text-white font-semibold text-sm whitespace-nowrap">Join Telegram</span>
     </a>
   );
+}
+
+function ResearchRouteContext() {
+  const [path] = useLocation();
+  const meta = researchPageMeta(path);
+  // Mount only on covered routes: unrelated app screens retain their metadata.
+  return <>{meta && <ResearchRouteHead path={path} meta={meta} />}<ResearchDisclosure /></>;
+}
+
+function ResearchRouteHead({ path, meta }: {
+  path: string; meta: { title: string; description: string };
+}) {
+  usePageMeta({ ...meta, canonical: `https://wnsp.io${path === "/" ? "/" : path}` });
+  return null;
 }
 
 function App() {
@@ -679,11 +706,15 @@ function App() {
             <AuthProvider>
               <Toaster />
               <FriendRequestNotifier />
-              <AuthLoading>
-                <Suspense fallback={<PageLoader />}>
-                  <Router />
-                </Suspense>
-              </AuthLoading>
+              {/* AuthLoading is intentionally NOT wrapping Router here.
+                  Public routes (constitution, docs, crowdfund, etc.) must
+                  paint immediately without waiting for /api/auth/me.
+                  Protected routes are individually guarded by <ProtectedRoute>
+                  which shows its own "Authenticating…" state while isLoading. */}
+              <Suspense fallback={<PageLoader />}>
+                <ResearchRouteContext />
+                <Router />
+              </Suspense>
               <TelegramFloat />
               <Suspense fallback={null}><GuideBot /></Suspense>
             </AuthProvider>

@@ -3,6 +3,9 @@ import { Link } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import TelegramVideoGallery from "@/components/TelegramVideoGallery";
 import { PSI_CHANNELS } from "@/lib/channel-model";
+import { trackEvent } from "@/lib/analytics";
+import { HARDWARE_REVIEW_HOLD, promotionsArePaused } from "@shared/hardware-readiness";
+import { HardwareFundingHold } from "@/components/hardware-readiness";
 import {
   Zap, Cpu, Radio, Waves, Shield, Globe, Layers, Activity,
   ArrowRight, ExternalLink, Check, ChevronDown, ChevronUp,
@@ -248,7 +251,7 @@ const COMMUNITY_TIERS = [
 ];
 
 // ── Lab donation tiers ─────────────────────────────────────────────────────
-const LAB_TIERS = [
+export const LAB_TIERS = [
   {
     tier: 1,
     name: "Photon",
@@ -427,16 +430,14 @@ interface DonateResult {
   newBalance: string;
 }
 
-function DonateModal({ t, onClose }: { t: typeof LAB_TIERS[0]; onClose: () => void }) {
+export function DonateModal({ t, onClose }: { t: typeof LAB_TIERS[0]; onClose: () => void }) {
   const [result, setResult] = useState<DonateResult | null>(null);
   const [copied, setCopied] = useState(false);
 
   const { data: auth } = useQuery<any>({
     queryKey: ["/api/auth/me"],
     queryFn: async () => {
-      const token = localStorage.getItem("auth_token");
       const r = await fetch("/api/auth/me", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",
       });
       return r.ok ? r.json() : null;
@@ -446,9 +447,7 @@ function DonateModal({ t, onClose }: { t: typeof LAB_TIERS[0]; onClose: () => vo
   const { data: physics } = useQuery<any>({
     queryKey: ["/api/physics/my"],
     queryFn: async () => {
-      const token = localStorage.getItem("auth_token");
       const r = await fetch("/api/physics/my", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",
       });
       return r.ok ? r.json() : null;
@@ -458,12 +457,12 @@ function DonateModal({ t, onClose }: { t: typeof LAB_TIERS[0]; onClose: () => vo
 
   const donate = useMutation({
     mutationFn: async () => {
-      const token = localStorage.getItem("auth_token");
+      if (promotionsArePaused()) throw new Error(HARDWARE_REVIEW_HOLD.reason);
+      trackEvent("campaign_contribution_started", { surface: "campaign", tier: t.tier });
       const r = await fetch("/api/campaign/donate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: "include",
         body: JSON.stringify({ tier: t.tier }),
@@ -472,7 +471,14 @@ function DonateModal({ t, onClose }: { t: typeof LAB_TIERS[0]; onClose: () => vo
       if (!r.ok) throw new Error(data.error ?? "Donation failed");
       return data as DonateResult;
     },
-    onSuccess: (data) => setResult(data),
+    onSuccess: (data) => {
+      // This confirms the API record, not receipt of an external payment.
+      trackEvent("campaign_contribution_result", { surface: "campaign", tier: t.tier, outcome: "success" });
+      setResult(data);
+    },
+    onError: () => {
+      trackEvent("campaign_contribution_result", { surface: "campaign", tier: t.tier, outcome: "failure" });
+    },
   });
 
   const psi  = physics?.channel?.psi ?? "—";
@@ -488,6 +494,8 @@ function DonateModal({ t, onClose }: { t: typeof LAB_TIERS[0]; onClose: () => vo
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
+
+  if (promotionsArePaused()) return <HardwareFundingHold />;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -800,6 +808,10 @@ function CommunityTierCard({ t, onDonate }: {
 }
 
 export default function CampaignPage() {
+  return promotionsArePaused() ? <HardwareFundingHold /> : <CampaignContent />;
+}
+
+function CampaignContent() {
   const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
   const [expandedTier, setExpandedTier] = useState<number | null>(null);
   const [expandedAudience, setExpandedAudience] = useState<number | null>(null);

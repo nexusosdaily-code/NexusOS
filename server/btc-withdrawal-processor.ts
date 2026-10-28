@@ -6,32 +6,37 @@
 
 import * as bitcoin from "bitcoinjs-lib";
 import * as tinysecp from "tiny-secp256k1";
-import { getServiceWallet, getUTXOs, getSafeUTXOs, getFeeRate } from "./btc-inscription-engine.js";
+import { getServiceWallet, getSafeUTXOs, getFeeRate } from "./btc-inscription-engine.js";
 import { ECPairFactory } from "ecpair";
+import type { Pool } from "pg";
+import { applyWithdrawalReconciliation, type WithdrawalEvidenceReader } from "./withdrawal-reconciliation";
+import { processBtcWithdrawalQueue, type ConstructedWithdrawal } from "./btc-withdrawal-attempt";
+
+/** Operator-only broadcast reconciliation; missing evidence never releases sats. */
+export function reconcileBtcWithdrawal(
+  pool: Pick<Pool, "connect">, approvalId: string, confirmedKey: string, reader: WithdrawalEvidenceReader,
+) {
+  return applyWithdrawalReconciliation(pool, approvalId, confirmedKey, "bitcoin", reader);
+}
 
 bitcoin.initEccLib(tinysecp);
 const ECPair   = ECPairFactory(tinysecp);
 const NETWORK  = bitcoin.networks.bitcoin;
 const ESPLORA  = "https://blockstream.info/api";
-const MEMPOOL  = "https://mempool.space/api";
 const DUST     = 546;
 
 async function broadcastTx(txHex: string): Promise<string> {
-  for (const url of [`${ESPLORA}/tx`, `${MEMPOOL}/tx`]) {
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: txHex,
-        signal: AbortSignal.timeout(15000),
-      });
-      if (res.ok) return (await res.text()).trim();
-    } catch { /* try next */ }
-  }
-  throw new Error("Failed to broadcast via Blockstream and mempool.space");
+  const res = await fetch(`${ESPLORA}/tx`, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: txHex,
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error("Broadcast outcome unknown");
+  return (await res.text()).trim();
 }
 
-export async function sendBtcOnChain(destAddress: string, amountSats: number): Promise<string> {
+export async function constructBtcWithdrawal(destAddress: string, amountSats: number): Promise<ConstructedWithdrawal> {
   const wallet = getServiceWallet();
   if (!wallet) throw new Error("BTC service wallet not configured (BTC_INSCRIPTION_WALLET_WIF missing)");
 
@@ -66,7 +71,14 @@ export async function sendBtcOnChain(destAddress: string, amountSats: number): P
   // BIP341: tweak private key for key-path spend
   const internalPubkey = Buffer.from(wallet.keyPair.publicKey).slice(1, 33);
   const tweak = bitcoin.crypto.taggedHash("TapTweak", internalPubkey);
-  const tweakedPriv = Buffer.from(tinysecp.privateAdd(wallet.keyPair.privateKey!, tweak)!);
+  // BIP340 x-only keys represent the even-Y point. Negate odd-Y private
+  // keys before applying the BIP341 tweak, matching the P2TR output key.
+  const privateKey = wallet.keyPair.publicKey[0] === 3
+    ? tinysecp.privateNegate(wallet.keyPair.privateKey!)
+    : wallet.keyPair.privateKey!;
+  const tweaked = tinysecp.privateAdd(privateKey, tweak);
+  if (!tweaked) throw new Error("Invalid Taproot signing tweak");
+  const tweakedPriv = Buffer.from(tweaked);
   const tweakedKeyPair = ECPair.fromPrivateKey(tweakedPriv, { network: NETWORK });
 
   const psbt = new bitcoin.Psbt({ network: NETWORK });
@@ -90,57 +102,22 @@ export async function sendBtcOnChain(destAddress: string, amountSats: number): P
   }
   psbt.finalizeAllInputs();
 
-  const txHex = psbt.extractTransaction().toHex();
-  const txid  = await broadcastTx(txHex);
-  console.log(`[BTC Withdrawal] ✓ Sent ${amountSats} sats → ${destAddress} | txid: ${txid}`);
-  return txid;
+  return {
+    txHex: psbt.extractTransaction().toHex(),
+    serviceScript: Buffer.from(wallet.p2tr.output!).toString("hex"),
+    inputs: selected.map(u => ({
+      txid: u.txid, vout: u.vout, valueSats: String(u.value),
+      script: Buffer.from(wallet.p2tr.output!).toString("hex"),
+    })),
+  };
 }
 
 export async function processWithdrawalQueue(): Promise<void> {
-  const { db }  = await import("./db.js");
-  const { lightningTransactions } = await import("../shared/schema.js");
-  const { eq, and } = await import("drizzle-orm");
-
-  const pending = await db.select().from(lightningTransactions)
-    .where(and(
-      eq(lightningTransactions.type, "withdrawal"),
-      eq(lightningTransactions.status, "pending"),
-    ));
-
-  if (pending.length === 0) return;
-  console.log(`[BTC Withdrawal] Processing ${pending.length} pending withdrawal(s)…`);
-
-  for (const tx of pending) {
-    if (!tx.btcAddress) {
-      // Legacy records without btc_address — try to extract from memo
-      const match = tx.memo?.match(/to\s+(bc1[a-z0-9]+|[13][a-zA-HJ-NP-Z0-9]+)/);
-      if (!match) {
-        await db.update(lightningTransactions)
-          .set({ status: "failed", completedAt: new Date() })
-          .where(eq(lightningTransactions.id, tx.id));
-        console.warn(`[BTC Withdrawal] TX #${tx.id} has no btc_address — marked failed`);
-        continue;
-      }
-      // Patch the record with the extracted address so next run works cleanly
-      await db.update(lightningTransactions)
-        .set({ btcAddress: match[1] })
-        .where(eq(lightningTransactions.id, tx.id));
-      tx.btcAddress = match[1];
-    }
-
-    try {
-      const txid = await sendBtcOnChain(tx.btcAddress, tx.amountSats);
-      await db.update(lightningTransactions)
-        .set({ status: "completed", btcTxid: txid, completedAt: new Date() })
-        .where(eq(lightningTransactions.id, tx.id));
-      console.log(`[BTC Withdrawal] ✓ TX #${tx.id} completed → ${txid}`);
-    } catch (err: any) {
-      console.error(`[BTC Withdrawal] ✗ TX #${tx.id} failed: ${err.message}`);
-      await db.update(lightningTransactions)
-        .set({ status: "failed", memo: `${tx.memo} | ERROR: ${err.message}`, completedAt: new Date() })
-        .where(eq(lightningTransactions.id, tx.id));
-    }
-  }
+  const { pool } = await import("./db.js");
+  const { isUserOutgoingLocked } = await import("./founder-wallet-lock");
+  await processBtcWithdrawalQueue(pool, {
+    isLocked: isUserOutgoingLocked, construct: constructBtcWithdrawal, broadcast: broadcastTx,
+  });
 }
 
 export function startWithdrawalProcessor(intervalMs = 60_000): NodeJS.Timeout {

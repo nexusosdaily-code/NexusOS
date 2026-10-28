@@ -9,6 +9,9 @@ import path from 'path';
 export function metaImagesPlugin(): Plugin {
   return {
     name: 'vite-plugin-meta-images',
+    // Must run after other plugins that may also transform index.html
+    // so that og:image / twitter:image are the final values in the page.
+    enforce: 'post',
     transformIndexHtml(html) {
       const baseUrl = getDeploymentUrl();
       if (!baseUrl) {
@@ -22,13 +25,14 @@ export function metaImagesPlugin(): Plugin {
       const opengraphJpgPath = path.join(publicDir, 'opengraph.jpg');
       const opengraphJpegPath = path.join(publicDir, 'opengraph.jpeg');
 
+      // Prefer JPG/JPEG (much smaller) over PNG
       let imageExt: string | null = null;
-      if (fs.existsSync(opengraphPngPath)) {
-        imageExt = 'png';
-      } else if (fs.existsSync(opengraphJpgPath)) {
+      if (fs.existsSync(opengraphJpgPath)) {
         imageExt = 'jpg';
       } else if (fs.existsSync(opengraphJpegPath)) {
         imageExt = 'jpeg';
+      } else if (fs.existsSync(opengraphPngPath)) {
+        imageExt = 'png';
       }
 
       if (!imageExt) {
@@ -54,6 +58,7 @@ export function metaImagesPlugin(): Plugin {
     },
   };
 }
+
 
 function getDeploymentUrl(): string | null {
   if (process.env.REPLIT_INTERNAL_APP_DOMAIN) {

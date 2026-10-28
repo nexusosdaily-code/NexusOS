@@ -70,7 +70,7 @@ export default function RuneMintPage() {
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <Link href="/rune-etching">
-            <button className="text-slate-400 hover:text-white transition-colors">
+            <button className="text-slate-400 hover:text-white transition-colors" aria-label="Back to Rune Etching">
               <ArrowLeft className="w-5 h-5" />
             </button>
           </Link>

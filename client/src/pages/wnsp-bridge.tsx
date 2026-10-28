@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -7,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PSI_CHANNEL_COUNT } from "@/lib/channel-model";
+import { encodeVMName } from "@shared/wnsp-model";
 import { useToast } from "@/hooks/use-toast";
 import {
   Radio, Zap, Globe, Copy, Check, ChevronRight, ExternalLink,
@@ -18,14 +20,8 @@ import { formatDistanceToNow } from "date-fns";
 // ── WASCII CE→SE engine (v1.0) ───────────────────────────────────────────────
 function ceEncode(text: string) {
   const input = (text || "nexus").trim();
-  const codes = input.toUpperCase().split("").map(c => c.charCodeAt(0)).filter(c => c >= 32 && c <= 126);
-  const sum   = codes.reduce((a, b) => a + b, 0);
-  const avg   = sum / (codes.length || 1);
-  const nm    = parseFloat((380 + ((avg - 32) / 94) * 400).toFixed(2));
+  const { nm, wdm, oam, pol } = encodeVMName(input);
   const thz   = parseFloat((299_792_458 / (nm * 1e-9) / 1e12).toFixed(3));
-  const wdm   = Math.floor((nm - 380) / 4) + 1;
-  const oam   = sum % 100;
-  const pol   = codes.length % 2 === 0 ? "H" : "V";
   const band  = nm < 450 ? "VIOLET" : nm < 495 ? "BLUE" : nm < 520 ? "CYAN" : nm < 565 ? "GREEN" : nm < 590 ? "YELLOW" : nm < 625 ? "ORANGE" : "RED";
   const slug  = input.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
   return { nm, thz, wdm, oam, pol, band, psi: `Ψ(${wdm},${oam},${pol})`, uri: `wnsp://Ψ(${wdm},${oam},${pol})/${slug}`, input };
@@ -133,8 +129,7 @@ function SpectralVectorDisplay({ sv }: { sv: any }) {
 }
 
 function authFetch(url: string, opts: RequestInit = {}) {
-  const token = localStorage.getItem("auth_token");
-  return fetch(url, { ...opts, headers: { Authorization: `Bearer ${token}`, ...(opts.headers ?? {}) } });
+  return fetch(url, { ...opts, credentials: "include" });
 }
 
 // ── Bitcoin Genesis Inscription Proof Banner ──────────────────────────────────
@@ -516,7 +511,7 @@ function RegistryTable() {
   const [regHttp,  setRegHttp]          = useState("");
   const { toast } = useToast();
   const qc = useQueryClient();
-  const token = localStorage.getItem("auth_token");
+  const { isAuthenticated } = useAuth();
 
   const regEnc = ceEncode(regLabel || "preview");
 
@@ -567,7 +562,7 @@ function RegistryTable() {
             className="bg-slate-800 border-slate-600 text-slate-200 text-sm pl-8"
             data-testid="input-registry-filter" />
         </div>
-        {token && (
+        {isAuthenticated && (
           <Button size="sm" onClick={() => setRegisterOpen(v => !v)}
             className="bg-cyan-800 hover:bg-cyan-700 text-xs"
             data-testid="btn-open-register">
@@ -1291,17 +1286,17 @@ function DensityPanel() {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function WnspBridgePage() {
+  const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<"identity"|"resolver"|"hilbert"|"density"|"registry"|"spec">("identity");
-  const token = localStorage.getItem("auth_token");
 
   const { data: meData } = useQuery<{ user: { id: string; username: string } }>({
     queryKey: ["/api/auth/me"],
     queryFn: async () => {
-      const res = await fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch("/api/auth/me", { credentials: "include" });
       if (!res.ok) throw new Error("Not logged in");
       return res.json();
     },
-    enabled: !!token,
+    enabled: isAuthenticated,
   });
 
   const username = meData?.user.username;

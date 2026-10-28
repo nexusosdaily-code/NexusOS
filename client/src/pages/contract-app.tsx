@@ -1,6 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Link, useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getAuthHeaders } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { assertVmSource, assertBrowserInstructions, VM_MAX_CYCLES } from "@shared/vm-security";
 import {
   ArrowLeft, Cpu, Play, StepForward, RotateCcw, Zap, Radio,
   Activity, ExternalLink, Server, Clock, CheckCircle2, AlertCircle,
@@ -57,10 +61,11 @@ interface VMState {
 }
 
 function freshVM(): VMState {
-  return { pc: 0, registers: [], agents: [], output: [], tuned: 520, halted: false, cycleCount: 0, kvStore: {}, kvDirty: {} };
+  return { pc: 0, registers: [], agents: [], output: [], tuned: 520, halted: false, cycleCount: 0, kvStore: Object.create(null), kvDirty: Object.create(null) };
 }
 
 function compileWLS(src: string): Ins[] {
+  assertVmSource(src);
   if (!src.trim()) return [];
   const ins: Ins[] = []; let off = 0;
   function add(op: number, mnem: string, args: string, cmt: string, nm?: number, ch?: string, extra?: Partial<Ins>) {
@@ -110,10 +115,12 @@ function compileWLS(src: string): Ins[] {
     add(0x0B, "EXEC", `@${e.nm}nm`, line.slice(0, 60), e.nm);
   }
   add(0xFF, "HALT", "", "wavefunction terminated");
+  assertBrowserInstructions(ins);
   return ins;
 }
 
 function stepVM(state: VMState, ins: Ins[], channelLoad: number): VMState {
+  if (state.cycleCount >= VM_MAX_CYCLES) return { ...state, halted: true };
   if (state.halted || state.pc >= ins.length) return { ...state, halted: true };
   const i = ins[state.pc];
   const s: VMState = { ...state, pc: state.pc + 1, cycleCount: state.cycleCount + 1, registers: [...state.registers], agents: [...state.agents], output: [...state.output], kvDirty: { ...state.kvDirty } };
@@ -132,7 +139,7 @@ function stepVM(state: VMState, ins: Ins[], channelLoad: number): VMState {
     case 0xFF: s.halted = true; s.output.push({ text: `HALT  — terminated  (${s.cycleCount} cycles)`, type: "sys" }); break;
     // v1.1
     case 0x10: { const key = i.storeKey ?? i.args.split(" ")[0]; const val = i.storeVal ?? `@${s.tuned}nm`; s.kvDirty[key] = val; s.output.push({ text: `STORE  ${key} := "${val}"  → contract_state`, type: "store" }); break; }
-    case 0x11: { const key = i.args; const val = s.kvStore[key] ?? s.kvDirty[key] ?? null; s.output.push({ text: `LOAD  ${key} ← ${val !== null ? `"${JSON.stringify(val)}"` : "(not set)"}`, type: "store" }); break; }
+    case 0x11: { const key = i.args; const val = Object.prototype.hasOwnProperty.call(s.kvDirty, key) ? s.kvDirty[key] : Object.prototype.hasOwnProperty.call(s.kvStore, key) ? s.kvStore[key] : null; s.output.push({ text: `LOAD  ${key} ← ${val !== null ? `"${JSON.stringify(val)}"` : "(not set)"}`, type: "store" }); break; }
     case 0x12: s.output.push({ text: `XFER_NXT  ${i.xferAmount ?? "0"} NXT → ${i.ch ?? "?"} [browser sim]`, type: "xfer" }); break;
     case 0x13: s.output.push({ text: `XFER_SATS  ${i.xferAmount ?? "0"} sats → ${i.ch ?? "?"} [browser sim]`, type: "xfer" }); break;
     case 0x14: { const slug = i.args.replace(/"/g, ""); s.output.push({ text: `CALL  "${slug}" [use Execute on Chain]`, type: "call" }); break; }
@@ -164,6 +171,8 @@ interface ChainExecution {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function ContractAppPage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const { slug } = useParams<{ slug: string }>();
   const qc = useQueryClient();
 
@@ -180,9 +189,9 @@ export default function ContractAppPage() {
   useEffect(() => { channelLoadRef.current = channelLoad; }, [channelLoad]);
 
   const { data: contract, isLoading } = useQuery<any>({
-    queryKey: ["/api/app", slug],
+    queryKey: ["/api/app", slug, user?.id ?? "anonymous"],
     queryFn: async () => {
-      const r = await fetch(`/api/app/${slug}`);
+      const r = await fetch(`/api/app/${slug}`, { headers: getAuthHeaders(), credentials: "include" });
       if (!r.ok) throw new Error("Not found");
       return r.json();
     },
@@ -210,17 +219,23 @@ export default function ContractAppPage() {
 
   useEffect(() => {
     if (contract?.source_code) {
-      setCompiled(compileWLS(contract.source_code));
+      try {
+        setCompiled(compileWLS(contract.source_code));
+      } catch (error) {
+        setCompiled(null);
+        toast({ title: "Browser preview stopped", description: (error as Error).message, variant: "destructive" });
+      }
       setVmState(freshVM());
     }
-  }, [contract?.source_code]);
+  }, [contract?.source_code, toast]);
 
   const executeMutation = useMutation<ChainExecution, Error, number>({
     mutationFn: async (load: number) => {
       const r = await fetch(`/api/app/${slug}/run`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel_load: load }),
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({ channel_load: load, request_id: crypto.randomUUID() }),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({ error: r.statusText }));
@@ -280,7 +295,7 @@ export default function ContractAppPage() {
          style={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace" }}>
 
       {/* Header */}
-      <div className="border-b border-slate-800 px-4 py-3 flex items-center gap-3 bg-slate-900/80 shrink-0">
+      <div className="border-b border-slate-800 px-4 py-3 flex flex-wrap items-center gap-3 bg-slate-900/80 shrink-0">
         <Link href="/spectral-ide" className="text-slate-500 hover:text-slate-300"><ArrowLeft size={15} /></Link>
         <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
         <span className="text-slate-200 font-semibold">{contract.name}</span>
@@ -299,9 +314,9 @@ export default function ContractAppPage() {
         </Link>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col md:flex-row flex-1 min-w-0 overflow-hidden">
         {/* Source panel */}
-        <div className="w-72 border-r border-slate-800 flex flex-col overflow-hidden shrink-0">
+        <div className="w-full md:w-72 max-h-48 md:max-h-none border-b md:border-b-0 md:border-r border-slate-800 flex flex-col overflow-hidden shrink-0">
           <div className="px-3 py-2 text-xs font-semibold text-slate-500 border-b border-slate-800 flex items-center gap-2">
             <Cpu size={11} /> WavelengthScript Source
           </div>
@@ -317,7 +332,7 @@ export default function ContractAppPage() {
         <div className="flex-1 flex flex-col overflow-hidden">
 
           {/* Tab bar */}
-          <div className="flex border-b border-slate-800 bg-slate-900/40 shrink-0">
+          <div className="flex flex-wrap border-b border-slate-800 bg-slate-900/40 shrink-0">
             {([
               ["execute", "Execute on Chain", <Server size={11} />],
               ["debug",   "Debug (Browser VM)", <Cpu size={11} />],
@@ -345,13 +360,18 @@ export default function ContractAppPage() {
                     className="flex-1 accent-cyan-500" data-testid="slider-channel-load" />
                   <span className="text-xs text-cyan-400 font-mono w-10 text-right">{channelLoad}%</span>
                 </div>
-                <div className="flex items-center gap-2 pt-1">
-                  <button onClick={() => executeMutation.mutate(channelLoad)}
-                    disabled={executeMutation.isPending}
+                <p className="text-xs text-slate-400">
+                  Only the signed-in contract owner can run real actions. The Debug tab provides a public, local-only preview.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <button onClick={() => {
+                    if (window.confirm("Execute real actions? This may update contract state, send messages, or spend the contract's funded NXT.")) executeMutation.mutate(channelLoad);
+                  }}
+                    disabled={executeMutation.isPending || !contract?.can_execute}
                     data-testid="btn-execute-chain"
                     className="flex items-center gap-2 px-4 py-2 text-xs font-semibold bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 border border-cyan-600/40 rounded transition-colors disabled:opacity-40">
                     <Server size={12} />
-                    {executeMutation.isPending ? "Executing…" : "Execute on Chain"}
+                    {executeMutation.isPending ? "Executing…" : "Execute on Chain (owner only)"}
                   </button>
                   <span className="text-xs text-slate-700">Runs server-side · logs to blockchain · fires kernel events</span>
                 </div>

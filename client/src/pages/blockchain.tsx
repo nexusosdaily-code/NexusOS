@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";
+import { ProjectDirection } from "@/components/project-direction";
 import {
   Layers, Zap, Send, Clock, ChevronDown, ChevronRight,
   Link as LinkIcon, Globe2, Hash, Radio, ArrowRight, ExternalLink,
@@ -577,7 +578,8 @@ export default function BlockchainPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-100">Wavelength Blockchain</h1>
             <p className="text-slate-400 text-sm">
-              First photonic ledger — block identity is a Ψ channel, not a hash
+              Blockchain development led by WavelengthScript and WNSP software on conventional computers.
+              Ψ-channel identity is a project model; this is not a claim of photonic execution or a replacement for cryptography.
             </p>
           </div>
           <div className="ml-auto flex items-center gap-4 text-xs font-mono text-slate-500">
@@ -593,6 +595,8 @@ export default function BlockchainPage() {
             </div>
           </div>
         </div>
+
+        <ProjectDirection />
 
         <SpectrumBar />
 

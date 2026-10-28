@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Activity, Globe, Bot, AlertTriangle, Radio, RefreshCw, ShieldAlert, Skull } from "lucide-react";
+import { ArrowLeft, Activity, Globe, Bot, AlertTriangle, Radio, RefreshCw, ShieldAlert, Skull, ShieldX } from "lucide-react";
 
 type ThreatEntry = {
   path: string; country: string; userAgent: string;
   botName: string; hits: number; firstSeen: string; lastSeen: string;
+};
+
+type BlockedReferrerEntry = {
+  label: string; hits: number; lastSeen: string; uniqueIps: number;
 };
 
 type TrafficSummary = {
@@ -26,6 +30,8 @@ type TrafficSummary = {
     totalProbes: number; uniquePaths: number;
     countriesProbing: number; uniqueIps: number;
   };
+  blockedReferrers: BlockedReferrerEntry[];
+  blockedHits: number;
   window: string;
 };
 
@@ -69,7 +75,7 @@ function timeSince(iso: string) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-const TAB_LIST = ["pages", "bots", "countries", "threats", "seo", "live"] as const;
+const TAB_LIST = ["pages", "bots", "blocked", "countries", "threats", "seo", "live"] as const;
 type Tab = typeof TAB_LIST[number];
 
 export default function NexusAnalyticsPage() {
@@ -89,6 +95,10 @@ export default function NexusAnalyticsPage() {
   const botPct     = data ? Math.round((data.botHits / Math.max(data.totalHits, 1)) * 100) : 0;
   const updated    = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : "—";
   const probeCount = data?.threatSummary?.totalProbes ?? 0;
+  const blockedHits = data?.blockedHits ?? 0;
+
+  // topBots is already filtered server-side to exclude BLOCKED-REFERRER:* entries
+  const regularBots = data?.topBots ?? [];
 
   return (
     <div className="min-h-screen bg-[#040810] text-slate-200">
@@ -136,10 +146,10 @@ export default function NexusAnalyticsPage() {
           <>
             {/* Stat cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard icon={Activity}     label="Total Hits"    value={data.totalHits}     sub={`Last ${window}`}         color="cyan" />
-              <StatCard icon={Globe}        label="Human Visits"  value={data.humanHits}     sub={`${100 - botPct}% of traffic`} color="green" />
-              <StatCard icon={Bot}          label="Bot Hits"      value={data.botHits}       sub={`${botPct}% of traffic`}  color="amber" />
-              <StatCard icon={ShieldAlert}  label="Probe Alerts"  value={probeCount}          sub="Honeypot triggers"        color={probeCount > 0 ? "orange" : "green"} />
+              <StatCard icon={Activity}    label="Total Hits"    value={data.totalHits}    sub={`Last ${window}`}           color="cyan" />
+              <StatCard icon={Globe}       label="Human Visits"  value={data.humanHits}    sub={`${100 - botPct}% of traffic`} color="green" />
+              <StatCard icon={Bot}         label="Bot Hits"      value={data.botHits}      sub={`${botPct}% of traffic`}    color="amber" />
+              <StatCard icon={ShieldX}     label="Blocked Hits"  value={blockedHits}       sub="Referrer exclusions · 403"  color={blockedHits > 0 ? "red" : "green"} />
             </div>
 
             {/* Tabs */}
@@ -151,7 +161,11 @@ export default function NexusAnalyticsPage() {
                       ? "border-cyan-500 text-cyan-300"
                       : "border-transparent text-slate-500 hover:text-slate-300"
                   }`}>
-                  {t === "seo" ? "SEO Issues" : t === "live" ? "Live Feed" : t === "threats" ? "⚠ Threats" : t}
+                  {t === "seo"     ? "SEO Issues"
+                  : t === "live"   ? "Live Feed"
+                  : t === "threats"? "⚠ Threats"
+                  : t === "blocked"? "🛡 Blocked"
+                  : t}
                 </button>
               ))}
             </div>
@@ -176,22 +190,65 @@ export default function NexusAnalyticsPage() {
               </div>
             )}
 
-            {/* Bots tab */}
+            {/* Bots tab — regular automated traffic (excludes constitutional blocks) */}
             {tab === "bots" && (
               <div className="space-y-2">
                 <h2 className="sr-only">Top Bots</h2>
-                {data.topBots.length === 0 && <p className="text-slate-600 text-sm text-center py-8">No bots detected in this window.</p>}
-                {data.topBots.map((b, i) => (
+                {regularBots.length === 0 && <p className="text-slate-600 text-sm text-center py-8">No bots detected in this window.</p>}
+                {regularBots.map((b, i) => (
                   <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-lg border border-amber-500/10 bg-amber-500/5">
                     <Bot className="w-4 h-4 text-amber-400 flex-shrink-0" />
                     <span className="text-sm text-slate-200 flex-1">{b.name}</span>
                     <span className="text-sm font-bold text-amber-400">{b.hits} hits</span>
                   </div>
                 ))}
-                {data.topBots.length > 0 && (
+                {regularBots.length > 0 && (
                   <p className="text-[11px] text-slate-600 pt-2">
-                    All bots listed hit authenticated endpoints and received 401 responses. No data was exposed.
+                    Automated clients detected by User-Agent pattern or datacenter IP. Constitutional referrer exclusions are listed separately in the Blocked tab.
                   </p>
+                )}
+              </div>
+            )}
+
+            {/* Blocked Referrers tab — constitutionally excluded entities */}
+            {tab === "blocked" && (
+              <div className="space-y-4">
+                <h2 className="sr-only">Blocked Referrers</h2>
+                <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-xs text-red-300 leading-relaxed">
+                  These referrer origins are constitutionally excluded from the NexusOS ecosystem. Every request
+                  from these sources is refused with HTTP&nbsp;403 before reaching the application layer and
+                  logged here for audit purposes. No data is exposed.
+                </div>
+
+                {data.blockedReferrers.length === 0 ? (
+                  <div className="text-center py-16 space-y-2">
+                    <ShieldX className="w-8 h-8 text-green-500 mx-auto opacity-60" />
+                    <p className="text-slate-400 text-sm">No blocked referrer hits in this window.</p>
+                    <p className="text-slate-600 text-xs">Blocks are active. Any hit from an excluded domain will appear here.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-[1fr_4rem_4rem_5rem] gap-2 px-3 text-[10px] text-slate-600 uppercase tracking-widest font-mono">
+                      <span>Excluded Entity</span>
+                      <span className="text-right">Hits</span>
+                      <span className="text-right">IPs</span>
+                      <span className="text-right">Last Seen</span>
+                    </div>
+                    {data.blockedReferrers.map((b, i) => (
+                      <div key={i} className="grid grid-cols-[1fr_4rem_4rem_5rem] gap-2 px-3 py-3 rounded-lg border border-red-500/20 bg-red-500/5 items-center">
+                        <div className="min-w-0 flex items-center gap-2">
+                          <ShieldX className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                          <span className="font-mono text-xs text-red-300 truncate">{b.label}</span>
+                        </div>
+                        <span className="text-right text-xs font-bold text-red-400">{b.hits}</span>
+                        <span className="text-right text-xs text-slate-400 font-mono">{b.uniqueIps}</span>
+                        <span className="text-right text-[10px] text-slate-500">{timeSince(b.lastSeen)}</span>
+                      </div>
+                    ))}
+                    <p className="text-[11px] text-slate-600 pt-2">
+                      All entries returned HTTP 403. No application data was exposed. Logged for constitutional audit trail.
+                    </p>
+                  </div>
                 )}
               </div>
             )}
@@ -224,10 +281,10 @@ export default function NexusAnalyticsPage() {
                 <h2 className="sr-only">Threat Probes</h2>
                 {/* Threat summary cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <StatCard icon={Skull}        label="Total Probes"      value={data.threatSummary.totalProbes}       color="red" />
-                  <StatCard icon={ShieldAlert}   label="Paths Probed"     value={data.threatSummary.uniquePaths}       color="orange" />
-                  <StatCard icon={Globe}         label="Probing Countries" value={data.threatSummary.countriesProbing}  color="amber" />
-                  <StatCard icon={Activity}      label="Unique IPs"       value={data.threatSummary.uniqueIps}         color="purple" />
+                  <StatCard icon={Skull}        label="Total Probes"       value={data.threatSummary.totalProbes}       color="red" />
+                  <StatCard icon={ShieldAlert}   label="Paths Probed"      value={data.threatSummary.uniquePaths}       color="orange" />
+                  <StatCard icon={Globe}         label="Probing Countries"  value={data.threatSummary.countriesProbing}  color="amber" />
+                  <StatCard icon={Activity}      label="Unique IPs"         value={data.threatSummary.uniqueIps}         color="purple" />
                 </div>
 
                 {data.threats.length === 0 ? (
@@ -298,14 +355,24 @@ export default function NexusAnalyticsPage() {
                   <span>Time</span><span>Path</span><span>Code</span><span>Country</span><span>Source</span>
                 </div>
                 {data.recentHits.map((h, i) => {
-                  const isHoneypot = h.botName?.startsWith("HONEYPOT:");
+                  const isHoneypot   = h.botName?.startsWith("HONEYPOT:");
+                  const isBlocked    = h.botName?.startsWith("BLOCKED-REFERRER:");
+                  const sourceLabel  = isHoneypot
+                    ? "⚠ Probe"
+                    : isBlocked
+                      ? `🛡 ${h.botName?.replace("BLOCKED-REFERRER:", "") ?? "Blocked"}`
+                      : h.isBot
+                        ? (h.botName ?? "Bot")
+                        : "Human";
                   return (
                     <div key={i} className={`grid grid-cols-[4rem_1fr_3rem_4rem_5rem] gap-2 px-3 py-2 rounded-lg text-xs items-center ${
                       isHoneypot
                         ? "bg-red-500/8 border border-red-500/20"
-                        : h.isBot
-                          ? "bg-amber-500/5 border border-amber-500/10"
-                          : "bg-slate-900/20 border border-slate-800/40"
+                        : isBlocked
+                          ? "bg-red-500/5 border border-red-500/15"
+                          : h.isBot
+                            ? "bg-amber-500/5 border border-amber-500/10"
+                            : "bg-slate-900/20 border border-slate-800/40"
                     }`}>
                       <span className="font-mono text-slate-600 text-[10px]">
                         {new Date(h.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
@@ -313,8 +380,13 @@ export default function NexusAnalyticsPage() {
                       <span className="font-mono text-slate-300 truncate">{h.path}</span>
                       <StatusBadge code={h.statusCode ?? 0} />
                       <span className="text-slate-500 font-mono">{h.country || "—"}</span>
-                      <span className={`text-[10px] truncate ${isHoneypot ? "text-red-400" : h.isBot ? "text-amber-400" : "text-green-400"}`}>
-                        {isHoneypot ? "⚠ Probe" : h.isBot ? (h.botName ?? "Bot") : "Human"}
+                      <span className={`text-[10px] truncate ${
+                        isHoneypot ? "text-red-400"
+                        : isBlocked ? "text-red-400"
+                        : h.isBot ? "text-amber-400"
+                        : "text-green-400"
+                      }`}>
+                        {sourceLabel}
                       </span>
                     </div>
                   );

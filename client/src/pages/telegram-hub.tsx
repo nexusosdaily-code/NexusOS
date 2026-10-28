@@ -5,6 +5,7 @@ import {
   Code2, Waves, FlaskConical, TrendingUp, Wrench,
   ClipboardList, Building2, Eye, Telescope, ChevronRight, ArrowLeft,
 } from "lucide-react";
+import { telegramCommandCategory, trackEvent } from "@/lib/analytics";
 
 const BOT_USERNAME    = "Nexuswnspbot";
 const CHANNEL_USERNAME = "troglodytememe";
@@ -203,6 +204,7 @@ Quick starts:
 
   async function sendCommand(cmd: string) {
     if (!cmd.trim() || loading) return;
+    const commandCategory = telegramCommandCategory(cmd);
     setMessages(m => [...m, { from: "user", text: cmd.trim(), ts: Date.now() }]);
     setInput("");
     setLoading(true);
@@ -213,8 +215,10 @@ Quick starts:
         body: JSON.stringify({ text: cmd.trim() }),
       });
       const data = await res.json();
+      trackEvent("telegram_command", { surface: "telegram_hub", command_category: commandCategory, outcome: res.ok ? "success" : "failure" });
       setMessages(m => [...m, { from: "bot", text: data.reply ?? "No response.", ts: Date.now() }]);
     } catch {
+      trackEvent("telegram_command", { surface: "telegram_hub", command_category: commandCategory, outcome: "failure" });
       setMessages(m => [...m, { from: "bot", text: "⚠️ Connection error.", ts: Date.now() }]);
     } finally {
       setLoading(false);
@@ -246,12 +250,12 @@ Quick starts:
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <a href={`https://t.me/${CHANNEL_USERNAME}`} target="_blank" rel="noopener noreferrer"
+            <a onClick={() => trackEvent("telegram_cta", { surface: "telegram_hub", action: "join_channel" })} href={`https://t.me/${CHANNEL_USERNAME}`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-sky-400/30 text-sky-400 hover:border-sky-400/60 hover:bg-sky-400/5 transition-all"
               data-testid="link-join-channel">
               <Users size={14} /> Channel <ExternalLink size={12} className="opacity-50" />
             </a>
-            <a href={`https://t.me/${BOT_USERNAME}`} target="_blank" rel="noopener noreferrer"
+            <a onClick={() => trackEvent("telegram_cta", { surface: "telegram_hub", action: "start_bot" })} href={`https://t.me/${BOT_USERNAME}`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-violet-400/30 text-violet-400 hover:border-violet-400/60 hover:bg-violet-400/5 transition-all"
               data-testid="link-start-bot">
               <Bot size={14} /> @{BOT_USERNAME} <ExternalLink size={12} className="opacity-50" />

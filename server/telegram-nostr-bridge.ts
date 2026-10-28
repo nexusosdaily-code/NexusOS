@@ -8,6 +8,7 @@
  */
 
 import * as nostrService from "./nostr-service";
+import { promotionsArePaused } from "../shared/hardware-readiness";
 
 const TAG = "[TgNostrBridge]";
 const POLL_MS = 60_000; // 1 minute
@@ -179,12 +180,14 @@ async function syncNostrToTg() {
 
 // ── Tick ──────────────────────────────────────────────────────────────────────
 async function tick() {
+  if (promotionsArePaused()) return;
   if (!_state.running) return;
   await Promise.allSettled([syncTgToNostr(), syncNostrToTg()]);
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 export function startTgNostrBridge() {
+  if (promotionsArePaused()) return;
   if (_state.running) return;
 
   const hasTg    = !!process.env.TELEGRAM_BOT_TOKEN;

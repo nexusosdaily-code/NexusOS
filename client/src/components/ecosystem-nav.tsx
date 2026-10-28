@@ -4,6 +4,9 @@ import { Radio, Hammer } from "lucide-react";
 export function EcosystemNav() {
   return (
     <div className="grid grid-cols-2 gap-3 text-xs">
+      <Link href="/research-transparency" className="col-span-2 rounded-lg border border-slate-700 px-4 py-3 text-center text-slate-300 hover:text-white">
+        Research transparency — progress, evidence and limitations
+      </Link>
       <Link
         href="/build"
         data-testid="link-back-to-build"

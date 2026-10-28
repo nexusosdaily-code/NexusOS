@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -199,15 +200,13 @@ function WriteTab({ onStored, records }: { onStored: () => void; records: any[] 
   const fileMutation = useMutation({
     mutationFn: async () => {
       if (!uploadFile) throw new Error("No file selected");
-      const token = localStorage.getItem("auth_token");
-      if (!token) throw new Error("Login required to upload files");
       const form = new FormData();
       form.append("file", uploadFile);
       form.append("label", fileLabel || uploadFile.name);
       if (fileDesc) form.append("description", fileDesc);
       const res = await fetch("/api/spectral-db/store-file", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
         body: form,
       });
       if (res.status === 401) throw new Error("Login required to upload files");
@@ -550,7 +549,7 @@ function RetrieveTab({ records, onDelete, onSendToBus, onExport }: {
 // ── TAB: MEDIA — video upload + library ───────────────────────────────────────
 function MediaTab() {
   const qc = useQueryClient();
-  const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem("auth_token"));
+  const { isAuthenticated: isLoggedIn } = useAuth();
   const [showUpload, setShowUpload]  = useState(false);
   const [uploadFile, setUploadFile]  = useState<File | null>(null);
   const [uploadForm, setUploadForm]  = useState({ title: "", description: "" });
@@ -558,13 +557,6 @@ function MediaTab() {
   const [playingId, setPlayingId]    = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  useEffect(() => {
-    const check = () => setIsLoggedIn(!!localStorage.getItem("auth_token"));
-    check();
-    window.addEventListener("storage", check);
-    window.addEventListener("focus", check);
-    return () => { window.removeEventListener("storage", check); window.removeEventListener("focus", check); };
-  }, []);
 
   const { data: videosData, isLoading } = useQuery<any>({
     queryKey: ["/api/spectral-workspace/videos"],
@@ -575,15 +567,14 @@ function MediaTab() {
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!uploadFile) throw new Error("No file selected");
-      const token = localStorage.getItem("auth_token");
-      if (!token) throw new Error("LOGIN_REQUIRED");
+      if (!isLoggedIn) throw new Error("LOGIN_REQUIRED");
       const form = new FormData();
       form.append("file", uploadFile);
       form.append("title", uploadForm.title || uploadFile.name);
       if (uploadForm.description) form.append("description", uploadForm.description);
       const res = await fetch("/api/spectral-workspace/video", {
         method: "POST",
-        headers: { "Authorization": `Bearer ${token}` },
+        credentials: "include",
         body: form,
       });
       if (res.status === 401) throw new Error("LOGIN_REQUIRED");

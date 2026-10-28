@@ -440,12 +440,17 @@ def get_capacity():
 def encode_message():
     """Legacy encode endpoint — routes through the full WNSP stack."""
     data = request.get_json()
-    if not data or 'content' not in data:
-        return jsonify({"error": "Missing 'content' field"}), 400
+    if not isinstance(data, dict):
+        return jsonify({"error": "Expected a JSON object"}), 400
+    if 'text' in data and 'content' in data and data['text'] != data['content']:
+        return jsonify({"error": "Conflicting text and content fields"}), 400
+    content = data.get('text', data.get('content'))
+    if not isinstance(content, str) or not 1 <= len(content) <= 10000:
+        return jsonify({"error": "text or content must be a string of 1–10000 characters"}), 400
 
     try:
         result = encode_lambda_message(
-            content=data.get('content', ''),
+            content=content,
             sender=data.get('sender', ''),
             recipient=data.get('recipient', ''),
             intensity=data.get('intensity', 32),
@@ -2135,4 +2140,4 @@ def quanta_oscillate():
 
 if __name__ == '__main__':
     print("Starting Spectral API server on port 5001...")
-    app.run(host='0.0.0.0', port=5001, debug=False, threaded=True)
+    app.run(host='127.0.0.1', port=5001, debug=False, threaded=True)

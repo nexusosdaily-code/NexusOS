@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import PrivateTrustWorkspace from "@/components/private-trust-workspace";
 import {
   ArrowLeft, Heart, Shield, Globe, Zap, Scale, Lock,
   Users, TrendingUp, FileText, ExternalLink, CheckCircle2
@@ -268,6 +269,9 @@ export default function FoundersCharityPage() {
             <Pill text="No private ledger" color="#a78bfa" />
           </div>
         </div>
+
+        {/* Private family/charitable record workspace — distinct from the public mission above. */}
+        <PrivateTrustWorkspace />
 
         {/* ── Links ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">

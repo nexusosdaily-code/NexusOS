@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -10,8 +11,7 @@ import {
 } from "lucide-react";
 
 function authFetch(url: string) {
-  const token = localStorage.getItem("auth_token");
-  return fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  return fetch(url, { credentials: "include" });
 }
 
 const BAND_COLOR: Record<string, { color: string; bg: string }> = {
@@ -56,7 +56,7 @@ interface PhonebookData {
 export default function PhonebookPage() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
-  const token = localStorage.getItem("auth_token");
+  const { isAuthenticated } = useAuth();
 
   const { data, isLoading, error } = useQuery<PhonebookData>({
     queryKey: ["/api/phonebook"],
@@ -65,7 +65,7 @@ export default function PhonebookPage() {
       if (!res.ok) throw new Error("Failed to load phonebook");
       return res.json();
     },
-    enabled: !!token,
+    enabled: isAuthenticated,
     refetchInterval: 30_000,
   });
 
@@ -75,7 +75,7 @@ export default function PhonebookPage() {
     });
   };
 
-  if (!token) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center space-y-3">

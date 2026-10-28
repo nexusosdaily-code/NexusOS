@@ -1,8 +1,10 @@
+import { HardwareReadinessPanel } from "@/components/hardware-readiness";
 import { Link } from "wouter";
+import { HARDWARE_STATUS, MAPPING_PROFILES } from "@shared/wnsp-model";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import {
   ArrowLeft, Shield, Cpu, Zap, Radio, Code2, Lock,
-  GitBranch, Network, Layers, ExternalLink, Atom
+  GitBranch, Network, Layers, ExternalLink, Atom, CheckCircle2, FlaskConical
 } from "lucide-react";
 
 const SPEC_DATE = "2026-05-16";
@@ -11,12 +13,12 @@ const REPO = "https://github.com/nexusosdaily-code/NexusOS";
 // Band definitions — exactly as in lambda-state.ts
 const BANDS = [
   { name: "SYSTEM",  minNm: 380, maxNm: 450, color: "#8b00ff", wdm: "0–22"   },
-  { name: "AUTH",    minNm: 450, maxNm: 490, color: "#0050ff", wdm: "22–35"  },
-  { name: "STREAM",  minNm: 490, maxNm: 520, color: "#00cfcf", wdm: "35–45"  },
+  { name: "AUTH",    minNm: 450, maxNm: 490, color: "#0050ff", wdm: "23–35"  },
+  { name: "STREAM",  minNm: 490, maxNm: 520, color: "#00cfcf", wdm: "36–44"  },
   { name: "CORE",    minNm: 520, maxNm: 565, color: "#16a34a", wdm: "45–59"  },
-  { name: "UI",      minNm: 565, maxNm: 590, color: "#cccc00", wdm: "59–67"  },
-  { name: "EVENT",   minNm: 590, maxNm: 625, color: "#ff8c00", wdm: "67–78"  },
-  { name: "STORAGE", minNm: 625, maxNm: 780, color: "#cc0000", wdm: "78–127" },
+  { name: "UI",      minNm: 565, maxNm: 590, color: "#cccc00", wdm: "60–67"  },
+  { name: "EVENT",   minNm: 590, maxNm: 625, color: "#ff8c00", wdm: "68–78"  },
+  { name: "STORAGE", minNm: 625, maxNm: 780, color: "#cc0000", wdm: "79–127" },
 ];
 
 function Section({ id, title, icon: Icon, accent, badge, children }: {
@@ -78,13 +80,13 @@ function PriorArt({ text }: { text: string }) {
 
 export default function HardwareSpecPage() {
   usePageMeta({
-    title: "NexusOS Hardware Specification — SNIC, PHR-1, Spectral Relay Mesh (AGPL-3.0)",
-    description: "Formal specification of the Spectral Network Interface Card (SNIC), PHR-1 bifilar resonator, Spectral Relay Mesh v1, and WavelengthScript Compiler α. First public disclosure 2026-05-16. AGPL-3.0 protected.",
+    title: "NexusOS Hardware — Engineering Hold and Grounded Requirements",
+    description: "Hardware fundraising paused. Draft conventional-host system architecture, missing engineering evidence, independent review requirements and archived photonic concepts. Not approved procurement specifications.",
     canonical: "https://wnsp.io/hardware-spec",
-    ogTitle: "NexusOS Hardware Specification — AGPL-3.0",
-    ogDescription: "SNIC, PHR-1, Spectral Relay Mesh v1, WavelengthScript Compiler α. First public disclosure 2026-05-16. AGPL-3.0. Open forever — improvements must be contributed back.",
-    twitterTitle: "NexusOS Hardware Specification",
-    twitterDescription: "SNIC photonic NIC, PHR-1 resonator, Spectral Relay Mesh. First disclosed 2026-05-16. AGPL-3.0.",
+    ogTitle: "NexusOS Hardware — Engineering Review Required",
+    ogDescription: "Engineering review required. Grounded system boundary, evidence gaps and release gates; native photonic operation has not been demonstrated.",
+    twitterTitle: "NexusOS Hardware — Fundraising Paused",
+    twitterDescription: "Hardware campaign paused pending independently reviewed requirements, test evidence and explicit founder approval.",
   });
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -93,6 +95,17 @@ export default function HardwareSpecPage() {
         style={{ background: "linear-gradient(to right,#8b00ff,#0050ff,#00cfcf,#16a34a,#cccc00,#ff8c00,#cc0000)" }} />
 
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-10">
+        <HardwareReadinessPanel />
+        <details className="space-y-6 rounded-xl border border-amber-800/50 p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-amber-200">
+            Archived design concepts — not validated specifications or approved purchase instructions
+          </summary>
+          <p className="mt-4 text-sm text-amber-200">
+            Historical proposals follow for traceability. Their numerical targets, examples, diagrams and dates
+            are not evidence of feasibility, a qualified bill of materials or a working integrated device.
+            The engineering requirements and hold above take precedence for current planning.
+          </p>
+          <div className="space-y-10">
 
         {/* ── Header ── */}
         <div className="space-y-4">
@@ -119,44 +132,63 @@ export default function HardwareSpecPage() {
               <a href={REPO} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 underline">{REPO}</a>
             </p>
             <p className="text-slate-600 leading-relaxed">
-              Any hardware, firmware, HDL, photonic mask layout, driver, or software that implements,
-              adapts, or interfaces with the components described herein must be released in full source
-              form under AGPL-3.0 and must attribute NexusOS as the originating specification. The
-              copyleft obligation extends to network-accessible services per the AGPL-3.0 network use clause.
+              The project describes its code as AGPL-3.0. Applicable licence terms and third-party
+              rights require their own assessment; this specification does not establish exclusive
+              rights over physical laws, every independent implementation or all interfacing hardware.
+              Historical disclosures are preserved and are not independent validation.
             </p>
           </div>
         </div>
 
         {/* ── Overview ── */}
+        <aside className="rounded-xl border border-amber-700/50 bg-amber-950/20 p-5 space-y-3 text-sm text-slate-300" aria-label="Hardware implementation and evidence status">
+          <h2 className="font-semibold text-amber-300">Current implementation and evidence status</h2>
+          <p>{HARDWARE_STATUS}</p>
+          <p>Our nominal namespace has 51,200 combinations, not 51,200 measured optical channels. Compiler α is software. The ~2030/~2032 dates are planning targets.</p>
+          <p>Mapping profiles must not be substituted for one another:</p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>{MAPPING_PROFILES.account}: 256 endpoint-inclusive account wavelengths; 400/255 nm spacing. Existing account addresses are preserved.</li>
+            <li>{MAPPING_PROFILES.name}: legacy printable-ASCII name fingerprint; 4 nm address bins and 50 OAM indices. This is not reversible Unicode transport.</li>
+            <li>{MAPPING_PROFILES.ledger}: 128 character wavelengths at 3.125 nm spacing; 380.000–776.875 nm.</li>
+            <li>{MAPPING_PROFILES.opticalBins}: proposed 256 uniform bins at 1.5625 nm spacing, not a manufactured or deployed optical grid.</li>
+          </ul>
+          <p>Four account permission tiers, seven CE spectral labels and legacy VM aliases are different software classifications; they are not interchangeable authority grants.</p>
+        </aside>
         <div className="text-sm text-slate-400 leading-relaxed border-l-2 border-slate-700 pl-4">
           Four interlocking components form the complete NexusOS photonic computing stack — from photon to program.
           Each component has a live software implementation in the codebase today (Phase 1), and a direct photonic
-          hardware mapping for post-2032 ASIC deployment (Phase 2). The software and hardware speak the same language:
+          proposed hardware mapping for a photonic integration target around 2032 (Phase 2). Software coordinates describe the intended interface, not demonstrated hardware execution:
           Ψ(wdm, oam, pol) coordinates.
         </div>
 
         {/* Full stack diagram */}
-        <CodeBlock>{`DEVELOPER writes WavelengthScript source
-        ↓  WavelengthScript Compiler α  [lambda-state.ts :: compileTransaction()]
-Ψ(wdm, oam, pol) instruction stream
-        ↓  Spectral Relay Mesh v1       [p2p-sync-engine.ts :: P2PSyncEngine]
-Packet routed to destination node
-        ↓  PHR-1 bifilar coil           [lambda-state.ts :: verifyHardwareAnchor()]
-Thermal stabilisation + OAM imprint + polarisation
-        ↓  SNIC micro-ring resonator    [lambda-state.ts :: CE_TABLE + wdm()]
-Photon coupled at exact λ — delivered to destination Ψ`}</CodeBlock>
+        <CodeBlock>{`CURRENT SOFTWARE EXECUTION
+WavelengthScript source
+  → compileWLS() → runToHalt()  [server/wnsp_vm.ts]
+  → defined VM instructions, registers, state and authorised effects
+
+SEPARATE SOFTWARE LEDGER MODEL
+Text → compileTransaction() → commitBlock()  [lambda-state.ts]
+verifyHardwareAnchor() compares a reading with a wavelength tolerance;
+it does not drive a coil or certify a photonic device.
+
+PROPOSED OPTICAL HARDWARE PATH — NOT DEMONSTRATED
+Spectral operands → validated device-control/transduction interface
+  → PHR-1 tuning + optical mode preparation → SNIC → optical relay
+Each physical interface and its end-to-end performance require testing.`}</CodeBlock>
 
         {/* ── SNIC ── */}
         <Section id="snic" title="1. SNIC — Spectral Node Integration Circuit" icon={Cpu} accent="#22d3ee" badge="micro-ring resonator">
           <Field label="Classification">Photonic integrated circuit — micro-ring resonator array</Field>
           <Field label="Physical basis">
             A closed-loop optical waveguide (5–50 μm diameter) on a silicon photonic chip. When the ring
-            circumference equals an integer multiple of the target wavelength, resonance extracts that
-            wavelength. All other λ pass through undisturbed — no logic, no power, no clock.
+            optical path is approximately an integer multiple of the vacuum wavelength, resonance selects that
+            wavelength. Refractive index, dispersion and coupling must be included. Passive selection does not
+            imply loss-free operation or a power-free complete system.
           </Field>
           <Field label="Function">
-            Physical implementation of the CE lookup table. Wavelength-selective demultiplexing at the
-            speed of light with no CPU, no clock cycle, and no binary logic.
+            Proposed physical implementation of the CE lookup table. Wavelength-selective demultiplexing
+            still requires measured insertion loss, linewidth, crosstalk and electrical control power.
           </Field>
 
           <div className="space-y-2">
@@ -218,8 +250,8 @@ const nm = CE_TABLE[char.charCodeAt(0) % 128];  // canonical CE formula`}</CodeB
           <Field label="Classification">Electromagnetic controller — bifilar coil driver with integrated phase controller</Field>
           <Field label="Physical basis">
             Two parallel conductors carrying equal-magnitude, opposite-polarity currents. Magnetic fields
-            cancel at distance (zero EMI). The controlled near-field electric envelope provides precision
-            coupling to an adjacent SNIC ring. Phase-offset drive generates helical OAM field modes (0–49).
+            can reduce distant magnetic fields under a balanced drive. Zero EMI is not guaranteed.
+            The proposed SNIC coupling and OAM generation require a specified optical transducer and measurements.
           </Field>
 
           <div className="bg-slate-900/60 border border-slate-800 rounded-lg p-4 space-y-4 text-xs">
@@ -228,8 +260,8 @@ const nm = CE_TABLE[char.charCodeAt(0) % 128];  // canonical CE formula`}</CodeB
             <div className="space-y-1">
               <p className="text-slate-300 font-semibold">① WDM wavelength stabilisation → <span className="text-cyan-400">wdm</span></p>
               <p className="text-slate-500 leading-relaxed">
-                ΔT = 1°C → Δλ ≈ 0.1 nm — enough to miss a 3.125 nm CE band entirely.
-                PHR-1 applies precision DC to a microheater, holding resonance within ±0.5 nm of target.
+                The page's Δλ ≈ 0.1 nm/°C is a design reference, not a NexusOS measurement; 0.1 nm is smaller than 3.125 nm.
+                PHR-1 proposes DC microheater tuning with a ±0.5 nm resonance target, which requires validation.
                 The software analogue is <code className="text-emerald-400">verifyHardwareAnchor()</code>, which enforces ±2.000 nm chain tolerance.
               </p>
             </div>
@@ -247,7 +279,7 @@ function oam(text: string): number {
 
             <div className="space-y-1">
               <p className="text-slate-300 font-semibold">③ Polarisation control → <span className="text-emerald-400">pol</span></p>
-              <p className="text-slate-500">Current polarity (+) → H (horizontal) · Current polarity (−) → V (vertical)</p>
+              <p className="text-slate-500">Proposed control labels: (+) → H, (−) → V. Current polarity alone does not establish optical polarisation; a suitable device and optical measurements are required.</p>
               <p className="text-slate-600 text-[10px]">Current implementation defaults to pol=H. V-polarisation reserved for Phase 2 hardware.</p>
             </div>
           </div>
@@ -289,9 +321,9 @@ public verifyHardwareAnchor(blockIndex: number, readingNm: number): boolean {
             the full Ψ address, SNIC launches the photon.
           </Field>
           <Field label="Channel capacity">
-            <span className="font-mono text-emerald-400">256 WDM × 50 OAM × 2 POL × 2 DIR = 51,200 orthogonal channels</span>
-            <br /><span className="text-slate-500">⟨Ψᵢ|Ψⱼ⟩ = 0 — quantum mechanical guarantee, not software policy.</span>
-            <br /><span className="text-slate-500 text-xs">DIR: +k̂ forward / −k̂ backward propagating modes. Maxwell time-reversal symmetry guarantees orthogonality. Phase conjugation is the physical reversal mechanism.</span>
+            <span className="font-mono text-emerald-400">256 WDM × 50 OAM × 2 POL × 2 DIR = 51,200 nominal labels; physical mode independence requires measurement</span>
+            <br /><span className="text-slate-500">This counts configured labels. Orthogonal-mode assumptions require measured isolation and crosstalk.</span>
+            <br /><span className="text-slate-500 text-xs">DIR labels forward/backward modes. Time-reversal symmetry alone does not certify independence of real device channels.</span>
           </Field>
 
           <div className="space-y-2">
@@ -332,15 +364,15 @@ if (curr.previousWavelengthHash !== expectedHash) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[
                 {
-                  phase: "Phase 1 — 2026 (live now)",
+                  phase: "Phase 1 — software models and network integration",
                   color: "#22d3ee",
-                  desc: "P2PSyncEngine over TCP/IP via WNSP Bridge. LoRaWAN 868/915 MHz CSS for low-power inter-node heartbeat and governance. Genesis anchor enforced in software.",
+                  desc: "Peer synchronisation is modelled in software. TCP/IP integration and proposed LoRaWAN 868/915 MHz heartbeat require separate deployment evidence. Genesis anchor checks are software rules.",
                   impl: "p2p-sync-engine.ts"
                 },
                 {
                   phase: "Phase 2 — ~2032",
                   color: "#4ade80",
-                  desc: "All-optical fabric. TCP/IP removed. SNIC arrays terminate fibre directly. PHR-1 enforces genesis anchor in hardware. Existing fibre unchanged.",
+                  desc: "Proposed all-optical fabric and SNIC/PHR-1 integration. Optical interfaces, link budgets and control functions must be validated before claiming deployed operation.",
                   impl: "SNIC + PHR-1 arrays"
                 },
               ].map(p => (
@@ -361,15 +393,15 @@ if (curr.previousWavelengthHash !== expectedHash) {
             <ImplRef label="Developer Docs" href="/docs" file="docs.tsx" />
           </div>
           <PriorArt text={`Spectral Relay Mesh v1 — WNSP-addressed photonic relay across TCP/IP overlay and all-optical phases — first specified ${SPEC_DATE}`} />
-          <PriorArt text={`Bidirectional channel dimension N_Dir=2 — forward (+k̂) and backward (−k̂) propagating modes as orthogonal Hilbert sub-space; phase conjugation reversal; 25,600 → 51,200 channel expansion — first specified 2026-07-02`} />
+          <PriorArt text={`Bidirectional channel dimension N_Dir=2 — forward (+k̂) and backward (−k̂) propagating modes as orthogonal Hilbert sub-space; phase conjugation reversal; 51,200 → 51,200 channel expansion — first specified 2026-07-02`} />
         </Section>
 
         {/* ── Compiler α ── */}
         <Section id="compiler" title="4. WavelengthScript Compiler α" icon={Code2} accent="#fb923c" badge="spectral instruction set">
           <Field label="Classification">Software — spectral instruction set compiler (alpha prototype)</Field>
           <Field label="Key property">
-            Output opcodes are Ψ channel coordinates, not binary machine codes. No lower level of
-            representation exists. On photonic hardware each opcode is a direct PHR-1 instruction.
+            The working software VM uses numeric bytecode opcodes and spectral operands.
+            Photonic mappings are proposed interfaces, not proof that the software executes on a fabricated chip.
           </Field>
 
           <div className="space-y-2">
@@ -468,20 +500,21 @@ public auditChain(): { valid: boolean; faults: number[] } {
         </Section>
 
         {/* ── SiN Substrate ── */}
-        <Section id="sin-substrate" title="5. Silicon Nitride (SiN) Substrate — Photonic Fabrication Basis" icon={Atom} accent="#38bdf8" badge="LPCVD · validated 2026-07-17">
+        <Section id="sin-substrate" title="5. Silicon Nitride (SiN) Substrate — Proposed Fabrication Basis" icon={Atom} accent="#38bdf8" badge="Process characterisation required">
           <Field label="Classification">Photonic integrated circuit substrate — low-pressure CVD silicon nitride waveguide platform</Field>
           <Field label="Why SiN">
             Standard silicon-on-insulator (SOI) absorbs below ~1100 nm, cutting off the entire NexusOS
             visible band (380–780 nm). Silicon nitride provides a transparency window from ~500 nm to
-            2500 nm — our CE table's full 380–780 nm range sits within it. Every authority band,
-            every WDM channel, every ghost node resonance can propagate without material absorption loss.
+            2500 nm in the cited reference range. That does not cover 380–500 nm.
+            Foundry-specific characterisation must establish the intended visible-band coverage and loss;
+            no material choice guarantees zero attenuation.
           </Field>
           <Field label="Fabrication">
             <span className="font-semibold text-sky-300">LPCVD (Low-Pressure CVD)</span> over PECVD.
-            LPCVD eliminates residual N–H bonds that create an absorption peak at ~1520 nm in PECVD films.
+            LPCVD is proposed to reduce absorption associated with residual bonds; the actual process must be characterised.
             It also enables thick-film deposition (up to ~800 nm vs ~300 nm) giving the waveguide cross-section
-            needed for OAM mode confinement across l = 0–49. Propagation loss: ~0.1 dB/cm — roughly
-            10× lower than silicon, with ~100× better power handling.
+            proposed for waveguide geometry. Neither thickness nor Kerr nonlinearity alone guarantees 50 OAM modes.
+            The cited ~0.1 dB/cm loss is a reference/design figure, not a measured NexusOS chip result.
           </Field>
 
           {/* Transparency + channel table */}
@@ -495,8 +528,8 @@ public auditChain(): { valid: boolean; faults: number[] } {
               </div>
               {[
                 { platform: "Silicon (SOI)",         lo: "~1100 nm",   hi: "~3500 nm",  note: "Misses entire CE visible band", color: "#ef4444" },
-                { platform: "Silicon Nitride (SiN)", lo: "~500 nm",    hi: "~2500 nm",  note: "Covers full CE table 380–780 nm", color: "#4ade80" },
-                { platform: "WNSP CE band",          lo: "380.0 nm",   hi: "780.0 nm",  note: "256 WDM × 3.125 nm bands", color: "#38bdf8" },
+                { platform: "Silicon Nitride (SiN)", lo: "~500 nm",    hi: "~2500 nm",  note: "380–500 nm requires process-specific verification", color: "#4ade80" },
+                { platform: "WNSP CE table",         lo: "380.0 nm",   hi: "776.875 nm",note: "128 entries × 3.125 nm; separate from 256-index namespace", color: "#38bdf8" },
               ].map(r => (
                 <div key={r.platform} className="grid grid-cols-3 px-3 py-1.5 border-t border-slate-800/60 items-center">
                   <span className="font-mono" style={{ color: r.color }}>{r.platform}</span>
@@ -519,17 +552,17 @@ public auditChain(): { valid: boolean; faults: number[] } {
                 {
                   dim: "WDM (256 channels)",
                   color: "#38bdf8",
-                  sin: "Micro-ring resonators tuned at 3.125 nm spacing. Ultra-compact inverse-design WDM mux encodes Ψ(wdm,*,*) directly into the PIC mask.",
+                    sin: "Proposed resonators and WDM mux require a versioned channel plan. The CE table's 128 entries at 3.125 nm spacing are not a 256-channel optical grid.",
                 },
                 {
                   dim: "OAM (l = 0–49)",
                   color: "#a78bfa",
-                  sin: "Kerr nonlinearity enables on-chip OAM mode generation. Null-core radius r_null = lλ/2π (Act 9) is physically enforced by the waveguide cross-section geometry at each l index.",
+                    sin: "Proposed OAM generation needs a specified field geometry and mode measurements; there is no universal vortex-core radius lλ/2π.",
                 },
                 {
                   dim: "Ghost Nodes (WDM = 0)",
                   color: "#4ade80",
-                  sin: "Kerr nonlinearity at the ZPE floor supports integer octave resonance (ρ_matter = 0, α = 0). The material provides the non-linear optical mechanism that keeps Beer-Lambert loss at zero for ghost channels.",
+                    sin: "Ghost-node labels are project research/software conventions. No Kerr or vacuum argument establishes zero propagation loss in the proposed devices.",
                 },
                 {
                   dim: "Polarisation (H/V)",
@@ -554,9 +587,8 @@ public auditChain(): { valid: boolean; faults: number[] } {
           <div className="bg-slate-900/40 border border-sky-900/40 rounded-lg px-4 py-3 text-[11px] text-slate-400 leading-relaxed">
             <span className="text-sky-300 font-semibold">Hybrid SiN + thin-film LiNbO₃:</span>{" "}
             Emerging platforms combine the SiN waveguide with a thin lithium niobate layer to generate
-            coherent laser frequency combs — hundreds of lines from a single chip. This directly provides
-            the addressing density our 256 WDM channels require without separate laser banks, and is the
-            intended fabrication path for SNIC v2 (~2030).
+            coherent laser frequency combs. Line count, spacing, linewidth, power and spectral coverage
+            must match a validated channel plan. This is a proposed SNIC v2 path around 2030, not a completed chip.
           </div>
 
           {/* PHR-1 interface */}
@@ -566,16 +598,16 @@ public auditChain(): { valid: boolean; faults: number[] } {
             </p>
             <CodeBlock>{`PHR-1 bifilar coil
   ↓  near-field EM envelope  (low-frequency domain)
-RF-to-photonic transduction boundary
-  ↓  evanescent coupling into SiN waveguide  (photonic domain)
+RF-to-photonic transduction boundary (mechanism must be specified and tested)
+  ↓  proposed optical interface into SiN waveguide
 SNIC micro-ring resonator
   — selects λ from input broadband / comb source
-  — OAM null-core geometry enforced by waveguide cross-section
-  — Ghost node channels: Kerr ZPE floor, α = 0
-  — Output: Ψ(wdm, oam, pol) photon launched into Relay Mesh`}</CodeBlock>
+  — optical mode geometry requires measurement
+  — ghost-node labels do not establish zero loss
+  — proposed output: optical carrier with measured channel parameters`}</CodeBlock>
           </div>
 
-          <PriorArt text={`Silicon nitride LPCVD substrate as SNIC/PHR-1 fabrication basis — independently validated by Google AI 2026-07-17. Channel count: 51,200 orthogonal Ψ channels (256×50×2×2). Note: external sources may cite 51,600 — the correct WNSP spec value is 51,200.`} />
+          <PriorArt text={`Silicon nitride LPCVD is a proposed fabrication basis. AI agreement is not independent experimental validation. The namespace counts 51,200 combinations (256×50×2×2); measured optical capacity is not established.`} />
         </Section>
 
         {/* ── Dependency matrix ── */}
@@ -587,13 +619,122 @@ PHR-1                    Compiler α (Ψ target)   SNIC (thermal + OAM + pol)
 Spectral Relay Mesh      SNIC + PHR-1            Compiler α (addressable network)
 WavelengthScript α       Relay Mesh              PHR-1 (Ψ instruction targets)
 
-Phase 1 software map:
+Software analogues (not photonic device drivers):
 ──────────────────────────────────────────────────────────────────────
 SNIC           → CE_TABLE + wdm()             lambda-state.ts
 PHR-1          → verifyHardwareAnchor()       lambda-state.ts
 Relay Mesh     → P2PSyncEngine                p2p-sync-engine.ts
-Compiler α     → compileTransaction()         lambda-state.ts
+Compiler / VM  → compileWLS() + runToHalt()    server/wnsp_vm.ts
 Genesis anchor → blockWavelengthAnchor=380nm  lambda-state.ts`}</CodeBlock>
+        </Section>
+
+        {/* ── First Physical Prototype ── */}
+        <Section id="proto001" title="First Physical Prototype — PROTO-001" icon={FlaskConical} accent="#a3e635" badge="2026-07-27">
+
+          {/* Milestone banner */}
+          <div className="bg-emerald-950/40 border border-emerald-700/50 rounded-xl px-5 py-4 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <p className="text-emerald-300 font-bold text-xs">
+                First physical NexusOS hardware build — manufactured and tested 2026-07-27
+              </p>
+            </div>
+            <p className="text-slate-400 text-[11px] leading-relaxed pl-6">
+              Three PHR-1 bifilar toroid prototypes manufactured by Coiltek (Salisbury South SA, Australia),
+              100% electrically tested against the WNSP hardware specification. This is the first
+              external manufacturing engagement in NexusOS history — the point where the physics stack
+              crossed from software into the physical world.
+            </p>
+          </div>
+
+          {/* Part record */}
+          <div className="space-y-2.5">
+            <Field label="Part number">NEX-0589-PROTO-001</Field>
+            <Field label="Component">PHR-1 Bifilar Toroid — T200-2 iron powder core, 72 bifilar turns (144 individual turns), clockwise direction</Field>
+            <Field label="Wire">0.5 mm PUR1 · Conductor A = Red · Conductor B = Copper · 3.7 m per conductor · 100 mm leads</Field>
+            <Field label="Drawing">REV A · Drawn Tim Short (TS) · 2026-07-16 · Coiltek R&D Dept</Field>
+            <Field label="Test report">ETR NEX-0589 PROTO-001 · Issue 1.0 · P.O Ref S17406</Field>
+            <Field label="Manufacturer">Coiltek Pty Ltd · 5 Mengel Court, Salisbury South SA 5106 · ctmenquiry@coiltek.com.au</Field>
+            <Field label="Test condition">1 kHz / 1.0 V · GW Instek LCR-6100 · 15.6 °C · 61% RH</Field>
+            <Field label="Quantity">3 units · 100% tested · All pass</Field>
+          </div>
+
+          {/* Test results table */}
+          <div className="space-y-2">
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">
+              Electrical test results — all units within specification
+            </p>
+            <div className="border border-slate-800 rounded-lg overflow-hidden text-[11px]">
+              <div className="grid grid-cols-5 bg-slate-900 px-3 py-2 text-slate-500 font-semibold uppercase text-[10px] tracking-widest">
+                <span>Unit</span>
+                <span>L_A (μH)</span>
+                <span>L_B (μH)</span>
+                <span>DCR_A (mΩ)</span>
+                <span>DCR_B (mΩ)</span>
+              </div>
+              {[
+                { sn: "SN001.001", la: "61.99", lb: "62.05", da: "291.8", db: "297.4" },
+                { sn: "SN001.002", la: "62.17", lb: "62.05", da: "291.9", db: "296.9" },
+                { sn: "SN001.003", la: "62.44", lb: "62.36", da: "292.4", db: "300.2" },
+              ].map(r => (
+                <div key={r.sn} className="grid grid-cols-5 px-3 py-1.5 border-t border-slate-800/60 font-mono text-slate-300">
+                  <span className="text-slate-400">{r.sn}</span>
+                  <span className="text-lime-400">{r.la}</span>
+                  <span className="text-lime-400">{r.lb}</span>
+                  <span className="text-cyan-400">{r.da}</span>
+                  <span className="text-cyan-400">{r.db}</span>
+                </div>
+              ))}
+              <div className="grid grid-cols-5 px-3 py-1.5 border-t border-slate-700 bg-slate-900/60 font-mono text-[10px]">
+                <span className="text-slate-500 uppercase font-bold tracking-widest">Avg</span>
+                <span className="text-lime-600">62.200</span>
+                <span className="text-lime-600">62.153</span>
+                <span className="text-cyan-700">292.033</span>
+                <span className="text-cyan-700">298.167</span>
+              </div>
+              <div className="grid grid-cols-5 px-3 py-1.5 border-t border-slate-800/40 font-mono text-[10px]">
+                <span className="text-slate-600 uppercase tracking-widest">Spec</span>
+                <span className="text-slate-500">62 ±10%</span>
+                <span className="text-slate-500">62 ±10%</span>
+                <span className="text-slate-500">295 ±2%</span>
+                <span className="text-slate-500">295 ±2%</span>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-600">
+              Inductance σ = 0.185 μH (Conductor A) · 0.146 μH (Conductor B) — tight uniformity across all three units confirms winding specification is sound.
+            </p>
+          </div>
+
+          {/* Physics connection */}
+          <div className="bg-slate-900/60 border border-slate-800 rounded-lg p-4 space-y-3 text-xs">
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">
+              Connection to PHR-1 specification
+            </p>
+            <div className="space-y-2 text-slate-400 leading-relaxed">
+              <p>
+                The bifilar winding provides two adjacent conductors for electrical coupling experiments.
+                The reported inductance and DC resistance do not measure phase inversion, quantum
+                entanglement, zero EMI or evanescent optical coupling to a SNIC ring.
+              </p>
+              <p>
+                At 62 μH on the T200-2 iron powder core, this component operates at HF/RF frequencies.
+                This is an electrical prototype milestone. RF behaviour, coupling coefficient and
+                the transition to optical devices require additional tests and a specified transducer.
+              </p>
+            </div>
+            <CodeBlock>{`// Approximate effective AL inferred from reported inductance, not a core certificate:
+// AL = L / N² ≈ 62,000 nH / 72² ≈ 11.96 nH per turn².
+// L ≈ N² × AL ≈ 62 μH. Actual winding geometry and test conditions matter.
+//
+// Bifilar coupling principle:
+//   Opposing currents can reduce fields under balanced conditions.
+//   No optical H/V polarisation or zero-EMI result follows from these DC/L tests.
+//   RF/optical interfaces must be independently characterised.
+//
+// A bifilar winding is not a demonstrated quantum tensor-product state.`}</CodeBlock>
+          </div>
+
+          <PriorArt text="NEX-0589-PROTO-001 · First physical PHR-1 prototype · Manufactured and tested 2026-07-27 · Coiltek, Salisbury South SA · ETR Issue 1.0 · P.O Ref S17406 · Three units, 100% pass" />
         </Section>
 
         {/* ── Live pages ── */}
@@ -638,6 +779,8 @@ Genesis anchor → blockWavelengthAnchor=380nm  lambda-state.ts`}</CodeBlock>
           </p>
         </div>
 
+          </div>
+        </details>
       </div>
     </div>
   );

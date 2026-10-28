@@ -15,6 +15,7 @@
 import { db } from "./db";
 import { eq, and, lt, sql, desc } from "drizzle-orm";
 import { socialBroadcasts, telegramVideos } from "../shared/schema";
+import { HARDWARE_REVIEW_HOLD, canDispatchScheduledPromotion, promotionsArePaused } from "../shared/hardware-readiness";
 
 // ── Agent state (shared with kernel_agents status endpoint) ──────────────────
 
@@ -153,6 +154,7 @@ export async function queueBroadcastsForVideo(videoId: number): Promise<void> {
 // ── Main agent tick — processes pending jobs ─────────────────────────────────
 
 async function broadcastTick(): Promise<void> {
+  if (promotionsArePaused()) return;
   // Grab up to 5 pending jobs
   const pending = await db
     .select()
@@ -171,6 +173,7 @@ async function broadcastTick(): Promise<void> {
   let failed = 0;
 
   for (const job of pending) {
+    if (!canDispatchScheduledPromotion(job.scheduledAt)) continue;
     // Mark as in-progress
     await db.update(socialBroadcasts)
       .set({ status: "broadcasting", attemptCount: job.attemptCount + 1 })
@@ -295,6 +298,11 @@ export async function skipBroadcast(id: number): Promise<void> {
 // ── Start the agent loop ──────────────────────────────────────────────────────
 
 export function startSocialBroadcastAgent(): void {
+  if (promotionsArePaused()) {
+    _state.status = "IDLE";
+    _state.lastAction = HARDWARE_REVIEW_HOLD.reason;
+    return;
+  }
   _state.status    = "ACTIVE";
   _state.lastAction = "Agent started — monitoring broadcast queue";
 

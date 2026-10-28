@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef } from "react";
-import { useLocation, useRoute } from "wouter";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { Link, useLocation, useRoute } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import VideoStreaming from "@/components/VideoStreaming";
+import WaveRecipientPicker from "@/components/wave-recipient-picker";
+import { BroadcastInviteError, createBroadcastRoom, inviteBroadcastGuests, type BroadcastType } from "@/lib/spectral-broadcast";
 import {
   Radio, Eye, Plus, ArrowLeft, Users, Clock,
   Play, Video, Trash2, Zap, Globe, Lock, Signal, Wifi, Heart,
@@ -63,6 +65,7 @@ interface Stream {
   status: string;
   viewerCount: number;
   quality: string;
+  streamType?: BroadcastType;
   isPublic: boolean;
   startedAt?: string;
   createdAt: string;
@@ -96,13 +99,13 @@ function LiveBadge() {
 // ── Main page ─────────────────────────────────────────────────────────
 export default function StreamingPage() {
   const { user } = useAuth();
-  const token = localStorage.getItem("auth_token") || "";
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/streaming/:streamId");
 
   const [tab, setTab] = useState<"browse" | "create" | "mine">("browse");
   const [liveStreams, setLiveStreams]   = useState<Stream[]>([]);
+  const [invitedRooms, setInvitedRooms] = useState<Array<{ id: string; title: string; broadcasterId: string; isPublic: boolean; status: string }>>([]);
   const [myStreams,   setMyStreams]     = useState<Stream[]>([]);
   const [loading, setLoading]          = useState(true);
   const [activeStream, setActiveStream] = useState<{ id: string; mode: "broadcaster" | "viewer" } | null>(null);
@@ -135,50 +138,258 @@ export default function StreamingPage() {
 
   const [title,  setTitle]  = useState("");
   const [desc,   setDesc]   = useState("");
-  const [pub,    setPub]    = useState(true);
+  const [pub,    setPub]    = useState(false);
+  const [streamType, setStreamType] = useState<BroadcastType>("camera");
+  const [inviteAddresses, setInviteAddresses] = useState<string[]>([]);
+  const [inviteAddress, setInviteAddress] = useState("");
+  const [pendingInvite, setPendingInvite] = useState<{ id: string; title: string; addresses: string[]; invited: string[] } | null>(null);
+  const [inviteError, setInviteError] = useState("");
+  const [discoveryError, setDiscoveryError] = useState("");
+  const [invitedLoading, setInvitedLoading] = useState(false);
+  const accountId = useRef(user?.id);
+  const inviteSession = useRef(0);
+  const broadcastSession = useRef(0);
+  const broadcastController = useRef<AbortController | null>(null);
+  const sessionAccount = useRef(user?.id);
+  const refreshInvitedRef = useRef<() => void>(() => {});
+  accountId.current = user?.id;
   const [creating, setCreating] = useState(false);
 
-  useEffect(() => { fetchAll(); return () => stopHb(); }, []);
+  useLayoutEffect(() => {
+    const session = ++inviteSession.current;
+    broadcastSession.current++;
+    broadcastController.current?.abort();
+    broadcastController.current = null;
+    if (sessionAccount.current !== user?.id) {
+      if (sessionAccount.current) {
+        try { window.sessionStorage.removeItem(`nexusos:broadcast-pending:${sessionAccount.current}`); } catch {}
+      }
+      sessionAccount.current = user?.id;
+    }
+    accountId.current = user?.id;
+    setLiveStreams([]);
+    setMyStreams([]);
+    setInvitedRooms([]);
+    setInviteAddresses([]);
+    setInviteAddress("");
+    setPendingInvite(null);
+    if (user?.id) {
+      try {
+        const saved = window.sessionStorage.getItem(`nexusos:broadcast-pending:${user.id}`);
+        if (saved) {
+          const parsed = JSON.parse(saved) as { id?: unknown; title?: unknown; addresses?: unknown; invited?: unknown };
+          const addressesValid = Array.isArray(parsed.addresses) && parsed.addresses.every((value: unknown) => typeof value === "string");
+          const invitedValid = Array.isArray(parsed.invited) && parsed.invited.every((value: unknown) => typeof value === "string");
+          const valid = typeof parsed.id === "string" && typeof parsed.title === "string"
+            && addressesValid && invitedValid
+            && (parsed.invited as string[]).every(value => (parsed.addresses as string[]).includes(value));
+          if (valid) setPendingInvite(parsed as { id: string; title: string; addresses: string[]; invited: string[] });
+          else window.sessionStorage.removeItem(`nexusos:broadcast-pending:${user.id}`);
+        }
+      } catch {}
+    }
+    setInviteError("");
+    setDiscoveryError("");
+    setPub(false);
+    setCreating(false);
+    setTitle("");
+    setDesc("");
+    setActiveStream(null);
+    stopHb();
+    if (new URLSearchParams(window.location.search).get("create") === "private") {
+      setTab("create");
+      setPub(false);
+    }
+    const controller = new AbortController();
+    const refreshInvited = async () => {
+      setInvitedLoading(true);
+      try {
+        const response = await fetch("/api/p2p/live", { credentials: "include", cache: "no-store", signal: controller.signal });
+        if (!response.ok) throw new Error("Invited broadcasts could not be refreshed.");
+        const data = await response.json();
+        if (!controller.signal.aborted && inviteSession.current === session && accountId.current === user?.id) {
+          setInvitedRooms(Array.isArray(data.streams) ? data.streams : []);
+          setDiscoveryError("");
+        }
+      } catch {
+        if (!controller.signal.aborted && inviteSession.current === session) setDiscoveryError("Could not refresh invited broadcasts. Retry to check access.");
+      } finally {
+        if (!controller.signal.aborted && inviteSession.current === session) setInvitedLoading(false);
+      }
+    };
+    refreshInvitedRef.current = () => { void refreshInvited(); };
+    void fetchAll();
+    void refreshInvited();
+    const interval = window.setInterval(() => { void refreshInvited(); }, 10_000);
+    const onWake = () => { if (document.visibilityState === "visible") void refreshInvited(); };
+    window.addEventListener("focus", onWake);
+    window.addEventListener("online", onWake);
+    document.addEventListener("visibilitychange", onWake);
+    return () => {
+      controller.abort();
+      broadcastController.current?.abort();
+      inviteSession.current++;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onWake);
+      window.removeEventListener("online", onWake);
+      document.removeEventListener("visibilitychange", onWake);
+      refreshInvitedRef.current = () => {};
+      stopHb();
+    };
+  }, [user?.id]);
   useEffect(() => {
     if (match && params?.streamId) joinViewer(params.streamId);
   }, [match, params?.streamId]);
 
   async function fetchAll() {
+    const expectedAccount = user?.id;
     setLoading(true);
     try {
       const [liveR, myR] = await Promise.all([
-        fetch("/api/streams/live",  { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/streams/my",    { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/streams/live", { credentials: "include", cache: "no-store" }),
+        fetch("/api/streams/my", { credentials: "include", cache: "no-store" }),
       ]);
-      if (liveR.ok) setLiveStreams((await liveR.json()).streams ?? []);
-      if (myR.ok)  setMyStreams((await myR.json()).streams ?? []);
+      const [liveBody, myBody] = await Promise.all([liveR.ok ? liveR.json() : null, myR.ok ? myR.json() : null]);
+      if (accountId.current === expectedAccount) {
+        if (liveBody) setLiveStreams(liveBody.streams ?? []);
+        if (myBody) setMyStreams(myBody.streams ?? []);
+      }
     } catch {}
-    setLoading(false);
+    if (accountId.current === expectedAccount) setLoading(false);
   }
 
   async function createStream() {
-    if (!token) { toast({ title: "Login required", description: "Log in first to go live.", variant: "destructive" }); return; }
+    if (!user) { toast({ title: "Login required", description: "Log in first to go live.", variant: "destructive" }); return; }
     if (!title.trim()) { toast({ title: "Title required", variant: "destructive" }); return; }
+    if (!pub && inviteAddresses.length === 0) { setInviteError("Add at least one recipient before creating a private broadcast."); return; }
+    const ownerId = user?.id;
+    const session = broadcastSession.current;
+    const controller = new AbortController();
+    broadcastController.current?.abort();
+    broadcastController.current = controller;
     setCreating(true);
+    setInviteError("");
     try {
-      const res = await fetch("/api/streams", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title, description: desc, isPublic: pub }),
-      });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Failed");
-      const data = await res.json();
+      const data = await createBroadcastRoom({ title: title.trim(), description: desc.trim() || undefined, isPublic: pub, streamType }, controller.signal);
+      if (controller.signal.aborted || session !== broadcastSession.current || accountId.current !== ownerId) return;
+      const room = { id: data.stream.id, title: title.trim(), addresses: pub ? [] : [...inviteAddresses], invited: [] as string[] };
+      if (!pub) {
+        setPendingInvite(room);
+        savePendingInvite(ownerId, room);
+        try {
+          room.invited = await inviteBroadcastGuests(room.id, room.addresses, controller.signal, invited => {
+            room.invited = invited;
+            const progress = { ...room, invited: [...invited] };
+            setPendingInvite(progress);
+            savePendingInvite(ownerId, progress);
+          });
+        } catch (error) {
+          if (error instanceof BroadcastInviteError) room.invited = error.invited;
+          if (controller.signal.aborted || session !== broadcastSession.current || accountId.current !== ownerId) return;
+          const progress = { ...room, invited: [...room.invited] };
+          setPendingInvite(progress);
+          savePendingInvite(ownerId, progress);
+          throw error;
+        }
+      }
+      if (controller.signal.aborted || session !== broadcastSession.current || accountId.current !== ownerId) return;
+      if (!pub) savePendingInvite(ownerId, null);
+      setPendingInvite(null);
+      setInviteAddresses([]); setTitle(""); setDesc("");
       setActiveStream({ id: data.stream.id, mode: "broadcaster" });
-      setTitle(""); setDesc("");
     } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      if (!controller.signal.aborted && session === broadcastSession.current && accountId.current === ownerId) {
+        setInviteError(e.message || "Broadcast could not be prepared.");
+        toast({ title: "Broadcast not started", description: e.message, variant: "destructive" });
+      }
+    } finally {
+      if (broadcastController.current === controller) broadcastController.current = null;
+      if (session === broadcastSession.current && accountId.current === ownerId) setCreating(false);
     }
-    setCreating(false);
   }
 
+  async function retryInvites() {
+    if (!pendingInvite || creating) return;
+    const ownerId = user?.id;
+    const session = broadcastSession.current;
+    const controller = new AbortController();
+    broadcastController.current?.abort();
+    broadcastController.current = controller;
+    setCreating(true);
+    setInviteError("");
+    const remaining = pendingInvite.addresses.filter(address => !pendingInvite.invited.includes(address));
+    try {
+      await inviteBroadcastGuests(pendingInvite.id, remaining, controller.signal, invited => {
+        setPendingInvite(current => {
+          if (!current || current.id !== pendingInvite.id) return current;
+          const progress = { ...current, invited: [...current.invited, ...invited] };
+          savePendingInvite(ownerId, progress);
+          return progress;
+        });
+      });
+      if (controller.signal.aborted || session !== broadcastSession.current || accountId.current !== ownerId) return;
+      const room = pendingInvite;
+      savePendingInvite(ownerId, null);
+      setPendingInvite(null);
+      setInviteAddresses([]);
+      setTitle("");
+      setDesc("");
+      setActiveStream({ id: room.id, mode: "broadcaster" });
+    } catch (error) {
+      if (controller.signal.aborted || session !== broadcastSession.current || accountId.current !== ownerId) return;
+      if (error instanceof BroadcastInviteError) {
+        setPendingInvite(current => {
+          if (!current) return current;
+          const progress = { ...current, invited: [...new Set([...current.invited, ...error.invited])] };
+          savePendingInvite(ownerId, progress);
+          return progress;
+        });
+      }
+      setInviteError(error instanceof Error ? error.message : "Invitation failed. Retry without creating another room.");
+    } finally {
+      if (broadcastController.current === controller) broadcastController.current = null;
+      if (session === broadcastSession.current && accountId.current === ownerId) setCreating(false);
+    }
+  }
+
+  const addExactRecipient = () => {
+    const address = inviteAddress.trim();
+    if (address && !inviteAddresses.includes(address)) setInviteAddresses(current => [...current, address]);
+    setInviteAddress("");
+  };
+
+  const savePendingInvite = (ownerId: string | undefined, value: { id: string; title: string; addresses: string[]; invited: string[] } | null) => {
+    if (!ownerId) return;
+    try {
+      const key = `nexusos:broadcast-pending:${ownerId}`;
+      if (value) window.sessionStorage.setItem(key, JSON.stringify(value));
+      else window.sessionStorage.removeItem(key);
+    } catch { /* Session storage is optional; the current view still supports retry. */ }
+  };
+
   async function startBroadcast(id: string) {
-    const res = await fetch(`/api/streams/${id}/start`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
-    if (res.ok) setActiveStream({ id, mode: "broadcaster" });
+    const ownerId = user?.id;
+    if (pendingInvite?.id === id) {
+      setInviteError("Finish the remaining invitations before starting this private room.");
+      return;
+    }
+    const stream = myStreams.find(item => item.id === id);
+    if (stream && !stream.isPublic) {
+      try {
+        const response = await fetch(`/api/p2p/live/${encodeURIComponent(id)}/guests`, { credentials: "include", cache: "no-store" });
+        const body = await response.json().catch(() => ({}));
+        if (accountId.current !== ownerId) return;
+        if (!response.ok || !Array.isArray(body.guests) || body.guests.length === 0) {
+          toast({ title: "Invite viewers first", description: "Manage this private room in P2P before starting the broadcast.", variant: "destructive" });
+          return;
+        }
+      } catch {
+        if (accountId.current !== ownerId) return;
+        toast({ title: "Invitations unavailable", description: "Could not confirm this private room's viewers. It was not started.", variant: "destructive" });
+        return;
+      }
+    }
+    setActiveStream({ id, mode: "broadcaster" });
   }
 
   function stopHb() { if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; } }
@@ -186,18 +397,35 @@ export default function StreamingPage() {
   function startHb(id: string) {
     stopHb();
     heartbeatRef.current = setInterval(async () => {
-      const r = await fetch(`/api/streams/${id}/heartbeat`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
-      if (r.status === 402) { stopHb(); toast({ title: "NXT low", description: "Insufficient NXT to sustain stream", variant: "destructive" }); }
+      const r = await fetch(`/api/streams/${id}/heartbeat`, { method: "POST", credentials: "include" });
+      if (!r.ok) { stopHb(); toast({ title: "Stream unavailable", description: "The stream ended or access is no longer available", variant: "destructive" }); }
     }, 60_000);
   }
 
   async function joinViewer(id: string) {
+    const ownerId = user?.id;
     try {
-      const r = await fetch(`/api/streams/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      const r = await fetch(`/api/streams/${encodeURIComponent(id)}`, { credentials: "include", cache: "no-store" });
       if (!r.ok) throw new Error("Not found");
       const d = await r.json();
+      if (accountId.current !== ownerId) return;
+      if (d.isOwner) {
+        if (d.stream?.isPublic === false) {
+          const access = await fetch(`/api/p2p/live/${encodeURIComponent(id)}/guests`, { credentials: "include", cache: "no-store" });
+          const guestList = await access.json().catch(() => ({}));
+          if (accountId.current !== ownerId) return;
+          if (!access.ok || !Array.isArray(guestList.guests) || guestList.guests.length === 0) {
+            toast({ title: "Invite viewers first", description: "Manage this private room in P2P before starting the broadcast.", variant: "destructive" });
+            return;
+          }
+        }
+        setActiveStream({ id, mode: "broadcaster" });
+        return;
+      }
       if (d.stream.status !== "live") { toast({ title: "Not live", variant: "destructive" }); return; }
-      await fetch(`/api/streams/${id}/join`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      const joined = await fetch(`/api/streams/${encodeURIComponent(id)}/join`, { method: "POST", credentials: "include", cache: "no-store" });
+      if (!joined.ok) throw new Error("Stream invitation or session unavailable");
+      if (accountId.current !== ownerId) return;
       setActiveStream({ id, mode: "viewer" });
       startHb(id);
     } catch { toast({ title: "Failed to join", variant: "destructive" }); }
@@ -205,16 +433,15 @@ export default function StreamingPage() {
 
   async function endStream() {
     if (!activeStream) return;
-    await fetch(`/api/streams/${activeStream.id}/end`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
-    if (activeStream.mode === "viewer")
-      fetch(`/api/streams/${activeStream.id}/leave`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
     stopHb();
+    const action = activeStream.mode === "broadcaster" ? "end" : "leave";
+    await fetch(`/api/streams/${activeStream.id}/${action}`, { method: "POST", credentials: "include" }).catch(() => {});
     setActiveStream(null);
     fetchAll();
   }
 
   async function deleteStream(id: string) {
-    const r = await fetch(`/api/streams/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    const r = await fetch(`/api/streams/${id}`, { method: "DELETE", credentials: "include" });
     if (r.ok) { toast({ title: "Deleted" }); fetchAll(); }
   }
 
@@ -226,7 +453,7 @@ export default function StreamingPage() {
         <VideoStreaming
           streamId={activeStream.id}
           mode={activeStream.mode}
-          token={token}
+          initialSource={stream?.streamType ?? streamType}
           streamTitle={stream?.title || "Live Stream"}
           onEnd={endStream}
         />
@@ -277,11 +504,11 @@ export default function StreamingPage() {
         {/* Hero strip */}
         <div className="border border-white/8 rounded-xl p-5" style={{ background: "rgba(255,255,255,0.01)" }}>
           <div className="h-0.5 rounded-full mb-4" style={{ background: "linear-gradient(to right,#8b00ff,#2563eb,#06b6d4,#16a34a,#ca8a04,#ea580c,#dc2626)" }} />
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
             {[
-              { Icon: Globe,  col: "#06b6d4", title: "Open Spectrum",    body: "Your stream broadcasts on a wavelength of light. No company controls the channel. No one can ban the physics." },
-              { Icon: Zap,    col: "#ca8a04", title: "Physics Pricing",  body: "Stream fees computed from E=hf — the actual energy of your spectral signal, not a platform percentage cut." },
-              { Icon: Lock,   col: "#a78bfa", title: "P2P Encrypted",   body: "WebRTC peer-to-peer — viewer connects directly to broadcaster. Zero middleman, zero central relay server." },
+              { Icon: Globe,  col: "#06b6d4", title: "Software coordinates", body: "Wave addresses are software coordinates used to find accounts and rooms; they do not transmit media through light." },
+              { Icon: Zap,    col: "#ca8a04", title: "Free live access",  body: "Opening and watching streams is free. Optional sats tips and purchases require explicit confirmation; no NXT viewing fees." },
+              { Icon: Lock,   col: "#a78bfa", title: "Direct WebRTC media", body: "Live media uses a direct WebRTC connection when available. This setup has no TURN relay, so connections can fail." },
             ].map(({ Icon, col, title, body }) => (
               <div key={title} className="flex items-start gap-3 border border-white/5 rounded-lg p-3">
                 <Icon size={13} style={{ color: col }} className="mt-0.5 flex-shrink-0" />
@@ -295,15 +522,36 @@ export default function StreamingPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2">
-          {Tab("browse", "Browse Live", Radio)}
-          {Tab("create", "Go Live",     Plus)}
-          {Tab("mine",   "My Streams",  Video)}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            {Tab("browse", "Browse Live", Radio)}
+            {Tab("create", "Go Live",     Plus)}
+            {Tab("mine",   "My Streams",  Video)}
+          </div>
+          <Link href="/live-guide" className="inline-flex min-h-10 items-center rounded-lg border border-emerald-300/20 px-3 text-[10px] font-semibold text-emerald-200/80 transition hover:bg-emerald-300/10 hover:text-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300" aria-label="Read How to go live">
+            How to go live
+          </Link>
         </div>
 
         {/* ── Browse ────────────────────────────────────────────────── */}
         {tab === "browse" && (
           <div className="space-y-4">
+            {user && (
+              <section className="border border-emerald-400/15 rounded-xl p-4 space-y-3" aria-label="Invited broadcasts" data-testid="invited-broadcasts">
+                <div className="flex items-center justify-between gap-3">
+                  <div><div className="text-[10px] uppercase tracking-widest text-emerald-300/70">Addressed to you</div><p className="mt-1 text-[9px] text-white/30">Private rooms appear here only when your account is invited. Joining is always your choice.</p></div>
+                  <button type="button" onClick={() => refreshInvitedRef.current()} className="text-[9px] text-white/40 hover:text-white/80">Refresh</button>
+                </div>
+                {invitedLoading && invitedRooms.length === 0 ? <div className="h-12 animate-pulse rounded-lg bg-white/5" aria-label="Loading invited broadcasts" />
+                  : invitedRooms.length ? <div className="space-y-2">{invitedRooms.filter(room => room.broadcasterId !== user.id).map(room =>
+                    <div key={room.id} className="flex flex-col gap-3 rounded-lg border border-white/8 p-3 sm:flex-row sm:items-center sm:justify-between" data-testid={`invited-room-${room.id}`}>
+                      <div className="min-w-0"><div className="truncate text-[11px] font-bold">{room.title}</div><div className="mt-1 text-[9px] text-white/40">{room.status === "live" ? "Live now · ready when you are" : "Waiting for the broadcaster to start"} · {room.isPublic ? "Public room" : "Private invitation"}</div></div>
+                      {room.status === "live" ? <button type="button" onClick={() => void joinViewer(room.id)} className="rounded-lg border border-emerald-300/30 px-3 py-2 text-[9px] font-bold text-emerald-200 hover:bg-emerald-300/10" data-testid={`button-join-invited-${room.id}`}>Join live</button> : <span className="text-[9px] text-amber-200/70">Waiting</span>}
+                    </div>
+                  )}</div> : <p className="rounded-lg border border-dashed border-white/10 px-4 py-5 text-center text-[10px] text-white/30">No invited rooms yet. New invitations will appear here automatically.</p>}
+                {discoveryError && <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-rose-300/20 bg-rose-300/5 px-3 py-2 text-[9px] text-rose-200">{discoveryError}<button type="button" onClick={() => refreshInvitedRef.current()} className="shrink-0 underline">Retry refresh</button></div>}
+              </section>
+            )}
             <div className="flex items-center justify-between">
               <div className="text-[10px] text-white/30 uppercase tracking-widest">
                 {loading ? "Loading…" : `${liveStreams.length} channel${liveStreams.length !== 1 ? "s" : ""} broadcasting now`}
@@ -431,7 +679,7 @@ export default function StreamingPage() {
                 <Radio size={11} className="text-red-400" /> Start a Spectral Broadcast
               </div>
 
-              {!token && (
+              {!user && (
                 <div className="border border-yellow-400/20 rounded-lg p-3 text-[9px] text-yellow-400/70 flex items-center gap-2">
                   <Zap size={10} /> You must be logged in to go live.
                 </div>
@@ -466,7 +714,7 @@ export default function StreamingPage() {
                   <div className="text-[8px] text-white/20">Visible to all nodes on the network</div>
                 </div>
                 <button
-                  onClick={() => setPub(p => !p)}
+                  onClick={() => { setPub(p => { const next = !p; if (next) setInviteAddresses([]); return next; }); setInviteError(""); }}
                   className={`w-10 h-5 rounded-full transition-all relative ${pub ? "bg-emerald-500/40 border border-emerald-400/40" : "bg-white/10 border border-white/10"}`}
                   data-testid="switch-public"
                 >
@@ -474,9 +722,33 @@ export default function StreamingPage() {
                 </button>
               </div>
 
+              <label className="block space-y-1">
+                <span className="text-[9px] text-white/30">Capture source</span>
+                <select value={streamType} onChange={event => setStreamType(event.target.value as BroadcastType)} className="w-full rounded-lg border border-white/10 bg-[#111] px-3 py-2.5 text-[11px] text-white outline-none focus:border-white/25" data-testid="select-stream-type">
+                  <option value="camera">Camera</option><option value="screen">Screen</option><option value="both">Camera and screen</option>
+                </select>
+              </label>
+
+              {!pub && <div className="space-y-3 rounded-lg border border-emerald-300/10 bg-emerald-300/[0.025] p-3">
+                <div><div className="text-[10px] font-bold text-emerald-200/80">Invite viewers before capture</div><p className="mt-1 text-[8px] leading-relaxed text-white/30">The room stays private. Grants are applied before camera or screen capture can begin.</p></div>
+                <WaveRecipientPicker isAuthenticated={!!user} accountKey={user?.id} onSelect={address => setInviteAddresses(current => current.includes(address) ? current : [...current, address])} />
+                <div className="flex gap-2">
+                  <input value={inviteAddress} onChange={event => setInviteAddress(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); addExactRecipient(); } }} placeholder="Or enter an exact wave address" className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-[10px] text-white outline-none focus:border-white/25" data-testid="input-broadcast-address" />
+                  <button type="button" onClick={addExactRecipient} disabled={!inviteAddress.trim()} className="rounded-lg border border-white/10 px-3 text-[9px] text-white/70 disabled:opacity-40">Add</button>
+                </div>
+                {inviteAddresses.length > 0 && <ul className="space-y-1">{inviteAddresses.map(address => <li key={address} className="flex items-center justify-between gap-2 rounded bg-black/25 px-2 py-1.5 text-[9px] text-white/70"><span className="min-w-0 break-all font-mono">{address}</span><button type="button" onClick={() => setInviteAddresses(list => list.filter(item => item !== address))} className="shrink-0 text-white/40 hover:text-white" aria-label={`Remove ${address}`}>Remove</button></li>)}</ul>}
+              </div>}
+
+              {pendingInvite && <div role="alert" className="rounded-lg border border-amber-300/25 bg-amber-300/5 p-3 text-[9px] text-amber-100/80" data-testid="broadcast-invite-retry">
+                <p>Private room “{pendingInvite.title}” was created, but not all invitations were applied. Capture has not started. Retry below to finish invitations on this same room; no duplicate room will be created.</p>
+                <p className="mt-1">{pendingInvite.invited.length} of {pendingInvite.addresses.length} invited.</p>
+                <button type="button" disabled={creating} onClick={() => void retryInvites()} className="mt-2 rounded-lg border border-amber-200/30 px-3 py-2 font-bold disabled:opacity-50">{creating ? "Applying invitations…" : "Retry remaining invitations"}</button>
+              </div>}
+              {inviteError && !pendingInvite && <p role="alert" className="text-[9px] text-rose-300">{inviteError}</p>}
+
               <button
                 onClick={createStream}
-                disabled={creating || !title.trim()}
+                disabled={creating || !title.trim() || !!pendingInvite || (!pub && inviteAddresses.length === 0)}
                 className="w-full py-3 rounded-lg font-bold text-[11px] uppercase tracking-wider transition-all disabled:opacity-40"
                 style={{ background: "linear-gradient(135deg,#dc2626,#9333ea)", color: "#fff" }}
                 data-testid="button-create-stream"
@@ -595,7 +867,7 @@ export default function StreamingPage() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {s.status === "pending" && (
+                      {s.status === "pending" && s.isPublic && (
                         <button
                           onClick={() => startBroadcast(s.id)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold border border-red-400/40 text-red-400 hover:bg-red-400/10 transition-all"
@@ -604,6 +876,7 @@ export default function StreamingPage() {
                           <Play size={10} /> Start
                         </button>
                       )}
+                      {s.status === "pending" && !s.isPublic && <Link href="/p2p" className="flex items-center gap-1.5 rounded-lg border border-amber-300/30 px-3 py-1.5 text-[10px] font-bold text-amber-200 hover:bg-amber-300/10">Manage invites</Link>}
                       {s.status === "live" && (
                         <button
                           onClick={() => setActiveStream({ id: s.id, mode: "broadcaster" })}
@@ -633,7 +906,7 @@ export default function StreamingPage() {
         {/* Footer */}
         <div className="border border-white/5 rounded-xl p-4 flex items-center gap-6 text-[9px] text-white/15">
           <div className="flex items-center gap-1.5"><Wifi size={10} /> P2P mesh — no central relay</div>
-          <div className="flex items-center gap-1.5"><Zap size={10} /> Fees from E=hf physics</div>
+          <div className="flex items-center gap-1.5"><Zap size={10} /> Free viewing · optional sats support</div>
           <div className="flex items-center gap-1.5"><Globe size={10} /> Open spectrum — no ban button</div>
           <div className="ml-auto font-mono">WNSP Spectral Broadcast v1.0</div>
         </div>

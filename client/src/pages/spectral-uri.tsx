@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -108,7 +109,7 @@ export default function SpectralUriPage() {
   useEffect(() => { const t = setTimeout(() => setDebounced(input), 300); return () => clearTimeout(t); }, [input]);
 
   const [auditResult, setAuditResult] = useState<{ recordId: string; txId: string; psi: string; nm: number } | null>(null);
-  const [isLoggedIn] = useState(() => !!localStorage.getItem("auth_token"));
+  const { isAuthenticated: isLoggedIn } = useAuth();
 
   const { data: ecoData } = useQuery<any>({ queryKey: ["/api/ecosystem/status"], refetchInterval: 15_000 });
   const systems = ecoData?.systems ?? {};
@@ -118,11 +119,10 @@ export default function SpectralUriPage() {
 
   const recordMutation = useMutation({
     mutationFn: async () => {
-      const token = localStorage.getItem("auth_token");
-      if (!token) throw new Error("LOGIN_REQUIRED");
+      if (!isLoggedIn) throw new Error("LOGIN_REQUIRED");
       const res = await fetch("/api/spectral-db/store", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: debounced, label: enc.wnspUri, data: { source: "spectral-uri-encoder", wnspUri: enc.wnspUri } }),
       });
       if (res.status === 401) throw new Error("LOGIN_REQUIRED");

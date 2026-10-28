@@ -262,7 +262,7 @@ export default function TheNetworkPage() {
 
           <div className="flex items-start gap-3">
             <Link href="/the-emitter">
-              <button className="text-gray-500 hover:text-white transition-colors mt-1">
+              <button className="text-gray-500 hover:text-white transition-colors mt-1" aria-label="Back to The Emitter">
                 <ArrowLeft className="w-5 h-5" />
               </button>
             </Link>

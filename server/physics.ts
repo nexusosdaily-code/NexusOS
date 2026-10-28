@@ -7,11 +7,12 @@
  *   E = h·f = h·c / λ         (Planck–Einstein relation)
  *   Λ = h·f / c²              (Einstein mass-energy: compression state)
  *
- * Authority bands are defined by wavelength compression state (WDM index):
- *   SYSTEM  WDM  0–63    λ ≈ 380–405 nm   (violet / UV border)
- *   KERNEL  WDM  64–127  λ ≈ 405–480 nm   (deep blue)
- *   USER    WDM  128–191 λ ≈ 480–630 nm   (green → orange)
- *   GUEST   WDM  192–255 λ ≈ 630–780 nm   (red)
+ * Account authority is a software policy over hashed WDM indices, not a
+ * physical consequence of photon energy. Endpoint-inclusive mapping:
+ *   SYSTEM  WDM  0–63    λ ≈ 380.000–478.824 nm
+ *   KERNEL  WDM  64–127  λ ≈ 480.392–579.216 nm
+ *   USER    WDM  128–191 λ ≈ 580.784–679.608 nm
+ *   GUEST   WDM  192–255 λ ≈ 681.176–780.000 nm
  *
  * Fee multiplier: E_sender / E_reference  (reference = 560 nm, green)
  *   → SYSTEM users pay ≈ 1.4× base fee
@@ -20,14 +21,11 @@
  */
 
 import crypto from "crypto";
+import { accountWavelength } from "../shared/wnsp-model";
+export { H_PLANCK, C_LIGHT, NM_MIN, NM_MAX, WDM_CHANNELS, OAM_MODES, N_DIR, TOTAL_CHANNELS } from "../shared/wnsp-model";
+import { H_PLANCK, C_LIGHT, NM_MIN, NM_MAX, WDM_CHANNELS, OAM_MODES } from "../shared/wnsp-model";
 
 // ── Physical constants ────────────────────────────────────────────────────────
-export const H_PLANCK = 6.626_070_15e-34;   // J·s
-export const C_LIGHT  = 299_792_458;         // m/s
-export const NM_MIN   = 380;                 // nm — shortest visible (SYSTEM band)
-export const NM_MAX   = 780;                 // nm — longest visible (GUEST band)
-export const WDM_CHANNELS = 256;
-export const OAM_MODES    = 50;
 
 // Reference wavelength (green — midpoint of authority spectrum)
 const REF_NM = 560;
@@ -71,7 +69,7 @@ export function applyGovernanceParam(key: string, value: number): void {
 /**
  * Ghost nodes are integer octave addresses in the WNSP compression lattice
  * where no stable nucleus exists. Each lies at an orbital shell boundary,
- * making it a lossless, zero-entropy quantum register tuned to the adjacent
+   * used as software service labels; this does not establish a lossless quantum register at the adjacent
  * matter class. These Ψ channels are RESERVED as NexusOS system services.
  *
  * All ghost nodes sit at WDM=0 (integer octave → frac(n)=0 → 380 nm, SYSTEM
@@ -206,7 +204,7 @@ export function deriveChannel(username: string): {
   // Ghost-node guard — step away from reserved system channels
   oam = _stepAwayFromGhostNode(wdm, oam);
 
-  const nm          = NM_MIN + wdm * ((NM_MAX - NM_MIN) / (WDM_CHANNELS - 1));
+  const nm          = accountWavelength(wdm);
   const frequencyHz = C_LIGHT / (nm * 1e-9);
   const energyJ     = H_PLANCK * frequencyHz;
   const lambdaKg    = energyJ / (C_LIGHT * C_LIGHT);

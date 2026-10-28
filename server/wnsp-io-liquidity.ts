@@ -106,6 +106,7 @@ async function isAlreadyCredited(txid: string): Promise<boolean> {
 }
 
 async function creditToBalance(sats: number, txid: string, address: string, label: string) {
+  if (!Number.isSafeInteger(sats) || sats <= 0) throw new Error("Invalid watched BTC amount");
   const { db } = await import("./db");
 
   // Find owner (first user = Nexus admin)
@@ -113,20 +114,28 @@ async function creditToBalance(sats: number, txid: string, address: string, labe
   if ((ownerRows.rows as any[]).length === 0) return;
   const ownerId = (ownerRows.rows[0] as any).id;
 
-  await db.execute(sql`
+  const credited = await db.transaction(async tx => {
+    // Claim the external event and its credit together; a duplicate must not
+    // increment a balance before ON CONFLICT reports that it was already seen.
+    const event = await tx.execute(sql`
+      INSERT INTO watched_btc_feeds (address, txid, sats_received, note)
+      VALUES (${address}, ${txid}, ${sats}, ${`Auto-credited from ${label || address}`})
+      ON CONFLICT (txid) DO NOTHING RETURNING id
+    `);
+    if (!event.rows.length) return false;
+    await tx.execute(sql`
     INSERT INTO lightning_wallets (user_id, sats_balance, updated_at)
     VALUES (${ownerId}, ${sats}, NOW())
     ON CONFLICT (user_id)
     DO UPDATE SET
       sats_balance = lightning_wallets.sats_balance + ${sats},
       updated_at   = NOW()
-  `);
-
-  await db.execute(sql`
-    INSERT INTO watched_btc_feeds (address, txid, sats_received, note)
-    VALUES (${address}, ${txid}, ${sats}, ${`Auto-credited from ${label || address}`})
-    ON CONFLICT (txid) DO NOTHING
-  `);
+    `);
+    await tx.execute(sql`INSERT INTO lightning_transactions(user_id,type,amount_sats,status,memo,payment_hash,completed_at)
+      VALUES (${ownerId},'btc_deposit',${sats},'completed',${`Watched BTC deposit ${address}`},${txid},now())`);
+    return true;
+  });
+  if (!credited) return;
 
   const w = _wallets.get(address);
   if (w) w.satsFed += sats;
@@ -169,7 +178,6 @@ async function pollAddress(w: WalletState) {
     // Credit new confirmed inbound TXs
     for (const tx of (txs as any[]).filter(t => t.status?.confirmed)) {
       if (w.knownTxids.has(tx.txid)) continue;
-      w.knownTxids.add(tx.txid);
 
       let inbound = 0;
       for (const vout of (tx.vout ?? [])) {
@@ -181,12 +189,11 @@ async function pollAddress(w: WalletState) {
           await creditToBalance(inbound, tx.txid, w.address, w.label);
         }
       }
-    }
-
-    // Track unconfirmed so we detect them when confirmed
-    for (const tx of (txs as any[]).filter(t => !t.status?.confirmed)) {
+      // Only suppress retries after the event is durably handled.
       w.knownTxids.add(tx.txid);
     }
+
+    // Do not mark unconfirmed transactions known: they still need settlement.
   } catch (e: any) {
     console.warn(`[BTC Watcher] Poll error for ${w.address}: ${e.message}`);
   }

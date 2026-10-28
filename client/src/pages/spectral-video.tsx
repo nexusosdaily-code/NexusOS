@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -104,14 +105,7 @@ export default function SpectralVideoPage() {
 
   // ── Library tab state ──
   const qc = useQueryClient();
-  const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem("auth_token"));
-  useEffect(() => {
-    const check = () => setIsLoggedIn(!!localStorage.getItem("auth_token"));
-    check();
-    window.addEventListener("storage", check);
-    window.addEventListener("focus", check);
-    return () => { window.removeEventListener("storage", check); window.removeEventListener("focus", check); };
-  }, []);
+  const { isAuthenticated: isLoggedIn } = useAuth();
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [uploadForm, setUploadForm] = useState({ title: "", description: "" });
@@ -127,15 +121,14 @@ export default function SpectralVideoPage() {
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!uploadFile) throw new Error("No file selected");
-      const token = localStorage.getItem("auth_token");
-      if (!token) throw new Error("LOGIN_REQUIRED");
+      if (!isLoggedIn) throw new Error("LOGIN_REQUIRED");
       const form = new FormData();
       form.append("file", uploadFile);
       form.append("title", uploadForm.title || uploadFile.name);
       if (uploadForm.description) form.append("description", uploadForm.description);
       const res = await fetch("/api/spectral-workspace/video", {
         method: "POST",
-        headers: { "Authorization": `Bearer ${token}` },
+        credentials: "include",
         body: form,
       });
       if (res.status === 401) throw new Error("LOGIN_REQUIRED");

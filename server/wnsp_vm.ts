@@ -2,27 +2,17 @@
 // Canonical WavelengthScript compiler + VM. No browser deps.
 // v1.1 adds: STORE/LOAD (persistent state), XFER_NXT/XFER_SATS (transfers),
 //            CALL (sub-contract invocation).
+import { encodeVMName, vmBand } from "../shared/wnsp-model";
+import { assertVmSource, VM_MAX_CYCLES } from "../shared/vm-security";
 
 // ── Physics helpers ───────────────────────────────────────────────────────────
 export function nmToBand(nm: number): string {
-  if (nm < 450) return "SYSTEM";
-  if (nm < 495) return "AUTH";
-  if (nm < 520) return "STREAM";
-  if (nm < 565) return "LOGIC";
-  if (nm < 590) return "INTERFACE";
-  if (nm < 625) return "EVENT";
-  return "STORAGE";
+  return vmBand(nm);
 }
 
 export function ceEncode(name: string): { nm: number; psi: string; band: string } {
-  const codes = name.toUpperCase().split("").map(c => c.charCodeAt(0)).filter(c => c >= 32 && c <= 126);
-  if (!codes.length) codes.push(77);
-  const avg = codes.reduce((a, b) => a + b, 0) / codes.length;
-  const nm = parseFloat((380 + ((avg - 32) / 94) * 400).toFixed(2));
-  const wdm = Math.floor((nm - 380) / 4) + 1;
-  const oam = codes.reduce((a, b) => a + b, 0) % 50;
-  const pol = codes.length % 2 === 0 ? "H" : "V";
-  return { nm, psi: `Ψ(${wdm},${oam},${pol})`, band: nmToBand(nm) };
+  const { nm, psi, band } = encodeVMName(name);
+  return { nm, psi, band };
 }
 
 // ── Instruction types ─────────────────────────────────────────────────────────
@@ -32,6 +22,7 @@ export interface Ins {
   gateThreshold?: number; gateHigh?: number; gateLow?: number;
   storeKey?: string; storeVal?: string;
   xferAmount?: string;
+  squeezeR?: number;
 }
 
 // ── Side effects ─────────────────────────────────────────────────────────────
@@ -81,12 +72,13 @@ export function freshVM(initialState?: Record<string, any>): VMState {
   return {
     pc: 0, registers: [], agents: [], output: [],
     tuned: 520, halted: false, cycleCount: 0,
-    kvStore: initialState ?? {}, kvDirty: {},
+    kvStore: initialState ?? Object.create(null), kvDirty: Object.create(null),
   };
 }
 
 // ── WavelengthScript compiler ─────────────────────────────────────────────────
 export function compileWLS(src: string): Ins[] {
+  assertVmSource(src);
   if (!src.trim()) return [];
   const ins: Ins[] = [];
   let off = 0;
@@ -174,6 +166,14 @@ export function compileWLS(src: string): Ins[] {
     const mXferSats = line.match(/^transfer_sats\("([^"]+)",\s*"([^"]+)"\)/);
     if (mXferSats) {
       add(0x13, "XFER_SATS", `"${mXferSats[1]}"  ${mXferSats[2]}`, `transfer ${mXferSats[2]} sats → ${mXferSats[1]}`, undefined, mXferSats[1], { xferAmount: mXferSats[2] });
+      continue;
+    }
+
+    // 0x15 SQZ — Bogoliubov squeeze of the tuned channel: Λ_B = Λ₀·cosh(2r)
+    const mSqz = line.match(/^squeeze\((-?\d+\.?\d*)\)/);
+    if (mSqz) {
+      const r = parseFloat(mSqz[1]);
+      add(0x15, "SQZ", `r=${r}`, `Bogoliubov squeeze — Λ_B = Λ₀·cosh(${(2 * r).toFixed(2)})`, undefined, undefined, { squeezeR: r });
       continue;
     }
 
@@ -285,7 +285,11 @@ export function stepVM(
     case 0x11: {
       // LOAD — read key from contract_state (kvStore) or session writes (kvDirty)
       const key = i.args;
-      const val = s.kvStore[key] ?? s.kvDirty[key] ?? null;
+      // Read our own latest write, including null/false/zero; never inherited
+      // Object prototype properties from an uninitialised state key.
+      const val = Object.prototype.hasOwnProperty.call(s.kvDirty, key)
+        ? s.kvDirty[key]
+        : Object.prototype.hasOwnProperty.call(s.kvStore, key) ? s.kvStore[key] : null;
       s.output.push({ text: `LOAD  ${key} ← ${val !== null ? `"${JSON.stringify(val)}"` : "(not set — initialise with @store)"}  from contract_state`, type: "store" });
       break;
     }
@@ -316,6 +320,20 @@ export function stepVM(
       break;
     }
 
+    case 0x15: {
+      // SQZ — Bogoliubov squeeze of the tuned channel (Claim 36)
+      const r = Math.max(-10, Math.min(10, i.squeezeR ?? 0));
+      const H = 6.62607015e-34, C = 299792458;
+      const f = C / (s.tuned * 1e-9);
+      const lambda0 = (H * f) / (2 * C * C);
+      const gain = Math.cosh(2 * r);
+      s.output.push({
+        text: `SQZ   r=${r}  λ=${s.tuned}nm  Λ₀=${lambda0.toExponential(3)}kg → Λ_B=${(lambda0 * gain).toExponential(3)}kg  (gain cosh(2r)=${gain.toFixed(4)})`,
+        type: "sys",
+      });
+      break;
+    }
+
     case 0xFE:
       s.output.push({ text: `RET   — wave collapses, scope exits`, type: "sys" });
       break;
@@ -332,7 +350,7 @@ export function stepVM(
 }
 
 // ── Run to HALT — synchronous, no I/O ────────────────────────────────────────
-const MAX_CYCLES = 10_000;
+const MAX_CYCLES = VM_MAX_CYCLES;
 
 export interface ExecutionResult {
   instructions:     Ins[];
@@ -379,10 +397,11 @@ export function runToHalt(
     halted:           state.halted,
     psiChannel:       psi,
     wavelengthNm:     nm,
-    effects,
+    // A cycle-limited execution has not reached its commit point.
+    effects:          state.halted ? effects : [],
     instructionCount: instructions.filter(i => i.op !== 0x00).length,
     truncated,
-    stateDelta:       state.kvDirty,
+    stateDelta:       state.halted ? state.kvDirty : {},
   };
 }
 
@@ -396,9 +415,12 @@ export async function fireEffects(
   contractName: string,
   executionId:  string,
   contractId:   string,
+  checkPermission: () => Promise<void> = async () => {},
 ): Promise<void> {
   const now = Date.now() / 1000;
   for (const fx of effects) {
+    // Do not catch permission denial and continue to a later effect.
+    await checkPermission();
     try {
       if (fx.type === "AGENT_REGISTER" && fx.name) {
         await fetch("http://localhost:5001/api/wnsp/agent/allocate", {
@@ -407,6 +429,7 @@ export async function fireEffects(
           body:    JSON.stringify({ agent_name: fx.name, intent: "contract_agent" }),
           signal:  AbortSignal.timeout(3000),
         }).catch(() => null);
+        await checkPermission();
         await pool.query(
           `INSERT INTO wnsp_kernel_events (event_type, agent_id, detail, created_at)
            VALUES ($1, $2, $3, $4)`,
